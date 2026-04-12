@@ -5,6 +5,10 @@ import type {
   TemplateExercise,
   WorkoutSession,
   WorkoutSet,
+  FoodEntry,
+  DailyLog,
+  MacroTargets,
+  Meal,
 } from "./types";
 import { seedExercises } from "./seed";
 
@@ -70,6 +74,36 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       reps INTEGER,
       completed INTEGER DEFAULT 0,
       completed_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS food_entries (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      calories REAL DEFAULT 0,
+      protein REAL DEFAULT 0,
+      carbs REAL DEFAULT 0,
+      fat REAL DEFAULT 0,
+      serving_size TEXT DEFAULT '1 serving',
+      is_favorite INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS daily_log (
+      id TEXT PRIMARY KEY,
+      food_entry_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      meal TEXT NOT NULL DEFAULT 'snack',
+      servings REAL DEFAULT 1,
+      logged_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS macro_targets (
+      id TEXT PRIMARY KEY,
+      calories REAL DEFAULT 2000,
+      protein REAL DEFAULT 150,
+      carbs REAL DEFAULT 250,
+      fat REAL DEFAULT 65,
+      updated_at INTEGER NOT NULL
     );
   `);
 }
@@ -613,6 +647,9 @@ export async function exportAllData(): Promise<{
   template_exercises: TemplateExercise[];
   sessions: WorkoutSession[];
   sets: WorkoutSet[];
+  food_entries: FoodRow[];
+  daily_log: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
+  macro_targets: MacroTargets[];
 }> {
   const database = await getDatabase();
   const exercises = await database.getAllAsync<ExerciseRow>("SELECT * FROM exercises");
@@ -620,6 +657,9 @@ export async function exportAllData(): Promise<{
   const tplExercises = await database.getAllAsync<TemplateExercise>("SELECT * FROM template_exercises");
   const sessions = await database.getAllAsync<WorkoutSession>("SELECT * FROM workout_sessions");
   const sets = await database.getAllAsync<WorkoutSet>("SELECT * FROM workout_sets");
+  const foods = await database.getAllAsync<FoodRow>("SELECT * FROM food_entries");
+  const logs = await database.getAllAsync<{ id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }>("SELECT * FROM daily_log");
+  const targets = await database.getAllAsync<MacroTargets>("SELECT * FROM macro_targets");
   return {
     version: 1,
     exported_at: new Date().toISOString(),
@@ -628,6 +668,9 @@ export async function exportAllData(): Promise<{
     template_exercises: tplExercises,
     sessions,
     sets,
+    food_entries: foods,
+    daily_log: logs,
+    macro_targets: targets,
   };
 }
 
@@ -638,6 +681,9 @@ export async function importData(data: {
   template_exercises?: { id: string; template_id: string; exercise_id: string; position: number; target_sets: number; target_reps: string; rest_seconds: number }[];
   sessions?: { id: string; template_id: string | null; name: string; started_at: number; completed_at: number | null; duration_seconds: number | null; notes: string }[];
   sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null }[];
+  food_entries?: { id: string; name: string; calories: number; protein: number; carbs: number; fat: number; serving_size: string; is_favorite: number; created_at: number }[];
+  daily_log?: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
+  macro_targets?: { id: string; calories: number; protein: number; carbs: number; fat: number; updated_at: number }[];
 }): Promise<{ inserted: number }> {
   const database = await getDatabase();
   let inserted = 0;
@@ -692,6 +738,36 @@ export async function importData(data: {
         inserted += r.changes;
       }
     }
+
+    if (data.food_entries) {
+      for (const f of data.food_entries) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO food_entries (id, name, calories, protein, carbs, fat, serving_size, is_favorite, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [f.id, f.name, f.calories, f.protein, f.carbs, f.fat, f.serving_size, f.is_favorite, f.created_at]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.daily_log) {
+      for (const l of data.daily_log) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO daily_log (id, food_entry_id, date, meal, servings, logged_at) VALUES (?, ?, ?, ?, ?, ?)",
+          [l.id, l.food_entry_id, l.date, l.meal, l.servings, l.logged_at]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.macro_targets) {
+      for (const t of data.macro_targets) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+          [t.id, t.calories, t.protein, t.carbs, t.fat, t.updated_at]
+        );
+        inserted += r.changes;
+      }
+    }
   });
 
   return { inserted };
@@ -712,4 +788,191 @@ export async function getRestSecondsForExercise(
     [exerciseId, sessionId]
   );
   return row?.rest_seconds ?? 90;
+}
+
+// --------------- Nutrition ---------------
+
+type FoodRow = {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  serving_size: string;
+  is_favorite: number;
+  created_at: number;
+};
+
+function mapFood(row: FoodRow): FoodEntry {
+  return {
+    ...row,
+    is_favorite: row.is_favorite === 1,
+  };
+}
+
+export async function addFoodEntry(
+  name: string,
+  calories: number,
+  protein: number,
+  carbs: number,
+  fat: number,
+  serving: string,
+  favorite: boolean
+): Promise<FoodEntry> {
+  const database = await getDatabase();
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await database.runAsync(
+    "INSERT INTO food_entries (id, name, calories, protein, carbs, fat, serving_size, is_favorite, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, name, calories, protein, carbs, fat, serving, favorite ? 1 : 0, now]
+  );
+  return { id, name, calories, protein, carbs, fat, serving_size: serving, is_favorite: favorite, created_at: now };
+}
+
+export async function getFoodEntries(): Promise<FoodEntry[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<FoodRow>("SELECT * FROM food_entries ORDER BY created_at DESC");
+  return rows.map(mapFood);
+}
+
+export async function getFavoriteFoods(): Promise<FoodEntry[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<FoodRow>(
+    "SELECT * FROM food_entries WHERE is_favorite = 1 ORDER BY name ASC"
+  );
+  return rows.map(mapFood);
+}
+
+export async function toggleFavorite(id: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "UPDATE food_entries SET is_favorite = CASE WHEN is_favorite = 1 THEN 0 ELSE 1 END WHERE id = ?",
+    [id]
+  );
+}
+
+export async function addDailyLog(
+  foodId: string,
+  date: string,
+  meal: Meal,
+  servings: number
+): Promise<DailyLog> {
+  const database = await getDatabase();
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await database.runAsync(
+    "INSERT INTO daily_log (id, food_entry_id, date, meal, servings, logged_at) VALUES (?, ?, ?, ?, ?, ?)",
+    [id, foodId, date, meal, servings, now]
+  );
+  return { id, food_entry_id: foodId, date, meal, servings, logged_at: now };
+}
+
+type DailyLogRow = {
+  id: string;
+  food_entry_id: string;
+  date: string;
+  meal: string;
+  servings: number;
+  logged_at: number;
+  food_name: string;
+  food_calories: number;
+  food_protein: number;
+  food_carbs: number;
+  food_fat: number;
+  food_serving_size: string;
+  food_is_favorite: number;
+  food_created_at: number;
+};
+
+export async function getDailyLogs(date: string): Promise<DailyLog[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<DailyLogRow>(
+    `SELECT dl.*, f.name AS food_name, f.calories AS food_calories, f.protein AS food_protein,
+            f.carbs AS food_carbs, f.fat AS food_fat, f.serving_size AS food_serving_size,
+            f.is_favorite AS food_is_favorite, f.created_at AS food_created_at
+     FROM daily_log dl
+     JOIN food_entries f ON dl.food_entry_id = f.id
+     WHERE dl.date = ?
+     ORDER BY dl.logged_at ASC`,
+    [date]
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    food_entry_id: r.food_entry_id,
+    date: r.date,
+    meal: r.meal as Meal,
+    servings: r.servings,
+    logged_at: r.logged_at,
+    food: mapFood({
+      id: r.food_entry_id,
+      name: r.food_name,
+      calories: r.food_calories,
+      protein: r.food_protein,
+      carbs: r.food_carbs,
+      fat: r.food_fat,
+      serving_size: r.food_serving_size,
+      is_favorite: r.food_is_favorite,
+      created_at: r.food_created_at,
+    }),
+  }));
+}
+
+export async function deleteDailyLog(id: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync("DELETE FROM daily_log WHERE id = ?", [id]);
+}
+
+export async function getMacroTargets(): Promise<MacroTargets> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<MacroTargets>("SELECT * FROM macro_targets LIMIT 1");
+  if (row) return row;
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await database.runAsync(
+    "INSERT INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, 2000, 150, 250, 65, ?)",
+    [id, now]
+  );
+  return { id, calories: 2000, protein: 150, carbs: 250, fat: 65, updated_at: now };
+}
+
+export async function updateMacroTargets(
+  calories: number,
+  protein: number,
+  carbs: number,
+  fat: number
+): Promise<void> {
+  const database = await getDatabase();
+  const targets = await getMacroTargets();
+  await database.runAsync(
+    "UPDATE macro_targets SET calories = ?, protein = ?, carbs = ?, fat = ?, updated_at = ? WHERE id = ?",
+    [calories, protein, carbs, fat, Date.now(), targets.id]
+  );
+}
+
+export async function getDailySummary(
+  date: string
+): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{
+    calories: number | null;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
+  }>(
+    `SELECT SUM(f.calories * dl.servings) AS calories,
+            SUM(f.protein * dl.servings) AS protein,
+            SUM(f.carbs * dl.servings) AS carbs,
+            SUM(f.fat * dl.servings) AS fat
+     FROM daily_log dl
+     JOIN food_entries f ON dl.food_entry_id = f.id
+     WHERE dl.date = ?`,
+    [date]
+  );
+  return {
+    calories: row?.calories ?? 0,
+    protein: row?.protein ?? 0,
+    carbs: row?.carbs ?? 0,
+    fat: row?.fat ?? 0,
+  };
 }

@@ -83,6 +83,24 @@ export default function RootLayout() {
               headerTintColor,
             }}
           />
+          <Stack.Screen
+            name="nutrition/add"
+            options={{
+              headerShown: true,
+              title: "Add Food",
+              headerStyle,
+              headerTintColor,
+            }}
+          />
+          <Stack.Screen
+            name="nutrition/targets"
+            options={{
+              headerShown: true,
+              title: "Macro Targets",
+              headerStyle,
+              headerTintColor,
+            }}
+          />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

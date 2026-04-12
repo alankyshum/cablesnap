@@ -112,3 +112,47 @@ export type WorkoutSet = {
   completed: boolean;
   completed_at: number | null;
 };
+
+// --------------- Nutrition ---------------
+
+export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
+
+export const MEALS: Meal[] = ["breakfast", "lunch", "dinner", "snack"];
+
+export const MEAL_LABELS: Record<Meal, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  snack: "Snack",
+};
+
+export type FoodEntry = {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  serving_size: string;
+  is_favorite: boolean;
+  created_at: number;
+};
+
+export type DailyLog = {
+  id: string;
+  food_entry_id: string;
+  date: string;
+  meal: Meal;
+  servings: number;
+  logged_at: number;
+  food?: FoodEntry;
+};
+
+export type MacroTargets = {
+  id: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  updated_at: number;
+};
