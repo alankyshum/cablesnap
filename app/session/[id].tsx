@@ -14,6 +14,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import {
   addSet,
   cancelSession,
@@ -23,6 +24,7 @@ import {
   getSessionSets,
   getTemplateById,
   getPreviousSets,
+  getRestSecondsForExercise,
   uncompleteSet,
   updateSet,
 } from "../../lib/db";
@@ -51,6 +53,8 @@ export default function ActiveSession() {
   const [elapsed, setElapsed] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const initialized = useRef(false);
+  const [rest, setRest] = useState(0);
+  const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -163,11 +167,41 @@ export default function ActiveSession() {
     await load();
   };
 
+  const startRest = useCallback(async (exerciseId: string) => {
+    if (restRef.current) clearInterval(restRef.current);
+    const secs = await getRestSecondsForExercise(id!, exerciseId);
+    setRest(secs);
+    restRef.current = setInterval(() => {
+      setRest((prev) => {
+        if (prev <= 1) {
+          if (restRef.current) clearInterval(restRef.current);
+          restRef.current = null;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [id]);
+
+  const dismissRest = () => {
+    if (restRef.current) clearInterval(restRef.current);
+    restRef.current = null;
+    setRest(0);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (restRef.current) clearInterval(restRef.current);
+    };
+  }, []);
+
   const handleCheck = async (set: SetWithMeta) => {
     if (set.completed) {
       await uncompleteSet(set.id);
     } else {
       await completeSet(set.id);
+      startRest(set.exercise_id);
     }
     await load();
   };
@@ -255,6 +289,26 @@ export default function ActiveSession() {
         style={[styles.container, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
       >
+        {rest > 0 && (
+          <View style={[styles.restBanner, { backgroundColor: theme.colors.primaryContainer }]}>
+            <Text variant="headlineLarge" style={{ color: theme.colors.onPrimaryContainer, fontWeight: "700" }}>
+              {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
+            </Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer, marginTop: 4 }}>
+              Rest Timer
+            </Text>
+            <Button
+              mode="text"
+              compact
+              onPress={dismissRest}
+              textColor={theme.colors.onPrimaryContainer}
+              style={{ marginTop: 4 }}
+            >
+              Skip
+            </Button>
+          </View>
+        )}
+
         {groups.map((group) => (
           <View key={group.exercise_id} style={styles.group}>
             <Text
@@ -460,5 +514,11 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     marginTop: 8,
+  },
+  restBanner: {
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
   },
 });
