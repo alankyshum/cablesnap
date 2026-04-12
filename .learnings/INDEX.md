@@ -1,42 +1,41 @@
-# BLD Knowledge Base
+# FitForge Knowledge Base
 
 Last updated: 2026-04-12
+Total learnings: 6
 
-## How to Use
+## How to Use This Knowledge Base
 
-Before starting work on any task, search this index for relevant learnings:
+Before starting work on a task, search this index for relevant learnings:
 1. Check the category that matches your task type
 2. Read the pitfalls section for your technology stack
 3. Review recent decisions for architectural context
+4. Search by tags if looking for something specific
 
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md)
-- [TypeScript](patterns/typescript.md)
-- [State Management](patterns/state-management.md)
-- [Testing](patterns/testing.md)
+- [React Native + Expo](patterns/react-native.md) — 2 learnings
 
 ### Pitfalls
-- [Dependencies](pitfalls/dependencies.md)
-- [Build Configuration](pitfalls/build-config.md)
-- [Type Safety](pitfalls/type-safety.md)
-
-### Decisions
-- [Architecture](decisions/architecture.md)
-- [Tech Stack](decisions/tech-stack.md)
+- [Dependencies](pitfalls/dependencies.md) — 2 learnings
+- [Build Configuration](pitfalls/build-config.md) — 1 learning
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md)
-- [Agent Coordination](process/agent-coordination.md)
-- [PR Workflow](process/pr-workflow.md)
+- [Quality Pipeline](process/quality-pipeline.md) — 1 learning
+
+### Decisions
+_(no learnings yet)_
 
 ### Debugging
-- [Common Errors](debugging/common-errors.md)
-- [Diagnostic Techniques](debugging/diagnostic-techniques.md)
+_(no learnings yet)_
 
 ## Recent Learnings
 
-| Date | Source | Title | Category |
-|------|--------|-------|----------|
-| *No learnings extracted yet* | | | |
+| Date | Source | Title | Category | File |
+|------|--------|-------|----------|------|
+| 2026-04-12 | BLD-12, BLD-14 | legacy-peer-deps Masks Missing Peer Dependencies | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
+| 2026-04-12 | BLD-13 | Use expo-document-picker for File Selection | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
+| 2026-04-12 | BLD-14 | Metro Bundler Requires Explicit WASM Extension | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-12 | BLD-10, BLD-12, BLD-14 | Never Trust PR Self-Verification | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-12 | BLD-13 | Wrap Bulk SQLite Inserts in withTransactionAsync | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-12 | BLD-13 | Never Execute Side Effects Inside setState Updaters | Patterns | [react-native.md](patterns/react-native.md) |
