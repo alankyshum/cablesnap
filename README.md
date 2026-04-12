@@ -32,7 +32,7 @@
 ### Install
 
 ```bash
-git clone https://github.com/anomalyco/fitforge.git
+git clone https://github.com/alankyshum/fitforge.git
 cd fitforge
 npm install
 ```
