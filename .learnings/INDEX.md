@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-12
-Total learnings: 7
+Total learnings: 8
 
 ## How to Use This Knowledge Base
 
@@ -23,6 +23,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 1 learning
+- [PR Workflow](process/pr-workflow.md) — 1 learning
 
 ### Decisions
 _(no learnings yet)_
@@ -34,6 +35,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-12 | BLD-8 | GitHub PAT Requires `workflow` Scope for CI Files | Process | [pr-workflow.md](process/pr-workflow.md) |
 | 2026-04-12 | BLD-9, BLD-13 | Never Hardcode Hex Colors — Use Theme Tokens | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-12 | BLD-12, BLD-14 | legacy-peer-deps Masks Missing Peer Dependencies | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-12 | BLD-13 | Use expo-document-picker for File Selection | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
