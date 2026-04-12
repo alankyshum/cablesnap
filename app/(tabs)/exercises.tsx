@@ -53,7 +53,7 @@ export default function Exercises() {
     ({ item }: ListRenderItemInfo<Exercise>) => (
       <TouchableRipple
         onPress={() => router.push(`/exercise/${item.id}`)}
-        style={[styles.item, { backgroundColor: theme.colors.surface }]}
+        style={[styles.item, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant }]}
       >
         <View>
           <Text variant="titleSmall" numberOfLines={1} style={{ color: theme.colors.onSurface }}>
@@ -177,7 +177,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e0e0e0",
     minHeight: ITEM_HEIGHT,
     justifyContent: "center",
   },

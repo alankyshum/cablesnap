@@ -304,7 +304,7 @@ export function seedExercises(): Exercise[] {
     },
     {
       id: id(),
-      name: "Shoulder Face Pull",
+      name: "Rear Delt Face Pull",
       category: "shoulders",
       primary_muscles: ["shoulders"],
       secondary_muscles: ["traps", "back"],
