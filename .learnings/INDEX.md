@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-12
-Total learnings: 6
+Total learnings: 7
 
 ## How to Use This Knowledge Base
 
@@ -19,6 +19,7 @@ Before starting work on a task, search this index for relevant learnings:
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
 - [Build Configuration](pitfalls/build-config.md) — 1 learning
+- [Theming](pitfalls/theming.md) — 1 learning
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 1 learning
@@ -33,6 +34,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-12 | BLD-9, BLD-13 | Never Hardcode Hex Colors — Use Theme Tokens | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-12 | BLD-12, BLD-14 | legacy-peer-deps Masks Missing Peer Dependencies | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-12 | BLD-13 | Use expo-document-picker for File Selection | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-12 | BLD-14 | Metro Bundler Requires Explicit WASM Extension | Pitfalls | [build-config.md](pitfalls/build-config.md) |
