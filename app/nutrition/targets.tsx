@@ -25,14 +25,17 @@ export default function Targets() {
 
   const save = async () => {
     setSaving(true);
-    await updateMacroTargets(
-      parseFloat(calories) || 2000,
-      parseFloat(protein) || 150,
-      parseFloat(carbs) || 250,
-      parseFloat(fat) || 65
-    );
-    setSaving(false);
-    router.back();
+    try {
+      await updateMacroTargets(
+        Math.max(0, parseFloat(calories) || 2000),
+        Math.max(0, parseFloat(protein) || 150),
+        Math.max(0, parseFloat(carbs) || 250),
+        Math.max(0, parseFloat(fat) || 65)
+      );
+      router.back();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const reset = () => {

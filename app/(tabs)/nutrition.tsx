@@ -21,13 +21,15 @@ import {
 import type { DailyLog, MacroTargets } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 
+const DAY_MS = 86_400_000;
+
 function dateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
 function label(d: Date): string {
   const today = dateStr(new Date());
-  const yesterday = dateStr(new Date(Date.now() - 86400000));
+  const yesterday = dateStr(new Date(Date.now() - DAY_MS));
   const ds = dateStr(d);
   if (ds === today) return "Today";
   if (ds === yesterday) return "Yesterday";
@@ -61,8 +63,8 @@ export default function Nutrition() {
     }, [load])
   );
 
-  const prev = () => setDate((d) => new Date(d.getTime() - 86400000));
-  const next = () => setDate((d) => new Date(d.getTime() + 86400000));
+  const prev = () => setDate((d) => new Date(d.getTime() - DAY_MS));
+  const next = () => setDate((d) => new Date(d.getTime() + DAY_MS));
 
   const remove = async (log: DailyLog) => {
     if (deleted.current) clearTimeout(deleted.current.timer);

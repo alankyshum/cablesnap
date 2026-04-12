@@ -43,25 +43,31 @@ export default function AddFood() {
   const save = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    const entry = await addFoodEntry(
-      name.trim(),
-      parseFloat(calories) || 0,
-      parseFloat(protein) || 0,
-      parseFloat(carbs) || 0,
-      parseFloat(fat) || 0,
-      serving.trim() || "1 serving",
-      favorite
-    );
-    await addDailyLog(entry.id, today, meal, 1);
-    setSaving(false);
-    router.back();
+    try {
+      const entry = await addFoodEntry(
+        name.trim(),
+        Math.max(0, parseFloat(calories) || 0),
+        Math.max(0, parseFloat(protein) || 0),
+        Math.max(0, parseFloat(carbs) || 0),
+        Math.max(0, parseFloat(fat) || 0),
+        serving.trim() || "1 serving",
+        favorite
+      );
+      await addDailyLog(entry.id, today, meal, 1);
+      router.back();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const quickLog = async (food: FoodEntry) => {
     setSaving(true);
-    await addDailyLog(food.id, today, meal, 1);
-    setSaving(false);
-    router.back();
+    try {
+      await addDailyLog(food.id, today, meal, 1);
+      router.back();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
