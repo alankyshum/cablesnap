@@ -25,3 +25,11 @@
 **Learning**: The ErrorBoundary must wrap OUTSIDE PaperProvider/ThemeProvider so it catches errors thrown by providers themselves (e.g., theme initialization failures). This means the crash screen cannot use theme tokens — hardcoded dark-mode styles are justified as an exception to the "never hardcode colors" rule. Additionally, the error handler and logging must be fully defensive: wrap all DB writes in silent try/catch, because crash-handling code that itself crashes creates an unrecoverable state.
 **Action**: Place ErrorBoundary as the outermost wrapper in _layout.tsx, outside all providers. Use hardcoded colors only in the ErrorBoundary crash screen. Wrap all operations inside error handlers (logError, generateReport) in try/catch blocks that silently ignore failures.
 **Tags**: react, error-boundary, crash-reporting, provider-ordering, defensive-programming, theming-exception
+
+### Always Use try/finally for Async Operations with Loading State
+**Source**: BLD-11 — Phase 5: Nutrition and Macro Tracking
+**Date**: 2026-04-12
+**Context**: The nutrition feature's save() and quickLog() functions in add.tsx called setSaving(true) before an async DB write, then setSaving(false) after. If the async operation threw, the loading state was never reset — the UI showed a perpetual spinner with no way to retry.
+**Learning**: Any pattern of `setLoading(true); await asyncOp(); setLoading(false)` has a silent failure mode: if `asyncOp()` throws, the loading state is never cleared. This leaves the UI stuck in a disabled/spinner state. The fix is wrapping the operation in try/finally so the state reset executes regardless of success or failure.
+**Action**: Always use `try { await asyncOp(); } finally { setLoading(false); }` when managing loading/saving state around async operations. Search for `setLoading(true)` or `setSaving(true)` patterns during self-review to verify each has a corresponding finally block.
+**Tags**: react, async, loading-state, try-finally, error-handling, ui-state
