@@ -523,3 +523,193 @@ export async function getSessionSetCount(
   );
   return row?.count ?? 0;
 }
+
+// --------------- Progress Queries ---------------
+
+export async function getWeeklySessionCounts(
+  weeks = 8
+): Promise<{ week: string; count: number }[]> {
+  const database = await getDatabase();
+  const cutoff = Date.now() - weeks * 7 * 24 * 60 * 60 * 1000;
+  const rows = await database.getAllAsync<{ week_start: number; count: number }>(
+    `SELECT (started_at / 604800000) * 604800000 AS week_start, COUNT(*) AS count
+     FROM workout_sessions
+     WHERE completed_at IS NOT NULL AND started_at >= ?
+     GROUP BY week_start
+     ORDER BY week_start ASC`,
+    [cutoff]
+  );
+  return rows.map((r) => {
+    const d = new Date(r.week_start);
+    return {
+      week: `${d.getMonth() + 1}/${d.getDate()}`,
+      count: r.count,
+    };
+  });
+}
+
+export async function getWeeklyVolume(
+  weeks = 8
+): Promise<{ week: string; volume: number }[]> {
+  const database = await getDatabase();
+  const cutoff = Date.now() - weeks * 7 * 24 * 60 * 60 * 1000;
+  const rows = await database.getAllAsync<{ week_start: number; volume: number }>(
+    `SELECT (wss.started_at / 604800000) * 604800000 AS week_start,
+            COALESCE(SUM(ws.weight * ws.reps), 0) AS volume
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.completed = 1 AND wss.completed_at IS NOT NULL AND wss.started_at >= ?
+     GROUP BY week_start
+     ORDER BY week_start ASC`,
+    [cutoff]
+  );
+  return rows.map((r) => {
+    const d = new Date(r.week_start);
+    return {
+      week: `${d.getMonth() + 1}/${d.getDate()}`,
+      volume: r.volume,
+    };
+  });
+}
+
+export async function getPersonalRecords(): Promise<
+  { exercise_id: string; name: string; max_weight: number }[]
+> {
+  const database = await getDatabase();
+  return database.getAllAsync<{ exercise_id: string; name: string; max_weight: number }>(
+    `SELECT ws.exercise_id, e.name, MAX(ws.weight) AS max_weight
+     FROM workout_sets ws
+     JOIN exercises e ON ws.exercise_id = e.id
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.completed = 1 AND ws.weight IS NOT NULL AND ws.weight > 0
+       AND wss.completed_at IS NOT NULL
+     GROUP BY ws.exercise_id
+     ORDER BY e.name ASC`
+  );
+}
+
+export async function getCompletedSessionsWithSetCount(
+  limit = 10
+): Promise<(WorkoutSession & { set_count: number })[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<WorkoutSession & { set_count: number }>(
+    `SELECT wss.*,
+            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
+     FROM workout_sessions wss
+     WHERE wss.completed_at IS NOT NULL
+     ORDER BY wss.started_at DESC
+     LIMIT ?`,
+    [limit]
+  );
+}
+
+// --------------- Import / Export ---------------
+
+export async function exportAllData(): Promise<{
+  version: number;
+  exported_at: string;
+  exercises: ExerciseRow[];
+  templates: WorkoutTemplate[];
+  template_exercises: TemplateExercise[];
+  sessions: WorkoutSession[];
+  sets: WorkoutSet[];
+}> {
+  const database = await getDatabase();
+  const exercises = await database.getAllAsync<ExerciseRow>("SELECT * FROM exercises");
+  const templates = await database.getAllAsync<WorkoutTemplate>("SELECT * FROM workout_templates");
+  const tplExercises = await database.getAllAsync<TemplateExercise>("SELECT * FROM template_exercises");
+  const sessions = await database.getAllAsync<WorkoutSession>("SELECT * FROM workout_sessions");
+  const sets = await database.getAllAsync<WorkoutSet>("SELECT * FROM workout_sets");
+  return {
+    version: 1,
+    exported_at: new Date().toISOString(),
+    exercises,
+    templates,
+    template_exercises: tplExercises,
+    sessions,
+    sets,
+  };
+}
+
+export async function importData(data: {
+  version: number;
+  exercises?: { id: string; name: string; category: string; primary_muscles: string; secondary_muscles: string; equipment: string; instructions: string; difficulty: string; is_custom: number }[];
+  templates?: { id: string; name: string; created_at: number; updated_at: number }[];
+  template_exercises?: { id: string; template_id: string; exercise_id: string; position: number; target_sets: number; target_reps: string; rest_seconds: number }[];
+  sessions?: { id: string; template_id: string | null; name: string; started_at: number; completed_at: number | null; duration_seconds: number | null; notes: string }[];
+  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null }[];
+}): Promise<{ inserted: number }> {
+  const database = await getDatabase();
+  let inserted = 0;
+
+  await database.withTransactionAsync(async () => {
+    if (data.exercises) {
+      for (const e of data.exercises) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [e.id, e.name, e.category, e.primary_muscles, e.secondary_muscles, e.equipment, e.instructions, e.difficulty, e.is_custom]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.templates) {
+      for (const t of data.templates) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+          [t.id, t.name, t.created_at, t.updated_at]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.template_exercises) {
+      for (const te of data.template_exercises) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [te.id, te.template_id, te.exercise_id, te.position, te.target_sets, te.target_reps, te.rest_seconds]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.sessions) {
+      for (const s of data.sessions) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [s.id, s.template_id, s.name, s.started_at, s.completed_at, s.duration_seconds, s.notes]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.sets) {
+      for (const s of data.sets) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at]
+        );
+        inserted += r.changes;
+      }
+    }
+  });
+
+  return { inserted };
+}
+
+// --------------- Rest Timer Helper ---------------
+
+export async function getRestSecondsForExercise(
+  sessionId: string,
+  exerciseId: string
+): Promise<number> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ rest_seconds: number }>(
+    `SELECT te.rest_seconds
+     FROM workout_sessions wss
+     JOIN template_exercises te ON te.template_id = wss.template_id AND te.exercise_id = ?
+     WHERE wss.id = ?`,
+    [exerciseId, sessionId]
+  );
+  return row?.rest_seconds ?? 90;
+}
