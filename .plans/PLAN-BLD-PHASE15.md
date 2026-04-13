@@ -1,9 +1,9 @@
 # Phase 15: Weekly Muscle Group Volume Analysis
 
-**Issue**: TBD
+**Issue**: BLD-23
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT
+**Status**: IN_REVIEW
 
 ## Problem Statement
 Users can see total weekly volume and personal records, but have no way to analyze training balance across muscle groups. They cannot tell if they are neglecting back work, over-training chest, or under-training legs. This is one of the most common training mistakes, especially for intermediate lifters.
