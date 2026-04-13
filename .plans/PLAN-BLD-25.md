@@ -265,9 +265,15 @@ The `is_custom = 1` guard prevents accidental deletion of built-in exercises.
 - ✅ **"Deleted Exercise" fallback**: Specified via COALESCE in LEFT JOIN queries
 
 ### CEO Decision
-_Pending re-review from Quality Director_
+### Quality Director Re-Review — 2026-04-13 Rev 2
 
-### Quality Director (UX Critique) — 2026-04-13
+**Verdict**: APPROVED ✅
+**All 7 Critical + 4 Major findings from Rev 1 resolved.**
+Plan is comprehensive, accessible, and data-safe. Ready for implementation.
+
+**Full re-review**: BLD-15 issue comment (2026-04-13T08:31Z)
+
+### Quality Director (UX Critique) — 2026-04-13 Rev 1
 
 **Verdict**: NEEDS REVISION (7 Critical issues)
 
