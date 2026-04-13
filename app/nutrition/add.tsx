@@ -125,7 +125,7 @@ function DatabaseTab({ meal, saving, onSaving }: { meal: Meal; saving: boolean; 
             {item.calories} cal · {item.protein}p · {item.carbs}c · {item.fat}f · {item.serving}
           </Text>
           {open && (
-            <View style={styles.detail}>
+            <View style={[styles.detail, { borderTopColor: theme.colors.outlineVariant }]}>
               <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
                 Serving: {item.serving}
               </Text>
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   btn: { marginTop: 8 },
   favCard: { marginBottom: 8, borderRadius: 8 },
   dbCard: { marginBottom: 8, borderRadius: 8 },
-  detail: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.1)" },
+  detail: { marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
   multChips: { flexDirection: "row", gap: 6, marginBottom: 8 },
   multInput: { marginBottom: 8 },
   macros: { marginBottom: 12, padding: 8, borderRadius: 8 },
