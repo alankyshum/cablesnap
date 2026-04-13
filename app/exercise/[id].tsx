@@ -23,7 +23,7 @@ import {
   type ExerciseRecords as Records,
 } from "../../lib/db";
 import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
-import { semantic } from "../../constants/theme";
+import { semantic, difficultyText } from "../../constants/theme";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
 
@@ -230,7 +230,7 @@ export default function ExerciseDetail() {
         <Chip
           compact
           style={[styles.difficultyChip, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }]}
-          textStyle={styles.difficultyText}
+          textStyle={[styles.difficultyText, { color: difficultyText(exercise.difficulty) }]}
         >
           {exercise.difficulty}
         </Chip>
@@ -572,7 +572,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   difficultyText: {
-    color: semantic.onSemantic,
     fontWeight: "600",
   },
   step: {

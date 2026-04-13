@@ -15,7 +15,7 @@ import {
   type Category,
   type Exercise,
 } from "../../lib/types";
-import { semantic } from "../../constants/theme";
+import { semantic, difficultyText } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
 
 const ITEM_HEIGHT = 84;
@@ -256,7 +256,7 @@ export default function Exercises() {
               <Chip
                 compact
                 style={{ backgroundColor: DIFFICULTY_COLORS[detail.difficulty], marginLeft: 8 }}
-                textStyle={{ color: semantic.onSemantic, fontWeight: "600" }}
+                textStyle={{ color: difficultyText(detail.difficulty), fontWeight: "600" }}
               >
                 {detail.difficulty}
               </Chip>
