@@ -3,7 +3,7 @@
 **Issue**: BLD-8 (repurposed)
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -31,12 +31,16 @@ A single new screen (`app/tools/plates.tsx`) that calculates barbell plate loadi
 1. **Bar Weight Selector** — segmented buttons for common bar weights:
    - kg: 20 (standard), 15 (women's), 10 (training)
    - lb: 45, 35, 25
-   - Bar weight respects user's unit preference
+   - Bar weight respects user's unit preference (fallback to kg if body_settings not configured)
+   - Each button: `accessibilityState={{ selected: true/false }}`, `accessibilityRole="radio"`
 
 2. **Target Weight Input** — large, prominent TextInput for total target weight
    - Shows unit label (kg/lb)
+   - `keyboardType="numeric"` to show numeric keyboard
    - Step buttons (±2.5kg or ±5lb) — reuse pattern from Phase 16
+   - Step buttons: `accessibilityValue={{ now: targetWeight, min: barWeight, max: 999, text: "{targetWeight} {unit}" }}`
    - Auto-focuses on screen load
+   - Validation: real-time as user types (debounced 300ms) — show error inline, don't wait for blur
 
 3. **Plate Breakdown Display** — visual representation:
    - "Per side: X kg/lb" header
@@ -44,8 +48,11 @@ A single new screen (`app/tools/plates.tsx`) that calculates barbell plate loadi
    - Color-coded plate badges matching standard competition colors:
      - 25kg/55lb = red, 20kg/45lb = blue, 15kg/35lb = yellow, 10kg/25lb = green
      - 5kg/10lb = white, 2.5kg/5lb = black/dark, 1.25kg/2.5lb = silver
-   - Use theme-compatible color tokens (not hardcoded hex)
-   - Simple barbell visualization (horizontal bar with colored plate rectangles)
+   - Use theme-compatible color tokens defined in `constants/theme.ts` as `plateColors` map (light/dark aware, WCAG contrast) — NOT hardcoded hex in component
+   - Plate badges: add border/outline for dark mode visibility (especially yellow/white plates)
+   - Simple barbell visualization (horizontal bar with colored plate rectangles) — optional, colored badges with text labels are the primary display
+   - Barbell visualization `accessibilityLabel`: comprehensive summary e.g., "Barbell loaded with 2 twenty kilogram plates and 1 five kilogram plate per side, totaling 90 kilograms"
+   - All touch targets >= 48dp (56dp when accessed from active session per existing pattern)
 
 4. **Available Plates Configuration** — expandable section:
    - Default plate inventory: [25, 20, 15, 10, 5, 2.5, 1.25] kg or [55, 45, 35, 25, 10, 5, 2.5] lb
@@ -68,23 +75,36 @@ A single new screen (`app/tools/plates.tsx`) that calculates barbell plate loadi
 
 #### Plate Calculation Algorithm
 
-Greedy approach (works for standard plate sets):
+Backtracking/DP approach (handles limited plate counts correctly):
 ```
 function calculatePlates(target, barWeight, availablePlates):
   perSide = (target - barWeight) / 2
   if perSide < 0: return error "Target less than bar"
   
-  result = []
-  remaining = perSide
+  // Build flat list of available plates respecting counts
+  plates = []
   for plate in availablePlates (sorted descending):
-    while remaining >= plate.weight and plate.remaining > 0:
-      result.push(plate.weight)
-      remaining -= plate.weight
-      plate.remaining -= 1
+    for i in 0..plate.count: plates.push(plate.weight)
   
-  if remaining > 0.001: return error "Cannot make exact weight"
-  return result
+  // Backtracking search (search space is tiny — <100 plates max)
+  function solve(remaining, index):
+    if abs(remaining) < 0.001: return []
+    if index >= plates.length or remaining < 0: return null
+    // Try using this plate
+    with = solve(remaining - plates[index], index + 1)
+    if with != null: return [plates[index], ...with]
+    // Skip this plate
+    return solve(remaining, index + 1)
+  
+  result = solve(perSide, 0)
+  if result != null: return result
+  
+  // Exact match failed — find closest achievable weight (round DOWN)
+  // BFS/DP over achievable weights to find largest <= perSide
+  return closestAchievable(perSide, plates)
 ```
+
+The search space is tiny (standard plate sets have <20 items per side), so backtracking runs in microseconds. This correctly handles limited plate counts (e.g., 1×20kg + 2×15kg, target 30kg/side → finds 15+15=30 instead of failing after greedy picks 20).
 
 #### State Management
 
@@ -114,7 +134,7 @@ function calculatePlates(target, barWeight, availablePlates):
 - Error handling for impossible/invalid weights
 
 **Out of Scope:**
-- Persisting plate configuration (advanced — future phase if needed)
+- Persisting plate configuration (high-priority fast follow — Phase 18 candidate)
 - Warm-up set calculator (separate feature)
 - 1RM calculator (separate feature)
 - Barbell type database (Olympic, hex bar, etc.)
@@ -153,7 +173,7 @@ function calculatePlates(target, barWeight, availablePlates):
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Greedy algorithm fails for exotic plate sets | Very Low | Low | Standard plate sets are always greedy-solvable. Edge case for non-standard sets shows "closest" fallback. |
+| Greedy algorithm fails for exotic plate sets | N/A | N/A | Replaced with backtracking/DP — handles all plate set configurations correctly including limited counts. |
 | Too many plate sizes crowd the UI | Low | Medium | Default to collapsed "Available Plates" section. Most users won't need to change defaults. |
 | Colors for plate badges don't work in dark mode | Medium | Medium | Use theme-compatible color definitions with adequate contrast for both modes. |
 
@@ -199,4 +219,11 @@ function calculatePlates(target, barWeight, availablePlates):
 4. Reuse Phase 16 step button pattern (inline or extract shared component)
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED (Rev 2)** — All QD critical findings addressed:
+- C1 Algorithm: Replaced greedy with backtracking/DP to handle limited plate counts correctly
+- C2 Accessibility: Added accessibilityValue on stepper, keyboardType=numeric, touch targets 48dp/56dp, accessibilityState+role on bar weight buttons
+- C3 Barbell viz a11y: Added comprehensive accessibilityLabel describing full plate loading
+- Recommendations incorporated: body_settings fallback to kg, plate badge borders for dark mode, real-time validation, plateColors in theme.ts
+- Techlead guidance incorporated: plateColors semantic map in constants/theme.ts, barbell viz is optional, closest rounds DOWN, reuse Phase 16 step pattern
+
+Both reviewers' substantive concerns resolved. Proceeding to implementation.
