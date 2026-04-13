@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -17,6 +17,7 @@ import {
 } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
+  getRecentSessions,
   getSessionsByMonth,
   searchSessions,
 } from "../lib/db";
@@ -68,11 +69,22 @@ function HistoryScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SessionRow[] | null>(null);
+  const [hasAny, setHasAny] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
   const load = useCallback(async () => {
-    const data = await getSessionsByMonth(year, month);
+    const [data, any] = await Promise.all([
+      getSessionsByMonth(year, month),
+      getRecentSessions(1),
+    ]);
     setSessions(data);
+    setHasAny(any.length > 0);
   }, [year, month]);
 
   useFocusEffect(
@@ -161,8 +173,8 @@ function HistoryScreen() {
 
     const label =
       count > 0
-        ? `${day} ${monthLabel(year, month).split(" ")[0]}, ${count} workout${count > 1 ? "s" : ""}`
-        : `${day} ${monthLabel(year, month).split(" ")[0]}, rest day`;
+        ? `${day} ${monthLabel(year, month)}, ${count} workout${count > 1 ? "s" : ""}`
+        : `${day} ${monthLabel(year, month)}, rest day`;
 
     return (
       <Pressable
@@ -258,9 +270,7 @@ function HistoryScreen() {
   const emptyMessage = () => {
     if (query.trim()) return `No workouts matching "${query}"`;
     if (selected) return "Rest day!";
-    if (sessions.length === 0) {
-      return "No workouts yet. Start your first workout!";
-    }
+    if (!hasAny) return "No workouts yet. Start your first workout!";
     return `No workouts in ${monthLabel(year, month)}`;
   };
 
