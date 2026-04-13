@@ -143,6 +143,8 @@ export type TemplateExercise = {
   target_sets: number;
   target_reps: string;
   rest_seconds: number;
+  link_id: string | null;
+  link_label: string;
   exercise?: Exercise;
 };
 
@@ -167,6 +169,14 @@ export type WorkoutSet = {
   completed_at: number | null;
   rpe: number | null;
   notes: string;
+  link_id: string | null;
+  round: number | null;
+};
+
+export type LinkedGroup = {
+  link_id: string;
+  label: string;
+  exercises: TemplateExercise[];
 };
 
 // --------------- Nutrition ---------------

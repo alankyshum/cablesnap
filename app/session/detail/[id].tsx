@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -13,6 +13,7 @@ type ExerciseGroup = {
   exercise_id: string;
   name: string;
   sets: SetWithName[];
+  link_id: string | null;
 };
 
 export default function SessionDetail() {
@@ -21,6 +22,19 @@ export default function SessionDetail() {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [groups, setGroups] = useState<ExerciseGroup[]>([]);
   const [prs, setPrs] = useState<{ exercise_id: string; name: string; weight: number; previous_max: number }[]>([]);
+
+  const linkIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const g of groups) {
+      if (g.link_id && !ids.includes(g.link_id)) ids.push(g.link_id);
+    }
+    return ids;
+  }, [groups]);
+
+  const palette = useMemo(
+    () => [theme.colors.tertiary, theme.colors.secondary, theme.colors.primary, theme.colors.error, theme.colors.inversePrimary],
+    [theme],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +55,7 @@ export default function SessionDetail() {
             exercise_id: s.exercise_id,
             name: s.exercise_name ?? "Unknown",
             sets: [],
+            link_id: s.link_id ?? null,
           });
         }
         map.get(s.exercise_id)!.sets.push(s);
@@ -211,8 +226,29 @@ export default function SessionDetail() {
         )}
 
         {/* Exercise breakdown */}
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
+          const isFirst = group.link_id ? linked[0]?.exercise_id === group.exercise_id : false;
+          const isLast = group.link_id ? linked[linked.length - 1]?.exercise_id === group.exercise_id : false;
+          const label = group.link_id
+            ? linked.length >= 3 ? "Circuit" : "Superset"
+            : "";
+          const groupColorIdx = group.link_id ? linkIds.indexOf(group.link_id) : -1;
+          const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
+
+          return (
           <View key={group.exercise_id} style={styles.group}>
+            {isFirst && group.link_id && (
+              <View
+                style={[styles.linkHeader, { borderLeftColor: groupColor }]}
+                accessibilityLabel={`${label}: ${linked.map((g) => g.name).join(" and ")}`}
+              >
+                <Text variant="labelMedium" style={{ color: groupColor, fontWeight: "700" }}>
+                  {label}
+                </Text>
+              </View>
+            )}
+            <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
             <Text
               variant="titleMedium"
               style={[styles.groupTitle, { color: theme.colors.primary }]}
@@ -228,7 +264,7 @@ export default function SessionDetail() {
                       variant="bodyMedium"
                       style={[styles.setNum, { color: theme.colors.onSurface }]}
                     >
-                      Set {set.set_number}
+                      {set.round ? `R${set.round}` : `Set ${set.set_number}`}
                     </Text>
                     <Text
                       variant="bodyMedium"
@@ -254,9 +290,14 @@ export default function SessionDetail() {
                   ) : null}
                 </View>
               ))}
+            </View>
+            {isLast && group.link_id && (
+              <View style={{ height: 4, backgroundColor: groupColor, borderRadius: 2 }} />
+            )}
             <Divider style={styles.divider} />
           </View>
-        ))}
+          );
+        })}
 
         {/* Notes */}
         {session.notes ? (
@@ -350,6 +391,12 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: 8,
     marginBottom: 12,
+  },
+  linkHeader: {
+    borderLeftWidth: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 4,
   },
   notes: {
     marginTop: 8,
