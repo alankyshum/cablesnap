@@ -1,29 +1,40 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  ScrollView,
   StyleSheet,
   View,
   type ListRenderItemInfo,
 } from "react-native";
 import { Chip, Searchbar, Text, TouchableRipple, useTheme } from "react-native-paper";
 import { useRouter } from "expo-router";
-import { getAllExercises } from "../../lib/db";
+import { getAllExercises, getExerciseById } from "../../lib/db";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
   type Category,
   type Exercise,
 } from "../../lib/types";
+import { semantic } from "../../constants/theme";
+import { useLayout } from "../../lib/layout";
 
 const ITEM_HEIGHT = 84;
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  beginner: semantic.beginner,
+  intermediate: semantic.intermediate,
+  advanced: semantic.advanced,
+};
 
 export default function Exercises() {
   const theme = useTheme();
   const router = useRouter();
+  const layout = useLayout();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<Category>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<Exercise | null>(null);
 
   useEffect(() => {
     getAllExercises()
@@ -49,11 +60,26 @@ export default function Exercises() {
     });
   }, []);
 
+  const onPress = useCallback(
+    (item: Exercise) => {
+      if (layout.wide) {
+        getExerciseById(item.id).then(setDetail);
+      } else {
+        router.push(`/exercise/${item.id}`);
+      }
+    },
+    [layout.wide, router]
+  );
+
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<Exercise>) => (
       <TouchableRipple
-        onPress={() => router.push(`/exercise/${item.id}`)}
-        style={[styles.item, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant }]}
+        onPress={() => onPress(item)}
+        style={[
+          styles.item,
+          { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
+          layout.wide && detail?.id === item.id && { backgroundColor: theme.colors.primaryContainer },
+        ]}
         accessibilityLabel={`${item.name}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
         accessibilityRole="button"
       >
@@ -93,7 +119,7 @@ export default function Exercises() {
         </View>
       </TouchableRipple>
     ),
-    [router, theme]
+    [onPress, theme, layout.wide, detail]
   );
 
   const getLayout = useCallback(
@@ -122,8 +148,8 @@ export default function Exercises() {
     [loading, theme]
   );
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+  const list = (
+    <View style={layout.wide ? { flex: 6 } : { flex: 1 }}>
       <Searchbar
         placeholder="Search exercises..."
         value={query}
@@ -162,11 +188,102 @@ export default function Exercises() {
       />
     </View>
   );
+
+  if (!layout.wide) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {list}
+      </View>
+    );
+  }
+
+  const steps = detail?.instructions
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  return (
+    <View style={[styles.container, styles.wideRow, { backgroundColor: theme.colors.background }]}>
+      {list}
+      <View style={[styles.detailPane, { borderLeftColor: theme.colors.outlineVariant }]}>
+        {detail ? (
+          <ScrollView contentContainerStyle={styles.detailContent}>
+            <Text variant="headlineSmall" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+              {detail.name}
+            </Text>
+            <View style={styles.row}>
+              <Chip compact style={{ backgroundColor: theme.colors.primaryContainer }}>
+                {CATEGORY_LABELS[detail.category]}
+              </Chip>
+              <Chip
+                compact
+                style={{ backgroundColor: DIFFICULTY_COLORS[detail.difficulty], marginLeft: 8 }}
+                textStyle={{ color: semantic.onSemantic, fontWeight: "600" }}
+              >
+                {detail.difficulty}
+              </Chip>
+            </View>
+            <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+              Equipment
+            </Text>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, marginTop: 4 }}>
+              {detail.equipment}
+            </Text>
+            <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+              Primary Muscles
+            </Text>
+            <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
+              {detail.primary_muscles.map((m) => (
+                <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
+                  {m}
+                </Chip>
+              ))}
+            </View>
+            {detail.secondary_muscles.length > 0 && (
+              <>
+                <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                  Secondary Muscles
+                </Text>
+                <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
+                  {detail.secondary_muscles.map((m) => (
+                    <Chip key={m} compact style={{ backgroundColor: theme.colors.tertiaryContainer }}>
+                      {m}
+                    </Chip>
+                  ))}
+                </View>
+              </>
+            )}
+            {steps && steps.length > 0 && (
+              <>
+                <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                  Instructions
+                </Text>
+                {steps.map((step, i) => (
+                  <Text key={i} variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 6, lineHeight: 22 }}>
+                    {step}
+                  </Text>
+                ))}
+              </>
+            )}
+          </ScrollView>
+        ) : (
+          <View style={styles.detailEmpty}>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+              Select an exercise to view details
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  wideRow: {
+    flexDirection: "row",
   },
   search: {
     margin: 12,
@@ -211,5 +328,18 @@ const styles = StyleSheet.create({
   },
   emptyList: {
     flexGrow: 1,
+  },
+  detailPane: {
+    flex: 4,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+  },
+  detailContent: {
+    padding: 24,
+    paddingBottom: 32,
+  },
+  detailEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

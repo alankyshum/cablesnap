@@ -1,13 +1,16 @@
 import { useCallback, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
+  Button,
   Card,
+  Chip,
   FAB,
   IconButton,
   MD3Theme,
   ProgressBar,
   Snackbar,
   Text,
+  TextInput,
   useTheme,
 } from "react-native-paper";
 import { router, useFocusEffect } from "expo-router";
@@ -17,10 +20,13 @@ import {
   getMacroTargets,
   deleteDailyLog,
   addDailyLog,
+  addFoodEntry,
+  getFavoriteFoods,
 } from "../../lib/db";
-import type { DailyLog, MacroTargets } from "../../lib/types";
+import type { DailyLog, FoodEntry, MacroTargets, Meal } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 import { semantic } from "../../constants/theme";
+import { useLayout } from "../../lib/layout";
 
 const DAY_MS = 86_400_000;
 
@@ -39,12 +45,25 @@ function label(d: Date): string {
 
 export default function Nutrition() {
   const theme = useTheme();
+  const layout = useLayout();
   const [date, setDate] = useState(new Date());
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [summary, setSummary] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const [snack, setSnack] = useState("");
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
+
+  // Inline add-form state (tablet only)
+  const [name, setName] = useState("");
+  const [calories, setCalories] = useState("");
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
+  const [serving, setServing] = useState("1 serving");
+  const [meal, setMeal] = useState<Meal>("snack");
+  const [favorite, setFavorite] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [favorites, setFavorites] = useState<FoodEntry[]>([]);
 
   const load = useCallback(async () => {
     const ds = dateStr(date);
@@ -61,7 +80,8 @@ export default function Nutrition() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+      if (layout.wide) getFavoriteFoods().then(setFavorites);
+    }, [load, layout.wide])
   );
 
   const prev = () => setDate((d) => new Date(d.getTime() - DAY_MS));
@@ -90,10 +110,50 @@ export default function Nutrition() {
     load();
   };
 
+  const inlineSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const entry = await addFoodEntry(
+        name.trim(),
+        Math.max(0, parseFloat(calories) || 0),
+        Math.max(0, parseFloat(protein) || 0),
+        Math.max(0, parseFloat(carbs) || 0),
+        Math.max(0, parseFloat(fat) || 0),
+        serving.trim() || "1 serving",
+        favorite
+      );
+      await addDailyLog(entry.id, dateStr(date), meal, 1);
+      setName("");
+      setCalories("");
+      setProtein("");
+      setCarbs("");
+      setFat("");
+      setServing("1 serving");
+      setFavorite(false);
+      load();
+      getFavoriteFoods().then(setFavorites);
+      setSnack("Food logged");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const quickLog = async (food: FoodEntry) => {
+    setSaving(true);
+    try {
+      await addDailyLog(food.id, dateStr(date), meal, 1);
+      load();
+      setSnack(`${food.name} logged`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const empty = logs.length === 0;
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+  const logContent = (
+    <>
       <View style={styles.header}>
         <IconButton icon="chevron-left" onPress={prev} accessibilityLabel="Previous day" />
         <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
@@ -130,13 +190,13 @@ export default function Nutrition() {
             </Text>
           </View>
         ) : (
-          MEALS.map((meal) => {
-            const items = logs.filter((l) => l.meal === meal);
+          MEALS.map((m) => {
+            const items = logs.filter((l) => l.meal === m);
             if (items.length === 0) return null;
             return (
-              <View key={meal} style={styles.section}>
+              <View key={m} style={styles.section}>
                 <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
-                  {MEAL_LABELS[meal]}
+                  {MEAL_LABELS[m]}
                 </Text>
                 {items.map((item) => (
                   <Card key={item.id} style={[styles.foodCard, { backgroundColor: theme.colors.surface }]}>
@@ -165,6 +225,115 @@ export default function Nutrition() {
           })
         )}
       </ScrollView>
+    </>
+  );
+
+  const addForm = (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.addContent}>
+      <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+        Add Food
+      </Text>
+
+      <View style={styles.meals}>
+        {MEALS.map((m) => (
+          <Chip
+            key={m}
+            selected={meal === m}
+            onPress={() => setMeal(m)}
+            accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: meal === m }}
+          >
+            {MEAL_LABELS[m]}
+          </Chip>
+        ))}
+      </View>
+
+      <TextInput label="Food name" value={name} onChangeText={setName} mode="outlined" style={styles.input} />
+      <TextInput label="Calories" value={calories} onChangeText={setCalories} keyboardType="numeric" mode="outlined" style={styles.input} />
+      <View style={styles.macroInputRow}>
+        <TextInput label="Protein (g)" value={protein} onChangeText={setProtein} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
+        <View style={{ width: 8 }} />
+        <TextInput label="Carbs (g)" value={carbs} onChangeText={setCarbs} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
+        <View style={{ width: 8 }} />
+        <TextInput label="Fat (g)" value={fat} onChangeText={setFat} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
+      </View>
+      <TextInput label="Serving size" value={serving} onChangeText={setServing} mode="outlined" style={styles.input} />
+
+      <Chip
+        selected={favorite}
+        onPress={() => setFavorite(!favorite)}
+        icon={favorite ? "heart" : "heart-outline"}
+        style={styles.favChip}
+        accessibilityLabel={favorite ? "Remove from favorites" : "Save as favorite"}
+        accessibilityRole="button"
+        accessibilityState={{ selected: favorite }}
+      >
+        Save as favorite
+      </Chip>
+
+      <Button
+        mode="contained"
+        onPress={inlineSave}
+        loading={saving}
+        disabled={saving || !name.trim()}
+        accessibilityLabel="Log food"
+      >
+        Log Food
+      </Button>
+
+      {favorites.length > 0 && (
+        <>
+          <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 24, marginBottom: 8 }}>
+            Quick Log Favorites
+          </Text>
+          {favorites.map((f) => (
+            <Card
+              key={f.id}
+              style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
+              onPress={() => quickLog(f)}
+              accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
+              accessibilityRole="button"
+            >
+              <Card.Content>
+                <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+                  {f.name}
+                </Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  {f.calories} cal · {f.protein}p · {f.carbs}c · {f.fat}f
+                </Text>
+              </Card.Content>
+            </Card>
+          ))}
+        </>
+      )}
+    </ScrollView>
+  );
+
+  if (layout.wide) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.wideRow}>
+          <View style={styles.wideLog}>{logContent}</View>
+          <View style={[styles.wideAdd, { borderLeftColor: theme.colors.outlineVariant }]}>
+            {addForm}
+          </View>
+        </View>
+        <Snackbar
+          visible={!!snack}
+          onDismiss={() => setSnack("")}
+          duration={4000}
+          action={{ label: "Undo", onPress: undo }}
+        >
+          {snack}
+        </Snackbar>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {logContent}
 
       <FAB
         icon="plus"
@@ -227,6 +396,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: 8 },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 80 },
+  addContent: { padding: 16, paddingBottom: 32 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 64 },
   section: { marginBottom: 16 },
   foodCard: { marginBottom: 6, borderRadius: 8 },
@@ -235,4 +405,13 @@ const styles = StyleSheet.create({
   macro: { marginBottom: 8 },
   macroHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   bar: { height: 6, borderRadius: 3 },
+  wideRow: { flex: 1, flexDirection: "row" },
+  wideLog: { flex: 6 },
+  wideAdd: { flex: 4, borderLeftWidth: StyleSheet.hairlineWidth },
+  meals: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12, gap: 8 },
+  input: { marginBottom: 12 },
+  macroInputRow: { flexDirection: "row" },
+  flex: { flex: 1 },
+  favChip: { marginBottom: 16 },
+  favCard: { marginBottom: 8, borderRadius: 8 },
 });

@@ -988,3 +988,82 @@ export async function getDailySummary(
     fat: row?.fat ?? 0,
   };
 }
+
+// --------------- CSV Export ---------------
+
+export type WorkoutCSVRow = {
+  date: string;
+  exercise: string;
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+  notes: string;
+};
+
+export type NutritionCSVRow = {
+  date: string;
+  meal: string;
+  food: string;
+  servings: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<WorkoutCSVRow>(
+    `SELECT
+       date(ws.started_at / 1000, 'unixepoch') AS date,
+       e.name AS exercise,
+       wset.set_number,
+       wset.weight,
+       wset.reps,
+       ws.duration_seconds,
+       ws.notes
+     FROM workout_sessions ws
+     JOIN workout_sets wset ON wset.session_id = ws.id
+     JOIN exercises e ON e.id = wset.exercise_id
+     WHERE ws.completed_at IS NOT NULL
+       AND ws.started_at >= ?
+     ORDER BY ws.started_at ASC, e.name ASC, wset.set_number ASC`,
+    [since]
+  );
+}
+
+export async function getNutritionCSVData(since: number): Promise<NutritionCSVRow[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<NutritionCSVRow>(
+    `SELECT
+       dl.date,
+       dl.meal,
+       f.name AS food,
+       dl.servings,
+       ROUND(f.calories * dl.servings, 1) AS calories,
+       ROUND(f.protein * dl.servings, 1) AS protein,
+       ROUND(f.carbs * dl.servings, 1) AS carbs,
+       ROUND(f.fat * dl.servings, 1) AS fat
+     FROM daily_log dl
+     JOIN food_entries f ON f.id = dl.food_entry_id
+     WHERE dl.date >= date(? / 1000, 'unixepoch')
+     ORDER BY dl.date ASC, dl.meal ASC`,
+    [since]
+  );
+}
+
+export async function getCSVCounts(since: number): Promise<{ sessions: number; entries: number }> {
+  const database = await getDatabase();
+  const s = await database.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM workout_sessions
+     WHERE completed_at IS NOT NULL AND started_at >= ?`,
+    [since]
+  );
+  const e = await database.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM daily_log
+     WHERE date >= date(? / 1000, 'unixepoch')`,
+    [since]
+  );
+  return { sessions: s?.count ?? 0, entries: e?.count ?? 0 };
+}
