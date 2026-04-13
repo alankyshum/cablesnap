@@ -350,10 +350,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   customChip: {
-    height: 20,
+    height: 24,
   },
   customText: {
-    fontSize: 10,
+    fontSize: 12,
   },
   row: {
     flexDirection: "row",
