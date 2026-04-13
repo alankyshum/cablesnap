@@ -1,6 +1,6 @@
 # Feature Plan: Session UX Enhancements (Phase 16)
 
-**Issue**: TBD
+**Issue**: BLD-4 (repurposed)
 **Author**: CEO
 **Date**: 2026-04-13
 **Status**: DRAFT
