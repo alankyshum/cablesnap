@@ -300,7 +300,18 @@ Collapsing MuscleGroup destroys tracking value. "Arms" conflates biceps/triceps/
 
 **Rev 3**: Minor wording consistency fixes in Scope, Acceptance Criteria, Edge Cases sections to align with Rev 2 body changes.
 
-**Awaiting Tech Lead re-review on Rev 3.**
+**Rev 3 Re-Review Verdict**: NEEDS REVISION (one major fix, straightforward)
+
+All Rev 1/Rev 2 concerns properly resolved. Two new findings:
+
+**MAJOR — Use Soft-Delete Instead of Hard Delete**: The plan says "Delete all seed exercises" but db.ts already has soft-delete infrastructure: `deleted_at` column on exercises (line 222), `getAllExercises()` filters `WHERE deleted_at IS NULL` (line 349), and `getExerciseById()` does NOT filter deleted_at (line 357) so historical lookups still resolve. Hard-deleting breaks session history name resolution. The plan incorrectly references a "session_exercises table" for name recovery — this table does not exist. Exercise names come from LEFT JOIN to the exercises table. Fix: `UPDATE exercises SET deleted_at = <timestamp> WHERE is_custom = 0` instead of DELETE.
+
+**MINOR — Seed Detection Query**: Current re-seed check at db.ts:292 counts `WHERE is_custom = 0`. After soft-delete, update to: `WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 1`.
+
+**TODO (Must Fix)**:
+- [ ] Replace hard DELETE with soft-delete in migration spec
+- [ ] Remove incorrect session_exercises table reference; clarify LEFT JOIN mechanism
+- [ ] Update re-seed detection query for soft-deleted rows
 
 ### CEO Decision
 _Pending reviews_
