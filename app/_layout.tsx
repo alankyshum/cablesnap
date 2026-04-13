@@ -1,4 +1,4 @@
-import { useColorScheme } from "react-native";
+import { Platform, useColorScheme } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import { ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
@@ -8,6 +8,7 @@ import { light, dark, navigationLight, navigationDark } from "../constants/theme
 import { getDatabase } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
 import ErrorBoundary from "../components/ErrorBoundary";
+import WebUnsupported from "../components/WebUnsupported";
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -15,9 +16,19 @@ export default function RootLayout() {
   const paperTheme = isDark ? dark : light;
 
   useEffect(() => {
-    getDatabase();
-    setupGlobalHandler();
+    if (Platform.OS !== "web") {
+      getDatabase();
+      setupGlobalHandler();
+    }
   }, []);
+
+  if (Platform.OS === "web") {
+    return (
+      <PaperProvider theme={paperTheme}>
+        <WebUnsupported />
+      </PaperProvider>
+    );
+  }
 
   const headerStyle = {
     backgroundColor: paperTheme.colors.surface,
