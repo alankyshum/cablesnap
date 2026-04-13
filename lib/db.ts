@@ -15,6 +15,7 @@ import type {
   Program,
   ProgramDay,
   ProgramLog,
+  MuscleGroup,
 } from "./types";
 import { seedExercises } from "./seed";
 
@@ -1983,4 +1984,113 @@ export async function getExerciseChartData(
      ) ORDER BY date ASC`,
     [exerciseId, limit]
   );
+}
+
+// ---- Muscle Volume Analysis ----
+
+export async function getMuscleVolumeForWeek(
+  weekStart: number
+): Promise<{ muscle: MuscleGroup; sets: number; exercises: number }[]> {
+  const database = await getDatabase();
+  const end = weekStart + 7 * 24 * 60 * 60 * 1000;
+
+  const rows = await database.getAllAsync<{
+    exercise_id: string;
+    primary_muscles: string | null;
+    sets: number;
+  }>(
+    `SELECT ws.exercise_id,
+            e.primary_muscles,
+            COUNT(*) AS sets
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
+     WHERE wss.completed_at IS NOT NULL
+       AND wss.completed_at >= ?
+       AND wss.completed_at < ?
+       AND ws.completed = 1
+     GROUP BY ws.exercise_id`,
+    [weekStart, end]
+  );
+
+  const map = new Map<MuscleGroup, { sets: number; exercises: Set<string> }>();
+
+  for (const row of rows) {
+    if (!row.primary_muscles) continue;
+    let muscles: MuscleGroup[];
+    try {
+      muscles = JSON.parse(row.primary_muscles);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(muscles) || muscles.length === 0) continue;
+
+    for (const m of muscles) {
+      const entry = map.get(m) ?? { sets: 0, exercises: new Set<string>() };
+      entry.sets += row.sets;
+      entry.exercises.add(row.exercise_id);
+      map.set(m, entry);
+    }
+  }
+
+  return Array.from(map.entries())
+    .map(([muscle, data]) => ({
+      muscle,
+      sets: data.sets,
+      exercises: data.exercises.size,
+    }))
+    .sort((a, b) => b.sets - a.sets);
+}
+
+export async function getMuscleVolumeTrend(
+  muscle: MuscleGroup,
+  weeks: number
+): Promise<{ week: string; sets: number }[]> {
+  const database = await getDatabase();
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - diff);
+
+  const oldest = new Date(monday);
+  oldest.setDate(oldest.getDate() - (weeks - 1) * 7);
+  const end = new Date(monday);
+  end.setDate(end.getDate() + 7);
+
+  const rows = await database.getAllAsync<{
+    primary_muscles: string | null;
+    completed_at: number;
+    sets: number;
+  }>(
+    `SELECT e.primary_muscles, wss.completed_at, COUNT(*) AS sets
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
+     WHERE wss.completed_at IS NOT NULL
+       AND wss.completed_at >= ?
+       AND wss.completed_at < ?
+       AND ws.completed = 1
+     GROUP BY ws.exercise_id, wss.id`,
+    [oldest.getTime(), end.getTime()]
+  );
+
+  // Bucket by week index
+  const buckets = new Array<number>(weeks).fill(0);
+  const oldestMs = oldest.getTime();
+
+  for (const row of rows) {
+    if (!row.primary_muscles) continue;
+    try {
+      const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
+      if (!muscles.includes(muscle)) continue;
+    } catch {
+      continue;
+    }
+    const idx = Math.floor((row.completed_at - oldestMs) / (7 * 24 * 60 * 60 * 1000));
+    if (idx >= 0 && idx < weeks) buckets[idx] += row.sets;
+  }
+
+  return buckets.map((sets, i) => ({ week: `W${i + 1}`, sets }));
 }

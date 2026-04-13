@@ -42,6 +42,7 @@ import {
 import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types";
 import { useLayout } from "../../lib/layout";
 import { KG_TO_LB, LB_TO_KG, toDisplay, toKg } from "../../lib/units";
+import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 
 type PR = { exercise_id: string; name: string; max_weight: number };
 type SessionRow = { id: string; name: string; started_at: number; duration_seconds: number | null; set_count: number };
@@ -127,7 +128,7 @@ export default function Progress() {
   useFocusEffect(
     useCallback(() => {
       if (segment === "workouts") loadWorkouts();
-      else loadBody();
+      else if (segment === "body") loadBody();
     }, [segment, loadWorkouts, loadBody])
   );
 
@@ -764,10 +765,15 @@ export default function Progress() {
           buttons={[
             { value: "workouts", label: "Workouts", accessibilityLabel: "Workouts progress" },
             { value: "body", label: "Body", accessibilityLabel: "Body metrics" },
+            { value: "muscles", label: "Muscles", accessibilityLabel: "Muscle volume analysis" },
           ]}
         />
       </View>
-      {segment === "workouts" ? renderWorkouts() : renderBody()}
+      {segment === "workouts"
+        ? renderWorkouts()
+        : segment === "body"
+          ? renderBody()
+          : <MuscleVolumeSegment />}
       {renderModal()}
     </View>
   );
