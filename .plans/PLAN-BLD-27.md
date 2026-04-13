@@ -193,7 +193,24 @@ Per knowledge base (quality-pipeline.md): "Embed Accessibility in Every Feature 
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: NEEDS REVISION** — 2 Critical, 4 Major issues found.
+
+**Critical:**
+1. FOREIGN KEY on `program_days.template_id` conflicts with hard-delete in `deleteTemplate()`. Recommend `ON DELETE SET NULL` with nullable template_id.
+2. Missing `deleted_at` column in programs table despite claiming soft-delete.
+
+**Major:**
+3. Segmented control default not specified (should be Programs when active program exists).
+4. Day label fallback when empty not specified (should show template name).
+5. No cycle completion UX when program wraps from last day to first.
+6. Missing guard for program deletion during active session.
+
+**Strengths:** Good UX (segmented control, auto-advance, Next Workout banner), well-covered edge cases, correct use of learned patterns, embedded accessibility spec.
+
+Fix Critical + Major items and re-submit.
+
+_Reviewed 2026-04-13 by quality-director_
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** (2 Critical, 2 Major)
