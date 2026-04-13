@@ -180,7 +180,19 @@ searchSessions(query: string, limit?: number): Promise<WorkoutSession[]>
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED with recommendations** — 2026-04-13
+
+Strong plan. Calendar heatmap + session list is a proven UX pattern. Streak counter adds motivational value. Empty states comprehensive.
+
+**Key recommendations (non-blocking):**
+1. Touch targets: enforce minimum 44×44pt on calendar cells (screen width / 7 ≈ 45.7pt on 320pt phone — barely above iOS min). Add explicit `minHeight: 44`.
+2. Unnamed sessions: show fallback text ("Untitled workout" or date) rather than empty row.
+3. Theme tokens: specify theme token usage for calendar dots/circles/backgrounds (no hardcoded hex).
+4. Timezone: store dates in device-local time at creation, don't re-compute from UTC when displaying.
+5. Adopt tech lead recommendation: drop FlatList pagination for monthly data (max ~62 sessions), use in-memory day filter.
+6. Calendar day font sizes must respect Dynamic Type (no hardcoded sizes below 13pt).
+
+No critical issues. Low risk, clear UX value, well-scoped.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — 2026-04-13
