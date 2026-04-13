@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 29
+Total learnings: 31
 
 ## How to Use This Knowledge Base
 
@@ -18,12 +18,12 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
-- [Build Configuration](pitfalls/build-config.md) — 1 learning
+- [Build Configuration](pitfalls/build-config.md) — 2 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 3 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 2 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 3 learnings
 - [PR Workflow](process/pr-workflow.md) — 1 learning
 
 ### Decisions
@@ -36,6 +36,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-8 | Expo Router: New Screen Files Require Explicit Stack.Screen Registration | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-13 | BLD-8 | Documented Pitfalls Still Recur — Agents Must Read Learnings Before Implementation | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-13 | BLD-20 | Numeric Map Keys Collide Across Unit Systems — Use Unit-Qualified Keys | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-13 | BLD-21 | MD3 Container Tokens Need Separate Light/Dark Values for WCAG Contrast | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-13 | BLD-2 | Use Refs for Non-Rendering State Inside useFocusEffect | Patterns | [react-native.md](patterns/react-native.md) |
