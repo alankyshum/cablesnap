@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   AccessibilityInfo,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -22,11 +23,13 @@ import {
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useKeepAwake } from "expo-keep-awake";
 import {
   addSet,
   cancelSession,
   completeSession,
   completeSet,
+  getBodySettings,
   getMaxWeightByExercise,
   getSessionById,
   getSessionSets,
@@ -66,6 +69,7 @@ const RPE_LABELS: Record<number, string> = {
 };
 
 export default function ActiveSession() {
+  useKeepAwake();
   const theme = useTheme();
   const router = useRouter();
   const { id, templateId } = useLocalSearchParams<{
@@ -88,6 +92,9 @@ export default function ActiveSession() {
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [step, setStep] = useState(2.5);
+  const restFlash = useRef(new Animated.Value(0)).current;
+  const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -114,6 +121,10 @@ export default function ActiveSession() {
     }
 
     const sets = await getSessionSets(id);
+
+    // Fetch weight step from body settings
+    const body = await getBodySettings();
+    setStep(body.weight_unit === "lb" ? 5 : 2.5);
 
     // Build previous data
     const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
@@ -179,6 +190,20 @@ export default function ActiveSession() {
               for (let i = 1; i <= te.target_sets; i++) {
                 await addSet(id, te.exercise_id, i);
               }
+            }
+          }
+
+          // Auto-fill weight from previous session
+          const created = await getSessionSets(id);
+          const exerciseIds = [...new Set(created.map((s) => s.exercise_id))];
+          const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
+          for (const eid of exerciseIds) {
+            prevCache[eid] = await getPreviousSets(eid, id);
+          }
+          for (const s of created) {
+            const prev = prevCache[s.exercise_id]?.find((p) => p.set_number === s.set_number);
+            if (prev && prev.weight != null) {
+              await updateSet(s.id, prev.weight, null);
             }
           }
         }
@@ -268,7 +293,23 @@ export default function ActiveSession() {
   const prevRest = useRef(0);
   useEffect(() => {
     if (prevRest.current > 0 && rest === 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Triple-burst haptic pattern
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      const t1 = setTimeout(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      }, 300);
+      const t2 = setTimeout(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }, 600);
+      restHapticTimers.current = [t1, t2];
+
+      // Flash animation on rest timer card
+      restFlash.setValue(1);
+      Animated.timing(restFlash, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: false,
+      }).start();
     }
     prevRest.current = rest;
   }, [rest]);
@@ -277,8 +318,16 @@ export default function ActiveSession() {
     return () => {
       if (restRef.current) clearInterval(restRef.current);
       if (hintTimer.current) clearTimeout(hintTimer.current);
+      for (const t of restHapticTimers.current) clearTimeout(t);
     };
   }, []);
+
+  const handleStep = (set: SetWithMeta, dir: 1 | -1) => {
+    const current = set.weight != null ? set.weight : 0;
+    const val = Math.max(0, current + dir * step);
+    handleUpdate(set.id, "weight", String(val));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   const handleCheck = async (set: SetWithMeta) => {
     if (set.completed) {
@@ -467,7 +516,18 @@ export default function ActiveSession() {
         contentContainerStyle={styles.content}
       >
         {rest > 0 && (
-          <View style={[styles.restBanner, { backgroundColor: theme.colors.primaryContainer }]} accessibilityLiveRegion="polite">
+          <Animated.View
+            style={[
+              styles.restBanner,
+              {
+                backgroundColor: restFlash.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [theme.colors.primaryContainer, theme.colors.primary],
+                }),
+              },
+            ]}
+            accessibilityLiveRegion="polite"
+          >
             <Text variant="headlineLarge" style={{ color: theme.colors.onPrimaryContainer, fontWeight: "700" }} accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds`}>
               {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
             </Text>
@@ -484,7 +544,7 @@ export default function ActiveSession() {
             >
               Skip
             </Button>
-          </View>
+          </Animated.View>
         )}
 
         {/* Next exercise hint for supersets */}
@@ -587,16 +647,36 @@ export default function ActiveSession() {
                   >
                     {set.previous}
                   </Text>
-                  <TextInput
-                    mode="outlined"
-                    dense
-                    keyboardType="numeric"
-                    style={styles.colInput}
-                    value={set.weight != null ? String(set.weight) : ""}
-                    onChangeText={(v) => handleUpdate(set.id, "weight", v)}
-                    placeholder="-"
-                    accessibilityLabel={`Set ${set.set_number} weight`}
-                  />
+                  <View style={styles.weightCol}>
+                    <IconButton
+                      icon="minus"
+                      size={24}
+                      onPress={() => handleStep(set, -1)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityLabel={`Decrease weight by ${step}`}
+                      accessibilityRole="button"
+                      style={styles.stepBtn}
+                    />
+                    <TextInput
+                      mode="outlined"
+                      dense
+                      keyboardType="numeric"
+                      style={styles.weightInput}
+                      value={set.weight != null ? String(set.weight) : ""}
+                      onChangeText={(v) => handleUpdate(set.id, "weight", v)}
+                      placeholder="-"
+                      accessibilityLabel={`Set ${set.set_number} weight`}
+                    />
+                    <IconButton
+                      icon="plus"
+                      size={24}
+                      onPress={() => handleStep(set, 1)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityLabel={`Increase weight by ${step}`}
+                      accessibilityRole="button"
+                      style={styles.stepBtn}
+                    />
+                  </View>
                   <TextInput
                     mode="outlined"
                     dense
@@ -946,5 +1026,20 @@ const styles = StyleSheet.create({
   },
   notesInput: {
     fontSize: 13,
+  },
+  weightCol: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 2,
+  },
+  weightInput: {
+    flex: 1,
+    height: 36,
+    fontSize: 14,
+  },
+  stepBtn: {
+    margin: 0,
+    padding: 0,
   },
 });
