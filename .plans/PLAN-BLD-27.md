@@ -3,7 +3,7 @@
 **Issue**: BLD-6
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT
+**Status**: IN_REVIEW
 
 ## Problem Statement
 
