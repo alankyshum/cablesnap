@@ -42,12 +42,6 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         return instance;
       } catch (err) {
         if (Platform.OS === "web") {
-          if (__DEV__) {
-            console.warn(
-              "expo-sqlite: OPFS unavailable, using in-memory database. Data will not persist across reloads.",
-              err,
-            );
-          }
           try {
             const instance = await SQLite.openDatabaseAsync(":memory:");
             await migrate(instance);

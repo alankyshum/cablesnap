@@ -14,6 +14,7 @@ export default function RootLayout() {
   const isDark = scheme === "dark";
   const paperTheme = isDark ? dark : light;
   const [banner, setBanner] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getDatabase()
@@ -21,7 +22,7 @@ export default function RootLayout() {
         if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
       })
       .catch((err) => {
-        console.error("Database initialization failed:", err);
+        setError(err?.message ?? "Failed to initialize database");
       });
     setupGlobalHandler();
   }, []);
@@ -41,6 +42,13 @@ export default function RootLayout() {
             icon="alert-circle-outline"
           >
             Web storage unavailable — using in-memory database. Your data will not persist across page reloads.
+          </Banner>
+          <Banner
+            visible={!!error}
+            actions={[{ label: "Retry", onPress: () => { setError(null); getDatabase().catch(() => {}); } }]}
+            icon="alert"
+          >
+            Database error: {error}. Try reloading the app.
           </Banner>
           <Stack
             screenOptions={{
