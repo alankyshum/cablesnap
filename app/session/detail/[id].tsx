@@ -13,6 +13,7 @@ type ExerciseGroup = {
   exercise_id: string;
   name: string;
   sets: SetWithName[];
+  link_id: string | null;
 };
 
 export default function SessionDetail() {
@@ -41,6 +42,7 @@ export default function SessionDetail() {
             exercise_id: s.exercise_id,
             name: s.exercise_name ?? "Unknown",
             sets: [],
+            link_id: s.link_id ?? null,
           });
         }
         map.get(s.exercise_id)!.sets.push(s);
@@ -211,8 +213,27 @@ export default function SessionDetail() {
         )}
 
         {/* Exercise breakdown */}
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
+          const isFirst = group.link_id ? linked[0]?.exercise_id === group.exercise_id : false;
+          const isLast = group.link_id ? linked[linked.length - 1]?.exercise_id === group.exercise_id : false;
+          const label = group.link_id
+            ? linked.length >= 3 ? "Circuit" : "Superset"
+            : "";
+
+          return (
           <View key={group.exercise_id} style={styles.group}>
+            {isFirst && group.link_id && (
+              <View
+                style={[styles.linkHeader, { borderLeftColor: theme.colors.tertiary }]}
+                accessibilityLabel={`${label}: ${linked.map((g) => g.name).join(" and ")}`}
+              >
+                <Text variant="labelMedium" style={{ color: theme.colors.tertiary, fontWeight: "700" }}>
+                  {label}
+                </Text>
+              </View>
+            )}
+            <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: theme.colors.tertiary, paddingLeft: 8 } : undefined}>
             <Text
               variant="titleMedium"
               style={[styles.groupTitle, { color: theme.colors.primary }]}
@@ -228,7 +249,7 @@ export default function SessionDetail() {
                       variant="bodyMedium"
                       style={[styles.setNum, { color: theme.colors.onSurface }]}
                     >
-                      Set {set.set_number}
+                      {set.round ? `R${set.round}` : `Set ${set.set_number}`}
                     </Text>
                     <Text
                       variant="bodyMedium"
@@ -254,9 +275,14 @@ export default function SessionDetail() {
                   ) : null}
                 </View>
               ))}
+            </View>
+            {isLast && group.link_id && (
+              <View style={{ height: 4, backgroundColor: theme.colors.tertiary, borderRadius: 2 }} />
+            )}
             <Divider style={styles.divider} />
           </View>
-        ))}
+          );
+        })}
 
         {/* Notes */}
         {session.notes ? (
@@ -350,6 +376,12 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: 8,
     marginBottom: 12,
+  },
+  linkHeader: {
+    borderLeftWidth: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 4,
   },
   notes: {
     marginTop: 8,
