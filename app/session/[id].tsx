@@ -501,12 +501,23 @@ export default function ActiveSession() {
         options={{
           title: session.name,
           headerRight: () => (
-            <Text
-              variant="labelLarge"
-              style={{ color: theme.colors.primary, marginRight: 8 }}
-            >
-              {formatTime(elapsed)}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <IconButton
+                icon="calculator-variant"
+                size={22}
+                onPress={() => router.push("/tools/plates")}
+                accessibilityLabel="Open plate calculator"
+                accessibilityRole="button"
+                iconColor={theme.colors.onSurface}
+                style={{ marginRight: 0 }}
+              />
+              <Text
+                variant="labelLarge"
+                style={{ color: theme.colors.primary, marginRight: 8 }}
+              >
+                {formatTime(elapsed)}
+              </Text>
+            </View>
           ),
         }}
       />

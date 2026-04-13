@@ -1,9 +1,10 @@
-import { Tabs } from "expo-router";
-import { useTheme } from "react-native-paper";
+import { Tabs, useRouter } from "expo-router";
+import { IconButton, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 export default function TabLayout() {
   const theme = useTheme();
+  const router = useRouter();
 
   return (
     <Tabs
@@ -26,6 +27,16 @@ export default function TabLayout() {
           title: "Workouts",
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="dumbbell" size={size} color={color} />
+          ),
+          headerRight: () => (
+            <IconButton
+              icon="calculator-variant"
+              size={24}
+              onPress={() => router.push("/tools/plates")}
+              accessibilityLabel="Open plate calculator"
+              accessibilityRole="button"
+              iconColor={theme.colors.onSurface}
+            />
           ),
         }}
       />

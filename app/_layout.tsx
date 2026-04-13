@@ -186,6 +186,15 @@ export default function RootLayout() {
                 headerTintColor,
               }}
             />
+            <Stack.Screen
+              name="tools/plates"
+              options={{
+                headerShown: true,
+                title: "Plate Calculator",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
