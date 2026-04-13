@@ -3,7 +3,7 @@
 **Issue**: BLD-4 (repurposed)
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -51,7 +51,7 @@ Four targeted improvements to the session screen (`app/session/[id].tsx`) plus o
 - Tapping plus adds one step to current weight; tapping minus subtracts one step
 - If weight field is empty, plus starts from the step value (2.5 or 5)
 - Minus cannot go below 0 (clamps to 0)
-- Buttons are compact (24x24dp icon buttons) to not crowd the set row
+- Buttons are compact (24dp icon, 48dp touch target via hitSlop) to not crowd the set row
 - Light haptic feedback on tap (`ImpactFeedbackStyle.Light`)
 
 #### 4. Enhanced Rest Timer Completion Alert
@@ -183,4 +183,12 @@ Implementation notes:
 Reviewed: 2026-04-13
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-13)
+
+All reviewers agree. Incorporating mandatory fixes into implementation spec:
+1. Step button touch targets must be 48dp minimum (hitSlop={{top:12,bottom:12,left:12,right:12}})
+2. Add expo-keep-awake as explicit dep via `npx expo install expo-keep-awake`
+3. Wrap weight+step buttons in flex:1 container for layout symmetry
+4. Batch auto-fill updateSet calls, single load() at end
+5. Clear setTimeout refs in haptic useEffect cleanup
+6. Use useNativeDriver: false for backgroundColor animation, clean up on unmount
