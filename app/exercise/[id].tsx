@@ -439,10 +439,17 @@ export default function ExerciseDetail() {
     </View>
   );
 
+  const rpeColor = (val: number): string => {
+    if (val <= 7) return semantic.beginner;
+    if (val <= 8) return semantic.intermediate;
+    return semantic.advanced;
+  };
+
   const renderItem = ({ item }: { item: ExerciseSession }) => {
+    const rpeLabel = item.avg_rpe != null ? `, avg RPE ${Math.round(item.avg_rpe * 10) / 10}` : "";
     const label = bw
-      ? `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max reps ${item.max_reps}`
-      : `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max weight ${toDisplay(item.max_weight, unit)} ${unit}`;
+      ? `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max reps ${item.max_reps}${rpeLabel}`
+      : `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max weight ${toDisplay(item.max_weight, unit)} ${unit}${rpeLabel}`;
     return (
       <Pressable
         onPress={() => router.push(`/session/detail/${item.session_id}`)}
@@ -462,6 +469,13 @@ export default function ExerciseDetail() {
           <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
             {bw ? `${item.max_reps} reps` : `${toDisplay(item.max_weight, unit)} ${unit}`}
           </Text>
+          {item.avg_rpe != null && (
+            <View style={[styles.rpeBadge, { backgroundColor: rpeColor(item.avg_rpe) }]}>
+              <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+                RPE {Math.round(item.avg_rpe * 10) / 10}
+              </Text>
+            </View>
+          )}
         </View>
       </Pressable>
     );
@@ -606,5 +620,12 @@ const styles = StyleSheet.create({
   },
   historyRight: {
     marginLeft: 12,
+    alignItems: "flex-end",
+  },
+  rpeBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 4,
   },
 });
