@@ -1460,3 +1460,104 @@ export async function getBodyMeasurementsCSVData(since: number): Promise<BodyMea
     [cutoff]
   );
 }
+
+// --------------- Workout Insights (PR Detection) ---------------
+
+export async function getMaxWeightByExercise(
+  exerciseIds: string[],
+  excludeSessionId: string
+): Promise<Record<string, number>> {
+  if (exerciseIds.length === 0) return {};
+  const database = await getDatabase();
+  const placeholders = exerciseIds.map(() => "?").join(", ");
+  const rows = await database.getAllAsync<{ exercise_id: string; max_weight: number }>(
+    `SELECT ws.exercise_id, MAX(ws.weight) AS max_weight
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id IN (${placeholders})
+       AND ws.session_id != ?
+       AND ws.completed = 1
+       AND ws.weight IS NOT NULL
+       AND ws.weight > 0
+       AND wss.completed_at IS NOT NULL
+     GROUP BY ws.exercise_id`,
+    [...exerciseIds, excludeSessionId]
+  );
+  const result: Record<string, number> = {};
+  for (const r of rows) {
+    result[r.exercise_id] = r.max_weight;
+  }
+  return result;
+}
+
+export async function getSessionPRs(
+  sessionId: string
+): Promise<{ exercise_id: string; name: string; weight: number; previous_max: number }[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<{ exercise_id: string; name: string; weight: number; previous_max: number }>(
+    `SELECT cur.exercise_id,
+            COALESCE(e.name, 'Deleted Exercise') AS name,
+            cur.max_weight AS weight,
+            hist.max_weight AS previous_max
+     FROM (
+       SELECT ws.exercise_id, MAX(ws.weight) AS max_weight
+       FROM workout_sets ws
+       WHERE ws.session_id = ?
+         AND ws.completed = 1
+         AND ws.weight IS NOT NULL
+         AND ws.weight > 0
+       GROUP BY ws.exercise_id
+     ) cur
+     JOIN (
+       SELECT ws.exercise_id, MAX(ws.weight) AS max_weight
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.session_id != ?
+         AND ws.completed = 1
+         AND ws.weight IS NOT NULL
+         AND ws.weight > 0
+         AND wss.completed_at IS NOT NULL
+       GROUP BY ws.exercise_id
+     ) hist ON cur.exercise_id = hist.exercise_id
+     LEFT JOIN exercises e ON cur.exercise_id = e.id
+     WHERE cur.max_weight > hist.max_weight
+     ORDER BY name ASC`,
+    [sessionId, sessionId]
+  );
+}
+
+export async function getRecentPRs(
+  limit: number = 5
+): Promise<{ exercise_id: string; name: string; weight: number; session_id: string; date: number }[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<{ exercise_id: string; name: string; weight: number; session_id: string; date: number }>(
+    `SELECT ws.exercise_id,
+            COALESCE(e.name, 'Deleted Exercise') AS name,
+            MAX(ws.weight) AS weight,
+            ws.session_id,
+            wss.started_at AS date
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
+     WHERE ws.completed = 1
+       AND ws.weight IS NOT NULL
+       AND ws.weight > 0
+       AND wss.completed_at IS NOT NULL
+       AND ws.weight > COALESCE(
+         (SELECT MAX(ws2.weight)
+          FROM workout_sets ws2
+          JOIN workout_sessions wss2 ON ws2.session_id = wss2.id
+          WHERE ws2.exercise_id = ws.exercise_id
+            AND ws2.session_id != ws.session_id
+            AND ws2.completed = 1
+            AND ws2.weight IS NOT NULL
+            AND ws2.weight > 0
+            AND wss2.completed_at IS NOT NULL
+            AND wss2.started_at < wss.started_at
+         ), 0)
+     GROUP BY ws.session_id, ws.exercise_id
+     ORDER BY wss.started_at DESC
+     LIMIT ?`,
+    [limit]
+  );
+}

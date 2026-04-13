@@ -13,11 +13,13 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   deleteTemplate,
   getActiveSession,
   getAllCompletedSessionWeeks,
+  getRecentPRs,
   getRecentSessions,
   getSessionSetCount,
   getTemplateExerciseCount,
@@ -54,17 +56,20 @@ export default function Workouts() {
   const [setCounts2, setSetCounts] = useState<Record<string, number>>({});
   const [active, setActive] = useState<WorkoutSession | null>(null);
   const [streak, setStreak] = useState(0);
+  const [recentPRs, setRecentPRs] = useState<{ exercise_id: string; name: string; weight: number; session_id: string; date: number }[]>([]);
 
   const load = useCallback(async () => {
-    const [tpls, sess, act, timestamps] = await Promise.all([
+    const [tpls, sess, act, timestamps, prData] = await Promise.all([
       getTemplates(),
       getRecentSessions(5),
       getActiveSession(),
       getAllCompletedSessionWeeks(),
+      getRecentPRs(5),
     ]);
     setTemplates(tpls);
     setSessions(sess);
     setActive(act);
+    setRecentPRs(prData);
 
     // Calculate streak in JS: consecutive weeks with >= 1 workout
     setStreak(computeStreak(timestamps));
@@ -258,6 +263,65 @@ export default function Workouts() {
         </Card>
       )}
 
+      {/* Recent Personal Records */}
+      <Card
+        style={[styles.prCard, { backgroundColor: theme.colors.surface }]}
+        accessibilityLabel="Recent personal records"
+      >
+        <Card.Content>
+          <View style={styles.prHeader}>
+            <MaterialCommunityIcons name="trophy" size={20} color={theme.colors.primary} />
+            <Text
+              variant="titleMedium"
+              style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+            >
+              Recent Personal Records
+            </Text>
+          </View>
+          {recentPRs.length === 0 ? (
+            <Text
+              variant="bodyMedium"
+              style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", paddingVertical: 12 }}
+              accessibilityLabel="No personal records yet. Complete workouts to start tracking."
+            >
+              Complete workouts to start tracking PRs!
+            </Text>
+          ) : (
+            recentPRs.map((pr, i) => (
+              <Card
+                key={`${pr.session_id}-${pr.exercise_id}`}
+                style={[styles.prRow, i < recentPRs.length - 1 && styles.prRowSpaced]}
+                onPress={() => router.push(`/session/detail/${pr.session_id}`)}
+                accessibilityLabel={`Personal record: ${pr.name}, ${pr.weight}, achieved on ${new Date(pr.date).toLocaleDateString()}`}
+                accessibilityRole="button"
+              >
+                <Card.Content style={styles.prRowContent}>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onSurface, flex: 1 }}
+                    numberOfLines={1}
+                  >
+                    {pr.name}
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.primary, fontWeight: "600", marginHorizontal: 8 }}
+                  >
+                    {pr.weight}
+                  </Text>
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: theme.colors.onSurfaceVariant }}
+                  >
+                    {new Date(pr.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </Text>
+                </Card.Content>
+              </Card>
+            ))
+          )}
+        </Card.Content>
+      </Card>
+
       {/* Recent Workouts */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -343,6 +407,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  prCard: {
+    marginBottom: 16,
+  },
+  prHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  prRow: {
+    elevation: 0,
+    minHeight: 48,
+  },
+  prRowSpaced: {
+    marginBottom: 4,
+  },
+  prRowContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 48,
   },
   quickStartContent: {
     paddingVertical: 8,
