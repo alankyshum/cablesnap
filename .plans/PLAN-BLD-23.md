@@ -1,7 +1,7 @@
 # PLAN: Body Weight & Measurements Tracking (Phase 7)
 
 **BLD-23** | Priority: High | Project: FitForge
-**Status**: DRAFT → **REVISION 1** (addressing QD feedback)
+**Status**: ~~DRAFT~~ → ~~REVISION 1~~ → **APPROVED** (2026-04-13)
 
 ## Problem Statement
 
@@ -272,7 +272,7 @@ Technical feasibility confirmed. No new dependencies required. All patterns (Seg
 Complexity: Medium | Risk: Low | New dependencies: None
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-13) — Both QD and techlead approved. Proceeding to implementation.
 
 ---
 
