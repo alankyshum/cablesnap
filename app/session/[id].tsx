@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AccessibilityInfo,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -11,6 +14,7 @@ import {
   Checkbox,
   Chip,
   Divider,
+  IconButton,
   Snackbar,
   Text,
   TextInput,
@@ -31,6 +35,8 @@ import {
   getRestSecondsForExercise,
   uncompleteSet,
   updateSet,
+  updateSetRPE,
+  updateSetNotes,
 } from "../../lib/db";
 import {
   getSessionProgramDayId,
@@ -38,6 +44,7 @@ import {
   advanceProgram,
 } from "../../lib/programs";
 import type { WorkoutSession, WorkoutSet } from "../../lib/types";
+import { semantic } from "../../constants/theme";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -49,6 +56,18 @@ type ExerciseGroup = {
   name: string;
   sets: SetWithMeta[];
 };
+
+const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
+
+const RPE_LABELS: Record<number, string> = {
+  6: "Easy", 7: "Easy", 8: "Mod", 9: "Hard", 10: "Max",
+};
+
+function rpeColor(val: number): string {
+  if (val <= 7) return semantic.beginner;
+  if (val <= 8) return semantic.intermediate;
+  return semantic.advanced;
+}
 
 export default function ActiveSession() {
   const theme = useTheme();
@@ -68,6 +87,8 @@ export default function ActiveSession() {
   const prevExerciseIds = useRef<string>("");
   const prHapticFired = useRef<Set<string>>(new Set());
   const [snackbar, setSnackbar] = useState("");
+  const [notesOpen, setNotesOpen] = useState<Record<string, boolean>>({});
+  const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -245,6 +266,29 @@ export default function ActiveSession() {
     router.push(`/template/pick-exercise?sessionId=${id}`);
   };
 
+  const handleRPE = async (set: SetWithMeta, val: number) => {
+    const next = set.rpe === val ? null : val;
+    await updateSetRPE(set.id, next);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await load();
+  };
+
+  const handleHalfStep = async (setId: string, val: number) => {
+    await updateSetRPE(setId, val);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setHalfStep(null);
+    await load();
+  };
+
+  const handleNotes = async (setId: string, text: string) => {
+    await updateSetNotes(setId, text);
+    await load();
+  };
+
+  const toggleNotes = (setId: string) => {
+    setNotesOpen((prev) => ({ ...prev, [setId]: !prev[setId] }));
+  };
+
   const isPR = (set: SetWithMeta) => {
     if (!set.completed || !set.weight || set.weight <= 0) return false;
     const max = maxes[set.exercise_id];
@@ -360,8 +404,9 @@ export default function ActiveSession() {
           ),
         }}
       />
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
       <ScrollView
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={{ backgroundColor: theme.colors.background }}
         contentContainerStyle={styles.content}
       >
         {rest > 0 && (
@@ -424,67 +469,178 @@ export default function ActiveSession() {
             </View>
 
             {group.sets.map((set) => (
-              <View
-                key={set.id}
-                style={[
-                  styles.setRow,
-                  set.completed && {
-                    backgroundColor: theme.colors.primaryContainer + "40",
-                  },
-                ]}
-              >
-                <Text
-                  variant="bodyMedium"
-                  style={[styles.colSet, { color: theme.colors.onSurface }]}
-                >
-                  {set.set_number}
-                </Text>
-                <Text
-                  variant="bodySmall"
+              <View key={set.id}>
+                <View
                   style={[
-                    styles.colPrev,
-                    { color: theme.colors.onSurfaceVariant },
+                    styles.setRow,
+                    set.completed && {
+                      backgroundColor: theme.colors.primaryContainer + "40",
+                    },
                   ]}
                 >
-                  {set.previous}
-                </Text>
-                <TextInput
-                  mode="outlined"
-                  dense
-                  keyboardType="numeric"
-                  style={styles.colInput}
-                  value={set.weight != null ? String(set.weight) : ""}
-                  onChangeText={(v) => handleUpdate(set.id, "weight", v)}
-                  placeholder="-"
-                  accessibilityLabel={`Set ${set.set_number} weight`}
-                />
-                <TextInput
-                  mode="outlined"
-                  dense
-                  keyboardType="numeric"
-                  style={styles.colInput}
-                  value={set.reps != null ? String(set.reps) : ""}
-                  onChangeText={(v) => handleUpdate(set.id, "reps", v)}
-                  placeholder="-"
-                  accessibilityLabel={`Set ${set.set_number} reps`}
-                />
-                <View style={styles.colCheck} accessible accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`} accessibilityRole="checkbox" accessibilityState={{ checked: set.completed }}>
-                  <Checkbox
-                    status={set.completed ? "checked" : "unchecked"}
-                    onPress={() => handleCheck(set)}
+                  <Text
+                    variant="bodyMedium"
+                    style={[styles.colSet, { color: theme.colors.onSurface }]}
+                  >
+                    {set.set_number}
+                  </Text>
+                  <Text
+                    variant="bodySmall"
+                    style={[
+                      styles.colPrev,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {set.previous}
+                  </Text>
+                  <TextInput
+                    mode="outlined"
+                    dense
+                    keyboardType="numeric"
+                    style={styles.colInput}
+                    value={set.weight != null ? String(set.weight) : ""}
+                    onChangeText={(v) => handleUpdate(set.id, "weight", v)}
+                    placeholder="-"
+                    accessibilityLabel={`Set ${set.set_number} weight`}
+                  />
+                  <TextInput
+                    mode="outlined"
+                    dense
+                    keyboardType="numeric"
+                    style={styles.colInput}
+                    value={set.reps != null ? String(set.reps) : ""}
+                    onChangeText={(v) => handleUpdate(set.id, "reps", v)}
+                    placeholder="-"
+                    accessibilityLabel={`Set ${set.set_number} reps`}
+                  />
+                  <View style={styles.colCheck} accessible accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`} accessibilityRole="checkbox" accessibilityState={{ checked: set.completed }}>
+                    <Checkbox
+                      status={set.completed ? "checked" : "unchecked"}
+                      onPress={() => handleCheck(set)}
+                    />
+                  </View>
+                  {isPR(set) && (
+                    <Chip
+                      compact
+                      icon="trophy"
+                      style={{ backgroundColor: theme.colors.tertiaryContainer }}
+                      textStyle={styles.prChipText}
+                      accessibilityLabel="New personal record"
+                      accessibilityRole="text"
+                    >
+                      PR
+                    </Chip>
+                  )}
+                  <IconButton
+                    icon={set.notes ? "note-text" : "note-text-outline"}
+                    size={18}
+                    onPress={() => toggleNotes(set.id)}
+                    accessibilityLabel="Set notes"
                   />
                 </View>
-                {isPR(set) && (
-                  <Chip
-                    compact
-                    icon="trophy"
-                    style={{ backgroundColor: theme.colors.tertiaryContainer }}
-                    textStyle={styles.prChipText}
-                    accessibilityLabel="New personal record"
-                    accessibilityRole="text"
+
+                {/* RPE chips — visible only for completed sets */}
+                {set.completed && (
+                  <View
+                    style={styles.rpeRow}
+                    accessibilityLabel="Rate of perceived exertion"
+                    accessibilityRole="radiogroup"
                   >
-                    PR
-                  </Chip>
+                    {RPE_CHIPS.map((val) => {
+                      const selected = set.rpe === val;
+                      return (
+                        <Pressable
+                          key={val}
+                          onPress={() => handleRPE(set, val)}
+                          onLongPress={() => setHalfStep({ setId: set.id, base: val })}
+                          style={[
+                            styles.rpeChip,
+                            { borderColor: rpeColor(val) },
+                            selected && { backgroundColor: rpeColor(val) },
+                          ]}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected }}
+                          accessibilityLabel={`RPE ${val} ${RPE_LABELS[val]}`}
+                        >
+                          <Text style={[
+                            styles.rpeChipText,
+                            { color: selected ? semantic.onSemantic : rpeColor(val) },
+                          ]}>
+                            {val} {RPE_LABELS[val]}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Half-step picker overlay */}
+                {halfStep && halfStep.setId === set.id && (
+                  <View style={[styles.halfStepRow, { backgroundColor: theme.colors.surfaceVariant }]}>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginRight: 8, fontSize: 12 }}>
+                      Half-step:
+                    </Text>
+                    {halfStep.base > 6 && (
+                      <Pressable
+                        onPress={() => handleHalfStep(set.id, halfStep.base - 0.5)}
+                        style={[styles.halfChip, { borderColor: rpeColor(halfStep.base - 0.5) }]}
+                        accessibilityLabel={`RPE ${halfStep.base - 0.5}`}
+                      >
+                        <Text style={[styles.rpeChipText, { color: rpeColor(halfStep.base - 0.5) }]}>
+                          {halfStep.base - 0.5}
+                        </Text>
+                      </Pressable>
+                    )}
+                    {halfStep.base < 10 && (
+                      <Pressable
+                        onPress={() => handleHalfStep(set.id, halfStep.base + 0.5)}
+                        style={[styles.halfChip, { borderColor: rpeColor(halfStep.base + 0.5) }]}
+                        accessibilityLabel={`RPE ${halfStep.base + 0.5}`}
+                      >
+                        <Text style={[styles.rpeChipText, { color: rpeColor(halfStep.base + 0.5) }]}>
+                          {halfStep.base + 0.5}
+                        </Text>
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={() => setHalfStep(null)}
+                      style={[styles.halfChip, { borderColor: theme.colors.outline }]}
+                      accessibilityLabel="Cancel half-step picker"
+                    >
+                      <Text style={[styles.rpeChipText, { color: theme.colors.onSurfaceVariant }]}>✕</Text>
+                    </Pressable>
+                  </View>
+                )}
+
+                {/* RPE badge for half-step values */}
+                {set.completed && set.rpe != null && !Number.isInteger(set.rpe) && (
+                  <View style={styles.rpeBadgeRow}>
+                    <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
+                      <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+                        RPE {set.rpe}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Notes input */}
+                {notesOpen[set.id] && (
+                  <View style={styles.notesContainer}>
+                    <TextInput
+                      mode="outlined"
+                      dense
+                      placeholder="Add notes..."
+                      value={set.notes}
+                      onChangeText={(v) => handleNotes(set.id, v)}
+                      maxLength={200}
+                      multiline
+                      style={styles.notesInput}
+                      accessibilityLabel="Set notes"
+                    />
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "right", fontSize: 12 }}>
+                      {set.notes.length}/200
+                    </Text>
+                  </View>
                 )}
               </View>
             ))}
@@ -533,6 +689,7 @@ export default function ActiveSession() {
           Cancel Workout
         </Button>
       </ScrollView>
+      </KeyboardAvoidingView>
       <Snackbar
         visible={!!snackbar}
         onDismiss={() => setSnackbar("")}
@@ -625,5 +782,58 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
+  },
+  rpeRow: {
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    flexWrap: "wrap",
+  },
+  rpeChip: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minWidth: 56,
+    alignItems: "center",
+  },
+  rpeChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  halfStepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginHorizontal: 4,
+    marginBottom: 4,
+    gap: 8,
+  },
+  halfChip: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  rpeBadgeRow: {
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+  },
+  rpeBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  notesContainer: {
+    paddingHorizontal: 4,
+    paddingBottom: 6,
+  },
+  notesInput: {
+    fontSize: 13,
   },
 });
