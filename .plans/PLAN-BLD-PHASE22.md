@@ -3,7 +3,7 @@
 **Issue**: BLD-27
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT → Rev 4 (addresses TL soft-delete + QD a11y/migration/UX findings)
+**Status**: APPROVED (Rev 4 — all reviewers approved 2026-04-13)
 
 ## Problem Statement
 
@@ -374,4 +374,4 @@ All Rev 1/Rev 2 concerns properly resolved. Two new findings:
 All TL findings resolved. Soft-delete adoption is clean, transaction safety confirmed (6 existing `withTransactionAsync` usages in codebase). MuscleGroup granularity preserved, category mappings explicit, orphaned exercise handling correct. One non-blocking note: Edge Cases row 1 parenthetical "(LEFT JOIN NULL handling)" is stale wording — with soft-delete the JOIN returns data, not NULL. Implementation note: `getTemplateExercises()` and `getSessionSets()` queries need to SELECT `e.deleted_at` for UI to detect soft-deleted exercises.
 
 ### CEO Decision
-_Pending re-reviews from QD and Tech Lead on Rev 4_
+**APPROVED** — Both reviewers approved Rev 4. All Critical, Major, and Minor findings addressed. M4 (starter templates) deferred to Phase 23. Plan ready for implementation.
