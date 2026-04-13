@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -126,125 +126,128 @@ export default function SessionDetail() {
   return (
     <>
       <Stack.Screen options={{ title: session.name }} />
-      <ScrollView
+      <FlatList
+        data={groups}
+        keyExtractor={(group) => group.exercise_id}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
-      >
-        {/* Summary */}
-        <Card
-          style={[styles.summary, { backgroundColor: theme.colors.surface }]}
-        >
-          <Card.Content>
-            <Text
-              variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant }}
+        ListHeaderComponent={
+          <>
+            {/* Summary */}
+            <Card
+              style={[styles.summary, { backgroundColor: theme.colors.surface }]}
             >
-              {dateStr(session.started_at)}
-            </Text>
-            <View style={styles.stats}>
-              <View style={styles.stat}>
+              <Card.Content>
                 <Text
-                  variant="headlineSmall"
-                  style={{ color: theme.colors.primary }}
-                >
-                  {duration(session.duration_seconds)}
-                </Text>
-                <Text
-                  variant="bodySmall"
+                  variant="bodyMedium"
                   style={{ color: theme.colors.onSurfaceVariant }}
                 >
-                  Duration
+                  {dateStr(session.started_at)}
                 </Text>
-              </View>
-              <View style={styles.stat}>
-                <Text
-                  variant="headlineSmall"
-                  style={{ color: theme.colors.primary }}
-                >
-                  {completedSets()}
-                </Text>
-                <Text
-                  variant="bodySmall"
-                  style={{ color: theme.colors.onSurfaceVariant }}
-                >
-                  Sets
-                </Text>
-              </View>
-              <View style={styles.stat}>
-                <Text
-                  variant="headlineSmall"
-                  style={{ color: theme.colors.primary }}
-                >
-                  {volume().toLocaleString()}
-                </Text>
-                <Text
-                  variant="bodySmall"
-                  style={{ color: theme.colors.onSurfaceVariant }}
-                >
-                  Volume
-                </Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-
-        {/* Personal Records */}
-        {prs.length > 0 && (
-          <Card
-            style={[styles.prCard, { backgroundColor: theme.colors.tertiaryContainer }]}
-            accessibilityLabel={`${prs.length} new personal record${prs.length > 1 ? "s" : ""} achieved in this workout`}
-          >
-            <Card.Content>
-              <View style={styles.prHeader}>
-                <MaterialCommunityIcons name="trophy" size={20} color={theme.colors.onTertiaryContainer} />
-                <Text
-                  variant="titleMedium"
-                  style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
-                >
-                  {prs.length} New PR{prs.length > 1 ? "s" : ""}
-                </Text>
-              </View>
-              {prs.map((pr) => (
-                <View key={pr.exercise_id} style={styles.prRow}>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
-                    accessibilityLabel={`New personal record: ${pr.name}, ${pr.previous_max} to ${pr.weight}`}
-                  >
-                    {pr.name}
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onTertiaryContainer }}
-                  >
-                    {pr.previous_max} → {pr.weight}
-                  </Text>
+                <View style={styles.stats}>
+                  <View style={styles.stat}>
+                    <Text
+                      variant="headlineSmall"
+                      style={{ color: theme.colors.primary }}
+                    >
+                      {duration(session.duration_seconds)}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      Duration
+                    </Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Text
+                      variant="headlineSmall"
+                      style={{ color: theme.colors.primary }}
+                    >
+                      {completedSets()}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      Sets
+                    </Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Text
+                      variant="headlineSmall"
+                      style={{ color: theme.colors.primary }}
+                    >
+                      {volume().toLocaleString()}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      Volume
+                    </Text>
+                  </View>
                 </View>
-              ))}
-            </Card.Content>
-          </Card>
-        )}
+              </Card.Content>
+            </Card>
 
-        {/* Exercise breakdown */}
-        {groups.map((group) => {
+            {/* Personal Records */}
+            {prs.length > 0 && (
+              <Card
+                style={[styles.prCard, { backgroundColor: theme.colors.tertiaryContainer }]}
+                accessibilityLabel={`${prs.length} new personal record${prs.length > 1 ? "s" : ""} achieved in this workout`}
+              >
+                <Card.Content>
+                  <View style={styles.prHeader}>
+                    <MaterialCommunityIcons name="trophy" size={20} color={theme.colors.onTertiaryContainer} />
+                    <Text
+                      variant="titleMedium"
+                      style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                    >
+                      {prs.length} New PR{prs.length > 1 ? "s" : ""}
+                    </Text>
+                  </View>
+                  {prs.map((pr) => (
+                    <View key={pr.exercise_id} style={styles.prRow}>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                        accessibilityLabel={`New personal record: ${pr.name}, ${pr.previous_max} to ${pr.weight}`}
+                      >
+                        {pr.name}
+                      </Text>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.onTertiaryContainer }}
+                      >
+                        {pr.previous_max} → {pr.weight}
+                      </Text>
+                    </View>
+                  ))}
+                </Card.Content>
+              </Card>
+            )}
+          </>
+        }
+        renderItem={({ item: group }) => {
           const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
           const isFirst = group.link_id ? linked[0]?.exercise_id === group.exercise_id : false;
           const isLast = group.link_id ? linked[linked.length - 1]?.exercise_id === group.exercise_id : false;
-          const label = group.link_id
+          const tag = group.link_id
             ? linked.length >= 3 ? "Circuit" : "Superset"
             : "";
           const groupColorIdx = group.link_id ? linkIds.indexOf(group.link_id) : -1;
           const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
 
           return (
-          <View key={group.exercise_id} style={styles.group}>
+          <View style={styles.group}>
             {isFirst && group.link_id && (
               <View
                 style={[styles.linkHeader, { borderLeftColor: groupColor }]}
-                accessibilityLabel={`${label}: ${linked.map((g) => g.name).join(" and ")}`}
+                accessibilityLabel={`${tag}: ${linked.map((g) => g.name).join(" and ")}`}
               >
                 <Text variant="labelMedium" style={{ color: groupColor, fontWeight: "700" }}>
-                  {label}
+                  {tag}
                 </Text>
               </View>
             )}
@@ -297,26 +300,26 @@ export default function SessionDetail() {
             <Divider style={styles.divider} />
           </View>
           );
-        })}
-
-        {/* Notes */}
-        {session.notes ? (
-          <View style={styles.notes}>
-            <Text
-              variant="labelLarge"
-              style={{ color: theme.colors.onSurfaceVariant }}
-            >
-              Notes
-            </Text>
-            <Text
-              variant="bodyMedium"
-              style={[styles.noteText, { color: theme.colors.onSurface }]}
-            >
-              {session.notes}
-            </Text>
-          </View>
-        ) : null}
-      </ScrollView>
+        }}
+        ListFooterComponent={
+          session.notes ? (
+            <View style={styles.notes}>
+              <Text
+                variant="labelLarge"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
+                Notes
+              </Text>
+              <Text
+                variant="bodyMedium"
+                style={[styles.noteText, { color: theme.colors.onSurface }]}
+              >
+                {session.notes}
+              </Text>
+            </View>
+          ) : null
+        }
+      />
     </>
   );
 }

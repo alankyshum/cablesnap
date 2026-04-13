@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AccessibilityInfo,
-  ScrollView,
+  FlatList,
   Share,
   StyleSheet,
   View,
@@ -170,261 +170,278 @@ export default function Summary() {
   return (
     <>
       <Stack.Screen options={{ title: "Workout Complete!" }} />
-      <ScrollView
+      <FlatList
+        data={
+          [
+            ...(allPrs.length > 0 ? [{ key: "prs" }] : []),
+            ...(increases.length > 0 ? [{ key: "increases" }] : []),
+            ...(comparison?.previous ? [{ key: "comparison" }] : []),
+          ] as { key: string }[]
+        }
+        keyExtractor={(s) => s.key}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <MaterialCommunityIcons
-            name="check-circle"
-            size={48}
-            color={theme.colors.primary}
-          />
-          <Text
-            variant="headlineMedium"
-            style={[styles.title, { color: theme.colors.onBackground }]}
-            accessibilityRole="header"
-          >
-            Workout Complete!
-          </Text>
-          <Text
-            variant="bodyLarge"
-            style={{ color: theme.colors.onSurfaceVariant }}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {session.name}
-          </Text>
-        </View>
+        ListHeaderComponent={
+          <>
+            {/* Header */}
+            <View style={styles.header}>
+              <MaterialCommunityIcons
+                name="check-circle"
+                size={48}
+                color={theme.colors.primary}
+              />
+              <Text
+                variant="headlineMedium"
+                style={[styles.title, { color: theme.colors.onBackground }]}
+                accessibilityRole="header"
+              >
+                Workout Complete!
+              </Text>
+              <Text
+                variant="bodyLarge"
+                style={{ color: theme.colors.onSurfaceVariant }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {session.name}
+              </Text>
+            </View>
 
-        {/* Stats Row */}
-        <View style={styles.stats}>
-          <Card
-            style={[styles.stat, { backgroundColor: theme.colors.surface }]}
-            accessibilityLabel={`Duration: ${durationSpoken()}`}
-          >
-            <Card.Content style={styles.statInner}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                {duration}
-              </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                Duration
-              </Text>
-            </Card.Content>
-          </Card>
-          <Card
-            style={[styles.stat, { backgroundColor: theme.colors.surface }]}
-            accessibilityLabel={`${completed.length} sets completed`}
-          >
-            <Card.Content style={styles.statInner}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                {completed.length}
-              </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                Sets
-              </Text>
-            </Card.Content>
-          </Card>
-          <Card
-            style={[styles.stat, { backgroundColor: theme.colors.surface }]}
-            accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}
-          >
-            <Card.Content style={styles.statInner}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                {volumeDisplay.toLocaleString()}
-              </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                Volume ({unit})
-              </Text>
-            </Card.Content>
-          </Card>
-        </View>
+            {/* Stats Row */}
+            <View style={styles.stats}>
+              <Card
+                style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+                accessibilityLabel={`Duration: ${durationSpoken()}`}
+              >
+                <Card.Content style={styles.statInner}>
+                  <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                    {duration}
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    Duration
+                  </Text>
+                </Card.Content>
+              </Card>
+              <Card
+                style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+                accessibilityLabel={`${completed.length} sets completed`}
+              >
+                <Card.Content style={styles.statInner}>
+                  <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                    {completed.length}
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    Sets
+                  </Text>
+                </Card.Content>
+              </Card>
+              <Card
+                style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+                accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}
+              >
+                <Card.Content style={styles.statInner}>
+                  <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                    {volumeDisplay.toLocaleString()}
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    Volume ({unit})
+                  </Text>
+                </Card.Content>
+              </Card>
+            </View>
+          </>
+        }
+        renderItem={({ item }) => {
+          if (item.key === "prs") {
+            return (
+              <Card
+                style={[styles.section, { backgroundColor: theme.colors.tertiaryContainer }]}
+                accessibilityLabel={`${allPrs.length} new personal record${allPrs.length > 1 ? "s" : ""}`}
+              >
+                <Card.Content>
+                  <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons
+                      name="trophy"
+                      size={20}
+                      color={theme.colors.onTertiaryContainer}
+                    />
+                    <Text
+                      variant="titleMedium"
+                      style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                    >
+                      {allPrs.length} New PR{allPrs.length > 1 ? "s" : ""}
+                    </Text>
+                  </View>
+                  {prs.map((pr) => (
+                    <View key={pr.exercise_id} style={styles.row}>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                        accessibilityLabel={`New personal record: ${pr.name}, ${toDisplay(pr.weight, unit)} ${unit}`}
+                      >
+                        {pr.name}
+                      </Text>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.onTertiaryContainer }}
+                      >
+                        {toDisplay(pr.previous_max, unit)} → {toDisplay(pr.weight, unit)} {unit}
+                      </Text>
+                    </View>
+                  ))}
+                  {repPrs.map((pr) => (
+                    <View key={pr.exercise_id} style={styles.row}>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                        accessibilityLabel={`New rep personal record: ${pr.name}, ${pr.reps} reps`}
+                      >
+                        {pr.name}
+                      </Text>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.onTertiaryContainer }}
+                      >
+                        {pr.previous_max} → {pr.reps} reps
+                      </Text>
+                    </View>
+                  ))}
+                </Card.Content>
+              </Card>
+            );
+          }
 
-        {/* PRs Section */}
-        {allPrs.length > 0 && (
-          <Card
-            style={[styles.section, { backgroundColor: theme.colors.tertiaryContainer }]}
-            accessibilityLabel={`${allPrs.length} new personal record${allPrs.length > 1 ? "s" : ""}`}
-          >
-            <Card.Content>
-              <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons
-                  name="trophy"
-                  size={20}
-                  color={theme.colors.onTertiaryContainer}
-                />
-                <Text
-                  variant="titleMedium"
-                  style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
-                >
-                  {allPrs.length} New PR{allPrs.length > 1 ? "s" : ""}
-                </Text>
-              </View>
-              {prs.map((pr) => (
-                <View key={pr.exercise_id} style={styles.row}>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
-                    accessibilityLabel={`New personal record: ${pr.name}, ${toDisplay(pr.weight, unit)} ${unit}`}
-                  >
-                    {pr.name}
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onTertiaryContainer }}
-                  >
-                    {toDisplay(pr.previous_max, unit)} → {toDisplay(pr.weight, unit)} {unit}
-                  </Text>
-                </View>
-              ))}
-              {repPrs.map((pr) => (
-                <View key={pr.exercise_id} style={styles.row}>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
-                    accessibilityLabel={`New rep personal record: ${pr.name}, ${pr.reps} reps`}
-                  >
-                    {pr.name}
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onTertiaryContainer }}
-                  >
-                    {pr.previous_max} → {pr.reps} reps
-                  </Text>
-                </View>
-              ))}
-            </Card.Content>
-          </Card>
-        )}
+          if (item.key === "increases") {
+            return (
+              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+                <Card.Content>
+                  <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons
+                      name="trending-up"
+                      size={20}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      variant="titleMedium"
+                      style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                    >
+                      Weight Increases
+                    </Text>
+                  </View>
+                  {increases.map((inc) => (
+                    <View key={inc.exercise_id} style={styles.row}>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.onSurface, flex: 1 }}
+                        accessibilityLabel={`${inc.name}: weight increased from ${toDisplay(inc.previous, unit)} to ${toDisplay(inc.current, unit)} ${unit}`}
+                      >
+                        {inc.name}
+                      </Text>
+                      <Text
+                        variant="bodyMedium"
+                        style={{ color: theme.colors.primary }}
+                      >
+                        {toDisplay(inc.previous, unit)} → {toDisplay(inc.current, unit)} {unit}
+                      </Text>
+                    </View>
+                  ))}
+                </Card.Content>
+              </Card>
+            );
+          }
 
-        {/* Weight Increases */}
-        {increases.length > 0 && (
-          <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
-            <Card.Content>
-              <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons
-                  name="trending-up"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  variant="titleMedium"
-                  style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
-                >
-                  Weight Increases
-                </Text>
-              </View>
-              {increases.map((inc) => (
-                <View key={inc.exercise_id} style={styles.row}>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onSurface, flex: 1 }}
-                    accessibilityLabel={`${inc.name}: weight increased from ${toDisplay(inc.previous, unit)} to ${toDisplay(inc.current, unit)} ${unit}`}
-                  >
-                    {inc.name}
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.primary }}
-                  >
-                    {toDisplay(inc.previous, unit)} → {toDisplay(inc.current, unit)} {unit}
-                  </Text>
-                </View>
-              ))}
-            </Card.Content>
-          </Card>
-        )}
+          if (item.key === "comparison" && comparison?.previous) {
+            return (
+              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+                <Card.Content>
+                  <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons
+                      name="compare-horizontal"
+                      size={20}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      variant="titleMedium"
+                      style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                    >
+                      vs. Last Time
+                    </Text>
+                  </View>
+                  <View style={styles.compRow}>
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                      Volume
+                    </Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={{ color: theme.colors.onSurface }}
+                      accessibilityLabel={`Volume ${comparison.current.volume >= comparison.previous.volume ? "increased" : "decreased"} by ${Math.abs(comparison.current.volume - comparison.previous.volume).toLocaleString()}`}
+                    >
+                      {delta(comparison.current.volume, comparison.previous.volume)}
+                    </Text>
+                  </View>
+                  <View style={styles.compRow}>
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                      Duration
+                    </Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={{ color: theme.colors.onSurface }}
+                    >
+                      {deltaTime(comparison.current.duration, comparison.previous.duration)}
+                    </Text>
+                  </View>
+                  <View style={styles.compRow}>
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                      Sets
+                    </Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={{ color: theme.colors.onSurface }}
+                    >
+                      {delta(comparison.current.sets, comparison.previous.sets)}
+                    </Text>
+                  </View>
+                </Card.Content>
+              </Card>
+            );
+          }
 
-        {/* Comparison Section */}
-        {comparison?.previous && (
-          <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
-            <Card.Content>
-              <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons
-                  name="compare-horizontal"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  variant="titleMedium"
-                  style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
-                >
-                  vs. Last Time
-                </Text>
-              </View>
-              <View style={styles.compRow}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
-                  Volume
-                </Text>
-                <Text
-                  variant="bodyMedium"
-                  style={{ color: theme.colors.onSurface }}
-                  accessibilityLabel={`Volume ${comparison.current.volume >= comparison.previous.volume ? "increased" : "decreased"} by ${Math.abs(comparison.current.volume - comparison.previous.volume).toLocaleString()}`}
-                >
-                  {delta(comparison.current.volume, comparison.previous.volume)}
-                </Text>
-              </View>
-              <View style={styles.compRow}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
-                  Duration
-                </Text>
-                <Text
-                  variant="bodyMedium"
-                  style={{ color: theme.colors.onSurface }}
-                >
-                  {deltaTime(comparison.current.duration, comparison.previous.duration)}
-                </Text>
-              </View>
-              <View style={styles.compRow}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
-                  Sets
-                </Text>
-                <Text
-                  variant="bodyMedium"
-                  style={{ color: theme.colors.onSurface }}
-                >
-                  {delta(comparison.current.sets, comparison.previous.sets)}
-                </Text>
-              </View>
-            </Card.Content>
-          </Card>
-        )}
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Button
-            mode="contained"
-            onPress={() => router.replace("/(tabs)")}
-            style={styles.doneBtn}
-            contentStyle={styles.btnContent}
-            accessibilityRole="button"
-            accessibilityHint="Return to workouts tab"
-          >
-            Done
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={share}
-            style={styles.shareBtn}
-            contentStyle={styles.btnContent}
-            accessibilityRole="button"
-            accessibilityHint="Share workout summary"
-          >
-            Share
-          </Button>
-          <Button
-            mode="text"
-            onPress={() => router.replace(`/session/detail/${id}`)}
-            contentStyle={styles.btnContent}
-            accessibilityRole="button"
-            accessibilityHint="View detailed workout breakdown"
-          >
-            View Details
-          </Button>
-        </View>
-      </ScrollView>
+          return null;
+        }}
+        ListFooterComponent={
+          <View style={styles.actions}>
+            <Button
+              mode="contained"
+              onPress={() => router.replace("/(tabs)")}
+              style={styles.doneBtn}
+              contentStyle={styles.btnContent}
+              accessibilityRole="button"
+              accessibilityHint="Return to workouts tab"
+            >
+              Done
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={share}
+              style={styles.shareBtn}
+              contentStyle={styles.btnContent}
+              accessibilityRole="button"
+              accessibilityHint="Share workout summary"
+            >
+              Share
+            </Button>
+            <Button
+              mode="text"
+              onPress={() => router.replace(`/session/detail/${id}`)}
+              contentStyle={styles.btnContent}
+              accessibilityRole="button"
+              accessibilityHint="View detailed workout breakdown"
+            >
+              View Details
+            </Button>
+          </View>
+        }
+      />
     </>
   );
 }

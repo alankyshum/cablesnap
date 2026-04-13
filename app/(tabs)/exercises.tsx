@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
-  ScrollView,
   StyleSheet,
   View,
   type ListRenderItemInfo,
@@ -236,74 +235,81 @@ export default function Exercises() {
       {list}
       <View style={[styles.detailPane, { borderLeftColor: theme.colors.outlineVariant }]}>
         {detail ? (
-          <ScrollView contentContainerStyle={styles.detailContent}>
-            <Text variant="headlineSmall" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
-              {detail.name}
-            </Text>
-            {detail.is_custom && (
-              <Chip
-                compact
-                style={{ backgroundColor: theme.colors.tertiaryContainer, alignSelf: "flex-start", marginBottom: 8 }}
-                textStyle={{ fontSize: 12 }}
-              >
-                Custom
-              </Chip>
-            )}
-            <View style={styles.row}>
-              <Chip compact style={{ backgroundColor: theme.colors.primaryContainer }}>
-                {CATEGORY_LABELS[detail.category]}
-              </Chip>
-              <Chip
-                compact
-                style={{ backgroundColor: DIFFICULTY_COLORS[detail.difficulty], marginLeft: 8 }}
-                textStyle={{ color: difficultyText(detail.difficulty), fontWeight: "600" }}
-              >
-                {detail.difficulty}
-              </Chip>
-            </View>
-            <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-              Equipment
-            </Text>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, marginTop: 4 }}>
-              {detail.equipment}
-            </Text>
-            <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-              Primary Muscles
-            </Text>
-            <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-              {detail.primary_muscles.map((m) => (
-                <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
-                  {m}
-                </Chip>
-              ))}
-            </View>
-            {detail.secondary_muscles.length > 0 && (
+          <FlatList
+            data={[]}
+            renderItem={null}
+            contentContainerStyle={styles.detailContent}
+            ListHeaderComponent={
               <>
+                <Text variant="headlineSmall" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+                  {detail.name}
+                </Text>
+                {detail.is_custom && (
+                  <Chip
+                    compact
+                    style={{ backgroundColor: theme.colors.tertiaryContainer, alignSelf: "flex-start", marginBottom: 8 }}
+                    textStyle={{ fontSize: 12 }}
+                  >
+                    Custom
+                  </Chip>
+                )}
+                <View style={styles.row}>
+                  <Chip compact style={{ backgroundColor: theme.colors.primaryContainer }}>
+                    {CATEGORY_LABELS[detail.category]}
+                  </Chip>
+                  <Chip
+                    compact
+                    style={{ backgroundColor: DIFFICULTY_COLORS[detail.difficulty], marginLeft: 8 }}
+                    textStyle={{ color: difficultyText(detail.difficulty), fontWeight: "600" }}
+                  >
+                    {detail.difficulty}
+                  </Chip>
+                </View>
                 <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-                  Secondary Muscles
+                  Equipment
+                </Text>
+                <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, marginTop: 4 }}>
+                  {detail.equipment}
+                </Text>
+                <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                  Primary Muscles
                 </Text>
                 <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-                  {detail.secondary_muscles.map((m) => (
-                    <Chip key={m} compact style={{ backgroundColor: theme.colors.tertiaryContainer }}>
+                  {detail.primary_muscles.map((m) => (
+                    <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
                       {m}
                     </Chip>
                   ))}
                 </View>
+                {detail.secondary_muscles.length > 0 && (
+                  <>
+                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                      Secondary Muscles
+                    </Text>
+                    <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
+                      {detail.secondary_muscles.map((m) => (
+                        <Chip key={m} compact style={{ backgroundColor: theme.colors.tertiaryContainer }}>
+                          {m}
+                        </Chip>
+                      ))}
+                    </View>
+                  </>
+                )}
+                {steps && steps.length > 0 && (
+                  <>
+                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                      Instructions
+                    </Text>
+                    {steps.map((step, i) => (
+                      <Text key={i} variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 6, lineHeight: 22 }}>
+                        {step}
+                      </Text>
+                    ))}
+                  </>
+                )}
               </>
-            )}
-            {steps && steps.length > 0 && (
-              <>
-                <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-                  Instructions
-                </Text>
-                {steps.map((step, i) => (
-                  <Text key={i} variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 6, lineHeight: 22 }}>
-                    {step}
-                  </Text>
-                ))}
-              </>
-            )}
-          </ScrollView>
+            }
+          />
         ) : (
           <View style={styles.detailEmpty}>
             <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>

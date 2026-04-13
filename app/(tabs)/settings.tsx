@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -262,13 +262,16 @@ export default function Settings() {
   };
 
   return (
-    <ScrollView
+    <FlatList
+      data={[]}
+      renderItem={null}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.content}
-    >
-      <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
-        Settings
-      </Text>
+      ListHeaderComponent={
+        <>
+          <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
+            Settings
+          </Text>
 
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
@@ -466,7 +469,9 @@ export default function Settings() {
       >
         {snack}
       </Snackbar>
-    </ScrollView>
+        </>
+      }
+    />
   );
 }
 

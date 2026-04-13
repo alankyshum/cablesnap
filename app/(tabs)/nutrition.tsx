@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { FlatList, SectionList, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -152,162 +152,175 @@ export default function Nutrition() {
 
   const empty = logs.length === 0;
 
-  const logContent = (
-    <>
-      <View style={styles.header}>
-        <IconButton icon="chevron-left" onPress={prev} accessibilityLabel="Previous day" />
-        <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
-          {label(date)}
-        </Text>
-        <IconButton icon="chevron-right" onPress={next} accessibilityLabel="Next day" />
-      </View>
+  const sections = useMemo(() =>
+    MEALS
+      .map((m) => ({ title: MEAL_LABELS[m], meal: m, data: logs.filter((l) => l.meal === m) }))
+      .filter((s) => s.data.length > 0),
+    [logs],
+  );
 
-      {targets && (
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface, marginHorizontal: 16 }]}>
+  const logContent = (
+    <SectionList
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      style={styles.scroll}
+      contentContainerStyle={styles.scrollContent}
+      stickySectionHeadersEnabled={false}
+      renderSectionHeader={({ section }) => (
+        <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+          {section.title}
+        </Text>
+      )}
+      renderItem={({ item }) => (
+        <Card style={[styles.foodCard, { backgroundColor: theme.colors.surface }]}>
+          <Card.Content style={styles.foodRow}>
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                {item.food?.name ?? "Unknown"}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                {Math.round((item.food?.calories ?? 0) * item.servings)} cal
+                {item.servings !== 1 ? ` · ${item.servings}×` : ""}
+                {" · "}
+                {Math.round((item.food?.protein ?? 0) * item.servings)}p
+                {" · "}
+                {Math.round((item.food?.carbs ?? 0) * item.servings)}c
+                {" · "}
+                {Math.round((item.food?.fat ?? 0) * item.servings)}f
+              </Text>
+            </View>
+            <IconButton icon="delete-outline" size={20} onPress={() => remove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} />
+          </Card.Content>
+        </Card>
+      )}
+      SectionSeparatorComponent={() => <View style={{ height: 16 }} />}
+      ListHeaderComponent={
+        <>
+          <View style={styles.header}>
+            <IconButton icon="chevron-left" onPress={prev} accessibilityLabel="Previous day" />
+            <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+              {label(date)}
+            </Text>
+            <IconButton icon="chevron-right" onPress={next} accessibilityLabel="Next day" />
+          </View>
+
+          {targets && (
+            <Card style={[styles.card, { backgroundColor: theme.colors.surface, marginHorizontal: 16 }]}>
+              <Card.Content>
+                <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={theme.colors.primary} theme={theme} />
+                <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" theme={theme} />
+                <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" theme={theme} />
+                <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" theme={theme} />
+                <Text
+                  variant="labelSmall"
+                  style={{ color: theme.colors.primary, marginTop: 8 }}
+                  onPress={() => router.push("/nutrition/targets")}
+                  accessibilityLabel="Edit macro targets"
+                  accessibilityRole="link"
+                >
+                  Edit Targets →
+                </Text>
+              </Card.Content>
+            </Card>
+          )}
+        </>
+      }
+      ListEmptyComponent={
+        <View style={styles.empty}>
+          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
+            No food logged yet.{"\n"}Tap + to add your first meal.
+          </Text>
+        </View>
+      }
+    />
+  );
+
+  const addForm = (
+    <FlatList
+      data={favorites}
+      keyExtractor={(f) => f.id}
+      style={styles.scroll}
+      contentContainerStyle={styles.addContent}
+      keyboardShouldPersistTaps="handled"
+      renderItem={({ item: f }) => (
+        <Card
+          style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
+          onPress={() => quickLog(f)}
+          accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
+          accessibilityRole="button"
+        >
           <Card.Content>
-            <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={theme.colors.primary} theme={theme} />
-            <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" theme={theme} />
-            <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" theme={theme} />
-            <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" theme={theme} />
-            <Text
-              variant="labelSmall"
-              style={{ color: theme.colors.primary, marginTop: 8 }}
-              onPress={() => router.push("/nutrition/targets")}
-              accessibilityLabel="Edit macro targets"
-              accessibilityRole="link"
-            >
-              Edit Targets →
+            <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+              {f.name}
+            </Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              {f.calories} cal · {f.protein}p · {f.carbs}c · {f.fat}f
             </Text>
           </Card.Content>
         </Card>
       )}
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {empty ? (
-          <View style={styles.empty}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
-              No food logged yet.{"\n"}Tap + to add your first meal.
-            </Text>
-          </View>
-        ) : (
-          MEALS.map((m) => {
-            const items = logs.filter((l) => l.meal === m);
-            if (items.length === 0) return null;
-            return (
-              <View key={m} style={styles.section}>
-                <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
-                  {MEAL_LABELS[m]}
-                </Text>
-                {items.map((item) => (
-                  <Card key={item.id} style={[styles.foodCard, { backgroundColor: theme.colors.surface }]}>
-                    <Card.Content style={styles.foodRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
-                          {item.food?.name ?? "Unknown"}
-                        </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                          {Math.round((item.food?.calories ?? 0) * item.servings)} cal
-                          {item.servings !== 1 ? ` · ${item.servings}×` : ""}
-                          {" · "}
-                          {Math.round((item.food?.protein ?? 0) * item.servings)}p
-                          {" · "}
-                          {Math.round((item.food?.carbs ?? 0) * item.servings)}c
-                          {" · "}
-                          {Math.round((item.food?.fat ?? 0) * item.servings)}f
-                        </Text>
-                      </View>
-                      <IconButton icon="delete-outline" size={20} onPress={() => remove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} />
-                    </Card.Content>
-                  </Card>
-                ))}
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
-    </>
-  );
-
-  const addForm = (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.addContent}>
-      <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
-        Add Food
-      </Text>
-
-      <View style={styles.meals}>
-        {MEALS.map((m) => (
-          <Chip
-            key={m}
-            selected={meal === m}
-            onPress={() => setMeal(m)}
-            accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
-            accessibilityRole="button"
-            accessibilityState={{ selected: meal === m }}
-          >
-            {MEAL_LABELS[m]}
-          </Chip>
-        ))}
-      </View>
-
-      <TextInput label="Food name" value={name} onChangeText={setName} mode="outlined" style={styles.input} />
-      <TextInput label="Calories" value={calories} onChangeText={setCalories} keyboardType="numeric" mode="outlined" style={styles.input} />
-      <View style={styles.macroInputRow}>
-        <TextInput label="Protein (g)" value={protein} onChangeText={setProtein} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
-        <View style={{ width: 8 }} />
-        <TextInput label="Carbs (g)" value={carbs} onChangeText={setCarbs} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
-        <View style={{ width: 8 }} />
-        <TextInput label="Fat (g)" value={fat} onChangeText={setFat} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
-      </View>
-      <TextInput label="Serving size" value={serving} onChangeText={setServing} mode="outlined" style={styles.input} />
-
-      <Chip
-        selected={favorite}
-        onPress={() => setFavorite(!favorite)}
-        icon={favorite ? "heart" : "heart-outline"}
-        style={styles.favChip}
-        accessibilityLabel={favorite ? "Remove from favorites" : "Save as favorite"}
-        accessibilityRole="button"
-        accessibilityState={{ selected: favorite }}
-      >
-        Save as favorite
-      </Chip>
-
-      <Button
-        mode="contained"
-        onPress={inlineSave}
-        loading={saving}
-        disabled={saving || !name.trim()}
-        accessibilityLabel="Log food"
-      >
-        Log Food
-      </Button>
-
-      {favorites.length > 0 && (
+      ListHeaderComponent={
         <>
-          <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 24, marginBottom: 8 }}>
-            Quick Log Favorites
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+            Add Food
           </Text>
-          {favorites.map((f) => (
-            <Card
-              key={f.id}
-              style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
-              onPress={() => quickLog(f)}
-              accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
-              accessibilityRole="button"
-            >
-              <Card.Content>
-                <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
-                  {f.name}
-                </Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  {f.calories} cal · {f.protein}p · {f.carbs}c · {f.fat}f
-                </Text>
-              </Card.Content>
-            </Card>
-          ))}
+
+          <View style={styles.meals}>
+            {MEALS.map((m) => (
+              <Chip
+                key={m}
+                selected={meal === m}
+                onPress={() => setMeal(m)}
+                accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: meal === m }}
+              >
+                {MEAL_LABELS[m]}
+              </Chip>
+            ))}
+          </View>
+
+          <TextInput label="Food name" value={name} onChangeText={setName} mode="outlined" style={styles.input} />
+          <TextInput label="Calories" value={calories} onChangeText={setCalories} keyboardType="numeric" mode="outlined" style={styles.input} />
+          <View style={styles.macroInputRow}>
+            <TextInput label="Protein (g)" value={protein} onChangeText={setProtein} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
+            <View style={{ width: 8 }} />
+            <TextInput label="Carbs (g)" value={carbs} onChangeText={setCarbs} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
+            <View style={{ width: 8 }} />
+            <TextInput label="Fat (g)" value={fat} onChangeText={setFat} keyboardType="numeric" mode="outlined" style={[styles.input, styles.flex]} />
+          </View>
+          <TextInput label="Serving size" value={serving} onChangeText={setServing} mode="outlined" style={styles.input} />
+
+          <Chip
+            selected={favorite}
+            onPress={() => setFavorite(!favorite)}
+            icon={favorite ? "heart" : "heart-outline"}
+            style={styles.favChip}
+            accessibilityLabel={favorite ? "Remove from favorites" : "Save as favorite"}
+            accessibilityRole="button"
+            accessibilityState={{ selected: favorite }}
+          >
+            Save as favorite
+          </Chip>
+
+          <Button
+            mode="contained"
+            onPress={inlineSave}
+            loading={saving}
+            disabled={saving || !name.trim()}
+            accessibilityLabel="Log food"
+          >
+            Log Food
+          </Button>
+
+          {favorites.length > 0 && (
+            <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 24, marginBottom: 8 }}>
+              Quick Log Favorites
+            </Text>
+          )}
         </>
-      )}
-    </ScrollView>
+      }
+    />
   );
 
   if (layout.wide) {

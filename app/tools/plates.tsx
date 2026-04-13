@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  ScrollView,
+  FlatList,
   StyleSheet,
   View,
   useColorScheme,
@@ -190,85 +190,144 @@ export default function PlateCalculator() {
   return (
     <>
       <Stack.Screen options={{ title: "Plate Calculator" }} />
-      <ScrollView
+      <FlatList
+        data={expanded ? available : []}
+        keyExtractor={(p) => String(p.weight)}
         style={{ backgroundColor: theme.colors.background }}
         contentContainerStyle={styles.content}
-      >
-        {/* Bar Weight */}
-        <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginBottom: 8 }}>
-          Bar Weight
-        </Text>
-        <SegmentedButtons
-          value={String(bar)}
-          onValueChange={(v) => setBar(Number(v))}
-          buttons={bars.map((b) => ({
-            value: String(b),
-            label: `${b}${unit}`,
-            accessibilityLabel: `Bar weight ${b} ${unit === "kg" ? "kilograms" : "pounds"}`,
-          }))}
-          style={styles.segment}
-        />
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <>
+            {/* Bar Weight */}
+            <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginBottom: 8 }}>
+              Bar Weight
+            </Text>
+            <SegmentedButtons
+              value={String(bar)}
+              onValueChange={(v) => setBar(Number(v))}
+              buttons={bars.map((b) => ({
+                value: String(b),
+                label: `${b}${unit}`,
+                accessibilityLabel: `Bar weight ${b} ${unit === "kg" ? "kilograms" : "pounds"}`,
+              }))}
+              style={styles.segment}
+            />
 
-        {/* Target Weight */}
-        <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 20, marginBottom: 8 }}>
-          Target Weight
-        </Text>
-        <View style={styles.row}>
-          <IconButton
-            icon="minus"
-            size={28}
-            onPress={() => bump(-1)}
-            accessibilityLabel={`Decrease target weight by ${step}`}
-            accessibilityRole="button"
-            accessibilityValue={{ now: valid ? parsed : 0, min: 0, max: 999, text: `${target || 0} ${unit}` }}
-            style={styles.stepBtn}
-          />
-          <TextInput
-            mode="outlined"
-            keyboardType="numeric"
-            autoFocus
-            value={target}
-            onChangeText={setTarget}
-            placeholder={String(bar)}
-            right={<TextInput.Affix text={unit} />}
-            style={styles.input}
-            accessibilityLabel="Target barbell weight"
-          />
-          <IconButton
-            icon="plus"
-            size={28}
-            onPress={() => bump(1)}
-            accessibilityLabel={`Increase target weight by ${step}`}
-            accessibilityRole="button"
-            accessibilityValue={{ now: valid ? parsed : 0, min: 0, max: 999, text: `${target || 0} ${unit}` }}
-            style={styles.stepBtn}
-          />
-        </View>
+            {/* Target Weight */}
+            <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 20, marginBottom: 8 }}>
+              Target Weight
+            </Text>
+            <View style={styles.row}>
+              <IconButton
+                icon="minus"
+                size={28}
+                onPress={() => bump(-1)}
+                accessibilityLabel={`Decrease target weight by ${step}`}
+                accessibilityRole="button"
+                accessibilityValue={{ now: valid ? parsed : 0, min: 0, max: 999, text: `${target || 0} ${unit}` }}
+                style={styles.stepBtn}
+              />
+              <TextInput
+                mode="outlined"
+                keyboardType="numeric"
+                autoFocus
+                value={target}
+                onChangeText={setTarget}
+                placeholder={String(bar)}
+                right={<TextInput.Affix text={unit} />}
+                style={styles.input}
+                accessibilityLabel="Target barbell weight"
+              />
+              <IconButton
+                icon="plus"
+                size={28}
+                onPress={() => bump(1)}
+                accessibilityLabel={`Increase target weight by ${step}`}
+                accessibilityRole="button"
+                accessibilityValue={{ now: valid ? parsed : 0, min: 0, max: 999, text: `${target || 0} ${unit}` }}
+                style={styles.stepBtn}
+              />
+            </View>
 
-        {/* Error */}
-        {result.error && (
-          <Text variant="bodyMedium" style={[styles.error, { color: theme.colors.error }]}>
-            {result.error}
-          </Text>
-        )}
-
-        {/* Results */}
-        {valid && !result.error && result.plates !== null && (
-          <View style={styles.results}>
-            {result.plates.length === 0 ? (
-              <Text variant="bodyLarge" style={{ color: theme.colors.onBackground, textAlign: "center", marginVertical: 16 }}>
-                Per side: 0{unit} — no plates needed
+            {/* Error */}
+            {result.error && (
+              <Text variant="bodyMedium" style={[styles.error, { color: theme.colors.error }]}>
+                {result.error}
               </Text>
-            ) : (
-              <>
-                <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginBottom: 12 }}>
-                  Per side: {result.perSide}{unit}
+            )}
+
+            {/* Results */}
+            {valid && !result.error && result.plates !== null && (
+              <View style={styles.results}>
+                {result.plates.length === 0 ? (
+                  <Text variant="bodyLarge" style={{ color: theme.colors.onBackground, textAlign: "center", marginVertical: 16 }}>
+                    Per side: 0{unit} — no plates needed
+                  </Text>
+                ) : (
+                  <>
+                    <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginBottom: 12 }}>
+                      Per side: {result.perSide}{unit}
+                    </Text>
+                    <View
+                      style={styles.badges}
+                      accessibilityLabel={vizLabel()}
+                      accessibilityRole="summary"
+                    >
+                      {result.plates.map((p, i) => {
+                        const c = plateColor(p.weight, unit, isDark);
+                        return (
+                          <View
+                            key={i}
+                            style={[
+                              styles.badge,
+                              {
+                                backgroundColor: c.bg,
+                                borderColor: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.15)",
+                              },
+                            ]}
+                            accessibilityLabel={`${p.count} times ${p.weight} ${unit === "kg" ? "kilogram" : "pound"} plate`}
+                          >
+                            <Text style={[styles.badgeText, { color: c.text }]}>
+                              {p.count} × {p.weight}{unit}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {/* Barbell visualization */}
+                    <View style={styles.barbell} accessibilityLabel={vizLabel()}>
+                      <View style={[styles.sleeve, { backgroundColor: theme.colors.outlineVariant }]} />
+                      {result.plates.map((p, i) => {
+                        const c = plateColor(p.weight, unit, isDark);
+                        return Array.from({ length: p.count }).map((_, j) => (
+                          <View
+                            key={`${i}-${j}`}
+                            style={[
+                              styles.plate,
+                              {
+                                backgroundColor: c.bg,
+                                borderColor: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.15)",
+                                height: 20 + Math.min(p.weight, 25) * 1.6,
+                              },
+                            ]}
+                          />
+                        ));
+                      })}
+                      <View style={[styles.shaft, { backgroundColor: theme.colors.outline }]} />
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* Fallback plates */}
+            {result.error && result.plates && result.plates.length > 0 && (
+              <View style={styles.results}>
+                <Text variant="titleSmall" style={{ color: theme.colors.onBackground, marginBottom: 8 }}>
+                  Closest loading ({result.achieved}{unit} per side):
                 </Text>
-                <View
-                  style={styles.badges}
-                  accessibilityLabel={vizLabel()}
-                  accessibilityRole="summary"
-                >
+                <View style={styles.badges}>
                   {result.plates.map((p, i) => {
                     const c = plateColor(p.weight, unit, isDark);
                     return (
@@ -290,118 +349,60 @@ export default function PlateCalculator() {
                     );
                   })}
                 </View>
+              </View>
+            )}
 
-                {/* Barbell visualization */}
-                <View style={styles.barbell} accessibilityLabel={vizLabel()}>
-                  <View style={[styles.sleeve, { backgroundColor: theme.colors.outlineVariant }]} />
-                  {result.plates.map((p, i) => {
-                    const c = plateColor(p.weight, unit, isDark);
-                    return Array.from({ length: p.count }).map((_, j) => (
-                      <View
-                        key={`${i}-${j}`}
-                        style={[
-                          styles.plate,
-                          {
-                            backgroundColor: c.bg,
-                            borderColor: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.15)",
-                            height: 20 + Math.min(p.weight, 25) * 1.6,
-                          },
-                        ]}
-                      />
-                    ));
-                  })}
-                  <View style={[styles.shaft, { backgroundColor: theme.colors.outline }]} />
-                </View>
-              </>
+            {/* Available Plates */}
+            <Divider style={{ marginTop: 24 }} />
+            <Button
+              mode="text"
+              onPress={() => setExpanded(!expanded)}
+              icon={expanded ? "chevron-up" : "chevron-down"}
+              contentStyle={styles.expandBtn}
+              style={{ marginTop: 8 }}
+            >
+              Available Plates
+            </Button>
+          </>
+        }
+        renderItem={({ item: p, index: i }) => (
+          <View style={styles.plateRow}>
+            <Chip
+              selected={p.enabled}
+              onPress={() => toggle(i)}
+              style={[styles.chip, !p.enabled && { opacity: 0.5 }]}
+              accessibilityLabel={`Toggle ${p.weight} ${unit === "kg" ? "kilogram" : "pound"} plates`}
+              accessibilityState={{ selected: p.enabled }}
+            >
+              {p.weight}{unit}
+            </Chip>
+            {p.enabled && (
+              <View style={styles.countRow}>
+                <IconButton
+                  icon="minus"
+                  size={20}
+                  onPress={() => setCount(i, -1)}
+                  disabled={p.count <= 1}
+                  accessibilityLabel={`Decrease ${p.weight}${unit} plate count`}
+                />
+                <Text variant="bodyMedium" style={{ color: theme.colors.onBackground, minWidth: 20, textAlign: "center" }}>
+                  {p.count}
+                </Text>
+                <IconButton
+                  icon="plus"
+                  size={20}
+                  onPress={() => setCount(i, 1)}
+                  disabled={p.count >= 10}
+                  accessibilityLabel={`Increase ${p.weight}${unit} plate count`}
+                />
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  per side
+                </Text>
+              </View>
             )}
           </View>
         )}
-
-        {/* Fallback plates */}
-        {result.error && result.plates && result.plates.length > 0 && (
-          <View style={styles.results}>
-            <Text variant="titleSmall" style={{ color: theme.colors.onBackground, marginBottom: 8 }}>
-              Closest loading ({result.achieved}{unit} per side):
-            </Text>
-            <View style={styles.badges}>
-              {result.plates.map((p, i) => {
-                const c = plateColor(p.weight, unit, isDark);
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.badge,
-                      {
-                        backgroundColor: c.bg,
-                        borderColor: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.15)",
-                      },
-                    ]}
-                    accessibilityLabel={`${p.count} times ${p.weight} ${unit === "kg" ? "kilogram" : "pound"} plate`}
-                  >
-                    <Text style={[styles.badgeText, { color: c.text }]}>
-                      {p.count} × {p.weight}{unit}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Available Plates */}
-        <Divider style={{ marginTop: 24 }} />
-        <Button
-          mode="text"
-          onPress={() => setExpanded(!expanded)}
-          icon={expanded ? "chevron-up" : "chevron-down"}
-          contentStyle={styles.expandBtn}
-          style={{ marginTop: 8 }}
-        >
-          Available Plates
-        </Button>
-
-        {expanded && (
-          <View style={styles.config}>
-            {available.map((p, i) => (
-              <View key={p.weight} style={styles.plateRow}>
-                <Chip
-                  selected={p.enabled}
-                  onPress={() => toggle(i)}
-                  style={[styles.chip, !p.enabled && { opacity: 0.5 }]}
-                  accessibilityLabel={`Toggle ${p.weight} ${unit === "kg" ? "kilogram" : "pound"} plates`}
-                  accessibilityState={{ selected: p.enabled }}
-                >
-                  {p.weight}{unit}
-                </Chip>
-                {p.enabled && (
-                  <View style={styles.countRow}>
-                    <IconButton
-                      icon="minus"
-                      size={20}
-                      onPress={() => setCount(i, -1)}
-                      disabled={p.count <= 1}
-                      accessibilityLabel={`Decrease ${p.weight}${unit} plate count`}
-                    />
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onBackground, minWidth: 20, textAlign: "center" }}>
-                      {p.count}
-                    </Text>
-                    <IconButton
-                      icon="plus"
-                      size={20}
-                      onPress={() => setCount(i, 1)}
-                      disabled={p.count >= 10}
-                      accessibilityLabel={`Increase ${p.weight}${unit} plate count`}
-                    />
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                      per side
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+      />
     </>
   );
 }

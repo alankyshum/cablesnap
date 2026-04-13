@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { Snackbar, Text, useTheme } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -13,16 +13,22 @@ export default function EditExercise() {
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [toast, setToast] = useState("");
 
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   useEffect(() => {
-    if (id) getExerciseById(id).then(setExercise);
+    let cancelled = false;
+    if (id) getExerciseById(id).then((e) => { if (!cancelled) setExercise(e); });
+    return () => { cancelled = true; };
   }, [id]);
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const save = useCallback(
     async (data: Omit<Exercise, "id" | "is_custom">) => {
       if (!id) return;
       await updateCustomExercise(id, data);
       setToast("Exercise updated");
-      setTimeout(() => router.back(), 400);
+      timer.current = setTimeout(() => router.back(), 400);
     },
     [id, router]
   );

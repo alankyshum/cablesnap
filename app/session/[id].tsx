@@ -3,10 +3,10 @@ import {
   Alert,
   AccessibilityInfo,
   Animated,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -553,10 +553,14 @@ export default function ActiveSession() {
         }}
       />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
-      <ScrollView
+      <FlatList
+        data={[]}
+        renderItem={null}
         style={{ backgroundColor: theme.colors.background }}
         contentContainerStyle={styles.content}
-      >
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <>
         {rest > 0 && (
           <Animated.View
             style={[
@@ -966,7 +970,9 @@ export default function ActiveSession() {
         >
           Cancel Workout
         </Button>
-      </ScrollView>
+          </>
+        }
+      />
       </KeyboardAvoidingView>
       <Snackbar
         visible={!!snackbar}

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, ScrollView, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -307,148 +307,152 @@ export default function AddFood() {
     );
   }
 
+  const renderFav = ({ item: f }: { item: FoodEntry }) => (
+    <Card
+      style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
+      onPress={() => quickLog(f)}
+      accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
+      accessibilityRole="button"
+    >
+      <Card.Content>
+        <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+          {f.name}
+        </Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          {f.calories} cal · {f.protein}p · {f.carbs}c · {f.fat}f · {f.serving_size}
+        </Text>
+      </Card.Content>
+    </Card>
+  );
+
   return (
-    <ScrollView
+    <FlatList
+      data={tab === "favorites" ? favorites : []}
+      keyExtractor={(f) => f.id}
+      renderItem={renderFav}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.content}
-    >
-      <SegmentedButtons
-        value={tab}
-        onValueChange={setTab}
-        buttons={[
-          { value: "new", label: "New Food" },
-          { value: "favorites", label: "Favorites" },
-          { value: "database", label: "Database" },
-        ]}
-        style={styles.tabs}
-      />
+      keyboardShouldPersistTaps="handled"
+      ListHeaderComponent={
+        <>
+          <SegmentedButtons
+            value={tab}
+            onValueChange={setTab}
+            buttons={[
+              { value: "new", label: "New Food" },
+              { value: "favorites", label: "Favorites" },
+              { value: "database", label: "Database" },
+            ]}
+            style={styles.tabs}
+          />
 
-      <View style={styles.meals}>
-        {MEALS.map((m) => (
-          <Chip
-            key={m}
-            selected={meal === m}
-            onPress={() => setMeal(m)}
-            style={styles.chip}
-            accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
-            accessibilityRole="button"
-            accessibilityState={{ selected: meal === m }}
-          >
-            {MEAL_LABELS[m]}
-          </Chip>
-        ))}
-      </View>
-
-      {tab === "new" ? (
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            <TextInput
-              label="Food name"
-              value={name}
-              onChangeText={setName}
-              mode="outlined"
-              style={styles.input}
-            />
-            <TextInput
-              label="Calories"
-              value={calories}
-              onChangeText={setCalories}
-              keyboardType="numeric"
-              mode="outlined"
-              style={styles.input}
-            />
-            <View style={styles.row}>
-              <TextInput
-                label="Protein (g)"
-                value={protein}
-                onChangeText={setProtein}
-                keyboardType="numeric"
-                mode="outlined"
-                style={[styles.input, styles.flex]}
-              />
-              <View style={{ width: 8 }} />
-              <TextInput
-                label="Carbs (g)"
-                value={carbs}
-                onChangeText={setCarbs}
-                keyboardType="numeric"
-                mode="outlined"
-                style={[styles.input, styles.flex]}
-              />
-              <View style={{ width: 8 }} />
-              <TextInput
-                label="Fat (g)"
-                value={fat}
-                onChangeText={setFat}
-                keyboardType="numeric"
-                mode="outlined"
-                style={[styles.input, styles.flex]}
-              />
-            </View>
-            <TextInput
-              label="Serving size"
-              value={serving}
-              onChangeText={setServing}
-              mode="outlined"
-              style={styles.input}
-            />
-            <Chip
-              selected={favorite}
-              onPress={() => setFavorite(!favorite)}
-              icon={favorite ? "heart" : "heart-outline"}
-              style={styles.favChip}
-              accessibilityLabel={favorite ? "Remove from favorites" : "Save as favorite"}
-              accessibilityRole="button"
-              accessibilityState={{ selected: favorite }}
-            >
-              Save as favorite
-            </Chip>
-            <Button
-              mode="contained"
-              onPress={save}
-              loading={saving}
-              disabled={saving || !name.trim()}
-              style={styles.btn}
-              accessibilityLabel="Log food"
-            >
-              Log Food
-            </Button>
-          </Card.Content>
-        </Card>
-      ) : (
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content>
-            {favorites.length === 0 ? (
-              <Text
-                variant="bodyMedium"
-                style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 16 }}
+          <View style={styles.meals}>
+            {MEALS.map((m) => (
+              <Chip
+                key={m}
+                selected={meal === m}
+                onPress={() => setMeal(m)}
+                style={styles.chip}
+                accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: meal === m }}
               >
-                No favorites yet. Save foods as favorites when logging them.
-              </Text>
-            ) : (
-              favorites.map((f) => (
-                <Card
-                  key={f.id}
-                  style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
-                  onPress={() => quickLog(f)}
-                  accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
+                {MEAL_LABELS[m]}
+              </Chip>
+            ))}
+          </View>
+
+          {tab === "new" ? (
+            <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+              <Card.Content>
+                <TextInput
+                  label="Food name"
+                  value={name}
+                  onChangeText={setName}
+                  mode="outlined"
+                  style={styles.input}
+                />
+                <TextInput
+                  label="Calories"
+                  value={calories}
+                  onChangeText={setCalories}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  style={styles.input}
+                />
+                <View style={styles.row}>
+                  <TextInput
+                    label="Protein (g)"
+                    value={protein}
+                    onChangeText={setProtein}
+                    keyboardType="numeric"
+                    mode="outlined"
+                    style={[styles.input, styles.flex]}
+                  />
+                  <View style={{ width: 8 }} />
+                  <TextInput
+                    label="Carbs (g)"
+                    value={carbs}
+                    onChangeText={setCarbs}
+                    keyboardType="numeric"
+                    mode="outlined"
+                    style={[styles.input, styles.flex]}
+                  />
+                  <View style={{ width: 8 }} />
+                  <TextInput
+                    label="Fat (g)"
+                    value={fat}
+                    onChangeText={setFat}
+                    keyboardType="numeric"
+                    mode="outlined"
+                    style={[styles.input, styles.flex]}
+                  />
+                </View>
+                <TextInput
+                  label="Serving size"
+                  value={serving}
+                  onChangeText={setServing}
+                  mode="outlined"
+                  style={styles.input}
+                />
+                <Chip
+                  selected={favorite}
+                  onPress={() => setFavorite(!favorite)}
+                  icon={favorite ? "heart" : "heart-outline"}
+                  style={styles.favChip}
+                  accessibilityLabel={favorite ? "Remove from favorites" : "Save as favorite"}
                   accessibilityRole="button"
+                  accessibilityState={{ selected: favorite }}
                 >
-                  <Card.Content>
-                    <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
-                      {f.name}
-                    </Text>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                      {f.calories} cal · {f.protein}p · {f.carbs}c · {f.fat}f · {f.serving_size}
-                    </Text>
-                  </Card.Content>
-                </Card>
-              ))
-            )}
-          </Card.Content>
-        </Card>
-      )}
-    </ScrollView>
+                  Save as favorite
+                </Chip>
+                <Button
+                  mode="contained"
+                  onPress={save}
+                  loading={saving}
+                  disabled={saving || !name.trim()}
+                  style={styles.btn}
+                  accessibilityLabel="Log food"
+                >
+                  Log Food
+                </Button>
+              </Card.Content>
+            </Card>
+          ) : favorites.length === 0 ? (
+            <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+              <Card.Content>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 16 }}
+                >
+                  No favorites yet. Save foods as favorites when logging them.
+                </Text>
+              </Card.Content>
+            </Card>
+          ) : null}
+        </>
+      }
+    />
   );
 }
 

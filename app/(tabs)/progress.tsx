@@ -3,7 +3,6 @@ import {
   Alert,
   FlatList,
   Modal,
-  ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -355,30 +354,33 @@ export default function Progress() {
     );
 
     return (
-      <ScrollView
+      <FlatList
+        data={[]}
+        renderItem={null}
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
-      >
-        {layout.wide ? (
-          <>
-            <View style={styles.grid}>
+        ListHeaderComponent={
+          layout.wide ? (
+            <>
+              <View style={styles.grid}>
+                {freqCard}
+                {volCard}
+              </View>
+              <View style={styles.grid}>
+                {prCard}
+                {sessionsCard}
+              </View>
+            </>
+          ) : (
+            <>
               {freqCard}
               {volCard}
-            </View>
-            <View style={styles.grid}>
               {prCard}
               {sessionsCard}
-            </View>
-          </>
-        ) : (
-          <>
-            {freqCard}
-            {volCard}
-            {prCard}
-            {sessionsCard}
-          </>
-        )}
-      </ScrollView>
+            </>
+          )
+        }
+      />
     );
   };
 

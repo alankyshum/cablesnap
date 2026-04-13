@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -131,71 +131,77 @@ export default function Measurements() {
   ));
 
   return (
-    <ScrollView
+    <FlatList
+      data={[]}
+      renderItem={null}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.content}
-    >
-      <Text variant="titleLarge" style={{ color: theme.colors.onBackground, marginBottom: 16 }}>
-        Log Measurements
-      </Text>
+      keyboardShouldPersistTaps="handled"
+      ListHeaderComponent={
+        <>
+          <Text variant="titleLarge" style={{ color: theme.colors.onBackground, marginBottom: 16 }}>
+            Log Measurements
+          </Text>
 
-      <TextInput
-        label="Date (YYYY-MM-DD)"
-        value={date}
-        onChangeText={setDate}
-        mode="outlined"
-        style={styles.input}
-        accessibilityLabel="Measurement date"
-      />
+          <TextInput
+            label="Date (YYYY-MM-DD)"
+            value={date}
+            onChangeText={setDate}
+            mode="outlined"
+            style={styles.input}
+            accessibilityLabel="Measurement date"
+          />
 
-      {layout.wide ? (
-        <View style={styles.grid}>
-          {fieldInputs}
-        </View>
-      ) : (
-        fieldInputs
-      )}
+          {layout.wide ? (
+            <View style={styles.grid}>
+              {fieldInputs}
+            </View>
+          ) : (
+            fieldInputs
+          )}
 
-      <TextInput
-        label="Body Fat %"
-        value={form.body_fat}
-        onChangeText={(v) => update("body_fat", v)}
-        keyboardType="numeric"
-        mode="outlined"
-        style={styles.input}
-        accessibilityLabel="Body fat percentage"
-      />
+          <TextInput
+            label="Body Fat %"
+            value={form.body_fat}
+            onChangeText={(v) => update("body_fat", v)}
+            keyboardType="numeric"
+            mode="outlined"
+            style={styles.input}
+            accessibilityLabel="Body fat percentage"
+          />
 
-      <TextInput
-        label="Notes (optional)"
-        value={notes}
-        onChangeText={setNotes}
-        mode="outlined"
-        style={styles.input}
-        accessibilityLabel="Optional notes"
-      />
+          <TextInput
+            label="Notes (optional)"
+            value={notes}
+            onChangeText={setNotes}
+            mode="outlined"
+            style={styles.input}
+            accessibilityLabel="Optional notes"
+          />
 
-      <View style={styles.buttons}>
-        <Button
-          mode="outlined"
-          onPress={() => router.back()}
-          style={{ flex: 1, marginRight: 8 }}
-          accessibilityLabel="Cancel measurement log"
-        >
-          Cancel
-        </Button>
-        <Button
-          mode="contained"
-          onPress={handleSave}
-          loading={saving}
-          disabled={saving}
-          style={{ flex: 1 }}
-          accessibilityLabel="Save measurements"
-        >
-          Save
-        </Button>
-      </View>
-    </ScrollView>
+          <View style={styles.buttons}>
+            <Button
+              mode="outlined"
+              onPress={() => router.back()}
+              style={{ flex: 1, marginRight: 8 }}
+              accessibilityLabel="Cancel measurement log"
+            >
+              Cancel
+            </Button>
+            <Button
+              mode="contained"
+              onPress={handleSave}
+              loading={saving}
+              disabled={saving}
+              style={{ flex: 1 }}
+              accessibilityLabel="Save measurements"
+            >
+              Save
+            </Button>
+          </View>
+        </>
+      }
+    />
   );
 }
 

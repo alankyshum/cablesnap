@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
   type ListRenderItemInfo,
@@ -275,72 +274,76 @@ function HistoryScreen() {
   };
 
   return (
-    <ScrollView
+    <FlatList
+      data={filtered}
+      keyExtractor={(item) => item.id}
+      renderItem={renderSession}
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       contentContainerStyle={styles.container}
-    >
-      {/* Search */}
-      <Searchbar
-        placeholder="Search workouts"
-        value={query}
-        onChangeText={onSearch}
-        style={[styles.search, { backgroundColor: theme.colors.surface }]}
-        accessibilityLabel="Search workout history"
-      />
+      ListHeaderComponent={
+        <>
+          {/* Search */}
+          <Searchbar
+            placeholder="Search workouts"
+            value={query}
+            onChangeText={onSearch}
+            style={[styles.search, { backgroundColor: theme.colors.surface }]}
+            accessibilityLabel="Search workout history"
+          />
 
-      {/* Month Navigation */}
-      <View style={styles.monthNav}>
-        <IconButton
-          icon="chevron-left"
-          onPress={prevMonth}
-          accessibilityLabel="Previous month"
-        />
-        <Text
-          variant="titleMedium"
-          style={{ color: theme.colors.onBackground }}
-        >
-          {monthLabel(year, month)}
-        </Text>
-        <IconButton
-          icon="chevron-right"
-          onPress={nextMonth}
-          accessibilityLabel="Next month"
-        />
-      </View>
-
-      {/* Day-of-week headers */}
-      <View style={styles.grid}>
-        {DAYS.map((d) => (
-          <View key={d} style={[styles.cell, { width: cellSize, height: 28 }]}>
+          {/* Month Navigation */}
+          <View style={styles.monthNav}>
+            <IconButton
+              icon="chevron-left"
+              onPress={prevMonth}
+              accessibilityLabel="Previous month"
+            />
             <Text
-              variant="labelSmall"
-              style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 * layout.scale }}
+              variant="titleMedium"
+              style={{ color: theme.colors.onBackground }}
             >
-              {d}
+              {monthLabel(year, month)}
             </Text>
+            <IconButton
+              icon="chevron-right"
+              onPress={nextMonth}
+              accessibilityLabel="Next month"
+            />
           </View>
-        ))}
-      </View>
 
-      {/* Calendar Grid */}
-      <View style={styles.grid}>{cells}</View>
+          {/* Day-of-week headers */}
+          <View style={styles.grid}>
+            {DAYS.map((d) => (
+              <View key={d} style={[styles.cell, { width: cellSize, height: 28 }]}>
+                <Text
+                  variant="labelSmall"
+                  style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 * layout.scale }}
+                >
+                  {d}
+                </Text>
+              </View>
+            ))}
+          </View>
 
-      {/* Active filter chip */}
-      {(selected || query.trim()) && (
-        <Chip
-          icon="close"
-          onPress={clearFilter}
-          style={styles.chip}
-          accessibilityLabel="Clear filter"
-        >
-          {query.trim()
-            ? `Search: ${query}`
-            : `${new Date(year, month, Number(selected!.split("-")[2])).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
-        </Chip>
-      )}
+          {/* Calendar Grid */}
+          <View style={styles.grid}>{cells}</View>
 
-      {/* Session List */}
-      {filtered.length === 0 ? (
+          {/* Active filter chip */}
+          {(selected || query.trim()) && (
+            <Chip
+              icon="close"
+              onPress={clearFilter}
+              style={styles.chip}
+              accessibilityLabel="Clear filter"
+            >
+              {query.trim()
+                ? `Search: ${query}`
+                : `${new Date(year, month, Number(selected!.split("-")[2])).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
+            </Chip>
+          )}
+        </>
+      }
+      ListEmptyComponent={
         <View style={styles.empty}>
           <Text
             variant="bodyMedium"
@@ -349,15 +352,8 @@ function HistoryScreen() {
             {emptyMessage()}
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={false}
-          renderItem={renderSession}
-        />
-      )}
-    </ScrollView>
+      }
+    />
   );
 }
 

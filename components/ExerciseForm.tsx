@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -113,187 +113,198 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ScrollView
+      <FlatList
+        data={[]}
+        renderItem={null}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-      >
-        {/* Name */}
-        <TextInput
-          label="Exercise Name"
-          value={name}
-          onChangeText={(v) => { setName(v); setDirty(true); setErrors((e) => ({ ...e, name: undefined })); }}
-          mode="outlined"
-          maxLength={100}
-          error={!!errors.name}
-          accessibilityLabel="Exercise name"
-          style={styles.input}
-        />
-        <View style={styles.counter}>
-          <Text
-            variant="bodySmall"
-            style={{ color: errors.name ? theme.colors.error : theme.colors.onSurfaceVariant }}
-            accessibilityLabel={errors.name ?? `${name.length} of 100 characters used`}
-            accessibilityLiveRegion="polite"
-          >
-            {errors.name ?? `${name.length}/100`}
-          </Text>
-        </View>
-
-        {/* Category */}
-        <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
-          Category *
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-          <View style={styles.chipRow}>
-            {CATEGORIES.map((cat) => (
-              <Chip
-                key={cat}
-                selected={category === cat}
-                onPress={() => { setCategory(cat); setDirty(true); setErrors((e) => ({ ...e, category: undefined })); }}
-                style={styles.chip}
-                compact
-                accessibilityLabel={`Category: ${CATEGORY_LABELS[cat]}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: category === cat }}
+        ListHeaderComponent={
+          <>
+            {/* Name */}
+            <TextInput
+              label="Exercise Name"
+              value={name}
+              onChangeText={(v) => { setName(v); setDirty(true); setErrors((e) => ({ ...e, name: undefined })); }}
+              mode="outlined"
+              maxLength={100}
+              error={!!errors.name}
+              accessibilityLabel="Exercise name"
+              style={styles.input}
+            />
+            <View style={styles.counter}>
+              <Text
+                variant="bodySmall"
+                style={{ color: errors.name ? theme.colors.error : theme.colors.onSurfaceVariant }}
+                accessibilityLabel={errors.name ?? `${name.length} of 100 characters used`}
+                accessibilityLiveRegion="polite"
               >
-                {CATEGORY_LABELS[cat]}
-              </Chip>
-            ))}
-          </View>
-        </ScrollView>
-        {errors.category && (
-          <Text
-            variant="bodySmall"
-            style={{ color: theme.colors.error, marginTop: 2, marginHorizontal: 16 }}
-            accessibilityLiveRegion="polite"
-          >
-            {errors.category}
-          </Text>
-        )}
+                {errors.name ?? `${name.length}/100`}
+              </Text>
+            </View>
 
-        {/* Equipment */}
-        <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
-          Equipment
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-          <View style={styles.chipRow}>
-            {EQUIPMENT_LIST.map((eq) => (
-              <Chip
-                key={eq}
-                selected={equipment === eq}
-                onPress={() => { setEquipment(eq); setDirty(true); }}
-                style={styles.chip}
-                compact
-                accessibilityLabel={`Equipment: ${EQUIPMENT_LABELS[eq]}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: equipment === eq }}
-              >
-                {EQUIPMENT_LABELS[eq]}
-              </Chip>
-            ))}
-          </View>
-        </ScrollView>
-
-        {/* Difficulty */}
-        <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
-          Difficulty
-        </Text>
-        <SegmentedButtons
-          value={difficulty}
-          onValueChange={(v) => { setDifficulty(v as Difficulty); setDirty(true); }}
-          buttons={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABELS[d] }))}
-          style={styles.segment}
-        />
-
-        {/* Primary Muscles */}
-        <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
-          Primary Muscles *
-        </Text>
-        {MUSCLE_GROUPS_BY_REGION.map((region) => (
-          <View key={region.label} style={styles.region}>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
-              {region.label}
+            {/* Category */}
+            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+              Category *
             </Text>
-            <View style={styles.chipWrap}>
-              {region.muscles.map((m) => (
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={CATEGORIES}
+              keyExtractor={(cat) => cat}
+              style={styles.chipScroll}
+              contentContainerStyle={styles.chipRow}
+              renderItem={({ item: cat }) => (
                 <Chip
-                  key={m}
-                  selected={primary.has(m)}
-                  onPress={() => { toggleMuscle(primary, setPrimary, m); setErrors((e) => ({ ...e, muscles: undefined })); }}
+                  selected={category === cat}
+                  onPress={() => { setCategory(cat); setDirty(true); setErrors((e) => ({ ...e, category: undefined })); }}
                   style={styles.chip}
                   compact
-                  accessibilityLabel={`Primary muscle: ${MUSCLE_LABELS[m]}`}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ selected: primary.has(m) }}
+                  accessibilityLabel={`Category: ${CATEGORY_LABELS[cat]}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: category === cat }}
                 >
-                  {MUSCLE_LABELS[m]}
+                  {CATEGORY_LABELS[cat]}
                 </Chip>
-              ))}
-            </View>
-          </View>
-        ))}
-        {errors.muscles && (
-          <Text
-            variant="bodySmall"
-            style={{ color: theme.colors.error, marginHorizontal: 16 }}
-            accessibilityLiveRegion="polite"
-          >
-            {errors.muscles}
-          </Text>
-        )}
+              )}
+            />
+            {errors.category && (
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.error, marginTop: 2, marginHorizontal: 16 }}
+                accessibilityLiveRegion="polite"
+              >
+                {errors.category}
+              </Text>
+            )}
 
-        {/* Secondary Muscles */}
-        <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
-          Secondary Muscles
-        </Text>
-        {MUSCLE_GROUPS_BY_REGION.map((region) => (
-          <View key={region.label} style={styles.region}>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
-              {region.label}
+            {/* Equipment */}
+            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+              Equipment
             </Text>
-            <View style={styles.chipWrap}>
-              {region.muscles.map((m) => (
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={EQUIPMENT_LIST}
+              keyExtractor={(eq) => eq}
+              style={styles.chipScroll}
+              contentContainerStyle={styles.chipRow}
+              renderItem={({ item: eq }) => (
                 <Chip
-                  key={m}
-                  selected={secondary.has(m)}
-                  onPress={() => toggleMuscle(secondary, setSecondary, m)}
+                  selected={equipment === eq}
+                  onPress={() => { setEquipment(eq); setDirty(true); }}
                   style={styles.chip}
                   compact
-                  accessibilityLabel={`Secondary muscle: ${MUSCLE_LABELS[m]}`}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ selected: secondary.has(m) }}
+                  accessibilityLabel={`Equipment: ${EQUIPMENT_LABELS[eq]}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: equipment === eq }}
                 >
-                  {MUSCLE_LABELS[m]}
+                  {EQUIPMENT_LABELS[eq]}
                 </Chip>
-              ))}
-            </View>
-          </View>
-        ))}
+              )}
+            />
 
-        {/* Save / Cancel */}
-        <View style={styles.actions}>
-          <Button
-            mode="contained"
-            onPress={save}
-            loading={saving}
-            disabled={saving}
-            style={styles.saveBtn}
-            accessibilityLabel={`Save ${title.toLowerCase()}`}
-          >
-            Save
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={back}
-            disabled={saving}
-            style={styles.cancelBtn}
-            accessibilityLabel="Cancel"
-          >
-            Cancel
-          </Button>
-        </View>
-      </ScrollView>
+            {/* Difficulty */}
+            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+              Difficulty
+            </Text>
+            <SegmentedButtons
+              value={difficulty}
+              onValueChange={(v) => { setDifficulty(v as Difficulty); setDirty(true); }}
+              buttons={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABELS[d] }))}
+              style={styles.segment}
+            />
+
+            {/* Primary Muscles */}
+            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+              Primary Muscles *
+            </Text>
+            {MUSCLE_GROUPS_BY_REGION.map((region) => (
+              <View key={region.label} style={styles.region}>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
+                  {region.label}
+                </Text>
+                <View style={styles.chipWrap}>
+                  {region.muscles.map((m) => (
+                    <Chip
+                      key={m}
+                      selected={primary.has(m)}
+                      onPress={() => { toggleMuscle(primary, setPrimary, m); setErrors((e) => ({ ...e, muscles: undefined })); }}
+                      style={styles.chip}
+                      compact
+                      accessibilityLabel={`Primary muscle: ${MUSCLE_LABELS[m]}`}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ selected: primary.has(m) }}
+                    >
+                      {MUSCLE_LABELS[m]}
+                    </Chip>
+                  ))}
+                </View>
+              </View>
+            ))}
+            {errors.muscles && (
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.error, marginHorizontal: 16 }}
+                accessibilityLiveRegion="polite"
+              >
+                {errors.muscles}
+              </Text>
+            )}
+
+            {/* Secondary Muscles */}
+            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+              Secondary Muscles
+            </Text>
+            {MUSCLE_GROUPS_BY_REGION.map((region) => (
+              <View key={region.label} style={styles.region}>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
+                  {region.label}
+                </Text>
+                <View style={styles.chipWrap}>
+                  {region.muscles.map((m) => (
+                    <Chip
+                      key={m}
+                      selected={secondary.has(m)}
+                      onPress={() => toggleMuscle(secondary, setSecondary, m)}
+                      style={styles.chip}
+                      compact
+                      accessibilityLabel={`Secondary muscle: ${MUSCLE_LABELS[m]}`}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ selected: secondary.has(m) }}
+                    >
+                      {MUSCLE_LABELS[m]}
+                    </Chip>
+                  ))}
+                </View>
+              </View>
+            ))}
+
+            {/* Save / Cancel */}
+            <View style={styles.actions}>
+              <Button
+                mode="contained"
+                onPress={save}
+                loading={saving}
+                disabled={saving}
+                style={styles.saveBtn}
+                accessibilityLabel={`Save ${title.toLowerCase()}`}
+              >
+                Save
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={back}
+                disabled={saving}
+                style={styles.cancelBtn}
+                accessibilityLabel="Cancel"
+              >
+                Cancel
+              </Button>
+            </View>
+          </>
+        }
+      />
 
       <Snackbar
         visible={!!toast}
