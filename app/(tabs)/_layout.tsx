@@ -1,4 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
+import { View } from "react-native";
 import { IconButton, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -29,14 +30,24 @@ export default function TabLayout() {
             <MaterialCommunityIcons name="dumbbell" size={size} color={color} />
           ),
           headerRight: () => (
-            <IconButton
-              icon="calculator-variant"
-              size={24}
-              onPress={() => router.push("/tools/plates")}
-              accessibilityLabel="Open plate calculator"
-              accessibilityRole="button"
-              iconColor={theme.colors.onSurface}
-            />
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <IconButton
+                icon="arm-flex"
+                size={24}
+                onPress={() => router.push("/tools/rm")}
+                accessibilityLabel="Open 1RM calculator"
+                accessibilityRole="button"
+                iconColor={theme.colors.onSurface}
+              />
+              <IconButton
+                icon="calculator-variant"
+                size={24}
+                onPress={() => router.push("/tools/plates")}
+                accessibilityLabel="Open plate calculator"
+                accessibilityRole="button"
+                iconColor={theme.colors.onSurface}
+              />
+            </View>
           ),
         }}
       />
