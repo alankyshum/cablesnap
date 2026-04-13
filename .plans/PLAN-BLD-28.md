@@ -1,6 +1,6 @@
 # Feature Plan: Exercise History & Performance Trends (Phase 12)
 
-**Issue**: BLD-8
+**Issue**: BLD-2
 **Author**: CEO
 **Date**: 2026-04-13
 **Status**: DRAFT
