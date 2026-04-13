@@ -165,6 +165,8 @@ export type WorkoutSet = {
   reps: number | null;
   completed: boolean;
   completed_at: number | null;
+  rpe: number | null;
+  notes: string;
 };
 
 // --------------- Nutrition ---------------

@@ -207,6 +207,21 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     );
   }
 
+  // Migration: add rpe and notes columns to workout_sets
+  const setCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(workout_sets)"
+  );
+  if (!setCols.some((c) => c.name === "rpe")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sets ADD COLUMN rpe REAL DEFAULT NULL"
+    );
+  }
+  if (!setCols.some((c) => c.name === "notes")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sets ADD COLUMN notes TEXT DEFAULT ''"
+    );
+  }
+
   // Migration: index for exercise history query performance
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise ON workout_sets(exercise_id)"
@@ -601,6 +616,8 @@ type SetRow = {
   reps: number | null;
   completed: number;
   completed_at: number | null;
+  rpe: number | null;
+  notes: string;
   exercise_name: string | null;
 };
 
@@ -625,6 +642,8 @@ export async function getSessionSets(
     reps: r.reps,
     completed: r.completed === 1,
     completed_at: r.completed_at,
+    rpe: r.rpe ?? null,
+    notes: r.notes ?? "",
     exercise_name: r.exercise_name ?? undefined,
   }));
 }
@@ -658,6 +677,8 @@ export async function addSet(
     reps: null,
     completed: false,
     completed_at: null,
+    rpe: null,
+    notes: "",
   };
 }
 
@@ -692,6 +713,22 @@ export async function uncompleteSet(id: string): Promise<void> {
 export async function deleteSet(id: string): Promise<void> {
   const database = await getDatabase();
   await database.runAsync("DELETE FROM workout_sets WHERE id = ?", [id]);
+}
+
+export async function updateSetRPE(id: string, rpe: number | null): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "UPDATE workout_sets SET rpe = ? WHERE id = ?",
+    [rpe, id]
+  );
+}
+
+export async function updateSetNotes(id: string, notes: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "UPDATE workout_sets SET notes = ? WHERE id = ?",
+    [notes, id]
+  );
 }
 
 export async function getPreviousSets(
@@ -734,6 +771,17 @@ export async function getSessionSetCount(
     [sessionId]
   );
   return row?.count ?? 0;
+}
+
+export async function getSessionAvgRPE(
+  sessionId: string
+): Promise<number | null> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ val: number | null }>(
+    "SELECT AVG(rpe) AS val FROM workout_sets WHERE session_id = ? AND completed = 1 AND rpe IS NOT NULL",
+    [sessionId]
+  );
+  return row?.val ?? null;
 }
 
 // --------------- History & Calendar ---------------
@@ -913,7 +961,7 @@ export async function importData(data: {
   templates?: { id: string; name: string; created_at: number; updated_at: number }[];
   template_exercises?: { id: string; template_id: string; exercise_id: string; position: number; target_sets: number; target_reps: string; rest_seconds: number }[];
   sessions?: { id: string; template_id: string | null; name: string; started_at: number; completed_at: number | null; duration_seconds: number | null; notes: string }[];
-  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null }[];
+  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null; set_rpe?: number | null; set_notes?: string }[];
   food_entries?: { id: string; name: string; calories: number; protein: number; carbs: number; fat: number; serving_size: string; is_favorite: number; created_at: number }[];
   daily_log?: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
   macro_targets?: { id: string; calories: number; protein: number; carbs: number; fat: number; updated_at: number }[];
@@ -968,8 +1016,8 @@ export async function importData(data: {
     if (data.sets) {
       for (const s of data.sets) {
         const r = await database.runAsync(
-          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at]
+          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at, s.set_rpe ?? null, s.set_notes ?? ""]
         );
         inserted += r.changes;
       }
@@ -1253,6 +1301,8 @@ export type WorkoutCSVRow = {
   reps: number | null;
   duration_seconds: number | null;
   notes: string;
+  set_rpe: number | null;
+  set_notes: string;
 };
 
 export type NutritionCSVRow = {
@@ -1276,7 +1326,9 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
        wset.weight,
        wset.reps,
        ws.duration_seconds,
-       ws.notes
+       ws.notes,
+       wset.rpe AS set_rpe,
+       wset.notes AS set_notes
      FROM workout_sessions ws
      JOIN workout_sets wset ON wset.session_id = ws.id
      LEFT JOIN exercises e ON e.id = wset.exercise_id
@@ -1619,6 +1671,7 @@ export type ExerciseSession = {
   total_reps: number;
   set_count: number;
   volume: number;
+  avg_rpe: number | null;
 };
 
 export type ExerciseRecords = {
@@ -1644,7 +1697,8 @@ export async function getExerciseHistory(
             MAX(ws.reps) AS max_reps,
             SUM(ws.reps) AS total_reps,
             COUNT(ws.id) AS set_count,
-            SUM(ws.weight * ws.reps) AS volume
+            SUM(ws.weight * ws.reps) AS volume,
+            AVG(CASE WHEN ws.rpe IS NOT NULL THEN ws.rpe END) AS avg_rpe
      FROM workout_sets ws
      JOIN workout_sessions wss ON ws.session_id = wss.id
      WHERE ws.exercise_id = ?
