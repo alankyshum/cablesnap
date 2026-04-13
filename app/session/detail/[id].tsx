@@ -5,8 +5,15 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { getSessionById, getSessionPRs, getSessionSets } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
+import { semantic } from "../../../constants/theme";
 
 type SetWithName = WorkoutSet & { exercise_name?: string };
+
+function rpeColor(val: number): string {
+  if (val <= 7) return semantic.beginner;
+  if (val <= 8) return semantic.intermediate;
+  return semantic.advanced;
+}
 
 type ExerciseGroup = {
   exercise_id: string;
@@ -221,19 +228,36 @@ export default function SessionDetail() {
             {group.sets
               .filter((s) => s.completed)
               .map((set) => (
-                <View key={set.id} style={styles.setRow}>
-                  <Text
-                    variant="bodyMedium"
-                    style={[styles.setNum, { color: theme.colors.onSurface }]}
-                  >
-                    Set {set.set_number}
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onSurface }}
-                  >
-                    {set.weight ?? 0} × {set.reps ?? 0}
-                  </Text>
+                <View key={set.id}>
+                  <View style={styles.setRow}>
+                    <Text
+                      variant="bodyMedium"
+                      style={[styles.setNum, { color: theme.colors.onSurface }]}
+                    >
+                      Set {set.set_number}
+                    </Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={{ color: theme.colors.onSurface }}
+                    >
+                      {set.weight ?? 0} × {set.reps ?? 0}
+                    </Text>
+                    {set.rpe != null && (
+                      <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
+                        <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+                          RPE {set.rpe}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  {set.notes ? (
+                    <Text
+                      variant="bodySmall"
+                      style={[styles.setNote, { color: theme.colors.onSurfaceVariant }]}
+                    >
+                      {set.notes}
+                    </Text>
+                  ) : null}
                 </View>
               ))}
             <Divider style={styles.divider} />
@@ -310,11 +334,24 @@ const styles = StyleSheet.create({
   setRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
   setNum: {
     width: 60,
+  },
+  rpeBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  setNote: {
+    fontStyle: "italic",
+    paddingHorizontal: 8,
+    paddingBottom: 4,
+    fontSize: 12,
   },
   divider: {
     marginTop: 8,
