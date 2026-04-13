@@ -179,6 +179,31 @@ export type LinkedGroup = {
   exercises: TemplateExercise[];
 };
 
+// --------------- Food Database ---------------
+
+export type FoodCategory = "protein" | "grains" | "dairy" | "fruits" | "vegetables" | "fats" | "other";
+
+export type BuiltinFood = {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  serving: string;
+};
+
+export const FOOD_CATEGORIES: { id: FoodCategory; label: string }[] = [
+  { id: "protein", label: "Protein" },
+  { id: "grains", label: "Grains" },
+  { id: "dairy", label: "Dairy" },
+  { id: "fruits", label: "Fruits" },
+  { id: "vegetables", label: "Vegetables" },
+  { id: "fats", label: "Fats & Nuts" },
+  { id: "other", label: "Other" },
+];
+
 // --------------- Nutrition ---------------
 
 export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
