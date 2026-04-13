@@ -31,6 +31,7 @@ import {
   completeSet,
   getBodySettings,
   getMaxWeightByExercise,
+  getRecentExerciseSets,
   getSessionById,
   getSessionSets,
   getTemplateById,
@@ -41,6 +42,7 @@ import {
   updateSet,
   updateSetRPE,
   updateSetNotes,
+  getExerciseById,
 } from "../../lib/db";
 import {
   getSessionProgramDayId,
@@ -49,6 +51,7 @@ import {
 } from "../../lib/programs";
 import type { WorkoutSession, WorkoutSet } from "../../lib/types";
 import { rpeColor, rpeText } from "../../lib/rpe";
+import { suggest, type Suggestion } from "../../lib/rm";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -95,6 +98,7 @@ export default function ActiveSession() {
   const [step, setStep] = useState(2.5);
   const restFlash = useRef(new Animated.Value(0)).current;
   const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -164,6 +168,25 @@ export default function ActiveSession() {
       });
     }
     setGroups([...map.values()]);
+
+    // Compute progressive overload suggestions
+    const weightStep = body.weight_unit === "lb" ? 5 : 2.5;
+    const sugg: Record<string, Suggestion | null> = {};
+    for (const eid of exerciseIds) {
+      try {
+        const recent = await getRecentExerciseSets(eid, 2);
+        if (recent.length === 0) { sugg[eid] = null; continue; }
+        // Check if exercise is time-based (all reps=1, weight=0) — suppress
+        const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
+        if (timeBased) { sugg[eid] = null; continue; }
+        const ex = await getExerciseById(eid);
+        const bw = ex ? ex.equipment === "bodyweight" : false;
+        sugg[eid] = suggest(recent, weightStep, bw);
+      } catch {
+        sugg[eid] = null;
+      }
+    }
+    setSuggestions(sugg);
   }, [id, router]);
 
   // Initialize session from template
@@ -633,6 +656,58 @@ export default function ActiveSession() {
               <View style={styles.colCheck} />
             </View>
 
+            {/* Suggestion chip */}
+            {suggestions[group.exercise_id] && (() => {
+              const s = suggestions[group.exercise_id]!;
+              const isIncrease = s.type === "increase" || s.type === "rep_increase";
+              const label = s.type === "rep_increase"
+                ? `${s.reps} reps ▲`
+                : s.type === "increase"
+                  ? `${s.weight} ▲`
+                  : `${s.weight} =`;
+              const hint = s.type === "rep_increase"
+                ? `Suggested reps: ${s.reps}, ${s.reason}`
+                : s.type === "increase"
+                  ? `Suggested weight: ${s.weight}, increase by ${step}`
+                  : `Suggested weight: ${s.weight}, maintain`;
+              return (
+                <Pressable
+                  onPress={() => {
+                    if (s.type === "rep_increase") return;
+                    for (const set of group.sets) {
+                      if (!set.completed && (set.weight == null || set.weight === 0)) {
+                        handleUpdate(set.id, "weight", String(s.weight));
+                      }
+                    }
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={[
+                    styles.suggestionChip,
+                    {
+                      backgroundColor: isIncrease
+                        ? theme.colors.primaryContainer
+                        : theme.colors.surfaceVariant,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={hint}
+                  accessibilityHint="Double tap to fill suggested weight"
+                >
+                  <Text
+                    variant="labelSmall"
+                    style={{
+                      color: isIncrease
+                        ? theme.colors.onPrimaryContainer
+                        : theme.colors.onSurfaceVariant,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Suggested: {label}
+                  </Text>
+                </Pressable>
+              );
+            })()}
+
             {group.sets.map((set) => (
               <View key={set.id}>
                 <View
@@ -1052,5 +1127,15 @@ const styles = StyleSheet.create({
   stepBtn: {
     margin: 0,
     padding: 0,
+  },
+  suggestionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    alignSelf: "flex-start",
+    marginLeft: 4,
+    marginBottom: 6,
+    minHeight: 48,
+    justifyContent: "center",
   },
 });
