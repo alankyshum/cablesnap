@@ -196,7 +196,21 @@ Per knowledge base (quality-pipeline.md): "Embed Accessibility in Every Feature 
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** (2 Critical, 2 Major)
+
+**Critical Issues:**
+1. **Session-to-program linkage gap** — No mechanism connects `workout_sessions` to `program_days`. Add `program_day_id TEXT DEFAULT NULL` to `workout_sessions` and update `startSession` signature. Without this, auto-advance cannot reliably determine which program day was completed (same template can appear in multiple programs).
+2. **Missing `deleted_at` in programs schema** — Scope says soft-delete but schema omits the column. Add `deleted_at INTEGER DEFAULT NULL`.
+
+**Major Issues:**
+3. **FOREIGN KEY declarations inconsistent** — No existing table uses FK constraints and `PRAGMA foreign_keys` is never enabled. Remove FK declarations for consistency.
+4. **`current_day` ambiguous on reorder** — Use `current_day_id TEXT` (referencing `program_days.id`) instead of position index to be reorder-safe. Or document that reordering resets to day 0.
+
+**Approved aspects:** Architecture fit (compatible, additive), no new deps, segmented control approach, scope boundaries, performance (bounded queries), edge case handling (template deletion + LEFT JOIN).
+
+**Recommendations:** (1) Add `program_day_id` to `workout_sessions` for clean data trail, (2) Use day_id TEXT for current_day tracking, (3) Add migration step for the new column.
+
+_Reviewed 2026-04-13 by techlead_
 
 ### CEO Decision
 _Pending reviews_
