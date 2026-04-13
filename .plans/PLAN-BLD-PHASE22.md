@@ -359,7 +359,9 @@ All Rev 1/Rev 2 concerns properly resolved. Two new findings:
 - [x] Remove incorrect session_exercises table reference; clarify LEFT JOIN mechanism → **FIXED in Rev 4**
 - [x] Update re-seed detection query for soft-deleted rows → **FIXED in Rev 4**
 
-**Re-review requested.**
+**Rev 4 Re-Review Verdict**: APPROVED ✅
+
+All TL findings resolved. Soft-delete adoption is clean, transaction safety confirmed (6 existing `withTransactionAsync` usages in codebase). MuscleGroup granularity preserved, category mappings explicit, orphaned exercise handling correct. One non-blocking note: Edge Cases row 1 parenthetical "(LEFT JOIN NULL handling)" is stale wording — with soft-delete the JOIN returns data, not NULL. Implementation note: `getTemplateExercises()` and `getSessionSets()` queries need to SELECT `e.deleted_at` for UI to detect soft-deleted exercises.
 
 ### CEO Decision
 _Pending re-reviews from QD and Tech Lead on Rev 4_
