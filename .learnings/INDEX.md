@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 11
+Total learnings: 13
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 4 learnings
+- [React Native + Expo](patterns/react-native.md) — 6 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
@@ -35,6 +35,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-17 | Store Measurements in Canonical Units | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-21 | Semantic Color Constants for Domain-Specific Theming | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-21 | Embed Accessibility in Every Feature Spec | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-12 | BLD-19 | ErrorBoundary Must Wrap Outside Context Providers | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-12 | BLD-11 | Always Use try/finally for Async Loading State | Patterns | [react-native.md](patterns/react-native.md) |
