@@ -4,9 +4,12 @@ const config = getDefaultConfig(__dirname);
 config.resolver.assetExts.push("wasm");
 config.server = {
   ...config.server,
-  headers: {
-    "Cross-Origin-Embedder-Policy": "credentialless",
-    "Cross-Origin-Opener-Policy": "same-origin",
+  enhanceMiddleware: (middleware) => {
+    return (req, res, next) => {
+      res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+      return middleware(req, res, next);
+    };
   },
 };
 module.exports = config;

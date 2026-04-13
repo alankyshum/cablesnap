@@ -60,6 +60,58 @@ describe("getDatabase", () => {
   });
 });
 
+describe("getDatabase web fallback", () => {
+  const originalPlatform = jest.requireActual("react-native").Platform;
+
+  it("falls back to :memory: on web when OPFS fails", async () => {
+    jest.resetModules();
+
+    const failOnce = jest.fn()
+      .mockRejectedValueOnce(new Error("cannot create file"))
+      .mockResolvedValue(mockDb);
+
+    jest.doMock("expo-sqlite", () => ({
+      openDatabaseAsync: failOnce,
+    }));
+    jest.doMock("react-native", () => ({
+      Platform: { OS: "web" },
+    }));
+    jest.doMock("../../lib/seed", () => ({
+      seedExercises: jest.fn(() => []),
+    }));
+
+    const dbMod = require("../../lib/db");
+    const result = await dbMod.getDatabase();
+
+    expect(result).toBe(mockDb);
+    expect(failOnce).toHaveBeenCalledTimes(2);
+    expect(failOnce).toHaveBeenNthCalledWith(1, "fitforge.db");
+    expect(failOnce).toHaveBeenNthCalledWith(2, ":memory:");
+    expect(dbMod.isMemoryFallback()).toBe(true);
+  });
+
+  it("throws on non-web platform when open fails", async () => {
+    jest.resetModules();
+
+    const fail = jest.fn().mockRejectedValue(new Error("native crash"));
+
+    jest.doMock("expo-sqlite", () => ({
+      openDatabaseAsync: fail,
+    }));
+    jest.doMock("react-native", () => ({
+      Platform: { OS: "android" },
+    }));
+    jest.doMock("../../lib/seed", () => ({
+      seedExercises: jest.fn(() => []),
+    }));
+
+    const dbMod = require("../../lib/db");
+    await expect(dbMod.getDatabase()).rejects.toThrow("native crash");
+    expect(fail).toHaveBeenCalledTimes(1);
+    expect(dbMod.isMemoryFallback()).toBe(false);
+  });
+});
+
 describe("exercises CRUD", () => {
   it("getAllExercises returns mapped exercises", async () => {
     await initDb();
