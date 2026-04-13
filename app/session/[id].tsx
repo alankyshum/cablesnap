@@ -476,7 +476,14 @@ export default function ActiveSession() {
               // Program advance failed — session is already saved, navigate normally
             }
 
-            router.replace(`/session/detail/${id}`);
+            // Skip summary if no completed sets
+            const allSets = await getSessionSets(id!);
+            const done = allSets.filter((s) => s.completed);
+            if (done.length === 0) {
+              router.replace("/(tabs)");
+            } else {
+              router.replace(`/session/summary/${id}`);
+            }
           },
         },
       ]

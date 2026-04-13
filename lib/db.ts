@@ -2158,3 +2158,159 @@ export async function getMuscleVolumeTrend(
 
   return buckets.map((sets, i) => ({ week: `W${i + 1}`, sets }));
 }
+
+// --------------- Post-Workout Summary ---------------
+
+export async function getSessionRepPRs(
+  sessionId: string
+): Promise<{ exercise_id: string; name: string; reps: number; previous_max: number }[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<{ exercise_id: string; name: string; reps: number; previous_max: number }>(
+    `SELECT cur.exercise_id,
+            COALESCE(e.name, 'Deleted Exercise') AS name,
+            cur.max_reps AS reps,
+            hist.max_reps AS previous_max
+     FROM (
+       SELECT ws.exercise_id, MAX(ws.reps) AS max_reps
+       FROM workout_sets ws
+       WHERE ws.session_id = ?
+         AND ws.completed = 1
+         AND ws.reps IS NOT NULL
+         AND ws.reps > 0
+         AND (ws.weight IS NULL OR ws.weight = 0)
+       GROUP BY ws.exercise_id
+     ) cur
+     JOIN (
+       SELECT ws.exercise_id, MAX(ws.reps) AS max_reps
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.session_id != ?
+         AND ws.completed = 1
+         AND ws.reps IS NOT NULL
+         AND ws.reps > 0
+         AND (ws.weight IS NULL OR ws.weight = 0)
+         AND wss.completed_at IS NOT NULL
+       GROUP BY ws.exercise_id
+     ) hist ON cur.exercise_id = hist.exercise_id
+     LEFT JOIN exercises e ON cur.exercise_id = e.id
+     WHERE cur.max_reps > hist.max_reps
+     ORDER BY name ASC`,
+    [sessionId, sessionId]
+  );
+}
+
+export async function getSessionComparison(
+  sessionId: string
+): Promise<{
+  previous: { volume: number; duration: number; sets: number } | null;
+  current: { volume: number; duration: number; sets: number };
+} | null> {
+  const database = await getDatabase();
+
+  const session = await database.getFirstAsync<{ template_id: string | null; started_at: number }>(
+    "SELECT template_id, started_at FROM workout_sessions WHERE id = ?",
+    [sessionId]
+  );
+  if (!session?.template_id) return null;
+
+  const prev = await database.getFirstAsync<{ id: string; duration_seconds: number | null }>(
+    `SELECT id, duration_seconds FROM workout_sessions
+     WHERE template_id = ? AND id != ? AND completed_at IS NOT NULL
+     ORDER BY started_at DESC LIMIT 1`,
+    [session.template_id, sessionId]
+  );
+  if (!prev) return null;
+
+  const agg = async (sid: string) => {
+    const row = await database.getFirstAsync<{ vol: number; cnt: number }>(
+      `SELECT COALESCE(SUM(CASE WHEN weight IS NOT NULL AND reps IS NOT NULL THEN weight * reps ELSE 0 END), 0) AS vol,
+              COUNT(*) AS cnt
+       FROM workout_sets WHERE session_id = ? AND completed = 1`,
+      [sid]
+    );
+    return { volume: row?.vol ?? 0, sets: row?.cnt ?? 0 };
+  };
+
+  const curAgg = await agg(sessionId);
+  const prevAgg = await agg(prev.id);
+
+  const curSession = await database.getFirstAsync<{ duration_seconds: number | null }>(
+    "SELECT duration_seconds FROM workout_sessions WHERE id = ?",
+    [sessionId]
+  );
+
+  return {
+    current: { ...curAgg, duration: curSession?.duration_seconds ?? 0 },
+    previous: { ...prevAgg, duration: prev.duration_seconds ?? 0 },
+  };
+}
+
+export async function getSessionWeightIncreases(
+  sessionId: string
+): Promise<{ exercise_id: string; name: string; current: number; previous: number }[]> {
+  const database = await getDatabase();
+
+  // Get max weight per exercise in current session
+  const current = await database.getAllAsync<{
+    exercise_id: string;
+    name: string;
+    max_weight: number;
+  }>(
+    `SELECT ws.exercise_id,
+            COALESCE(e.name, 'Deleted Exercise') AS name,
+            MAX(ws.weight) AS max_weight
+     FROM workout_sets ws
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
+     WHERE ws.session_id = ?
+       AND ws.completed = 1
+       AND ws.weight IS NOT NULL
+       AND ws.weight > 0
+     GROUP BY ws.exercise_id`,
+    [sessionId]
+  );
+
+  if (current.length === 0) return [];
+
+  const session = await database.getFirstAsync<{ started_at: number }>(
+    "SELECT started_at FROM workout_sessions WHERE id = ?",
+    [sessionId]
+  );
+  if (!session) return [];
+
+  const result: { exercise_id: string; name: string; current: number; previous: number }[] = [];
+
+  for (const ex of current) {
+    // Find max weight from the most recent previous session with this exercise
+    const prev = await database.getFirstAsync<{ max_weight: number }>(
+      `SELECT MAX(ws.weight) AS max_weight
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.exercise_id = ?
+         AND wss.id != ?
+         AND wss.completed_at IS NOT NULL
+         AND ws.completed = 1
+         AND ws.weight > 0
+         AND wss.started_at = (
+           SELECT MAX(wss2.started_at)
+           FROM workout_sessions wss2
+           JOIN workout_sets ws2 ON ws2.session_id = wss2.id
+           WHERE ws2.exercise_id = ?
+             AND wss2.id != ?
+             AND wss2.completed_at IS NOT NULL
+             AND ws2.completed = 1
+         )`,
+      [ex.exercise_id, sessionId, ex.exercise_id, sessionId]
+    );
+
+    if (prev?.max_weight && ex.max_weight > prev.max_weight) {
+      result.push({
+        exercise_id: ex.exercise_id,
+        name: ex.name,
+        current: ex.max_weight,
+        previous: prev.max_weight,
+      });
+    }
+  }
+
+  return result;
+}

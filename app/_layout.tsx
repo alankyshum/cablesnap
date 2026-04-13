@@ -187,6 +187,15 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="session/summary/[id]"
+              options={{
+                headerShown: true,
+                title: "Summary",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="tools/plates"
               options={{
                 headerShown: true,

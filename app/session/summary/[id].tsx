@@ -1,0 +1,500 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  AccessibilityInfo,
+  ScrollView,
+  Share,
+  StyleSheet,
+  View,
+} from "react-native";
+import {
+  Button,
+  Card,
+  Text,
+  useTheme,
+} from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  getBodySettings,
+  getSessionById,
+  getSessionComparison,
+  getSessionPRs,
+  getSessionRepPRs,
+  getSessionSets,
+  getSessionWeightIncreases,
+} from "../../../lib/db";
+import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
+import { toDisplay } from "../../../lib/units";
+
+type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
+type RepPR = { exercise_id: string; name: string; reps: number; previous_max: number };
+type Increase = { exercise_id: string; name: string; current: number; previous: number };
+type Comparison = {
+  previous: { volume: number; duration: number; sets: number } | null;
+  current: { volume: number; duration: number; sets: number };
+} | null;
+
+export default function Summary() {
+  const theme = useTheme();
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [session, setSession] = useState<WorkoutSession | null>(null);
+  const [sets, setSets] = useState<(WorkoutSet & { exercise_name?: string })[]>([]);
+  const [prs, setPrs] = useState<PR[]>([]);
+  const [repPrs, setRepPrs] = useState<RepPR[]>([]);
+  const [increases, setIncreases] = useState<Increase[]>([]);
+  const [comparison, setComparison] = useState<Comparison>(null);
+  const [unit, setUnit] = useState<"kg" | "lb">("kg");
+
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const [sess, settings] = await Promise.all([
+        getSessionById(id),
+        getBodySettings(),
+      ]);
+      if (!sess) return;
+      setSession(sess);
+      setUnit(settings.weight_unit);
+
+      const [setsData, prData, repPrData, incData, compData] = await Promise.all([
+        getSessionSets(id),
+        getSessionPRs(id),
+        getSessionRepPRs(id),
+        getSessionWeightIncreases(id),
+        getSessionComparison(id),
+      ]);
+      setSets(setsData);
+      setPrs(prData);
+      setRepPrs(repPrData);
+      // Filter out exercises that are already weight PRs
+      setIncreases(incData.filter(
+        (inc) => !prData.some((pr) => pr.exercise_id === inc.exercise_id)
+      ));
+      setComparison(compData);
+
+      AccessibilityInfo.announceForAccessibility("Workout Complete!");
+    })();
+  }, [id]);
+
+  const completed = useMemo(
+    () => sets.filter((s) => s.completed),
+    [sets],
+  );
+
+  const volume = useMemo(() => {
+    let total = 0;
+    for (const s of completed) {
+      if (s.weight && s.reps) total += s.weight * s.reps;
+    }
+    return total;
+  }, [completed]);
+
+  const formatTime = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    const mm = String(m).padStart(2, "0");
+    const ss = String(s).padStart(2, "0");
+    if (h > 0) return `${h}:${mm}:${ss}`;
+    return `${mm}:${ss}`;
+  };
+
+  const duration = session?.duration_seconds
+    ? formatTime(session.duration_seconds)
+    : "0:00";
+
+  const durationSpoken = () => {
+    if (!session?.duration_seconds) return "0 minutes";
+    const h = Math.floor(session.duration_seconds / 3600);
+    const m = Math.floor((session.duration_seconds % 3600) / 60);
+    if (h > 0) return `${h} hour${h > 1 ? "s" : ""} ${m} minute${m !== 1 ? "s" : ""}`;
+    return `${m} minute${m !== 1 ? "s" : ""}`;
+  };
+
+  const volumeDisplay = toDisplay(volume, unit);
+
+  const delta = (cur: number, prev: number) => {
+    const diff = cur - prev;
+    if (diff > 0) return `↑ ${diff}`;
+    if (diff < 0) return `↓ ${Math.abs(diff)}`;
+    return "—";
+  };
+
+  const deltaTime = (cur: number, prev: number) => {
+    const diff = cur - prev;
+    const m = Math.floor(Math.abs(diff) / 60);
+    if (diff > 0) return `↑ ${m}m`;
+    if (diff < 0) return `↓ ${m}m`;
+    return "—";
+  };
+
+  const share = async () => {
+    const lines = [`🏋️ ${session?.name ?? "Workout"} Complete!`];
+    lines.push(`Duration: ${duration}`);
+    lines.push(`Sets: ${completed.length}`);
+    lines.push(`Volume: ${volumeDisplay.toLocaleString()} ${unit}`);
+    if (prs.length > 0) {
+      lines.push("");
+      lines.push("🏆 New PRs:");
+      for (const pr of prs) {
+        lines.push(`  ${pr.name}: ${toDisplay(pr.weight, unit)} ${unit}`);
+      }
+    }
+    if (repPrs.length > 0) {
+      if (prs.length === 0) lines.push("", "🏆 New PRs:");
+      for (const pr of repPrs) {
+        lines.push(`  ${pr.name}: ${pr.reps} reps`);
+      }
+    }
+    try {
+      await Share.share({ message: lines.join("\n") });
+    } catch {
+      // User cancelled share
+    }
+  };
+
+  if (!session) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Summary" }} />
+        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+          <Text style={{ color: theme.colors.onSurfaceVariant }}>Loading...</Text>
+        </View>
+      </>
+    );
+  }
+
+  const allPrs = [...prs, ...repPrs];
+
+  return (
+    <>
+      <Stack.Screen options={{ title: "Workout Complete!" }} />
+      <ScrollView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        contentContainerStyle={styles.content}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <MaterialCommunityIcons
+            name="check-circle"
+            size={48}
+            color={theme.colors.primary}
+          />
+          <Text
+            variant="headlineMedium"
+            style={[styles.title, { color: theme.colors.onBackground }]}
+            accessibilityRole="header"
+          >
+            Workout Complete!
+          </Text>
+          <Text
+            variant="bodyLarge"
+            style={{ color: theme.colors.onSurfaceVariant }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {session.name}
+          </Text>
+        </View>
+
+        {/* Stats Row */}
+        <View style={styles.stats}>
+          <Card
+            style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+            accessibilityLabel={`Duration: ${durationSpoken()}`}
+          >
+            <Card.Content style={styles.statInner}>
+              <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                {duration}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                Duration
+              </Text>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+            accessibilityLabel={`${completed.length} sets completed`}
+          >
+            <Card.Content style={styles.statInner}>
+              <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                {completed.length}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                Sets
+              </Text>
+            </Card.Content>
+          </Card>
+          <Card
+            style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+            accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}
+          >
+            <Card.Content style={styles.statInner}>
+              <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                {volumeDisplay.toLocaleString()}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                Volume ({unit})
+              </Text>
+            </Card.Content>
+          </Card>
+        </View>
+
+        {/* PRs Section */}
+        {allPrs.length > 0 && (
+          <Card
+            style={[styles.section, { backgroundColor: theme.colors.tertiaryContainer }]}
+            accessibilityLabel={`${allPrs.length} new personal record${allPrs.length > 1 ? "s" : ""}`}
+          >
+            <Card.Content>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons
+                  name="trophy"
+                  size={20}
+                  color={theme.colors.onTertiaryContainer}
+                />
+                <Text
+                  variant="titleMedium"
+                  style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                >
+                  {allPrs.length} New PR{allPrs.length > 1 ? "s" : ""}
+                </Text>
+              </View>
+              {prs.map((pr) => (
+                <View key={pr.exercise_id} style={styles.row}>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                    accessibilityLabel={`New personal record: ${pr.name}, ${toDisplay(pr.weight, unit)} ${unit}`}
+                  >
+                    {pr.name}
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onTertiaryContainer }}
+                  >
+                    {toDisplay(pr.previous_max, unit)} → {toDisplay(pr.weight, unit)} {unit}
+                  </Text>
+                </View>
+              ))}
+              {repPrs.map((pr) => (
+                <View key={pr.exercise_id} style={styles.row}>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                    accessibilityLabel={`New rep personal record: ${pr.name}, ${pr.reps} reps`}
+                  >
+                    {pr.name}
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onTertiaryContainer }}
+                  >
+                    {pr.previous_max} → {pr.reps} reps
+                  </Text>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Weight Increases */}
+        {increases.length > 0 && (
+          <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons
+                  name="trending-up"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  variant="titleMedium"
+                  style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                >
+                  Weight Increases
+                </Text>
+              </View>
+              {increases.map((inc) => (
+                <View key={inc.exercise_id} style={styles.row}>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onSurface, flex: 1 }}
+                    accessibilityLabel={`${inc.name}: weight increased from ${toDisplay(inc.previous, unit)} to ${toDisplay(inc.current, unit)} ${unit}`}
+                  >
+                    {inc.name}
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.primary }}
+                  >
+                    {toDisplay(inc.previous, unit)} → {toDisplay(inc.current, unit)} {unit}
+                  </Text>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Comparison Section */}
+        {comparison?.previous && (
+          <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons
+                  name="compare-horizontal"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  variant="titleMedium"
+                  style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                >
+                  vs. Last Time
+                </Text>
+              </View>
+              <View style={styles.compRow}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                  Volume
+                </Text>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurface }}
+                  accessibilityLabel={`Volume ${comparison.current.volume >= comparison.previous.volume ? "increased" : "decreased"} by ${Math.abs(comparison.current.volume - comparison.previous.volume).toLocaleString()}`}
+                >
+                  {delta(comparison.current.volume, comparison.previous.volume)}
+                </Text>
+              </View>
+              <View style={styles.compRow}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                  Duration
+                </Text>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurface }}
+                >
+                  {deltaTime(comparison.current.duration, comparison.previous.duration)}
+                </Text>
+              </View>
+              <View style={styles.compRow}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                  Sets
+                </Text>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurface }}
+                >
+                  {delta(comparison.current.sets, comparison.previous.sets)}
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Actions */}
+        <View style={styles.actions}>
+          <Button
+            mode="contained"
+            onPress={() => router.replace("/(tabs)")}
+            style={styles.doneBtn}
+            contentStyle={styles.btnContent}
+            accessibilityRole="button"
+            accessibilityHint="Return to workouts tab"
+          >
+            Done
+          </Button>
+          <Button
+            mode="outlined"
+            onPress={share}
+            style={styles.shareBtn}
+            contentStyle={styles.btnContent}
+            accessibilityRole="button"
+            accessibilityHint="Share workout summary"
+          >
+            Share
+          </Button>
+          <Button
+            mode="text"
+            onPress={() => router.replace(`/session/detail/${id}`)}
+            contentStyle={styles.btnContent}
+            accessibilityRole="button"
+            accessibilityHint="View detailed workout breakdown"
+          >
+            View Details
+          </Button>
+        </View>
+      </ScrollView>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 48,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 24,
+    paddingTop: 8,
+  },
+  title: {
+    fontWeight: "700",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  stats: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  stat: {
+    flex: 1,
+  },
+  statInner: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+  compRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  actions: {
+    marginTop: 16,
+    gap: 12,
+  },
+  doneBtn: {
+    borderRadius: 8,
+  },
+  shareBtn: {
+    borderRadius: 8,
+  },
+  btnContent: {
+    paddingVertical: 4,
+  },
+});
