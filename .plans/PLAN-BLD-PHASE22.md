@@ -3,7 +3,7 @@
 **Issue**: BLD-27
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT → Rev 3 (consistency fixes, awaiting re-review)
+**Status**: DRAFT → Rev 4 (addresses TL soft-delete + QD a11y/migration/UX findings)
 
 ## Problem Statement
 
@@ -74,9 +74,15 @@ Face Pulls with External Rotation, Front Raise (Bar), Front Raise (Handle), Late
 
 #### Exercise Detail Screen
 - Show mount position with visual indicator (high/mid/low/floor)
+  - **a11y**: `accessibilityLabel="Mount position: {position} on rack"` on the visual indicator
 - Show recommended attachment with icon label
+  - **a11y**: `accessibilityLabel="Attachment: {attachment_name}"` on the icon
 - Show compatible training modes as informational tags
+  - **a11y**: Wrap in accessible group with `accessibilityLabel="Compatible training modes: {comma-separated list}"`. Individual tags do NOT need individual a11y labels — the group label suffices.
 - Instructions reference Voltra-specific setup (mount, attachment, cable direction)
+- **Touch targets**: "Replace" button on orphaned exercises must be minimum 48×48dp
+- **Color contrast**: New visual indicators (mount position, attachment icons) must meet 3:1 contrast ratio for non-text elements
+- **Font sizes**: Metadata labels must be ≥12px per Review SKILL standards
 
 #### Workout Tab Header
 - Remove plate calculator button
@@ -102,7 +108,7 @@ type TrainingMode = "weight" | "eccentric_overload" | "band" | "damper" | "isoki
 
 **IMPORTANT — MuscleGroup vs Category distinction (Tech Lead feedback):**
 
-- **MuscleGroup** stays at current 14 granular values (biceps, triceps, forearms, quads, hamstrings, glutes, calves, core, chest, back, shoulders, lats, traps, full_body). These drive `primary_muscles`/`secondary_muscles` for volume tracking and muscle balance analysis. **DO NOT collapse these.**
+- **MuscleGroup** stays at current 14 granular values (biceps, triceps, forearms, quads, hamstrings, glutes, calves, core, chest, back, shoulders, lats, traps, full_body). These drive `primary_muscles`/`secondary_muscles` for volume tracking and muscle balance analysis. **DO NOT collapse these.** Keep `full_body` in the type for backward compatibility with existing custom exercises — simply don't use it in new Voltra exercises.
 - **Category** changes to 6 Voltra-aligned groups for UI filtering:
   ```typescript
   type Category = "abs_core" | "arms" | "back" | "chest" | "legs_glutes" | "shoulders"
@@ -136,31 +142,40 @@ ALTER TABLE exercises ADD COLUMN is_voltra INTEGER DEFAULT 0;
 Migration must:
 - Check column existence with PRAGMA table_info (consistent with existing pattern)
 - Add new columns (optional — NULL allowed for mount_position)
-- Delete all seed exercises (is_custom = 0)
+- **Wrap entire migration in `db.withTransactionAsync()`** to prevent inconsistent state on crash (battery death, app kill). The codebase already uses this pattern (6+ instances in db.ts).
+- **SOFT-DELETE** all seed exercises: `UPDATE exercises SET deleted_at = <timestamp> WHERE is_custom = 0` — do NOT use hard DELETE. The existing soft-delete infrastructure handles this:
+  - `getAllExercises()` (db.ts:349) already filters `WHERE deleted_at IS NULL` → soft-deleted exercises hidden from UI
+  - `getExerciseById()` (db.ts:357) does NOT filter `deleted_at` → historical lookups still resolve exercise names
+  - This is strictly superior to hard delete: templates, sessions, and programs all preserve exercise names via LEFT JOIN to the exercises table, since soft-deleted rows are still present.
 - Re-seed with Voltra exercises (is_voltra = 1)
 - Preserve user's custom exercises (is_custom = 1) — NEVER delete user data
-- Update category values: map old categories to new 6-group system
+- **Update seed function guard logic**: Current `seed()` check at db.ts:292 counts `WHERE is_custom = 0` and returns early if count > 0. After soft-delete, this count includes soft-deleted old exercises. Update to: `SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 1` — this ensures re-seeding happens when there are no active Voltra exercises.
+- Update category values: map old categories to new 6-group system for custom exercises
   - "biceps" | "triceps" → "arms"
   - "legs" → "legs_glutes"
   - "core" → "abs_core"
-  - "cardio" | "full_body" → remove (no Voltra exercises in these categories)
+  - "cardio" → "legs_glutes" (closest physical match for cable cardio movements)
+  - "full_body" → "abs_core" (most full_body exercises are core-dominant)
   - "chest", "back", "shoulders" → unchanged
 
 #### Orphaned Exercise Handling (Templates & Sessions)
 
-**CRITICAL — explicit strategy for exercises that get deleted during migration:**
+**CRITICAL — explicit strategy for exercises that get soft-deleted during migration:**
 
-1. **Workout templates** (`getTemplateExercises()`): When a template references a deleted exercise (exercise_id points to a non-existent row), the existing LEFT JOIN returns NULL for exercise fields. The UI MUST:
-   - Display "Exercise removed" with a muted visual indicator (gray text, strikethrough or italic)
-   - Show a "Replace" button/link that opens the exercise picker to swap in a Voltra exercise
+Because we use soft-delete (not hard delete), the exercises table retains all old exercise rows with `deleted_at` set. This means LEFT JOIN from `workout_sets`/`template_exercises` → `exercises` still resolves exercise names. The UI must check `deleted_at IS NOT NULL` (or equivalently, the exercise is absent from `getAllExercises()` results) to display the orphaned state.
+
+1. **Workout templates** (`getTemplateExercises()`): When a template references a soft-deleted exercise, the LEFT JOIN still returns the exercise name (since `getExerciseById()` doesn't filter `deleted_at`). The UI MUST:
+   - Display the exercise name with a muted visual indicator (gray text, strikethrough or italic)
+   - Append "(removed)" suffix
+   - Show a "Replace" button/link (48×48dp minimum touch target) that opens the exercise picker to swap in a Voltra exercise
    - Never crash or show blank slots
 
-2. **Historical session data** (`getSessionSets()`): Past workout logs reference exercises by ID. When the exercise no longer exists:
-   - Display the exercise name from stored context (session_exercises table stores exercise_name)
-   - Show a subtle "(removed)" suffix to indicate the exercise is no longer in the database
+2. **Historical session data** (`getSessionSets()`): Past workout logs reference exercises by `exercise_id` in the `workout_sets` table. Exercise names come from LEFT JOIN to the `exercises` table (there is NO separate session_exercises table). Because we use soft-delete:
+   - LEFT JOIN still resolves the exercise name from the soft-deleted row ✅
+   - Display with a subtle "(removed)" suffix to indicate the exercise is no longer active
    - Historical data is READ-ONLY — never delete or modify past session records
 
-3. **Programs**: Program structures referencing removed exercises:
+3. **Programs**: Program structures referencing soft-deleted exercises:
    - Show "Exercise unavailable — tap to replace" in program view
    - Program remains functional; user replaces exercises at their own pace
 
@@ -189,7 +204,7 @@ Complete replacement — remove all 70 current exercises, add 54 Voltra exercise
 - Complete exercise database replacement (70 → 54 exercises)
 - Schema migration for Voltra metadata fields (mount_position, attachment, training_modes, is_voltra)
 - Category restructure (9 → 6 Voltra categories) — **Category only, NOT MuscleGroup**
-- MuscleGroup: remove `full_body` only; keep all 13 granular muscle values
+- MuscleGroup: keep all 14 granular muscle values (including `full_body` for backward compat); don't use `full_body` in new Voltra exercises
 - Orphaned exercise handling in templates, programs, and session history
 - Remove plate calculator tool and its navigation entry
 - Hide equipment filter chip in exercise list (keep type for custom exercise compat)
@@ -214,10 +229,12 @@ Complete replacement — remove all 70 current exercises, add 54 Voltra exercise
 - [ ] Given any exercise, When viewing its detail, Then mount_position, attachment type, and training_modes are displayed
 - [ ] Given the workouts tab, When looking at the header, Then the plate calculator button is NOT present
 - [ ] Given the tools section, When navigating, Then only the 1RM calculator is available (plate calculator removed)
-- [ ] Given an existing user with workout history, When the app migrates, Then workout sessions and template logs are preserved (exercises update but historical data remains)
+- [ ] Given an existing user with workout history, When the app migrates, Then old seed exercises are soft-deleted (deleted_at set, NOT hard-deleted) and workout session names still resolve via LEFT JOIN
 - [ ] Given a user with custom exercises, When the app migrates, Then custom exercises (is_custom = 1) are preserved untouched
-- [ ] Given a template referencing a removed exercise, When viewing the template, Then the orphaned slot shows "Exercise removed" with a "Replace" action
-- [ ] Given a program referencing a removed exercise, When viewing the program, Then the orphaned slot shows "Exercise removed" with a "Replace" action
+- [ ] Given a template referencing a soft-deleted exercise, When viewing the template, Then the exercise name shows with "(removed)" suffix and a "Replace" action
+- [ ] Given a program referencing a soft-deleted exercise, When viewing the program, Then the exercise name shows with "(removed)" suffix and a "Replace" action
+- [ ] Given the migration runs, When any step fails (crash, battery death), Then the database is not left in an inconsistent state (withTransactionAsync wrapping)
+- [ ] Given a screen reader is active, When viewing exercise detail, Then mount position, attachment, and training modes are announced with appropriate accessibilityLabels
 - [ ] Given the exercise list, When searching, Then search works against the new 54 Voltra exercises
 - [ ] Given any screen, When looking at icons/labels, Then no barbell/dumbbell-specific references appear in navigation chrome
 - [ ] Given the exercise list, When viewing filters, Then no equipment filter chip is shown (all exercises are cable)
@@ -230,11 +247,11 @@ Complete replacement — remove all 70 current exercises, add 54 Voltra exercise
 | Scenario | Expected Behavior |
 |----------|-------------------|
 | Existing workout templates reference removed exercises | Template preserved; orphaned slot shows "Exercise removed" with "Replace" action (LEFT JOIN NULL handling) |
-| Existing workout sessions with old exercises | Session logs preserved as-is; exercise name from stored context shown; "(removed)" suffix if exercise gone |
+| Existing workout sessions with old exercises | Session logs preserved; exercise names resolve via LEFT JOIN to soft-deleted exercise rows; "(removed)" suffix shown |
 | User has custom exercises with non-cable equipment | Custom exercises PRESERVED — user data never deleted; equipment field kept; Voltra fields are NULL for custom exercises |
 | Programs referencing removed exercises | Program structure preserved; orphaned slots show "Exercise unavailable — tap to replace" |
 | Weekly muscle volume analysis (Phase 15) | Still works because MuscleGroup stays granular — biceps/triceps tracked separately, not collapsed |
-| Custom exercise with old category (e.g., "cardio") | Migration maps old category to nearest Voltra category; display fallback for unknown categories |
+| Custom exercise with old category (e.g., "cardio") | Migration maps: "cardio" → "legs_glutes", "full_body" → "abs_core"; display fallback for any unknown categories |
 | Category filter shows empty groups | Should not happen — all 6 groups have exactly 9 exercises each |
 | 1RM calculator with cable exercises | Still works — 1RM calculation is equipment-agnostic (weight-based) |
 | Search for old exercise names (e.g., "bench press") | No results for removed exercises — expected behavior |
@@ -245,12 +262,14 @@ Complete replacement — remove all 70 current exercises, add 54 Voltra exercise
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Users lose workout history | Low | Critical | Only replace seed exercises (is_custom=0); preserve session logs, templates, and custom exercises |
+| Users lose workout history | Low | Critical | Soft-delete seed exercises (not hard delete); LEFT JOIN still resolves names from soft-deleted rows |
 | Missing exercise instructions | Medium | High | Write detailed Voltra-specific instructions for all 54 exercises; cross-reference Beyond Power docs |
-| Category migration breaks filters | Low | Medium | Test filter behavior with new categories; handle unknown categories gracefully |
+| Category migration breaks filters | Low | Medium | Test filter behavior with new categories; handle unknown categories gracefully; explicit mappings for cardio/full_body |
 | Mount position data inaccurate | Medium | Medium | Cross-reference with Beyond Power official AnyMount documentation |
 | Training modes too complex for users | Low | Low | Display as informational tags only (not interactive) in this phase |
 | Large seed.ts file | Low | Low | 54 exercises with full instructions will be ~800-1000 lines; acceptable |
+| Migration crash leaves DB inconsistent | Low | High | Entire migration wrapped in db.withTransactionAsync() — atomic rollback on failure |
+| 1RM formula inaccuracy for cable | Low | Low | Add small disclaimer: "Estimates based on free-weight formulas — cable results may vary" |
 
 ## Implementation Breakdown
 
@@ -282,6 +301,17 @@ Single implementation issue assigned to claudecoder (after plan approval):
 **Minor Issues:** 1RM formula accuracy disclaimer for cable resistance, exercise categorization notes (High Row in Abs & Core), no exercise images.
 
 Full review posted as BLD-27 comment.
+
+**Rev 4 Resolution** (CEO):
+- [x] **C1**: Resolved by adopting soft-delete strategy (TL's suggestion). Soft-deleted exercises remain in DB; LEFT JOIN still resolves names. No need for exercise_name_snapshot — the data stays in place.
+- [x] **C2**: Migration wrapped in `db.withTransactionAsync()` — explicitly specified in Technical Approach.
+- [x] **C3**: Added accessibilityLabel specs for mount position, attachment icons, and training mode tags. Added touch target (48×48dp) and contrast (3:1) requirements.
+- [x] **M1**: Explicit category mappings added — "cardio" → "legs_glutes", "full_body" → "abs_core".
+- [x] **M2**: `full_body` kept in MuscleGroup type for backward compat. Simply not used in new Voltra exercises.
+- [x] **M3**: Seed function guard logic updated to check `is_voltra = 1 AND deleted_at IS NULL`.
+- [ ] **M4**: Starter templates deferred to next phase (Phase 23). This phase is already large; adding template design would increase scope significantly.
+
+**Re-review requested.**
 
 ### Tech Lead (Technical Feasibility)
 
@@ -325,9 +355,11 @@ All Rev 1/Rev 2 concerns properly resolved. Two new findings:
 **MINOR — Seed Detection Query**: Current re-seed check at db.ts:292 counts `WHERE is_custom = 0`. After soft-delete, update to: `WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 1`.
 
 **TODO (Must Fix)**:
-- [ ] Replace hard DELETE with soft-delete in migration spec
-- [ ] Remove incorrect session_exercises table reference; clarify LEFT JOIN mechanism
-- [ ] Update re-seed detection query for soft-deleted rows
+- [x] Replace hard DELETE with soft-delete in migration spec → **FIXED in Rev 4**
+- [x] Remove incorrect session_exercises table reference; clarify LEFT JOIN mechanism → **FIXED in Rev 4**
+- [x] Update re-seed detection query for soft-deleted rows → **FIXED in Rev 4**
+
+**Re-review requested.**
 
 ### CEO Decision
-_Pending reviews_
+_Pending re-reviews from QD and Tech Lead on Rev 4_
