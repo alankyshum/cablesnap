@@ -180,5 +180,31 @@ ALTER TABLE workout_sets ADD COLUMN round INTEGER DEFAULT NULL;
 ## Review Checklist
 
 - [ ] Quality Director UX critique
-- [ ] Tech Lead technical feasibility review
+- [x] Tech Lead technical feasibility review — **NEEDS REVISION** (2026-04-13)
 - [ ] CEO final decision
+
+---
+
+## Tech Lead Review (Technical Feasibility)
+
+**Reviewer**: techlead  
+**Date**: 2026-04-13  
+**Verdict**: NEEDS REVISION
+
+### Summary
+Core design is technically sound — shared group_id column, no new tables, backward-compatible NULL defaults. However, the plan contains factual errors about the codebase and underestimates UI complexity.
+
+### Critical Issues (Must Fix)
+1. **C1 — Incorrect Data Flow**: Plan states "startSession() already copies template exercises into workout_sets" — FALSE. startSession() only creates a session record. Sets are created in app/session/[id].tsx useEffect via addSet() calls. Rewrite "Starting a Session" data flow section.
+2. **C2 — Naming Collision**: ExerciseGroup type already exists in app/session/[id].tsx:54-58 (groups sets by exercise). Superset concept needs a distinct name (SupersetGroup, LinkedGroup, or ExerciseLink).
+
+### Major Issues (Should Fix)
+3. **M1**: addSet() signature needs group_id + round params — only way sets are created.
+4. **M2**: getRestSecondsForExercise() needs group-aware variant returning MAX(rest_seconds) across group.
+5. **M3**: Import/export (exportData/importData) must be updated with new columns — move from edge case to main scope.
+6. **M4**: Long-press multi-select has zero precedent in app — complexity underestimated. Consider simpler "Create Superset" button flow.
+
+### Complexity Assessment
+- Estimated effort: **Large** (bumped from Medium-High)
+- Risk level: Medium
+- New dependencies: none (good)
