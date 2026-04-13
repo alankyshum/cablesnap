@@ -3,7 +3,7 @@
 **Issue**: BLD-6
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: IN_REVIEW
+**Status**: IN_REVIEW (Rev 2)
 
 ## Problem Statement
 
@@ -36,6 +36,10 @@ Add a **Programs** feature that lets users:
 [Templates] [Programs]
 ```
 
+**Segmented Control Default**: When the user opens the Workouts tab, show the **Programs** segment by default if an active program exists, otherwise default to **Templates**. This respects the user's primary intent — "do my next workout."
+
+**"Next Workout" Banner Visibility**: The "Next Workout" banner appears on BOTH segments (Templates and Programs). The user's primary CTA should never disappear when switching segments.
+
 **Program Creation Flow**:
 1. Tap "New Program" FAB on Programs segment
 2. Enter name + optional description
@@ -52,14 +56,23 @@ Add a **Programs** feature that lets users:
 
 **Program Detail Screen** (app/program/[id].tsx):
 - Program name, description, number of days
-- List of days with template names
+- List of days with template names (if day label is empty, display the template name as fallback)
 - "Set Active" / "Deactivate" button
 - Progress indicator showing current day
+- Cycle count (how many full cycles completed, derived from program_log)
 - History section showing completed sessions
 
 ### Technical Approach
 
-**Data Model** — Three new tables:
+**Data Model** — Three new tables + one existing table modification:
+
+**Design decisions from review:**
+- No FOREIGN KEY declarations (consistent with existing codebase — `PRAGMA foreign_keys` is never enabled)
+- Programs use soft-delete (`deleted_at` column), consistent with custom exercises
+- `current_day_id` references a `program_days.id` (TEXT) instead of a position index — reorder-safe
+- `workout_sessions` gets a new `program_day_id` column to link sessions to program days for reliable auto-advance
+- `program_days.template_id` is nullable — when a template is hard-deleted, program days that reference it will show "Deleted Template" via NULL check
+- Same template CAN appear in multiple program days (core PPL use case: Push, Pull, Legs, Push, Pull, Legs)
 
 ```sql
 CREATE TABLE IF NOT EXISTS programs (
@@ -67,19 +80,18 @@ CREATE TABLE IF NOT EXISTS programs (
   name TEXT NOT NULL,
   description TEXT DEFAULT '',
   is_active INTEGER DEFAULT 0,
-  current_day INTEGER DEFAULT 0,
+  current_day_id TEXT DEFAULT NULL,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  deleted_at INTEGER DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS program_days (
   id TEXT PRIMARY KEY,
   program_id TEXT NOT NULL,
-  template_id TEXT NOT NULL,
+  template_id TEXT DEFAULT NULL,
   position INTEGER NOT NULL,
-  label TEXT DEFAULT '',
-  FOREIGN KEY (program_id) REFERENCES programs(id),
-  FOREIGN KEY (template_id) REFERENCES workout_templates(id)
+  label TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS program_log (
@@ -87,12 +99,18 @@ CREATE TABLE IF NOT EXISTS program_log (
   program_id TEXT NOT NULL,
   day_id TEXT NOT NULL,
   session_id TEXT NOT NULL,
-  completed_at INTEGER NOT NULL,
-  FOREIGN KEY (program_id) REFERENCES programs(id),
-  FOREIGN KEY (day_id) REFERENCES program_days(id),
-  FOREIGN KEY (session_id) REFERENCES workout_sessions(id)
+  completed_at INTEGER NOT NULL
 );
+
+-- Migration: add program_day_id to existing workout_sessions table
+ALTER TABLE workout_sessions ADD COLUMN program_day_id TEXT DEFAULT NULL;
 ```
+
+**Migration notes:**
+- The `ALTER TABLE` for `workout_sessions` must be wrapped in a try/catch — the column may already exist on subsequent app launches.
+- Existing sessions will have `program_day_id = NULL` (started independently, not from a program).
+- `current_day_id` references `program_days.id` — when a program is first activated with days, set to the first day's ID. When days are reordered, `current_day_id` stays stable (points to the same day regardless of position change).
+- When a template is hard-deleted by `deleteTemplate()`, any `program_days` rows referencing it retain their ID but `template_id` should be set to NULL. Add an update step to `deleteTemplate()`: `UPDATE program_days SET template_id = NULL WHERE template_id = ?`.
 
 **New Files**:
 
@@ -106,9 +124,9 @@ CREATE TABLE IF NOT EXISTS program_log (
 
 | File | Change |
 |------|--------|
-| app/(tabs)/index.tsx | Add segmented control (Templates / Programs), "Next Workout" banner |
-| lib/db.ts | Add 3 tables + CRUD functions for programs |
-| app/session/[id].tsx | After session complete, advance program day if from active program |
+| app/(tabs)/index.tsx | Add segmented control (Templates / Programs), "Next Workout" banner (visible on both segments) |
+| lib/db.ts | Add 3 tables + CRUD functions for programs, add `program_day_id` column to `workout_sessions`, update `deleteTemplate()` to NULL-ify program_days.template_id, update `startSession()` to accept optional `programDayId` |
+| app/session/[id].tsx | After session complete, if `program_day_id` is set, advance program to next day and write program_log entry |
 
 **Implementation Patterns** (from knowledge base):
 - Wrap bulk position updates in `withTransactionAsync()` (per "Wrap Bulk SQLite Inserts" learning)
@@ -137,20 +155,30 @@ CREATE TABLE IF NOT EXISTS program_log (
 
 ### Acceptance Criteria
 
-- [ ] GIVEN no programs exist WHEN user taps Programs segment THEN show empty state with "Create your first program" prompt
+- [ ] GIVEN no programs exist WHEN user taps Programs segment THEN show empty state with "Create your first program" CTA button
 - [ ] GIVEN user is creating a program WHEN they add 3 templates as days THEN days appear in order with position labels
-- [ ] GIVEN a program with 3 days WHEN user sets it active THEN any previously active program is deactivated
-- [ ] GIVEN an active program on day 2 of 3 WHEN user completes day 2's workout THEN current_day advances to day 3 (index 2)
-- [ ] GIVEN an active program on last day WHEN user completes it THEN current_day wraps to day 1 (index 0)
-- [ ] GIVEN an active program WHEN user opens Workouts tab THEN "Next: [Day Label] — [Template Name]" banner appears at top
-- [ ] GIVEN user taps "Next Workout" banner THEN a session starts from that day's template
-- [ ] GIVEN a program WHEN user taps delete THEN confirm dialog and soft-delete (do not cascade-delete sessions)
-- [ ] GIVEN a program with days WHEN user reorders them THEN positions update correctly
-- [ ] GIVEN program detail WHEN user scrolls to history THEN completed sessions for this program are listed newest-first
+- [ ] GIVEN a program day has an empty label WHEN displayed THEN show the linked template name as fallback
+- [ ] GIVEN a program with 3 days WHEN user sets it active THEN any previously active program is deactivated (single transaction)
+- [ ] GIVEN an active program on day 2 of 3 WHEN user completes day 2's workout THEN current_day_id advances to the day 3 ID
+- [ ] GIVEN an active program on last day WHEN user completes it THEN current_day_id wraps to first day's ID and cycle count increments
+- [ ] GIVEN an active program that completes a full cycle WHEN wrapping to day 1 THEN show a brief "Cycle N complete!" snackbar
+- [ ] GIVEN an active program WHEN user opens Workouts tab THEN "Next: [Day Label] — [Template Name]" banner appears at top of BOTH segments
+- [ ] GIVEN no active program WHEN user opens Workouts tab THEN default to Templates segment (no banner)
+- [ ] GIVEN an active program WHEN user opens Workouts tab THEN default to Programs segment
+- [ ] GIVEN user taps "Next Workout" banner THEN a session starts from that day's template with `program_day_id` set on the session
+- [ ] GIVEN a program WHEN user taps delete THEN confirm dialog and soft-delete (set deleted_at, do not cascade-delete sessions)
+- [ ] GIVEN a program with days WHEN user reorders them THEN positions update correctly and current_day_id remains stable
+- [ ] GIVEN program detail WHEN user scrolls to history THEN completed sessions for this program are listed newest-first with cycle count
+- [ ] GIVEN user adds same template to multiple days (PPL: Push, Pull, Legs, Push, Pull, Legs) THEN all 6 days are created correctly
+- [ ] Segmented control has accessibilityRole="tab" and accessibilityState={{ selected: true/false }}
 - [ ] All new screens have proper accessibilityLabel/accessibilityRole attributes
+- [ ] When program advances, announce via accessibilityLiveRegion: "Day N of M complete. Next: [Day Name]"
 - [ ] Minimum touch target 48x48dp on all interactive elements
+- [ ] "Next Workout" banner has adequate color contrast (theme tokens only)
 - [ ] Font sizes >= 12sp for body text, >= 14sp for labels
 - [ ] All colors use theme tokens (no hardcoded hex)
+- [ ] Program and day lists use FlatList (not ScrollView+map)
+- [ ] All database queries use parameterized statements
 - [ ] PR passes typecheck with zero errors
 - [ ] No new lint warnings
 
@@ -158,13 +186,17 @@ CREATE TABLE IF NOT EXISTS program_log (
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Template deleted while in program | Day still shows but template name = "Deleted Template". Starting session shows error snackbar. |
-| Active program with 1 day | current_day always stays at 0, wraps to itself |
+| Template deleted while in program | `deleteTemplate()` sets `program_days.template_id = NULL`. Day still shows, name = "Deleted Template". Starting session from that day shows error snackbar "Template no longer exists". |
+| Template edited after adding to program | Changes apply immediately — template is by reference. This is expected and documented behavior. |
+| Active program with 1 day | current_day_id always points to that day. Completing it wraps to itself and increments cycle count. |
 | Two programs both "active" (race) | Enforce single-active in activation function (deactivate all in transaction then activate one) |
 | Empty program (0 days) | Cannot set active — show "Add at least one day" error |
-| Session cancelled (not completed) | Do NOT advance program day |
+| Session cancelled (not completed) | Do NOT advance program day. program_day_id stays on the session row but no program_log entry is written. |
 | Very long program name | Truncate with ellipsis in list views (maxWidth constraint) |
-| Soft-deleted template in program | LEFT JOIN handles gracefully, show "Deleted Template" name |
+| Program deleted during active session | Session completion handler checks if program still exists (not soft-deleted). If deleted, skip auto-advance and do not write program_log. |
+| Reorder days of active program | current_day_id stays stable (references day ID, not position). User sees correct "next" workout. |
+| Same template in multiple program days | Fully supported — PPL (6 days, 3 templates) is a core use case. Each program_day has its own ID. |
+| Duplicate template across programs | Supported — template_id is not unique within program_days. |
 
 ### Risk Assessment
 
@@ -230,4 +262,33 @@ _Reviewed 2026-04-13 by quality-director_
 _Reviewed 2026-04-13 by techlead_
 
 ### CEO Decision
-_Pending reviews_
+**Rev 2 addresses all Critical and Major items from both reviews:**
+
+Techlead Critical fixes:
+1. ✅ Added `program_day_id TEXT DEFAULT NULL` to `workout_sessions` + `startSession` signature update
+2. ✅ Added `deleted_at INTEGER DEFAULT NULL` to `programs` table
+
+Techlead Major fixes:
+3. ✅ Removed all FOREIGN KEY declarations (consistent with codebase)
+4. ✅ Changed `current_day` (integer) to `current_day_id` (TEXT referencing day ID) — reorder-safe
+
+QD Critical fixes:
+1. ✅ Removed FK on template_id, made it nullable, added NULL-ify step in `deleteTemplate()`
+2. ✅ Added `deleted_at` to programs table
+
+QD Major fixes:
+3. ✅ Specified segmented control defaults (Programs if active program, else Templates)
+4. ✅ Specified day label fallback (show template name when empty)
+5. ✅ Added cycle completion UX (snackbar + cycle count on detail screen)
+6. ✅ Added guard for program deletion during active session
+
+Additional improvements from review recommendations:
+- ✅ Segmented control gets accessibilityRole="tab" + accessibilityState
+- ✅ Program advance announces via accessibilityLiveRegion
+- ✅ FlatList required for program/day lists
+- ✅ Parameterized statements required explicitly
+- ✅ "Next Workout" banner visible on BOTH segments
+- ✅ Same template allowed in multiple days (PPL use case documented)
+- ✅ Template edit affects program days documented as expected behavior
+
+_Pending re-review_
