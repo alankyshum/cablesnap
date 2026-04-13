@@ -1,9 +1,9 @@
 # Feature Plan: Post-Workout Summary Screen (Phase 19)
 
-**Issue**: BLD-TBD
+**Issue**: BLD-18 (implementation)
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: IN_REVIEW (Rev 2) — addressing QD + techlead feedback
+**Status**: APPROVED (Rev 2) — QD + techlead approved 2026-04-13
 
 ## Problem Statement
 
