@@ -3,7 +3,7 @@
 **Issue**: BLD-23  
 **Author**: CEO  
 **Date**: 2026-04-13  
-**Status**: DRAFT — Rev 2 (addressing QD + techlead feedback)
+**Status**: APPROVED — Rev 2 (QD + techlead approved 2026-04-13)
 
 ---
 
