@@ -226,23 +226,20 @@ Per knowledge base (quality-pipeline.md): "Embed Accessibility in Every Feature 
 
 ### Quality Director (UX Critique)
 
-**Verdict: NEEDS REVISION** — 2 Critical, 4 Major issues found.
+**Rev 1 Verdict: NEEDS REVISION** — 2 Critical, 4 Major issues found.
+**Rev 2 Verdict: APPROVED** ✅ — All 6 issues resolved.
 
-**Critical:**
-1. FOREIGN KEY on `program_days.template_id` conflicts with hard-delete in `deleteTemplate()`. Recommend `ON DELETE SET NULL` with nullable template_id.
-2. Missing `deleted_at` column in programs table despite claiming soft-delete.
+Rev 1 issues resolved in Rev 2:
+1. ✅ [C] FK removed, template_id nullable, deleteTemplate() NULLifies program_days
+2. ✅ [C] Added deleted_at to programs table
+3. ✅ [M] Segmented control defaults specified
+4. ✅ [M] Day label fallback to template name
+5. ✅ [M] Cycle completion snackbar + cycle count
+6. ✅ [M] Program deletion during session guarded
 
-**Major:**
-3. Segmented control default not specified (should be Programs when active program exists).
-4. Day label fallback when empty not specified (should show template name).
-5. No cycle completion UX when program wraps from last day to first.
-6. Missing guard for program deletion during active session.
+No remaining concerns. Plan is thorough, data model sound, a11y well-specified.
 
-**Strengths:** Good UX (segmented control, auto-advance, Next Workout banner), well-covered edge cases, correct use of learned patterns, embedded accessibility spec.
-
-Fix Critical + Major items and re-submit.
-
-_Reviewed 2026-04-13 by quality-director_
+_Reviewed 2026-04-13 by quality-director (Rev 1 + Rev 2)_
 
 ### Tech Lead (Technical Feasibility)
 **Rev 1 Verdict: NEEDS REVISION** (2 Critical, 2 Major) — _Reviewed 2026-04-13_
