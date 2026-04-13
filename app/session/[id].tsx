@@ -8,6 +8,7 @@ import {
 import {
   Button,
   Checkbox,
+  Chip,
   Divider,
   Text,
   TextInput,
@@ -20,6 +21,7 @@ import {
   cancelSession,
   completeSession,
   completeSet,
+  getMaxWeightByExercise,
   getSessionById,
   getSessionSets,
   getTemplateById,
@@ -55,6 +57,9 @@ export default function ActiveSession() {
   const initialized = useRef(false);
   const [rest, setRest] = useState(0);
   const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [maxes, setMaxes] = useState<Record<string, number>>({});
+  const prevExerciseIds = useRef<string>("");
+  const prHapticFired = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -74,6 +79,14 @@ export default function ActiveSession() {
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
     for (const eid of exerciseIds) {
       prevCache[eid] = await getPreviousSets(eid, id);
+    }
+
+    // Fetch historical maxes for PR detection (only when exercise list changes)
+    const key = exerciseIds.sort().join(",");
+    if (key !== prevExerciseIds.current) {
+      prevExerciseIds.current = key;
+      const m = await getMaxWeightByExercise(exerciseIds, id);
+      setMaxes(m);
     }
 
     // Group by exercise
@@ -223,6 +236,28 @@ export default function ActiveSession() {
   const handleAddExercise = () => {
     router.push(`/template/pick-exercise?sessionId=${id}`);
   };
+
+  const isPR = (set: SetWithMeta) => {
+    if (!set.completed || !set.weight || set.weight <= 0) return false;
+    const max = maxes[set.exercise_id];
+    if (max === undefined) return false;
+    return set.weight > max;
+  };
+
+  // Haptic feedback on new PR detection
+  useEffect(() => {
+    for (const g of groups) {
+      for (const s of g.sets) {
+        if (isPR(s) && !prHapticFired.current.has(s.id)) {
+          prHapticFired.current.add(s.id);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        if (!isPR(s) && prHapticFired.current.has(s.id)) {
+          prHapticFired.current.delete(s.id);
+        }
+      }
+    }
+  }, [groups, maxes]);
 
   const finish = () => {
     Alert.alert(
@@ -406,6 +441,18 @@ export default function ActiveSession() {
                     onPress={() => handleCheck(set)}
                   />
                 </View>
+                {isPR(set) && (
+                  <Chip
+                    compact
+                    icon="trophy"
+                    style={{ backgroundColor: theme.colors.tertiaryContainer }}
+                    textStyle={styles.prChipText}
+                    accessibilityLabel="New personal record"
+                    accessibilityRole="text"
+                  >
+                    PR
+                  </Chip>
+                )}
               </View>
             ))}
 
@@ -508,6 +555,9 @@ const styles = StyleSheet.create({
   colCheck: {
     width: 40,
     alignItems: "center",
+  },
+  prChipText: {
+    fontSize: 12,
   },
   addSetBtn: {
     alignSelf: "flex-start",

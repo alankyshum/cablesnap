@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { getSessionById, getSessionSets } from "../../../lib/db";
+import { getSessionById, getSessionPRs, getSessionSets } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
 
 type SetWithName = WorkoutSet & { exercise_name?: string };
@@ -18,6 +19,7 @@ export default function SessionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [groups, setGroups] = useState<ExerciseGroup[]>([]);
+  const [prs, setPrs] = useState<{ exercise_id: string; name: string; weight: number; previous_max: number }[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -26,7 +28,11 @@ export default function SessionDetail() {
       if (!sess) return;
       setSession(sess);
 
-      const sets = await getSessionSets(id);
+      const [sets, prData] = await Promise.all([
+        getSessionSets(id),
+        getSessionPRs(id),
+      ]);
+      setPrs(prData);
       const map = new Map<string, ExerciseGroup>();
       for (const s of sets) {
         if (!map.has(s.exercise_id)) {
@@ -166,6 +172,43 @@ export default function SessionDetail() {
           </Card.Content>
         </Card>
 
+        {/* Personal Records */}
+        {prs.length > 0 && (
+          <Card
+            style={[styles.prCard, { backgroundColor: theme.colors.tertiaryContainer }]}
+            accessibilityLabel={`${prs.length} new personal record${prs.length > 1 ? "s" : ""} achieved in this workout`}
+          >
+            <Card.Content>
+              <View style={styles.prHeader}>
+                <MaterialCommunityIcons name="trophy" size={20} color={theme.colors.onTertiaryContainer} />
+                <Text
+                  variant="titleMedium"
+                  style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                >
+                  {prs.length} New PR{prs.length > 1 ? "s" : ""}
+                </Text>
+              </View>
+              {prs.map((pr) => (
+                <View key={pr.exercise_id} style={styles.prRow}>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                    accessibilityLabel={`New personal record: ${pr.name}, ${pr.previous_max} to ${pr.weight}`}
+                  >
+                    {pr.name}
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: theme.colors.onTertiaryContainer }}
+                  >
+                    {pr.previous_max} → {pr.weight}
+                  </Text>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
         {/* Exercise breakdown */}
         {groups.map((group) => (
           <View key={group.exercise_id} style={styles.group}>
@@ -234,6 +277,20 @@ const styles = StyleSheet.create({
   },
   summary: {
     marginBottom: 20,
+  },
+  prCard: {
+    marginBottom: 20,
+  },
+  prHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  prRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
   },
   stats: {
     flexDirection: "row",
