@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   AccessibilityInfo,
@@ -88,6 +88,19 @@ export default function ActiveSession() {
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const linkIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const g of groups) {
+      if (g.link_id && !ids.includes(g.link_id)) ids.push(g.link_id);
+    }
+    return ids;
+  }, [groups]);
+
+  const palette = useMemo(
+    () => [theme.colors.tertiary, theme.colors.secondary, theme.colors.primary, theme.colors.error, theme.colors.inversePrimary],
+    [theme],
+  );
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -284,7 +297,7 @@ export default function ActiveSession() {
           setNextHint(`Next: ${next.name}`);
           AccessibilityInfo.announceForAccessibility(`Next: ${next.name}`);
           if (hintTimer.current) clearTimeout(hintTimer.current);
-          hintTimer.current = setTimeout(() => setNextHint(null), 2000);
+          hintTimer.current = setTimeout(() => setNextHint(null), 1500);
         } else {
           // End of round: start rest timer with MAX(rest_seconds)
           setNextHint(null);
@@ -491,17 +504,19 @@ export default function ActiveSession() {
           const completedRounds = group.link_id
             ? Math.min(...linked.map((g) => g.sets.filter((s) => s.completed).length))
             : 0;
+          const groupColorIdx = group.link_id ? linkIds.indexOf(group.link_id) : -1;
+          const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
 
           return (
           <View key={group.exercise_id} style={styles.group}>
             {/* Linked group header */}
             {isFirstInLink && group.link_id && (
               <View
-                style={[styles.linkGroupHeader, { borderLeftColor: theme.colors.tertiary, borderLeftWidth: 4 }]}
+                style={[styles.linkGroupHeader, { borderLeftColor: groupColor, borderLeftWidth: 4 }]}
                 accessibilityRole="header"
                 accessibilityLabel={`Round ${completedRounds + 1} of ${totalRounds}`}
               >
-                <Text variant="labelMedium" style={{ color: theme.colors.tertiary, fontWeight: "700" }}>
+                <Text variant="labelMedium" style={{ color: groupColor, fontWeight: "700" }}>
                   {linked.length >= 3 ? "Circuit" : "Superset"} — Round {completedRounds + 1}/{totalRounds}
                 </Text>
                 <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>
@@ -510,7 +525,7 @@ export default function ActiveSession() {
               </View>
             )}
 
-            <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: theme.colors.tertiary, paddingLeft: 8 } : undefined}>
+            <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
             <Text
               variant="titleMedium"
               style={[styles.groupTitle, { color: theme.colors.primary }]}

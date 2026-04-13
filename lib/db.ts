@@ -1241,6 +1241,8 @@ export async function updateLinkLabel(
   );
 }
 
+// Queries live template for rest seconds — if template links change mid-session,
+// the query may return NULL and falls back to 90s default.
 export async function getRestSecondsForLink(
   sessionId: string,
   linkId: string

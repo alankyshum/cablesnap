@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -22,6 +22,19 @@ export default function SessionDetail() {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [groups, setGroups] = useState<ExerciseGroup[]>([]);
   const [prs, setPrs] = useState<{ exercise_id: string; name: string; weight: number; previous_max: number }[]>([]);
+
+  const linkIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const g of groups) {
+      if (g.link_id && !ids.includes(g.link_id)) ids.push(g.link_id);
+    }
+    return ids;
+  }, [groups]);
+
+  const palette = useMemo(
+    () => [theme.colors.tertiary, theme.colors.secondary, theme.colors.primary, theme.colors.error, theme.colors.inversePrimary],
+    [theme],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -220,20 +233,22 @@ export default function SessionDetail() {
           const label = group.link_id
             ? linked.length >= 3 ? "Circuit" : "Superset"
             : "";
+          const groupColorIdx = group.link_id ? linkIds.indexOf(group.link_id) : -1;
+          const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
 
           return (
           <View key={group.exercise_id} style={styles.group}>
             {isFirst && group.link_id && (
               <View
-                style={[styles.linkHeader, { borderLeftColor: theme.colors.tertiary }]}
+                style={[styles.linkHeader, { borderLeftColor: groupColor }]}
                 accessibilityLabel={`${label}: ${linked.map((g) => g.name).join(" and ")}`}
               >
-                <Text variant="labelMedium" style={{ color: theme.colors.tertiary, fontWeight: "700" }}>
+                <Text variant="labelMedium" style={{ color: groupColor, fontWeight: "700" }}>
                   {label}
                 </Text>
               </View>
             )}
-            <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: theme.colors.tertiary, paddingLeft: 8 } : undefined}>
+            <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
             <Text
               variant="titleMedium"
               style={[styles.groupTitle, { color: theme.colors.primary }]}
@@ -277,7 +292,7 @@ export default function SessionDetail() {
               ))}
             </View>
             {isLast && group.link_id && (
-              <View style={{ height: 4, backgroundColor: theme.colors.tertiary, borderRadius: 2 }} />
+              <View style={{ height: 4, backgroundColor: groupColor, borderRadius: 2 }} />
             )}
             <Divider style={styles.divider} />
           </View>

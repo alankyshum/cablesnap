@@ -26,14 +26,6 @@ import {
 } from "../../lib/db";
 import type { TemplateExercise, WorkoutTemplate } from "../../lib/types";
 
-const LINK_COLORS = [
-  "#6750A4", // tertiary
-  "#625B71", // secondary
-  "#7D5260", // pink
-  "#006C4C", // green
-  "#005DB8", // blue
-];
-
 function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
   const count = exercises.filter((e) => e.link_id === linkId).length;
   const custom = exercises.find((e) => e.link_id === linkId && e.link_label)?.link_label;
@@ -65,6 +57,11 @@ export default function EditTemplate() {
     }
     return ids;
   }, [exercises]);
+
+  const palette = useMemo(
+    () => [theme.colors.tertiary, theme.colors.secondary, theme.colors.primary, theme.colors.error, theme.colors.inversePrimary],
+    [theme],
+  );
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -171,7 +168,7 @@ export default function EditTemplate() {
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<TemplateExercise>) => {
       const linkIdx = item.link_id ? linkIds.indexOf(item.link_id) : -1;
-      const color = linkIdx >= 0 ? LINK_COLORS[linkIdx % LINK_COLORS.length] : undefined;
+      const color = linkIdx >= 0 ? palette[linkIdx % palette.length] : undefined;
       const isFirst = item.link_id ? exercises.findIndex((e) => e.link_id === item.link_id) === index : false;
       const isLast = item.link_id ? exercises.findLastIndex((e) => e.link_id === item.link_id) === index : false;
       const groupLabel = item.link_id ? linkLabel(exercises, item.link_id, linkIdx) : "";
@@ -282,7 +279,7 @@ export default function EditTemplate() {
         </View>
       );
     },
-    [theme, exercises, linkIds, selecting, selected, move, remove]
+    [theme, exercises, linkIds, palette, selecting, selected, move, remove]
   );
 
   if (!template) {
