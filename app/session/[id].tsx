@@ -171,21 +171,22 @@ export default function ActiveSession() {
 
     // Compute progressive overload suggestions
     const weightStep = body.weight_unit === "lb" ? 5 : 2.5;
-    const sugg: Record<string, Suggestion | null> = {};
-    for (const eid of exerciseIds) {
-      try {
-        const recent = await getRecentExerciseSets(eid, 2);
-        if (recent.length === 0) { sugg[eid] = null; continue; }
-        // Check if exercise is time-based (all reps=1, weight=0) — suppress
-        const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
-        if (timeBased) { sugg[eid] = null; continue; }
-        const ex = await getExerciseById(eid);
-        const bw = ex ? ex.equipment === "bodyweight" : false;
-        sugg[eid] = suggest(recent, weightStep, bw);
-      } catch {
-        sugg[eid] = null;
-      }
-    }
+    const entries = await Promise.all(
+      exerciseIds.map(async (eid): Promise<[string, Suggestion | null]> => {
+        try {
+          const recent = await getRecentExerciseSets(eid, 2);
+          if (recent.length === 0) return [eid, null];
+          const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
+          if (timeBased) return [eid, null];
+          const ex = await getExerciseById(eid);
+          const bw = ex ? ex.equipment === "bodyweight" : false;
+          return [eid, suggest(recent, weightStep, bw)];
+        } catch {
+          return [eid, null];
+        }
+      }),
+    );
+    const sugg: Record<string, Suggestion | null> = Object.fromEntries(entries);
     setSuggestions(sugg);
   }, [id, router]);
 
@@ -673,10 +674,17 @@ export default function ActiveSession() {
               return (
                 <Pressable
                   onPress={() => {
-                    if (s.type === "rep_increase") return;
-                    for (const set of group.sets) {
-                      if (!set.completed && (set.weight == null || set.weight === 0)) {
-                        handleUpdate(set.id, "weight", String(s.weight));
+                    if (s.type === "rep_increase") {
+                      for (const set of group.sets) {
+                        if (!set.completed && (set.reps == null || set.reps === 0)) {
+                          handleUpdate(set.id, "reps", String(s.reps));
+                        }
+                      }
+                    } else {
+                      for (const set of group.sets) {
+                        if (!set.completed && (set.weight == null || set.weight === 0)) {
+                          handleUpdate(set.id, "weight", String(s.weight));
+                        }
                       }
                     }
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -691,7 +699,7 @@ export default function ActiveSession() {
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={hint}
-                  accessibilityHint="Double tap to fill suggested weight"
+                  accessibilityHint={s.type === "rep_increase" ? "Double tap to fill suggested reps" : "Double tap to fill suggested weight"}
                 >
                   <Text
                     variant="labelSmall"

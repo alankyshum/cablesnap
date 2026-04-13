@@ -388,7 +388,7 @@ export default function ExerciseDetail() {
                 ? `Based on: ${toDisplay(best.weight, unit)}${unit} × ${best.reps} reps`
                 : "";
               return (
-                <View style={styles.pctSection}>
+                <View style={[styles.pctSection, { borderTopColor: theme.colors.outlineVariant }]}>
                   <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
                     {tested ? "Tested 1RM" : "Estimated 1RM"}: {orm} {unit}
                   </Text>
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e0e0e0",
+
   },
   pctTable: {
     borderRadius: 8,

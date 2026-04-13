@@ -195,6 +195,15 @@ export default function RootLayout() {
                 headerTintColor,
               }}
             />
+            <Stack.Screen
+              name="tools/rm"
+              options={{
+                headerShown: true,
+                title: "1RM Calculator",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
