@@ -35,36 +35,45 @@ const darkColors = {
 };
 
 // Competition plate colors (light/dark aware, WCAG contrast)
+// Keys use unit suffix to avoid kg/lb collisions (e.g. "25kg" vs "25lb")
 export const plateColors = {
   light: {
-    25: { bg: "#D32F2F", text: "#FFFFFF" },    // red
-    20: { bg: "#1565C0", text: "#FFFFFF" },    // blue
-    15: { bg: "#F9A825", text: "#000000" },    // yellow
-    10: { bg: "#2E7D32", text: "#FFFFFF" },    // green
-    5:  { bg: "#757575", text: "#FFFFFF" },    // white/grey
-    2.5: { bg: "#37474F", text: "#FFFFFF" },   // dark
-    1.25: { bg: "#9E9E9E", text: "#000000" },  // silver
-    55: { bg: "#D32F2F", text: "#FFFFFF" },    // red (lb)
-    45: { bg: "#1565C0", text: "#FFFFFF" },    // blue (lb)
-    35: { bg: "#F9A825", text: "#000000" },    // yellow (lb)
-  } as Record<number, { bg: string; text: string }>,
+    "25kg":   { bg: "#D32F2F", text: "#FFFFFF" },  // red
+    "20kg":   { bg: "#1565C0", text: "#FFFFFF" },  // blue
+    "15kg":   { bg: "#F9A825", text: "#000000" },  // yellow
+    "10kg":   { bg: "#2E7D32", text: "#FFFFFF" },  // green
+    "5kg":    { bg: "#757575", text: "#FFFFFF" },   // white/grey
+    "2.5kg":  { bg: "#37474F", text: "#FFFFFF" },  // dark
+    "1.25kg": { bg: "#9E9E9E", text: "#000000" },  // silver
+    "55lb":   { bg: "#D32F2F", text: "#FFFFFF" },  // red
+    "45lb":   { bg: "#1565C0", text: "#FFFFFF" },  // blue
+    "35lb":   { bg: "#F9A825", text: "#000000" },  // yellow
+    "25lb":   { bg: "#2E7D32", text: "#FFFFFF" },  // green
+    "10lb":   { bg: "#757575", text: "#FFFFFF" },   // white
+    "5lb":    { bg: "#37474F", text: "#FFFFFF" },   // dark
+    "2.5lb":  { bg: "#9E9E9E", text: "#000000" },  // silver
+  } as Record<string, { bg: string; text: string }>,
   dark: {
-    25: { bg: "#EF5350", text: "#000000" },
-    20: { bg: "#42A5F5", text: "#000000" },
-    15: { bg: "#FFD54F", text: "#000000" },
-    10: { bg: "#66BB6A", text: "#000000" },
-    5:  { bg: "#BDBDBD", text: "#000000" },
-    2.5: { bg: "#78909C", text: "#FFFFFF" },
-    1.25: { bg: "#E0E0E0", text: "#000000" },
-    55: { bg: "#EF5350", text: "#000000" },
-    45: { bg: "#42A5F5", text: "#000000" },
-    35: { bg: "#FFD54F", text: "#000000" },
-  } as Record<number, { bg: string; text: string }>,
+    "25kg":   { bg: "#EF5350", text: "#000000" },
+    "20kg":   { bg: "#42A5F5", text: "#000000" },
+    "15kg":   { bg: "#FFD54F", text: "#000000" },
+    "10kg":   { bg: "#66BB6A", text: "#000000" },
+    "5kg":    { bg: "#BDBDBD", text: "#000000" },
+    "2.5kg":  { bg: "#78909C", text: "#FFFFFF" },
+    "1.25kg": { bg: "#E0E0E0", text: "#000000" },
+    "55lb":   { bg: "#EF5350", text: "#000000" },
+    "45lb":   { bg: "#42A5F5", text: "#000000" },
+    "35lb":   { bg: "#FFD54F", text: "#000000" },
+    "25lb":   { bg: "#66BB6A", text: "#000000" },
+    "10lb":   { bg: "#BDBDBD", text: "#000000" },
+    "5lb":    { bg: "#78909C", text: "#FFFFFF" },
+    "2.5lb":  { bg: "#E0E0E0", text: "#000000" },
+  } as Record<string, { bg: string; text: string }>,
 };
 
-export function plateColor(weight: number, isDark: boolean): { bg: string; text: string } {
+export function plateColor(weight: number, unit: "kg" | "lb", isDark: boolean): { bg: string; text: string } {
   const palette = isDark ? plateColors.dark : plateColors.light;
-  return palette[weight] || (isDark
+  return palette[`${weight}${unit}`] || (isDark
     ? { bg: "#616161", text: "#FFFFFF" }
     : { bg: "#424242", text: "#FFFFFF" });
 }

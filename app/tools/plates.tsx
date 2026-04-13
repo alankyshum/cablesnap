@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -106,7 +106,7 @@ export default function PlateCalculator() {
   const parsed = parseFloat(target);
   const valid = !isNaN(parsed) && parsed > 0;
 
-  const compute = () => {
+  const result = useMemo(() => {
     if (!valid) return { error: null, plates: null, perSide: 0, achieved: 0 };
 
     if (parsed < bar)
@@ -136,10 +136,10 @@ export default function PlateCalculator() {
 
     const perSide = Math.round(((parsed - bar) / 2) * 1000) / 1000;
     const flat = flatten(available);
-    const result = solve(perSide, flat, 0);
+    const found = solve(perSide, flat, 0);
 
-    if (result)
-      return { error: null, plates: aggregate(result), perSide, achieved: perSide };
+    if (found)
+      return { error: null, plates: aggregate(found), perSide, achieved: perSide };
 
     const best = closest(perSide, flat);
     const fallback = solve(best, flat, 0);
@@ -149,9 +149,7 @@ export default function PlateCalculator() {
       perSide: best,
       achieved: best,
     };
-  };
-
-  const result = compute();
+  }, [valid, parsed, bar, unit, available]);
 
   const bump = (dir: 1 | -1) => {
     const cur = valid ? parsed : bar;
@@ -228,6 +226,7 @@ export default function PlateCalculator() {
           <TextInput
             mode="outlined"
             keyboardType="numeric"
+            autoFocus
             value={target}
             onChangeText={setTarget}
             placeholder={String(bar)}
@@ -271,7 +270,7 @@ export default function PlateCalculator() {
                   accessibilityRole="summary"
                 >
                   {result.plates.map((p, i) => {
-                    const c = plateColor(p.weight, isDark);
+                    const c = plateColor(p.weight, unit, isDark);
                     return (
                       <View
                         key={i}
@@ -296,7 +295,7 @@ export default function PlateCalculator() {
                 <View style={styles.barbell} accessibilityLabel={vizLabel()}>
                   <View style={[styles.sleeve, { backgroundColor: theme.colors.outlineVariant }]} />
                   {result.plates.map((p, i) => {
-                    const c = plateColor(p.weight, isDark);
+                    const c = plateColor(p.weight, unit, isDark);
                     return Array.from({ length: p.count }).map((_, j) => (
                       <View
                         key={`${i}-${j}`}
@@ -326,7 +325,7 @@ export default function PlateCalculator() {
             </Text>
             <View style={styles.badges}>
               {result.plates.map((p, i) => {
-                const c = plateColor(p.weight, isDark);
+                const c = plateColor(p.weight, unit, isDark);
                 return (
                   <View
                     key={i}
