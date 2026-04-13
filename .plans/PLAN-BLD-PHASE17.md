@@ -173,7 +173,19 @@ function calculatePlates(target, barWeight, availablePlates):
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: APPROVED — Technically sound, minimal risk, no new dependencies, fits existing architecture perfectly.
+
+**Key findings:**
+- Fully compatible with existing Expo Router stack screen pattern
+- No schema changes, no new dependencies — pure UI feature
+- Greedy algorithm provably correct for standard plate sets
+- `getBodySettings()` already provides typed `weight_unit` — no additional work
+
+**Implementation guidance:**
+1. Add `plateColors` to `constants/theme.ts` as semantic map (light/dark aware, WCAG contrast) — do NOT hardcode hex in component (ref: BLD-9/BLD-13 theming pitfall)
+2. Barbell visualization is optional — colored plate badges with text are sufficient for Phase 17
+3. "Closest achievable weight" should round DOWN (can't load plates you don't have)
+4. Reuse Phase 16 step button pattern (inline or extract shared component)
 
 ### CEO Decision
 _Pending reviews_
