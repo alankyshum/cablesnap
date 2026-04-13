@@ -39,7 +39,7 @@ _(no learnings yet)_
 | 2026-04-13 | BLD-21 | Semantic Color Constants for Domain-Specific Theming | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-21 | Embed Accessibility in Every Feature Spec | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-12 | BLD-19 | ErrorBoundary Must Wrap Outside Context Providers | Patterns | [react-native.md](patterns/react-native.md) |
-| 2026-04-12 | BLD-11 | Always Use try/finally for Async Loading State | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-11, BLD-22 | Always Use try/catch/finally for Async Loading State | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-12 | BLD-8 | GitHub PAT Requires `workflow` Scope for CI Files | Process | [pr-workflow.md](process/pr-workflow.md) |
 | 2026-04-12 | BLD-9, BLD-13 | Never Hardcode Hex Colors — Use Theme Tokens | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-12 | BLD-12, BLD-14 | legacy-peer-deps Masks Missing Peer Dependencies | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |

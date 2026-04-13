@@ -26,13 +26,13 @@
 **Action**: Place ErrorBoundary as the outermost wrapper in _layout.tsx, outside all providers. Use hardcoded colors only in the ErrorBoundary crash screen. Wrap all operations inside error handlers (logError, generateReport) in try/catch blocks that silently ignore failures.
 **Tags**: react, error-boundary, crash-reporting, provider-ordering, defensive-programming, theming-exception
 
-### Always Use try/finally for Async Operations with Loading State
-**Source**: BLD-11 — Phase 5: Nutrition and Macro Tracking
-**Date**: 2026-04-12
-**Context**: The nutrition feature's save() and quickLog() functions in add.tsx called setSaving(true) before an async DB write, then setSaving(false) after. If the async operation threw, the loading state was never reset — the UI showed a perpetual spinner with no way to retry.
-**Learning**: Any pattern of `setLoading(true); await asyncOp(); setLoading(false)` has a silent failure mode: if `asyncOp()` throws, the loading state is never cleared. This leaves the UI stuck in a disabled/spinner state. The fix is wrapping the operation in try/finally so the state reset executes regardless of success or failure.
-**Action**: Always use `try { await asyncOp(); } finally { setLoading(false); }` when managing loading/saving state around async operations. Search for `setLoading(true)` or `setSaving(true)` patterns during self-review to verify each has a corresponding finally block.
-**Tags**: react, async, loading-state, try-finally, error-handling, ui-state
+### Always Use try/catch/finally for Async Operations with Loading State
+**Source**: BLD-11 — Phase 5: Nutrition and Macro Tracking; refined by BLD-22 — Phase 6: CSV Export
+**Date**: 2026-04-12 (updated 2026-04-13)
+**Context**: The nutrition feature's save() and quickLog() used `try/finally` without `catch`. The loading state reset correctly on failure (via finally), but thrown errors propagated unhandled — the user saw no feedback about what went wrong. The tech lead flagged this in PR #12 review, noting that settings.tsx already used the correct `try/catch/finally` pattern with snackbar error feedback.
+**Learning**: `try/finally` alone fixes stuck spinners but silently swallows errors from the user's perspective. Without `catch`, a failed DB write resets the button but shows no error message — the user thinks nothing happened. The complete pattern is `try/catch/finally`: catch provides user-facing feedback (snackbar, alert), finally resets loading state unconditionally.
+**Action**: Always use `try { await asyncOp(); } catch { showErrorFeedback() } finally { setLoading(false); }`. The catch block should show a snackbar or alert explaining the failure. During self-review, search for `try {` blocks that have `finally` but no `catch` — each is a silent-failure risk.
+**Tags**: react, async, loading-state, try-catch-finally, error-handling, ui-state, snackbar
 
 ### Store Measurements in Canonical Units — Convert at the Display Layer Only
 **Source**: BLD-17 — Body Weight & Measurements Tracking (Phase 7)
