@@ -43,6 +43,24 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="exercise/create"
+              options={{
+                headerShown: true,
+                title: "New Exercise",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="exercise/edit/[id]"
+              options={{
+                headerShown: true,
+                title: "Edit Exercise",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="template/create"
               options={{
                 headerShown: true,

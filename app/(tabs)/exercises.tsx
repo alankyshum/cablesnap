@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   ScrollView,
@@ -6,8 +6,8 @@ import {
   View,
   type ListRenderItemInfo,
 } from "react-native";
-import { Chip, Searchbar, Text, TouchableRipple, useTheme } from "react-native-paper";
-import { useRouter } from "expo-router";
+import { Chip, FAB, Searchbar, Text, TouchableRipple, useTheme } from "react-native-paper";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getAllExercises, getExerciseById } from "../../lib/db";
 import {
   CATEGORIES,
@@ -26,36 +26,44 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   advanced: semantic.advanced,
 };
 
+type FilterType = Category | "custom";
+const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
+
 export default function Exercises() {
   const theme = useTheme();
   const router = useRouter();
   const layout = useLayout();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Set<Category>>(new Set());
+  const [selected, setSelected] = useState<Set<FilterType>>(new Set());
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<Exercise | null>(null);
 
-  useEffect(() => {
-    getAllExercises()
-      .then(setExercises)
-      .finally(() => setLoading(false));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getAllExercises()
+        .then(setExercises)
+        .finally(() => setLoading(false));
+    }, [])
+  );
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
+    const customFilter = selected.has("custom");
+    const cats = new Set([...selected].filter((s): s is Category => s !== "custom"));
     return exercises.filter((ex) => {
       if (q && !ex.name.toLowerCase().includes(q)) return false;
-      if (selected.size > 0 && !selected.has(ex.category)) return false;
+      if (customFilter && !ex.is_custom) return false;
+      if (cats.size > 0 && !cats.has(ex.category)) return false;
       return true;
     });
   }, [exercises, query, selected]);
 
-  const toggle = useCallback((cat: Category) => {
+  const toggle = useCallback((f: FilterType) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
+      if (next.has(f)) next.delete(f);
+      else next.add(f);
       return next;
     });
   }, []);
@@ -80,13 +88,24 @@ export default function Exercises() {
           { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
           layout.wide && detail?.id === item.id && { backgroundColor: theme.colors.primaryContainer },
         ]}
-        accessibilityLabel={`${item.name}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
+        accessibilityLabel={`${item.name}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
         accessibilityRole="button"
       >
         <View>
-          <Text variant="titleSmall" numberOfLines={1} style={{ color: theme.colors.onSurface }}>
-            {item.name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text variant="titleSmall" numberOfLines={1} style={[{ color: theme.colors.onSurface }, styles.titleText]}>
+              {item.name}
+            </Text>
+            {item.is_custom && (
+              <Chip
+                compact
+                textStyle={styles.customText}
+                style={[styles.customChip, { backgroundColor: theme.colors.tertiaryContainer }]}
+              >
+                Custom
+              </Chip>
+            )}
+          </View>
           <View style={styles.row}>
             <Chip
               compact
@@ -148,6 +167,8 @@ export default function Exercises() {
     [loading, theme]
   );
 
+  const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : CATEGORY_LABELS[f]);
+
   const list = (
     <View style={layout.wide ? { flex: 6 } : { flex: 1 }}>
       <Searchbar
@@ -161,19 +182,19 @@ export default function Exercises() {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={CATEGORIES}
+          data={FILTER_ALL}
           keyExtractor={(c) => c}
-          renderItem={({ item: cat }) => (
+          renderItem={({ item: f }) => (
             <Chip
-              selected={selected.has(cat)}
-              onPress={() => toggle(cat)}
+              selected={selected.has(f)}
+              onPress={() => toggle(f)}
               style={styles.filterChip}
               compact
-              accessibilityLabel={`Filter by ${CATEGORY_LABELS[cat]}`}
+              accessibilityLabel={`Filter by ${filterLabel(f)}`}
               accessibilityRole="button"
-              accessibilityState={{ selected: selected.has(cat) }}
+              accessibilityState={{ selected: selected.has(f) }}
             >
-              {CATEGORY_LABELS[cat]}
+              {filterLabel(f)}
             </Chip>
           )}
         />
@@ -185,6 +206,14 @@ export default function Exercises() {
         getItemLayout={getLayout}
         ListEmptyComponent={empty}
         contentContainerStyle={filtered.length === 0 ? styles.emptyList : undefined}
+      />
+      <FAB
+        icon="plus"
+        onPress={() => router.push("/exercise/create")}
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        color={theme.colors.onPrimary}
+        accessibilityLabel="Add custom exercise"
+        accessibilityRole="button"
       />
     </View>
   );
@@ -211,6 +240,15 @@ export default function Exercises() {
             <Text variant="headlineSmall" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
               {detail.name}
             </Text>
+            {detail.is_custom && (
+              <Chip
+                compact
+                style={{ backgroundColor: theme.colors.tertiaryContainer, alignSelf: "flex-start", marginBottom: 8 }}
+                textStyle={{ fontSize: 12 }}
+              >
+                Custom
+              </Chip>
+            )}
             <View style={styles.row}>
               <Chip compact style={{ backgroundColor: theme.colors.primaryContainer }}>
                 {CATEGORY_LABELS[detail.category]}
@@ -303,6 +341,20 @@ const styles = StyleSheet.create({
     minHeight: ITEM_HEIGHT,
     justifyContent: "center",
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  titleText: {
+    flexShrink: 1,
+  },
+  customChip: {
+    height: 24,
+  },
+  customText: {
+    fontSize: 12,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -328,6 +380,16 @@ const styles = StyleSheet.create({
   },
   emptyList: {
     flexGrow: 1,
+  },
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
   },
   detailPane: {
     flex: 4,
