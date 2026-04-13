@@ -608,6 +608,52 @@ export async function getSessionSetCount(
   return row?.count ?? 0;
 }
 
+// --------------- History & Calendar ---------------
+
+export async function getSessionsByMonth(
+  year: number,
+  month: number
+): Promise<(WorkoutSession & { set_count: number })[]> {
+  const database = await getDatabase();
+  const start = new Date(year, month, 1).getTime();
+  const end = new Date(year, month + 1, 1).getTime();
+  return database.getAllAsync<WorkoutSession & { set_count: number }>(
+    `SELECT wss.*,
+            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
+     FROM workout_sessions wss
+     WHERE wss.completed_at IS NOT NULL
+       AND wss.started_at >= ? AND wss.started_at < ?
+     ORDER BY wss.started_at DESC`,
+    [start, end]
+  );
+}
+
+export async function searchSessions(
+  query: string,
+  limit = 50
+): Promise<(WorkoutSession & { set_count: number })[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<WorkoutSession & { set_count: number }>(
+    `SELECT wss.*,
+            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
+     FROM workout_sessions wss
+     WHERE wss.completed_at IS NOT NULL AND wss.name LIKE ?
+     ORDER BY wss.started_at DESC
+     LIMIT ?`,
+    [`%${query}%`, limit]
+  );
+}
+
+export async function getAllCompletedSessionWeeks(): Promise<number[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<{ started_at: number }>(
+    `SELECT started_at FROM workout_sessions
+     WHERE completed_at IS NOT NULL
+     ORDER BY started_at DESC`
+  );
+  return rows.map((r) => r.started_at);
+}
+
 // --------------- Progress Queries ---------------
 
 export async function getWeeklySessionCounts(

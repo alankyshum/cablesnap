@@ -132,6 +132,15 @@ export default function RootLayout() {
                 headerTintColor,
               }}
             />
+            <Stack.Screen
+              name="history"
+              options={{
+                headerShown: true,
+                title: "Workout History",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

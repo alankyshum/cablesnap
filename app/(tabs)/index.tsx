@@ -17,6 +17,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import {
   deleteTemplate,
   getActiveSession,
+  getAllCompletedSessionWeeks,
   getRecentSessions,
   getSessionSetCount,
   getTemplateExerciseCount,
@@ -24,6 +25,25 @@ import {
   startSession,
 } from "../../lib/db";
 import type { WorkoutSession, WorkoutTemplate } from "../../lib/types";
+
+function mondayOf(date: Date): number {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+  d.setDate(d.getDate() - day);
+  return d.getTime();
+}
+
+function computeStreak(timestamps: number[]): number {
+  if (timestamps.length === 0) return 0;
+  const weeks = new Set(timestamps.map((ts) => mondayOf(new Date(ts))));
+  let current = mondayOf(new Date());
+  let count = 0;
+  while (weeks.has(current)) {
+    count++;
+    current -= 7 * 24 * 60 * 60 * 1000;
+  }
+  return count;
+}
 
 export default function Workouts() {
   const theme = useTheme();
@@ -33,16 +53,21 @@ export default function Workouts() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [setCounts2, setSetCounts] = useState<Record<string, number>>({});
   const [active, setActive] = useState<WorkoutSession | null>(null);
+  const [streak, setStreak] = useState(0);
 
   const load = useCallback(async () => {
-    const [tpls, sess, act] = await Promise.all([
+    const [tpls, sess, act, timestamps] = await Promise.all([
       getTemplates(),
       getRecentSessions(5),
       getActiveSession(),
+      getAllCompletedSessionWeeks(),
     ]);
     setTemplates(tpls);
     setSessions(sess);
     setActive(act);
+
+    // Calculate streak in JS: consecutive weeks with >= 1 workout
+    setStreak(computeStreak(timestamps));
 
     const c: Record<string, number> = {};
     for (const t of tpls) {
@@ -216,14 +241,43 @@ export default function Workouts() {
         )}
       </View>
 
+      {/* Streak Card */}
+      {streak > 0 && (
+        <Card
+          style={[styles.streak, { backgroundColor: theme.colors.primaryContainer }]}
+          accessibilityLabel={`Training streak: ${streak} week${streak > 1 ? "s" : ""}`}
+        >
+          <Card.Content style={styles.streakContent}>
+            <Text variant="headlineSmall" style={{ color: theme.colors.onPrimaryContainer }}>
+              🔥 {streak}
+            </Text>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onPrimaryContainer }}>
+              week streak
+            </Text>
+          </Card.Content>
+        </Card>
+      )}
+
       {/* Recent Workouts */}
       <View style={styles.section}>
-        <Text
-          variant="titleMedium"
-          style={[styles.sectionTitle, { color: theme.colors.onBackground }]}
-        >
-          Recent Workouts
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text
+            variant="titleMedium"
+            style={{ color: theme.colors.onBackground }}
+          >
+            Recent Workouts
+          </Text>
+          {sessions.length > 0 && (
+            <Button
+              mode="text"
+              compact
+              onPress={() => router.push("/history")}
+              accessibilityLabel="View all workout history"
+            >
+              View All History
+            </Button>
+          )}
+        </View>
         {sessions.length === 0 ? (
           <View style={styles.empty}>
             <Text
@@ -281,6 +335,14 @@ const styles = StyleSheet.create({
   },
   quickStart: {
     marginBottom: 20,
+  },
+  streak: {
+    marginBottom: 16,
+  },
+  streakContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   quickStartContent: {
     paddingVertical: 8,
