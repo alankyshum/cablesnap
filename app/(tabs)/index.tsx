@@ -23,6 +23,7 @@ import {
   getAllCompletedSessionWeeks,
   getRecentPRs,
   getRecentSessions,
+  getSessionAvgRPE,
   getSessionSetCount,
   getTemplateExerciseCount,
   getTemplates,
@@ -35,6 +36,7 @@ import {
   softDeleteProgram,
 } from "../../lib/programs";
 import type { Program, ProgramDay, WorkoutSession, WorkoutTemplate } from "../../lib/types";
+import { semantic } from "../../constants/theme";
 
 function mondayOf(date: Date): number {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -68,6 +70,7 @@ export default function Workouts() {
   const [active, setActive] = useState<WorkoutSession | null>(null);
   const [streak, setStreak] = useState(0);
   const [recentPRs, setRecentPRs] = useState<{ exercise_id: string; name: string; weight: number; session_id: string; date: number }[]>([]);
+  const [avgRPEs, setAvgRPEs] = useState<Record<string, number | null>>({});
   const [nextWorkout, setNextWorkout] = useState<{ program: Program; day: ProgramDay } | null>(null);
   const [snackbar, setSnackbar] = useState("");
 
@@ -102,10 +105,13 @@ export default function Workouts() {
     setCounts(c);
 
     const sc: Record<string, number> = {};
+    const rpeMap: Record<string, number | null> = {};
     for (const s of sess) {
       sc[s.id] = await getSessionSetCount(s.id);
+      rpeMap[s.id] = await getSessionAvgRPE(s.id);
     }
     setSetCounts(sc);
+    setAvgRPEs(rpeMap);
 
     const dc: Record<string, number> = {};
     for (const p of progs) {
@@ -540,13 +546,16 @@ export default function Workouts() {
             data={sessions}
             keyExtractor={(item) => item.id}
             scrollEnabled={false}
-            renderItem={({ item }: ListRenderItemInfo<WorkoutSession>) => (
+            renderItem={({ item }: ListRenderItemInfo<WorkoutSession>) => {
+              const rpe = avgRPEs[item.id];
+              const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
+              return (
               <Card
                 style={[styles.card, { backgroundColor: theme.colors.surface }]}
                 onPress={() =>
                   router.push(`/session/detail/${item.id}`)
                 }
-                accessibilityLabel={`View workout: ${item.name}, ${dateStr(item.started_at)}, ${duration(item.duration_seconds)}, ${setCounts2[item.id] ?? 0} sets`}
+                accessibilityLabel={`View workout: ${item.name}, ${dateStr(item.started_at)}, ${duration(item.duration_seconds)}, ${setCounts2[item.id] ?? 0} sets${rpeStr}`}
                 accessibilityRole="button"
               >
                 <Card.Content>
@@ -556,16 +565,26 @@ export default function Workouts() {
                   >
                     {item.name}
                   </Text>
-                  <Text
-                    variant="bodySmall"
-                    style={{ color: theme.colors.onSurfaceVariant }}
-                  >
-                    {dateStr(item.started_at)} · {duration(item.duration_seconds)} ·{" "}
-                    {setCounts2[item.id] ?? 0} sets
-                  </Text>
+                  <View style={styles.recentRow}>
+                    <Text
+                      variant="bodySmall"
+                      style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}
+                    >
+                      {dateStr(item.started_at)} · {duration(item.duration_seconds)} ·{" "}
+                      {setCounts2[item.id] ?? 0} sets
+                    </Text>
+                    {rpe != null && (
+                      <View style={[styles.rpeTag, { backgroundColor: rpe <= 7 ? semantic.beginner : rpe <= 8 ? semantic.intermediate : semantic.advanced }]}>
+                        <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+                          RPE {Math.round(rpe * 10) / 10}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </Card.Content>
               </Card>
-            )}
+              );
+            }}
           />
         )}
       </View>
@@ -662,6 +681,16 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: "center",
     paddingVertical: 16,
+  },
+  recentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  rpeTag: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
   },
   emptyBtn: {
     marginTop: 8,
