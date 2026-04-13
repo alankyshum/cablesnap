@@ -174,7 +174,21 @@ All UI uses existing react-native-paper components (Chip, Card, Text, Divider). 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED** — Well-designed motivational feature with thorough a11y and sound technical approach.
+
+**UX Assessment**: Three-feature scope (in-workout badge, post-workout summary, home widget) creates a coherent progress feedback loop. Problem is real, solution is well-scoped, no schema changes reduces risk.
+
+**Accessibility**: Comprehensive. All new elements have proper labels and a11y attributes. Add >= 48dp touch target spec on Recent PRs widget rows.
+
+**Should Address Before/During Implementation**:
+1. Add explicit edge case: weight edited after set completion — badge must update reactively (declarative render, not event-driven only)
+2. Move haptic feedback IN SCOPE — `expo-haptics` already imported, one line of code, core UX for a motivation feature
+3. Specify >= 48dp touch targets on Recent PRs tappable rows
+
+**Recommendations (Nice to Have)**:
+- Subtle scale-in animation on PR badge appearance
+- Show weight units alongside PR values (existing app-wide gap)
+- Use `LEFT JOIN exercises` in all new queries for soft-deleted exercise handling
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — Technically sound, no schema changes, clean architectural fit.
