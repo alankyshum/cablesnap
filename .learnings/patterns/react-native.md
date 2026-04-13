@@ -33,3 +33,19 @@
 **Learning**: Any pattern of `setLoading(true); await asyncOp(); setLoading(false)` has a silent failure mode: if `asyncOp()` throws, the loading state is never cleared. This leaves the UI stuck in a disabled/spinner state. The fix is wrapping the operation in try/finally so the state reset executes regardless of success or failure.
 **Action**: Always use `try { await asyncOp(); } finally { setLoading(false); }` when managing loading/saving state around async operations. Search for `setLoading(true)` or `setSaving(true)` patterns during self-review to verify each has a corresponding finally block.
 **Tags**: react, async, loading-state, try-finally, error-handling, ui-state
+
+### Store Measurements in Canonical Units — Convert at the Display Layer Only
+**Source**: BLD-17 — Body Weight & Measurements Tracking (Phase 7)
+**Date**: 2026-04-13
+**Context**: Body weight and measurements support both metric (kg/cm) and imperial (lb/in) units. The question was whether to store values in the user's preferred unit or in a single canonical unit.
+**Learning**: Storing user-preference units in the database causes conversion bugs in aggregations, charts, goal calculations, and CSV exports. If a user switches from kg to lb, all historical data must be re-interpreted. By storing exclusively in canonical units (kg for weight, cm for measurements) and converting at the UI layer via a settings table (`body_settings.weight_unit`), all database queries, aggregations, and exports operate on consistent data.
+**Action**: When a feature involves unit preferences (weight, distance, temperature), always store in a single canonical unit. Keep unit preference in a separate settings table. Convert in UI components only — never in database queries or export functions.
+**Tags**: data-modeling, units, canonical-storage, conversion, body-tracking, internationalization
+
+### Semantic Color Constants for Domain-Specific Theming
+**Source**: BLD-21 — Accessibility: a11y attrs, font sizes, theme colors
+**Date**: 2026-04-13
+**Context**: FitForge needed colors for domain concepts (macro nutrients, exercise difficulty levels) that don't map to Material Design 3's built-in color tokens. Hardcoding hex values was flagged as an accessibility failure during a board audit.
+**Learning**: Material Design 3 theme tokens (primary, secondary, surface, etc.) don't cover domain-specific color needs. Creating a `semantic` color export in the theme file maps domain concepts to colors (e.g., `protein → blue`, `difficulty.beginner → green`) while keeping them centrally managed and dark-mode aware. This prevents scattered hardcoded hex values without forcing domain concepts into inappropriate MD3 roles.
+**Action**: When a feature needs colors for domain concepts not covered by MD3 tokens, add them to the `semantic` section of `constants/theme.ts`. Never use hardcoded hex in component StyleSheet. Reference semantic constants for domain colors and `useTheme()` for standard UI colors.
+**Tags**: theming, material-design-3, semantic-colors, accessibility, dark-mode, react-native-paper, hardcoded-colors
