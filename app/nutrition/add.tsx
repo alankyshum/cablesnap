@@ -92,6 +92,9 @@ export default function AddFood() {
             selected={meal === m}
             onPress={() => setMeal(m)}
             style={styles.chip}
+            accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: meal === m }}
           >
             {MEAL_LABELS[m]}
           </Chip>
@@ -156,6 +159,9 @@ export default function AddFood() {
               onPress={() => setFavorite(!favorite)}
               icon={favorite ? "heart" : "heart-outline"}
               style={styles.favChip}
+              accessibilityLabel={favorite ? "Remove from favorites" : "Save as favorite"}
+              accessibilityRole="button"
+              accessibilityState={{ selected: favorite }}
             >
               Save as favorite
             </Chip>
@@ -165,6 +171,7 @@ export default function AddFood() {
               loading={saving}
               disabled={saving || !name.trim()}
               style={styles.btn}
+              accessibilityLabel="Log food"
             >
               Log Food
             </Button>
@@ -186,6 +193,8 @@ export default function AddFood() {
                   key={f.id}
                   style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
                   onPress={() => quickLog(f)}
+                  accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
+                  accessibilityRole="button"
                 >
                   <Card.Content>
                     <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>

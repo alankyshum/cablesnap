@@ -102,17 +102,20 @@ export default function EditTemplate() {
             size={18}
             onPress={() => move(index, -1)}
             disabled={index === 0}
+            accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} up`}
           />
           <IconButton
             icon="arrow-down"
             size={18}
             onPress={() => move(index, 1)}
             disabled={index === exercises.length - 1}
+            accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`}
           />
           <IconButton
             icon="close"
             size={18}
             onPress={() => remove(item.id)}
+            accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`}
           />
         </View>
       </View>
@@ -175,10 +178,11 @@ export default function EditTemplate() {
             router.push(`/template/pick-exercise?templateId=${id}&editId=${id}`)
           }
           style={styles.addBtn}
+          accessibilityLabel="Add exercise to template"
         >
           Add Exercise
         </Button>
-        <Button mode="contained" onPress={() => router.back()} style={styles.doneBtn}>
+        <Button mode="contained" onPress={() => router.back()} style={styles.doneBtn} accessibilityLabel="Done editing template">
           Done
         </Button>
       </View>

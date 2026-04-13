@@ -20,6 +20,7 @@ import {
 } from "../../lib/db";
 import type { DailyLog, MacroTargets } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
+import { semantic } from "../../constants/theme";
 
 const DAY_MS = 86_400_000;
 
@@ -94,24 +95,26 @@ export default function Nutrition() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <IconButton icon="chevron-left" onPress={prev} />
+        <IconButton icon="chevron-left" onPress={prev} accessibilityLabel="Previous day" />
         <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
           {label(date)}
         </Text>
-        <IconButton icon="chevron-right" onPress={next} />
+        <IconButton icon="chevron-right" onPress={next} accessibilityLabel="Next day" />
       </View>
 
       {targets && (
         <Card style={[styles.card, { backgroundColor: theme.colors.surface, marginHorizontal: 16 }]}>
           <Card.Content>
             <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={theme.colors.primary} theme={theme} />
-            <MacroRow label="Protein" value={summary.protein} target={targets.protein} color="#4caf50" unit="g" theme={theme} />
-            <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color="#ff9800" unit="g" theme={theme} />
-            <MacroRow label="Fat" value={summary.fat} target={targets.fat} color="#f44336" unit="g" theme={theme} />
+            <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" theme={theme} />
+            <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" theme={theme} />
+            <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" theme={theme} />
             <Text
               variant="labelSmall"
               style={{ color: theme.colors.primary, marginTop: 8 }}
               onPress={() => router.push("/nutrition/targets")}
+              accessibilityLabel="Edit macro targets"
+              accessibilityRole="link"
             >
               Edit Targets →
             </Text>
@@ -153,7 +156,7 @@ export default function Nutrition() {
                           {Math.round((item.food?.fat ?? 0) * item.servings)}f
                         </Text>
                       </View>
-                      <IconButton icon="delete-outline" size={20} onPress={() => remove(item)} />
+                      <IconButton icon="delete-outline" size={20} onPress={() => remove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} />
                     </Card.Content>
                   </Card>
                 ))}
@@ -168,6 +171,7 @@ export default function Nutrition() {
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         color={theme.colors.onPrimary}
         onPress={() => router.push("/nutrition/add")}
+        accessibilityLabel="Add food"
       />
 
       <Snackbar

@@ -4,11 +4,12 @@ import { Chip, Text, useTheme } from "react-native-paper";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { getExerciseById } from "../../lib/db";
 import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
+import { semantic } from "../../constants/theme";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: "#4CAF50",
-  intermediate: "#FF9800",
-  advanced: "#F44336",
+  beginner: semantic.beginner,
+  intermediate: semantic.intermediate,
+  advanced: semantic.advanced,
 };
 
 export default function ExerciseDetail() {
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   difficultyText: {
-    color: "#ffffff",
+    color: semantic.onSemantic,
     fontWeight: "600",
   },
   step: {

@@ -108,6 +108,7 @@ export default function Settings() {
             loading={loading}
             disabled={loading}
             style={styles.btn}
+            accessibilityLabel="Export all data"
           >
             Export All Data
           </Button>
@@ -123,6 +124,7 @@ export default function Settings() {
             loading={loading}
             disabled={loading}
             style={styles.btn}
+            accessibilityLabel="Import data"
           >
             Import Data
           </Button>
@@ -144,6 +146,7 @@ export default function Settings() {
             icon="bug-outline"
             onPress={() => router.push("/errors")}
             style={styles.btn}
+            accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}
           >
             View Error Log
           </Button>
@@ -171,6 +174,7 @@ export default function Settings() {
             loading={loading}
             disabled={loading}
             style={styles.btn}
+            accessibilityLabel="Share crash report"
           >
             Share Crash Report
           </Button>
@@ -185,6 +189,7 @@ export default function Settings() {
             }}
             style={styles.btn}
             textColor={theme.colors.error}
+            accessibilityLabel="Clear error log"
           >
             Clear Error Log
           </Button>

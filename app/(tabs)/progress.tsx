@@ -139,7 +139,7 @@ export default function Progress() {
             </Text>
           ) : (
             prs.map((pr) => (
-              <View key={pr.exercise_id} style={styles.prRow}>
+              <View key={pr.exercise_id} style={[styles.prRow, { borderBottomColor: theme.colors.outlineVariant }]}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, flex: 1 }}>
                   {pr.name}
                 </Text>
@@ -203,7 +203,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e0e0e0",
   },
   sessionRow: {
     flexDirection: "row",

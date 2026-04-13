@@ -17,6 +17,17 @@ const colors = {
   tertiaryContainer: "#E8F5E9",
 };
 
+// Custom semantic colors for domain-specific indicators
+export const semantic = {
+  protein: "#4caf50",
+  carbs: "#ff9800",
+  fat: "#f44336",
+  beginner: "#4CAF50",
+  intermediate: "#FF9800",
+  advanced: "#F44336",
+  onSemantic: "#ffffff",
+};
+
 export const light = {
   ...MD3LightTheme,
   colors: {

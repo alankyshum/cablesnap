@@ -96,6 +96,8 @@ export default function PickExercise() {
             borderBottomColor: theme.colors.outlineVariant,
           },
         ]}
+        accessibilityLabel={`Select ${item.name}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
+        accessibilityRole="button"
       >
         <View>
           <Text
@@ -143,6 +145,7 @@ export default function PickExercise() {
           value={query}
           onChangeText={setQuery}
           style={[styles.search, { backgroundColor: theme.colors.surface }]}
+          accessibilityLabel="Search exercises"
         />
         <View style={styles.chips}>
           <FlatList
@@ -156,6 +159,9 @@ export default function PickExercise() {
                 onPress={() => toggle(cat)}
                 style={styles.filterChip}
                 compact
+                accessibilityLabel={`Filter by ${CATEGORY_LABELS[cat]}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: selected.has(cat) }}
               >
                 {CATEGORY_LABELS[cat]}
               </Chip>
@@ -223,7 +229,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   chipText: {
-    fontSize: 11,
+    fontSize: 12,
   },
   empty: {
     alignItems: "center",

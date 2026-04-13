@@ -116,6 +116,8 @@ export default function Workouts() {
         <Card
           style={[styles.banner, { backgroundColor: theme.colors.primaryContainer }]}
           onPress={() => router.push(`/session/${active.id}`)}
+          accessibilityLabel={`Resume active workout: ${active.name}`}
+          accessibilityRole="button"
         >
           <Card.Content>
             <Text variant="titleSmall" style={{ color: theme.colors.onPrimaryContainer }}>
@@ -135,6 +137,7 @@ export default function Workouts() {
         onPress={quickStart}
         style={styles.quickStart}
         contentStyle={styles.quickStartContent}
+        accessibilityLabel="Quick start workout"
       >
         Quick Start
       </Button>
@@ -150,6 +153,7 @@ export default function Workouts() {
             icon="plus"
             compact
             onPress={() => router.push("/template/create")}
+            accessibilityLabel="Create new template"
           >
             Create
           </Button>
@@ -166,6 +170,7 @@ export default function Workouts() {
               mode="outlined"
               onPress={() => router.push("/template/create")}
               style={styles.emptyBtn}
+              accessibilityLabel="Create your first template"
             >
               Create Template
             </Button>
@@ -180,6 +185,8 @@ export default function Workouts() {
                 style={[styles.card, { backgroundColor: theme.colors.surface }]}
                 onPress={() => startFromTemplate(item)}
                 onLongPress={() => confirmDelete(item)}
+                accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
+                accessibilityRole="button"
               >
                 <Card.Content style={styles.cardContent}>
                   <View style={styles.cardInfo}>
@@ -200,6 +207,7 @@ export default function Workouts() {
                     icon="pencil"
                     size={20}
                     onPress={() => router.push(`/template/${item.id}`)}
+                    accessibilityLabel={`Edit template ${item.name}`}
                   />
                 </Card.Content>
               </Card>
@@ -236,6 +244,8 @@ export default function Workouts() {
                 onPress={() =>
                   router.push(`/session/detail/${item.id}`)
                 }
+                accessibilityLabel={`View workout: ${item.name}, ${dateStr(item.started_at)}, ${duration(item.duration_seconds)}, ${setCounts2[item.id] ?? 0} sets`}
+                accessibilityRole="button"
               >
                 <Card.Content>
                   <Text

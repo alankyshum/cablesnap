@@ -297,8 +297,8 @@ export default function ActiveSession() {
         contentContainerStyle={styles.content}
       >
         {rest > 0 && (
-          <View style={[styles.restBanner, { backgroundColor: theme.colors.primaryContainer }]}>
-            <Text variant="headlineLarge" style={{ color: theme.colors.onPrimaryContainer, fontWeight: "700" }}>
+          <View style={[styles.restBanner, { backgroundColor: theme.colors.primaryContainer }]} accessibilityLiveRegion="polite">
+            <Text variant="headlineLarge" style={{ color: theme.colors.onPrimaryContainer, fontWeight: "700" }} accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds`}>
               {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
             </Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer, marginTop: 4 }}>
@@ -310,6 +310,7 @@ export default function ActiveSession() {
               onPress={dismissRest}
               textColor={theme.colors.onPrimaryContainer}
               style={{ marginTop: 4 }}
+              accessibilityLabel="Skip rest timer"
             >
               Skip
             </Button>
@@ -387,6 +388,7 @@ export default function ActiveSession() {
                   value={set.weight != null ? String(set.weight) : ""}
                   onChangeText={(v) => handleUpdate(set.id, "weight", v)}
                   placeholder="-"
+                  accessibilityLabel={`Set ${set.set_number} weight`}
                 />
                 <TextInput
                   mode="outlined"
@@ -396,8 +398,9 @@ export default function ActiveSession() {
                   value={set.reps != null ? String(set.reps) : ""}
                   onChangeText={(v) => handleUpdate(set.id, "reps", v)}
                   placeholder="-"
+                  accessibilityLabel={`Set ${set.set_number} reps`}
                 />
-                <View style={styles.colCheck}>
+                <View style={styles.colCheck} accessible accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`} accessibilityRole="checkbox" accessibilityState={{ checked: set.completed }}>
                   <Checkbox
                     status={set.completed ? "checked" : "unchecked"}
                     onPress={() => handleCheck(set)}
@@ -412,6 +415,7 @@ export default function ActiveSession() {
               icon="plus"
               onPress={() => handleAddSet(group.exercise_id)}
               style={styles.addSetBtn}
+              accessibilityLabel={`Add set to ${group.name}`}
             >
               Add Set
             </Button>
@@ -424,6 +428,7 @@ export default function ActiveSession() {
           icon="plus"
           onPress={handleAddExercise}
           style={styles.addExercise}
+          accessibilityLabel="Add exercise to workout"
         >
           Add Exercise
         </Button>
@@ -433,6 +438,7 @@ export default function ActiveSession() {
           onPress={finish}
           style={styles.finishBtn}
           contentStyle={styles.finishContent}
+          accessibilityLabel="Finish workout"
         >
           Finish Workout
         </Button>
@@ -442,6 +448,7 @@ export default function ActiveSession() {
           onPress={cancel}
           textColor={theme.colors.error}
           style={styles.cancelBtn}
+          accessibilityLabel="Cancel workout"
         >
           Cancel Workout
         </Button>

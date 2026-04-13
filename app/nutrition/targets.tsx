@@ -87,10 +87,10 @@ export default function Targets() {
             mode="outlined"
             style={styles.input}
           />
-          <Button mode="contained" onPress={save} loading={saving} disabled={saving} style={styles.btn}>
+          <Button mode="contained" onPress={save} loading={saving} disabled={saving} style={styles.btn} accessibilityLabel="Save macro targets">
             Save Targets
           </Button>
-          <Button mode="outlined" onPress={reset} style={styles.btn}>
+          <Button mode="outlined" onPress={reset} style={styles.btn} accessibilityLabel="Reset to default targets">
             Reset to Defaults
           </Button>
         </Card.Content>

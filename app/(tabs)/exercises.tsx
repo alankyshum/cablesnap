@@ -54,6 +54,8 @@ export default function Exercises() {
       <TouchableRipple
         onPress={() => router.push(`/exercise/${item.id}`)}
         style={[styles.item, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant }]}
+        accessibilityLabel={`${item.name}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
+        accessibilityRole="button"
       >
         <View>
           <Text variant="titleSmall" numberOfLines={1} style={{ color: theme.colors.onSurface }}>
@@ -127,6 +129,7 @@ export default function Exercises() {
         value={query}
         onChangeText={setQuery}
         style={[styles.search, { backgroundColor: theme.colors.surface }]}
+        accessibilityLabel="Search exercises"
       />
       <View style={styles.chips}>
         <FlatList
@@ -140,6 +143,9 @@ export default function Exercises() {
               onPress={() => toggle(cat)}
               style={styles.filterChip}
               compact
+              accessibilityLabel={`Filter by ${CATEGORY_LABELS[cat]}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: selected.has(cat) }}
             >
               {CATEGORY_LABELS[cat]}
             </Chip>
@@ -190,14 +196,14 @@ const styles = StyleSheet.create({
     height: 24,
   },
   chipText: {
-    fontSize: 11,
+    fontSize: 12,
   },
   muscle: {
     marginRight: 4,
     height: 22,
   },
   muscleText: {
-    fontSize: 10,
+    fontSize: 12,
   },
   empty: {
     alignItems: "center",

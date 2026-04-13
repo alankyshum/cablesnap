@@ -36,7 +36,7 @@ export default function Errors() {
       nav.setOptions({
         headerRight: () =>
           errors.length > 0 ? (
-            <Button onPress={handleClear} compact textColor={theme.colors.error}>
+            <Button onPress={handleClear} compact textColor={theme.colors.error} accessibilityLabel="Clear all errors">
               Clear All
             </Button>
           ) : null,
@@ -89,6 +89,8 @@ export default function Errors() {
           <Card
             style={[styles.card, { backgroundColor: theme.colors.surface }]}
             onPress={() => toggle(item.id)}
+            accessibilityLabel={`Error: ${item.message}, ${fmt(item.timestamp)}${item.fatal ? ", fatal" : ""}`}
+            accessibilityRole="button"
           >
             <Card.Content>
               <View style={styles.row}>
@@ -101,7 +103,7 @@ export default function Errors() {
                 {item.fatal && (
                   <Chip
                     compact
-                    textStyle={{ fontSize: 10 }}
+                    textStyle={{ fontSize: 12 }}
                     style={{ backgroundColor: theme.colors.errorContainer }}
                   >
                     FATAL
@@ -122,7 +124,7 @@ export default function Errors() {
                     style={{
                       fontFamily: "monospace",
                       color: theme.colors.onSurfaceVariant,
-                      fontSize: 11,
+                      fontSize: 12,
                     }}
                     selectable
                   >

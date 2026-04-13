@@ -137,17 +137,20 @@ export default function CreateTemplate() {
             size={18}
             onPress={() => move(index, -1)}
             disabled={index === 0}
+            accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} up`}
           />
           <IconButton
             icon="arrow-down"
             size={18}
             onPress={() => move(index, 1)}
             disabled={index === exercises.length - 1}
+            accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`}
           />
           <IconButton
             icon="close"
             size={18}
             onPress={() => remove(item.id)}
+            accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`}
           />
         </View>
       </View>
@@ -206,6 +209,7 @@ export default function CreateTemplate() {
                 )
               }
               style={styles.addBtn}
+              accessibilityLabel="Add exercise to template"
             >
               Add Exercise
             </Button>
@@ -217,6 +221,7 @@ export default function CreateTemplate() {
           loading={saving}
           disabled={saving}
           style={styles.saveBtn}
+          accessibilityLabel={template ? "Done editing template" : "Create template"}
         >
           {template ? "Done" : "Create Template"}
         </Button>
