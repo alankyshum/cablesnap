@@ -1,11 +1,11 @@
-import { useColorScheme } from "react-native";
-import { PaperProvider } from "react-native-paper";
+import { useColorScheme, Platform } from "react-native";
+import { PaperProvider, Banner } from "react-native-paper";
 import { ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
-import { getDatabase } from "../lib/db";
+import { getDatabase, isMemoryFallback } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
 import ErrorBoundary from "../components/ErrorBoundary";
 
@@ -13,9 +13,12 @@ export default function RootLayout() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const paperTheme = isDark ? dark : light;
+  const [banner, setBanner] = useState(false);
 
   useEffect(() => {
-    getDatabase();
+    getDatabase().then(() => {
+      if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
+    });
     setupGlobalHandler();
   }, []);
 
@@ -28,6 +31,13 @@ export default function RootLayout() {
     <ErrorBoundary>
       <PaperProvider theme={paperTheme}>
         <ThemeProvider value={isDark ? navigationDark : navigationLight}>
+          <Banner
+            visible={banner}
+            actions={[{ label: "Dismiss", onPress: () => setBanner(false) }]}
+            icon="alert-circle-outline"
+          >
+            Web storage unavailable — using in-memory database. Your data will not persist across page reloads.
+          </Banner>
           <Stack
             screenOptions={{
               headerShown: false,

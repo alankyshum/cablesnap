@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import { Platform } from "react-native";
 import type {
   Exercise,
   WorkoutTemplate,
@@ -23,6 +24,11 @@ const DB_NAME = "fitforge.db";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let init: Promise<SQLite.SQLiteDatabase> | null = null;
+let memoryFallback = false;
+
+export function isMemoryFallback(): boolean {
+  return memoryFallback;
+}
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
@@ -35,6 +41,23 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         db = instance;
         return instance;
       } catch (err) {
+        if (Platform.OS === "web") {
+          console.warn(
+            "expo-sqlite: OPFS unavailable, using in-memory database. Data will not persist across reloads.",
+            err,
+          );
+          try {
+            const instance = await SQLite.openDatabaseAsync(":memory:");
+            await migrate(instance);
+            await seed(instance);
+            memoryFallback = true;
+            db = instance;
+            return instance;
+          } catch (fallbackErr) {
+            init = null;
+            throw fallbackErr;
+          }
+        }
         init = null;
         throw err;
       }
