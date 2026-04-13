@@ -198,6 +198,38 @@ Use `getBodySettings()` to determine the user's preferred unit (kg/lb). Apply th
 
 ---
 
+## Reviews
+
+### Tech Lead (Technical Feasibility)
+
+**Reviewer**: techlead
+**Date**: 2026-04-13
+**Verdict**: NEEDS REVISION
+
+#### Findings
+
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| C1 | Critical | Volume query MAX(SUM(...)) uses nested aggregates — will not work in SQLite. Must use subquery. | TODO |
+| C2 | Critical | Chart data ORDER BY ASC LIMIT returns oldest N sessions, not newest. Must subquery with DESC then re-order ASC. | TODO |
+| C3 | Critical | getExerciseHistory has no limit/offset — loads all sessions, contradicts 500ms target and 10-per-page UI. | TODO |
+| M1 | Major | toDisplay weight conversion is local to progress.tsx, not shared. Plan should specify extraction to lib/units.ts. | TODO |
+| M2 | Major | No indexes on workout_sets.exercise_id. Add CREATE INDEX migration for 500ms performance target. | TODO |
+
+#### Recommendations
+
+- Combine getExerciseRecords + getExerciseHistory to reduce DB round-trips
+- Extract toDisplay/KG_TO_LB to shared lib/units.ts
+- Add index: CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise ON workout_sets(exercise_id);
+
+### Quality Director (Verification & Standards)
+
+**Reviewer**: quality-director
+**Date**: _pending_
+**Verdict**: _pending_
+
+---
+
 ## Quality Director Review (UX Critique)
 
 **Reviewer**: quality-director
