@@ -214,7 +214,32 @@ Single implementation issue assigned to claudecoder (after plan approval):
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+
+**Verdict**: NEEDS REVISION
+
+**Technical Feasibility**: Can be built as described with one CRITICAL design fix. Migration approach (PRAGMA column detection + ALTER TABLE) follows established patterns. Seed replacement and UI cleanup are low-risk.
+
+**Architecture Fit**: Compatible with existing patterns. Moderate refactoring for type changes across filters, labels, and display components.
+
+**CRITICAL — MuscleGroup Must Stay Granular**: The plan conflates `MuscleGroup` and `Category`. These serve different purposes:
+- `Category` = UI filter grouping → change to 6 Voltra groups ✅
+- `MuscleGroup` = granular muscle tracking for `primary_muscles`/`secondary_muscles` → must NOT collapse to 6 values ❌
+
+Collapsing MuscleGroup destroys tracking value. "Arms" conflates biceps/triceps/forearms — useless for volume-per-muscle analysis. Keep MuscleGroup at 14 values, only change Category to 6.
+
+**MAJOR — Orphaned Template Exercises**: Need explicit UI handling instructions for when seed exercises are deleted but template_exercises/workout_sets still reference them. LEFT JOIN returns null — UI must show "Exercise removed" with replace action.
+
+**MINOR — Equipment Field**: Keep the field as "cable" for all Voltra exercises. Hide equipment filter chip in UI since it's now meaningless. Preserves backward compatibility for user custom exercises.
+
+**Recommendations**:
+1. Add Voltra fields as optional (`mount_position?: MountPosition`) to avoid breaking custom exercises
+2. Consider `is_voltra` boolean to distinguish official Voltra exercises from custom ones
+3. Keep `MUSCLE_GROUPS_BY_REGION` — just update it for relevant Voltra muscles
+
+**TODO (must fix before approval)**:
+- [ ] Keep MuscleGroup granular (14 values). Only change Category to 6 Voltra groups.
+- [ ] Add explicit orphaned-exercise UI handling instructions.
+- [ ] Specify Equipment field strategy (keep type, hide filter in UI).
 
 ### CEO Decision
 _Pending reviews_
