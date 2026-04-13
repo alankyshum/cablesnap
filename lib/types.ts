@@ -73,6 +73,60 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   full_body: "Full Body",
 };
 
+export const EQUIPMENT_LABELS: Record<Equipment, string> = {
+  barbell: "Barbell",
+  dumbbell: "Dumbbell",
+  cable: "Cable",
+  machine: "Machine",
+  bodyweight: "Bodyweight",
+  kettlebell: "Kettlebell",
+  band: "Band",
+  other: "Other",
+};
+
+export const EQUIPMENT_LIST: Equipment[] = [
+  "barbell",
+  "dumbbell",
+  "cable",
+  "machine",
+  "bodyweight",
+  "kettlebell",
+  "band",
+  "other",
+];
+
+export const DIFFICULTIES: Difficulty[] = ["beginner", "intermediate", "advanced"];
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+};
+
+export const MUSCLE_GROUPS_BY_REGION: { label: string; muscles: MuscleGroup[] }[] = [
+  { label: "Upper Body", muscles: ["chest", "back", "shoulders", "biceps", "triceps", "forearms", "traps", "lats"] },
+  { label: "Lower Body", muscles: ["quads", "hamstrings", "glutes", "calves"] },
+  { label: "Core", muscles: ["core"] },
+  { label: "Full Body", muscles: ["full_body"] },
+];
+
+export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
+  chest: "Chest",
+  back: "Back",
+  shoulders: "Shoulders",
+  biceps: "Biceps",
+  triceps: "Triceps",
+  quads: "Quads",
+  hamstrings: "Hamstrings",
+  glutes: "Glutes",
+  calves: "Calves",
+  core: "Core",
+  forearms: "Forearms",
+  traps: "Traps",
+  lats: "Lats",
+  full_body: "Full Body",
+};
+
 export type WorkoutTemplate = {
   id: string;
   name: string;

@@ -156,6 +156,16 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       updated_at INTEGER NOT NULL
     );
   `);
+
+  // Migration: add deleted_at column for soft-delete
+  const cols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(exercises)"
+  );
+  if (!cols.some((c) => c.name === "deleted_at")) {
+    await database.execAsync(
+      "ALTER TABLE exercises ADD COLUMN deleted_at INTEGER DEFAULT NULL"
+    );
+  }
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -217,7 +227,7 @@ function mapRow(row: ExerciseRow): Exercise {
 export async function getAllExercises(): Promise<Exercise[]> {
   const database = await getDatabase();
   const rows = await database.getAllAsync<ExerciseRow>(
-    "SELECT * FROM exercises ORDER BY name ASC"
+    "SELECT * FROM exercises WHERE deleted_at IS NULL ORDER BY name ASC"
   );
   return rows.map(mapRow);
 }
@@ -230,6 +240,77 @@ export async function getExerciseById(id: string): Promise<Exercise | null> {
   );
   if (!row) return null;
   return mapRow(row);
+}
+
+export async function createCustomExercise(
+  exercise: Omit<Exercise, "id" | "is_custom">
+): Promise<Exercise> {
+  const database = await getDatabase();
+  const id = crypto.randomUUID();
+  await database.runAsync(
+    `INSERT INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+    [
+      id,
+      exercise.name,
+      exercise.category,
+      JSON.stringify(exercise.primary_muscles),
+      JSON.stringify(exercise.secondary_muscles),
+      exercise.equipment,
+      exercise.instructions,
+      exercise.difficulty,
+    ]
+  );
+  return { ...exercise, id, is_custom: true };
+}
+
+export async function updateCustomExercise(
+  id: string,
+  exercise: Partial<Omit<Exercise, "id" | "is_custom">>
+): Promise<void> {
+  const database = await getDatabase();
+  const fields: string[] = [];
+  const values: (string | number)[] = [];
+  if (exercise.name !== undefined) { fields.push("name = ?"); values.push(exercise.name); }
+  if (exercise.category !== undefined) { fields.push("category = ?"); values.push(exercise.category); }
+  if (exercise.primary_muscles !== undefined) { fields.push("primary_muscles = ?"); values.push(JSON.stringify(exercise.primary_muscles)); }
+  if (exercise.secondary_muscles !== undefined) { fields.push("secondary_muscles = ?"); values.push(JSON.stringify(exercise.secondary_muscles)); }
+  if (exercise.equipment !== undefined) { fields.push("equipment = ?"); values.push(exercise.equipment); }
+  if (exercise.instructions !== undefined) { fields.push("instructions = ?"); values.push(exercise.instructions); }
+  if (exercise.difficulty !== undefined) { fields.push("difficulty = ?"); values.push(exercise.difficulty); }
+  if (fields.length === 0) return;
+  values.push(id);
+  await database.runAsync(
+    `UPDATE exercises SET ${fields.join(", ")} WHERE id = ? AND is_custom = 1`,
+    values
+  );
+}
+
+export async function softDeleteCustomExercise(id: string): Promise<void> {
+  const database = await getDatabase();
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "DELETE FROM template_exercises WHERE exercise_id = ?",
+      [id]
+    );
+    await database.runAsync(
+      "UPDATE exercises SET deleted_at = ? WHERE id = ? AND is_custom = 1",
+      [Date.now(), id]
+    );
+  });
+}
+
+export async function getTemplatesUsingExercise(
+  exerciseId: string
+): Promise<{ id: string; name: string }[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<{ id: string; name: string }>(
+    `SELECT DISTINCT wt.id, wt.name
+     FROM template_exercises te
+     JOIN workout_templates wt ON wt.id = te.template_id
+     WHERE te.exercise_id = ?`,
+    [exerciseId]
+  );
 }
 
 // --------------- Templates ---------------
@@ -707,14 +788,14 @@ export async function getPersonalRecords(): Promise<
 > {
   const database = await getDatabase();
   return database.getAllAsync<{ exercise_id: string; name: string; max_weight: number }>(
-    `SELECT ws.exercise_id, e.name, MAX(ws.weight) AS max_weight
+    `SELECT ws.exercise_id, COALESCE(e.name, 'Deleted Exercise') AS name, MAX(ws.weight) AS max_weight
      FROM workout_sets ws
-     JOIN exercises e ON ws.exercise_id = e.id
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
      JOIN workout_sessions wss ON ws.session_id = wss.id
      WHERE ws.completed = 1 AND ws.weight IS NOT NULL AND ws.weight > 0
        AND wss.completed_at IS NOT NULL
      GROUP BY ws.exercise_id
-     ORDER BY e.name ASC`
+     ORDER BY name ASC`
   );
 }
 
@@ -1143,7 +1224,7 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
   return database.getAllAsync<WorkoutCSVRow>(
     `SELECT
        date(ws.started_at / 1000, 'unixepoch') AS date,
-       e.name AS exercise,
+       COALESCE(e.name, 'Deleted Exercise') AS exercise,
        wset.set_number,
        wset.weight,
        wset.reps,
@@ -1151,10 +1232,10 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
        ws.notes
      FROM workout_sessions ws
      JOIN workout_sets wset ON wset.session_id = ws.id
-     JOIN exercises e ON e.id = wset.exercise_id
+     LEFT JOIN exercises e ON e.id = wset.exercise_id
      WHERE ws.completed_at IS NOT NULL
        AND ws.started_at >= ?
-     ORDER BY ws.started_at ASC, e.name ASC, wset.set_number ASC`,
+     ORDER BY ws.started_at ASC, exercise ASC, wset.set_number ASC`,
     [since]
   );
 }

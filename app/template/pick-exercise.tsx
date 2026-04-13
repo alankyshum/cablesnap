@@ -96,7 +96,7 @@ export default function PickExercise() {
             borderBottomColor: theme.colors.outlineVariant,
           },
         ]}
-        accessibilityLabel={`Select ${item.name}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
+        accessibilityLabel={`Select ${item.name}${item.is_custom ? " (Custom)" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
         accessibilityRole="button"
       >
         <View>
@@ -105,7 +105,7 @@ export default function PickExercise() {
             numberOfLines={1}
             style={{ color: theme.colors.onSurface }}
           >
-            {item.name}
+            {item.name}{item.is_custom ? " (Custom)" : ""}
           </Text>
           <View style={styles.row}>
             <Chip
