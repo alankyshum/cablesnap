@@ -153,19 +153,16 @@ Use React Native's built-in `Share.share({ message })` — NOT expo-sharing (whi
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION (2026-04-13)
+**Initial Verdict**: NEEDS REVISION (2026-04-13T18:25Z) — 1 Critical, 2 Major, 3 Minor
+**Rev 2 Verdict**: APPROVED (2026-04-13T18:38Z) — All 6 findings resolved
 
-**Critical issues (must fix):**
-1. **C1 — Bodyweight exercises invisible in PRs.** `getSessionPRs()` filters `weight > 0`, so bodyweight exercises (pushups, pullups, etc.) never show PRs. Add rep-based PR detection for exercises where weight=0.
-
-**Major issues (should fix):**
-1. **M1 — Share uses wrong API.** `expo-sharing` requires file URIs, not text. Use RN's built-in `Share.share({ message })` from `react-native` (zero new deps). Drop clipboard mention or add expo-clipboard.
-2. **M2 — Button hierarchy undefined.** Specify: Done=filled/primary (full-width), Share=outlined, View Details=text/tertiary.
-
-**Minor issues:**
-1. **m1** — Add `AccessibilityInfo.announceForAccessibility('Workout Complete!')` on mount.
-2. **m2** — Progressive overload section wording misleading — suggestion taps aren't stored. Say "Weight Increases" not "Progressive Overload Followed."
-3. **m3** — Reuse existing `formatTime()` for duration display.
+**Findings (all resolved in Rev 2):**
+1. **C1 — Bodyweight PRs** ✅ Rep-based PR detection added (getSessionRepPRs, is_bodyweight/weight=0 fallback)
+2. **M1 — Share API** ✅ RN Share.share({ message }), not expo-sharing
+3. **M2 — Button hierarchy** ✅ Done=filled, Share=outlined, View Details=text
+4. **m1 — a11y announce** ✅ AccessibilityInfo.announceForAccessibility on mount
+5. **m2 — Naming** ✅ "Weight Increases" not "Progressive Overload"
+6. **m3 — formatTime()** ✅ Reuse existing helper
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED (with minor fixes)
