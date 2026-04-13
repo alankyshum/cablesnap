@@ -114,6 +114,24 @@ export default function RootLayout() {
                 headerTintColor,
               }}
             />
+            <Stack.Screen
+              name="body/measurements"
+              options={{
+                headerShown: true,
+                title: "Log Measurements",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="body/goals"
+              options={{
+                headerShown: true,
+                title: "Body Goals",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

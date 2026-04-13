@@ -157,6 +157,43 @@ export type MacroTargets = {
   updated_at: number;
 };
 
+// --------------- Body Tracking ---------------
+
+export type BodyWeight = {
+  id: string;
+  weight: number;
+  date: string;
+  notes: string;
+  logged_at: number;
+};
+
+export type BodyMeasurements = {
+  id: string;
+  date: string;
+  waist: number | null;
+  chest: number | null;
+  hips: number | null;
+  left_arm: number | null;
+  right_arm: number | null;
+  left_thigh: number | null;
+  right_thigh: number | null;
+  left_calf: number | null;
+  right_calf: number | null;
+  neck: number | null;
+  body_fat: number | null;
+  notes: string;
+  logged_at: number;
+};
+
+export type BodySettings = {
+  id: string;
+  weight_unit: "kg" | "lb";
+  measurement_unit: "cm" | "in";
+  weight_goal: number | null;
+  body_fat_goal: number | null;
+  updated_at: number;
+};
+
 // --------------- Error Log ---------------
 
 export type ErrorEntry = {

@@ -9,6 +9,9 @@ import type {
   DailyLog,
   MacroTargets,
   Meal,
+  BodyWeight,
+  BodyMeasurements,
+  BodySettings,
 } from "./types";
 import { seedExercises } from "./seed";
 
@@ -116,6 +119,41 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       app_version TEXT,
       platform TEXT,
       os_version TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS body_weight (
+      id TEXT PRIMARY KEY,
+      weight REAL NOT NULL,
+      date TEXT NOT NULL UNIQUE,
+      notes TEXT DEFAULT '',
+      logged_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS body_measurements (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL UNIQUE,
+      waist REAL,
+      chest REAL,
+      hips REAL,
+      left_arm REAL,
+      right_arm REAL,
+      left_thigh REAL,
+      right_thigh REAL,
+      left_calf REAL,
+      right_calf REAL,
+      neck REAL,
+      body_fat REAL,
+      notes TEXT DEFAULT '',
+      logged_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS body_settings (
+      id TEXT PRIMARY KEY DEFAULT 'default',
+      weight_unit TEXT NOT NULL DEFAULT 'kg',
+      measurement_unit TEXT NOT NULL DEFAULT 'cm',
+      weight_goal REAL,
+      body_fat_goal REAL,
+      updated_at INTEGER NOT NULL
     );
   `);
 }
@@ -662,6 +700,9 @@ export async function exportAllData(): Promise<{
   food_entries: FoodRow[];
   daily_log: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
   macro_targets: MacroTargets[];
+  body_weight: BodyWeight[];
+  body_measurements: BodyMeasurements[];
+  body_settings: BodySettings[];
 }> {
   const database = await getDatabase();
   const exercises = await database.getAllAsync<ExerciseRow>("SELECT * FROM exercises");
@@ -672,6 +713,9 @@ export async function exportAllData(): Promise<{
   const foods = await database.getAllAsync<FoodRow>("SELECT * FROM food_entries");
   const logs = await database.getAllAsync<{ id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }>("SELECT * FROM daily_log");
   const targets = await database.getAllAsync<MacroTargets>("SELECT * FROM macro_targets");
+  const weights = await database.getAllAsync<BodyWeight>("SELECT * FROM body_weight");
+  const measurements = await database.getAllAsync<BodyMeasurements>("SELECT * FROM body_measurements");
+  const bodySettings = await database.getAllAsync<BodySettings>("SELECT * FROM body_settings");
   return {
     version: 1,
     exported_at: new Date().toISOString(),
@@ -683,6 +727,9 @@ export async function exportAllData(): Promise<{
     food_entries: foods,
     daily_log: logs,
     macro_targets: targets,
+    body_weight: weights,
+    body_measurements: measurements,
+    body_settings: bodySettings,
   };
 }
 
@@ -696,6 +743,9 @@ export async function importData(data: {
   food_entries?: { id: string; name: string; calories: number; protein: number; carbs: number; fat: number; serving_size: string; is_favorite: number; created_at: number }[];
   daily_log?: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
   macro_targets?: { id: string; calories: number; protein: number; carbs: number; fat: number; updated_at: number }[];
+  body_weight?: { id: string; weight: number; date: string; notes: string; logged_at: number }[];
+  body_measurements?: { id: string; date: string; waist: number | null; chest: number | null; hips: number | null; left_arm: number | null; right_arm: number | null; left_thigh: number | null; right_thigh: number | null; left_calf: number | null; right_calf: number | null; neck: number | null; body_fat: number | null; notes: string; logged_at: number }[];
+  body_settings?: { id: string; weight_unit: string; measurement_unit: string; weight_goal: number | null; body_fat_goal: number | null; updated_at: number }[];
 }): Promise<{ inserted: number }> {
   const database = await getDatabase();
   let inserted = 0;
@@ -776,6 +826,36 @@ export async function importData(data: {
         const r = await database.runAsync(
           "INSERT OR IGNORE INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
           [t.id, t.calories, t.protein, t.carbs, t.fat, t.updated_at]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.body_weight) {
+      for (const w of data.body_weight) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO body_weight (id, weight, date, notes, logged_at) VALUES (?, ?, ?, ?, ?)",
+          [w.id, w.weight, w.date, w.notes, w.logged_at]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.body_measurements) {
+      for (const m of data.body_measurements) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO body_measurements (id, date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes, logged_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [m.id, m.date, m.waist, m.chest, m.hips, m.left_arm, m.right_arm, m.left_thigh, m.right_thigh, m.left_calf, m.right_calf, m.neck, m.body_fat, m.notes, m.logged_at]
+        );
+        inserted += r.changes;
+      }
+    }
+
+    if (data.body_settings) {
+      for (const s of data.body_settings) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO body_settings (id, weight_unit, measurement_unit, weight_goal, body_fat_goal, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+          [s.id, s.weight_unit, s.measurement_unit, s.weight_goal, s.body_fat_goal, s.updated_at]
         );
         inserted += r.changes;
       }
@@ -1066,4 +1146,190 @@ export async function getCSVCounts(since: number): Promise<{ sessions: number; e
     [since]
   );
   return { sessions: s?.count ?? 0, entries: e?.count ?? 0 };
+}
+
+// --------------- Body Tracking ---------------
+
+export async function getBodySettings(): Promise<BodySettings> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<BodySettings>("SELECT * FROM body_settings LIMIT 1");
+  if (row) return row;
+  const now = Date.now();
+  await database.runAsync(
+    "INSERT INTO body_settings (id, weight_unit, measurement_unit, updated_at) VALUES ('default', 'kg', 'cm', ?)",
+    [now]
+  );
+  return { id: "default", weight_unit: "kg", measurement_unit: "cm", weight_goal: null, body_fat_goal: null, updated_at: now };
+}
+
+export async function updateBodySettings(
+  unit: "kg" | "lb",
+  measurement: "cm" | "in",
+  goal: number | null,
+  fatGoal: number | null
+): Promise<void> {
+  const database = await getDatabase();
+  const settings = await getBodySettings();
+  await database.runAsync(
+    "UPDATE body_settings SET weight_unit = ?, measurement_unit = ?, weight_goal = ?, body_fat_goal = ?, updated_at = ? WHERE id = ?",
+    [unit, measurement, goal, fatGoal, Date.now(), settings.id]
+  );
+}
+
+export async function upsertBodyWeight(
+  weight: number,
+  date: string,
+  notes: string
+): Promise<BodyWeight> {
+  const database = await getDatabase();
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await database.runAsync(
+    `INSERT INTO body_weight (id, weight, date, notes, logged_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(date) DO UPDATE SET weight = excluded.weight, notes = excluded.notes, logged_at = excluded.logged_at`,
+    [id, weight, date, notes, now]
+  );
+  const row = await database.getFirstAsync<BodyWeight>(
+    "SELECT * FROM body_weight WHERE date = ?",
+    [date]
+  );
+  return row!;
+}
+
+export async function getBodyWeightEntries(
+  limit = 20,
+  offset = 0
+): Promise<BodyWeight[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<BodyWeight>(
+    "SELECT * FROM body_weight ORDER BY date DESC LIMIT ? OFFSET ?",
+    [limit, offset]
+  );
+}
+
+export async function getBodyWeightCount(): Promise<number> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM body_weight"
+  );
+  return row?.count ?? 0;
+}
+
+export async function getLatestBodyWeight(): Promise<BodyWeight | null> {
+  const database = await getDatabase();
+  return database.getFirstAsync<BodyWeight>(
+    "SELECT * FROM body_weight ORDER BY date DESC LIMIT 1"
+  );
+}
+
+export async function getPreviousBodyWeight(): Promise<BodyWeight | null> {
+  const database = await getDatabase();
+  return database.getFirstAsync<BodyWeight>(
+    "SELECT * FROM body_weight ORDER BY date DESC LIMIT 1 OFFSET 1"
+  );
+}
+
+export async function deleteBodyWeight(id: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync("DELETE FROM body_weight WHERE id = ?", [id]);
+}
+
+export async function getBodyWeightChartData(
+  weeks = 12
+): Promise<{ date: string; weight: number }[]> {
+  const database = await getDatabase();
+  const cutoff = new Date(Date.now() - weeks * 7 * 86_400_000).toISOString().slice(0, 10);
+  return database.getAllAsync<{ date: string; weight: number }>(
+    "SELECT date, weight FROM body_weight WHERE date >= ? ORDER BY date ASC",
+    [cutoff]
+  );
+}
+
+export async function upsertBodyMeasurements(
+  date: string,
+  vals: Omit<BodyMeasurements, "id" | "date" | "logged_at">
+): Promise<BodyMeasurements> {
+  const database = await getDatabase();
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await database.runAsync(
+    `INSERT INTO body_measurements (id, date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes, logged_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(date) DO UPDATE SET
+       waist = excluded.waist, chest = excluded.chest, hips = excluded.hips,
+       left_arm = excluded.left_arm, right_arm = excluded.right_arm,
+       left_thigh = excluded.left_thigh, right_thigh = excluded.right_thigh,
+       left_calf = excluded.left_calf, right_calf = excluded.right_calf,
+       neck = excluded.neck, body_fat = excluded.body_fat,
+       notes = excluded.notes, logged_at = excluded.logged_at`,
+    [id, date, vals.waist, vals.chest, vals.hips, vals.left_arm, vals.right_arm, vals.left_thigh, vals.right_thigh, vals.left_calf, vals.right_calf, vals.neck, vals.body_fat, vals.notes, now]
+  );
+  const row = await database.getFirstAsync<BodyMeasurements>(
+    "SELECT * FROM body_measurements WHERE date = ?",
+    [date]
+  );
+  return row!;
+}
+
+export async function getLatestMeasurements(): Promise<BodyMeasurements | null> {
+  const database = await getDatabase();
+  return database.getFirstAsync<BodyMeasurements>(
+    "SELECT * FROM body_measurements ORDER BY date DESC LIMIT 1"
+  );
+}
+
+export async function getBodyMeasurementEntries(
+  limit = 20,
+  offset = 0
+): Promise<BodyMeasurements[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<BodyMeasurements>(
+    "SELECT * FROM body_measurements ORDER BY date DESC LIMIT ? OFFSET ?",
+    [limit, offset]
+  );
+}
+
+export async function deleteBodyMeasurements(id: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync("DELETE FROM body_measurements WHERE id = ?", [id]);
+}
+
+export type BodyWeightCSVRow = {
+  date: string;
+  weight: number;
+  notes: string;
+};
+
+export type BodyMeasurementsCSVRow = {
+  date: string;
+  waist: number | null;
+  chest: number | null;
+  hips: number | null;
+  left_arm: number | null;
+  right_arm: number | null;
+  left_thigh: number | null;
+  right_thigh: number | null;
+  left_calf: number | null;
+  right_calf: number | null;
+  neck: number | null;
+  body_fat: number | null;
+  notes: string;
+};
+
+export async function getBodyWeightCSVData(since: number): Promise<BodyWeightCSVRow[]> {
+  const database = await getDatabase();
+  const cutoff = since === 0 ? "0000-01-01" : new Date(since).toISOString().slice(0, 10);
+  return database.getAllAsync<BodyWeightCSVRow>(
+    "SELECT date, weight, notes FROM body_weight WHERE date >= ? ORDER BY date ASC",
+    [cutoff]
+  );
+}
+
+export async function getBodyMeasurementsCSVData(since: number): Promise<BodyMeasurementsCSVRow[]> {
+  const database = await getDatabase();
+  const cutoff = since === 0 ? "0000-01-01" : new Date(since).toISOString().slice(0, 10);
+  return database.getAllAsync<BodyMeasurementsCSVRow>(
+    "SELECT date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes FROM body_measurements WHERE date >= ? ORDER BY date ASC",
+    [cutoff]
+  );
 }

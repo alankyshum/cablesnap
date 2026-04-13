@@ -11,19 +11,13 @@ import {
   importData,
   getWorkoutCSVData,
   getNutritionCSVData,
+  getBodyWeightCSVData,
+  getBodyMeasurementsCSVData,
   getCSVCounts,
 } from "../../lib/db";
-import type { WorkoutCSVRow, NutritionCSVRow } from "../../lib/db";
+import type { WorkoutCSVRow, NutritionCSVRow, BodyWeightCSVRow, BodyMeasurementsCSVRow } from "../../lib/db";
 import { getErrorCount, clearErrorLog, generateReport } from "../../lib/errors";
-
-function csvEscape(val: string | number | null | undefined): string {
-  if (val === null || val === undefined) return "";
-  const s = String(val);
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-    return '"' + s.replace(/"/g, '""') + '"';
-  }
-  return s;
-}
+import { csvEscape } from "../../lib/csv";
 
 function workoutCSV(rows: WorkoutCSVRow[]): string {
   const header = "date,exercise,set_number,weight,reps,duration_seconds,notes";
@@ -53,6 +47,36 @@ function nutritionCSV(rows: NutritionCSVRow[]): string {
       csvEscape(r.protein),
       csvEscape(r.carbs),
       csvEscape(r.fat),
+    ].join(",")
+  );
+  return [header, ...lines].join("\n");
+}
+
+function bodyWeightCSV(rows: BodyWeightCSVRow[]): string {
+  const header = "date,weight_kg,notes";
+  const lines = rows.map((r) =>
+    [csvEscape(r.date), csvEscape(r.weight), csvEscape(r.notes)].join(",")
+  );
+  return [header, ...lines].join("\n");
+}
+
+function bodyMeasurementsCSV(rows: BodyMeasurementsCSVRow[]): string {
+  const header = "date,waist_cm,chest_cm,hips_cm,left_arm_cm,right_arm_cm,left_thigh_cm,right_thigh_cm,left_calf_cm,right_calf_cm,neck_cm,body_fat_pct,notes";
+  const lines = rows.map((r) =>
+    [
+      csvEscape(r.date),
+      csvEscape(r.waist),
+      csvEscape(r.chest),
+      csvEscape(r.hips),
+      csvEscape(r.left_arm),
+      csvEscape(r.right_arm),
+      csvEscape(r.left_thigh),
+      csvEscape(r.right_thigh),
+      csvEscape(r.left_calf),
+      csvEscape(r.right_calf),
+      csvEscape(r.neck),
+      csvEscape(r.body_fat),
+      csvEscape(r.notes),
     ].join(",")
   );
   return [header, ...lines].join("\n");
@@ -124,6 +148,44 @@ export default function Settings() {
       await Sharing.shareAsync(file.uri, {
         mimeType: "text/csv",
         dialogTitle: "Export Nutrition CSV",
+      });
+    } catch {
+      setSnack("Export failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBodyWeightCSV = async () => {
+    setLoading(true);
+    try {
+      const rows = await getBodyWeightCSVData(sinceForRange(range));
+      const csv = bodyWeightCSV(rows);
+      if (rows.length === 0) setSnack("No data to export");
+      const file = new File(Paths.cache, `fitforge-body-weight-${dateStamp()}.csv`);
+      await file.write(csv);
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "text/csv",
+        dialogTitle: "Export Body Weight CSV",
+      });
+    } catch {
+      setSnack("Export failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBodyMeasurementsCSV = async () => {
+    setLoading(true);
+    try {
+      const rows = await getBodyMeasurementsCSVData(sinceForRange(range));
+      const csv = bodyMeasurementsCSV(rows);
+      if (rows.length === 0) setSnack("No data to export");
+      const file = new File(Paths.cache, `fitforge-body-measurements-${dateStamp()}.csv`);
+      await file.write(csv);
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "text/csv",
+        dialogTitle: "Export Body Measurements CSV",
       });
     } catch {
       setSnack("Export failed");
@@ -253,6 +315,30 @@ export default function Settings() {
             accessibilityLabel="Export nutrition as CSV"
           >
             Export Nutrition CSV
+          </Button>
+
+          <Button
+            mode="contained"
+            icon="scale-bathroom"
+            onPress={handleBodyWeightCSV}
+            loading={loading}
+            disabled={loading}
+            style={styles.btn}
+            accessibilityLabel="Export body weight as CSV"
+          >
+            Export Body Weight CSV
+          </Button>
+
+          <Button
+            mode="contained"
+            icon="human"
+            onPress={handleBodyMeasurementsCSV}
+            loading={loading}
+            disabled={loading}
+            style={styles.btn}
+            accessibilityLabel="Export body measurements as CSV"
+          >
+            Export Measurements CSV
           </Button>
         </Card.Content>
       </Card>
