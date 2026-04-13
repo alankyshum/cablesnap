@@ -155,3 +155,25 @@ getTemplatesUsingExercise(exerciseId: string): Promise<{id: string, name: string
 - **Files changed**: 6-8
 - **Lines of code**: ~400-600
 - **Agent**: claudecoder (standard implementation)
+
+## Reviews
+
+### Tech Lead (Technical Feasibility) — 2026-04-13
+
+**Verdict**: APPROVED (with one required fix)
+
+**Technical Feasibility**: Fully buildable. Schema ready, existing patterns compatible.
+
+**Architecture Fit**: Excellent — follows all existing patterns (db functions, UUID generation, Expo Router, RN Paper components, theme tokens).
+
+**Critical Finding**: The "Risks" section incorrectly claims workout_sets JOINs are safe. Two queries use INNER JOIN (not LEFT JOIN) on exercises:
+- `getPersonalRecords()` (db.ts:712) — deleting custom exercise silently drops its PR data
+- `getWorkoutCSVData()` (db.ts:1154) — deleting custom exercise omits workout entries from CSV
+
+**Required Fix**: Convert those two INNER JOINs to LEFT JOINs with `COALESCE(e.name, 'Deleted Exercise')`. Bundle into this PR.
+
+**Recommendations**:
+1. Use `useFocusEffect` instead of `useEffect([])` on exercises tab for immediate refresh after creating an exercise
+2. Show "Deleted Exercise" fallback name in session history for deleted exercises
+
+**Complexity**: Medium | **Risk**: Low | **New deps**: None
