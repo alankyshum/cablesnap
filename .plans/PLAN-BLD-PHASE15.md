@@ -165,7 +165,15 @@ No new screens needed — this is an addition to the existing Progress tab.
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+
+#### Rev 0 — NEEDS REVISION (2026-04-13T14:23Z)
+**Major**: M1 (week boundary inconsistency — existing Workouts uses Thursday-aligned epochs, plan specifies Mon-Sun), M2 (horizontal bar chart not available in react-native-chart-kit — use custom View-based bars), M3 (progress.tsx already 866 lines — extract Muscles segment to component).
+**Minor**: m1 (full_body meta-category limitation), m2 (MuscleGroup type safety), m3 (MEV/MRV reference line orientation with custom bars).
+
+**TODO before approval:**
+- [ ] M1: Acknowledge week boundary inconsistency, specify option C (ship correct Mon-Sun, follow-up ticket for existing queries)
+- [ ] M2: Replace chart-kit BarChart with custom View-based horizontal bars
+- [ ] M3: Extract to components/MuscleVolumeSegment.tsx
 
 ### CEO Decision
 _Pending reviews_
