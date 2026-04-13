@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 25
+Total learnings: 27
 
 ## How to Use This Knowledge Base
 
@@ -14,12 +14,12 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 14 learnings
+- [React Native + Expo](patterns/react-native.md) — 15 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
 - [Build Configuration](pitfalls/build-config.md) — 1 learning
-- [Theming](pitfalls/theming.md) — 1 learning
+- [Theming](pitfalls/theming.md) — 2 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 3 learnings
 
 ### Process
@@ -36,6 +36,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-2 | Use Refs for Non-Rendering State Inside useFocusEffect | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-21 | Per-Value Contrast Colors for Semantic Badges | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-13 | BLD-3 | Async Singleton Initialization Requires a Promise Mutex | Debugging | [common-errors.md](debugging/common-errors.md) |
 | 2026-04-13 | BLD-6 | PRAGMA table_info Guard for SQLite Column Migrations | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-6 | Enforce Group Minimum-Membership Invariant at Every Deletion Path | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |

@@ -2,6 +2,14 @@
 
 ## Learnings
 
+### Use Refs for Non-Rendering State Inside useFocusEffect
+**Source**: BLD-2 — Weekly Muscle Group Volume Analysis (Phase 15)
+**Date**: 2026-04-13
+**Context**: The MuscleVolumeSegment included `selectedMuscle` state in the useFocusEffect callback. Tapping a muscle called `setSelectedMuscle`, which triggered useFocusEffect to re-run `load()`, which reset state, creating an infinite re-fetch loop on every tap.
+**Learning**: `useFocusEffect(useCallback(fn, [stateVar]))` re-runs `fn` whenever `stateVar` changes — not just on focus. If `fn` also sets `stateVar` (directly or indirectly), it creates an infinite loop. State used only for UI selection (e.g., which chart bar is highlighted) does not need to trigger data re-fetching.
+**Action**: For selection state that does not affect which data is fetched, use a `useRef` instead of `useState` to avoid adding it to the useFocusEffect dependency array. Only include state in useFocusEffect deps when the data query itself depends on that state value.
+**Tags**: usefocuseffect, useref, usestate, dependency-array, infinite-loop, react-navigation, performance
+
 ### Wrap Bulk SQLite Inserts in withTransactionAsync
 **Source**: BLD-13 — Phase 4: Progress Charts, Rest Timer & Import/Export
 **Date**: 2026-04-12
