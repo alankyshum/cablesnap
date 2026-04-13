@@ -97,3 +97,11 @@
 **Learning**: Multi-step state machine mutations — where step N depends on step N-1 or where partial completion leaves data inconsistent — require transactional wrapping for atomicity. This is distinct from bulk-insert transactions (which are primarily for performance): state machine transactions prevent logically inconsistent intermediate states that no retry can fix.
 **Action**: When a function performs multiple related writes that together represent a single state transition (log + advance, delete + reassign pointer, deactivate-all + activate-one), wrap them in `withTransactionAsync`. During code review, look for sequential `runAsync` calls that touch related tables — each is a candidate for transactional wrapping.
 **Tags**: expo-sqlite, transactions, state-machine, atomicity, data-integrity, multi-step-mutation
+
+### Buffer Text Inputs — Save on Blur, Not on Keystroke
+**Source**: BLD-14 — Per-Set Notes & RPE Tracking (Phase 13)
+**Date**: 2026-04-13
+**Context**: A text input for per-set notes called `updateSetNotes` (a SQLite write) and `load()` (a full data reload) on every keystroke via `onChangeText`. This caused N database writes per second while typing and unnecessary full re-renders on each character.
+**Learning**: When a text input writes to a persistent store (SQLite, API, AsyncStorage), binding the write to `onChangeText` creates excessive I/O and re-renders. The correct pattern is: buffer the text in local component state via `onChangeText`, then persist via `onBlur` or an explicit save action.
+**Action**: For any text input backed by a database write, use local `useState` for the input value and only call the persistence function on `onBlur`. Never bind `onChangeText` directly to a database write or data-reload function.
+**Tags**: react-native, text-input, onblur, debounce, sqlite, performance, forms

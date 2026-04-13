@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 21
+Total learnings: 22
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 12 learnings
+- [React Native + Expo](patterns/react-native.md) — 13 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
@@ -36,6 +36,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-14 | Buffer Text Inputs — Save on Blur, Not on Keystroke | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-1 | Derive Shared Display Flags Before Rendering Concurrent Async Results | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-1 | Nested Subquery for "Last N in Chronological Order" in SQLite | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-7 | Wrap Multi-Step State Machine Mutations in Transactions | Patterns | [react-native.md](patterns/react-native.md) |
