@@ -21,13 +21,25 @@ import { seedExercises } from "./seed";
 const DB_NAME = "fitforge.db";
 
 let db: SQLite.SQLiteDatabase | null = null;
+let init: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
-  db = await SQLite.openDatabaseAsync(DB_NAME);
-  await migrate(db);
-  await seed(db);
-  return db;
+  if (!init) {
+    init = (async () => {
+      try {
+        const instance = await SQLite.openDatabaseAsync(DB_NAME);
+        await migrate(instance);
+        await seed(instance);
+        db = instance;
+        return instance;
+      } catch (err) {
+        init = null;
+        throw err;
+      }
+    })();
+  }
+  return init;
 }
 
 async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
