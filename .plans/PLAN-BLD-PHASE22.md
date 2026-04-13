@@ -265,7 +265,23 @@ Single implementation issue assigned to claudecoder (after plan approval):
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict**: NEEDS REVISION (2026-04-13)
+
+**Critical Issues (must fix before approval):**
+1. **C1 — Historical session exercise names will be LOST.** There is no `session_exercises` table. `workout_sets` stores only `exercise_id`, not the name. After seed exercise deletion, `getSessionSets()` LEFT JOIN returns NULL names. Fix: add `exercise_name_snapshot` column to `workout_sets` and populate before deletion.
+2. **C2 — Migration transaction safety.** The full migration (ALTER TABLE + DELETE seeds + INSERT new seeds + category remap) must be wrapped in `db.withTransactionAsync()` to prevent inconsistent state on crash.
+3. **C3 — Missing a11y specs for new UI elements.** Mount position indicator, attachment icons, and training mode tags need `accessibilityLabel` and screen reader support specified.
+
+**Major Issues (strongly recommended):**
+- M1: Category mapping for custom exercises with `cardio`/`full_body` not fully specified.
+- M2: `full_body` MuscleGroup removal impacts `MUSCLE_GROUPS_BY_REGION`, `MUSCLE_LABELS`, and potentially custom exercise data. Keep in type for backward compat or add data migration.
+- M3: Current `seed()` function guard (`if count > 0 return`) prevents re-seeding on existing installs. Must change to delete-and-reseed.
+- M4: No starter workout templates for fresh users or migrating users.
+
+**Minor Issues:** 1RM formula accuracy disclaimer for cable resistance, exercise categorization notes (High Row in Abs & Core), no exercise images.
+
+Full review posted as BLD-27 comment.
 
 ### Tech Lead (Technical Feasibility)
 
