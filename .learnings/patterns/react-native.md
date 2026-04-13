@@ -105,3 +105,11 @@
 **Learning**: When a text input writes to a persistent store (SQLite, API, AsyncStorage), binding the write to `onChangeText` creates excessive I/O and re-renders. The correct pattern is: buffer the text in local component state via `onChangeText`, then persist via `onBlur` or an explicit save action.
 **Action**: For any text input backed by a database write, use local `useState` for the input value and only call the persistence function on `onBlur`. Never bind `onChangeText` directly to a database write or data-reload function.
 **Tags**: react-native, text-input, onblur, debounce, sqlite, performance, forms
+
+### PRAGMA table_info Guard for SQLite Column Migrations
+**Source**: BLD-6 — Superset & Circuit Training Support (Phase 14)
+**Date**: 2026-04-13
+**Context**: Adding `link_id` and `link_label` columns to `template_exercises` and `link_id`/`round` to `workout_sets` required ALTER TABLE ADD COLUMN. SQLite does not support `ADD COLUMN IF NOT EXISTS`, so running the migration twice would crash on duplicate column errors.
+**Learning**: Use `PRAGMA table_info(<table>)` to retrieve the current column list, then conditionally `ALTER TABLE ADD COLUMN` only when the column is absent. This makes migrations idempotent — safe to run on both fresh installs and upgrades. The pattern: query columns into an array, check with `.some(c => c.name === '<col>')`, and skip the ALTER if the column already exists.
+**Action**: For every SQLite schema migration that adds columns, wrap it in a PRAGMA table_info guard. Never use raw ALTER TABLE ADD COLUMN without checking column existence first. Group related column additions under a single PRAGMA call to reduce queries.
+**Tags**: expo-sqlite, sqlite, migration, alter-table, pragma, idempotent, schema-evolution
