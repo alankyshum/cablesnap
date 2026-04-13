@@ -25,3 +25,11 @@
 **Learning**: MD3 container tokens (primaryContainer, onPrimaryContainer, etc.) must have separate values for light and dark themes. Light mode uses light container backgrounds with dark foregrounds; dark mode inverts this (dark container backgrounds with light foregrounds). Sharing one color set across both themes guarantees contrast failure in one mode.
 **Action**: In constants/theme.ts, maintain separate `lightColors` and `darkColors` objects for all container/onContainer token pairs. Apply `lightColors` to the light theme and `darkColors` to the dark theme. After any theme change, manually verify contrast in both modes — automated WCAG checks are not yet in the pipeline.
 **Tags**: a11y, wcag, contrast, material-design-3, container-tokens, dark-mode, light-mode, theming, react-native-paper
+
+### Numeric Map Keys Collide Across Unit Systems — Use Unit-Qualified Keys
+**Source**: BLD-20 — Barbell Plate Calculator (Phase 17)
+**Date**: 2026-04-13
+**Context**: Plate colors were looked up by numeric weight (e.g., `plateColors[25]`). Competition standards assign different colors per unit system (25kg = red, 25lb = green), but both mapped to the same numeric key, so lb users saw kg colors.
+**Learning**: When two unit systems (kg/lb, cm/in) share numeric values that map to different outputs, using plain numeric keys in a lookup map causes silent collisions. The code compiles fine and appears correct when tested with only one unit system.
+**Action**: Use composite string keys that include the unit (e.g., `"25kg"`, `"25lb"`) in any lookup map where kg and lb values overlap. Always test features with the non-default unit system — collisions only surface when both systems are exercised.
+**Tags**: units, lookup-map, key-collision, kg-lb, theming, plate-colors, dual-unit, testing
