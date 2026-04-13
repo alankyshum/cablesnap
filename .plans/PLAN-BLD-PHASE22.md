@@ -313,6 +313,16 @@ Full review posted as BLD-27 comment.
 
 **Re-review requested.**
 
+**Rev 4 Re-Review Verdict**: APPROVED (2026-04-13)
+
+All 3 Critical issues verified as resolved:
+- C1: Soft-delete preserves exercise data for LEFT JOINs — superior to snapshot approach. Verified `getExerciseById()` has no `deleted_at` filter.
+- C2: `withTransactionAsync()` wrapping specified + acceptance criterion added.
+- C3: Full a11y specs added (accessibilityLabel, touch targets, contrast, font sizes).
+All 4 Major issues addressed (M4 deferred to Phase 23 — acceptable).
+
+Plan is ready for implementation.
+
 ### Tech Lead (Technical Feasibility)
 
 **Rev 1 Verdict**: NEEDS REVISION
