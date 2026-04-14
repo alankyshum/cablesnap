@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-14
-Total learnings: 47
+Total learnings: 49
 
 ## How to Use This Knowledge Base
 
@@ -15,10 +15,10 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Patterns
 - [React Native + Expo](patterns/react-native.md) — 27 learnings
-- [Testing](patterns/testing.md) — 2 learnings
+- [Testing](patterns/testing.md) — 3 learnings
 
 ### Pitfalls
-- [Dependencies](pitfalls/dependencies.md) — 2 learnings
+- [Dependencies](pitfalls/dependencies.md) — 3 learnings
 - [Build Configuration](pitfalls/build-config.md) — 3 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 4 learnings
@@ -37,6 +37,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-14 | BLD-75 | Pin react-test-renderer to Match Expo SDK's React Version | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
+| 2026-04-14 | BLD-75/76 | Mock expo-router with useFocusEffect-as-useEffect for Flow Tests | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-14 | BLD-70 | Progressive Content Truncation for URL-Length-Limited Payloads | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-69 | Use Inner Pressable Instead of Card onPress When Card Contains Interactive Children (Web) | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-62 | Use FlatList with keyExtractor — Never ScrollView + .map() for Dynamic Lists | Patterns | [react-native.md](patterns/react-native.md) |

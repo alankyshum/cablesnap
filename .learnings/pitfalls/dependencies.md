@@ -17,3 +17,11 @@
 **Learning**: `expo-file-system` is for reading/writing files on disk. It has no file picker UI. For presenting a system file picker to the user, use `expo-document-picker` (`DocumentPicker.getDocumentAsync()`). These are separate packages with distinct responsibilities.
 **Action**: Use `expo-document-picker` for file selection and `expo-file-system` for file I/O. Always verify that an API method exists in the installed version before using it — check Expo SDK docs for the specific version.
 **Tags**: expo, expo-document-picker, expo-file-system, file-picker, api-mismatch
+
+### Pin react-test-renderer to Match Expo SDK's React Version
+**Source**: BLD-75 — Implement: User Flow Integration Tests (Phase 28a)
+**Date**: 2026-04-14
+**Context**: Adding RNTL flow tests with `react-test-renderer@^19.2.5` failed because Expo SDK 55 pins `react@19.1.0`. The caret range resolved to 19.2.5, which declares `peerDependencies: { "react": "^19.2.5" }`, creating an unresolvable mismatch.
+**Learning**: `react-test-renderer` must exactly match the project's React minor version. Expo SDK controls the React version; using a caret range for react-test-renderer lets npm resolve to a newer minor that is incompatible with the SDK-pinned React.
+**Action**: Pin `react-test-renderer` to the exact minor version matching the project's React (e.g., `"react-test-renderer": "19.1.0"` when Expo uses `react@19.1.0`). After every Expo SDK upgrade, bump react-test-renderer to match the new React version.
+**Tags**: react-test-renderer, react, expo, version-pinning, peer-dependencies, rntl, testing

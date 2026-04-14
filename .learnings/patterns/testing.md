@@ -17,3 +17,11 @@
 **Learning**: The `jest-expo` preset handles Babel/Metro transform configuration automatically. The critical piece is `transformIgnorePatterns` — a whitelist regex that tells Jest which `node_modules` to transform (since RN packages ship untranspiled ES modules). Without it, every Expo/RN import fails. The pattern is: `'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo|...)'`.
 **Action**: When bootstrapping tests in an Expo project: (1) install `jest`, `jest-expo`, `@testing-library/react-native`, `@types/jest`; (2) set `preset: 'jest-expo'` in jest.config.js; (3) copy the `transformIgnorePatterns` whitelist from an existing working config — do not write it from scratch. Mock `crypto.randomUUID` globally if the app uses UUID generation.
 **Tags**: jest, jest-expo, testing, react-native, expo, transform-ignore-patterns, babel, test-setup, bootstrap
+
+### Mock expo-router with useFocusEffect-as-useEffect for Flow Tests
+**Source**: BLD-75, BLD-76 — User Flow Integration Tests + RNTL Infrastructure
+**Date**: 2026-04-14
+**Context**: RNTL flow tests render real screen components that import `useRouter`, `useFocusEffect`, `useLocalSearchParams`, and `Stack.Screen` from expo-router. Without a complete mock, tests crash on missing navigation context.
+**Learning**: expo-router requires a module-level `jest.mock('expo-router', ...)` declared BEFORE importing any component that uses it. The critical piece is replacing `useFocusEffect` with `React.useEffect` so focus-based data loading triggers in tests. Declare `mockRouter` as a module-level `const` with `jest.fn()` methods so assertions can verify navigation calls.
+**Action**: Use this standard mock at the top of every flow test file (before component imports): `const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }; jest.mock('expo-router', () => { const R = require('react'); return { useRouter: () => mockRouter, useLocalSearchParams: () => ({}), useFocusEffect: (cb) => { R.useEffect(() => { const cleanup = cb(); return typeof cleanup === 'function' ? cleanup : undefined }, []) }, Stack: { Screen: () => null } } })`. Clear mockRouter in `beforeEach`.
+**Tags**: expo-router, jest, testing, rntl, usefocuseffect, mock, flow-test, react-native, navigation
