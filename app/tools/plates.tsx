@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react"
 import {
-  ScrollView,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -12,7 +12,7 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper"
-import { Stack, useLocalSearchParams, useRouter } from "expo-router"
+import { Stack, useLocalSearchParams } from "expo-router"
 import { useFocusEffect } from "expo-router"
 import { getBodySettings } from "../../lib/db"
 import {
@@ -109,6 +109,152 @@ export default function PlateCalculator() {
     return "Barbell loaded with " + desc + " on each side, total " + state.achieved + " " + unit
   }, [state, active, unit])
 
+  const items = useMemo(() => {
+    if (!state || "error" in state) return []
+    return state.grouped
+  }, [state])
+
+  function renderPlate({ item: g }: { item: { weight: number; count: number } }) {
+    const c = color(g.weight, unit)
+    return (
+      <View style={styles.row}>
+        <View
+          style={[
+            styles.swatch,
+            {
+              backgroundColor: c.bg,
+              borderColor: c.border ? theme.colors[c.border] : "transparent",
+              borderWidth: c.border ? 1 : 0,
+            },
+          ]}
+        />
+        <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
+          {g.count}× {g.weight}{unit}
+        </Text>
+      </View>
+    )
+  }
+
+  const header = (
+    <>
+      {/* Unit toggle */}
+      <View accessibilityRole="radiogroup" accessibilityLabel="Unit system">
+        <SegmentedButtons
+          value={unit}
+          onValueChange={switchUnit}
+          buttons={[
+            { value: "kg", label: "kg", accessibilityLabel: "Kilograms" },
+            { value: "lb", label: "lb", accessibilityLabel: "Pounds" },
+          ]}
+          style={styles.segment}
+        />
+      </View>
+
+      {/* Target weight */}
+      <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 16, marginBottom: 8 }}>
+        Target Weight
+      </Text>
+      <TextInput
+        mode="outlined"
+        keyboardType="numeric"
+        value={target}
+        onChangeText={setTarget}
+        placeholder="0"
+        right={<TextInput.Affix text={unit} />}
+        style={styles.input}
+        accessibilityLabel={"Target weight in " + label}
+      />
+
+      {/* Bar weight */}
+      <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 16, marginBottom: 8 }}>
+        Bar Weight
+      </Text>
+      <View accessibilityRole="radiogroup" accessibilityLabel="Bar weight selection" style={styles.bars}>
+        {presets.map(p => (
+          <View
+            key={p}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: custom === "" && bar === p }}
+            style={{ minWidth: 48, minHeight: 48 }}
+          >
+            <SegmentedButtons
+              value={custom === "" && bar === p ? String(p) : ""}
+              onValueChange={() => selectBar(p)}
+              buttons={[{ value: String(p), label: p + unit }]}
+              density="medium"
+            />
+          </View>
+        ))}
+        <TextInput
+          mode="outlined"
+          keyboardType="numeric"
+          value={custom}
+          onChangeText={v => { setCustom(v); setBar(null) }}
+          placeholder="Custom"
+          dense
+          style={[styles.custom, { minHeight: 48 }]}
+          right={<TextInput.Affix text={unit} />}
+          accessibilityLabel={"Custom bar weight in " + label}
+        />
+      </View>
+
+      {/* Results */}
+      <View accessibilityLiveRegion="polite" style={styles.results}>
+        {!valid && target === "" && (
+          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>
+            Enter a target weight
+          </Text>
+        )}
+
+        {!valid && target !== "" && (
+          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginTop: 16 }}>
+            Enter a valid weight
+          </Text>
+        )}
+
+        {valid && state && "error" in state && state.error === "low" && (
+          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginTop: 16 }}>
+            Weight must exceed bar weight
+          </Text>
+        )}
+
+        {valid && state && "error" in state && state.error === "empty" && (
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 16 }}>
+            Target equals bar weight — no plates needed
+          </Text>
+        )}
+
+        {state && !("error" in state) && (
+          <>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 12 }}>
+              ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
+            </Text>
+
+            {state.rounded && (
+              <Text variant="bodySmall" style={{ color: theme.colors.tertiary, textAlign: "center", marginTop: 4 }}>
+                Rounded to {state.achieved}{unit} (nearest achievable)
+              </Text>
+            )}
+
+            {/* Barbell diagram */}
+            <Barbell plates={diagram} unit={unit} barbell={barbell} />
+          </>
+        )}
+      </View>
+    </>
+  )
+
+  const footer = state && !("error" in state) ? (
+    <Text variant="titleMedium" style={{ color: theme.colors.onBackground, textAlign: "center", marginTop: 16 }}>
+      Total: {state.achieved}{unit}
+      {active != null && (
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          {" "}(bar {active}{unit} + 2×{state.side}{unit})
+        </Text>
+      )}
+    </Text>
+  ) : null
+
   if (!ready) return null
 
   return (
@@ -119,206 +265,86 @@ export default function PlateCalculator() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={100}
       >
-        <ScrollView
+        <FlatList
           style={{ backgroundColor: theme.colors.background }}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-        >
-          {/* Unit toggle */}
-          <View accessibilityRole="radiogroup" accessibilityLabel="Unit system">
-            <SegmentedButtons
-              value={unit}
-              onValueChange={switchUnit}
-              buttons={[
-                { value: "kg", label: "kg", accessibilityLabel: "Kilograms" },
-                { value: "lb", label: "lb", accessibilityLabel: "Pounds" },
-              ]}
-              style={styles.segment}
-            />
-          </View>
-
-          {/* Target weight */}
-          <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 16, marginBottom: 8 }}>
-            Target Weight
-          </Text>
-          <TextInput
-            mode="outlined"
-            keyboardType="numeric"
-            value={target}
-            onChangeText={setTarget}
-            placeholder="0"
-            right={<TextInput.Affix text={unit} />}
-            style={styles.input}
-            accessibilityLabel={"Target weight in " + label}
-          />
-
-          {/* Bar weight */}
-          <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 16, marginBottom: 8 }}>
-            Bar Weight
-          </Text>
-          <View accessibilityRole="radiogroup" accessibilityLabel="Bar weight selection" style={styles.bars}>
-            {presets.map(p => (
-              <View
-                key={p}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: custom === "" && bar === p }}
-                style={{ minWidth: 48, minHeight: 48 }}
-              >
-                <SegmentedButtons
-                  value={custom === "" && bar === p ? String(p) : ""}
-                  onValueChange={() => selectBar(p)}
-                  buttons={[{ value: String(p), label: p + unit }]}
-                  density="medium"
-                />
-              </View>
-            ))}
-            <TextInput
-              mode="outlined"
-              keyboardType="numeric"
-              value={custom}
-              onChangeText={v => { setCustom(v); setBar(null) }}
-              placeholder="Custom"
-              dense
-              style={[styles.custom, { minHeight: 48 }]}
-              right={<TextInput.Affix text={unit} />}
-              accessibilityLabel={"Custom bar weight in " + label}
-            />
-          </View>
-
-          {/* Results */}
-          <View accessibilityLiveRegion="polite" style={styles.results}>
-            {!valid && target === "" && (
-              <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>
-                Enter a target weight
-              </Text>
-            )}
-
-            {!valid && target !== "" && (
-              <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginTop: 16 }}>
-                Enter a valid weight
-              </Text>
-            )}
-
-            {valid && state && "error" in state && state.error === "low" && (
-              <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginTop: 16 }}>
-                Weight must exceed bar weight
-              </Text>
-            )}
-
-            {valid && state && "error" in state && state.error === "empty" && (
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 16 }}>
-                Target equals bar weight — no plates needed
-              </Text>
-            )}
-
-            {state && !("error" in state) && (
-              <>
-                {/* Per-side label */}
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 12 }}>
-                  ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
-                </Text>
-
-                {state.rounded && (
-                  <Text variant="bodySmall" style={{ color: theme.colors.tertiary, textAlign: "center", marginTop: 4 }}>
-                    Rounded to {state.achieved}{unit} (nearest achievable)
-                  </Text>
-                )}
-
-                {/* Barbell diagram */}
-                <View
-                  style={styles.barbell}
-                  accessibilityLabel={barbell}
-                  accessibilityRole="image"
-                >
-                  {/* Left plates (reversed) */}
-                  <View style={styles.side}>
-                    {[...diagram].reverse().map((p, i) => {
-                      const c = color(p, unit)
-                      return (
-                        <View
-                          key={"l" + i}
-                          style={[
-                            styles.plate,
-                            {
-                              height: plateHeight(p),
-                              backgroundColor: c.bg,
-                              borderColor: c.border ? theme.colors[c.border] : "transparent",
-                              borderWidth: c.border ? 1 : 0,
-                            },
-                          ]}
-                        />
-                      )
-                    })}
-                  </View>
-
-                  {/* Bar center */}
-                  <View style={[styles.bar, { backgroundColor: theme.colors.outlineVariant }]} />
-
-                  {/* Right plates */}
-                  <View style={styles.side}>
-                    {diagram.map((p, i) => {
-                      const c = color(p, unit)
-                      return (
-                        <View
-                          key={"r" + i}
-                          style={[
-                            styles.plate,
-                            {
-                              height: plateHeight(p),
-                              backgroundColor: c.bg,
-                              borderColor: c.border ? theme.colors[c.border] : "transparent",
-                              borderWidth: c.border ? 1 : 0,
-                            },
-                          ]}
-                        />
-                      )
-                    })}
-                  </View>
-                </View>
-
-                {/* Plate list */}
-                {state.grouped.length > 0 && (
-                  <View style={styles.list}>
-                    {state.grouped.map(g => {
-                      const c = color(g.weight, unit)
-                      return (
-                        <View key={g.weight} style={styles.row}>
-                          <View
-                            style={[
-                              styles.swatch,
-                              {
-                                backgroundColor: c.bg,
-                                borderColor: c.border ? theme.colors[c.border] : "transparent",
-                                borderWidth: c.border ? 1 : 0,
-                              },
-                            ]}
-                          />
-                          <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
-                            {g.count}× {g.weight}{unit}
-                          </Text>
-                        </View>
-                      )
-                    })}
-                  </View>
-                )}
-
-                {/* Total confirmation */}
-                <Text variant="titleMedium" style={{ color: theme.colors.onBackground, textAlign: "center", marginTop: 16 }}>
-                  Total: {state.achieved}{unit}
-                  {active != null && (
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-                      {" "}(bar {active}{unit} + 2×{state.side}{unit})
-                    </Text>
-                  )}
-                </Text>
-              </>
-            )}
-          </View>
-        </ScrollView>
+          data={items}
+          keyExtractor={g => String(g.weight)}
+          renderItem={renderPlate}
+          ListHeaderComponent={header}
+          ListFooterComponent={footer}
+        />
       </KeyboardAvoidingView>
     </>
   )
 }
+
+function PlateView({ weight, unit }: { weight: number; unit: "kg" | "lb" }) {
+  const theme = useTheme()
+  const c = color(weight, unit)
+  return (
+    <View
+      style={[
+        plateStyles.plate,
+        {
+          height: plateHeight(weight),
+          backgroundColor: c.bg,
+          borderColor: c.border ? theme.colors[c.border] : "transparent",
+          borderWidth: c.border ? 1 : 0,
+        },
+      ]}
+    />
+  )
+}
+
+function Barbell({ plates, unit, barbell: label }: { plates: number[]; unit: "kg" | "lb"; barbell: string }) {
+  const theme = useTheme()
+  return (
+    <View
+      style={plateStyles.barbell}
+      accessibilityLabel={label}
+      accessibilityRole="image"
+    >
+      <View style={plateStyles.side}>
+        {[...plates].reverse().map((p, i) => (
+          <PlateView key={"l" + i} weight={p} unit={unit} />
+        ))}
+      </View>
+      <View style={[plateStyles.bar, { backgroundColor: theme.colors.outlineVariant }]} />
+      <View style={plateStyles.side}>
+        {plates.map((p, i) => (
+          <PlateView key={"r" + i} weight={p} unit={unit} />
+        ))}
+      </View>
+    </View>
+  )
+}
+
+const plateStyles = StyleSheet.create({
+  barbell: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    marginBottom: 12,
+    minHeight: 100,
+  },
+  side: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  plate: {
+    width: 22,
+    borderRadius: 3,
+    marginHorizontal: 1,
+  },
+  bar: {
+    width: 60,
+    height: 8,
+    borderRadius: 2,
+  },
+})
 
 const styles = StyleSheet.create({
   container: {
@@ -347,32 +373,6 @@ const styles = StyleSheet.create({
   },
   results: {
     marginTop: 8,
-  },
-  barbell: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-    marginBottom: 12,
-    minHeight: 100,
-  },
-  side: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  plate: {
-    width: 22,
-    borderRadius: 3,
-    marginHorizontal: 1,
-  },
-  bar: {
-    width: 60,
-    height: 8,
-    borderRadius: 2,
-  },
-  list: {
-    marginTop: 12,
-    gap: 8,
   },
   row: {
     flexDirection: "row",
