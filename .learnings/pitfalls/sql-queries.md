@@ -34,6 +34,14 @@
 **Action**: When displaying time-scoped statistics (e.g., "this week"), use a query explicitly bounded by that time window (e.g., `getWeekAdherence()`), not a count-bounded query re-filtered on the client. When a count-bounded query is the only available source, label the stat as "recent" not "this week." During review, check that every stat card's label matches its data source's actual scope.
 **Tags**: sqlite, data-accuracy, bounded-query, time-filtering, stats-ui, label-mismatch, code-review
 
+### Manual Row Mapping Silently Drops New SQLite Columns
+**Source**: BLD-82 — Volta Training Mode Selection & Eccentric Tracking (Phase 30)
+**Date**: 2026-04-14
+**Context**: FitForge's `lib/db.ts` query functions (e.g., `getSessionSets()`) use `getAllAsync` and then manually map each column in `rows.map()` — selecting properties individually rather than spreading the row object. When `training_mode` and `tempo` columns were added to `workout_sets`, the new data was returned by SQLite but silently absent from the application-layer object until the mapping was updated.
+**Learning**: In any data access layer that manually enumerates columns in a `rows.map()` or similar transformation, new database columns will be silently dropped from the returned typed object. The TypeScript compiler will not catch this if the type is updated but the mapping is not — the properties will simply be `undefined` at runtime. This differs from ORM-based patterns where new columns are automatically included.
+**Action**: When adding new columns to a SQLite table, search `lib/db.ts` for ALL functions that query that table — especially `rows.map()` and `rows.forEach()` blocks that manually destructure or select properties. Update every mapping to include the new columns. Add the new fields to both the `*Row` type AND the return mapping. During code review, verify that the number of mapped properties matches the column count in the SELECT clause.
+**Tags**: sqlite, data-access, row-mapping, silent-failure, type-safety, manual-mapping, runtime-undefined
+
 ### Map Custom User Data When Restructuring Category Enums
 **Source**: BLD-30 — Strategic Pivot: Cable Machine + Voltra Exercise Database (Phase 22)
 **Date**: 2026-04-14

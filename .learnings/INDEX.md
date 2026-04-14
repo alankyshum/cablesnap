@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-14
-Total learnings: 50
+Total learnings: 51
 
 ## How to Use This Knowledge Base
 
@@ -21,7 +21,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 3 learnings
 - [Build Configuration](pitfalls/build-config.md) — 3 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 5 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 6 learnings
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 3 learnings
@@ -37,6 +37,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-14 | BLD-82 | Manual Row Mapping Silently Drops New SQLite Columns | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-14 | BLD-79/80 | Bounded Query Results Produce Wrong Aggregates When Re-Filtered Client-Side | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-14 | BLD-75 | Pin react-test-renderer to Match Expo SDK's React Version | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-14 | BLD-75/76 | Mock expo-router with useFocusEffect-as-useEffect for Flow Tests | Patterns | [testing.md](patterns/testing.md) |
