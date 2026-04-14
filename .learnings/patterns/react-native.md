@@ -185,3 +185,19 @@
 **Learning**: Color alone is insufficient to communicate categorical differences in visualizations. The implementation used solid strokes (width 2) for primary muscles and dashed strokes ("4,3" dasharray, width 1) for secondary muscles, providing a second visual channel independent of color perception. This approach satisfies WCAG 1.4.1 (Use of Color) without requiring pattern fills.
 **Action**: When any component uses color to distinguish categories (charts, status indicators, heatmaps, annotated diagrams), always add a non-color visual distinction: stroke style (solid vs dashed), fill pattern, opacity level, shape, or icon. Test by viewing the component in grayscale — categories should still be distinguishable.
 **Tags**: a11y, wcag, color-blind, svg, react-native-svg, dual-channel, stroke-style, visualization, muscle-map
+
+### Use FlatList with keyExtractor — Never ScrollView + .map() for Dynamic Lists
+**Source**: BLD-62 — Weekly Workout Schedule & Adherence Tracking (Phase 25)
+**Date**: 2026-04-14
+**Context**: The schedule screen's template picker rendered templates using ScrollView + .map(). The automated reviewer flagged this as a deterministic-check failure because it prevents list virtualization, lacks stable keys, and bypasses React's reconciliation optimizations.
+**Learning**: ScrollView + .map() is an anti-pattern for any list backed by dynamic data (database queries, API responses). It renders all items simultaneously — no virtualization, no recycling, no built-in key tracking. FlatList with a stable keyExtractor and memoized renderItem handles all three automatically, and is the canonical list component in React Native.
+**Action**: Always use FlatList (or SectionList) for lists rendered from dynamic data. Reserve ScrollView for static, fixed-size content (forms, settings screens). When reviewing PRs, flag any ScrollView + .map() pattern rendering database results as a MAJOR finding.
+**Tags**: react-native, flatlist, scrollview, performance, virtualization, anti-pattern, list-rendering, review-checklist
+
+### Set accessibilityViewIsModal on Overlay Pickers and Custom Modals
+**Source**: BLD-62 — Weekly Workout Schedule & Adherence Tracking (Phase 25)
+**Date**: 2026-04-14
+**Context**: The template picker overlay in the schedule screen was implemented as a positioned View rather than a native Modal. Screen readers could navigate to background content behind the overlay, breaking the expected modal interaction model. The reviewer flagged this as a MAJOR a11y issue.
+**Learning**: Custom overlays (pickers, bottom sheets, action menus) that visually cover background content must also logically trap screen reader focus. Without accessibilityViewIsModal={true}, VoiceOver and TalkBack will announce background elements, confusing users. React Native's Modal component handles this automatically; custom overlays need it set explicitly.
+**Action**: For any overlay component that is NOT using React Native's Modal, set accessibilityViewIsModal={true} on the overlay container View. Alternatively, use the built-in Modal component which handles focus trapping natively. During PR review, check that every overlay/picker/bottom-sheet either uses Modal or has accessibilityViewIsModal.
+**Tags**: a11y, accessibility, modal, overlay, picker, voiceover, talkback, screen-reader, focus-trap, react-native
