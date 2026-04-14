@@ -39,7 +39,7 @@ async function load(): Promise<Map<TimerCue, Audio.Sound>> {
     sounds = map
     return map
   } catch (err) {
-    console.warn("audio: failed to load sounds", err)
+    if (__DEV__) console.warn("audio: failed to load sounds", err)
     return new Map()
   } finally {
     loading = false
@@ -54,7 +54,7 @@ export async function play(cue: TimerCue): Promise<void> {
     if (!sound) return
     await sound.replayAsync()
   } catch (err) {
-    console.warn("audio: playback error", err)
+    if (__DEV__) console.warn("audio: playback error", err)
   }
 }
 

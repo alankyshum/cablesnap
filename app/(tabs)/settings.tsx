@@ -122,7 +122,7 @@ export default function Settings() {
         const on = val !== "false";
         setSoundEnabled(on);
         setAudioEnabled(on);
-      });
+      }).catch(() => {});
     }, [])
   );
 
@@ -297,7 +297,11 @@ export default function Settings() {
               onValueChange={async (val) => {
                 setSoundEnabled(val);
                 setAudioEnabled(val);
-                await setAppSetting("timer_sound_enabled", val ? "true" : "false");
+                try {
+                  await setAppSetting("timer_sound_enabled", val ? "true" : "false");
+                } catch {
+                  setSnack("Failed to save timer sound setting");
+                }
               }}
               accessibilityLabel="Timer Sound"
               accessibilityRole="switch"
