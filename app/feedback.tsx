@@ -125,12 +125,12 @@ export default function FeedbackScreen() {
         null,
         2
       );
-      const file = new File(Paths.cache, "fitforge-report.json");
-      await file.write(json);
-      const textFile = new File(Paths.cache, "fitforge-report.txt");
-      await textFile.write(text);
-      await Sharing.shareAsync(file.uri, {
-        mimeType: "application/json",
+      const report = new File(Paths.cache, "fitforge-report.txt");
+      await report.write(text);
+      const artifact = new File(Paths.cache, "fitforge-report.json");
+      await artifact.write(json);
+      await Sharing.shareAsync(report.uri, {
+        mimeType: "text/plain",
         dialogTitle: "Share Report",
       });
       startCooldown();
