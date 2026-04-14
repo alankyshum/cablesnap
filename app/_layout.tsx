@@ -294,7 +294,7 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="schedule"
+              name="schedule/index"
               options={{
                 headerShown: true,
                 title: "Weekly Schedule",
