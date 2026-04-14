@@ -28,6 +28,39 @@ module.exports = {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
     "@typescript-eslint/no-require-imports": "off",
+    "no-restricted-syntax": [
+      "warn",
+      {
+        selector:
+          "Property[key.name=/color|backgroundColor|borderColor|tintColor/] > Literal[value=/^#[0-9A-Fa-f]{3,8}$/]",
+        message:
+          "Use theme.colors.* via useTheme() or import from constants/theme.ts instead of hardcoded hex colors.",
+      },
+    ],
   },
+  overrides: [
+    {
+      files: [
+        "constants/theme.ts",
+        "constants/design-tokens.ts",
+        "components/muscle-paths.ts",
+        "**/*.test.*",
+        "**/__tests__/**",
+      ],
+      rules: {
+        "no-restricted-syntax": "off",
+      },
+    },
+    {
+      files: [
+        "lib/animations/**",
+        "components/ui/**",
+      ],
+      rules: {
+        "react-hooks/immutability": "off",
+        "react-hooks/exhaustive-deps": "warn",
+      },
+    },
+  ],
   ignorePatterns: ["node_modules/", ".expo/", "dist/", "web-build/"],
 };

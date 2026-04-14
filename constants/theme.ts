@@ -8,84 +8,133 @@ import {
   DarkTheme as NavigationDarkTheme,
 } from "@react-navigation/native";
 
+// ─── Electric Coral Energy Palette ─────────────────────────────────
+
 const base = {
-  primary: "#4CAF50",
-  secondary: "#388E3C",
-  tertiary: "#81C784",
+  primary: "#FF6038",
+  secondary: "#1A2138",
+  tertiary: "#FFB830",
 };
 
 const lightColors = {
   ...base,
-  primaryContainer: "#C8E6C9",
-  secondaryContainer: "#A5D6A7",
-  tertiaryContainer: "#E8F5E9",
-  onPrimaryContainer: "#1B5E20",
-  onSecondaryContainer: "#1B5E20",
-  onTertiaryContainer: "#1B5E20",
+  primaryContainer: "#FFE0D6",
+  secondaryContainer: "#E0E4ED",
+  tertiaryContainer: "#FFF0D1",
+  onPrimary: "#FFFFFF",
+  onSecondary: "#FFFFFF",
+  onTertiary: "#1A2138",
+  onPrimaryContainer: "#6B1F0A",
+  onSecondaryContainer: "#1A2138",
+  onTertiaryContainer: "#5C3D00",
+  surface: "#FFFFFF",
+  surfaceVariant: "#F3F4F6",
+  onSurface: "#1A2138",
+  onSurfaceVariant: "#6B7280",
+  background: "#FAFAFA",
+  outline: "#D1D5DB",
+  outlineVariant: "#E5E7EB",
+  error: "#EF4444",
+  onError: "#FFFFFF",
+  errorContainer: "#FEE2E2",
+  onErrorContainer: "#7F1D1D",
 };
 
 const darkColors = {
   ...base,
-  primaryContainer: "#1B5E20",
-  secondaryContainer: "#2E7D32",
-  tertiaryContainer: "#1B3A1D",
-  onPrimaryContainer: "#C8E6C9",
-  onSecondaryContainer: "#A5D6A7",
-  onTertiaryContainer: "#C8E6C9",
+  primary: "#FF7A55",
+  tertiary: "#FFD166",
+  primaryContainer: "#6B1F0A",
+  secondaryContainer: "#2D3350",
+  tertiaryContainer: "#5C3D00",
+  onPrimary: "#FFFFFF",
+  onSecondary: "#FFFFFF",
+  onTertiary: "#1A2138",
+  onPrimaryContainer: "#FFE0D6",
+  onSecondaryContainer: "#A8B4D4",
+  onTertiaryContainer: "#FFF0D1",
+  surface: "#161B22",
+  surfaceVariant: "#21262D",
+  onSurface: "#F0F2F5",
+  onSurfaceVariant: "#8B949E",
+  background: "#0D1117",
+  outline: "#30363D",
+  outlineVariant: "#21262D",
+  error: "#F87171",
+  onError: "#FFFFFF",
+  errorContainer: "#7F1D1D",
+  onErrorContainer: "#FEE2E2",
 };
 
-// Competition plate colors (light/dark aware, WCAG contrast)
-// Keys use unit suffix to avoid kg/lb collisions (e.g. "25kg" vs "25lb")
+// ─── Accent Colors (spot usage) ────────────────────────────────────
+
+export const accent = {
+  cyan: "#00D4AA",
+  cyanMuted: "#00B894",
+  warning: "#F59E0B",
+  success: "#10B981",
+};
+
+// ─── Competition Plate Colors ──────────────────────────────────────
+
 export const plateColors = {
   light: {
-    "25kg":   { bg: "#D32F2F", text: "#FFFFFF" },  // red
-    "20kg":   { bg: "#1565C0", text: "#FFFFFF" },  // blue
-    "15kg":   { bg: "#F9A825", text: "#000000" },  // yellow
-    "10kg":   { bg: "#2E7D32", text: "#FFFFFF" },  // green
-    "5kg":    { bg: "#757575", text: "#FFFFFF" },   // white/grey
-    "2.5kg":  { bg: "#37474F", text: "#FFFFFF" },  // dark
-    "1.25kg": { bg: "#9E9E9E", text: "#000000" },  // silver
-    "55lb":   { bg: "#D32F2F", text: "#FFFFFF" },  // red
-    "45lb":   { bg: "#1565C0", text: "#FFFFFF" },  // blue
-    "35lb":   { bg: "#F9A825", text: "#000000" },  // yellow
-    "25lb":   { bg: "#2E7D32", text: "#FFFFFF" },  // green
-    "10lb":   { bg: "#757575", text: "#FFFFFF" },   // white
-    "5lb":    { bg: "#37474F", text: "#FFFFFF" },   // dark
-    "2.5lb":  { bg: "#9E9E9E", text: "#000000" },  // silver
+    "25kg": { bg: "#D32F2F", text: "#FFFFFF" },
+    "20kg": { bg: "#1565C0", text: "#FFFFFF" },
+    "15kg": { bg: "#F9A825", text: "#000000" },
+    "10kg": { bg: "#2E7D32", text: "#FFFFFF" },
+    "5kg": { bg: "#757575", text: "#FFFFFF" },
+    "2.5kg": { bg: "#37474F", text: "#FFFFFF" },
+    "1.25kg": { bg: "#9E9E9E", text: "#000000" },
+    "55lb": { bg: "#D32F2F", text: "#FFFFFF" },
+    "45lb": { bg: "#1565C0", text: "#FFFFFF" },
+    "35lb": { bg: "#F9A825", text: "#000000" },
+    "25lb": { bg: "#2E7D32", text: "#FFFFFF" },
+    "10lb": { bg: "#757575", text: "#FFFFFF" },
+    "5lb": { bg: "#37474F", text: "#FFFFFF" },
+    "2.5lb": { bg: "#9E9E9E", text: "#000000" },
   } as Record<string, { bg: string; text: string }>,
   dark: {
-    "25kg":   { bg: "#EF5350", text: "#000000" },
-    "20kg":   { bg: "#42A5F5", text: "#000000" },
-    "15kg":   { bg: "#FFD54F", text: "#000000" },
-    "10kg":   { bg: "#66BB6A", text: "#000000" },
-    "5kg":    { bg: "#BDBDBD", text: "#000000" },
-    "2.5kg":  { bg: "#78909C", text: "#FFFFFF" },
+    "25kg": { bg: "#EF5350", text: "#000000" },
+    "20kg": { bg: "#42A5F5", text: "#000000" },
+    "15kg": { bg: "#FFD54F", text: "#000000" },
+    "10kg": { bg: "#66BB6A", text: "#000000" },
+    "5kg": { bg: "#BDBDBD", text: "#000000" },
+    "2.5kg": { bg: "#78909C", text: "#FFFFFF" },
     "1.25kg": { bg: "#E0E0E0", text: "#000000" },
-    "55lb":   { bg: "#EF5350", text: "#000000" },
-    "45lb":   { bg: "#42A5F5", text: "#000000" },
-    "35lb":   { bg: "#FFD54F", text: "#000000" },
-    "25lb":   { bg: "#66BB6A", text: "#000000" },
-    "10lb":   { bg: "#BDBDBD", text: "#000000" },
-    "5lb":    { bg: "#78909C", text: "#FFFFFF" },
-    "2.5lb":  { bg: "#E0E0E0", text: "#000000" },
+    "55lb": { bg: "#EF5350", text: "#000000" },
+    "45lb": { bg: "#42A5F5", text: "#000000" },
+    "35lb": { bg: "#FFD54F", text: "#000000" },
+    "25lb": { bg: "#66BB6A", text: "#000000" },
+    "10lb": { bg: "#BDBDBD", text: "#000000" },
+    "5lb": { bg: "#78909C", text: "#FFFFFF" },
+    "2.5lb": { bg: "#E0E0E0", text: "#000000" },
   } as Record<string, { bg: string; text: string }>,
 };
 
-export function plateColor(weight: number, unit: "kg" | "lb", isDark: boolean): { bg: string; text: string } {
+export function plateColor(
+  weight: number,
+  unit: "kg" | "lb",
+  isDark: boolean
+): { bg: string; text: string } {
   const palette = isDark ? plateColors.dark : plateColors.light;
-  return palette[`${weight}${unit}`] || (isDark
-    ? { bg: "#616161", text: "#FFFFFF" }
-    : { bg: "#424242", text: "#FFFFFF" });
+  return (
+    palette[`${weight}${unit}`] ||
+    (isDark
+      ? { bg: "#616161", text: "#FFFFFF" }
+      : { bg: "#424242", text: "#FFFFFF" })
+  );
 }
 
-// Custom semantic colors for domain-specific indicators
+// ─── Semantic Domain Colors ────────────────────────────────────────
+
 export const semantic = {
-  protein: "#4caf50",
-  carbs: "#ff9800",
-  fat: "#f44336",
-  beginner: "#4CAF50",
-  intermediate: "#FF9800",
-  advanced: "#F44336",
+  protein: "#10B981",
+  carbs: "#FFB830",
+  fat: "#EF4444",
+  beginner: "#10B981",
+  intermediate: "#FFB830",
+  advanced: "#EF4444",
   onBeginner: "#ffffff",
   onIntermediate: "#000000",
   onAdvanced: "#ffffff",
@@ -97,23 +146,25 @@ export const DIFFICULTY_COLORS: Record<string, string> = {
   advanced: semantic.advanced,
 };
 
-// Muscle diagram colors — separate light/dark for WCAG contrast
+// ─── Muscle Diagram Colors ─────────────────────────────────────────
+
 export const muscle = {
   light: {
-    primary: "#D32F2F",
-    secondary: "#F57C00",
+    primary: "#FF6038",
+    secondary: "#FFB830",
     inactive: "#E0E0E0",
     outline: "#9E9E9E",
   },
   dark: {
-    primary: "#EF5350",
-    secondary: "#FFB74D",
+    primary: "#FF7A55",
+    secondary: "#FFD166",
     inactive: "#424242",
     outline: "#616161",
   },
 };
 
-// Category icon map for MaterialCommunityIcons
+// ─── Category Icon Map ─────────────────────────────────────────────
+
 export const CATEGORY_ICONS: Record<string, string> = {
   abs_core: "stomach",
   arms: "arm-flex",
@@ -129,6 +180,8 @@ export function difficultyText(level: string): string {
   return semantic.onBeginner;
 }
 
+// ─── MD3 Themes ────────────────────────────────────────────────────
+
 export const light = {
   ...MD3LightTheme,
   colors: {
@@ -142,10 +195,10 @@ export const dark = {
   colors: {
     ...MD3DarkTheme.colors,
     ...darkColors,
-    surface: "#121212",
-    background: "#121212",
   },
 };
+
+// ─── Navigation Themes ─────────────────────────────────────────────
 
 const { LightTheme: navLight, DarkTheme: navDark } = adaptNavigationTheme({
   reactNavigationLight: NavigationDefaultTheme,
