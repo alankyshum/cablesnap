@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-13
-Total learnings: 37
+Last updated: 2026-04-14
+Total learnings: 39
 
 ## How to Use This Knowledge Base
 
@@ -14,14 +14,14 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 18 learnings
+- [React Native + Expo](patterns/react-native.md) — 19 learnings
 - [Testing](patterns/testing.md) — 2 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
 - [Build Configuration](pitfalls/build-config.md) — 3 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 3 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 4 learnings
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 3 learnings
@@ -37,6 +37,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-14 | BLD-30 | Seed Data Pivot via Soft-Delete + Idempotent Re-Seed | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-14 | BLD-30 | Map Custom User Data When Restructuring Category Enums | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-13 | BLD-28 | Use Middleware for COOP/COEP Headers — Static Server Config Is Unreliable | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-13 | BLD-28 | Platform-Aware Graceful Degradation for expo-sqlite Web | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-15 | Bundle Static Reference Data as JSON for Read-Only Datasets | Patterns | [react-native.md](patterns/react-native.md) |

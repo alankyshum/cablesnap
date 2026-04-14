@@ -145,3 +145,11 @@
 **Learning**: By default, React Native FlatList dismisses the keyboard when the user taps outside a TextInput. When a list combines search inputs with interactive items (expandable rows, buttons, secondary inputs), this creates a frustrating UX where every non-input tap forces keyboard dismissal. Setting `keyboardShouldPersistTaps="handled"` keeps the keyboard open unless the tap explicitly blurs it.
 **Action**: On any FlatList or ScrollView that contains both TextInput fields and interactive list items, set `keyboardShouldPersistTaps="handled"`. Test the flow: type in search → tap list item → verify keyboard stays open.
 **Tags**: react-native, flatlist, keyboard, textinput, ux, keyboardshouldpersisttaps, scroll-view
+
+### Seed Data Pivot via Soft-Delete + Idempotent Re-Seed
+**Source**: BLD-30 — Strategic Pivot: Cable Machine + Voltra Exercise Database (Phase 22)
+**Date**: 2026-04-14
+**Context**: FitForge pivoted from a generic exercise library (70 exercises) to a cable-machine-focused database (54 Voltra exercises). Old exercises were referenced by existing user sessions and templates, so hard-deleting them would break historical data.
+**Learning**: When replacing seed/reference data entirely, soft-delete old records (UPDATE SET deleted_at = ? WHERE is_custom = 0) rather than hard-deleting. This preserves foreign-key references in user data (sessions, templates). Use an idempotent check (SELECT COUNT WHERE is_new = 1 AND deleted_at IS NULL) to prevent double-execution on app restart. Show orphaned (soft-deleted) entities with a visual marker in the UI (e.g., "(removed)" suffix in italic/gray) and offer a Replace action.
+**Action**: When a product pivot requires replacing seed data: (1) add a deleted_at column if not present, (2) soft-delete old seed rows only (is_custom = 0 guard), (3) insert new seed data with INSERT OR IGNORE, (4) gate the entire migration with an idempotent count check, (5) update all UI lists to handle soft-deleted references gracefully.
+**Tags**: sqlite, data-migration, soft-delete, seed-data, idempotent, product-pivot, reference-data
