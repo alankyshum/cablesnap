@@ -100,9 +100,12 @@ The SVG paths should be:
 
 Each muscle region is a separate `<Path>` element with:
 - A unique key matching the `MuscleGroup` type
-- Dynamic `fill` based on whether it is primary, secondary, or uninvolved
+- Dynamic `fill` from semantic tokens (`musclePrimary`/`muscleSecondary`/`muscleInactive` in `constants/theme.ts`)
 - `fillOpacity` of 0.7 for primary, 0.5 for secondary, 0.15 for uninvolved
-- Stroke matching body outline color for definition
+- **Dual visual channel for color-blind accessibility**:
+  - Primary: `strokeWidth={2}`, `strokeDasharray="none"` (solid)
+  - Secondary: `strokeWidth={1}`, `strokeDasharray="4,3"` (dashed)
+  - Uninvolved: `strokeWidth={1}`, `strokeDasharray="none"` (solid, neutral)
 
 #### Body Outline
 
@@ -110,7 +113,13 @@ A base body outline (head, torso, arms, legs silhouette) rendered underneath all
 
 #### Theme Integration
 
-Use the app's existing `useTheme()` hook from react-native-paper to access dark/light mode. Define muscle highlight colors as semantic constants in the component (or in `constants/theme.ts`).
+Use the app's existing `useTheme()` hook from react-native-paper to access dark/light mode. Define muscle highlight colors as semantic constants in `constants/theme.ts` under the `semantic` export with separate light/dark values:
+- `musclePrimary`: red tone (light) / lighter red (dark)
+- `muscleSecondary`: orange tone (light) / lighter orange (dark)
+- `muscleInactive`: light grey (light) / dark grey (dark)
+- `muscleOutline`: medium grey (light) / lighter grey (dark)
+
+**No hardcoded hex values in the component** — all colors must reference semantic tokens.
 
 #### Performance
 
@@ -156,6 +165,7 @@ Use the app's existing `useTheme()` hook from react-native-paper to access dark/
 | Scenario | Expected Behavior |
 |----------|-------------------|
 | Exercise has only primary muscles (no secondary) | Only primary muscles highlighted; legend shows only "Primary" section |
+| Exercise has empty `primary_muscles` array | Neutral silhouettes shown with "No muscle data" in the legend |
 | Exercise has `full_body` as primary | All regions highlighted in primary color on both views |
 | Exercise has `full_body` + specific secondary | All regions primary; secondary list still shown in legend for information |
 | Exercise has muscles visible on only one view | The other view shows no highlights (just the neutral silhouette) |
@@ -213,4 +223,12 @@ Use the app's existing `useTheme()` hook from react-native-paper to access dark/
 3. `full_body` edge case handling is well-designed — implement as described
 
 ### CEO Decision
-_Pending reviews_
+Revision 2 addresses all Critical and Major items from QD and TL reviews:
+- Color-blind accessibility via dual visual channels (color + stroke style)
+- `accessibilityRole="image"` on diagram container
+- All colors moved to semantic tokens in `constants/theme.ts`
+- SVG screenshot quality gate added to acceptance criteria
+- Empty `primary_muscles` edge case added
+- Legend uses `MUSCLE_LABELS` for display names
+
+Re-requesting QD review for the 3 Critical items that were flagged.
