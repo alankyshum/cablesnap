@@ -17,6 +17,7 @@ import type {
   ProgramDay,
   ProgramLog,
   MuscleGroup,
+  TrainingMode,
 } from "./types";
 import { seedExercises } from "./seed";
 import {
@@ -289,6 +290,23 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     await database.execAsync(
       "ALTER TABLE workout_sets ADD COLUMN round INTEGER DEFAULT NULL"
     );
+  }
+
+  // Migration: add training_mode and tempo to workout_sets
+  const setNames = new Set(setCols.map((c) => c.name));
+  if (!setNames.has("training_mode") || !setNames.has("tempo")) {
+    await database.withTransactionAsync(async () => {
+      if (!setNames.has("training_mode")) {
+        await database.execAsync(
+          "ALTER TABLE workout_sets ADD COLUMN training_mode TEXT DEFAULT NULL"
+        );
+      }
+      if (!setNames.has("tempo")) {
+        await database.execAsync(
+          "ALTER TABLE workout_sets ADD COLUMN tempo TEXT DEFAULT NULL"
+        );
+      }
+    });
   }
 
   // Migration: add Voltra metadata columns to exercises
@@ -967,6 +985,8 @@ type SetRow = {
   notes: string;
   link_id: string | null;
   round: number | null;
+  training_mode: string | null;
+  tempo: string | null;
   exercise_name: string | null;
   exercise_deleted_at: number | null;
 };
@@ -996,6 +1016,8 @@ export async function getSessionSets(
     notes: r.notes ?? "",
     link_id: r.link_id ?? null,
     round: r.round ?? null,
+    training_mode: (r.training_mode as TrainingMode) ?? null,
+    tempo: r.tempo ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
   }));
@@ -1015,13 +1037,15 @@ export async function addSet(
   exerciseId: string,
   setNumber: number,
   linkId?: string | null,
-  round?: number | null
+  round?: number | null,
+  trainingMode?: TrainingMode | null,
+  tempo?: string | null
 ): Promise<WorkoutSet> {
   const database = await getDatabase();
   const id = crypto.randomUUID();
   await database.runAsync(
-    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round) VALUES (?, ?, ?, ?, ?, ?)",
-    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null]
+    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null, trainingMode ?? null, tempo ?? null]
   );
   return {
     id,
@@ -1036,6 +1060,8 @@ export async function addSet(
     notes: "",
     link_id: linkId ?? null,
     round: round ?? null,
+    training_mode: trainingMode ?? null,
+    tempo: tempo ?? null,
   };
 }
 
@@ -1085,6 +1111,22 @@ export async function updateSetNotes(id: string, notes: string): Promise<void> {
   await database.runAsync(
     "UPDATE workout_sets SET notes = ? WHERE id = ?",
     [notes, id]
+  );
+}
+
+export async function updateSetTrainingMode(id: string, mode: TrainingMode | null): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "UPDATE workout_sets SET training_mode = ? WHERE id = ?",
+    [mode, id]
+  );
+}
+
+export async function updateSetTempo(id: string, tempo: string | null): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "UPDATE workout_sets SET tempo = ? WHERE id = ?",
+    [tempo, id]
   );
 }
 
@@ -1296,7 +1338,7 @@ export async function exportAllData(): Promise<{
   const measurements = await database.getAllAsync<BodyMeasurements>("SELECT * FROM body_measurements");
   const bodySettings = await database.getAllAsync<BodySettings>("SELECT * FROM body_settings");
   return {
-    version: 1,
+    version: 2,
     exported_at: new Date().toISOString(),
     exercises,
     templates,
@@ -1318,7 +1360,7 @@ export async function importData(data: {
   templates?: { id: string; name: string; created_at: number; updated_at: number }[];
   template_exercises?: { id: string; template_id: string; exercise_id: string; position: number; target_sets: number; target_reps: string; rest_seconds: number; link_id?: string | null; link_label?: string }[];
   sessions?: { id: string; template_id: string | null; name: string; started_at: number; completed_at: number | null; duration_seconds: number | null; notes: string }[];
-  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null; set_rpe?: number | null; set_notes?: string; link_id?: string | null; round?: number | null }[];
+  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null; set_rpe?: number | null; set_notes?: string; link_id?: string | null; round?: number | null; training_mode?: string | null; tempo?: string | null }[];
   food_entries?: { id: string; name: string; calories: number; protein: number; carbs: number; fat: number; serving_size: string; is_favorite: number; created_at: number }[];
   daily_log?: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
   macro_targets?: { id: string; calories: number; protein: number; carbs: number; fat: number; updated_at: number }[];
@@ -1373,8 +1415,8 @@ export async function importData(data: {
     if (data.sets) {
       for (const s of data.sets) {
         const r = await database.runAsync(
-          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at, s.set_rpe ?? null, s.set_notes ?? "", s.link_id ?? null, s.round ?? null]
+          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at, s.set_rpe ?? null, s.set_notes ?? "", s.link_id ?? null, s.round ?? null, s.training_mode ?? null, s.tempo ?? null]
         );
         inserted += r.changes;
       }
@@ -1761,6 +1803,8 @@ export type WorkoutCSVRow = {
   set_rpe: number | null;
   set_notes: string;
   link_id: string | null;
+  training_mode: string | null;
+  tempo: string | null;
 };
 
 export type NutritionCSVRow = {
@@ -1787,7 +1831,9 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
        ws.notes,
        wset.rpe AS set_rpe,
        wset.notes AS set_notes,
-       wset.link_id
+       wset.link_id,
+       wset.training_mode,
+       wset.tempo
      FROM workout_sessions ws
      JOIN workout_sets wset ON wset.session_id = ws.id
      LEFT JOIN exercises e ON e.id = wset.exercise_id

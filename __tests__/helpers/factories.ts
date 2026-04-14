@@ -135,6 +135,8 @@ export function createSet(overrides: Partial<WorkoutSet> = {}): WorkoutSet {
     notes: '',
     link_id: null,
     round: null,
+    training_mode: null,
+    tempo: null,
     ...overrides,
   }
 }

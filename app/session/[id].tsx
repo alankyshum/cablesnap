@@ -42,6 +42,8 @@ import {
   updateSet,
   updateSetRPE,
   updateSetNotes,
+  updateSetTrainingMode,
+  updateSetTempo,
   getExerciseById,
 } from "../../lib/db";
 import {
@@ -49,9 +51,11 @@ import {
   getProgramDayById,
   advanceProgram,
 } from "../../lib/programs";
-import type { WorkoutSession, WorkoutSet } from "../../lib/types";
+import type { WorkoutSession, WorkoutSet, TrainingMode, Exercise } from "../../lib/types";
+import { TRAINING_MODE_LABELS } from "../../lib/types";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { suggest, type Suggestion } from "../../lib/rm";
+import TrainingModeSelector from "../../components/TrainingModeSelector";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -64,6 +68,8 @@ type ExerciseGroup = {
   name: string;
   sets: SetWithMeta[];
   link_id: string | null;
+  training_modes: TrainingMode[];
+  is_voltra: boolean;
 };
 
 const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
@@ -100,6 +106,8 @@ export default function ActiveSession() {
   const restFlash = useRef(new Animated.Value(0)).current;
   const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
+  const [modes, setModes] = useState<Record<string, TrainingMode>>({});
+  const [tempoDraft, setTempoDraft] = useState<Record<string, string>>({});
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -149,13 +157,27 @@ export default function ActiveSession() {
 
     // Group by exercise
     const map = new Map<string, ExerciseGroup>();
+    const exerciseMeta: Record<string, Exercise> = {};
+    for (const eid of exerciseIds) {
+      const ex = await getExerciseById(eid);
+      if (ex) exerciseMeta[eid] = ex;
+    }
     for (const s of sets) {
       if (!map.has(s.exercise_id)) {
+        const ex = exerciseMeta[s.exercise_id];
+        let parsed: TrainingMode[] = [];
+        try {
+          parsed = ex?.training_modes ?? [];
+        } catch {
+          parsed = [];
+        }
         map.set(s.exercise_id, {
           exercise_id: s.exercise_id,
           name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
           sets: [],
           link_id: s.link_id ?? null,
+          training_modes: parsed,
+          is_voltra: ex?.is_voltra ?? false,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
@@ -388,8 +410,33 @@ export default function ActiveSession() {
   const handleAddSet = async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
     const num = (group?.sets.length ?? 0) + 1;
-    await addSet(id!, exerciseId, num);
+    const mode = modes[exerciseId] ?? null;
+    const tp = mode === "eccentric_overload" ? (tempoDraft[exerciseId] || null) : null;
+    await addSet(id!, exerciseId, num, null, null, mode, tp);
     await load();
+  };
+
+  const handleModeChange = async (exerciseId: string, mode: TrainingMode) => {
+    setModes((prev) => ({ ...prev, [exerciseId]: mode }));
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (!group) return;
+    for (const set of group.sets) {
+      if (!set.completed) {
+        await updateSetTrainingMode(set.id, mode);
+      }
+    }
+    await load();
+  };
+
+  const handleTempoBlur = async (exerciseId: string, val: string) => {
+    const clean = val && !/^[\s-]*$/.test(val) ? val : null;
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (!group) return;
+    for (const set of group.sets) {
+      if (!set.completed) {
+        await updateSetTempo(set.id, clean);
+      }
+    }
   };
 
   const handleAddExercise = () => {
@@ -631,6 +678,21 @@ export default function ActiveSession() {
               {group.name}
             </Text>
 
+            {/* Training mode selector for Volta exercises with multiple modes */}
+            {group.is_voltra && group.training_modes.length > 1 && (
+              <TrainingModeSelector
+                modes={group.training_modes}
+                selected={modes[group.exercise_id] ?? group.training_modes[0]}
+                exercise={group.name}
+                tempo={tempoDraft[group.exercise_id] ?? ""}
+                onSelect={(m) => handleModeChange(group.exercise_id, m)}
+                onTempoChange={(v) => {
+                  setTempoDraft((prev) => ({ ...prev, [group.exercise_id]: v }));
+                  handleTempoBlur(group.exercise_id, v);
+                }}
+              />
+            )}
+
             {/* Header row */}
             <View style={styles.headerRow}>
               <Text
@@ -801,6 +863,13 @@ export default function ActiveSession() {
                     >
                       PR
                     </Chip>
+                  )}
+                  {set.completed && set.training_mode && set.training_mode !== "weight" && (
+                    <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
+                      <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 10, fontWeight: "700" }}>
+                        {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
+                      </Text>
+                    </View>
                   )}
                   <IconButton
                     icon={set.notes ? "note-text" : "note-text-outline"}
@@ -1032,6 +1101,12 @@ const styles = StyleSheet.create({
   },
   prChipText: {
     fontSize: 12,
+  },
+  modeBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
   },
   addSetBtn: {
     alignSelf: "flex-start",

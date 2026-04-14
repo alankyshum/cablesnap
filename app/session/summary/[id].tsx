@@ -24,6 +24,7 @@ import {
   getSessionWeightIncreases,
 } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
+import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { toDisplay } from "../../../lib/units";
 
 type PR = { exercise_id: string; name: string; weight: number; previous_max: number };

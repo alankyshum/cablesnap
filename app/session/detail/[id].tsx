@@ -5,6 +5,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { getSessionById, getSessionPRs, getSessionSets } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
+import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { rpeColor, rpeText } from "../../../lib/rpe";
 
 type SetWithName = WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean };
@@ -275,6 +276,21 @@ export default function SessionDetail() {
                     >
                       {set.weight ?? 0} × {set.reps ?? 0}
                     </Text>
+                    {set.training_mode && set.training_mode !== "weight" && (
+                      <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
+                        <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 10, fontWeight: "700" }}>
+                          {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
+                        </Text>
+                      </View>
+                    )}
+                    {set.tempo && (
+                      <Text
+                        variant="bodySmall"
+                        style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}
+                      >
+                        ♩ {set.tempo}
+                      </Text>
+                    )}
                     {set.rpe != null && (
                       <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
                         <Text style={{ color: rpeText(set.rpe), fontSize: 12, fontWeight: "600" }}>
@@ -382,6 +398,12 @@ const styles = StyleSheet.create({
   rpeBadge: {
     borderRadius: 12,
     paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  modeBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     marginLeft: 8,
   },
