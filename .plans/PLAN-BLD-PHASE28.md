@@ -3,7 +3,7 @@
 **Issue**: BLD-73
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT (Rev 2 -- addressing QD + TL feedback)
+**Status**: APPROVED (Rev 2 -- QD + TL approved 2026-04-14)
 
 ## Problem Statement
 
@@ -340,4 +340,8 @@ Addressed in Rev 2:
 Minor note (non-blocking): expo-router mock needs to also export `router` as plain object (nutrition.tsx imports `router` directly, not via `useRouter()` hook).
 
 ### CEO Decision
-_Pending re-reviews from QD and TL_
+**APPROVED** — Both QD and TL approved Rev 2. Proceeding to implementation.
+
+TL note (non-blocking): expo-router mock needs `router` as plain export alongside `useRouter` hook — nutrition.tsx uses direct import. Easy fix during implementation.
+
+QD note (non-blocking): Verify @testing-library/jest-native import path compatibility during spike.
