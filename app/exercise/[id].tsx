@@ -24,7 +24,7 @@ import {
   type ExerciseRecords as Records,
 } from "../../lib/db";
 import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS, type Exercise } from "../../lib/types";
-import { semantic, difficultyText } from "../../constants/theme";
+import { semantic, difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
@@ -32,12 +32,6 @@ import { epley, percentageTable } from "../../lib/rm";
 
 const PAGE_SIZE = 10;
 const MAX_ITEMS = 50;
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: semantic.beginner,
-  intermediate: semantic.intermediate,
-  advanced: semantic.advanced,
-};
 
 function formatDate(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(ts));

@@ -12,6 +12,8 @@ import { setupGlobalHandler } from "../lib/errors";
 import { log as logInteraction } from "../lib/interactions";
 import { setupHandler, handleResponse, getPermissionStatus } from "../lib/notifications";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { SnackbarProvider } from "../components/SnackbarProvider";
+import { QueryProvider } from "../lib/query";
 
 SplashScreen.preventAutoHideAsync();
 setupHandler();
@@ -99,8 +101,10 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
+      <QueryProvider>
       <PaperProvider theme={paperTheme}>
         <ThemeProvider value={isDark ? navigationDark : navigationLight}>
+        <SnackbarProvider>
           {!onboarded && <Redirect href="/onboarding/welcome" />}
           <Banner
             visible={banner}
@@ -340,8 +344,10 @@ export default function RootLayout() {
           >
             {snack}
           </Snackbar>
+        </SnackbarProvider>
         </ThemeProvider>
       </PaperProvider>
+      </QueryProvider>
     </ErrorBoundary>
   );
 }

@@ -7,7 +7,8 @@ import {
 } from "react-native";
 import { Chip, FAB, Searchbar, Text, TouchableRipple, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { getAllExercises, getExerciseById } from "../../lib/db";
 import {
   CATEGORIES,
@@ -16,16 +17,11 @@ import {
   type Category,
   type Exercise,
 } from "../../lib/types";
-import { semantic, difficultyText, CATEGORY_ICONS } from "../../constants/theme";
+import { semantic, difficultyText, CATEGORY_ICONS, DIFFICULTY_COLORS } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
+import { useFocusRefetch } from "../../lib/query";
 
 const ITEM_HEIGHT = 84;
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: semantic.beginner,
-  intermediate: semantic.intermediate,
-  advanced: semantic.advanced,
-};
 
 type FilterType = Category | "custom" | "volta";
 const FILTER_ALL: FilterType[] = [...CATEGORIES, "volta", "custom"];
@@ -34,19 +30,15 @@ export default function Exercises() {
   const theme = useTheme();
   const router = useRouter();
   const layout = useLayout();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<FilterType>>(new Set());
-  const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<Exercise | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      getAllExercises()
-        .then(setExercises)
-        .finally(() => setLoading(false));
-    }, [])
-  );
+  const { data: exercises = [], isLoading: loading } = useQuery({
+    queryKey: ["exercises"],
+    queryFn: getAllExercises,
+  });
+  useFocusRefetch(["exercises"]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();

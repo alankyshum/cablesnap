@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   FlatList,
@@ -13,12 +13,12 @@ import {
   IconButton,
   Menu,
   SegmentedButtons,
-  Snackbar,
   Text,
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getNextWorkout,
   getPrograms,
@@ -48,104 +48,91 @@ import { semantic } from "../../constants/theme";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { DIFFICULTY_LABELS } from "../../lib/types";
+import { formatDuration, formatDateShort, computeStreak } from "../../lib/format";
+import { useFocusRefetch } from "../../lib/query";
+import { useSnackbar } from "../../components/SnackbarProvider";
 
-function mondayOf(date: Date): number {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const day = (d.getDay() + 6) % 7; // Mon=0..Sun=6
-  d.setDate(d.getDate() - day);
-  return d.getTime();
-}
+async function loadHomeData() {
+  const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
+    getTemplates(),
+    getRecentSessions(5),
+    getActiveSession(),
+    getAllCompletedSessionWeeks(),
+    getRecentPRs(5),
+    getPrograms(),
+    getNextWorkout(),
+    getTodaySchedule(),
+    isTodayCompleted(),
+    getWeekAdherence(),
+  ]);
 
-function computeStreak(timestamps: number[]): number {
-  if (timestamps.length === 0) return 0;
-  const weeks = new Set(timestamps.map((ts) => mondayOf(new Date(ts))));
-  let current = mondayOf(new Date());
-  let count = 0;
-  while (weeks.has(current)) {
-    count++;
-    current -= 7 * 24 * 60 * 60 * 1000;
+  const counts: Record<string, number> = {};
+  for (const t of tpls) {
+    counts[t.id] = await getTemplateExerciseCount(t.id);
   }
-  return count;
+
+  const setCounts: Record<string, number> = {};
+  const avgRPEs: Record<string, number | null> = {};
+  for (const s of sess) {
+    setCounts[s.id] = await getSessionSetCount(s.id);
+    avgRPEs[s.id] = await getSessionAvgRPE(s.id);
+  }
+
+  const dayCounts: Record<string, number> = {};
+  for (const p of progs) {
+    dayCounts[p.id] = await getProgramDayCount(p.id);
+  }
+
+  return {
+    templates: tpls,
+    sessions: sess,
+    active: act,
+    streak: computeStreak(timestamps),
+    recentPRs: prData,
+    programs: progs,
+    nextWorkout: nw,
+    todaySchedule: sched,
+    todayDone: done,
+    adherence: adh,
+    counts,
+    setCounts,
+    avgRPEs,
+    dayCounts,
+  };
 }
 
 export default function Workouts() {
   const theme = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { showSnack } = useSnackbar();
   const [segment, setSegment] = useState("templates");
-  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [dayCounts, setDayCounts] = useState<Record<string, number>>({});
-  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [setCounts2, setSetCounts] = useState<Record<string, number>>({});
-  const [active, setActive] = useState<WorkoutSession | null>(null);
-  const [streak, setStreak] = useState(0);
-  const [recentPRs, setRecentPRs] = useState<{ exercise_id: string; name: string; weight: number; session_id: string; date: number }[]>([]);
-  const [avgRPEs, setAvgRPEs] = useState<Record<string, number | null>>({});
-  const [nextWorkout, setNextWorkout] = useState<{ program: Program; day: ProgramDay } | null>(null);
-  const [snackbar, setSnackbar] = useState("");
   const [menu, setMenu] = useState<string | null>(null);
-  const [todaySchedule, setTodaySchedule] = useState<ScheduleEntry | null>(null);
-  const [todayDone, setTodayDone] = useState(false);
-  const [adherence, setAdherence] = useState<{ day: number; scheduled: boolean; completed: boolean }[]>([]);
 
-  const load = useCallback(async () => {
-    const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
-      getTemplates(),
-      getRecentSessions(5),
-      getActiveSession(),
-      getAllCompletedSessionWeeks(),
-      getRecentPRs(5),
-      getPrograms(),
-      getNextWorkout(),
-      getTodaySchedule(),
-      isTodayCompleted(),
-      getWeekAdherence(),
-    ]);
-    setTemplates(tpls);
-    setSessions(sess);
-    setActive(act);
-    setRecentPRs(prData);
-    setPrograms(progs);
-    setNextWorkout(nw);
-    setTodaySchedule(sched);
-    setTodayDone(done);
-    setAdherence(adh);
+  const { data } = useQuery({
+    queryKey: ["home"],
+    queryFn: loadHomeData,
+  });
+  useFocusRefetch(["home"]);
 
-    // Default segment: Programs if active program exists, else Templates
-    if (nw) {
-      setSegment("programs");
-    }
+  const templates = data?.templates ?? [];
+  const programs = data?.programs ?? [];
+  const dayCounts = data?.dayCounts ?? {};
+  const sessions = data?.sessions ?? [];
+  const counts = data?.counts ?? {};
+  const setCounts2 = data?.setCounts ?? {};
+  const active = data?.active ?? null;
+  const streak = data?.streak ?? 0;
+  const recentPRs = data?.recentPRs ?? [];
+  const avgRPEs = data?.avgRPEs ?? {};
+  const nextWorkout = data?.nextWorkout ?? null;
+  const todaySchedule = data?.todaySchedule ?? null;
+  const todayDone = data?.todayDone ?? false;
+  const adherence = data?.adherence ?? [];
 
-    setStreak(computeStreak(timestamps));
+  const effectiveSegment = nextWorkout && segment === "templates" ? "programs" : segment;
 
-    const c: Record<string, number> = {};
-    for (const t of tpls) {
-      c[t.id] = await getTemplateExerciseCount(t.id);
-    }
-    setCounts(c);
-
-    const sc: Record<string, number> = {};
-    const rpeMap: Record<string, number | null> = {};
-    for (const s of sess) {
-      sc[s.id] = await getSessionSetCount(s.id);
-      rpeMap[s.id] = await getSessionAvgRPE(s.id);
-    }
-    setSetCounts(sc);
-    setAvgRPEs(rpeMap);
-
-    const dc: Record<string, number> = {};
-    for (const p of progs) {
-      dc[p.id] = await getProgramDayCount(p.id);
-    }
-    setDayCounts(dc);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  const reload = () => queryClient.invalidateQueries({ queryKey: ["home"] });
 
   const quickStart = async () => {
     const session = await startSession(null, "Quick Workout");
@@ -160,7 +147,7 @@ export default function Workouts() {
   const startNextWorkout = async () => {
     if (!nextWorkout) return;
     if (!nextWorkout.day.template_id) {
-      setSnackbar("Template no longer exists");
+      showSnack("Template no longer exists");
       return;
     }
     const session = await startSession(
@@ -189,7 +176,7 @@ export default function Workouts() {
           style: "destructive",
           onPress: async () => {
             await softDeleteProgram(prog.id);
-            await load();
+            reload();
           },
         },
       ]
@@ -208,7 +195,7 @@ export default function Workouts() {
           style: "destructive",
           onPress: async () => {
             await deleteTemplate(tpl.id);
-            await load();
+            reload();
           },
         },
       ]
@@ -218,14 +205,14 @@ export default function Workouts() {
   const handleDuplicateTemplate = async (tpl: WorkoutTemplate) => {
     setMenu(null);
     const newId = await duplicateTemplate(tpl.id);
-    await load();
+    reload();
     router.push(`/template/${newId}`);
   };
 
   const handleDuplicateProgram = async (prog: Program) => {
     setMenu(null);
     const newId = await duplicateProgram(prog.id);
-    await load();
+    reload();
     router.push(`/program/${newId}`);
   };
 
@@ -236,22 +223,6 @@ export default function Workouts() {
   const starters = templates.filter((t) => t.is_starter);
   const userPrograms = programs.filter((p) => !p.is_starter);
   const starterPrograms = programs.filter((p) => p.is_starter);
-
-  const duration = (seconds: number | null) => {
-    if (!seconds) return "-";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  };
-
-  const dateStr = (ts: number) => {
-    const d = new Date(ts);
-    return d.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-  };
 
   const scheduled = adherence.filter((a) => a.scheduled);
   const weekDone = adherence.filter((a) => a.completed).length;
@@ -500,7 +471,7 @@ export default function Workouts() {
 
       {/* Segmented Control */}
       <SegmentedButtons
-        value={segment}
+        value={effectiveSegment}
         onValueChange={setSegment}
         buttons={[
           {
@@ -517,7 +488,7 @@ export default function Workouts() {
         style={styles.segmented}
       />
 
-      {segment === "templates" ? (
+      {effectiveSegment === "templates" ? (
         <>
           {/* User Templates */}
           <View style={styles.section}>
@@ -877,7 +848,7 @@ export default function Workouts() {
                 onPress={() =>
                   router.push(`/session/detail/${item.id}`)
                 }
-                accessibilityLabel={`View workout: ${item.name}, ${dateStr(item.started_at)}, ${duration(item.duration_seconds)}, ${setCounts2[item.id] ?? 0} sets${rpeStr}`}
+                accessibilityLabel={`View workout: ${item.name}, ${formatDateShort(item.started_at)}, ${formatDuration(item.duration_seconds)}, ${setCounts2[item.id] ?? 0} sets${rpeStr}`}
                 accessibilityRole="button"
               >
                 <Card.Content>
@@ -892,7 +863,7 @@ export default function Workouts() {
                       variant="bodySmall"
                       style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}
                     >
-                      {dateStr(item.started_at)} · {duration(item.duration_seconds)} ·{" "}
+                      {formatDateShort(item.started_at)} · {formatDuration(item.duration_seconds)} ·{" "}
                       {setCounts2[item.id] ?? 0} sets
                     </Text>
                     {rpe != null && (
@@ -935,13 +906,6 @@ export default function Workouts() {
         </Card>
       </View>
 
-      <Snackbar
-        visible={!!snackbar}
-        onDismiss={() => setSnackbar("")}
-        duration={3000}
-      >
-        {snackbar}
-      </Snackbar>
     </View>
   );
 }

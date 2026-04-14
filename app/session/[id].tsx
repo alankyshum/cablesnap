@@ -58,6 +58,7 @@ import { TRAINING_MODE_LABELS } from "../../lib/types";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { suggest, type Suggestion } from "../../lib/rm";
 import TrainingModeSelector from "../../components/TrainingModeSelector";
+import { formatTime } from "../../lib/format";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -278,16 +279,6 @@ export default function ActiveSession() {
       if (timer.current) clearInterval(timer.current);
     };
   }, [session]);
-
-  const formatTime = (secs: number) => {
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = secs % 60;
-    const mm = String(m).padStart(2, "0");
-    const ss = String(s).padStart(2, "0");
-    if (h > 0) return `${h}:${mm}:${ss}`;
-    return `${mm}:${ss}`;
-  };
 
   const handleUpdate = async (
     setId: string,

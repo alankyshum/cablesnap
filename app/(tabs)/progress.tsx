@@ -42,6 +42,7 @@ import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types
 import { useLayout } from "../../lib/layout";
 import { KG_TO_LB, LB_TO_KG, toDisplay, toKg } from "../../lib/units";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
+import { formatDuration, formatDateShort, movingAvg } from "../../lib/format";
 
 type PR = { exercise_id: string; name: string; max_weight: number };
 type SessionRow = { id: string; name: string; started_at: number; duration_seconds: number | null; set_count: number };
@@ -50,15 +51,6 @@ const PAGE_SIZE = 20;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function movingAvg(data: { date: string; weight: number }[], window = 7): { date: string; avg: number }[] {
-  return data.map((entry, i) => {
-    const start = Math.max(0, i - window + 1);
-    const slice = data.slice(start, i + 1);
-    const avg = slice.reduce((sum, e) => sum + e.weight, 0) / slice.length;
-    return { date: entry.date, avg: Math.round(avg * 10) / 10 };
-  });
 }
 
 export default function Progress() {
@@ -225,20 +217,6 @@ export default function Progress() {
     propsForBackgroundLines: { stroke: theme.colors.outlineVariant },
   };
 
-  const duration = (secs: number | null) => {
-    if (!secs) return "-";
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    if (h > 0) return h + "h " + m + "m";
-    return m + "m";
-  };
-
-  const dateStr = (ts: number) =>
-    new Date(ts).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-
   // ---- Workout segment ----
 
   const renderWorkouts = () => {
@@ -342,7 +320,7 @@ export default function Progress() {
                     {s.name}
                   </Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    {dateStr(s.started_at)} · {duration(s.duration_seconds)} · {s.set_count} sets
+                    {formatDateShort(s.started_at)} · {formatDuration(s.duration_seconds)} · {s.set_count} sets
                   </Text>
                 </View>
               </View>

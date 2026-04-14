@@ -23,10 +23,9 @@ import {
 import type { WorkoutSession } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { DAYS, formatDateKey, formatDuration } from "../lib/format";
 
 type SessionRow = WorkoutSession & { set_count: number };
-
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function weekday(d: Date): number {
   return (d.getDay() + 6) % 7; // Mon=0..Sun=6
@@ -34,19 +33,6 @@ function weekday(d: Date): number {
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
-}
-
-function dateKey(ts: number): string {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return "-";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
 }
 
 function monthLabel(year: number, month: number): string {
@@ -95,7 +81,7 @@ function HistoryScreen() {
   const dotMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const s of sessions) {
-      const key = dateKey(s.started_at);
+      const key = formatDateKey(s.started_at);
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return map;
@@ -104,7 +90,7 @@ function HistoryScreen() {
   const filtered = useMemo(() => {
     if (results) return results;
     if (!selected) return sessions;
-    return sessions.filter((s) => dateKey(s.started_at) === selected);
+    return sessions.filter((s) => formatDateKey(s.started_at) === selected);
   }, [sessions, selected, results]);
 
   const prevMonth = () => {
@@ -161,11 +147,11 @@ function HistoryScreen() {
   const total = daysInMonth(year, month);
   const offset = weekday(new Date(year, month, 1));
   const today = new Date();
-  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const todayKey = formatDateKey(today.getTime());
   const cellSize = Math.max(44, Math.floor(layout.width / 7) - 4);
 
   const renderDay = (day: number) => {
-    const key = `${year}-${month}-${day}`;
+    const key = formatDateKey(new Date(year, month, day).getTime());
     const count = dotMap.get(key) ?? 0;
     const isToday = key === todayKey;
     const isSel = key === selected;

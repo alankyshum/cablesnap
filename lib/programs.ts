@@ -1,5 +1,5 @@
 import type { Program, ProgramDay, ProgramLog } from "./types";
-import { getDatabase } from "./db";
+import { getDatabase } from "./db/helpers";
 
 // --------------- Programs ---------------
 

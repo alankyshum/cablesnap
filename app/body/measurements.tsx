@@ -8,9 +8,7 @@ import {
   getBodySettings,
 } from "../../lib/db";
 import { useLayout } from "../../lib/layout";
-
-const CM_TO_IN = 0.393701;
-const IN_TO_CM = 2.54;
+import { CM_TO_IN, IN_TO_CM } from "../../lib/units";
 
 const FIELDS = [
   { key: "waist", label: "Waist" },

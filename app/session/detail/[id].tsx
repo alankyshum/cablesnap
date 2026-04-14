@@ -7,6 +7,7 @@ import { getSessionById, getSessionPRs, getSessionSets } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
 import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { rpeColor, rpeText } from "../../../lib/rpe";
+import { formatDuration, formatDateShort } from "../../../lib/format";
 
 type SetWithName = WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean };
 
@@ -64,25 +65,6 @@ export default function SessionDetail() {
       setGroups([...map.values()]);
     })();
   }, [id]);
-
-  const duration = (seconds: number | null) => {
-    if (!seconds) return "-";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m ${s}s`;
-  };
-
-  const dateStr = (ts: number) => {
-    const d = new Date(ts);
-    return d.toLocaleDateString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
 
   const volume = () => {
     let total = 0;
@@ -143,7 +125,7 @@ export default function SessionDetail() {
                   variant="bodyMedium"
                   style={{ color: theme.colors.onSurfaceVariant }}
                 >
-                  {dateStr(session.started_at)}
+                  {formatDateShort(session.started_at)}
                 </Text>
                 <View style={styles.stats}>
                   <View style={styles.stat}>
@@ -151,7 +133,7 @@ export default function SessionDetail() {
                       variant="headlineSmall"
                       style={{ color: theme.colors.primary }}
                     >
-                      {duration(session.duration_seconds)}
+                      {formatDuration(session.duration_seconds)}
                     </Text>
                     <Text
                       variant="bodySmall"

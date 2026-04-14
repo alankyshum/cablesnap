@@ -91,6 +91,12 @@ export const semantic = {
   onAdvanced: "#ffffff",
 };
 
+export const DIFFICULTY_COLORS: Record<string, string> = {
+  beginner: semantic.beginner,
+  intermediate: semantic.intermediate,
+  advanced: semantic.advanced,
+};
+
 // Muscle diagram colors — separate light/dark for WCAG contrast
 export const muscle = {
   light: {

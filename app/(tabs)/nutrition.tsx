@@ -27,17 +27,14 @@ import type { DailyLog, FoodEntry, MacroTargets, Meal } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 import { semantic } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
+import { todayKey, formatDateKey } from "../../lib/format";
 
 const DAY_MS = 86_400_000;
 
-function dateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
 function label(d: Date): string {
-  const today = dateStr(new Date());
-  const yesterday = dateStr(new Date(Date.now() - DAY_MS));
-  const ds = dateStr(d);
+  const today = todayKey();
+  const yesterday = formatDateKey(Date.now() - DAY_MS);
+  const ds = formatDateKey(d.getTime());
   if (ds === today) return "Today";
   if (ds === yesterday) return "Yesterday";
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
@@ -66,7 +63,7 @@ export default function Nutrition() {
   const [favorites, setFavorites] = useState<FoodEntry[]>([]);
 
   const load = useCallback(async () => {
-    const ds = dateStr(date);
+    const ds = formatDateKey(date.getTime());
     const [l, s, t] = await Promise.all([
       getDailyLogs(ds),
       getDailySummary(ds),
@@ -123,7 +120,7 @@ export default function Nutrition() {
         serving.trim() || "1 serving",
         favorite
       );
-      await addDailyLog(entry.id, dateStr(date), meal, 1);
+      await addDailyLog(entry.id, formatDateKey(date.getTime()), meal, 1);
       setName("");
       setCalories("");
       setProtein("");
@@ -142,7 +139,7 @@ export default function Nutrition() {
   const quickLog = async (food: FoodEntry) => {
     setSaving(true);
     try {
-      await addDailyLog(food.id, dateStr(date), meal, 1);
+      await addDailyLog(food.id, formatDateKey(date.getTime()), meal, 1);
       load();
       setSnack(`${food.name} logged`);
     } finally {

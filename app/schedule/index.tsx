@@ -20,8 +20,7 @@ import {
 } from "../../lib/db";
 import { scheduleReminders } from "../../lib/notifications";
 import type { WorkoutTemplate } from "../../lib/types";
-
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+import { DAYS } from "../../lib/format";
 
 export default function Schedule() {
   const theme = useTheme();

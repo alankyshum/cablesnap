@@ -52,6 +52,7 @@ import {
   type Config,
 } from "../../lib/timer"
 import { getAppSetting, setAppSetting } from "../../lib/db"
+import { hexToRgb } from "../../lib/format"
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
@@ -594,15 +595,6 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
       </View>
     </View>
   )
-}
-
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "")
-  const r = parseInt(h.substring(0, 2), 16)
-  const g = parseInt(h.substring(2, 4), 16)
-  const b = parseInt(h.substring(4, 6), 16)
-  if (isNaN(r) || isNaN(g) || isNaN(b)) return "0, 0, 0"
-  return `${r}, ${g}, ${b}`
 }
 
 const styles = StyleSheet.create({
