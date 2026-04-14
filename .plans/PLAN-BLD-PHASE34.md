@@ -131,7 +131,24 @@ No new database tables needed.
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION
+
+**Critical Issues (Must Fix):**
+1. **C1: Missing notification tap behavior** — Plan doesn't define what happens when user taps a notification. Must add `addNotificationResponseReceivedListener` in `app/_layout.tsx` to navigate to the scheduled workout template on tap. Define behavior for deleted templates.
+2. **C2: Permission re-check on app resume** — Must check `getPermissionsAsync()` on each app foreground (`AppState` change to "active"). If permission revoked externally while `reminders_enabled` is "true", auto-update setting to "false" and show informational snackbar. Toggle must reflect actual OS permission state.
+3. **C3: Incomplete a11y specification** — Must specify: Reminders toggle (`accessibilityLabel="Workout Reminders"`, `accessibilityRole="switch"`, `accessibilityHint`), time picker (`accessibilityLabel="Reminder time"` with `accessibilityValue`), explanation card (4.5:1 contrast, labeled button), snackbar (`accessibilityLiveRegion="polite"`).
+
+**Major Issues (Should Fix):**
+- M1: Error handling for `scheduleNotificationAsync` failures — try/catch with user-facing Snackbar
+- M2: Clarify ONE notification per day (not per template). Use "Push Day (and 1 more)" pattern.
+- M3: Specify time picker component (`@react-native-community/datetimepicker` recommended)
+- M4: Recommend memory-only notification identifier storage (cancel-all + reschedule atomically)
+
+**Additional Acceptance Criteria Needed:**
+- Given user taps notification → app opens to scheduled workout template
+- Given permission revoked in device Settings → reminders toggle reflects "off"
+
+_Reviewed 2026-04-14 by quality-director_
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: NEEDS REVISION (minor)
