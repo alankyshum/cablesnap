@@ -205,7 +205,26 @@ idle → (start) → running → (pause) → paused → (resume) → running
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION
+**Reviewer**: quality-director
+**Date**: 2026-04-14
+
+**Critical Issues (must fix):**
+1. **C1**: Use absolute timestamps for timer, not cumulative `setInterval` counting. Cumulative counting drifts over 60-min AMRAP.
+2. **C2**: Touch targets must be 56dp (not 48dp) per SKILL for active workout screens.
+3. **C3**: Stepper controls need `accessibilityValue` with `{min, max, now, text}` (SKILL [C] requirement).
+4. **C4**: App backgrounding must use `AppState` listener + absolute timestamps to detect/handle pause correctly.
+5. **C5**: Explicit acceptance criterion for `useEffect` cleanup of all timers/intervals on unmount.
+
+**Major Issues (should fix):**
+- M1: Remove redundant Custom mode (Tabata is already configurable).
+- M2: No audio cues is a significant UX gap — haptics alone unreliable during workouts. Plan fast-follow or include expo-av.
+- M3: 3rd header icon button creates crowding/discoverability issues. Consider overflow menu.
+- M4: Use react-native-reanimated (installed, v4.x) for progress ring — better perf than Animated + SVG.
+- M5: Add `useReducedMotion()` acceptance criterion for animations.
+- M6: Save last-used timer settings per mode to reduce friction.
+
+**Decision**: Fix C1-C5 and re-submit. Core concept is sound.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED
