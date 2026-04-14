@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-14
-Total learnings: 51
+Total learnings: 54
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 27 learnings
+- [React Native + Expo](patterns/react-native.md) — 30 learnings
 - [Testing](patterns/testing.md) — 3 learnings
 
 ### Pitfalls
@@ -37,6 +37,9 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-14 | BLD-84 | Integer Arithmetic for Precise Decimal Calculations | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-14 | BLD-23 | Animated.Value with useRef for Non-Interactive Transient Animations | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-14 | BLD-23 | hitSlop for Invisible Touch Target Expansion | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-82 | Manual Row Mapping Silently Drops New SQLite Columns | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-14 | BLD-79/80 | Bounded Query Results Produce Wrong Aggregates When Re-Filtered Client-Side | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-14 | BLD-75 | Pin react-test-renderer to Match Expo SDK's React Version | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |

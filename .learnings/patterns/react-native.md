@@ -217,3 +217,27 @@
 **Learning**: Implement multi-phase graceful degradation when fitting dynamic content into length-limited containers: (1) strip verbose parts first (stack traces), (2) remove entire sections (error logs), (3) trim individual items (interactions), (4) truncate the description. Each phase checks whether the payload fits before proceeding. Always append a truncation notice and provide a separate Share fallback with full untruncated content.
 **Action**: When constructing URLs with dynamic body content (pre-filled forms, deep links, `mailto:` links), implement priority-ordered content reduction rather than naive string slicing. Define a `MAX_URL` constant, build a `check()` helper that measures the encoded URL length, and degrade sections in order of decreasing verbosity. Always pair URL-based submission with a Share/export fallback that includes the complete payload.
 **Tags**: url-length, truncation, linking, github-issues, mobile, expo, graceful-degradation, feedback
+
+### Integer Arithmetic for Precise Decimal Calculations
+**Source**: BLD-84 — Plate Calculator (Phase 31)
+**Date**: 2026-04-14
+**Context**: The plate calculator needed precise weight arithmetic across kg/lb unit systems. JavaScript floating-point produces rounding errors (e.g., 0.1 + 0.2 !== 0.3) that compound through plate-selection iterations, causing incorrect remainder calculations and wrong plate counts.
+**Learning**: Convert decimals to integers using a fixed scale multiplier before performing arithmetic: `toMicro(v) = Math.round(v * SCALE)`, `fromMicro(v) = v / SCALE`. All intermediate calculations (subtraction, comparison, modulo) operate on integers, eliminating floating-point drift. Convert back to decimals only for display.
+**Action**: For any feature involving decimal arithmetic (weight calculators, macro portions, unit conversions, currency), implement a micro-unit conversion layer. Choose a scale factor large enough to cover the smallest decimal precision needed (e.g., 1000000 for six decimal places). Perform all math in integer space and convert back only at the output boundary.
+**Tags**: javascript, floating-point, precision, integer-arithmetic, calculator, unit-conversion, math, defensive-programming
+
+### Animated.Value with useRef for Non-Interactive Transient Animations
+**Source**: BLD-23 — Session UX Enhancements (Phase 16)
+**Date**: 2026-04-14
+**Context**: The rest timer card needed a color-flash animation on timer expiry — a brief, non-user-controlled visual pulse. Storing the animation value in useState would trigger re-renders on every animation frame, causing performance jank during an already CPU-intensive timer callback.
+**Learning**: For transient, non-interactive animations (flashes, pulses, fades), store the Animated.Value in a useRef — not useState. This persists the animation instance across renders without triggering re-renders. Use Animated.timing().start() to trigger and clean up in the useEffect return. Note: useNativeDriver false is required for backgroundColor animations since the native driver only supports transform and opacity.
+**Action**: When adding brief visual feedback animations in React Native: (1) create the value with useRef(new Animated.Value(0)).current, (2) trigger with Animated.timing with toValue 1 and duration 300, (3) interpolate in style with inputRange [0,1] and outputRange [baseColor, flashColor], (4) reset in cleanup. Never use useState for animation values.
+**Tags**: react-native, animation, useref, animated-value, performance, transient-ui, useNativeDriver, color-flash
+
+### hitSlop for Invisible Touch Target Expansion
+**Source**: BLD-23 — Session UX Enhancements (Phase 16)
+**Date**: 2026-04-14
+**Context**: Step buttons (plus/minus 2.5kg) flanking the weight input were visually 24x24dp icons to fit the compact layout. The 48x48dp minimum accessible touch target requirement would force oversized buttons that break the UI design.
+**Learning**: React Native's hitSlop prop on Pressable/TouchableOpacity expands the touchable area beyond the component's visual bounds without affecting layout or rendering. Setting hitSlop with 12 on each side on a 24dp element creates a 48dp touch target invisibly. This separates visual size from interaction size — a distinction unique to React Native with no CSS equivalent.
+**Action**: When a Pressable element is visually smaller than 48x48dp, add hitSlop with padding values that bring the total to at least 48dp per axis. Prefer hitSlop over padding/margin because it does not shift surrounding elements. During a11y review, check that every icon-only button either has dimensions of at least 48dp or uses hitSlop to reach that threshold.
+**Tags**: react-native, accessibility, a11y, touch-target, hitslop, pressable, compact-ui, icon-button, 48dp
