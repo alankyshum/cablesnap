@@ -26,16 +26,34 @@ export type Equipment =
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
+export type MountPosition = "high" | "mid" | "low" | "floor";
+
+export type Attachment =
+  | "handle"
+  | "ring_handle"
+  | "ankle_strap"
+  | "rope"
+  | "bar"
+  | "squat_harness"
+  | "carabiner";
+
+export type TrainingMode =
+  | "weight"
+  | "eccentric_overload"
+  | "band"
+  | "damper"
+  | "isokinetic"
+  | "isometric"
+  | "custom_curves"
+  | "rowing";
+
 export type Category =
-  | "chest"
+  | "abs_core"
+  | "arms"
   | "back"
-  | "shoulders"
-  | "biceps"
-  | "triceps"
-  | "legs"
-  | "core"
-  | "cardio"
-  | "full_body";
+  | "chest"
+  | "legs_glutes"
+  | "shoulders";
 
 export type Exercise = {
   id: string;
@@ -47,30 +65,46 @@ export type Exercise = {
   instructions: string;
   difficulty: Difficulty;
   is_custom: boolean;
+  deleted_at?: number | null;
+  mount_position?: MountPosition;
+  attachment?: Attachment;
+  training_modes?: TrainingMode[];
+  is_voltra?: boolean;
 };
 
 export const CATEGORIES: Category[] = [
-  "chest",
+  "abs_core",
+  "arms",
   "back",
+  "chest",
+  "legs_glutes",
   "shoulders",
-  "biceps",
-  "triceps",
-  "legs",
-  "core",
-  "cardio",
-  "full_body",
 ];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  chest: "Chest",
+  abs_core: "Abs & Core",
+  arms: "Arms",
   back: "Back",
+  chest: "Chest",
+  legs_glutes: "Legs & Glutes",
   shoulders: "Shoulders",
-  biceps: "Biceps",
-  triceps: "Triceps",
-  legs: "Legs",
-  core: "Core",
-  cardio: "Cardio",
-  full_body: "Full Body",
+};
+
+export const MOUNT_POSITION_LABELS: Record<MountPosition, string> = {
+  high: "High",
+  mid: "Mid",
+  low: "Low",
+  floor: "Floor",
+};
+
+export const ATTACHMENT_LABELS: Record<Attachment, string> = {
+  handle: "Handle",
+  ring_handle: "Ring Handle",
+  ankle_strap: "Ankle Strap",
+  rope: "Rope",
+  bar: "Bar",
+  squat_harness: "Squat Harness",
+  carabiner: "Carabiner",
 };
 
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {

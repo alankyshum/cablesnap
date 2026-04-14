@@ -23,7 +23,7 @@ import {
   type ExerciseSession,
   type ExerciseRecords as Records,
 } from "../../lib/db";
-import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
+import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS, type Exercise } from "../../lib/types";
 import { semantic, difficultyText } from "../../constants/theme";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
@@ -240,15 +240,56 @@ export default function ExerciseDetail() {
         </Chip>
       </View>
 
-      {/* Equipment */}
-      <View style={styles.section}>
-        <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-          Equipment
-        </Text>
-        <Text variant="bodyLarge" style={[styles.value, { color: theme.colors.onSurface }]}>
-          {exercise.equipment}
-        </Text>
-      </View>
+      {/* Voltra Metadata */}
+      {exercise.mount_position && (
+        <View style={styles.section}>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+            Mount Position
+          </Text>
+          <Text
+            variant="bodyLarge"
+            style={[styles.value, { color: theme.colors.onSurface }]}
+            accessibilityLabel={`Mount position: ${MOUNT_POSITION_LABELS[exercise.mount_position]} on rack`}
+          >
+            {MOUNT_POSITION_LABELS[exercise.mount_position]}
+          </Text>
+        </View>
+      )}
+      {exercise.attachment && (
+        <View style={styles.section}>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+            Attachment
+          </Text>
+          <Text
+            variant="bodyLarge"
+            style={[styles.value, { color: theme.colors.onSurface }]}
+            accessibilityLabel={`Attachment: ${ATTACHMENT_LABELS[exercise.attachment]}`}
+          >
+            {ATTACHMENT_LABELS[exercise.attachment]}
+          </Text>
+        </View>
+      )}
+      {exercise.training_modes && exercise.training_modes.length > 0 && (
+        <View
+          style={styles.section}
+          accessibilityLabel={`Compatible training modes: ${exercise.training_modes.join(", ")}`}
+        >
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+            Training Modes
+          </Text>
+          <View style={styles.chipRow}>
+            {exercise.training_modes.map((m) => (
+              <Chip
+                key={m}
+                compact
+                style={[styles.muscleChip, { backgroundColor: theme.colors.secondaryContainer }]}
+              >
+                {m.replace(/_/g, " ")}
+              </Chip>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Primary Muscles */}
       <View style={styles.section}>

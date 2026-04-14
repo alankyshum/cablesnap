@@ -118,23 +118,33 @@ describe("exercises CRUD", () => {
     mockDb.getAllAsync.mockResolvedValueOnce([
       {
         id: "ex1",
-        name: "Bench Press",
+        name: "Cable Chest Press",
         category: "chest",
         primary_muscles: '["chest"]',
         secondary_muscles: '["triceps"]',
-        equipment: "barbell",
-        instructions: "Press the bar",
+        equipment: "cable",
+        instructions: "Press the handles",
         difficulty: "intermediate",
         is_custom: 0,
+        deleted_at: null,
+        mount_position: "mid",
+        attachment: "single_handle",
+        training_modes: '["strength"]',
+        is_voltra: 1,
       },
     ]);
 
     const exercises = await db.getAllExercises();
     expect(exercises).toHaveLength(1);
-    expect(exercises[0].name).toBe("Bench Press");
+    expect(exercises[0].name).toBe("Cable Chest Press");
     expect(exercises[0].primary_muscles).toEqual(["chest"]);
     expect(exercises[0].secondary_muscles).toEqual(["triceps"]);
     expect(exercises[0].is_custom).toBe(false);
+    expect(exercises[0].mount_position).toBe("mid");
+    expect(exercises[0].attachment).toBe("single_handle");
+    expect(exercises[0].training_modes).toEqual(["strength"]);
+    expect(exercises[0].is_voltra).toBe(true);
+    expect(exercises[0].deleted_at).toBeUndefined();
   });
 
   it("getExerciseById returns null for missing exercise", async () => {
@@ -149,21 +159,28 @@ describe("exercises CRUD", () => {
     await initDb();
     mockDb.getFirstAsync.mockResolvedValueOnce({
       id: "ex1",
-      name: "Squat",
-      category: "legs",
+      name: "Cable Squat",
+      category: "legs_glutes",
       primary_muscles: '["quads","glutes"]',
       secondary_muscles: '["hamstrings"]',
-      equipment: "barbell",
+      equipment: "cable",
       instructions: "Squat down",
       difficulty: "beginner",
       is_custom: 1,
+      deleted_at: null,
+      mount_position: "low",
+      attachment: "rope",
+      training_modes: '["strength","hypertrophy"]',
+      is_voltra: 0,
     });
 
     const exercise = await db.getExerciseById("ex1");
     expect(exercise).not.toBeNull();
-    expect(exercise!.name).toBe("Squat");
+    expect(exercise!.name).toBe("Cable Squat");
     expect(exercise!.primary_muscles).toEqual(["quads", "glutes"]);
     expect(exercise!.is_custom).toBe(true);
+    expect(exercise!.mount_position).toBe("low");
+    expect(exercise!.training_modes).toEqual(["strength", "hypertrophy"]);
   });
 
   it("createCustomExercise inserts and returns exercise", async () => {
@@ -173,7 +190,7 @@ describe("exercises CRUD", () => {
       category: "chest" as const,
       primary_muscles: ["chest" as const],
       secondary_muscles: ["triceps" as const],
-      equipment: "dumbbell" as const,
+      equipment: "cable" as const,
       instructions: "Do it",
       difficulty: "beginner" as const,
     };
@@ -200,6 +217,33 @@ describe("exercises CRUD", () => {
       expect.stringContaining("UPDATE exercises SET deleted_at"),
       expect.arrayContaining(["ex1"])
     );
+  });
+
+  it("getExerciseById returns soft-deleted exercise for historical lookup", async () => {
+    await initDb();
+    mockDb.getFirstAsync.mockResolvedValueOnce({
+      id: "ex-old",
+      name: "Old Bench Press",
+      category: "chest",
+      primary_muscles: '["chest"]',
+      secondary_muscles: '[]',
+      equipment: "barbell",
+      instructions: null,
+      difficulty: "intermediate",
+      is_custom: 0,
+      deleted_at: 1700000000,
+      mount_position: null,
+      attachment: null,
+      training_modes: null,
+      is_voltra: 0,
+    });
+
+    const exercise = await db.getExerciseById("ex-old");
+    expect(exercise).not.toBeNull();
+    expect(exercise!.deleted_at).toBe(1700000000);
+    expect(exercise!.name).toBe("Old Bench Press");
+    expect(exercise!.mount_position).toBeUndefined();
+    expect(exercise!.is_voltra).toBeUndefined();
   });
 });
 

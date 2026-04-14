@@ -223,8 +223,14 @@ export default function EditTemplate() {
               />
             )}
             <View style={styles.info}>
-              <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
-                {item.exercise?.name ?? "Unknown"}
+              <Text
+                variant="titleSmall"
+                style={{
+                  color: item.exercise?.deleted_at ? theme.colors.onSurfaceVariant : theme.colors.onSurface,
+                  fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
+                }}
+              >
+                {item.exercise?.name ?? "Unknown"}{item.exercise?.deleted_at ? " (removed)" : ""}
               </Text>
               <Text
                 variant="bodySmall"
@@ -232,7 +238,19 @@ export default function EditTemplate() {
               >
                 {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
               </Text>
-              {item.link_id && !selecting && (
+              {item.exercise?.deleted_at && !selecting && (
+                <Button
+                  mode="text"
+                  compact
+                  onPress={() => router.push(`/template/${id}?replaceTeId=${item.id}`)}
+                  style={{ alignSelf: "flex-start", minHeight: 48, minWidth: 48 }}
+                  accessibilityLabel={`Replace ${item.exercise.name}`}
+                  accessibilityRole="button"
+                >
+                  Replace
+                </Button>
+              )}
+              {item.link_id && !selecting && !item.exercise?.deleted_at && (
                 <Text variant="labelSmall" style={{ color, marginTop: 2 }}>
                   Linked — rotate in session
                 </Text>

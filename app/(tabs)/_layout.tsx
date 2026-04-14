@@ -27,7 +27,7 @@ export default function TabLayout() {
         options={{
           title: "Workouts",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="dumbbell" size={size} color={color} />
+            <MaterialCommunityIcons name="arm-flex" size={size} color={color} />
           ),
           headerRight: () => (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -36,14 +36,6 @@ export default function TabLayout() {
                 size={24}
                 onPress={() => router.push("/tools/rm")}
                 accessibilityLabel="Open 1RM calculator"
-                accessibilityRole="button"
-                iconColor={theme.colors.onSurface}
-              />
-              <IconButton
-                icon="calculator-variant"
-                size={24}
-                onPress={() => router.push("/tools/plates")}
-                accessibilityLabel="Open plate calculator"
                 accessibilityRole="button"
                 iconColor={theme.colors.onSurface}
               />
