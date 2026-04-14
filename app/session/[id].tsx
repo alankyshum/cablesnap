@@ -55,6 +55,7 @@ import { suggest, type Suggestion } from "../../lib/rm";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
+  exercise_deleted?: boolean;
   previous?: string;
 };
 
@@ -152,7 +153,7 @@ export default function ActiveSession() {
       if (!map.has(s.exercise_id)) {
         map.set(s.exercise_id, {
           exercise_id: s.exercise_id,
-          name: s.exercise_name ?? "Unknown",
+          name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
           sets: [],
           link_id: s.link_id ?? null,
         });
@@ -533,15 +534,6 @@ export default function ActiveSession() {
           title: session.name,
           headerRight: () => (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <IconButton
-                icon="calculator-variant"
-                size={22}
-                onPress={() => router.push("/tools/plates")}
-                accessibilityLabel="Open plate calculator"
-                accessibilityRole="button"
-                iconColor={theme.colors.onSurface}
-                style={{ marginRight: 0 }}
-              />
               <Text
                 variant="labelLarge"
                 style={{ color: theme.colors.primary, marginRight: 8 }}

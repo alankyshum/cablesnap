@@ -7,7 +7,7 @@ import { getSessionById, getSessionPRs, getSessionSets } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
 import { rpeColor, rpeText } from "../../../lib/rpe";
 
-type SetWithName = WorkoutSet & { exercise_name?: string };
+type SetWithName = WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean };
 
 type ExerciseGroup = {
   exercise_id: string;
@@ -53,7 +53,7 @@ export default function SessionDetail() {
         if (!map.has(s.exercise_id)) {
           map.set(s.exercise_id, {
             exercise_id: s.exercise_id,
-            name: s.exercise_name ?? "Unknown",
+            name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
             sets: [],
             link_id: s.link_id ?? null,
           });
