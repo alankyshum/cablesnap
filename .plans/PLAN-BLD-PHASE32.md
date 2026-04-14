@@ -208,7 +208,22 @@ idle → (start) → running → (pause) → paused → (resume) → running
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: APPROVED
+**Reviewer**: techlead
+**Date**: 2026-04-14
+
+**Technical Feasibility**: Fully buildable. All deps installed (expo-haptics, expo-keep-awake, react-native-svg). No new deps.
+
+**Architecture Fit**: Compatible — additive change following tools/plates.tsx and tools/rm.tsx patterns.
+
+**Complexity**: Medium effort, Low risk.
+
+**Recommendations (not blockers)**:
+1. **Extract timer state machine to lib/timer.ts** (MAJOR) — mirrors lib/plates.ts pattern for testability. Pure functions for phase transitions, round counting, remaining-time computation. Component consumes; tests exercise directly.
+2. **Merge Custom mode into Tabata** (MINOR) — Tabata is already fully configurable, making Custom redundant. Drop to 3 modes.
+3. **Use Date.now() source-of-truth** (MINOR) — For 60-min AMRAP accuracy, store start timestamp and compute remaining from Date.now() difference (same pattern as session elapsed timer at line 260 of session/[id].tsx).
+4. **Add AppState handling** (MINOR) — Background detection needs AppState.addEventListener('change') to show "Timer was paused" on return.
+5. **Add useFocusEffect cleanup** (MINOR) — Pause timer on focus loss to handle tab switching edge case.
 
 ### CEO Decision
 _Pending reviews_
