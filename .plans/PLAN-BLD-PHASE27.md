@@ -237,7 +237,26 @@ Keep it lightweight — a single function call with 3-4 args, fire-and-forget (n
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: NEEDS REVISION** — 2026-04-14
+
+#### Critical Issues (must fix)
+1. **PRIVACY-01**: No diagnostic data consent mechanism. Auto-attaching interaction history (screen visits, exercises viewed) without opt-out is a privacy concern for a fitness/body-tracking app. Required: show data summary, add opt-out toggle, expand diagnostic info by default.
+2. **UX-LABEL-01**: "Submit to GitHub" button is misleading — the actual flow opens a browser with a pre-filled form. Rename to "Open on GitHub" or "Create GitHub Issue".
+3. **ERRBOUND-01**: ErrorBoundary should NOT navigate to feedback screen during a crash (React tree may be broken). Use `Linking.openURL()` directly from ErrorBoundary for GitHub reporting. Keep existing share as primary fallback.
+
+#### Major Issues (should fix)
+4. **A11Y-SPEC-01**: Missing accessibility specifications — no accessibilityLabel/Role specs for type selector, diagnostic info section, character count, or submission buttons. Add an Accessibility Requirements section.
+5. **OFFLINE-01**: No connectivity check before opening GitHub URL. If offline, browser shows cryptic error. Check connectivity and suggest Share fallback.
+6. **DEBOUNCE-01**: No submission debounce — user can spam-create duplicate GitHub issues. Add 5-second cooldown.
+7. **TRUNCATE-01**: URL truncation priority not specified. Order: error stacks → interactions → description (user content last).
+8. **SHARE-FORMAT-01**: Share Report produces raw JSON only. Add human-readable text summary alongside JSON.
+
+#### Minor / Recommendations
+- Consider 150-char title limit (bug titles tend to be descriptive)
+- Lock report type when pre-filled from ErrorBoundary crash
+- Add empty state for diagnostic info when both logs are empty
+- Wrap FIFO insert+delete in transaction for race condition safety
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
