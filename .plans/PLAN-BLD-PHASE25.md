@@ -3,7 +3,7 @@
 **Issue**: BLD-36
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT (Rev 2 — addresses QD + TL feedback)
+**Status**: APPROVED
 
 ## Problem Statement
 Users have no way to plan when they train during the week. The "Next Workout" indicator only works for active programs (sequential day advancement), and standalone templates have no scheduling at all. Users who want to train Mon/Wed/Fri with specific templates must remember their plan mentally. There's also no way to see weekly adherence — did I actually train on the days I planned?
