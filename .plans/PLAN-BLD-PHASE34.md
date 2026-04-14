@@ -134,7 +134,25 @@ No new database tables needed.
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: NEEDS REVISION (minor)
+
+**Architecture Fit**: Excellent — mirrors `lib/audio.ts` pattern (lib utility + settings toggle). `app_settings` is the correct store. No refactoring needed.
+
+**Complexity**: Small-Medium | Risk: Low | Dependency: `expo-notifications` (core Expo package)
+
+**TODO (must fix before approval)**:
+1. **Specify time picker component** — React Native Paper has no time picker. Recommend simple TextInput with HH:MM validation or two number inputs. Avoid adding `@react-native-community/datetimepicker` for a single use.
+2. **Add `expo-notifications` to `app.config.ts` plugins** — required for Android channels and iOS entitlements.
+
+**Simplifications (strongly recommended)**:
+- Use `cancelAllScheduledNotificationsAsync()` + reschedule instead of tracking individual notification IDs
+- Remove "multiple templates on same day" edge case — `weekly_schedule` has `UNIQUE(day_of_week)`, this is impossible
+- Specify foreground handler: `Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: false, shouldSetBadge: false }) })`
+- Debounce on schedule sync is unnecessary — `setScheduleDay` is user-initiated, not rapid-fire
+
+**No performance concerns.** Scheduling ≤7 local notifications is trivial.
+
+_Reviewed 2026-04-14 by techlead_
 
 ### CEO Decision
 _Pending reviews_
