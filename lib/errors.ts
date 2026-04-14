@@ -1,7 +1,8 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { getDatabase } from "./db";
-import type { ErrorEntry } from "./types";
+import { recent as recentInteractions } from "./interactions";
+import type { ErrorEntry, Interaction, ReportType } from "./types";
 
 declare const ErrorUtils: {
   setGlobalHandler: (callback: (error: Error, isFatal?: boolean) => void) => void;
@@ -87,6 +88,7 @@ export async function clearErrorLog(): Promise<void> {
 
 export async function generateReport(): Promise<string> {
   const errors = await getRecentErrors(MAX_ERRORS);
+  const interactions = await recentInteractions();
   return JSON.stringify(
     {
       generated_at: new Date().toISOString(),
@@ -95,10 +97,183 @@ export async function generateReport(): Promise<string> {
       os_version: String(Platform.Version),
       error_count: errors.length,
       errors,
+      interactions,
     },
     null,
     2
   );
+}
+
+export function formatInteractions(items: Interaction[]): string {
+  if (items.length === 0) return "No recent interactions";
+  return items
+    .map(
+      (i, idx) =>
+        `${idx + 1}. [${new Date(i.timestamp).toISOString()}] ${i.action}: ${i.screen}${i.detail ? ` — ${i.detail}` : ""}`
+    )
+    .join("\n");
+}
+
+function formatErrors(items: ErrorEntry[]): string {
+  if (items.length === 0) return "No errors recorded";
+  return items
+    .map((e) => {
+      const stack = e.stack
+        ? e.stack.split("\n").slice(0, 2).join("\n")
+        : "";
+      return `- [${new Date(e.timestamp).toISOString()}] ${e.message} (fatal: ${e.fatal})${stack ? `\n  ${stack}` : ""}`;
+    })
+    .join("\n");
+}
+
+export function buildReportBody(opts: {
+  type: ReportType;
+  description: string;
+  errors: ErrorEntry[];
+  interactions: Interaction[];
+  includeDiag: boolean;
+}): string {
+  const version = Constants.expoConfig?.version ?? "unknown";
+  const parts: string[] = [];
+
+  parts.push("## Description\n");
+  parts.push(opts.description || "(no description)");
+  parts.push("");
+
+  parts.push("## Diagnostic Info\n");
+  parts.push(`- App Version: ${version}`);
+  parts.push(`- Platform: ${Platform.OS}`);
+  parts.push(`- OS Version: ${String(Platform.Version)}`);
+  parts.push("");
+
+  if (opts.includeDiag) {
+    parts.push("## Recent Interactions\n");
+    parts.push(formatInteractions(opts.interactions));
+    parts.push("");
+
+    if (opts.type !== "feature") {
+      parts.push("## Error Log\n");
+      parts.push(formatErrors(opts.errors));
+      parts.push("");
+    }
+  }
+
+  return parts.join("\n");
+}
+
+const MAX_URL = 8000;
+
+export function truncateBody(body: string, errors: ErrorEntry[], interactions: Interaction[], desc: string, type: ReportType, includeDiag: boolean): string {
+  const check = (b: string) =>
+    `https://github.com/alankyshum/fitforge/issues/new?title=x&body=${encodeURIComponent(b)}`.length;
+
+  if (check(body) <= MAX_URL) return body;
+
+  // Phase 1: remove stack traces from errors
+  const noStacks = buildReportBody({
+    type,
+    description: desc,
+    errors: errors.map((e) => ({ ...e, stack: null })),
+    interactions,
+    includeDiag,
+  });
+  if (check(noStacks) <= MAX_URL) return noStacks + "\n\n[truncated — share full report for details]";
+
+  // Phase 2: remove errors entirely
+  const noErrors = buildReportBody({
+    type,
+    description: desc,
+    errors: [],
+    interactions,
+    includeDiag,
+  });
+  if (check(noErrors) <= MAX_URL) return noErrors + "\n\n[truncated — share full report for details]";
+
+  // Phase 3: trim interactions
+  let trimmed = interactions;
+  while (trimmed.length > 0) {
+    trimmed = trimmed.slice(0, -1);
+    const attempt = buildReportBody({
+      type,
+      description: desc,
+      errors: [],
+      interactions: trimmed,
+      includeDiag,
+    });
+    if (check(attempt) <= MAX_URL) return attempt + "\n\n[truncated — share full report for details]";
+  }
+
+  // Phase 4: truncate description
+  let short = desc;
+  while (short.length > 20) {
+    short = short.slice(0, Math.floor(short.length * 0.7));
+    const attempt = buildReportBody({
+      type,
+      description: short + "...",
+      errors: [],
+      interactions: [],
+      includeDiag,
+    });
+    if (check(attempt) <= MAX_URL) return attempt + "\n\n[truncated — share full report for details]";
+  }
+
+  return buildReportBody({ type, description: "...", errors: [], interactions: [], includeDiag }) +
+    "\n\n[truncated — share full report for details]";
+}
+
+export function generateGitHubURL(opts: {
+  type: ReportType;
+  title: string;
+  description: string;
+  errors: ErrorEntry[];
+  interactions: Interaction[];
+  includeDiag: boolean;
+}): string {
+  const labels =
+    opts.type === "bug"
+      ? "bug"
+      : opts.type === "feature"
+        ? "enhancement"
+        : "bug,crash";
+
+  const body = buildReportBody(opts);
+  const final = truncateBody(body, opts.errors, opts.interactions, opts.description, opts.type, opts.includeDiag);
+  const encoded = encodeURIComponent(final);
+  const title = encodeURIComponent(opts.title.slice(0, 150));
+  return `https://github.com/alankyshum/fitforge/issues/new?title=${title}&body=${encoded}&labels=${labels}`;
+}
+
+export function generateShareText(opts: {
+  type: ReportType;
+  title: string;
+  description: string;
+  errors: ErrorEntry[];
+  interactions: Interaction[];
+  includeDiag: boolean;
+}): string {
+  const version = Constants.expoConfig?.version ?? "unknown";
+  const lines: string[] = [];
+  lines.push(`FitForge ${opts.type === "bug" ? "Bug Report" : opts.type === "feature" ? "Feature Request" : "Crash Report"}`);
+  lines.push(`Title: ${opts.title}`);
+  lines.push(`Date: ${new Date().toISOString()}`);
+  lines.push(`App Version: ${version}`);
+  lines.push(`Platform: ${Platform.OS} ${String(Platform.Version)}`);
+  lines.push("");
+  lines.push("Description:");
+  lines.push(opts.description || "(none)");
+  lines.push("");
+
+  if (opts.includeDiag) {
+    lines.push("Recent Interactions:");
+    lines.push(formatInteractions(opts.interactions));
+    lines.push("");
+    if (opts.type !== "feature") {
+      lines.push("Errors:");
+      lines.push(formatErrors(opts.errors));
+    }
+  }
+
+  return lines.join("\n");
 }
 
 let installed = false;

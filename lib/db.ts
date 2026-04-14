@@ -378,6 +378,17 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       UNIQUE(day_of_week)
     )`
   );
+
+  // Migration: create interaction_log table
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS interaction_log (
+      id TEXT PRIMARY KEY,
+      action TEXT NOT NULL,
+      screen TEXT NOT NULL,
+      detail TEXT,
+      timestamp INTEGER NOT NULL
+    )`
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -2719,4 +2730,41 @@ export async function getWeekAdherence(): Promise<{ day: number; scheduled: bool
     scheduled: scheduled.has(i),
     completed: completed.has(i),
   }));
+}
+
+// --------------- Interaction Log ---------------
+
+export async function insertInteraction(
+  action: string,
+  screen: string,
+  detail: string | null
+): Promise<void> {
+  const database = await getDatabase();
+  await database.withTransactionAsync(async () => {
+    const id = crypto.randomUUID();
+    await database.runAsync(
+      `INSERT INTO interaction_log (id, action, screen, detail, timestamp)
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, action, screen, detail, Date.now()]
+    );
+    await database.runAsync(
+      `DELETE FROM interaction_log WHERE id NOT IN (
+        SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 10
+      )`
+    );
+  });
+}
+
+export async function getInteractions(): Promise<
+  { id: string; action: string; screen: string; detail: string | null; timestamp: number }[]
+> {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    "SELECT * FROM interaction_log ORDER BY timestamp DESC LIMIT 10"
+  );
+}
+
+export async function clearInteractions(): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync("DELETE FROM interaction_log");
 }

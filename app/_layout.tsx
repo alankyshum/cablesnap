@@ -1,13 +1,14 @@
 import { useColorScheme, Platform } from "react-native";
 import { PaperProvider, Banner } from "react-native-paper";
 import { ThemeProvider } from "@react-navigation/native";
-import { Redirect, Stack } from "expo-router";
+import { Redirect, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
 import { getDatabase, isMemoryFallback, isOnboardingComplete } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
+import { log as logInteraction } from "../lib/interactions";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 SplashScreen.preventAutoHideAsync();
@@ -20,6 +21,16 @@ export default function RootLayout() {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [onboarded, setOnboarded] = useState(true);
+  const pathname = usePathname();
+  const prev = useRef(pathname);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (pathname !== prev.current) {
+      prev.current = pathname;
+      logInteraction("navigate", pathname);
+    }
+  }, [pathname, ready]);
 
   useEffect(() => {
     getDatabase()
@@ -192,6 +203,15 @@ export default function RootLayout() {
               options={{
                 headerShown: true,
                 title: "Error Log",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="feedback"
+              options={{
+                headerShown: true,
+                title: "Feedback & Reports",
                 headerStyle,
                 headerTintColor,
               }}

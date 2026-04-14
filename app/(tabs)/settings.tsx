@@ -16,7 +16,7 @@ import {
   getCSVCounts,
 } from "../../lib/db";
 import type { WorkoutCSVRow, NutritionCSVRow, BodyWeightCSVRow, BodyMeasurementsCSVRow } from "../../lib/db";
-import { getErrorCount, clearErrorLog, generateReport } from "../../lib/errors";
+import { getErrorCount, clearErrorLog } from "../../lib/errors";
 import { csvEscape } from "../../lib/csv";
 
 function workoutCSV(rows: WorkoutCSVRow[]): string {
@@ -392,45 +392,37 @@ export default function Settings() {
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
-            Crash Reporting ({count} {count === 1 ? "error" : "errors"})
+            Feedback &amp; Reports
           </Text>
 
           <Button
             mode="contained"
             icon="bug-outline"
-            onPress={() => router.push("/errors")}
+            onPress={() => router.push({ pathname: "/feedback", params: { type: "bug" } })}
             style={styles.btn}
-            accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}
+            accessibilityLabel="Report a bug"
           >
-            View Error Log
+            Report a Bug
           </Button>
 
           <Button
             mode="outlined"
-            icon="share-variant"
-            onPress={async () => {
-              setLoading(true);
-              try {
-                const report = await generateReport();
-                const file = new File(Paths.cache, "fitforge-crash-report.json");
-                await file.write(report);
-                await Sharing.shareAsync(file.uri, {
-                  mimeType: "application/json",
-                  dialogTitle: "Share Crash Report",
-                });
-                setSnack("Crash report shared");
-              } catch {
-                setSnack("Unable to share");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            loading={loading}
-            disabled={loading}
+            icon="lightbulb-outline"
+            onPress={() => router.push({ pathname: "/feedback", params: { type: "feature" } })}
             style={styles.btn}
-            accessibilityLabel="Share crash report"
+            accessibilityLabel="Request a feature"
           >
-            Share Crash Report
+            Request a Feature
+          </Button>
+
+          <Button
+            mode="outlined"
+            icon="format-list-bulleted"
+            onPress={() => router.push("/errors")}
+            style={styles.btn}
+            accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}
+          >
+            View Error Log ({count})
           </Button>
 
           <Button

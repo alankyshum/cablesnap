@@ -1,9 +1,10 @@
 import React from "react";
-import { Appearance, ScrollView, StyleSheet, View } from "react-native";
+import { Appearance, Linking, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { logError, generateReport } from "../lib/errors";
+import { logError, generateReport, generateGitHubURL, getRecentErrors } from "../lib/errors";
+import { recent as recentInteractions } from "../lib/interactions";
 import { light, dark } from "../constants/theme";
 
 type Props = { children: React.ReactNode };
@@ -39,6 +40,26 @@ export default class ErrorBoundary extends React.Component<Props, State> {
       });
     } catch {
       // If sharing fails, silently ignore — we're already in a crash state
+    }
+  };
+
+  handleGitHub = async () => {
+    try {
+      const [errors, interactions] = await Promise.all([
+        getRecentErrors(5),
+        recentInteractions(),
+      ]);
+      const url = generateGitHubURL({
+        type: "crash",
+        title: `Crash: ${this.state.error?.message?.slice(0, 100) ?? "Unknown error"}`,
+        description: this.state.error?.message ?? "Application crashed",
+        errors,
+        interactions,
+        includeDiag: true,
+      });
+      await Linking.openURL(url);
+    } catch {
+      // If opening URL fails, silently ignore
     }
   };
 
@@ -86,6 +107,16 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             accessibilityLabel="Share crash report"
           >
             Share Crash Report
+          </Button>
+
+          <Button
+            mode="outlined"
+            icon="github"
+            onPress={this.handleGitHub}
+            style={styles.btn}
+            accessibilityLabel="Report crash on GitHub"
+          >
+            Report on GitHub
           </Button>
 
           <Button

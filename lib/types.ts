@@ -364,3 +364,19 @@ export type ErrorEntry = {
   platform: string | null;
   os_version: string | null;
 };
+
+// --------------- Interactions ---------------
+
+export type InteractionAction = "navigate" | "tap" | "submit" | "delete" | "create";
+
+export type Interaction = {
+  id: string;
+  action: InteractionAction;
+  screen: string;
+  detail: string | null;
+  timestamp: number;
+};
+
+// --------------- Feedback ---------------
+
+export type ReportType = "bug" | "feature" | "crash";
