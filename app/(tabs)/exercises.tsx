@@ -11,6 +11,7 @@ import { getAllExercises, getExerciseById } from "../../lib/db";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
+  ATTACHMENT_LABELS,
   type Category,
   type Exercise,
 } from "../../lib/types";
@@ -113,9 +114,11 @@ export default function Exercises() {
             >
               {CATEGORY_LABELS[item.category]}
             </Chip>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>
-              {item.equipment}
-            </Text>
+            {item.attachment && (
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>
+                {ATTACHMENT_LABELS[item.attachment]}
+              </Text>
+            )}
           </View>
           <View style={styles.row}>
             {item.primary_muscles.slice(0, 3).map((m) => (
@@ -265,12 +268,48 @@ export default function Exercises() {
                     {detail.difficulty}
                   </Chip>
                 </View>
-                <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-                  Equipment
-                </Text>
-                <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, marginTop: 4 }}>
-                  {detail.equipment}
-                </Text>
+                {detail.mount_position && (
+                  <>
+                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                      Mount Position
+                    </Text>
+                    <Text
+                      variant="bodyLarge"
+                      style={{ color: theme.colors.onSurface, marginTop: 4 }}
+                      accessibilityLabel={`Mount position: ${detail.mount_position} on rack`}
+                    >
+                      {detail.mount_position}
+                    </Text>
+                  </>
+                )}
+                {detail.attachment && (
+                  <>
+                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                      Attachment
+                    </Text>
+                    <Text
+                      variant="bodyLarge"
+                      style={{ color: theme.colors.onSurface, marginTop: 4 }}
+                      accessibilityLabel={`Attachment: ${detail.attachment}`}
+                    >
+                      {detail.attachment}
+                    </Text>
+                  </>
+                )}
+                {detail.training_modes && detail.training_modes.length > 0 && (
+                  <View accessibilityLabel={`Compatible training modes: ${detail.training_modes.join(", ")}`}>
+                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                      Training Modes
+                    </Text>
+                    <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
+                      {detail.training_modes.map((m) => (
+                        <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
+                          {m.replace(/_/g, " ")}
+                        </Chip>
+                      ))}
+                    </View>
+                  </View>
+                )}
                 <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
                   Primary Muscles
                 </Text>
