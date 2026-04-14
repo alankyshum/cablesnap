@@ -9,7 +9,6 @@ import {
   View,
 } from "react-native"
 import {
-  Button,
   IconButton,
   SegmentedButtons,
   Snackbar,
@@ -43,7 +42,6 @@ import {
   pauseDuration,
   clamp,
   progress,
-  DEFAULTS,
   type Mode,
   type State,
   type TabataConfig,
@@ -79,7 +77,7 @@ export default function TimerScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([])
   const appRef = useRef(state)
-  appRef.current = state
+  useEffect(() => { appRef.current = state })
 
   const active = state.status === "running" || state.status === "paused"
 
@@ -97,13 +95,22 @@ export default function TimerScreen() {
   )
 
   // Keep awake only when timer is active
+  const wakeLockActive = useRef(false)
   useEffect(() => {
     if (active) {
-      activateKeepAwakeAsync().catch(() => {})
-    } else {
+      activateKeepAwakeAsync()
+        .then(() => { wakeLockActive.current = true })
+        .catch(() => {})
+    } else if (wakeLockActive.current) {
       deactivateKeepAwake()
+      wakeLockActive.current = false
     }
-    return () => { deactivateKeepAwake() }
+    return () => {
+      if (wakeLockActive.current) {
+        deactivateKeepAwake()
+        wakeLockActive.current = false
+      }
+    }
   }, [active])
 
   // Animated values
@@ -184,13 +191,14 @@ export default function TimerScreen() {
   }, [state.status])
 
   // Update animated values
+  const currentProgress = progress(state)
+  const { phase, status, remaining } = state
   useEffect(() => {
-    const p = progress(state)
     const dur = reduced ? 0 : 300
-    bgOpacity.value = withTiming(state.status === "running" ? 0.15 : 0, { duration: dur })
-    isWork.value = state.phase === "work"
-    ringProgress.value = withTiming(p, { duration: dur })
-  }, [state.remaining, state.phase, state.status])
+    bgOpacity.value = withTiming(status === "running" ? 0.15 : 0, { duration: dur })
+    isWork.value = phase === "work"
+    ringProgress.value = withTiming(currentProgress, { duration: dur })
+  }, [remaining, phase, status, reduced, bgOpacity, isWork, ringProgress, currentProgress])
 
   // AppState handling
   useEffect(() => {
@@ -254,21 +262,21 @@ export default function TimerScreen() {
         setPauseMsg("")
       }
     })
-  }, [state.status, mode, state.config])
+  }, [state.status, mode, state.config, debounced, save])
 
   const handleReset = useCallback(() => {
     debounced(() => {
       setState(prev => reset(prev))
       setPauseMsg("")
     })
-  }, [])
+  }, [debounced])
 
   const handleAddRound = useCallback(() => {
     debounced(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       setState(prev => addRound(prev))
     })
-  }, [])
+  }, [debounced])
 
   const handleMode = useCallback((m: string) => {
     const next = m as Mode
