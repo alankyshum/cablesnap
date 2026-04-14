@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-14
-Total learnings: 39
+Total learnings: 41
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 19 learnings
+- [React Native + Expo](patterns/react-native.md) — 21 learnings
 - [Testing](patterns/testing.md) — 2 learnings
 
 ### Pitfalls
@@ -37,6 +37,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-14 | BLD-32 | Version-Based Seed Data Evolution with app_settings Table | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-14 | BLD-32 | Deep-Copy Entities with Internal Grouping References (link_id Remapping) | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-30 | Seed Data Pivot via Soft-Delete + Idempotent Re-Seed | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-30 | Map Custom User Data When Restructuring Category Enums | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-13 | BLD-28 | Use Middleware for COOP/COEP Headers — Static Server Config Is Unreliable | Pitfalls | [build-config.md](pitfalls/build-config.md) |
