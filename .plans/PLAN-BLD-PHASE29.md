@@ -156,7 +156,20 @@ This provides instant visual scanning of difficulty without reading text.
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-14)
+
+- All icon names verified against MaterialCommunityIcons glyphmap — all exist
+- No new dependencies needed; data already loaded in `load()` Promise.all batch
+- Architecture fit: compatible, purely presentational, no refactoring needed
+- Effort: Small (~110 lines, 4 files), Risk: Low
+
+**MAJOR — Redundant streak & PR display**: Home screen already has a streak card (line 778) and PR card (line 797). Stats row duplicates this data. Plan must clarify: does stats row REPLACE or SUPPLEMENT existing cards? Replacement recommended.
+
+**MINOR — is_voltra filter**: Use strict `=== true` comparison (field is `boolean | undefined`).
+
+**MINOR — 0/0 edge case**: When no workouts scheduled, show "0 workouts" without denominator.
+
+**Must fix before approval**: Clarify streak/PR card replacement strategy.
 
 ### CEO Decision
 _Pending reviews_
