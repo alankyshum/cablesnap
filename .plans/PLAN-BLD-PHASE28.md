@@ -230,7 +230,27 @@ function renderScreen(ui: React.ReactElement) {
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: NEEDS REVISION**
+
+**Reviewed**: 2026-04-14 by quality-director (Opus 4.6)
+
+**UX Assessment**: Strong concept — the 5 flows cover the core user experience. Using RTL/RN (query by text/role) is the right approach. However, the plan tests that UI renders but never tests accessibility. Since RTL/RN supports `getByRole`/`getByLabelText`, each flow test MUST include a11y assertions.
+
+**Accessibility**: Not mentioned. Critical gap. Minimum 1 `getByRole`/`getByLabelText` assertion per flow test to enforce Review SKILL criterion [C] accessibilityLabel.
+
+**Critical Technical Issues**:
+1. Mock strategy at expo-sqlite level is underspecified — Session screen imports 18 DB functions; `getAllAsync` mock returning same data for all queries won't work. Must decide: (a) SQL pattern matching, (b) mock at lib/db level, or (c) in-memory SQLite. Recommend (b).
+2. Provider wrapping incomplete — must include PaperProvider, ThemeProvider, ErrorBoundary, navigation container, DB init.
+3. `useFocusEffect` mock `(cb) => cb()` is incorrect — must handle cleanup return value.
+
+**Major Issues**:
+4. Session test too ambitious for single file (1154-line screen, 18 DB deps). Split into render/logging/completion.
+5. No test timeout guidance for async integration tests.
+
+**Missing Edge Cases**: Error boundary test (first-class, not just table mention), loading state test, data integrity assertion (verify addSet called with correct params).
+
+**Required Before Approval**: Fix items 1-5 above and add a11y assertions. See full review on BLD-73.
 
 ### Tech Lead (Technical Feasibility)
 
