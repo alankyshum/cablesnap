@@ -171,6 +171,19 @@ describe('Nutrition Logging', () => {
     expect(await findByText(/No food logged yet/)).toBeTruthy()
   })
 
+  it('shows loading state before data loads', () => {
+    // While async load() hasn't resolved, no macro card or log entries appear
+    mockGetLogs.mockReturnValue(new Promise(() => {}))
+    mockGetSummary.mockReturnValue(new Promise(() => {}))
+    mockGetTargets.mockReturnValue(new Promise(() => {}))
+
+    const { queryByText } = renderScreen(<Nutrition />)
+    // Targets card not rendered yet (null until resolved)
+    expect(queryByText('Calories')).toBeNull()
+    // No food items visible
+    expect(queryByText('Chicken Breast')).toBeNull()
+  })
+
   it('shows meal section headers', async () => {
     const { findByText } = renderScreen(<Nutrition />)
     expect(await findByText('Lunch')).toBeTruthy()

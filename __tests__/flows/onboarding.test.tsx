@@ -30,6 +30,24 @@ jest.mock('../../lib/programs', () => ({
   activateProgram: jest.fn().mockResolvedValue(undefined),
 }))
 
+jest.mock('../../lib/errors', () => ({
+  logError: jest.fn(),
+  generateReport: jest.fn().mockResolvedValue('{}'),
+  getRecentErrors: jest.fn().mockResolvedValue([]),
+  generateGitHubURL: jest.fn().mockReturnValue('https://github.com'),
+}))
+jest.mock('../../lib/interactions', () => ({
+  log: jest.fn(),
+  recent: jest.fn().mockResolvedValue([]),
+}))
+jest.mock('expo-file-system', () => ({
+  File: jest.fn(),
+  Paths: { cache: '/cache' },
+}))
+jest.mock('expo-sharing', () => ({
+  shareAsync: jest.fn(),
+}))
+
 import Welcome from '../../app/onboarding/welcome'
 import Setup from '../../app/onboarding/setup'
 import Recommend from '../../app/onboarding/recommend'
@@ -209,6 +227,20 @@ describe('Onboarding Flow', () => {
     it('shows Browse All Templates button with a11y', () => {
       const { getByLabelText } = renderScreen(<Recommend />)
       expect(getByLabelText('Browse all workout templates')).toBeTruthy()
+    })
+  })
+
+  describe('ErrorBoundary', () => {
+    it('catches render errors and shows error screen', async () => {
+      const ErrorBoundary = require('../../components/ErrorBoundary').default
+      const Broken = () => { throw new Error('onboarding crash') }
+
+      jest.spyOn(console, 'error').mockImplementation(() => {})
+      const { findByText } = renderScreen(
+        <ErrorBoundary><Broken /></ErrorBoundary>
+      )
+      expect(await findByText('Something went wrong')).toBeTruthy()
+      ;(console.error as jest.Mock).mockRestore()
     })
   })
 })
