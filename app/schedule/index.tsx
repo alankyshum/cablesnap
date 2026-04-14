@@ -59,7 +59,9 @@ export default function Schedule() {
       const raw = await getAppSetting("reminder_time");
       const [h, m] = (raw ?? "08:00").split(":").map(Number);
       await scheduleReminders({ hour: h, minute: m });
-    } catch {}
+    } catch {
+      Alert.alert("Reminders", "Couldn't set reminders. Try again later.");
+    }
   };
 
   const assign = async (day: number, tpl: WorkoutTemplate | null) => {

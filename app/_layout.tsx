@@ -82,7 +82,9 @@ export default function RootLayout() {
             setSnack("Notification permission was revoked. Reminders disabled.");
           }
         }
-      } catch {}
+      } catch {
+        // Permission check failed silently — non-critical background operation
+      }
     });
     return () => sub.remove();
   }, []);
