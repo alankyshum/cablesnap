@@ -201,3 +201,11 @@
 **Learning**: Custom overlays (pickers, bottom sheets, action menus) that visually cover background content must also logically trap screen reader focus. Without accessibilityViewIsModal={true}, VoiceOver and TalkBack will announce background elements, confusing users. React Native's Modal component handles this automatically; custom overlays need it set explicitly.
 **Action**: For any overlay component that is NOT using React Native's Modal, set accessibilityViewIsModal={true} on the overlay container View. Alternatively, use the built-in Modal component which handles focus trapping natively. During PR review, check that every overlay/picker/bottom-sheet either uses Modal or has accessibilityViewIsModal.
 **Tags**: a11y, accessibility, modal, overlay, picker, voiceover, talkback, screen-reader, focus-trap, react-native
+
+### Use Inner Pressable Instead of Card onPress When Card Contains Interactive Children (Web)
+**Source**: BLD-69 — FIX: Nested button hydration error on web (BLD-64)
+**Date**: 2026-04-14
+**Context**: On web, react-native-paper's Card with onPress renders as a button element. Chip components (even without onPress) and IconButton components inside the Card also render as button, creating invalid nested button HTML that causes hydration errors.
+**Learning**: React Native Paper components that inherit from TouchableRipple (including Card, Chip, IconButton, DataTable.Row) render as button on web. Any nesting of these produces invalid HTML. Non-interactive Chip used as labels should be replaced with plain View+Text badges. Cards containing IconButton or Menu triggers must not use onPress on the Card itself.
+**Action**: When a Card contains interactive children (IconButton, Menu, or any pressable): (1) remove onPress from Card, (2) wrap the non-interactive content area in a Pressable with the original handler, (3) keep interactive children (IconButton, Menu) as siblings outside the Pressable but inside Card.Content. For display-only labels, replace Chip with View+Text styled to match. Before submitting web-targeting PRs, search for Card with onPress that also contain IconButton, Chip, or Menu as descendants.
+**Tags**: react-native-paper, web, hydration, button-nesting, pressable, card, chip, html-validation, cross-platform

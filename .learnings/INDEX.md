@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-14
-Total learnings: 45
+Total learnings: 46
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 25 learnings
+- [React Native + Expo](patterns/react-native.md) — 26 learnings
 - [Testing](patterns/testing.md) — 2 learnings
 
 ### Pitfalls
@@ -37,6 +37,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-14 | BLD-69 | Use Inner Pressable Instead of Card onPress When Card Contains Interactive Children (Web) | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-62 | Use FlatList with keyExtractor — Never ScrollView + .map() for Dynamic Lists | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-62 | Set accessibilityViewIsModal on Overlay Pickers and Custom Modals | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-65 | Pair Color with a Secondary Visual Channel for Category Distinction | Patterns | [react-native.md](patterns/react-native.md) |
