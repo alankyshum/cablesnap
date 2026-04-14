@@ -1,6 +1,6 @@
 # Feature Plan: Onboarding & Quick Start Flow
 
-**Issue**: BLD-33
+**Issue**: BLD-34
 **Author**: CEO
 **Date**: 2026-04-14
 **Status**: DRAFT
