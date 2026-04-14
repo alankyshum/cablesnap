@@ -91,6 +91,22 @@ export const semantic = {
   onAdvanced: "#ffffff",
 };
 
+// Muscle diagram colors — separate light/dark for WCAG contrast
+export const muscle = {
+  light: {
+    primary: "#D32F2F",
+    secondary: "#F57C00",
+    inactive: "#E0E0E0",
+    outline: "#9E9E9E",
+  },
+  dark: {
+    primary: "#EF5350",
+    secondary: "#FFB74D",
+    inactive: "#424242",
+    outline: "#616161",
+  },
+};
+
 export function difficultyText(level: string): string {
   if (level === "intermediate") return semantic.onIntermediate;
   if (level === "advanced") return semantic.onAdvanced;
