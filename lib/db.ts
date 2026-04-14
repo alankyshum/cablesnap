@@ -285,18 +285,69 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       "ALTER TABLE workout_sets ADD COLUMN round INTEGER DEFAULT NULL"
     );
   }
+
+  // Migration: add Voltra metadata columns to exercises
+  const exCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(exercises)"
+  );
+  const names = new Set(exCols.map((c) => c.name));
+  if (!names.has("mount_position")) {
+    await database.execAsync(
+      "ALTER TABLE exercises ADD COLUMN mount_position TEXT DEFAULT NULL"
+    );
+  }
+  if (!names.has("attachment")) {
+    await database.execAsync(
+      "ALTER TABLE exercises ADD COLUMN attachment TEXT DEFAULT 'handle'"
+    );
+  }
+  if (!names.has("training_modes")) {
+    await database.execAsync(
+      `ALTER TABLE exercises ADD COLUMN training_modes TEXT DEFAULT '["weight"]'`
+    );
+  }
+  if (!names.has("is_voltra")) {
+    await database.execAsync(
+      "ALTER TABLE exercises ADD COLUMN is_voltra INTEGER DEFAULT 0"
+    );
+  }
+
+  // Migration: soft-delete old seed exercises and re-seed with Voltra exercises
+  const hasVoltra = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM exercises WHERE is_voltra = 1 AND deleted_at IS NULL"
+  );
+  if (!hasVoltra || hasVoltra.count === 0) {
+    await database.withTransactionAsync(async () => {
+      const now = Date.now();
+      // Soft-delete all old seed exercises (preserve custom)
+      await database.runAsync(
+        "UPDATE exercises SET deleted_at = ? WHERE is_custom = 0 AND deleted_at IS NULL",
+        [now]
+      );
+      // Migrate custom exercise categories to new 6-group system
+      await database.runAsync(
+        "UPDATE exercises SET category = 'arms' WHERE is_custom = 1 AND category IN ('biceps', 'triceps')"
+      );
+      await database.runAsync(
+        "UPDATE exercises SET category = 'legs_glutes' WHERE is_custom = 1 AND category IN ('legs', 'cardio')"
+      );
+      await database.runAsync(
+        "UPDATE exercises SET category = 'abs_core' WHERE is_custom = 1 AND category IN ('core', 'full_body')"
+      );
+    });
+  }
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   const result = await database.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0"
+    "SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 1"
   );
   if (result && result.count > 0) return;
 
   const exercises = seedExercises();
   const stmt = await database.prepareAsync(
-    `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom)
-     VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom)`
+    `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, mount_position, attachment, training_modes, is_voltra)
+     VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom, $mount_position, $attachment, $training_modes, $is_voltra)`
   );
   try {
     for (const ex of exercises) {
@@ -310,6 +361,10 @@ async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
         $instructions: ex.instructions,
         $difficulty: ex.difficulty,
         $is_custom: ex.is_custom ? 1 : 0,
+        $mount_position: ex.mount_position ?? null,
+        $attachment: ex.attachment ?? "handle",
+        $training_modes: JSON.stringify(ex.training_modes ?? ["weight"]),
+        $is_voltra: ex.is_voltra ? 1 : 0,
       });
     }
   } finally {
@@ -327,6 +382,11 @@ type ExerciseRow = {
   instructions: string;
   difficulty: string;
   is_custom: number;
+  deleted_at: number | null;
+  mount_position: string | null;
+  attachment: string | null;
+  training_modes: string | null;
+  is_voltra: number | null;
 };
 
 function mapRow(row: ExerciseRow): Exercise {
@@ -340,6 +400,11 @@ function mapRow(row: ExerciseRow): Exercise {
     instructions: row.instructions,
     difficulty: row.difficulty as Exercise["difficulty"],
     is_custom: row.is_custom === 1,
+    deleted_at: row.deleted_at ?? undefined,
+    mount_position: (row.mount_position as Exercise["mount_position"]) ?? undefined,
+    attachment: (row.attachment as Exercise["attachment"]) ?? undefined,
+    training_modes: row.training_modes ? JSON.parse(row.training_modes) : undefined,
+    is_voltra: row.is_voltra === 1 ? true : undefined,
   };
 }
 
@@ -471,6 +536,7 @@ type TemplateExerciseRow = {
   exercise_instructions: string | null;
   exercise_difficulty: string | null;
   exercise_is_custom: number | null;
+  exercise_deleted_at: number | null;
 };
 
 export async function getTemplateById(
@@ -486,7 +552,8 @@ export async function getTemplateById(
     `SELECT te.*, e.name AS exercise_name, e.category AS exercise_category,
        e.primary_muscles AS exercise_primary_muscles, e.secondary_muscles AS exercise_secondary_muscles,
        e.equipment AS exercise_equipment, e.instructions AS exercise_instructions,
-       e.difficulty AS exercise_difficulty, e.is_custom AS exercise_is_custom
+       e.difficulty AS exercise_difficulty, e.is_custom AS exercise_is_custom,
+       e.deleted_at AS exercise_deleted_at
      FROM template_exercises te
      LEFT JOIN exercises e ON te.exercise_id = e.id
      WHERE te.template_id = ?
@@ -514,6 +581,11 @@ export async function getTemplateById(
           instructions: r.exercise_instructions!,
           difficulty: r.exercise_difficulty!,
           is_custom: r.exercise_is_custom!,
+          deleted_at: r.exercise_deleted_at,
+          mount_position: null,
+          attachment: null,
+          training_modes: null,
+          is_voltra: null,
         })
       : undefined,
   }));
@@ -699,14 +771,15 @@ type SetRow = {
   link_id: string | null;
   round: number | null;
   exercise_name: string | null;
+  exercise_deleted_at: number | null;
 };
 
 export async function getSessionSets(
   sessionId: string
-): Promise<(WorkoutSet & { exercise_name?: string })[]> {
+): Promise<(WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean })[]> {
   const database = await getDatabase();
   const rows = await database.getAllAsync<SetRow>(
-    `SELECT ws.*, e.name AS exercise_name
+    `SELECT ws.*, e.name AS exercise_name, e.deleted_at AS exercise_deleted_at
      FROM workout_sets ws
      LEFT JOIN exercises e ON ws.exercise_id = e.id
      WHERE ws.session_id = ?
@@ -727,6 +800,7 @@ export async function getSessionSets(
     link_id: r.link_id ?? null,
     round: r.round ?? null,
     exercise_name: r.exercise_name ?? undefined,
+    exercise_deleted: r.exercise_deleted_at != null,
   }));
 }
 
