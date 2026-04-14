@@ -177,3 +177,11 @@
 **Learning**: In Expo Router, gate conditional navigation behind the splash screen: call `SplashScreen.preventAutoHideAsync()` at module scope, resolve the async check (e.g., `isOnboardingComplete()`) inside `useEffect`, then set state and call `SplashScreen.hideAsync()`. Render `<Redirect href="/onboarding/welcome" />` inside the normal `<Stack>` tree — do NOT conditionally swap navigators. Use `router.replace()` between onboarding steps to prevent back navigation. Wrap the onboarding stack in an `ErrorBoundary` with a "Skip to App" fallback that marks onboarding complete.
 **Action**: For any conditional first-launch flow (onboarding, auth gate, migration): (1) `preventAutoHideAsync()` at module level, (2) async check in root layout `useEffect`, (3) `hideAsync()` only after state resolves, (4) use `<Redirect>` component for redirection — not conditional navigator rendering, (5) `router.replace()` for all internal transitions, (6) wrap in ErrorBoundary with skip-to-app fallback.
 **Tags**: expo-router, splash-screen, onboarding, redirect, conditional-navigation, first-launch, error-boundary
+
+### Pair Color with a Secondary Visual Channel for Category Distinction
+**Source**: BLD-65 — Muscle Illustration for Exercises (Phase 26)
+**Date**: 2026-04-14
+**Context**: The MuscleMap component needed to distinguish primary muscles (red) from secondary muscles (orange) on SVG body diagrams. Relying on color alone would fail for color-blind users who cannot distinguish red from orange.
+**Learning**: Color alone is insufficient to communicate categorical differences in visualizations. The implementation used solid strokes (width 2) for primary muscles and dashed strokes ("4,3" dasharray, width 1) for secondary muscles, providing a second visual channel independent of color perception. This approach satisfies WCAG 1.4.1 (Use of Color) without requiring pattern fills.
+**Action**: When any component uses color to distinguish categories (charts, status indicators, heatmaps, annotated diagrams), always add a non-color visual distinction: stroke style (solid vs dashed), fill pattern, opacity level, shape, or icon. Test by viewing the component in grayscale — categories should still be distinguishable.
+**Tags**: a11y, wcag, color-blind, svg, react-native-svg, dual-channel, stroke-style, visualization, muscle-map
