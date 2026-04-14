@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
+  Pressable,
   StyleSheet,
   View,
   type ListRenderItemInfo,
@@ -9,7 +10,6 @@ import {
 import {
   Button,
   Card,
-  Chip,
   IconButton,
   Menu,
   SegmentedButtons,
@@ -502,13 +502,15 @@ export default function Workouts() {
                     renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => (
                       <Card
                         style={[styles.card, { backgroundColor: theme.colors.surface }]}
-                        onPress={() => startFromTemplate(item)}
-                        onLongPress={() => confirmDelete(item)}
-                        accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
-                        accessibilityRole="button"
                       >
                         <Card.Content style={styles.cardContent}>
-                          <View style={styles.cardInfo}>
+                          <Pressable
+                            onPress={() => startFromTemplate(item)}
+                            onLongPress={() => confirmDelete(item)}
+                            style={styles.cardInfo}
+                            accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
+                            accessibilityRole="button"
+                          >
                             <Text
                               variant="titleSmall"
                               style={{ color: theme.colors.onSurface }}
@@ -521,7 +523,7 @@ export default function Workouts() {
                             >
                               {counts[item.id] ?? 0} exercises
                             </Text>
-                          </View>
+                          </Pressable>
                           <IconButton
                             icon="pencil"
                             size={20}
@@ -551,13 +553,15 @@ export default function Workouts() {
                         return (
                           <Card
                             style={[styles.card, { backgroundColor: theme.colors.surface }]}
-                            onPress={() => startFromTemplate(item)}
-                            accessibilityLabel={`Starter template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
-                            accessibilityHint="Double-tap to start workout"
-                            accessibilityRole="button"
                           >
                             <Card.Content style={styles.cardContent}>
-                              <View style={styles.cardInfo}>
+                              <Pressable
+                                onPress={() => startFromTemplate(item)}
+                                style={styles.cardInfo}
+                                accessibilityLabel={`Starter template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
+                                accessibilityHint="Double-tap to start workout"
+                                accessibilityRole="button"
+                              >
                                 <View style={styles.chipRow}>
                                   <Text
                                     variant="titleSmall"
@@ -565,25 +569,18 @@ export default function Workouts() {
                                   >
                                     {item.name}
                                   </Text>
-                                  <Chip
-                                    mode="flat"
-                                    compact
-                                    style={styles.starterChip}
-                                    textStyle={styles.starterChipText}
-                                    accessibilityLabel="Starter template"
-                                  >
-                                    STARTER
-                                  </Chip>
+                                  <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
+                                    <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
+                                  </View>
                                   {meta?.recommended && (
-                                    <Chip
-                                      mode="flat"
-                                      compact
-                                      style={[styles.starterChip, { backgroundColor: theme.colors.primaryContainer }]}
-                                      textStyle={[styles.starterChipText, { color: theme.colors.onPrimaryContainer }]}
+                                    <View
+                                      style={[styles.badge, { backgroundColor: theme.colors.primaryContainer }]}
                                       accessibilityLabel="Recommended"
                                     >
-                                      Recommended
-                                    </Chip>
+                                      <Text style={[styles.badgeText, { color: theme.colors.onPrimaryContainer }]}>
+                                        Recommended
+                                      </Text>
+                                    </View>
                                   )}
                                 </View>
                                 <Text
@@ -592,7 +589,7 @@ export default function Workouts() {
                                 >
                                   {meta ? `${DIFFICULTY_LABELS[meta.difficulty]} · ${meta.duration} · ${meta.exercises.length} exercises` : `${counts[item.id] ?? 0} exercises`}
                                 </Text>
-                              </View>
+                              </Pressable>
                               <Menu
                                 visible={menu === item.id}
                                 onDismiss={() => setMenu(null)}
@@ -719,13 +716,15 @@ export default function Workouts() {
                       renderItem={({ item }: ListRenderItemInfo<Program>) => (
                         <Card
                           style={[styles.card, { backgroundColor: theme.colors.surface }]}
-                          onPress={() => router.push(`/program/${item.id}`)}
-                          accessibilityLabel={`Starter program: ${item.name}, ${dayCounts[item.id] ?? 0} days`}
-                          accessibilityHint="Double-tap to view program"
-                          accessibilityRole="button"
                         >
                           <Card.Content style={styles.cardContent}>
-                            <View style={styles.cardInfo}>
+                            <Pressable
+                              onPress={() => router.push(`/program/${item.id}`)}
+                              style={styles.cardInfo}
+                              accessibilityLabel={`Starter program: ${item.name}, ${dayCounts[item.id] ?? 0} days`}
+                              accessibilityHint="Double-tap to view program"
+                              accessibilityRole="button"
+                            >
                               <View style={styles.chipRow}>
                                 <Text
                                   variant="titleSmall"
@@ -733,15 +732,9 @@ export default function Workouts() {
                                 >
                                   {item.name}
                                 </Text>
-                                <Chip
-                                  mode="flat"
-                                  compact
-                                  style={styles.starterChip}
-                                  textStyle={styles.starterChipText}
-                                  accessibilityLabel="Starter template"
-                                >
-                                  STARTER
-                                </Chip>
+                                <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
+                                  <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
+                                </View>
                               </View>
                               <Text
                                 variant="bodySmall"
@@ -749,7 +742,7 @@ export default function Workouts() {
                               >
                                 {dayCounts[item.id] ?? 0} days · Intermediate
                               </Text>
-                            </View>
+                            </Pressable>
                             <Menu
                               visible={menu === `prog-${item.id}`}
                               onDismiss={() => setMenu(null)}
@@ -1050,10 +1043,13 @@ const styles = StyleSheet.create({
     gap: 6,
     flexWrap: "wrap",
   },
-  starterChip: {
+  badge: {
     height: 24,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    justifyContent: "center",
   },
-  starterChipText: {
+  badgeText: {
     fontSize: 12,
     lineHeight: 16,
   },
