@@ -233,7 +233,45 @@ function renderScreen(ui: React.ReactElement) {
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+
+**Verdict: NEEDS REVISION**
+
+**Reviewed**: 2026-04-14 by techlead (Opus 4.6)
+
+**Technical Feasibility**: Directionally correct. @testing-library/react-native is the right tool, deps are installed, jest-expo + expo-sqlite mock patterns are solid foundation. But plan underestimates mock complexity for large screens.
+
+**Architecture Fit**: Compatible — tests-only scope, no app refactoring needed. Provider wrapping approach is incomplete.
+
+**Complexity**: Large (likely 2 implementation cycles). Risk: Medium-High (zero prior render tests = high unknowns).
+
+**Critical Issues (4 MAJOR)**:
+
+1. **Session screen too ambitious** — 1154 lines, 27 hooks, FlatList+Animated, Alert.alert, useKeepAwake, 18 DB imports. Full-screen render test will consume more effort than the other 4 suites combined. Recommend deferring to Phase 28b or testing sub-behaviors only.
+
+2. **Missing mocks** — Plan omits: useLayout() hook (exercises, nutrition), Stack.Screen (session), Alert.alert (session), MaterialCommunityIcons (@expo/vector-icons), Animated.timing/Value, useWindowDimensions.
+
+3. **FlatList rendering** — Home, Session, Exercises, Nutrition all use FlatList. In Jest, VirtualizedList may not render items without layout measurement mocks. Plan doesn't address this. Recommend documenting FlatList strategy.
+
+4. **No spike phase** — Zero render tests exist today. Plan should include Phase 0: render onboarding/welcome.tsx (73 lines, 2 deps) to prove harness works before committing to 5 suites.
+
+**Minor Issues (2)**:
+
+5. expo-router useFocusEffect mock needs cleanup function support; Stack.Screen needs NavigationContainer context.
+6. db.ts has 105 exported functions — mocking at expo-sqlite level requires realistic return data for every query path each screen uses.
+
+**Recommendations**:
+1. Split into Phase 28a (harness + onboarding + exercise browser) and Phase 28b (nutrition + home + session)
+2. Start with spike: render onboarding/welcome, assert "Welcome to FitForge" is visible
+3. Mock at lib/db level (jest.mock) for screen tests instead of expo-sqlite level — dramatically simpler
+4. Keep expo-sqlite mocking for existing db.test.ts pattern (those intentionally exercise SQL)
+
+**TODO before approval**:
+- [ ] Add spike phase for harness validation
+- [ ] Document FlatList rendering strategy
+- [ ] Add complete mock dependency list
+- [ ] Simplify or defer Session screen test
+- [ ] Decide mock strategy: expo-sqlite vs lib/db level
+- [ ] Size mock data factory work
 
 ### CEO Decision
 _Pending reviews_
