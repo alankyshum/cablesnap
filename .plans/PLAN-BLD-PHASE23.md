@@ -3,7 +3,7 @@
 **Issue**: BLD-31 (TBD)
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT
+**Status**: DRAFT → Rev 2 (addressing QD feedback)
 
 ## Problem Statement
 
@@ -26,12 +26,16 @@ Seed 6 starter workout templates and 1 starter program into the database during 
 ### UX Design
 
 **Workouts Tab — Templates Segment:**
-- Starter templates appear first, in a "Starter" section with a section header
-- Each starter card shows a `★ STARTER` chip/badge in the theme's tertiary color
+- User-created templates appear FIRST in a "My Templates" section (users see their own content first)
+- Starter templates appear BELOW in a "Starter Workouts" section with a section header
+- "Full Body" starter has a "Recommended" chip/tag — the best starting point for beginners
+- Each starter card shows:
+  - `STARTER` chip (react-native-paper Chip, mode="flat", compact) in theme's tertiary color
+  - Difficulty tag: "Beginner" or "Intermediate" (small text below name)
+  - Estimated duration and exercise count: "~35 min · 6 exercises"
 - Tap a starter → starts a workout (same as user templates)
-- Long-press or overflow menu → "Duplicate" (creates editable copy) and "Hide" (removes from view)
+- Overflow icon (three-dot menu) on each starter card → "Duplicate" action (NO long-press — avoids gesture inconsistency with user templates where long-press = delete)
 - Starters are read-only — no edit/delete actions shown
-- User-created templates appear below in a "My Templates" section
 
 **Workouts Tab — Programs Segment:**
 - Starter program appears with the same `★ STARTER` badge
@@ -39,17 +43,21 @@ Seed 6 starter workout templates and 1 starter program into the database during 
 - Starter programs are read-only
 
 **Empty State:**
-- If no user-created templates exist, show only starters (no "My Templates" section header)
-- If starters are hidden and no user templates exist, show "Create your first template" CTA
+- If no user-created templates exist, show starters only (no "My Templates" section header)
+- If no starters and no user templates, show "Create your first template" CTA
 
 **Navigation:**
 - No new screens needed — starters use existing template/program detail views
 - Detail views detect `is_starter` and hide edit/delete buttons
 
 **Accessibility:**
-- `★ STARTER` badge has accessibilityLabel="Starter template"
+- `STARTER` chip has accessibilityLabel="Starter template"
+- Starter cards have accessibilityHint="Double-tap to start workout"
+- When a starter has an active session, card has accessibilityState={{ busy: true }}
 - Section headers have accessibilityRole="header"
 - Duplicate action has accessibilityLabel="Duplicate template for editing"
+- Starter detail view header has accessibilityLabel="Starter template, read-only. Duplicate to edit."
+- All touch targets on starter cards >= 48dp
 
 ### Technical Approach
 
@@ -68,7 +76,7 @@ Migration pattern: PRAGMA table_info check (existing pattern), then ALTER TABLE.
 
 Create a new file `lib/starter-templates.ts` with 6 curated templates:
 
-**Template 1: Voltra Full Body** (beginner, ~35 min)
+**Template 1: Full Body** (beginner, ~35 min)
 - Goblet Squat (legs_glutes)
 - Standing Chest Press (Handle) (chest)
 - Seated Cable Row (back)
@@ -77,7 +85,7 @@ Create a new file `lib/starter-templates.ts` with 6 curated templates:
 - Abdominal Crunches (abs_core)
 - 3 sets × 10-12 reps each, 60s rest
 
-**Template 2: Voltra Upper Push** (intermediate, ~30 min)
+**Template 2: Upper Push** (intermediate, ~30 min)
 - Incline Chest Press (chest)
 - Standing Chest Press (Bar) (chest)
 - Crossover Fly (chest)
@@ -86,7 +94,7 @@ Create a new file `lib/starter-templates.ts` with 6 curated templates:
 - Triceps Push-down (arms)
 - 3 sets × 8-12 reps, 90s rest
 
-**Template 3: Voltra Upper Pull** (intermediate, ~30 min)
+**Template 3: Upper Pull** (intermediate, ~30 min)
 - Wide Grip Lat Pull-down (back)
 - Seated Cable Row (back)
 - Face Pulls with External Rotation (shoulders)
@@ -95,7 +103,7 @@ Create a new file `lib/starter-templates.ts` with 6 curated templates:
 - Hammer Curl (arms)
 - 3 sets × 8-12 reps, 90s rest
 
-**Template 4: Voltra Lower & Core** (intermediate, ~35 min)
+**Template 4: Lower & Core** (intermediate, ~35 min)
 - Goblet Squat (legs_glutes)
 - Deadlift (legs_glutes)
 - Reverse Lunges with Cable Pull (legs_glutes)
@@ -104,7 +112,7 @@ Create a new file `lib/starter-templates.ts` with 6 curated templates:
 - Trunk Horizontal Rotations (abs_core)
 - 3 sets × 10-12 reps, 60s rest
 
-**Template 5: Voltra Arms & Shoulders** (beginner, ~25 min)
+**Template 5: Arms & Shoulders** (beginner, ~25 min)
 - Biceps Curls (arms)
 - Triceps Push-down (arms)
 - Hammer Curl (arms)
@@ -113,7 +121,7 @@ Create a new file `lib/starter-templates.ts` with 6 curated templates:
 - Upright Rows (Bar) (shoulders)
 - 3 sets × 10-15 reps, 60s rest
 
-**Template 6: Voltra Core Strength** (intermediate, ~20 min)
+**Template 6: Core Strength** (intermediate, ~20 min)
 - Abdominal Crunches (abs_core)
 - Half Kneeling Chop (abs_core)
 - Anti-rotational Supine Bicycle (abs_core)
@@ -124,7 +132,7 @@ Create a new file `lib/starter-templates.ts` with 6 curated templates:
 
 #### 3. Starter Program Data
 
-**Program: Voltra Push/Pull/Legs** (intermediate, 3-day cycle)
+**Program: Push/Pull/Legs** (intermediate, 3-day cycle)
 - Day 1 "Push": uses Template 2 (Upper Push)
 - Day 2 "Pull": uses Template 3 (Upper Pull)
 - Day 3 "Legs & Core": uses Template 4 (Lower & Core)
@@ -132,30 +140,35 @@ Create a new file `lib/starter-templates.ts` with 6 curated templates:
 #### 4. Seeding Logic (lib/db.ts)
 
 In `initDatabase()`, after exercise seeding:
-1. Check if starter templates exist: `SELECT COUNT(*) FROM workout_templates WHERE is_starter = 1`
-2. If count is 0, seed all 6 starter templates + 1 program
+1. Check `starter_version` in a settings/meta table (or app_settings key-value): `SELECT value FROM app_settings WHERE key = 'starter_version'`
+2. If no entry or version < current (e.g., `1`), seed/update starter templates
 3. Use a deterministic ID scheme: `starter-tpl-{N}` for templates, `starter-prog-1` for the program
 4. Wrap seeding in `withTransactionAsync()`
-5. Template exercise IDs: `starter-te-{templateN}-{exercisePosition}`
+5. Template exercise IDs: `starter-te-{templateN}-{exerciseSlug}` (content-based, not position-based)
+6. After seeding, `INSERT OR REPLACE INTO app_settings (key, value) VALUES ('starter_version', '1')`
+7. Use fixed historical timestamp for `created_at`/`updated_at` (e.g., `0` epoch) so starters don't mix with user templates in date-based views
+8. Note: `app_settings` table may need creation: `CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)`
 
 #### 5. Query Changes
 
-- `getTemplates()`: Add `ORDER BY is_starter DESC, created_at DESC` — starters sort first
+- `getTemplates()`: Add `ORDER BY is_starter ASC, created_at DESC` — user templates first, starters last
 - `getPrograms()`: Same ordering
 - Both queries return `is_starter` field
 
 #### 6. UI Changes
 
 **app/(tabs)/index.tsx:**
-- Group templates into starters vs user-created using `is_starter`
-- Add section header "Starter Workouts" and "My Templates" when both exist
-- Starter cards show `★ STARTER` Chip (react-native-paper Chip component, mode="flat", compact)
+- Group templates into user-created vs starters using `is_starter`
+- Add section header "My Templates" (first) and "Starter Workouts" (second) when both exist
+- "Full Body" starter gets an additional "Recommended" chip
+- Starter cards show `STARTER` Chip (react-native-paper Chip component, mode="flat", compact)
+- Starter cards show difficulty tag ("Beginner" / "Intermediate") and duration ("~35 min · 6 exercises")
 - Starter cards: hide delete button, hide edit navigation
-- Add "Duplicate" action to starter card overflow menu
+- Starter cards: show overflow icon (three-dot IconButton) with "Duplicate" action (NO long-press)
 
 **app/template/[id].tsx (detail/edit):**
 - If `is_starter`: hide edit controls (reorder, add/remove exercise), show "Duplicate to Edit" button
-- Duplicate: call `duplicateTemplate(id)` → creates copy with `is_starter = 0`, navigates to the copy
+- Duplicate: call `duplicateTemplate(id)` → creates copy with `is_starter = 0`, name without "Voltra" prefix, navigates to the copy's edit view with name field focused for immediate rename
 
 **app/program/[id].tsx:**
 - If `is_starter`: hide edit controls, show "Duplicate to Edit" button
@@ -163,10 +176,11 @@ In `initDatabase()`, after exercise seeding:
 #### 7. New DB Functions
 
 ```typescript
-// Duplicate a template (including all exercises)
+// Duplicate a template (including all exercises, generating new link_ids for groups)
 async function duplicateTemplate(id: string): Promise<string>
 
-// Duplicate a program (including days and template references)
+// Duplicate a program — also duplicates all referenced starter templates
+// Each day's template reference is replaced with a new editable copy
 async function duplicateProgram(id: string): Promise<string>
 ```
 
@@ -188,48 +202,62 @@ is_starter?: boolean;
 - 6 starter workout templates with exercise assignments
 - 1 starter program (PPL 3-day)
 - `is_starter` column on templates and programs
-- Visual distinction in list view (badge)
+- `app_settings` table for starter version tracking
+- Visual distinction in list view (STARTER chip + difficulty tag + duration)
+- "Recommended" highlight on Full Body template
 - Read-only mode for starters
-- Duplicate action (creates editable copy)
-- Seeding during database init
+- Duplicate action via overflow menu (creates editable copy)
+- Duplicate focuses name field for immediate rename
+- Program duplicate also duplicates referenced starter templates
+- Seeding during database init (version-based, idempotent)
+- Defense-in-depth: `is_starter` guard on delete functions
 
 **Out of Scope:**
 - Template categories/tags (future phase)
 - Community/shared templates
-- Template difficulty ratings in list view
-- Workout duration estimates
 - Template preview (exercise list preview without navigating)
 - Hide/unhide starters (defer — low priority)
 - Voltra training mode selection per exercise in templates (future phase)
+- Excluding starters from export (nice-to-have, defer)
 
 ### Acceptance Criteria
 
 - [ ] Fresh install shows 6 starter templates in Workouts → Templates
 - [ ] Fresh install shows 1 starter program in Workouts → Programs
-- [ ] Starter templates display `★ STARTER` badge
-- [ ] Starter program displays `★ STARTER` badge
+- [ ] Starter templates display `STARTER` chip (react-native-paper Chip, not ★ text)
+- [ ] Starter cards show difficulty level ("Beginner" / "Intermediate")
+- [ ] Starter cards show estimated duration ("~35 min · 6 exercises")
+- [ ] "Full Body" starter has a "Recommended" indicator
+- [ ] Starter program displays `STARTER` chip
 - [ ] Tapping a starter template starts a workout (existing flow works)
 - [ ] Starter template detail view shows exercises but hides edit controls
-- [ ] "Duplicate" creates an editable copy with is_starter=0
-- [ ] User-created templates appear below starters in the list
-- [ ] Starters cannot be deleted or edited
+- [ ] "Duplicate" via overflow menu creates an editable copy with is_starter=0
+- [ ] After duplicate, navigates to edit view with name field focused
+- [ ] Duplicating a program also duplicates its referenced starter templates
+- [ ] User-created templates appear ABOVE starters in the list
+- [ ] Starters cannot be deleted or edited (UI + DB guard)
 - [ ] Existing user data (templates, programs) is preserved during migration
-- [ ] Re-opening app does not re-seed starters (idempotent check)
+- [ ] Re-opening app does not re-seed starters (version-based idempotent check)
 - [ ] Starter PPL program links to the correct starter templates
+- [ ] Starter cards have accessibilityHint="Double-tap to start workout"
 - [ ] npx tsc --noEmit passes with zero errors
 - [ ] All existing tests pass
-- [ ] Screen reader announces "Starter template" for badge
+- [ ] Screen reader announces "Starter template" for chip
 
 ### Edge Cases
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| User duplicates a starter | New template created with `is_starter=0`, name suffixed " (copy)" |
-| User deletes a duplicated starter | Normal delete — does not affect the original starter |
+| User duplicates a starter template | New template created with `is_starter=0`, clean name (no prefix), edit view opens with name focused |
+| User duplicates a starter program | Program duplicated AND all referenced starter templates duplicated as editable copies |
+| User deletes a duplicated template | Normal delete — does not affect the original starter |
+| Attempt to delete a starter directly | DB guard (`WHERE is_starter = 0`) prevents deletion; UI hides delete button |
 | Starter exercise was soft-deleted | Shows (removed) suffix like any other template exercise |
 | Migration on existing install with templates | Existing templates get `is_starter=0` (DEFAULT), starters seeded fresh |
-| Database reset / fresh install | All 6 starters + 1 program seeded |
+| Database reset / fresh install | All 6 starters + 1 program seeded, starter_version set to 1 |
 | Starter program day references | Days reference starter template IDs (deterministic) |
+| Future v2 adds Template 7 | Increment starter_version → seeding runs again, INSERT OR IGNORE preserves existing starters |
+| Starters appear in export | Included (acceptable — deterministic IDs + INSERT OR IGNORE handles re-import) |
 
 ### Risk Assessment
 
@@ -279,4 +307,21 @@ Recommendations for implementer:
 4. Handle `link_id`/`link_label` generically in `duplicateTemplate()`
 
 ### CEO Decision
-_Pending reviews_
+**Rev 2 submitted** (2026-04-14) — All 5 Critical items addressed:
+- [C-UX-01] ✅ Removed "Hide" from UX Design entirely
+- [C-UX-02] ✅ Replaced long-press with overflow icon (three-dot menu)
+- [C-UX-03] ✅ Added difficulty tag on starter cards
+- [C-A11Y-01] ✅ Added accessibilityHint, accessibilityState, detail view label, 48dp targets
+- [C-EDGE-01] ✅ Switched to version-based seeding via app_settings table
+
+Also addressed all 8 Major recommendations:
+- [M-UX-04] ✅ User templates sort first, starters below
+- [M-UX-05] ✅ "Full Body" gets "Recommended" indicator
+- [M-UX-06] ✅ Duration + exercise count shown on cards
+- [M-UX-07] ✅ Name field focused after duplicate
+- [M-UX-08] ✅ Dropped "Voltra" prefix from all template names
+- [M-EDGE-02] ✅ Program duplicate also duplicates referenced templates
+- [M-EDGE-03] ✅ Fixed historical timestamps for starters
+- [M-DATA-01] ✅ Content-based IDs (exercise slug) instead of position
+
+Awaiting QD re-review.
