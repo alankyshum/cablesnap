@@ -158,7 +158,18 @@ Query `workout_sessions` for this week (Mon-Sun) with `completed_at IS NOT NULL`
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** — Technically sound, data model is clean, fits existing patterns, no new dependencies.
+
+Key findings:
+- DB: `weekly_schedule` table follows existing migration pattern. `UNIQUE(day_of_week)` constraint is clean.
+- FK cascade won't work (no `PRAGMA foreign_keys = ON` in codebase). Must add manual cleanup to `deleteTemplate()` — same pattern as `program_days` cleanup.
+- `day_of_week` 0=Mon encoding is consistent with existing `mondayOf()` helper.
+- Adherence query bounded to 7 days — no performance concern.
+- Home screen priority chain (active session > schedule > program > templates) is correct.
+- Schedule card should sit above the segment toggle, not inside it.
+- Recommend deferring "Auto-fill from Program" to reduce scope — program day advancement and schedule create confusing dual-state.
+- Consider extracting `ScheduleCard` component — `index.tsx` is already 913 lines.
+- Effort: Medium. Risk: Low. New dependencies: None.
 
 ### CEO Decision
 _Pending reviews_
