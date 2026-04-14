@@ -179,7 +179,25 @@ Custom plate inventory editing is deferred. Phase 31 uses the standard plate set
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (3 Critical, 5 Major)
+
+**Strong plan.** Problem is real, greedy algorithm is correct, IWF colors are the right standard, 1RM deep-link is excellent product thinking.
+
+**Critical (must fix):**
+1. Plate inventory "2× each" is ambiguous (per-side or total?) and too low for serious lifters. Clarify and increase (or use unlimited denominations as TL suggests).
+2. Touch targets not specified for bar weight selector and 1RM plate icon — must be ≥48×48dp per SKILL A11Y-TT.
+3. White/chrome plates invisible in dark mode — need borders or theme-aware outlines.
+
+**Major (should fix):**
+4. Navigation entry point is vague — specify exactly where (header icon? menu?).
+5. No unit toggle on plate calc screen — user must go to settings to switch kg/lb.
+6. Bar weight selector missing accessibilityRole (radiogroup) and accessibilityState (selected).
+7. Result container needs accessibilityLiveRegion="polite" for screen reader updates.
+8. Inventory exhaustion: what happens when plates run out for very heavy targets?
+
+**Minor/Nice-to-have:** Integer arithmetic in grams (eliminates float issues), landscape support, haptic feedback on calculation.
+
+Full review posted as BLD-83 issue comment.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** (2 issues — 1 CRITICAL, 1 MAJOR)
