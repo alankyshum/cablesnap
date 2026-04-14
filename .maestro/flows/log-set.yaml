@@ -1,0 +1,36 @@
+appId: com.anomalyco.fitforge
+---
+- launchApp
+
+# Start a quick workout
+- tapOn: "Quick Start"
+- assertVisible: "Quick Workout"
+
+# Add an exercise to the session
+- tapOn: "Add Exercise"
+- assertVisible: "Search exercises"
+
+# Search for an exercise and select it
+- tapOn: "Search exercises"
+- inputText: "Bench Press"
+- tapOn: "Barbell Bench Press"
+
+# Back on session screen with the exercise added
+- assertVisible: "Barbell Bench Press"
+- assertVisible: "SET"
+- assertVisible: "WEIGHT"
+- assertVisible: "REPS"
+
+# Fill in set 1 weight
+- tapOn:
+    id: "set-1-weight"
+- inputText: "60"
+
+# Fill in set 1 reps
+- tapOn:
+    id: "set-1-reps"
+- inputText: "10"
+
+# Cancel the workout to clean up
+- tapOn: "Cancel Workout"
+- tapOn: "Discard"

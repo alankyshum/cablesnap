@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { Alert, FlatList, Modal, StyleSheet, View } from "react-native";
+import { Alert, Modal, StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   ActivityIndicator,
   Button,
@@ -233,7 +234,7 @@ export default function Schedule() {
                   {picker !== null ? DAYS[picker] : ""} — Pick Template
                 </Text>
 
-                <FlatList
+                <FlashList
                   data={
                     picker !== null && entry(picker)
                       ? [{ id: "__remove__", name: "Remove (Rest Day)" } as WorkoutTemplate, ...templates]

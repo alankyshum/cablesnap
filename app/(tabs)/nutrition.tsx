@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { FlatList, SectionList, StyleSheet, View } from "react-native";
+import { SectionList, StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Card,
@@ -28,6 +29,7 @@ import { MEALS, MEAL_LABELS } from "../../lib/types";
 import { semantic } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
 import { todayKey, formatDateKey } from "../../lib/format";
+import SwipeToDelete from "../../components/SwipeToDelete";
 
 const DAY_MS = 86_400_000;
 
@@ -77,8 +79,8 @@ export default function Nutrition() {
   useFocusEffect(
     useCallback(() => {
       load();
-      if (layout.wide) getFavoriteFoods().then(setFavorites);
-    }, [load, layout.wide])
+      if (layout.atLeastMedium) getFavoriteFoods().then(setFavorites);
+    }, [load, layout.atLeastMedium])
   );
 
   const prev = () => setDate((d) => new Date(d.getTime() - DAY_MS));
@@ -167,26 +169,28 @@ export default function Nutrition() {
         </Text>
       )}
       renderItem={({ item }) => (
-        <Card style={[styles.foodCard, { backgroundColor: theme.colors.surface }]}>
-          <Card.Content style={styles.foodRow}>
-            <View style={{ flex: 1 }}>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
-                {item.food?.name ?? "Unknown"}
-              </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                {Math.round((item.food?.calories ?? 0) * item.servings)} cal
-                {item.servings !== 1 ? ` · ${item.servings}×` : ""}
-                {" · "}
-                {Math.round((item.food?.protein ?? 0) * item.servings)}p
-                {" · "}
-                {Math.round((item.food?.carbs ?? 0) * item.servings)}c
-                {" · "}
-                {Math.round((item.food?.fat ?? 0) * item.servings)}f
-              </Text>
-            </View>
-            <IconButton icon="delete-outline" size={20} onPress={() => remove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} />
-          </Card.Content>
-        </Card>
+        <SwipeToDelete onDelete={() => remove(item)}>
+          <Card style={[styles.foodCard, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content style={styles.foodRow}>
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                  {item.food?.name ?? "Unknown"}
+                </Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  {Math.round((item.food?.calories ?? 0) * item.servings)} cal
+                  {item.servings !== 1 ? ` · ${item.servings}×` : ""}
+                  {" · "}
+                  {Math.round((item.food?.protein ?? 0) * item.servings)}p
+                  {" · "}
+                  {Math.round((item.food?.carbs ?? 0) * item.servings)}c
+                  {" · "}
+                  {Math.round((item.food?.fat ?? 0) * item.servings)}f
+                </Text>
+              </View>
+              <IconButton icon="delete-outline" size={20} onPress={() => remove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} />
+            </Card.Content>
+          </Card>
+        </SwipeToDelete>
       )}
       SectionSeparatorComponent={() => <View style={{ height: 16 }} />}
       ListHeaderComponent={
@@ -231,12 +235,10 @@ export default function Nutrition() {
   );
 
   const addForm = (
-    <FlatList
+    <FlashList
       data={favorites}
       keyExtractor={(f) => f.id}
-      style={styles.scroll}
       contentContainerStyle={styles.addContent}
-      keyboardShouldPersistTaps="handled"
       renderItem={({ item: f }) => (
         <Card
           style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
@@ -318,9 +320,9 @@ export default function Nutrition() {
     />
   );
 
-  if (layout.wide) {
+  if (layout.atLeastMedium) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <View style={styles.wideRow}>
           <View style={styles.wideLog}>{logContent}</View>
           <View style={[styles.wideAdd, { borderLeftColor: theme.colors.outlineVariant }]}>

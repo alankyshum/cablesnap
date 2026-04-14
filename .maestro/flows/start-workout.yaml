@@ -1,0 +1,19 @@
+appId: com.anomalyco.fitforge
+---
+- launchApp
+
+# Workouts tab should be visible
+- assertVisible: "Workouts"
+
+# Start a quick workout
+- tapOn: "Quick Start"
+
+# Active session screen
+- assertVisible: "Quick Workout"
+- assertVisible: "Add Exercise"
+- assertVisible: "Finish Workout"
+- assertVisible: "Cancel Workout"
+
+# Cancel the workout to clean up
+- tapOn: "Cancel Workout"
+- tapOn: "Discard"

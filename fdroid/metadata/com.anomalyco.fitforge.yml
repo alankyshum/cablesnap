@@ -1,0 +1,28 @@
+Categories:
+  - Sports & Health
+License: MIT
+AuthorName: anomalyco
+SourceCode: https://github.com/alankyshum/fitforge
+IssueTracker: https://github.com/alankyshum/fitforge/issues
+
+AutoName: FitForge
+Summary: Workout tracking, nutrition logging, and progress analytics
+Description: |
+  FitForge is a local-first fitness app for tracking workouts,
+  nutrition, and body measurements. All data stays on your device.
+
+  Features:
+  - Workout logging with sets, reps, weight, and RPE
+  - Exercise library with 100+ built-in exercises
+  - Workout templates and multi-day programs
+  - Nutrition tracking with macro targets
+  - Progress charts and 1RM tracking
+  - Body weight and measurements logging
+  - Workout history with calendar view
+  - Plate calculator and 1RM calculator
+  - Interval timers (Tabata, EMOM, AMRAP)
+  - CSV export and sharing
+  - Dark mode support
+
+CurrentVersion: 0.1.0
+CurrentVersionCode: 1

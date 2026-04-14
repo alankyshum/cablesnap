@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   DataTable,
   IconButton,
@@ -63,12 +63,10 @@ export default function RMCalculator() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={100}
       >
-        <FlatList
+        <FlashList
           data={table}
           keyExtractor={(row) => String(row.pct)}
           style={{ backgroundColor: theme.colors.background }}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <>
               <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginBottom: 8 }}>

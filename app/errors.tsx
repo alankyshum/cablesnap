@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { Button, Card, Chip, Snackbar, Text, useTheme } from "react-native-paper";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -81,10 +82,9 @@ export default function Errors() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <FlatList
+      <FlashList
         data={errors}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <Card
             style={[styles.card, { backgroundColor: theme.colors.surface }]}

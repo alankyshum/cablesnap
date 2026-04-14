@@ -1,12 +1,10 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
-  FlatList,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
-  AccessibilityInfo,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Card,
@@ -20,7 +18,6 @@ import { useFocusEffect } from "expo-router";
 import {
   getProgramById,
   getProgramDays,
-  getProgramDayCount,
   getProgramCycleCount,
   getProgramHistory,
   activateProgram,
@@ -153,9 +150,8 @@ export default function ProgramDetail() {
   return (
     <>
       <Stack.Screen options={{ title: program.name }} />
-      <FlatList
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.content}
+      <FlashList
+        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
         data={days}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
@@ -261,7 +257,7 @@ export default function ProgramDetail() {
             </View>
           </>
         }
-        renderItem={({ item, index }: ListRenderItemInfo<ProgramDay>) => (
+        renderItem={({ item, index }: { item: ProgramDay; index: number }) => (
           <Card
             style={[
               styles.card,

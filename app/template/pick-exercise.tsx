@@ -4,8 +4,8 @@ import {
   Pressable,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Chip,
   Searchbar,
@@ -78,7 +78,7 @@ export default function PickExercise() {
   );
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Exercise>) => (
+    ({ item }: { item: Exercise }) => (
       <Pressable
         onPress={() => pick(item)}
         style={({ pressed }) => [
@@ -161,15 +161,10 @@ export default function PickExercise() {
             )}
           />
         </View>
-        <FlatList
+        <FlashList
           data={filtered}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          getItemLayout={(_, index) => ({
-            length: ITEM_HEIGHT,
-            offset: ITEM_HEIGHT * index,
-            index,
-          })}
           ListEmptyComponent={
             loading ? null : (
               <View style={styles.empty}>
@@ -181,9 +176,6 @@ export default function PickExercise() {
                 </Text>
               </View>
             )
-          }
-          contentContainerStyle={
-            filtered.length === 0 ? styles.emptyList : undefined
           }
         />
       </View>

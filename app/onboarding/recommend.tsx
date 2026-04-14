@@ -1,4 +1,5 @@
-import { FlatList, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { Banner, Button, Card, Chip, Text, useTheme } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -253,11 +254,10 @@ export default function Recommend() {
   );
 
   return (
-    <FlatList
+    <FlashList
       data={BROWSE_TEMPLATES}
       keyExtractor={(tpl) => tpl.id}
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={styles.scroll}
       ListHeaderComponent={advancedHeader}
       ListFooterComponent={advancedFooter}
       renderItem={({ item: tpl }) => (

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AccessibilityInfo,
-  FlatList,
   Share,
   StyleSheet,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Card,
@@ -172,7 +172,7 @@ export default function Summary() {
   return (
     <>
       <Stack.Screen options={{ title: "Workout Complete!" }} />
-      <FlatList
+      <FlashList
         data={
           [
             ...(allPrs.length > 0 ? [{ key: "prs" }] : []),
@@ -182,8 +182,7 @@ export default function Summary() {
           ] as { key: string }[]
         }
         keyExtractor={(s) => s.key}
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.content}
+        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
         ListHeaderComponent={
           <>
             {/* Header */}

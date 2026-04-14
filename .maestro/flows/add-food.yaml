@@ -1,0 +1,41 @@
+appId: com.anomalyco.fitforge
+---
+- launchApp
+
+# Navigate to Nutrition tab
+- tapOn: "Nutrition"
+- assertVisible: "Today"
+
+# Tap FAB to add food
+- tapOn:
+    id: "add-food-fab"
+
+# Add Food screen
+- assertVisible: "New Food"
+- assertVisible: "Favorites"
+- assertVisible: "Database"
+
+# Fill in food details
+- tapOn: "Food name"
+- inputText: "Chicken Breast"
+
+- tapOn: "Calories"
+- inputText: "165"
+
+- tapOn: "Protein (g)"
+- inputText: "31"
+
+- tapOn: "Carbs (g)"
+- inputText: "0"
+
+- tapOn: "Fat (g)"
+- inputText: "3.6"
+
+# Select meal type
+- tapOn: "Lunch"
+
+# Log the food
+- tapOn: "Log Food"
+
+# Should return to nutrition screen with the entry visible
+- assertVisible: "Nutrition"

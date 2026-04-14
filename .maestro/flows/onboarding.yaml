@@ -1,0 +1,32 @@
+appId: com.anomalyco.fitforge
+---
+- launchApp:
+    clearState: true
+
+# Welcome screen
+- assertVisible: "Welcome to FitForge"
+- assertVisible: "Your free workout & macro tracker"
+- tapOn: "Get Started"
+
+# Setup screen — preferences
+- assertVisible: "Set Up Your Preferences"
+- assertVisible: "Weight Unit"
+- tapOn: "kg"
+- assertVisible: "Measurement Unit"
+- tapOn: "cm"
+
+# Select experience level
+- assertVisible: "Experience Level"
+- tapOn: "Beginner"
+- assertVisible: "I'm just getting started with gym workouts"
+- tapOn: "Continue"
+
+# Recommend screen
+- assertVisible: "We Recommend"
+- assertVisible: "Recommended"
+- tapOn:
+    text: "I'll explore on my own"
+
+# Should land on main Workouts tab
+- assertVisible: "Workouts"
+- assertVisible: "Quick Start"

@@ -123,7 +123,7 @@ export default function Measurements() {
       onChangeText={(v) => update(f.key, v)}
       keyboardType="numeric"
       mode="outlined"
-      style={layout.wide ? styles.wideInput : styles.input}
+      style={layout.atLeastMedium ? styles.wideInput : styles.input}
       accessibilityLabel={`${f.label} in ${unit}`}
     />
   ));
@@ -150,7 +150,7 @@ export default function Measurements() {
             accessibilityLabel="Measurement date"
           />
 
-          {layout.wide ? (
+          {layout.atLeastMedium ? (
             <View style={styles.grid}>
               {fieldInputs}
             </View>

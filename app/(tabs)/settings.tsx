@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Linking, StyleSheet, Switch, TextInput, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme } from "react-native-paper";
+import { useLayout } from "../../lib/layout";
+import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
@@ -115,6 +117,7 @@ function dateStamp(): string {
 export default function Settings() {
   const theme = useTheme();
   const router = useRouter();
+  const layout = useLayout();
   const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState("");
   const [count, setCount] = useState(0);
@@ -298,18 +301,16 @@ export default function Settings() {
   };
 
   return (
-    <FlatList
-      data={[]}
-      renderItem={null}
+    <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
-      ListHeaderComponent={
-        <>
-          <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
-            Settings
-          </Text>
+      contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
+    >
+      <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
+        Settings
+      </Text>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <FlowContainer gap={16}>
+      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
             Reminders
@@ -432,6 +433,7 @@ export default function Settings() {
                 mode="outlined"
                 onPress={() => Linking.openSettings()}
                 compact
+                style={{ alignSelf: "flex-start" }}
                 accessibilityLabel="Open device notification settings"
               >
                 Open Settings
@@ -441,7 +443,7 @@ export default function Settings() {
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
             Timer
@@ -474,7 +476,7 @@ export default function Settings() {
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
             Data Export (CSV)
@@ -500,150 +502,152 @@ export default function Settings() {
             {counts.entries} nutrition entr{counts.entries !== 1 ? "ies" : "y"}
           </Text>
 
-          <Button
-            mode="contained"
-            icon="file-export-outline"
-            onPress={handleWorkoutCSV}
-            loading={loading}
-            disabled={loading}
-            style={styles.btn}
-            accessibilityLabel="Export workouts as CSV"
-          >
-            Export Workouts CSV
-          </Button>
+          <View style={styles.buttonFlow}>
+            <Button
+              mode="contained"
+              icon="file-export-outline"
+              onPress={handleWorkoutCSV}
+              loading={loading}
+              disabled={loading}
+              compact
+              accessibilityLabel="Export workouts as CSV"
+            >
+              Workouts
+            </Button>
 
-          <Button
-            mode="contained"
-            icon="food-apple-outline"
-            onPress={handleNutritionCSV}
-            loading={loading}
-            disabled={loading}
-            style={styles.btn}
-            accessibilityLabel="Export nutrition as CSV"
-          >
-            Export Nutrition CSV
-          </Button>
+            <Button
+              mode="contained"
+              icon="food-apple-outline"
+              onPress={handleNutritionCSV}
+              loading={loading}
+              disabled={loading}
+              compact
+              accessibilityLabel="Export nutrition as CSV"
+            >
+              Nutrition
+            </Button>
 
-          <Button
-            mode="contained"
-            icon="scale-bathroom"
-            onPress={handleBodyWeightCSV}
-            loading={loading}
-            disabled={loading}
-            style={styles.btn}
-            accessibilityLabel="Export body weight as CSV"
-          >
-            Export Body Weight CSV
-          </Button>
+            <Button
+              mode="contained"
+              icon="scale-bathroom"
+              onPress={handleBodyWeightCSV}
+              loading={loading}
+              disabled={loading}
+              compact
+              accessibilityLabel="Export body weight as CSV"
+            >
+              Body Weight
+            </Button>
 
-          <Button
-            mode="contained"
-            icon="human"
-            onPress={handleBodyMeasurementsCSV}
-            loading={loading}
-            disabled={loading}
-            style={styles.btn}
-            accessibilityLabel="Export body measurements as CSV"
-          >
-            Export Measurements CSV
-          </Button>
+            <Button
+              mode="contained"
+              icon="human"
+              onPress={handleBodyMeasurementsCSV}
+              loading={loading}
+              disabled={loading}
+              compact
+              accessibilityLabel="Export body measurements as CSV"
+            >
+              Measurements
+            </Button>
+          </View>
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
             Data Management
           </Text>
 
-          <Button
-            mode="contained"
-            icon="export"
-            onPress={handleExport}
-            loading={loading}
-            disabled={loading}
-            style={styles.btn}
-            accessibilityLabel="Export all data"
-          >
-            Export All Data
-          </Button>
+          <View style={styles.buttonFlow}>
+            <Button
+              mode="contained"
+              icon="export"
+              onPress={handleExport}
+              loading={loading}
+              disabled={loading}
+              compact
+              accessibilityLabel="Export all data"
+            >
+              Export All
+            </Button>
 
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
-            Export all exercises, templates, sessions, and sets as a JSON file.
-          </Text>
+            <Button
+              mode="outlined"
+              icon="import"
+              onPress={handleImport}
+              loading={loading}
+              disabled={loading}
+              compact
+              accessibilityLabel="Import data"
+            >
+              Import
+            </Button>
+          </View>
 
-          <Button
-            mode="outlined"
-            icon="import"
-            onPress={handleImport}
-            loading={loading}
-            disabled={loading}
-            style={styles.btn}
-            accessibilityLabel="Import data"
-          >
-            Import Data
-          </Button>
-
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            Import a previously exported FitForge JSON file. Duplicate records are skipped.
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 12 }}>
+            Export as JSON or import a previously exported file. Duplicates are skipped.
           </Text>
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
             Feedback &amp; Reports
           </Text>
 
-          <Button
-            mode="contained"
-            icon="bug-outline"
-            onPress={() => router.push({ pathname: "/feedback", params: { type: "bug" } })}
-            style={styles.btn}
-            accessibilityLabel="Report a bug"
-          >
-            Report a Bug
-          </Button>
+          <View style={styles.buttonFlow}>
+            <Button
+              mode="contained"
+              icon="bug-outline"
+              onPress={() => router.push({ pathname: "/feedback", params: { type: "bug" } })}
+              compact
+              accessibilityLabel="Report a bug"
+            >
+              Report Bug
+            </Button>
 
-          <Button
-            mode="outlined"
-            icon="lightbulb-outline"
-            onPress={() => router.push({ pathname: "/feedback", params: { type: "feature" } })}
-            style={styles.btn}
-            accessibilityLabel="Request a feature"
-          >
-            Request a Feature
-          </Button>
+            <Button
+              mode="outlined"
+              icon="lightbulb-outline"
+              onPress={() => router.push({ pathname: "/feedback", params: { type: "feature" } })}
+              compact
+              accessibilityLabel="Request a feature"
+            >
+              Feature Request
+            </Button>
 
-          <Button
-            mode="outlined"
-            icon="format-list-bulleted"
-            onPress={() => router.push("/errors")}
-            style={styles.btn}
-            accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}
-          >
-            View Error Log ({count})
-          </Button>
+            <Button
+              mode="outlined"
+              icon="format-list-bulleted"
+              onPress={() => router.push("/errors")}
+              compact
+              accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}
+            >
+              Errors ({count})
+            </Button>
 
-          <Button
-            mode="outlined"
-            icon="delete-outline"
-            onPress={async () => {
-              await clearErrorLog();
-              setCount(0);
-              setSnack("Error log cleared");
-            }}
-            style={styles.btn}
-            textColor={theme.colors.error}
-            accessibilityLabel="Clear error log"
-          >
-            Clear Error Log
-          </Button>
+            <Button
+              mode="outlined"
+              icon="delete-outline"
+              onPress={async () => {
+                await clearErrorLog();
+                setCount(0);
+                setSnack("Error log cleared");
+              }}
+              compact
+              textColor={theme.colors.error}
+              accessibilityLabel="Clear error log"
+            >
+              Clear Log
+            </Button>
+          </View>
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
             About
@@ -653,6 +657,7 @@ export default function Settings() {
           </Text>
         </Card.Content>
       </Card>
+      </FlowContainer>
 
       <Snackbar
         visible={!!snack}
@@ -662,9 +667,7 @@ export default function Settings() {
       >
         {snack}
       </Snackbar>
-        </>
-      }
-    />
+    </ScrollView>
   );
 }
 
@@ -673,14 +676,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
-    paddingBottom: 32,
+    paddingTop: 16,
+    paddingBottom: 48,
   },
-  card: {
-    marginBottom: 16,
+  flowCard: {
+    ...flowCardStyle,
   },
-  btn: {
-    marginBottom: 8,
+  wideCard: {
+    minWidth: 340,
+    flexBasis: 340,
   },
   segment: {
     marginBottom: 4,
@@ -690,6 +694,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+  },
+  buttonFlow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
   timeInput: {
     borderWidth: 1,

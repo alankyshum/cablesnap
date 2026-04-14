@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Searchbar,
   Text,
@@ -52,7 +51,7 @@ export default function PickTemplate() {
   );
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<WorkoutTemplate>) => (
+    ({ item }: { item: WorkoutTemplate }) => (
       <TouchableRipple
         onPress={() => pick(item)}
         style={[
@@ -98,15 +97,10 @@ export default function PickTemplate() {
           style={[styles.search, { backgroundColor: theme.colors.surface }]}
           accessibilityLabel="Search templates"
         />
-        <FlatList
+        <FlashList
           data={filtered}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          getItemLayout={(_, index) => ({
-            length: ITEM_HEIGHT,
-            offset: ITEM_HEIGHT * index,
-            index,
-          })}
           ListEmptyComponent={
             loading ? null : (
               <View style={styles.empty}>
@@ -120,9 +114,6 @@ export default function PickTemplate() {
                 </Text>
               </View>
             )
-          }
-          contentContainerStyle={
-            filtered.length === 0 ? styles.emptyList : undefined
           }
         />
       </View>

@@ -59,7 +59,7 @@ jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), notificationAsync: jest.fn(), ImpactFeedbackStyle: { Light: 'light', Heavy: 'heavy' }, NotificationFeedbackType: { Success: 'success', Warning: 'warning' } }))
 jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn() }))
 jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn() }))
-jest.mock('react-native-chart-kit', () => ({ LineChart: 'LineChart', BarChart: 'BarChart' }))
+jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 
 import React from 'react'
 import { Alert } from 'react-native'

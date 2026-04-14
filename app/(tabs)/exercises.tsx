@@ -4,10 +4,11 @@ import {
   Pressable,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
-import { Chip, FAB, Searchbar, Text, useTheme } from "react-native-paper";
+import { FlashList } from "@shopify/flash-list";
+import { Card, Chip, FAB, Searchbar, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAllExercises, getExerciseById } from "../../lib/db";
@@ -21,6 +22,8 @@ import {
 import { semantic, difficultyText, CATEGORY_ICONS, DIFFICULTY_COLORS } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
 import { useFocusRefetch } from "../../lib/query";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const ITEM_HEIGHT = 84;
 
@@ -66,28 +69,29 @@ export default function Exercises() {
 
   const onPress = useCallback(
     (item: Exercise) => {
-      if (layout.wide) {
+      if (layout.atLeastMedium) {
         getExerciseById(item.id).then(setDetail);
       } else {
         router.push(`/exercise/${item.id}`);
       }
     },
-    [layout.wide, router]
+    [layout.atLeastMedium, router]
   );
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Exercise>) => {
+    ({ item }: { item: Exercise }) => {
       const diff = item.difficulty || "intermediate";
       const color = DIFFICULTY_COLORS[diff] || semantic.intermediate;
       const label = diff === "beginner" ? "B" : diff === "advanced" ? "A" : "I";
       return (
-      <Pressable
+      <Animated.View entering={FadeIn.duration(200)}>
+      <AnimatedPressable
         onPress={() => onPress(item)}
         style={({ pressed }) => [
           styles.item,
           { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
-          layout.wide && detail?.id === item.id && { backgroundColor: theme.colors.primaryContainer },
-          pressed && { opacity: 0.7 },
+          layout.atLeastMedium && detail?.id === item.id && { backgroundColor: theme.colors.primaryContainer },
+          pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
         ]}
         accessibilityLabel={`${item.name}${item.is_voltra === true ? ", Volta 1 compatible" : ""}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}, Difficulty: ${diff}`}
         accessibilityRole="button"
@@ -162,19 +166,11 @@ export default function Exercises() {
             </View>
           </View>
         </View>
-      </Pressable>
+      </AnimatedPressable>
+      </Animated.View>
       );
     },
-    [onPress, theme, layout.wide, detail]
-  );
-
-  const getLayout = useCallback(
-    (_data: ArrayLike<Exercise> | null | undefined, index: number) => ({
-      length: ITEM_HEIGHT,
-      offset: ITEM_HEIGHT * index,
-      index,
-    }),
-    []
+    [onPress, theme, layout.atLeastMedium, detail]
   );
 
   const keyExtractor = useCallback((item: Exercise) => item.id, []);
@@ -197,7 +193,7 @@ export default function Exercises() {
   const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : f === "volta" ? "Volta 1" : CATEGORY_LABELS[f]);
 
   const list = (
-    <View style={layout.wide ? { flex: 6 } : { flex: 1 }}>
+    <View style={layout.atLeastMedium ? { flex: 6 } : { flex: 1 }}>
       <Searchbar
         placeholder="Search exercises..."
         value={query}
@@ -233,13 +229,11 @@ export default function Exercises() {
           )}
         />
       </View>
-      <FlatList
+      <FlashList
         data={filtered}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        getItemLayout={getLayout}
         ListEmptyComponent={empty}
-        contentContainerStyle={filtered.length === 0 ? styles.emptyList : undefined}
       />
       <FAB
         icon="plus"
@@ -252,7 +246,7 @@ export default function Exercises() {
     </View>
   );
 
-  if (!layout.wide) {
+  if (!layout.atLeastMedium) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {list}
@@ -342,30 +336,34 @@ export default function Exercises() {
                     </View>
                   </View>
                 )}
-                <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-                  Primary Muscles
-                </Text>
-                <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-                  {detail.primary_muscles.map((m) => (
-                    <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
-                      {m}
-                    </Chip>
-                  ))}
-                </View>
-                {detail.secondary_muscles.length > 0 && (
-                  <>
+                <View style={styles.muscleColumns}>
+                  <View style={{ flex: 1 }}>
                     <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-                      Secondary Muscles
+                      Primary Muscles
                     </Text>
                     <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-                      {detail.secondary_muscles.map((m) => (
-                        <Chip key={m} compact style={{ backgroundColor: theme.colors.tertiaryContainer }}>
+                      {detail.primary_muscles.map((m) => (
+                        <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
                           {m}
                         </Chip>
                       ))}
                     </View>
-                  </>
-                )}
+                  </View>
+                  {detail.secondary_muscles.length > 0 && (
+                    <View style={{ flex: 1 }}>
+                      <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                        Secondary Muscles
+                      </Text>
+                      <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
+                        {detail.secondary_muscles.map((m) => (
+                          <Chip key={m} compact style={{ backgroundColor: theme.colors.tertiaryContainer }}>
+                            {m}
+                          </Chip>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
                 {steps && steps.length > 0 && (
                   <>
                     <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
@@ -498,6 +496,10 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
+  },
+  muscleColumns: {
+    flexDirection: "row",
+    gap: 16,
   },
   detailPane: {
     flex: 4,

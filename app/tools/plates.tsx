@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from "react"
 import {
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   View,
 } from "react-native"
+import { FlashList } from "@shopify/flash-list"
 import {
   SegmentedButtons,
   Text,
@@ -265,10 +265,8 @@ export default function PlateCalculator() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={100}
       >
-        <FlatList
+        <FlashList
           style={{ backgroundColor: theme.colors.background }}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
           data={items}
           keyExtractor={g => String(g.weight)}
           renderItem={renderPlate}

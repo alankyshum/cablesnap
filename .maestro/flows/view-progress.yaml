@@ -1,0 +1,25 @@
+appId: com.anomalyco.fitforge
+---
+- launchApp
+
+# Navigate to Progress tab
+- tapOn: "Progress"
+
+# Workouts segment is shown by default
+- assertVisible: "Workouts"
+- assertVisible: "Body"
+- assertVisible: "Muscles"
+
+# Switch to Body segment
+- tapOn: "Body"
+
+# Verify body tracking section loads (empty or with data)
+- assertVisible:
+    text: "Log body weight|Current Weight"
+    regex: true
+
+# Switch to Muscles segment
+- tapOn: "Muscles"
+
+# Switch back to Workouts segment
+- tapOn: "Workouts"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -109,11 +110,10 @@ export default function SessionDetail() {
   return (
     <>
       <Stack.Screen options={{ title: session.name }} />
-      <FlatList
+      <FlashList
         data={groups}
         keyExtractor={(group) => group.exercise_id}
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.content}
+        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
         ListHeaderComponent={
           <>
             {/* Summary */}

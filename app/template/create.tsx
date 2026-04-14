@@ -1,11 +1,10 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
-  FlatList,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   IconButton,
@@ -106,7 +105,7 @@ export default function CreateTemplate() {
   }, [template, exercises, load]);
 
   const renderItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<TemplateExercise>) => (
+    ({ item, index }: { item: TemplateExercise; index: number }) => (
       <View
         style={[
           styles.exerciseRow,
@@ -177,7 +176,7 @@ export default function CreateTemplate() {
                 Exercises ({exercises.length})
               </Text>
             </View>
-            <FlatList
+            <FlashList
               data={exercises}
               renderItem={renderItem}
               keyExtractor={(item) => item.id}

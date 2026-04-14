@@ -2,15 +2,15 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { Button, Card, Chip, IconButton, Snackbar, Text, useTheme } from "react-native-paper";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { LineChart } from "react-native-chart-kit";
+import { CartesianChart, Line } from "victory-native";
 import {
   getExerciseById,
   softDeleteCustomExercise,
@@ -24,11 +24,13 @@ import {
   type ExerciseRecords as Records,
 } from "../../lib/db";
 import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS, type Exercise } from "../../lib/types";
-import { semantic, difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
+import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
-import { epley, percentageTable } from "../../lib/rm";
+import { percentageTable } from "../../lib/rm";
+import { useLayout } from "../../lib/layout";
+import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
 
 const PAGE_SIZE = 10;
 const MAX_ITEMS = 50;
@@ -45,6 +47,7 @@ export default function ExerciseDetail() {
   const theme = useTheme();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
+  const layout = useLayout();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [toast, setToast] = useState("");
@@ -179,16 +182,9 @@ export default function ExerciseDetail() {
     .filter(Boolean);
 
   const bw = records?.is_bodyweight ?? false;
-  const chartWidth = screenWidth - 48;
-
-  const chartConfig = {
-    backgroundGradientFrom: theme.colors.surface,
-    backgroundGradientTo: theme.colors.surface,
-    color: () => theme.colors.primary,
-    labelColor: () => theme.colors.onSurfaceVariant,
-    decimalPlaces: bw ? 0 : 1,
-    propsForBackgroundLines: { stroke: theme.colors.outlineVariant },
-  };
+  const chartWidth = layout.atLeastMedium
+    ? Math.min((screenWidth - 80) / 2, 500)
+    : screenWidth - 48;
 
   // Chart accessibility summary
   const chartSummary = chart.length >= 2
@@ -286,38 +282,72 @@ export default function ExerciseDetail() {
         </View>
       )}
 
-      {/* Muscle Diagram */}
-      <View style={styles.section}>
-        <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-          Muscles Involved
-        </Text>
-        <MuscleMap
-          primary={exercise.primary_muscles}
-          secondary={exercise.secondary_muscles}
-          width={screenWidth - 32}
-        />
-      </View>
-
-      {/* Instructions */}
-      {steps.length > 0 && (
-        <View style={styles.section}>
-          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-            Instructions
-          </Text>
-          {steps.map((step, i) => (
-            <Text
-              key={i}
-              variant="bodyMedium"
-              style={[styles.step, { color: theme.colors.onSurface }]}
-            >
-              {step}
+      {/* Info + Muscle Diagram side by side on tablet */}
+      {layout.atLeastMedium ? (
+        <View style={styles.infoRow}>
+          <View style={{ flex: 1 }}>
+            <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+              Muscles Involved
             </Text>
-          ))}
+            <MuscleMap
+              primary={exercise.primary_muscles}
+              secondary={exercise.secondary_muscles}
+              width={Math.min(screenWidth * 0.45, 400)}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            {steps.length > 0 && (
+              <View style={styles.section}>
+                <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                  Instructions
+                </Text>
+                {steps.map((step, i) => (
+                  <Text
+                    key={i}
+                    variant="bodyMedium"
+                    style={[styles.step, { color: theme.colors.onSurface }]}
+                  >
+                    {step}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
+      ) : (
+        <>
+          <View style={styles.section}>
+            <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+              Muscles Involved
+            </Text>
+            <MuscleMap
+              primary={exercise.primary_muscles}
+              secondary={exercise.secondary_muscles}
+              width={screenWidth - 32}
+            />
+          </View>
+          {steps.length > 0 && (
+            <View style={styles.section}>
+              <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                Instructions
+              </Text>
+              {steps.map((step, i) => (
+                <Text
+                  key={i}
+                  variant="bodyMedium"
+                  style={[styles.step, { color: theme.colors.onSurface }]}
+                >
+                  {step}
+                </Text>
+              ))}
+            </View>
+          )}
+        </>
       )}
 
-      {/* Personal Records Card */}
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      {/* Personal Records + Chart flow into row on tablet */}
+      <FlowContainer gap={16}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
             Personal Records
@@ -443,8 +473,7 @@ export default function ExerciseDetail() {
         </Card.Content>
       </Card>
 
-      {/* Performance Chart */}
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
             {bw ? "Reps Progression" : "Weight Progression"}
@@ -464,20 +493,26 @@ export default function ExerciseDetail() {
             </Text>
           ) : (
             <View accessibilityLabel={chartSummary ?? undefined}>
-              <LineChart
-                data={{
-                  labels: chart.map((d) => formatDate(d.date)),
-                  datasets: [{
-                    data: bw ? chart.map((d) => d.value) : chart.map((d) => toDisplay(d.value, unit)),
-                  }],
-                }}
-                width={chartWidth}
-                height={200}
-                chartConfig={chartConfig}
-                bezier
-                style={styles.chartStyle}
-                withDots={chart.length <= 30}
-              />
+              <View style={{ width: chartWidth, height: 200 }}>
+                <CartesianChart
+                  data={chart.map((d) => ({
+                    date: formatDate(d.date),
+                    value: bw ? d.value : toDisplay(d.value, unit),
+                  }))}
+                  xKey="date"
+                  yKeys={["value"]}
+                  domainPadding={{ left: 10, right: 10 }}
+                >
+                  {({ points }) => (
+                    <Line
+                      points={points.value}
+                      color={theme.colors.primary}
+                      strokeWidth={2}
+                      curveType="natural"
+                    />
+                  )}
+                </CartesianChart>
+              </View>
               {chartSummary && (
                 <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
                   {chartSummary}
@@ -487,6 +522,8 @@ export default function ExerciseDetail() {
           )}
         </Card.Content>
       </Card>
+
+      </FlowContainer>
 
       {/* History section header */}
       <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginTop: 8, marginBottom: 8 }}>
@@ -581,16 +618,16 @@ export default function ExerciseDetail() {
             : undefined,
         }}
       />
-      <FlatList
+      <FlashList
         style={{ flex: 1, backgroundColor: theme.colors.background }}
         data={historyLoading || historyError || history.length === 0 ? [] : history}
         keyExtractor={(item) => item.session_id}
         renderItem={renderItem}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
+        ListFooterComponentStyle={{ paddingBottom: 32 }}
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
-        contentContainerStyle={{ paddingBottom: 32 }}
       />
 
       <Snackbar visible={!!toast} onDismiss={() => setToast("")} duration={3000}>
@@ -650,6 +687,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 12,
   },
+  flowCard: {
+    ...flowCardStyle,
+    maxWidth: 560,
+  },
+  infoRow: {
+    flexDirection: "row",
+    gap: 24,
+    marginBottom: 20,
+  },
   loader: {
     paddingVertical: 24,
   },
@@ -663,10 +709,6 @@ const styles = StyleSheet.create({
   },
   stat: {
     alignItems: "center",
-  },
-  chartStyle: {
-    borderRadius: 12,
-    marginLeft: -16,
   },
   historyRow: {
     flexDirection: "row",

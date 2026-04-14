@@ -1,0 +1,95 @@
+name: Build APK & Update F-Droid Repo
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: fdroid-release
+  cancel-in-progress: false
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Build APK
+        run: eas build -p android --profile production --local --non-interactive --output fitforge.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fitforge-apk
+          path: fitforge.apk
+          retention-days: 90
+
+  update-fdroid:
+    name: Update F-Droid Repo
+    needs: build-apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: fitforge-apk
+
+      - name: Restore F-Droid keystore
+        run: |
+          echo "${{ secrets.FDROID_KEYSTORE }}" | base64 -d > fdroid/keystore.p12
+
+      - name: Install fdroidserver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fdroidserver
+
+      - name: Prepare F-Droid repo
+        run: |
+          cp fitforge.apk fdroid/repo/
+          cd fdroid
+          fdroid update --create-metadata --rename-apks
+        env:
+          FDROID_KEY_STORE_PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f fdroid/keystore.p12
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: fdroid
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: update-fdroid
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

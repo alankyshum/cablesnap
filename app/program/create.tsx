@@ -1,11 +1,10 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
-  FlatList,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   IconButton,
@@ -111,7 +110,7 @@ export default function CreateProgram() {
     day.label || day.template_name || "Deleted Template";
 
   const renderItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<ProgramDay>) => (
+    ({ item, index }: { item: ProgramDay; index: number }) => (
       <View
         style={[
           styles.dayRow,
@@ -197,7 +196,7 @@ export default function CreateProgram() {
                 Workout Days ({days.length})
               </Text>
             </View>
-            <FlatList
+            <FlashList
               data={days}
               renderItem={renderItem}
               keyExtractor={(item) => item.id}

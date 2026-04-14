@@ -2,11 +2,11 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  FlatList,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Card,
@@ -15,7 +15,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useFocusEffect } from "expo-router";
-import { LineChart } from "react-native-chart-kit";
+import { CartesianChart, Line } from "victory-native";
 import { getMuscleVolumeForWeek, getMuscleVolumeTrend } from "../lib/db";
 import type { MuscleGroup } from "../lib/types";
 import { MUSCLE_LABELS } from "../lib/types";
@@ -155,28 +155,14 @@ export default function MuscleVolumeSegment() {
     [data]
   );
 
-  const chartWidth = layout.wide
-    ? (layout.width - 64) / 2 - 32
+  const chartWidth = layout.atLeastMedium
+    ? (layout.width - 96) / 2 - 32
     : layout.width - 48;
-
-  const chartConfig = useMemo(() => ({
-    backgroundGradientFrom: theme.colors.surface,
-    backgroundGradientTo: theme.colors.surface,
-    color: () => theme.colors.primary,
-    labelColor: () => theme.colors.onSurfaceVariant,
-    decimalPlaces: 0,
-    propsForBackgroundLines: { stroke: theme.colors.outlineVariant },
-  }), [theme]);
 
   const hasEnoughTrend = useMemo(
     () => trend.filter((t) => t.sets > 0).length >= 2,
     [trend]
   );
-
-  const trendData = useMemo(() => ({
-    labels: trend.map((t) => t.week),
-    datasets: [{ data: trend.length > 0 ? trend.map((t) => t.sets) : [0] }],
-  }), [trend]);
 
   // ---- Render ----
 
@@ -269,8 +255,9 @@ export default function MuscleVolumeSegment() {
         </Card>
       ) : (
         <>
-          {/* Volume Bars */}
-          <Card style={[styles.card, layout.wide && styles.wide, { backgroundColor: theme.colors.surface }]}>
+          {/* Volume Bars + Trend flow side by side on tablet */}
+          <View style={layout.atLeastMedium ? styles.flowRow : undefined}>
+          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: theme.colors.surface }]}>
             <Card.Content>
               <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
                 Sets per Muscle Group
@@ -346,23 +333,29 @@ export default function MuscleVolumeSegment() {
             </Card.Content>
           </Card>
 
-          {/* Trend Chart */}
-          <Card style={[styles.card, layout.wide && styles.wide, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: theme.colors.surface }]}>
             <Card.Content>
               <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
                 {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : "Weekly Trend"}
               </Text>
               {hasEnoughTrend ? (
-                <LineChart
-                  data={trendData}
-                  width={chartWidth}
-                  height={180}
-                  chartConfig={chartConfig}
-                  bezier={!reduced}
-                  withDots
-                  style={styles.chart}
-                  fromZero
-                />
+                <View style={{ width: chartWidth, height: 180 }}>
+                  <CartesianChart
+                    data={trend.map((t) => ({ week: t.week, sets: t.sets }))}
+                    xKey="week"
+                    yKeys={["sets"]}
+                    domainPadding={{ left: 10, right: 10 }}
+                  >
+                    {({ points }) => (
+                      <Line
+                        points={points.sets}
+                        color={theme.colors.primary}
+                        strokeWidth={2}
+                        curveType={reduced ? "linear" : "natural"}
+                      />
+                    )}
+                  </CartesianChart>
+                </View>
               ) : (
                 <Text
                   variant="bodyMedium"
@@ -378,13 +371,15 @@ export default function MuscleVolumeSegment() {
             </Card.Content>
           </Card>
 
+          </View>
+
           {/* Muscle Detail List */}
-          <Card style={[styles.card, layout.wide && styles.wide, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             <Card.Content>
               <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
                 Muscle Group Details
               </Text>
-              <FlatList
+              <FlashList
                 data={data}
                 keyExtractor={(item) => item.muscle}
                 scrollEnabled={false}
@@ -428,10 +423,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
   },
-  wide: {
-    maxWidth: 600,
-    alignSelf: "center",
-    width: "100%" as unknown as number,
+  flowRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  flowCard: {
+    flex: 1,
   },
   bars: {
     position: "relative",
@@ -476,10 +473,6 @@ const styles = StyleSheet.create({
   },
   barFill: {
     height: "100%",
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 8,
   },
   row: {
     flexDirection: "row",

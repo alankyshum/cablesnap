@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  FlatList,
   Pressable,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { FlashList } from "@shopify/flash-list";
 import {
   Card,
   Chip,
@@ -224,31 +224,33 @@ function HistoryScreen() {
     cells.push(renderDay(d));
   }
 
-  const renderSession = useCallback(({ item }: ListRenderItemInfo<SessionRow>) => {
+  const renderSession = useCallback(({ item }: { item: SessionRow }) => {
     const date = new Date(item.started_at).toLocaleDateString(undefined, {
       weekday: "short",
       month: "short",
       day: "numeric",
     });
     return (
-      <Card
-        style={[styles.card, { backgroundColor: theme.colors.surface }]}
-        onPress={() => router.push(`/session/detail/${item.id}`)}
-        accessibilityLabel={`${item.name || "Untitled workout"}, ${date}, ${formatDuration(item.duration_seconds)}, ${item.set_count} sets`}
-        accessibilityRole="button"
-      >
-        <Card.Content>
-          <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
-            {item.name || "Untitled workout"}
-          </Text>
-          <Text
-            variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant }}
-          >
-            {date} · {formatDuration(item.duration_seconds)} · {item.set_count} sets
-          </Text>
-        </Card.Content>
-      </Card>
+      <Animated.View entering={FadeIn.duration(200)}>
+        <Card
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          onPress={() => router.push(`/session/detail/${item.id}`)}
+          accessibilityLabel={`${item.name || "Untitled workout"}, ${date}, ${formatDuration(item.duration_seconds)}, ${item.set_count} sets`}
+          accessibilityRole="button"
+        >
+          <Card.Content>
+            <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+              {item.name || "Untitled workout"}
+            </Text>
+            <Text
+              variant="bodySmall"
+              style={{ color: theme.colors.onSurfaceVariant }}
+            >
+              {date} · {formatDuration(item.duration_seconds)} · {item.set_count} sets
+            </Text>
+          </Card.Content>
+        </Card>
+      </Animated.View>
     );
   }, [theme, router]);
 
@@ -260,12 +262,11 @@ function HistoryScreen() {
   };
 
   return (
-    <FlatList
+    <FlashList
       data={filtered}
       keyExtractor={(item) => item.id}
       renderItem={renderSession}
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={styles.container}
       ListHeaderComponent={
         <>
           {/* Search */}

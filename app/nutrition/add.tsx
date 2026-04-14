@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Card,
@@ -207,14 +208,12 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
   );
 
   return (
-    <FlatList
+    <FlashList
       data={results}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.content}
       style={{ backgroundColor: theme.colors.background }}
     />
   );
@@ -333,13 +332,11 @@ export default function AddFood() {
   );
 
   return (
-    <FlatList
+    <FlashList
       data={tab === "favorites" ? favorites : []}
       keyExtractor={(f) => f.id}
       renderItem={renderFav}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
+      style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
       ListHeaderComponent={
         <>
           <SegmentedButtons

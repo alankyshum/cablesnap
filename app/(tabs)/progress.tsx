@@ -7,6 +7,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Card,
@@ -21,7 +22,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
-import { BarChart, LineChart } from "react-native-chart-kit";
+import { CartesianChart, Bar, Line } from "victory-native";
 import {
   getWeeklySessionCounts,
   getWeeklyVolume,
@@ -123,8 +124,8 @@ export default function Progress() {
     }, [segment, loadWorkouts, loadBody])
   );
 
-  const chartWidth = layout.wide
-    ? (screenWidth - 64) / 2 - 32
+  const chartWidth = layout.atLeastMedium
+    ? (screenWidth - 96) / 2 - 32
     : screenWidth - 48;
 
   const handleSave = async () => {
@@ -211,16 +212,6 @@ export default function Progress() {
 
   // ---- Render helpers ----
 
-  const chartConfig = {
-    backgroundGradientFrom: theme.colors.surface,
-    backgroundGradientTo: theme.colors.surface,
-    color: () => theme.colors.primary,
-    labelColor: () => theme.colors.onSurfaceVariant,
-    barPercentage: 0.6,
-    decimalPlaces: 0,
-    propsForBackgroundLines: { stroke: theme.colors.outlineVariant },
-  };
-
   // ---- Workout segment ----
 
   const renderWorkouts = () => {
@@ -237,55 +228,61 @@ export default function Progress() {
     }
 
     const freqCard = freq.length > 0 ? (
-      <Card style={[styles.card, layout.wide && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
             Sessions Per Week
           </Text>
-          <BarChart
-            data={{
-              labels: freq.map((f) => f.week),
-              datasets: [{ data: freq.map((f) => f.count) }],
-            }}
-            width={chartWidth}
-            height={180}
-            yAxisLabel=""
-            yAxisSuffix=""
-            chartConfig={chartConfig}
-            fromZero
-            showValuesOnTopOfBars
-            style={styles.chartStyle}
-          />
+          <View style={{ width: chartWidth, height: 180 }}>
+            <CartesianChart
+              data={freq.map((f) => ({ week: f.week, count: f.count }))}
+              xKey="week"
+              yKeys={["count"]}
+              domainPadding={{ left: 20, right: 20 }}
+            >
+              {({ points, chartBounds }) => (
+                <Bar
+                  points={points.count}
+                  chartBounds={chartBounds}
+                  color={theme.colors.primary}
+                  roundedCorners={{ topLeft: 4, topRight: 4 }}
+                />
+              )}
+            </CartesianChart>
+          </View>
         </Card.Content>
       </Card>
     ) : null;
 
     const volCard = vol.length > 0 ? (
-      <Card style={[styles.card, layout.wide && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
             Weekly Volume (kg)
           </Text>
-          <BarChart
-            data={{
-              labels: vol.map((v) => v.week),
-              datasets: [{ data: vol.map((v) => v.volume) }],
-            }}
-            width={chartWidth}
-            height={180}
-            yAxisLabel=""
-            yAxisSuffix=""
-            chartConfig={chartConfig}
-            fromZero
-            showValuesOnTopOfBars
-            style={styles.chartStyle}
-          />
+          <View style={{ width: chartWidth, height: 180 }}>
+            <CartesianChart
+              data={vol.map((v) => ({ week: v.week, volume: v.volume }))}
+              xKey="week"
+              yKeys={["volume"]}
+              domainPadding={{ left: 20, right: 20 }}
+            >
+              {({ points, chartBounds }) => (
+                <Bar
+                  points={points.volume}
+                  chartBounds={chartBounds}
+                  color={theme.colors.primary}
+                  roundedCorners={{ topLeft: 4, topRight: 4 }}
+                />
+              )}
+            </CartesianChart>
+          </View>
         </Card.Content>
       </Card>
     ) : null;
 
     const prCard = (
-      <Card style={[styles.card, layout.wide && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
             Personal Records
@@ -311,7 +308,7 @@ export default function Progress() {
     );
 
     const sessionsCard = (
-      <Card style={[styles.card, layout.wide && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
             Recent Sessions
@@ -342,7 +339,7 @@ export default function Progress() {
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         ListHeaderComponent={
-          layout.wide ? (
+          layout.atLeastMedium ? (
             <>
               <View style={styles.grid}>
                 {freqCard}
@@ -527,24 +524,35 @@ export default function Progress() {
             <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
               Weight Trend
             </Text>
-            <LineChart
-              data={{
-                labels: paddedLabels,
-                datasets: [
-                  { data: chart.map((d) => toDisplay(d.weight, unit)), color: () => theme.colors.primary },
-                  { data: avg.map((d) => toDisplay(d.avg, unit)), color: () => theme.colors.tertiary, strokeDashArray: [5, 5] },
-                ],
-              }}
-              width={chartWidth}
-              height={200}
-              chartConfig={{
-                ...chartConfig,
-                decimalPlaces: 1,
-              }}
-              bezier
-              style={styles.chartStyle}
-              withDots={chart.length <= 30}
-            />
+            <View style={{ width: chartWidth, height: 200 }}>
+              <CartesianChart
+                data={chart.map((d, i) => ({
+                  date: paddedLabels[i] || "",
+                  weight: toDisplay(d.weight, unit),
+                  avg: avg[i] ? toDisplay(avg[i].avg, unit) : toDisplay(d.weight, unit),
+                }))}
+                xKey="date"
+                yKeys={["weight", "avg"]}
+                domainPadding={{ left: 10, right: 10 }}
+              >
+                {({ points }) => (
+                  <>
+                    <Line
+                      points={points.weight}
+                      color={theme.colors.primary}
+                      strokeWidth={2}
+                      curveType="natural"
+                    />
+                    <Line
+                      points={points.avg}
+                      color={theme.colors.tertiary}
+                      strokeWidth={2}
+                      curveType="natural"
+                    />
+                  </>
+                )}
+              </CartesianChart>
+            </View>
             <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
               <Text variant="bodySmall" style={{ color: theme.colors.primary }}>● Actual</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.tertiary }}>● 7-day avg</Text>
@@ -623,13 +631,12 @@ export default function Progress() {
 
     return (
       <View style={{ flex: 1 }}>
-        <FlatList
+        <FlashList
           data={entries}
           keyExtractor={(item) => item.id}
           renderItem={renderEntry}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
-          contentContainerStyle={styles.content}
           ListHeaderComponent={
             <>
               {weightCard}
@@ -738,7 +745,7 @@ export default function Progress() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.segmentContainer}>
+      <View style={[styles.segmentContainer, { paddingHorizontal: layout.horizontalPadding }]}>
         <SegmentedButtons
           value={segment}
           onValueChange={setSegment}
@@ -784,10 +791,6 @@ const styles = StyleSheet.create({
   },
   wideCard: {
     flex: 1,
-  },
-  chartStyle: {
-    borderRadius: 8,
-    marginLeft: -16,
   },
   prRow: {
     flexDirection: "row",

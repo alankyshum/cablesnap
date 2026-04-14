@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, FlatList, Linking, StyleSheet, View } from "react-native";
+import { Alert, Linking, StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   SegmentedButtons,
@@ -187,12 +188,10 @@ export default function FeedbackScreen() {
 
   return (
     <>
-      <FlatList
+      <FlashList
         data={ITEMS}
         keyExtractor={(item) => item}
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
+        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
         renderItem={() => (
           <View>
             <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>

@@ -85,8 +85,7 @@ describe('PlateCalculator screen', () => {
     })
   })
 
-  it('uses FlatList for plate list (no ScrollView anti-pattern)', async () => {
-    // Structural test: verify the component source does not use ScrollView
+  it('uses FlashList for plate list (no ScrollView anti-pattern)', async () => {
     const fs = require('fs')
     const path = require('path')
     const src = fs.readFileSync(
@@ -94,7 +93,7 @@ describe('PlateCalculator screen', () => {
       'utf-8'
     )
     expect(src).not.toMatch(/import\s*\{[^}]*ScrollView[^}]*\}\s*from\s*["']react-native["']/)
-    expect(src).toMatch(/import\s*\{[^}]*FlatList[^}]*\}\s*from\s*["']react-native["']/)
+    expect(src).toMatch(/import\s*\{[^}]*FlashList[^}]*\}\s*from\s*["']@shopify\/flash-list["']/)
   })
 
   it('shows plate list items for 100kg target with 20kg bar', async () => {

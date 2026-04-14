@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   AccessibilityInfo,
-  Animated,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +9,12 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  interpolateColor,
+} from "react-native-reanimated";
 import {
   Button,
   Checkbox,
@@ -28,6 +33,7 @@ import { play as playAudio, setEnabled as setAudioEnabled } from "../../lib/audi
 import {
   addSet,
   cancelSession,
+  deleteSet,
   completeSession,
   completeSet,
   getBodySettings,
@@ -58,6 +64,7 @@ import { TRAINING_MODE_LABELS } from "../../lib/types";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { suggest, type Suggestion } from "../../lib/rm";
 import TrainingModeSelector from "../../components/TrainingModeSelector";
+import SwipeToDelete from "../../components/SwipeToDelete";
 import { formatTime } from "../../lib/format";
 
 type SetWithMeta = WorkoutSet & {
@@ -106,7 +113,14 @@ export default function ActiveSession() {
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [step, setStep] = useState(2.5);
-  const restFlash = useRef(new Animated.Value(0)).current;
+  const restFlash = useSharedValue(0);
+  const restFlashStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      restFlash.value,
+      [0, 1],
+      [theme.colors.primaryContainer, theme.colors.primary],
+    ),
+  }));
   const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Load timer sound setting
@@ -351,13 +365,10 @@ export default function ActiveSession() {
       // Audio cue — rest complete
       playAudio("complete");
 
-      // Flash animation on rest timer card
-      restFlash.setValue(1);
-      Animated.timing(restFlash, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: false,
-      }).start();
+      // eslint-disable-next-line react-hooks/immutability
+      restFlash.value = 1;
+      // eslint-disable-next-line react-hooks/immutability
+      restFlash.value = withTiming(0, { duration: 400 });
     }
 
     // Audio cue — 3-2-1 countdown tick
@@ -366,7 +377,7 @@ export default function ActiveSession() {
     }
 
     prevRest.current = rest;
-  }, [rest]);
+  }, [rest, restFlash]);
 
   useEffect(() => {
     return () => {
@@ -496,6 +507,7 @@ export default function ActiveSession() {
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups, maxes]);
 
   const finish = () => {
@@ -610,16 +622,8 @@ export default function ActiveSession() {
         ListHeaderComponent={
           <>
         {rest > 0 && (
-          <Animated.View
-            style={[
-              styles.restBanner,
-              {
-                backgroundColor: restFlash.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [theme.colors.primaryContainer, theme.colors.primary],
-                }),
-              },
-            ]}
+          <Reanimated.View
+            style={[styles.restBanner, restFlashStyle]}
             accessibilityLiveRegion="polite"
           >
             <Text variant="headlineLarge" style={{ color: theme.colors.onPrimaryContainer, fontWeight: "700" }} accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds`}>
@@ -638,7 +642,7 @@ export default function ActiveSession() {
             >
               Skip
             </Button>
-          </Animated.View>
+          </Reanimated.View>
         )}
 
         {/* Next exercise hint for supersets */}
@@ -792,12 +796,14 @@ export default function ActiveSession() {
 
             {group.sets.map((set) => (
               <View key={set.id}>
+              <SwipeToDelete onDelete={async () => { await deleteSet(set.id); await load(); }}>
                 <View
                   style={[
                     styles.setRow,
                     set.completed && {
                       backgroundColor: theme.colors.primaryContainer + "40",
                     },
+                    { backgroundColor: theme.colors.background },
                   ]}
                 >
                   <Text
@@ -887,6 +893,7 @@ export default function ActiveSession() {
                     accessibilityLabel="Set notes"
                   />
                 </View>
+              </SwipeToDelete>
 
                 {/* RPE chips — visible only for completed sets */}
                 {set.completed && (
@@ -1066,7 +1073,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    padding: 16,
+    paddingVertical: 16,
     paddingBottom: 48,
   },
   group: {

@@ -174,109 +174,202 @@ async function collectContrastIssues(page: Page) {
   });
 }
 
+async function collectTabBarMetrics(page: Page) {
+  return page.evaluate(() => {
+    const tabBar = document.querySelector('[role="tablist"]');
+    if (!tabBar) return { found: false, labels: [] };
+
+    const tabs = tabBar.querySelectorAll('[role="tab"]');
+    const labels: { text: string; scrollWidth: number; clientWidth: number; truncated: boolean }[] = [];
+
+    for (const tab of tabs) {
+      const textEl = tab.querySelector('[dir="auto"]') || tab;
+      const text = textEl.textContent?.trim() || "";
+      if (!text) continue;
+
+      const sw = (textEl as HTMLElement).scrollWidth;
+      const cw = (textEl as HTMLElement).clientWidth;
+      labels.push({
+        text,
+        scrollWidth: sw,
+        clientWidth: cw,
+        truncated: sw > cw + 1,
+      });
+    }
+
+    return { found: true, labels };
+  });
+}
+
+async function collectContentWidth(page: Page) {
+  return page.evaluate(() => {
+    const cards = document.querySelectorAll('[class*="card"], [class*="Card"]');
+    let maxCardWidth = 0;
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      if (rect.width > maxCardWidth) maxCardWidth = rect.width;
+    }
+    return { maxCardWidth: Math.round(maxCardWidth), viewport: window.innerWidth };
+  });
+}
+
 // ── Tests ────────────────────────────────────────────────────────────
 
-test.describe("Design quality — Exercises page", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/exercises");
+const SCREENS = [
+  { name: "Exercises", path: "/exercises" },
+  { name: "Workouts", path: "/" },
+  { name: "Settings", path: "/settings" },
+];
+
+for (const screen of SCREENS) {
+  test.describe(`Design quality — ${screen.name} page`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto(screen.path);
+      await page.waitForSelector('[role="button"]', { timeout: 10_000 });
+      await page.waitForTimeout(500);
+    });
+
+    test("typography: uses a limited font size scale (< 12 distinct sizes)", async ({
+      page,
+    }) => {
+      const m = await collectDesignMetrics(page);
+      expect(
+        m.fontSizeCount,
+        `Found ${m.fontSizeCount} distinct font sizes — too many indicates inconsistent typography.\nSizes: ${JSON.stringify(m.fontSizes)}`
+      ).toBeLessThan(12);
+    });
+
+    test("color: background palette has fewer than 15 distinct colors", async ({
+      page,
+    }) => {
+      const m = await collectDesignMetrics(page);
+      expect(
+        m.bgColorCount,
+        `Found ${m.bgColorCount} distinct background colors — suggests an uncontrolled palette`
+      ).toBeLessThan(15);
+    });
+
+    test("color: text palette has fewer than 10 distinct colors", async ({
+      page,
+    }) => {
+      const m = await collectDesignMetrics(page);
+      expect(
+        m.textColorCount,
+        `Found ${m.textColorCount} distinct text colors — text should use a small set of semantic colors`
+      ).toBeLessThan(10);
+    });
+
+    test("spacing: uses a limited spacing scale (< 20 distinct values)", async ({
+      page,
+    }) => {
+      const m = await collectDesignMetrics(page);
+      expect(
+        m.uniqueGaps.length,
+        `Found ${m.uniqueGaps.length} distinct spacing values — too many indicates ad-hoc spacing.\nValues: ${m.uniqueGaps.join(", ")}`
+      ).toBeLessThan(20);
+    });
+
+    test("responsiveness: no horizontal overflow", async ({
+      page,
+    }) => {
+      const m = await collectDesignMetrics(page);
+      expect(
+        m.overflowing,
+        `${m.overflowing.length} elements overflow the viewport:\n${m.overflowing.map((o) => `  <${o.tag}> "${o.text}"`).join("\n")}`
+      ).toHaveLength(0);
+    });
+
+    test("accessibility: all touch targets are at least 44x44px", async ({
+      page,
+    }, testInfo) => {
+      const m = await collectDesignMetrics(page);
+      const undersized = m.touchTargets.filter(
+        (t) => t.w < 44 || t.h < 44
+      );
+
+      if (undersized.length > 0) {
+        testInfo.annotations.push({
+          type: "touch-target-warning",
+          description: undersized
+            .map((t) => `"${t.text}" (${t.w}x${t.h})`)
+            .join("; "),
+        });
+      }
+
+      const appUndersized = undersized.filter(
+        (t) => !["Dismiss", "Retry", "OK"].includes(t.text)
+      );
+      expect(
+        appUndersized,
+        `${appUndersized.length} app touch targets below 44px minimum:\n${appUndersized.map((t) => `  "${t.text}" (${t.w}x${t.h})`).join("\n")}`
+      ).toHaveLength(0);
+    });
+
+    test("accessibility: text contrast meets WCAG AA (4.5:1 normal, 3:1 large)", async ({
+      page,
+    }, testInfo) => {
+      const issues = await collectContrastIssues(page);
+      if (issues.length > 0) {
+        testInfo.annotations.push({
+          type: "contrast-warning",
+          description: issues
+            .map(
+              (i) =>
+                `"${i.text}" ratio=${i.ratio} (fg=${i.fg}, bg=${i.bg}, ${i.fontSize}px)`
+            )
+            .join("; "),
+        });
+      }
+    });
+  });
+}
+
+// ── Tab Bar ─────────────────────────────────────────────────────────
+
+test.describe("Tab bar — label truncation", () => {
+  test("no tab labels are truncated on current viewport", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector('[role="tab"]', { timeout: 10_000 });
+    await page.waitForTimeout(500);
+
+    const metrics = await collectTabBarMetrics(page);
+
+    if (!metrics.found) {
+      test.skip(!metrics.found, "No tab bar found on this viewport");
+      return;
+    }
+
+    const truncated = metrics.labels.filter((l) => l.truncated);
+    expect(
+      truncated,
+      `Tab labels truncated:\n${truncated.map((l) => `  "${l.text}" scrollWidth=${l.scrollWidth} > clientWidth=${l.clientWidth}`).join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+// ── Content Max-Width (tablet/desktop only) ─────────────────────────
+
+test.describe("Responsiveness — content width constraint", () => {
+  test("content cards don't exceed 720px on wide viewports", async ({
+    page,
+  }, testInfo) => {
+    const viewport = page.viewportSize();
+    if (!viewport || viewport.width < 600) {
+      test.skip(true, "Only relevant for tablet/desktop viewports");
+      return;
+    }
+
+    await page.goto("/settings");
     await page.waitForSelector('[role="button"]', { timeout: 10_000 });
     await page.waitForTimeout(500);
-  });
 
-  test("typography: uses a limited font size scale (< 12 distinct sizes)", async ({
-    page,
-  }) => {
-    const m = await collectDesignMetrics(page);
-    expect(
-      m.fontSizeCount,
-      `Found ${m.fontSizeCount} distinct font sizes — too many indicates inconsistent typography.\nSizes: ${JSON.stringify(m.fontSizes)}`
-    ).toBeLessThan(12);
-  });
+    const metrics = await collectContentWidth(page);
 
-  test("color: background palette has fewer than 15 distinct colors", async ({
-    page,
-  }) => {
-    const m = await collectDesignMetrics(page);
-    expect(
-      m.bgColorCount,
-      `Found ${m.bgColorCount} distinct background colors — suggests an uncontrolled palette`
-    ).toBeLessThan(15);
-  });
-
-  test("color: text palette has fewer than 10 distinct colors", async ({
-    page,
-  }) => {
-    const m = await collectDesignMetrics(page);
-    expect(
-      m.textColorCount,
-      `Found ${m.textColorCount} distinct text colors — text should use a small set of semantic colors`
-    ).toBeLessThan(10);
-  });
-
-  test("spacing: uses a limited spacing scale (< 20 distinct values)", async ({
-    page,
-  }) => {
-    const m = await collectDesignMetrics(page);
-    expect(
-      m.uniqueGaps.length,
-      `Found ${m.uniqueGaps.length} distinct spacing values — too many indicates ad-hoc spacing.\nValues: ${m.uniqueGaps.join(", ")}`
-    ).toBeLessThan(20);
-  });
-
-  test("responsiveness: no horizontal overflow on mobile viewport", async ({
-    page,
-  }) => {
-    const m = await collectDesignMetrics(page);
-    expect(
-      m.overflowing,
-      `${m.overflowing.length} elements overflow the viewport:\n${m.overflowing.map((o) => `  <${o.tag}> "${o.text}"`).join("\n")}`
-    ).toHaveLength(0);
-  });
-
-  test("accessibility: all touch targets are at least 44x44px", async ({
-    page,
-  }, testInfo) => {
-    const m = await collectDesignMetrics(page);
-    const undersized = m.touchTargets.filter(
-      (t) => t.w < 44 || t.h < 44
-    );
-
-    if (undersized.length > 0) {
+    if (metrics.maxCardWidth > 720) {
       testInfo.annotations.push({
-        type: "touch-target-warning",
-        description: undersized
-          .map((t) => `"${t.text}" (${t.w}x${t.h})`)
-          .join("; "),
+        type: "content-width-warning",
+        description: `Widest card is ${metrics.maxCardWidth}px on ${metrics.viewport}px viewport (max recommended: 720px)`,
       });
     }
-
-    // Only hard-fail for app-level buttons (exclude framework banner actions)
-    const appUndersized = undersized.filter(
-      (t) => !["Dismiss", "Retry", "OK"].includes(t.text)
-    );
-    expect(
-      appUndersized,
-      `${appUndersized.length} app touch targets below 44px minimum:\n${appUndersized.map((t) => `  "${t.text}" (${t.w}x${t.h})`).join("\n")}`
-    ).toHaveLength(0);
-  });
-
-  test("accessibility: text contrast meets WCAG AA (4.5:1 normal, 3:1 large)", async ({
-    page,
-  }, testInfo) => {
-    const issues = await collectContrastIssues(page);
-    if (issues.length > 0) {
-      testInfo.annotations.push({
-        type: "contrast-warning",
-        description: issues
-          .map(
-            (i) =>
-              `"${i.text}" ratio=${i.ratio} (fg=${i.fg}, bg=${i.bg}, ${i.fontSize}px)`
-          )
-          .join("; "),
-      });
-    }
-    // Warn but don't hard-fail for contrast (pre-existing theme issue)
-    // Uncomment the next line to make contrast a hard gate:
-    // expect(issues, `Contrast issues:\n${issues.map(i => `  "${i.text}" ${i.ratio}:1`).join('\n')}`).toHaveLength(0);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "fitforge",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -15,11 +15,19 @@
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
     "test:e2e:design": "playwright test e2e/design-quality.spec.ts e2e/chip-layout.spec.ts",
+    "test:maestro": "maestro test .maestro/flows/",
+    "test:maestro:record": "maestro record",
+    "build:apk": "eas build -p android --profile preview --local",
+    "build:apk:prod": "eas build -p android --profile production --local",
+    "build:apk:cloud": "eas build -p android --profile preview",
+    "install:apk": "adb install -r $(ls -t *.apk | head -1)",
     "prepare": "husky"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/netinfo": "^12.0.1",
+    "@shopify/flash-list": "2.0.2",
+    "@shopify/react-native-skia": "2.2.12",
     "@tanstack/react-query": "^5.99.0",
     "expo": "~54.0.33",
     "expo-av": "~16.0.8",
@@ -41,7 +49,6 @@
     "react-dom": "19.1.0",
     "react-hook-form": "^7.72.1",
     "react-native": "0.81.5",
-    "react-native-chart-kit": "^6.12.0",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-paper": "^5.15.0",
     "react-native-reanimated": "~4.1.1",
@@ -51,6 +58,7 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
+    "victory-native": "^41.20.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {

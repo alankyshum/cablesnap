@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  FlatList,
   Pressable,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Checkbox,
@@ -27,6 +26,7 @@ import {
   unlinkSingleExercise,
 } from "../../lib/db";
 import type { TemplateExercise, WorkoutTemplate } from "../../lib/types";
+import SwipeToDelete from "../../components/SwipeToDelete";
 
 function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
   const count = exercises.filter((e) => e.link_id === linkId).length;
@@ -160,7 +160,7 @@ export default function EditTemplate() {
   }, [load]);
 
   const renderItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<TemplateExercise>) => {
+    ({ item, index }: { item: TemplateExercise; index: number }) => {
       const linkIdx = item.link_id ? linkIds.indexOf(item.link_id) : -1;
       const color = linkIdx >= 0 ? palette[linkIdx % palette.length] : undefined;
       const isFirst = item.link_id ? exercises.findIndex((e) => e.link_id === item.link_id) === index : false;
@@ -191,98 +191,100 @@ export default function EditTemplate() {
             </View>
           )}
 
-          <Pressable
-            onLongPress={() => {
-              if (!selecting) startSelection(item.id);
-            }}
-            style={[
-              styles.row,
-              {
-                backgroundColor: theme.colors.surface,
-                borderBottomColor: theme.colors.outlineVariant,
-                borderLeftWidth: color ? 4 : 0,
-                borderLeftColor: color ?? "transparent",
-              },
-            ]}
-            accessibilityRole={selecting ? "checkbox" : "none"}
-            accessibilityState={selecting ? { selected: selected.has(item.id) } : undefined}
-            accessibilityLabel={selecting
-              ? `Select ${item.exercise?.name ?? "exercise"} for superset`
-              : undefined}
-          >
-            {selecting && (
-              <Checkbox
-                status={selected.has(item.id) ? "checked" : "unchecked"}
-                onPress={() => toggleSelect(item.id)}
-              />
-            )}
-            <View style={styles.info}>
-              <Text
-                variant="titleSmall"
-                style={{
-                  color: item.exercise?.deleted_at ? theme.colors.onSurfaceVariant : theme.colors.onSurface,
-                  fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
-                }}
-              >
-                {item.exercise?.name ?? "Unknown"}{item.exercise?.deleted_at ? " (removed)" : ""}
-              </Text>
-              <Text
-                variant="bodySmall"
-                style={{ color: theme.colors.onSurfaceVariant }}
-              >
-                {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
-              </Text>
-              {item.exercise?.deleted_at && !selecting && (
-                <Button
-                  mode="text"
-                  compact
-                  onPress={() => router.push(`/template/${id}?replaceTeId=${item.id}`)}
-                  style={{ alignSelf: "flex-start", minHeight: 48, minWidth: 48 }}
-                  accessibilityLabel={`Replace ${item.exercise.name}`}
-                  accessibilityRole="button"
+          <SwipeToDelete onDelete={() => remove(item.id)} enabled={!selecting}>
+            <Pressable
+              onLongPress={() => {
+                if (!selecting) startSelection(item.id);
+              }}
+              style={[
+                styles.row,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderBottomColor: theme.colors.outlineVariant,
+                  borderLeftWidth: color ? 4 : 0,
+                  borderLeftColor: color ?? "transparent",
+                },
+              ]}
+              accessibilityRole={selecting ? "checkbox" : "none"}
+              accessibilityState={selecting ? { selected: selected.has(item.id) } : undefined}
+              accessibilityLabel={selecting
+                ? `Select ${item.exercise?.name ?? "exercise"} for superset`
+                : undefined}
+            >
+              {selecting && (
+                <Checkbox
+                  status={selected.has(item.id) ? "checked" : "unchecked"}
+                  onPress={() => toggleSelect(item.id)}
+                />
+              )}
+              <View style={styles.info}>
+                <Text
+                  variant="titleSmall"
+                  style={{
+                    color: item.exercise?.deleted_at ? theme.colors.onSurfaceVariant : theme.colors.onSurface,
+                    fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
+                  }}
                 >
-                  Replace
-                </Button>
-              )}
-              {item.link_id && !selecting && !item.exercise?.deleted_at && (
-                <Text variant="labelSmall" style={{ color, marginTop: 2 }}>
-                  Linked — rotate in session
+                  {item.exercise?.name ?? "Unknown"}{item.exercise?.deleted_at ? " (removed)" : ""}
                 </Text>
-              )}
-            </View>
-            {!selecting && (
-              <View style={styles.actions}>
-                {item.link_id && (
-                  <IconButton
-                    icon="link-off"
-                    size={16}
-                    onPress={() => handleUnlinkSingle(item.id, item.link_id!)}
-                    accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"} from superset`}
-                  />
+                <Text
+                  variant="bodySmall"
+                  style={{ color: theme.colors.onSurfaceVariant }}
+                >
+                  {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
+                </Text>
+                {item.exercise?.deleted_at && !selecting && (
+                  <Button
+                    mode="text"
+                    compact
+                    onPress={() => router.push(`/template/${id}?replaceTeId=${item.id}`)}
+                    style={{ alignSelf: "flex-start", minHeight: 48, minWidth: 48 }}
+                    accessibilityLabel={`Replace ${item.exercise.name}`}
+                    accessibilityRole="button"
+                  >
+                    Replace
+                  </Button>
                 )}
-                <IconButton
-                  icon="arrow-up"
-                  size={18}
-                  onPress={() => move(index, -1)}
-                  disabled={index === 0}
-                  accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} up`}
-                />
-                <IconButton
-                  icon="arrow-down"
-                  size={18}
-                  onPress={() => move(index, 1)}
-                  disabled={index === exercises.length - 1}
-                  accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`}
-                />
-                <IconButton
-                  icon="close"
-                  size={18}
-                  onPress={() => remove(item.id)}
-                  accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`}
-                />
+                {item.link_id && !selecting && !item.exercise?.deleted_at && (
+                  <Text variant="labelSmall" style={{ color, marginTop: 2 }}>
+                    Linked — rotate in session
+                  </Text>
+                )}
               </View>
-            )}
-          </Pressable>
+              {!selecting && (
+                <View style={styles.actions}>
+                  {item.link_id && (
+                    <IconButton
+                      icon="link-off"
+                      size={16}
+                      onPress={() => handleUnlinkSingle(item.id, item.link_id!)}
+                      accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"} from superset`}
+                    />
+                  )}
+                  <IconButton
+                    icon="arrow-up"
+                    size={18}
+                    onPress={() => move(index, -1)}
+                    disabled={index === 0}
+                    accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} up`}
+                  />
+                  <IconButton
+                    icon="arrow-down"
+                    size={18}
+                    onPress={() => move(index, 1)}
+                    disabled={index === exercises.length - 1}
+                    accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`}
+                  />
+                  <IconButton
+                    icon="close"
+                    size={18}
+                    onPress={() => remove(item.id)}
+                    accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`}
+                  />
+                </View>
+              )}
+            </Pressable>
+          </SwipeToDelete>
 
           {/* Bottom border for link group */}
           {isLast && item.link_id && (
@@ -374,9 +376,9 @@ export default function EditTemplate() {
           </View>
         )}
 
-        <FlatList
+        <FlashList
           data={exercises}
-          renderItem={starter ? ({ item }: ListRenderItemInfo<TemplateExercise>) => {
+          renderItem={starter ? ({ item }: { item: TemplateExercise }) => {
             const linkIdx = item.link_id ? linkIds.indexOf(item.link_id) : -1;
             const color = linkIdx >= 0 ? palette[linkIdx % palette.length] : undefined;
             return (

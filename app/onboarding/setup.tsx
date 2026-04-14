@@ -1,4 +1,5 @@
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { Button, SegmentedButtons, Text, TouchableRipple, useTheme } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -108,7 +109,7 @@ export default function Setup() {
   );
 
   return (
-    <FlatList
+    <FlashList
       data={LEVELS}
       keyExtractor={(item) => item.value}
       style={{ flex: 1, backgroundColor: theme.colors.background }}
@@ -136,7 +137,7 @@ export default function Setup() {
           >
             <View style={styles.cardRow}>
               <MaterialCommunityIcons
-                name={item.icon as any}
+                name={item.icon as React.ComponentProps<typeof MaterialCommunityIcons>["name"]}
                 size={28}
                 color={selected ? theme.colors.primary : theme.colors.onSurfaceVariant}
                 style={styles.cardIcon}

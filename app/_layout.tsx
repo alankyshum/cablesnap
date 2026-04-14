@@ -1,4 +1,14 @@
+import "react-native-reanimated";
+
+// Reanimated 4 performance flags for New Architecture on Android
+(global as Record<string, unknown>)._reanimatedFeatureFlags = {
+  ...((global as Record<string, unknown>)._reanimatedFeatureFlags as Record<string, boolean> ?? {}),
+  ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS: true,
+  USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS: true,
+};
+
 import { useColorScheme, Platform, AppState } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider, Banner, Snackbar } from "react-native-paper";
 import { ThemeProvider } from "@react-navigation/native";
 import { Redirect, Stack, usePathname, useRouter } from "expo-router";
@@ -109,6 +119,7 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <ErrorBoundary>
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
@@ -135,6 +146,7 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: false,
+              animation: "fade_from_bottom",
             }}
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -188,6 +200,8 @@ export default function RootLayout() {
               options={{
                 headerShown: true,
                 title: "Pick Exercise",
+                presentation: "modal",
+                animation: "slide_from_bottom",
                 headerStyle,
                 headerTintColor,
               }}
@@ -215,6 +229,8 @@ export default function RootLayout() {
               options={{
                 headerShown: true,
                 title: "Pick Template",
+                presentation: "modal",
+                animation: "slide_from_bottom",
                 headerStyle,
                 headerTintColor,
               }}
@@ -242,6 +258,8 @@ export default function RootLayout() {
               options={{
                 headerShown: true,
                 title: "Add Food",
+                presentation: "modal",
+                animation: "slide_from_bottom",
                 headerStyle,
                 headerTintColor,
               }}
@@ -251,6 +269,8 @@ export default function RootLayout() {
               options={{
                 headerShown: true,
                 title: "Macro Targets",
+                presentation: "modal",
+                animation: "slide_from_bottom",
                 headerStyle,
                 headerTintColor,
               }}
@@ -362,5 +382,6 @@ export default function RootLayout() {
       </OnboardingContext.Provider>
       </QueryProvider>
     </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

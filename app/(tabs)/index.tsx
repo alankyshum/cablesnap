@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
   Alert,
-  FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
-  type ListRenderItemInfo,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   Button,
   Card,
@@ -41,16 +41,17 @@ import {
   getWeekAdherence,
   isTodayCompleted,
   startSession,
-  type ScheduleEntry,
 } from "../../lib/db";
-import type { Program, ProgramDay, WorkoutSession, WorkoutTemplate } from "../../lib/types";
-import { semantic } from "../../constants/theme";
+import type { Program, WorkoutTemplate } from "../../lib/types";
+
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { DIFFICULTY_LABELS } from "../../lib/types";
 import { formatDuration, formatDateShort, computeStreak } from "../../lib/format";
 import { useFocusRefetch } from "../../lib/query";
 import { useSnackbar } from "../../components/SnackbarProvider";
+import { useLayout } from "../../lib/layout";
+import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
 
 async function loadHomeData() {
   const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
@@ -106,6 +107,7 @@ export default function Workouts() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showSnack } = useSnackbar();
+  const layout = useLayout();
   const [segment, setSegment] = useState("templates");
   const [menu, setMenu] = useState<string | null>(null);
 
@@ -233,12 +235,14 @@ export default function Workouts() {
   const prCount = recentPRs.length;
 
   return (
-    <View
+    <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16 }}
     >
       {/* Stats Row */}
       <View style={styles.statsRow}>
-        <View
+        <Animated.View
+          entering={FadeInDown.delay(0).duration(300)}
           style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
           accessibilityLabel={`${streak} week streak`}
         >
@@ -253,8 +257,9 @@ export default function Workouts() {
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
             {streak === 1 ? "week" : "weeks"}
           </Text>
-        </View>
-        <View
+        </Animated.View>
+        <Animated.View
+          entering={FadeInDown.delay(60).duration(300)}
           style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
           accessibilityLabel={scheduled.length > 0 ? `${weekDone} of ${scheduled.length} workouts this week` : `${weekDone} workouts this week`}
         >
@@ -269,8 +274,9 @@ export default function Workouts() {
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
             {weekSub}
           </Text>
-        </View>
-        <View
+        </Animated.View>
+        <Animated.View
+          entering={FadeInDown.delay(120).duration(300)}
           style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
           accessibilityLabel={`${prCount} recent personal records`}
         >
@@ -285,7 +291,7 @@ export default function Workouts() {
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
             recent
           </Text>
-        </View>
+        </Animated.View>
       </View>
 
       {/* Resume active session banner */}
@@ -429,45 +435,40 @@ export default function Workouts() {
         </View>
       )}
 
-      {/* Set Schedule button (when no schedule exists) */}
-      {!adherence.some((a) => a.scheduled) && (
+      {/* Schedule + Quick Start */}
+      <View style={styles.actionRow}>
+        {!adherence.some((a) => a.scheduled) && (
+          <Button
+            mode="text"
+            icon="calendar-plus"
+            compact
+            onPress={() => router.push("/schedule")}
+            accessibilityLabel="Set weekly schedule"
+          >
+            Set Schedule
+          </Button>
+        )}
+        {adherence.some((a) => a.scheduled) && (
+          <Button
+            mode="text"
+            icon="pencil"
+            compact
+            onPress={() => router.push("/schedule")}
+            accessibilityLabel="Edit weekly schedule"
+          >
+            Edit Schedule
+          </Button>
+        )}
         <Button
-          mode="text"
-          icon="calendar-plus"
-          compact
-          onPress={() => router.push("/schedule")}
-          style={styles.scheduleLink}
-          accessibilityLabel="Set weekly schedule"
+          mode="contained"
+          icon="flash"
+          onPress={quickStart}
+          contentStyle={styles.quickStartContent}
+          accessibilityLabel="Quick start workout"
         >
-          Set Schedule
+          Quick Start
         </Button>
-      )}
-
-      {/* Edit schedule link (when schedule exists) */}
-      {adherence.some((a) => a.scheduled) && (
-        <Button
-          mode="text"
-          icon="pencil"
-          compact
-          onPress={() => router.push("/schedule")}
-          style={styles.scheduleLink}
-          accessibilityLabel="Edit weekly schedule"
-        >
-          Edit Schedule
-        </Button>
-      )}
-
-      {/* Quick Start */}
-      <Button
-        mode="contained"
-        icon="flash"
-        onPress={quickStart}
-        style={styles.quickStart}
-        contentStyle={styles.quickStartContent}
-        accessibilityLabel="Quick start workout"
-      >
-        Quick Start
-      </Button>
+      </View>
 
       {/* Segmented Control */}
       <SegmentedButtons
@@ -526,13 +527,11 @@ export default function Workouts() {
             ) : (
               <>
                 {userTemplates.length > 0 && (
-                  <FlatList
-                    data={userTemplates}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                    renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => (
+                  <FlowContainer>
+                    {userTemplates.map((item) => (
                       <Card
-                        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                        key={item.id}
+                        style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                       >
                         <Card.Content style={styles.cardContent}>
                           <Pressable
@@ -563,8 +562,8 @@ export default function Workouts() {
                           />
                         </Card.Content>
                       </Card>
-                    )}
-                  />
+                    ))}
+                  </FlowContainer>
                 )}
 
                 {/* Starter Workouts */}
@@ -575,15 +574,13 @@ export default function Workouts() {
                         Starter Workouts
                       </Text>
                     </View>
-                    <FlatList
-                      data={starters}
-                      keyExtractor={(item) => item.id}
-                      scrollEnabled={false}
-                      renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => {
+                    <FlowContainer>
+                      {starters.map((item) => {
                         const meta = starterMeta(item.id);
                         return (
                           <Card
-                            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                            key={item.id}
+                            style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                           >
                             <Card.Content style={styles.cardContent}>
                               <Pressable
@@ -643,8 +640,8 @@ export default function Workouts() {
                             </Card.Content>
                           </Card>
                         );
-                      }}
-                    />
+                      })}
+                    </FlowContainer>
                   </>
                 )}
               </>
@@ -691,13 +688,11 @@ export default function Workouts() {
             ) : (
               <>
                 {userPrograms.length > 0 && (
-                  <FlatList
-                    data={userPrograms}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                    renderItem={({ item }: ListRenderItemInfo<Program>) => (
+                  <FlowContainer>
+                    {userPrograms.map((item) => (
                       <Card
-                        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                        key={item.id}
+                        style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                         onPress={() => router.push(`/program/${item.id}`)}
                         onLongPress={() => confirmDeleteProgram(item)}
                         accessibilityLabel={`Program: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
@@ -728,8 +723,8 @@ export default function Workouts() {
                           )}
                         </Card.Content>
                       </Card>
-                    )}
-                  />
+                    ))}
+                  </FlowContainer>
                 )}
 
                 {/* Starter Programs */}
@@ -740,13 +735,11 @@ export default function Workouts() {
                         Starter Programs
                       </Text>
                     </View>
-                    <FlatList
-                      data={starterPrograms}
-                      keyExtractor={(item) => item.id}
-                      scrollEnabled={false}
-                      renderItem={({ item }: ListRenderItemInfo<Program>) => (
+                    <FlowContainer>
+                      {starterPrograms.map((item) => (
                         <Card
-                          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                          key={item.id}
+                          style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                         >
                           <Card.Content style={styles.cardContent}>
                             <Pressable
@@ -795,8 +788,8 @@ export default function Workouts() {
                             </Menu>
                           </Card.Content>
                         </Card>
-                      )}
-                    />
+                      ))}
+                    </FlowContainer>
                   </>
                 )}
               </>
@@ -835,16 +828,14 @@ export default function Workouts() {
             </Text>
           </View>
         ) : (
-          <FlatList
-            data={sessions}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            renderItem={({ item }: ListRenderItemInfo<WorkoutSession>) => {
+          <FlowContainer>
+            {sessions.map((item, index) => {
               const rpe = avgRPEs[item.id];
               const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
               return (
+              <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(300)}>
               <Card
-                style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                 onPress={() =>
                   router.push(`/session/detail/${item.id}`)
                 }
@@ -876,9 +867,10 @@ export default function Workouts() {
                   </View>
                 </Card.Content>
               </Card>
+              </Animated.View>
               );
-            }}
-          />
+            })}
+          </FlowContainer>
         )}
       </View>
 
@@ -890,7 +882,7 @@ export default function Workouts() {
           </Text>
         </View>
         <Card
-          style={styles.card}
+          style={styles.flowCard}
           onPress={() => router.push("/tools/timer")}
           accessibilityLabel="Open interval timer"
         >
@@ -906,14 +898,13 @@ export default function Workouts() {
         </Card>
       </View>
 
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
   banner: {
     marginBottom: 12,
@@ -942,8 +933,12 @@ const styles = StyleSheet.create({
   nextText: {
     flex: 1,
   },
-  quickStart: {
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     marginBottom: 12,
+    flexWrap: "wrap",
   },
   segmented: {
     marginBottom: 16,
@@ -963,8 +958,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 8,
   },
-  card: {
+  flowCard: {
     marginBottom: 8,
+    ...flowCardStyle,
   },
   cardContent: {
     flexDirection: "row",
@@ -1023,8 +1019,5 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-  },
-  scheduleLink: {
-    marginBottom: 8,
   },
 });
