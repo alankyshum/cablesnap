@@ -25,6 +25,7 @@ import {
 } from "../../lib/db";
 import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS, type Exercise } from "../../lib/types";
 import { semantic, difficultyText } from "../../constants/theme";
+import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
 import { epley, percentageTable } from "../../lib/rm";
@@ -291,43 +292,17 @@ export default function ExerciseDetail() {
         </View>
       )}
 
-      {/* Primary Muscles */}
+      {/* Muscle Diagram */}
       <View style={styles.section}>
         <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-          Primary Muscles
+          Muscles Involved
         </Text>
-        <View style={styles.chipRow}>
-          {exercise.primary_muscles.map((m) => (
-            <Chip
-              key={m}
-              compact
-              style={[styles.muscleChip, { backgroundColor: theme.colors.secondaryContainer }]}
-            >
-              {m}
-            </Chip>
-          ))}
-        </View>
+        <MuscleMap
+          primary={exercise.primary_muscles}
+          secondary={exercise.secondary_muscles}
+          width={screenWidth - 32}
+        />
       </View>
-
-      {/* Secondary Muscles */}
-      {exercise.secondary_muscles.length > 0 && (
-        <View style={styles.section}>
-          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-            Secondary Muscles
-          </Text>
-          <View style={styles.chipRow}>
-            {exercise.secondary_muscles.map((m) => (
-              <Chip
-                key={m}
-                compact
-                style={[styles.muscleChip, { backgroundColor: theme.colors.tertiaryContainer }]}
-              >
-                {m}
-              </Chip>
-            ))}
-          </View>
-        </View>
-      )}
 
       {/* Instructions */}
       {steps.length > 0 && (
