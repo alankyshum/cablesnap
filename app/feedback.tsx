@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Linking, ScrollView, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, FlatList, Linking, StyleSheet, View } from "react-native";
 import {
   Button,
   SegmentedButtons,
@@ -174,26 +174,38 @@ export default function FeedbackScreen() {
     return parts.join("\n");
   })();
 
+  const buttons = useMemo(
+    () =>
+      TYPE_OPTIONS.map((o) => ({
+        ...o,
+        disabled: locked && o.value !== type,
+      })),
+    [locked, type]
+  );
+
+  const ITEMS = ["form"] as const;
+
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
-        Report Type
-      </Text>
-      <SegmentedButtons
-        value={type}
-        onValueChange={(v) => {
-          if (!locked) setType(v as ReportType);
-        }}
-        buttons={TYPE_OPTIONS.map((o) => ({
-          ...o,
-          disabled: locked && o.value !== type,
-        }))}
-        style={styles.segment}
-      />
+    <>
+      <FlatList
+        data={ITEMS}
+        keyExtractor={(item) => item}
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        renderItem={() => (
+          <View>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+              Report Type
+            </Text>
+            <SegmentedButtons
+              value={type}
+              onValueChange={(v) => {
+                if (!locked) setType(v as ReportType);
+              }}
+              buttons={buttons}
+              style={styles.segment}
+            />
 
       <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginTop: 16, marginBottom: 8 }}>
         Title ({title.length}/{MAX_TITLE})
@@ -277,6 +289,9 @@ export default function FeedbackScreen() {
       >
         {cooldown > 0 ? `Share Report (${cooldown}s)` : "Share Report"}
       </Button>
+          </View>
+        )}
+      />
 
       <Snackbar
         visible={!!snack}
@@ -286,7 +301,7 @@ export default function FeedbackScreen() {
       >
         {snack}
       </Snackbar>
-    </ScrollView>
+    </>
   );
 }
 
