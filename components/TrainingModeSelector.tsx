@@ -16,9 +16,10 @@ type Props = {
   tempo: string;
   onSelect: (mode: TrainingMode) => void;
   onTempoChange: (tempo: string) => void;
+  onTempoBlur: () => void;
 };
 
-export default function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTempoChange }: Props) {
+export default function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTempoChange, onTempoBlur }: Props) {
   const theme = useTheme();
   const [tooltip, setTooltip] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,11 +42,6 @@ export default function TrainingModeSelector({ modes, selected, exercise, tempo,
       `Switched to ${TRAINING_MODE_LABELS[mode].label} mode`
     );
   }, [onSelect]);
-
-  const sanitize = (val: string) => {
-    if (!val || /^[\s-]*$/.test(val)) return null;
-    return val;
-  };
 
   return (
     <View style={styles.container}>
@@ -98,7 +94,7 @@ export default function TrainingModeSelector({ modes, selected, exercise, tempo,
             placeholder="Tempo (e.g. 3-1-5-1)"
             value={tempo}
             onChangeText={onTempoChange}
-            onBlur={() => onTempoChange(sanitize(tempo) ?? "")}
+            onBlur={onTempoBlur}
             maxLength={15}
             style={styles.tempoInput}
             accessibilityLabel="Tempo notation, for example 3 1 5 1"

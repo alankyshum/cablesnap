@@ -16,6 +16,7 @@ describe('TrainingModeSelector', () => {
     tempo: '',
     onSelect: jest.fn(),
     onTempoChange: jest.fn(),
+    onTempoBlur: jest.fn(),
   }
 
   beforeEach(() => jest.clearAllMocks())

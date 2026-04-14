@@ -165,12 +165,7 @@ export default function ActiveSession() {
     for (const s of sets) {
       if (!map.has(s.exercise_id)) {
         const ex = exerciseMeta[s.exercise_id];
-        let parsed: TrainingMode[] = [];
-        try {
-          parsed = ex?.training_modes ?? [];
-        } catch {
-          parsed = [];
-        }
+        const parsed: TrainingMode[] = ex?.training_modes ?? [];
         map.set(s.exercise_id, {
           exercise_id: s.exercise_id,
           name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
@@ -431,6 +426,7 @@ export default function ActiveSession() {
 
   const handleTempoBlur = async (exerciseId: string, val: string) => {
     const clean = val && !/^[\s-]*$/.test(val) ? val : null;
+    setTempoDraft((prev) => ({ ...prev, [exerciseId]: clean ?? "" }));
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (!group) return;
     for (const set of group.sets) {
@@ -689,8 +685,8 @@ export default function ActiveSession() {
                 onSelect={(m) => handleModeChange(group.exercise_id, m)}
                 onTempoChange={(v) => {
                   setTempoDraft((prev) => ({ ...prev, [group.exercise_id]: v }));
-                  handleTempoBlur(group.exercise_id, v);
                 }}
+                onTempoBlur={() => handleTempoBlur(group.exercise_id, tempoDraft[group.exercise_id] ?? "")}
               />
             )}
 
