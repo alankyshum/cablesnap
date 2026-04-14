@@ -3,7 +3,7 @@
 **Issue**: BLD-73
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT
+**Status**: DRAFT (Rev 2 -- addressing QD + TL feedback)
 
 ## Problem Statement
 
@@ -26,186 +26,63 @@ The largest, most complex screens -- Session (1154 lines), Home (1073 lines), Pr
 
 ### Overview
 
-Add 5 integration test suites covering the most critical user flows, using `@testing-library/react-native` (already installed) to render real React components, simulate user interactions (press, type, scroll), and assert on visible output. Tests run in Jest -- no emulator or device required.
+Add integration test suites in **two phases**, using `@testing-library/react-native` (already installed) to render real React components, simulate user interactions (press, type, scroll), and assert on visible output. Tests run in Jest -- no emulator or device required.
+
+**Phase 28a** (this issue): Spike + 3 low-risk suites (onboarding, exercises, nutrition)
+**Phase 28b** (future issue): 2 high-risk suites (home, session -- complex state, FlatList-heavy)
 
 ### Test Architecture
 
 Each integration test will:
 
-1. **Mock expo-sqlite** at the module level (same pattern as existing `__tests__/lib/db.test.ts`) -- provide a mock DB that returns realistic test data
-2. **Mock expo-router** -- provide a fake router with navigation tracking
-3. **Mock native modules** (expo-haptics, expo-keep-awake, expo-sharing, etc.) -- noop stubs
-4. **Render the screen component** using `@testing-library/react-native` `render()`
+1. **Mock `lib/db` at function level** using `jest.mock('../../lib/db')` -- each DB function returns controlled test data. The existing unit tests already verify db.ts -> expo-sqlite integration, so integration tests focus on Component -> lib/db.
+2. **Mock expo-router** -- provide a fake router with navigation tracking, correct useFocusEffect lifecycle
+3. **Mock native modules** (expo-haptics, expo-keep-awake, expo-sharing, MaterialCommunityIcons, etc.) -- noop stubs
+4. **Render the screen component** using `@testing-library/react-native` `render()` with full provider wrapping
 5. **Simulate user interactions** using `fireEvent.press()`, `fireEvent.changeText()`, `waitFor()`
-6. **Assert on visible output** -- text content, element presence, navigation calls
+6. **Assert on visible output AND accessibility** -- text content, element presence, navigation calls, `getByRole`, `getByLabelText`
 
-### Shared Test Utilities
+### Mock Strategy Decision (addresses QD Critical #1 and TL concern)
 
-Create `__tests__/helpers/render.tsx` -- a shared test harness that:
-- Wraps components in required providers (PaperProvider, ThemeProvider, NavigationContainer)
-- Provides default mock implementations for expo-sqlite, expo-router, expo-haptics, etc.
-- Exports a `renderScreen(Component, { mockDbQueries, routeParams })` helper
-- Exports `createMockDb(overrides)` for per-test DB customization
+**Decision: Mock at `lib/db` level (option b), NOT at expo-sqlite level.**
 
-### Test Suites
+Rationale:
+- Unit tests (`__tests__/lib/db.test.ts`) already verify the DB layer (lib/db -> expo-sqlite). Duplicating that in integration tests is wasteful.
+- Mocking at lib/db level means each screen test controls exactly what each DB function returns. No SQL pattern matching fragility.
+- Session screen imports 18 DB functions -- mocking each at function level is explicit and maintainable. Mocking at expo-sqlite level would require SQL-coupled pattern matching.
+- This is standard RTL practice: test the boundary closest to what you render.
 
-#### 1. Home Screen -- Workout Dashboard (`__tests__/flows/home.test.tsx`)
-
-**What it tests**: The primary landing screen users see after opening the app.
-
-**User flow**:
-- Screen renders with recent sessions, templates list, and schedule
-- User sees workout streak and weekly adherence
-- User taps a template to start a session
-- User sees the "no templates" empty state when no templates exist
-
-**Mock data**: 3 templates, 5 recent sessions, schedule entries
-
-**Assertions**:
-- Template names are visible
-- Recent session dates are displayed
-- Tapping "Start" on a template triggers `startSession()` and navigates to `/session/{id}`
-- Empty state shows "Create your first template" prompt when templates list is empty
-
-#### 2. Active Session -- Set Logging (`__tests__/flows/session.test.tsx`)
-
-**What it tests**: The core workout interaction -- logging sets during an active session.
-
-**User flow**:
-- Screen renders with exercises from the template
-- User sees exercise name, previous performance, and input fields
-- User enters weight and reps, taps "Log Set"
-- Set appears in the completed list
-- User taps "Complete Workout" to finish the session
-
-**Mock data**: 1 active session with 3 exercises, previous set history
-
-**Assertions**:
-- Exercise names are visible
-- Weight/reps inputs accept text
-- After logging a set, it appears in the list with correct values
-- "Complete Workout" button triggers `completeSession()` and navigates to summary
-- RPE chip selection updates the set's RPE value
-
-#### 3. Exercise Browser -- Search & Detail (`__tests__/flows/exercise.test.tsx`)
-
-**What it tests**: Browsing, searching, and viewing exercise details.
-
-**User flow**:
-- Exercises screen renders with category filters and exercise list
-- User searches for "bench press" -- list filters
-- User taps an exercise -- navigates to detail screen
-- Detail screen shows instructions, muscles, equipment
-
-**Mock data**: 10 exercises across 3 categories
-
-**Assertions**:
-- Category filter buttons are visible
-- Search input filters the list (only matching exercises shown)
-- Tapping an exercise navigates to `/exercise/{id}`
-- Exercise detail screen renders name, instructions, muscle tags
-
-#### 4. Nutrition Logging (`__tests__/flows/nutrition.test.tsx`)
-
-**What it tests**: Adding food entries and viewing daily macro summary.
-
-**User flow**:
-- Nutrition tab renders with today's macro summary (calories, protein, carbs, fat)
-- User taps "Add Food"
-- User searches for a food, selects it
-- Macro totals update to reflect the new entry
-
-**Mock data**: Macro targets, 2 existing food entries, food database results
-
-**Assertions**:
-- Daily macro totals are displayed (calories, protein values visible)
-- "Add" button is present and navigates to `/nutrition/add`
-- Food search returns results
-- After adding a food, daily totals reflect the addition
-
-#### 5. Onboarding Flow (`__tests__/flows/onboarding.test.tsx`)
-
-**What it tests**: The first-launch onboarding wizard.
-
-**User flow**:
-- Welcome screen renders with "Get Started" button
-- User taps "Get Started" -- navigates to setup screen
-- User selects unit system (metric/imperial)
-- User taps "Continue" -- navigates to recommend screen
-- Recommend screen shows starter template suggestions
-
-**Mock data**: Empty DB (first launch)
-
-**Assertions**:
-- Welcome text and "Get Started" button are visible
-- Unit system toggle switches between metric/imperial
-- Navigation progresses through welcome -> setup -> recommend
-- Recommend screen renders starter template cards
-
-### Scope
-
-**In Scope:**
-- 5 integration test suites (home, session, exercise, nutrition, onboarding)
-- Shared test harness (`__tests__/helpers/render.tsx`)
-- Mock infrastructure for expo-sqlite, expo-router, and native modules
-- All tests run in Jest without an emulator
-
-**Out of Scope:**
-- E2E tests requiring a real device or emulator (Detox, Maestro)
-- Visual regression testing (screenshot comparison)
-- Performance testing
-- Tests for settings, progress charts, or program management (future phases)
-- Modifying any existing app code -- tests only
-
-### Acceptance Criteria
-
-- [ ] Given a fresh checkout, When `npm test` runs, Then all existing 218+ tests still pass (zero regressions)
-- [ ] Given the test harness exists, When rendering any screen, Then it wraps in PaperProvider + NavigationContainer correctly
-- [ ] Given the home flow test, When templates exist in mock DB, Then template names appear in rendered output
-- [ ] Given the home flow test, When no templates exist, Then empty state text is visible
-- [ ] Given the session flow test, When user enters weight/reps and taps log, Then the set appears in the completed list
-- [ ] Given the exercise flow test, When user types in search, Then list filters to matching exercises
-- [ ] Given the nutrition flow test, When daily entries exist, Then macro totals are displayed
-- [ ] Given the onboarding flow test, When user taps "Get Started", Then navigation advances to setup
-- [ ] Given all tests pass, When `npx tsc --noEmit` runs, Then zero type errors
-- [ ] Given the PR, When reviewed, Then no new dependencies are added (all testing deps already installed)
-
-### Edge Cases
-
-| Scenario | Expected Behavior |
-|----------|-------------------|
-| Screen renders with empty mock DB | Empty state UI is shown, no crash |
-| Mock DB query throws error | Error boundary catches it, error screen renders |
-| Screen component uses `useFocusEffect` | Mock triggers focus callback on render |
-| Component uses `useLocalSearchParams` | Mock returns configured route params |
-| Component uses `useRouter` | Mock tracks `push()`, `back()`, `replace()` calls |
-| Component uses `Animated` API | React Native test renderer handles natively |
-| Component uses `Platform.OS` | Jest-expo provides default platform (ios) |
-
-### Technical Approach
-
-**File structure:**
-```
-__tests__/
-  helpers/
-    render.tsx         # Shared test harness with providers
-    mocks.ts           # Common mock factories (DB, router, etc.)
-  flows/
-    home.test.tsx      # Home screen integration test
-    session.test.tsx   # Active session integration test
-    exercise.test.tsx  # Exercise browser integration test
-    nutrition.test.tsx # Nutrition logging integration test
-    onboarding.test.tsx # Onboarding flow integration test
-```
-
-**Mock strategy:**
-- Reuse the `jest.doMock("expo-sqlite")` + `jest.resetModules()` pattern from existing db.test.ts (documented in knowledge base)
-- Create a `createMockDb()` factory that accepts query -> result mappings
-- Mock expo-router: `{ useRouter: () => mockRouter, useLocalSearchParams: () => params, useFocusEffect: (cb) => cb() }`
-- Mock all native-only modules (Haptics, KeepAwake, Sharing, SplashScreen) with noop stubs
-
-**Provider wrapping:**
+Example:
 ```tsx
+jest.mock('../../lib/db', () => ({
+  getTemplates: jest.fn().mockResolvedValue([
+    { id: 'tpl-1', name: 'Push Day', exercises: 3 },
+  ]),
+  getRecentSessions: jest.fn().mockResolvedValue([]),
+  startSession: jest.fn().mockResolvedValue('session-123'),
+  // ... only mock the functions THIS screen imports
+}))
+```
+
+### Provider Wrapping (addresses QD Critical #2)
+
+The `renderScreen()` helper MUST replicate all required providers. Here is the complete list:
+
+| Provider | Source | Required? | How handled in tests |
+|----------|--------|-----------|---------------------|
+| `PaperProvider` | react-native-paper | YES | Wrap with `light` theme |
+| `NavigationContainer` | @react-navigation/native | NO | Not needed -- screens don't use NavigationContainer directly; expo-router hooks are mocked |
+| `Stack` / `Stack.Screen` | expo-router | NO | Screens don't render Stack.Screen themselves (only _layout.tsx does) |
+| `ErrorBoundary` | components/ErrorBoundary | YES (for error tests) | Wrap for error boundary tests; omit for normal flow tests |
+| DB initialization | lib/db getDatabase() | NO | Mocked at lib/db level -- no real DB init needed |
+| SplashScreen | expo-splash-screen | NO | Mocked as noop |
+| Onboarding redirect | _layout.tsx | NO | Not part of individual screen rendering |
+
+```tsx
+import { render } from '@testing-library/react-native'
+import { PaperProvider } from 'react-native-paper'
+import { light } from '../../constants/theme'
+
 function renderScreen(ui: React.ReactElement) {
   return render(
     <PaperProvider theme={light}>
@@ -213,85 +90,246 @@ function renderScreen(ui: React.ReactElement) {
     </PaperProvider>
   )
 }
+
+// For error boundary tests:
+function renderWithErrorBoundary(ui: React.ReactElement) {
+  return render(
+    <PaperProvider theme={light}>
+      <ErrorBoundary>{ui}</ErrorBoundary>
+    </PaperProvider>
+  )
+}
 ```
 
-**Key dependency**: Tests MUST NOT import from `lib/db.ts` directly -- they render the component which internally calls DB functions. The mock intercepts at the expo-sqlite level so the full DB call chain is exercised.
+### expo-router Mock (addresses QD Critical #3 -- useFocusEffect)
+
+The useFocusEffect mock must handle the cleanup function pattern correctly:
+
+```tsx
+jest.mock('expo-router', () => {
+  const React = require('react')
+  return {
+    useRouter: () => mockRouter,
+    useLocalSearchParams: () => mockParams,
+    usePathname: () => '/test',
+    useFocusEffect: (cb: () => (() => void) | void) => {
+      // Wrap in real useEffect to handle cleanup correctly
+      React.useEffect(() => {
+        const cleanup = cb()
+        return typeof cleanup === 'function' ? cleanup : undefined
+      }, [])
+    },
+    Stack: { Screen: () => null },
+    Redirect: () => null,
+  }
+})
+```
+
+### Required Module Mocks (addresses TL concern #2)
+
+Every integration test file must mock these modules:
+
+| Module | Mock approach |
+|--------|--------------|
+| `expo-router` | Custom mock (see above) |
+| `lib/db` | `jest.mock()` with per-test function overrides |
+| `lib/programs` | `jest.mock()` with noop functions |
+| `lib/interactions` | `jest.mock()` with noop `log()` |
+| `lib/errors` | `jest.mock()` with noop functions |
+| `expo-haptics` | `jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), ... }))` |
+| `expo-keep-awake` | `jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn() }))` |
+| `expo-sharing` | `jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))` |
+| `expo-splash-screen` | `jest.mock('expo-splash-screen', () => ({ preventAutoHideAsync: jest.fn(), hideAsync: jest.fn() }))` |
+| `@expo/vector-icons/MaterialCommunityIcons` | `jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')` |
+| `lib/layout` | `jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, width: 375, scale: 1.0 }) }))` |
+| `react-native` Alert | `jest.spyOn(Alert, 'alert').mockImplementation(...)` (per-test, for Session) |
+
+### Spike Phase (addresses TL concern #4)
+
+**Before implementing any flow test, the engineer MUST complete a spike:**
+
+1. Create `__tests__/flows/spike.test.tsx`
+2. Render `app/onboarding/welcome.tsx` (73 lines, minimal deps: useRouter, useTheme, MaterialCommunityIcons)
+3. Assert: `getByText('Welcome to FitForge')` is visible
+4. Assert: `getByRole('button', { name: /get started/i })` exists (a11y check)
+5. Assert: pressing the button calls `router.push('/onboarding/setup')`
+
+If the spike fails, stop and debug the harness before proceeding. If it passes, delete it and fold the assertions into the onboarding test suite.
+
+### Test Suites -- Phase 28a (This Issue)
+
+#### 1. Onboarding Flow (`__tests__/flows/onboarding.test.tsx`)
+
+**Why first**: Simplest screens (73 + 215 lines), minimal DB deps, no FlatList, no useFocusEffect.
+
+**Tests**:
+- Welcome screen renders "Welcome to FitForge" text and dumbbell icon
+- "Get Started" button is accessible (`getByRole('button')`) and navigates to setup
+- Setup screen shows unit system toggle (metric/imperial)
+- Selecting unit system and tapping "Continue" navigates to recommend
+- Recommend screen renders starter template cards
+- **A11y**: All buttons have accessible names
+- **Error**: If getDatabase() fails on welcome, app still renders (no DB needed for welcome)
+
+**Mock data**: Minimal -- only onboarding-related DB functions (saveSettings, getBodySettings)
+
+#### 2. Exercise Browser (`__tests__/flows/exercise.test.tsx`)
+
+**Why second**: Medium complexity (452 lines), uses FlatList but with simple items, uses useLayout.
+
+**Tests**:
+- Screen renders with exercise list from mock data
+- Category filter buttons are visible and filter the list
+- Search input filters exercises by name
+- Tapping exercise navigates to `/exercise/{id}`
+- Empty state shows appropriate message when no exercises match filter
+- **Loading**: Initial render shows loading state, then data appears after async resolution
+- **A11y**: Search input has `accessibilityLabel`, exercise items are accessible
+- **Error boundary**: When `getAllExercises()` throws, ErrorBoundary renders error screen
+
+**Mock data**: 10 exercises across 3 categories (Chest, Legs, Back)
+
+**FlatList strategy**: Mock `useLayout` to return `{ wide: false, width: 375, scale: 1.0 }`. Use `waitFor()` for async data loading. RNTL handles basic FlatList rendering at default `initialNumToRender`.
+
+#### 3. Nutrition Logging (`__tests__/flows/nutrition.test.tsx`)
+
+**Why third**: Medium complexity (430 lines), async data, uses useLayout.
+
+**Tests**:
+- Screen renders with today's macro summary (calories, protein, carbs, fat)
+- Progress bars reflect current intake vs targets
+- "Add" button navigates to `/nutrition/add`
+- Date navigation shows different day's data
+- Empty state (no entries today) shows appropriate message
+- **Loading**: Verify loading state renders before data
+- **A11y**: Add button has accessible label, macro values are labeled
+- **Error boundary**: When DB throws, error screen renders
+
+**Mock data**: Macro targets (2000 cal, 150g protein, 250g carbs, 67g fat), 2 food entries
+
+### Deferred to Phase 28b
+
+#### Home Screen (complex -- 1073 lines, 15+ DB functions, FlatList with multiple sections, useFocusEffect with complex data refresh)
+
+#### Active Session (highest risk -- 1154 lines, 18 DB function imports, Animated, timers, Haptics, Alert.alert, FlatList with animated items. Per TL recommendation: split into sub-flow tests -- session-render, session-logging, session-completion)
+
+### Scope
+
+**In Scope (Phase 28a):**
+- Spike test proving harness works
+- 3 integration test suites (onboarding, exercises, nutrition)
+- Shared test harness (`__tests__/helpers/render.tsx`)
+- Shared mock factories (`__tests__/helpers/factories.ts`)
+- Module mock setup (`__tests__/helpers/mocks.ts`)
+- At least 1 a11y assertion per test suite
+- At least 1 error boundary test
+- At least 1 loading state test
+
+**Out of Scope:**
+- Home screen flow tests (Phase 28b)
+- Session screen flow tests (Phase 28b)
+- E2E tests requiring emulator (Detox, Maestro)
+- Visual regression testing
+- Performance testing
+- Modifying any existing app code -- tests only
+- New dependencies
+
+### Acceptance Criteria
+
+- [ ] Given a fresh checkout, When `npm test` runs, Then all existing 218+ tests still pass (zero regressions)
+- [ ] Given the test harness, When rendering any screen, Then it wraps in PaperProvider with correct theme
+- [ ] Given the onboarding test, When welcome renders, Then "Welcome to FitForge" is visible AND "Get Started" button is accessible via getByRole
+- [ ] Given the exercise test, When user types "bench" in search, Then only matching exercises appear
+- [ ] Given the exercise test, When getAllExercises throws, Then ErrorBoundary renders error message
+- [ ] Given the nutrition test, When daily entries exist, Then macro totals are displayed with correct values
+- [ ] Given any flow test, When screen first renders, Then a loading/empty state is visible before data loads
+- [ ] Given each test suite, When assertions run, Then at least one uses getByRole or getByLabelText (a11y)
+- [ ] Given all tests pass, When `npx tsc --noEmit` runs, Then zero type errors
+- [ ] Given the PR, When reviewed, Then no new dependencies are added
+- [ ] Given the test run, Then total flow test execution time is under 30 seconds
+- [ ] Given each test, Then `jest.setTimeout(10000)` is set to handle async rendering
+
+### Edge Cases
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Screen renders with empty mock data | Empty state UI is shown, no crash |
+| DB function throws error | ErrorBoundary catches it, error screen renders with message |
+| useFocusEffect cleanup runs | No memory leak or warning |
+| Component uses useLayout | Mock returns consistent { wide: false, width: 375 } |
+| Component uses MaterialCommunityIcons | Mock renders as plain text/noop |
+| FlatList with 0 items | Empty state renders |
+| FlatList with 50+ items | initialNumToRender handles it; test only checks first few |
+| Async state updates | Tests use waitFor() consistently |
+| Platform.OS check | jest-expo default (ios) |
+
+### Technical Approach
+
+**File structure:**
+```
+__tests__/
+  helpers/
+    render.tsx         # renderScreen() with PaperProvider wrapping
+    factories.ts       # createMockExercise(), createMockSession(), etc.
+    mocks.ts           # Shared mock setup (router, native modules)
+  flows/
+    onboarding.test.tsx  # Onboarding wizard flow
+    exercise.test.tsx    # Exercise browser flow
+    nutrition.test.tsx   # Nutrition logging flow
+```
+
+**Test data factories** (`__tests__/helpers/factories.ts`):
+```tsx
+export function createExercise(overrides = {}) {
+  return {
+    id: 'ex-1', name: 'Bench Press', category: 'Chest',
+    primary_muscles: 'Chest', secondary_muscles: 'Triceps',
+    equipment: 'Barbell', instructions: 'Lie on bench...',
+    difficulty: 'intermediate', is_custom: 0, deleted: 0,
+    ...overrides,
+  }
+}
+
+export function createFoodEntry(overrides = {}) { ... }
+export function createTemplate(overrides = {}) { ... }
+export function createSession(overrides = {}) { ... }
+```
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| expo-router mocking complexity | Medium | Medium | Start with simplest mock (useRouter, useLocalSearchParams), iterate |
-| React Native Paper component rendering issues in test env | Medium | Medium | jest-expo preset handles most; may need to mock specific Paper components |
-| Test flakiness from async state updates | Low | Medium | Use `waitFor()` and `act()` consistently |
-| Large test file sizes mirroring large screen files | Medium | Low | Keep tests focused on user flows, not implementation details |
-| Mock DB state management across tests | Low | Medium | Use `beforeEach` reset pattern from knowledge base |
+| Spike fails (harness can't render screens) | Medium | High | Spike is first -- if it fails, we debug before writing full suites |
+| FlatList doesn't render items in test env | Medium | Medium | Use waitFor(), test first few items only, fallback to mock FlatList |
+| Async state makes tests flaky | Low | Medium | Use waitFor() and act() consistently, set jest.setTimeout(10000) |
+| Too many mock functions needed per screen | Medium | Low | factories.ts provides defaults; per-test overrides for specific scenarios |
+| react-native-paper components render differently in test | Low | Medium | jest-expo preset handles most; mock specific components if needed |
 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
+**Rev 1 Verdict**: NEEDS REVISION
 
-**Verdict: NEEDS REVISION**
-
-**Reviewed**: 2026-04-14 by quality-director (Opus 4.6)
-
-**UX Assessment**: Strong concept — the 5 flows cover the core user experience. Using RTL/RN (query by text/role) is the right approach. However, the plan tests that UI renders but never tests accessibility. Since RTL/RN supports `getByRole`/`getByLabelText`, each flow test MUST include a11y assertions.
-
-**Accessibility**: Not mentioned. Critical gap. Minimum 1 `getByRole`/`getByLabelText` assertion per flow test to enforce Review SKILL criterion [C] accessibilityLabel.
-
-**Critical Technical Issues**:
-1. Mock strategy at expo-sqlite level is underspecified — Session screen imports 18 DB functions; `getAllAsync` mock returning same data for all queries won't work. Must decide: (a) SQL pattern matching, (b) mock at lib/db level, or (c) in-memory SQLite. Recommend (b).
-2. Provider wrapping incomplete — must include PaperProvider, ThemeProvider, ErrorBoundary, navigation container, DB init.
-3. `useFocusEffect` mock `(cb) => cb()` is incorrect — must handle cleanup return value.
-
-**Major Issues**:
-4. Session test too ambitious for single file (1154-line screen, 18 DB deps). Split into render/logging/completion.
-5. No test timeout guidance for async integration tests.
-
-**Missing Edge Cases**: Error boundary test (first-class, not just table mention), loading state test, data integrity assertion (verify addSet called with correct params).
-
-**Required Before Approval**: Fix items 1-5 above and add a11y assertions. See full review on BLD-73.
+Addressed in Rev 2:
+- [x] Mock strategy decided: lib/db level (option b) -- explicit, maintainable
+- [x] Provider wrapping fully specified with table of all providers
+- [x] useFocusEffect mock handles cleanup correctly via React.useEffect wrapper
+- [x] A11y assertions required: minimum 1 per suite using getByRole/getByLabelText
+- [x] Error boundary test added as first-class test case (not just edge case mention)
+- [x] Loading state tests added
+- [x] Test timeout guidance added (jest.setTimeout 10000, suite target under 30s)
 
 ### Tech Lead (Technical Feasibility)
+**Rev 1 Verdict**: NEEDS REVISION
 
-**Verdict: NEEDS REVISION**
-
-**Reviewed**: 2026-04-14 by techlead (Opus 4.6)
-
-**Technical Feasibility**: Directionally correct. @testing-library/react-native is the right tool, deps are installed, jest-expo + expo-sqlite mock patterns are solid foundation. But plan underestimates mock complexity for large screens.
-
-**Architecture Fit**: Compatible — tests-only scope, no app refactoring needed. Provider wrapping approach is incomplete.
-
-**Complexity**: Large (likely 2 implementation cycles). Risk: Medium-High (zero prior render tests = high unknowns).
-
-**Critical Issues (4 MAJOR)**:
-
-1. **Session screen too ambitious** — 1154 lines, 27 hooks, FlatList+Animated, Alert.alert, useKeepAwake, 18 DB imports. Full-screen render test will consume more effort than the other 4 suites combined. Recommend deferring to Phase 28b or testing sub-behaviors only.
-
-2. **Missing mocks** — Plan omits: useLayout() hook (exercises, nutrition), Stack.Screen (session), Alert.alert (session), MaterialCommunityIcons (@expo/vector-icons), Animated.timing/Value, useWindowDimensions.
-
-3. **FlatList rendering** — Home, Session, Exercises, Nutrition all use FlatList. In Jest, VirtualizedList may not render items without layout measurement mocks. Plan doesn't address this. Recommend documenting FlatList strategy.
-
-4. **No spike phase** — Zero render tests exist today. Plan should include Phase 0: render onboarding/welcome.tsx (73 lines, 2 deps) to prove harness works before committing to 5 suites.
-
-**Minor Issues (2)**:
-
-5. expo-router useFocusEffect mock needs cleanup function support; Stack.Screen needs NavigationContainer context.
-6. db.ts has 105 exported functions — mocking at expo-sqlite level requires realistic return data for every query path each screen uses.
-
-**Recommendations**:
-1. Split into Phase 28a (harness + onboarding + exercise browser) and Phase 28b (nutrition + home + session)
-2. Start with spike: render onboarding/welcome, assert "Welcome to FitForge" is visible
-3. Mock at lib/db level (jest.mock) for screen tests instead of expo-sqlite level — dramatically simpler
-4. Keep expo-sqlite mocking for existing db.test.ts pattern (those intentionally exercise SQL)
-
-**TODO before approval**:
-- [ ] Add spike phase for harness validation
-- [ ] Document FlatList rendering strategy
-- [ ] Add complete mock dependency list
-- [ ] Simplify or defer Session screen test
-- [ ] Decide mock strategy: expo-sqlite vs lib/db level
-- [ ] Size mock data factory work
+Addressed in Rev 2:
+- [x] Spike phase added -- prove harness works with onboarding/welcome before other suites
+- [x] FlatList strategy documented (waitFor, initialNumToRender defaults, test first few items)
+- [x] Missing mocks fully listed (useLayout, MaterialCommunityIcons, Alert, etc.)
+- [x] Session screen deferred to Phase 28b (too complex for first integration tests)
+- [x] Mock strategy decided: lib/db level, with justification
+- [x] Two-phase structure: 28a = harness + 3 low-risk suites; 28b = 2 high-risk suites
+- [x] Mock data factory work sized via factories.ts specification
 
 ### CEO Decision
-_Pending reviews_
+_Pending re-reviews from QD and TL_
