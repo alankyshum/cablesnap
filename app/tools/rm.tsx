@@ -8,17 +8,19 @@ import {
 } from "react-native";
 import {
   DataTable,
+  IconButton,
   Text,
   TextInput,
   useTheme,
 } from "react-native-paper";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { getBodySettings } from "../../lib/db";
 import { epley, brzycki, lombardi, average, percentageTable } from "../../lib/rm";
 
 export default function RMCalculator() {
   const theme = useTheme();
+  const router = useRouter();
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
@@ -152,6 +154,7 @@ export default function RMCalculator() {
                       <DataTable.Title>% 1RM</DataTable.Title>
                       <DataTable.Title numeric>Weight</DataTable.Title>
                       <DataTable.Title numeric>Rep Range</DataTable.Title>
+                      <DataTable.Title numeric style={{ flex: 0.4 }}> </DataTable.Title>
                     </DataTable.Header>
                   </DataTable>
                 </View>
@@ -165,6 +168,17 @@ export default function RMCalculator() {
               <DataTable.Cell>{row.pct}%</DataTable.Cell>
               <DataTable.Cell numeric>{row.weight} {unit}</DataTable.Cell>
               <DataTable.Cell numeric>{row.reps}</DataTable.Cell>
+              <DataTable.Cell numeric style={{ flex: 0.4 }}>
+                <IconButton
+                  icon="weight"
+                  size={18}
+                  onPress={() => router.push(`/tools/plates?weight=${row.weight}&unit=${unit}`)}
+                  accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
+                  accessibilityRole="button"
+                  style={{ minWidth: 48, minHeight: 48 }}
+                  iconColor={theme.colors.onSurfaceVariant}
+                />
+              </DataTable.Cell>
             </DataTable.Row>
           )}
           ListFooterComponent={

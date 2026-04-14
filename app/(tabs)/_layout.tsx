@@ -32,12 +32,22 @@ export default function TabLayout() {
           headerRight: () => (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <IconButton
+                icon="weight"
+                size={24}
+                onPress={() => router.push("/tools/plates")}
+                accessibilityLabel="Open plate calculator"
+                accessibilityRole="button"
+                iconColor={theme.colors.onSurface}
+                style={{ minWidth: 48, minHeight: 48 }}
+              />
+              <IconButton
                 icon="arm-flex"
                 size={24}
                 onPress={() => router.push("/tools/rm")}
                 accessibilityLabel="Open 1RM calculator"
                 accessibilityRole="button"
                 iconColor={theme.colors.onSurface}
+                style={{ minWidth: 48, minHeight: 48 }}
               />
             </View>
           ),
