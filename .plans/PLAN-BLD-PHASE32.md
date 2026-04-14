@@ -244,24 +244,29 @@ Pure function: `(state, input) → nextState` — no side effects
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION (Rev 1)
+**Verdict**: ~~NEEDS REVISION (Rev 1)~~ → **APPROVED (Rev 2)**
 **Reviewer**: quality-director
 **Date**: 2026-04-14
 
-**Critical Issues (must fix):**
+**Rev 1 — NEEDS REVISION**: 5 Critical issues, 6 Major issues identified.
+**Rev 2 — APPROVED**: All Critical issues resolved. All Major issues addressed or explicitly acknowledged with fast-follow plan.
+
+**Critical Issues (all resolved):**
 1. **C1**: ✅ FIXED Rev 2 — Absolute timestamps via Date.now(), not cumulative setInterval
 2. **C2**: ✅ FIXED Rev 2 — Touch targets 56dp for all active workout controls
 3. **C3**: ✅ FIXED Rev 2 — accessibilityValue with min/max/now/text on steppers
 4. **C4**: ✅ FIXED Rev 2 — AppState listener + absolute timestamps for background handling
 5. **C5**: ✅ FIXED Rev 2 — Explicit acceptance criterion for useEffect cleanup
 
-**Major Issues (should fix):**
+**Major Issues (all addressed):**
 - M1: ✅ FIXED Rev 2 — Custom mode removed, 3 modes only
 - M2: ✅ ADDRESSED Rev 2 — Acknowledged as significant gap, fast-follow planned
 - M3: ✅ FIXED Rev 2 — Timer in Workouts tab body (Tools section), not header icon
 - M4: ✅ FIXED Rev 2 — Using react-native-reanimated for progress ring
 - M5: ✅ FIXED Rev 2 — useReducedMotion() acceptance criterion added
 - M6: ✅ FIXED Rev 2 — Last-used settings saved per mode to AsyncStorage
+
+**Minor note**: Acceptance criteria uses `bun typecheck` — project standard is `npx -p typescript tsc --noEmit`.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED (Rev 1)
