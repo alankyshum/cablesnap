@@ -103,7 +103,7 @@ export default function Exercises() {
             style={[styles.diffBar, { backgroundColor: color }]}
             accessibilityLabel={`Difficulty: ${diff}`}
           >
-            <Text style={[styles.diffLabel, { color: "#fff" }]}>{label}</Text>
+            <Text style={[styles.diffLabel, { color: theme.colors.onPrimary }]}>{label}</Text>
           </View>
           <View style={styles.itemContent}>
             <View style={styles.titleRow}>
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   diffLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
   },
   itemContent: {
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   v1Text: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
   row: {
