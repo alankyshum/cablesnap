@@ -3,15 +3,18 @@ import { View, StyleSheet } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
 import React from "react";
 import { setAppSetting } from "../../lib/db";
+import { useCompleteOnboarding } from "../../lib/onboarding-context";
 
 function Fallback() {
   const theme = useTheme();
   const router = useRouter();
+  const completeOnboarding = useCompleteOnboarding();
   const [err, setErr] = React.useState<string | null>(null);
 
   async function skip() {
     try {
       await setAppSetting("onboarding_complete", "1");
+      completeOnboarding();
       router.replace("/(tabs)");
     } catch {
       setErr("Could not save preferences. Tap again to continue anyway.");
@@ -19,6 +22,7 @@ function Fallback() {
   }
 
   function force() {
+    completeOnboarding();
     router.replace("/(tabs)");
   }
 
@@ -28,7 +32,7 @@ function Fallback() {
         Something went wrong
       </Text>
       <Text variant="bodyMedium" style={[styles.sub, { color: theme.colors.onSurfaceVariant }]}>
-        We couldn't load onboarding. You can skip straight to the app.
+        {"We couldn't load onboarding. You can skip straight to the app."}
       </Text>
       {err && (
         <Text variant="bodySmall" style={[styles.sub, { color: theme.colors.error }]}>

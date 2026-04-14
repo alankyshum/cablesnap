@@ -3,7 +3,7 @@ import { PaperProvider, Banner, Snackbar } from "react-native-paper";
 import { ThemeProvider } from "@react-navigation/native";
 import { Redirect, Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
@@ -14,6 +14,7 @@ import { setupHandler, handleResponse, getPermissionStatus } from "../lib/notifi
 import ErrorBoundary from "../components/ErrorBoundary";
 import { SnackbarProvider } from "../components/SnackbarProvider";
 import { QueryProvider } from "../lib/query";
+import { OnboardingContext } from "../lib/onboarding-context";
 
 SplashScreen.preventAutoHideAsync();
 setupHandler();
@@ -99,11 +100,18 @@ export default function RootLayout() {
   };
   const headerTintColor = paperTheme.colors.onSurface;
 
+  const completeOnboarding = useCallback(() => setOnboarded(true), []);
+  const onboardingCtx = useMemo(
+    () => ({ completeOnboarding }),
+    [completeOnboarding]
+  );
+
   if (!ready) return null;
 
   return (
     <ErrorBoundary>
       <QueryProvider>
+      <OnboardingContext.Provider value={onboardingCtx}>
       <PaperProvider theme={paperTheme}>
         <ThemeProvider value={isDark ? navigationDark : navigationLight}>
         <SnackbarProvider>
@@ -351,6 +359,7 @@ export default function RootLayout() {
         </SnackbarProvider>
         </ThemeProvider>
       </PaperProvider>
+      </OnboardingContext.Provider>
       </QueryProvider>
     </ErrorBoundary>
   );

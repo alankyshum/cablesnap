@@ -9,6 +9,7 @@ import {
   STARTER_TEMPLATES,
   STARTER_PROGRAM,
 } from "../../lib/starter-templates";
+import { useCompleteOnboarding } from "../../lib/onboarding-context";
 
 type Level = "beginner" | "intermediate" | "advanced";
 
@@ -23,6 +24,7 @@ export default function Recommend() {
   const level = (params.level ?? "beginner") as Level;
   const weight = (params.weight ?? "kg") as "kg" | "lb";
   const measurement = (params.measurement ?? "cm") as "cm" | "in";
+  const completeOnboarding = useCompleteOnboarding();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +37,7 @@ export default function Recommend() {
       await updateBodySettings(weight, measurement, settings.weight_goal, settings.body_fat_goal);
       await setAppSetting("experience_level", level);
       await setAppSetting("onboarding_complete", "1");
+      completeOnboarding();
 
       if (action === "program") {
         await activateProgram(PPL.id);
@@ -42,7 +45,7 @@ export default function Recommend() {
       } else {
         router.replace("/(tabs)");
       }
-    } catch (err) {
+    } catch {
       setSaving(false);
       setError("Something went wrong saving your preferences. Tap to retry or skip.");
     }
@@ -50,7 +53,10 @@ export default function Recommend() {
 
   function skip() {
     setAppSetting("onboarding_complete", "1")
-      .then(() => router.replace("/(tabs)"))
+      .then(() => {
+        completeOnboarding();
+        router.replace("/(tabs)");
+      })
       .catch(() => {
         setError("Could not save preferences. Tap Skip to continue anyway.");
       });
@@ -62,7 +68,7 @@ export default function Recommend() {
         visible={!!error}
         actions={[
           { label: "Retry", onPress: () => finish() },
-          { label: "Skip", onPress: () => router.replace("/(tabs)") },
+          { label: "Skip", onPress: skip },
         ]}
         icon="alert-circle-outline"
       >
@@ -136,7 +142,7 @@ export default function Recommend() {
           disabled={saving}
           accessibilityLabel="Skip recommendation and explore on your own"
         >
-          I'll explore on my own
+          {"I'll explore on my own"}
         </Button>
       </ScrollView>
     );
@@ -197,7 +203,7 @@ export default function Recommend() {
           disabled={saving}
           accessibilityLabel="Skip recommendation and explore on your own"
         >
-          I'll explore on my own
+          {"I'll explore on my own"}
         </Button>
       </ScrollView>
     );
@@ -237,7 +243,7 @@ export default function Recommend() {
         disabled={saving}
         accessibilityLabel="Skip and explore on your own"
       >
-        I'll explore on my own
+        {"I'll explore on my own"}
       </Button>
     </>
   );
