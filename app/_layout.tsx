@@ -233,6 +233,15 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="schedule"
+              options={{
+                headerShown: true,
+                title: "Weekly Schedule",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="tools/plates"
               options={{
                 headerShown: true,

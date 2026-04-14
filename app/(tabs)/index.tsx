@@ -37,7 +37,11 @@ import {
   getSessionSetCount,
   getTemplateExerciseCount,
   getTemplates,
+  getTodaySchedule,
+  getWeekAdherence,
+  isTodayCompleted,
   startSession,
+  type ScheduleEntry,
 } from "../../lib/db";
 import type { Program, ProgramDay, WorkoutSession, WorkoutTemplate } from "../../lib/types";
 import { semantic } from "../../constants/theme";
@@ -81,9 +85,12 @@ export default function Workouts() {
   const [nextWorkout, setNextWorkout] = useState<{ program: Program; day: ProgramDay } | null>(null);
   const [snackbar, setSnackbar] = useState("");
   const [menu, setMenu] = useState<string | null>(null);
+  const [todaySchedule, setTodaySchedule] = useState<ScheduleEntry | null>(null);
+  const [todayDone, setTodayDone] = useState(false);
+  const [adherence, setAdherence] = useState<{ day: number; scheduled: boolean; completed: boolean }[]>([]);
 
   const load = useCallback(async () => {
-    const [tpls, sess, act, timestamps, prData, progs, nw] = await Promise.all([
+    const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
       getTemplates(),
       getRecentSessions(5),
       getActiveSession(),
@@ -91,6 +98,9 @@ export default function Workouts() {
       getRecentPRs(5),
       getPrograms(),
       getNextWorkout(),
+      getTodaySchedule(),
+      isTodayCompleted(),
+      getWeekAdherence(),
     ]);
     setTemplates(tpls);
     setSessions(sess);
@@ -98,6 +108,9 @@ export default function Workouts() {
     setRecentPRs(prData);
     setPrograms(progs);
     setNextWorkout(nw);
+    setTodaySchedule(sched);
+    setTodayDone(done);
+    setAdherence(adh);
 
     // Default segment: Programs if active program exists, else Templates
     if (nw) {
@@ -156,6 +169,12 @@ export default function Workouts() {
       nextWorkout.day.id
     );
     router.push(`/session/${session.id}?templateId=${nextWorkout.day.template_id}`);
+  };
+
+  const startFromSchedule = async () => {
+    if (!todaySchedule) return;
+    const session = await startSession(todaySchedule.template_id, todaySchedule.template_name);
+    router.push(`/session/${session.id}?templateId=${todaySchedule.template_id}`);
   };
 
   const confirmDeleteProgram = (prog: Program) => {
@@ -257,8 +276,70 @@ export default function Workouts() {
         </Card>
       )}
 
-      {/* Next Workout Banner (visible on both segments) */}
-      {nextWorkout && (
+      {/* Today's Schedule Card — overrides next workout when schedule exists */}
+      {todaySchedule && !todayDone && (
+        <Card
+          style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]}
+          onPress={startFromSchedule}
+          accessibilityLabel={`Today's workout: ${todaySchedule.template_name}. Tap to start.`}
+          accessibilityRole="button"
+        >
+          <Card.Content style={styles.nextContent}>
+            <MaterialCommunityIcons name="calendar-check" size={24} color={theme.colors.onSecondaryContainer} />
+            <View style={styles.nextText}>
+              <Text variant="titleSmall" style={{ color: theme.colors.onSecondaryContainer }}>
+                Today: {todaySchedule.template_name}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSecondaryContainer }}>
+                {todaySchedule.exercise_count} exercises · Tap to start
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
+      {todaySchedule && todayDone && (
+        <Card
+          style={[styles.nextBanner, { backgroundColor: theme.colors.primaryContainer }]}
+          onPress={startFromSchedule}
+          accessibilityLabel={`Completed: ${todaySchedule.template_name}. Tap to train again.`}
+          accessibilityRole="button"
+        >
+          <Card.Content style={styles.nextContent}>
+            <MaterialCommunityIcons name="check-circle" size={24} color={theme.colors.onPrimaryContainer} />
+            <View style={styles.nextText}>
+              <Text variant="titleSmall" style={{ color: theme.colors.onPrimaryContainer }}>
+                ✅ Completed: {todaySchedule.template_name}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer }}>
+                Train again
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
+      {!todaySchedule && adherence.some((a) => a.scheduled) && (
+        <Card
+          style={[styles.nextBanner, { backgroundColor: theme.colors.surface }]}
+          accessibilityLabel="Rest day. No workout scheduled."
+        >
+          <Card.Content style={styles.nextContent}>
+            <MaterialCommunityIcons name="bed" size={24} color={theme.colors.onSurfaceVariant} />
+            <View style={styles.nextText}>
+              <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+                Rest Day
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                No workout scheduled
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
+      {/* Next Workout Banner (visible when NO schedule exists) */}
+      {nextWorkout && !todaySchedule && !adherence.some((a) => a.scheduled) && (
         <Card
           style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]}
           onPress={startNextWorkout}
@@ -277,6 +358,72 @@ export default function Workouts() {
             </View>
           </Card.Content>
         </Card>
+      )}
+
+      {/* Program indicator when schedule is active */}
+      {nextWorkout && adherence.some((a) => a.scheduled) && (
+        <Text
+          variant="bodySmall"
+          style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8, textAlign: "center" }}
+          accessibilityLabel={`Program ${nextWorkout.program.name}: Schedule active`}
+        >
+          {nextWorkout.program.name} (Schedule active)
+        </Text>
+      )}
+
+      {/* Weekly Adherence Bar */}
+      {adherence.some((a) => a.scheduled) && (
+        <View style={styles.adherence} accessibilityLabel={`Adherence: ${adherence.filter((a) => a.scheduled && a.completed).length} of ${adherence.filter((a) => a.scheduled).length} this week`}>
+          <View style={styles.dots}>
+            {adherence.map((a, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  a.completed
+                    ? { backgroundColor: theme.colors.primary }
+                    : a.scheduled
+                    ? { backgroundColor: "transparent", borderWidth: 2, borderColor: theme.colors.onSurfaceVariant }
+                    : { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+                accessibilityLabel={`${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}: ${a.completed ? "completed" : a.scheduled ? "scheduled" : "rest day"}`}
+              />
+            ))}
+          </View>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
+            {adherence.filter((a) => a.scheduled && a.completed).length} of{" "}
+            {adherence.filter((a) => a.scheduled).length} this week{" "}
+            {adherence.filter((a) => a.scheduled).every((a) => a.completed) && adherence.some((a) => a.scheduled) ? "🔥" : "🎯"}
+          </Text>
+        </View>
+      )}
+
+      {/* Set Schedule button (when no schedule exists) */}
+      {!adherence.some((a) => a.scheduled) && (
+        <Button
+          mode="text"
+          icon="calendar-plus"
+          compact
+          onPress={() => router.push("/schedule")}
+          style={styles.scheduleLink}
+          accessibilityLabel="Set weekly schedule"
+        >
+          Set Schedule
+        </Button>
+      )}
+
+      {/* Edit schedule link (when schedule exists) */}
+      {adherence.some((a) => a.scheduled) && (
+        <Button
+          mode="text"
+          icon="pencil"
+          compact
+          onPress={() => router.push("/schedule")}
+          style={styles.scheduleLink}
+          accessibilityLabel="Edit weekly schedule"
+        >
+          Edit Schedule
+        </Button>
       )}
 
       {/* Quick Start */}
@@ -909,5 +1056,22 @@ const styles = StyleSheet.create({
   starterChipText: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  adherence: {
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  dots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  scheduleLink: {
+    marginBottom: 8,
   },
 });
