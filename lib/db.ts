@@ -19,6 +19,11 @@ import type {
   MuscleGroup,
 } from "./types";
 import { seedExercises } from "./seed";
+import {
+  STARTER_TEMPLATES,
+  STARTER_PROGRAM,
+  STARTER_VERSION,
+} from "./starter-templates";
 
 const DB_NAME = "fitforge.db";
 
@@ -336,6 +341,31 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       );
     });
   }
+
+  // Migration: add is_starter column to workout_templates
+  const tplCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(workout_templates)"
+  );
+  if (!tplCols.some((c) => c.name === "is_starter")) {
+    await database.execAsync(
+      "ALTER TABLE workout_templates ADD COLUMN is_starter INTEGER DEFAULT 0"
+    );
+  }
+
+  // Migration: add is_starter column to programs
+  const progCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(programs)"
+  );
+  if (!progCols.some((c) => c.name === "is_starter")) {
+    await database.execAsync(
+      "ALTER TABLE programs ADD COLUMN is_starter INTEGER DEFAULT 0"
+    );
+  }
+
+  // Migration: create app_settings table
+  await database.execAsync(
+    "CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)"
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -370,6 +400,48 @@ async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   } finally {
     await stmt.finalizeAsync();
   }
+
+  await seedStarters(database);
+}
+
+async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
+  const row = await database.getFirstAsync<{ value: string }>(
+    "SELECT value FROM app_settings WHERE key = 'starter_version'"
+  );
+  if (row && Number(row.value) >= STARTER_VERSION) return;
+
+  await database.withTransactionAsync(async () => {
+    for (const tpl of STARTER_TEMPLATES) {
+      await database.runAsync(
+        "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, 0, 0, 1)",
+        [tpl.id, tpl.name]
+      );
+      for (let i = 0; i < tpl.exercises.length; i++) {
+        const ex = tpl.exercises[i];
+        await database.runAsync(
+          "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds]
+        );
+      }
+    }
+
+    await database.runAsync(
+      "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, is_starter) VALUES (?, ?, ?, 0, NULL, 0, 0, 1)",
+      [STARTER_PROGRAM.id, STARTER_PROGRAM.name, STARTER_PROGRAM.description]
+    );
+    for (let i = 0; i < STARTER_PROGRAM.days.length; i++) {
+      const day = STARTER_PROGRAM.days[i];
+      await database.runAsync(
+        "INSERT OR IGNORE INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
+        [day.id, STARTER_PROGRAM.id, day.template_id, i, day.label]
+      );
+    }
+
+    await database.runAsync(
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('starter_version', ?)",
+      [String(STARTER_VERSION)]
+    );
+  });
 }
 
 type ExerciseRow = {
@@ -512,10 +584,16 @@ export async function createTemplate(name: string): Promise<WorkoutTemplate> {
 
 export async function getTemplates(): Promise<WorkoutTemplate[]> {
   const database = await getDatabase();
-  const rows = await database.getAllAsync<WorkoutTemplate>(
-    "SELECT * FROM workout_templates ORDER BY updated_at DESC"
+  const rows = await database.getAllAsync<{
+    id: string;
+    name: string;
+    created_at: number;
+    updated_at: number;
+    is_starter: number;
+  }>(
+    "SELECT * FROM workout_templates ORDER BY is_starter ASC, created_at DESC"
   );
-  return rows;
+  return rows.map((r) => ({ ...r, is_starter: r.is_starter === 1 }));
 }
 
 type TemplateExerciseRow = {
@@ -543,11 +621,18 @@ export async function getTemplateById(
   id: string
 ): Promise<WorkoutTemplate | null> {
   const database = await getDatabase();
-  const tpl = await database.getFirstAsync<WorkoutTemplate>(
+  const raw = await database.getFirstAsync<{
+    id: string;
+    name: string;
+    created_at: number;
+    updated_at: number;
+    is_starter: number;
+  }>(
     "SELECT * FROM workout_templates WHERE id = ?",
     [id]
   );
-  if (!tpl) return null;
+  if (!raw) return null;
+  const tpl: WorkoutTemplate = { ...raw, is_starter: raw.is_starter === 1 };
   const rows = await database.getAllAsync<TemplateExerciseRow>(
     `SELECT te.*, e.name AS exercise_name, e.category AS exercise_category,
        e.primary_muscles AS exercise_primary_muscles, e.secondary_muscles AS exercise_secondary_muscles,
@@ -594,9 +679,91 @@ export async function getTemplateById(
 
 export async function deleteTemplate(id: string): Promise<void> {
   const database = await getDatabase();
+  const tpl = await database.getFirstAsync<{ is_starter: number }>(
+    "SELECT is_starter FROM workout_templates WHERE id = ?",
+    [id]
+  );
+  if (tpl?.is_starter === 1) return;
   await database.runAsync("DELETE FROM template_exercises WHERE template_id = ?", [id]);
   await database.runAsync("UPDATE program_days SET template_id = NULL WHERE template_id = ?", [id]);
-  await database.runAsync("DELETE FROM workout_templates WHERE id = ?", [id]);
+  await database.runAsync("DELETE FROM workout_templates WHERE id = ? AND is_starter = 0", [id]);
+}
+
+export async function duplicateTemplate(id: string): Promise<string> {
+  const database = await getDatabase();
+  const tpl = await getTemplateById(id);
+  if (!tpl) throw new Error("Template not found");
+
+  const newId = crypto.randomUUID();
+  const now = Date.now();
+  const name = tpl.is_starter ? `${tpl.name} (Copy)` : `${tpl.name} (Copy)`;
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "INSERT INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, ?, ?, 0)",
+      [newId, name, now, now]
+    );
+
+    const linkMap = new Map<string, string>();
+    for (const ex of tpl.exercises ?? []) {
+      const teId = crypto.randomUUID();
+      let linkId = ex.link_id;
+      if (linkId) {
+        if (!linkMap.has(linkId)) linkMap.set(linkId, crypto.randomUUID());
+        linkId = linkMap.get(linkId)!;
+      }
+      await database.runAsync(
+        "INSERT INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [teId, newId, ex.exercise_id, ex.position, ex.target_sets, ex.target_reps, ex.rest_seconds, linkId, ex.link_label]
+      );
+    }
+  });
+
+  return newId;
+}
+
+export async function duplicateProgram(id: string): Promise<string> {
+  const database = await getDatabase();
+  const prog = await database.getFirstAsync<{ id: string; name: string; description: string; is_starter: number }>(
+    "SELECT id, name, description, is_starter FROM programs WHERE id = ? AND deleted_at IS NULL",
+    [id]
+  );
+  if (!prog) throw new Error("Program not found");
+
+  const newId = crypto.randomUUID();
+  const now = Date.now();
+  const name = `${prog.name} (Copy)`;
+
+  const days = await database.getAllAsync<{ id: string; template_id: string | null; position: number; label: string }>(
+    "SELECT id, template_id, position, label FROM program_days WHERE program_id = ? ORDER BY position ASC",
+    [id]
+  );
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "INSERT INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, is_starter) VALUES (?, ?, ?, 0, NULL, ?, ?, 0)",
+      [newId, name, prog.description, now, now]
+    );
+
+    for (const day of days) {
+      let tplId = day.template_id;
+      if (tplId) {
+        const tpl = await database.getFirstAsync<{ is_starter: number }>(
+          "SELECT is_starter FROM workout_templates WHERE id = ?",
+          [tplId]
+        );
+        if (tpl?.is_starter === 1) {
+          tplId = await duplicateTemplate(tplId);
+        }
+      }
+      await database.runAsync(
+        "INSERT INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
+        [crypto.randomUUID(), newId, tplId, day.position, day.label]
+      );
+    }
+  });
+
+  return newId;
 }
 
 export async function addExerciseToTemplate(

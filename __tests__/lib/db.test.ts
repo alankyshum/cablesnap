@@ -261,12 +261,14 @@ describe("templates CRUD", () => {
   it("getTemplates returns all templates", async () => {
     await initDb();
     const templates = [
-      { id: "t1", name: "Push", created_at: 100, updated_at: 200 },
+      { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: 0 },
     ];
     mockDb.getAllAsync.mockResolvedValueOnce(templates);
 
     const result = await db.getTemplates();
-    expect(result).toEqual(templates);
+    expect(result).toEqual([
+      { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: false },
+    ]);
   });
 
   it("deleteTemplate removes template and related data", async () => {

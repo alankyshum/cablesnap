@@ -10,6 +10,7 @@ import {
 import {
   Button,
   Card,
+  Chip,
   IconButton,
   Text,
   useTheme,
@@ -28,6 +29,7 @@ import {
   removeProgramDay,
   reorderProgramDays,
 } from "../../lib/programs";
+import { duplicateProgram } from "../../lib/db";
 import type { Program, ProgramDay } from "../../lib/types";
 
 export default function ProgramDetail() {
@@ -141,6 +143,12 @@ export default function ProgramDetail() {
   }
 
   const currentIdx = days.findIndex((d) => d.id === program.current_day_id);
+  const starter = program.is_starter;
+
+  const handleDuplicate = async () => {
+    const newId = await duplicateProgram(program.id);
+    router.replace(`/program/${newId}`);
+  };
 
   return (
     <>
@@ -152,6 +160,17 @@ export default function ProgramDetail() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <>
+            {starter && (
+              <Chip
+                mode="flat"
+                compact
+                style={styles.starterChip}
+                accessibilityLabel="Starter program, read-only. Duplicate to edit."
+              >
+                STARTER
+              </Chip>
+            )}
+
             {program.description ? (
               <Text
                 variant="bodyMedium"
@@ -176,44 +195,69 @@ export default function ProgramDetail() {
               )}
             </View>
 
-            <View style={styles.actions}>
-              <Button
-                mode={program.is_active ? "outlined" : "contained"}
-                onPress={toggle}
-                disabled={loading}
-                style={styles.actionBtn}
-                accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
-              >
-                {program.is_active ? "Deactivate" : "Set Active"}
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={() => router.push(`/program/create?programId=${program.id}`)}
-                style={styles.actionBtn}
-                accessibilityLabel="Edit program"
-              >
-                Edit
-              </Button>
-              <IconButton
-                icon="delete"
-                onPress={confirmDelete}
-                accessibilityLabel="Delete program"
-              />
-            </View>
+            {starter ? (
+              <View style={styles.actions}>
+                <Button
+                  mode={program.is_active ? "outlined" : "contained"}
+                  onPress={toggle}
+                  disabled={loading}
+                  style={styles.actionBtn}
+                  accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
+                >
+                  {program.is_active ? "Deactivate" : "Set Active"}
+                </Button>
+                <Button
+                  mode="outlined"
+                  icon="content-copy"
+                  onPress={handleDuplicate}
+                  style={styles.actionBtn}
+                  accessibilityLabel="Duplicate to edit"
+                >
+                  Duplicate to Edit
+                </Button>
+              </View>
+            ) : (
+              <View style={styles.actions}>
+                <Button
+                  mode={program.is_active ? "outlined" : "contained"}
+                  onPress={toggle}
+                  disabled={loading}
+                  style={styles.actionBtn}
+                  accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
+                >
+                  {program.is_active ? "Deactivate" : "Set Active"}
+                </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => router.push(`/program/create?programId=${program.id}`)}
+                  style={styles.actionBtn}
+                  accessibilityLabel="Edit program"
+                >
+                  Edit
+                </Button>
+                <IconButton
+                  icon="delete"
+                  onPress={confirmDelete}
+                  accessibilityLabel="Delete program"
+                />
+              </View>
+            )}
 
             <View style={styles.sectionHeader}>
               <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
                 Workout Days ({days.length})
               </Text>
-              <Button
-                mode="text"
-                icon="plus"
-                compact
-                onPress={() => router.push(`/program/pick-template?programId=${program.id}`)}
-                accessibilityLabel="Add workout day"
-              >
-                Add Day
-              </Button>
+              {!starter && (
+                <Button
+                  mode="text"
+                  icon="plus"
+                  compact
+                  onPress={() => router.push(`/program/pick-template?programId=${program.id}`)}
+                  accessibilityLabel="Add workout day"
+                >
+                  Add Day
+                </Button>
+              )}
             </View>
           </>
         }
@@ -245,30 +289,32 @@ export default function ProgramDetail() {
                   </Text>
                 )}
               </View>
-              <View style={styles.cardActions}>
-                <IconButton
-                  icon="arrow-up"
-                  size={18}
-                  onPress={() => move(index, -1)}
-                  disabled={index === 0}
-                  accessibilityLabel={`Move ${dayName(item)} up`}
-                  accessibilityHint="Reorders workout day"
-                />
-                <IconButton
-                  icon="arrow-down"
-                  size={18}
-                  onPress={() => move(index, 1)}
-                  disabled={index === days.length - 1}
-                  accessibilityLabel={`Move ${dayName(item)} down`}
-                  accessibilityHint="Reorders workout day"
-                />
-                <IconButton
-                  icon="close"
+              {!starter && (
+                <View style={styles.cardActions}>
+                  <IconButton
+                    icon="arrow-up"
+                    size={18}
+                    onPress={() => move(index, -1)}
+                    disabled={index === 0}
+                    accessibilityLabel={`Move ${dayName(item)} up`}
+                    accessibilityHint="Reorders workout day"
+                  />
+                  <IconButton
+                    icon="arrow-down"
+                    size={18}
+                    onPress={() => move(index, 1)}
+                    disabled={index === days.length - 1}
+                    accessibilityLabel={`Move ${dayName(item)} down`}
+                    accessibilityHint="Reorders workout day"
+                  />
+                  <IconButton
+                    icon="close"
                   size={18}
                   onPress={() => remove(item.id)}
                   accessibilityLabel={`Remove ${dayName(item)}`}
                 />
               </View>
+              )}
             </Card.Content>
           </Card>
         )}
@@ -330,6 +376,10 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   desc: {
+    marginBottom: 12,
+  },
+  starterChip: {
+    alignSelf: "flex-start",
     marginBottom: 12,
   },
   meta: {

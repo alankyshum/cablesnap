@@ -9,6 +9,7 @@ import {
 import {
   Button,
   Checkbox,
+  Chip,
   IconButton,
   Snackbar,
   Text,
@@ -18,6 +19,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   addExerciseToTemplate,
   createExerciseLink,
+  duplicateTemplate,
   getTemplateById,
   removeExerciseFromTemplate,
   reorderTemplateExercises,
@@ -318,6 +320,13 @@ export default function EditTemplate() {
     );
   }
 
+  const starter = template.is_starter;
+
+  const handleDuplicate = async () => {
+    const newId = await duplicateTemplate(template.id);
+    router.replace(`/template/${newId}`);
+  };
+
   return (
     <>
       <Stack.Screen options={{ title: template.name }} />
@@ -325,16 +334,27 @@ export default function EditTemplate() {
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.section}>
-          <Text
-            variant="titleMedium"
-            style={{ color: theme.colors.onBackground }}
-          >
-            Exercises ({exercises.length})
-          </Text>
+          <View style={styles.headerRow}>
+            <Text
+              variant="titleMedium"
+              style={{ color: theme.colors.onBackground }}
+            >
+              Exercises ({exercises.length})
+            </Text>
+            {starter && (
+              <Chip
+                mode="flat"
+                compact
+                accessibilityLabel="Starter template, read-only. Duplicate to edit."
+              >
+                STARTER
+              </Chip>
+            )}
+          </View>
         </View>
 
         {/* Selection mode toolbar */}
-        {selecting && (
+        {selecting && !starter && (
           <View style={[styles.selectionBar, { backgroundColor: theme.colors.primaryContainer }]}>
             <Text variant="bodyMedium" style={{ color: theme.colors.onPrimaryContainer, flex: 1 }}
               accessibilityLiveRegion="polite"
@@ -364,7 +384,42 @@ export default function EditTemplate() {
 
         <FlatList
           data={exercises}
-          renderItem={renderItem}
+          renderItem={starter ? ({ item, index }: ListRenderItemInfo<TemplateExercise>) => {
+            const linkIdx = item.link_id ? linkIds.indexOf(item.link_id) : -1;
+            const color = linkIdx >= 0 ? palette[linkIdx % palette.length] : undefined;
+            return (
+              <Pressable
+                style={[
+                  styles.row,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderBottomColor: theme.colors.outlineVariant,
+                    borderLeftWidth: color ? 4 : 0,
+                    borderLeftColor: color ?? "transparent",
+                  },
+                ]}
+                accessibilityRole="none"
+              >
+                <View style={styles.info}>
+                  <Text
+                    variant="titleSmall"
+                    style={{
+                      color: item.exercise?.deleted_at ? theme.colors.onSurfaceVariant : theme.colors.onSurface,
+                      fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
+                    }}
+                  >
+                    {item.exercise?.name ?? "Unknown"}{item.exercise?.deleted_at ? " (removed)" : ""}
+                  </Text>
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: theme.colors.onSurfaceVariant }}
+                  >
+                    {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          } : renderItem}
           keyExtractor={(item) => item.id}
           extraData={[selecting, selected, linkIds]}
           ListEmptyComponent={
@@ -380,33 +435,47 @@ export default function EditTemplate() {
           style={styles.list}
         />
 
-        {!selecting && exercises.length >= 2 && (
+        {starter ? (
           <Button
-            mode="outlined"
-            icon="link-variant"
-            onPress={() => startSelection()}
-            style={styles.addBtn}
-            accessibilityLabel="Create superset"
-            accessibilityRole="button"
+            mode="contained"
+            icon="content-copy"
+            onPress={handleDuplicate}
+            style={styles.doneBtn}
+            accessibilityLabel="Duplicate to edit"
           >
-            Create Superset
+            Duplicate to Edit
           </Button>
-        )}
+        ) : (
+          <>
+            {!selecting && exercises.length >= 2 && (
+              <Button
+                mode="outlined"
+                icon="link-variant"
+                onPress={() => startSelection()}
+                style={styles.addBtn}
+                accessibilityLabel="Create superset"
+                accessibilityRole="button"
+              >
+                Create Superset
+              </Button>
+            )}
 
-        <Button
-          mode="outlined"
-          icon="plus"
-          onPress={() =>
-            router.push(`/template/pick-exercise?templateId=${id}&editId=${id}`)
-          }
-          style={styles.addBtn}
-          accessibilityLabel="Add exercise to template"
-        >
-          Add Exercise
-        </Button>
-        <Button mode="contained" onPress={() => router.back()} style={styles.doneBtn} accessibilityLabel="Done editing template">
-          Done
-        </Button>
+            <Button
+              mode="outlined"
+              icon="plus"
+              onPress={() =>
+                router.push(`/template/pick-exercise?templateId=${id}&editId=${id}`)
+              }
+              style={styles.addBtn}
+              accessibilityLabel="Add exercise to template"
+            >
+              Add Exercise
+            </Button>
+            <Button mode="contained" onPress={() => router.back()} style={styles.doneBtn} accessibilityLabel="Done editing template">
+              Done
+            </Button>
+          </>
+        )}
       </View>
       <Snackbar
         visible={!!snackbar}
@@ -440,6 +509,11 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 8,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   list: {
     flex: 1,

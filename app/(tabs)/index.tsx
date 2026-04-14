@@ -9,7 +9,9 @@ import {
 import {
   Button,
   Card,
+  Chip,
   IconButton,
+  Menu,
   SegmentedButtons,
   Snackbar,
   Text,
@@ -18,7 +20,15 @@ import {
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
+  getNextWorkout,
+  getPrograms,
+  getProgramDayCount,
+  softDeleteProgram,
+} from "../../lib/programs";
+import {
   deleteTemplate,
+  duplicateTemplate,
+  duplicateProgram,
   getActiveSession,
   getAllCompletedSessionWeeks,
   getRecentPRs,
@@ -29,15 +39,11 @@ import {
   getTemplates,
   startSession,
 } from "../../lib/db";
-import {
-  getNextWorkout,
-  getPrograms,
-  getProgramDayCount,
-  softDeleteProgram,
-} from "../../lib/programs";
 import type { Program, ProgramDay, WorkoutSession, WorkoutTemplate } from "../../lib/types";
 import { semantic } from "../../constants/theme";
 import { rpeColor, rpeText } from "../../lib/rpe";
+import { STARTER_TEMPLATES } from "../../lib/starter-templates";
+import { DIFFICULTY_LABELS } from "../../lib/types";
 
 function mondayOf(date: Date): number {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -74,6 +80,7 @@ export default function Workouts() {
   const [avgRPEs, setAvgRPEs] = useState<Record<string, number | null>>({});
   const [nextWorkout, setNextWorkout] = useState<{ program: Program; day: ProgramDay } | null>(null);
   const [snackbar, setSnackbar] = useState("");
+  const [menu, setMenu] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [tpls, sess, act, timestamps, prData, progs, nw] = await Promise.all([
@@ -152,6 +159,7 @@ export default function Workouts() {
   };
 
   const confirmDeleteProgram = (prog: Program) => {
+    if (prog.is_starter) return;
     Alert.alert(
       "Delete Program",
       `Delete "${prog.name}"? Past workout data will be preserved.`,
@@ -170,6 +178,7 @@ export default function Workouts() {
   };
 
   const confirmDelete = (tpl: WorkoutTemplate) => {
+    if (tpl.is_starter) return;
     Alert.alert(
       "Delete Template",
       `Delete "${tpl.name}"? Past workout data will be preserved.`,
@@ -186,6 +195,28 @@ export default function Workouts() {
       ]
     );
   };
+
+  const handleDuplicateTemplate = async (tpl: WorkoutTemplate) => {
+    setMenu(null);
+    const newId = await duplicateTemplate(tpl.id);
+    await load();
+    router.push(`/template/${newId}`);
+  };
+
+  const handleDuplicateProgram = async (prog: Program) => {
+    setMenu(null);
+    const newId = await duplicateProgram(prog.id);
+    await load();
+    router.push(`/program/${newId}`);
+  };
+
+  const starterMeta = (id: string) =>
+    STARTER_TEMPLATES.find((s) => s.id === id);
+
+  const userTemplates = templates.filter((t) => !t.is_starter);
+  const starters = templates.filter((t) => t.is_starter);
+  const userPrograms = programs.filter((p) => !p.is_starter);
+  const starterPrograms = programs.filter((p) => p.is_starter);
 
   const duration = (seconds: number | null) => {
     if (!seconds) return "-";
@@ -281,7 +312,7 @@ export default function Workouts() {
 
       {segment === "templates" ? (
         <>
-          {/* Templates */}
+          {/* User Templates */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
@@ -297,7 +328,7 @@ export default function Workouts() {
                 Create
               </Button>
             </View>
-            {templates.length === 0 ? (
+            {userTemplates.length === 0 && starters.length === 0 ? (
               <View style={styles.empty}>
                 <Text
                   variant="bodyMedium"
@@ -315,49 +346,139 @@ export default function Workouts() {
                 </Button>
               </View>
             ) : (
-              <FlatList
-                data={templates}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => (
-                  <Card
-                    style={[styles.card, { backgroundColor: theme.colors.surface }]}
-                    onPress={() => startFromTemplate(item)}
-                    onLongPress={() => confirmDelete(item)}
-                    accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
-                    accessibilityRole="button"
-                  >
-                    <Card.Content style={styles.cardContent}>
-                      <View style={styles.cardInfo}>
-                        <Text
-                          variant="titleSmall"
-                          style={{ color: theme.colors.onSurface }}
-                        >
-                          {item.name}
-                        </Text>
-                        <Text
-                          variant="bodySmall"
-                          style={{ color: theme.colors.onSurfaceVariant }}
-                        >
-                          {counts[item.id] ?? 0} exercises
-                        </Text>
-                      </View>
-                      <IconButton
-                        icon="pencil"
-                        size={20}
-                        onPress={() => router.push(`/template/${item.id}`)}
-                        accessibilityLabel={`Edit template ${item.name}`}
-                      />
-                    </Card.Content>
-                  </Card>
+              <>
+                {userTemplates.length > 0 && (
+                  <FlatList
+                    data={userTemplates}
+                    keyExtractor={(item) => item.id}
+                    scrollEnabled={false}
+                    renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => (
+                      <Card
+                        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                        onPress={() => startFromTemplate(item)}
+                        onLongPress={() => confirmDelete(item)}
+                        accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
+                        accessibilityRole="button"
+                      >
+                        <Card.Content style={styles.cardContent}>
+                          <View style={styles.cardInfo}>
+                            <Text
+                              variant="titleSmall"
+                              style={{ color: theme.colors.onSurface }}
+                            >
+                              {item.name}
+                            </Text>
+                            <Text
+                              variant="bodySmall"
+                              style={{ color: theme.colors.onSurfaceVariant }}
+                            >
+                              {counts[item.id] ?? 0} exercises
+                            </Text>
+                          </View>
+                          <IconButton
+                            icon="pencil"
+                            size={20}
+                            onPress={() => router.push(`/template/${item.id}`)}
+                            accessibilityLabel={`Edit template ${item.name}`}
+                          />
+                        </Card.Content>
+                      </Card>
+                    )}
+                  />
                 )}
-              />
+
+                {/* Starter Workouts */}
+                {starters.length > 0 && (
+                  <>
+                    <View style={styles.starterHeader} accessibilityRole="header">
+                      <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+                        Starter Workouts
+                      </Text>
+                    </View>
+                    <FlatList
+                      data={starters}
+                      keyExtractor={(item) => item.id}
+                      scrollEnabled={false}
+                      renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => {
+                        const meta = starterMeta(item.id);
+                        return (
+                          <Card
+                            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                            onPress={() => startFromTemplate(item)}
+                            accessibilityLabel={`Starter template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
+                            accessibilityHint="Double-tap to start workout"
+                            accessibilityRole="button"
+                          >
+                            <Card.Content style={styles.cardContent}>
+                              <View style={styles.cardInfo}>
+                                <View style={styles.chipRow}>
+                                  <Text
+                                    variant="titleSmall"
+                                    style={{ color: theme.colors.onSurface }}
+                                  >
+                                    {item.name}
+                                  </Text>
+                                  <Chip
+                                    mode="flat"
+                                    compact
+                                    style={styles.starterChip}
+                                    textStyle={styles.starterChipText}
+                                    accessibilityLabel="Starter template"
+                                  >
+                                    STARTER
+                                  </Chip>
+                                  {meta?.recommended && (
+                                    <Chip
+                                      mode="flat"
+                                      compact
+                                      style={[styles.starterChip, { backgroundColor: theme.colors.primaryContainer }]}
+                                      textStyle={[styles.starterChipText, { color: theme.colors.onPrimaryContainer }]}
+                                      accessibilityLabel="Recommended"
+                                    >
+                                      Recommended
+                                    </Chip>
+                                  )}
+                                </View>
+                                <Text
+                                  variant="bodySmall"
+                                  style={{ color: theme.colors.onSurfaceVariant }}
+                                >
+                                  {meta ? `${DIFFICULTY_LABELS[meta.difficulty]} · ${meta.duration} · ${meta.exercises.length} exercises` : `${counts[item.id] ?? 0} exercises`}
+                                </Text>
+                              </View>
+                              <Menu
+                                visible={menu === item.id}
+                                onDismiss={() => setMenu(null)}
+                                anchor={
+                                  <IconButton
+                                    icon="dots-vertical"
+                                    size={20}
+                                    onPress={() => setMenu(item.id)}
+                                    accessibilityLabel={`Options for ${item.name}`}
+                                  />
+                                }
+                              >
+                                <Menu.Item
+                                  onPress={() => handleDuplicateTemplate(item)}
+                                  title="Duplicate"
+                                  leadingIcon="content-copy"
+                                  accessibilityLabel="Duplicate template for editing"
+                                />
+                              </Menu>
+                            </Card.Content>
+                          </Card>
+                        );
+                      }}
+                    />
+                  </>
+                )}
+              </>
             )}
           </View>
         </>
       ) : (
         <>
-          {/* Programs */}
+          {/* User Programs */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
@@ -373,7 +494,7 @@ export default function Workouts() {
                 Create
               </Button>
             </View>
-            {programs.length === 0 ? (
+            {userPrograms.length === 0 && starterPrograms.length === 0 ? (
               <View style={styles.empty}>
                 <Text
                   variant="bodyMedium"
@@ -393,45 +514,121 @@ export default function Workouts() {
                 </Button>
               </View>
             ) : (
-              <FlatList
-                data={programs}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                renderItem={({ item }: ListRenderItemInfo<Program>) => (
-                  <Card
-                    style={[styles.card, { backgroundColor: theme.colors.surface }]}
-                    onPress={() => router.push(`/program/${item.id}`)}
-                    onLongPress={() => confirmDeleteProgram(item)}
-                    accessibilityLabel={`Program: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
-                    accessibilityRole="button"
-                  >
-                    <Card.Content style={styles.cardContent}>
-                      <View style={styles.cardInfo}>
-                        <Text
-                          variant="titleSmall"
-                          style={{ color: theme.colors.onSurface }}
-                        >
-                          {item.name}
-                        </Text>
-                        <Text
-                          variant="bodySmall"
-                          style={{ color: theme.colors.onSurfaceVariant }}
-                        >
-                          {dayCounts[item.id] ?? 0} days{item.is_active ? " · Active" : ""}
-                        </Text>
-                      </View>
-                      {item.is_active && (
-                        <MaterialCommunityIcons
-                          name="check-circle"
-                          size={20}
-                          color={theme.colors.primary}
-                          accessibilityLabel="Active program"
-                        />
-                      )}
-                    </Card.Content>
-                  </Card>
+              <>
+                {userPrograms.length > 0 && (
+                  <FlatList
+                    data={userPrograms}
+                    keyExtractor={(item) => item.id}
+                    scrollEnabled={false}
+                    renderItem={({ item }: ListRenderItemInfo<Program>) => (
+                      <Card
+                        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                        onPress={() => router.push(`/program/${item.id}`)}
+                        onLongPress={() => confirmDeleteProgram(item)}
+                        accessibilityLabel={`Program: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
+                        accessibilityRole="button"
+                      >
+                        <Card.Content style={styles.cardContent}>
+                          <View style={styles.cardInfo}>
+                            <Text
+                              variant="titleSmall"
+                              style={{ color: theme.colors.onSurface }}
+                            >
+                              {item.name}
+                            </Text>
+                            <Text
+                              variant="bodySmall"
+                              style={{ color: theme.colors.onSurfaceVariant }}
+                            >
+                              {dayCounts[item.id] ?? 0} days{item.is_active ? " · Active" : ""}
+                            </Text>
+                          </View>
+                          {item.is_active && (
+                            <MaterialCommunityIcons
+                              name="check-circle"
+                              size={20}
+                              color={theme.colors.primary}
+                              accessibilityLabel="Active program"
+                            />
+                          )}
+                        </Card.Content>
+                      </Card>
+                    )}
+                  />
                 )}
-              />
+
+                {/* Starter Programs */}
+                {starterPrograms.length > 0 && (
+                  <>
+                    <View style={styles.starterHeader} accessibilityRole="header">
+                      <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+                        Starter Programs
+                      </Text>
+                    </View>
+                    <FlatList
+                      data={starterPrograms}
+                      keyExtractor={(item) => item.id}
+                      scrollEnabled={false}
+                      renderItem={({ item }: ListRenderItemInfo<Program>) => (
+                        <Card
+                          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                          onPress={() => router.push(`/program/${item.id}`)}
+                          accessibilityLabel={`Starter program: ${item.name}, ${dayCounts[item.id] ?? 0} days`}
+                          accessibilityHint="Double-tap to view program"
+                          accessibilityRole="button"
+                        >
+                          <Card.Content style={styles.cardContent}>
+                            <View style={styles.cardInfo}>
+                              <View style={styles.chipRow}>
+                                <Text
+                                  variant="titleSmall"
+                                  style={{ color: theme.colors.onSurface }}
+                                >
+                                  {item.name}
+                                </Text>
+                                <Chip
+                                  mode="flat"
+                                  compact
+                                  style={styles.starterChip}
+                                  textStyle={styles.starterChipText}
+                                  accessibilityLabel="Starter template"
+                                >
+                                  STARTER
+                                </Chip>
+                              </View>
+                              <Text
+                                variant="bodySmall"
+                                style={{ color: theme.colors.onSurfaceVariant }}
+                              >
+                                {dayCounts[item.id] ?? 0} days · Intermediate
+                              </Text>
+                            </View>
+                            <Menu
+                              visible={menu === `prog-${item.id}`}
+                              onDismiss={() => setMenu(null)}
+                              anchor={
+                                <IconButton
+                                  icon="dots-vertical"
+                                  size={20}
+                                  onPress={() => setMenu(`prog-${item.id}`)}
+                                  accessibilityLabel={`Options for ${item.name}`}
+                                />
+                              }
+                            >
+                              <Menu.Item
+                                onPress={() => handleDuplicateProgram(item)}
+                                title="Duplicate"
+                                leadingIcon="content-copy"
+                                accessibilityLabel="Duplicate program for editing"
+                              />
+                            </Menu>
+                          </Card.Content>
+                        </Card>
+                      )}
+                    />
+                  </>
+                )}
+              </>
             )}
           </View>
         </>
@@ -695,5 +892,22 @@ const styles = StyleSheet.create({
   },
   emptyBtn: {
     marginTop: 8,
+  },
+  starterHeader: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  starterChip: {
+    height: 24,
+  },
+  starterChipText: {
+    fontSize: 10,
+    lineHeight: 14,
   },
 });

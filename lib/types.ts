@@ -166,6 +166,7 @@ export type WorkoutTemplate = {
   name: string;
   created_at: number;
   updated_at: number;
+  is_starter?: boolean;
   exercises?: TemplateExercise[];
 };
 
@@ -326,6 +327,7 @@ export type Program = {
   name: string;
   description: string;
   is_active: boolean;
+  is_starter?: boolean;
   current_day_id: string | null;
   created_at: number;
   updated_at: number;

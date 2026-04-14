@@ -33,14 +33,15 @@ export async function getPrograms(): Promise<Program[]> {
     name: string;
     description: string;
     is_active: number;
+    is_starter: number;
     current_day_id: string | null;
     created_at: number;
     updated_at: number;
     deleted_at: number | null;
   }>(
-    "SELECT * FROM programs WHERE deleted_at IS NULL ORDER BY is_active DESC, updated_at DESC"
+    "SELECT * FROM programs WHERE deleted_at IS NULL ORDER BY is_active DESC, is_starter ASC, updated_at DESC"
   );
-  return rows.map((r) => ({ ...r, is_active: r.is_active === 1 }));
+  return rows.map((r) => ({ ...r, is_active: r.is_active === 1, is_starter: r.is_starter === 1 }));
 }
 
 export async function getProgramById(id: string): Promise<Program | null> {
@@ -50,13 +51,14 @@ export async function getProgramById(id: string): Promise<Program | null> {
     name: string;
     description: string;
     is_active: number;
+    is_starter: number;
     current_day_id: string | null;
     created_at: number;
     updated_at: number;
     deleted_at: number | null;
   }>("SELECT * FROM programs WHERE id = ? AND deleted_at IS NULL", [id]);
   if (!row) return null;
-  return { ...row, is_active: row.is_active === 1 };
+  return { ...row, is_active: row.is_active === 1, is_starter: row.is_starter === 1 };
 }
 
 export async function updateProgram(
@@ -73,8 +75,13 @@ export async function updateProgram(
 
 export async function softDeleteProgram(id: string): Promise<void> {
   const database = await getDatabase();
+  const prog = await database.getFirstAsync<{ is_starter: number }>(
+    "SELECT is_starter FROM programs WHERE id = ?",
+    [id]
+  );
+  if (prog?.is_starter === 1) return;
   await database.runAsync(
-    "UPDATE programs SET deleted_at = ?, is_active = 0, updated_at = ? WHERE id = ?",
+    "UPDATE programs SET deleted_at = ?, is_active = 0, updated_at = ? WHERE id = ? AND is_starter = 0",
     [Date.now(), Date.now(), id]
   );
 }
