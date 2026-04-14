@@ -193,7 +193,20 @@ Timer sound preference stored via existing `getAppSetting`/`setAppSetting` (app_
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: APPROVED — with required improvements (2026-04-14)
+
+**Must address during implementation:**
+1. Add acceptance criterion: "Existing haptic feedback continues to fire regardless of Timer Sound setting"
+2. Sound asset licensing: Specify CC0/public domain source. Include `assets/sounds/LICENSE`
+3. Settings toggle a11y: Specify `accessibilityLabel`, `accessibilityRole`, `accessibilityHint` for Timer Sound switch
+
+**Recommendations (non-blocking):**
+- Pre-compose compound cues as single audio files instead of multi-play with setTimeout
+- Keep sounds loaded while timer screens are mounted; unload on final screen unmount only
+- Document Android vibrate mode behavior for users
+- Consider audio preview when toggling Timer Sound ON
+- Consider 10s rest timer warning in addition to 3-2-1 tick
+- Ensure work/rest cues use clearly different tonal ranges for gym-noise distinguishability
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — 2026-04-14
