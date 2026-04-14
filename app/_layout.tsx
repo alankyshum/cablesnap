@@ -1,13 +1,16 @@
 import { useColorScheme, Platform } from "react-native";
 import { PaperProvider, Banner } from "react-native-paper";
 import { ThemeProvider } from "@react-navigation/native";
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
+import * as SplashScreen from "expo-splash-screen";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
-import { getDatabase, isMemoryFallback } from "../lib/db";
+import { getDatabase, isMemoryFallback, isOnboardingComplete } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
 import ErrorBoundary from "../components/ErrorBoundary";
+
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -15,14 +18,22 @@ export default function RootLayout() {
   const paperTheme = isDark ? dark : light;
   const [banner, setBanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [onboarded, setOnboarded] = useState(true);
 
   useEffect(() => {
     getDatabase()
-      .then(() => {
+      .then(async () => {
         if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
+        const complete = await isOnboardingComplete();
+        setOnboarded(complete);
+        setReady(true);
+        SplashScreen.hideAsync();
       })
       .catch((err) => {
         setError(err?.message ?? "Failed to initialize database");
+        setReady(true);
+        SplashScreen.hideAsync();
       });
     setupGlobalHandler();
   }, []);
@@ -32,10 +43,13 @@ export default function RootLayout() {
   };
   const headerTintColor = paperTheme.colors.onSurface;
 
+  if (!ready) return null;
+
   return (
     <ErrorBoundary>
       <PaperProvider theme={paperTheme}>
         <ThemeProvider value={isDark ? navigationDark : navigationLight}>
+          {!onboarded && <Redirect href="/onboarding/welcome" />}
           <Banner
             visible={banner}
             actions={[{ label: "Dismiss", onPress: () => setBanner(false) }]}
@@ -56,6 +70,7 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen
               name="exercise/[id]"
               options={{

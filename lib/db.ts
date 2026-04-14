@@ -372,33 +372,33 @@ async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   const result = await database.getFirstAsync<{ count: number }>(
     "SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 1"
   );
-  if (result && result.count > 0) return;
-
-  const exercises = seedExercises();
-  const stmt = await database.prepareAsync(
-    `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, mount_position, attachment, training_modes, is_voltra)
+  if (!result || result.count === 0) {
+    const exercises = seedExercises();
+    const stmt = await database.prepareAsync(
+      `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, mount_position, attachment, training_modes, is_voltra)
      VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom, $mount_position, $attachment, $training_modes, $is_voltra)`
-  );
-  try {
-    for (const ex of exercises) {
-      await stmt.executeAsync({
-        $id: ex.id,
-        $name: ex.name,
-        $category: ex.category,
-        $primary_muscles: JSON.stringify(ex.primary_muscles),
-        $secondary_muscles: JSON.stringify(ex.secondary_muscles),
-        $equipment: ex.equipment,
-        $instructions: ex.instructions,
-        $difficulty: ex.difficulty,
-        $is_custom: ex.is_custom ? 1 : 0,
-        $mount_position: ex.mount_position ?? null,
-        $attachment: ex.attachment ?? "handle",
-        $training_modes: JSON.stringify(ex.training_modes ?? ["weight"]),
-        $is_voltra: ex.is_voltra ? 1 : 0,
-      });
+    );
+    try {
+      for (const ex of exercises) {
+        await stmt.executeAsync({
+          $id: ex.id,
+          $name: ex.name,
+          $category: ex.category,
+          $primary_muscles: JSON.stringify(ex.primary_muscles),
+          $secondary_muscles: JSON.stringify(ex.secondary_muscles),
+          $equipment: ex.equipment,
+          $instructions: ex.instructions,
+          $difficulty: ex.difficulty,
+          $is_custom: ex.is_custom ? 1 : 0,
+          $mount_position: ex.mount_position ?? null,
+          $attachment: ex.attachment ?? "handle",
+          $training_modes: JSON.stringify(ex.training_modes ?? ["weight"]),
+          $is_voltra: ex.is_voltra ? 1 : 0,
+        });
+      }
+    } finally {
+      await stmt.finalizeAsync();
     }
-  } finally {
-    await stmt.finalizeAsync();
   }
 
   await seedStarters(database);
@@ -408,6 +408,12 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
   const row = await database.getFirstAsync<{ value: string }>(
     "SELECT value FROM app_settings WHERE key = 'starter_version'"
   );
+  // Existing user upgrading: they already have starter data, skip onboarding
+  if (row) {
+    await database.runAsync(
+      "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('onboarding_complete', '1')"
+    );
+  }
   if (row && Number(row.value) >= STARTER_VERSION) return;
 
   await database.withTransactionAsync(async () => {
@@ -2573,4 +2579,28 @@ export async function getSessionWeightIncreases(
   }
 
   return result;
+}
+
+// --------------- App Settings ---------------
+
+export async function getAppSetting(key: string): Promise<string | null> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ value: string }>(
+    "SELECT value FROM app_settings WHERE key = ?",
+    [key]
+  );
+  return row?.value ?? null;
+}
+
+export async function setAppSetting(key: string, value: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
+    [key, value]
+  );
+}
+
+export async function isOnboardingComplete(): Promise<boolean> {
+  const val = await getAppSetting("onboarding_complete");
+  return val === "1";
 }
