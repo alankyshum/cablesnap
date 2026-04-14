@@ -24,6 +24,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useKeepAwake } from "expo-keep-awake";
+import { play as playAudio, setEnabled as setAudioEnabled } from "../../lib/audio";
 import {
   addSet,
   cancelSession,
@@ -45,6 +46,7 @@ import {
   updateSetTrainingMode,
   updateSetTempo,
   getExerciseById,
+  getAppSetting,
 } from "../../lib/db";
 import {
   getSessionProgramDayId,
@@ -105,6 +107,16 @@ export default function ActiveSession() {
   const [step, setStep] = useState(2.5);
   const restFlash = useRef(new Animated.Value(0)).current;
   const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Load timer sound setting
+  useEffect(() => {
+    getAppSetting("timer_sound_enabled").then((val) => {
+      setAudioEnabled(val !== "false")
+    }).catch(() => {
+      setAudioEnabled(true)
+      setSnackbar("Could not load sound setting")
+    })
+  }, []);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
   const [modes, setModes] = useState<Record<string, TrainingMode>>({});
   const [tempoDraft, setTempoDraft] = useState<Record<string, string>>({});
@@ -345,6 +357,9 @@ export default function ActiveSession() {
       }, 600);
       restHapticTimers.current = [t1, t2];
 
+      // Audio cue — rest complete
+      playAudio("complete");
+
       // Flash animation on rest timer card
       restFlash.setValue(1);
       Animated.timing(restFlash, {
@@ -353,6 +368,12 @@ export default function ActiveSession() {
         useNativeDriver: false,
       }).start();
     }
+
+    // Audio cue — 3-2-1 countdown tick
+    if (rest > 0 && rest <= 3) {
+      playAudio("tick");
+    }
+
     prevRest.current = rest;
   }, [rest]);
 

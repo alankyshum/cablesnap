@@ -20,6 +20,7 @@ import { Stack } from "expo-router"
 import { useFocusEffect } from "expo-router"
 import * as Haptics from "expo-haptics"
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake"
+import { play as playAudio, unload as unloadAudio, setEnabled as setAudioEnabled } from "../../lib/audio"
 import Svg, { Circle } from "react-native-svg"
 import Animated, {
   useSharedValue,
@@ -81,6 +82,19 @@ export default function TimerScreen() {
 
   const active = state.status === "running" || state.status === "paused"
 
+  // Load timer sound setting
+  useFocusEffect(
+    useCallback(() => {
+      getAppSetting("timer_sound_enabled").then((val) => {
+        setAudioEnabled(val !== "false")
+      }).catch(() => {
+        setAudioEnabled(true)
+        setError("Could not load sound setting")
+      })
+      return () => { unloadAudio() }
+    }, [])
+  )
+
   // Keep awake only when timer is active
   useEffect(() => {
     if (active) {
@@ -138,17 +152,22 @@ export default function TimerScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
         const t = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
         timeoutRefs.current.push(t)
+        playAudio("work_start")
       } else if (result.transition === "rest") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+        playAudio("rest_start")
       } else if (result.transition === "minute") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+        playAudio("minute")
       } else if (result.transition === "warning30" || result.transition === "warning10") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+        playAudio("warning")
       } else if (result.transition === "completed") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
         const t1 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
         const t2 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300)
         timeoutRefs.current.push(t1, t2)
+        playAudio("complete")
       }
       setState(result.state)
     }, 200)

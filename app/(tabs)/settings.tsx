@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, Switch, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -14,10 +14,13 @@ import {
   getBodyWeightCSVData,
   getBodyMeasurementsCSVData,
   getCSVCounts,
+  getAppSetting,
+  setAppSetting,
 } from "../../lib/db";
 import type { WorkoutCSVRow, NutritionCSVRow, BodyWeightCSVRow, BodyMeasurementsCSVRow } from "../../lib/db";
 import { getErrorCount, clearErrorLog } from "../../lib/errors";
 import { csvEscape } from "../../lib/csv";
+import { setEnabled as setAudioEnabled } from "../../lib/audio";
 
 function workoutCSV(rows: WorkoutCSVRow[]): string {
   const header = "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id";
@@ -110,10 +113,20 @@ export default function Settings() {
   const [count, setCount] = useState(0);
   const [range, setRange] = useState("30");
   const [counts, setCounts] = useState({ sessions: 0, entries: 0 });
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       getErrorCount().then(setCount);
+      getAppSetting("timer_sound_enabled").then((val) => {
+        const on = val !== "false";
+        setSoundEnabled(on);
+        setAudioEnabled(on);
+      }).catch(() => {
+        setSoundEnabled(true);
+        setAudioEnabled(true);
+        setSnack("Could not load sound setting");
+      });
     }, [])
   );
 
@@ -272,6 +285,39 @@ export default function Settings() {
           <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
             Settings
           </Text>
+
+      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Card.Content>
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+            Timer
+          </Text>
+
+          <View style={styles.row}>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+              Timer Sound
+            </Text>
+            <Switch
+              value={soundEnabled}
+              onValueChange={async (val) => {
+                setSoundEnabled(val);
+                setAudioEnabled(val);
+                try {
+                  await setAppSetting("timer_sound_enabled", val ? "true" : "false");
+                } catch {
+                  setSnack("Failed to save timer sound setting");
+                }
+              }}
+              accessibilityLabel="Timer Sound"
+              accessibilityRole="switch"
+              accessibilityHint="Enable or disable audio cues for workout timers"
+            />
+          </View>
+
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            Play audio cues for interval timers and rest timer countdowns.
+          </Text>
+        </Card.Content>
+      </Card>
 
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
@@ -483,5 +529,11 @@ const styles = StyleSheet.create({
   },
   segment: {
     marginBottom: 4,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
 });
