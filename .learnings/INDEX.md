@@ -93,3 +93,5 @@ _(no learnings yet)_
 | 2026-04-12 | BLD-10, BLD-12, BLD-14 | Never Trust PR Self-Verification | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-12 | BLD-13 | Wrap Bulk SQLite Inserts in withTransactionAsync | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-12 | BLD-13 | Never Execute Side Effects Inside setState Updaters | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-14 | BLD-93 | expo-notifications Requires Explicit expo-modules-core | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
+| 2026-04-14 | BLD-93 | qa-fitforge CODE-02 False Positive with sub.remove() | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
