@@ -254,10 +254,7 @@ export default function Workouts() {
   };
 
   const scheduled = adherence.filter((a) => a.scheduled);
-  const weekDone = sessions.filter((s) => {
-    const m = mondayOf(new Date());
-    return s.started_at >= m;
-  }).length;
+  const weekDone = adherence.filter((a) => a.completed).length;
   const weekLabel = scheduled.length > 0
     ? `${weekDone}/${scheduled.length}`
     : `${weekDone}`;
@@ -304,7 +301,7 @@ export default function Workouts() {
         </View>
         <View
           style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
-          accessibilityLabel={`${prCount} personal records this week`}
+          accessibilityLabel={`${prCount} recent personal records`}
         >
           <MaterialCommunityIcons
             name="trophy"
@@ -315,7 +312,7 @@ export default function Workouts() {
             {prCount}
           </Text>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            this week
+            recent
           </Text>
         </View>
       </View>

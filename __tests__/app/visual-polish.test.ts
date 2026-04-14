@@ -64,7 +64,7 @@ describe("Home screen stats row (index.tsx)", () => {
   it("has accessibility labels on each stat card", () => {
     expect(indexSrc).toContain("week streak");
     expect(indexSrc).toContain("workouts this week");
-    expect(indexSrc).toContain("personal records this week");
+    expect(indexSrc).toContain("recent personal records");
   });
 
   it("shows 0 with muted styling when streak is zero", () => {
