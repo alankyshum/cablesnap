@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
+  Pressable,
   StyleSheet,
   View,
   type ListRenderItemInfo,
 } from "react-native";
-import { Chip, FAB, Searchbar, Text, TouchableRipple, useTheme } from "react-native-paper";
+import { Chip, FAB, Searchbar, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -80,12 +81,13 @@ export default function Exercises() {
       const color = DIFFICULTY_COLORS[diff] || semantic.intermediate;
       const label = diff === "beginner" ? "B" : diff === "advanced" ? "A" : "I";
       return (
-      <TouchableRipple
+      <Pressable
         onPress={() => onPress(item)}
-        style={[
+        style={({ pressed }) => [
           styles.item,
           { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
           layout.wide && detail?.id === item.id && { backgroundColor: theme.colors.primaryContainer },
+          pressed && { opacity: 0.7 },
         ]}
         accessibilityLabel={`${item.name}${item.is_voltra === true ? ", Volta 1 compatible" : ""}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}, Difficulty: ${diff}`}
         accessibilityRole="button"
@@ -160,7 +162,7 @@ export default function Exercises() {
             </View>
           </View>
         </View>
-      </TouchableRipple>
+      </Pressable>
       );
     },
     [onPress, theme, layout.wide, detail]
