@@ -48,11 +48,11 @@ const mockGenerateReport = jest.fn().mockResolvedValue('{}')
 const mockGenerateGitHubURL = jest.fn().mockReturnValue('https://github.com')
 
 jest.mock('../../lib/errors', () => ({
-  getRecentErrors: (...args: any[]) => mockGetRecentErrors(...args),
-  clearErrorLog: (...args: any[]) => mockClearErrorLog(...args),
-  logError: (...args: any[]) => mockLogError(...args),
-  generateReport: (...args: any[]) => mockGenerateReport(...args),
-  generateGitHubURL: (...args: any[]) => mockGenerateGitHubURL(...args),
+  getRecentErrors: (...args: unknown[]) => mockGetRecentErrors(...args),
+  clearErrorLog: (...args: unknown[]) => mockClearErrorLog(...args),
+  logError: (...args: unknown[]) => mockLogError(...args),
+  generateReport: (...args: unknown[]) => mockGenerateReport(...args),
+  generateGitHubURL: (...args: unknown[]) => mockGenerateGitHubURL(...args),
 }))
 
 jest.mock('../../lib/interactions', () => ({
