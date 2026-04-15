@@ -315,6 +315,12 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="progress"
+              options={{
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
               name="history"
               options={{
                 headerShown: true,
