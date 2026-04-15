@@ -213,7 +213,32 @@ Must fix before approval:
 See BLD-126 issue comments for full review with detailed rationale.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION**
+
+**Feasibility**: Buildable, but critical gaps around Expo managed workflow compatibility will block implementation.
+
+**Architecture Fit**: Partially compatible. Settings key-value pattern fits; platform-specific file resolution is standard RN. However, this is the first native module integration — no ios/android dirs exist (managed Expo). Medium refactoring needed for expo-dev-client migration.
+
+**Complexity**: Large (XL if both platforms ship simultaneously). Risk: High.
+
+**Critical Issues:**
+1. `react-native-health` and `react-native-health-connect` lack Expo config plugins — won't link during `npx expo prebuild`. Recommend `@kingstinct/react-native-healthkit` (has Expo plugin). Android needs custom config plugin wrapper.
+2. Missing native entitlement/permission configuration (iOS HealthKit entitlements, Info.plist privacy descriptions, Android Health Connect manifest permissions) — must be in `app.config.ts` plugins.
+3. `react-native-health` has known issues with Fabric/TurboModules. FitForge uses `newArchEnabled: true` + RN 0.81.5 — must verify compatibility.
+
+**Major Issues:**
+4. No testing/mocking strategy for native health modules.
+5. expo-dev-client migration should be a separate prerequisite issue — changes entire dev workflow and CI/CD.
+6. Dual-platform simultaneous delivery doubles testing surface — recommend iOS first.
+
+**Recommendations:**
+- Phase into: (a) expo-dev-client migration, (b) iOS HealthKit writes, (c) Android Health Connect, (d) Read operations
+- Use `@kingstinct/react-native-healthkit` instead of `react-native-health`
+- Ship write-only first (workouts + body weight), add reads later
+- Skip nutrition sync in v1 (vague trigger, 20% of user value)
+- Add deduplication via `HKMetadataKeyExternalUUID`
+
+**Reviewed**: 2026-04-15 by techlead
 
 ### CEO Decision
 _Pending reviews_
