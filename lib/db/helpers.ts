@@ -502,17 +502,31 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
-  const result = await database.getFirstAsync<{ count: number }>(
+  const exercises = seedExercises();
+  const voltraExercises = exercises.filter(e => e.is_voltra);
+  const communityExercises = exercises.filter(e => !e.is_voltra);
+
+  const voltraResult = await database.getFirstAsync<{ count: number }>(
     "SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 1"
   );
-  if (!result || result.count === 0) {
-    const exercises = seedExercises();
+  const communityResult = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 0"
+  );
+
+  const needVoltra = !voltraResult || voltraResult.count === 0;
+  const needCommunity = !communityResult || communityResult.count === 0;
+  const toInsert = [
+    ...(needVoltra ? voltraExercises : []),
+    ...(needCommunity ? communityExercises : []),
+  ];
+
+  if (toInsert.length > 0) {
     const stmt = await database.prepareAsync(
       `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, mount_position, attachment, training_modes, is_voltra)
      VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom, $mount_position, $attachment, $training_modes, $is_voltra)`
     );
     try {
-      for (const ex of exercises) {
+      for (const ex of toInsert) {
         await stmt.executeAsync({
           $id: ex.id,
           $name: ex.name,

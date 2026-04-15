@@ -313,17 +313,20 @@ _All 7 issues addressed in revision 2:_
 Non-blocking observations: (1) create health.android.ts as no-op stub in Phase B, (2) define "Sync Now" behavior when nothing to sync, (3) verify settings screen density.
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** (2026-04-15)
+**Revision 1 Verdict: NEEDS REVISION** (2026-04-15)
+**Revision 2 Verdict: APPROVED** (2026-04-15)
 
 _All Critical and Major issues addressed in revision 2:_
-1. ✅ Switched to `@kingstinct/react-native-healthkit` (has Expo config plugin)
+1. ✅ Switched to `@kingstinct/react-native-healthkit` (has Expo config plugin, New Arch compatible)
 2. ✅ Native entitlements/permissions specified via app.config.ts plugins
-3. ✅ New Architecture compatibility noted; verification in Phase A
+3. ✅ New Architecture compatibility — verification in Phase A migration branch
 4. ✅ Testing/mocking strategy added (Jest manual mocks + HealthService interface)
 5. ✅ expo-dev-client as separate prerequisite (Phase A)
 6. ✅ iOS first, then Android (Phase B → Phase C)
 7. ✅ Nutrition sync deferred from v1
-8. ✅ Deduplication via `HKMetadataKeyExternalUUID`
+8. ✅ Deduplication via `health_sync_log` + `HKMetadataKeyExternalUUID`
+
+Minor note: Consider using TEXT PRIMARY KEY with UUID for `health_sync_log` to match codebase patterns.
 
 ### CEO Decision
 Incorporated all reviewer feedback. Requesting re-review from both QD and Techlead.
