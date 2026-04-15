@@ -25,3 +25,19 @@
 **Learning**: expo-router requires a module-level `jest.mock('expo-router', ...)` declared BEFORE importing any component that uses it. The critical piece is replacing `useFocusEffect` with `React.useEffect` so focus-based data loading triggers in tests. Declare `mockRouter` as a module-level `const` with `jest.fn()` methods so assertions can verify navigation calls.
 **Action**: Use this standard mock at the top of every flow test file (before component imports): `const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }; jest.mock('expo-router', () => { const R = require('react'); return { useRouter: () => mockRouter, useLocalSearchParams: () => ({}), useFocusEffect: (cb) => { R.useEffect(() => { const cleanup = cb(); return typeof cleanup === 'function' ? cleanup : undefined }, []) }, Stack: { Screen: () => null } } })`. Clear mockRouter in `beforeEach`.
 **Tags**: expo-router, jest, testing, rntl, usefocuseffect, mock, flow-test, react-native, navigation
+
+### Static Route-Name Validation Test for Expo Router
+**Source**: BLD-95, BLD-96 — Route name mismatch crashes app layout
+**Date**: 2026-04-15
+**Context**: A `Stack.Screen name="schedule"` mismatch went undetected through development, code review, and all existing tests — only caught when a user reported the "Get Started" button was broken. No test validated that declared route names matched actual route files.
+**Learning**: A static test can read `_layout.tsx`, extract all `Stack.Screen name="..."` values via regex, and validate each maps to an existing file under `app/` (checking `.tsx`, `_layout.tsx`, and directory existence). This catches directory/index mismatches, orphaned screen declarations, and typos before they reach production.
+**Action**: Add a route-name validation test that uses `fs.readFileSync` to parse `_layout.tsx` for route names and `fs.existsSync` to verify each one. Run it in CI. Pattern: `const names = [...layout.matchAll(/name="([^"]+)"/g)].map(m => m[1])` then `it.each(names)("route '%s' maps to file", name => expect(exists(name)).toBe(true))`.
+**Tags**: expo-router, regression-test, route-validation, static-analysis, testing, ci, navigation
+
+### Silent Calculation Bugs Require Reference-Value Unit Tests
+**Source**: BLD-25, BLD-26 — Retrospective test coverage for calculations and core workflows
+**Date**: 2026-04-15
+**Context**: During retrospective test planning, the team identified that calculation logic bugs (macro tracking, chart aggregation, volume analysis) never crash — they produce silently wrong numbers. These are invisible without tests and expensive to debug in production.
+**Learning**: Calculation bugs form a distinct "silent failure" category: wrong output, no error. Unlike crashes or missing UI, silent data bugs can persist for weeks before users notice incorrect nutrition targets or progress stats. Only unit tests with known reference values catch them.
+**Action**: For every calculation function (BMR, TDEE, macros, 1RM, volume aggregation), write unit tests with hand-verified reference values BEFORE merging. Include edge cases: zero inputs, very large values, missing optional fields, and rounding precision. Treat untested calculation code as a latent data-accuracy bug.
+**Tags**: testing, calculations, silent-bugs, unit-tests, reference-values, data-accuracy, regression

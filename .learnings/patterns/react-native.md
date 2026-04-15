@@ -257,3 +257,67 @@
 **Learning**: Pre-load all sounds lazily on first play into a module-level Map singleton, guarded by a boolean loading flag to prevent concurrent init. Use replayAsync() (not playAsync()) for repeat playback — it resets position and plays without requiring stop/unload. Swallow all errors since audio is non-critical UX. Set playsInSilentModeIOS: false to respect the hardware silent switch. Clean up with unloadAsync() on each sound in a useFocusEffect cleanup return.
 **Action**: When adding sound effects with expo-av: (1) define a typed cue union and a SOURCES record mapping cues to require() assets, (2) lazy-load all sounds into a module-level Map on first play() call, (3) always use replayAsync() for playback, (4) wrap every async audio call in try/catch that swallows errors, (5) call unload() in useFocusEffect cleanup or useEffect cleanup to release native resources.
 **Tags**: expo-av, audio, sound-effects, lazy-loading, singleton, replayAsync, timer, cleanup, react-native
+
+### Separate Additive Seed Data into Dedicated Module Files
+**Source**: BLD-99 — Scrape & seed cable + bodyweight exercises from MuscleWiki
+**Date**: 2026-04-15
+**Context**: FitForge needed to expand its exercise library from 54 Voltra-specific exercises to include 65 community-sourced cable and bodyweight exercises from an external source.
+**Learning**: When adding bulk seed data from a new source, create a dedicated module file (e.g., `seed-community.ts`) that exports the new data, then import it into the main seed file. This keeps the original seed data untouched, makes data provenance clear (Voltra vs community), and prevents merge conflicts when multiple sources contribute data.
+**Action**: When expanding seed/reference data from a new source, create a new file named `seed-<source>.ts`, export the array, and merge it into the main seed array via import. Never inline new-source data into an existing seed file.
+**Tags**: seed-data, data-management, file-organization, module-separation, exercise-library
+
+### accessibilityState for Collapsible Section Toggles
+**Source**: BLD-114 — Workout Calendar & Streak Heatmap
+**Date**: 2026-04-15
+**Context**: A heatmap section had a collapse/expand toggle (Pressable with label and role) but no accessibilityState. QA review flagged this as MAJOR — screen readers could not announce whether the section was expanded or collapsed.
+**Learning**: React Native's `accessibilityState` prop with `{ expanded: boolean }` is required on any collapsible section's toggle control. Without it, screen readers can invoke the toggle but provide no feedback about the current state. accessibilityLabel and accessibilityRole alone are insufficient for stateful controls.
+**Action**: On every Pressable/TouchableOpacity that toggles a collapsible section, add `accessibilityState={{ expanded: isExpanded }}`. During a11y review, check that all expand/collapse controls expose their current state — not just their label and role.
+**Tags**: react-native, accessibility, a11y, accessibilityState, collapsible, expand-collapse, screen-reader
+
+### RN accessibilityRole Does Not Support 'grid' — Use 'summary'
+**Source**: BLD-114 — Workout Calendar & Streak Heatmap
+**Date**: 2026-04-15
+**Context**: The heatmap grid required `accessibilityRole="grid"` per the spec, but React Native's typed roles do not include 'grid'. Using `as any` to force it triggered ESLint warnings.
+**Learning**: React Native's `accessibilityRole` type is a closed union that does not include all ARIA/web roles. 'grid' is not supported. The closest valid alternative is 'summary' for data visualization containers. Forcing unsupported roles with `as any` works at runtime but creates type-safety and lint issues.
+**Action**: When implementing grid-like data visualizations in React Native, use `accessibilityRole="summary"` instead of 'grid'. Add an `accessibilityLabel` that describes the grid's content. If the spec requires 'grid', document the adaptation with a code comment explaining the RN limitation.
+**Tags**: react-native, accessibility, a11y, accessibilityRole, grid, type-safety, aria
+
+### Proactive Interaction History for Crash Diagnostics
+**Source**: BLD-63 — Crash Reporting infrastructure
+**Date**: 2026-04-15
+**Context**: Implementing crash/bug reporting revealed that error logs alone are insufficient for diagnosis. Without knowing what the user was doing before the crash, error logs are decontextualized stack traces.
+**Learning**: Effective crash reporting requires proactive context collection, not reactive. A ring buffer of the last 10 user interactions (navigation events, form submissions, button presses) stored in persistent storage provides the "what was the user doing" context that transforms a stack trace into a diagnosable bug report.
+**Action**: Implement an event bus that logs user interactions to AsyncStorage or SQLite as a circular buffer (overwrite oldest on new entry). Attach this interaction history alongside error logs and system info when generating crash reports. Include: screen name, action type, timestamp, and relevant parameters.
+**Tags**: crash-reporting, error-boundary, diagnostics, user-context, ring-buffer, debugging
+
+### Pure Calculation Module Pattern for Domain Logic
+**Source**: BLD-97, BLD-107 — Intelligent nutrition targets with profile-based recommendations
+**Date**: 2026-04-15
+**Context**: Implementing BMR/TDEE/macro calculations required separating pure math from UI and storage concerns. The calculations (Mifflin-St Jeor formula) needed unit testing against reference values, while UI needed auto-population from existing user data.
+**Learning**: Domain calculation logic (BMR, TDEE, macros, 1RM estimation, periodization) should live in a pure `lib/` module with zero React/storage dependencies. This enables: (1) unit testing with reference values, (2) reuse across multiple screens, (3) edge case handling (calorie floors, extreme inputs) tested independently of UI state.
+**Action**: Extract any domain calculation into `lib/<domain>-calc.ts` as pure functions. Auto-populate input fields from existing data (e.g., latest body_weight entry) but allow manual override. Store calculated results as defaults that users can modify. Enforce safety floors (e.g., 1200 kcal minimum) with user-visible warnings.
+**Tags**: architecture, pure-functions, domain-logic, testability, nutrition, calculation, separation-of-concerns
+
+### Deterministic Multi-Pass Name Matching for Data Import
+**Source**: BLD-120 — Import Workout Data from Strong CSV
+**Date**: 2026-04-15
+**Context**: Importing workout data from Strong required mapping exercise names between two apps with different naming conventions (Strong uses "Exercise (Equipment)" format, FitForge uses "Equipment Exercise"). Fuzzy matching (Levenshtein) was rejected due to unpredictable results and testing difficulty.
+**Learning**: A deterministic multi-pass matching strategy produces predictable, fully testable results for cross-app data import. The effective pass order is: (1) exact case-insensitive match, (2) normalize + extract parentheticals and rearrange (e.g., "Bench Press (Barbell)" → try "Barbell Bench Press"), (3) substring containment (either direction), (4) hardcoded alias lookup table for common abbreviations. Each pass has a clear confidence level (exact/possible/none) enabling grouped UX.
+**Action**: When building data import from another app, implement matching as ordered passes with decreasing confidence rather than a single fuzzy algorithm. Classify results by confidence level and present grouped in the UI (auto-mapped / needs confirmation / will create new). This pattern scales to new import sources by adding source-specific normalization passes without changing the core architecture.
+**Tags**: import, data-migration, name-matching, deterministic, csv, exercise, cross-app, architecture
+
+### Directory Route Grouping for Multi-Screen Feature Areas
+**Source**: BLD-123 — Progress Photos — Visual Body Transformation Tracking
+**Date**: 2026-04-15
+**Context**: Adding Progress Photos required 4 new screens (gallery, compare, goals, measurements) under the `body/` route. Initially, each screen was registered individually in the root `_layout.tsx` with separate `Stack.Screen` entries, cluttering the root layout.
+**Learning**: When a feature area grows to 3+ screens sharing a common route prefix, create a directory layout (`app/<area>/_layout.tsx`) with its own Stack navigator. Register the entire group as a single headerless entry in the root layout (`name="<area>"`, `headerShown: false`). This keeps the root layout clean, co-locates feature navigation config, and enables feature-specific header theming.
+**Action**: When adding a new screen to a route group that already has 2+ siblings, create `app/<area>/_layout.tsx` with a Stack navigator registering all screens. Replace individual root-level `Stack.Screen` entries with a single group entry. Move header configuration (title, style, tintColor) into the directory layout.
+**Tags**: expo-router, navigation, directory-routes, layout, architecture, stack-navigator
+
+### Filesystem + SQLite Hybrid for User Media Management
+**Source**: BLD-123 — Progress Photos — Visual Body Transformation Tracking
+**Date**: 2026-04-15
+**Context**: Progress photos needed persistent storage with gallery performance, soft-delete with undo, and eventual permanent cleanup. Storing photos as blobs in SQLite would degrade query performance; storing metadata on filesystem would lose queryability.
+**Learning**: Store large binary assets (photos, audio, documents) on the filesystem in a dedicated app-sandbox directory, with all metadata in SQLite. This hybrid gives fast gallery queries (SQLite) with efficient storage (filesystem). Critical implementation details: (1) generate thumbnails at capture time for gallery performance, (2) soft-delete via `deleted_at` column with time-based permanent cleanup (30 days), (3) delete files AFTER DB row removal to prevent orphan DB records pointing to missing files, (4) run orphan file cleanup on app startup to catch files not tracked in DB.
+**Action**: For any feature handling user-generated media: create a dedicated `documentDirectory` subdirectory, store metadata in SQLite with file_path references, generate thumbnails at capture, implement soft-delete + timed permanent cleanup, and add startup routines for both expired-soft-delete cleanup and orphan file cleanup. Always delete the DB row first, then the file.
+**Tags**: media, photos, filesystem, sqlite, soft-delete, cleanup, thumbnails, storage, architecture

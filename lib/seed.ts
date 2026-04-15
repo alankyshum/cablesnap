@@ -1,4 +1,5 @@
 import type { Exercise, MountPosition, Attachment, TrainingMode } from "./types";
+import { communityExercises } from "./seed-community";
 
 let counter = 0;
 function id(): string {
@@ -630,5 +631,30 @@ export function seedExercises(): Exercise[] {
       attachment: "handle",
       training_modes: ["weight", "band", "isometric"],
     }),
+
+    // ── Additional ──────────────────────────────────────────
+    voltra({
+      name: "Cable Overhead Press",
+      category: "shoulders",
+      primary_muscles: ["shoulders"],
+      secondary_muscles: ["triceps", "core"],
+      difficulty: "intermediate",
+      instructions: "1. Attach handle to low mount on rack.\n2. Stand with back to Voltra, handle at shoulder height.\n3. Press cable overhead until arms are fully extended.\n4. Keep core braced and avoid arching the lower back.\n5. Lower slowly to shoulder level with control.",
+      mount_position: "low",
+      attachment: "handle",
+      training_modes: ["weight", "eccentric_overload", "band"],
+    }),
+    voltra({
+      name: "Kneeling Cable Crunch",
+      category: "abs_core",
+      primary_muscles: ["core"],
+      secondary_muscles: [],
+      difficulty: "intermediate",
+      instructions: "1. Attach rope to high mount on rack.\n2. Kneel facing the Voltra, grip rope behind head.\n3. Crunch downward, pulling elbows toward knees.\n4. Squeeze abs hard at the bottom of the movement.\n5. Return slowly to upright kneeling position.",
+      mount_position: "high",
+      attachment: "rope",
+      training_modes: ["weight", "band"],
+    }),
+    ...communityExercises(),
   ];
 }

@@ -74,3 +74,29 @@ export function hexToRgb(hex: string): string {
   const b = parseInt(hex.slice(5, 7), 16);
   return `${r}, ${g}, ${b}`;
 }
+
+export function withOpacity(hex: string, opacity: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
+export function computeLongestStreak(timestamps: number[]): number {
+  if (timestamps.length === 0) return 0;
+  const weeks = new Set(timestamps.map((ts) => mondayOf(new Date(ts))));
+  const sorted = Array.from(weeks).sort((a, b) => a - b);
+  let max = 1;
+  let current = 1;
+  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = sorted[i] - sorted[i - 1];
+    if (diff === oneWeekMs) {
+      current++;
+      if (current > max) max = current;
+    } else {
+      current = 1;
+    }
+  }
+  return max;
+}

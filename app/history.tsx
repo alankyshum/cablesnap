@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   View,
@@ -9,6 +10,7 @@ import { FlashList } from "@shopify/flash-list";
 import {
   Card,
   Chip,
+  Icon,
   IconButton,
   Searchbar,
   Text,
@@ -16,14 +18,25 @@ import {
 } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
+  getAllCompletedSessionWeeks,
   getRecentSessions,
+  getSessionCountsByDay,
   getSessionsByMonth,
+  getTotalSessionCount,
   searchSessions,
 } from "../lib/db";
 import type { WorkoutSession } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { DAYS, formatDateKey, formatDuration } from "../lib/format";
+import WorkoutHeatmap from "../components/WorkoutHeatmap";
+import {
+  computeLongestStreak,
+  computeStreak,
+  DAYS,
+  formatDateKey,
+  formatDuration,
+  withOpacity,
+} from "../lib/format";
 
 type SessionRow = WorkoutSession & { set_count: number };
 
@@ -57,6 +70,15 @@ function HistoryScreen() {
   const [hasAny, setHasAny] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Heatmap + streak state
+  const [heatmapData, setHeatmapData] = useState<Map<string, number>>(new Map());
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
+  const [heatmapLoading, setHeatmapLoading] = useState(true);
+  const [heatmapError, setHeatmapError] = useState(false);
+  const [heatmapExpanded, setHeatmapExpanded] = useState(true);
+
   useEffect(() => {
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -72,10 +94,40 @@ function HistoryScreen() {
     setHasAny(any.length > 0);
   }, [year, month]);
 
+  const loadHeatmap = useCallback(async () => {
+    setHeatmapLoading(true);
+    setHeatmapError(false);
+    try {
+      const today = new Date();
+      const endTs = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime();
+      const startTs = endTs - 16 * 7 * 24 * 60 * 60 * 1000;
+
+      const [counts, allWeeks, total] = await Promise.all([
+        getSessionCountsByDay(startTs, endTs),
+        getAllCompletedSessionWeeks(),
+        getTotalSessionCount(),
+      ]);
+
+      const map = new Map<string, number>();
+      for (const row of counts) {
+        map.set(row.date, row.count);
+      }
+      setHeatmapData(map);
+      setCurrentStreak(computeStreak(allWeeks));
+      setLongestStreak(computeLongestStreak(allWeeks));
+      setTotalWorkouts(total);
+    } catch {
+      setHeatmapError(true);
+    } finally {
+      setHeatmapLoading(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+      loadHeatmap();
+    }, [load, loadHeatmap])
   );
 
   const dotMap = useMemo(() => {
@@ -143,6 +195,17 @@ function HistoryScreen() {
     setSelected(selected === key ? null : key);
   };
 
+  const onHeatmapDayPress = (dateKey: string) => {
+    const [y, m] = dateKey.split("-").map(Number);
+    if (y !== year || m - 1 !== month) {
+      setYear(y);
+      setMonth(m - 1);
+    }
+    setQuery("");
+    setResults(null);
+    setSelected(dateKey);
+  };
+
   // Calendar grid
   const total = daysInMonth(year, month);
   const offset = weekday(new Date(year, month, 1));
@@ -177,7 +240,9 @@ function HistoryScreen() {
             borderColor: isToday ? theme.colors.primary : "transparent",
             backgroundColor: isSel
               ? theme.colors.primary
-              : "transparent",
+              : count > 0
+                ? withOpacity(theme.colors.primaryContainer, 0.4)
+                : "transparent",
           },
         ]}
       >
@@ -269,6 +334,66 @@ function HistoryScreen() {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       ListHeaderComponent={
         <>
+          {/* Streak Summary Bar */}
+          <Card style={[styles.streakCard, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content style={styles.streakRow}>
+              <View style={styles.streakItem} accessibilityLabel={`Current streak: ${currentStreak} weeks`}>
+                <Icon source="whatshot" size={20} color={theme.colors.primary} />
+                <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>{currentStreak}</Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>weeks</Text>
+              </View>
+              <View style={styles.streakItem} accessibilityLabel={`Longest streak: ${longestStreak} weeks`}>
+                <Icon source="emoji-events" size={20} color={theme.colors.primary} />
+                <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>{longestStreak}</Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>weeks</Text>
+              </View>
+              <View style={styles.streakItem} accessibilityLabel={`Total workouts: ${totalWorkouts}`}>
+                <Icon source="fitness-center" size={20} color={theme.colors.primary} />
+                <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>{totalWorkouts}</Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>total</Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Heatmap Section */}
+          <View style={styles.heatmapSection}>
+            <Pressable
+              onPress={() => setHeatmapExpanded(!heatmapExpanded)}
+              style={styles.heatmapHeader}
+              accessibilityRole="button"
+              accessibilityLabel={`Last 16 Weeks, ${heatmapExpanded ? "collapse" : "expand"}`}
+              accessibilityState={{ expanded: heatmapExpanded }}
+            >
+              <Text variant="titleSmall" style={{ color: theme.colors.onBackground }}>
+                Last 16 Weeks
+              </Text>
+              <Icon
+                source={heatmapExpanded ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={theme.colors.onSurfaceVariant}
+              />
+            </Pressable>
+            {heatmapExpanded && (
+              heatmapLoading ? (
+                <View style={styles.heatmapLoading}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                </View>
+              ) : heatmapError ? (
+                <View style={styles.heatmapLoading}>
+                  <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+                    Unable to load heatmap data. Pull down to retry.
+                  </Text>
+                </View>
+              ) : (
+                <WorkoutHeatmap
+                  data={heatmapData}
+                  weeks={16}
+                  onDayPress={onHeatmapDayPress}
+                />
+              )
+            )}
+          </View>
+
           {/* Search */}
           <Searchbar
             placeholder="Search workouts"
@@ -356,6 +481,34 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     paddingBottom: 40,
+  },
+  streakCard: {
+    marginBottom: 12,
+  },
+  streakRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  streakItem: {
+    alignItems: "center",
+    gap: 2,
+  },
+  heatmapSection: {
+    marginBottom: 12,
+  },
+  heatmapHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  heatmapLoading: {
+    height: 120,
+    alignItems: "center",
+    justifyContent: "center",
   },
   search: {
     marginBottom: 12,

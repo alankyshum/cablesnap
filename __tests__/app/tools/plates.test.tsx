@@ -14,7 +14,7 @@ jest.mock('expo-router', () => ({
     useEffect(() => {
       const cleanup = cb()
       if (typeof cleanup === 'function') return cleanup
-    }, [])
+    }, [cb])
   },
   Link: 'Link',
   Stack: { Screen: 'Screen' },
@@ -36,10 +36,10 @@ import PlateCalculator from '../../../app/tools/plates'
 describe('PlateCalculator screen', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('renders unit toggle with kg/lb', async () => {
+  it('renders bar weight selection with kg/lb', async () => {
     const { getByLabelText } = renderScreen(<PlateCalculator />)
     await waitFor(() => {
-      expect(getByLabelText('Unit system')).toBeTruthy()
+      expect(getByLabelText('Bar weight selection')).toBeTruthy()
     })
   })
 

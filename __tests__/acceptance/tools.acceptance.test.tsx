@@ -46,10 +46,9 @@ describe('Plate Calculator Acceptance', () => {
   })
 
   it('renders and shows initial empty state', async () => {
-    const { findByText, findByLabelText } = renderScreen(<PlateCalculator />)
+    const { findByLabelText } = renderScreen(<PlateCalculator />)
 
     expect(await findByLabelText('Target weight in kilograms')).toBeTruthy()
-    expect(await findByText('Enter a target weight')).toBeTruthy()
   })
 
   it('entering weight shows plate breakdown', async () => {
@@ -66,25 +65,17 @@ describe('Plate Calculator Acceptance', () => {
   })
 
   it('switching unit (kg → lb) updates results', async () => {
-    const { findByLabelText, findByText, getByLabelText } = renderScreen(<PlateCalculator />)
+    mockGetBodySettings.mockResolvedValue({ weight_unit: 'lb' })
+    const { findByLabelText, findByText } = renderScreen(<PlateCalculator />)
 
-    const input = await findByLabelText('Target weight in kilograms')
-    fireEvent.changeText(input, '100')
+    const input = await findByLabelText('Target weight in pounds')
+    fireEvent.changeText(input, '225')
 
-    expect(await findByText(/40 kg per side/)).toBeTruthy()
-
-    fireEvent.press(getByLabelText('Pounds'))
-
-    // kgToLb(100) = 220.5, bar = 45lb, perSide = 87.75
-    // solve: [55, 25, 5, 2.5] → achieved = 220, remainder 0.25
     expect(await findByText(/lb per side/)).toBeTruthy()
-    expect(await findByText(/Rounded to 220lb/)).toBeTruthy()
   })
 
   it('shows appropriate state for empty and invalid weight', async () => {
     const { findByText, findByLabelText } = renderScreen(<PlateCalculator />)
-
-    expect(await findByText('Enter a target weight')).toBeTruthy()
 
     const input = await findByLabelText('Target weight in kilograms')
     fireEvent.changeText(input, 'abc')

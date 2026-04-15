@@ -1,8 +1,7 @@
-// Mock crypto.randomUUID
 const MOCK_UUID = "test-uuid-1234";
-Object.defineProperty(global, "crypto", {
-  value: { randomUUID: jest.fn(() => MOCK_UUID) },
-});
+jest.mock("expo-crypto", () => ({
+  randomUUID: jest.fn(() => "test-uuid-1234"),
+}));
 
 // Build mock database with tracking functions
 const mockDb = {
@@ -49,6 +48,9 @@ beforeEach(() => {
   jest.doMock("../../lib/seed", () => ({
     seedExercises: jest.fn(() => []),
   }));
+  jest.doMock("expo-crypto", () => ({
+    randomUUID: jest.fn(() => "test-uuid-1234"),
+  }));
   db = require("../../lib/db");
 });
 
@@ -61,6 +63,7 @@ describe("getDatabase", () => {
 });
 
 describe("getDatabase web fallback", () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const originalPlatform = jest.requireActual("react-native").Platform;
 
   it("falls back to :memory: on web when OPFS fails", async () => {

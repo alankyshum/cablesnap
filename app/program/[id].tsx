@@ -490,7 +490,6 @@ export default function ProgramDetail() {
                           : templates
                       }
                       keyExtractor={(item) => item.id}
-                      estimatedItemSize={48}
                       style={{ maxHeight: 300 }}
                       renderItem={({ item }) => {
                         if (item.id === "__remove__") {

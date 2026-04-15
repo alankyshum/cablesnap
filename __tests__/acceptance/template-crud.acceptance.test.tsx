@@ -89,6 +89,7 @@ jest.mock('../../lib/db', () => ({
   createExerciseLink: (...args: unknown[]) => mockCreateExerciseLink(...args),
   unlinkExerciseGroup: (...args: unknown[]) => mockUnlinkGroup(...args),
   unlinkSingleExercise: (...args: unknown[]) => mockUnlinkSingle(...args),
+  getAllExercises: jest.fn().mockResolvedValue([]),
 }))
 
 import CreateTemplate from '../../app/template/create'
@@ -198,7 +199,7 @@ describe('Template CRUD Acceptance', () => {
       expect(mockRouter.back).toHaveBeenCalled()
     })
 
-    it('navigates to exercise picker on Add Exercise', async () => {
+    it('opens exercise picker on Add Exercise', async () => {
       mockParams = { templateId: 'tpl-1' }
 
       const { findByLabelText } = renderScreen(<CreateTemplate />)
@@ -206,9 +207,10 @@ describe('Template CRUD Acceptance', () => {
       const addBtn = await findByLabelText('Add exercise to template')
       fireEvent.press(addBtn)
 
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        '/template/pick-exercise?templateId=tpl-1',
-      )
+      const { getAllExercises } = require('../../lib/db')
+      await waitFor(() => {
+        expect(getAllExercises).toHaveBeenCalled()
+      })
     })
 
     it('shows empty state message when no exercises', async () => {

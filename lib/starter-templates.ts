@@ -24,7 +24,7 @@ export type StarterProgram = {
   days: { id: string; label: string; template_id: string }[];
 };
 
-export const STARTER_VERSION = 1;
+export const STARTER_VERSION = 2;
 
 export const STARTER_TEMPLATES: StarterTemplate[] = [
   {
@@ -110,6 +110,24 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
       { id: "starter-te-6-trunk-rotations", exercise_id: "voltra-009", target_sets: 3, target_reps: "12-15", rest_seconds: 45 },
       { id: "starter-te-6-squat-rotation", exercise_id: "voltra-008", target_sets: 3, target_reps: "12-15", rest_seconds: 45 },
       { id: "starter-te-6-high-row", exercise_id: "voltra-004", target_sets: 3, target_reps: "12-15", rest_seconds: 45 },
+    ],
+  },
+  {
+    id: "starter-tpl-7",
+    name: "Founder's Favourite",
+    difficulty: "advanced",
+    duration: "~75 min",
+    exercises: [
+      { id: "starter-te-7-triceps-pushdown", exercise_id: "voltra-017", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
+      { id: "starter-te-7-chest-press", exercise_id: "voltra-035", target_sets: 5, target_reps: "10-12", rest_seconds: 90 },
+      { id: "starter-te-7-face-pulls", exercise_id: "voltra-046", target_sets: 5, target_reps: "10-12", rest_seconds: 60 },
+      { id: "starter-te-7-chest-press-bar", exercise_id: "voltra-034", target_sets: 5, target_reps: "10", rest_seconds: 90 },
+      { id: "starter-te-7-seated-row", exercise_id: "voltra-021", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
+      { id: "starter-te-7-goblet-squat", exercise_id: "voltra-039", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
+      { id: "starter-te-7-supinated-row", exercise_id: "voltra-027", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
+      { id: "starter-te-7-overhead-press", exercise_id: "voltra-055", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
+      { id: "starter-te-7-kneeling-crunch", exercise_id: "voltra-056", target_sets: 5, target_reps: "10-12", rest_seconds: 60 },
+      { id: "starter-te-7-decline-fly", exercise_id: "voltra-036", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
     ],
   },
 ];

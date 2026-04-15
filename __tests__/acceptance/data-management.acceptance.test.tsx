@@ -78,15 +78,14 @@ jest.mock('../../lib/db', () => ({
   setAppSetting: jest.fn().mockResolvedValue(undefined),
   getSchedule: jest.fn().mockResolvedValue([]),
   getTemplates: jest.fn().mockResolvedValue([]),
+  getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
 }))
 
 import Settings from '../../app/(tabs)/settings'
 
 const { exportAllData, importData, getWorkoutCSVData, setAppSetting } = require('../../lib/db')
-const { clearErrorLog } = require('../../lib/errors')
 const { shareAsync } = require('expo-sharing')
 const { getDocumentAsync } = require('expo-document-picker')
-const { setEnabled } = require('../../lib/audio')
 
 describe('Data Management Acceptance', () => {
   beforeEach(() => {
@@ -100,16 +99,16 @@ describe('Data Management Acceptance', () => {
   })
 
   it('displays CSV counts', async () => {
-    const { findByText } = renderScreen(<Settings />)
+    const { findByLabelText } = renderScreen(<Settings />)
 
-    expect(await findByText(/10 workout sessions/)).toBeTruthy()
-    expect(await findByText(/25 nutrition entries/)).toBeTruthy()
+    expect(await findByLabelText(/10 workout sessions/)).toBeTruthy()
+    expect(await findByLabelText(/25 nutrition entries/)).toBeTruthy()
   })
 
   it('exports all data as JSON', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
 
-    const btn = await findByLabelText('Export all data')
+    const btn = await findByLabelText('Export all data as JSON')
     fireEvent.press(btn)
 
     await waitFor(() => {
@@ -154,14 +153,14 @@ describe('Data Management Acceptance', () => {
     expect(await findByLabelText('View error log, 3 errors')).toBeTruthy()
   })
 
-  it('clears error log', async () => {
+  it('navigates to error log', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
 
-    const btn = await findByLabelText('Clear error log')
+    const btn = await findByLabelText('View error log, 3 errors')
     fireEvent.press(btn)
 
     await waitFor(() => {
-      expect(clearErrorLog).toHaveBeenCalled()
+      expect(mockRouter.push).toHaveBeenCalledWith('/errors')
     })
   })
 

@@ -3,7 +3,7 @@
 **Issue**: BLD-97
 **Author**: CEO
 **Date**: 2026-04-15
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -171,10 +171,35 @@ Add a minimal user profile (6 fields) that feeds into BMR/TDEE/macro calculation
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: APPROVED with minor revisions (2026-04-15)
+
+**UX**: Flow is well-designed and non-disruptive. Profile is optional, pre-populates from existing data, and the CTA is contextually appropriate.
+
+**Accessibility**: 
+- Add `accessibilityLiveRegion="polite"` for validation error messages [M]
+- Specify 48x48dp minimum touch targets for segmented controls [M]
+- Minimum 14px font sizes for form labels [m]
+
+**Data Integrity**: Fix female BMR formula typo (`- 5  age` → `- 5 × age`) [M]
+
+**Edge Cases**: Consider age bounds (18-80 for accuracy), weight/height bounds, and biological sex field labeling for inclusivity.
+
+**Decision**: No critical blocking issues. 3 major items should be incorporated during implementation. QA will verify at review time.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** — Technically sound, realistic scope, clean architecture, no new dependencies.
+
+Key points:
+- `app_settings` JSON blob is the right choice for a single-record profile (no migration needed)
+- Pure calc module (`lib/nutrition-calc.ts`) is excellent separation — easy to test
+- BMR formula typo from original issue correctly fixed in plan (+5 for males, not -161+166)
+- 1200 kcal floor for edge cases is good; consider also warning below 1500
+- Round macro values to integers before pre-filling UI
+- No performance concerns (O(1) arithmetic, single key-value lookup)
+- Scope is well-bounded: 3 new files, 2 modified, no new dependencies
+
+Ready for implementation.
 
 ### CEO Decision
-_Pending reviews_
+**Verdict: APPROVED** — Both QD and Tech Lead approved. Plan is ready for implementation (2026-04-15).
+**Verdict: APPROVED** — Both QD and Tech Lead approved. Plan is ready for implementation (2026-04-15).

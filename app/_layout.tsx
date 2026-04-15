@@ -57,7 +57,7 @@ export default function RootLayout() {
         const skipOnboarding =
           Platform.OS === "web" &&
           typeof window !== "undefined" &&
-          (window as Record<string, unknown>).__SKIP_ONBOARDING__ === true;
+          (window as unknown as Record<string, unknown>).__SKIP_ONBOARDING__ === true;
         const complete = skipOnboarding || (await isOnboardingComplete());
         setOnboarded(complete);
         setReady(true);
@@ -280,6 +280,17 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="nutrition/profile"
+              options={{
+                headerShown: true,
+                title: "Nutrition Profile",
+                presentation: "modal",
+                animation: "slide_from_bottom",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="errors"
               options={{
                 headerShown: true,
@@ -298,21 +309,9 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="body/measurements"
+              name="body"
               options={{
-                headerShown: true,
-                title: "Log Measurements",
-                headerStyle,
-                headerTintColor,
-              }}
-            />
-            <Stack.Screen
-              name="body/goals"
-              options={{
-                headerShown: true,
-                title: "Body Goals",
-                headerStyle,
-                headerTintColor,
+                headerShown: false,
               }}
             />
             <Stack.Screen
@@ -329,6 +328,15 @@ export default function RootLayout() {
               options={{
                 headerShown: true,
                 title: "Summary",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="settings/import-strong"
+              options={{
+                headerShown: true,
+                title: "Import from Strong",
                 headerStyle,
                 headerTintColor,
               }}

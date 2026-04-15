@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react"
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native"
@@ -132,7 +132,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
                 if (v === "" || isNaN(num)) {
                   setCustom("")
                   setBar(presets[presets.length - 1])
-                } else if (presets.includes(num as typeof presets[number])) {
+                } else if ((presets as readonly number[]).includes(num)) {
                   setCustom("")
                   setBar(num)
                 } else {
@@ -200,26 +200,31 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
       </View>
 
       {/* Plate list */}
-      {items.map(g => {
-        const c = color(g.weight, unit)
-        return (
-          <View key={g.weight} style={styles.row}>
-            <View
-              style={[
-                styles.swatch,
-                {
-                  backgroundColor: c.bg,
-                  borderColor: c.border ? theme.colors[c.border] : "transparent",
-                  borderWidth: c.border ? 1 : 0,
-                },
-              ]}
-            />
-            <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
-              {g.count}× {g.weight}{unit}
-            </Text>
-          </View>
-        )
-      })}
+      <FlatList
+        data={items}
+        keyExtractor={(item) => String(item.weight)}
+        scrollEnabled={false}
+        renderItem={({ item: g }) => {
+          const c = color(g.weight, unit)
+          return (
+            <View style={styles.row}>
+              <View
+                style={[
+                  styles.swatch,
+                  {
+                    backgroundColor: c.bg,
+                    borderColor: c.border ? theme.colors[c.border] : "transparent",
+                    borderWidth: c.border ? 1 : 0,
+                  },
+                ]}
+              />
+              <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
+                {g.count}× {g.weight}{unit}
+              </Text>
+            </View>
+          )
+        }}
+      />
 
       {/* Footer */}
       {state && !("error" in state) && (
@@ -248,12 +253,13 @@ export default function PlateCalculator() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={100}
       >
-        <ScrollView
+        <FlatList
+          data={[]}
+          renderItem={null}
           style={{ backgroundColor: theme.colors.background }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        >
-          <PlateCalculatorContent initialWeight={params.weight} />
-        </ScrollView>
+          ListHeaderComponent={<PlateCalculatorContent initialWeight={params.weight} />}
+        />
       </KeyboardAvoidingView>
     </>
   )

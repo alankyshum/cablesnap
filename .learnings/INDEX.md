@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-14
-Total learnings: 56
+Last updated: 2026-04-15
+Total learnings: 72
 
 ## How to Use This Knowledge Base
 
@@ -14,21 +14,22 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 32 learnings
-- [Testing](patterns/testing.md) — 3 learnings
+- [React Native + Expo](patterns/react-native.md) — 40 learnings
+- [Testing](patterns/testing.md) — 5 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 3 learnings
-- [Build Configuration](pitfalls/build-config.md) — 3 learnings
+- [Build Configuration](pitfalls/build-config.md) — 5 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 6 learnings
+- [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 3 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 4 learnings
 - [PR Workflow](process/pr-workflow.md) — 1 learning
 
 ### Decisions
-_(no learnings yet)_
+- [Architecture](decisions/architecture.md) — 1 learning
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 1 learning
@@ -37,6 +38,22 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-123 | Directory Route Grouping for Multi-Screen Feature Areas | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-123 | Filesystem + SQLite Hybrid for User Media Management | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-120 | Deterministic Multi-Pass Name Matching for Data Import | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-25/26 | Silent Calculation Bugs Require Reference-Value Unit Tests | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-15 | BLD-27 | Product Pivots Cascade Through Data Models | Decisions | [architecture.md](decisions/architecture.md) |
+| 2026-04-15 | BLD-63 | Proactive Interaction History for Crash Diagnostics | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-97/107 | Pure Calculation Module Pattern for Domain Logic | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-72 | Verify All Output Formats in Multi-Format Share/Export | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-15 | BLD-114 | accessibilityState for Collapsible Section Toggles | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-114 | RN accessibilityRole Does Not Support 'grid' — Use 'summary' | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-100/108 | upload-pages-artifact path Becomes Site Root — Not a URL Prefix | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-15 | BLD-112 | Double-Cast Through `unknown` for Unrelated Type Assertions | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
+| 2026-04-15 | BLD-112 | `Array.includes()` Fails on Readonly Tuple Types | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
+| 2026-04-15 | BLD-99 | Separate Additive Seed Data into Dedicated Module Files | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-95/96 | Expo Router Directory Routes Register as `directory/index` | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-15 | BLD-95/96 | Static Route-Name Validation Test for Expo Router | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-14 | BLD-90 | Lazy-Load Audio with replayAsync for Repeated Sound Effects | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-88 | Pure State Machine Guard Clauses Create Silent UI Failures | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-84 | Integer Arithmetic for Precise Decimal Calculations | Patterns | [react-native.md](patterns/react-native.md) |

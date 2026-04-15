@@ -76,6 +76,8 @@ export {
   getSessionRepPRs,
   getSessionComparison,
   getSessionWeightIncreases,
+  getSessionCountsByDay,
+  getTotalSessionCount,
 } from "./sessions";
 export type { ExerciseSession, ExerciseRecords } from "./sessions";
 
@@ -137,3 +139,21 @@ export {
 export type { ScheduleEntry } from "./settings";
 
 export { exportAllData, importData } from "./import-export";
+
+export {
+  insertPhoto,
+  getPhotos,
+  getPhotoById,
+  getPhotoCount,
+  softDeletePhoto,
+  restorePhoto,
+  permanentlyDeletePhoto,
+  cleanupDeletedPhotos,
+  cleanupOrphanFiles,
+  updatePhotoMeta,
+  getPhotosByMonth,
+  ensurePhotoDirs,
+  getPhotoDir,
+  getThumbnailDir,
+} from "./photos";
+export type { ProgressPhoto, PoseCategory } from "./photos";
