@@ -18,19 +18,41 @@ export default function CompareScreen() {
   const [photo1, setPhoto1] = useState<ProgressPhoto | null>(null);
   const [photo2, setPhoto2] = useState<ProgressPhoto | null>(null);
 
+  const [error, setError] = useState(false);
+
   useEffect(() => {
+    let mounted = true;
     if (params.id1 && params.id2) {
       Promise.all([
         getPhotoById(params.id1),
         getPhotoById(params.id2),
       ]).then(([p1, p2]) => {
-        setPhoto1(p1);
-        setPhoto2(p2);
+        if (mounted) {
+          setPhoto1(p1);
+          setPhoto2(p2);
+        }
+      }).catch(() => {
+        if (mounted) {
+          setError(true);
+        }
       });
     }
+    return () => { mounted = false; };
   }, [params.id1, params.id2]);
 
   const isLandscape = width > height;
+
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["bottom"]}>
+        <View style={styles.center}>
+          <Text variant="bodyLarge" style={{ color: theme.colors.error }}>
+            Could not load photos. They may have been deleted.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!photo1 || !photo2) {
     return (
@@ -56,7 +78,7 @@ export default function CompareScreen() {
         {/* White text on dark overlay for WCAG AA contrast on photos */}
         <Text style={[styles.labelText, { color: theme.colors.onPrimary }]}>{photo.display_date}</Text>
         {photo.pose_category && (
-          <Text style={[styles.labelPose, { color: theme.colors.onSurfaceVariant }]}>{photo.pose_category.replace("_", " ")}</Text>
+          <Text style={[styles.labelPose, { color: theme.colors.onPrimary }]}>{photo.pose_category.replace("_", " ")}</Text>
         )}
       </View>
     </View>

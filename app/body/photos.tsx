@@ -2,8 +2,8 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   Image,
+  Linking,
   Modal,
-  Platform,
   StyleSheet,
   View,
 } from "react-native";
@@ -158,9 +158,7 @@ export default function PhotosScreen() {
           {
             text: "Open Settings",
             onPress: () => {
-              if (Platform.OS === "ios") {
-                // Linking is handled by the system
-              }
+              Linking.openSettings();
             },
           },
         ]
@@ -178,7 +176,7 @@ export default function PhotosScreen() {
         "Please enable photo library access in your device settings to import progress photos.",
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Open Settings" },
+          { text: "Open Settings", onPress: () => Linking.openSettings() },
         ]
       );
       return false;
@@ -274,8 +272,14 @@ export default function PhotosScreen() {
     }
   };
 
+  const isValidDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d));
+
   const handleSaveMeta = async () => {
     if (!pendingUri) return;
+    if (!isValidDate(metaDate)) {
+      setSnack("Please enter a valid date (YYYY-MM-DD)");
+      return;
+    }
     setSaving(true);
     try {
       await insertPhoto({
@@ -576,6 +580,8 @@ export default function PhotosScreen() {
                   selected={metaPose === p.value}
                   onPress={() => setMetaPose(metaPose === p.value ? null : p.value)}
                   style={styles.chip}
+                  accessibilityLabel={`${p.label} pose category`}
+                  accessibilityRole="togglebutton"
                 >
                   {p.label}
                 </Chip>

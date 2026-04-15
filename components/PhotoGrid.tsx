@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dateText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   poseIcon: {
