@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
+  Pressable,
   StyleSheet,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Card, Chip, FAB, Searchbar, Text, useTheme } from "react-native-paper";
+import { Chip, FAB, Searchbar, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -78,17 +79,18 @@ export default function Exercises() {
       const color = DIFFICULTY_COLORS[diff] || semantic.intermediate;
       const selected = layout.atLeastMedium && detail?.id === item.id;
       return (
-      <Card
+      <Pressable
         onPress={() => onPress(item)}
-        style={[
+        style={({ pressed }) => [
           styles.exerciseCard,
           { borderLeftColor: color, borderLeftWidth: 3, backgroundColor: theme.colors.surface },
           selected && { backgroundColor: theme.colors.primaryContainer },
+          pressed && { opacity: 0.7 },
         ]}
         accessibilityLabel={`${item.name}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}, Difficulty: ${diff}`}
         accessibilityRole="button"
       >
-        <Card.Content style={styles.cardInner}>
+        <View style={styles.cardInner}>
           <View style={styles.titleRow}>
             <Text variant="titleSmall" numberOfLines={1} style={[{ color: theme.colors.onSurface }, styles.titleText]}>
               {item.name}
@@ -120,8 +122,8 @@ export default function Exercises() {
               </View>
             ))}
           </View>
-        </Card.Content>
-      </Card>
+        </View>
+      </Pressable>
       );
     },
     [onPress, theme, layout.atLeastMedium, detail, mc]
@@ -382,8 +384,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     marginVertical: 4,
     borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 2,
   },
   cardInner: {
+    paddingHorizontal: 16,
     paddingVertical: 8,
   },
   titleRow: {
