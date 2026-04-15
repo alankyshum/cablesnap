@@ -86,6 +86,7 @@ jobs:
       - name: Prepare F-Droid repo
         run: |
           cp fitforge.apk fdroid/repo/
+          rm -f fdroid/repo/.gitkeep
           cd fdroid
           /tmp/fdroid-venv/bin/fdroid update --create-metadata --rename-apks
         env:
