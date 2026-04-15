@@ -227,6 +227,28 @@ export default function Progress() {
       );
     }
 
+    const achievementsCard = (
+      <Card
+        style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}
+        onPress={() => router.push("/progress/achievements")}
+        accessibilityLabel="Achievements"
+        accessibilityRole="button"
+        accessibilityHint="View your achievements and milestones"
+      >
+        <Card.Content>
+          <View style={styles.cardHeader}>
+            <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+              Achievements
+            </Text>
+          </View>
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+            Track your milestones and badges
+          </Text>
+        </Card.Content>
+      </Card>
+    );
+
     const freqCard = freq.length > 0 ? (
       <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
@@ -341,6 +363,7 @@ export default function Progress() {
         ListHeaderComponent={
           layout.atLeastMedium ? (
             <>
+              {achievementsCard}
               <View style={styles.grid}>
                 {freqCard}
                 {volCard}
@@ -352,6 +375,7 @@ export default function Progress() {
             </>
           ) : (
             <>
+              {achievementsCard}
               {freqCard}
               {volCard}
               {prCard}

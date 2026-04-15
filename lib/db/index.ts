@@ -157,3 +157,14 @@ export {
   getThumbnailDir,
 } from "./photos";
 export type { ProgressPhoto, PoseCategory } from "./photos";
+
+export {
+  buildAchievementContext,
+  getEarnedAchievements,
+  getEarnedAchievementIds,
+  getEarnedAchievementMap,
+  saveEarnedAchievements,
+  getEarnedCount,
+  hasSeenRetroactiveBanner,
+  markRetroactiveBannerSeen,
+} from "./achievements";

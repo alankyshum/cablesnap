@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AccessibilityInfo,
+  Platform,
   Share,
   StyleSheet,
   View,
@@ -13,6 +14,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   getBodySettings,
@@ -22,7 +24,12 @@ import {
   getSessionRepPRs,
   getSessionSets,
   getSessionWeightIncreases,
+  buildAchievementContext,
+  getEarnedAchievementIds,
+  saveEarnedAchievements,
 } from "../../../lib/db";
+import { evaluateAchievements } from "../../../lib/achievements";
+import type { AchievementDef } from "../../../lib/achievements";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
 import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { toDisplay } from "../../../lib/units";
@@ -47,6 +54,7 @@ export default function Summary() {
   const [increases, setIncreases] = useState<Increase[]>([]);
   const [comparison, setComparison] = useState<Comparison>(null);
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
+  const [newAchievements, setNewAchievements] = useState<AchievementDef[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -74,6 +82,24 @@ export default function Summary() {
         (inc) => !prData.some((pr) => pr.exercise_id === inc.exercise_id)
       ));
       setComparison(compData);
+
+      // Achievement evaluation
+      try {
+        const [ctx, alreadyEarnedIds] = await Promise.all([
+          buildAchievementContext(),
+          getEarnedAchievementIds(),
+        ]);
+        const earned = evaluateAchievements(ctx, alreadyEarnedIds);
+        if (earned.length > 0) {
+          await saveEarnedAchievements(earned.map((e) => e.achievement.id));
+          setNewAchievements(earned.map((e) => e.achievement));
+          if (Platform.OS !== "web") {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          }
+        }
+      } catch {
+        // Achievement evaluation is non-critical
+      }
 
       AccessibilityInfo.announceForAccessibility("Workout Complete!");
     })();
@@ -175,6 +201,7 @@ export default function Summary() {
       <FlashList
         data={
           [
+            ...(newAchievements.length > 0 ? [{ key: "achievements" }] : []),
             ...(allPrs.length > 0 ? [{ key: "prs" }] : []),
             ...(increases.length > 0 ? [{ key: "increases" }] : []),
             ...(comparison?.previous ? [{ key: "comparison" }] : []),
@@ -254,6 +281,61 @@ export default function Summary() {
           </>
         }
         renderItem={({ item }) => {
+          if (item.key === "achievements") {
+            const displayed = newAchievements.slice(0, 3);
+            const extraCount = newAchievements.length - 3;
+            return (
+              <Card
+                style={[styles.section, { backgroundColor: theme.colors.tertiaryContainer }]}
+                accessibilityLabel={`${newAchievements.length} achievement${newAchievements.length > 1 ? "s" : ""} unlocked`}
+                accessibilityLiveRegion="polite"
+              >
+                <Card.Content>
+                  <View style={styles.sectionHeader}>
+                    <Text style={{ fontSize: 20 }}>🏆</Text>
+                    <Text
+                      variant="titleMedium"
+                      style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                    >
+                      Achievement{newAchievements.length > 1 ? "s" : ""} Unlocked!
+                    </Text>
+                  </View>
+                  {displayed.map((a) => (
+                    <View key={a.id} style={styles.row}>
+                      <Text style={{ fontSize: 18, marginRight: 8 }}>{a.icon}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          variant="bodyMedium"
+                          style={{ color: theme.colors.onTertiaryContainer, fontWeight: "600" }}
+                        >
+                          {a.name}
+                        </Text>
+                        <Text
+                          variant="bodySmall"
+                          style={{ color: theme.colors.onTertiaryContainer }}
+                        >
+                          {a.description}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                  {extraCount > 0 && (
+                    <Button
+                      mode="text"
+                      onPress={() => router.push("/progress/achievements")}
+                      textColor={theme.colors.onTertiaryContainer}
+                      style={{ marginTop: 4 }}
+                      accessibilityLabel={`View ${extraCount} more achievements`}
+                      accessibilityRole="link"
+                    >
+                      +{extraCount} more
+                    </Button>
+                  )}
+                </Card.Content>
+              </Card>
+            );
+          }
+
           if (item.key === "prs") {
             return (
               <Card

@@ -499,6 +499,13 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_progress_photos_deleted ON progress_photos(deleted_at)"
   );
+
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS achievements_earned (
+      achievement_id TEXT PRIMARY KEY,
+      earned_at INTEGER NOT NULL
+    )`
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
