@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import {
   AccessibilityInfo,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -1049,50 +1049,10 @@ export default function ActiveSession() {
         }}
       />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
-      <FlatList
-        data={[]}
-        renderItem={null}
-        style={{ backgroundColor: theme.colors.background }}
-        contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <>
-        {rest > 0 && (
-          <Reanimated.View
-            style={[styles.restBanner, restFlashStyle]}
-            accessibilityLiveRegion="polite"
-          >
-            <Text variant="headlineLarge" style={{ color: theme.colors.onPrimaryContainer, fontWeight: "700" }} accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds`}>
-              {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
-            </Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer, marginTop: 4 }}>
-              Rest Timer
-            </Text>
-            <Button
-              mode="text"
-              compact
-              onPress={dismissRest}
-              textColor={theme.colors.onPrimaryContainer}
-              style={{ marginTop: 4 }}
-              accessibilityLabel="Skip rest timer"
-            >
-              Skip
-            </Button>
-          </Reanimated.View>
-        )}
-
-        {/* Next exercise hint for supersets */}
-        {nextHint && (
-          <View style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]} accessibilityLiveRegion="polite">
-            <Text variant="titleSmall" style={{ color: theme.colors.onSecondaryContainer, fontWeight: "700" }}>
-              {nextHint}
-            </Text>
-          </View>
-        )}
-
-        {groups.map((group) => (
+      <FlashList
+        data={groups}
+        renderItem={({ item: group }) => (
           <ExerciseGroupCard
-            key={group.exercise_id}
             group={group}
             step={step}
             unit={unit}
@@ -1121,37 +1081,74 @@ export default function ActiveSession() {
             onNotesDraftChange={handleNotesDraftChange}
             onToggleNotes={toggleNotes}
           />
-        ))}
-
-        <Button
-          mode="outlined"
-          icon="plus"
-          onPress={handleAddExercise}
-          style={styles.addExercise}
-          accessibilityLabel="Add exercise to workout"
-        >
-          Add Exercise
-        </Button>
-
-        <Button
-          mode="contained"
-          onPress={finish}
-          style={styles.finishBtn}
-          contentStyle={styles.finishContent}
-          accessibilityLabel="Finish workout"
-        >
-          Finish Workout
-        </Button>
-
-        <Button
-          mode="text"
-          onPress={cancel}
-          textColor={theme.colors.error}
-          style={styles.cancelBtn}
-          accessibilityLabel="Cancel workout"
-        >
-          Cancel Workout
-        </Button>
+        )}
+        keyExtractor={(item) => item.exercise_id}
+        estimatedItemSize={250}
+        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <>
+            {rest > 0 && (
+              <Reanimated.View
+                style={[styles.restBanner, restFlashStyle]}
+                accessibilityLiveRegion="polite"
+              >
+                <Text variant="headlineLarge" style={{ color: theme.colors.onPrimaryContainer, fontWeight: "700" }} accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds`}>
+                  {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
+                </Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer, marginTop: 4 }}>
+                  Rest Timer
+                </Text>
+                <Button
+                  mode="text"
+                  compact
+                  onPress={dismissRest}
+                  textColor={theme.colors.onPrimaryContainer}
+                  style={{ marginTop: 4 }}
+                  accessibilityLabel="Skip rest timer"
+                >
+                  Skip
+                </Button>
+              </Reanimated.View>
+            )}
+            {nextHint && (
+              <View style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]} accessibilityLiveRegion="polite">
+                <Text variant="titleSmall" style={{ color: theme.colors.onSecondaryContainer, fontWeight: "700" }}>
+                  {nextHint}
+                </Text>
+              </View>
+            )}
+          </>
+        }
+        ListFooterComponent={
+          <>
+            <Button
+              mode="outlined"
+              icon="plus"
+              onPress={handleAddExercise}
+              style={styles.addExercise}
+              accessibilityLabel="Add exercise to workout"
+            >
+              Add Exercise
+            </Button>
+            <Button
+              mode="contained"
+              onPress={finish}
+              style={styles.finishBtn}
+              contentStyle={styles.finishContent}
+              accessibilityLabel="Finish workout"
+            >
+              Finish Workout
+            </Button>
+            <Button
+              mode="text"
+              onPress={cancel}
+              textColor={theme.colors.error}
+              style={styles.cancelBtn}
+              accessibilityLabel="Cancel workout"
+            >
+              Cancel Workout
+            </Button>
           </>
         }
       />
@@ -1176,10 +1173,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  content: {
-    paddingVertical: 16,
-    paddingBottom: 48,
   },
   group: {
     marginBottom: 8,
@@ -1339,15 +1332,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 2,
-  },
-  weightInput: {
-    flex: 1,
-    height: 36,
-    fontSize: 14,
-  },
-  stepBtn: {
-    margin: 0,
-    padding: 0,
   },
   suggestionChip: {
     paddingHorizontal: 12,

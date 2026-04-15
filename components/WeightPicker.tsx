@@ -1,7 +1,6 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text, TextInput, useTheme } from "react-native-paper";
-import WheelPicker from "@quidone/react-native-wheel-picker";
 import * as Haptics from "expo-haptics";
 
 type Props = {
@@ -19,64 +18,63 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel }: 
   const theme = useTheme();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-  const lastVal = useRef<number>(value ?? 0);
+  const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const data = useMemo(() => {
-    const items: { value: number; label: string }[] = [];
-    for (let v = MIN; v <= MAX; v += step) {
-      const rounded = Math.round(v * 10) / 10;
-      items.push({ value: rounded, label: String(rounded) });
+  const increment = useCallback(() => {
+    const next = Math.min(MAX, Math.round(((value ?? 0) + step) * 10) / 10);
+    onValueChange(next);
+    Haptics.selectionAsync();
+  }, [value, step, onValueChange]);
+
+  const decrement = useCallback(() => {
+    const next = Math.max(MIN, Math.round(((value ?? 0) - step) * 10) / 10);
+    onValueChange(next);
+    Haptics.selectionAsync();
+  }, [value, step, onValueChange]);
+
+  const startRepeat = useCallback((fn: () => void) => {
+    if (repeatRef.current) clearInterval(repeatRef.current);
+    repeatRef.current = setInterval(fn, 120);
+  }, []);
+
+  const stopRepeat = useCallback(() => {
+    if (repeatRef.current) {
+      clearInterval(repeatRef.current);
+      repeatRef.current = null;
     }
-    return items;
-  }, [step]);
+  }, []);
 
-  const handleChange = useCallback(({ item }: { item: { value: number } }) => {
-    const num = item.value;
-    if (num !== lastVal.current) {
-      lastVal.current = num;
-      onValueChange(num);
-      Haptics.selectionAsync();
-    }
-  }, [onValueChange]);
-
-  const startEdit = () => {
+  const startEdit = useCallback(() => {
     setDraft(value != null ? String(value) : "");
     setEditing(true);
-  };
+  }, [value]);
 
-  const endEdit = () => {
+  const endEdit = useCallback(() => {
     setEditing(false);
     const num = parseFloat(draft);
     if (!isNaN(num) && num >= MIN && num <= MAX) {
       onValueChange(num);
     }
-  };
+  }, [draft, onValueChange]);
 
   const display = value != null ? String(value) : "—";
 
   return (
     <View style={styles.container}>
-      <View style={styles.wheelWrap}>
-        <WheelPicker
-          data={data}
-          value={value ?? 0}
-          onValueChanged={handleChange}
-          itemHeight={32}
-          width="100%"
-          visibleItemCount={3}
-          itemTextStyle={{
-            fontSize: 14,
-            color: theme.colors.onSurfaceVariant,
-          }}
-          overlayItemStyle={{
-            backgroundColor: theme.colors.primaryContainer,
-            borderRadius: 6,
-          }}
-        />
-      </View>
+      <Pressable
+        onPress={decrement}
+        onLongPress={() => startRepeat(decrement)}
+        onPressOut={stopRepeat}
+        style={[styles.stepBtn, { backgroundColor: theme.colors.surfaceVariant }]}
+        accessibilityLabel={`Decrease weight by ${step}`}
+        accessibilityRole="button"
+      >
+        <Text style={[styles.stepText, { color: theme.colors.onSurfaceVariant }]}>−</Text>
+      </Pressable>
+
       {editing ? (
         <TextInput
-          mode="outlined"
+          mode="flat"
           dense
           value={draft}
           onChangeText={setDraft}
@@ -84,19 +82,30 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel }: 
           onSubmitEditing={endEdit}
           keyboardType="numeric"
           autoFocus
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.colors.surface }]}
           accessibilityLabel={accessibilityLabel}
         />
       ) : (
         <Pressable onPress={startEdit} style={styles.valueTap} accessibilityLabel={accessibilityLabel} accessibilityRole="button">
-          <Text variant="titleSmall" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
+          <Text style={[styles.valueText, { color: theme.colors.onSurface }]}>
             {display}
           </Text>
-          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 10 }}>
+          <Text style={[styles.unitText, { color: theme.colors.onSurfaceVariant }]}>
             {unit}
           </Text>
         </Pressable>
       )}
+
+      <Pressable
+        onPress={increment}
+        onLongPress={() => startRepeat(increment)}
+        onPressOut={stopRepeat}
+        style={[styles.stepBtn, { backgroundColor: theme.colors.primaryContainer }]}
+        accessibilityLabel={`Increase weight by ${step}`}
+        accessibilityRole="button"
+      >
+        <Text style={[styles.stepText, { color: theme.colors.onPrimaryContainer }]}>+</Text>
+      </Pressable>
     </View>
   );
 }
@@ -107,24 +116,39 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
-  wheelWrap: {
-    flex: 1,
-    height: 96,
-    overflow: "hidden",
+  stepBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepText: {
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 20,
   },
   valueTap: {
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 48,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    minWidth: 44,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  valueText: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  unitText: {
+    fontSize: 10,
   },
   input: {
     width: 56,
     height: 32,
-    fontSize: 13,
+    fontSize: 14,
     textAlign: "center",
+    paddingHorizontal: 2,
   },
 });
