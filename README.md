@@ -32,7 +32,8 @@
 - [Node.js](https://nodejs.org/) 20+
 - npm
 - [Expo CLI](https://docs.expo.dev/get-started/installation/) (installed via npx)
-- iOS Simulator (macOS) or Android Emulator, or the [Expo Go](https://expo.dev/go) app on your device
+- iOS Simulator + Xcode (macOS) or Android Emulator
+- [EAS CLI](https://docs.expo.dev/build/introduction/) (`npm install -g eas-cli`) — for building the development client
 
 ### Install
 
@@ -42,19 +43,35 @@ cd fitforge
 npm install
 ```
 
-### Run
+### Development Build (Recommended)
+
+FitForge uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
 
 ```bash
-# Start the development server
-npx expo start
+# Build the development client for iOS Simulator
+npx expo run:ios
 
-# Run on specific platform
-npm run android
-npm run ios
+# Build the development client for Android Emulator
+npx expo run:android
+
+# Or use EAS Build for a development build
+eas build --profile development --platform ios
+eas build --profile development --platform android
+```
+
+After the first build, start the dev server and the app will connect automatically:
+
+```bash
+npx expo start --dev-client
+```
+
+### Run on Web
+
+```bash
 npm run web
 ```
 
-Scan the QR code with the Expo Go app on your phone, or press `a` for Android emulator / `i` for iOS simulator.
+> **Note:** Expo Go is no longer supported for development. Use the development build workflow above.
 
 ## Project Structure
 
