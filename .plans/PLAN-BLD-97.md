@@ -171,7 +171,20 @@ Add a minimal user profile (6 fields) that feeds into BMR/TDEE/macro calculation
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: APPROVED with minor revisions (2026-04-15)
+
+**UX**: Flow is well-designed and non-disruptive. Profile is optional, pre-populates from existing data, and the CTA is contextually appropriate.
+
+**Accessibility**: 
+- Add `accessibilityLiveRegion="polite"` for validation error messages [M]
+- Specify 48x48dp minimum touch targets for segmented controls [M]
+- Minimum 14px font sizes for form labels [m]
+
+**Data Integrity**: Fix female BMR formula typo (`- 5  age` → `- 5 × age`) [M]
+
+**Edge Cases**: Consider age bounds (18-80 for accuracy), weight/height bounds, and biological sex field labeling for inclusivity.
+
+**Decision**: No critical blocking issues. 3 major items should be incorporated during implementation. QA will verify at review time.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
