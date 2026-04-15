@@ -15,7 +15,7 @@ const KNOWN_LIBRARY_RULES = ["role-img-alt", "nested-interactive"];
  */
 export async function skipOnboarding(page: Page) {
   await page.addInitScript(() => {
-    (window as Record<string, unknown>).__SKIP_ONBOARDING__ = true;
+    (window as unknown as Record<string, unknown>).__SKIP_ONBOARDING__ = true;
   });
   await page.goto("/");
   await page.waitForTimeout(500);

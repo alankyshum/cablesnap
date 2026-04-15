@@ -57,7 +57,7 @@ export default function RootLayout() {
         const skipOnboarding =
           Platform.OS === "web" &&
           typeof window !== "undefined" &&
-          (window as Record<string, unknown>).__SKIP_ONBOARDING__ === true;
+          (window as unknown as Record<string, unknown>).__SKIP_ONBOARDING__ === true;
         const complete = skipOnboarding || (await isOnboardingComplete());
         setOnboarded(complete);
         setReady(true);

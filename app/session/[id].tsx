@@ -1279,7 +1279,6 @@ export default function ActiveSession() {
           />
         )}
         keyExtractor={(item) => item.exercise_id}
-        estimatedItemSize={250}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={

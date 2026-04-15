@@ -132,7 +132,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
                 if (v === "" || isNaN(num)) {
                   setCustom("")
                   setBar(presets[presets.length - 1])
-                } else if (presets.includes(num as typeof presets[number])) {
+                } else if ((presets as readonly number[]).includes(num)) {
                   setCustom("")
                   setBar(num)
                 } else {

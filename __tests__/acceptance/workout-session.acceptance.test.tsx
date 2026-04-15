@@ -137,7 +137,7 @@ describe('Workout Session Acceptance', () => {
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
     const completeBtn = buttons.find((b) => b.text === 'OK')
-    await completeBtn.onPress()
+    await completeBtn!.onPress!()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-2')
 
@@ -166,7 +166,7 @@ describe('Workout Session Acceptance', () => {
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
     const discardBtn = buttons.find((b) => b.text === 'Delete')
-    await discardBtn.onPress()
+    await discardBtn!.onPress!()
 
     expect(mockDb.cancelSession).toHaveBeenCalledWith('sess-3')
     expect(mockRouter.back).toHaveBeenCalled()
@@ -373,7 +373,7 @@ describe('Workout Session Acceptance', () => {
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
     const completeBtn = buttons.find((b) => b.text === 'OK')
-    await completeBtn.onPress()
+    await completeBtn!.onPress!()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-nav')
     expect(mockRouter.replace).toHaveBeenCalledWith('/session/summary/sess-nav')
@@ -399,7 +399,7 @@ describe('Workout Session Acceptance', () => {
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
     const completeBtn = buttons.find((b) => b.text === 'OK')
-    await completeBtn.onPress()
+    await completeBtn!.onPress!()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-empty')
     expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)')
@@ -424,7 +424,7 @@ describe('Workout Session Acceptance', () => {
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
     const keepBtn = buttons.find((b) => b.text === 'Cancel')
     expect(keepBtn).toBeDefined()
-    expect(keepBtn.style).toBe('cancel')
+    expect(keepBtn!.style).toBe('cancel')
 
     expect(mockDb.cancelSession).not.toHaveBeenCalled()
     expect(mockRouter.back).not.toHaveBeenCalled()
