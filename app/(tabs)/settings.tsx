@@ -3,6 +3,7 @@ import { Linking, ScrollView, StyleSheet, Switch, TextInput, View } from "react-
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme, Divider } from "react-native-paper";
 import { useLayout } from "../../lib/layout";
 import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
+import BodyProfileCard from "../../components/BodyProfileCard";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
@@ -366,6 +367,8 @@ export default function Settings() {
           </View>
         </Card.Content>
       </Card>
+
+      <BodyProfileCard />
 
       <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
