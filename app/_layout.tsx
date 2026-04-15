@@ -15,12 +15,11 @@ import { Redirect, Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
-import * as Notifications from "expo-notifications";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
 import { getDatabase, isMemoryFallback, isOnboardingComplete, getAppSetting, setAppSetting } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
 import { log as logInteraction } from "../lib/interactions";
-import { setupHandler, handleResponse, getPermissionStatus } from "../lib/notifications";
+import { setupHandler, handleResponse, getPermissionStatus, addNotificationResponseReceivedListener } from "../lib/notifications";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { SnackbarProvider } from "../components/SnackbarProvider";
 import { QueryProvider } from "../lib/query";
@@ -74,7 +73,7 @@ export default function RootLayout() {
 
   // Notification tap handler
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const sub = addNotificationResponseReceivedListener((response) => {
       handleResponse(
         response,
         (path, params) => {
@@ -86,7 +85,7 @@ export default function RootLayout() {
         setSnack
       );
     });
-    return () => sub.remove();
+    return () => sub?.remove();
   }, [router]);
 
   // Permission re-check on app foreground

@@ -1,5 +1,5 @@
-import { Audio } from "expo-av"
-import type { AVPlaybackSource } from "expo-av"
+import { createAudioPlayer, setAudioModeAsync } from "expo-audio"
+import type { AudioPlayer, AudioSource } from "expo-audio"
 
 export type TimerCue =
   | "work_start"
@@ -9,7 +9,7 @@ export type TimerCue =
   | "warning"
   | "complete"
 
-const SOURCES: Record<TimerCue, AVPlaybackSource> = {
+const SOURCES: Record<TimerCue, AudioSource> = {
   work_start: require("../assets/sounds/beep_high.wav"),
   rest_start: require("../assets/sounds/beep_low.wav"),
   tick: require("../assets/sounds/tick.wav"),
@@ -18,25 +18,22 @@ const SOURCES: Record<TimerCue, AVPlaybackSource> = {
   complete: require("../assets/sounds/complete.wav"),
 }
 
-let sounds: Map<TimerCue, Audio.Sound> | null = null
+let players: Map<TimerCue, AudioPlayer> | null = null
 let enabled = true
 let loading = false
 
-async function load(): Promise<Map<TimerCue, Audio.Sound>> {
-  if (sounds) return sounds
+async function load(): Promise<Map<TimerCue, AudioPlayer>> {
+  if (players) return players
   if (loading) return new Map()
   loading = true
   try {
-    await Audio.setAudioModeAsync({ playsInSilentModeIOS: false })
-    const map = new Map<TimerCue, Audio.Sound>()
+    await setAudioModeAsync({ playsInSilentMode: false })
+    const map = new Map<TimerCue, AudioPlayer>()
     const cues = Object.keys(SOURCES) as TimerCue[]
-    await Promise.all(
-      cues.map(async (cue) => {
-        const { sound } = await Audio.Sound.createAsync(SOURCES[cue])
-        map.set(cue, sound)
-      }),
-    )
-    sounds = map
+    for (const cue of cues) {
+      map.set(cue, createAudioPlayer(SOURCES[cue]))
+    }
+    players = map
     return map
   } catch (err) {
     if (__DEV__) console.warn("audio: failed to load sounds", err)
@@ -50,21 +47,22 @@ export async function play(cue: TimerCue): Promise<void> {
   if (!enabled) return
   try {
     const map = await load()
-    const sound = map.get(cue)
-    if (!sound) return
-    await sound.replayAsync()
+    const player = map.get(cue)
+    if (!player) return
+    player.seekTo(0)
+    player.play()
   } catch (err) {
     if (__DEV__) console.warn("audio: playback error", err)
   }
 }
 
 export async function unload(): Promise<void> {
-  if (!sounds) return
-  const map = sounds
-  sounds = null
-  for (const sound of map.values()) {
+  if (!players) return
+  const map = players
+  players = null
+  for (const player of map.values()) {
     try {
-      await sound.unloadAsync()
+      player.release()
     } catch {
       // ignore cleanup errors
     }

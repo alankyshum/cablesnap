@@ -1,42 +1,36 @@
-jest.mock("expo-av", () => {
-  const sound = {
-    replayAsync: jest.fn().mockResolvedValue(undefined),
-    unloadAsync: jest.fn().mockResolvedValue(undefined),
+jest.mock("expo-audio", () => {
+  const player = {
+    seekTo: jest.fn(),
+    play: jest.fn(),
+    release: jest.fn(),
   }
   return {
-    Audio: {
-      setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
-      Sound: {
-        createAsync: jest.fn().mockResolvedValue({ sound }),
-      },
-    },
+    setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
+    createAudioPlayer: jest.fn(() => player),
   }
 })
 
 describe("audio", () => {
   let audio: typeof import("../../lib/audio")
-  let Sound: { createAsync: jest.Mock }
+  let createAudioPlayer: jest.Mock
   let setAudioModeAsync: jest.Mock
 
   beforeEach(() => {
     jest.resetModules()
-    jest.doMock("expo-av", () => {
-      const snd = {
-        replayAsync: jest.fn().mockResolvedValue(undefined),
-        unloadAsync: jest.fn().mockResolvedValue(undefined),
+    jest.doMock("expo-audio", () => {
+      const p = {
+        seekTo: jest.fn(),
+        play: jest.fn(),
+        release: jest.fn(),
       }
       return {
-        Audio: {
-          setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
-          Sound: {
-            createAsync: jest.fn().mockResolvedValue({ sound: snd }),
-          },
-        },
+        setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
+        createAudioPlayer: jest.fn(() => p),
       }
     })
-    const av = require("expo-av")
-    Sound = av.Audio.Sound
-    setAudioModeAsync = av.Audio.setAudioModeAsync
+    const expoAudio = require("expo-audio")
+    createAudioPlayer = expoAudio.createAudioPlayer
+    setAudioModeAsync = expoAudio.setAudioModeAsync
     audio = require("../../lib/audio")
   })
 
@@ -52,34 +46,35 @@ describe("audio", () => {
   })
 
   it("play loads sounds lazily on first call", async () => {
-    expect(Sound.createAsync).not.toHaveBeenCalled()
+    expect(createAudioPlayer).not.toHaveBeenCalled()
     await audio.play("tick")
-    expect(setAudioModeAsync).toHaveBeenCalledWith({ playsInSilentModeIOS: false })
-    expect(Sound.createAsync).toHaveBeenCalled()
+    expect(setAudioModeAsync).toHaveBeenCalledWith({ playsInSilentMode: false })
+    expect(createAudioPlayer).toHaveBeenCalled()
   })
 
   it("play does nothing when disabled", async () => {
     audio.setEnabled(false)
     await audio.play("tick")
-    expect(Sound.createAsync).not.toHaveBeenCalled()
+    expect(createAudioPlayer).not.toHaveBeenCalled()
   })
 
-  it("play uses replayAsync for playback", async () => {
+  it("play uses seekTo + play for playback", async () => {
     await audio.play("complete")
-    const { sound } = await Sound.createAsync.mock.results[0].value
-    expect(sound.replayAsync).toHaveBeenCalled()
+    const player = createAudioPlayer.mock.results[0].value
+    expect(player.seekTo).toHaveBeenCalledWith(0)
+    expect(player.play).toHaveBeenCalled()
   })
 
   it("play swallows errors", async () => {
-    Sound.createAsync.mockRejectedValueOnce(new Error("fail"))
+    setAudioModeAsync.mockRejectedValueOnce(new Error("fail"))
     await expect(audio.play("tick")).resolves.toBeUndefined()
   })
 
-  it("unload releases all sounds", async () => {
+  it("unload releases all players", async () => {
     await audio.play("tick")
-    const { sound } = await Sound.createAsync.mock.results[0].value
+    const player = createAudioPlayer.mock.results[0].value
     await audio.unload()
-    expect(sound.unloadAsync).toHaveBeenCalled()
+    expect(player.release).toHaveBeenCalled()
   })
 
   it("unload is safe when no sounds loaded", async () => {
@@ -89,17 +84,16 @@ describe("audio", () => {
   it("play reloads after unload", async () => {
     await audio.play("tick")
     await audio.unload()
-    const calls = Sound.createAsync.mock.calls.length
+    const calls = createAudioPlayer.mock.calls.length
     await audio.play("complete")
-    expect(Sound.createAsync.mock.calls.length).toBeGreaterThan(calls)
+    expect(createAudioPlayer.mock.calls.length).toBeGreaterThan(calls)
   })
 
   it("supports all cue types", async () => {
-    const cues: (typeof import("../../lib/audio"))["play"] extends (c: infer C) => unknown ? C : never = "tick"
     const all = ["work_start", "rest_start", "tick", "minute", "warning", "complete"] as const
     for (const cue of all) {
       await audio.play(cue)
     }
-    expect(Sound.createAsync).toHaveBeenCalled()
+    expect(createAudioPlayer).toHaveBeenCalled()
   })
 })

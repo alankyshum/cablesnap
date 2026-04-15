@@ -1,36 +1,79 @@
-import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+import Constants from "expo-constants";
 import { getSchedule, getTemplateById } from "./db";
 
+type ExpoNotifications = typeof import("expo-notifications");
+
+let _mod: ExpoNotifications | null = null;
+let _unavailable = false;
+
+function isExpoGo(): boolean {
+  return Constants.executionEnvironment === "storeClient";
+}
+
+function getModule(): ExpoNotifications | null {
+  if (_unavailable) return null;
+  if (_mod) return _mod;
+  if (Platform.OS !== "web" && isExpoGo()) {
+    _unavailable = true;
+    return null;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _mod = require("expo-notifications") as ExpoNotifications;
+    return _mod;
+  } catch {
+    _unavailable = true;
+    return null;
+  }
+}
+
+export const isAvailable = (): boolean => getModule() !== null;
+
 export async function requestPermission(): Promise<boolean> {
-  const { status: existing } = await Notifications.getPermissionsAsync();
-  if (existing === "granted") return true;
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === "granted";
+  const mod = getModule();
+  if (!mod) return false;
+  try {
+    const { status: existing } = await mod.getPermissionsAsync();
+    if (existing === "granted") return true;
+    const { status } = await mod.requestPermissionsAsync();
+    return status === "granted";
+  } catch {
+    return false;
+  }
 }
 
 export async function getPermissionStatus(): Promise<string> {
-  const { status } = await Notifications.getPermissionsAsync();
-  return status;
+  const mod = getModule();
+  if (!mod) return "unavailable";
+  try {
+    const { status } = await mod.getPermissionsAsync();
+    return status;
+  } catch {
+    return "unavailable";
+  }
 }
 
 export async function scheduleReminders(time: {
   hour: number;
   minute: number;
 }): Promise<number> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  const mod = getModule();
+  if (!mod) return 0;
+  await mod.cancelAllScheduledNotificationsAsync();
   const entries = await getSchedule();
   if (entries.length === 0) return 0;
   for (const entry of entries) {
     // expo weekday: 1=Sunday..7=Saturday; our day_of_week: 0=Mon..6=Sun
     const weekday = ((entry.day_of_week + 1) % 7) + 1;
-    await Notifications.scheduleNotificationAsync({
+    await mod.scheduleNotificationAsync({
       content: {
         title: "Time to train!",
         body: `${entry.template_name} is scheduled for today`,
         data: { templateId: entry.template_id },
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        type: mod.SchedulableTriggerInputTypes.WEEKLY,
         weekday,
         hour: time.hour,
         minute: time.minute,
@@ -41,11 +84,13 @@ export async function scheduleReminders(time: {
 }
 
 export async function cancelAll(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  const mod = getModule();
+  if (!mod) return;
+  await mod.cancelAllScheduledNotificationsAsync();
 }
 
 export async function handleResponse(
-  response: Notifications.NotificationResponse,
+  response: { notification: { request: { content: { data: unknown } } } },
   navigate: (path: string, params?: Record<string, string>) => void,
   showSnackbar: (msg: string) => void
 ): Promise<void> {
@@ -67,13 +112,31 @@ export async function handleResponse(
 }
 
 export function setupHandler(): void {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
+  const mod = getModule();
+  if (!mod) return;
+  try {
+    mod.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch {
+    _unavailable = true;
+  }
+}
+
+export function addNotificationResponseReceivedListener(
+  listener: (response: { notification: { request: { content: { data: unknown } } } }) => void
+): { remove: () => void } | null {
+  const mod = getModule();
+  if (!mod) return null;
+  try {
+    return mod.addNotificationResponseReceivedListener(listener);
+  } catch {
+    return null;
+  }
 }

@@ -1,10 +1,16 @@
+jest.mock("expo-constants", () => ({
+  executionEnvironment: "standalone",
+}));
+
 jest.mock("expo-notifications", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let handler: any = null;
   return {
     getPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
     requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
     cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
     scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setNotificationHandler: jest.fn((h: any) => { handler = h; }),
     addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
     SchedulableTriggerInputTypes: { WEEKLY: "weekly" },
@@ -26,13 +32,18 @@ describe("notifications", () => {
 
   beforeEach(() => {
     jest.resetModules();
+    jest.doMock("expo-constants", () => ({
+      executionEnvironment: "standalone",
+    }));
     jest.doMock("expo-notifications", () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let handler: any = null;
       return {
         getPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
         requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
         cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
         scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setNotificationHandler: jest.fn((h: any) => { handler = h; }),
         addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
         SchedulableTriggerInputTypes: { WEEKLY: "weekly" },
@@ -170,7 +181,7 @@ describe("notifications", () => {
       db.getTemplateById.mockResolvedValueOnce({ id: "t1", name: "Push Day" });
       const response = {
         notification: { request: { content: { data: { templateId: "t1" } } } },
-      } as any;
+      };
       await notifications.handleResponse(response, navigate, showSnackbar);
       expect(navigate).toHaveBeenCalledWith("/workout/new", { templateId: "t1" });
     });
@@ -179,7 +190,7 @@ describe("notifications", () => {
       db.getTemplateById.mockResolvedValueOnce(null);
       const response = {
         notification: { request: { content: { data: { templateId: "deleted" } } } },
-      } as any;
+      };
       await notifications.handleResponse(response, navigate, showSnackbar);
       expect(navigate).toHaveBeenCalledWith("/");
       expect(showSnackbar).toHaveBeenCalledWith("Scheduled template no longer exists");
@@ -188,7 +199,7 @@ describe("notifications", () => {
     it("navigates home when no templateId in data", async () => {
       const response = {
         notification: { request: { content: { data: {} } } },
-      } as any;
+      };
       await notifications.handleResponse(response, navigate, showSnackbar);
       expect(navigate).toHaveBeenCalledWith("/");
     });
