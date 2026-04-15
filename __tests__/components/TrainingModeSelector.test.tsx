@@ -13,10 +13,7 @@ describe('TrainingModeSelector', () => {
     modes: [...modes],
     selected: 'weight' as const,
     exercise: 'Cable Curl',
-    tempo: '',
     onSelect: jest.fn(),
-    onTempoChange: jest.fn(),
-    onTempoBlur: jest.fn(),
   }
 
   beforeEach(() => jest.clearAllMocks())
@@ -51,27 +48,11 @@ describe('TrainingModeSelector', () => {
     )
   })
 
-  it('does NOT show tempo field when mode is not eccentric', () => {
+  it('does NOT show tempo field when eccentric mode is selected (tempo removed)', () => {
     const { queryByPlaceholderText } = renderScreen(
-      <TrainingModeSelector {...defaults} selected="weight" />
+      <TrainingModeSelector {...defaults} selected="eccentric_overload" />
     )
     expect(queryByPlaceholderText(/Tempo/)).toBeNull()
-  })
-
-  it('shows tempo field when eccentric mode is selected', () => {
-    const { getByPlaceholderText, getByText } = renderScreen(
-      <TrainingModeSelector {...defaults} selected="eccentric_overload" />
-    )
-    expect(getByPlaceholderText('Tempo (e.g. 3-1-5-1)')).toBeTruthy()
-    expect(getByText(/Eccentric – Pause – Concentric – Pause/)).toBeTruthy()
-  })
-
-  it('calls onTempoChange when tempo text changes', () => {
-    const { getByPlaceholderText } = renderScreen(
-      <TrainingModeSelector {...defaults} selected="eccentric_overload" />
-    )
-    fireEvent.changeText(getByPlaceholderText('Tempo (e.g. 3-1-5-1)'), '3-1-5-1')
-    expect(defaults.onTempoChange).toHaveBeenCalledWith('3-1-5-1')
   })
 
   it('has radiogroup accessibility role on container', () => {
@@ -93,13 +74,5 @@ describe('TrainingModeSelector', () => {
     expect(band.props.accessibilityState).toEqual({ selected: true })
     const std = getByLabelText('Standard training mode')
     expect(std.props.accessibilityState).toEqual({ selected: false })
-  })
-
-  it('tempo field has accessibility hint', () => {
-    const { getByLabelText } = renderScreen(
-      <TrainingModeSelector {...defaults} selected="eccentric_overload" />
-    )
-    const field = getByLabelText(/Tempo notation/)
-    expect(field.props.accessibilityHint).toContain('eccentric, pause, concentric, pause')
   })
 })

@@ -53,7 +53,6 @@ import {
   updateSetRPE,
   updateSetNotes,
   updateSetTrainingMode,
-  updateSetTempo,
   getExerciseById,
   getAppSetting,
 } from "../../lib/db";
@@ -298,7 +297,6 @@ type GroupCardProps = {
   unit: "kg" | "lb";
   suggestions: Record<string, Suggestion | null>;
   modes: Record<string, TrainingMode>;
-  tempoDraft: Record<string, string>;
   notesOpenMap: Record<string, boolean>;
   notesDraftMap: Record<string, string>;
   halfStep: { setId: string; base: number } | null;
@@ -310,8 +308,6 @@ type GroupCardProps = {
   onDelete: (setId: string) => void;
   onAddSet: (exerciseId: string) => void;
   onModeChange: (exerciseId: string, mode: TrainingMode) => void;
-  onTempoChange: (exerciseId: string, val: string) => void;
-  onTempoBlur: (exerciseId: string, val: string) => void;
   onRPE: (set: SetWithMeta, val: number) => void;
   onHalfStep: (setId: string, val: number) => void;
   onHalfStepClear: () => void;
@@ -323,10 +319,10 @@ type GroupCardProps = {
 };
 
 const ExerciseGroupCard = memo(function ExerciseGroupCard({
-  group, step, unit, suggestions, modes, tempoDraft,
+  group, step, unit, suggestions, modes,
   notesOpenMap, notesDraftMap, halfStep, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onModeChange,
-  onTempoChange, onTempoBlur, onRPE, onHalfStep, onHalfStepClear,
+  onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes,
   onShowDetail,
 }: GroupCardProps) {
@@ -417,10 +413,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
             modes={group.training_modes}
             selected={modes[group.exercise_id] ?? group.training_modes[0]}
             exercise={group.name}
-            tempo={tempoDraft[group.exercise_id] ?? ""}
             onSelect={(m) => onModeChange(group.exercise_id, m)}
-            onTempoChange={(v) => onTempoChange(group.exercise_id, v)}
-            onTempoBlur={() => onTempoBlur(group.exercise_id, tempoDraft[group.exercise_id] ?? "")}
             compact
           />
         )}
@@ -698,7 +691,6 @@ export default function ActiveSession() {
   }, []);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
   const [modes, setModes] = useState<Record<string, TrainingMode>>({});
-  const [tempoDraft, setTempoDraft] = useState<Record<string, string>>({});
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
 
   const linkIds = useMemo(() => {
@@ -1022,8 +1014,7 @@ export default function ActiveSession() {
     const num = (group?.sets.length ?? 0) + 1;
     const fallback = group?.is_voltra && group.training_modes.length > 1 ? group.training_modes[0] : null;
     const mode = modes[exerciseId] ?? fallback;
-    const tp = mode === "eccentric_overload" ? (tempoDraft[exerciseId] || null) : null;
-    const newSet = await addSet(id!, exerciseId, num, null, null, mode, tp);
+    const newSet = await addSet(id!, exerciseId, num, null, null, mode, null);
     setGroups((prev) =>
       prev.map((g) =>
         g.exercise_id === exerciseId
@@ -1031,7 +1022,7 @@ export default function ActiveSession() {
           : g
       )
     );
-  }, [id, groups, modes, tempoDraft]);
+  }, [id, groups, modes]);
 
   const handleModeChange = useCallback(async (exerciseId: string, mode: TrainingMode) => {
     setModes((prev) => ({ ...prev, [exerciseId]: mode }));
@@ -1047,18 +1038,6 @@ export default function ActiveSession() {
     for (const set of group.sets) {
       if (!set.completed) {
         await updateSetTrainingMode(set.id, mode);
-      }
-    }
-  }, [groups]);
-
-  const handleTempoBlur = useCallback(async (exerciseId: string, val: string) => {
-    const clean = val && !/^[\s-]*$/.test(val) ? val : null;
-    setTempoDraft((prev) => ({ ...prev, [exerciseId]: clean ?? "" }));
-    const group = groups.find((g) => g.exercise_id === exerciseId);
-    if (!group) return;
-    for (const set of group.sets) {
-      if (!set.completed) {
-        await updateSetTempo(set.id, clean);
       }
     }
   }, [groups]);
@@ -1119,10 +1098,6 @@ export default function ActiveSession() {
     setNotesDraft((prev) => { const next = { ...prev }; delete next[setId]; return next; });
     await updateSetNotes(setId, text);
   }, [updateGroupSet]);
-
-  const handleTempoChange = useCallback((exerciseId: string, val: string) => {
-    setTempoDraft((prev) => ({ ...prev, [exerciseId]: val }));
-  }, []);
 
   const handleNotesDraftChange = useCallback((setId: string, text: string) => {
     setNotesDraft((prev) => ({ ...prev, [setId]: text }));
@@ -1254,7 +1229,6 @@ export default function ActiveSession() {
             unit={unit}
             suggestions={suggestions}
             modes={modes}
-            tempoDraft={tempoDraft}
             notesOpenMap={notesOpen}
             notesDraftMap={notesDraft}
             halfStep={halfStep}
@@ -1266,8 +1240,6 @@ export default function ActiveSession() {
             onDelete={handleDelete}
             onAddSet={handleAddSet}
             onModeChange={handleModeChange}
-            onTempoChange={handleTempoChange}
-            onTempoBlur={handleTempoBlur}
             onRPE={handleRPE}
             onHalfStep={handleHalfStep}
             onHalfStepClear={handleHalfStepClear}

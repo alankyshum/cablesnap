@@ -5,7 +5,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Text, TextInput, useTheme } from "react-native-paper";
+import { Text, useTheme } from "react-native-paper";
 import type { TrainingMode } from "../lib/types";
 import { TRAINING_MODE_LABELS } from "../lib/types";
 
@@ -13,14 +13,11 @@ type Props = {
   modes: TrainingMode[];
   selected: TrainingMode;
   exercise: string;
-  tempo: string;
   onSelect: (mode: TrainingMode) => void;
-  onTempoChange: (tempo: string) => void;
-  onTempoBlur: () => void;
   compact?: boolean;
 };
 
-function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTempoChange, onTempoBlur, compact: isCompact }: Props) {
+function TrainingModeSelector({ modes, selected, exercise, onSelect, compact: isCompact }: Props) {
   const theme = useTheme();
   const [tooltip, setTooltip] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,28 +84,6 @@ function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTe
         </View>
       )}
 
-      {selected === "eccentric_overload" && (
-        <View style={styles.tempoContainer}>
-          <TextInput
-            mode="outlined"
-            dense
-            placeholder="Tempo (e.g. 3-1-5-1)"
-            value={tempo}
-            onChangeText={onTempoChange}
-            onBlur={onTempoBlur}
-            maxLength={15}
-            style={styles.tempoInput}
-            accessibilityLabel="Tempo notation, for example 3 1 5 1"
-            accessibilityHint="Enter four numbers separated by dashes: eccentric, pause, concentric, pause seconds"
-          />
-          <Text
-            variant="labelSmall"
-            style={[styles.helper, { color: theme.colors.onSurfaceVariant }]}
-          >
-            Seconds: Eccentric – Pause – Concentric – Pause
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -167,17 +142,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-  },
-  tempoContainer: {
-    paddingHorizontal: 4,
-    marginTop: 8,
-  },
-  tempoInput: {
-    fontSize: 14,
-  },
-  helper: {
-    marginTop: 4,
-    fontSize: 12,
-    fontStyle: "italic",
   },
 });
