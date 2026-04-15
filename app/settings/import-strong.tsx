@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -563,32 +563,31 @@ function StepConfirmImport({
 
   // Check for duplicates
   const [duplicates, setDuplicates] = useState<string[]>([]);
-  const checkDuplicatesOnce = useCallback(async () => {
-    try {
-      const db = await getDatabase();
-      const dupes: string[] = [];
-      for (const session of parsed.sessions) {
-        const dateStr = session.date.trim().replace(" ", "T");
-        const d = new Date(dateStr);
-        const dateOnly = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        const existing = await db.getFirstAsync<{ id: string }>(
-          "SELECT id FROM workout_sessions WHERE date(started_at/1000, 'unixepoch') = ? AND name = ?",
-          [dateOnly, session.workoutName]
-        );
-        if (existing) {
-          dupes.push(`${session.workoutName} (${dateOnly})`);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const db = await getDatabase();
+        const dupes: string[] = [];
+        for (const session of parsed.sessions) {
+          const dateStr = session.date.trim().replace(" ", "T");
+          const d = new Date(dateStr);
+          const dateOnly = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const existing = await db.getFirstAsync<{ id: string }>(
+            "SELECT id FROM workout_sessions WHERE date(started_at/1000, 'unixepoch') = ? AND name = ?",
+            [dateOnly, session.workoutName]
+          );
+          if (existing) {
+            dupes.push(`${session.workoutName} (${dateOnly})`);
+          }
         }
+        if (!cancelled) setDuplicates(dupes);
+      } catch {
+        // Duplicate check non-critical
       }
-      setDuplicates(dupes);
-    } catch {
-      // Duplicate check non-critical
-    }
+    })();
+    return () => { cancelled = true; };
   }, [parsed.sessions]);
-
-  // Run duplicate check on mount
-  useState(() => {
-    checkDuplicatesOnce();
-  });
 
   const handleImport = async () => {
     Alert.alert(

@@ -56,15 +56,6 @@ export async function getExerciseById(id: string): Promise<Exercise | null> {
   return mapRow(row);
 }
 
-export async function findExerciseByName(name: string): Promise<Exercise | null> {
-  const row = await queryOne<ExerciseRow>(
-    "SELECT * FROM exercises WHERE LOWER(name) = LOWER(?) AND deleted_at IS NULL LIMIT 1",
-    [name]
-  );
-  if (!row) return null;
-  return mapRow(row);
-}
-
 export async function createCustomExercise(
   exercise: Omit<Exercise, "id" | "is_custom">
 ): Promise<Exercise> {
