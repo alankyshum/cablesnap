@@ -45,13 +45,11 @@ export default function PickExercise() {
   }, []);
 
   const filtered = useMemo(() => {
-    const norm = (s: string) => s.toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
-    const q = norm(query);
-    const qNoSpace = q.replace(/ /g, "");
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const q = normalize(query);
     return exercises.filter((ex) => {
       if (q) {
-        const n = norm(ex.name);
-        if (!n.includes(q) && !n.replace(/ /g, "").includes(qNoSpace)) return false;
+        if (!normalize(ex.name).includes(q)) return false;
       }
       if (selected.size > 0 && !selected.has(ex.category)) return false;
       return true;

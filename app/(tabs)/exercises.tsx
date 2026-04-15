@@ -42,15 +42,13 @@ export default function Exercises() {
   useFocusRefetch(["exercises"]);
 
   const filtered = useMemo(() => {
-    const norm = (s: string) => s.toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
-    const q = norm(query);
-    const qNoSpace = q.replace(/ /g, "");
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const q = normalize(query);
     const customFilter = selected.has("custom");
     const cats = new Set([...selected].filter((s): s is Category => s !== "custom"));
     return exercises.filter((ex) => {
       if (q) {
-        const n = norm(ex.name);
-        if (!n.includes(q) && !n.replace(/ /g, "").includes(qNoSpace)) return false;
+        if (!normalize(ex.name).includes(q)) return false;
       }
       if (customFilter && !ex.is_custom) return false;
       if (cats.size > 0 && !cats.has(ex.category)) return false;
