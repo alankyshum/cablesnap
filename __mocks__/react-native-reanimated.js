@@ -6,6 +6,21 @@ const React = require('react');
 const noop = () => {};
 const noopValue = (v) => ({ value: v });
 
+// Chainable layout animation mock — supports .delay().duration() and .duration().delay()
+const makeLayoutAnim = () => {
+  const anim = {};
+  anim.duration = () => anim;
+  anim.delay = () => anim;
+  anim.springify = () => anim;
+  anim.damping = () => anim;
+  anim.stiffness = () => anim;
+  anim.withInitialValues = () => anim;
+  anim.withCallback = () => anim;
+  anim.randomDelay = () => anim;
+  anim.build = () => anim;
+  return anim;
+};
+
 module.exports = {
   __esModule: true,
   default: {
@@ -50,23 +65,24 @@ module.exports = {
     inOut: noop,
   },
   interpolate: (v) => v,
+  interpolateColor: (_value, _inputRange, outputRange) => outputRange[0],
   Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
   runOnUI: (fn) => fn,
   runOnJS: (fn) => fn,
   createAnimatedComponent: (Component) =>
     React.forwardRef((props, ref) => React.createElement(Component, { ...props, ref })),
-  FadeIn: { duration: () => ({ delay: () => ({}) }) },
-  FadeOut: { duration: () => ({ delay: () => ({}) }) },
-  FadeInDown: { duration: () => ({ delay: () => ({}) }) },
-  FadeInUp: { duration: () => ({ delay: () => ({}) }) },
-  FadeOutDown: { duration: () => ({ delay: () => ({}) }) },
-  FadeOutUp: { duration: () => ({ delay: () => ({}) }) },
-  SlideInRight: { duration: () => ({}) },
-  SlideOutRight: { duration: () => ({}) },
-  Layout: { duration: () => ({}) },
-  LinearTransition: { duration: () => ({}) },
-  ZoomIn: { duration: () => ({}) },
-  ZoomOut: { duration: () => ({}) },
+  FadeIn: makeLayoutAnim(),
+  FadeOut: makeLayoutAnim(),
+  FadeInDown: makeLayoutAnim(),
+  FadeInUp: makeLayoutAnim(),
+  FadeOutDown: makeLayoutAnim(),
+  FadeOutUp: makeLayoutAnim(),
+  SlideInRight: makeLayoutAnim(),
+  SlideOutRight: makeLayoutAnim(),
+  Layout: makeLayoutAnim(),
+  LinearTransition: makeLayoutAnim(),
+  ZoomIn: makeLayoutAnim(),
+  ZoomOut: makeLayoutAnim(),
   measure: () => ({ x: 0, y: 0, width: 0, height: 0, pageX: 0, pageY: 0 }),
   scrollTo: noop,
   setGestureState: noop,

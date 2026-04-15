@@ -8,9 +8,13 @@ import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { Alert } from "react-native";
 import {
   exportAllData,
-  importData,
+  estimateExportSize,
+  validateBackupFileSize,
+  validateBackupData,
+  BACKUP_TABLE_LABELS,
   getWorkoutCSVData,
   getNutritionCSVData,
   getBodyWeightCSVData,
@@ -22,6 +26,7 @@ import {
   getBodySettings,
   updateBodySettings,
 } from "../../lib/db";
+import type { BackupTableName, ExportProgress } from "../../lib/db";
 
 import { getErrorCount } from "../../lib/errors";
 import { workoutCSV, nutritionCSV, bodyWeightCSV, bodyMeasurementsCSV } from "../../lib/csv-format";
@@ -68,6 +73,7 @@ export default function Settings() {
   const [measureUnit, setMeasureUnit] = useState<"cm" | "in">("cm");
   const [weightGoal, setWeightGoal] = useState<number | null>(null);
   const [fatGoal, setFatGoal] = useState<number | null>(null);
+  const [exportProgress, setExportProgress] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -183,21 +189,56 @@ export default function Settings() {
   };
 
   const handleExport = async () => {
-    setLoading(true);
     try {
-      const data = await exportAllData();
-      const json = JSON.stringify(data, null, 2);
-      const file = new File(Paths.cache, "fitforge-export.json");
-      await file.write(json);
-      await Sharing.shareAsync(file.uri, {
-        mimeType: "application/json",
-        dialogTitle: "Export FitForge Data",
-      });
-      setSnack("Data exported successfully");
+      const { label } = await estimateExportSize();
+      Alert.alert(
+        "Export All Data",
+        `Your backup will be approximately ${label}. This may take a moment. Continue?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Export",
+            onPress: async () => {
+              setLoading(true);
+              setExportProgress("Preparing export...");
+              try {
+                const data = await exportAllData((progress: ExportProgress) => {
+                  if (progress.table === "done") {
+                    setExportProgress(null);
+                  } else {
+                    const label = BACKUP_TABLE_LABELS[progress.table as BackupTableName] ?? progress.table;
+                    setExportProgress(`Exporting ${label}... (${progress.tableIndex + 1}/${progress.totalTables})`);
+                  }
+                });
+
+                const totalRecords = Object.values(data.counts).reduce((a, b) => a + b, 0);
+                if (totalRecords === 0) {
+                  setSnack("No data to export");
+                  setLoading(false);
+                  setExportProgress(null);
+                  return;
+                }
+
+                const json = JSON.stringify(data, null, 2);
+                const file = new File(Paths.cache, `fitforge-backup-${dateStamp()}.json`);
+                await file.write(json);
+                await Sharing.shareAsync(file.uri, {
+                  mimeType: "application/json",
+                  dialogTitle: "Export FitForge Data",
+                });
+                setSnack("Data exported successfully");
+              } catch {
+                setSnack("Export failed");
+              } finally {
+                setLoading(false);
+                setExportProgress(null);
+              }
+            },
+          },
+        ]
+      );
     } catch {
-      setSnack("Export failed");
-    } finally {
-      setLoading(false);
+      setSnack("Could not estimate export size");
     }
   };
 
@@ -209,39 +250,51 @@ export default function Settings() {
       });
       if (result.canceled || !result.assets?.length) return;
 
+      const asset = result.assets[0];
+
+      // File size check
+      if (asset.size && asset.size > 50 * 1024 * 1024) {
+        Alert.alert("File Too Large", "This backup file is too large to process safely.");
+        return;
+      }
+
       setLoading(true);
-      const uri = result.assets[0].uri;
+      const uri = asset.uri;
       const file = new File(uri);
       const raw = await file.text();
+
+      // File size validation on content
+      const sizeError = validateBackupFileSize(raw.length);
+      if (sizeError) {
+        Alert.alert("File Too Large", sizeError.message);
+        setLoading(false);
+        return;
+      }
 
       let data: Record<string, unknown>;
       try {
         data = JSON.parse(raw);
       } catch {
-        setSnack("Invalid file format");
+        Alert.alert("Invalid File", "This file doesn't appear to be a valid FitForge backup.");
         setLoading(false);
         return;
       }
 
-      if (typeof data !== "object" || data === null) {
-        setSnack("Invalid file format");
+      const validationError = validateBackupData(data);
+      if (validationError) {
+        Alert.alert("Invalid Backup", validationError.message);
         setLoading(false);
         return;
       }
 
-      if (data.version !== 1 && data.version !== 2) {
-        setSnack("Unsupported format version");
-        setLoading(false);
-        return;
-      }
-
-      const { inserted } = await importData(
-        data as Parameters<typeof importData>[0]
-      );
-      setSnack(`Import complete — ${inserted} records added`);
+      // Navigate to import preview screen with the parsed data
+      setLoading(false);
+      router.push({
+        pathname: "/settings/import-backup",
+        params: { backupJson: raw },
+      });
     } catch {
       setSnack("Import failed");
-    } finally {
       setLoading(false);
     }
   };
@@ -468,7 +521,7 @@ export default function Settings() {
       <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
-            Data
+            Data Management
           </Text>
 
           <View style={styles.buttonFlow}>
@@ -480,8 +533,9 @@ export default function Settings() {
               disabled={loading}
               contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export all data as JSON"
+              accessibilityRole="button"
             >
-              Export All
+              Export All Data
             </Button>
 
             <Button
@@ -492,16 +546,49 @@ export default function Settings() {
               disabled={loading}
               contentStyle={styles.exportBtnContent}
               accessibilityLabel="Import data"
+              accessibilityRole="button"
             >
-              Import
+              Import FitForge Backup
             </Button>
           </View>
 
+          {exportProgress && (
+            <Text
+              variant="bodySmall"
+              style={{ color: theme.colors.primary, marginTop: 8 }}
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={exportProgress}
+            >
+              {exportProgress}
+            </Text>
+          )}
+
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}>
-            Export as JSON or import a previously exported file. Duplicates are skipped.
+            Export your complete FitForge data as a JSON backup file, or restore from a previous backup. Duplicates are skipped.
           </Text>
 
-          <Text variant="labelLarge" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+          <Divider style={{ marginBottom: 16 }} />
+
+          <Button
+            mode="outlined"
+            icon="file-import-outline"
+            onPress={() => router.push("/settings/import-strong")}
+            contentStyle={styles.exportBtnContent}
+            accessibilityLabel="Import workout data from Strong CSV export"
+            accessibilityRole="button"
+          >
+            Import from Strong
+          </Button>
+
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
+            Import workout history from the Strong app using a CSV export file.
+          </Text>
+        </Card.Content>
+      </Card>
+
+      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+        <Card.Content>
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
             CSV Export
           </Text>
 
@@ -569,26 +656,6 @@ export default function Settings() {
               Measurements
             </Button>
           </View>
-
-          <Divider style={{ marginVertical: 16 }} />
-
-          <Text variant="labelLarge" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
-            CSV Import
-          </Text>
-
-          <Button
-            mode="outlined"
-            icon="file-import-outline"
-            onPress={() => router.push("/settings/import-strong")}
-            contentStyle={styles.exportBtnContent}
-            accessibilityLabel="Import workout data from Strong CSV export"
-          >
-            Import from Strong
-          </Button>
-
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
-            Import workout history from the Strong app using a CSV export file.
-          </Text>
         </Card.Content>
       </Card>
 

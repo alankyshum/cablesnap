@@ -7,181 +7,483 @@ import type {
   BodyWeight,
   BodyMeasurements,
   BodySettings,
+  Program,
+  ProgramDay,
+  ProgramLog,
 } from "../types";
 import { getDatabase } from "./helpers";
 
-export async function exportAllData(): Promise<{
-  version: number;
-  exported_at: string;
+// --------------- Backup Format Types ---------------
+
+export type BackupTableName =
+  | "exercises"
+  | "workout_templates"
+  | "programs"
+  | "food_entries"
+  | "macro_targets"
+  | "body_weight"
+  | "body_measurements"
+  | "body_settings"
+  | "app_settings"
+  | "achievements_earned"
+  | "template_exercises"
+  | "workout_sessions"
+  | "program_days"
+  | "workout_sets"
+  | "daily_log"
+  | "program_log"
+  | "weekly_schedule"
+  | "program_schedule";
+
+export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
+  exercises: "Exercises",
+  workout_templates: "Workout Templates",
+  programs: "Programs",
+  food_entries: "Food Entries",
+  macro_targets: "Macro Targets",
+  body_weight: "Body Weight",
+  body_measurements: "Body Measurements",
+  body_settings: "Body Settings",
+  app_settings: "App Settings",
+  achievements_earned: "Achievements",
+  template_exercises: "Template Exercises",
+  workout_sessions: "Workout Sessions",
+  program_days: "Program Days",
+  workout_sets: "Workout Sets",
+  daily_log: "Daily Log",
+  program_log: "Program Log",
+  weekly_schedule: "Weekly Schedule",
+  program_schedule: "Program Schedule",
+};
+
+// FK-dependency order for import — parents before children
+export const IMPORT_TABLE_ORDER: BackupTableName[] = [
+  "exercises",
+  "workout_templates",
+  "programs",
+  "food_entries",
+  "macro_targets",
+  "body_weight",
+  "body_measurements",
+  "body_settings",
+  "app_settings",
+  "achievements_earned",
+  "template_exercises",
+  "workout_sessions",
+  "program_days",
+  "workout_sets",
+  "daily_log",
+  "program_log",
+  "weekly_schedule",
+  "program_schedule",
+];
+
+export type AppSettingRow = { key: string; value: string };
+export type AchievementEarnedRow = { achievement_id: string; earned_at: number };
+export type WeeklyScheduleRow = { id: string; day_of_week: number; template_id: string; created_at: number };
+export type ProgramScheduleRow = { program_id: string; day_of_week: number; template_id: string };
+
+export type BackupV3Data = {
   exercises: unknown[];
-  templates: WorkoutTemplate[];
+  workout_templates: WorkoutTemplate[];
   template_exercises: TemplateExercise[];
-  sessions: WorkoutSession[];
-  sets: WorkoutSet[];
+  workout_sessions: WorkoutSession[];
+  workout_sets: WorkoutSet[];
   food_entries: unknown[];
   daily_log: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
   macro_targets: MacroTargets[];
   body_weight: BodyWeight[];
   body_measurements: BodyMeasurements[];
   body_settings: BodySettings[];
-}> {
+  programs: Program[];
+  program_days: ProgramDay[];
+  program_log: ProgramLog[];
+  app_settings: AppSettingRow[];
+  weekly_schedule: WeeklyScheduleRow[];
+  program_schedule: ProgramScheduleRow[];
+  achievements_earned: AchievementEarnedRow[];
+};
+
+export type BackupV3 = {
+  version: 3;
+  app_version: string;
+  exported_at: string;
+  data: BackupV3Data;
+  counts: Record<string, number>;
+};
+
+export type ExportProgress = {
+  table: string;
+  tableIndex: number;
+  totalTables: number;
+};
+
+export type ImportProgress = {
+  table: string;
+  tableIndex: number;
+  totalTables: number;
+};
+
+export type ImportResult = {
+  inserted: number;
+  skipped: number;
+  perTable: Record<string, { inserted: number; skipped: number }>;
+};
+
+// Numeric fields that must be non-negative for validation
+const NUMERIC_NONNEG_FIELDS: Record<string, string[]> = {
+  food_entries: ["calories", "protein", "carbs", "fat"],
+  macro_targets: ["calories", "protein", "carbs", "fat"],
+  body_weight: ["weight"],
+  workout_sets: ["weight", "reps", "set_number"],
+  template_exercises: ["position", "target_sets", "rest_seconds"],
+  program_days: ["position"],
+};
+
+const MAX_BACKUP_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+// --------------- Validation ---------------
+
+export type ValidationError = {
+  type: "corrupt_json" | "missing_version" | "future_version" | "missing_data" | "invalid_table" | "negative_values" | "empty_backup" | "file_too_large";
+  message: string;
+};
+
+export function validateBackupFileSize(sizeBytes: number): ValidationError | null {
+  if (sizeBytes > MAX_BACKUP_FILE_SIZE) {
+    return { type: "file_too_large", message: "This backup file is too large to process safely." };
+  }
+  return null;
+}
+
+export function validateBackupData(data: unknown): ValidationError | null {
+  if (typeof data !== "object" || data === null) {
+    return { type: "corrupt_json", message: "This file doesn't appear to be a valid FitForge backup." };
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  // Check version
+  if (obj.version === undefined || obj.version === null) {
+    return { type: "missing_version", message: "This file doesn't appear to be a valid FitForge backup." };
+  }
+
+  const version = Number(obj.version);
+  if (version >= 4) {
+    return { type: "future_version", message: "This backup was created with a newer version of FitForge. Please update the app first." };
+  }
+
+  // v2 backups have data at top level, v3 under data key
+  const tableData = version <= 2 ? obj : (obj.data as Record<string, unknown> | undefined);
+
+  if (version >= 3 && (!tableData || typeof tableData !== "object")) {
+    return { type: "missing_data", message: "This file doesn't appear to be a valid FitForge backup." };
+  }
+
+  // Validate arrays and numeric fields (check types before checking emptiness)
+  if (tableData && typeof tableData === "object") {
+    for (const tableName of IMPORT_TABLE_ORDER) {
+      const key = getV2Key(tableName, version);
+      const arr = (tableData as Record<string, unknown>)[key];
+      if (arr === undefined || arr === null) continue;
+      if (!Array.isArray(arr)) {
+        return { type: "invalid_table", message: `Invalid data format: "${tableName}" should be an array.` };
+      }
+
+      // Validate non-negative numerics
+      const numericFields = NUMERIC_NONNEG_FIELDS[tableName];
+      if (numericFields) {
+        for (const row of arr) {
+          if (typeof row !== "object" || row === null) continue;
+          const r = row as Record<string, unknown>;
+          for (const field of numericFields) {
+            const val = r[field];
+            if (val !== null && val !== undefined && typeof val === "number" && val < 0) {
+              return { type: "negative_values", message: "Backup contains invalid data (negative values)." };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Check if backup is empty (no arrays with data)
+  if (tableData && typeof tableData === "object") {
+    const hasAnyData = IMPORT_TABLE_ORDER.some((tableName) => {
+      const key = getV2Key(tableName, version);
+      const arr = (tableData as Record<string, unknown>)[key];
+      return Array.isArray(arr) && arr.length > 0;
+    });
+    if (!hasAnyData) {
+      return { type: "empty_backup", message: "This backup file contains no data." };
+    }
+  }
+
+  return null;
+}
+
+// v2 backups use different key names for some tables
+function getV2Key(tableName: BackupTableName, version: number): string {
+  if (version <= 2) {
+    const v2KeyMap: Partial<Record<BackupTableName, string>> = {
+      workout_templates: "templates",
+      template_exercises: "template_exercises",
+      workout_sessions: "sessions",
+      workout_sets: "sets",
+    };
+    return v2KeyMap[tableName] ?? tableName;
+  }
+  return tableName;
+}
+
+/** Extract record counts from a parsed backup for the preview screen */
+export function getBackupCounts(data: Record<string, unknown>): Record<BackupTableName, number> {
+  const version = Number(data.version ?? 0);
+  const tableData = version <= 2 ? data : (data.data as Record<string, unknown> | undefined) ?? {};
+  const counts: Record<string, number> = {};
+  for (const tableName of IMPORT_TABLE_ORDER) {
+    const key = getV2Key(tableName, version);
+    const arr = (tableData as Record<string, unknown>)[key];
+    counts[tableName] = Array.isArray(arr) ? arr.length : 0;
+  }
+  return counts as Record<BackupTableName, number>;
+}
+
+/** Estimate export file size (rough estimate based on row counts) */
+export async function estimateExportSize(): Promise<{ bytes: number; label: string }> {
   const database = await getDatabase();
-  const exercises = await database.getAllAsync("SELECT * FROM exercises");
-  const templates = await database.getAllAsync<WorkoutTemplate>("SELECT * FROM workout_templates");
-  const tplExercises = await database.getAllAsync<TemplateExercise>("SELECT * FROM template_exercises");
-  const sessions = await database.getAllAsync<WorkoutSession>("SELECT * FROM workout_sessions");
-  const sets = await database.getAllAsync<WorkoutSet>("SELECT * FROM workout_sets");
-  const foods = await database.getAllAsync("SELECT * FROM food_entries");
-  const logs = await database.getAllAsync<{ id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }>("SELECT * FROM daily_log");
-  const targets = await database.getAllAsync<MacroTargets>("SELECT * FROM macro_targets");
-  const weights = await database.getAllAsync<BodyWeight>("SELECT * FROM body_weight");
-  const measurements = await database.getAllAsync<BodyMeasurements>("SELECT * FROM body_measurements");
-  const bodySettings = await database.getAllAsync<BodySettings>("SELECT * FROM body_settings");
+  let totalRows = 0;
+  for (const table of IMPORT_TABLE_ORDER) {
+    const result = await database.getFirstAsync<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM ${table}`);
+    totalRows += result?.cnt ?? 0;
+  }
+  // ~200 bytes per row average for JSON representation
+  const bytes = Math.max(totalRows * 200, 256);
+  const label = bytes < 1024 * 1024
+    ? `${Math.ceil(bytes / 1024)} KB`
+    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return { bytes, label };
+}
+
+// --------------- Export ---------------
+
+export async function exportAllData(
+  onProgress?: (progress: ExportProgress) => void
+): Promise<BackupV3> {
+  const database = await getDatabase();
+  const tables = IMPORT_TABLE_ORDER;
+  const data: Record<string, unknown[]> = {};
+  const counts: Record<string, number> = {};
+
+  for (let i = 0; i < tables.length; i++) {
+    const table = tables[i];
+    onProgress?.({ table, tableIndex: i, totalTables: tables.length });
+    const rows = await database.getAllAsync(`SELECT * FROM ${table}`);
+    data[table] = rows;
+    counts[table] = rows.length;
+  }
+
+  onProgress?.({ table: "done", tableIndex: tables.length, totalTables: tables.length });
+
   return {
-    version: 2,
+    version: 3,
+    app_version: "1.0.0",
     exported_at: new Date().toISOString(),
-    exercises,
-    templates,
-    template_exercises: tplExercises,
-    sessions,
-    sets,
-    food_entries: foods,
-    daily_log: logs,
-    macro_targets: targets,
-    body_weight: weights,
-    body_measurements: measurements,
-    body_settings: bodySettings,
+    data: data as unknown as BackupV3Data,
+    counts,
   };
 }
 
-export async function importData(data: {
-  version: number;
-  exercises?: { id: string; name: string; category: string; primary_muscles: string; secondary_muscles: string; equipment: string; instructions: string; difficulty: string; is_custom: number }[];
-  templates?: { id: string; name: string; created_at: number; updated_at: number }[];
-  template_exercises?: { id: string; template_id: string; exercise_id: string; position: number; target_sets: number; target_reps: string; rest_seconds: number; link_id?: string | null; link_label?: string }[];
-  sessions?: { id: string; template_id: string | null; name: string; started_at: number; completed_at: number | null; duration_seconds: number | null; notes: string }[];
-  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null; set_rpe?: number | null; set_notes?: string; link_id?: string | null; round?: number | null; training_mode?: string | null; tempo?: string | null }[];
-  food_entries?: { id: string; name: string; calories: number; protein: number; carbs: number; fat: number; serving_size: string; is_favorite: number; created_at: number }[];
-  daily_log?: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
-  macro_targets?: { id: string; calories: number; protein: number; carbs: number; fat: number; updated_at: number }[];
-  body_weight?: { id: string; weight: number; date: string; notes: string; logged_at: number }[];
-  body_measurements?: { id: string; date: string; waist: number | null; chest: number | null; hips: number | null; left_arm: number | null; right_arm: number | null; left_thigh: number | null; right_thigh: number | null; left_calf: number | null; right_calf: number | null; neck: number | null; body_fat: number | null; notes: string; logged_at: number }[];
-  body_settings?: { id: string; weight_unit: string; measurement_unit: string; weight_goal: number | null; body_fat_goal: number | null; updated_at: number }[];
-}): Promise<{ inserted: number }> {
+// --------------- Import ---------------
+
+export async function importData(
+  data: Record<string, unknown>,
+  onProgress?: (progress: ImportProgress) => void
+): Promise<ImportResult> {
   const database = await getDatabase();
-  let inserted = 0;
+  const version = Number(data.version ?? 0);
+  const tableData = version <= 2 ? data : (data.data as Record<string, unknown> | undefined) ?? {};
+  let totalInserted = 0;
+  let totalSkipped = 0;
+  const perTable: Record<string, { inserted: number; skipped: number }> = {};
 
   await database.withTransactionAsync(async () => {
-    if (data.exercises) {
-      for (const e of data.exercises) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [e.id, e.name, e.category, e.primary_muscles, e.secondary_muscles, e.equipment, e.instructions, e.difficulty, e.is_custom]
-        );
-        inserted += r.changes;
-      }
-    }
+    // Ensure foreign keys are enforced
+    await database.execAsync("PRAGMA foreign_keys = ON");
 
-    if (data.templates) {
-      for (const t of data.templates) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-          [t.id, t.name, t.created_at, t.updated_at]
-        );
-        inserted += r.changes;
-      }
-    }
+    for (let i = 0; i < IMPORT_TABLE_ORDER.length; i++) {
+      const tableName = IMPORT_TABLE_ORDER[i];
+      const key = getV2Key(tableName, version);
+      const rows = (tableData as Record<string, unknown>)[key];
 
-    if (data.template_exercises) {
-      for (const te of data.template_exercises) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [te.id, te.template_id, te.exercise_id, te.position, te.target_sets, te.target_reps, te.rest_seconds, te.link_id ?? null, te.link_label ?? ""]
-        );
-        inserted += r.changes;
-      }
-    }
+      onProgress?.({ table: tableName, tableIndex: i, totalTables: IMPORT_TABLE_ORDER.length });
 
-    if (data.sessions) {
-      for (const s of data.sessions) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [s.id, s.template_id, s.name, s.started_at, s.completed_at, s.duration_seconds, s.notes]
-        );
-        inserted += r.changes;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        perTable[tableName] = { inserted: 0, skipped: 0 };
+        continue;
       }
-    }
 
-    if (data.sets) {
-      for (const s of data.sets) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at, s.set_rpe ?? null, s.set_notes ?? "", s.link_id ?? null, s.round ?? null, s.training_mode ?? null, s.tempo ?? null]
-        );
-        inserted += r.changes;
-      }
-    }
-
-    if (data.food_entries) {
-      for (const f of data.food_entries) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO food_entries (id, name, calories, protein, carbs, fat, serving_size, is_favorite, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [f.id, f.name, f.calories, f.protein, f.carbs, f.fat, f.serving_size, f.is_favorite, f.created_at]
-        );
-        inserted += r.changes;
-      }
-    }
-
-    if (data.daily_log) {
-      for (const l of data.daily_log) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO daily_log (id, food_entry_id, date, meal, servings, logged_at) VALUES (?, ?, ?, ?, ?, ?)",
-          [l.id, l.food_entry_id, l.date, l.meal, l.servings, l.logged_at]
-        );
-        inserted += r.changes;
-      }
-    }
-
-    if (data.macro_targets) {
-      for (const t of data.macro_targets) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-          [t.id, t.calories, t.protein, t.carbs, t.fat, t.updated_at]
-        );
-        inserted += r.changes;
-      }
-    }
-
-    if (data.body_weight) {
-      for (const w of data.body_weight) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO body_weight (id, weight, date, notes, logged_at) VALUES (?, ?, ?, ?, ?)",
-          [w.id, w.weight, w.date, w.notes, w.logged_at]
-        );
-        inserted += r.changes;
-      }
-    }
-
-    if (data.body_measurements) {
-      for (const m of data.body_measurements) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO body_measurements (id, date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes, logged_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [m.id, m.date, m.waist, m.chest, m.hips, m.left_arm, m.right_arm, m.left_thigh, m.right_thigh, m.left_calf, m.right_calf, m.neck, m.body_fat, m.notes, m.logged_at]
-        );
-        inserted += r.changes;
-      }
-    }
-
-    if (data.body_settings) {
-      for (const s of data.body_settings) {
-        const r = await database.runAsync(
-          "INSERT OR IGNORE INTO body_settings (id, weight_unit, measurement_unit, weight_goal, body_fat_goal, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-          [s.id, s.weight_unit, s.measurement_unit, s.weight_goal, s.body_fat_goal, s.updated_at]
-        );
-        inserted += r.changes;
-      }
+      const { inserted, skipped } = await importTable(database, tableName, rows);
+      totalInserted += inserted;
+      totalSkipped += skipped;
+      perTable[tableName] = { inserted, skipped };
     }
   });
 
-  return { inserted };
+  onProgress?.({ table: "done", tableIndex: IMPORT_TABLE_ORDER.length, totalTables: IMPORT_TABLE_ORDER.length });
+
+  return { inserted: totalInserted, skipped: totalSkipped, perTable };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic row insertion
+async function importTable(database: any, tableName: BackupTableName, rows: unknown[]): Promise<{ inserted: number; skipped: number }> {
+  let inserted = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    if (typeof row !== "object" || row === null) {
+      skipped++;
+      continue;
+    }
+    const r = row as Record<string, unknown>;
+    const result = await insertRow(database, tableName, r);
+    if (result) inserted++;
+    else skipped++;
+  }
+
+  return { inserted, skipped };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic database interface
+async function insertRow(database: any, tableName: BackupTableName, row: Record<string, unknown>): Promise<boolean> {
+  switch (tableName) {
+    case "exercises": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.category, row.primary_muscles, row.secondary_muscles, row.equipment, row.instructions, row.difficulty, row.is_custom]
+      );
+      return r.changes > 0;
+    }
+    case "workout_templates": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        [row.id, row.name, row.created_at, row.updated_at]
+      );
+      return r.changes > 0;
+    }
+    case "programs": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.description ?? "", row.is_active ?? 0, row.current_day_id ?? null, row.created_at, row.updated_at, row.deleted_at ?? null]
+      );
+      return r.changes > 0;
+    }
+    case "food_entries": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO food_entries (id, name, calories, protein, carbs, fat, serving_size, is_favorite, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.calories, row.protein, row.carbs, row.fat, row.serving_size, row.is_favorite, row.created_at]
+      );
+      return r.changes > 0;
+    }
+    case "macro_targets": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [row.id, row.calories, row.protein, row.carbs, row.fat, row.updated_at]
+      );
+      return r.changes > 0;
+    }
+    case "body_weight": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO body_weight (id, weight, date, notes, logged_at) VALUES (?, ?, ?, ?, ?)",
+        [row.id, row.weight, row.date, row.notes, row.logged_at]
+      );
+      return r.changes > 0;
+    }
+    case "body_measurements": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO body_measurements (id, date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes, logged_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.date, row.waist, row.chest, row.hips, row.left_arm, row.right_arm, row.left_thigh, row.right_thigh, row.left_calf, row.right_calf, row.neck, row.body_fat, row.notes, row.logged_at]
+      );
+      return r.changes > 0;
+    }
+    case "body_settings": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO body_settings (id, weight_unit, measurement_unit, weight_goal, body_fat_goal, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [row.id, row.weight_unit, row.measurement_unit, row.weight_goal, row.body_fat_goal, row.updated_at]
+      );
+      return r.changes > 0;
+    }
+    case "app_settings": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)",
+        [row.key, row.value]
+      );
+      return r.changes > 0;
+    }
+    case "achievements_earned": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO achievements_earned (achievement_id, earned_at) VALUES (?, ?)",
+        [row.achievement_id, row.earned_at]
+      );
+      return r.changes > 0;
+    }
+    case "template_exercises": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.exercise_id, row.position, row.target_sets, row.target_reps, row.rest_seconds, row.link_id ?? null, row.link_label ?? ""]
+      );
+      return r.changes > 0;
+    }
+    case "workout_sessions": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.name, row.started_at, row.completed_at, row.duration_seconds, row.notes]
+      );
+      return r.changes > 0;
+    }
+    case "program_days": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
+        [row.id, row.program_id, row.template_id ?? null, row.position, row.label ?? ""]
+      );
+      return r.changes > 0;
+    }
+    case "workout_sets": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null]
+      );
+      return r.changes > 0;
+    }
+    case "daily_log": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO daily_log (id, food_entry_id, date, meal, servings, logged_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [row.id, row.food_entry_id, row.date, row.meal, row.servings, row.logged_at]
+      );
+      return r.changes > 0;
+    }
+    case "program_log": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO program_log (id, program_id, day_id, session_id, completed_at) VALUES (?, ?, ?, ?, ?)",
+        [row.id, row.program_id, row.day_id, row.session_id, row.completed_at]
+      );
+      return r.changes > 0;
+    }
+    case "weekly_schedule": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO weekly_schedule (id, day_of_week, template_id, created_at) VALUES (?, ?, ?, ?)",
+        [row.id, row.day_of_week, row.template_id, row.created_at ?? Date.now()]
+      );
+      return r.changes > 0;
+    }
+    case "program_schedule": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO program_schedule (program_id, day_of_week, template_id) VALUES (?, ?, ?)",
+        [row.program_id, row.day_of_week, row.template_id]
+      );
+      return r.changes > 0;
+    }
+    default:
+      return false;
+  }
 }

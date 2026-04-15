@@ -84,8 +84,14 @@ const mockGetBodySettings = jest.fn().mockResolvedValue({
 })
 
 jest.mock('../../lib/db', () => ({
-  exportAllData: jest.fn().mockResolvedValue({ version: 1 }),
-  importData: jest.fn().mockResolvedValue({ inserted: 0 }),
+  exportAllData: jest.fn().mockResolvedValue({ version: 3, app_version: '1.0.0', exported_at: '2026-04-15T00:00:00.000Z', data: {}, counts: {} }),
+  importData: jest.fn().mockResolvedValue({ inserted: 0, skipped: 0, perTable: {} }),
+  estimateExportSize: jest.fn().mockResolvedValue({ bytes: 1024, label: '1 KB' }),
+  validateBackupFileSize: jest.fn().mockReturnValue(null),
+  validateBackupData: jest.fn().mockReturnValue(null),
+  getBackupCounts: jest.fn().mockReturnValue({}),
+  BACKUP_TABLE_LABELS: {},
+  IMPORT_TABLE_ORDER: [],
   getWorkoutCSVData: jest.fn().mockResolvedValue([]),
   getNutritionCSVData: jest.fn().mockResolvedValue([]),
   getBodyWeightCSVData: jest.fn().mockResolvedValue([]),
@@ -126,7 +132,7 @@ describe('Settings Screen Acceptance', () => {
     const { findByText } = renderScreen(<Settings />)
     expect(await findByText('Units')).toBeTruthy()
     expect(await findByText('Preferences')).toBeTruthy()
-    expect(await findByText('Data')).toBeTruthy()
+    expect(await findByText('Data Management')).toBeTruthy()
     expect(await findByText('Feedback & Reports')).toBeTruthy()
     expect(await findByText('About')).toBeTruthy()
   })

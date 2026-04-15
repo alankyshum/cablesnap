@@ -138,7 +138,24 @@ export {
 } from "./settings";
 export type { ScheduleEntry } from "./settings";
 
-export { exportAllData, importData } from "./import-export";
+export {
+  exportAllData,
+  importData,
+  estimateExportSize,
+  validateBackupFileSize,
+  validateBackupData,
+  getBackupCounts,
+  BACKUP_TABLE_LABELS,
+  IMPORT_TABLE_ORDER,
+} from "./import-export";
+export type {
+  BackupV3,
+  BackupTableName,
+  ExportProgress,
+  ImportProgress,
+  ImportResult,
+  ValidationError,
+} from "./import-export";
 
 export {
   insertPhoto,

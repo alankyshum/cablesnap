@@ -348,6 +348,15 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="settings/import-backup"
+              options={{
+                headerShown: true,
+                title: "Import Backup",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="tools/index"
               options={{
                 headerShown: true,

@@ -1,6 +1,7 @@
 jest.setTimeout(10000)
 
 import React from 'react'
+import { Alert } from 'react-native'
 import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
 
@@ -67,8 +68,14 @@ jest.mock('expo-document-picker', () => ({
 }))
 
 jest.mock('../../lib/db', () => ({
-  exportAllData: jest.fn().mockResolvedValue({ version: 1, exercises: [], templates: [], sessions: [], sets: [] }),
-  importData: jest.fn().mockResolvedValue({ inserted: 5 }),
+  exportAllData: jest.fn().mockResolvedValue({ version: 3, app_version: '1.0.0', exported_at: '2026-04-15T00:00:00.000Z', data: { exercises: [{ id: '1' }], workout_templates: [], workout_sessions: [], workout_sets: [] }, counts: { exercises: 1 } }),
+  importData: jest.fn().mockResolvedValue({ inserted: 5, skipped: 0, perTable: {} }),
+  estimateExportSize: jest.fn().mockResolvedValue({ bytes: 1024, label: '1 KB' }),
+  validateBackupFileSize: jest.fn().mockReturnValue(null),
+  validateBackupData: jest.fn().mockReturnValue(null),
+  getBackupCounts: jest.fn().mockReturnValue({}),
+  BACKUP_TABLE_LABELS: {},
+  IMPORT_TABLE_ORDER: [],
   getWorkoutCSVData: jest.fn().mockResolvedValue([{ date: '2024-01-15', exercise: 'Bench', set_number: 1, weight: 60, reps: 10, duration_seconds: 1800, notes: '', set_rpe: 8, set_notes: '', link_id: null }]),
   getNutritionCSVData: jest.fn().mockResolvedValue([]),
   getBodyWeightCSVData: jest.fn().mockResolvedValue([]),
@@ -83,9 +90,12 @@ jest.mock('../../lib/db', () => ({
 
 import Settings from '../../app/(tabs)/settings'
 
-const { exportAllData, importData, getWorkoutCSVData, setAppSetting } = require('../../lib/db')
+const { exportAllData, importData, getWorkoutCSVData, setAppSetting, estimateExportSize } = require('../../lib/db')
 const { shareAsync } = require('expo-sharing')
 const { getDocumentAsync } = require('expo-document-picker')
+
+// Spy on Alert.alert to auto-confirm
+const alertSpy = jest.spyOn(Alert, 'alert')
 
 describe('Data Management Acceptance', () => {
   beforeEach(() => {
@@ -106,11 +116,21 @@ describe('Data Management Acceptance', () => {
   })
 
   it('exports all data as JSON', async () => {
+    // Auto-press "Export" in the confirmation alert
+    alertSpy.mockImplementation((_title, _message, buttons) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const exportBtn = buttons?.find((b: any) => b.text === 'Export')
+      if (exportBtn?.onPress) exportBtn.onPress()
+    })
+
     const { findByLabelText } = renderScreen(<Settings />)
 
     const btn = await findByLabelText('Export all data as JSON')
     fireEvent.press(btn)
 
+    await waitFor(() => {
+      expect(estimateExportSize).toHaveBeenCalled()
+    })
     await waitFor(() => {
       expect(exportAllData).toHaveBeenCalled()
     })
