@@ -26,11 +26,6 @@ jobs:
           node-version: 20
           cache: npm
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -38,8 +33,27 @@ jobs:
 
       - run: npm ci
 
-      - name: Build APK
-        run: eas build -p android --profile production --local --non-interactive --output fitforge.apk
+      - name: Build APK on EAS Cloud
+        run: |
+          eas build -p android --profile production --non-interactive --json --no-wait > build-info.json
+          BUILD_ID=$(cat build-info.json | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+          echo "Waiting for EAS build $BUILD_ID..."
+          eas build:view $BUILD_ID --json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" || true
+
+          while true; do
+            STATUS=$(eas build:view $BUILD_ID --json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+            echo "Build status: $STATUS"
+            if [ "$STATUS" = "FINISHED" ]; then
+              URL=$(eas build:view $BUILD_ID --json | python3 -c "import sys,json; print(json.load(sys.stdin)['artifacts']['buildUrl'])")
+              echo "Downloading APK from $URL"
+              curl -L -o fitforge.apk "$URL"
+              break
+            elif [ "$STATUS" = "ERRORED" ] || [ "$STATUS" = "CANCELED" ]; then
+              echo "Build failed with status: $STATUS"
+              exit 1
+            fi
+            sleep 30
+          done
 
       - uses: actions/upload-artifact@v4
         with:
