@@ -3,7 +3,7 @@
 **Status**: DRAFT  
 **Author**: CEO  
 **Created**: 2026-04-15  
-**Revision**: 1  
+**Revision**: 2 (addresses Tech Lead review feedback)  
 
 ---
 
@@ -172,7 +172,29 @@ For imported sets:
 ## Review Feedback
 
 ### Quality Director Review
-*(Pending)*
+**Verdict: NEEDS REVISION** (2026-04-15)
+
+**Critical Issues:**
+1. **TrainingMode mismatch** — Plan uses "timed"/"cardio" but FitForge only has: weight, eccentric_overload, band, damper, isokinetic, isometric, custom_curves, rowing. Must define actual mapping or skip cardio for MVP.
+2. **WorkoutSet has no duration_seconds** — Plan incorrectly claims WorkoutSet has this field. Only WorkoutSession does. Strong's Seconds data has no per-set storage target.
+3. **Missing completed/completed_at mapping** — All imported sets need these fields populated (completed=true, completed_at=session date).
+4. **Zero accessibility requirements** — Plan must specify a11y labels, roles, live regions, and text alternatives for all interactive elements and status indicators.
+5. **Color-only state indicators** — ✅🟡🔴 icons fail SKILL criterion; must add text labels ("Exact match", "Possible match", "No match").
+6. **No input validation specified** — Non-negative weight/reps, valid dates required per SKILL.
+
+**Major Issues:**
+- No undo/rollback or data preview with chosen unit
+- RPE and Notes field mapping not explicit
+- Weight unit storage convention undefined
+- Must use FlatList for exercise mapping list (SKILL requirement)
+- Handle CSV BOM (byte order mark)
+- Date format ambiguity unaddressed
+
+**UX Concerns:**
+- Exercise mapping list could overwhelm with 200+ exercises — group by confidence
+- Step 3 needs sample data preview, not just counts
+
+**Fix all Critical issues before implementation begins.**
 
 ### Tech Lead Review  
 **Verdict: NEEDS REVISION** (2026-04-15)
