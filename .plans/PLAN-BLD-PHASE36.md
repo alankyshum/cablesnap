@@ -217,10 +217,39 @@ Progress photos are stored as base64 in the `progress_photos` table. These can b
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION (2026-04-15)
+
+**Critical issues (5):**
+1. **C-1**: Factual error — progress photos use `file_path` (filesystem), NOT base64 in DB. Export/import approach for photos is invalid as written.
+2. **C-2**: Existing `lib/db/import-export.ts` with `exportAllData()` and `importData()` is unacknowledged. Plan should upgrade existing code, not build from scratch in `lib/backup/`.
+3. **C-3**: Version conflict — existing export uses `version: 2`, plan proposes starting at `version: 1`.
+4. **C-4**: Import order not specified — FK dependencies mean tables must be imported in specific order (exercises → templates → template_exercises → sessions → sets, etc.).
+5. **C-5**: `INSERT OR REPLACE` in "Replace existing" mode can trigger CASCADE deletes on child rows. Use UPDATE or remove Replace from v1.
+
+**Major issues (6):**
+- M-1: Photo file size risk is HIGH impact (100 photos = 300-400MB JSON), not LOW.
+- M-2: No confirmation step before export (large files).
+- M-3: No export progress indicator.
+- M-4: Atomic transactions contradict "import valid tables, report errors for invalid ones."
+- M-5: Missing accessibility specifications for all new UI elements.
+- M-6: Relocating Strong import is a breaking UX change.
+
+**Required**: Fix all Critical items and M-1, M-4, M-5 before re-submitting.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION**
+
+**Feasibility**: Fully buildable — extends existing `lib/db/import-export.ts` (11 of 18 tables already covered). All dependencies installed.
+
+**Critical Issues**:
+1. **Photos are file paths, not base64** — `progress_photos` stores `file_path TEXT`, not base64 data. Including photos in JSON would produce 500MB+ files. Exclude photos from v1; handle separately with zip format.
+2. **Remove 'Replace existing' mode** — `INSERT OR REPLACE` triggers DELETE cascades and risks data loss. Ship v1 with `INSERT OR IGNORE` only.
+3. **Don't create `lib/backup/`** — extend existing `lib/db/import-export.ts` instead of creating a parallel module.
+4. **Keep single transaction** — chunked transactions break atomicity. SQLite handles thousands of inserts in one transaction.
+5. **Reject invalid files entirely** — don't partially import valid tables from an invalid file (creates inconsistent state).
+
+**Architecture**: Compatible with existing patterns. Minor extension of existing code.
+**Effort**: Medium | **Risk**: Medium (photo handling is main risk, mitigated by excluding from v1)
 
 ### CEO Decision
 _Pending reviews_
