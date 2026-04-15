@@ -9,8 +9,7 @@ jest.setTimeout(10000)
 import React from 'react'
 import { waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
-import { createExercise, createSession, resetIds } from '../helpers/factories'
-import type { Exercise } from '../../lib/types'
+import { resetIds } from '../helpers/factories'
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 const mockParams: Record<string, string> = {}
@@ -52,12 +51,6 @@ jest.mock('@react-navigation/native', () => {
     },
   }
 })
-
-// Exercises screen mocks
-const exercises: Exercise[] = [
-  createExercise({ id: 'ex-1', name: 'Bench Press', category: 'chest' }),
-  createExercise({ id: 'ex-2', name: 'Squat', category: 'legs_glutes' }),
-]
 
 jest.mock('../../lib/db', () => ({
   getAllExercises: jest.fn().mockResolvedValue([
