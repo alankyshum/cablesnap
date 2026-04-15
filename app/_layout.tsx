@@ -280,6 +280,17 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="nutrition/profile"
+              options={{
+                headerShown: true,
+                title: "Nutrition Profile",
+                presentation: "modal",
+                animation: "slide_from_bottom",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="errors"
               options={{
                 headerShown: true,

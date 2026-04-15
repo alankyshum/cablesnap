@@ -2,7 +2,13 @@ import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { Button, Card, Text, TextInput, useTheme } from "react-native-paper";
 import { router, useFocusEffect } from "expo-router";
-import { getMacroTargets, updateMacroTargets } from "../../lib/db";
+import { getAppSetting, getMacroTargets, updateMacroTargets } from "../../lib/db";
+import {
+  calculateFromProfile,
+  ACTIVITY_LABELS,
+  GOAL_LABELS,
+  type NutritionProfile,
+} from "../../lib/nutrition-calc";
 
 export default function Targets() {
   const theme = useTheme();
@@ -11,6 +17,7 @@ export default function Targets() {
   const [carbs, setCarbs] = useState("250");
   const [fat, setFat] = useState("65");
   const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<NutritionProfile | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -19,6 +26,9 @@ export default function Targets() {
         setProtein(String(t.protein));
         setCarbs(String(t.carbs));
         setFat(String(t.fat));
+      });
+      getAppSetting("nutrition_profile").then((saved) => {
+        setProfile(saved ? JSON.parse(saved) : null);
       });
     }, [])
   );
@@ -39,17 +49,49 @@ export default function Targets() {
   };
 
   const reset = () => {
-    setCalories("2000");
-    setProtein("150");
-    setCarbs("250");
-    setFat("65");
+    if (profile) {
+      const result = calculateFromProfile(profile);
+      setCalories(String(result.calories));
+      setProtein(String(result.protein));
+      setCarbs(String(result.carbs));
+      setFat(String(result.fat));
+    } else {
+      setCalories("2000");
+      setProtein("150");
+      setCarbs("250");
+      setFat("65");
+    }
   };
+
+  const profileSummary = profile
+    ? profile.age + "yo, " + profile.weight + profile.weightUnit + ", " +
+      ACTIVITY_LABELS[profile.activityLevel].toLowerCase() + ", " +
+      GOAL_LABELS[profile.goal].toLowerCase()
+    : null;
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.content}
     >
+      <Card
+        style={[styles.card, { backgroundColor: theme.colors.primaryContainer }]}
+        onPress={() => router.push("/nutrition/profile")}
+        accessibilityLabel={profile ? "Update your nutrition profile" : "Set your profile for personalized targets"}
+        accessibilityRole="button"
+      >
+        <Card.Content>
+          <Text variant="titleSmall" style={{ color: theme.colors.onPrimaryContainer, fontSize: 15 }}>
+            {profile ? "Update your profile" : "Set your profile for personalized targets"}
+          </Text>
+          {profileSummary ? (
+            <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer, marginTop: 4, fontSize: 14 }}>
+              {"Based on: " + profileSummary}
+            </Text>
+          ) : null}
+        </Card.Content>
+      </Card>
+
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
