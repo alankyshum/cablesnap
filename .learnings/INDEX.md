@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-15
-Total learnings: 61
+Total learnings: 64
 
 ## How to Use This Knowledge Base
 
@@ -14,12 +14,12 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 33 learnings
+- [React Native + Expo](patterns/react-native.md) — 35 learnings
 - [Testing](patterns/testing.md) — 4 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 3 learnings
-- [Build Configuration](pitfalls/build-config.md) — 4 learnings
+- [Build Configuration](pitfalls/build-config.md) — 5 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 6 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
@@ -38,6 +38,9 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-114 | accessibilityState for Collapsible Section Toggles | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-114 | RN accessibilityRole Does Not Support 'grid' — Use 'summary' | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-100/108 | upload-pages-artifact path Becomes Site Root — Not a URL Prefix | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-15 | BLD-112 | Double-Cast Through `unknown` for Unrelated Type Assertions | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-15 | BLD-112 | `Array.includes()` Fails on Readonly Tuple Types | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-15 | BLD-99 | Separate Additive Seed Data into Dedicated Module Files | Patterns | [react-native.md](patterns/react-native.md) |

@@ -33,3 +33,11 @@
 **Learning**: When a route uses the directory pattern (`app/schedule/index.tsx` instead of `app/schedule.tsx`), Expo Router registers the route as `schedule/index`, not `schedule`. A `Stack.Screen` with `name="schedule"` will not match, causing a layout crash that breaks all navigation — not just that route.
 **Action**: When using directory-based routes (`app/X/index.tsx`), always set `name="X/index"` in the corresponding `Stack.Screen`. Add a route-name validation test (see testing patterns) to catch mismatches at build time.
 **Tags**: expo-router, stack-screen, directory-routes, routing, layout-crash, navigation, file-based-routing
+
+### upload-pages-artifact path Becomes Site Root — Not a URL Prefix
+**Source**: BLD-100, BLD-108 — GitHub Pages deployment failing / Fix F-Droid repo_url
+**Date**: 2026-04-15
+**Context**: The F-Droid release workflow used `actions/upload-pages-artifact` with `path: fdroid`. Config files referenced the repo at `<base>/fdroid/repo/`, but Pages returned 404 because the deployed URL was `<base>/repo/`.
+**Learning**: When `actions/upload-pages-artifact@v3` specifies a `path` (e.g., `fdroid`), that directory's *contents* become the site root — the directory name itself is NOT part of the deployed URL. So `fdroid/repo/index.html` on disk deploys to `<base-url>/repo/index.html`, not `<base-url>/fdroid/repo/index.html`.
+**Action**: When configuring GitHub Pages via Actions, match all URL references (config files, READMEs, API endpoints) to the *deployed* path structure, not the filesystem path. Test by checking the actual Pages URL after first deployment before hardcoding references.
+**Tags**: github-actions, github-pages, upload-pages-artifact, deployment, url-path, f-droid, ci-cd

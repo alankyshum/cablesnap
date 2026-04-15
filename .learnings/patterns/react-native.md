@@ -265,3 +265,19 @@
 **Learning**: When adding bulk seed data from a new source, create a dedicated module file (e.g., `seed-community.ts`) that exports the new data, then import it into the main seed file. This keeps the original seed data untouched, makes data provenance clear (Voltra vs community), and prevents merge conflicts when multiple sources contribute data.
 **Action**: When expanding seed/reference data from a new source, create a new file named `seed-<source>.ts`, export the array, and merge it into the main seed array via import. Never inline new-source data into an existing seed file.
 **Tags**: seed-data, data-management, file-organization, module-separation, exercise-library
+
+### accessibilityState for Collapsible Section Toggles
+**Source**: BLD-114 — Workout Calendar & Streak Heatmap
+**Date**: 2026-04-15
+**Context**: A heatmap section had a collapse/expand toggle (Pressable with label and role) but no accessibilityState. QA review flagged this as MAJOR — screen readers could not announce whether the section was expanded or collapsed.
+**Learning**: React Native's `accessibilityState` prop with `{ expanded: boolean }` is required on any collapsible section's toggle control. Without it, screen readers can invoke the toggle but provide no feedback about the current state. accessibilityLabel and accessibilityRole alone are insufficient for stateful controls.
+**Action**: On every Pressable/TouchableOpacity that toggles a collapsible section, add `accessibilityState={{ expanded: isExpanded }}`. During a11y review, check that all expand/collapse controls expose their current state — not just their label and role.
+**Tags**: react-native, accessibility, a11y, accessibilityState, collapsible, expand-collapse, screen-reader
+
+### RN accessibilityRole Does Not Support 'grid' — Use 'summary'
+**Source**: BLD-114 — Workout Calendar & Streak Heatmap
+**Date**: 2026-04-15
+**Context**: The heatmap grid required `accessibilityRole="grid"` per the spec, but React Native's typed roles do not include 'grid'. Using `as any` to force it triggered ESLint warnings.
+**Learning**: React Native's `accessibilityRole` type is a closed union that does not include all ARIA/web roles. 'grid' is not supported. The closest valid alternative is 'summary' for data visualization containers. Forcing unsupported roles with `as any` works at runtime but creates type-safety and lint issues.
+**Action**: When implementing grid-like data visualizations in React Native, use `accessibilityRole="summary"` instead of 'grid'. Add an `accessibilityLabel` that describes the grid's content. If the spec requires 'grid', document the adaptation with a code comment explaining the RN limitation.
+**Tags**: react-native, accessibility, a11y, accessibilityRole, grid, type-safety, aria
