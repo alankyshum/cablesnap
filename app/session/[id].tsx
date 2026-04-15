@@ -180,7 +180,7 @@ const SetRow = memo(function SetRow({
           >
             <MaterialCommunityIcons
               name={set.notes ? "note-text" : "note-text-outline"}
-              size={18}
+              size={22}
               color={theme.colors.onSurfaceVariant}
             />
           </Pressable>
@@ -190,7 +190,7 @@ const SetRow = memo(function SetRow({
             accessibilityLabel={`Delete set ${set.set_number}`}
             accessibilityRole="button"
           >
-            <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
+            <MaterialCommunityIcons name="delete-outline" size={22} color={theme.colors.error} />
           </Pressable>
         </View>
 
