@@ -50,6 +50,7 @@ export default function AchievementsScreen() {
   const [items, setItems] = useState<AchievementItem[]>([]);
   const [earnedCount, setEarnedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [retroBanner, setRetroBanner] = useState<number | null>(null);
 
   useFocusEffect(
@@ -80,6 +81,7 @@ export default function AchievementsScreen() {
 
           // Show retroactive banner on first open
           const seenBanner = await hasSeenRetroactiveBanner();
+          if (cancelled) return;
           if (!seenBanner && earnedMap.size > 0) {
             setRetroBanner(earnedMap.size);
             await markRetroactiveBannerSeen();
@@ -101,8 +103,9 @@ export default function AchievementsScreen() {
             })),
           );
           setEarnedCount(earnedMap.size);
-        } catch {
-          // Evaluation failed — show empty state with error
+        } catch (e) {
+          console.warn("Achievement evaluation failed:", e);
+          if (!cancelled) setError("Could not load achievements. Please try again later.");
         } finally {
           if (!cancelled) setLoading(false);
         }
@@ -129,6 +132,20 @@ export default function AchievementsScreen() {
         <Stack.Screen options={{ title: "Achievements" }} />
         <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
           <Text style={{ color: theme.colors.onSurfaceVariant }}>Loading achievements...</Text>
+        </View>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Achievements" }} />
+        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+          <Text variant="headlineMedium" style={{ marginBottom: 8 }}>⚠️</Text>
+          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+            {error}
+          </Text>
         </View>
       </>
     );
@@ -172,7 +189,7 @@ export default function AchievementsScreen() {
             ? `${item.name} achievement — Earned on ${formatDate(item.earnedAt!)}`
             : `${item.name} achievement — Locked, ${Math.round(item.progress * 100)}% complete`
         }
-        accessibilityRole="button"
+        accessibilityRole="summary"
       >
         <Card.Content style={styles.badgeContent}>
           <View style={styles.iconContainer}>

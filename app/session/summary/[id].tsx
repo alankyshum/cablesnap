@@ -97,8 +97,8 @@ export default function Summary() {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
           }
         }
-      } catch {
-        // Achievement evaluation is non-critical
+      } catch (e) {
+        console.warn("Achievement evaluation failed:", e);
       }
 
       AccessibilityInfo.announceForAccessibility("Workout Complete!");

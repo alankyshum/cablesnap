@@ -1,7 +1,7 @@
 // Database queries for the achievement system.
 // Builds AchievementContext from batched queries and manages achievements_earned table.
 
-import { query, queryOne, execute } from "./helpers";
+import { query, queryOne, execute, withTransaction } from "./helpers";
 import type { AchievementContext, EarnedAchievement } from "../achievements";
 
 // --- Context Building ---
@@ -129,12 +129,14 @@ export async function saveEarnedAchievements(
   achievementIds: string[],
   earnedAt: number = Date.now(),
 ): Promise<void> {
-  for (const id of achievementIds) {
-    await execute(
-      "INSERT OR IGNORE INTO achievements_earned (achievement_id, earned_at) VALUES (?, ?)",
-      [id, earnedAt]
-    );
-  }
+  await withTransaction(async (db) => {
+    for (const id of achievementIds) {
+      await db.runAsync(
+        "INSERT OR IGNORE INTO achievements_earned (achievement_id, earned_at) VALUES (?, ?)",
+        [id, earnedAt]
+      );
+    }
+  });
 }
 
 export async function getEarnedCount(): Promise<number> {
