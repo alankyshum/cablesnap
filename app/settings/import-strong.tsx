@@ -219,27 +219,34 @@ function StepSelectFile({
                 >
                   Preview (with conversion)
                 </Text>
-                {sampleRows.map((row, i) => {
-                  const converted = convertWeight(
-                    row.weight,
-                    sourceUnit,
-                    targetUnit
-                  );
-                  return (
-                    <View key={i} style={styles.previewRow}>
-                      <Text
-                        style={{ color: theme.colors.onSurface }}
-                        accessibilityLabel={`Sample row ${i + 1}: ${row.exerciseName}, ${converted ?? "bodyweight"} ${targetUnit}, ${row.reps ?? 0} reps`}
-                      >
-                        {row.exerciseName} —{" "}
-                        {converted !== null
-                          ? `${converted} ${targetUnit}`
-                          : "Bodyweight"}{" "}
-                        × {row.reps ?? 0} reps
-                      </Text>
-                    </View>
-                  );
-                })}
+                {sampleRows.length > 0 && (
+                  <FlatList
+                    data={sampleRows}
+                    scrollEnabled={false}
+                    keyExtractor={(_, i) => `sample-${i}`}
+                    renderItem={({ item: row, index: i }) => {
+                      const converted = convertWeight(
+                        row.weight,
+                        sourceUnit,
+                        targetUnit
+                      );
+                      return (
+                        <View style={styles.previewRow}>
+                          <Text
+                            style={{ color: theme.colors.onSurface }}
+                            accessibilityLabel={`Sample row ${i + 1}: ${row.exerciseName}, ${converted ?? "bodyweight"} ${targetUnit}, ${row.reps ?? 0} reps`}
+                          >
+                            {row.exerciseName} —{" "}
+                            {converted !== null
+                              ? `${converted} ${targetUnit}`
+                              : "Bodyweight"}{" "}
+                            × {row.reps ?? 0} reps
+                          </Text>
+                        </View>
+                      );
+                    }}
+                  />
+                )}
               </Card.Content>
             </Card>
           )}
@@ -797,15 +804,19 @@ function StepConfirmImport({
             >
               Sample Sessions
             </Text>
-            {sampleSessions.map((s, i) => (
-              <Text
-                key={i}
-                style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}
-                accessibilityLabel={`Sample session: ${s.name} on ${s.date}, ${s.setCount} sets`}
-              >
-                {s.name} — {s.date} ({s.setCount} sets)
-              </Text>
-            ))}
+            <FlatList
+              data={sampleSessions}
+              scrollEnabled={false}
+              keyExtractor={(_, i) => `session-${i}`}
+              renderItem={({ item: s }) => (
+                <Text
+                  style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}
+                  accessibilityLabel={`Sample session: ${s.name} on ${s.date}, ${s.setCount} sets`}
+                >
+                  {s.name} — {s.date} ({s.setCount} sets)
+                </Text>
+              )}
+            />
           </Card.Content>
         </Card>
       )}
@@ -853,18 +864,22 @@ function StepConfirmImport({
               {duplicates.length !== 1 ? "s" : ""} already exist with the
               same date and name. They will be skipped (INSERT OR IGNORE).
             </Text>
-            {duplicates.slice(0, 5).map((d, i) => (
-              <Text
-                key={i}
-                style={{
-                  color: theme.colors.onErrorContainer,
-                  fontSize: 12,
-                  marginTop: 2,
-                }}
-              >
-                • {d}
-              </Text>
-            ))}
+            <FlatList
+              data={duplicates.slice(0, 5)}
+              scrollEnabled={false}
+              keyExtractor={(_, i) => `dup-${i}`}
+              renderItem={({ item: d }) => (
+                <Text
+                  style={{
+                    color: theme.colors.onErrorContainer,
+                    fontSize: 12,
+                    marginTop: 2,
+                  }}
+                >
+                  • {d}
+                </Text>
+              )}
+            />
             {duplicates.length > 5 && (
               <Text
                 style={{
