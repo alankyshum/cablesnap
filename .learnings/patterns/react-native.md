@@ -257,3 +257,11 @@
 **Learning**: Pre-load all sounds lazily on first play into a module-level Map singleton, guarded by a boolean loading flag to prevent concurrent init. Use replayAsync() (not playAsync()) for repeat playback — it resets position and plays without requiring stop/unload. Swallow all errors since audio is non-critical UX. Set playsInSilentModeIOS: false to respect the hardware silent switch. Clean up with unloadAsync() on each sound in a useFocusEffect cleanup return.
 **Action**: When adding sound effects with expo-av: (1) define a typed cue union and a SOURCES record mapping cues to require() assets, (2) lazy-load all sounds into a module-level Map on first play() call, (3) always use replayAsync() for playback, (4) wrap every async audio call in try/catch that swallows errors, (5) call unload() in useFocusEffect cleanup or useEffect cleanup to release native resources.
 **Tags**: expo-av, audio, sound-effects, lazy-loading, singleton, replayAsync, timer, cleanup, react-native
+
+### Separate Additive Seed Data into Dedicated Module Files
+**Source**: BLD-99 — Scrape & seed cable + bodyweight exercises from MuscleWiki
+**Date**: 2026-04-15
+**Context**: FitForge needed to expand its exercise library from 54 Voltra-specific exercises to include 65 community-sourced cable and bodyweight exercises from an external source.
+**Learning**: When adding bulk seed data from a new source, create a dedicated module file (e.g., `seed-community.ts`) that exports the new data, then import it into the main seed file. This keeps the original seed data untouched, makes data provenance clear (Voltra vs community), and prevents merge conflicts when multiple sources contribute data.
+**Action**: When expanding seed/reference data from a new source, create a new file named `seed-<source>.ts`, export the array, and merge it into the main seed array via import. Never inline new-source data into an existing seed file.
+**Tags**: seed-data, data-management, file-organization, module-separation, exercise-library

@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-15
-Total learnings: 58
+Total learnings: 59
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 32 learnings
+- [React Native + Expo](patterns/react-native.md) — 33 learnings
 - [Testing](patterns/testing.md) — 4 learnings
 
 ### Pitfalls
@@ -37,6 +37,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-99 | Separate Additive Seed Data into Dedicated Module Files | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-95/96 | Expo Router Directory Routes Register as `directory/index` | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-15 | BLD-95/96 | Static Route-Name Validation Test for Expo Router | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-14 | BLD-90 | Lazy-Load Audio with replayAsync for Repeated Sound Effects | Patterns | [react-native.md](patterns/react-native.md) |
