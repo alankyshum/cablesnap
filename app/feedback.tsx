@@ -193,7 +193,7 @@ export default function FeedbackScreen() {
         data={ITEMS}
         keyExtractor={(item) => item}
         style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
-        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding }}
+        contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
         renderItem={() => (
           <View>
             <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
