@@ -138,7 +138,7 @@ gh release create vX.Y.Z \
 
 Add the F-Droid repo URL to your F-Droid client:
 \`\`\`
-https://alankyshum.github.io/fitforge/fdroid/repo
+https://alankyshum.github.io/fitforge/repo
 \`\`\`
 NOTES
 )"
@@ -182,7 +182,7 @@ gh api repos/alankyshum/fitforge/pages/builds --jq '.[0].status'
 ```
 
 The F-Droid repo will be live at:
-`https://alankyshum.github.io/fitforge/fdroid/repo`
+`https://alankyshum.github.io/fitforge/repo`
 
 ## Post-Publish
 
@@ -221,7 +221,7 @@ the config is dynamic (TypeScript). The project ID is:
 
 ### F-Droid client not showing update
 - Pull-to-refresh in F-Droid
-- Check repo URL is exactly: `https://alankyshum.github.io/fitforge/fdroid/repo`
+- Check repo URL is exactly: `https://alankyshum.github.io/fitforge/repo`
 - Verify Pages is deployed: `gh api repos/alankyshum/fitforge/pages`
 
 ### Need to re-publish same version
