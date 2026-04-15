@@ -298,7 +298,8 @@ Phase B (iOS HealthKit writes — this plan's implementation):
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict: NEEDS REVISION** — 7 Critical issues found (2026-04-15)
+**Revision 1 Verdict: NEEDS REVISION** — 7 Critical issues found (2026-04-15)
+**Revision 2 Verdict: APPROVED** (2026-04-15)
 
 _All 7 issues addressed in revision 2:_
 1. ✅ Toggle behavior on permission dismissed — defined (reverts to OFF, no message)
@@ -308,6 +309,8 @@ _All 7 issues addressed in revision 2:_
 5. ✅ Nutrition sync data integrity — moot (removed from v1)
 6. ✅ expo-dev-client as separate prerequisite issue (Phase A)
 7. ✅ 48×48dp touch targets specified for all toggles and buttons
+
+Non-blocking observations: (1) create health.android.ts as no-op stub in Phase B, (2) define "Sync Now" behavior when nothing to sync, (3) verify settings screen density.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** (2026-04-15)
