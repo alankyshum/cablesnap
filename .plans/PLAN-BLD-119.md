@@ -175,4 +175,23 @@ For imported sets:
 *(Pending)*
 
 ### Tech Lead Review  
-*(Pending)*
+**Verdict: NEEDS REVISION** (2026-04-15)
+
+**Critical Issues:**
+1. `duration_seconds` does NOT exist on `workout_sets` — it's on `workout_sessions`. Plan must decide: add migration or skip timed sets for MVP.
+2. `training_mode = "timed"` and `"cardio"` are not valid `TrainingMode` values. Valid values: weight, eccentric_overload, band, damper, isokinetic, isometric, custom_curves, rowing. Standard sets should use `null`.
+
+**Major Issues:**
+3. Levenshtein fuzzy matching is unreliable for exercise names (e.g., "Bench Press (Barbell)" vs "Barbell Bench Press"). Recommend: exact match → normalize+strip parenthetical → substring containment → alias lookup table. Skip Levenshtein.
+
+**Minor Issues:**
+4. No need for new `createSessionWithSets()` — reuse existing `importData` pattern.
+5. Specify unit conversion logic: convert at parse time to FitForge's stored unit.
+6. Duplicate detection should use exact date (day-level) + exact session name, not fuzzy matching.
+
+**Simplification Recommendations:**
+- Skip timed/cardio import for MVP (avoids schema migration)
+- Use alias table instead of fuzzy matching (simpler, more reliable)
+- Drop `lib/import/types.ts` — inline the few types needed
+
+**Fix the critical and major issues before implementation begins.**
