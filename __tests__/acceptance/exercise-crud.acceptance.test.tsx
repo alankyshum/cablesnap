@@ -38,6 +38,8 @@ const exercises: Exercise[] = [
   createExercise({ id: 'ex-3', name: 'Deadlift', category: 'back', primary_muscles: ['back', 'hamstrings'] }),
   createExercise({ id: 'ex-4', name: 'Bicep Curl', category: 'arms', primary_muscles: ['biceps'], is_custom: true }),
   createExercise({ id: 'ex-5', name: 'Shoulder Press', category: 'shoulders', primary_muscles: ['shoulders'] }),
+  createExercise({ id: 'mw-bw-001', name: 'Push-Up', category: 'chest', primary_muscles: ['chest', 'triceps'], equipment: 'bodyweight' }),
+  createExercise({ id: 'mw-bw-002', name: 'Wide Push-Up', category: 'chest', primary_muscles: ['chest'], equipment: 'bodyweight' }),
 ]
 
 const mockGetAll = jest.fn().mockResolvedValue(exercises)
@@ -53,7 +55,6 @@ jest.mock('../../lib/db', () => ({
 }))
 
 import Exercises from '../../app/(tabs)/exercises'
-import ErrorBoundary from '../../components/ErrorBoundary'
 
 describe('Exercise Library Acceptance', () => {
   beforeEach(() => {
@@ -124,6 +125,33 @@ describe('Exercise Library Acceptance', () => {
     fireEvent.press(fab)
 
     expect(mockRouter.push).toHaveBeenCalledWith('/exercise/create')
+  })
+
+  it('finds hyphenated exercises when searching with spaces or no separator', async () => {
+    const { findByText, getByLabelText, queryByText } = renderScreen(<Exercises />)
+
+    await findByText('Push-Up')
+
+    const searchBar = getByLabelText('Search exercises')
+
+    fireEvent.changeText(searchBar, 'push up')
+    await waitFor(() => {
+      expect(queryByText('Push-Up')).toBeTruthy()
+      expect(queryByText('Wide Push-Up')).toBeTruthy()
+      expect(queryByText('Bench Press')).toBeNull()
+    })
+
+    fireEvent.changeText(searchBar, 'pushup')
+    await waitFor(() => {
+      expect(queryByText('Push-Up')).toBeTruthy()
+      expect(queryByText('Wide Push-Up')).toBeTruthy()
+    })
+
+    fireEvent.changeText(searchBar, 'push-up')
+    await waitFor(() => {
+      expect(queryByText('Push-Up')).toBeTruthy()
+      expect(queryByText('Wide Push-Up')).toBeTruthy()
+    })
   })
 
   it('shows empty state when no exercises match', async () => {

@@ -60,6 +60,9 @@ const exercises: Exercise[] = [
   createExercise({ id: 'ex-8', name: 'Cable Fly', category: 'chest', primary_muscles: ['chest'] }),
   createExercise({ id: 'ex-9', name: 'Leg Press', category: 'legs_glutes', primary_muscles: ['quads'] }),
   createExercise({ id: 'ex-10', name: 'Lateral Raise', category: 'shoulders', primary_muscles: ['shoulders'] }),
+  createExercise({ id: 'mw-bw-001', name: 'Push-Up', category: 'chest', primary_muscles: ['chest', 'triceps'], equipment: 'bodyweight' }),
+  createExercise({ id: 'mw-bw-002', name: 'Diamond Push-Up', category: 'chest', primary_muscles: ['triceps', 'chest'], equipment: 'bodyweight' }),
+  createExercise({ id: 'mw-bw-003', name: 'Pull-Up', category: 'back', primary_muscles: ['lats', 'biceps'], equipment: 'bodyweight' }),
 ]
 
 const mockGetAll = jest.fn().mockResolvedValue(exercises)
@@ -107,6 +110,44 @@ describe('Exercise Browser', () => {
       expect(queryByText('Bench Press')).toBeTruthy()
       expect(queryByText('Squat')).toBeNull()
       expect(queryByText('Deadlift')).toBeNull()
+    })
+  })
+
+  it('search finds hyphenated exercises when query uses spaces', async () => {
+    const { findByText, getByLabelText, queryByText } = renderScreen(<Exercises />)
+    await findByText('Push-Up')
+
+    fireEvent.changeText(getByLabelText('Search exercises'), 'push up')
+
+    await waitFor(() => {
+      expect(queryByText('Push-Up')).toBeTruthy()
+      expect(queryByText('Diamond Push-Up')).toBeTruthy()
+      expect(queryByText('Bench Press')).toBeNull()
+    })
+  })
+
+  it('search finds hyphenated exercises when query omits separator', async () => {
+    const { findByText, getByLabelText, queryByText } = renderScreen(<Exercises />)
+    await findByText('Push-Up')
+
+    fireEvent.changeText(getByLabelText('Search exercises'), 'pushup')
+
+    await waitFor(() => {
+      expect(queryByText('Push-Up')).toBeTruthy()
+      expect(queryByText('Diamond Push-Up')).toBeTruthy()
+      expect(queryByText('Bench Press')).toBeNull()
+    })
+  })
+
+  it('search finds hyphenated exercises with exact hyphen query', async () => {
+    const { findByText, getByLabelText, queryByText } = renderScreen(<Exercises />)
+    await findByText('Pull-Up')
+
+    fireEvent.changeText(getByLabelText('Search exercises'), 'pull-up')
+
+    await waitFor(() => {
+      expect(queryByText('Pull-Up')).toBeTruthy()
+      expect(queryByText('Lat Pulldown')).toBeNull()
     })
   })
 

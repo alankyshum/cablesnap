@@ -113,9 +113,14 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
   }));
 
   const filtered = useMemo(() => {
-    const q = query.toLowerCase();
+    const norm = (s: string) => s.toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
+    const q = norm(query);
+    const qNoSpace = q.replace(/ /g, "");
     return exercises.filter((ex) => {
-      if (q && !ex.name.toLowerCase().includes(q)) return false;
+      if (q) {
+        const n = norm(ex.name);
+        if (!n.includes(q) && !n.replace(/ /g, "").includes(qNoSpace)) return false;
+      }
       if (selected.size > 0 && !selected.has(ex.category)) return false;
       return true;
     });
