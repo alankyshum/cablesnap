@@ -5,7 +5,7 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
+  FlatList as RNFlatList,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -611,30 +611,38 @@ function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
     : screenWidth - 48;
 
   return (
-    <ScrollView style={styles.detailBody} contentContainerStyle={{ paddingBottom: 32 }}>
-      {layout.atLeastMedium ? (
+    <RNFlatList
+      data={[]}
+      renderItem={null}
+      style={styles.detailBody}
+      contentContainerStyle={{ paddingBottom: 32 }}
+      ListHeaderComponent={
         <>
-          <View style={styles.detailRow}>
-            <View style={styles.detailColLeft}>
+          {layout.atLeastMedium ? (
+            <>
+              <View style={styles.detailRow}>
+                <View style={styles.detailColLeft}>
+                  {musclesAndMeta}
+                </View>
+                <View style={styles.detailColRight}>
+                  {instructions}
+                </View>
+              </View>
+              <MuscleMap
+                primary={exercise.primary_muscles}
+                secondary={exercise.secondary_muscles}
+                width={mapWidth}
+              />
+            </>
+          ) : (
+            <>
               {musclesAndMeta}
-            </View>
-            <View style={styles.detailColRight}>
               {instructions}
-            </View>
-          </View>
-          <MuscleMap
-            primary={exercise.primary_muscles}
-            secondary={exercise.secondary_muscles}
-            width={mapWidth}
-          />
+            </>
+          )}
         </>
-      ) : (
-        <>
-          {musclesAndMeta}
-          {instructions}
-        </>
-      )}
-    </ScrollView>
+      }
+    />
   );
 }
 
@@ -1365,7 +1373,7 @@ export default function ActiveSession() {
       >
         <View style={styles.detailOverlay}>
           <Pressable style={styles.detailDismiss} onPress={() => setDetailExercise(null)} accessibilityRole="button" accessibilityLabel="Close details" />
-          <View style={[styles.detailSheet, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.detailSheet, { backgroundColor: theme.colors.surface, shadowColor: theme.colors.shadow }]}>
             {detailExercise && (
               <>
                 <View style={styles.detailHeader}>
@@ -1453,7 +1461,7 @@ const styles = StyleSheet.create({
   colLabel: {
     flex: 1,
     textAlign: "center",
-    fontSize: 11,
+    fontSize: 12,
   },
   colCheck: {
     width: 32,
@@ -1543,7 +1551,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   rpeChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   halfStepRow: {
@@ -1602,7 +1610,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 16,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,

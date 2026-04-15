@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   labelCompact: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   tooltip: {

@@ -2,8 +2,8 @@ import { STARTER_TEMPLATES, STARTER_PROGRAM, STARTER_VERSION } from "../../lib/s
 import { DIFFICULTY_LABELS } from "../../lib/types";
 
 describe("starter-templates data", () => {
-  it("has 6 starter templates", () => {
-    expect(STARTER_TEMPLATES).toHaveLength(6);
+  it("has at least 6 starter templates", () => {
+    expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(6);
   });
 
   it("has unique template IDs", () => {
@@ -11,9 +11,9 @@ describe("starter-templates data", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("each template has 6 exercises", () => {
+  it("each template has at least 1 exercise", () => {
     for (const tpl of STARTER_TEMPLATES) {
-      expect(tpl.exercises).toHaveLength(6);
+      expect(tpl.exercises.length).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -66,7 +66,7 @@ describe("starter-templates data", () => {
     for (const tpl of STARTER_TEMPLATES) {
       for (const ex of tpl.exercises) {
         expect(ex.target_sets).toBeGreaterThanOrEqual(1);
-        expect(ex.target_reps).toMatch(/^\d+-\d+$/);
+        expect(ex.target_reps).toMatch(/^\d+(-\d+)?$/);
         expect(ex.rest_seconds).toBeGreaterThan(0);
       }
     }

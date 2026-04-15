@@ -1,4 +1,5 @@
 import type { Exercise, MountPosition, Attachment, TrainingMode } from "./types";
+import { communityExercises } from "./seed-community";
 
 let counter = 0;
 function id(): string {
@@ -654,5 +655,6 @@ export function seedExercises(): Exercise[] {
       attachment: "rope",
       training_modes: ["weight", "band"],
     }),
+    ...communityExercises(),
   ];
 }

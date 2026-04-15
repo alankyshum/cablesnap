@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -134,27 +135,31 @@ export function RMCalculatorContent() {
               <DataTable.Title numeric>Rep Range</DataTable.Title>
               <DataTable.Title numeric style={{ flex: 0.4 }}> </DataTable.Title>
             </DataTable.Header>
-            {table.map(row => (
-              <DataTable.Row
-                key={row.pct}
-                accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${label}, ${row.reps} reps`}
-              >
-                <DataTable.Cell>{row.pct}%</DataTable.Cell>
-                <DataTable.Cell numeric>{row.weight} {unit}</DataTable.Cell>
-                <DataTable.Cell numeric>{row.reps}</DataTable.Cell>
-                <DataTable.Cell numeric style={{ flex: 0.4 }}>
-                  <IconButton
-                    icon="weight"
-                    size={18}
-                    onPress={() => router.push(`/tools/plates?weight=${row.weight}`)}
-                    accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
-                    accessibilityRole="button"
-                    style={{ minWidth: 48, minHeight: 48 }}
-                    iconColor={theme.colors.onSurfaceVariant}
-                  />
-                </DataTable.Cell>
-              </DataTable.Row>
-            ))}
+            <FlatList
+              data={table}
+              keyExtractor={(item) => String(item.pct)}
+              scrollEnabled={false}
+              renderItem={({ item: row }) => (
+                <DataTable.Row
+                  accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${label}, ${row.reps} reps`}
+                >
+                  <DataTable.Cell>{row.pct}%</DataTable.Cell>
+                  <DataTable.Cell numeric>{row.weight} {unit}</DataTable.Cell>
+                  <DataTable.Cell numeric>{row.reps}</DataTable.Cell>
+                  <DataTable.Cell numeric style={{ flex: 0.4 }}>
+                    <IconButton
+                      icon="weight"
+                      size={18}
+                      onPress={() => router.push(`/tools/plates?weight=${row.weight}`)}
+                      accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
+                      accessibilityRole="button"
+                      style={{ minWidth: 48, minHeight: 48 }}
+                      iconColor={theme.colors.onSurfaceVariant}
+                    />
+                  </DataTable.Cell>
+                </DataTable.Row>
+              )}
+            />
           </DataTable>
 
           <Text variant="bodySmall" style={[styles.disclaimer, { color: theme.colors.onSurfaceVariant }]}>

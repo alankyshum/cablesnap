@@ -1,10 +1,7 @@
-// Mock crypto.randomUUID
-let uuidCounter = 0;
-Object.defineProperty(global, "crypto", {
-  value: {
-    randomUUID: jest.fn(() => `uuid-${++uuidCounter}`),
-  },
-});
+let mockUuidCounter = 0;
+jest.mock("expo-crypto", () => ({
+  randomUUID: jest.fn(() => `uuid-${++mockUuidCounter}`),
+}));
 
 const mockDb = {
   execAsync: jest.fn().mockResolvedValue(undefined),
@@ -34,7 +31,7 @@ async function initDb() {
 }
 
 beforeEach(() => {
-  uuidCounter = 0;
+  mockUuidCounter = 0;
   jest.clearAllMocks();
   mockDb.execAsync.mockResolvedValue(undefined);
   mockDb.getAllAsync.mockResolvedValue([]);
@@ -47,6 +44,9 @@ beforeEach(() => {
   }));
   jest.doMock("../../lib/seed", () => ({
     seedExercises: jest.fn(() => []),
+  }));
+  jest.doMock("expo-crypto", () => ({
+    randomUUID: jest.fn(() => `uuid-${++mockUuidCounter}`),
   }));
   db = require("../../lib/db");
 });

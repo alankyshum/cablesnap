@@ -22,9 +22,9 @@ import {
   getBodySettings,
   updateBodySettings,
 } from "../../lib/db";
-import type { WorkoutCSVRow, NutritionCSVRow, BodyWeightCSVRow, BodyMeasurementsCSVRow } from "../../lib/db";
+
 import { getErrorCount } from "../../lib/errors";
-import { csvEscape } from "../../lib/csv";
+import { workoutCSV, nutritionCSV, bodyWeightCSV, bodyMeasurementsCSV } from "../../lib/csv-format";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import {
   requestPermission,
@@ -33,78 +33,12 @@ import {
   getPermissionStatus,
 } from "../../lib/notifications";
 
-function workoutCSV(rows: WorkoutCSVRow[]): string {
-  const header = "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id";
-  const lines = rows.map((r) =>
-    [
-      csvEscape(r.date),
-      csvEscape(r.exercise),
-      csvEscape(r.set_number),
-      csvEscape(r.weight),
-      csvEscape(r.reps),
-      csvEscape(r.duration_seconds),
-      csvEscape(r.notes),
-      csvEscape(r.set_rpe),
-      csvEscape(r.set_notes),
-      csvEscape(r.link_id),
-    ].join(",")
-  );
-  return [header, ...lines].join("\n");
-}
-
-function nutritionCSV(rows: NutritionCSVRow[]): string {
-  const header = "date,meal,food,servings,calories,protein,carbs,fat";
-  const lines = rows.map((r) =>
-    [
-      csvEscape(r.date),
-      csvEscape(r.meal),
-      csvEscape(r.food),
-      csvEscape(r.servings),
-      csvEscape(r.calories),
-      csvEscape(r.protein),
-      csvEscape(r.carbs),
-      csvEscape(r.fat),
-    ].join(",")
-  );
-  return [header, ...lines].join("\n");
-}
-
-function bodyWeightCSV(rows: BodyWeightCSVRow[]): string {
-  const header = "date,weight_kg,notes";
-  const lines = rows.map((r) =>
-    [csvEscape(r.date), csvEscape(r.weight), csvEscape(r.notes)].join(",")
-  );
-  return [header, ...lines].join("\n");
-}
-
-function bodyMeasurementsCSV(rows: BodyMeasurementsCSVRow[]): string {
-  const header = "date,waist_cm,chest_cm,hips_cm,left_arm_cm,right_arm_cm,left_thigh_cm,right_thigh_cm,left_calf_cm,right_calf_cm,neck_cm,body_fat_pct,notes";
-  const lines = rows.map((r) =>
-    [
-      csvEscape(r.date),
-      csvEscape(r.waist),
-      csvEscape(r.chest),
-      csvEscape(r.hips),
-      csvEscape(r.left_arm),
-      csvEscape(r.right_arm),
-      csvEscape(r.left_thigh),
-      csvEscape(r.right_thigh),
-      csvEscape(r.left_calf),
-      csvEscape(r.right_calf),
-      csvEscape(r.neck),
-      csvEscape(r.body_fat),
-      csvEscape(r.notes),
-    ].join(",")
-  );
-  return [header, ...lines].join("\n");
-}
-
-const RANGES = [
-  { value: "7", label: "7 days" },
-  { value: "30", label: "30 days" },
-  { value: "90", label: "90 days" },
-  { value: "all", label: "All" },
-] as const;
+const RANGE_BUTTONS = [
+  { value: "7", label: "7 days", accessibilityLabel: "Date range 7 days" },
+  { value: "30", label: "30 days", accessibilityLabel: "Date range 30 days" },
+  { value: "90", label: "90 days", accessibilityLabel: "Date range 90 days" },
+  { value: "all", label: "All", accessibilityLabel: "Date range All" },
+];
 
 function sinceForRange(range: string): number {
   if (range === "all") return 0;
@@ -406,7 +340,7 @@ export default function Settings() {
                       return;
                     }
                     setPermDenied(false);
-                    const [h, m] = reminderTime.split(":").map(Number);
+                    const parts = reminderTime.split(":"); const h = Number(parts[0]); const m = Number(parts[1]);
                     const count = await scheduleReminders({ hour: h, minute: m });
                     await setAppSetting("reminders_enabled", "true");
                     setReminders(true);
@@ -574,11 +508,7 @@ export default function Settings() {
           <SegmentedButtons
             value={range}
             onValueChange={setRange}
-            buttons={RANGES.map((r) => ({
-              value: r.value,
-              label: r.label,
-              accessibilityLabel: `Date range ${r.label}`,
-            }))}
+            buttons={RANGE_BUTTONS}
             style={styles.segment}
           />
 

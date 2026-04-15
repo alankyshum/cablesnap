@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   unitText: {
-    fontSize: 10,
+    fontSize: 12,
   },
   input: {
     width: 56,

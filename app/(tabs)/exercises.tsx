@@ -83,7 +83,7 @@ export default function Exercises() {
         onPress={() => onPress(item)}
         style={({ pressed }) => [
           styles.exerciseCard,
-          { borderLeftColor: color, borderLeftWidth: 3, backgroundColor: theme.colors.surface },
+          { borderLeftColor: color, borderLeftWidth: 3, backgroundColor: theme.colors.surface, shadowColor: theme.colors.shadow },
           selected && { backgroundColor: theme.colors.primaryContainer },
           pressed && { opacity: 0.7 },
         ]}
@@ -386,7 +386,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     marginVertical: 4,
     borderRadius: 10,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
@@ -412,7 +411,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   customBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   row: {
@@ -439,7 +438,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   muscleLabel: {
-    fontSize: 11,
+    fontSize: 12,
   },
   empty: {
     alignItems: "center",

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Alert,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -51,7 +52,7 @@ import { formatDuration, formatDateShort, computeStreak } from "../../lib/format
 import { useFocusRefetch } from "../../lib/query";
 import { useSnackbar } from "../../components/SnackbarProvider";
 import { useLayout } from "../../lib/layout";
-import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
+import { flowCardStyle } from "../../components/ui/FlowContainer";
 
 async function loadHomeData() {
   const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
@@ -412,20 +413,25 @@ export default function Workouts() {
       {adherence.some((a) => a.scheduled) && (
         <View style={styles.adherence} accessibilityLabel={`Adherence: ${adherence.filter((a) => a.scheduled && a.completed).length} of ${adherence.filter((a) => a.scheduled).length} this week`}>
           <View style={styles.dots}>
-            {adherence.map((a, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  a.completed
-                    ? { backgroundColor: theme.colors.primary }
-                    : a.scheduled
-                    ? { backgroundColor: "transparent", borderWidth: 2, borderColor: theme.colors.onSurfaceVariant }
-                    : { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-                accessibilityLabel={`${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}: ${a.completed ? "completed" : a.scheduled ? "scheduled" : "rest day"}`}
-              />
-            ))}
+            <FlatList
+              data={adherence}
+              horizontal
+              scrollEnabled={false}
+              keyExtractor={(_, i) => String(i)}
+              renderItem={({ item: a, index: i }) => (
+                <View
+                  style={[
+                    styles.dot,
+                    a.completed
+                      ? { backgroundColor: theme.colors.primary }
+                      : a.scheduled
+                      ? { backgroundColor: "transparent", borderWidth: 2, borderColor: theme.colors.onSurfaceVariant }
+                      : { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                  accessibilityLabel={`${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}: ${a.completed ? "completed" : a.scheduled ? "scheduled" : "rest day"}`}
+                />
+              )}
+            />
           </View>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
             {adherence.filter((a) => a.scheduled && a.completed).length} of{" "}
@@ -506,10 +512,13 @@ export default function Workouts() {
             ) : (
               <>
                 {userTemplates.length > 0 && (
-                  <FlowContainer>
-                    {userTemplates.map((item) => (
+                  <FlatList
+                    data={userTemplates}
+                    keyExtractor={(item) => item.id}
+                    scrollEnabled={false}
+                    contentContainerStyle={styles.flowList}
+                    renderItem={({ item }) => (
                       <Card
-                        key={item.id}
                         style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                       >
                         <Card.Content style={styles.cardContent}>
@@ -541,8 +550,8 @@ export default function Workouts() {
                           />
                         </Card.Content>
                       </Card>
-                    ))}
-                  </FlowContainer>
+                    )}
+                  />
                 )}
 
                 {/* Starter Workouts */}
@@ -553,12 +562,15 @@ export default function Workouts() {
                         Starter Workouts
                       </Text>
                     </View>
-                    <FlowContainer>
-                      {starters.map((item) => {
+                    <FlatList
+                      data={starters}
+                      keyExtractor={(item) => item.id}
+                      scrollEnabled={false}
+                      contentContainerStyle={styles.flowList}
+                      renderItem={({ item }) => {
                         const meta = starterMeta(item.id);
                         return (
                           <Card
-                            key={item.id}
                             style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                           >
                             <Card.Content style={styles.cardContent}>
@@ -619,8 +631,8 @@ export default function Workouts() {
                             </Card.Content>
                           </Card>
                         );
-                      })}
-                    </FlowContainer>
+                      }}
+                    />
                   </>
                 )}
               </>
@@ -668,10 +680,13 @@ export default function Workouts() {
             ) : (
               <>
                 {userPrograms.length > 0 && (
-                  <FlowContainer>
-                    {userPrograms.map((item) => (
+                  <FlatList
+                    data={userPrograms}
+                    keyExtractor={(item) => item.id}
+                    scrollEnabled={false}
+                    contentContainerStyle={styles.flowList}
+                    renderItem={({ item }) => (
                       <Card
-                        key={item.id}
                         style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                         onPress={() => router.push(`/program/${item.id}`)}
                         onLongPress={() => confirmDeleteProgram(item)}
@@ -703,8 +718,8 @@ export default function Workouts() {
                           )}
                         </Card.Content>
                       </Card>
-                    ))}
-                  </FlowContainer>
+                    )}
+                  />
                 )}
 
                 {/* Starter Programs */}
@@ -715,10 +730,13 @@ export default function Workouts() {
                         Starter Programs
                       </Text>
                     </View>
-                    <FlowContainer>
-                      {starterPrograms.map((item) => (
+                    <FlatList
+                      data={starterPrograms}
+                      keyExtractor={(item) => item.id}
+                      scrollEnabled={false}
+                      contentContainerStyle={styles.flowList}
+                      renderItem={({ item }) => (
                         <Card
-                          key={item.id}
                           style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                         >
                           <Card.Content style={styles.cardContent}>
@@ -768,8 +786,8 @@ export default function Workouts() {
                             </Menu>
                           </Card.Content>
                         </Card>
-                      ))}
-                    </FlowContainer>
+                      )}
+                    />
                   </>
                 )}
               </>
@@ -808,12 +826,16 @@ export default function Workouts() {
             </Text>
           </View>
         ) : (
-          <FlowContainer>
-            {sessions.map((item, index) => {
+          <FlatList
+            data={sessions}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+            contentContainerStyle={styles.flowList}
+            renderItem={({ item, index }) => {
               const rpe = avgRPEs[item.id];
               const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
               return (
-              <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(300)}>
+              <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
               <Card
                 style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
                 onPress={() =>
@@ -849,8 +871,8 @@ export default function Workouts() {
               </Card>
               </Animated.View>
               );
-            })}
-          </FlowContainer>
+            }}
+          />
         )}
       </View>
 
@@ -861,6 +883,11 @@ export default function Workouts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  flowList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
   },
   banner: {
     marginBottom: 12,

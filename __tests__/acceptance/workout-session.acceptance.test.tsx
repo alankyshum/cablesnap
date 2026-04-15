@@ -57,7 +57,7 @@ jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().m
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), notificationAsync: jest.fn(), ImpactFeedbackStyle: { Light: 'light', Heavy: 'heavy' }, NotificationFeedbackType: { Success: 'success', Warning: 'warning' } }))
-jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn() }))
+jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn(), activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined), deactivateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn() }))
 jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 
@@ -136,7 +136,7 @@ describe('Workout Session Acceptance', () => {
     )
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const completeBtn = buttons.find((b) => b.text === 'Complete')
+    const completeBtn = buttons.find((b) => b.text === 'OK')
     await completeBtn.onPress()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-2')
@@ -165,7 +165,7 @@ describe('Workout Session Acceptance', () => {
     )
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const discardBtn = buttons.find((b) => b.text === 'Discard')
+    const discardBtn = buttons.find((b) => b.text === 'Delete')
     await discardBtn.onPress()
 
     expect(mockDb.cancelSession).toHaveBeenCalledWith('sess-3')
@@ -327,8 +327,8 @@ describe('Workout Session Acceptance', () => {
     const screen = renderScreen(<ActiveSession />)
     await screen.findByText('Bench Press')
 
-    // Paper Checkbox has status prop; accessible wrapper hides it from a11y queries
-    const unchecked = screen.UNSAFE_queryAllByProps({ status: 'unchecked' })
+    // Custom Pressable checkbox with accessibility labels
+    const unchecked = screen.queryAllByLabelText(/Mark set \d+ complete$/)
     expect(unchecked.length).toBeGreaterThanOrEqual(2)
     fireEvent.press(unchecked[0])
 
@@ -348,7 +348,7 @@ describe('Workout Session Acceptance', () => {
     const screen = renderScreen(<ActiveSession />)
     await screen.findByText('Bench Press')
 
-    const checked = screen.UNSAFE_queryAllByProps({ status: 'checked' })
+    const checked = screen.queryAllByLabelText(/Mark set \d+ incomplete$/)
     expect(checked.length).toBeGreaterThanOrEqual(1)
     fireEvent.press(checked[0])
 
@@ -372,7 +372,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(finishBtn)
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const completeBtn = buttons.find((b) => b.text === 'Complete')
+    const completeBtn = buttons.find((b) => b.text === 'OK')
     await completeBtn.onPress()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-nav')
@@ -398,7 +398,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(finishBtn)
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const completeBtn = buttons.find((b) => b.text === 'Complete')
+    const completeBtn = buttons.find((b) => b.text === 'OK')
     await completeBtn.onPress()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-empty')
@@ -422,7 +422,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(cancelBtn)
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const keepBtn = buttons.find((b) => b.text === 'Keep Going')
+    const keepBtn = buttons.find((b) => b.text === 'Cancel')
     expect(keepBtn).toBeDefined()
     expect(keepBtn.style).toBe('cancel')
 

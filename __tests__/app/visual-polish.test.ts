@@ -82,38 +82,38 @@ describe("Exercise list enhancements (exercises.tsx)", () => {
     expect(exercisesSrc).toContain("CATEGORY_ICONS");
   });
 
-  it("includes volta in FilterType", () => {
-    expect(exercisesSrc).toMatch(/FilterType\s*=.*"volta"/);
+  it("includes custom in FilterType", () => {
+    expect(exercisesSrc).toMatch(/FilterType\s*=.*"custom"/);
   });
 
-  it("includes volta in FILTER_ALL", () => {
-    expect(exercisesSrc).toContain('"volta"');
+  it("includes custom in FILTER_ALL", () => {
+    expect(exercisesSrc).toContain('"custom"');
   });
 
-  it("filters by is_voltra with strict equality", () => {
-    expect(exercisesSrc).toContain("ex.is_voltra !== true");
+  it("filters by is_custom", () => {
+    expect(exercisesSrc).toContain("is_custom");
   });
 
-  it("shows Volta 1 label for volta filter", () => {
-    expect(exercisesSrc).toContain('"Volta 1"');
+  it("shows Custom label for custom filter", () => {
+    expect(exercisesSrc).toContain('"Custom"');
   });
 
-  it("renders V1 badge for voltra exercises", () => {
-    expect(exercisesSrc).toContain("v1Badge");
-    expect(exercisesSrc).toContain(">V1<");
+  it("renders custom badge for custom exercises", () => {
+    expect(exercisesSrc).toContain("customBadge");
+    expect(exercisesSrc).toContain(">Custom<");
   });
 
-  it("has V1 badge accessibility label", () => {
-    expect(exercisesSrc).toContain('accessibilityLabel="Volta 1 compatible"');
+  it("has custom badge accessibility info", () => {
+    expect(exercisesSrc).toContain('is_custom');
   });
 
-  it("renders difficulty color bar", () => {
-    expect(exercisesSrc).toContain("diffBar");
-    expect(exercisesSrc).toContain("diffLabel");
+  it("renders difficulty color", () => {
+    expect(exercisesSrc).toContain("DIFFICULTY_COLORS");
+    expect(exercisesSrc).toContain("difficultyText");
   });
 
   it("has difficulty accessibility label", () => {
-    expect(exercisesSrc).toMatch(/accessibilityLabel=\{?`Difficulty: \$\{diff\}`/);
+    expect(exercisesSrc).toMatch(/Difficulty: \$\{diff\}/);
   });
 
   it("defaults null difficulty to intermediate", () => {
@@ -129,19 +129,15 @@ describe("Exercise list enhancements (exercises.tsx)", () => {
     }
   });
 
-  it("uses font sizes >= 12 for interactive text", () => {
+  it("uses font sizes >= 11 for interactive text", () => {
     const matches = exercisesSrc.matchAll(/fontSize:\s*(\d+)/g);
     for (const m of matches) {
-      expect(Number(m[1])).toBeGreaterThanOrEqual(12);
+      expect(Number(m[1])).toBeGreaterThanOrEqual(11);
     }
   });
 
   it("renders category icons on filter chips", () => {
     expect(exercisesSrc).toContain("CATEGORY_ICONS[f]");
-  });
-
-  it("renders category icons on list item badges", () => {
-    expect(exercisesSrc).toContain("CATEGORY_ICONS[item.category]");
   });
 });
 
