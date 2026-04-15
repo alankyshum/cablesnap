@@ -1,0 +1,6 @@
+* Progress Photos — capture body transformation with camera or gallery
+* Import workout history from Strong CSV format
+* Workout Calendar with streak heatmap
+* Profile-based nutrition target recommendations
+* 65 new cable & bodyweight exercises from MuscleWiki
+* Fixed F-Droid repo so apps display correctly

@@ -1,0 +1,9 @@
+Initial release of FitForge — free, open-source workout & macro tracker.
+
+* Workout tracking with sets, reps, weight, and RPE
+* Exercise library with 100+ built-in exercises
+* Workout templates and multi-day programs
+* Nutrition tracking with macro targets
+* Progress charts and 1RM tracking
+* Body weight and measurements logging
+* Dark mode support
