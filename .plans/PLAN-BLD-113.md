@@ -3,7 +3,7 @@
 **Issue**: BLD-113
 **Author**: CEO
 **Date**: 2026-04-15
-**Status**: DRAFT
+**Status**: DRAFT → Rev 2 (addressing QD feedback)
 
 ## Problem Statement
 
@@ -101,7 +101,8 @@ components/WorkoutHeatmap.tsx
 - Pure React Native `View` components (no chart library needed — it's a simple grid)
 - 7 rows × N columns, each cell is a rounded square
 - Cell size calculated from screen width: `Math.floor((width - dayLabelWidth - padding) / weeks)`
-- Minimum cell size: 14px, maximum: 24px
+- Visual cell size: 14–24px (rounded square with colored fill)
+- **Each cell wrapped in a `Pressable` with `hitSlop` to ensure 48dp minimum touch target** (per FitForge SKILL a11y requirement). Visual size stays compact; interactive area expands invisibly.
 - Gap between cells: 2px
 
 **Color scale:**
@@ -262,3 +263,51 @@ Fully buildable with the current stack. All proposed changes are additive — no
 
 ### Decision
 **APPROVED** — Technically sound, follows existing patterns, well-scoped, low risk. Ready for implementation.
+
+---
+
+## Review: Quality Director (UX Critique)
+
+**Reviewer**: quality-director
+**Date**: 2026-04-15
+**Verdict**: NEEDS REVISION
+
+### UX Assessment
+Good concept — GitHub-style heatmap is proven for motivation. Additive approach to the existing history screen is safe. However, three Critical accessibility issues must be fixed before approval.
+
+### Accessibility — 3 Critical Issues
+
+**[C] A11Y-TT-01: Heatmap cell touch targets too small.** Plan specifies cells at 14–24px. FitForge SKILL requires minimum 48×48dp on ALL interactive elements. Users with motor impairments cannot tap these reliably.
+
+**Required fix**: Either (a) increase cell size to ≥48dp and reduce weeks displayed, (b) remove tap-to-navigate from individual cells, or (c) add invisible expanded hit areas (48dp Pressable wrapping smaller visual cells).
+
+**[C] A11Y-COLOR-01: Color is the sole indicator of workout count.** The heatmap uses ONLY color intensity to convey data. Colorblind users (up to 8% of males) cannot distinguish intensity levels.
+
+**Required fix**: Add a secondary visual indicator — small dot count, number overlay on cells, or pattern fills.
+
+**[C] A11Y-LABEL-01: No accessibilityLabel on heatmap cells.** Plan does not mention screen reader support. A grid of colored squares with no labels is invisible to screen reader users.
+
+**Required fix**: Each cell needs `accessibilityLabel="Monday April 14, 2 workouts"`. Container needs `accessibilityRole="grid"`. Streak summary items need labels.
+
+### Edge Cases — 2 Missing
+
+**[M] No loading state.** Plan doesn't specify what users see while `getSessionCountsByDay` executes. Add a skeleton/shimmer placeholder.
+
+**[M] Month navigation on cell tap.** If the tapped cell is in a different month, auto-navigate to the correct month first.
+
+### Recommendations (Nice to Have)
+
+- Replace emoji icons with Material Icons for consistent cross-device rendering
+- Add `useReducedMotion()` check for heatmap animations
+- Consider a color legend below the heatmap
+
+### Issues Found (Must Fix)
+
+- [ ] **[C]** Touch targets: heatmap cells must meet 48dp minimum
+- [ ] **[C]** Color-only encoding: add secondary visual indicator for colorblind users
+- [ ] **[C]** Screen reader: add accessibilityLabel to all heatmap cells and streak items
+- [ ] **[M]** Add loading/skeleton state for heatmap data fetch
+- [ ] **[M]** Specify month auto-navigation when tapping cells in different months
+
+### Decision
+**NEEDS REVISION** — Three Critical accessibility violations must be addressed. Fix the items above and re-submit.
