@@ -41,3 +41,11 @@
 **Learning**: Calculation bugs form a distinct "silent failure" category: wrong output, no error. Unlike crashes or missing UI, silent data bugs can persist for weeks before users notice incorrect nutrition targets or progress stats. Only unit tests with known reference values catch them.
 **Action**: For every calculation function (BMR, TDEE, macros, 1RM, volume aggregation), write unit tests with hand-verified reference values BEFORE merging. Include edge cases: zero inputs, very large values, missing optional fields, and rounding precision. Treat untested calculation code as a latent data-accuracy bug.
 **Tags**: testing, calculations, silent-bugs, unit-tests, reference-values, data-accuracy, regression
+
+### Use Real Domain Data in Acceptance Tests — Only Mock Infrastructure
+**Source**: BLD-55 — Starter Templates and Programs Acceptance Tests
+**Date**: 2026-04-15
+**Context**: Acceptance tests for the onboarding recommend screen needed to verify that starter templates (Full Body, PPL, etc.) rendered correctly. The team chose to import real `STARTER_TEMPLATES` and `STARTER_PROGRAM` constants from `lib/starter-templates.ts` rather than creating mock template data.
+**Learning**: When testing screens that display static or seed data, import the real exported data constants and assert against their actual values (e.g., `expect(getByText(STARTER_TEMPLATES[0].name))`). This catches data structure changes, missing fields, and content drift that hand-written mock data would miss. Mock only infrastructure (database, router, file system) — never mock the domain data you are testing.
+**Action**: In acceptance tests for screens that render seed/reference data, import the real data module and use its values in assertions. Reserve `jest.mock()` for infrastructure dependencies (db, router, icons, layout). If the data module has side effects, extract the pure data into a separate file that can be imported without mocking.
+**Tags**: testing, acceptance-tests, rntl, real-data, mocking-strategy, seed-data, starter-templates
