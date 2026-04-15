@@ -1,3 +1,4 @@
+import { uuid } from "../uuid";
 import { query, queryOne, execute, getDatabase } from "./helpers";
 
 // ---- App Settings ----
@@ -49,7 +50,7 @@ export async function setScheduleDay(day: number, templateId: string | null): Pr
     await execute("DELETE FROM weekly_schedule WHERE day_of_week = ?", [day]);
     return;
   }
-  const id = crypto.randomUUID();
+  const id = uuid();
   await execute(
     `INSERT OR REPLACE INTO weekly_schedule (id, day_of_week, template_id, created_at)
      VALUES (?, ?, ?, ?)`,
@@ -128,7 +129,7 @@ export async function insertInteraction(
 ): Promise<void> {
   const database = await getDatabase();
   await database.withTransactionAsync(async () => {
-    const id = crypto.randomUUID();
+    const id = uuid();
     await database.runAsync(
       `INSERT INTO interaction_log (id, action, screen, detail, timestamp)
        VALUES (?, ?, ?, ?, ?)`,

@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { getDatabase } from "./db";
 import { recent as recentInteractions } from "./interactions";
+import { uuid } from "./uuid";
 import type { ErrorEntry, Interaction, ReportType } from "./types";
 
 declare const ErrorUtils: {
@@ -36,7 +37,7 @@ export async function logError(
 ): Promise<void> {
   try {
     const database = await getDatabase();
-    const id = crypto.randomUUID();
+    const id = uuid();
     await database.runAsync(
       `INSERT INTO error_log (id, message, stack, component, fatal, timestamp, app_version, platform, os_version)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,

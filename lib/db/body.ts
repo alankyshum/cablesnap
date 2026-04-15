@@ -1,4 +1,5 @@
 import type { BodyWeight, BodyMeasurements, BodySettings } from "../types";
+import { uuid } from "../uuid";
 import { query, queryOne, execute } from "./helpers";
 
 export async function getBodySettings(): Promise<BodySettings> {
@@ -30,7 +31,7 @@ export async function upsertBodyWeight(
   date: string,
   notes: string
 ): Promise<BodyWeight> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await execute(
     `INSERT INTO body_weight (id, weight, date, notes, logged_at) VALUES (?, ?, ?, ?, ?)
@@ -91,7 +92,7 @@ export async function upsertBodyMeasurements(
   date: string,
   vals: Omit<BodyMeasurements, "id" | "date" | "logged_at">
 ): Promise<BodyMeasurements> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await execute(
     `INSERT INTO body_measurements (id, date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes, logged_at)

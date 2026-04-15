@@ -1,4 +1,5 @@
 import type { FoodEntry, DailyLog, MacroTargets, Meal } from "../types";
+import { uuid } from "../uuid";
 import { query, queryOne, execute } from "./helpers";
 
 type FoodRow = {
@@ -46,7 +47,7 @@ export async function addFoodEntry(
   serving: string,
   favorite: boolean
 ): Promise<FoodEntry> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await execute(
     "INSERT INTO food_entries (id, name, calories, protein, carbs, fat, serving_size, is_favorite, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -80,7 +81,7 @@ export async function addDailyLog(
   meal: Meal,
   servings: number
 ): Promise<DailyLog> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await execute(
     "INSERT INTO daily_log (id, food_entry_id, date, meal, servings, logged_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -128,7 +129,7 @@ export async function deleteDailyLog(id: string): Promise<void> {
 export async function getMacroTargets(): Promise<MacroTargets> {
   const row = await queryOne<MacroTargets>("SELECT * FROM macro_targets LIMIT 1");
   if (row) return row;
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await execute(
     "INSERT INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, 2000, 150, 250, 65, ?)",

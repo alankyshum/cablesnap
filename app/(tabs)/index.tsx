@@ -874,30 +874,6 @@ export default function Workouts() {
         )}
       </View>
 
-      {/* Tools */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
-            Tools
-          </Text>
-        </View>
-        <Card
-          style={styles.flowCard}
-          onPress={() => router.push("/tools/timer")}
-          accessibilityLabel="Open interval timer"
-        >
-          <Card.Content style={styles.cardContent}>
-            <View style={styles.cardInfo}>
-              <Text variant="titleSmall">Interval Timer</Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                Tabata · EMOM · AMRAP
-              </Text>
-            </View>
-            <IconButton icon="timer-outline" size={24} iconColor={theme.colors.onSurfaceVariant} />
-          </Card.Content>
-        </Card>
-      </View>
-
     </ScrollView>
   );
 }
@@ -936,6 +912,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 12,
     marginBottom: 12,
     flexWrap: "wrap",

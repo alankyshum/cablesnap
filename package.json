@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@quidone/react-native-wheel-picker": "^1.6.4",
     "@react-native-community/netinfo": "^12.0.1",
     "@shopify/flash-list": "2.0.2",
     "@shopify/react-native-skia": "2.2.12",
@@ -32,6 +33,7 @@
     "expo": "~54.0.33",
     "expo-av": "~16.0.8",
     "expo-constants": "~18.0.13",
+    "expo-crypto": "~15.0.8",
     "expo-document-picker": "^55.0.13",
     "expo-file-system": "^55.0.16",
     "expo-haptics": "^55.0.14",
@@ -49,6 +51,7 @@
     "react-dom": "19.1.0",
     "react-hook-form": "^7.72.1",
     "react-native": "0.81.5",
+    "react-native-body-highlighter": "^3.2.0",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-paper": "^5.15.0",
     "react-native-reanimated": "~4.1.1",

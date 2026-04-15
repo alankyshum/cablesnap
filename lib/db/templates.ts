@@ -1,4 +1,5 @@
 import type { WorkoutTemplate, TemplateExercise } from "../types";
+import { uuid } from "../uuid";
 import { query, queryOne, execute, getDatabase } from "./helpers";
 import { mapRow } from "./exercises";
 
@@ -24,7 +25,7 @@ type TemplateExerciseRow = {
 };
 
 export async function createTemplate(name: string): Promise<WorkoutTemplate> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await execute(
     "INSERT INTO workout_templates (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
@@ -135,7 +136,7 @@ export async function duplicateTemplate(id: string): Promise<string> {
   const tpl = await getTemplateById(id);
   if (!tpl) throw new Error("Template not found");
 
-  const newId = crypto.randomUUID();
+  const newId = uuid();
   const now = Date.now();
   const name = `${tpl.name} (Copy)`;
 
@@ -147,10 +148,10 @@ export async function duplicateTemplate(id: string): Promise<string> {
 
     const linkMap = new Map<string, string>();
     for (const ex of tpl.exercises ?? []) {
-      const teId = crypto.randomUUID();
+      const teId = uuid();
       let linkId = ex.link_id;
       if (linkId) {
-        if (!linkMap.has(linkId)) linkMap.set(linkId, crypto.randomUUID());
+        if (!linkMap.has(linkId)) linkMap.set(linkId, uuid());
         linkId = linkMap.get(linkId)!;
       }
       await database.runAsync(
@@ -171,7 +172,7 @@ export async function duplicateProgram(id: string): Promise<string> {
   );
   if (!prog) throw new Error("Program not found");
 
-  const newId = crypto.randomUUID();
+  const newId = uuid();
   const now = Date.now();
   const name = `${prog.name} (Copy)`;
 
@@ -203,7 +204,7 @@ export async function duplicateProgram(id: string): Promise<string> {
       const tplId = templateCopies.get(day.template_id ?? "") ?? day.template_id;
       await database.runAsync(
         "INSERT INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
-        [crypto.randomUUID(), newId, tplId, day.position, day.label]
+        [uuid(), newId, tplId, day.position, day.label]
       );
     }
   });
@@ -219,7 +220,7 @@ export async function addExerciseToTemplate(
   targetReps = "8-12",
   restSeconds = 90
 ): Promise<TemplateExercise> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   await execute(
     `INSERT INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -328,7 +329,7 @@ export async function createExerciseLink(
   exerciseIds: string[]
 ): Promise<string> {
   const database = await getDatabase();
-  const linkId = crypto.randomUUID();
+  const linkId = uuid();
   await database.withTransactionAsync(async () => {
     for (const eid of exerciseIds) {
       await database.runAsync(

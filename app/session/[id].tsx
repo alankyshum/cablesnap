@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   AccessibilityInfo,
   FlatList,
   KeyboardAvoidingView,
@@ -66,6 +65,9 @@ import { suggest, type Suggestion } from "../../lib/rm";
 import TrainingModeSelector from "../../components/TrainingModeSelector";
 import SwipeToDelete from "../../components/SwipeToDelete";
 import { formatTime } from "../../lib/format";
+import { useLayout } from "../../lib/layout";
+import { confirmAction } from "../../lib/confirm";
+import WeightPicker from "../../components/WeightPicker";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -92,6 +94,7 @@ export default function ActiveSession() {
   useKeepAwake();
   const theme = useTheme();
   const router = useRouter();
+  const layout = useLayout();
   const { id, templateId } = useLocalSearchParams<{
     id: string;
     templateId?: string;
@@ -113,6 +116,7 @@ export default function ActiveSession() {
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [step, setStep] = useState(2.5);
+  const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const restFlash = useSharedValue(0);
   const restFlashStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(
@@ -166,6 +170,7 @@ export default function ActiveSession() {
     const body = await getBodySettings();
     const derived = body.weight_unit === "lb" ? 5 : 2.5;
     setStep(derived);
+    setUnit(body.weight_unit);
 
     // Build previous data
     const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
@@ -387,13 +392,6 @@ export default function ActiveSession() {
     };
   }, []);
 
-  const handleStep = (set: SetWithMeta, dir: 1 | -1) => {
-    const current = set.weight != null ? set.weight : 0;
-    const val = Math.max(0, current + dir * step);
-    handleUpdate(set.id, "weight", String(val));
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
   const handleCheck = async (set: SetWithMeta) => {
     if (set.completed) {
       await uncompleteSet(set.id);
@@ -511,69 +509,56 @@ export default function ActiveSession() {
   }, [groups, maxes]);
 
   const finish = () => {
-    Alert.alert(
+    confirmAction(
       "Complete Workout?",
       `Duration: ${formatTime(elapsed)}`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Complete",
-          onPress: async () => {
-            await completeSession(id!);
+      async () => {
+        await completeSession(id!);
 
-            // Auto-advance program if this session was started from a program
-            try {
-              const dayId = await getSessionProgramDayId(id!);
-              if (dayId) {
-                const day = await getProgramDayById(dayId);
-                if (day) {
-                  const result = await advanceProgram(day.program_id, dayId, id!);
-                  if (result.wrapped) {
-                    setSnackbar(`Cycle ${result.cycle} complete!`);
-                    AccessibilityInfo.announceForAccessibility(
-                      `Cycle ${result.cycle} complete! Program wrapping to day 1.`
-                    );
-                    await new Promise((r) => setTimeout(r, 1500));
-                  } else {
-                    AccessibilityInfo.announceForAccessibility(
-                      "Workout complete. Program advanced to next day."
-                    );
-                  }
-                }
+        try {
+          const dayId = await getSessionProgramDayId(id!);
+          if (dayId) {
+            const day = await getProgramDayById(dayId);
+            if (day) {
+              const result = await advanceProgram(day.program_id, dayId, id!);
+              if (result.wrapped) {
+                setSnackbar(`Cycle ${result.cycle} complete!`);
+                AccessibilityInfo.announceForAccessibility(
+                  `Cycle ${result.cycle} complete! Program wrapping to day 1.`
+                );
+                await new Promise((r) => setTimeout(r, 1500));
+              } else {
+                AccessibilityInfo.announceForAccessibility(
+                  "Workout complete. Program advanced to next day."
+                );
               }
-            } catch {
-              // Program advance failed — session is already saved, navigate normally
             }
+          }
+        } catch {
+          // Program advance failed — session is already saved, navigate normally
+        }
 
-            // Skip summary if no completed sets
-            const allSets = await getSessionSets(id!);
-            const done = allSets.filter((s) => s.completed);
-            if (done.length === 0) {
-              router.replace("/(tabs)");
-            } else {
-              router.replace(`/session/summary/${id}`);
-            }
-          },
-        },
-      ]
+        const allSets = await getSessionSets(id!);
+        const done = allSets.filter((s) => s.completed);
+        if (done.length === 0) {
+          router.replace("/(tabs)");
+        } else {
+          router.replace(`/session/summary/${id}`);
+        }
+      },
+      false
     );
   };
 
   const cancel = () => {
-    Alert.alert(
+    confirmAction(
       "Discard Workout?",
       "All logged sets will be lost.",
-      [
-        { text: "Keep Going", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: async () => {
-            await cancelSession(id!);
-            router.back();
-          },
-        },
-      ]
+      async () => {
+        await cancelSession(id!);
+        router.back();
+      },
+      true
     );
   };
 
@@ -617,7 +602,7 @@ export default function ActiveSession() {
         data={[]}
         renderItem={null}
         style={{ backgroundColor: theme.colors.background }}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <>
@@ -684,27 +669,27 @@ export default function ActiveSession() {
             )}
 
             <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
-            <Text
-              variant="titleMedium"
-              style={[styles.groupTitle, { color: theme.colors.primary }]}
-            >
-              {group.name}
-            </Text>
-
-            {/* Training mode selector for Volta exercises with multiple modes */}
-            {group.is_voltra && group.training_modes.length > 1 && (
-              <TrainingModeSelector
-                modes={group.training_modes}
-                selected={modes[group.exercise_id] ?? group.training_modes[0]}
-                exercise={group.name}
-                tempo={tempoDraft[group.exercise_id] ?? ""}
-                onSelect={(m) => handleModeChange(group.exercise_id, m)}
-                onTempoChange={(v) => {
-                  setTempoDraft((prev) => ({ ...prev, [group.exercise_id]: v }));
-                }}
-                onTempoBlur={() => handleTempoBlur(group.exercise_id, tempoDraft[group.exercise_id] ?? "")}
-              />
-            )}
+            <View style={styles.groupHeader}>
+              <Text
+                variant="titleMedium"
+                style={[styles.groupTitle, { color: theme.colors.primary }]}
+              >
+                {group.name}
+              </Text>
+              {group.is_voltra && group.training_modes.length > 1 && (
+                <TrainingModeSelector
+                  modes={group.training_modes}
+                  selected={modes[group.exercise_id] ?? group.training_modes[0]}
+                  exercise={group.name}
+                  tempo={tempoDraft[group.exercise_id] ?? ""}
+                  onSelect={(m) => handleModeChange(group.exercise_id, m)}
+                  onTempoChange={(v) => {
+                    setTempoDraft((prev) => ({ ...prev, [group.exercise_id]: v }));
+                  }}
+                  onTempoBlur={() => handleTempoBlur(group.exercise_id, tempoDraft[group.exercise_id] ?? "")}
+                />
+              )}
+            </View>
 
             {/* Header row */}
             <View style={styles.headerRow}>
@@ -722,13 +707,13 @@ export default function ActiveSession() {
               </Text>
               <Text
                 variant="labelSmall"
-                style={[styles.colInput, { color: theme.colors.onSurfaceVariant }]}
+                style={[styles.colLabel, { color: theme.colors.onSurfaceVariant }]}
               >
-                WEIGHT
+                {unit === "lb" ? "LB" : "KG"}
               </Text>
               <Text
                 variant="labelSmall"
-                style={[styles.colInput, { color: theme.colors.onSurfaceVariant }]}
+                style={[styles.colLabel, { color: theme.colors.onSurfaceVariant }]}
               >
                 REPS
               </Text>
@@ -822,33 +807,12 @@ export default function ActiveSession() {
                     {set.previous}
                   </Text>
                   <View style={styles.weightCol}>
-                    <IconButton
-                      icon="minus"
-                      size={24}
-                      onPress={() => handleStep(set, -1)}
-                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      accessibilityLabel={`Decrease weight by ${step}`}
-                      accessibilityRole="button"
-                      style={styles.stepBtn}
-                    />
-                    <TextInput
-                      mode="outlined"
-                      dense
-                      keyboardType="numeric"
-                      style={styles.weightInput}
-                      value={set.weight != null ? String(set.weight) : ""}
-                      onChangeText={(v) => handleUpdate(set.id, "weight", v)}
-                      placeholder="-"
+                    <WeightPicker
+                      value={set.weight}
+                      step={step}
+                      unit={unit}
+                      onValueChange={(v) => handleUpdate(set.id, "weight", String(v))}
                       accessibilityLabel={`Set ${set.set_number} weight`}
-                    />
-                    <IconButton
-                      icon="plus"
-                      size={24}
-                      onPress={() => handleStep(set, 1)}
-                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      accessibilityLabel={`Increase weight by ${step}`}
-                      accessibilityRole="button"
-                      style={styles.stepBtn}
                     />
                   </View>
                   <TextInput
@@ -1079,8 +1043,14 @@ const styles = StyleSheet.create({
   group: {
     marginBottom: 8,
   },
-  groupTitle: {
+  groupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     marginBottom: 8,
+    flexWrap: "wrap",
+  },
+  groupTitle: {
     fontWeight: "700",
   },
   headerRow: {
@@ -1110,6 +1080,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     height: 36,
     fontSize: 14,
+  },
+  colLabel: {
+    flex: 1,
+    marginHorizontal: 4,
+    textAlign: "center",
+    fontSize: 11,
   },
   colCheck: {
     width: 40,
@@ -1173,14 +1149,14 @@ const styles = StyleSheet.create({
   },
   rpeChip: {
     borderWidth: 1.5,
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    minWidth: 56,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    minWidth: 44,
     alignItems: "center",
   },
   rpeChipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
   },
   halfStepRow: {

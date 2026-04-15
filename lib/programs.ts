@@ -1,4 +1,5 @@
 import type { Program, ProgramDay } from "./types";
+import { uuid } from "./uuid";
 import { getDatabase } from "./db/helpers";
 
 // --------------- Programs ---------------
@@ -8,7 +9,7 @@ export async function createProgram(
   description = ""
 ): Promise<Program> {
   const database = await getDatabase();
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await database.runAsync(
     "INSERT INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at) VALUES (?, ?, ?, 0, NULL, ?, ?)",
@@ -182,7 +183,7 @@ export async function addProgramDay(
   label = ""
 ): Promise<ProgramDay> {
   const database = await getDatabase();
-  const id = crypto.randomUUID();
+  const id = uuid();
   await database.runAsync(
     "INSERT INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
     [id, programId, templateId, position, label]
@@ -273,7 +274,7 @@ export async function advanceProgram(
   await database.withTransactionAsync(async () => {
     await database.runAsync(
       "INSERT INTO program_log (id, program_id, day_id, session_id, completed_at) VALUES (?, ?, ?, ?, ?)",
-      [crypto.randomUUID(), programId, dayId, sessionId, now]
+      [uuid(), programId, dayId, sessionId, now]
     );
 
     const days = await database.getAllAsync<{ id: string; position: number }>(

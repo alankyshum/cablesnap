@@ -1,4 +1,5 @@
 import type { WorkoutSession, WorkoutSet, TrainingMode, MuscleGroup } from "../types";
+import { uuid } from "../uuid";
 import { query, queryOne, execute } from "./helpers";
 
 type SetRow = {
@@ -27,7 +28,7 @@ export async function startSession(
   name: string,
   programDayId?: string
 ): Promise<WorkoutSession> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   const now = Date.now();
   await execute(
     "INSERT INTO workout_sessions (id, template_id, name, started_at, notes, program_day_id) VALUES (?, ?, ?, ?, '', ?)",
@@ -131,7 +132,7 @@ export async function addSet(
   trainingMode?: TrainingMode | null,
   tempo?: string | null
 ): Promise<WorkoutSet> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   await execute(
     "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null, trainingMode ?? null, tempo ?? null]

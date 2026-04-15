@@ -1,17 +1,10 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
-import Svg, { Path } from "react-native-svg";
+import Body, { type Slug, type ExtendedBodyPart } from "react-native-body-highlighter";
 import type { MuscleGroup } from "../lib/types";
 import { MUSCLE_LABELS } from "../lib/types";
 import { muscle } from "../constants/theme";
-import {
-  BODY_OUTLINE_FRONT,
-  BODY_OUTLINE_REAR,
-  FRONT_PATHS,
-  REAR_PATHS,
-  ALL_MUSCLES,
-} from "./muscle-paths";
 
 type Props = {
   primary: MuscleGroup[];
@@ -19,95 +12,99 @@ type Props = {
   width?: number;
 };
 
-function colors(isDark: boolean) {
-  return isDark ? muscle.dark : muscle.light;
+const SLUG_MAP: Record<MuscleGroup, Slug[]> = {
+  chest: ["chest"],
+  back: ["upper-back", "lower-back"],
+  shoulders: ["deltoids"],
+  biceps: ["biceps"],
+  triceps: ["triceps"],
+  quads: ["quadriceps"],
+  hamstrings: ["hamstring"],
+  glutes: ["gluteal"],
+  calves: ["calves"],
+  core: ["abs", "obliques"],
+  forearms: ["forearm"],
+  traps: ["trapezius"],
+  lats: ["upper-back"],
+  full_body: [
+    "chest", "biceps", "abs", "obliques", "quadriceps", "deltoids",
+    "trapezius", "triceps", "forearm", "calves", "hamstring", "gluteal",
+    "upper-back", "lower-back", "adductors",
+  ],
+};
+
+function buildData(
+  groups: MuscleGroup[],
+  intensity: number,
+): ExtendedBodyPart[] {
+  const seen = new Set<Slug>();
+  const result: ExtendedBodyPart[] = [];
+  for (const g of groups) {
+    const slugs = SLUG_MAP[g] ?? [];
+    for (const s of slugs) {
+      if (!seen.has(s)) {
+        seen.add(s);
+        result.push({ slug: s, intensity });
+      }
+    }
+  }
+  return result;
 }
 
-function role(
-  group: MuscleGroup,
-  primary: MuscleGroup[],
-  secondary: MuscleGroup[]
-): "primary" | "secondary" | "inactive" {
-  const expanded = primary.includes("full_body") ? ALL_MUSCLES : primary;
-  if (expanded.includes(group)) return "primary";
-  if (secondary.includes(group)) return "secondary";
-  return "inactive";
-}
+function MuscleMapInner({ primary, secondary, width: w }: Props) {
+  const theme = useTheme();
+  const isDark = theme.dark;
+  const c = isDark ? muscle.dark : muscle.light;
+  const total = w ?? 280;
+  const scale = Math.min((total - 8) / 400, 1.2);
 
-function fill(r: "primary" | "secondary" | "inactive", c: ReturnType<typeof colors>) {
-  if (r === "primary") return c.primary;
-  if (r === "secondary") return c.secondary;
-  return c.inactive;
-}
+  const data = [
+    ...buildData(primary, 2),
+    ...buildData(secondary, 1),
+  ];
 
-function opacity(r: "primary" | "secondary" | "inactive") {
-  if (r === "primary") return 0.7;
-  if (r === "secondary") return 0.5;
-  return 0.15;
-}
+  const labels = (list: MuscleGroup[]) =>
+    list.filter((m) => m !== "full_body").map((m) => MUSCLE_LABELS[m]).join(", ");
 
-function stroke(r: "primary" | "secondary" | "inactive", c: ReturnType<typeof colors>) {
-  if (r === "primary") return { width: 2, dash: "" };
-  if (r === "secondary") return { width: 1, dash: "4,3" };
-  return { width: 1, dash: "" };
-}
+  const summary = [
+    primary.length > 0 ? `primary muscles: ${labels(primary)}` : "",
+    secondary.length > 0 ? `secondary muscles: ${labels(secondary)}` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
 
-function BodyView({
-  paths,
-  outline,
-  primary,
-  secondary,
-  size,
-  label,
-  isDark,
-}: {
-  paths: Partial<Record<MuscleGroup, string[]>>;
-  outline: string;
-  primary: MuscleGroup[];
-  secondary: MuscleGroup[];
-  size: number;
-  label: string;
-  isDark: boolean;
-}) {
-  const c = colors(isDark);
-  const height = size * 2.5;
+  const acc = summary
+    ? `Muscle diagram showing ${summary}`
+    : "Muscle diagram with no muscle data";
 
   return (
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={label}
-      style={{ width: size, height }}
+      accessibilityLabel={acc}
+      style={styles.container}
     >
-      <Svg width={size} height={height} viewBox="0 0 200 500">
-        <Path
-          d={outline}
-          fill="none"
-          stroke={c.outline}
-          strokeWidth={1.5}
-          fillRule="evenodd"
+      <View style={styles.horizontal}>
+        <Body
+          data={data}
+          gender="male"
+          side="front"
+          scale={scale}
+          colors={[c.secondary, c.primary]}
+          border={isDark ? "#555" : "#dfdfdf"}
+          hiddenParts={["hair"]}
         />
-        {(Object.entries(paths) as [MuscleGroup, string[]][]).map(([group, ds]) => {
-          const r = role(group, primary, secondary);
-          const s = stroke(r, c);
-          return ds.map((d, i) => (
-            <Path
-              key={`${group}-${i}`}
-              d={d}
-              fill={fill(r, c)}
-              fillOpacity={opacity(r)}
-              stroke={fill(r, c)}
-              strokeWidth={s.width}
-              strokeDasharray={s.dash || undefined}
-              accessibilityLabel={
-                r !== "inactive"
-                  ? `${r === "primary" ? "Primary" : "Secondary"} muscle: ${MUSCLE_LABELS[group]}`
-                  : undefined
-              }
-            />
-          ));
-        })}
-      </Svg>
+        <Body
+          data={data}
+          gender="male"
+          side="back"
+          scale={scale}
+          colors={[c.secondary, c.primary]}
+          border={isDark ? "#555" : "#dfdfdf"}
+          hiddenParts={["hair"]}
+        />
+      </View>
+      <Legend primary={primary} secondary={secondary} isDark={isDark} />
     </View>
   );
 }
@@ -122,7 +119,7 @@ function Legend({
   isDark: boolean;
 }) {
   const theme = useTheme();
-  const c = colors(isDark);
+  const c = isDark ? muscle.dark : muscle.light;
   const names = (list: MuscleGroup[]) =>
     list.filter((m) => m !== "full_body").map((m) => MUSCLE_LABELS[m]).join(", ");
 
@@ -150,66 +147,13 @@ function Legend({
       </View>
       {secondary.length > 0 && (
         <View style={styles.row}>
-          <View style={[styles.dot, { backgroundColor: c.secondary, borderStyle: "dashed", borderWidth: 1, borderColor: c.secondary }]} />
+          <View style={[styles.dot, { backgroundColor: c.secondary }]} />
           <Text variant="bodySmall" style={{ color: theme.colors.onSurface }}>
             <Text style={{ fontWeight: "700" }}>Secondary: </Text>
             {names(secondary)}
           </Text>
         </View>
       )}
-    </View>
-  );
-}
-
-function MuscleMapInner({ primary, secondary, width: w }: Props) {
-  const theme = useTheme();
-  const isDark = theme.dark;
-  const total = w ?? 280;
-  const narrow = total < 300;
-  const size = narrow ? Math.min(total - 16, 160) : Math.floor((total - 24) / 2);
-
-  const labels = (list: MuscleGroup[]) =>
-    list.map((m) => MUSCLE_LABELS[m]).join(", ");
-
-  const summary = [
-    primary.length > 0 ? `primary muscles: ${labels(primary)}` : "",
-    secondary.length > 0 ? `secondary muscles: ${labels(secondary)}` : "",
-  ]
-    .filter(Boolean)
-    .join("; ");
-
-  const acc = summary
-    ? `Muscle diagram showing ${summary}`
-    : "Muscle diagram with no muscle data";
-
-  return (
-    <View
-      accessible
-      accessibilityRole="image"
-      accessibilityLabel={acc}
-      style={styles.container}
-    >
-      <View style={narrow ? styles.vertical : styles.horizontal}>
-        <BodyView
-          paths={FRONT_PATHS}
-          outline={BODY_OUTLINE_FRONT}
-          primary={primary}
-          secondary={secondary}
-          size={size}
-          label="Front view"
-          isDark={isDark}
-        />
-        <BodyView
-          paths={REAR_PATHS}
-          outline={BODY_OUTLINE_REAR}
-          primary={primary}
-          secondary={secondary}
-          size={size}
-          label="Rear view"
-          isDark={isDark}
-        />
-      </View>
-      <Legend primary={primary} secondary={secondary} isDark={isDark} />
     </View>
   );
 }
@@ -224,12 +168,7 @@ const styles = StyleSheet.create({
   horizontal: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 12,
-  },
-  vertical: {
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 12,
+    gap: 4,
   },
   legend: {
     marginTop: 12,

@@ -1,4 +1,5 @@
 import type { Exercise } from "../types";
+import { uuid } from "../uuid";
 import { query, queryOne, execute, getDatabase } from "./helpers";
 
 type ExerciseRow = {
@@ -58,7 +59,7 @@ export async function getExerciseById(id: string): Promise<Exercise | null> {
 export async function createCustomExercise(
   exercise: Omit<Exercise, "id" | "is_custom">
 ): Promise<Exercise> {
-  const id = crypto.randomUUID();
+  const id = uuid();
   await execute(
     `INSERT INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
