@@ -25,3 +25,11 @@
 **Learning**: Metro's `config.server.headers` applies only to certain responses (primarily HTML). Web Workers and WASM assets served by Metro do not inherit these headers. Without COOP/COEP on ALL responses (including worker scripts), SharedArrayBuffer remains unavailable inside workers, and OPFS-backed storage fails silently. The fix is `config.server.enhanceMiddleware` — a middleware function that intercepts every response and sets headers universally.
 **Action**: When configuring cross-origin isolation headers for web (COOP/COEP), always use `enhanceMiddleware` in metro.config.js, not `server.headers`. Verify headers reach worker.js and .wasm files by inspecting the Network tab in DevTools. This applies to any library using WASM + Web Workers (sqlite, compression, cryptography).
 **Tags**: metro, coop, coep, shared-array-buffer, web-workers, wasm, expo-sqlite, web-platform, middleware
+
+### Expo Router Directory Routes Register as `directory/index`, Not `directory`
+**Source**: BLD-95, BLD-96 — Route name mismatch crashes app layout
+**Date**: 2026-04-15
+**Context**: The app declared `<Stack.Screen name="schedule" />` in `_layout.tsx`, but the route file lived at `app/schedule/index.tsx`. This caused `[Layout children]: No route named "schedule" exists` — crashing ALL navigation, including the onboarding "Get Started" button.
+**Learning**: When a route uses the directory pattern (`app/schedule/index.tsx` instead of `app/schedule.tsx`), Expo Router registers the route as `schedule/index`, not `schedule`. A `Stack.Screen` with `name="schedule"` will not match, causing a layout crash that breaks all navigation — not just that route.
+**Action**: When using directory-based routes (`app/X/index.tsx`), always set `name="X/index"` in the corresponding `Stack.Screen`. Add a route-name validation test (see testing patterns) to catch mismatches at build time.
+**Tags**: expo-router, stack-screen, directory-routes, routing, layout-crash, navigation, file-based-routing

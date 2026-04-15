@@ -25,3 +25,11 @@
 **Learning**: expo-router requires a module-level `jest.mock('expo-router', ...)` declared BEFORE importing any component that uses it. The critical piece is replacing `useFocusEffect` with `React.useEffect` so focus-based data loading triggers in tests. Declare `mockRouter` as a module-level `const` with `jest.fn()` methods so assertions can verify navigation calls.
 **Action**: Use this standard mock at the top of every flow test file (before component imports): `const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }; jest.mock('expo-router', () => { const R = require('react'); return { useRouter: () => mockRouter, useLocalSearchParams: () => ({}), useFocusEffect: (cb) => { R.useEffect(() => { const cleanup = cb(); return typeof cleanup === 'function' ? cleanup : undefined }, []) }, Stack: { Screen: () => null } } })`. Clear mockRouter in `beforeEach`.
 **Tags**: expo-router, jest, testing, rntl, usefocuseffect, mock, flow-test, react-native, navigation
+
+### Static Route-Name Validation Test for Expo Router
+**Source**: BLD-95, BLD-96 — Route name mismatch crashes app layout
+**Date**: 2026-04-15
+**Context**: A `Stack.Screen name="schedule"` mismatch went undetected through development, code review, and all existing tests — only caught when a user reported the "Get Started" button was broken. No test validated that declared route names matched actual route files.
+**Learning**: A static test can read `_layout.tsx`, extract all `Stack.Screen name="..."` values via regex, and validate each maps to an existing file under `app/` (checking `.tsx`, `_layout.tsx`, and directory existence). This catches directory/index mismatches, orphaned screen declarations, and typos before they reach production.
+**Action**: Add a route-name validation test that uses `fs.readFileSync` to parse `_layout.tsx` for route names and `fs.existsSync` to verify each one. Run it in CI. Pattern: `const names = [...layout.matchAll(/name="([^"]+)"/g)].map(m => m[1])` then `it.each(names)("route '%s' maps to file", name => expect(exists(name)).toBe(true))`.
+**Tags**: expo-router, regression-test, route-validation, static-analysis, testing, ci, navigation

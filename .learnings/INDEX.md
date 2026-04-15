@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-14
-Total learnings: 56
+Last updated: 2026-04-15
+Total learnings: 58
 
 ## How to Use This Knowledge Base
 
@@ -15,11 +15,11 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Patterns
 - [React Native + Expo](patterns/react-native.md) — 32 learnings
-- [Testing](patterns/testing.md) — 3 learnings
+- [Testing](patterns/testing.md) — 4 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 3 learnings
-- [Build Configuration](pitfalls/build-config.md) — 3 learnings
+- [Build Configuration](pitfalls/build-config.md) — 4 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 6 learnings
 
@@ -37,6 +37,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-95/96 | Expo Router Directory Routes Register as `directory/index` | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-15 | BLD-95/96 | Static Route-Name Validation Test for Expo Router | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-14 | BLD-90 | Lazy-Load Audio with replayAsync for Repeated Sound Effects | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-88 | Pure State Machine Guard Clauses Create Silent UI Failures | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-84 | Integer Arithmetic for Precise Decimal Calculations | Patterns | [react-native.md](patterns/react-native.md) |
