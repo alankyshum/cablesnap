@@ -149,7 +149,21 @@ A client-side achievement system that evaluates workout data against predefined 
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — 5 Critical + 3 Major issues (2026-04-15)
+
+Must fix before approval:
+1. AC-1: Add accessibilityLabel and accessibilityRole for every achievement badge (emoji icons read inconsistently by screen readers)
+2. AC-2: Add non-color differentiator for earned vs unearned state (lock icon, text label) — color alone fails colorblind users
+3. AC-3: Add accessibilityValue (min/max/now/text) to all progress bars
+4. AC-4: Add accessibilityLiveRegion="polite" to achievement notification card on post-workout summary
+5. AC-5: Specify minimum 48x48dp touch targets for achievement grid badges
+6. UX-1: Move max-3 limit into UX Design section, define stacking behavior (vertical stack, "+N more" link)
+7. UX-2: Define first-run retroactive unlock experience for existing users (10+ achievements detected at once)
+8. UX-3: Fix file location from app/body/achievements.tsx to app/progress/achievements.tsx (matches navigation hierarchy)
+
+Recommendations (nice to have): simplify schema (achievement_id as PK), add loading/empty/error states, check useReducedMotion for haptics, dark mode badge visibility.
+
+See BLD-130 issue comments for full review with detailed rationale.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
