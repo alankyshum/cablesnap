@@ -646,6 +646,25 @@ export default function Progress() {
               {chartCard}
               {singleCard}
               {measCard}
+              {/* Progress Photos card */}
+              <Card
+                style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                onPress={() => router.push("/body/photos")}
+                accessibilityLabel="Progress Photos"
+                accessibilityRole="button"
+                accessibilityHint="View and manage your progress photos"
+              >
+                <Card.Content>
+                  <View style={styles.cardHeader}>
+                    <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+                      Progress Photos
+                    </Text>
+                  </View>
+                  <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                    Track your visual transformation
+                  </Text>
+                </Card.Content>
+              </Card>
               <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8, marginTop: 8 }}>
                 Recent Entries
               </Text>

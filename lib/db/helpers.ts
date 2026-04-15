@@ -477,6 +477,28 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       timestamp INTEGER NOT NULL
     )`
   );
+
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS progress_photos (
+      id TEXT PRIMARY KEY,
+      file_path TEXT NOT NULL,
+      thumbnail_path TEXT,
+      capture_date TEXT NOT NULL DEFAULT (datetime('now')),
+      display_date TEXT NOT NULL,
+      pose_category TEXT,
+      note TEXT,
+      width INTEGER,
+      height INTEGER,
+      deleted_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_progress_photos_display_date ON progress_photos(display_date)"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_progress_photos_deleted ON progress_photos(deleted_at)"
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {

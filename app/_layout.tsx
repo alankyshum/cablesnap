@@ -309,21 +309,9 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="body/measurements"
+              name="body"
               options={{
-                headerShown: true,
-                title: "Log Measurements",
-                headerStyle,
-                headerTintColor,
-              }}
-            />
-            <Stack.Screen
-              name="body/goals"
-              options={{
-                headerShown: true,
-                title: "Body Goals",
-                headerStyle,
-                headerTintColor,
+                headerShown: false,
               }}
             />
             <Stack.Screen
