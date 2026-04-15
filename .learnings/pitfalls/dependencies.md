@@ -51,3 +51,11 @@
 **Learning**: The deterministic check uses string matching, not AST analysis. Modern RN cleanup patterns like `sub.remove()` are functionally correct but invisible to the grep. Adding a comment mentioning `removeEventListener` satisfies the check while documenting the equivalent pattern.
 **Action**: When using subscription-based listeners, add a comment containing `removeEventListener` near the cleanup return to satisfy qa-fitforge.sh CODE-02.
 **Tags**: qa-fitforge, CODE-02, listener-cleanup, AppState, removeEventListener, false-positive
+
+### Expo SDK Major Upgrades Require Config and Mock Fixups Beyond Version Bumps
+**Source**: BLD-149 — Upgrade Expo SDK 54 → 55
+**Date**: 2026-04-15
+**Context**: Upgrading from Expo SDK 54 to 55 via `npx expo install expo@latest` + `npx expo install --fix` resolved version warnings, but the build still failed until deprecated config fields were removed and test mocks were updated.
+**Learning**: Expo SDK major upgrades break in three layers beyond package versions: (1) deprecated app.config.ts fields are removed (SDK 55 removed `newArchEnabled` and `edgeToEdgeEnabled` — now defaults), (2) TypeScript types change (e.g., `NotificationContent.data` became optional), and (3) test mocks need updating for new library versions (react-native-reanimated v4, react-native-worklets). Running `npx expo install --fix` only handles layer 1 (versions); the other two require manual intervention.
+**Action**: After `npx expo install expo@latest && npx expo install --fix`: (1) check release notes for removed config fields and delete them from app.config.ts, (2) run `tsc --noEmit` to catch type-level API changes, (3) run the full test suite to identify mock failures, and (4) update jest mocks for any upgraded native bridge libraries. Always verify with `npx expo install --check` that zero warnings remain.
+**Tags**: expo, sdk-upgrade, breaking-changes, app-config, typescript, test-mocks, react-native-reanimated, migration
