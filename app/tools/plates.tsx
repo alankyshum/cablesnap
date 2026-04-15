@@ -104,7 +104,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
 
   return (
     <View>
-      {/* Target weight + bar selection */}
+      {/* [target] with [bar] */}
       <View style={styles.inputRow}>
         <View style={styles.targetWrap}>
           <TextInput
@@ -112,37 +112,52 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
             keyboardType="numeric"
             value={target}
             onChangeText={setTarget}
-            placeholder="Weight"
+            placeholder="Total"
             dense
             right={<TextInput.Affix text={unit} />}
             accessibilityLabel={"Target weight in " + label}
           />
         </View>
-        <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-          Bar
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          with bar
         </Text>
-        {sortedPresets.map(p => (
-          <Chip
-            key={p}
-            selected={custom === "" && bar === p}
-            showSelectedOverlay
-            onPress={() => selectBar(p)}
-            compact
-            accessibilityRole="radio"
-            accessibilityState={{ selected: custom === "" && bar === p }}
-            accessibilityLabel={p + " " + label + " bar"}
-          >{p}</Chip>
-        ))}
-        <View style={styles.customBarWrap}>
-          <TextInput
-            mode="outlined"
-            keyboardType="numeric"
-            value={custom}
-            onChangeText={v => { setCustom(v); setBar(null) }}
-            placeholder="Bar"
-            dense
-            accessibilityLabel={"Custom bar weight in " + label}
-          />
+        <View style={styles.barWrap} accessibilityRole="radiogroup" accessibilityLabel="Bar weight selection">
+          <View style={styles.barInputWrap}>
+            <TextInput
+              mode="outlined"
+              keyboardType="numeric"
+              value={custom !== "" ? custom : bar != null ? String(bar) : ""}
+              onChangeText={v => {
+                const num = parseFloat(v)
+                if (v === "" || isNaN(num)) {
+                  setCustom("")
+                  setBar(presets[presets.length - 1])
+                } else if (presets.includes(num as typeof presets[number])) {
+                  setCustom("")
+                  setBar(num)
+                } else {
+                  setCustom(v)
+                  setBar(null)
+                }
+              }}
+              placeholder="Bar"
+              dense
+              right={<TextInput.Affix text={unit} />}
+              accessibilityLabel={"Bar weight in " + label}
+            />
+          </View>
+          {sortedPresets.map(p => (
+            <Chip
+              key={p}
+              selected={custom === "" && bar === p}
+              showSelectedOverlay
+              onPress={() => selectBar(p)}
+              compact
+              accessibilityRole="radio"
+              accessibilityState={{ selected: custom === "" && bar === p }}
+              accessibilityLabel={p + " " + label + " bar"}
+            >{p}</Chip>
+          ))}
         </View>
       </View>
 
@@ -318,13 +333,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   targetWrap: {
-    width: 120,
+    width: 130,
   },
-  customBarWrap: {
-    width: 72,
+  barWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+  },
+  barInputWrap: {
+    width: 90,
   },
   row: {
     flexDirection: "row",

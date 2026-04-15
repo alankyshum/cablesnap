@@ -15,17 +15,16 @@ test.beforeEach(async ({ page }) => {
 });
 
 // ── Route Registry ───────────────────────────────────────────────────
-// Every route the app exposes, with a wait strategy for each.
+// Every route registered in app/_layout.tsx, grouped by category.
+// Dynamic [id] routes use known seed IDs so the screen renders content.
 
 type Screen = {
   name: string;
   path: string;
-  /** CSS selector to wait for before running checks. */
   waitFor?: string;
-  /** Some routes need the DB seeded with data to render meaningfully;
-   *  skip those that are purely dynamic-id-driven. */
 };
 
+// Tabs (app/(tabs)/)
 const TAB_SCREENS: Screen[] = [
   { name: "Workouts", path: "/" },
   { name: "Exercises", path: "/exercises" },
@@ -34,12 +33,15 @@ const TAB_SCREENS: Screen[] = [
   { name: "Settings", path: "/settings" },
 ];
 
+// Tools (app/tools/)
 const TOOL_SCREENS: Screen[] = [
+  { name: "Tools Hub", path: "/tools" },
   { name: "1RM Calculator", path: "/tools/rm" },
   { name: "Plate Calculator", path: "/tools/plates" },
   { name: "Interval Timer", path: "/tools/timer" },
 ];
 
+// Standalone screens with no dynamic ID
 const STANDALONE_SCREENS: Screen[] = [
   { name: "Workout History", path: "/history" },
   { name: "Feedback", path: "/feedback" },
@@ -47,15 +49,35 @@ const STANDALONE_SCREENS: Screen[] = [
   { name: "Body Measurements", path: "/body/measurements" },
   { name: "Body Goals", path: "/body/goals" },
   { name: "Macro Targets", path: "/nutrition/targets" },
+  { name: "Add Food", path: "/nutrition/add" },
   { name: "New Exercise", path: "/exercise/create" },
   { name: "New Template", path: "/template/create" },
+  { name: "Pick Exercise", path: "/template/pick-exercise" },
   { name: "New Program", path: "/program/create" },
+  { name: "Pick Template", path: "/program/pick-template" },
+];
+
+// Dynamic [id] routes — use seed IDs that exist after DB init
+const DYNAMIC_SCREENS: Screen[] = [
+  { name: "Exercise Detail", path: "/exercise/voltra-001" },
+  { name: "Edit Exercise", path: "/exercise/edit/voltra-001" },
+  { name: "Template Detail", path: "/template/starter-tpl-1" },
+  { name: "Program Detail", path: "/program/starter-prog-1" },
 ];
 
 const ALL_SCREENS: Screen[] = [
   ...TAB_SCREENS,
   ...TOOL_SCREENS,
   ...STANDALONE_SCREENS,
+  ...DYNAMIC_SCREENS,
+];
+
+// Onboarding screens are tested separately (they need the onboarding
+// gate to be active, i.e. __SKIP_ONBOARDING__ must NOT be set).
+const ONBOARDING_SCREENS: Screen[] = [
+  { name: "Onboarding: Welcome", path: "/onboarding/welcome" },
+  { name: "Onboarding: Setup", path: "/onboarding/setup" },
+  { name: "Onboarding: Recommend", path: "/onboarding/recommend" },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -554,6 +576,108 @@ test.describe("Responsiveness — content width constraint (tablet+)", () => {
           description: `${screen.name}: widest content is ${metrics.maxContentWidth}px on ${metrics.viewport}px viewport (max recommended: 720px)`,
         });
       }
+    });
+  }
+});
+
+// ── Onboarding Screens ──────────────────────────────────────────────
+// Tested without __SKIP_ONBOARDING__ — the onboarding gate must be
+// active so these screens actually render.
+
+test.describe("Design quality — Onboarding", () => {
+  async function gotoOnboardingScreen(page: Page, path: string) {
+    // Navigate to / first — onboarding gate redirects to /onboarding/welcome
+    await page.goto("/");
+    await page.waitForTimeout(500);
+
+    if (path === "/onboarding/welcome") return;
+
+    // Get Started → Setup
+    const getStarted = page.getByRole("button", { name: /get started/i });
+    if (await getStarted.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await getStarted.click();
+      await page.waitForTimeout(500);
+    }
+    if (path === "/onboarding/setup") return;
+
+    // Setup → Continue → Recommend
+    const beginner = page.getByText("Beginner");
+    if (await beginner.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await beginner.click();
+      await page.waitForTimeout(300);
+    }
+    const cont = page.getByRole("button", { name: /continue/i });
+    if (await cont.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await cont.click();
+      await page.waitForTimeout(1_000);
+    }
+  }
+
+  for (const screen of ONBOARDING_SCREENS) {
+    test.describe(screen.name, () => {
+      test.beforeEach(async ({ page }) => {
+        await gotoOnboardingScreen(page, screen.path);
+        await page.waitForTimeout(500);
+      });
+
+      test("responsiveness: no horizontal overflow", async ({ page }) => {
+        const m = await collectDesignMetrics(page);
+        expect(
+          m.overflowing,
+          `${m.overflowing.length} elements overflow the viewport:\n${m.overflowing.map((o) => `  <${o.tag}> "${o.text}"`).join("\n")}`,
+        ).toHaveLength(0);
+      });
+
+      test("responsiveness: content has edge padding (>= 8px inset)", async ({
+        page,
+      }) => {
+        const issues = await collectEdgePaddingIssues(page);
+        expect(
+          issues,
+          `${issues.length} elements flush against viewport edge (no padding):\n${issues.map((i) => `  <${i.tag}> "${i.text}" left=${i.leftInset}px right=${i.rightInset}px`).join("\n")}`,
+        ).toHaveLength(0);
+      });
+
+      test("accessibility: touch targets >= 44x44px", async ({
+        page,
+      }, testInfo) => {
+        const m = await collectDesignMetrics(page);
+        const undersized = m.touchTargets.filter(
+          (t) => t.w < 44 || t.h < 44,
+        );
+        if (undersized.length > 0) {
+          testInfo.annotations.push({
+            type: "touch-target-warning",
+            description: undersized
+              .map((t) => `"${t.text}" (${t.w}x${t.h})`)
+              .join("; "),
+          });
+        }
+        const appUndersized = undersized.filter(
+          (t) => !FRAMEWORK_BUTTONS.includes(t.text),
+        );
+        expect(
+          appUndersized,
+          `${appUndersized.length} app touch targets below 44px minimum:\n${appUndersized.map((t) => `  "${t.text}" (${t.w}x${t.h})`).join("\n")}`,
+        ).toHaveLength(0);
+      });
+
+      test("accessibility: text contrast WCAG AA", async ({
+        page,
+      }, testInfo) => {
+        const issues = await collectContrastIssues(page);
+        if (issues.length > 0) {
+          testInfo.annotations.push({
+            type: "contrast-warning",
+            description: issues
+              .map(
+                (i) =>
+                  `"${i.text}" ratio=${i.ratio} (fg=${i.fg}, bg=${i.bg}, ${i.fontSize}px)`,
+              )
+              .join("; "),
+          });
+        }
+      });
     });
   }
 });

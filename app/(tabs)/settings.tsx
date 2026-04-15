@@ -19,9 +19,11 @@ import {
   getAppSetting,
   setAppSetting,
   getSchedule,
+  getBodySettings,
+  updateBodySettings,
 } from "../../lib/db";
 import type { WorkoutCSVRow, NutritionCSVRow, BodyWeightCSVRow, BodyMeasurementsCSVRow } from "../../lib/db";
-import { getErrorCount, clearErrorLog } from "../../lib/errors";
+import { getErrorCount } from "../../lib/errors";
 import { csvEscape } from "../../lib/csv";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import {
@@ -101,7 +103,7 @@ const RANGES = [
   { value: "7", label: "7 days" },
   { value: "30", label: "30 days" },
   { value: "90", label: "90 days" },
-  { value: "all", label: "All Time" },
+  { value: "all", label: "All" },
 ] as const;
 
 function sinceForRange(range: string): number {
@@ -128,10 +130,20 @@ export default function Settings() {
   const [reminderTime, setReminderTime] = useState("08:00");
   const [permDenied, setPermDenied] = useState(false);
   const [scheduleCount, setScheduleCount] = useState(0);
+  const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
+  const [measureUnit, setMeasureUnit] = useState<"cm" | "in">("cm");
+  const [weightGoal, setWeightGoal] = useState<number | null>(null);
+  const [fatGoal, setFatGoal] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       getErrorCount().then(setCount);
+      getBodySettings().then((s) => {
+        setWeightUnit(s.weight_unit);
+        setMeasureUnit(s.measurement_unit as "cm" | "in");
+        setWeightGoal(s.weight_goal);
+        setFatGoal(s.body_fat_goal);
+      }).catch(() => {});
       getAppSetting("timer_sound_enabled").then((val) => {
         const on = val !== "false";
         setSoundEnabled(on);
@@ -313,7 +325,63 @@ export default function Settings() {
       <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
-            Reminders
+            Units
+          </Text>
+
+          <View style={styles.row}>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+              Weight
+            </Text>
+            <SegmentedButtons
+              value={weightUnit}
+              onValueChange={async (val) => {
+                const u = val as "kg" | "lb";
+                setWeightUnit(u);
+                try {
+                  await updateBodySettings(u, measureUnit, weightGoal, fatGoal);
+                } catch {
+                  setSnack("Could not save unit");
+                }
+              }}
+              buttons={[
+                { value: "kg", label: "kg" },
+                { value: "lb", label: "lb" },
+              ]}
+              density="medium"
+              style={{ width: 120 }}
+            />
+          </View>
+
+          <View style={[styles.row, { marginTop: 12 }]}>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+              Measurements
+            </Text>
+            <SegmentedButtons
+              value={measureUnit}
+              onValueChange={async (val) => {
+                const m = val as "cm" | "in";
+                setMeasureUnit(m);
+                try {
+                  await updateBodySettings(weightUnit, m, weightGoal, fatGoal);
+                } catch {
+                  setSnack("Could not save unit");
+                }
+              }}
+              buttons={[
+                { value: "cm", label: "cm" },
+                { value: "in", label: "in" },
+              ]}
+              density="medium"
+              style={{ width: 120 }}
+            />
+          </View>
+        </Card.Content>
+      </Card>
+
+      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+        <Card.Content>
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+            Preferences
           </Text>
 
           <View style={styles.row}>
@@ -434,16 +502,8 @@ export default function Settings() {
               </Button>
             </View>
           )}
-        </Card.Content>
-      </Card>
 
-      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
-            Timer
-          </Text>
-
-          <View style={styles.row}>
+          <View style={[styles.row, { marginTop: 16 }]}>
             <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
               Timer Sound
             </Text>
@@ -463,9 +523,8 @@ export default function Settings() {
               accessibilityHint="Enable or disable audio cues for workout timers"
             />
           </View>
-
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            Play audio cues for interval timers and rest timer countdowns.
+            Audio cues for interval timers and rest countdowns.
           </Text>
         </Card.Content>
       </Card>
@@ -473,7 +532,41 @@ export default function Settings() {
       <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
-            Data Export (CSV)
+            Data
+          </Text>
+
+          <View style={styles.buttonFlow}>
+            <Button
+              mode="contained"
+              icon="export"
+              onPress={handleExport}
+              loading={loading}
+              disabled={loading}
+              contentStyle={styles.exportBtnContent}
+              accessibilityLabel="Export all data as JSON"
+            >
+              Export All
+            </Button>
+
+            <Button
+              mode="outlined"
+              icon="import"
+              onPress={handleImport}
+              loading={loading}
+              disabled={loading}
+              contentStyle={styles.exportBtnContent}
+              accessibilityLabel="Import data"
+            >
+              Import
+            </Button>
+          </View>
+
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}>
+            Export as JSON or import a previously exported file. Duplicates are skipped.
+          </Text>
+
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+            CSV Export
           </Text>
 
           <SegmentedButtons
@@ -489,100 +582,61 @@ export default function Settings() {
 
           <Text
             variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16, marginTop: 8 }}
+            style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12, marginTop: 8 }}
             accessibilityLabel={`${counts.sessions} workout sessions, ${counts.entries} nutrition entries`}
           >
-            {counts.sessions} workout session{counts.sessions !== 1 ? "s" : ""},{" "}
-            {counts.entries} nutrition entr{counts.entries !== 1 ? "ies" : "y"}
+            {counts.sessions} session{counts.sessions !== 1 ? "s" : ""}, {counts.entries} entr{counts.entries !== 1 ? "ies" : "y"}
           </Text>
 
           <View style={styles.buttonFlow}>
             <Button
-              mode="contained"
+              mode="outlined"
               icon="file-export-outline"
               onPress={handleWorkoutCSV}
               loading={loading}
               disabled={loading}
-              compact
+              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export workouts as CSV"
             >
               Workouts
             </Button>
 
             <Button
-              mode="contained"
+              mode="outlined"
               icon="food-apple-outline"
               onPress={handleNutritionCSV}
               loading={loading}
               disabled={loading}
-              compact
+              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export nutrition as CSV"
             >
               Nutrition
             </Button>
 
             <Button
-              mode="contained"
+              mode="outlined"
               icon="scale-bathroom"
               onPress={handleBodyWeightCSV}
               loading={loading}
               disabled={loading}
-              compact
+              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export body weight as CSV"
             >
               Body Weight
             </Button>
 
             <Button
-              mode="contained"
+              mode="outlined"
               icon="human"
               onPress={handleBodyMeasurementsCSV}
               loading={loading}
               disabled={loading}
-              compact
+              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export body measurements as CSV"
             >
               Measurements
             </Button>
           </View>
-        </Card.Content>
-      </Card>
-
-      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
-            Data Management
-          </Text>
-
-          <View style={styles.buttonFlow}>
-            <Button
-              mode="contained"
-              icon="export"
-              onPress={handleExport}
-              loading={loading}
-              disabled={loading}
-              compact
-              accessibilityLabel="Export all data"
-            >
-              Export All
-            </Button>
-
-            <Button
-              mode="outlined"
-              icon="import"
-              onPress={handleImport}
-              loading={loading}
-              disabled={loading}
-              compact
-              accessibilityLabel="Import data"
-            >
-              Import
-            </Button>
-          </View>
-
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 12 }}>
-            Export as JSON or import a previously exported file. Duplicates are skipped.
-          </Text>
         </Card.Content>
       </Card>
 
@@ -597,7 +651,7 @@ export default function Settings() {
               mode="contained"
               icon="bug-outline"
               onPress={() => router.push({ pathname: "/feedback", params: { type: "bug" } })}
-              compact
+              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Report a bug"
             >
               Report Bug
@@ -607,7 +661,7 @@ export default function Settings() {
               mode="outlined"
               icon="lightbulb-outline"
               onPress={() => router.push({ pathname: "/feedback", params: { type: "feature" } })}
-              compact
+              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Request a feature"
             >
               Feature Request
@@ -617,26 +671,12 @@ export default function Settings() {
               mode="outlined"
               icon="format-list-bulleted"
               onPress={() => router.push("/errors")}
-              compact
+              contentStyle={styles.exportBtnContent}
               accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}
             >
               Errors ({count})
             </Button>
 
-            <Button
-              mode="outlined"
-              icon="delete-outline"
-              onPress={async () => {
-                await clearErrorLog();
-                setCount(0);
-                setSnack("Error log cleared");
-              }}
-              compact
-              textColor={theme.colors.error}
-              accessibilityLabel="Clear error log"
-            >
-              Clear Log
-            </Button>
           </View>
         </Card.Content>
       </Card>
@@ -693,6 +733,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  exportBtnContent: {
+    paddingHorizontal: 8,
   },
   timeInput: {
     borderWidth: 1,

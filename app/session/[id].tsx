@@ -27,7 +27,7 @@ import {
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useKeepAwake } from "expo-keep-awake";
+import { activateKeepAwakeAsync } from "expo-keep-awake";
 import { play as playAudio, setEnabled as setAudioEnabled } from "../../lib/audio";
 import {
   addSet,
@@ -91,7 +91,11 @@ const RPE_LABELS: Record<number, string> = {
 };
 
 export default function ActiveSession() {
-  useKeepAwake();
+  useEffect(() => {
+    activateKeepAwakeAsync().catch(() => {
+      // Wake Lock unavailable on web without secure context — non-critical
+    });
+  }, []);
   const theme = useTheme();
   const router = useRouter();
   const layout = useLayout();

@@ -1,9 +1,11 @@
 import { Tabs, useRouter } from "expo-router";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { IconButton, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useLayout } from "../../lib/layout";
 const NARROW_THRESHOLD = 380;
+
+type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 export default function TabLayout() {
   const theme = useTheme();
@@ -26,6 +28,16 @@ export default function TabLayout() {
         >
           {title}
         </Text>
+      );
+    };
+
+  const renderHeaderTitle = (icon: IconName, title: string) =>
+    function HeaderTitle() {
+      return (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <MaterialCommunityIcons name={icon} size={22} color={theme.colors.onSurface} />
+          <Text style={{ fontSize: 18, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
+        </View>
       );
     };
 
@@ -55,6 +67,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Workouts",
+          headerTitle: renderHeaderTitle("arm-flex", "Workouts"),
           tabBarLabel: renderLabel(narrow ? "Train" : "Workouts"),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="arm-flex" size={size} color={color} />
@@ -76,6 +89,7 @@ export default function TabLayout() {
         name="exercises"
         options={{
           title: "Exercises",
+          headerTitle: renderHeaderTitle("format-list-bulleted", "Exercises"),
           tabBarLabel: renderLabel(narrow ? "Library" : "Exercises"),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
@@ -90,6 +104,7 @@ export default function TabLayout() {
         name="nutrition"
         options={{
           title: "Nutrition",
+          headerTitle: renderHeaderTitle("food-apple", "Nutrition"),
           tabBarLabel: renderLabel("Nutrition"),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="food-apple" size={size} color={color} />
@@ -100,6 +115,7 @@ export default function TabLayout() {
         name="progress"
         options={{
           title: "Progress",
+          headerTitle: renderHeaderTitle("chart-line", "Progress"),
           tabBarLabel: renderLabel("Progress"),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
@@ -114,6 +130,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: "Settings",
+          headerTitle: renderHeaderTitle("cog", "Settings"),
           tabBarLabel: renderLabel("Settings"),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="cog" size={size} color={color} />

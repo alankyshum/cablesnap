@@ -12,6 +12,9 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+// Note: Chip is still used for filter chips at the top (they ARE interactive).
+// The category badge inside each list item uses View+Text to avoid nested
+// <button> elements on web (Chip renders as <button> even without onPress).
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { addExerciseToTemplate, addSet, getAllExercises, getTemplateExerciseCount } from "../../lib/db";
 import {
@@ -101,16 +104,16 @@ export default function PickExercise() {
             {item.name}{item.is_custom ? " (Custom)" : ""}
           </Text>
           <View style={styles.row}>
-            <Chip
-              compact
-              textStyle={styles.chipText}
+            <View
               style={[
                 styles.badge,
                 { backgroundColor: theme.colors.primaryContainer },
               ]}
             >
-              {CATEGORY_LABELS[item.category]}
-            </Chip>
+              <Text style={[styles.chipText, { color: theme.colors.onPrimaryContainer }]}>
+                {CATEGORY_LABELS[item.category]}
+              </Text>
+            </View>
             <Text
               variant="bodySmall"
               style={{
@@ -211,10 +214,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   badge: {
-    paddingVertical: 0,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   chipText: {
     fontSize: 12,
+    fontWeight: "500",
   },
   empty: {
     alignItems: "center",
