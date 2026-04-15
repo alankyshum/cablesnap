@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +11,7 @@ import {
 import {
   Button,
   Chip,
+  IconButton,
   SegmentedButtons,
   Snackbar,
   Text,
@@ -17,6 +19,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -32,12 +35,22 @@ import {
   MUSCLE_GROUPS_BY_REGION,
   MUSCLE_LABELS,
 } from "../lib/types";
+import { parseExerciseDescription } from "../lib/exercise-nlp";
 
 type Props = {
   initial?: Exercise;
   onSave: (data: Omit<Exercise, "id" | "is_custom">) => Promise<void>;
   title: string;
 };
+
+const NL_EXAMPLES = [
+  "incline dumbbell bench press",
+  "barbell back squat",
+  "cable lat pulldown",
+  "bodyweight pull-ups",
+  "kettlebell goblet squat",
+  "seated dumbbell shoulder press",
+];
 
 export default function ExerciseForm({ initial, onSave, title }: Props) {
   const theme = useTheme();
@@ -57,6 +70,65 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
   const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; category?: string; muscles?: string }>({});
   const [toast, setToast] = useState("");
+
+  const [nlInput, setNlInput] = useState("");
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  const [nlPlaceholderIdx] = useState(() => Math.floor(Math.random() * NL_EXAMPLES.length));
+  const flashAnim = useRef(new Animated.Value(0)).current;
+
+  const applyNlParse = useCallback(() => {
+    const text = nlInput.trim();
+    if (!text) return;
+
+    const result = parseExerciseDescription(text);
+    const filled = new Set<string>();
+
+    if (result.name) {
+      setName(result.name);
+      filled.add("name");
+    }
+    if (result.category) {
+      setCategory(result.category);
+      filled.add("category");
+    }
+    if (result.equipment) {
+      setEquipment(result.equipment);
+      filled.add("equipment");
+    }
+    if (result.difficulty) {
+      setDifficulty(result.difficulty);
+      filled.add("difficulty");
+    }
+    if (result.primary_muscles.length > 0) {
+      setPrimary(new Set(result.primary_muscles));
+      filled.add("primary_muscles");
+    }
+    if (result.secondary_muscles.length > 0) {
+      setSecondary(new Set(result.secondary_muscles));
+      filled.add("secondary_muscles");
+    }
+
+    setAutoFilledFields(filled);
+    setDirty(true);
+    setErrors({});
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    flashAnim.setValue(1);
+    Animated.timing(flashAnim, {
+      toValue: 0,
+      duration: 1200,
+      useNativeDriver: false,
+    }).start();
+
+    const fieldCount = filled.size;
+    setToast(`Auto-filled ${fieldCount} field${fieldCount === 1 ? "" : "s"}`);
+  }, [nlInput, flashAnim]);
+
+  const autoFillHighlight = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["transparent", theme.colors.primaryContainer],
+  });
 
   const toggleMuscle = useCallback(
     (set: Set<MuscleGroup>, setter: (s: Set<MuscleGroup>) => void, muscle: MuscleGroup) => {
@@ -122,7 +194,58 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <>
+            {/* Quick-fill from description */}
+            {!initial && (
+              <View style={[styles.nlSection, { borderBottomColor: theme.colors.outlineVariant }]}>
+                <Text
+                  variant="labelLarge"
+                  style={{ color: theme.colors.onSurface, marginBottom: 4 }}
+                >
+                  Describe your exercise
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}
+                >
+                  Type a description and we&apos;ll fill in the details
+                </Text>
+                <View style={styles.nlRow}>
+                  <TextInput
+                    value={nlInput}
+                    onChangeText={setNlInput}
+                    onSubmitEditing={applyNlParse}
+                    placeholder={`e.g. "${NL_EXAMPLES[nlPlaceholderIdx]}"`}
+                    mode="outlined"
+                    dense
+                    style={styles.nlInput}
+                    accessibilityLabel="Describe exercise in natural language"
+                    returnKeyType="go"
+                    blurOnSubmit={false}
+                  />
+                  <IconButton
+                    icon="auto-fix"
+                    mode="contained"
+                    onPress={applyNlParse}
+                    disabled={!nlInput.trim()}
+                    accessibilityLabel="Auto-fill from description"
+                    size={22}
+                    style={styles.nlButton}
+                  />
+                </View>
+                {autoFilledFields.size > 0 && (
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: theme.colors.primary, marginTop: 4 }}
+                    accessibilityLiveRegion="polite"
+                  >
+                    Fields highlighted below were auto-filled. Tap any to adjust.
+                  </Text>
+                )}
+              </View>
+            )}
+
             {/* Name */}
+            <Animated.View style={{ backgroundColor: autoFilledFields.has("name") ? autoFillHighlight : "transparent", borderRadius: 8 }}>
             <TextInput
               label="Exercise Name"
               value={name}
@@ -143,8 +266,10 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 {errors.name ?? `${name.length}/100`}
               </Text>
             </View>
+            </Animated.View>
 
             {/* Category */}
+            <Animated.View style={{ backgroundColor: autoFilledFields.has("category") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
             <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
               Category *
             </Text>
@@ -178,8 +303,10 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 {errors.category}
               </Text>
             )}
+            </Animated.View>
 
             {/* Equipment */}
+            <Animated.View style={{ backgroundColor: autoFilledFields.has("equipment") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
             <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
               Equipment
             </Text>
@@ -204,8 +331,10 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 </Chip>
               )}
             />
+            </Animated.View>
 
             {/* Difficulty */}
+            <Animated.View style={{ backgroundColor: autoFilledFields.has("difficulty") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
             <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
               Difficulty
             </Text>
@@ -215,8 +344,10 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
               buttons={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABELS[d] }))}
               style={styles.segment}
             />
+            </Animated.View>
 
             {/* Primary Muscles */}
+            <Animated.View style={{ backgroundColor: autoFilledFields.has("primary_muscles") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
             <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
               Primary Muscles *
             </Text>
@@ -252,8 +383,10 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 {errors.muscles}
               </Text>
             )}
+            </Animated.View>
 
             {/* Secondary Muscles */}
+            <Animated.View style={{ backgroundColor: autoFilledFields.has("secondary_muscles") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
             <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
               Secondary Muscles
             </Text>
@@ -281,6 +414,8 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
               </View>
             ))}
 
+            </Animated.View>
+
             {/* Instructions */}
             <TextInput
               label="Instructions (optional)"
@@ -301,6 +436,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 loading={saving}
                 disabled={saving}
                 style={styles.saveBtn}
+                contentStyle={{ paddingVertical: 8 }}
                 accessibilityLabel={`Save ${title.toLowerCase()}`}
               >
                 Save
@@ -310,6 +446,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 onPress={back}
                 disabled={saving}
                 style={styles.cancelBtn}
+                contentStyle={{ paddingVertical: 8 }}
                 accessibilityLabel="Cancel"
               >
                 Cancel
@@ -345,4 +482,8 @@ const styles = StyleSheet.create({
   actions: { marginTop: 24, gap: 12 },
   saveBtn: { borderRadius: 8 },
   cancelBtn: { borderRadius: 8 },
+  nlSection: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth },
+  nlRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  nlInput: { flex: 1 },
+  nlButton: { marginTop: 6 },
 });
