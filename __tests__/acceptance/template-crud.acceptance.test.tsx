@@ -33,6 +33,23 @@ jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().m
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 
+// Mock ExercisePickerSheet to avoid Portal infinite-update loop in test renderer
+jest.mock('../../components/ExercisePickerSheet', () => {
+  const RealReact = require('react')
+  const { getAllExercises } = require('../../lib/db')
+  // eslint-disable-next-line react/display-name
+  const MockPicker = ({ visible }: { visible: boolean; onDismiss: () => void; onPick: (e: unknown) => void }) => {
+    RealReact.useEffect(() => {
+      if (visible) getAllExercises()
+    }, [visible])
+    if (!visible) return null
+    return RealReact.createElement('View', { testID: 'exercise-picker-sheet' },
+      RealReact.createElement('View', { accessibilityLabel: 'Exercise picker open' })
+    )
+  }
+  return { __esModule: true, default: MockPicker }
+})
+
 const benchPress = createExercise({ id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'] })
 const squat = createExercise({ id: 'ex-2', name: 'Squat', category: 'legs_glutes', primary_muscles: ['quads'] })
 
