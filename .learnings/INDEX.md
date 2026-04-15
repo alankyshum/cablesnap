@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-15
-Total learnings: 69
+Total learnings: 70
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 37 learnings
+- [React Native + Expo](patterns/react-native.md) — 38 learnings
 - [Testing](patterns/testing.md) — 5 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-120 | Deterministic Multi-Pass Name Matching for Data Import | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-25/26 | Silent Calculation Bugs Require Reference-Value Unit Tests | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-15 | BLD-27 | Product Pivots Cascade Through Data Models | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-15 | BLD-63 | Proactive Interaction History for Crash Diagnostics | Patterns | [react-native.md](patterns/react-native.md) |

@@ -297,3 +297,11 @@
 **Learning**: Domain calculation logic (BMR, TDEE, macros, 1RM estimation, periodization) should live in a pure `lib/` module with zero React/storage dependencies. This enables: (1) unit testing with reference values, (2) reuse across multiple screens, (3) edge case handling (calorie floors, extreme inputs) tested independently of UI state.
 **Action**: Extract any domain calculation into `lib/<domain>-calc.ts` as pure functions. Auto-populate input fields from existing data (e.g., latest body_weight entry) but allow manual override. Store calculated results as defaults that users can modify. Enforce safety floors (e.g., 1200 kcal minimum) with user-visible warnings.
 **Tags**: architecture, pure-functions, domain-logic, testability, nutrition, calculation, separation-of-concerns
+
+### Deterministic Multi-Pass Name Matching for Data Import
+**Source**: BLD-120 — Import Workout Data from Strong CSV
+**Date**: 2026-04-15
+**Context**: Importing workout data from Strong required mapping exercise names between two apps with different naming conventions (Strong uses "Exercise (Equipment)" format, FitForge uses "Equipment Exercise"). Fuzzy matching (Levenshtein) was rejected due to unpredictable results and testing difficulty.
+**Learning**: A deterministic multi-pass matching strategy produces predictable, fully testable results for cross-app data import. The effective pass order is: (1) exact case-insensitive match, (2) normalize + extract parentheticals and rearrange (e.g., "Bench Press (Barbell)" → try "Barbell Bench Press"), (3) substring containment (either direction), (4) hardcoded alias lookup table for common abbreviations. Each pass has a clear confidence level (exact/possible/none) enabling grouped UX.
+**Action**: When building data import from another app, implement matching as ordered passes with decreasing confidence rather than a single fuzzy algorithm. Classify results by confidence level and present grouped in the UI (auto-mapped / needs confirmation / will create new). This pattern scales to new import sources by adding source-specific normalization passes without changing the core architecture.
+**Tags**: import, data-migration, name-matching, deterministic, csv, exercise, cross-app, architecture
