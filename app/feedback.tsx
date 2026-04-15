@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Linking, StyleSheet, View } from "react-native";
+import { useLayout } from "../lib/layout";
 import { FlashList } from "@shopify/flash-list";
 import {
   Button,
@@ -32,6 +33,7 @@ const TYPE_OPTIONS = [
 
 export default function FeedbackScreen() {
   const theme = useTheme();
+  const layout = useLayout();
   const params = useLocalSearchParams<{ type?: string }>();
 
   const initial = (params.type === "bug" || params.type === "feature" || params.type === "crash")
@@ -191,6 +193,7 @@ export default function FeedbackScreen() {
         data={ITEMS}
         keyExtractor={(item) => item}
         style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding }}
         renderItem={() => (
           <View>
             <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>

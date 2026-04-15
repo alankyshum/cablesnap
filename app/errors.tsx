@@ -5,10 +5,12 @@ import { Button, Card, Chip, Snackbar, Text, useTheme } from "react-native-paper
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { getRecentErrors, clearErrorLog } from "../lib/errors";
+import { useLayout } from "../lib/layout";
 import type { ErrorEntry } from "../lib/types";
 
 export default function Errors() {
   const theme = useTheme();
+  const layout = useLayout();
   const nav = useNavigation();
   const [errors, setErrors] = useState<ErrorEntry[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export default function Errors() {
 
   if (errors.length === 0) {
     return (
-      <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.empty, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <MaterialCommunityIcons
           name="check-circle-outline"
           size={64}
@@ -85,6 +87,7 @@ export default function Errors() {
       <FlashList
         data={errors}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding }}
         renderItem={({ item }) => (
           <Card
             style={[styles.card, { backgroundColor: theme.colors.surface }]}
