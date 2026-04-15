@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text, TextInput, useTheme } from "react-native-paper";
 import WheelPicker from "@quidone/react-native-wheel-picker";
@@ -15,7 +15,7 @@ type Props = {
 const MIN = 0;
 const MAX = 500;
 
-export default function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel }: Props) {
+function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel }: Props) {
   const theme = useTheme();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -100,6 +100,8 @@ export default function WeightPicker({ value, step, unit, onValueChange, accessi
     </View>
   );
 }
+
+export default memo(WeightPicker);
 
 const styles = StyleSheet.create({
   container: {

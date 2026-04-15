@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Pressable,
@@ -19,7 +19,7 @@ type Props = {
   onTempoBlur: () => void;
 };
 
-export default function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTempoChange, onTempoBlur }: Props) {
+function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTempoChange, onTempoBlur }: Props) {
   const theme = useTheme();
   const [tooltip, setTooltip] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,6 +111,8 @@ export default function TrainingModeSelector({ modes, selected, exercise, tempo,
     </View>
   );
 }
+
+export default memo(TrainingModeSelector);
 
 const styles = StyleSheet.create({
   container: {
