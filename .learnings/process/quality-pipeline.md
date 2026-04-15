@@ -25,3 +25,11 @@
 **Learning**: Documenting pitfalls in `.learnings/` is necessary but not sufficient. Agents do not automatically consult the knowledge base before implementation. Without an explicit "read learnings" step in the implementation workflow, the same mistakes will recur regardless of how well they are documented.
 **Action**: Every implementation issue spec should include a pre-implementation step: "Review `.learnings/INDEX.md` for relevant pitfalls before writing code." Reviewers should check whether a PR repeats any documented pitfall and flag it as a regression, not just a bug. Consider adding a checklist item to issue templates: "[ ] Reviewed `.learnings/pitfalls/` for relevant gotchas."
 **Tags**: process, knowledge-base, learnings, recurrence, review-checklist, quality, cross-project
+
+### Verify All Output Formats in Multi-Format Share/Export Flows
+**Source**: BLD-72 — handleShare() only shares JSON, not human-readable text
+**Date**: 2026-04-15
+**Context**: Crash report feature wrote both .txt and .json files but the share handler only attached the .json file. The human-readable text format — the one users actually need — was generated but never shared. Caught post-merge by reviewer.
+**Learning**: When code generates multiple output formats (text, JSON, CSV), it is common for only one format to be wired into the share/display/export flow. The unused format passes all tests because it is written correctly — it is just never delivered to the user. This is a silent omission bug.
+**Action**: For any feature that produces multiple output formats, add a reviewer checklist item: "Verify each generated format is actually used in the share/display/export path." Write at least one test per format that asserts the format appears in the final output (e.g., share payload includes .txt attachment). Don't test just generation — test delivery.
+**Tags**: code-review, share, export, multi-format, silent-bug, checklist, quality

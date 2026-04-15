@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-15
-Total learnings: 64
+Total learnings: 69
 
 ## How to Use This Knowledge Base
 
@@ -14,8 +14,8 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 35 learnings
-- [Testing](patterns/testing.md) — 4 learnings
+- [React Native + Expo](patterns/react-native.md) — 37 learnings
+- [Testing](patterns/testing.md) — 5 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 3 learnings
@@ -25,11 +25,11 @@ Before starting work on a task, search this index for relevant learnings:
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 3 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 4 learnings
 - [PR Workflow](process/pr-workflow.md) — 1 learning
 
 ### Decisions
-_(no learnings yet)_
+- [Architecture](decisions/architecture.md) — 1 learning
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 1 learning
@@ -38,6 +38,11 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-25/26 | Silent Calculation Bugs Require Reference-Value Unit Tests | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-15 | BLD-27 | Product Pivots Cascade Through Data Models | Decisions | [architecture.md](decisions/architecture.md) |
+| 2026-04-15 | BLD-63 | Proactive Interaction History for Crash Diagnostics | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-97/107 | Pure Calculation Module Pattern for Domain Logic | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-15 | BLD-72 | Verify All Output Formats in Multi-Format Share/Export | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-15 | BLD-114 | accessibilityState for Collapsible Section Toggles | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-114 | RN accessibilityRole Does Not Support 'grid' — Use 'summary' | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-100/108 | upload-pages-artifact path Becomes Site Root — Not a URL Prefix | Pitfalls | [build-config.md](pitfalls/build-config.md) |

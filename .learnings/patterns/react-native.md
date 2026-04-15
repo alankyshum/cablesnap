@@ -281,3 +281,19 @@
 **Learning**: React Native's `accessibilityRole` type is a closed union that does not include all ARIA/web roles. 'grid' is not supported. The closest valid alternative is 'summary' for data visualization containers. Forcing unsupported roles with `as any` works at runtime but creates type-safety and lint issues.
 **Action**: When implementing grid-like data visualizations in React Native, use `accessibilityRole="summary"` instead of 'grid'. Add an `accessibilityLabel` that describes the grid's content. If the spec requires 'grid', document the adaptation with a code comment explaining the RN limitation.
 **Tags**: react-native, accessibility, a11y, accessibilityRole, grid, type-safety, aria
+
+### Proactive Interaction History for Crash Diagnostics
+**Source**: BLD-63 — Crash Reporting infrastructure
+**Date**: 2026-04-15
+**Context**: Implementing crash/bug reporting revealed that error logs alone are insufficient for diagnosis. Without knowing what the user was doing before the crash, error logs are decontextualized stack traces.
+**Learning**: Effective crash reporting requires proactive context collection, not reactive. A ring buffer of the last 10 user interactions (navigation events, form submissions, button presses) stored in persistent storage provides the "what was the user doing" context that transforms a stack trace into a diagnosable bug report.
+**Action**: Implement an event bus that logs user interactions to AsyncStorage or SQLite as a circular buffer (overwrite oldest on new entry). Attach this interaction history alongside error logs and system info when generating crash reports. Include: screen name, action type, timestamp, and relevant parameters.
+**Tags**: crash-reporting, error-boundary, diagnostics, user-context, ring-buffer, debugging
+
+### Pure Calculation Module Pattern for Domain Logic
+**Source**: BLD-97, BLD-107 — Intelligent nutrition targets with profile-based recommendations
+**Date**: 2026-04-15
+**Context**: Implementing BMR/TDEE/macro calculations required separating pure math from UI and storage concerns. The calculations (Mifflin-St Jeor formula) needed unit testing against reference values, while UI needed auto-population from existing user data.
+**Learning**: Domain calculation logic (BMR, TDEE, macros, 1RM estimation, periodization) should live in a pure `lib/` module with zero React/storage dependencies. This enables: (1) unit testing with reference values, (2) reuse across multiple screens, (3) edge case handling (calorie floors, extreme inputs) tested independently of UI state.
+**Action**: Extract any domain calculation into `lib/<domain>-calc.ts` as pure functions. Auto-populate input fields from existing data (e.g., latest body_weight entry) but allow manual override. Store calculated results as defaults that users can modify. Enforce safety floors (e.g., 1200 kcal minimum) with user-visible warnings.
+**Tags**: architecture, pure-functions, domain-logic, testability, nutrition, calculation, separation-of-concerns
