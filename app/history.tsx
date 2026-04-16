@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
+  LayoutAnimation,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  useReducedMotion,
+  withTiming,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { FlashList } from "@shopify/flash-list";
 import {
   Card,
@@ -25,6 +34,7 @@ import {
   getTotalSessionCount,
   searchSessions,
 } from "../lib/db";
+import { getSchedule, type ScheduleEntry } from "../lib/db/settings";
 import type { WorkoutSession } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -38,7 +48,7 @@ import {
   formatDuration,
   withOpacity,
 } from "../lib/format";
-import { radii } from "../constants/design-tokens";
+import { duration as animDuration, radii, spacing } from "../constants/design-tokens";
 
 type SessionRow = WorkoutSession & { set_count: number };
 
@@ -57,10 +67,14 @@ function monthLabel(year: number, month: number): string {
   });
 }
 
+const SWIPE_THRESHOLD = 20;
+const MIN_TOUCH_TARGET = 48;
+
 function HistoryScreen() {
   const theme = useTheme();
   const router = useRouter();
   const layout = useLayout();
+  const reducedMotion = useReducedMotion();
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -71,6 +85,18 @@ function HistoryScreen() {
   const [results, setResults] = useState<SessionRow[] | null>(null);
   const [hasAny, setHasAny] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+  const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
+  const dayDetailRef = useRef<View>(null);
+  const selectedCellRef = useRef<View>(null);
+  const prevSelected = useRef<string | null>(null);
+
+  // Swipe animation
+  const translateX = useSharedValue(0);
+  const animatedCalendarStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   // Heatmap + streak state
   const [heatmapData, setHeatmapData] = useState<Map<string, number>>(new Map());
@@ -82,10 +108,38 @@ function HistoryScreen() {
   const [heatmapExpanded, setHeatmapExpanded] = useState(true);
 
   useEffect(() => {
+    AccessibilityInfo.isScreenReaderEnabled().then(setScreenReaderEnabled);
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotionEnabled);
+    const srSub = AccessibilityInfo.addEventListener(
+      "screenReaderChanged",
+      setScreenReaderEnabled
+    );
+    const rmSub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      setReduceMotionEnabled
+    );
     return () => {
+      srSub.remove();
+      rmSub.remove();
       if (timer.current) clearTimeout(timer.current);
     };
   }, []);
+
+  // Focus management for day detail panel
+  useEffect(() => {
+    if (selected && selected !== prevSelected.current) {
+      // Panel expanding — focus the panel heading
+      setTimeout(() => {
+        dayDetailRef.current?.focus?.();
+      }, 100);
+    } else if (!selected && prevSelected.current) {
+      // Panel collapsing — focus back to the calendar cell
+      setTimeout(() => {
+        selectedCellRef.current?.focus?.();
+      }, 100);
+    }
+    prevSelected.current = selected;
+  }, [selected]);
 
   const load = useCallback(async () => {
     const [data, any] = await Promise.all([
@@ -129,6 +183,7 @@ function HistoryScreen() {
     useCallback(() => {
       load();
       loadHeatmap();
+      getSchedule().then(setSchedule).catch(() => setSchedule([]));
     }, [load, loadHeatmap])
   );
 
@@ -141,35 +196,78 @@ function HistoryScreen() {
     return map;
   }, [sessions]);
 
+  // Schedule lookup: day_of_week → ScheduleEntry
+  const scheduleMap = useMemo(() => {
+    const map = new Map<number, ScheduleEntry>();
+    for (const entry of schedule) {
+      map.set(entry.day_of_week, entry);
+    }
+    return map;
+  }, [schedule]);
+
+  // Per-month summary stats
+  const monthSummary = useMemo(() => {
+    const count = sessions.length;
+    const totalHours = sessions.reduce(
+      (sum, s) => sum + (s.duration_seconds ?? 0),
+      0
+    ) / 3600;
+    return { count, totalHours: Math.round(totalHours * 10) / 10 };
+  }, [sessions]);
+
   const filtered = useMemo(() => {
     if (results) return results;
     if (!selected) return sessions;
     return sessions.filter((s) => formatDateKey(s.started_at) === selected);
   }, [sessions, selected, results]);
 
-  const prevMonth = () => {
-    setSelected(null);
-    setQuery("");
-    setResults(null);
-    if (month === 0) {
-      setMonth(11);
-      setYear(year - 1);
-    } else {
-      setMonth(month - 1);
-    }
-  };
+  const changeMonth = useCallback(
+    (direction: -1 | 1) => {
+      const animDurationMs = reducedMotion ? 0 : animDuration.normal;
+      const slideDistance = layout.width * direction * -1;
+      translateX.value = slideDistance;
+      translateX.value = withTiming(0, { duration: animDurationMs });
+      setSelected(null);
+      setQuery("");
+      setResults(null);
+      if (direction === -1) {
+        if (month === 0) {
+          setMonth(11);
+          setYear(year - 1);
+        } else {
+          setMonth(month - 1);
+        }
+      } else {
+        if (month === 11) {
+          setMonth(0);
+          setYear(year + 1);
+        } else {
+          setMonth(month + 1);
+        }
+      }
+    },
+    [month, year, layout.width, reducedMotion, translateX]
+  );
 
-  const nextMonth = () => {
-    setSelected(null);
-    setQuery("");
-    setResults(null);
-    if (month === 11) {
-      setMonth(0);
-      setYear(year + 1);
-    } else {
-      setMonth(month + 1);
-    }
-  };
+  const prevMonth = () => changeMonth(-1);
+  const nextMonth = () => changeMonth(1);
+
+  // Swipe gesture for month navigation (disabled when screen reader active)
+  const swipeGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-SWIPE_THRESHOLD, SWIPE_THRESHOLD])
+        .enabled(!screenReaderEnabled)
+        .onEnd((e: { translationX: number }) => {
+          if (e.translationX < -SWIPE_THRESHOLD) {
+            changeMonth(1);
+          } else if (e.translationX > SWIPE_THRESHOLD) {
+            changeMonth(-1);
+          }
+        })
+        .runOnJS(true),
+    [screenReaderEnabled, changeMonth]
+  );
 
   const onSearch = (text: string) => {
     setQuery(text);
@@ -194,6 +292,9 @@ function HistoryScreen() {
   const tapDay = (key: string) => {
     setQuery("");
     setResults(null);
+    if (!reduceMotionEnabled) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
     setSelected(selected === key ? null : key);
   };
 
@@ -213,22 +314,44 @@ function HistoryScreen() {
   const offset = weekday(new Date(year, month, 1));
   const today = new Date();
   const todayKey = formatDateKey(today.getTime());
-  const cellSize = Math.max(44, Math.floor(layout.width / 7) - 4);
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const cellSize = Math.max(MIN_TOUCH_TARGET, Math.floor(layout.width / 7) - 4);
 
   const renderDay = (day: number) => {
-    const key = formatDateKey(new Date(year, month, day).getTime());
+    const d = new Date(year, month, day);
+    const key = formatDateKey(d.getTime());
     const count = dotMap.get(key) ?? 0;
     const isToday = key === todayKey;
     const isSel = key === selected;
+    const dayOfWeek = weekday(d);
+    const scheduleEntry = scheduleMap.get(dayOfWeek);
+    const isPast = d.getTime() < todayMidnight;
+    const isFuture = d.getTime() > Date.now();
+    const isScheduled = !!scheduleEntry;
+    const isMissedScheduled = isScheduled && isPast && count === 0;
+
+    let cellBg = "transparent";
+    if (isSel) {
+      cellBg = theme.colors.primary;
+    } else if (count > 0) {
+      cellBg = withOpacity(theme.colors.primaryContainer, 0.4);
+    } else if (isScheduled) {
+      cellBg = withOpacity(theme.colors.primaryContainer, 0.2);
+    }
 
     const label =
       count > 0
         ? `${day} ${monthLabel(year, month)}, ${count} workout${count > 1 ? "s" : ""}`
-        : `${day} ${monthLabel(year, month)}, rest day`;
+        : isMissedScheduled
+          ? `${day} ${monthLabel(year, month)}, missed scheduled workout`
+          : isScheduled && isFuture
+            ? `${day} ${monthLabel(year, month)}, scheduled: ${scheduleEntry.template_name}`
+            : `${day} ${monthLabel(year, month)}, rest day`;
 
     return (
       <Pressable
         key={key}
+        ref={isSel ? selectedCellRef : undefined}
         onPress={() => tapDay(key)}
         accessibilityLabel={label}
         accessibilityRole="button"
@@ -240,11 +363,7 @@ function HistoryScreen() {
             borderRadius: cellSize / 2,
             borderWidth: isToday ? 2 : 0,
             borderColor: isToday ? theme.colors.primary : "transparent",
-            backgroundColor: isSel
-              ? theme.colors.primary
-              : count > 0
-                ? withOpacity(theme.colors.primaryContainer, 0.4)
-                : "transparent",
+            backgroundColor: cellBg,
           },
         ]}
       >
@@ -261,19 +380,55 @@ function HistoryScreen() {
         </Text>
         {count > 0 && (
           <View style={styles.dots}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: isSel ? theme.colors.onPrimary : theme.colors.primary },
-              ]}
-            />
-            {count > 1 && (
+            {count >= 3 ? (
               <View
                 style={[
-                  styles.dot,
-                  { backgroundColor: isSel ? theme.colors.onPrimary : theme.colors.primary },
+                  styles.countBadge,
+                  {
+                    backgroundColor: isSel
+                      ? theme.colors.onPrimary
+                      : theme.colors.primary,
+                  },
                 ]}
-              />
+              >
+                <Text
+                  style={[
+                    styles.countBadgeText,
+                    {
+                      color: isSel
+                        ? theme.colors.primary
+                        : theme.colors.onPrimary,
+                    },
+                  ]}
+                >
+                  {count}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor: isSel
+                        ? theme.colors.onPrimary
+                        : theme.colors.primary,
+                    },
+                  ]}
+                />
+                {count > 1 && (
+                  <View
+                    style={[
+                      styles.dot,
+                      {
+                        backgroundColor: isSel
+                          ? theme.colors.onPrimary
+                          : theme.colors.primary,
+                      },
+                    ]}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
@@ -290,6 +445,98 @@ function HistoryScreen() {
   for (let d = 1; d <= total; d++) {
     cells.push(renderDay(d));
   }
+
+  // Inline day detail panel data
+  const dayDetailSessions = useMemo(() => {
+    if (!selected) return [];
+    return sessions.filter((s) => formatDateKey(s.started_at) === selected);
+  }, [sessions, selected]);
+
+  const selectedDayScheduleEntry = useMemo(() => {
+    if (!selected) return null;
+    const parts = selected.split("-").map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dow = weekday(d);
+    return scheduleMap.get(dow) ?? null;
+  }, [selected, scheduleMap]);
+
+  const isSelectedDayFuture = useMemo(() => {
+    if (!selected) return false;
+    const parts = selected.split("-").map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return d.getTime() > todayStart.getTime();
+  }, [selected]);
+
+  const renderDayDetailPanel = () => {
+    if (!selected) return null;
+
+    const selectedDay = Number(selected.split("-")[2]);
+    const dayLabel = new Date(year, month, selectedDay).toLocaleDateString(
+      undefined,
+      { weekday: "long", month: "long", day: "numeric" }
+    );
+
+    return (
+      <View
+        ref={dayDetailRef}
+        style={[styles.dayDetailPanel, { backgroundColor: theme.colors.surfaceVariant }]}
+        accessibilityLiveRegion="polite"
+        accessibilityRole="summary"
+        accessible
+      >
+        <Text
+          variant="titleSmall"
+          style={{ color: theme.colors.onSurface, marginBottom: spacing.xs }}
+        >
+          {dayLabel}
+        </Text>
+        {dayDetailSessions.length > 0 ? (
+          dayDetailSessions.map((s) => (
+            <Pressable
+              key={s.id}
+              onPress={() => router.push(`/session/detail/${s.id}`)}
+              style={[
+                styles.dayDetailItem,
+                { backgroundColor: theme.colors.surface },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`${s.name || "Untitled workout"}, ${formatDuration(s.duration_seconds)}, ${s.set_count} sets`}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  variant="bodyMedium"
+                  numberOfLines={1}
+                  style={{ color: theme.colors.onSurface }}
+                >
+                  {s.name || "Untitled workout"}
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  style={{ color: theme.colors.onSurfaceVariant }}
+                >
+                  {formatDuration(s.duration_seconds)} · {s.set_count} sets
+                </Text>
+              </View>
+              {s.rating != null && s.rating > 0 && (
+                <RatingWidget value={s.rating} readOnly size="small" />
+              )}
+              <Icon source="chevron-right" size={20} color={theme.colors.onSurfaceVariant} />
+            </Pressable>
+          ))
+        ) : isSelectedDayFuture && selectedDayScheduleEntry ? (
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            Scheduled: {selectedDayScheduleEntry.template_name}
+          </Text>
+        ) : (
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            Rest day
+          </Text>
+        )}
+      </View>
+    );
+  };
 
   const renderSession = useCallback(({ item }: { item: SessionRow }) => {
     const date = new Date(item.started_at).toLocaleDateString(undefined, {
@@ -431,6 +678,24 @@ function HistoryScreen() {
             />
           </View>
 
+          {/* Per-Month Summary Bar */}
+          <Text
+            variant="bodySmall"
+            style={[
+              styles.monthSummary,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+            accessibilityLabel={
+              monthSummary.count > 0
+                ? `${monthSummary.count} workouts, ${monthSummary.totalHours} hours this month`
+                : "No workouts this month"
+            }
+          >
+            {monthSummary.count > 0
+              ? `${monthSummary.count} workout${monthSummary.count !== 1 ? "s" : ""} · ${monthSummary.totalHours} hrs`
+              : "No workouts this month"}
+          </Text>
+
           {/* Day-of-week headers */}
           <View style={styles.grid}>
             {DAYS.map((d) => (
@@ -445,8 +710,15 @@ function HistoryScreen() {
             ))}
           </View>
 
-          {/* Calendar Grid */}
-          <View style={styles.grid}>{cells}</View>
+          {/* Calendar Grid with swipe gesture */}
+          <GestureDetector gesture={swipeGesture}>
+            <Animated.View style={[styles.grid, animatedCalendarStyle]}>
+              {cells}
+            </Animated.View>
+          </GestureDetector>
+
+          {/* Inline Day Detail Panel */}
+          {renderDayDetailPanel()}
 
           {/* Active filter chip */}
           {(selected || query.trim()) && (
@@ -538,7 +810,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 2,
     marginHorizontal: 2,
-    minHeight: 44,
+    minHeight: MIN_TOUCH_TARGET,
   },
   dots: {
     flexDirection: "row",
@@ -550,6 +822,38 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: radii.sm,
+  },
+  countBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  monthSummary: {
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
+  dayDetailPanel: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    gap: spacing.xs,
+  },
+  dayDetailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.sm,
+    borderRadius: radii.md,
+    gap: spacing.sm,
+    marginTop: spacing.xxs,
   },
   card: {
     marginBottom: 8,
