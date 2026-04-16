@@ -19,6 +19,8 @@ type SetRow = {
   tempo: string | null;
   exercise_name: string | null;
   exercise_deleted_at: number | null;
+  swapped_from_exercise_id: string | null;
+  swapped_from_name: string | null;
 };
 
 // ---- Sessions ----
@@ -89,9 +91,11 @@ export async function getSessionSets(
   sessionId: string
 ): Promise<(WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean })[]> {
   const rows = await query<SetRow>(
-    `SELECT ws.*, e.name AS exercise_name, e.deleted_at AS exercise_deleted_at
+    `SELECT ws.*, e.name AS exercise_name, e.deleted_at AS exercise_deleted_at,
+            sf.name AS swapped_from_name
      FROM workout_sets ws
      LEFT JOIN exercises e ON ws.exercise_id = e.id
+     LEFT JOIN exercises sf ON ws.swapped_from_exercise_id = sf.id
      WHERE ws.session_id = ?
      ORDER BY ws.exercise_id, ws.set_number ASC`,
     [sessionId]
@@ -111,8 +115,10 @@ export async function getSessionSets(
     round: r.round ?? null,
     training_mode: (r.training_mode as TrainingMode) ?? null,
     tempo: r.tempo ?? null,
+    swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
+    swapped_from_name: r.swapped_from_name ?? undefined,
   }));
 }
 
@@ -153,6 +159,7 @@ export async function addSet(
     round: round ?? null,
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
+    swapped_from_exercise_id: null,
   };
 }
 
@@ -182,6 +189,7 @@ export async function addSetsBatch(
     round: s.round ?? null,
     training_mode: s.trainingMode ?? null,
     tempo: s.tempo ?? null,
+    swapped_from_exercise_id: null,
   }));
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
@@ -1177,8 +1185,8 @@ export async function swapExerciseInSession(
 
   const placeholders = setIds.map(() => "?").join(",");
   await execute(
-    `UPDATE workout_sets SET exercise_id = ? WHERE id IN (${placeholders})`,
-    [newExerciseId, ...setIds]
+    `UPDATE workout_sets SET exercise_id = ?, swapped_from_exercise_id = ? WHERE id IN (${placeholders})`,
+    [newExerciseId, oldExerciseId, ...setIds]
   );
 
   return setIds;
@@ -1191,7 +1199,7 @@ export async function undoSwapInSession(
   if (setIds.length === 0) return;
   const placeholders = setIds.map(() => "?").join(",");
   await execute(
-    `UPDATE workout_sets SET exercise_id = ? WHERE id IN (${placeholders})`,
+    `UPDATE workout_sets SET exercise_id = ?, swapped_from_exercise_id = NULL WHERE id IN (${placeholders})`,
     [originalExerciseId, ...setIds]
   );
 }

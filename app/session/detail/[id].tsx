@@ -19,13 +19,14 @@ import { rpeColor, rpeText } from "../../../lib/rpe";
 import { formatDuration, formatDateShort } from "../../../lib/format";
 import RatingWidget from "../../../components/RatingWidget";
 
-type SetWithName = WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean };
+type SetWithName = WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean; swapped_from_name?: string };
 
 type ExerciseGroup = {
   exercise_id: string;
   name: string;
   sets: SetWithName[];
   link_id: string | null;
+  swapped_from_name: string | null;
 };
 
 export default function SessionDetail() {
@@ -83,6 +84,7 @@ export default function SessionDetail() {
             name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
             sets: [],
             link_id: s.link_id ?? null,
+            swapped_from_name: (s as SetWithName).swapped_from_name ?? null,
           });
         }
         map.get(s.exercise_id)!.sets.push(s);
@@ -400,6 +402,15 @@ export default function SessionDetail() {
             >
               {group.name}
             </Text>
+            {group.swapped_from_name && (
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant, fontStyle: "italic", marginBottom: 4, marginTop: -2 }}
+                accessibilityLabel={`Swapped from ${group.swapped_from_name}`}
+              >
+                Swapped from {group.swapped_from_name}
+              </Text>
+            )}
             {group.sets
               .filter((s) => s.completed)
               .map((set) => (
