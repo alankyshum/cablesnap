@@ -16,6 +16,7 @@ import {
 // The category badge inside each list item uses View+Text to avoid nested
 // <button> elements on web (Chip renders as <button> even without onPress).
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import { addExerciseToTemplate, addSet, getAllExercises, getTemplateExerciseCount } from "../../lib/db";
 import {
   CATEGORIES,
@@ -28,6 +29,7 @@ const ITEM_HEIGHT = 72;
 
 export default function PickExercise() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
   const { templateId, sessionId } = useLocalSearchParams<{
     templateId?: string;
@@ -137,7 +139,7 @@ export default function PickExercise() {
     <>
       <Stack.Screen options={{ title: "Pick Exercise" }} />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <Searchbar
           placeholder="Search exercises..."

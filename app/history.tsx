@@ -332,6 +332,7 @@ function HistoryScreen() {
       keyExtractor={(item) => item.id}
       renderItem={renderSession}
       style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 40 }}
       ListHeaderComponent={
         <>
           {/* Streak Summary Bar */}

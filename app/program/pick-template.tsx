@@ -11,6 +11,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import { getTemplates } from "../../lib/db";
 import { addProgramDay, getProgramDayCount } from "../../lib/programs";
 import type { WorkoutTemplate } from "../../lib/types";
@@ -19,6 +20,7 @@ const ITEM_HEIGHT = 64;
 
 export default function PickTemplate() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
   const { programId } = useLocalSearchParams<{ programId: string }>();
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
@@ -88,7 +90,7 @@ export default function PickTemplate() {
     <>
       <Stack.Screen options={{ title: "Pick Template" }} />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <Searchbar
           placeholder="Search templates..."

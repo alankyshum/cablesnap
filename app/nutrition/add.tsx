@@ -11,6 +11,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import {
   addFoodEntry,
   addDailyLog,
@@ -227,6 +228,7 @@ function localDateKey(): string {
 
 export default function AddFood() {
   const theme = useTheme();
+  const layout = useLayout();
   const params = useLocalSearchParams<{ date?: string }>();
   const dateKey = params.date || localDateKey();
   const [tab, setTab] = useState("new");
@@ -281,7 +283,7 @@ export default function AddFood() {
 
   if (tab === "database") {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <View style={styles.header}>
           <SegmentedButtons
             value={tab}
@@ -338,6 +340,7 @@ export default function AddFood() {
       keyExtractor={(f) => f.id}
       renderItem={renderFav}
       style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+      contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 32 }}
       ListHeaderComponent={
         <>
           <SegmentedButtons

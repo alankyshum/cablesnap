@@ -16,6 +16,7 @@ import {
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLayout } from "../../../lib/layout";
 import {
   getBodySettings,
   getSessionById,
@@ -45,6 +46,7 @@ type Comparison = {
 
 export default function Summary() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [session, setSession] = useState<WorkoutSession | null>(null);
@@ -210,6 +212,7 @@ export default function Summary() {
         }
         keyExtractor={(s) => s.key}
         style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         ListHeaderComponent={
           <>
             {/* Header */}

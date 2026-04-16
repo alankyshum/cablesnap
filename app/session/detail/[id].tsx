@@ -4,6 +4,7 @@ import { FlashList } from "@shopify/flash-list";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
+import { useLayout } from "../../../lib/layout";
 import { getSessionById, getSessionPRs, getSessionSets } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
 import { TRAINING_MODE_LABELS } from "../../../lib/types";
@@ -21,6 +22,7 @@ type ExerciseGroup = {
 
 export default function SessionDetail() {
   const theme = useTheme();
+  const layout = useLayout();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [groups, setGroups] = useState<ExerciseGroup[]>([]);
@@ -114,6 +116,7 @@ export default function SessionDetail() {
         data={groups}
         keyExtractor={(group) => group.exercise_id}
         style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         ListHeaderComponent={
           <>
             {/* Summary */}

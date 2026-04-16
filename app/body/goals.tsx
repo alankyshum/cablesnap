@@ -2,11 +2,13 @@ import { useState, useCallback } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import { getBodySettings, updateBodySettings } from "../../lib/db";
 import { KG_TO_LB, LB_TO_KG } from "../../lib/units";
 
 export default function Goals() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [measUnit, setMeasUnit] = useState<"cm" | "in">("cm");
@@ -50,7 +52,7 @@ export default function Goals() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
       <Text variant="titleLarge" style={{ color: theme.colors.onBackground, marginBottom: 16 }}>
         Body Goals
@@ -107,7 +109,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    paddingVertical: 16,
     paddingBottom: 32,
   },
   input: {

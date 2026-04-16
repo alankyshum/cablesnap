@@ -14,6 +14,7 @@ import {
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import {
   createProgram,
   getProgramById,
@@ -26,6 +27,7 @@ import type { Program, ProgramDay } from "../../lib/types";
 
 export default function CreateProgram() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
     programId?: string;
@@ -165,7 +167,7 @@ export default function CreateProgram() {
         options={{ title: program ? "Edit Program" : "New Program" }}
       />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <TextInput
           label="Program Name"
@@ -247,7 +249,7 @@ export default function CreateProgram() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 16,
   },
   input: {
     marginBottom: 12,

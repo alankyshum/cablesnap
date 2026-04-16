@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { Button, Card, Text, TextInput, useTheme } from "react-native-paper";
 import { router, useFocusEffect } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import { getAppSetting, getMacroTargets, updateMacroTargets } from "../../lib/db";
 import {
   calculateFromProfile,
@@ -12,6 +13,7 @@ import {
 
 export default function Targets() {
   const theme = useTheme();
+  const layout = useLayout();
   const [calories, setCalories] = useState("2000");
   const [protein, setProtein] = useState("150");
   const [carbs, setCarbs] = useState("250");
@@ -72,7 +74,7 @@ export default function Targets() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
       <Card
         style={[styles.card, { backgroundColor: theme.colors.primaryContainer }]}
@@ -147,7 +149,7 @@ export default function Targets() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { paddingVertical: 16, paddingBottom: 32 },
   card: { marginBottom: 16 },
   input: { marginBottom: 12 },
   btn: { marginTop: 8 },

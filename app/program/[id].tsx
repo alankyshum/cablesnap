@@ -18,6 +18,7 @@ import {
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import {
   getProgramById,
   getProgramDays,
@@ -40,7 +41,9 @@ import type { ScheduleEntry } from "../../lib/db/settings";
 
 export default function ProgramDetail() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
+  
   const { id } = useLocalSearchParams<{ id: string }>();
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
@@ -219,6 +222,7 @@ export default function ProgramDetail() {
       <Stack.Screen options={{ title: program.name }} />
       <FlashList
         style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         data={days}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={

@@ -14,6 +14,7 @@ import {
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import {
   addExerciseToTemplate,
   createTemplate,
@@ -28,6 +29,7 @@ import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 
 export default function CreateTemplate() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
     templateId?: string;
@@ -168,7 +170,7 @@ export default function CreateTemplate() {
         options={{ title: template ? "Edit Template" : "New Template" }}
       />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <TextInput
           label="Template Name"
@@ -240,7 +242,7 @@ export default function CreateTemplate() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 16,
   },
   input: {
     marginBottom: 16,

@@ -16,6 +16,7 @@ import {
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
+import { useLayout } from "../../lib/layout";
 import {
   addExerciseToTemplate,
   createExerciseLink,
@@ -41,6 +42,7 @@ function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): 
 
 export default function EditTemplate() {
   const theme = useTheme();
+  const layout = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{
     id: string;
@@ -337,7 +339,7 @@ export default function EditTemplate() {
     <>
       <Stack.Screen options={{ title: template.name }} />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <View style={styles.section}>
           <View style={styles.headerRow}>
@@ -512,7 +514,7 @@ export default function EditTemplate() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 16,
   },
   center: {
     flex: 1,
