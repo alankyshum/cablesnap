@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "FitForge",
   slug: "fitforge",
-  version: "0.1.2",
+  version: "0.1.3",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
