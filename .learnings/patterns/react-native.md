@@ -345,3 +345,11 @@
 **Learning**: When the same data exists in both the database and a canonical JS/TS constant (e.g., `STARTER_TEMPLATES`), the UI should use the constant as a fallback source. This provides resilience against DB corruption without masking the underlying issue — the repair logic fixes the root cause while the fallback ensures the UI never shows blank content to users.
 **Action**: For any UI rendering of seeded/canonical data, use the pattern `canonicalSource?.field || dbRow.field` (e.g., `meta?.name || item.name`). This defense-in-depth approach prevents blank UI while the self-healing DB repair catches up. Apply this specifically to seeded data where a JS constant is the source of truth.
 **Tags**: react-native, defense-in-depth, fallback, db-corruption, seed-data, ui-resilience, canonical-source
+
+### Absolute-Positioned Bars Need Exported Height Constants for Content Padding
+**Source**: BLD-205 — PLAN REVIEW: Floating navbar redesign (BLD-198)
+**Date**: 2026-04-16
+**Context**: Plan for a floating tab bar used `position: 'absolute'` for the bar to float over content. Tech lead review identified that React Navigation's `useBottomTabBarHeight()` returns 0 for absolutely-positioned bars, so all screen content would scroll behind the bar with no padding.
+**Learning**: When a tab bar or any persistent UI element uses `position: 'absolute'`, the layout system does not reserve space for it. React Navigation's `useBottomTabBarHeight()` depends on the default layout-flow tab bar and returns 0 for custom absolute-positioned bars. Every scrollable screen must manually add bottom padding equal to the bar's height plus safe area insets.
+**Action**: When implementing an absolute-positioned persistent bar, export a height constant (e.g., `FLOATING_TAB_BAR_HEIGHT`) and a hook (e.g., `useFloatingTabBarHeight()`) that includes safe area insets. Update ALL screens that scroll behind the bar in the PR same do not defer this to a follow-up, as every screen will have content hidden behind the bar until patched. 
+**Tags**: react-native, position-absolute, tab-bar, content-padding, useBottomTabBarHeight, safe-area, layout, navigation

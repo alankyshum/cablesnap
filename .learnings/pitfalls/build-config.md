@@ -65,3 +65,19 @@
 **Learning**: Expo Go only supports modules included in the Expo SDK. Any feature requiring platform-specific native APIs (HealthKit, Health Connect, NFC, Bluetooth, custom native code) requires migrating to expo-dev-client. This migration is a build infrastructure change (4 files: package.json, app.config.ts, eas.json, README) with no user-facing code changes, but it changes the entire dev workflow from `npx expo start` to `npx expo run:ios` / `npx expo start --dev-client`.
 **Action**: When planning features that use platform-specific native APIs, check whether the project uses Expo Go. If so, schedule expo-dev-client migration as Phase 0 before any native module work. Also create separate eas.json profiles for simulator (`development` with `ios.simulator: true`) and physical device (`development-device`) builds.
 **Tags**: expo, expo-go, expo-dev-client, native-modules, healthkit, eas-build, migration, build-infrastructure
+
+### Android overflow: visible Does Not Propagate Touches Beyond Parent Bounds
+**Source**: BLD-205 — PLAN REVIEW: Floating navbar redesign (BLD-198)
+**Date**: 2026-04-16
+**Context**: The floating tab bar plan included a center button protruding 12dp above the bar using negative top positioning. On Android, the protruding portion would be visually visible but untappable because Android does not propagate touch events beyond the parent View's bounds, even with `overflow: 'visible'`.
+**Learning**: On Android, `overflow: 'visible'` only affects rendering — it does NOT extend the parent's touch-receiving area. Child elements that visually overflow the parent cannot receive touch events in the overflowed region. This is an Android-specific limitation; iOS propagates touches to visually overflowing children. The fix is to wrap the protruding element in a parent View whose bounds fully encompass the visible area, or use `hitSlop` on the touchable element.
+**Action**: When designing UI with elements that protrude beyond their container (raised buttons, badges, floating action buttons with anchored parents), ensure the touchable wrapper's bounds cover the full visible area on Android. Do not rely on `overflow: 'visible'` for touch propagation. Test on Android specifically — iOS will work without the fix, masking the bug.
+**Tags**: android, overflow-visible, touch-target, react-native, platform-specific, hit-testing, floating-button
+
+### Android Elevation Clips to Parent View Bounds
+**Source**: BLD-205 — PLAN REVIEW: Floating navbar redesign (BLD-198)
+**Date**: 2026-04-16
+**Context**: The floating tab bar plan applied elevation/shadow to the bar container, but the raised center button protrudes above the bar. On Android, `elevation` renders a shadow clipped to the parent View's boundaries — the protruding center button would have no shadow from the parent's elevation.
+**Learning**: Android's `elevation` property renders shadow based on the View's own bounds, and this shadow is clipped by the parent's bounds. If a child element protrudes beyond its parent (via negative margins or absolute positioning), the parent's elevation shadow will not extend to cover the protruding area. Each independently elevated element must have its own `elevation` property applied directly.
+**Action**: When a UI element protrudes beyond its container and both need shadows, apply `elevation` independently to the container and the protruding element — do not rely on the parent's elevation to cast shadow over overflowing children. On iOS, use separate `shadow*` properties (shadowColor, shadowOffset, shadowOpacity, shadowRadius) for the same effect, as iOS does not use `elevation`.
+**Tags**: android, elevation, shadow, overflow, react-native, platform-specific, clipping, z-index

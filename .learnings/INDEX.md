@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 89
+Total learnings: 92
 
 ## How to Use This Knowledge Base
 
@@ -14,12 +14,12 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 43 learnings
+- [React Native + Expo](patterns/react-native.md) — 44 learnings
 - [Testing](patterns/testing.md) — 6 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 5 learnings
-- [Build Configuration](pitfalls/build-config.md) — 8 learnings
+- [Build Configuration](pitfalls/build-config.md) — 10 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 10 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-205 | Absolute-Positioned Bars Need Exported Height Constants | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-16 | BLD-205 | Android overflow: visible Does Not Propagate Touches | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-16 | BLD-205 | Android Elevation Clips to Parent View Bounds | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-16 | BLD-182 | COUNT(*) Overcounts When Joining Tables with Duplicate Dimension Values | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-182 | Conditional Algorithm Specs Require Branch-by-Branch Verification | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-16 | BLD-186/187 | Seed Data Repair Must Cover ALL Canonical Columns | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
