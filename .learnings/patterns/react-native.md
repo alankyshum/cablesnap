@@ -385,3 +385,11 @@
 **Learning**: React Native's `<Modal>` component has no built-in gesture support — it is a fixed overlay. For drawers that need drag-to-expand, snap points, and scrollable content, `@gorhom/bottom-sheet` provides `<BottomSheet>` with configurable snap points (e.g., `["40%", "90%"]`), `<BottomSheetFlatList>` for virtualized scrolling inside the sheet, and `<BottomSheetBackdrop>` for tap-to-dismiss. Control visibility via `ref.current?.snapToIndex(0)` (open) and `ref.current?.close()` (close) with `index={-1}` as the hidden state.
 **Action**: When implementing a detail panel, exercise drawer, or any expandable overlay, use `@gorhom/bottom-sheet` (already in FitForge deps) instead of `<Modal>`. Define snap points with `useMemo`, use `BottomSheetFlatList` instead of `FlatList` for scrollable content, and add a Jest mock at `__mocks__/@gorhom/bottom-sheet.js`.
 **Tags**: react-native, bottom-sheet, modal, gorhom, gesture, snap-points, drawer, expandable, ui-pattern
+
+### Session Mutations Must Preserve Completed Records as Immutable
+BLD-240 **Source**: Smart Exercise Substitutions (Plan Review) 
+**Date**: 2026-04-16
+**Context**: The exercise substitution plan originally swapped ALL sets in a workout session to the new exercise. Quality Director flagged this as a critical data corruption issue — completed sets represent historical training data and must never be retroactively modified.
+**Learning**: When mutating active session data (swapping exercises, reordering, bulk editing), only rows where `completed = 0` are mutable. Completed rows (`completed = 1`) are historical records and must be treated as immutable. This partition — pending vs completed — is the fundamental invariant for session data integrity. Violating it corrupts workout history, breaks progress tracking, and makes analytics unreliable.
+**Action**: Any function that performs bulk updates on `workout_sets` within a session must include `WHERE completed = 0` (or equivalent). Provide an undo mechanism (e.g., 5s snackbar) for the mutable portion. Add a test that confirms completed sets are unchanged after the mutation. Apply this pattern to any future session-mutation feature (reorder, bulk edit, duplicate).
+**Tags**: data-integrity, session-data, immutability, workout-sets, completed-records, undo, mutation-safety
