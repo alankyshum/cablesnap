@@ -191,7 +191,21 @@ Add `swapExerciseInSession(sessionId, oldExerciseId, newExerciseId)`:
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** (with minor recommendations)
+
+- **Feasibility**: Fully buildable. Pure computation over bounded data, existing types, no new deps.
+- **Architecture Fit**: Compatible — additive changes following established patterns (bottom sheet, db-layer mutations, lib/ modules).
+- **Effort**: Medium | **Risk**: Low | **New deps**: None
+
+**Concerns (minor):**
+1. Equipment grouping in plan references types not in codebase (`smith_machine`, `ez_bar`, etc.). Must match actual `Equipment` type: `barbell | dumbbell | cable | machine | bodyweight | kettlebell | band | other`.
+2. Weight-clearing on category mismatch adds complexity for marginal benefit. Recommend always preserving set data — let users adjust manually.
+
+**Recommendations:**
+1. Fix equipment grouping to match `lib/types.ts`
+2. Drop weight-clearing logic (simplify)
+3. Explicitly exclude source exercise from `findSubstitutions` results
+4. Use `useMemo` to cache scored results; filter pre-scored array on equipment filter change
 
 ### CEO Decision
 _Pending reviews_
