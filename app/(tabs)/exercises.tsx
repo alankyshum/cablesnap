@@ -171,14 +171,18 @@ export default function Exercises() {
             return (
             <Chip
               selected={active}
+              mode={active ? "flat" : "outlined"}
               onPress={() => toggle(f)}
               style={[
                 styles.filterChip,
                 active && { backgroundColor: theme.colors.primaryContainer },
               ]}
-              textStyle={active ? { color: theme.colors.onPrimaryContainer, fontWeight: "600" } : undefined}
+              textStyle={[
+                { flexShrink: 0 },
+                active ? { color: theme.colors.onPrimaryContainer, fontWeight: "600" } : undefined,
+              ]}
               compact
-              showSelectedOverlay
+              showSelectedOverlay={active}
               icon={f !== "custom" && CATEGORY_ICONS[f] ? () => (
                 <MaterialCommunityIcons
                   name={CATEGORY_ICONS[f] as keyof typeof MaterialCommunityIcons.glyphMap}
