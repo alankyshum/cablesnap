@@ -159,37 +159,36 @@ describe("ProfileForm", () => {
 describe("BodyProfileCard", () => {
   it("shows loading state initially", () => {
     mockGetAppSetting.mockReturnValue(new Promise(() => {})); // never resolves
+    mockGetBodySettings.mockReturnValue(new Promise(() => {}));
+    mockGetLatestBodyWeight.mockReturnValue(new Promise(() => {}));
     const { getByText } = renderScreen(<BodyProfileCard />);
     expect(getByText("Loading profile…")).toBeTruthy();
   });
 
-  it("shows CTA when no profile exists", async () => {
+  it("shows inline form fields when no profile exists", async () => {
     mockGetAppSetting.mockResolvedValue(null);
-    const { getByText } = renderScreen(<BodyProfileCard />);
+    const { getByText, getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByText("Set up your body profile")).toBeTruthy();
-      expect(
-        getByText("Get personalized nutrition targets based on your body stats")
-      ).toBeTruthy();
+      expect(getByText("Body Profile")).toBeTruthy();
+      expect(getByLabelText("Age in years")).toBeTruthy();
+      expect(getByLabelText("Weight in kg")).toBeTruthy();
+      expect(getByLabelText("Height in cm")).toBeTruthy();
     });
   });
 
-  it("shows profile summary when profile exists", async () => {
+  it("pre-fills inline fields when profile exists", async () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
-    const { getByText } = renderScreen(<BodyProfileCard />);
+    const { getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByText("Body Profile")).toBeTruthy();
-      expect(getByText("Male")).toBeTruthy();
-      expect(getByText("30 years")).toBeTruthy();
-      expect(getByText("75 kg")).toBeTruthy();
-      expect(getByText("175 cm")).toBeTruthy();
-      expect(getByText("Moderately Active")).toBeTruthy();
-      expect(getByText("Maintain")).toBeTruthy();
+      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Weight in kg").props.value).toBe("75");
+      expect(getByLabelText("Height in cm").props.value).toBe("175");
     });
   });
 
   it("shows error state and retry button on fetch failure", async () => {
     mockGetAppSetting.mockRejectedValue(new Error("Network error"));
+    mockGetBodySettings.mockRejectedValue(new Error("Network error"));
     const { getByText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
       expect(getByText("Could not load profile")).toBeTruthy();
@@ -199,51 +198,64 @@ describe("BodyProfileCard", () => {
 
   it("retries loading on Retry press", async () => {
     mockGetAppSetting.mockRejectedValueOnce(new Error("fail"));
+    mockGetBodySettings.mockRejectedValueOnce(new Error("fail"));
+    mockGetLatestBodyWeight.mockRejectedValueOnce(new Error("fail"));
     const { getByText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
       expect(getByText("Retry")).toBeTruthy();
     });
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
+    mockGetBodySettings.mockResolvedValue(bodySettings);
+    mockGetLatestBodyWeight.mockResolvedValue(null);
     fireEvent.press(getByText("Retry"));
     await waitFor(() => {
       expect(getByText("Body Profile")).toBeTruthy();
     });
   });
 
-  it("has correct accessibility labels on summary items", async () => {
+  it("auto-saves on field blur with valid input", async () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
     const { getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByLabelText("Sex: Male")).toBeTruthy();
-      expect(getByLabelText("Age: 30 years")).toBeTruthy();
-      expect(getByLabelText("Weight: 75 kilograms")).toBeTruthy();
-      expect(getByLabelText("Height: 175 centimeters")).toBeTruthy();
-      expect(getByLabelText("Activity level: Moderately Active")).toBeTruthy();
-      expect(getByLabelText("Goal: Maintain")).toBeTruthy();
+      expect(getByLabelText("Age in years").props.value).toBe("30");
+    });
+    fireEvent.changeText(getByLabelText("Age in years"), "25");
+    fireEvent(getByLabelText("Age in years"), "blur");
+    await waitFor(() => {
+      expect(mockSetAppSetting).toHaveBeenCalledWith(
+        "nutrition_profile",
+        expect.any(String)
+      );
+      expect(mockUpdateMacroTargets).toHaveBeenCalled();
     });
   });
 
-  it("opens modal when CTA card is pressed", async () => {
-    mockGetAppSetting.mockResolvedValue(null);
-    const { getByText, getByLabelText } = renderScreen(<BodyProfileCard />);
+  it("shows validation error on blur with invalid input", async () => {
+    mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
+    const { getByLabelText, getByText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByText("Set up your body profile")).toBeTruthy();
+      expect(getByLabelText("Age in years").props.value).toBe("30");
     });
-    fireEvent.press(getByLabelText("Set up your body profile"));
+    fireEvent.changeText(getByLabelText("Age in years"), "");
+    fireEvent(getByLabelText("Age in years"), "blur");
     await waitFor(() => {
-      expect(getByText("Your Profile")).toBeTruthy();
+      expect(getByText("Enter a valid age (1–120)")).toBeTruthy();
     });
+    expect(mockSetAppSetting).not.toHaveBeenCalled();
   });
 
-  it("opens modal when summary card is pressed", async () => {
+  it("auto-saves when segment button changes", async () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
     const { getByText, getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByText("Body Profile")).toBeTruthy();
+      expect(getByLabelText("Age in years").props.value).toBe("30");
     });
-    fireEvent.press(getByLabelText("Edit body profile"));
+    fireEvent.press(getByText("Bulk"));
     await waitFor(() => {
-      expect(getByText("Your Profile")).toBeTruthy();
+      expect(mockSetAppSetting).toHaveBeenCalledWith(
+        "nutrition_profile",
+        expect.any(String)
+      );
     });
   });
 });
