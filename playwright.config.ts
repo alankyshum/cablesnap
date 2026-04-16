@@ -7,6 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
+  globalTeardown: "./e2e/generate-manifest.ts",
   snapshotPathTemplate:
     "{testDir}/__screenshots__/{projectName}/{testFilePath}/{arg}{ext}",
 
