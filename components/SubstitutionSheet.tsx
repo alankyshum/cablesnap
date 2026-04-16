@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   muscleText: {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
   },
   filterRow: {
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   equipText: {
-    fontSize: 11,
+    fontSize: 12,
   },
   emptyState: {
     paddingVertical: 48,
