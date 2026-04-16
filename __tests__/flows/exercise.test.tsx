@@ -73,6 +73,7 @@ const mockGetById = jest.fn().mockImplementation((id: string) =>
 jest.mock('../../lib/db', () => ({
   getAllExercises: (...args: unknown[]) => mockGetAll(...args),
   getExerciseById: (...args: unknown[]) => mockGetById(...args),
+  getAppSetting: jest.fn().mockResolvedValue(null),
 }))
 
 import Exercises from '../../app/(tabs)/exercises'
