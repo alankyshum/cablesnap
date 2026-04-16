@@ -149,3 +149,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-234 | LEARNINGS_EXTRACTED | 2026-04-16 |
 | BLD-237 | NO_LEARNINGS | 2026-04-16 |
 | BLD-236 | LEARNINGS_EXTRACTED | 2026-04-16 |
+| BLD-239 | NO_LEARNINGS | 2026-04-16 |
