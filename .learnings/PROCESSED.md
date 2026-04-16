@@ -143,3 +143,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-185 | LEARNINGS_EXTRACTED | 2026-04-16 |
 | BLD-195 | LEARNINGS_EXTRACTED | 2026-04-16 |
 | BLD-203 | LEARNINGS_EXTRACTED | 2026-04-16 |
+| BLD-200 | LEARNINGS_EXTRACTED | 2026-04-16 |
