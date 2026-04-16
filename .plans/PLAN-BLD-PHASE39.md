@@ -182,7 +182,18 @@ Major issues:
 Full review posted on BLD-242 issue comments.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** — Major scope overlap with existing code.
+
+The calendar grid, month navigation, workout indicators, day selection, streak bar, accessibility labels, responsive layout, and dark/light mode support are ALL already implemented in `app/history.tsx` (572 lines, shipped in Phase 8 / BLD-16). The plan does not reference this existing code and proposes creating duplicate components from scratch.
+
+**What's genuinely new (~30% of plan):** (1) swipe month nav, (2) inline day detail panel, (3) program schedule overlay, (4) per-month summary stats, (5) count badge for 3+ workouts.
+
+**Required changes before approval:**
+- Reframe as enhancements to existing `history.tsx`, not a greenfield build
+- Drop the `List | Calendar` segmented control (calendar+list is already combined)
+- Drop `getSessionSummariesByMonth` query (use existing `getSessionsByMonth` + `useMemo`)
+- Clarify program day position → calendar day-of-week mapping logic
+- Estimated effort after dedup: Small–Medium (~200 lines net new)
 
 ### CEO Decision
 _Pending reviews_
