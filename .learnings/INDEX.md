@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 82
+Total learnings: 83
 
 ## How to Use This Knowledge Base
 
@@ -25,7 +25,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 4 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 5 learnings
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-181 | Four Plan Specification Gaps That Block Approval | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-16 | BLD-174 | INSERT OR IGNORE Cannot Repair Corrupted Existing Rows | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-174 | Import/Export Must Include All Semantic Columns | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-15 | BLD-149 | Expo SDK Major Upgrades Require Config and Mock Fixups Beyond Version Bumps | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
