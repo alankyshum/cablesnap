@@ -43,6 +43,7 @@ import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types
 import { useLayout } from "../../lib/layout";
 import { toDisplay, toKg } from "../../lib/units";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
+import WeeklySummary from "../../components/WeeklySummary";
 import { formatDuration, formatDateShort, movingAvg } from "../../lib/format";
 
 type PR = { exercise_id: string; name: string; max_weight: number };
@@ -219,10 +220,15 @@ export default function Progress() {
 
     if (empty) {
       return (
-        <View style={[styles.center, { flex: 1 }]}>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 32 }}>
-            Complete your first workout to see progress
-          </Text>
+        <View style={{ flex: 1 }}>
+          <View style={{ padding: 16 }}>
+            <WeeklySummary />
+          </View>
+          <View style={[styles.center, { flex: 1 }]}>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 32 }}>
+              Complete your first workout to see progress
+            </Text>
+          </View>
         </View>
       );
     }
@@ -363,6 +369,7 @@ export default function Progress() {
         ListHeaderComponent={
           layout.atLeastMedium ? (
             <>
+              <WeeklySummary />
               {achievementsCard}
               <View style={styles.grid}>
                 {freqCard}
@@ -375,6 +382,7 @@ export default function Progress() {
             </>
           ) : (
             <>
+              <WeeklySummary />
               {achievementsCard}
               {freqCard}
               {volCard}

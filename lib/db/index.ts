@@ -176,6 +176,23 @@ export {
 export type { ProgressPhoto, PoseCategory } from "./photos";
 
 export {
+  getWeeklySummary,
+  getWeeklyWorkouts,
+  getWeeklyPRs,
+  getWeeklyNutrition,
+  getWeeklyBody,
+  getWeeklyStreak,
+  NUTRITION_ON_TARGET_TOLERANCE,
+} from "./weekly-summary";
+export type {
+  WeeklySummaryData,
+  WeeklyWorkoutSummary,
+  WeeklyPR,
+  WeeklyNutritionSummary,
+  WeeklyBodySummary,
+} from "./weekly-summary";
+
+export {
   buildAchievementContext,
   getEarnedAchievements,
   getEarnedAchievementIds,
