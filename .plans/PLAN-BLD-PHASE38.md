@@ -188,7 +188,19 @@ Add `swapExerciseInSession(sessionId, oldExerciseId, newExerciseId)`:
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — Reviewed 2026-04-16
+
+5 critical issues must be fixed before approval:
+
+1. **[C1] Destructive swap corrupts history** — Updating `exercise_id` on completed sets loses provenance. Recommend: only swap pending sets, leave completed sets as original exercise.
+2. **[C2] Rest timer contradiction** — Plan body says "original exercise's rest", AC says "new exercise's rest". Fix plan body to match AC (new exercise is correct).
+3. **[C3] No undo** — Must add Snackbar with "Undo" action (5s window). `SnackbarProvider` already exists in codebase.
+4. **[C4] Weight clearing too coarse** — Clear weights when equipment changes (not just category). Same-category but different-equipment exercises have wildly different weight ranges.
+5. **[C5] Touch target size** — Swap icon must be 56x56dp per active workout SKILL rule.
+
+Major recommendations: Lower scoring threshold from 30→20 (cable fly scores ~28 vs bench press but IS a valid substitute). Add equipment filter empty state. Add "Swapped from {X}" indicator in history. Consider extending `ExercisePickerSheet` instead of building new `SubstitutionSheet`.
+
+Full review posted as comment on BLD-240.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** (with minor recommendations)
