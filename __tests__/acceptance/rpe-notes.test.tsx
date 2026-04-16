@@ -344,3 +344,67 @@ describe('RPE and Notes Combined', () => {
     expect(await findByText('Hard set')).toBeTruthy()
   })
 })
+
+// --- Swapped From Label in Session Detail ---
+
+describe('Swapped From Label in Session Detail', () => {
+  const session = createSession({
+    id: 'sess-swap-detail',
+    name: 'Chest Day',
+    started_at: Date.now() - 3600000,
+    completed_at: Date.now(),
+    duration_seconds: 3600,
+  })
+
+  beforeEach(() => {
+    mockParams.id = 'sess-swap-detail'
+    mockDb.getSessionById.mockResolvedValue(session)
+  })
+
+  it('shows "Swapped from" label when exercise was substituted', async () => {
+    mockDb.getSessionSets.mockResolvedValue([
+      {
+        ...createSet({
+          id: 'set-swap-1',
+          session_id: 'sess-swap-detail',
+          exercise_id: 'ex-new',
+          set_number: 1,
+          weight: 60,
+          reps: 10,
+          completed: true,
+          completed_at: Date.now(),
+          swapped_from_exercise_id: 'ex-original',
+        }),
+        exercise_name: 'Dumbbell Press',
+        exercise_deleted: false,
+        swapped_from_name: 'Bench Press',
+      },
+    ])
+
+    const { findByText } = renderScreen(<SessionDetail />)
+    expect(await findByText('Swapped from Bench Press')).toBeTruthy()
+  })
+
+  it('does not show "Swapped from" label for non-substituted exercises', async () => {
+    mockDb.getSessionSets.mockResolvedValue([
+      {
+        ...createSet({
+          id: 'set-noswap-1',
+          session_id: 'sess-swap-detail',
+          exercise_id: 'ex-1',
+          set_number: 1,
+          weight: 80,
+          reps: 8,
+          completed: true,
+          completed_at: Date.now(),
+        }),
+        exercise_name: 'Bench Press',
+        exercise_deleted: false,
+      },
+    ])
+
+    const { findByText, queryByText } = renderScreen(<SessionDetail />)
+    expect(await findByText('Bench Press')).toBeTruthy()
+    expect(queryByText(/Swapped from/)).toBeNull()
+  })
+})
