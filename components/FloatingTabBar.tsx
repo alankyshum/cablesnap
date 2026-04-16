@@ -69,6 +69,7 @@ function CenterButton({
   activeColor: string;
   backgroundColor: string;
 }) {
+  const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
@@ -80,16 +81,20 @@ function CenterButton({
 
   const handlePressIn = useCallback(() => {
     if (reducedMotion) {
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
       opacity.value = withTiming(0.7, { duration: 0 });
     } else {
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
       scale.value = withSpring(0.9, { damping: 15, stiffness: 200 });
     }
   }, [reducedMotion, scale, opacity]);
 
   const handlePressOut = useCallback(() => {
     if (reducedMotion) {
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
       opacity.value = withTiming(1, { duration: 0 });
     } else {
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
       scale.value = withSpring(1, { damping: 15, stiffness: 200 });
     }
   }, [reducedMotion, scale, opacity]);
@@ -109,6 +114,7 @@ function CenterButton({
             centerStyles.button,
             {
               backgroundColor: focused ? activeColor : backgroundColor,
+              shadowColor: theme.colors.shadow,
             },
           ]}
         >
@@ -138,7 +144,6 @@ const centerStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -191,8 +196,8 @@ const tabStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   label: {
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: 2,
     textAlign: "center",
     includeFontPadding: false,
@@ -251,6 +256,7 @@ export default function FloatingTabBar({
         {
           bottom: insets.bottom + BAR_MARGIN_BOTTOM,
           backgroundColor: theme.colors.surface,
+          shadowColor: theme.colors.shadow,
         },
         animatedContainerStyle,
       ]}
@@ -310,7 +316,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-around",
     elevation: 8,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
