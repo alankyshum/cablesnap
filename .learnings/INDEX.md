@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 100
+Total learnings: 101
 
 ## How to Use This Knowledge Base
 
@@ -20,7 +20,7 @@ Before starting work on a task, search this index for relevant learnings:
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 5 learnings
 - [Build Configuration](pitfalls/build-config.md) — 11 learnings
-- [Theming](pitfalls/theming.md) — 4 learnings
+- [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 11 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-236/237 | Design Token Drift Extends Beyond Colors — Seven Categories Need Tokenization | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-16 | BLD-234 | Alert.prompt Is iOS-Only — Use Cross-Platform Modal for Text Input Dialogs | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-16 | BLD-234 | Bump Export Format Version When Adding Columns — Track Future-Version Guard | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-198/212 | Source-Level Structural Tests for Design System Compliance | Patterns | [testing.md](patterns/testing.md) |

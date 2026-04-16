@@ -2,6 +2,14 @@
 
 ## Learnings
 
+### Design Token Drift Extends Beyond Colors — Seven Categories Need Tokenization
+**Source**: BLD-236/237 — Investor demo pixel slop audit and cleanup
+**Date**: 2026-04-16
+**Context**: A pre-demo audit of visual consistency across FitForge found hardcoded values scattered across 23 files in seven distinct categories, despite an existing design token system. The "Never Hardcode Hex Colors" rule had been enforced for colors, but five other value types had drifted silently: border radii (28 instead of 9999 for pills, off-grid values like 6/10/14), modal overlay opacities (four different values: 0.3, 0.5, 0.55, 0.6), font sizes off the MD3 type scale (13, 15, 18), animation durations (mixed 200/250/400ms), and elevation/shadow values.
+**Learning**: Color tokenization alone prevents only one category of visual drift. Border radii, overlay opacities, font sizes, animation durations, and elevation values all accumulate inconsistency at the same rate as colors. Each category needs its own design token (radii.sm/md/lg/xl/pill, scrim token, typography scale, duration.fast/normal/slow, elevation tokens).
+**Action**: When implementing new UI components, use design tokens for ALL seven categories: (1) colors, (2) border radii, (3) overlay/scrim opacities, (4) font sizes, (5) animation durations, (6) elevation/shadows, (7) spacing. Never use magic numbers for any of these. During self-review, grep for numeric literals in style objects — any raw number that isn't 0 or 1 is suspect.
+**Tags**: design-tokens, pixel-slop, border-radius, animation, opacity, font-size, elevation, design-system, visual-consistency
+
 ### Per-Value Contrast Colors for Semantic Badges
 **Source**: BLD-21 — A11y contrast fix (GitHub #15)
 **Date**: 2026-04-13
