@@ -27,6 +27,9 @@ jest.mock('../../lib/db', () => ({
   getSessionWeightIncreases: jest.fn().mockResolvedValue([]),
   getSessionComparison: jest.fn().mockResolvedValue(null),
   deleteSet: jest.fn().mockResolvedValue(undefined),
+  getAllExercises: jest.fn().mockResolvedValue([]),
+  swapExerciseInSession: jest.fn().mockResolvedValue([]),
+  undoSwapInSession: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

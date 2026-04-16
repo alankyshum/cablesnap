@@ -32,6 +32,9 @@ jest.mock('../../lib/db', () => ({
   buildAchievementContext: jest.fn().mockResolvedValue({}),
   getEarnedAchievementIds: jest.fn().mockResolvedValue([]),
   saveEarnedAchievements: jest.fn().mockResolvedValue(undefined),
+  getAllExercises: jest.fn().mockResolvedValue([]),
+  swapExerciseInSession: jest.fn().mockResolvedValue([]),
+  undoSwapInSession: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

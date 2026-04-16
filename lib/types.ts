@@ -209,6 +209,7 @@ export type WorkoutSet = {
   round: number | null;
   training_mode: TrainingMode | null;
   tempo: string | null;
+  swapped_from_exercise_id: string | null;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {

@@ -332,6 +332,12 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     });
   }
 
+  if (!setNames.has("swapped_from_exercise_id")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sets ADD COLUMN swapped_from_exercise_id TEXT DEFAULT NULL"
+    );
+  }
+
   const exCols = await database.getAllAsync<{ name: string }>(
     "PRAGMA table_info(exercises)"
   );

@@ -37,6 +37,9 @@ jest.mock('../../lib/db', () => ({
   createExerciseLink: jest.fn().mockResolvedValue('link-new'),
   unlinkExerciseGroup: jest.fn().mockResolvedValue(undefined),
   unlinkSingleExercise: jest.fn().mockResolvedValue(undefined),
+  getAllExercises: jest.fn().mockResolvedValue([]),
+  swapExerciseInSession: jest.fn().mockResolvedValue([]),
+  undoSwapInSession: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({
@@ -210,6 +213,7 @@ beforeEach(() => {
   mockDb.getRestSecondsForExercise.mockResolvedValue(90)
   mockDb.getRestSecondsForLink.mockResolvedValue(30)
   mockDb.getAppSetting.mockResolvedValue('true')
+  mockDb.getAllExercises.mockResolvedValue([exerciseA, exerciseB, exerciseC])
   mockDb.getSessionPRs.mockResolvedValue([])
   mockDb.getSessionRepPRs.mockResolvedValue([])
   mockDb.getSessionWeightIncreases.mockResolvedValue([])

@@ -38,6 +38,7 @@ import {
   completeSession,
   completeSet,
   getBodySettings,
+  getAllExercises,
   getMaxWeightByExercise,
   getRecentExerciseSets,
   getSessionById,
@@ -46,6 +47,8 @@ import {
   getPreviousSets,
   getRestSecondsForExercise,
   getRestSecondsForLink,
+  swapExerciseInSession,
+  undoSwapInSession,
   uncompleteSet,
   updateSet,
   updateSetsBatch,
@@ -73,6 +76,7 @@ import { useLayout } from "../../lib/layout";
 import { confirmAction } from "../../lib/confirm";
 import WeightPicker from "../../components/WeightPicker";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
+import SubstitutionSheet from "../../components/SubstitutionSheet";
 import { radii, duration as durationTokens } from "../../constants/design-tokens";
 
 type SetWithMeta = WorkoutSet & {
@@ -317,6 +321,7 @@ type GroupCardProps = {
   onNotesDraftChange: (setId: string, text: string) => void;
   onToggleNotes: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
+  onSwap: (exerciseId: string) => void;
 };
 
 const ExerciseGroupCard = memo(function ExerciseGroupCard({
@@ -325,7 +330,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onUpdate, onCheck, onDelete, onAddSet, onModeChange,
   onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes,
-  onShowDetail,
+  onShowDetail, onSwap,
 }: GroupCardProps) {
   const theme = useTheme();
   const layout = useLayout();
@@ -417,6 +422,13 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
         >
           Details
         </Button>
+        <IconButton
+          icon="swap-horizontal"
+          size={24}
+          onPress={() => onSwap(group.exercise_id)}
+          accessibilityLabel={`Swap ${group.name} for alternative`}
+          style={styles.swapBtn}
+        />
         {group.is_voltra && group.training_modes.length > 1 && (
           <TrainingModeSelector
             modes={group.training_modes}
@@ -674,6 +686,7 @@ export default function ActiveSession() {
   const prevExerciseIds = useRef<string>("");
   const prHapticFired = useRef<Set<string>>(new Set());
   const [snackbar, setSnackbar] = useState("");
+  const [snackbarAction, setSnackbarAction] = useState<{ label: string; onPress: () => void } | undefined>();
   const [notesOpen, setNotesOpen] = useState<Record<string, boolean>>({});
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
@@ -705,6 +718,12 @@ export default function ActiveSession() {
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
   const detailSheetRef = useRef<BottomSheet>(null);
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
+
+  // Substitution state
+  const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+  const [swapSource, setSwapSource] = useState<Exercise | null>(null);
+  const swapSheetRef = useRef<BottomSheet>(null);
+  const swapUndoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -866,6 +885,10 @@ export default function ActiveSession() {
       if (initialized.current && id) {
         load();
       }
+      // Load all exercises for substitution sheet
+      getAllExercises().then(setAllExercises).catch((err) => {
+        console.warn("Failed to load exercises for substitution:", err);
+      });
     }, [id, load])
   );
 
@@ -989,6 +1012,7 @@ export default function ActiveSession() {
       if (restRef.current) clearInterval(restRef.current);
       if (hintTimer.current) clearTimeout(hintTimer.current);
       for (const t of restHapticTimers.current) clearTimeout(t);
+      if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
     };
   }, []);
 
@@ -1066,6 +1090,70 @@ export default function ActiveSession() {
     setDetailExercise(ex);
     detailSheetRef.current?.snapToIndex(0);
   }, []);
+
+  const handleSwapOpen = useCallback(async (exerciseId: string) => {
+    // Check if all sets are completed
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (group && group.sets.every((s) => s.completed)) {
+      setSnackbar("All sets completed — nothing to swap");
+      return;
+    }
+    const ex = await getExerciseById(exerciseId);
+    if (!ex) return;
+    setSwapSource(ex);
+    swapSheetRef.current?.snapToIndex(0);
+  }, [groups]);
+
+  const swapUndoRef = useRef<{ setIds: string[]; originalExerciseId: string } | null>(null);
+
+  const handleSwapUndo = useCallback(async () => {
+    if (!swapUndoRef.current) return;
+    try {
+      await undoSwapInSession(swapUndoRef.current.setIds, swapUndoRef.current.originalExerciseId);
+      swapUndoRef.current = null;
+      if (swapUndoTimer.current) {
+        clearTimeout(swapUndoTimer.current);
+        swapUndoTimer.current = null;
+      }
+      setSnackbar("");
+      setSnackbarAction(undefined);
+      await load();
+    } catch {
+      setSnackbar("Failed to undo swap");
+    }
+  }, [load]);
+
+  const handleSwapSelect = useCallback(async (newExercise: Exercise) => {
+    if (!id || !swapSource) return;
+    try {
+      const modifiedIds = await swapExerciseInSession(id, swapSource.id, newExercise.id);
+      if (modifiedIds.length === 0) {
+        setSnackbar("All sets completed — nothing to swap");
+        setSwapSource(null);
+        return;
+      }
+      const originalId = swapSource.id;
+      setSwapSource(null);
+      await load();
+
+      // Start rest timer with new exercise rest seconds
+      startRest(newExercise.id);
+
+      // Store undo info in ref for the snackbar action
+      swapUndoRef.current = { setIds: modifiedIds, originalExerciseId: originalId };
+
+      // Undo snackbar (5s)
+      if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
+      setSnackbar(`Swapped to ${newExercise.name}`);
+      setSnackbarAction({ label: "UNDO", onPress: () => handleSwapUndo() });
+      swapUndoTimer.current = setTimeout(() => {
+        swapUndoTimer.current = null;
+        swapUndoRef.current = null;
+      }, 5000);
+    } catch {
+      setSnackbar("Failed to swap exercise");
+    }
+  }, [id, swapSource, load, startRest, handleSwapUndo]);
 
   const handlePickExercise = useCallback(async (exercise: { id: string }) => {
     if (!id) return;
@@ -1262,6 +1350,7 @@ export default function ActiveSession() {
             onNotesDraftChange={handleNotesDraftChange}
             onToggleNotes={toggleNotes}
             onShowDetail={handleShowDetail}
+            onSwap={handleSwapOpen}
           />
         )}
         keyExtractor={(item) => item.exercise_id}
@@ -1338,8 +1427,12 @@ export default function ActiveSession() {
       </KeyboardAvoidingView>
       <Snackbar
         visible={!!snackbar}
-        onDismiss={() => setSnackbar("")}
-        duration={3000}
+        onDismiss={() => {
+          setSnackbar("");
+          setSnackbarAction(undefined);
+        }}
+        duration={snackbarAction ? 5000 : 3000}
+        action={snackbarAction}
         accessibilityLiveRegion="polite"
       >
         {snackbar}
@@ -1379,6 +1472,13 @@ export default function ActiveSession() {
           </>
         )}
       </BottomSheet>
+      <SubstitutionSheet
+        sheetRef={swapSheetRef}
+        sourceExercise={swapSource}
+        allExercises={allExercises}
+        onSelect={handleSwapSelect}
+        onDismiss={() => setSwapSource(null)}
+      />
     </>
   );
 }
@@ -1488,6 +1588,11 @@ const styles = StyleSheet.create({
   addSetBtn: {
     alignSelf: "flex-start",
     marginTop: 4,
+  },
+  swapBtn: {
+    width: 56,
+    height: 56,
+    margin: 0,
   },
   divider: {
     marginTop: 8,

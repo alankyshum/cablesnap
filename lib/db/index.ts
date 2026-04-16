@@ -80,6 +80,8 @@ export {
   getTotalSessionCount,
   updateSession,
   createTemplateFromSession,
+  swapExerciseInSession,
+  undoSwapInSession,
 } from "./sessions";
 export type { ExerciseSession, ExerciseRecords } from "./sessions";
 
