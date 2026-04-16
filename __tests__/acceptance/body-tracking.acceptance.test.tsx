@@ -32,6 +32,7 @@ jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache'
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 jest.mock('../../components/MuscleVolumeSegment', () => 'MuscleVolumeSegment')
+jest.mock('../../components/WeeklySummary', () => 'WeeklySummary')
 
 const mockSettings = createBodySettings({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: 70, body_fat_goal: 15 })
 const mockLatest = createBodyWeight({ id: 'bw1', weight: 75, date: '2024-01-15' })
