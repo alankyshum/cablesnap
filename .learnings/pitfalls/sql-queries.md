@@ -81,3 +81,11 @@
 **Learning**: COUNT(*) counts rows, not distinct values. In any query that joins or queries a table where the grouping/dimension column (e.g., day_of_week) can have multiple rows per value, COUNT(*) will overcount. The result is numerically plausible but silently wrong — a 3-day program with 2 templates per day reports 6 scheduled workouts instead of 3.
 **Action**: When counting distinct occurrences of a dimension (days, users, categories), use `COUNT(DISTINCT dimension_column)` instead of `COUNT(*)`. During review, check every COUNT(*) in aggregate queries: if the FROM clause involves a table where the counted dimension is not the primary key, it likely needs COUNT(DISTINCT). Add a test with duplicate dimension values to verify the count.
 **Tags**: sqlite, sql, count-distinct, aggregation, overcounting, join, dimension, code-review
+
+### Bump Export Format Version When Adding Columns — Track Future-Version Guard
+**Source**: BLD-234 — PLAN: Session Rating & Save-as-Template (Phase 37)
+**Date**: 2026-04-16
+**Context**: The initial plan for adding a `rating` column to workout_sessions specified the export format as "v3" — but the current format was already v3. Both QD and TL caught this: adding new fields to export requires bumping to v4. The plan also initially forgot to update the `future_version` guard (which rejects imports from newer versions) from `>= 4` to `>= 5`.
+**Learning**: When adding columns that appear in export/import data, three changes must happen atomically: (1) bump the export version number (v3 → v4), (2) update the `future_version` rejection threshold (>= 4 → >= 5) so older apps reject the new format cleanly, and (3) add backward-compatible handling so the new version can import old-format data (e.g., `row.rating ?? null`). Missing any one of these causes silent data loss, import crashes, or version confusion.
+**Action**: When modifying export/import to include new fields: bump the version constant, update the future_version guard, and add a fallback for the new field when importing older formats. Search for the current version number in import-export code and update all three locations in the same change.
+**Tags**: export, import, versioning, sqlite, data-migration, backward-compatibility, format-version

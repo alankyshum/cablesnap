@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 98
+Total learnings: 100
 
 ## How to Use This Knowledge Base
 
@@ -19,9 +19,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 5 learnings
-- [Build Configuration](pitfalls/build-config.md) — 10 learnings
+- [Build Configuration](pitfalls/build-config.md) — 11 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 10 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 11 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-234 | Alert.prompt Is iOS-Only — Use Cross-Platform Modal for Text Input Dialogs | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-16 | BLD-234 | Bump Export Format Version When Adding Columns — Track Future-Version Guard | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-198/212 | Source-Level Structural Tests for Design System Compliance | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-16 | BLD-203 | Flex Text Overflow: minWidth: 0 and Conditional flexBasis for Responsive Wrapping | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-195 | Playwright Worker Isolation Breaks Module-Level State Aggregation | Patterns | [testing.md](patterns/testing.md) |

@@ -81,3 +81,11 @@
 **Learning**: Android's `elevation` property renders shadow based on the View's own bounds, and this shadow is clipped by the parent's bounds. If a child element protrudes beyond its parent (via negative margins or absolute positioning), the parent's elevation shadow will not extend to cover the protruding area. Each independently elevated element must have its own `elevation` property applied directly.
 **Action**: When a UI element protrudes beyond its container and both need shadows, apply `elevation` independently to the container and the protruding element — do not rely on the parent's elevation to cast shadow over overflowing children. On iOS, use separate `shadow*` properties (shadowColor, shadowOffset, shadowOpacity, shadowRadius) for the same effect, as iOS does not use `elevation`.
 **Tags**: android, elevation, shadow, overflow, react-native, platform-specific, clipping, z-index
+
+### Alert.prompt Is iOS-Only — Use Cross-Platform Modal for Text Input Dialogs
+**Source**: BLD-234 — PLAN: Session Rating & Save-as-Template (Phase 37)
+**Date**: 2026-04-16
+**Context**: The initial plan for a "save as template" flow used `Alert.prompt()` to collect a template name from the user. Quality Director review identified this as a blocking issue because `Alert.prompt()` is an iOS-only API — it does not exist on Android or web.
+**Learning**: React Native's `Alert.prompt()` only works on iOS. On Android and web it is undefined and will crash or silently fail. Any flow requiring text input from a dialog must use a cross-platform alternative: a `Modal` with a `TextInput`, or `@gorhom/bottom-sheet` if already in the project.
+**Action**: Never use `Alert.prompt()` in cross-platform code. For text input dialogs, use a `Modal` component with an embedded `TextInput`, or `@gorhom/bottom-sheet`. Check that any React Native API used in plans is available on all target platforms (iOS, Android, web) before specifying it.
+**Tags**: react-native, alert, ios-only, cross-platform, modal, text-input, android, web, pitfall
