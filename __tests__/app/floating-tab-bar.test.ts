@@ -40,6 +40,30 @@ describe("FloatingTabBar component (BLD-212)", () => {
     expect(floatingTabBarSrc).toContain("shadowOffset");
   });
 
+  it("uses theme.colors.shadow instead of hardcoded #000 for shadowColor", () => {
+    expect(floatingTabBarSrc).toContain("theme.colors.shadow");
+    expect(floatingTabBarSrc).not.toContain('shadowColor: "#000"');
+    expect(floatingTabBarSrc).not.toContain("shadowColor: '#000'");
+  });
+
+  it("CenterButton uses useTheme for theme-aware styling", () => {
+    // useTheme must appear at least twice: once in CenterButton, once in FloatingTabBar
+    const themeUsages = (floatingTabBarSrc.match(/const theme = useTheme\(\)/g) || []);
+    expect(themeUsages.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("tab label font size is at least 12 for accessibility", () => {
+    const fontSizeMatch = floatingTabBarSrc.match(/label:[\s\S]*?fontSize:\s*(\d+)/);
+    expect(fontSizeMatch).not.toBeNull();
+    expect(Number(fontSizeMatch![1])).toBeGreaterThanOrEqual(12);
+  });
+
+  it("tab label line height is proportional to font size", () => {
+    const lineHeightMatch = floatingTabBarSrc.match(/label:[\s\S]*?lineHeight:\s*(\d+)/);
+    expect(lineHeightMatch).not.toBeNull();
+    expect(Number(lineHeightMatch![1])).toBeGreaterThanOrEqual(16);
+  });
+
   it("defines center button with circular shape", () => {
     expect(floatingTabBarSrc).toContain("CENTER_BUTTON_SIZE");
     expect(floatingTabBarSrc).toContain("borderRadius: CENTER_BUTTON_SIZE / 2");
