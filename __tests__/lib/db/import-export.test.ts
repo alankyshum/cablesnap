@@ -30,10 +30,10 @@ beforeEach(() => {
 // ---- Export v3 Format ----
 
 describe("exportAllData", () => {
-  it("produces v3 format with data wrapper and counts", async () => {
+  it("produces v4 format with data wrapper and counts", async () => {
     mockDb.getAllAsync.mockResolvedValue([]);
     const result = await exportAllData();
-    expect(result.version).toBe(3);
+    expect(result.version).toBe(4);
     expect(result.data).toBeDefined();
     expect(result.counts).toBeDefined();
     expect(result.exported_at).toBeDefined();
@@ -99,11 +99,19 @@ describe("validateBackupData", () => {
     expect(err!.type).toBe("missing_version");
   });
 
-  it("rejects future version (v4+)", () => {
-    const err = validateBackupData({ version: 4, data: { exercises: [{ id: "1" }] } });
+  it("rejects future version (v5+)", () => {
+    const err = validateBackupData({ version: 5, data: { exercises: [{ id: "1" }] } });
     expect(err).not.toBeNull();
     expect(err!.type).toBe("future_version");
     expect(err!.message).toContain("update the app");
+  });
+
+  it("accepts v4 backup", () => {
+    const err = validateBackupData({
+      version: 4,
+      data: { exercises: [{ id: "1", name: "Bench" }] },
+    });
+    expect(err).toBeNull();
   });
 
   it("accepts v2 backup", () => {

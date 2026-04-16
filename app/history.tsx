@@ -28,6 +28,7 @@ import {
 import type { WorkoutSession } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import ErrorBoundary from "../components/ErrorBoundary";
+import RatingWidget from "../components/RatingWidget";
 import WorkoutHeatmap from "../components/WorkoutHeatmap";
 import {
   computeLongestStreak,
@@ -300,13 +301,18 @@ function HistoryScreen() {
         <Card
           style={[styles.card, { backgroundColor: theme.colors.surface }]}
           onPress={() => router.push(`/session/detail/${item.id}`)}
-          accessibilityLabel={`${item.name || "Untitled workout"}, ${date}, ${formatDuration(item.duration_seconds)}, ${item.set_count} sets`}
+          accessibilityLabel={`${item.name || "Untitled workout"}, ${date}, ${formatDuration(item.duration_seconds)}, ${item.set_count} sets${item.rating ? `, rated ${item.rating} out of 5` : ""}`}
           accessibilityRole="button"
         >
           <Card.Content>
-            <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
-              {item.name || "Untitled workout"}
-            </Text>
+            <View style={styles.cardHeader}>
+              <Text variant="titleSmall" style={{ color: theme.colors.onSurface, flex: 1, minWidth: 0 }} numberOfLines={1}>
+                {item.name || "Untitled workout"}
+              </Text>
+              {item.rating != null && item.rating > 0 && (
+                <RatingWidget value={item.rating} readOnly size="small" />
+              )}
+            </View>
             <Text
               variant="bodySmall"
               style={{ color: theme.colors.onSurfaceVariant }}
@@ -546,6 +552,12 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 8,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
   chip: {
     alignSelf: "flex-start",

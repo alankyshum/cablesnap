@@ -1,6 +1,6 @@
 import type { WorkoutSession, WorkoutSet, TrainingMode, MuscleGroup } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, execute, withTransaction } from "./helpers";
+import { query, queryOne, execute, getDatabase, withTransaction } from "./helpers";
 
 type SetRow = {
   id: string;
@@ -42,6 +42,7 @@ export async function startSession(
     completed_at: null,
     duration_seconds: null,
     notes: "",
+    rating: null,
   };
 }
 
@@ -1054,4 +1055,106 @@ export async function getTotalSessionCount(): Promise<number> {
     "SELECT COUNT(*) AS count FROM workout_sessions WHERE completed_at IS NOT NULL"
   );
   return row?.count ?? 0;
+}
+
+// ---- Session Rating & Notes ----
+
+export async function updateSession(
+  id: string,
+  fields: { rating?: number | null; notes?: string }
+): Promise<void> {
+  const clauses: string[] = [];
+  const params: (string | number | null)[] = [];
+
+  if (fields.rating !== undefined) {
+    clauses.push("rating = ?");
+    params.push(fields.rating);
+  }
+  if (fields.notes !== undefined) {
+    clauses.push("notes = ?");
+    params.push(fields.notes);
+  }
+  if (clauses.length === 0) return;
+
+  params.push(id);
+  await execute(
+    `UPDATE workout_sessions SET ${clauses.join(", ")} WHERE id = ?`,
+    params
+  );
+}
+
+// ---- Save Session as Template ----
+
+export async function createTemplateFromSession(
+  sessionId: string,
+  name: string
+): Promise<string> {
+  const database = await getDatabase();
+
+  const newTemplateId = uuid();
+  const now = Date.now();
+
+  await database.withTransactionAsync(async () => {
+    // Create template
+    await database.runAsync(
+      "INSERT INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, ?, ?, 0)",
+      [newTemplateId, name, now, now]
+    );
+
+    // Get completed sets from session grouped by exercise
+    const sets = await database.getAllAsync<{
+      exercise_id: string;
+      set_number: number;
+      reps: number | null;
+      link_id: string | null;
+      training_mode: string | null;
+    }>(
+      `SELECT exercise_id, set_number, reps, link_id, training_mode
+       FROM workout_sets
+       WHERE session_id = ? AND completed = 1
+       ORDER BY exercise_id, set_number ASC`,
+      [sessionId]
+    );
+
+    if (sets.length === 0) return;
+
+    // Group by exercise_id to determine position and set counts
+    const exerciseOrder: string[] = [];
+    const exerciseGroups = new Map<string, typeof sets>();
+    for (const s of sets) {
+      if (!exerciseGroups.has(s.exercise_id)) {
+        exerciseOrder.push(s.exercise_id);
+        exerciseGroups.set(s.exercise_id, []);
+      }
+      exerciseGroups.get(s.exercise_id)!.push(s);
+    }
+
+    // Map old link_ids to new UUIDs (preserve superset groupings)
+    const linkMap = new Map<string, string>();
+
+    for (let i = 0; i < exerciseOrder.length; i++) {
+      const exerciseId = exerciseOrder[i];
+      const group = exerciseGroups.get(exerciseId)!;
+      const teId = uuid();
+
+      // Determine link_id for supersets
+      const firstSet = group[0];
+      let linkId: string | null = firstSet.link_id;
+      if (linkId) {
+        if (!linkMap.has(linkId)) linkMap.set(linkId, uuid());
+        linkId = linkMap.get(linkId)!;
+      }
+
+      // Use the max reps from completed sets as target_reps
+      const maxReps = Math.max(...group.map((s) => s.reps ?? 0));
+      const targetReps = maxReps > 0 ? String(maxReps) : "8-12";
+
+      await database.runAsync(
+        "INSERT INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [teId, newTemplateId, exerciseId, i, group.length, targetReps, 90, linkId, ""]
+      );
+    }
+  });
+
+  return newTemplateId;
 }

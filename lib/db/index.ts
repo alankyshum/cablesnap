@@ -78,6 +78,8 @@ export {
   getSessionWeightIncreases,
   getSessionCountsByDay,
   getTotalSessionCount,
+  updateSession,
+  createTemplateFromSession,
 } from "./sessions";
 export type { ExerciseSession, ExerciseRecords } from "./sessions";
 

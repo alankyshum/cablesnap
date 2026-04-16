@@ -191,6 +191,7 @@ export type WorkoutSession = {
   completed_at: number | null;
   duration_seconds: number | null;
   notes: string;
+  rating: number | null;
 };
 
 export type WorkoutSet = {

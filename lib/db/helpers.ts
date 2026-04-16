@@ -258,6 +258,11 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       "ALTER TABLE workout_sessions ADD COLUMN program_day_id TEXT DEFAULT NULL"
     );
   }
+  if (!sessionCols.some((c) => c.name === "rating")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sessions ADD COLUMN rating INTEGER DEFAULT NULL"
+    );
+  }
 
   const setCols = await database.getAllAsync<{ name: string }>(
     "PRAGMA table_info(workout_sets)"

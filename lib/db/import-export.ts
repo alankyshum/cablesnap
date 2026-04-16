@@ -105,7 +105,7 @@ export type BackupV3Data = {
 };
 
 export type BackupV3 = {
-  version: 3;
+  version: 3 | 4;
   app_version: string;
   exported_at: string;
   data: BackupV3Data;
@@ -169,7 +169,7 @@ export function validateBackupData(data: unknown): ValidationError | null {
   }
 
   const version = Number(obj.version);
-  if (version >= 4) {
+  if (version >= 5) {
     return { type: "future_version", message: "This backup was created with a newer version of FitForge. Please update the app first." };
   }
 
@@ -286,7 +286,7 @@ export async function exportAllData(
   onProgress?.({ table: "done", tableIndex: tables.length, totalTables: tables.length });
 
   return {
-    version: 3,
+    version: 4,
     app_version: "1.0.0",
     exported_at: new Date().toISOString(),
     data: data as unknown as BackupV3Data,
@@ -436,8 +436,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "workout_sessions": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.template_id, row.name, row.started_at, row.completed_at, row.duration_seconds, row.notes]
+        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes, program_day_id, rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.name, row.started_at, row.completed_at, row.duration_seconds, row.notes, row.program_day_id ?? null, row.rating ?? null]
       );
       return r.changes > 0;
     }

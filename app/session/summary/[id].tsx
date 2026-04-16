@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AccessibilityInfo,
+  Modal,
   Platform,
+  Pressable,
   Share,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   Card,
+  Snackbar,
   Text,
   useTheme,
 } from "react-native-paper";
@@ -18,16 +22,19 @@ import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../../lib/layout";
 import {
+  createTemplateFromSession,
   getBodySettings,
   getSessionById,
   getSessionComparison,
   getSessionPRs,
   getSessionRepPRs,
+  getSessionSetCount,
   getSessionSets,
   getSessionWeightIncreases,
   buildAchievementContext,
   getEarnedAchievementIds,
   saveEarnedAchievements,
+  updateSession,
 } from "../../../lib/db";
 import { evaluateAchievements } from "../../../lib/achievements";
 import type { AchievementDef } from "../../../lib/achievements";
@@ -35,6 +42,7 @@ import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
 import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { toDisplay } from "../../../lib/units";
 import { formatTime } from "../../../lib/format";
+import RatingWidget from "../../../components/RatingWidget";
 
 type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
 type RepPR = { exercise_id: string; name: string; reps: number; previous_max: number };
@@ -57,6 +65,14 @@ export default function Summary() {
   const [comparison, setComparison] = useState<Comparison>(null);
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [newAchievements, setNewAchievements] = useState<AchievementDef[]>([]);
+  const [rating, setRating] = useState<number | null>(null);
+  const [notesText, setNotesText] = useState("");
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [snackbar, setSnackbar] = useState<{ message: string; action?: { label: string; onPress: () => void } } | null>(null);
+  const [completedSetCount, setCompletedSetCount] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -68,16 +84,21 @@ export default function Summary() {
       if (!sess) return;
       setSession(sess);
       setUnit(settings.weight_unit);
+      setRating(sess.rating ?? null);
+      setNotesText(sess.notes ?? "");
+      setNotesExpanded(!!(sess.notes && sess.notes.length > 0));
 
-      const [setsData, prData, repPrData, incData, compData] = await Promise.all([
+      const [setsData, prData, repPrData, incData, compData, setCount] = await Promise.all([
         getSessionSets(id),
         getSessionPRs(id),
         getSessionRepPRs(id),
         getSessionWeightIncreases(id),
         getSessionComparison(id),
+        getSessionSetCount(id),
       ]);
       setSets(setsData);
       setPrs(prData);
+      setCompletedSetCount(setCount);
       setRepPrs(repPrData);
       // Filter out exercises that are already weight PRs
       setIncreases(incData.filter(
@@ -184,6 +205,48 @@ export default function Summary() {
     }
   };
 
+  const handleRatingChange = useCallback(async (newRating: number | null) => {
+    if (!id) return;
+    const previousRating = rating;
+    setRating(newRating);
+    try {
+      await updateSession(id, { rating: newRating });
+    } catch {
+      setRating(previousRating);
+      setSnackbar({ message: "Failed to save rating" });
+    }
+  }, [id, rating]);
+
+  const handleNotesSave = useCallback(async () => {
+    if (!id) return;
+    try {
+      await updateSession(id, { notes: notesText });
+    } catch {
+      setSnackbar({ message: "Failed to save notes" });
+    }
+  }, [id, notesText]);
+
+  const handleSaveAsTemplate = useCallback(async () => {
+    if (!id || saving) return;
+    setSaving(true);
+    try {
+      const truncatedName = templateName.slice(0, 100).trim() || "Untitled Template";
+      const newId = await createTemplateFromSession(id, truncatedName);
+      setTemplateModalVisible(false);
+      setSnackbar({
+        message: "Template saved!",
+        action: {
+          label: "View",
+          onPress: () => router.push(`/template/${newId}`),
+        },
+      });
+    } catch {
+      setSnackbar({ message: "Failed to save template" });
+    } finally {
+      setSaving(false);
+    }
+  }, [id, templateName, saving, router]);
+
   if (!session) {
     return (
       <>
@@ -281,6 +344,82 @@ export default function Summary() {
                 </Card.Content>
               </Card>
             </View>
+
+            {/* Rating Widget */}
+            {session.completed_at && (
+              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+                <Card.Content style={{ alignItems: "center" }}>
+                  <Text
+                    variant="titleMedium"
+                    style={{ color: theme.colors.onSurface, marginBottom: 12, fontWeight: "600" }}
+                  >
+                    How was your workout?
+                  </Text>
+                  <RatingWidget value={rating} onChange={handleRatingChange} size="large" />
+                </Card.Content>
+              </Card>
+            )}
+
+            {/* Session Notes */}
+            {session.completed_at && (
+              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+                <Card.Content>
+                  <Pressable
+                    onPress={() => setNotesExpanded(!notesExpanded)}
+                    style={styles.notesHeader}
+                    accessibilityRole="button"
+                    accessibilityLabel="Session notes"
+                    accessibilityHint="Double tap to add notes about this workout"
+                    accessibilityState={{ expanded: notesExpanded }}
+                  >
+                    <MaterialCommunityIcons
+                      name="note-edit-outline"
+                      size={20}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      variant="titleSmall"
+                      style={{ color: theme.colors.onSurface, marginLeft: 8, flex: 1 }}
+                    >
+                      Session notes
+                    </Text>
+                    <MaterialCommunityIcons
+                      name={notesExpanded ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                  </Pressable>
+                  {notesExpanded && (
+                    <View style={{ marginTop: 8 }}>
+                      <TextInput
+                        value={notesText}
+                        onChangeText={(t) => setNotesText(t.slice(0, 500))}
+                        onBlur={handleNotesSave}
+                        placeholder="Add notes about this workout..."
+                        placeholderTextColor={theme.colors.onSurfaceDisabled}
+                        multiline
+                        maxLength={500}
+                        style={[
+                          styles.notesInput,
+                          {
+                            color: theme.colors.onSurface,
+                            backgroundColor: theme.colors.surfaceVariant,
+                            borderColor: theme.colors.outline,
+                          },
+                        ]}
+                        accessibilityLabel="Session notes"
+                      />
+                      <Text
+                        variant="bodySmall"
+                        style={{ color: theme.colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}
+                      >
+                        {notesText.length}/500
+                      </Text>
+                    </View>
+                  )}
+                </Card.Content>
+              </Card>
+            )}
           </>
         }
         renderItem={({ item }) => {
@@ -559,6 +698,24 @@ export default function Summary() {
         }}
         ListFooterComponent={
           <View style={styles.actions}>
+            {session.completed_at && (
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  setTemplateName((session.name ?? "").slice(0, 100));
+                  setTemplateModalVisible(true);
+                }}
+                icon="content-save-outline"
+                style={styles.shareBtn}
+                contentStyle={styles.btnContent}
+                disabled={completedSetCount === 0}
+                accessibilityRole="button"
+                accessibilityHint={completedSetCount === 0 ? "No exercises to save" : "Save this workout as a reusable template"}
+                accessibilityState={{ disabled: completedSetCount === 0 }}
+              >
+                Save as Template
+              </Button>
+            )}
             <Button
               mode="contained"
               onPress={() => router.replace("/(tabs)")}
@@ -588,6 +745,69 @@ export default function Summary() {
             >
               View Details
             </Button>
+
+            {/* Save as Template Modal */}
+            <Modal
+              visible={templateModalVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setTemplateModalVisible(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+                  <Text
+                    variant="titleMedium"
+                    style={{ color: theme.colors.onSurface, marginBottom: 16 }}
+                  >
+                    Save as Template
+                  </Text>
+                  <TextInput
+                    value={templateName}
+                    onChangeText={(t) => setTemplateName(t.slice(0, 100))}
+                    placeholder="Template name"
+                    placeholderTextColor={theme.colors.onSurfaceDisabled}
+                    maxLength={100}
+                    style={[
+                      styles.modalInput,
+                      {
+                        color: theme.colors.onSurface,
+                        backgroundColor: theme.colors.surfaceVariant,
+                        borderColor: theme.colors.outline,
+                      },
+                    ]}
+                    autoFocus
+                    accessibilityLabel="Template name"
+                  />
+                  <View style={styles.modalActions}>
+                    <Button
+                      mode="text"
+                      onPress={() => setTemplateModalVisible(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      mode="contained"
+                      onPress={handleSaveAsTemplate}
+                      loading={saving}
+                      disabled={saving || !templateName.trim()}
+                      contentStyle={{ paddingVertical: 8 }}
+                    >
+                      Save
+                    </Button>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Snackbar */}
+            <Snackbar
+              visible={!!snackbar}
+              onDismiss={() => setSnackbar(null)}
+              duration={4000}
+              action={snackbar?.action}
+            >
+              {snackbar?.message ?? ""}
+            </Snackbar>
           </View>
         }
       />
@@ -677,5 +897,43 @@ const styles = StyleSheet.create({
   },
   btnContent: {
     paddingVertical: 4,
+  },
+  notesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 48,
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: "top",
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
   },
 });
