@@ -65,6 +65,7 @@ import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
+import { useProfileGender } from "../../lib/useProfileGender";
 import { suggest, type Suggestion } from "../../lib/rm";
 import TrainingModeSelector from "../../components/TrainingModeSelector";
 import { formatTime } from "../../lib/format";
@@ -508,6 +509,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
 function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
   const theme = useTheme();
   const layout = useLayout();
+  const profileGender = useProfileGender();
   const { width: screenWidth } = useWindowDimensions();
 
   const steps = exercise.instructions
@@ -624,6 +626,7 @@ function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
                 primary={exercise.primary_muscles}
                 secondary={exercise.secondary_muscles}
                 width={mapWidth}
+                gender={profileGender}
               />
             </>
           ) : (

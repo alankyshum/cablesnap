@@ -10,6 +10,7 @@ type Props = {
   primary: MuscleGroup[];
   secondary: MuscleGroup[];
   width?: number;
+  gender?: "male" | "female";
 };
 
 const SLUG_MAP: Record<MuscleGroup, Slug[]> = {
@@ -51,7 +52,7 @@ function buildData(
   return result;
 }
 
-function MuscleMapInner({ primary, secondary, width: w }: Props) {
+function MuscleMapInner({ primary, secondary, width: w, gender = "male" }: Props) {
   const theme = useTheme();
   const isDark = theme.dark;
   const c = isDark ? muscle.dark : muscle.light;
@@ -87,21 +88,19 @@ function MuscleMapInner({ primary, secondary, width: w }: Props) {
       <View style={styles.horizontal}>
         <Body
           data={data}
-          gender="male"
+          gender={gender}
           side="front"
           scale={scale}
           colors={[c.secondary, c.primary]}
           border={isDark ? "#555" : "#dfdfdf"}
-          hiddenParts={["hair"]}
         />
         <Body
           data={data}
-          gender="male"
+          gender={gender}
           side="back"
           scale={scale}
           colors={[c.secondary, c.primary]}
           border={isDark ? "#555" : "#dfdfdf"}
-          hiddenParts={["hair"]}
         />
       </View>
       <Legend primary={primary} secondary={secondary} isDark={isDark} />

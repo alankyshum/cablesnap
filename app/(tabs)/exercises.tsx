@@ -23,6 +23,7 @@ import { useLayout } from "../../lib/layout";
 import { MuscleMap } from "../../components/MuscleMap";
 import { useFocusRefetch } from "../../lib/query";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
+import { useProfileGender } from "../../lib/useProfileGender";
 
 type FilterType = Category | "custom";
 const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
@@ -32,6 +33,7 @@ export default function Exercises() {
   const router = useRouter();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
+  const profileGender = useProfileGender();
   const mc = theme.dark ? muscle.dark : muscle.light;
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<FilterType>>(new Set());
@@ -317,6 +319,7 @@ export default function Exercises() {
                   primary={detail.primary_muscles}
                   secondary={detail.secondary_muscles}
                   width={360}
+                  gender={profileGender}
                 />
                 <View style={styles.muscleColumns}>
                   <View style={{ flex: 1 }}>

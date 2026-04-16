@@ -31,6 +31,7 @@ import { toDisplay } from "../../lib/units";
 import { percentageTable } from "../../lib/rm";
 import { useLayout } from "../../lib/layout";
 import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
+import { useProfileGender } from "../../lib/useProfileGender";
 
 const PAGE_SIZE = 10;
 const MAX_ITEMS = 50;
@@ -48,6 +49,7 @@ export default function ExerciseDetail() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const layout = useLayout();
+  const profileGender = useProfileGender();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [toast, setToast] = useState("");
@@ -293,6 +295,7 @@ export default function ExerciseDetail() {
               primary={exercise.primary_muscles}
               secondary={exercise.secondary_muscles}
               width={Math.min(screenWidth * 0.45, 400)}
+              gender={profileGender}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -324,6 +327,7 @@ export default function ExerciseDetail() {
               primary={exercise.primary_muscles}
               secondary={exercise.secondary_muscles}
               width={screenWidth - 32}
+              gender={profileGender}
             />
           </View>
           {steps.length > 0 && (
