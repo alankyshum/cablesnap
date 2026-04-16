@@ -147,3 +147,10 @@ jobs:
           gh release create "v$VERSION" \
             --title "v$VERSION" \
             --notes "${{ steps.release_notes.outputs.notes }}"
+
+      - name: Trigger F-Droid build
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run fdroid-release.yml --ref "v${{ steps.next_version.outputs.version }}"
