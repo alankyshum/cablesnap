@@ -1,5 +1,5 @@
 import { query, queryOne } from "./helpers";
-import { mondayOf } from "../format";
+import { mondayOf, movingAvg } from "../format";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -126,7 +126,7 @@ export async function getWeeklyWorkouts(
         [start, end]
       ),
       queryOne<{ count: number }>(
-        `SELECT COUNT(*) AS count
+        `SELECT COUNT(DISTINCT ps.day_of_week) AS count
          FROM program_schedule ps
          JOIN programs p ON p.id = ps.program_id AND p.is_active = 1 AND p.deleted_at IS NULL`
       ),
@@ -286,6 +286,16 @@ export async function getWeeklyBody(
   );
 
   if (entries.length === 0) return null;
+
+  // Use 3-day rolling average when ≥3 entries, raw values for <3
+  if (entries.length >= 3) {
+    const smoothed = movingAvg(entries, 3);
+    return {
+      startWeight: smoothed[0].avg,
+      endWeight: smoothed[smoothed.length - 1].avg,
+      entryCount: entries.length,
+    };
+  }
 
   return {
     startWeight: entries[0].weight,
