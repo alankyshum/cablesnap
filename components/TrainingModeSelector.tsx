@@ -78,7 +78,7 @@ function TrainingModeSelector({ modes, selected, exercise, onSelect, compact: is
 
       {tooltip && (
         <View style={[styles.tooltip, { backgroundColor: theme.colors.inverseSurface }]}>
-          <Text style={{ color: theme.colors.inverseOnSurface, fontSize: 13 }}>
+          <Text style={{ color: theme.colors.inverseOnSurface, fontSize: 12 }}>
             {tooltip}
           </Text>
         </View>

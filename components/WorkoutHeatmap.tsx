@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { useLayout } from "../lib/layout";
 import { withOpacity } from "../lib/format";
+import { radii } from "../constants/design-tokens";
 
 type HeatmapProps = {
   data: Map<string, number>;
@@ -157,7 +158,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
                   {
                     width: cellSize,
                     height: cellSize,
-                    borderRadius: 3,
+                    borderRadius: radii.sm,
                     backgroundColor: bgColor,
                     margin: gap / 2,
                     opacity: isFuture ? 0.3 : 1,
@@ -183,7 +184,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
               styles.legendCell,
               {
                 backgroundColor: heatmapColor(level, theme),
-                borderRadius: 3,
+                borderRadius: radii.sm,
               },
             ]}
           >

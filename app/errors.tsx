@@ -7,6 +7,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { getRecentErrors, clearErrorLog } from "../lib/errors";
 import { useLayout } from "../lib/layout";
 import type { ErrorEntry } from "../lib/types";
+import { radii } from "../constants/design-tokens";
 
 export default function Errors() {
   const theme = useTheme();
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   },
   stackBox: {
     marginTop: 8,
-    borderRadius: 6,
+    borderRadius: radii.md,
     padding: 8,
   },
 });

@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { getPhotoById } from "../../lib/db/photos";
 import type { ProgressPhoto } from "../../lib/db/photos";
+import { radii, scrim } from "../../constants/design-tokens";
 
 export default function CompareScreen() {
   const theme = useTheme();
@@ -134,8 +135,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     left: 8,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 6,
+    backgroundColor: scrim.dark,
+    borderRadius: radii.md,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },

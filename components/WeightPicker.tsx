@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     lineHeight: 20,
   },
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   valueText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
   },
   unitText: {

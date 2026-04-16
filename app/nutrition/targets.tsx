@@ -83,7 +83,7 @@ export default function Targets() {
         accessibilityRole="button"
       >
         <Card.Content>
-          <Text variant="titleSmall" style={{ color: theme.colors.onPrimaryContainer, fontSize: 15 }}>
+          <Text variant="titleSmall" style={{ color: theme.colors.onPrimaryContainer, fontSize: 16 }}>
             {profile ? "Update your profile" : "Set your profile for personalized targets"}
           </Text>
           {profileSummary ? (

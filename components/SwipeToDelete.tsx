@@ -9,6 +9,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { IconButton, useTheme } from "react-native-paper";
+import { radii, duration as durationTokens } from "../constants/design-tokens";
 
 interface SwipeToDeleteProps {
   children: React.ReactNode;
@@ -35,7 +36,7 @@ export default function SwipeToDelete({
     })
     .onEnd((e) => {
       if (e.translationX < DISMISS_THRESHOLD) {
-        translateX.value = withTiming(-500, { duration: 200 }, () => {
+        translateX.value = withTiming(-500, { duration: durationTokens.fast }, () => {
           runOnJS(onDelete)();
         });
       } else if (e.translationX < THRESHOLD) {
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "flex-end",
-    borderRadius: 6,
+    borderRadius: radii.md,
   },
   deleteContent: {
     width: 80,

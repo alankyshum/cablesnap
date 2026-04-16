@@ -29,6 +29,7 @@ import {
   type Category,
   type Exercise,
 } from "../lib/types";
+import { duration as durationTokens, elevation } from "../constants/design-tokens";
 
 type Props = {
   visible: boolean;
@@ -67,18 +68,18 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         .finally(() => setLoading(false));
 
       translateY.value = withSpring(SNAP_MID, SPRING_CONFIG);
-      backdropOpacity.value = withTiming(1, { duration: 250 });
+      backdropOpacity.value = withTiming(1, { duration: durationTokens.normal });
     } else if (mounted) {
-      translateY.value = withTiming(SCREEN_H, { duration: 200 });
-      backdropOpacity.value = withTiming(0, { duration: 200 }, () => {
+      translateY.value = withTiming(SCREEN_H, { duration: durationTokens.fast });
+      backdropOpacity.value = withTiming(0, { duration: durationTokens.fast }, () => {
         runOnJS(setMounted)(false);
       });
     }
   }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_MID]);
 
   const dismiss = useCallback(() => {
-    translateY.value = withTiming(SCREEN_H, { duration: 200 });
-    backdropOpacity.value = withTiming(0, { duration: 200 }, () => {
+    translateY.value = withTiming(SCREEN_H, { duration: durationTokens.fast });
+    backdropOpacity.value = withTiming(0, { duration: durationTokens.fast }, () => {
       runOnJS(onDismiss)();
     });
   }, [translateY, backdropOpacity, onDismiss, SCREEN_H]);
@@ -294,11 +295,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     overflow: "hidden",
-    elevation: 16,
-    shadowColor: "rgb(0,0,0)",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    ...elevation.high,
   },
   handleZone: {
     alignItems: "center",

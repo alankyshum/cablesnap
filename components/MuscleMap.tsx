@@ -5,6 +5,7 @@ import Body, { type Slug, type ExtendedBodyPart } from "react-native-body-highli
 import type { MuscleGroup } from "../lib/types";
 import { MUSCLE_LABELS } from "../lib/types";
 import { muscle } from "../constants/theme";
+import { radii } from "../constants/design-tokens";
 
 type Props = {
   primary: MuscleGroup[];
@@ -92,7 +93,7 @@ function MuscleMapInner({ primary, secondary, width: w, gender = "male" }: Props
           side="front"
           scale={scale}
           colors={[c.secondary, c.primary]}
-          border={isDark ? "#555" : "#dfdfdf"}
+          border={isDark ? muscle.dark.outline : muscle.light.outline}
         />
         <Body
           data={data}
@@ -100,7 +101,7 @@ function MuscleMapInner({ primary, secondary, width: w, gender = "male" }: Props
           side="back"
           scale={scale}
           colors={[c.secondary, c.primary]}
-          border={isDark ? "#555" : "#dfdfdf"}
+          border={isDark ? muscle.dark.outline : muscle.light.outline}
         />
       </View>
       <Legend primary={primary} secondary={secondary} isDark={isDark} />
@@ -183,6 +184,6 @@ const styles = StyleSheet.create({
   dot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
+    borderRadius: radii.md,
   },
 });

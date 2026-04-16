@@ -24,6 +24,7 @@ import { MuscleMap } from "../../components/MuscleMap";
 import { useFocusRefetch } from "../../lib/query";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { useProfileGender } from "../../lib/useProfileGender";
+import { radii } from "../../constants/design-tokens";
 
 type FilterType = Category | "custom";
 const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 6,
     marginVertical: 4,
-    borderRadius: 10,
+    borderRadius: radii.lg,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
   customBadge: {
     height: 20,
     paddingHorizontal: 6,
-    borderRadius: 10,
+    borderRadius: radii.lg,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
     bottom: 16,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     justifyContent: "center",
     alignItems: "center",
   },

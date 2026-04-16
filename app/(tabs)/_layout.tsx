@@ -15,7 +15,7 @@ export default function TabLayout() {
       return (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <MaterialCommunityIcons name={icon} size={22} color={theme.colors.onSurface} />
-          <Text style={{ fontSize: 18, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
         </View>
       );
     };

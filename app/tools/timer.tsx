@@ -51,6 +51,7 @@ import {
 } from "../../lib/timer"
 import { getAppSetting, setAppSetting } from "../../lib/db"
 import { hexToRgb } from "../../lib/format"
+import { radii, typography } from "../../constants/design-tokens"
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
@@ -643,7 +644,7 @@ const styles = StyleSheet.create({
   stepBtn: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -680,8 +681,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   time: {
-    fontSize: 56,
-    fontWeight: "700",
+    ...typography.display,
     fontVariant: ["tabular-nums"],
     fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
   },
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
   addRound: {
     minWidth: 160,
     minHeight: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   btn: {
     minWidth: 120,
     minHeight: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,

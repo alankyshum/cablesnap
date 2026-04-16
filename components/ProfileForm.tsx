@@ -203,7 +203,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
 
       <Text
         variant="titleMedium"
-        style={{ color: theme.colors.onSurface, marginBottom: 16, fontSize: 18 }}
+        style={{ color: theme.colors.onSurface, marginBottom: 16 }}
       >
         Your Profile
       </Text>

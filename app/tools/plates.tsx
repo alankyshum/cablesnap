@@ -25,6 +25,7 @@ import {
   KG_BARS,
   LB_BARS,
 } from "../../lib/plates"
+import { radii } from "../../constants/design-tokens"
 
 const HEIGHT: Record<number, number> = {
   25: 80, 55: 80,
@@ -321,13 +322,13 @@ const plateStyles = StyleSheet.create({
   },
   plate: {
     width: 22,
-    borderRadius: 3,
+    borderRadius: radii.sm,
     marginHorizontal: 1,
   },
   bar: {
     width: 60,
     height: 8,
-    borderRadius: 2,
+    borderRadius: radii.sm,
   },
 })
 

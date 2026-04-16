@@ -38,6 +38,7 @@ import {
   formatDuration,
   withOpacity,
 } from "../lib/format";
+import { radii } from "../constants/design-tokens";
 
 type SessionRow = WorkoutSession & { set_count: number };
 
@@ -548,7 +549,7 @@ const styles = StyleSheet.create({
   dot: {
     width: 5,
     height: 5,
-    borderRadius: 2.5,
+    borderRadius: radii.sm,
   },
   card: {
     marginBottom: 8,

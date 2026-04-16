@@ -73,6 +73,7 @@ import { useLayout } from "../../lib/layout";
 import { confirmAction } from "../../lib/confirm";
 import WeightPicker from "../../components/WeightPicker";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
+import { radii, duration as durationTokens } from "../../constants/design-tokens";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -972,7 +973,7 @@ export default function ActiveSession() {
       // eslint-disable-next-line react-hooks/immutability
       restFlash.value = 1;
       // eslint-disable-next-line react-hooks/immutability
-      restFlash.value = withTiming(0, { duration: 400 });
+      restFlash.value = withTiming(0, { duration: durationTokens.slow });
     }
 
     // Audio cue — 3-2-1 countdown tick
@@ -1432,7 +1433,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 4,
     paddingHorizontal: 4,
-    borderRadius: 6,
+    borderRadius: radii.md,
     marginBottom: 2,
   },
   colSet: {
@@ -1463,7 +1464,7 @@ const styles = StyleSheet.create({
   circleCheck: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: radii.xl,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
@@ -1576,7 +1577,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   notesInput: {
-    fontSize: 13,
+    fontSize: 12,
   },
   suggestionChip: {
     paddingHorizontal: 12,

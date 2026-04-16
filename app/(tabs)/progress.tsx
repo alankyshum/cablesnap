@@ -46,6 +46,7 @@ import { toDisplay, toKg } from "../../lib/units";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import WeeklySummary from "../../components/WeeklySummary";
 import { formatDuration, formatDateShort, movingAvg } from "../../lib/format";
+import { radii } from "../../constants/design-tokens";
 
 type PR = { exercise_id: string; name: string; max_weight: number };
 type SessionRow = { id: string; name: string; started_at: number; duration_seconds: number | null; set_count: number };
@@ -877,7 +878,7 @@ const styles = StyleSheet.create({
     bottom: 16,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -885,7 +886,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },

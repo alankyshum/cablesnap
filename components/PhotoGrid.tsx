@@ -10,6 +10,7 @@ import { Text, useTheme } from "react-native-paper";
 import { FlashList } from "@shopify/flash-list";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ProgressPhoto } from "../lib/db/photos";
+import { radii, scrim } from "../constants/design-tokens";
 
 type Props = {
   photos: ProgressPhoto[];
@@ -89,7 +90,7 @@ export default function PhotoGrid({
             </View>
           )}
           {compareMode && !isSelected && (
-            <View style={[styles.checkbox, { borderColor: theme.colors.onSurface }]} />
+            <View style={[styles.checkbox, { borderColor: theme.colors.onSurface, backgroundColor: theme.colors.backdrop }]} />
           )}
         </Pressable>
       );
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: scrim.dark,
     paddingVertical: 2,
     paddingHorizontal: 4,
   },
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 4,
     left: 4,
-    borderRadius: 10,
+    borderRadius: radii.lg,
     width: 22,
     height: 22,
     alignItems: "center",
@@ -180,6 +181,5 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderWidth: 2,
-    backgroundColor: "rgba(255,255,255,0.5)",
   },
 });

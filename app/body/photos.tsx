@@ -40,6 +40,7 @@ import {
 import type { ProgressPhoto, PoseCategory } from "../../lib/db/photos";
 import { getAppSetting, setAppSetting } from "../../lib/db";
 import { uuid } from "../../lib/uuid";
+import { scrim } from "../../constants/design-tokens";
 
 const PAGE_SIZE = 20;
 const MAX_DIMENSION = 1200;
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
   },
   savingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: scrim.dark,
     justifyContent: "center",
     alignItems: "center",
   },

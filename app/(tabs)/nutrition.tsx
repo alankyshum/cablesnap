@@ -31,6 +31,7 @@ import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { todayKey, formatDateKey } from "../../lib/format";
 import SwipeToDelete from "../../components/SwipeToDelete";
+import { radii } from "../../constants/design-tokens";
 
 const DAY_MS = 86_400_000;
 
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
   fab: { position: "absolute", right: 16, bottom: 16 },
   macro: { marginBottom: 8 },
   macroHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  bar: { height: 6, borderRadius: 3 },
+  bar: { height: 6, borderRadius: radii.sm },
   wideRow: { flex: 1, flexDirection: "row" },
   wideLog: { flex: 6 },
   wideAdd: { flex: 4, borderLeftWidth: StyleSheet.hairlineWidth },

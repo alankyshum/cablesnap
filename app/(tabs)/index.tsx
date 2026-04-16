@@ -54,6 +54,7 @@ import { useSnackbar } from "../../components/SnackbarProvider";
 import { useLayout } from "../../lib/layout";
 import { flowCardStyle } from "../../components/ui/FlowContainer";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
+import { radii } from "../../constants/design-tokens";
 
 async function loadHomeData() {
   const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
@@ -1007,6 +1008,6 @@ const styles = StyleSheet.create({
   dot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
+    borderRadius: radii.md,
   },
 });

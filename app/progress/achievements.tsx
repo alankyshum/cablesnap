@@ -25,6 +25,7 @@ import {
   evaluateAchievements,
 } from "../../lib/achievements";
 import type { AchievementCategory } from "../../lib/achievements";
+import { radii, typography } from "../../constants/design-tokens";
 
 type AchievementItem = {
   id: string;
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   icon: {
-    fontSize: 32,
+    fontSize: typography.statValue.fontSize,
   },
   iconLocked: {
     opacity: 0.4,
@@ -385,6 +386,6 @@ const styles = StyleSheet.create({
   progressBar: {
     width: "100%",
     height: 4,
-    borderRadius: 2,
+    borderRadius: radii.sm,
   },
 });
