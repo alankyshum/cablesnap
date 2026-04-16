@@ -1,0 +1,11 @@
+v0.4.0 — Session Rating & UI Polish
+
+New Features:
+* Session rating (1-5 stars) on post-workout summary
+* Session notes — add text notes to completed workouts
+
+Improvements:
+* borderRadius tokens standardized to design system
+* Font sizes aligned to MD3 type scale
+* Modal overlay colors use theme tokens (no hardcoded values)
+* FloatingTabBar colors use theme tokens

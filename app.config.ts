@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "FitForge",
   slug: "fitforge",
-  version: "0.3.1",
+  version: "0.4.0",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#ffffff",
     },
     package: "com.anomalyco.fitforge",
-    versionCode: 2,
+    versionCode: 3,
   },
   web: {
     favicon: "./assets/favicon.png",

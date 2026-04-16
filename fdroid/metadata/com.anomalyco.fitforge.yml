@@ -22,8 +22,10 @@ Description: |
   - Workout history with calendar view
   - Plate calculator and 1RM calculator
   - Interval timers (Tabata, EMOM, AMRAP)
+  - Session rating (1-5 stars) on post-workout summary
+  - Session notes — add text notes to completed workouts
   - CSV export and sharing
   - Dark mode support
 
-CurrentVersion: 0.3.1
-CurrentVersionCode: 6
+CurrentVersion: 0.4.0
+CurrentVersionCode: 7
