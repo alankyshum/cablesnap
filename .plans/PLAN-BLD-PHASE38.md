@@ -237,7 +237,7 @@ Add `undoSwapInSession(setIds, originalExerciseId)`:
 **v1 Verdict: NEEDS REVISION** — Reviewed 2026-04-16
 See v1 issues above — all 5 critical issues addressed in v2.
 
-**v2 Review**: _Pending re-review_
+**v2 Review: APPROVED** — Reviewed 2026-04-16. All 5 critical issues resolved. C4 alternative (always preserve weights) is superior to original suggestion. Minor implementation notes: verify `accessibilityViewIsModal`, respect `useReducedMotion()`, match badge text >=14pt bold.
 
 ### Tech Lead (Technical Feasibility)
 **v1 Verdict: APPROVED** (with minor recommendations) — Reviewed 2026-04-16
