@@ -3,7 +3,7 @@
 **Issue**: BLD-198
 **Author**: CEO
 **Date**: 2026-04-16
-**Status**: DRAFT
+**Status**: IN_REVIEW (Rev 2 — addressing Tech Lead feedback)
 
 ## Problem Statement
 Two issues with the current bottom navbar:
@@ -60,10 +60,15 @@ Replace the default Expo Router `Tabs` tab bar with a custom `FloatingTabBar` co
 - Expo Router's `<Tabs>` accepts a `tabBar` prop for custom tab bar rendering
 - Custom tab bar receives `state`, `descriptors`, `navigation` props from React Navigation
 - Use `useSafeAreaInsets()` to get bottom padding for Android gesture bar
-- Center button: `position: 'relative'` with negative `top` to protrude above bar
+- Center button: Wrap in a `View` spanning full height (bar + protrusion) to ensure Android touch targets work — do NOT rely on `overflow: 'visible'` which doesn't propagate touches on Android
 - Floating effect: `position: 'absolute'`, `bottom: insets.bottom + 8`, `left: 16`, `right: 16`
-- Shadow: `elevation: 8` (Android), `shadowOffset/shadowRadius` (iOS)
+- Export `FLOATING_TAB_BAR_HEIGHT` constant (bar height + margin + inset buffer) for screens to use as `paddingBottom`
+- Provide `useFloatingTabBarHeight()` hook that accounts for safe area insets dynamically (React Navigation's `useBottomTabBarHeight()` won't work with absolute positioning)
+- All tab screens MUST use this constant/hook for bottom padding — update in same PR
+- Shadow: Apply `elevation` independently to bar container and center button (Android elevation clips to parent bounds, so protruding center button needs its own elevation)
 - Theme-aware: use `useTheme()` from react-native-paper for colors
+
+**IMPORTANT: `index.tsx` must NOT be renamed.** Reordering tabs by reordering `<Tabs.Screen>` definitions is correct, but `app/(tabs)/index.tsx` (Workouts) is the Expo Router default route. The file stays as `index.tsx` — only its visual position changes to center.
 
 **Tab order change:**
 Current: Workouts | Exercises | Nutrition | Progress | Settings
@@ -99,6 +104,8 @@ This requires reordering the `<Tabs.Screen>` definitions in `_layout.tsx`.
 - [ ] Given the Workouts center button, When pressing it, Then a subtle scale animation plays
 - [ ] Given a screen reader, When navigating the tab bar, Then all tabs are announced with correct labels and roles
 - [ ] TypeScript compiles with zero errors (`npx tsc --noEmit`)
+- [ ] `FLOATING_TAB_BAR_HEIGHT` constant exported and used by all tab screens for bottom padding
+- [ ] No content hidden behind the floating bar on any screen
 - [ ] No regressions in existing tests
 - [ ] Minimum touch target of 48x48dp for all tab buttons
 
@@ -110,6 +117,9 @@ This requires reordering the `<Tabs.Screen>` definitions in `_layout.tsx`.
 | Keyboard open | Tab bar may hide or stay; follow platform convention |
 | RTL layout | Tab order mirrors correctly |
 | Device with no gesture bar | Bar still looks correct with minimal bottom padding |
+| Android 3-button nav | Different inset values; bar adjusts correctly |
+| iPhone SE (small screen) | Bar fits, tabs compressed but minimum 48dp touch targets |
+| iPad (large screen) | Bar width adapts, maintains proportions |
 
 ### Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
@@ -151,4 +161,10 @@ _Pending review_
 - Simple Reanimated scale animation is fine — no performance concerns
 
 ### CEO Decision
-_Pending reviews_
+Rev 2 addresses all Tech Lead findings:
+- CRITICAL: Added `FLOATING_TAB_BAR_HEIGHT` constant + `useFloatingTabBarHeight()` hook; all screens must use it
+- MAJOR (touch): Center button uses wrapper View spanning full height instead of overflow
+- MAJOR (index.tsx): Explicit callout that index.tsx must not be renamed
+- MINOR (shadow): Independent elevation for bar and center button
+
+Awaiting Quality Director UX review before final approval.
