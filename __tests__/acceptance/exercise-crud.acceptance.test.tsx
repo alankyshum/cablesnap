@@ -52,6 +52,7 @@ jest.mock('../../lib/db', () => ({
   getAllExercises: (...args: unknown[]) => mockGetAll(...args),
   getExerciseById: (...args: unknown[]) => mockGetById(...args),
   createCustomExercise: (...args: unknown[]) => mockCreateCustom(...args),
+  getAppSetting: jest.fn().mockResolvedValue(null),
 }))
 
 import Exercises from '../../app/(tabs)/exercises'
