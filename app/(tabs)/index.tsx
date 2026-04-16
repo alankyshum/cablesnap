@@ -577,7 +577,7 @@ export default function Workouts() {
                               <Pressable
                                 onPress={() => startFromTemplate(item)}
                                 style={styles.cardInfo}
-                                accessibilityLabel={`Starter template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
+                                accessibilityLabel={`Starter template: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
                                 accessibilityHint="Double-tap to start workout"
                                 accessibilityRole="button"
                               >
@@ -586,7 +586,7 @@ export default function Workouts() {
                                     variant="titleSmall"
                                     style={{ color: theme.colors.onSurface }}
                                   >
-                                    {item.name}
+                                    {meta?.name || item.name}
                                   </Text>
                                   <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
                                     <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>

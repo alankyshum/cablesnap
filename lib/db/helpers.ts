@@ -568,17 +568,28 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
     );
   }
 
-  // Always repair is_starter flags — handles cases where import or
-  // migration left starters with is_starter=0
+  // Always repair is_starter flags and names — handles cases where import,
+  // migration, or prior seeding left starters with is_starter=0 or empty names
   const starterTplIds = STARTER_TEMPLATES.map((t) => t.id);
   const tplPlaceholders = starterTplIds.map(() => "?").join(",");
   await database.runAsync(
     `UPDATE workout_templates SET is_starter = 1 WHERE id IN (${tplPlaceholders}) AND is_starter = 0`,
     starterTplIds
   );
+  // Repair names from canonical STARTER_TEMPLATES data
+  for (const tpl of STARTER_TEMPLATES) {
+    await database.runAsync(
+      "UPDATE workout_templates SET name = ? WHERE id = ? AND (name IS NULL OR name = '')",
+      [tpl.name, tpl.id]
+    );
+  }
   await database.runAsync(
     "UPDATE programs SET is_starter = 1 WHERE id = ? AND is_starter = 0",
     [STARTER_PROGRAM.id]
+  );
+  await database.runAsync(
+    "UPDATE programs SET name = ? WHERE id = ? AND (name IS NULL OR name = '')",
+    [STARTER_PROGRAM.name, STARTER_PROGRAM.id]
   );
 
   if (row && Number(row.value) >= STARTER_VERSION) return;
