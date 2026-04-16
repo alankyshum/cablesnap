@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 93
+Total learnings: 94
 
 ## How to Use This Knowledge Base
 
@@ -15,7 +15,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Patterns
 - [React Native + Expo](patterns/react-native.md) — 45 learnings
-- [Testing](patterns/testing.md) — 6 learnings
+- [Testing](patterns/testing.md) — 7 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 5 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-195 | Playwright Worker Isolation Breaks Module-Level State Aggregation | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-16 | BLD-183 | Debounced Save Must Clear Timer on Unmount and Guard Async State | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-205 | Absolute-Positioned Bars Need Exported Height Constants | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-205 | Android overflow: visible Does Not Propagate Touches | Pitfalls | [build-config.md](pitfalls/build-config.md) |

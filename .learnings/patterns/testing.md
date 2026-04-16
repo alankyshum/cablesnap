@@ -49,3 +49,11 @@
 **Learning**: When testing screens that display static or seed data, import the real exported data constants and assert against their actual values (e.g., `expect(getByText(STARTER_TEMPLATES[0].name))`). This catches data structure changes, missing fields, and content drift that hand-written mock data would miss. Mock only infrastructure (database, router, file system) — never mock the domain data you are testing.
 **Action**: In acceptance tests for screens that render seed/reference data, import the real data module and use its values in assertions. Reserve `jest.mock()` for infrastructure dependencies (db, router, icons, layout). If the data module has side effects, extract the pure data into a separate file that can be imported without mocking.
 **Tags**: testing, acceptance-tests, rntl, real-data, mocking-strategy, seed-data, starter-templates
+
+### Playwright Worker Isolation Breaks Module-Level State Aggregation
+**Source**: BLD-195 — Expand pixelslop screenshot capture to all pages
+**Date**: 2026-04-16
+**Context**: A screenshot capture spec used a module-level `Map<string, ManifestScreen>` to accumulate data across tests, with `test.afterAll` writing a manifest JSON file. The manifest was always empty.
+**Learning**: Playwright runs each project (e.g., mobile/tablet/desktop viewports) in separate worker processes when `fullyParallel: true`. Module-level variables are NOT shared between workers — each worker gets its own empty copy. `test.afterAll` runs per-worker, not globally, so aggregation across projects fails silently.
+**Action**: Never use module-level variables to aggregate data across Playwright projects. For cross-worker data collection, use `globalTeardown` (runs once in the main process after all workers finish) and scan the filesystem for artifacts written by individual workers. Each worker should write its outputs to disk; the teardown script collects them.
+**Tags**: playwright, testing, worker-isolation, globalteardown, parallel, cross-project, e2e
