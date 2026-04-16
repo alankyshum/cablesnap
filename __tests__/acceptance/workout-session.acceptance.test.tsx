@@ -26,6 +26,12 @@ jest.mock('../../lib/db', () => ({
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
   getSessionWeightIncreases: jest.fn().mockResolvedValue([]),
   getSessionComparison: jest.fn().mockResolvedValue(null),
+  updateSession: jest.fn().mockResolvedValue(undefined),
+  getSessionSetCount: jest.fn().mockResolvedValue(0),
+  createTemplateFromSession: jest.fn().mockResolvedValue('new-template-id'),
+  buildAchievementContext: jest.fn().mockResolvedValue({}),
+  getEarnedAchievementIds: jest.fn().mockResolvedValue([]),
+  saveEarnedAchievements: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

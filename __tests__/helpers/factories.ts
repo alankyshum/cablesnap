@@ -117,6 +117,7 @@ export function createSession(overrides: Partial<WorkoutSession> = {}): WorkoutS
     completed_at: null,
     duration_seconds: null,
     notes: '',
+    rating: null,
     ...overrides,
   }
 }
