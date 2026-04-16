@@ -1,199 +1,255 @@
-# Feature Plan: Workout Calendar & Planning
+# Feature Plan: Calendar Enhancements (Phase 39)
 
 **Issue**: BLD-242
 **Author**: CEO
 **Date**: 2026-04-16
-**Status**: DRAFT
+**Status**: DRAFT → IN_REVIEW (Rev 2 — addressing reviewer feedback)
 
 ## Problem Statement
 
-FitForge tracks workout history as a flat list (history.tsx) and a heatmap grid. Users have no calendar-based view to answer questions like "What did I do last Tuesday?", "Am I following my 4-day split?", or "When should I train legs next?". This is a staple feature in every competitive fitness app (Strong, JEFIT, Hevy) that FitForge currently lacks.
+The History screen (`app/history.tsx`, 572 lines) already has a working monthly calendar grid with day cells, workout dot indicators, button-based month navigation, day tap filtering, and accessibility labels. However, it lacks:
 
-The existing WorkoutHeatmap shows activity density but doesn't reveal workout content per day. The history list requires scrolling and mental date-math. A proper calendar closes both gaps.
+1. **Swipe month navigation** — users must tap chevron buttons; swipe is the expected mobile gesture
+2. **Inline day detail panel** — tapping a day currently filters the session list below; an expandable summary panel between calendar and list would be more intuitive
+3. **Program schedule overlay** — users following a training program can't see which days they're scheduled to train on the calendar
+4. **Per-month summary stats** — the existing Streak Summary Card shows lifetime/rolling stats (weeks streak, total workouts); there's no per-month breakdown (workouts this month, total hours this month)
+5. **Count badge for 3+ workouts** — currently shows max 2 dots per day; days with 3+ workouts should show a number badge
+
+## Existing Implementation (What Already Works)
+
+Reference: `app/history.tsx` lines 211–292 (calendar grid), 150–172 (month nav), 241–242 (today ring), 262–279 (dot indicators), 194–198 (day tap filter), 346–364 (streak card), 224–227 (a11y labels), 216 (responsive cells).
+
+| Feature | Status |
+|---------|--------|
+| Monthly calendar grid (7-col, Mon–Sun) | ✅ Exists (lines 211–292) |
+| Month navigation (prev/next buttons) | ✅ Exists (lines 150–172, 414–432) |
+| Today highlighted with primary ring | ✅ Exists (lines 241–242) |
+| Workout dot indicators per day | ✅ Exists, max 2 dots (lines 262–279) |
+| Day tap → filter session list below | ✅ Exists (lines 194–198, 144–148) |
+| Session cards (name, duration, sets, rating) | ✅ Exists (lines 294–327) |
+| Streak summary card (lifetime stats) | ✅ Exists (lines 346–364) |
+| 16-week heatmap | ✅ Exists (lines 366–403) |
+| Search with debounce | ✅ Exists (lines 174–186) |
+| Responsive cell sizing via useLayout | ✅ Exists (line 216) |
+| A11y labels on day cells | ✅ Exists (lines 224–227) |
+| Rest day messaging | ✅ Exists (line 331) |
+| Dark/light mode via theme tokens | ✅ Throughout |
+| ErrorBoundary wrapping | ✅ Exists (line 480–485) |
 
 ## User Stories
 
-- As a gym-goer, I want to see my workouts on a monthly calendar so I can quickly check what I did on any given day
+- As a gym-goer, I want to swipe left/right to change months so I can browse my history quickly
 - As a program follower, I want to see which days I'm scheduled to train so I can plan my week
-- As a consistency-focused user, I want to see my training frequency patterns (e.g., I always skip Fridays) so I can adjust my schedule
-- As a user reviewing my training, I want to tap a calendar day and see a summary of that workout without navigating to a separate screen
+- As a user tapping a calendar day, I want to see a compact inline summary (not just a filtered list) so I can quickly review that day's workout
+- As a consistency-focused user, I want to see per-month stats (workout count, total hours) so I can track monthly trends
 
 ## Proposed Solution
 
 ### Overview
 
-Add a new **Calendar** screen accessible from the History screen (as a toggle between "List" and "Calendar" view modes). The calendar renders a month grid showing workout indicators on trained days. Tapping a day expands an inline summary showing exercises, volume, and duration. Program-scheduled days are shown with a subtle marker for untrained future days.
+Enhance the existing calendar in `app/history.tsx` in-place with 4 incremental improvements. **No new components, no new screen modes, no segmented control.** The current unified calendar+list view is the right UX — we enhance it, not replace it.
 
-### UX Design
+### Enhancement 1: Swipe Month Navigation
 
-#### Navigation & Entry Point
-- Add a segmented control at the top of the History screen: `List | Calendar`
-- Default remains List (existing behavior unchanged)
-- Calendar view replaces the list content area
-- The existing WorkoutHeatmap stays on the Home tab (dashboard) — calendar is a different, richer view
+**What**: Add horizontal swipe gesture to the calendar grid region for month changes, alongside existing button navigation.
 
-#### Calendar Grid
-- Standard month view: 7-column grid (Mon–Sun), ~5-6 rows per month
-- Swipe left/right to change months (with animated transition using Reanimated)
-- Month/year header with chevron navigation buttons
-- Today's date highlighted with primary color ring
-- Days with workouts show a filled dot indicator below the date number
-- Dot color: primary color for completed, surface-variant for scheduled-but-not-done
-- Multiple workouts on same day: show count badge (e.g., "2") instead of single dot
+**UX**:
+- Swipe left on the calendar grid → next month (same as tapping right chevron)
+- Swipe right on the calendar grid → previous month (same as tapping left chevron)
+- Smooth animated transition using Reanimated `withTiming`
+- Buttons remain as a secondary navigation method
 
-#### Day Detail Panel
-- Tapping a day with workout(s) expands an inline panel below the calendar grid (not a modal — keeps context)
-- Panel shows for each session:
+**Gesture Conflict Resolution** (per QD/TL feedback):
+- Use `react-native-gesture-handler` `GestureDetector` with `Gesture.Pan()` on the calendar grid region only (not the whole screen)
+- Set `activeOffsetX: [-20, 20]` threshold to avoid accidental triggers during vertical scrolling
+- The FlashList below handles vertical scroll independently — no conflict since the gesture is scoped to the calendar grid `View`
+- VoiceOver/TalkBack: swipe gestures are suppressed when screen reader is active (`useAccessibilityInfo()` or `AccessibilityInfo.isScreenReaderEnabled`). Month navigation falls back to button-only mode.
+- Reduced motion: when `useReducedMotion()` returns true, skip the slide animation — instant transition instead
+
+**Lines affected**: Wrap calendar grid (line 449) in `GestureDetector`; add `Animated.View` with `translateX` for transition; modify `prevMonth`/`nextMonth` (lines 150–172) to trigger animation.
+
+### Enhancement 2: Inline Day Detail Panel
+
+**What**: When a day with workouts is tapped, show an expandable summary panel between the calendar grid and the session list. This replaces the current behavior of filtering the list below.
+
+**UX**:
+- Tap a day with workout(s) → panel slides open between calendar and session list
+- Panel shows for each session on that day:
   - Workout name and duration
-  - Exercise list with set counts (e.g., "Bench Press — 4 sets")
-  - Total volume (if weight-based)
+  - Set count (already in `SessionRow`)
   - Rating stars (if rated)
-  - Tap anywhere in the panel to navigate to full session detail (`/session/detail/[id]`)
-- Tapping an empty day shows "Rest day" or "No workout logged"
-- Tapping a future scheduled day shows the program template name
+  - Tap → navigates to full session detail (`/session/detail/[id]`)
+- Tap same day again → panel collapses
+- Tap a different day → panel transitions to new day's data
+- Tap a rest day → panel shows "Rest day" text
+- The session list below continues to show ALL sessions for the month (not filtered)
+- Panel expand/collapse: use `LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)` for smooth animation
+- Reduced motion: skip animation, instant expand/collapse
+- `accessibilityLiveRegion="polite"` on the panel so screen readers announce content changes
 
-#### Program Schedule Overlay
-- If user has an active program, show scheduled training days with a subtle background tint
-- Match program day names to calendar days of the week
-- Visual distinction: past scheduled days that were missed show a muted X indicator
+**Screen reader focus management**: On panel expand, focus moves to the panel heading (day date). On panel collapse, focus returns to the tapped calendar cell.
 
-#### Month Summary Bar
-- Below the month header, show: "12 workouts · 4.2hrs · 3-day streak"
-- Updates as user navigates months
+**Lines affected**: New inline JSX between calendar grid (line 449) and filter chip (line 452). Uses existing `sessions` state filtered by `selected` date key. Approximately 60–80 lines of new JSX+styles.
+
+### Enhancement 3: Program Schedule Overlay
+
+**What**: If the user has an active program with a schedule, show scheduled training days on the calendar with a subtle background tint.
+
+**UX**:
+- Scheduled days show a subtle `primaryContainer` background tint (lighter than the workout-completed tint)
+- Past scheduled days that were missed (no workout logged) show the tint but no workout dot (visual indication of a missed day)
+- Tapping a scheduled future day shows the template name in the day detail panel: "Scheduled: Push Day A"
+- If no active program, this overlay is invisible (graceful degradation)
+
+**Data Layer**:
+- Use existing `getSchedule()` from `lib/db/settings.ts` — already returns `ScheduleEntry[]` with `day_of_week` (Mon=0..Sun=6), `template_id`, and `template_name` for the active program
+- No new DB query needed — `getSchedule()` returns the weekly pattern; we map `day_of_week` to calendar cells client-side
+- Load schedule once on mount (alongside `load()` and `loadHeatmap()`) and store in state
+- Map each calendar day's `weekday()` to the schedule entries to determine if it's a scheduled day
+
+**Lines affected**: Add `schedule` state (ScheduleEntry[]), load in `useFocusEffect`. Modify `renderDay` (line 218) to check if `weekday(day) === entry.day_of_week` for background tint. ~30 lines.
+
+### Enhancement 4: Per-Month Summary Bar
+
+**What**: Add a compact stat line below the month header showing per-month stats.
+
+**UX**:
+- Position: directly below the month navigation header (after line 432), before the day-of-week headers
+- Format: "8 workouts · 6.5 hrs" (simple, compact, secondary text)
+- Uses `theme.colors.onSurfaceVariant` — visually subordinate to the existing Streak Summary Card (which shows lifetime stats)
+- When month has no workouts: "No workouts this month"
+
+**Data Layer**:
+- Derived client-side via `useMemo` from the existing `sessions` state array — no new DB query needed (per BLD-16 single-fetch pattern)
+- `workoutCount = sessions.length`
+- `totalHours = sessions.reduce((sum, s) => sum + s.duration_seconds, 0) / 3600`
+
+**Relationship to existing Streak Summary Card** (per QD feedback [M-2]):
+- Streak Summary Card = lifetime/rolling stats (current streak weeks, longest streak weeks, total workouts ever) — stays as-is
+- Month Summary Bar = per-month stats (workouts this month, total hours this month) — new, positioned near the month header for context
+- Visual hierarchy: Streak Card is a full Card component; Month Summary is a subtle text line — no visual competition
+
+**Lines affected**: ~15 lines of new JSX after month nav (line 432). One `useMemo` (~5 lines).
+
+### Enhancement 5: Count Badge for 3+ Workouts
+
+**What**: Days with 3 or more workouts show a numeric badge instead of dots.
+
+**Current behavior**: Max 2 dots shown (lines 262–279). Days with 3+ workouts look the same as 2-workout days.
+
+**New behavior**: 
+- 1 workout → 1 dot (unchanged)
+- 2 workouts → 2 dots (unchanged)
+- 3+ workouts → show count number (e.g., "3") in a small badge below the date, same position as dots
+
+**Lines affected**: Modify `renderDay` conditional (lines 262–279). ~10 lines changed.
 
 ### Technical Approach
 
 #### Architecture
-- New component: `components/WorkoutCalendar.tsx` — the calendar grid with month navigation
-- New component: `components/CalendarDayDetail.tsx` — the expandable day detail panel
-- Modify: `app/history.tsx` — add segmented control toggle, conditionally render calendar vs list
-- New query: `lib/db/sessions.ts` → `getSessionSummariesByMonth(year, month)` — returns lightweight session data for calendar display (id, name, date, duration, exercise_count, total_volume, rating)
-- Reuse: `getSessionsByMonth` exists but returns full session + set_count. May need a lighter query for performance.
+- **No new components** — all enhancements are inline modifications to `app/history.tsx`
+- **No new DB queries** — use existing `getSessionsByMonth()` + `getSchedule()` + client-side derivation
+- **No segmented control** — the unified calendar+list view stays as-is
+- If `history.tsx` grows past ~700 lines after enhancements, a future refactoring phase can extract the calendar grid into `components/CalendarGrid.tsx` — but that's out of scope for this phase
 
-#### Data Layer
-- `getSessionSummariesByMonth(year: number, month: number)` returns:
-  ```ts
-  type CalendarSession = {
-    id: string
-    name: string
-    date: string        // YYYY-MM-DD
-    duration: number    // seconds
-    exercises: number   // count of distinct exercises
-    volume: number      // total weight × reps
-    rating: number | null
-  }
-  ```
-- `getProgramScheduleForMonth(year: number, month: number)` — if active program exists, returns which days-of-week are scheduled and what template name applies
-- Both queries should be fast (indexed on `started_at`, `completed_at`)
+#### Dependencies
+- `react-native-gesture-handler` — already installed (used by bottom-sheet and navigation)
+- `react-native-reanimated` — already installed and imported in history.tsx (line 8)
+- No new dependencies required
 
-#### Calendar Rendering
-- Pure RN components (View grid) — no third-party calendar library needed
-- Month grid: 7 columns  ceil((firstDayOffset + daysInMonth) / 7) rows
-- Use `Animated.View` with Reanimated for swipe transitions
-- Day cells: fixed aspect ratio (square or near-square), responsive to screen width
-- Touch handling: `Pressable` on each day cell
-
-#### Performance
-- Only query one month at a time (lazy load on swipe)
-- Cache adjacent months (prev/next) for smooth swiping
-- Day detail panel uses `LayoutAnimation` or Reanimated `withTiming` for expand/collapse
-- FlashList not needed (max ~42 cells per month — simple FlatList or map)
-
-#### Accessibility
-- Calendar grid uses `accessibilityRole="grid"`
-- Day cells: `accessibilityLabel="April 16, 2 workouts"` with `accessibilityRole="button"`
-- Month navigation: labeled buttons "Previous month" / "Next month"
-- Day detail panel: announces content on expand
+#### Touch Targets
+- Current cell size: `Math.max(44, Math.floor(layout.width / 7) - 4)` (line 216)
+- **Fix**: Change minimum from 44 to 48 to meet SKILL 48dp minimum: `Math.max(48, Math.floor(layout.width / 7) - 4)`
+- On a 375px phone: `375/7 - 4 = 49.6dp` → above 48dp minimum ✅
+- On smaller screens: `Math.max(48, ...)` guarantees the minimum
 
 ### Scope
 
 **In Scope:**
-- Monthly calendar grid with workout indicators
-- Day tap → inline detail panel with session summary
-- Month navigation (swipe + buttons)
-- Month summary bar (workout count, total time, streak)
-- Program schedule overlay (if active program)
-- Integration into existing History screen as a view toggle
-- Dark mode and light mode support
-- Responsive layout (phone and tablet via useLayout)
+1. Swipe month navigation with gesture conflict handling
+2. Inline day detail panel (replaces list-filtering behavior)
+3. Program schedule overlay using existing `getSchedule()`
+4. Per-month summary bar (derived from existing data)
+5. Count badge for 3+ workouts per day
+6. Touch target fix (44→48dp minimum)
+7. Screen reader focus management for panel expand/collapse
+8. Reduced motion fallback for all new animations
+9. VoiceOver/TalkBack swipe conflict handling (disable swipe nav when screen reader active)
 
 **Out of Scope:**
-- Week view (month only for v1)
-- Drag-and-drop workout scheduling (future enhancement)
-- Multi-month comparison view
-- Calendar widget for home screen
-- iCal/Google Calendar sync
-- Workout planning/creation from calendar (users create from templates)
+- New components (keep inline in history.tsx)
+- New DB queries (derive from existing data)
+- List/Calendar mode toggle (unified view stays)
+- Week view
+- Drag-and-drop workout scheduling
+- Pull-to-refresh (existing `useFocusEffect` reload is sufficient)
+- Calendar error state (existing ErrorBoundary wrapping on line 480 handles crashes)
 
 ### Acceptance Criteria
-- [ ] Given the History screen When I tap "Calendar" segment Then I see a monthly calendar grid with workout indicators on trained days
-- [ ] Given a month with workouts When I tap a day with a workout Then an inline panel expands showing workout name, duration, exercises, and volume
-- [ ] Given the calendar view When I swipe left Then the next month loads with its workout data
-- [ ] Given the calendar view When I swipe right Then the previous month loads with its workout data
-- [ ] Given today's date When viewing the current month Then today is highlighted with a primary color ring
-- [ ] Given an active program When viewing the calendar Then scheduled training days show a subtle background tint
-- [ ] Given a day with 2+ workouts When viewing the calendar Then the day shows a count badge instead of a single dot
-- [ ] Given dark mode is enabled When viewing the calendar Then all colors use theme tokens correctly
-- [ ] Given the month summary bar When viewing any month Then it shows correct workout count, total time, and streak
-- [ ] Given I tap the day detail panel When a session summary is shown Then tapping it navigates to the full session detail screen
+- [ ] Given the calendar grid When I swipe left Then the next month loads with animated transition
+- [ ] Given the calendar grid When I swipe right Then the previous month loads with animated transition
+- [ ] Given a screen reader is active When on the calendar Then swipe-to-change-month is disabled and button navigation works normally
+- [ ] Given reduced motion is enabled When swiping months Then the transition is instant (no animation)
+- [ ] Given a month with workouts When I tap a day with a workout Then an inline detail panel expands between the calendar and session list showing workout name, duration, set count
+- [ ] Given the day detail panel is expanded When the panel appears Then `accessibilityLiveRegion="polite"` announces the content to screen readers
+- [ ] Given the day detail panel is expanded When I tap a session summary Then it navigates to `/session/detail/[id]`
+- [ ] Given the day detail panel is expanded When I tap the same day again Then the panel collapses
+- [ ] Given an active program with a schedule When viewing the calendar Then scheduled training days show a subtle primaryContainer background tint
+- [ ] Given a scheduled day in the past with no workout logged Then the day shows the tint but no workout dot (visual indication of a missed day)
+- [ ] Given a scheduled future day When I tap it Then the day detail panel shows "Scheduled: [Template Name]"
+- [ ] Given no active program When viewing the calendar Then no schedule overlay is shown (graceful degradation)
+- [ ] Given the month summary bar When viewing any month Then it shows correct workout count and total hours derived from loaded sessions
+- [ ] Given a day with 3+ workouts When viewing the calendar Then the day shows a numeric count badge (e.g., "3") instead of dots
+- [ ] Given the calendar grid Then every day cell has a minimum touch target of 48dp × 48dp
 - [ ] PR passes all existing tests with no regressions
 - [ ] `npx tsc --noEmit` passes with zero errors
-- [ ] All new components use design tokens (radii, spacing, typography, duration) — no magic numbers
+- [ ] All new code uses design tokens (radii, spacing, typography, duration) — no magic numbers
 - [ ] Calendar renders correctly on phone (375px) and tablet (768px+) widths
 
 ### Edge Cases
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Month with no workouts | Calendar renders normally, month summary shows "0 workouts", tapping any day shows "Rest day" |
-| Day with 5+ workouts | Show count badge "5", detail panel scrolls if needed |
-| First-time user (no history) | Calendar shows empty month with today highlighted, encouraging message in summary bar |
-| Very old months (years ago) | Lazy-loads data on navigation, shows loading indicator briefly |
-| Month boundary (Dec → Jan) | Year rolls over correctly in header and queries |
-| Leap year February | 29 days rendered correctly |
-| Different week start (Mon vs Sun) | Use Monday as week start (consistent with WorkoutHeatmap) |
-| Screen rotation | Calendar re-renders with correct cell sizes |
-| Active workout in progress | Current day shows a pulsing/animated indicator |
+| Month with no workouts | Calendar renders normally, month summary shows "No workouts this month", tapping any day shows "Rest day" |
+| Day with 5+ workouts | Show count badge "5", detail panel shows scrollable list of sessions |
+| First-time user (no history) | Calendar shows empty month with today highlighted, month summary shows "No workouts this month" |
+| Month boundary (Dec → Jan) | Year rolls over correctly in header and queries (existing behavior, already works) |
+| Leap year February | 29 days rendered correctly (existing `daysInMonth()` helper already handles this) |
+| Screen reader + swipe | Swipe month nav disabled, button nav works normally |
+| Reduced motion preference | All animations skipped, instant transitions |
+| No active program | Schedule overlay invisible, no errors |
+| Program with rest days | Only scheduled days get tint, rest days have no tint |
+| Day detail panel + search | If user types in search while panel is open, panel collapses and search results show |
+| Active workout in progress | No special indicator (out of scope — existing behavior unchanged) |
 
 ### Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Performance with many months of data | Low | Medium | Lazy-load one month at a time, cache ±1 month |
-| Swipe gesture conflicts with tab navigation | Medium | Medium | Use horizontal gesture handler with activation distance threshold |
-| Calendar grid layout breaks on small screens | Low | High | Use responsive cell sizing based on screen width ÷ 7 |
-| Program schedule data complexity | Low | Low | Program overlay is optional — degrade gracefully if no active program |
+| Swipe gesture conflicts with FlashList vertical scroll | Low | Medium | Gesture scoped to calendar grid `View` only; `activeOffsetX: [-20, 20]` threshold |
+| VoiceOver swipe conflict | Medium | High | Detect screen reader → disable swipe nav entirely, use buttons only |
+| Day detail panel height overflow on small screens | Low | Medium | Constrain panel max height, add internal scroll if needed |
+| history.tsx complexity growth | Low | Low | File grows from 572 to ~750 lines. Manageable. Extract later if needed. |
 
 ## Review Feedback
-<!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-**Verdict: NEEDS REVISION** (2026-04-16)
-
-Critical issues found:
-1. **[C-1]** Plan doesn't acknowledge that `app/history.tsx` already implements a monthly calendar grid (day cells, dot indicators, month nav, day selection, today highlighting, a11y labels). Must rewrite as enhancement, not greenfield.
-2. **[C-A11Y]** Missing screen reader focus management for month changes and day detail panel. Missing VoiceOver/TalkBack swipe conflict resolution.
-3. **[C-TOUCH]** Must specify minimum 48dp touch target for calendar cells (current code uses 44dp minimum, already below SKILL requirement).
-
-Major issues:
-- **[M-1]** List/Calendar toggle may be a UX regression — current unified view shows calendar + list together.
-- **[M-2]** Month Summary Bar duplicates existing Streak Summary Card — clarify relationship.
-- **[M-3]** Gesture conflict strategy needs concrete specification (recognizer type, activation threshold, scope).
-- **[M-A11Y]** Missing `useReducedMotion()` fallback for Reanimated animations.
-
-Full review posted on BLD-242 issue comments.
+**Rev 1 verdict**: NEEDS REVISION — 2 Critical, 4 Major issues.
+**Key concerns addressed in Rev 2**:
+- [C-1] ✅ Acknowledged existing calendar — plan rewritten as enhancement
+- [M-1] ✅ Removed List/Calendar toggle — keeping unified view
+- [M-2] ✅ Clarified Month Summary Bar vs Streak Summary Card relationship
+- [M-3] ✅ Specified gesture conflict resolution (scoped to grid, activeOffsetX threshold, screen reader fallback)
+- [C-A11Y] ✅ Added screen reader focus management, accessibilityLiveRegion, VoiceOver swipe conflict handling
+- [M-A11Y] ✅ Added reduced motion fallback
+- [C-TOUCH] ✅ Specified 48dp minimum touch target (fixing current 44dp)
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** — Major scope overlap with existing code.
-
-The calendar grid, month navigation, workout indicators, day selection, streak bar, accessibility labels, responsive layout, and dark/light mode support are ALL already implemented in `app/history.tsx` (572 lines, shipped in Phase 8 / BLD-16). The plan does not reference this existing code and proposes creating duplicate components from scratch.
-
-**What's genuinely new (~30% of plan):** (1) swipe month nav, (2) inline day detail panel, (3) program schedule overlay, (4) per-month summary stats, (5) count badge for 3+ workouts.
-
-**Required changes before approval:**
-- Reframe as enhancements to existing `history.tsx`, not a greenfield build
-- Drop the `List | Calendar` segmented control (calendar+list is already combined)
-- Drop `getSessionSummariesByMonth` query (use existing `getSessionsByMonth` + `useMemo`)
-- Clarify program day position → calendar day-of-week mapping logic
-- Estimated effort after dedup: Small–Medium (~200 lines net new)
+**Rev 1 verdict**: NEEDS REVISION — Major scope overlap with existing code.
+**Key concerns addressed in Rev 2**:
+-  Removed duplicate components — all enhancements inline in history.tsx
+- ✅ Removed segmented control — unnecessary
+- ✅ Removed `getSessionSummariesByMonth` — using existing `getSessionsByMonth()` + client-side derivation
+- ✅ Using existing `getSchedule()` for program overlay — no new query
+- ✅ Clarified program day mapping: `getSchedule()` returns `day_of_week` (Mon=0..Sun=6) which maps directly to the existing `weekday()` helper
 
 ### CEO Decision
-_Pending reviews_
+_Awaiting re-review from QD and TL on Rev 2_
