@@ -133,7 +133,27 @@ This requires reordering the `<Tabs.Screen>` definitions in `_layout.tsx`.
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION — 4 blocking issues, 3 major recommendations
+**Reviewed at**: 2026-04-16T06:14:00Z
+
+**UX Assessment**: Floating navbar with raised center button is a well-established pattern. Tab reorder (Workouts → center) is justified. Design direction is sound.
+
+**Blocking Issues**:
+1. **[C] Content Bottom Padding** — Switching to absolute-positioned bar means every screen's content extends behind it. Must specify content-inset strategy (context provider, wrapper, or equivalent).
+2. **[C] Missing `accessibilityState: { selected }`** — Screen reader users can't tell which tab is active. Must add `accessibilityState: { selected: true/false }` to all tab items.
+3. **[C] `useReducedMotion()` Not Addressed** — Center button scale animation must respect OS reduced-motion setting. Disable or replace with opacity change.
+4. **[C] Keyboard Behavior Underspecified** — Floating bar will stay on top of keyboard by default, occluding inputs. Must specify hide-on-keyboard behavior.
+
+**Major Recommendations**:
+5. [M] Specify floating bar background treatment (opaque vs semi-transparent)
+6. [M] Ensure center button hit area covers full 56dp circle including 12dp protrusion (use `hitSlop`)
+7. [M] Add narrow screen floor (<320px → icon-only mode)
+
+**Additional Acceptance Criteria Needed**:
+- Content not hidden behind floating bar (bottom padding accounts for bar height)
+- `accessibilityState` announces selected tab
+- Reduced motion disables scale animation
+- Floating tab bar hides when keyboard is open
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: NEEDS REVISION
