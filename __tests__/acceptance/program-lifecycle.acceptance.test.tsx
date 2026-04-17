@@ -4,7 +4,7 @@ import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
 import { createProgram, createProgramDay, createSession, resetIds } from '../helpers/factories'
-import type { Program, ProgramDay } from '../../lib/types'
+
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 const mockParams: Record<string, string> = {}
@@ -36,8 +36,6 @@ jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'),
 jest.mock('../../lib/starter-templates', () => ({ STARTER_TEMPLATES: [] }))
 
 const mockGetTemplates = jest.fn().mockResolvedValue([])
-const mockGetPrograms = jest.fn().mockResolvedValue([])
-const mockGetProgramDayCount = jest.fn().mockResolvedValue(0)
 const mockGetActiveSession = jest.fn().mockResolvedValue(null)
 const mockGetAllCompletedSessionWeeks = jest.fn().mockResolvedValue([])
 const mockGetRecentPRs = jest.fn().mockResolvedValue([])
@@ -111,7 +109,8 @@ describe('Program Lifecycle Acceptance', () => {
     fireEvent.press(screen.getByLabelText('Programs tab'))
 
     await waitFor(() => {
-      expect(screen.getByText('My Programs')).toBeTruthy()
+      const matches = screen.getAllByText('Programs')
+      expect(matches.length).toBeGreaterThanOrEqual(2)
     })
   })
 

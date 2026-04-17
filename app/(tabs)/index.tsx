@@ -224,10 +224,14 @@ export default function Workouts() {
   const starterMeta = (id: string) =>
     STARTER_TEMPLATES.find((s) => s.id === id);
 
-  const userTemplates = templates.filter((t) => !t.is_starter);
-  const starters = templates.filter((t) => t.is_starter);
-  const userPrograms = programs.filter((p) => !p.is_starter);
-  const starterPrograms = programs.filter((p) => p.is_starter);
+  const allTemplates = [
+    ...templates.filter((t) => !t.is_starter),
+    ...templates.filter((t) => t.is_starter),
+  ];
+  const allPrograms = [
+    ...programs.filter((p) => !p.is_starter),
+    ...programs.filter((p) => p.is_starter),
+  ];
 
   const scheduled = adherence.filter((a) => a.scheduled);
   const weekDone = adherence.filter((a) => a.completed).length;
@@ -477,11 +481,11 @@ export default function Workouts() {
 
       {segment === "templates" ? (
         <>
-          {/* User Templates */}
+          {/* Templates */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
-                My Templates
+                Templates
               </Text>
               <Button
                 mode="text"
@@ -493,7 +497,7 @@ export default function Workouts() {
                 Create
               </Button>
             </View>
-            {userTemplates.length === 0 && starters.length === 0 ? (
+            {allTemplates.length === 0 ? (
               <View style={styles.empty}>
                 <Text
                   variant="bodyMedium"
@@ -512,142 +516,99 @@ export default function Workouts() {
                 </Button>
               </View>
             ) : (
-              <>
-                {userTemplates.length > 0 && (
-                  <FlatList
-                    data={userTemplates}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                    contentContainerStyle={styles.flowList}
-                    renderItem={({ item }) => (
-                      <Card
-                        style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
-                      >
-                        <Card.Content style={styles.cardContent}>
-                          <Pressable
-                            onPress={() => startFromTemplate(item)}
-                            onLongPress={() => confirmDelete(item)}
-                            style={styles.cardInfo}
-                            accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
-                            accessibilityRole="button"
-                          >
+              <FlatList
+                data={allTemplates}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                contentContainerStyle={styles.flowList}
+                renderItem={({ item }) => {
+                  const meta = item.is_starter ? starterMeta(item.id) : undefined;
+                  return (
+                    <Card
+                      style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
+                    >
+                      <Card.Content style={styles.cardContent}>
+                        <Pressable
+                          onPress={() => startFromTemplate(item)}
+                          onLongPress={!item.is_starter ? () => confirmDelete(item) : undefined}
+                          style={styles.cardInfo}
+                          accessibilityLabel={`${item.is_starter ? "Starter template" : "Start workout from template"}: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
+                          accessibilityHint={item.is_starter ? "Double-tap to start workout" : undefined}
+                          accessibilityRole="button"
+                        >
+                          <View style={styles.chipRow}>
                             <Text
                               variant="titleSmall"
                               style={{ color: theme.colors.onSurface }}
                             >
-                              {item.name}
+                              {meta?.name || item.name}
                             </Text>
-                            <Text
-                              variant="bodySmall"
-                              style={{ color: theme.colors.onSurfaceVariant }}
-                            >
-                              {counts[item.id] ?? 0} exercises
-                            </Text>
-                          </Pressable>
+                            {item.is_starter && (
+                              <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
+                                <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
+                              </View>
+                            )}
+                            {meta?.recommended && (
+                              <View
+                                style={[styles.badge, { backgroundColor: theme.colors.primaryContainer }]}
+                                accessibilityLabel="Recommended"
+                              >
+                                <Text style={[styles.badgeText, { color: theme.colors.onPrimaryContainer }]}>
+                                  Recommended
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text
+                            variant="bodySmall"
+                            style={{ color: theme.colors.onSurfaceVariant }}
+                          >
+                            {meta ? `${DIFFICULTY_LABELS[meta.difficulty]} \u00b7 ${meta.duration} \u00b7 ${meta.exercises.length} exercises` : `${counts[item.id] ?? 0} exercises`}
+                          </Text>
+                        </Pressable>
+                        {item.is_starter ? (
+                          <Menu
+                            visible={menu === item.id}
+                            onDismiss={() => setMenu(null)}
+                            anchor={
+                              <IconButton
+                                icon="dots-vertical"
+                                size={20}
+                                onPress={() => setMenu(item.id)}
+                                accessibilityLabel={`Options for ${item.name}`}
+                              />
+                            }
+                          >
+                            <Menu.Item
+                              onPress={() => handleDuplicateTemplate(item)}
+                              title="Duplicate"
+                              leadingIcon="content-copy"
+                              accessibilityLabel="Duplicate template for editing"
+                            />
+                          </Menu>
+                        ) : (
                           <IconButton
                             icon="pencil"
                             size={20}
                             onPress={() => router.push(`/template/${item.id}`)}
                             accessibilityLabel={`Edit template ${item.name}`}
                           />
-                        </Card.Content>
-                      </Card>
-                    )}
-                  />
-                )}
-
-                {/* Starter Workouts */}
-                {starters.length > 0 && (
-                  <>
-                    <View style={styles.starterHeader} accessibilityRole="header">
-                      <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
-                        Starter Workouts
-                      </Text>
-                    </View>
-                    <FlatList
-                      data={starters}
-                      keyExtractor={(item) => item.id}
-                      scrollEnabled={false}
-                      contentContainerStyle={styles.flowList}
-                      renderItem={({ item }) => {
-                        const meta = starterMeta(item.id);
-                        return (
-                          <Card
-                            style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
-                          >
-                            <Card.Content style={styles.cardContent}>
-                              <Pressable
-                                onPress={() => startFromTemplate(item)}
-                                style={styles.cardInfo}
-                                accessibilityLabel={`Starter template: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
-                                accessibilityHint="Double-tap to start workout"
-                                accessibilityRole="button"
-                              >
-                                <View style={styles.chipRow}>
-                                  <Text
-                                    variant="titleSmall"
-                                    style={{ color: theme.colors.onSurface }}
-                                  >
-                                    {meta?.name || item.name}
-                                  </Text>
-                                  <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
-                                    <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
-                                  </View>
-                                  {meta?.recommended && (
-                                    <View
-                                      style={[styles.badge, { backgroundColor: theme.colors.primaryContainer }]}
-                                      accessibilityLabel="Recommended"
-                                    >
-                                      <Text style={[styles.badgeText, { color: theme.colors.onPrimaryContainer }]}>
-                                        Recommended
-                                      </Text>
-                                    </View>
-                                  )}
-                                </View>
-                                <Text
-                                  variant="bodySmall"
-                                  style={{ color: theme.colors.onSurfaceVariant }}
-                                >
-                                  {meta ? `${DIFFICULTY_LABELS[meta.difficulty]} · ${meta.duration} · ${meta.exercises.length} exercises` : `${counts[item.id] ?? 0} exercises`}
-                                </Text>
-                              </Pressable>
-                              <Menu
-                                visible={menu === item.id}
-                                onDismiss={() => setMenu(null)}
-                                anchor={
-                                  <IconButton
-                                    icon="dots-vertical"
-                                    size={20}
-                                    onPress={() => setMenu(item.id)}
-                                    accessibilityLabel={`Options for ${item.name}`}
-                                  />
-                                }
-                              >
-                                <Menu.Item
-                                  onPress={() => handleDuplicateTemplate(item)}
-                                  title="Duplicate"
-                                  leadingIcon="content-copy"
-                                  accessibilityLabel="Duplicate template for editing"
-                                />
-                              </Menu>
-                            </Card.Content>
-                          </Card>
-                        );
-                      }}
-                    />
-                  </>
-                )}
-              </>
+                        )}
+                      </Card.Content>
+                    </Card>
+                  );
+                }}
+              />
             )}
           </View>
         </>
       ) : (
         <>
-          {/* User Programs */}
+          {/* Programs */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
-                My Programs
+                Programs
               </Text>
               <Button
                 mode="text"
@@ -659,7 +620,7 @@ export default function Workouts() {
                 Create
               </Button>
             </View>
-            {userPrograms.length === 0 && starterPrograms.length === 0 ? (
+            {allPrograms.length === 0 ? (
               <View style={styles.empty}>
                 <Text
                   variant="bodyMedium"
@@ -680,119 +641,95 @@ export default function Workouts() {
                 </Button>
               </View>
             ) : (
-              <>
-                {userPrograms.length > 0 && (
-                  <FlatList
-                    data={userPrograms}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                    contentContainerStyle={styles.flowList}
-                    renderItem={({ item }) => (
-                      <Card
-                        style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
-                        onPress={() => router.push(`/program/${item.id}`)}
-                        onLongPress={() => confirmDeleteProgram(item)}
-                        accessibilityLabel={`Program: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
-                        accessibilityRole="button"
-                      >
-                        <Card.Content style={styles.cardContent}>
-                          <View style={styles.cardInfo}>
+              <FlatList
+                data={allPrograms}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                contentContainerStyle={styles.flowList}
+                renderItem={({ item }) => (
+                  <Card
+                    style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
+                    onPress={!item.is_starter ? () => router.push(`/program/${item.id}`) : undefined}
+                    onLongPress={!item.is_starter ? () => confirmDeleteProgram(item) : undefined}
+                    accessibilityLabel={`${item.is_starter ? "Starter program" : "Program"}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
+                    accessibilityRole="button"
+                  >
+                    <Card.Content style={styles.cardContent}>
+                      {item.is_starter ? (
+                        <Pressable
+                          onPress={() => router.push(`/program/${item.id}`)}
+                          style={styles.cardInfo}
+                          accessibilityLabel={`Starter program: ${item.name}, ${dayCounts[item.id] ?? 0} days`}
+                          accessibilityHint="Double-tap to view program"
+                          accessibilityRole="button"
+                        >
+                          <View style={styles.chipRow}>
                             <Text
                               variant="titleSmall"
                               style={{ color: theme.colors.onSurface }}
                             >
                               {item.name}
                             </Text>
-                            <Text
-                              variant="bodySmall"
-                              style={{ color: theme.colors.onSurfaceVariant }}
-                            >
-                              {dayCounts[item.id] ?? 0} days{item.is_active ? " · Active" : ""}
-                            </Text>
+                            <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
+                              <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
+                            </View>
                           </View>
-                          {item.is_active && (
-                            <MaterialCommunityIcons
-                              name="check-circle"
-                              size={20}
-                              color={theme.colors.primary}
-                              accessibilityLabel="Active program"
-                            />
-                          )}
-                        </Card.Content>
-                      </Card>
-                    )}
-                  />
-                )}
-
-                {/* Starter Programs */}
-                {starterPrograms.length > 0 && (
-                  <>
-                    <View style={styles.starterHeader} accessibilityRole="header">
-                      <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
-                        Starter Programs
-                      </Text>
-                    </View>
-                    <FlatList
-                      data={starterPrograms}
-                      keyExtractor={(item) => item.id}
-                      scrollEnabled={false}
-                      contentContainerStyle={styles.flowList}
-                      renderItem={({ item }) => (
-                        <Card
-                          style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
-                        >
-                          <Card.Content style={styles.cardContent}>
-                            <Pressable
-                              onPress={() => router.push(`/program/${item.id}`)}
-                              style={styles.cardInfo}
-                              accessibilityLabel={`Starter program: ${item.name}, ${dayCounts[item.id] ?? 0} days`}
-                              accessibilityHint="Double-tap to view program"
-                              accessibilityRole="button"
-                            >
-                              <View style={styles.chipRow}>
-                                <Text
-                                  variant="titleSmall"
-                                  style={{ color: theme.colors.onSurface }}
-                                >
-                                  {item.name}
-                                </Text>
-                                <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
-                                  <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
-                                </View>
-                              </View>
-                              <Text
-                                variant="bodySmall"
-                                style={{ color: theme.colors.onSurfaceVariant }}
-                              >
-                                {dayCounts[item.id] ?? 0} days · Intermediate
-                              </Text>
-                            </Pressable>
-                            <Menu
-                              visible={menu === `prog-${item.id}`}
-                              onDismiss={() => setMenu(null)}
-                              anchor={
-                                <IconButton
-                                  icon="dots-vertical"
-                                  size={20}
-                                  onPress={() => setMenu(`prog-${item.id}`)}
-                                  accessibilityLabel={`Options for ${item.name}`}
-                                />
-                              }
-                            >
-                              <Menu.Item
-                                onPress={() => handleDuplicateProgram(item)}
-                                title="Duplicate"
-                                leadingIcon="content-copy"
-                                accessibilityLabel="Duplicate program for editing"
-                              />
-                            </Menu>
-                          </Card.Content>
-                        </Card>
+                          <Text
+                            variant="bodySmall"
+                            style={{ color: theme.colors.onSurfaceVariant }}
+                          >
+                            {dayCounts[item.id] ?? 0} days \u00b7 Intermediate
+                          </Text>
+                        </Pressable>
+                      ) : (
+                        <View style={styles.cardInfo}>
+                          <Text
+                            variant="titleSmall"
+                            style={{ color: theme.colors.onSurface }}
+                          >
+                            {item.name}
+                          </Text>
+                          <Text
+                            variant="bodySmall"
+                            style={{ color: theme.colors.onSurfaceVariant }}
+                          >
+                            {dayCounts[item.id] ?? 0} days{item.is_active ? " \u00b7 Active" : ""}
+                          </Text>
+                        </View>
                       )}
-                    />
-                  </>
+                      {item.is_active && (
+                        <MaterialCommunityIcons
+                          name="check-circle"
+                          size={20}
+                          color={theme.colors.primary}
+                          accessibilityLabel="Active program"
+                        />
+                      )}
+                      {item.is_starter && (
+                        <Menu
+                          visible={menu === `prog-${item.id}`}
+                          onDismiss={() => setMenu(null)}
+                          anchor={
+                            <IconButton
+                              icon="dots-vertical"
+                              size={20}
+                              onPress={() => setMenu(`prog-${item.id}`)}
+                              accessibilityLabel={`Options for ${item.name}`}
+                            />
+                          }
+                        >
+                          <Menu.Item
+                            onPress={() => handleDuplicateProgram(item)}
+                            title="Duplicate"
+                            leadingIcon="content-copy"
+                            accessibilityLabel="Duplicate program for editing"
+                          />
+                        </Menu>
+                      )}
+                    </Card.Content>
+                  </Card>
                 )}
-              </>
+              />
             )}
           </View>
         </>
@@ -975,10 +912,6 @@ const styles = StyleSheet.create({
   },
   btnContent: {
     paddingVertical: 8,
-  },
-  starterHeader: {
-    marginTop: 16,
-    marginBottom: 8,
   },
   chipRow: {
     flexDirection: "row",
