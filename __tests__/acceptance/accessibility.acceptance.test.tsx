@@ -200,6 +200,14 @@ jest.mock('../../lib/db', () => ({
   deleteTemplate: jest.fn().mockResolvedValue(undefined),
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   duplicateProgram: jest.fn().mockResolvedValue('dup-p1'),
+  getStravaConnection: jest.fn().mockResolvedValue(null),
+}))
+
+jest.mock('../../lib/strava', () => ({
+  connectStrava: jest.fn().mockResolvedValue(null),
+  disconnect: jest.fn().mockResolvedValue(undefined),
+  syncSessionToStrava: jest.fn().mockResolvedValue(false),
+  reconcileStravaQueue: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

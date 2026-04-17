@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Linking, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
+import { Linking, Platform, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme, Divider } from "react-native-paper";
 import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
@@ -27,6 +27,7 @@ import {
   getSchedule,
   getBodySettings,
   updateBodySettings,
+  getStravaConnection,
 } from "../../lib/db";
 import type { BackupTableName, ExportProgress } from "../../lib/db";
 
@@ -39,6 +40,8 @@ import {
   cancelAll,
   getPermissionStatus,
 } from "../../lib/notifications";
+import { connectStrava, disconnect as disconnectStrava } from "../../lib/strava";
+import ErrorBoundary from "../../components/ErrorBoundary";
 
 const RANGE_BUTTONS = [
   { value: "7", label: "7 days", accessibilityLabel: "Date range 7 days" },
@@ -77,6 +80,8 @@ export default function Settings() {
   const [weightGoal, setWeightGoal] = useState<number | null>(null);
   const [fatGoal, setFatGoal] = useState<number | null>(null);
   const [exportProgress, setExportProgress] = useState<string | null>(null);
+  const [stravaAthlete, setStravaAthlete] = useState<string | null>(null);
+  const [stravaLoading, setStravaLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,6 +113,11 @@ export default function Settings() {
         setPermDenied(perm === "denied");
         setScheduleCount(sched.length);
       }).catch(() => {});
+      if (Platform.OS !== "web") {
+        getStravaConnection().then((conn) => {
+          setStravaAthlete(conn?.athlete_name ?? null);
+        }).catch(() => {});
+      }
     }, [])
   );
 
@@ -522,6 +532,90 @@ export default function Settings() {
           </Text>
         </Card.Content>
       </Card>
+
+      {Platform.OS !== "web" && (
+        <ErrorBoundary>
+        <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+          <Card.Content>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+              Integrations
+            </Text>
+
+            {stravaAthlete ? (
+              <View>
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                      Strava
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      Connected as {stravaAthlete}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="outlined"
+                    onPress={async () => {
+                      setStravaLoading(true);
+                      try {
+                        await disconnectStrava();
+                        setStravaAthlete(null);
+                        setSnack("Strava disconnected");
+                      } catch {
+                        setSnack("Failed to disconnect Strava");
+                      } finally {
+                        setStravaLoading(false);
+                      }
+                    }}
+                    loading={stravaLoading}
+                    disabled={stravaLoading}
+                    contentStyle={styles.exportBtnContent}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Disconnect Strava account (${stravaAthlete})`}
+                  >
+                    Disconnect
+                  </Button>
+                </View>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                  Completed workouts are automatically uploaded to Strava.
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <Button
+                  mode="contained"
+                  icon="run"
+                  onPress={async () => {
+                    setStravaLoading(true);
+                    try {
+                      const result = await connectStrava();
+                      if (result) {
+                        setStravaAthlete(result.athleteName);
+                        setSnack("Connected to Strava!");
+                      }
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : "Connection failed";
+                      setSnack(msg);
+                    } finally {
+                      setStravaLoading(false);
+                    }
+                  }}
+                  loading={stravaLoading}
+                  disabled={stravaLoading}
+                  contentStyle={styles.exportBtnContent}
+                  accessibilityRole="button"
+                  accessibilityLabel="Connect your Strava account"
+                >
+                  Connect Strava
+                </Button>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
+                  Automatically upload completed workouts to your Strava account.
+                </Text>
+              </View>
+            )}
+          </Card.Content>
+        </Card>
+        </ErrorBoundary>
+      )}
 
       <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>

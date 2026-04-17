@@ -102,6 +102,12 @@ jest.mock('../../lib/db', () => ({
   getSchedule: jest.fn().mockResolvedValue([{ day: 1 }, { day: 3 }, { day: 5 }]),
   getBodySettings: (...args: unknown[]) => mockGetBodySettings(...args),
   updateBodySettings: (...args: unknown[]) => mockUpdateBodySettings(...args),
+  getStravaConnection: jest.fn().mockResolvedValue(null),
+}))
+
+jest.mock('../../lib/strava', () => ({
+  connectStrava: jest.fn().mockResolvedValue(null),
+  disconnect: jest.fn().mockResolvedValue(undefined),
 }))
 
 import Settings from '../../app/(tabs)/settings'

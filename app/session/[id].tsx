@@ -1446,6 +1446,17 @@ export default function ActiveSession() {
       async () => {
         await completeSession(id!);
 
+        // Strava sync (non-blocking — never prevents workout completion)
+        try {
+          const { syncSessionToStrava } = await import("../../lib/strava");
+          const synced = await syncSessionToStrava(id!);
+          if (synced) {
+            setSnackbar("Synced to Strava ✓");
+          }
+        } catch {
+          setSnackbar("Strava sync failed");
+        }
+
         try {
           const dayId = await getSessionProgramDayId(id!);
           if (dayId) {

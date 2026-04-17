@@ -535,6 +535,33 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       earned_at INTEGER NOT NULL
     )`
   );
+
+  // Strava integration tables (Phase 48)
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS strava_connection (
+      id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      athlete_id INTEGER NOT NULL,
+      athlete_name TEXT NOT NULL,
+      connected_at INTEGER NOT NULL
+    )`
+  );
+
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS strava_sync_log (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES workout_sessions(id),
+      strava_activity_id TEXT,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'synced', 'failed', 'permanently_failed')),
+      error TEXT,
+      retry_count INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      synced_at INTEGER,
+      UNIQUE(session_id)
+    )`
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_strava_sync_log_status ON strava_sync_log(status)"
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {

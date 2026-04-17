@@ -211,3 +211,16 @@ export {
   hasSeenRetroactiveBanner,
   markRetroactiveBannerSeen,
 } from "./achievements";
+
+export {
+  getStravaConnection,
+  saveStravaConnection,
+  deleteStravaConnection,
+  createSyncLogEntry,
+  markSyncSuccess,
+  markSyncFailed,
+  markSyncPermanentlyFailed,
+  getPendingOrFailedSyncs,
+  getSyncLogForSession,
+} from "./strava";
+export type { StravaConnection, StravaSyncLog, StravaSyncStatus } from "./strava";
