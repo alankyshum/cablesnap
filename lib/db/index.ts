@@ -83,8 +83,9 @@ export {
   createTemplateFromSession,
   swapExerciseInSession,
   undoSwapInSession,
+  getSourceSessionSets,
 } from "./sessions";
-export type { ExerciseSession, ExerciseRecords } from "./sessions";
+export type { ExerciseSession, ExerciseRecords, SourceSessionSet } from "./sessions";
 
 export {
   addFoodEntry,

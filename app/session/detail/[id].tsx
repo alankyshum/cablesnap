@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { Button, Card, Divider, IconButton, Snackbar, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -7,10 +7,12 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../../lib/layout";
 import {
   createTemplateFromSession,
+  getActiveSession,
   getSessionById,
   getSessionPRs,
   getSessionSetCount,
   getSessionSets,
+  startSession,
   updateSession,
 } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
@@ -156,6 +158,35 @@ export default function SessionDetail() {
       setSaving(false);
     }
   }, [id, templateName, saving, router]);
+
+  const handleRepeatWorkout = useCallback(() => {
+    if (!id || !session) return;
+    const doRepeat = async () => {
+      try {
+        const active = await getActiveSession();
+        if (active) {
+          Alert.alert(
+            "Active Workout",
+            "You have an active workout. Finish or cancel it first."
+          );
+          return;
+        }
+        const newSession = await startSession(null, session.name);
+        router.push(`/session/${newSession.id}?sourceSessionId=${id}`);
+      } catch {
+        setSnackbar({ message: "Failed to start repeated workout" });
+      }
+    };
+
+    Alert.alert(
+      "Repeat Workout?",
+      `Start a new session with the same exercises and target weights from ${session.name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Repeat", style: "default", onPress: doRepeat },
+      ]
+    );
+  }, [id, session, router]);
 
   if (!session) {
     return (
@@ -371,6 +402,25 @@ export default function SessionDetail() {
                 </Card.Content>
               </Card>
             )}
+
+            {/* Repeat Workout */}
+            {session.completed_at && (
+              <Button
+                mode="outlined"
+                icon={({ size, color }) => (
+                  <MaterialCommunityIcons name="repeat" size={size} color={color} />
+                )}
+                onPress={handleRepeatWorkout}
+                disabled={completedSetCount === 0}
+                style={styles.repeatButton}
+                contentStyle={{ paddingVertical: 8 }}
+                accessibilityLabel="Repeat workout"
+                accessibilityHint="Start a new session with the same exercises and weights"
+                accessibilityRole="button"
+              >
+                Repeat Workout
+              </Button>
+            )}
           </>
         }
         renderItem={({ item: group }) => {
@@ -557,6 +607,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   prCard: {
+    marginBottom: 20,
+  },
+  repeatButton: {
     marginBottom: 20,
   },
   prHeader: {

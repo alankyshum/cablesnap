@@ -43,6 +43,7 @@ import {
   getRecentExerciseSets,
   getSessionById,
   getSessionSets,
+  getSourceSessionSets,
   getTemplateById,
   getPreviousSets,
   getRestSecondsForExercise,
@@ -78,6 +79,7 @@ import WeightPicker from "../../components/WeightPicker";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import SubstitutionSheet from "../../components/SubstitutionSheet";
 import { radii, duration as durationTokens } from "../../constants/design-tokens";
+import { uuid } from "../../lib/uuid";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -713,9 +715,10 @@ export default function ActiveSession() {
   const theme = useTheme();
   const router = useRouter();
   const layout = useLayout();
-  const { id, templateId } = useLocalSearchParams<{
+  const { id, templateId, sourceSessionId } = useLocalSearchParams<{
     id: string;
     templateId?: string;
+    sourceSessionId?: string;
   }>();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [groups, setGroups] = useState<ExerciseGroup[]>([]);
@@ -918,10 +921,67 @@ export default function ActiveSession() {
           }
           await updateSetsBatch(setsToUpdate);
         }
+      } else if (sourceSessionId) {
+        const sourceSets = await getSourceSessionSets(sourceSessionId);
+
+        // Detect deleted exercises
+        const deletedExerciseIds = new Set<string>();
+        const validSets = sourceSets.filter((s) => {
+          if (!s.exercise_exists) {
+            deletedExerciseIds.add(s.exercise_id);
+            return false;
+          }
+          return true;
+        });
+
+        if (deletedExerciseIds.size > 0) {
+          setSnackbar(
+            `${deletedExerciseIds.size} exercise${deletedExerciseIds.size > 1 ? "s were" : " was"} skipped (no longer available)`
+          );
+        }
+
+        if (validSets.length > 0) {
+          // Map old link_ids to new UUIDs
+          const linkIdMap = new Map<string, string>();
+          for (const s of validSets) {
+            if (s.link_id && !linkIdMap.has(s.link_id)) {
+              linkIdMap.set(s.link_id, uuid());
+            }
+          }
+
+          const setsToInsert: Parameters<typeof addSetsBatch>[0] = [];
+          for (const s of validSets) {
+            const newLinkId = s.link_id ? linkIdMap.get(s.link_id) ?? null : null;
+            setsToInsert.push({
+              sessionId: id,
+              exerciseId: s.exercise_id,
+              setNumber: s.set_number,
+              linkId: newLinkId,
+              round: newLinkId ? s.set_number : null,
+              trainingMode: (s.training_mode as TrainingMode) ?? null,
+              tempo: s.tempo ?? null,
+            });
+          }
+          const created = await addSetsBatch(setsToInsert);
+
+          // Pre-fill weights and reps from source session
+          const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
+          for (let i = 0; i < created.length; i++) {
+            const source = validSets[i];
+            if (source && (source.weight != null || source.reps != null)) {
+              setsToUpdate.push({
+                id: created[i].id,
+                weight: source.weight,
+                reps: source.reps,
+              });
+            }
+          }
+          await updateSetsBatch(setsToUpdate);
+        }
       }
       await load();
     })();
-  }, [id, templateId, load]);
+  }, [id, templateId, sourceSessionId, load]);
 
   // Reload exercises when returning from exercise picker
   useFocusEffect(
