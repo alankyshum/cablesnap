@@ -1028,7 +1028,7 @@ export default function ActiveSession() {
       }
       // Load all exercises for substitution sheet
       getAllExercises().then(setAllExercises).catch((err) => {
-        console.warn("Failed to load exercises for substitution:", err);
+        if (__DEV__) console.warn("Failed to load exercises for substitution:", err);
       });
     }, [id, load])
   );

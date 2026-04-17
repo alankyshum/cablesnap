@@ -133,7 +133,7 @@ export default function Summary() {
           }
         }
       } catch (e) {
-        console.warn("Achievement evaluation failed:", e);
+        if (__DEV__) console.warn("Achievement evaluation failed:", e);
       }
 
       AccessibilityInfo.announceForAccessibility("Workout Complete!");

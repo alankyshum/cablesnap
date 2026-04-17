@@ -105,7 +105,7 @@ export default function AchievementsScreen() {
           );
           setEarnedCount(earnedMap.size);
         } catch (e) {
-          console.warn("Achievement evaluation failed:", e);
+          if (__DEV__) console.warn("Achievement evaluation failed:", e);
           if (!cancelled) setError("Could not load achievements. Please try again later.");
         } finally {
           if (!cancelled) setLoading(false);

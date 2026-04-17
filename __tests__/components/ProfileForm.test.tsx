@@ -81,7 +81,7 @@ describe("ProfileForm", () => {
 
   it("shows validation errors for empty fields", async () => {
     const onSave = jest.fn();
-    const { getByLabelText, getByText } = renderScreen(
+    const { getByLabelText } = renderScreen(
       <ProfileForm onSave={onSave} />
     );
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe("ProfileForm", () => {
 
   it("saves profile and calls onSave on valid input", async () => {
     const onSave = jest.fn();
-    const { getByLabelText, getByText } = renderScreen(
+    const { getByLabelText } = renderScreen(
       <ProfileForm initialProfile={mockProfile} onSave={onSave} />
     );
     await waitFor(() => {
@@ -143,7 +143,7 @@ describe("ProfileForm", () => {
 
   it("shows save error on failure", async () => {
     mockSetAppSetting.mockRejectedValue(new Error("DB error"));
-    const { getByLabelText, getByText } = renderScreen(
+    const { getByLabelText } = renderScreen(
       <ProfileForm initialProfile={mockProfile} onSave={jest.fn()} />
     );
     await waitFor(() => {
@@ -232,7 +232,7 @@ describe("BodyProfileCard", () => {
 
   it("shows validation error on blur with invalid input", async () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
-    const { getByLabelText, getByText } = renderScreen(<BodyProfileCard />);
+    const { getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
       expect(getByLabelText("Age in years").props.value).toBe("30");
     });
@@ -256,6 +256,19 @@ describe("BodyProfileCard", () => {
         "nutrition_profile",
         expect.any(String)
       );
+    });
+  });
+});
+
+describe("ProfileForm accessibility", () => {
+  it("activity dropdown has accessibilityState with expanded property", async () => {
+    const { getByLabelText } = renderScreen(
+      <ProfileForm onSave={jest.fn()} />
+    );
+    await waitFor(() => {
+      const dropdown = getByLabelText(/Activity level:/);
+      expect(dropdown.props.accessibilityState).toBeDefined();
+      expect(dropdown.props.accessibilityState).toHaveProperty("expanded");
     });
   });
 });

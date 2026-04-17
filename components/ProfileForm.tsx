@@ -290,6 +290,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
             style={[styles.dropdown, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}
             accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[activityLevel]}`}
             accessibilityRole="button"
+            accessibilityState={{ expanded: activityMenuVisible }}
           >
             <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
               {ACTIVITY_LABELS[activityLevel]}
