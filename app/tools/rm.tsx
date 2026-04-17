@@ -29,8 +29,12 @@ export function RMCalculatorContent() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const body = await getBodySettings();
-        setUnit(body.weight_unit);
+        try {
+          const body = await getBodySettings();
+          setUnit(body.weight_unit);
+        } catch {
+          // Fall back to default unit if settings unavailable
+        }
       })();
     }, []),
   );

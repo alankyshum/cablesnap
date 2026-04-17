@@ -1,3 +1,4 @@
+import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -55,10 +56,34 @@ function ToolCard({ icon, title, children }: {
             {title}
           </Text>
         </View>
-        {children}
+        <ToolErrorBoundary name={title}>
+          {children}
+        </ToolErrorBoundary>
       </Card.Content>
     </Card>
   );
+}
+
+type BoundaryProps = { name: string; children: React.ReactNode };
+type BoundaryState = { hasError: boolean };
+
+class ToolErrorBoundary extends React.Component<BoundaryProps, BoundaryState> {
+  state: BoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): Partial<BoundaryState> {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Text style={{ textAlign: "center", opacity: 0.6 }}>
+          {this.props.name} failed to load. Try opening it from the standalone screen.
+        </Text>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 const styles = StyleSheet.create({

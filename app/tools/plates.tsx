@@ -53,10 +53,15 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const body = await getBodySettings()
-        setUnit(body.weight_unit)
-        setBar(body.weight_unit === "kg" ? 20 : 45)
-        if (initialWeight) setTarget(initialWeight)
+        try {
+          const body = await getBodySettings()
+          setUnit(body.weight_unit)
+          setBar(body.weight_unit === "kg" ? 20 : 45)
+          if (initialWeight) setTarget(initialWeight)
+        } catch {
+          // Fall back to defaults if settings unavailable
+          setBar(20)
+        }
         setReady(true)
       })()
     }, [initialWeight])
