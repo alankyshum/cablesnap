@@ -1801,6 +1801,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 4,
     paddingHorizontal: 4,
+    minHeight: 28,
   },
   setRow: {
     flexDirection: "row",
@@ -1831,13 +1832,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 8,
+    marginHorizontal: 12,
   },
   colLabel: {
     flex: 1,
     textAlign: "center",
     fontSize: 12,
-    marginHorizontal: 8,
+    marginHorizontal: 12,
   },
   colCheck: {
     width: 32,
@@ -1885,7 +1886,8 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   detailsBtn: {
-    marginLeft: -16,
+    marginLeft: -12,
+    marginRight: -8,
   },
   divider: {
     marginTop: 8,
