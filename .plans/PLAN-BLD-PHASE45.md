@@ -234,7 +234,29 @@ Files that should NOT be modified:
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-17)
+
+**Critical Issues (must fix before approval):**
+1. **Discoverability** — Tap-on-set-number has zero visual affordance. Users cannot discover a hidden gesture on plain text. Need a visible toggle element (icon/chip) or at minimum a first-use coach mark.
+2. **Touch target** — `colSet` is 36×~30dp, well below the 48×48dp SKILL minimum (56dp for workout screens). Will cause mis-taps.
+3. **Consolidate UX approach** — Plan lists three competing proposals. Commit to ONE with user-centric reasoning, not "zero UI footprint."
+
+**Major Issues:**
+- Missing `accessibilityRole="switch"` and `accessibilityState={{ checked: isWarmup }}` on the toggle
+- Warm-up visual styling must use theme tokens, not hardcoded opacity (0.6)
+
+**Minor Issues:**
+- Document the achievement warm-up inclusion decision with a code comment
+
+**Positive:**
+- Edge case coverage is thorough
+- Data integrity approach is solid (ALTER TABLE + DEFAULT 0, graceful import)
+- Query inventory verified accurate against codebase
+- Repeat Workout carry-over is a good touch
+
+**Recommendations:**
+- Haptic feedback on toggle (`expo-haptics` selection)
+- One-time Snackbar education on first warm-up toggle
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
