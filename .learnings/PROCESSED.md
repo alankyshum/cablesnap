@@ -165,3 +165,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-259 | NO_LEARNINGS | 2026-04-17 |
 | BLD-260 | LEARNINGS_EXTRACTED | 2026-04-17 |
 | BLD-264 | NO_LEARNINGS | 2026-04-17 |
+| BLD-265 | LEARNINGS_EXTRACTED | 2026-04-17 |
