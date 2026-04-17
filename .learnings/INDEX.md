@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 116
+Total learnings: 118
 
 ## How to Use This Knowledge Base
 
@@ -19,7 +19,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 6 learnings
-- [Build Configuration](pitfalls/build-config.md) — 12 learnings
+- [Build Configuration](pitfalls/build-config.md) — 13 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 14 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
@@ -29,7 +29,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 2 learnings
+- [Architecture](decisions/architecture.md) — 3 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-287 | Expo Managed Workflow Cannot Access Native Platform Logs | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-17 | BLD-287 | DB-Backed Diagnostic Logs Need Count-Based Not Time-Based Pruning | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-276 | Guard console.warn and console.log with __DEV__ in React Native | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-17 | BLD-277 | Null-Initial State for Smart Defaults Without Overriding User Intent | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-272 | Defense-in-Depth Error Isolation for Composite Screens | Patterns | [react-native.md](patterns/react-native.md) |

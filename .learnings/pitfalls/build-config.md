@@ -97,3 +97,11 @@
 **Learning**: React Native does NOT strip `console.warn` or `console.log` in production builds. Unlike web bundlers that can be configured to drop console calls via plugins, Metro bundler preserves them by default. Any `console.warn` or `console.log` in shipped code runs on user devices, adding noise to logs and potentially exposing internal error details.
 **Action**: Wrap every `console.warn` and `console.log` with `if (__DEV__)` — the global `__DEV__` boolean is `false` in production builds. During code review, flag any unguarded console calls in non-test files. Prefer structured error reporting (e.g., Sentry, feedback reports) over console logging for production error visibility.
 **Tags**: react-native, console, production, __DEV__, metro, logging, security, code-review
+
+### Expo Managed Workflow Cannot Access Native Platform Logs
+**Source**: BLD-287 — Enhanced Error Logging with Platform Logs (GitHub #149)
+**Date**: 2026-04-17
+**Context**: Owner requested Android logcat and Expo internal logs in feedback reports. Feasibility analysis during planning revealed these are inaccessible from JavaScript in Expo managed workflow.
+**Learning**: Expo managed workflow provides no JS API to access Android logcat, iOS system logs, or Expo's own internal logs (Metro bundler, OTA updates). Accessing native platform logs requires ejecting to bare workflow or building a custom native module. The only runtime logs available to JS are: (1) console.log/warn/error captured by a JS-side buffer, (2) app-level event logs written to the app's own DB, and (3) device metadata from expo-device/expo-constants.
+**Action**: When planning diagnostic or debugging features, do not attempt to capture native platform logs in Expo managed workflow. Instead, maximize JS-accessible data: expand console log buffers, add structured event logging to DB, and include device metadata via expo-device and expo-constants. Document the native log limitation for stakeholders early in planning.
+**Tags**: expo, managed-workflow, logcat, native-logs, diagnostics, platform-limitation, debugging, feedback
