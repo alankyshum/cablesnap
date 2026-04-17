@@ -465,13 +465,19 @@ export default function SessionDetail() {
               .filter((s) => s.completed)
               .map((set) => (
                 <View key={set.id}>
-                  <View style={styles.setRow}>
+                  <View style={[styles.setRow, set.is_warmup && { borderLeftWidth: 3, borderLeftColor: theme.colors.surfaceVariant, paddingLeft: 5 }]}>
+                    {set.is_warmup ? (
+                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.surfaceVariant, justifyContent: "center", alignItems: "center", marginRight: 8 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: theme.colors.onSurfaceVariant }}>W</Text>
+                      </View>
+                    ) : (
                     <Text
                       variant="bodyMedium"
                       style={[styles.setNum, { color: theme.colors.onSurface }]}
                     >
                       {set.round ? `R${set.round}` : `Set ${set.set_number}`}
                     </Text>
+                    )}
                     <Text
                       variant="bodyMedium"
                       style={{ color: theme.colors.onSurface }}

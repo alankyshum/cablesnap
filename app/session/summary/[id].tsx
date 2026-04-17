@@ -158,10 +158,16 @@ export default function Summary() {
   const volume = useMemo(() => {
     let total = 0;
     for (const s of completed) {
-      if (s.weight && s.reps) total += s.weight * s.reps;
+      if (s.weight && s.reps && !s.is_warmup) total += s.weight * s.reps;
     }
     return total;
   }, [completed]);
+
+  const warmupCount = useMemo(
+    () => completed.filter((s) => s.is_warmup).length,
+    [completed],
+  );
+  const workingCount = completed.length - warmupCount;
 
   const duration = session?.duration_seconds
     ? formatTime(session.duration_seconds)
@@ -396,14 +402,14 @@ export default function Summary() {
               </Card>
               <Card
                 style={[styles.stat, { backgroundColor: theme.colors.surface }]}
-                accessibilityLabel={`${completed.length} sets completed`}
+                accessibilityLabel={warmupCount > 0 ? `${workingCount} working sets, ${warmupCount} warm-up sets` : `${completed.length} sets completed`}
               >
                 <Card.Content style={styles.statInner}>
                   <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
                     {completed.length}
                   </Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    Sets
+                    {warmupCount > 0 ? `Sets (${warmupCount}W / ${workingCount})` : "Sets"}
                   </Text>
                 </Card.Content>
               </Card>
