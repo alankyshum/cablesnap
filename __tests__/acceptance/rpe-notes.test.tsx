@@ -43,7 +43,7 @@ jest.mock('../../lib/programs', () => ({
   advanceProgram: jest.fn().mockResolvedValue({ wrapped: false }),
 }))
 
-jest.mock('../../lib/rm', () => ({ suggest: jest.fn().mockReturnValue(null) }))
+jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/rpe', () => ({
   rpeColor: jest.fn().mockReturnValue('#888'),
   rpeText: jest.fn().mockReturnValue('#fff'),

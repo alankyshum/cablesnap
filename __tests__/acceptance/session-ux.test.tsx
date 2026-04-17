@@ -38,7 +38,7 @@ jest.mock('../../lib/programs', () => ({
   advanceProgram: jest.fn().mockResolvedValue({ wrapped: false }),
 }))
 
-jest.mock('../../lib/rm', () => ({ suggest: jest.fn().mockReturnValue(null) }))
+jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
 jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
@@ -149,8 +149,8 @@ describe('Session UX Acceptance', () => {
       ])
       const { findByText, getAllByText } = renderScreen(<ActiveSession />)
       await findByText('Squat')
-      // Previous sets should be displayed as "weight×reps" format
-      expect(getAllByText('95×5').length).toBeGreaterThanOrEqual(1)
+      // Previous sets should be displayed as "weight×reps (1RM: X)" format
+      expect(getAllByText('95×5 (1RM: 111)').length).toBeGreaterThanOrEqual(1)
     })
 
     it('shows dash when no previous data exists', async () => {

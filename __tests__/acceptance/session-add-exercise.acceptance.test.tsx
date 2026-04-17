@@ -36,7 +36,7 @@ jest.mock('../../lib/programs', () => ({
   advanceProgram: jest.fn().mockResolvedValue({ wrapped: false }),
 }))
 
-jest.mock('../../lib/rm', () => ({ suggest: jest.fn().mockReturnValue(null) }))
+jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
 jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
