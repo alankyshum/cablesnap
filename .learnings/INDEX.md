@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 114
+Total learnings: 115
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 52 learnings
+- [React Native + Expo](patterns/react-native.md) — 53 learnings
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-277 | Null-Initial State for Smart Defaults Without Overriding User Intent | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-272 | Defense-in-Depth Error Isolation for Composite Screens | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-270 | Unused DB Functions Accumulate Silent Bugs — Audit Before Wiring Up | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-17 | BLD-268 | Boolean-to-Enum Migration via Dual-Write and Partition Alignment | Decisions | [architecture.md](decisions/architecture.md) |
