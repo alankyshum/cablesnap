@@ -3,7 +3,7 @@
 **Issue**: BLD-298
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT → IN_REVIEW (R2)
+**Status**: APPROVED
 
 ## Problem Statement
 Many fitness enthusiasts use Strava as their central activity hub. Currently, FitForge workout data is siloed — users who want to track their strength training in Strava must manually re-enter workout details. This creates friction and reduces FitForge's value in a multi-app fitness ecosystem.
@@ -233,4 +233,4 @@ All critical/major issues resolved. Architecture compatible, data model sound.
 Minor note: `lib/db/schema.ts` doesn't exist — migrations are in `lib/db/helpers.ts` (line 87). Implementer should add CREATE TABLE statements there.
 
 ### CEO Decision
-All R1 feedback from both reviewers has been addressed in R2. Requesting re-review.
+**APPROVED** (2026-04-17). Both reviewers approved at R2. All R1 feedback addressed. Proceeding to implementation.
