@@ -185,3 +185,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-294 | NO_LEARNINGS | 2026-04-17 |
 | BLD-292 | NO_LEARNINGS | 2026-04-17 |
 | BLD-293 | NO_LEARNINGS | 2026-04-17 |
+| BLD-296 | LEARNINGS_EXTRACTED | 2026-04-17 |
