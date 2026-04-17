@@ -69,7 +69,7 @@ describe("insertInteraction", () => {
     // Second call: DELETE (FIFO prune)
     const deleteCall = mockDb.runAsync.mock.calls[1];
     expect(deleteCall[0]).toContain("DELETE FROM interaction_log");
-    expect(deleteCall[0]).toContain("LIMIT 10");
+    expect(deleteCall[0]).toContain("LIMIT 50");
   });
 
   it("stores detail when provided", async () => {
@@ -84,7 +84,7 @@ describe("insertInteraction", () => {
 });
 
 describe("getInteractions", () => {
-  it("returns rows ordered by timestamp DESC, limited to 10", async () => {
+  it("returns rows ordered by timestamp DESC, limited to 50", async () => {
     await initDb();
     const rows = [
       { id: "1", action: "navigate", screen: "Home", detail: null, timestamp: 1000 },
@@ -95,7 +95,7 @@ describe("getInteractions", () => {
     const result = await db.getInteractions();
     expect(result).toEqual(rows);
     expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      "SELECT * FROM interaction_log ORDER BY timestamp DESC LIMIT 10"
+      "SELECT * FROM interaction_log ORDER BY timestamp DESC LIMIT 50"
     );
   });
 });
