@@ -27,12 +27,14 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
        WHERE completed_at IS NOT NULL
        ORDER BY date ASC`
     ),
+    // Warm-up sets excluded from volume/PR achievements but workout-count achievements are session-based, not set-based
     queryOne<{ count: number }>(
       `SELECT COUNT(*) AS count FROM (
         SELECT ws.exercise_id
         FROM workout_sets ws
         JOIN workout_sessions wss ON ws.session_id = wss.id
         WHERE ws.completed = 1
+          AND ws.is_warmup = 0
           AND ws.weight IS NOT NULL
           AND ws.weight > 0
           AND wss.completed_at IS NOT NULL
@@ -43,6 +45,7 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
             WHERE ws2.exercise_id = ws.exercise_id
               AND ws2.session_id != ws.session_id
               AND ws2.completed = 1
+              AND ws2.is_warmup = 0
               AND ws2.weight IS NOT NULL
               AND ws2.weight > 0
               AND wss2.completed_at IS NOT NULL
@@ -57,6 +60,7 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
         FROM workout_sets ws
         JOIN workout_sessions wss ON ws.session_id = wss.id
         WHERE ws.completed = 1
+          AND ws.is_warmup = 0
           AND ws.weight IS NOT NULL
           AND ws.reps IS NOT NULL
           AND wss.completed_at IS NOT NULL
@@ -68,6 +72,7 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
+         AND ws.is_warmup = 0
          AND ws.weight IS NOT NULL
          AND ws.reps IS NOT NULL
          AND wss.completed_at IS NOT NULL`

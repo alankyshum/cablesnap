@@ -105,7 +105,7 @@ export type BackupV3Data = {
 };
 
 export type BackupV3 = {
-  version: 3 | 4;
+  version: 3 | 4 | 5;
   app_version: string;
   exported_at: string;
   data: BackupV3Data;
@@ -169,7 +169,7 @@ export function validateBackupData(data: unknown): ValidationError | null {
   }
 
   const version = Number(obj.version);
-  if (version >= 5) {
+  if (version >= 6) {
     return { type: "future_version", message: "This backup was created with a newer version of FitForge. Please update the app first." };
   }
 
@@ -286,7 +286,7 @@ export async function exportAllData(
   onProgress?.({ table: "done", tableIndex: tables.length, totalTables: tables.length });
 
   return {
-    version: 4,
+    version: 5,
     app_version: "1.0.0",
     exported_at: new Date().toISOString(),
     data: data as unknown as BackupV3Data,
@@ -450,8 +450,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "workout_sets": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null]
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0]
       );
       return r.changes > 0;
     }

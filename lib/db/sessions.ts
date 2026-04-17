@@ -21,6 +21,7 @@ type SetRow = {
   exercise_deleted_at: number | null;
   swapped_from_exercise_id: string | null;
   swapped_from_name: string | null;
+  is_warmup: number;
 };
 
 // ---- Sessions ----
@@ -116,6 +117,7 @@ export async function getSessionSets(
     training_mode: (r.training_mode as TrainingMode) ?? null,
     tempo: r.tempo ?? null,
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
+    is_warmup: r.is_warmup === 1,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -139,6 +141,7 @@ export type SourceSessionSet = {
   training_mode: string | null;
   tempo: string | null;
   exercise_exists: boolean;
+  is_warmup: boolean;
 };
 
 export async function getSourceSessionSets(
@@ -153,9 +156,10 @@ export async function getSourceSessionSets(
     training_mode: string | null;
     tempo: string | null;
     exercise_exists: string | null;
+    is_warmup: number;
   }>(
     `SELECT ws.exercise_id, ws.set_number, ws.weight, ws.reps, ws.link_id,
-            ws.training_mode, ws.tempo, e.id AS exercise_exists
+            ws.training_mode, ws.tempo, e.id AS exercise_exists, ws.is_warmup
      FROM workout_sets ws
      LEFT JOIN exercises e ON ws.exercise_id = e.id
      WHERE ws.session_id = ? AND ws.completed = 1
@@ -171,6 +175,7 @@ export async function getSourceSessionSets(
     training_mode: r.training_mode,
     tempo: r.tempo,
     exercise_exists: r.exercise_exists != null,
+    is_warmup: r.is_warmup === 1,
   }));
 }
 
@@ -183,12 +188,13 @@ export async function addSet(
   linkId?: string | null,
   round?: number | null,
   trainingMode?: TrainingMode | null,
-  tempo?: string | null
+  tempo?: string | null,
+  isWarmup?: boolean
 ): Promise<WorkoutSet> {
   const id = uuid();
   await execute(
-    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null, trainingMode ?? null, tempo ?? null]
+    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null, trainingMode ?? null, tempo ?? null, isWarmup ? 1 : 0]
   );
   return {
     id,
@@ -206,6 +212,7 @@ export async function addSet(
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     swapped_from_exercise_id: null,
+    is_warmup: isWarmup ?? false,
   };
 }
 
@@ -218,6 +225,7 @@ export async function addSetsBatch(
     round?: number | null;
     trainingMode?: TrainingMode | null;
     tempo?: string | null;
+    isWarmup?: boolean;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => ({
@@ -236,16 +244,17 @@ export async function addSetsBatch(
     training_mode: s.trainingMode ?? null,
     tempo: s.tempo ?? null,
     swapped_from_exercise_id: null,
+    is_warmup: s.isWarmup ?? false,
   }));
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.link_id, r.round, r.training_mode, r.tempo,
+          r.link_id, r.round, r.training_mode, r.tempo, r.is_warmup ? 1 : 0,
         ]);
       }
     } finally {
@@ -330,6 +339,13 @@ export async function updateSetTempo(id: string, tempo: string | null): Promise<
   );
 }
 
+export async function updateSetWarmup(id: string, isWarmup: boolean): Promise<void> {
+  await execute(
+    "UPDATE workout_sets SET is_warmup = ? WHERE id = ?",
+    [isWarmup ? 1 : 0, id]
+  );
+}
+
 export async function getPreviousSets(
   exerciseId: string,
   currentSessionId: string
@@ -357,7 +373,7 @@ export async function getSessionSetCount(
   sessionId: string
 ): Promise<number> {
   const row = await queryOne<{ count: number }>(
-    "SELECT COUNT(*) as count FROM workout_sets WHERE session_id = ? AND completed = 1",
+    "SELECT COUNT(*) as count FROM workout_sets WHERE session_id = ? AND completed = 1 AND is_warmup = 0",
     [sessionId]
   );
   return row?.count ?? 0;
@@ -367,7 +383,7 @@ export async function getSessionAvgRPE(
   sessionId: string
 ): Promise<number | null> {
   const row = await queryOne<{ val: number | null }>(
-    "SELECT AVG(rpe) AS val FROM workout_sets WHERE session_id = ? AND completed = 1 AND rpe IS NOT NULL",
+    "SELECT AVG(rpe) AS val FROM workout_sets WHERE session_id = ? AND completed = 1 AND rpe IS NOT NULL AND is_warmup = 0",
     [sessionId]
   );
   return row?.val ?? null;
@@ -481,7 +497,7 @@ export async function getWeeklyVolume(
             COALESCE(SUM(ws.weight * ws.reps), 0) AS volume
      FROM workout_sets ws
      JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.completed = 1 AND wss.completed_at IS NOT NULL AND wss.started_at >= ?
+     WHERE ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL AND wss.started_at >= ?
      GROUP BY week_start
      ORDER BY week_start ASC`,
     [cutoff]
@@ -504,6 +520,7 @@ export async function getPersonalRecords(): Promise<
      LEFT JOIN exercises e ON ws.exercise_id = e.id
      JOIN workout_sessions wss ON ws.session_id = wss.id
      WHERE ws.completed = 1 AND ws.weight IS NOT NULL AND ws.weight > 0
+       AND ws.is_warmup = 0
        AND wss.completed_at IS NOT NULL
      GROUP BY ws.exercise_id
      ORDER BY name ASC`
@@ -541,6 +558,7 @@ export async function getMaxWeightByExercise(
        AND ws.completed = 1
        AND ws.weight IS NOT NULL
        AND ws.weight > 0
+       AND ws.is_warmup = 0
        AND wss.completed_at IS NOT NULL
      GROUP BY ws.exercise_id`,
     [...exerciseIds, excludeSessionId]
@@ -567,6 +585,7 @@ export async function getSessionPRs(
          AND ws.completed = 1
          AND ws.weight IS NOT NULL
          AND ws.weight > 0
+         AND ws.is_warmup = 0
        GROUP BY ws.exercise_id
      ) cur
      JOIN (
@@ -577,6 +596,7 @@ export async function getSessionPRs(
          AND ws.completed = 1
          AND ws.weight IS NOT NULL
          AND ws.weight > 0
+         AND ws.is_warmup = 0
          AND wss.completed_at IS NOT NULL
        GROUP BY ws.exercise_id
      ) hist ON cur.exercise_id = hist.exercise_id
@@ -602,6 +622,7 @@ export async function getRecentPRs(
      WHERE ws.completed = 1
        AND ws.weight IS NOT NULL
        AND ws.weight > 0
+       AND ws.is_warmup = 0
        AND wss.completed_at IS NOT NULL
        AND ws.weight > (SELECT MAX(ws2.weight)
           FROM workout_sets ws2
@@ -611,6 +632,7 @@ export async function getRecentPRs(
             AND ws2.completed = 1
             AND ws2.weight IS NOT NULL
             AND ws2.weight > 0
+            AND ws2.is_warmup = 0
             AND wss2.completed_at IS NOT NULL
             AND wss2.started_at < wss.started_at
          )
@@ -663,6 +685,7 @@ export async function getExerciseHistory(
      JOIN workout_sessions wss ON ws.session_id = wss.id
      WHERE ws.exercise_id = ?
        AND ws.completed = 1
+       AND ws.is_warmup = 0
        AND wss.completed_at IS NOT NULL
      GROUP BY wss.id
      ORDER BY wss.started_at DESC
@@ -676,7 +699,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
     `SELECT MAX(ws.weight) AS val
      FROM workout_sets ws
      JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.weight > 0 AND wss.completed_at IS NOT NULL`,
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.weight > 0 AND wss.completed_at IS NOT NULL`,
     [exerciseId]
   );
 
@@ -684,7 +707,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
     `SELECT MAX(ws.reps) AS val
      FROM workout_sets ws
      JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND wss.completed_at IS NOT NULL`,
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL`,
     [exerciseId]
   );
 
@@ -693,7 +716,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
        SELECT SUM(ws.weight * ws.reps) AS sv
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
-       WHERE ws.exercise_id = ? AND ws.completed = 1 AND wss.completed_at IS NOT NULL
+       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL
        GROUP BY wss.id
      )`,
     [exerciseId]
@@ -703,7 +726,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
     `SELECT MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS val
      FROM workout_sets ws
      JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL`,
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL`,
     [exerciseId]
   );
 
@@ -711,7 +734,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
     `SELECT COUNT(DISTINCT wss.id) AS val
      FROM workout_sets ws
      JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND wss.completed_at IS NOT NULL`,
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL`,
     [exerciseId]
   );
 
@@ -746,6 +769,7 @@ export async function getExercise1RMChartData(
          AND ws.weight > 0
          AND ws.reps IS NOT NULL
          AND ws.reps > 0
+         AND ws.is_warmup = 0
          AND wss.completed_at IS NOT NULL
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
@@ -769,6 +793,7 @@ export async function getExerciseChartData(
          AND ws.completed = 1
          AND ws.weight IS NOT NULL
          AND ws.weight > 0
+         AND ws.is_warmup = 0
          AND wss.completed_at IS NOT NULL
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
@@ -788,6 +813,7 @@ export async function getExerciseChartData(
        WHERE ws.exercise_id = ?
          AND ws.completed = 1
          AND wss.completed_at IS NOT NULL
+         AND ws.is_warmup = 0
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
        LIMIT ?
@@ -846,6 +872,7 @@ export async function getBestSet(
      JOIN workout_sessions wss ON ws.session_id = wss.id
      WHERE ws.exercise_id = ?
        AND ws.completed = 1
+       AND ws.is_warmup = 0
        AND ws.weight > 0
        AND ws.reps > 0
        AND ws.reps <= 12
@@ -878,6 +905,7 @@ export async function getMuscleVolumeForWeek(
        AND wss.completed_at >= ?
        AND wss.completed_at < ?
        AND ws.completed = 1
+       AND ws.is_warmup = 0
      GROUP BY ws.exercise_id`,
     [weekStart, end]
   );
@@ -940,6 +968,7 @@ export async function getMuscleVolumeTrend(
        AND wss.completed_at >= ?
        AND wss.completed_at < ?
        AND ws.completed = 1
+       AND ws.is_warmup = 0
      GROUP BY ws.exercise_id, wss.id`,
     [oldest.getTime(), end.getTime()]
   );
@@ -977,6 +1006,7 @@ export async function getSessionRepPRs(
        FROM workout_sets ws
        WHERE ws.session_id = ?
          AND ws.completed = 1
+         AND ws.is_warmup = 0
          AND ws.reps IS NOT NULL
          AND ws.reps > 0
          AND (ws.weight IS NULL OR ws.weight = 0)
@@ -988,6 +1018,7 @@ export async function getSessionRepPRs(
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.session_id != ?
          AND ws.completed = 1
+         AND ws.is_warmup = 0
          AND ws.reps IS NOT NULL
          AND ws.reps > 0
          AND (ws.weight IS NULL OR ws.weight = 0)
@@ -1025,7 +1056,7 @@ export async function getSessionComparison(
     const row = await queryOne<{ vol: number; cnt: number }>(
       `SELECT COALESCE(SUM(CASE WHEN weight IS NOT NULL AND reps IS NOT NULL THEN weight * reps ELSE 0 END), 0) AS vol,
               COUNT(*) AS cnt
-       FROM workout_sets WHERE session_id = ? AND completed = 1`,
+       FROM workout_sets WHERE session_id = ? AND completed = 1 AND is_warmup = 0`,
       [sid]
     );
     return { volume: row?.vol ?? 0, sets: row?.cnt ?? 0 };
@@ -1060,6 +1091,7 @@ export async function getSessionWeightIncreases(
      LEFT JOIN exercises e ON ws.exercise_id = e.id
      WHERE ws.session_id = ?
        AND ws.completed = 1
+       AND ws.is_warmup = 0
        AND ws.weight IS NOT NULL
        AND ws.weight > 0
      GROUP BY ws.exercise_id`,
@@ -1085,6 +1117,7 @@ export async function getSessionWeightIncreases(
          AND wss.id != ?
          AND wss.completed_at IS NOT NULL
          AND ws.completed = 1
+         AND ws.is_warmup = 0
          AND ws.weight > 0
          AND wss.started_at = (
            SELECT MAX(wss2.started_at)

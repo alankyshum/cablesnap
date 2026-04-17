@@ -97,7 +97,7 @@ export async function getWeeklyWorkouts(
         `SELECT COALESCE(SUM(ws.weight * ws.reps), 0) AS volume
          FROM workout_sets ws
          JOIN workout_sessions wss ON ws.session_id = wss.id
-         WHERE ws.completed = 1 AND wss.completed_at IS NOT NULL
+         WHERE ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL
            AND wss.started_at >= ? AND wss.started_at < ?`,
         [start, end]
       ),
@@ -111,7 +111,7 @@ export async function getWeeklyWorkouts(
         `SELECT COALESCE(SUM(ws.weight * ws.reps), 0) AS volume
          FROM workout_sets ws
          JOIN workout_sessions wss ON ws.session_id = wss.id
-         WHERE ws.completed = 1 AND wss.completed_at IS NOT NULL
+         WHERE ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL
            AND wss.started_at >= ? AND wss.started_at < ?`,
         [prevStart, start]
       ),
@@ -162,6 +162,7 @@ export async function getWeeklyPRs(weekStartMs: number): Promise<WeeklyPR[]> {
      LEFT JOIN exercises e ON ws.exercise_id = e.id
      JOIN workout_sessions wss ON ws.session_id = wss.id
      WHERE ws.completed = 1 AND ws.weight IS NOT NULL AND ws.weight > 0
+       AND ws.is_warmup = 0
        AND wss.completed_at IS NOT NULL
        AND wss.started_at >= ? AND wss.started_at < ?
      GROUP BY ws.exercise_id`,
@@ -178,6 +179,7 @@ export async function getWeeklyPRs(weekStartMs: number): Promise<WeeklyPR[]> {
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1 AND ws.weight IS NOT NULL AND ws.weight > 0
+         AND ws.is_warmup = 0
          AND wss.completed_at IS NOT NULL
          AND ws.exercise_id = ?
          AND wss.started_at < ?`,
