@@ -302,14 +302,22 @@ export async function reorderTemplateExercises(
 
 export async function updateTemplateExercise(
   id: string,
+  templateId: string,
   targetSets: number,
   targetReps: string,
   restSeconds: number
 ): Promise<void> {
-  await execute(
-    "UPDATE template_exercises SET target_sets = ?, target_reps = ?, rest_seconds = ? WHERE id = ?",
-    [targetSets, targetReps, restSeconds, id]
-  );
+  const database = await getDatabase();
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "UPDATE template_exercises SET target_sets = ?, target_reps = ?, rest_seconds = ? WHERE id = ?",
+      [targetSets, targetReps, restSeconds, id]
+    );
+    await database.runAsync(
+      "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
+      [Date.now(), templateId]
+    );
+  });
 }
 
 export async function getTemplateExerciseCount(
