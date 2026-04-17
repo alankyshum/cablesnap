@@ -66,7 +66,8 @@ export default function RootLayout() {
         SplashScreen.hideAsync();
       })
       .catch((err) => {
-        setError(err?.message ?? "Failed to initialize database");
+        const msg = typeof err === "string" ? err : err?.message ?? "Failed to initialize database";
+        setError(msg || "Unknown error");
         setReady(true);
         SplashScreen.hideAsync();
       });
@@ -135,13 +136,16 @@ export default function RootLayout() {
           {!onboarded && !pathname.startsWith("/onboarding") && (
             <Redirect href="/onboarding/welcome" />
           )}
+          {banner && (
           <Banner
             visible={banner}
             actions={[{ label: "Dismiss", onPress: () => setBanner(false) }]}
             icon="alert-circle-outline"
           >
-            Web storage unavailable — using in-memory database. Your data will not persist across page reloads.
+            Web storage unavailable — using in-memory database. Your data will not persist across page reloads. Try a hard refresh (Ctrl+Shift+R / Cmd+Shift+R).
           </Banner>
+          )}
+          {!!error && (
           <Banner
             visible={!!error}
             actions={[{ label: "Retry", onPress: () => { setError(null); getDatabase().catch((e) => setError(e?.message ?? "Retry failed")); } }]}
@@ -149,6 +153,7 @@ export default function RootLayout() {
           >
             Database error: {error}. Try reloading the app.
           </Banner>
+          )}
           <Stack
             screenOptions={{
               headerShown: false,

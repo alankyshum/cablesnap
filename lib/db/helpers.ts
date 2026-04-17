@@ -609,7 +609,7 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
       [tpl.id, tpl.name]
     );
     await database.runAsync(
-      "UPDATE workout_templates SET is_starter = 1, name = ? WHERE id = ? AND (is_starter = 0 OR name IS NULL OR name = '')",
+      "UPDATE workout_templates SET is_starter = 1, name = ? WHERE id = ? AND (is_starter IS NULL OR is_starter = 0 OR name IS NULL OR name = '')",
       [tpl.name, tpl.id]
     );
     for (let i = 0; i < tpl.exercises.length; i++) {
@@ -625,7 +625,7 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
     [STARTER_PROGRAM.id, STARTER_PROGRAM.name, STARTER_PROGRAM.description]
   );
   await database.runAsync(
-    "UPDATE programs SET is_starter = 1, name = ? WHERE id = ? AND (is_starter = 0 OR name IS NULL OR name = '')",
+      "UPDATE programs SET is_starter = 1, name = ? WHERE id = ? AND (is_starter IS NULL OR is_starter = 0 OR name IS NULL OR name = '')",
     [STARTER_PROGRAM.name, STARTER_PROGRAM.id]
   );
   for (let i = 0; i < STARTER_PROGRAM.days.length; i++) {

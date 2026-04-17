@@ -522,7 +522,8 @@ export default function Workouts() {
                 scrollEnabled={false}
                 contentContainerStyle={styles.flowList}
                 renderItem={({ item }) => {
-                  const meta = item.is_starter ? starterMeta(item.id) : undefined;
+                  const meta = starterMeta(item.id);
+                  const isStarter = !!meta || item.is_starter;
                   return (
                     <Card
                       style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
@@ -530,10 +531,10 @@ export default function Workouts() {
                       <Card.Content style={styles.cardContent}>
                         <Pressable
                           onPress={() => startFromTemplate(item)}
-                          onLongPress={!item.is_starter ? () => confirmDelete(item) : undefined}
+                          onLongPress={!isStarter ? () => confirmDelete(item) : undefined}
                           style={styles.cardInfo}
-                          accessibilityLabel={`${item.is_starter ? "Starter template" : "Start workout from template"}: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
-                          accessibilityHint={item.is_starter ? "Double-tap to start workout" : undefined}
+                          accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
+                          accessibilityHint={isStarter ? "Double-tap to start workout" : undefined}
                           accessibilityRole="button"
                         >
                           <View style={styles.chipRow}>
@@ -543,7 +544,7 @@ export default function Workouts() {
                             >
                               {meta?.name || item.name}
                             </Text>
-                            {item.is_starter && (
+                            {isStarter && (
                               <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
                                 <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
                               </View>
@@ -566,7 +567,7 @@ export default function Workouts() {
                             {meta ? `${DIFFICULTY_LABELS[meta.difficulty]} \u00b7 ${meta.duration} \u00b7 ${meta.exercises.length} exercises` : `${counts[item.id] ?? 0} exercises`}
                           </Text>
                         </Pressable>
-                        {item.is_starter ? (
+                        {isStarter ? (
                           <Menu
                             visible={menu === item.id}
                             onDismiss={() => setMenu(null)}
@@ -575,7 +576,7 @@ export default function Workouts() {
                                 icon="dots-vertical"
                                 size={20}
                                 onPress={() => setMenu(item.id)}
-                                accessibilityLabel={`Options for ${item.name}`}
+                                accessibilityLabel={`Options for ${meta?.name || item.name}`}
                               />
                             }
                           >
@@ -838,12 +839,11 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    height: 72,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   nextBanner: {
     marginBottom: 12,
@@ -889,6 +889,8 @@ const styles = StyleSheet.create({
   cardContent: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+    paddingVertical: 4,
   },
   cardInfo: {
     flex: 1,
