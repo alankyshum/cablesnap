@@ -457,3 +457,11 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: When renaming or restructuring fields in JSON-serialized app_settings values, create a centralized `migrateX()` function that: (1) checks for the new field first, (2) computes the new field from the old if absent, (3) strips the old field. This function must be called at EVERY load point — component mount, screen load, AND the import/export path. Missing a single read site causes silent data bugs.
 **Action**: For any JSON settings field change: (1) create a typed migration function (e.g., `migrateProfile(raw: any): NutritionProfile`), (2) grep for ALL `getAppSetting("<key>")` calls and wrap every `JSON.parse()` with the migration, (3) add migration to `import-export.ts` `insertRow` for the relevant settings key, (4) write explicit tests for legacy→new, modern→passthrough, and both-present→preference scenarios.
 **Tags**: app-settings, json-migration, data-migration, field-rename, import-export, nutrition-profile, backward-compatibility
+
+### FlashList renderItem Must Return a Single View-Based Root — Not a Fragment
+**Source**: BLD-295 — Inline food search on nutrition tab (Part B)
+**Date**: 2026-04-17
+**Context**: The inline food search component needed a labeled separator between local and online search results inside a FlashList. The initial instinct was to wrap the separator label and result item in a React Fragment (`<>...</>`), but this breaks FlashList's internal height estimation.
+**Learning**: FlashList relies on measuring the root element of each rendered item to calculate layout. React Fragments produce multiple sibling nodes with no single measurable root, which breaks FlashList's height estimation and causes rendering glitches (blank spaces, overlapping items, incorrect scroll positions). This constraint applies to `renderItem`, `ListHeaderComponent`, and `ListFooterComponent`.
+**Action**: Always return a single `<View>` wrapper (not `<>...</>`) from FlashList's `renderItem` when the item needs to render multiple elements (e.g., a separator label above the item). When reviewing PRs that use FlashList, flag any Fragment usage in renderItem as a MAJOR finding.
+**Tags**: flashlist, fragment, renderitem, view, height-estimation, shopify, react-native, list
