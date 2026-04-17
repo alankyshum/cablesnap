@@ -300,6 +300,64 @@ describe('Settings Screen Acceptance', () => {
     })
   })
 
+  it('shows schedule-required snack when no workout days scheduled', async () => {
+    const { getSchedule } = require('../../lib/db')
+    getSchedule.mockResolvedValue([])
+
+    mockGetAppSetting.mockImplementation((key: string) => {
+      if (key === 'reminders_enabled') return Promise.resolve('false')
+      if (key === 'timer_sound_enabled') return Promise.resolve('true')
+      return Promise.resolve(null)
+    })
+
+    const { findByLabelText, findByText } = renderScreen(<Settings />)
+    const toggle = await findByLabelText('Workout Reminders')
+
+    fireEvent(toggle, 'valueChange', true)
+
+    await waitFor(() => {
+      expect(requestPermission).not.toHaveBeenCalled()
+    })
+    expect(await findByText(/Set up a weekly workout schedule/)).toBeTruthy()
+  })
+
+  it('shows permission-denied snack when permission is denied on toggle', async () => {
+    const { getSchedule } = require('../../lib/db')
+    getSchedule.mockResolvedValue([{ day: 1 }, { day: 3 }, { day: 5 }])
+    requestPermission.mockResolvedValue(false)
+
+    mockGetAppSetting.mockImplementation((key: string) => {
+      if (key === 'reminders_enabled') return Promise.resolve('false')
+      if (key === 'timer_sound_enabled') return Promise.resolve('true')
+      return Promise.resolve(null)
+    })
+
+    const { findByLabelText, findByText } = renderScreen(<Settings />)
+    const toggle = await findByLabelText('Workout Reminders')
+
+    fireEvent(toggle, 'valueChange', true)
+
+    await waitFor(() => {
+      expect(requestPermission).toHaveBeenCalled()
+    })
+    expect(await findByText(/Notification permission denied.*Open Settings/)).toBeTruthy()
+  })
+
+  it('shows persistent schedule hint in error color when no schedule exists', async () => {
+    const { getSchedule } = require('../../lib/db')
+    getSchedule.mockResolvedValue([])
+
+    mockGetAppSetting.mockImplementation((key: string) => {
+      if (key === 'reminders_enabled') return Promise.resolve('false')
+      if (key === 'timer_sound_enabled') return Promise.resolve('true')
+      return Promise.resolve(null)
+    })
+
+    const { findByText } = renderScreen(<Settings />)
+    const hint = await findByText(/No workout days scheduled/)
+    expect(hint).toBeTruthy()
+  })
+
   // ── Export Data Button ──────────────────────────────────
 
   it('Export All button is pressable and has accessible label', async () => {
