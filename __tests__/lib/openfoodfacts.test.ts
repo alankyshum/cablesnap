@@ -3,6 +3,8 @@ import {
   formatProductName,
   parseProduct,
   fetchWithTimeout,
+  lookupBarcode,
+  lookupBarcodeWithTimeout,
   type OFFProduct,
 } from "../../lib/openfoodfacts";
 
@@ -403,6 +405,154 @@ describe("fetchWithTimeout", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.foods).toHaveLength(0);
+    }
+  });
+});
+
+// ── lookupBarcode ───────────────────────────────────────────────
+
+describe("lookupBarcode", () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("returns found food on valid barcode response", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: 1,
+          product: {
+            product_name: "Oat Milk",
+            brands: "Oatly",
+            nutriments: {
+              "energy-kcal_100g": 46,
+              proteins_100g: 1,
+              carbohydrates_100g: 6.7,
+              fat_100g: 1.5,
+            },
+            serving_size: "250ml",
+            serving_quantity: 250,
+          },
+        }),
+    });
+
+    const result = await lookupBarcode("7394376616037");
+    expect(result.ok).toBe(true);
+    if (result.ok && result.status === "found") {
+      expect(result.food.name).toBe("Oatly — Oat Milk");
+      expect(result.food.calories).toBe(115); // 46 * 2.5
+    }
+  });
+
+  it("returns not_found when status is 0", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 0, product: null }),
+    });
+
+    const result = await lookupBarcode("0000000000000");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.status).toBe("not_found");
+    }
+  });
+
+  it("returns incomplete when product fails validation", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: 1,
+          product: {
+            product_name: "Unknown Item",
+            nutriments: {
+              "energy-kcal_100g": -5,
+              proteins_100g: 0,
+              carbohydrates_100g: 0,
+              fat_100g: 0,
+            },
+          },
+        }),
+    });
+
+    const result = await lookupBarcode("1234567890123");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.status).toBe("incomplete");
+    }
+  });
+
+  it("returns offline error on network failure", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError("Network request failed"));
+
+    const result = await lookupBarcode("1234567890123");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe("offline");
+    }
+  });
+
+  it("returns unknown error on non-ok response", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500 });
+
+    const result = await lookupBarcode("1234567890123");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe("unknown");
+    }
+  });
+
+  it("calls the correct barcode API URL", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 0, product: null }),
+    });
+
+    await lookupBarcode("7394376616037");
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v2/product/7394376616037"),
+      expect.objectContaining({
+        headers: expect.objectContaining({ "User-Agent": expect.any(String) }),
+      })
+    );
+  });
+});
+
+// ── lookupBarcodeWithTimeout ────────────────────────────────────
+
+describe("lookupBarcodeWithTimeout", () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.useRealTimers();
+  });
+
+  it("returns result on success", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: 1,
+          product: {
+            product_name: "Test",
+            nutriments: {
+              "energy-kcal_100g": 100,
+              proteins_100g: 5,
+              carbohydrates_100g: 20,
+              fat_100g: 3,
+            },
+          },
+        }),
+    });
+
+    const result = await lookupBarcodeWithTimeout("1234567890123");
+    expect(result.ok).toBe(true);
+    if (result.ok && result.status === "found") {
+      expect(result.food.name).toBe("Test");
     }
   });
 });
