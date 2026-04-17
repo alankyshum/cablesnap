@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 110
+Total learnings: 111
 
 ## How to Use This Knowledge Base
 
@@ -21,7 +21,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 6 learnings
 - [Build Configuration](pitfalls/build-config.md) — 11 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 12 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 13 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-266 | Boolean Filter Column on Core Table Requires Exhaustive Aggregation Query Audit | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-17 | BLD-265 | Extensible Session Population via URL Params | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-265 | LEFT JOIN to Detect Deleted Referenced Entities Before Loading | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-17 | BLD-260 | Feature Plans Must Include an Existing Code Inventory to Prevent Scope Duplication | Process | [quality-pipeline.md](process/quality-pipeline.md) |
