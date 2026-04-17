@@ -401,44 +401,83 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
 
   const exerciseInfo = (
     <>
-      <View style={styles.groupHeader}>
-        <Text
-          variant="titleMedium"
-          numberOfLines={2}
-          style={[
-            styles.groupTitle,
-            { color: theme.colors.primary },
-            layout.compact && styles.groupTitleCompact,
-          ]}
-        >
-          {group.name}
-        </Text>
-        <Button
-          mode="text"
-          compact
-          icon="information-outline"
-          onPress={() => onShowDetail(group.exercise_id)}
-          accessibilityLabel={`View ${group.name} details`}
-        >
-          Details
-        </Button>
-        <IconButton
-          icon="swap-horizontal"
-          size={24}
-          onPress={() => onSwap(group.exercise_id)}
-          accessibilityLabel={`Swap ${group.name} for alternative`}
-          style={styles.swapBtn}
-        />
-        {group.is_voltra && group.training_modes.length > 1 && (
-          <TrainingModeSelector
-            modes={group.training_modes}
-            selected={modes[group.exercise_id] ?? group.training_modes[0]}
-            exercise={group.name}
-            onSelect={(m) => onModeChange(group.exercise_id, m)}
+      {layout.compact ? (
+        <View style={styles.groupHeaderCompactWrap}>
+          <View style={styles.groupHeaderCompactRow}>
+            <Text
+              variant="titleMedium"
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              style={[styles.groupTitle, { color: theme.colors.primary }]}
+            >
+              {group.name}
+            </Text>
+            <IconButton
+              icon="swap-horizontal"
+              size={24}
+              onPress={() => onSwap(group.exercise_id)}
+              accessibilityLabel={`Swap ${group.name} for alternative`}
+              style={styles.swapBtn}
+            />
+          </View>
+          <View style={styles.groupHeaderCompactRow}>
+            <Button
+              mode="text"
+              compact
+              icon="information-outline"
+              onPress={() => onShowDetail(group.exercise_id)}
+              accessibilityLabel={`View ${group.name} details`}
+            >
+              Details
+            </Button>
+            {group.is_voltra && group.training_modes.length > 1 && (
+              <TrainingModeSelector
+                modes={group.training_modes}
+                selected={modes[group.exercise_id] ?? group.training_modes[0]}
+                exercise={group.name}
+                onSelect={(m) => onModeChange(group.exercise_id, m)}
+                compact
+              />
+            )}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.groupHeader}>
+          <Text
+            variant="titleMedium"
+            numberOfLines={2}
+            ellipsizeMode="tail"
+            style={[styles.groupTitle, { color: theme.colors.primary }]}
+          >
+            {group.name}
+          </Text>
+          <Button
+            mode="text"
             compact
+            icon="information-outline"
+            onPress={() => onShowDetail(group.exercise_id)}
+            accessibilityLabel={`View ${group.name} details`}
+          >
+            Details
+          </Button>
+          <IconButton
+            icon="swap-horizontal"
+            size={24}
+            onPress={() => onSwap(group.exercise_id)}
+            accessibilityLabel={`Swap ${group.name} for alternative`}
+            style={styles.swapBtn}
           />
-        )}
-      </View>
+          {group.is_voltra && group.training_modes.length > 1 && (
+            <TrainingModeSelector
+              modes={group.training_modes}
+              selected={modes[group.exercise_id] ?? group.training_modes[0]}
+              exercise={group.name}
+              onSelect={(m) => onModeChange(group.exercise_id, m)}
+              compact
+            />
+          )}
+        </View>
+      )}
     </>
   );
 
@@ -1516,11 +1555,16 @@ const styles = StyleSheet.create({
   groupTitle: {
     fontWeight: "700",
     flex: 1,
-    minWidth: 0,
+    minWidth: 80,
   },
-  groupTitleCompact: {
-    flexBasis: "100%" as unknown as number,
-    flexGrow: 0,
+  groupHeaderCompactWrap: {
+    gap: 4,
+    marginBottom: 8,
+  },
+  groupHeaderCompactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   headerRow: {
     flexDirection: "row",
