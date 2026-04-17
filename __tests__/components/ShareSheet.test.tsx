@@ -29,10 +29,11 @@ jest.mock('@gorhom/bottom-sheet', () => {
 import React, { createRef } from 'react';
 import { render } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
+import type BottomSheet from '@gorhom/bottom-sheet';
 import ShareSheet from '../../components/ShareSheet';
 
 function renderSheet(overrides: Partial<React.ComponentProps<typeof ShareSheet>> = {}) {
-  const ref = createRef<InstanceType<typeof import('@gorhom/bottom-sheet').default>>();
+  const ref = createRef<BottomSheet | null>();
   const defaultProps = {
     sheetRef: ref,
     onShareText: jest.fn(),
