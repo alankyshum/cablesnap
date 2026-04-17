@@ -255,7 +255,7 @@ This is intentional tech debt — the dual-write approach is safer for Phase 46 
 
 **Reviewer**: techlead
 **Date**: 2026-04-17
-**Verdict**: NEEDS REVISION (minor fixes — technically sound overall)
+**Verdict**: ~~NEEDS REVISION~~ → **APPROVED** (all issues resolved in revision 4fd6abc)
 
 **Technical Feasibility**: Yes — extends Phase 45 infrastructure cleanly. Schema migration, dual-write, and cycle-through UI are all straightforward.
 
@@ -263,11 +263,13 @@ This is intentional tech debt — the dual-write approach is safer for Phase 46 
 
 **Complexity**: Medium | Risk: Low | New Dependencies: None
 
-**Issues Found (must fix before approval)**:
-1. **CRITICAL — Import/Export omitted**: `lib/db/import-export.ts` not in Files to Modify. Per BLD-234 learning, must bump format version, update INSERT, add backward-compatible fallback (`row.set_type ?? 'normal'`), and update future-version guard.
-2. **MAJOR — Session detail volume inconsistency**: `app/session/detail/[id].tsx` lines 98-108 doesn't filter warm-ups from volume. Adding more set types makes this worse. Must document decision (fix now or explicit out-of-scope).
-3. **MAJOR — Achievements/weekly-summary audit missing**: `lib/db/achievements.ts` (4 queries) and `lib/db/weekly-summary.ts` (4 queries) use `is_warmup = 0` but aren't listed in the plan. Per BLD-266 learning, these must be explicitly audited and documented.
-4. **MINOR — Naming**: Consider `'working'` instead of `'normal'` for default set type (gym terminology).
-5. **MINOR — Test factory**: `__tests__/helpers/factories.ts` needs `set_type` parameter support.
+**Issues Found (all resolved)**:
+1. ~~**CRITICAL — Import/Export omitted**~~ ✅ Added as section 7 + Files to Modify #3. Format version bump, backward-compat fallback, future-version guard all specified.
+2. ~~**MAJOR — Session detail volume inconsistency**~~ ✅ Documented as "Known pre-existing bug — out of scope for Phase 46." Correct decision.
+3. ~~**MAJOR — Achievements/weekly-summary audit missing**~~ ✅ Full query audit table added covering sessions.ts (38 refs), achievements.ts (4 refs), weekly-summary.ts (4 refs). All confirmed correct with `is_warmup = 0`.
+4. ~~**MINOR — Naming**~~ ✅ "normal" rationale documented — neutral DB default, UI never shows the word. Acceptable.
+5. ~~**MINOR — Test factory**~~ ✅ Added as Files to Modify #9.
 
-**Recommendations**: Run `grep -rn 'workout_sets' lib/` and document the decision for every query. Keep dual-write strategy. First-use tooltip content is good.
+**Additional notes on revision**: The long-press direct selection (from QD feedback) is a good addition. The query strategy of leaving all `is_warmup = 0` queries untouched is the correct low-risk approach — dual-write ensures correctness, and a future cleanup phase can migrate to `set_type`. The import fallback logic (`row.set_type ?? (row.is_warmup ? 'warmup' : 'normal')`) is thorough.
+
+**Recommendations**: Keep dual-write strategy. Plan is ready for implementation.
