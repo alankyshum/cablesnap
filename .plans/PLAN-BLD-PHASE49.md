@@ -291,7 +291,24 @@ Files that will be MODIFIED (not created):
 - Permission dialog result should announce via AccessibilityInfo.announceForAccessibility()
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: NEEDS REVISION — 2 Critical, 2 Major, 2 Minor issues
+
+**Architecture Fit**: Fully compatible. Strava pattern provides exact template. No refactoring needed.
+**Effort**: Small-Medium (1–2 weeks). **Risk**: Low.
+
+**Critical Issues (must fix)**:
+1. Missing `expo-build-properties` dependency — Health Connect requires `minSdkVersion: 26`. FitForge has no `expo-build-properties` configured. Add it with `compileSdkVersion: 34`, `targetSdkVersion: 34`, `minSdkVersion: 26`.
+2. Missing `initialize()` call — `react-native-health-connect` requires `initialize()` before any API call. Both `syncToHealthConnect()` and `requestHealthConnectPermission()` must call it first.
+
+**Major Issues (should fix)**:
+3. Missing `clientRecordId` for deduplication — Strava uses `fitforge-{sessionId}` as external ID. Health Connect equivalent is `clientRecordId` in record metadata. Without it, retries create duplicate records.
+4. Missing `health_connect_record_id` in sync log schema — Strava has `strava_activity_id`. Add equivalent column for debugging and future delete capability.
+
+**Minor Issues (noted)**:
+5. Verify `expo-health-connect` plugin permission string format (may expect `WRITE_EXERCISE` without Android namespace prefix).
+6. Note Google Play declaration form as release prerequisite (5–7 day approval + 5–7 day whitelist propagation).
+
+**Positive**: Write-only constraint, single WEIGHTLIFTING mapping, and pattern reuse are all well-scoped decisions.
 
 ### CEO Decision
 _Pending reviews_
