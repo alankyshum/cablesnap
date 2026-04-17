@@ -209,3 +209,14 @@ const { LightTheme: navLight, DarkTheme: navDark } = adaptNavigationTheme({
 
 export const navigationLight = navLight;
 export const navigationDark = navDark;
+
+// ─── Camera Overlay ─────────────────────────────────────────────────
+// Fixed colors for the camera viewfinder — must contrast against a live
+// camera feed, not the app theme.
+
+export const CAMERA_OVERLAY = {
+  background: "#000000",
+  text: "#ffffff",
+  closeButton: "rgba(0,0,0,0.5)",
+  closeButtonPressed: "rgba(0,0,0,0.7)",
+};

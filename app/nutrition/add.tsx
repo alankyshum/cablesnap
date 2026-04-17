@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Keyboard, Platform, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import {
   ActivityIndicator,
@@ -24,10 +24,13 @@ import {
 import { searchFoods, getCategories } from "../../lib/foods";
 import {
   fetchWithTimeout,
+  lookupBarcodeWithTimeout,
   type ParsedFood,
+  type BarcodeResult,
 } from "../../lib/openfoodfacts";
 import type { FoodEntry, Meal, BuiltinFood, FoodCategory } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
+import BarcodeScanner from "../../components/BarcodeScanner";
 
 function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void; dateKey: string }) {
   const theme = useTheme();
@@ -240,9 +243,14 @@ function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: bo
   const [saveFav, setSaveFav] = useState(false);
   const [offline, setOffline] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [barcodeError, setBarcodeError] = useState<string | null>(null);
+  const [scannedProductName, setScannedProductName] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const barcodeAbortRef = useRef<AbortController | null>(null);
   const cacheRef = useRef<Map<string, ParsedFood[]>>(new Map());
   const today = dateKey;
 
@@ -322,8 +330,66 @@ function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: bo
     return () => {
       if (abortRef.current) abortRef.current.abort();
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (barcodeAbortRef.current) barcodeAbortRef.current.abort();
     };
   }, []);
+
+  const handleBarcodeScanned = useCallback(async (barcode: string) => {
+    setScannerVisible(false);
+    setBarcodeError(null);
+    setBarcodeLoading(true);
+    setScannedProductName(null);
+
+    if (barcodeAbortRef.current) barcodeAbortRef.current.abort();
+    const controller = new AbortController();
+    barcodeAbortRef.current = controller;
+
+    const result: BarcodeResult = await lookupBarcodeWithTimeout(barcode, controller.signal);
+
+    if (controller.signal.aborted) return;
+    setBarcodeLoading(false);
+
+    if (!result.ok) {
+      if (result.error === "timeout") {
+        setBarcodeError("Lookup timed out. Please try again.");
+      } else if (result.error === "offline") {
+        setBarcodeError("Could not look up barcode. Check your connection.");
+      } else {
+        setBarcodeError("Could not look up barcode. Check your connection.");
+      }
+      return;
+    }
+
+    if (result.status === "not_found") {
+      setBarcodeError("Product not found. Try searching by name.");
+      return;
+    }
+
+    if (result.status === "incomplete") {
+      setBarcodeError("Product found but nutrition data is incomplete.");
+      return;
+    }
+
+    setScannedProductName(result.food.name);
+    setResults([result.food]);
+    setQuery("");
+    setExpanded(null);
+  }, []);
+
+  const openScanner = () => {
+    Keyboard.dismiss();
+    setBarcodeError(null);
+    setScannerVisible(true);
+  };
+
+  const retryBarcode = () => {
+    setBarcodeError(null);
+    setScannerVisible(true);
+  };
+
+  const switchToTextSearch = () => {
+    setBarcodeError(null);
+  };
 
   const mult = Math.max(0.25, parseFloat(multiplier) || 0);
   const valid = parseFloat(multiplier) >= 0.25;
@@ -390,6 +456,69 @@ function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: bo
 
   const header = () => (
     <View>
+      {Platform.OS !== "web" && (
+        <Button
+          mode="outlined"
+          icon="barcode-scan"
+          onPress={openScanner}
+          style={styles.scanBtn}
+          contentStyle={styles.scanBtnContent}
+          accessibilityLabel="Scan food barcode"
+          accessibilityRole="button"
+        >
+          Scan Barcode
+        </Button>
+      )}
+      {barcodeLoading && (
+        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
+          <ActivityIndicator
+            style={{ marginBottom: 8 }}
+            accessibilityLabel="Looking up barcode..."
+            accessibilityRole="progressbar"
+          />
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            Looking up barcode...
+          </Text>
+        </View>
+      )}
+      {barcodeError && (
+        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
+          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
+            {barcodeError}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button
+              mode="outlined"
+              onPress={retryBarcode}
+              accessibilityLabel="Retry barcode scan"
+              accessibilityRole="button"
+              contentStyle={{ minHeight: 48 }}
+            >
+              Retry
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={switchToTextSearch}
+              accessibilityLabel="Search by name instead"
+              accessibilityRole="button"
+              contentStyle={{ minHeight: 48 }}
+            >
+              Search by Name
+            </Button>
+          </View>
+        </View>
+      )}
+      {scannedProductName && (
+        <View accessibilityLiveRegion="polite">
+          <Text
+            variant="bodySmall"
+            style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}
+            accessibilityLabel={`Found: ${scannedProductName}`}
+          >
+            Found: {scannedProductName}
+          </Text>
+        </View>
+      )}
       <TextInput
         mode="outlined"
         placeholder="Search for foods online"
@@ -544,14 +673,24 @@ function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: bo
   };
 
   return (
-    <FlashList
-      data={results}
-      renderItem={renderItem}
-      keyExtractor={(item, index) => `${item.name}-${item.calories}-${index}`}
-      ListHeaderComponent={header}
-      ListEmptyComponent={empty}
-      style={{ backgroundColor: theme.colors.background }}
-    />
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <FlashList
+        data={results}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => `${item.name}-${item.calories}-${index}`}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        style={{ backgroundColor: theme.colors.background }}
+      />
+      <BarcodeScanner
+        visible={scannerVisible}
+        onClose={() => {
+          setScannerVisible(false);
+          if (barcodeAbortRef.current) barcodeAbortRef.current.abort();
+        }}
+        onBarcodeScanned={handleBarcodeScanned}
+      />
+    </View>
   );
 }
 
@@ -826,4 +965,6 @@ const styles = StyleSheet.create({
   multInput: { marginBottom: 8 },
   macros: { marginBottom: 12, padding: 8, borderRadius: 8 },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  scanBtn: { marginBottom: 12 },
+  scanBtnContent: { minHeight: 48, paddingVertical: 8 },
 });

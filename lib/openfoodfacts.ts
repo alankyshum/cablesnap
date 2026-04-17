@@ -6,8 +6,10 @@
 
 const BASE_URL =
   "https://world.openfoodfacts.org/cgi/search.pl";
+const BARCODE_BASE_URL =
+  "https://world.openfoodfacts.org/api/v2/product";
 const USER_AGENT =
-  "FitForge/0.5.0 (https://github.com/alankyshum/fitforge)";
+  "FitForge/0.6.0 (https://github.com/alankyshum/fitforge)";
 const TIMEOUT_MS = 5000;
 const PAGE_SIZE = 20;
 const FIELDS =
@@ -29,6 +31,11 @@ export type OFFProduct = {
 export type OFFSearchResponse = {
   count: number;
   products: OFFProduct[];
+};
+
+export type OFFProductResponse = {
+  status: 0 | 1;
+  product: OFFProduct;
 };
 
 export type ParsedFood = {
@@ -110,6 +117,66 @@ export type SearchError = "offline" | "timeout" | "unknown";
 export type SearchResult =
   | { ok: true; foods: ParsedFood[] }
   | { ok: false; error: SearchError };
+
+export type BarcodeResult =
+  | { ok: true; status: "found"; food: ParsedFood }
+  | { ok: true; status: "not_found" }
+  | { ok: true; status: "incomplete" }
+  | { ok: false; error: SearchError };
+
+export async function lookupBarcode(
+  barcode: string,
+  signal?: AbortSignal
+): Promise<BarcodeResult> {
+  const url = `${BARCODE_BASE_URL}/${encodeURIComponent(barcode)}?fields=${FIELDS}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal,
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: "unknown" };
+    }
+
+    const data: OFFProductResponse = await response.json();
+
+    if (data.status === 0 || !data.product) {
+      return { ok: true, status: "not_found" };
+    }
+
+    if (!isValidProduct(data.product)) {
+      return { ok: true, status: "incomplete" };
+    }
+
+    return { ok: true, status: "found", food: parseProduct(data.product) };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { ok: true, status: "not_found" };
+    }
+    if (err instanceof TypeError) {
+      return { ok: false, error: "offline" };
+    }
+    return { ok: false, error: "unknown" };
+  }
+}
+
+export function lookupBarcodeWithTimeout(
+  barcode: string,
+  signal?: AbortSignal
+): Promise<BarcodeResult> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolve({ ok: false, error: "timeout" });
+    }, TIMEOUT_MS);
+
+    lookupBarcode(barcode, signal).then((result) => {
+      clearTimeout(timeout);
+      resolve(result);
+    });
+  });
+}
 
 export async function searchOnlineFoods(
   query: string,
