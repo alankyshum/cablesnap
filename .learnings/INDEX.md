@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 106
+Total learnings: 107
 
 ## How to Use This Knowledge Base
 
@@ -18,7 +18,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
-- [Dependencies](pitfalls/dependencies.md) — 5 learnings
+- [Dependencies](pitfalls/dependencies.md) — 6 learnings
 - [Build Configuration](pitfalls/build-config.md) — 11 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 11 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-254 | React Native Easing and Reanimated Easing Are Not Interchangeable | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-17 | BLD-252 | Conditionally-Rendered Overlays Must Reset Internal State on Reopen | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-248 | Dedup Record Reuse Must Apply All User-Requested Mutations | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-247 | External API Integration Plans Require Three Data Integrity Specifications | Process | [quality-pipeline.md](process/quality-pipeline.md) |
