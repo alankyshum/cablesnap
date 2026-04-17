@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-16
-Total learnings: 103
+Last updated: 2026-04-17
+Total learnings: 104
 
 ## How to Use This Knowledge Base
 
@@ -25,7 +25,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 6 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 7 learnings
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-247 | External API Integration Plans Require Three Data Integrity Specifications | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-16 | BLD-241 | Mutation Features Require "Before State" Columns When History Views Exist | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-240 | Session Mutations Must Preserve Completed Records as Immutable | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-236/237 | Design Token Drift Extends Beyond Colors — Seven Categories Need Tokenization | Pitfalls | [theming.md](pitfalls/theming.md) |
