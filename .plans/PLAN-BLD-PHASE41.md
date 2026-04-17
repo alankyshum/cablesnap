@@ -171,7 +171,18 @@ type OFFProduct = {
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-17)
+
+Critical issues found — must fix before approval:
+
+1. **[C] DATA-01**: Per-100g vs per-serving ambiguity — plan must specify display, multiplier, and storage behavior for API values that come as per-100g but have serving_quantity available
+2. **[C] DATA-02**: No input validation rules for API-sourced macro values — need rejection criteria for negative, absurd (>2000 kcal/100g), or NaN values from crowd-sourced data
+3. **[C] DATA-03**: No deduplication strategy when logging the same online food multiple times — will create duplicate FoodEntry rows cluttering favorites
+
+Major issues (should fix):
+- **[M] A11Y-01**: Missing touch target sizing spec (48x48dp min) for result cards and retry button
+- **[M] UX-01**: 4-tab SegmentedButtons may overflow on 320px screens
+- **[M] UX-02**: serving_size is free-text from API — need display/truncation strategy
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** (2026-04-17)
