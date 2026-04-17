@@ -405,6 +405,16 @@ export type Interaction = {
   timestamp: number;
 };
 
+// --------------- Console Log Buffer ---------------
+
+export type LogLevel = "log" | "warn" | "error";
+
+export type ConsoleLogEntry = {
+  level: LogLevel;
+  message: string;
+  timestamp: number;
+};
+
 // --------------- Feedback ---------------
 
 export type ReportType = "bug" | "feature" | "crash";

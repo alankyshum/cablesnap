@@ -2,8 +2,9 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { getDatabase } from "./db";
 import { recent as recentInteractions } from "./interactions";
+import { getRecentConsoleLogs, formatConsoleLogs } from "./console-log-buffer";
 import { uuid } from "./uuid";
-import type { ErrorEntry, Interaction, ReportType } from "./types";
+import type { ConsoleLogEntry, ErrorEntry, Interaction, ReportType } from "./types";
 
 declare const ErrorUtils: {
   setGlobalHandler: (callback: (error: Error, isFatal?: boolean) => void) => void;
@@ -90,6 +91,7 @@ export async function clearErrorLog(): Promise<void> {
 export async function generateReport(): Promise<string> {
   const errors = await getRecentErrors(MAX_ERRORS);
   const interactions = await recentInteractions();
+  const consoleLogs = getRecentConsoleLogs();
   return JSON.stringify(
     {
       generated_at: new Date().toISOString(),
@@ -99,6 +101,7 @@ export async function generateReport(): Promise<string> {
       error_count: errors.length,
       errors,
       interactions,
+      console_logs: consoleLogs,
     },
     null,
     2
@@ -132,6 +135,7 @@ export function buildReportBody(opts: {
   description: string;
   errors: ErrorEntry[];
   interactions: Interaction[];
+  consoleLogs?: ConsoleLogEntry[];
   includeDiag: boolean;
 }): string {
   const version = Constants.expoConfig?.version ?? "unknown";
@@ -156,6 +160,10 @@ export function buildReportBody(opts: {
       parts.push("## Error Log\n");
       parts.push(formatErrors(opts.errors));
       parts.push("");
+
+      parts.push("## Console Logs\n");
+      parts.push(formatConsoleLogs(opts.consoleLogs ?? []));
+      parts.push("");
     }
   }
 
@@ -164,11 +172,22 @@ export function buildReportBody(opts: {
 
 const MAX_URL = 8000;
 
-export function truncateBody(body: string, errors: ErrorEntry[], interactions: Interaction[], desc: string, type: ReportType, includeDiag: boolean): string {
+export function truncateBody(body: string, errors: ErrorEntry[], interactions: Interaction[], desc: string, type: ReportType, includeDiag: boolean, consoleLogs?: ConsoleLogEntry[]): string {
   const check = (b: string) =>
     `https://github.com/alankyshum/fitforge/issues/new?title=x&body=${encodeURIComponent(b)}`.length;
 
   if (check(body) <= MAX_URL) return body;
+
+  // Phase 0: remove console logs first (they're supplementary)
+  const noConsoleLogs = buildReportBody({
+    type,
+    description: desc,
+    errors: errors.map((e) => ({ ...e, stack: null })),
+    interactions,
+    consoleLogs: [],
+    includeDiag,
+  });
+  if (check(noConsoleLogs) <= MAX_URL) return noConsoleLogs + "\n\n[truncated — share full report for details]";
 
   // Phase 1: remove stack traces from errors
   const noStacks = buildReportBody({
@@ -228,6 +247,7 @@ export function generateGitHubURL(opts: {
   description: string;
   errors: ErrorEntry[];
   interactions: Interaction[];
+  consoleLogs?: ConsoleLogEntry[];
   includeDiag: boolean;
 }): string {
   const labels =
@@ -238,7 +258,7 @@ export function generateGitHubURL(opts: {
         : "bug,crash";
 
   const body = buildReportBody(opts);
-  const final = truncateBody(body, opts.errors, opts.interactions, opts.description, opts.type, opts.includeDiag);
+  const final = truncateBody(body, opts.errors, opts.interactions, opts.description, opts.type, opts.includeDiag, opts.consoleLogs);
   const encoded = encodeURIComponent(final);
   const title = encodeURIComponent(opts.title.slice(0, 150));
   return `https://github.com/alankyshum/fitforge/issues/new?title=${title}&body=${encoded}&labels=${labels}`;
@@ -250,6 +270,7 @@ export function generateShareText(opts: {
   description: string;
   errors: ErrorEntry[];
   interactions: Interaction[];
+  consoleLogs?: ConsoleLogEntry[];
   includeDiag: boolean;
 }): string {
   const version = Constants.expoConfig?.version ?? "unknown";
@@ -271,6 +292,9 @@ export function generateShareText(opts: {
     if (opts.type !== "feature") {
       lines.push("Errors:");
       lines.push(formatErrors(opts.errors));
+      lines.push("");
+      lines.push("Console Logs:");
+      lines.push(formatConsoleLogs(opts.consoleLogs ?? []));
     }
   }
 

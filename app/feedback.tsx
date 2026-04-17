@@ -21,7 +21,8 @@ import {
   getRecentErrors,
 } from "../lib/errors";
 import { recent as recentInteractions } from "../lib/interactions";
-import type { ErrorEntry, Interaction, ReportType } from "../lib/types";
+import { getRecentConsoleLogs, formatConsoleLogs } from "../lib/console-log-buffer";
+import type { ConsoleLogEntry, ErrorEntry, Interaction, ReportType } from "../lib/types";
 
 const MAX_TITLE = 150;
 
@@ -48,6 +49,7 @@ export default function FeedbackScreen() {
   const [expanded, setExpanded] = useState(true);
   const [errors, setErrors] = useState<ErrorEntry[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [consoleLogs, setConsoleLogs] = useState<ConsoleLogEntry[]>([]);
   const [snack, setSnack] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -57,6 +59,7 @@ export default function FeedbackScreen() {
       const [e, i] = await Promise.all([getRecentErrors(5), recentInteractions()]);
       setErrors(e);
       setInteractions(i);
+      setConsoleLogs(getRecentConsoleLogs());
     })();
   }, []);
 
@@ -86,6 +89,7 @@ export default function FeedbackScreen() {
         description: desc.trim(),
         errors,
         interactions,
+        consoleLogs,
         includeDiag: diag,
       });
       const json = JSON.stringify(
@@ -96,6 +100,7 @@ export default function FeedbackScreen() {
           generated_at: new Date().toISOString(),
           errors: diag ? errors : [],
           interactions: diag ? interactions : [],
+          console_logs: diag ? consoleLogs : [],
         },
         null,
         2
@@ -113,7 +118,7 @@ export default function FeedbackScreen() {
     } catch {
       setSnack("Unable to share");
     }
-  }, [valid, type, title, desc, errors, interactions, diag, startCooldown]);
+  }, [valid, type, title, desc, errors, interactions, consoleLogs, diag, startCooldown]);
 
   const handleGitHub = useCallback(async () => {
     if (!valid) return;
@@ -135,15 +140,16 @@ export default function FeedbackScreen() {
       description: desc.trim(),
       errors,
       interactions,
+      consoleLogs,
       includeDiag: diag,
     });
     await Linking.openURL(url);
     startCooldown();
     setSnack("Report opened in browser");
-  }, [valid, type, title, desc, errors, interactions, diag, handleShare, startCooldown]);
+  }, [valid, type, title, desc, errors, interactions, consoleLogs, diag, handleShare, startCooldown]);
 
   const diagText = (() => {
-    if (interactions.length === 0 && errors.length === 0) return "No diagnostic data recorded";
+    if (interactions.length === 0 && errors.length === 0 && consoleLogs.length === 0) return "No diagnostic data recorded";
     const parts: string[] = [];
     if (interactions.length > 0) {
       parts.push(
@@ -171,6 +177,19 @@ export default function FeedbackScreen() {
         );
       } else {
         parts.push("\nNo errors recorded");
+      }
+      if (consoleLogs.length > 0) {
+        parts.push(
+          `\nLast ${consoleLogs.length} console log${consoleLogs.length > 1 ? "s" : ""}:\n` +
+            consoleLogs
+              .map(
+                (l, idx) =>
+                  `  ${idx + 1}. [${new Date(l.timestamp).toLocaleTimeString()}] [${l.level.toUpperCase()}] ${l.message.slice(0, 120)}`
+              )
+              .join("\n")
+        );
+      } else {
+        parts.push("\nNo recent console logs");
       }
     }
     return parts.join("\n");

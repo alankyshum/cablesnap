@@ -18,6 +18,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
 import { getDatabase, isMemoryFallback, isOnboardingComplete, getAppSetting, setAppSetting } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
+import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
 import { setupHandler, handleResponse, getPermissionStatus, addNotificationResponseReceivedListener } from "../lib/notifications";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -27,6 +28,7 @@ import { OnboardingContext } from "../lib/onboarding-context";
 
 SplashScreen.preventAutoHideAsync();
 setupHandler();
+setupConsoleLogBuffer();
 
 export default function RootLayout() {
   const scheme = useColorScheme();
