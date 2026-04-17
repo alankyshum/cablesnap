@@ -3,7 +3,7 @@
 **Issue**: BLD-287
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 Owner reported (GitHub #149) that error reports from the feedback screen are insufficient for debugging. Currently:
@@ -116,4 +116,8 @@ Focus on what's achievable: expand interaction logging, add device diagnostics. 
 4. All three are minor — no plan revision required, address during implementation.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — 2026-04-17. Both QD and TL approved with minor corrections to address during implementation:
+
+1. **Drop time-based pruning** — per TL recommendation, keep count-based 50 only. DB-backed interactions are valuable even if older than 60s.
+2. **Truncation order** — device info is first to go: device info → console logs → error stacks → errors → interactions → description.
+3. **Install expo-device** — must run `npx expo install expo-device` (not a transitive dep).
