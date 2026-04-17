@@ -401,3 +401,11 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: When a feature mutates data (swap, replace, reorder) and the app has a history/detail view for that data, the schema must include a column capturing the pre-mutation state. An in-memory undo ref or transient state is insufficient — the "before" value must survive app restarts.
 **Action**: Before implementing any mutation feature, audit ALL views that display the affected data (active, history, detail, export). If any view references "before" state, add a dedicated column (e.g., `swapped_from_exercise_id`) to the schema in the initial implementation, not as a follow-up fix.
 **Tags**: data-model, schema-design, mutation, history, session-detail, swap, persistence, before-state
+
+### Dedup Record Reuse Must Apply All User-Requested Mutations
+**Source**: BLD-248 — Online Food Search (Open Food Facts Integration)
+**Date**: 2026-04-17
+**Context**: The Online Food Search feature deduplicates food entries by matching name+macros. When a duplicate was found, the code reused the existing entry but skipped the "Save as Favorite" toggle — a MAJOR review finding that blocked the initial PR.
+**Learning**: When dedup logic reuses an existing database record instead of creating a new one, ALL user-requested mutations must still be applied to the reused record. Dedup optimizes the "create" path but must not suppress secondary operations (favoriting, tagging, updating metadata). The reused record is the target for every mutation the user initiated, not just the creation.
+**Action**: When implementing dedup/upsert logic: (1) separate the "find or create" step from the "apply user mutations" step, (2) after obtaining the entry (whether new or reused), execute ALL secondary operations (toggle favorite, update tags, set metadata) against it unconditionally, (3) add a test that specifically verifies secondary mutations are applied when dedup reuses an existing record.
+**Tags**: dedup, upsert, data-integrity, favorite, mutation, find-or-create, code-review

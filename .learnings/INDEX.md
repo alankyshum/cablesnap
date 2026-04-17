@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 104
+Total learnings: 105
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 48 learnings
+- [React Native + Expo](patterns/react-native.md) — 49 learnings
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-248 | Dedup Record Reuse Must Apply All User-Requested Mutations | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-247 | External API Integration Plans Require Three Data Integrity Specifications | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-16 | BLD-241 | Mutation Features Require "Before State" Columns When History Views Exist | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-240 | Session Mutations Must Preserve Completed Records as Immutable | Patterns | [react-native.md](patterns/react-native.md) |
