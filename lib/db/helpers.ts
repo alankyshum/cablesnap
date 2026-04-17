@@ -562,6 +562,24 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_strava_sync_log_status ON strava_sync_log(status)"
   );
+
+  // Health Connect integration tables (Phase 49)
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS health_connect_sync_log (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES workout_sessions(id),
+      health_connect_record_id TEXT,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'synced', 'failed', 'permanently_failed')),
+      error TEXT,
+      retry_count INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      synced_at INTEGER,
+      UNIQUE(session_id)
+    )`
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_hc_sync_log_status ON health_connect_sync_log(status)"
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {

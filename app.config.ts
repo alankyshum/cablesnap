@@ -45,6 +45,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     "expo-web-browser",
     "expo-secure-store",
+    [
+      "expo-build-properties",
+      {
+        android: {
+          minSdkVersion: 26,
+          compileSdkVersion: 34,
+          targetSdkVersion: 34,
+        },
+      },
+    ],
+    [
+      "expo-health-connect",
+      {
+        permissions: ["WRITE_EXERCISE"],
+      },
+    ],
   ],
   extra: {
     eas: {

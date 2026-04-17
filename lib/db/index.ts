@@ -224,3 +224,14 @@ export {
   getSyncLogForSession,
 } from "./strava";
 export type { StravaConnection, StravaSyncLog, StravaSyncStatus } from "./strava";
+
+export {
+  createHCSyncLogEntry,
+  markHCSyncSuccess,
+  markHCSyncFailed,
+  markHCSyncPermanentlyFailed,
+  getHCPendingOrFailedSyncs,
+  getHCSyncLogForSession,
+  markAllHCPendingAsFailed,
+} from "./health-connect";
+export type { HCSyncLog, HCSyncStatus } from "./health-connect";
