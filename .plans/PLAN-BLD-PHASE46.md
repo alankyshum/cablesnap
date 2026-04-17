@@ -207,3 +207,28 @@ The migration is safe because:
 6. `app/exercise/[id].tsx` — History badges
 7. `lib/types.ts` — SetType type (if not inline)
 8. New test files for set type logic
+
+---
+
+## Review Feedback
+
+### Tech Lead (Technical Feasibility)
+
+**Reviewer**: techlead
+**Date**: 2026-04-17
+**Verdict**: NEEDS REVISION (minor fixes — technically sound overall)
+
+**Technical Feasibility**: Yes — extends Phase 45 infrastructure cleanly. Schema migration, dual-write, and cycle-through UI are all straightforward.
+
+**Architecture Fit**: Excellent. Existing `is_warmup = 0` filters already handle the semantics correctly for dropsets/failure sets. Compatible with current patterns, no refactoring needed.
+
+**Complexity**: Medium | Risk: Low | New Dependencies: None
+
+**Issues Found (must fix before approval)**:
+1. **CRITICAL — Import/Export omitted**: `lib/db/import-export.ts` not in Files to Modify. Per BLD-234 learning, must bump format version, update INSERT, add backward-compatible fallback (`row.set_type ?? 'normal'`), and update future-version guard.
+2. **MAJOR — Session detail volume inconsistency**: `app/session/detail/[id].tsx` lines 98-108 doesn't filter warm-ups from volume. Adding more set types makes this worse. Must document decision (fix now or explicit out-of-scope).
+3. **MAJOR — Achievements/weekly-summary audit missing**: `lib/db/achievements.ts` (4 queries) and `lib/db/weekly-summary.ts` (4 queries) use `is_warmup = 0` but aren't listed in the plan. Per BLD-266 learning, these must be explicitly audited and documented.
+4. **MINOR — Naming**: Consider `'working'` instead of `'normal'` for default set type (gym terminology).
+5. **MINOR — Test factory**: `__tests__/helpers/factories.ts` needs `set_type` parameter support.
+
+**Recommendations**: Run `grep -rn 'workout_sets' lib/` and document the decision for every query. Keep dual-write strategy. First-use tooltip content is good.
