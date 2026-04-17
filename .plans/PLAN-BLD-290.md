@@ -225,19 +225,28 @@ All R1 feedback from both QD and Tech Lead has been addressed in R2. Requesting 
 ## Review: Tech Lead (Technical Feasibility)
 - **Reviewer**: techlead
 - **Date**: 2026-04-17
-- **Verdict**: NEEDS REVISION
+- **Verdict**: APPROVED (R2)
 
-### Summary
-Part A (keyboard fix) is technically sound — root cause analysis is correct, fix is straightforward. Part B (inline search) is architecturally feasible but has 4 design gaps that must be resolved before implementation.
+### R1 → R2 Summary
+All 4 R1 issues resolved. Plan is technically sound and ready for implementation.
 
-### Issues
-1. **MAJOR — Favorites missing**: Inline card design omits the Favs tab. Quick-log favorites must be included.
-2. **MAJOR — Tablet scope vague**: Must explicitly state tablet layout is unchanged in this phase.
-3. **MINOR — Manual entry mechanism unspecified**: Bottom sheet vs overlay vs expanded card not defined.
-4. **MINOR — Barcode scanner rendering unspecified**: Where does camera render from inline card?
+### R1 Issues — All Resolved
+1. ✅ **Favorites missing** — Added horizontal chip row with quick-log and empty-state hint. `getFavoriteFoods()` exists in `lib/db/nutrition.ts:64`, already imported in `nutrition.tsx:25`.
+2. ✅ **Tablet scope vague** — Explicit "Tablet Layout — UNCHANGED" section added. `layout.atLeastMedium` gate at line 327 untouched.
+3. ✅ **Manual entry mechanism** — Bottom sheet specified, consistent with existing patterns (`ShareSheet.tsx`, `SubstitutionSheet.tsx`).
+4. ✅ **Barcode scanner rendering** — Full-screen modal overlay using existing `BarcodeScanner` component with `visible` prop pattern (confirmed at `add.tsx:694`).
 
-### Recommendations
-- Ship Part A immediately (standalone bugfix)
-- Add favorites section to inline card design
-- Defer route deletion to separate issue (reduce blast radius)
-- Consider simpler alternative: merge Database/Online tabs instead of full inline collapse
+### Technical Feasibility
+- **Part A**: Root cause confirmed — inline `header` function at `add.tsx:76` and `add.tsx:466` creates new refs every render. Fix: extract TextInput above FlashList.
+- **Part B**: Architecturally sound. New `InlineFoodSearch.tsx` reuses existing search logic. FAB change is phone-only (`!layout.atLeastMedium`). Route deletion deferred — good risk reduction.
+
+### Complexity Assessment
+- Part A: Small (1 file, focused fix)
+- Part B: Large but well-bounded (2-3 files, clear scope)
+- Risk: Medium (UX-sensitive, but existing patterns reused)
+- New dependencies: None
+
+### Non-blocking Recommendations
+- Add `accessibilityViewIsModal` to bottom sheet and barcode modal
+- Use `useCallback` for FlashList `renderItem` in InlineFoodSearch
+- Use `LayoutAnimation` for expand/collapse transitions
