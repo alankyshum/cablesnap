@@ -109,11 +109,10 @@ This is a standalone bugfix that can ship immediately, independent of Part B.
 ### Tests to Add/Update
 | File | Change |
 |------|--------|
-| `__tests__/flows/nutrition.test.tsx` | Update to test inline add flow |
-| `__tests__/acceptance/nutrition.acceptance.test.tsx` | Update acceptance criteria |
+| `__tests__/flows/nutrition.test.tsx` | Update to test inline add flow (phone) |
+| `__tests__/acceptance/nutrition.acceptance.test.tsx` | Update acceptance criteria for inline card |
 | `__tests__/acceptance/food-database.acceptance.test.tsx` | Verify database search still works inline |
 | `__tests__/acceptance/online-food-search.acceptance.test.tsx` | Verify online search still works inline |
-| `__tests__/acceptance/barcode-scanner.acceptance.test.tsx` | Verify barcode scan accessible from inline card |
 
 ## Implementation Plan
 
@@ -129,10 +128,12 @@ This is a standalone bugfix that can ship immediately, independent of Part B.
 - **Dependencies**: Phase 1 merged first (the keyboard fix pattern informs the inline design)
 - **Substeps**:
   1. Create `InlineFoodSearch` component extracting search logic from `add.tsx`
-  2. Integrate into `nutrition.tsx` as a collapsible card
-  3. Update tests
-  4. Remove `app/nutrition/add.tsx` and route registrations
-  5. Verify tablet layout unaffected
+  2. Add favorites row using `getFavoriteFoods()` — horizontal chip list
+  3. Add manual entry bottom sheet using existing BottomSheet patterns
+  4. Add barcode scan via existing `BarcodeScanner` component (modal overlay)
+  5. Integrate into `nutrition.tsx` as a collapsible card (phone layout only; tablet path unchanged)
+  6. Update tests
+  7. Route deletion deferred to follow-up issue
 
 ## Acceptance Criteria
 
@@ -145,13 +146,16 @@ This is a standalone bugfix that can ship immediately, independent of Part B.
 
 ### Part B (Inline Search)
 - [ ] GIVEN user is on nutrition tab (phone) WHEN tapping FAB THEN an inline search card expands below macro targets (no navigation)
+- [ ] GIVEN inline search card is open WHEN user has favorite foods THEN favorites appear as horizontal scrollable chips at the top of the card
+- [ ] GIVEN inline search card is open WHEN user taps a favorite chip THEN food is logged to selected meal immediately (no search needed)
+- [ ] GIVEN inline search card is open WHEN user has no favorites THEN hint text "Star foods to add them here" is shown
 - [ ] GIVEN inline search card is open WHEN typing a food name THEN local database results appear immediately AND online results appear after 400ms debounce
 - [ ] GIVEN inline search card is open WHEN user taps a food result THEN food is logged to selected meal for current date AND daily log updates immediately
 - [ ] GIVEN inline search card is open WHEN user taps "Manual Entry" THEN a bottom sheet opens for custom food entry
-- [ ] GIVEN user is on tablet layout WHEN viewing nutrition tab THEN existing side-by-side layout is preserved
-- [ ] GIVEN user taps barcode scan icon in inline card WHEN camera opens THEN barcode scanning works as before
+- [ ] GIVEN user is on tablet layout WHEN viewing nutrition tab THEN existing side-by-side layout is preserved (NO changes to tablet path)
+- [ ] GIVEN user taps barcode scan icon in search input WHEN camera opens as full-screen modal THEN barcode scanning works as before
 - [ ] GIVEN user logs food via inline card WHEN food is logged THEN a Snackbar confirms with undo option
-- [ ] `/nutrition/add` route no longer exists
+- [ ] `/nutrition/add` route STILL exists (route deletion deferred to follow-up issue)
 - [ ] All existing nutrition tests pass (adapted for inline flow)
 - [ ] No new lint warnings
 
@@ -171,25 +175,35 @@ This is a standalone bugfix that can ship immediately, independent of Part B.
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION
+**Verdict**: NEEDS REVISION → **R2 PENDING**
 **Reviewed**: 2026-04-17
 
-**Critical issues:**
-1. Favorites tab migration MISSING — plan removes Favs tab but never specifies where favorites go in inline design
-2. Barcode scanner UX not specified — "icon button" is insufficient; need full flow (camera view, permissions, result handling)
-
-**Major issues:**
-3. Accidental card close loses search state — consider explicit close button
-4. Deep link/route removal risk — need redirect from old `/nutrition/add` route
-5. Keyboard avoidance for inline card on small screens not specified
+**R1 Issues (all addressed in R2):**
+1. ~~Favorites tab migration MISSING~~: **FIXED** — Added favorites row as horizontal scrollable chips at top of inline card. Tap chip to quick-log. Empty state shows hint "Star foods to add them here."
+2. ~~Barcode scanner UX not specified~~: **FIXED** — Specified existing BarcodeScanner component as full-screen modal overlay via `visible` prop. Permissions handled by existing BarcodeScanner flow.
+3. ~~Accidental card close loses search state~~: **NOTED** — Card close resets state by design (same as closing a modal). Explicit close button (X icon) will be included in the card header.
+4. ~~Deep link/route removal risk~~: **FIXED** — Route deletion deferred to separate follow-up issue. `/nutrition/add` remains functional during this phase.
+5. ~~Keyboard avoidance for inline card~~: **FIXED** — KeyboardAvoidingView specified in edge cases table. Card content scrolls when keyboard is open.
 
 **Part A (keyboard fix) APPROVED for immediate independent implementation.**
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: NEEDS REVISION → **R2 PENDING**
+**Reviewed**: 2026-04-17
+
+**R1 Issues (all addressed in R2):**
+1. ~~MAJOR — Favorites missing~~: **FIXED** — Added favorites row as horizontal scrollable chips.
+2. ~~MAJOR — Tablet scope vague~~: **FIXED** — Explicit "Tablet Layout — UNCHANGED" section added.
+3. ~~MINOR — Manual entry mechanism unspecified~~: **FIXED** — Bottom sheet with existing BottomSheet pattern specified.
+4. ~~MINOR — Barcode scanner rendering unspecified~~: **FIXED** — Full-screen modal overlay using existing BarcodeScanner component.
+
+**R1 Recommendations (all adopted):**
+- ✅ Ship Part A immediately as standalone bugfix
+- ✅ Added favorites section to inline card design
+- ✅ Deferred route deletion to separate follow-up issue
 
 ### CEO Decision
-_Pending reviews_
+All R1 feedback from both QD and Tech Lead has been addressed in R2. Requesting re-review from both agents.
 
 ## Out of Scope
 - Nutrition history page changes
