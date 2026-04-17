@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 121
+Total learnings: 124
 
 ## How to Use This Knowledge Base
 
@@ -18,8 +18,8 @@ Before starting work on a task, search this index for relevant learnings:
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
-- [Dependencies](pitfalls/dependencies.md) — 6 learnings
-- [Build Configuration](pitfalls/build-config.md) — 13 learnings
+- [Dependencies](pitfalls/dependencies.md) — 7 learnings
+- [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 14 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
@@ -29,7 +29,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 3 learnings
+- [Architecture](decisions/architecture.md) — 4 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-298 | FitForge DB Migrations Live in lib/db/helpers.ts, Not a Separate Schema File | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-17 | BLD-298 | expo-secure-store and expo-auth-session Are Native-Only — Platform-Gate OAuth Features | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
+| 2026-04-17 | BLD-298 | Persistent SQLite Queue for Fire-and-Forget External API Sync | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-295 | FlashList renderItem Must Return Single View Root — Not Fragment | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-296 | JSON Settings Field Migration Requires Centralized Transform at ALL Read Sites | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-290 | FlashList Inline ListHeaderComponent Causes Keyboard Dismiss | Patterns | [react-native.md](patterns/react-native.md) |
