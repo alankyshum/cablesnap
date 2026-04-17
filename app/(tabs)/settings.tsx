@@ -387,14 +387,14 @@ export default function Settings() {
               onValueChange={async (val) => {
                 if (val) {
                   if (scheduleCount === 0) {
-                    setSnack("No workout days scheduled — set up your schedule first");
+                    setSnack("Set up a weekly workout schedule in your active program first");
                     return;
                   }
                   try {
                     const granted = await requestPermission();
                     if (!granted) {
                       setPermDenied(true);
-                      setSnack("Notification permission denied");
+                      setSnack("Notification permission denied. Tap 'Open Settings' below to enable.");
                       return;
                     }
                     setPermDenied(false);
@@ -475,8 +475,8 @@ export default function Settings() {
           )}
 
           {!reminders && scheduleCount === 0 && (
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
-              Set a weekly schedule on your active program to enable reminders.
+            <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 4 }}>
+              No workout days scheduled. Set a weekly schedule on your active program to enable reminders.
             </Text>
           )}
 
