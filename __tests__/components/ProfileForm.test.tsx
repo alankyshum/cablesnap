@@ -81,7 +81,7 @@ describe("ProfileForm", () => {
 
   it("shows validation errors for empty fields", async () => {
     const onSave = jest.fn();
-    const { getByLabelText } = renderScreen(
+    const { getByLabelText, getByText } = renderScreen(
       <ProfileForm onSave={onSave} />
     );
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe("ProfileForm", () => {
 
   it("saves profile and calls onSave on valid input", async () => {
     const onSave = jest.fn();
-    const { getByLabelText } = renderScreen(
+    const { getByLabelText, getByText } = renderScreen(
       <ProfileForm initialProfile={mockProfile} onSave={onSave} />
     );
     await waitFor(() => {
@@ -143,7 +143,7 @@ describe("ProfileForm", () => {
 
   it("shows save error on failure", async () => {
     mockSetAppSetting.mockRejectedValue(new Error("DB error"));
-    const { getByLabelText } = renderScreen(
+    const { getByLabelText, getByText } = renderScreen(
       <ProfileForm initialProfile={mockProfile} onSave={jest.fn()} />
     );
     await waitFor(() => {
@@ -232,7 +232,7 @@ describe("BodyProfileCard", () => {
 
   it("shows validation error on blur with invalid input", async () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
-    const { getByLabelText } = renderScreen(<BodyProfileCard />);
+    const { getByLabelText, getByText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
       expect(getByLabelText("Age in years").props.value).toBe("30");
     });
