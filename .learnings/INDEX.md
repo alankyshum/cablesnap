@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 112
+Total learnings: 113
 
 ## How to Use This Knowledge Base
 
@@ -21,7 +21,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 6 learnings
 - [Build Configuration](pitfalls/build-config.md) — 11 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 13 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 14 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-270 | Unused DB Functions Accumulate Silent Bugs — Audit Before Wiring Up | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-17 | BLD-268 | Boolean-to-Enum Migration via Dual-Write and Partition Alignment | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-266 | Boolean Filter Column on Core Table Requires Exhaustive Aggregation Query Audit | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-17 | BLD-265 | Extensible Session Population via URL Params | Patterns | [react-native.md](patterns/react-native.md) |
