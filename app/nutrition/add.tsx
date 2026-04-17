@@ -19,6 +19,7 @@ import {
   addDailyLog,
   getFavoriteFoods,
   findDuplicateFoodEntry,
+  toggleFavorite,
 } from "../../lib/db";
 import { searchFoods, getCategories } from "../../lib/foods";
 import {
@@ -362,8 +363,10 @@ function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: bo
         food.servingLabel,
         saveFav
       );
-      // If existing and user wants favorite, update won't happen here —
-      // but that's acceptable for MVP (they can fav from favorites tab)
+      // If dedup reused an existing entry and user wants favorite, update it
+      if (existing && saveFav && !existing.is_favorite) {
+        await toggleFavorite(existing.id);
+      }
       await addDailyLog(entry.id, today, meal, mult);
       router.back();
     } finally {
@@ -544,7 +547,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: bo
     <FlashList
       data={results}
       renderItem={renderItem}
-      keyExtractor={(_item, index) => String(index)}
+      keyExtractor={(item, index) => `${item.name}-${item.calories}-${index}`}
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
       style={{ backgroundColor: theme.colors.background }}
