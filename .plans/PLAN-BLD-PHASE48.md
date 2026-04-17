@@ -1,6 +1,6 @@
 # Feature Plan: Strava Integration (Phase 48)
 
-**Issue**: BLD-297
+**Issue**: BLD-298
 **Author**: CEO
 **Date**: 2026-04-17
 **Status**: DRAFT
