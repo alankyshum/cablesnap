@@ -3,7 +3,7 @@
 **Issue**: BLD-TBD (PLAN)
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT
+**Status**: DRAFT → IN_REVIEW (addressing reviewer feedback)
 
 ## Problem Statement
 
@@ -43,7 +43,10 @@ The existing warm-up toggle (tap set number area) is extended to cycle through s
 - **Dropset**: "D" chip (same shape/size as "W" chip, `tertiaryContainer` background, `onTertiaryContainer` text)
 - **Failure**: "F" chip (same shape/size, `errorContainer` background, `onErrorContainer` text)
 
-Tap cycle order: normal → warmup → dropset → failure → normal
+**Interaction: Tap to cycle + Long-press for direct selection**
+
+- **Tap** cycles: normal → warmup → dropset → failure → normal (power users)
+- **Long-press** opens a bottom sheet / popup menu listing all 4 types for direct selection (deliberate choice, avoids overshooting). This mirrors Strong/HEVY UX patterns.
 
 The left border accent (3dp) color changes per type:
 - Normal: no border
@@ -53,16 +56,19 @@ The left border accent (3dp) color changes per type:
 
 All styling uses MD3 theme tokens only — no hardcoded colors.
 
+**Touch target:** The existing `colSet` style is 36dp wide × 36dp minHeight with `hitSlop={10}`, giving an effective 56×56dp touch target. This meets the 56dp workout-context minimum per SKILL requirements.
+
 **Accessibility:**
 - `accessibilityRole="button"` (changed from `switch` since it's no longer binary)
 - `accessibilityLabel`: "Set N, [type] set" (e.g., "Set 3, dropset")
-- `accessibilityHint`: "Double tap to cycle set type: normal, warm-up, dropset, failure"
+- `accessibilityHint`: "Double tap to cycle set type. Long press for direct selection."
 - `accessibilityActions` with named actions for each type, supporting direct type selection
+- `accessibilityLiveRegion="polite"` on the chip — announces the new type to screen readers on each change
 
 **First-use education:**
 - Reuse the existing `warmup_tooltip_shown` pattern. Add `set_type_tooltip_shown` flag.
 - On first non-warmup type selection, show Snackbar: "Dropsets count toward volume. Failure sets help track intensity."
-- One-time only.
+- One-time only, dismissible.
 
 **Haptic feedback:** Selection haptic on each cycle step (existing pattern from warm-up toggle if present).
 
@@ -104,46 +110,73 @@ Keep `is_warmup` column for backward compatibility. New code reads `set_type`. W
 type SetType = "normal" | "warmup" | "dropset" | "failure"
 ```
 
+**Naming decision:** Using `"normal"` (not `"working"`) for the default type. Rationale: "normal" is a neutral database default that maps to "no special annotation." The UI never displays the word "normal" — it just shows the set number with no badge. "Working" implies gym-specific semantics that could confuse in future contexts. This aligns with the existing `DEFAULT 'normal'` in the schema.
+
 #### 3. Database Layer (lib/db/sessions.ts)
 
 - `addSet()`: Accept `setType` parameter (default "normal"), write both `set_type` and `is_warmup` (for compat)
 - `addSetsBatch()`: Same dual-write
-- New function `updateSetType(id, type)`: Updates both columns
-- Query updates: Replace `is_warmup = 0` filters with `set_type != 'warmup'` where volume is concerned
+- New function `updateSetType(id, type)`: Updates both columns. Sets `is_warmup = (type === 'warmup' ? 1 : 0)` for backward compat.
+- **Query strategy: LEAVE ALL existing `is_warmup = 0` queries as-is.** Dropsets and failure sets have `is_warmup = 0` (they are not warmups), so all 38 existing queries that filter on `is_warmup` continue to work correctly without any changes. This minimizes regression risk. A future cleanup phase can migrate queries to `set_type` after `is_warmup` is fully deprecated.
+- New queries that need type-specific behavior (e.g., summary breakdown by type) should use `set_type` directly.
 
 #### 4. Session Screen (app/session/[id].tsx)
 
-- Replace binary warm-up toggle with cycle-through logic
+- Replace binary warm-up toggle with cycle-through + long-press direct selection
 - Update `SetRow` to show type-specific chip with type-specific color
 - Update left border accent color per type
-- Cycle function: `normal → warmup → dropset → failure → normal`
+- Tap cycle function: `normal → warmup → dropset → failure → normal`
+- Long-press handler: open a 4-option bottom sheet for direct type selection
 
 #### 5. Analytics Updates
 
-Queries that currently filter `is_warmup = 0`:
-- `getWeeklyVolume()` — keep filtering warm-ups only. Dropsets/failure count toward volume.
-- `getMuscleVolumeForWeek()` — same (warm-ups excluded, others included)
-- `getMuscleVolumeTrend()` — same
-- `getSessionSetCount()` — count all non-warmup sets (existing behavior preserved)
-- `getSessionAvgRPE()` — include failure sets (they have meaningful RPE data)
-- PR detection — include dropsets/failure in volume PRs. Weight PRs naturally handle this (dropsets are lighter).
+**Decision: NO changes to existing volume/analytics queries.** All existing `is_warmup = 0` filters remain as-is. This works because:
+- Dropsets have `is_warmup = 0` → included in volume (correct)
+- Failure sets have `is_warmup = 0` → included in volume (correct)
+- Warm-ups have `is_warmup = 1` → excluded from volume (correct, unchanged)
 
-No query changes needed for volume — existing `is_warmup = 0` already correctly includes what will become dropsets and failure sets. The migration backfill ensures consistency.
+**Full `is_warmup` query audit (per techlead review):**
+
+| File | Queries | Decision |
+|------|---------|----------|
+| `lib/db/sessions.ts` | 38 refs — volume, sets, PRs | No change — `is_warmup = 0` correct for all types |
+| `lib/db/achievements.ts` | 4 refs — streak, PR detection | No change — achievements correctly count non-warmup sets |
+| `lib/db/weekly-summary.ts` | 4 refs — weekly volume, stats | No change — weekly summary correctly excludes warmups only |
+| `app/session/detail/[id].tsx` | 0 refs — volume() at line 98 does NOT filter warmups | **Known pre-existing bug** — out of scope for Phase 46 (was present before warm-up tagging). Document as tech debt for a future fix. |
+
+New queries needed only for:
+- Summary screen: set type breakdown count (`SELECT set_type, COUNT(*) ... GROUP BY set_type`)
+- Detail screen: type badge display (read `set_type` alongside existing columns)
 
 #### 6. Summary & Detail Updates
 
 - Summary: Show set type breakdown in stats
 - Detail: Render type badges
-- Repeat Workout: Map `set_type` values to new session sets
+- Repeat Workout: Map `set_type` values to new session sets. When repeating a session with mixed types (e.g., 3 normal + 2 dropsets), all 5 empty sets appear with their types pre-filled. User can change types before/during the workout.
+
+#### 7. Export/Import (lib/db/import-export.ts)
+
+- **Export**: Include `set_type` column in the `workout_sets` export query. Bump export format version. CSV/JSON exports will contain the new column.
+- **Import**: If imported data lacks `set_type`, default to `'normal'`. If `is_warmup = 1` and `set_type` is missing, set `set_type = 'warmup'`. The import INSERT already uses `row.is_warmup ?? 0` — extend with `row.set_type ?? (row.is_warmup ? 'warmup' : 'normal')`. Update future-version guard.
+- **Backward compat**: Old exports without `set_type` import cleanly via the default fallback.
 
 ### Migration Safety
 
 The migration is safe because:
 1. New column with `DEFAULT 'normal'` — no existing data changes
 2. Backfill uses existing `is_warmup` as source of truth
-3. Dual-write to both `is_warmup` and `set_type` during transition
-4. All existing `is_warmup = 0` filters remain correct (dropset/failure were previously normal sets)
-5. No index changes needed — existing indexes on session_id and exercise_id are sufficient
+3. **Backfill UPDATE statements wrapped in a single transaction** (BEGIN/COMMIT)
+4. Dual-write to both `is_warmup` and `set_type` during transition
+5. All existing `is_warmup = 0` filters remain correct (dropset/failure were previously normal sets)
+6. No index changes needed — existing indexes on session_id and exercise_id are sufficient
+
+### Tech Debt Note
+
+The `is_warmup` column is preserved for backward compatibility in Phase 46. A future cleanup phase should:
+1. Migrate all 38 `is_warmup` query references to use `set_type`
+2. Remove the dual-write logic
+3. Drop the `is_warmup` column
+This is intentional tech debt — the dual-write approach is safer for Phase 46 rollout.
 
 ### Testing Plan
 
@@ -151,14 +184,17 @@ The migration is safe because:
 
 | Test | Description |
 |------|-------------|
-| Schema migration | `set_type` column exists after migration, backfill correct |
+| Schema migration | `set_type` column exists after migration, backfill correct, transaction wrapping |
 | `updateSetType()` | Updates both `set_type` and `is_warmup` correctly |
 | Cycle logic | normal → warmup → dropset → failure → normal |
-| Volume queries | Warm-ups excluded, dropsets/failure included |
+| Long-press selection | Direct type selection via long-press menu |
+| Volume queries | Warm-ups excluded, dropsets/failure included (no query changes needed) |
 | PR queries | Warm-ups excluded from PRs, dropsets/failure included |
 | Repeat Workout | Set types preserved when repeating a workout |
 | `addSet()` with types | Each set type persists correctly |
 | `addSetsBatch()` | Batch creation with mixed types works |
+| Export with set_type | CSV/JSON export includes set_type column |
+| Import without set_type | Old exports import with set_type defaulting to normal/warmup |
 
 #### Integration Tests
 
@@ -192,21 +228,24 @@ The migration is safe because:
 
 - **Schema**: Low (one column addition + backfill)
 - **DB layer**: Low (extend existing functions)
-- **UI**: Medium (cycle logic, 3 new chip styles, accessibility)
-- **Analytics**: Low (existing filters already correct)
-- **Tests**: Medium (new type combinations)
+- **UI**: Medium (cycle logic + long-press menu, 3 new chip styles, accessibility, live region)
+- **Analytics**: None (existing `is_warmup` filters unchanged)
+- **Export/Import**: Low (add column to export, default on import)
+- **Tests**: Medium (new type combinations, export/import compat)
 - **Overall**: Medium — extends well-established Phase 45 patterns
 
 ### Files to Modify
 
-1. `lib/db/helpers.ts` — Schema migration
-2. `lib/db/sessions.ts` — DB functions (addSet, updateSetType, queries)
-3. `app/session/[id].tsx` — Set row UI, cycle toggle
-4. `app/session/summary/[id].tsx` — Stats breakdown
-5. `app/session/detail/[id].tsx` — Type badges
-6. `app/exercise/[id].tsx` — History badges
-7. `lib/types.ts` — SetType type (if not inline)
-8. New test files for set type logic
+1. `lib/db/helpers.ts` — Schema migration (ALTER TABLE + backfill in transaction)
+2. `lib/db/sessions.ts` — DB functions (addSet, updateSetType, set_type breakdown query)
+3. `lib/db/import-export.ts` — Include set_type in export, handle missing on import, bump format version
+4. `app/session/[id].tsx` — Set row UI, cycle toggle + long-press menu, a11y live region
+5. `app/session/summary/[id].tsx` — Stats breakdown by type
+6. `app/session/detail/[id].tsx` — Type badges
+7. `app/exercise/[id].tsx` — History badges
+8. `lib/types.ts` — SetType type (if not inline)
+9. `__tests__/helpers/factories.ts` — Add `set_type` parameter support to test factory
+10. New test files for set type logic
 
 ---
 
