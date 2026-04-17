@@ -56,7 +56,7 @@ import {
   updateSetRPE,
   updateSetNotes,
   updateSetTrainingMode,
-  updateSetWarmup,
+  updateSetType,
   getExerciseById,
   getAppSetting,
   setAppSetting,
@@ -66,8 +66,8 @@ import {
   getProgramDayById,
   advanceProgram,
 } from "../../lib/programs";
-import type { WorkoutSession, WorkoutSet, TrainingMode, Exercise } from "../../lib/types";
-import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
+import type { WorkoutSession, WorkoutSet, TrainingMode, Exercise, SetType } from "../../lib/types";
+import { CATEGORY_LABELS, ATTACHMENT_LABELS, SET_TYPE_CYCLE, SET_TYPE_LABELS } from "../../lib/types";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
@@ -121,18 +121,32 @@ type SetRowProps = {
   onNotes: (setId: string, text: string) => void;
   onNotesDraftChange: (setId: string, text: string) => void;
   onToggleNotes: (setId: string) => void;
-  onToggleWarmup: (setId: string) => void;
+  onCycleSetType: (setId: string) => void;
+  onLongPressSetType: (setId: string) => void;
 };
 
 const SetRow = memo(function SetRow({
   set, step, unit, notesOpen, notesDraft, halfStep,
   onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onToggleWarmup,
+  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onCycleSetType, onLongPressSetType,
 }: SetRowProps) {
   const theme = useTheme();
 
   const onWeightChange = useCallback((v: number) => onUpdate(set.id, "weight", String(v)), [set.id, onUpdate]);
   const onRepsChange = useCallback((v: number) => onUpdate(set.id, "reps", String(v)), [set.id, onUpdate]);
+
+  const chipStyle = useMemo(() => {
+    switch (set.set_type) {
+      case "warmup": return { bg: theme.colors.surfaceVariant, fg: theme.colors.onSurfaceVariant };
+      case "dropset": return { bg: theme.colors.tertiaryContainer, fg: theme.colors.onTertiaryContainer };
+      case "failure": return { bg: theme.colors.errorContainer, fg: theme.colors.onErrorContainer };
+      default: return null;
+    }
+  }, [set.set_type, theme]);
+
+  const borderColor = chipStyle?.bg;
+  const chipLabel = SET_TYPE_LABELS[set.set_type]?.short;
+  const typeLabel = set.set_type === "normal" ? "working set" : `${set.set_type} set`;
 
   return (
     <View>
@@ -141,21 +155,22 @@ const SetRow = memo(function SetRow({
             styles.setRow,
             set.completed && { backgroundColor: theme.colors.primaryContainer + "40" },
             { backgroundColor: theme.colors.background },
-            set.is_warmup && { borderLeftWidth: 3, borderLeftColor: theme.colors.surfaceVariant },
+            borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined,
           ]}
         >
           <Pressable
-            onPress={() => onToggleWarmup(set.id)}
+            onPress={() => onCycleSetType(set.id)}
+            onLongPress={() => onLongPressSetType(set.id)}
             hitSlop={10}
             style={styles.colSet}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: set.is_warmup }}
-            accessibilityLabel={`Set ${set.set_number}, ${set.is_warmup ? "warm-up set" : "working set"}`}
-            accessibilityHint="Double tap to toggle between warm-up and working set"
+            accessibilityRole="button"
+            accessibilityLabel={`Set ${set.set_number}, ${typeLabel}`}
+            accessibilityHint="Double tap to cycle set type. Long press for direct selection."
+            accessibilityLiveRegion="polite"
           >
-            {set.is_warmup ? (
-              <View style={[styles.warmupChip, { backgroundColor: theme.colors.surfaceVariant }]}>
-                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, fontWeight: "700" }}>W</Text>
+            {chipLabel ? (
+              <View style={[styles.warmupChip, { backgroundColor: chipStyle!.bg }]}>
+                <Text style={{ color: chipStyle!.fg, fontSize: 13, fontWeight: "700" }}>{chipLabel}</Text>
               </View>
             ) : (
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, textAlign: "center" }}>
@@ -345,7 +360,8 @@ type GroupCardProps = {
   onNotes: (setId: string, text: string) => void;
   onNotesDraftChange: (setId: string, text: string) => void;
   onToggleNotes: (setId: string) => void;
-  onToggleWarmup: (setId: string) => void;
+  onCycleSetType: (setId: string) => void;
+  onLongPressSetType: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
 };
@@ -355,7 +371,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   notesOpenMap, notesDraftMap, halfStep, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onModeChange,
   onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onToggleWarmup,
+  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onCycleSetType, onLongPressSetType,
   onShowDetail, onSwap,
 }: GroupCardProps) {
   const theme = useTheme();
@@ -535,7 +551,8 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onNotes={onNotes}
           onNotesDraftChange={onNotesDraftChange}
           onToggleNotes={onToggleNotes}
-          onToggleWarmup={onToggleWarmup}
+          onCycleSetType={onCycleSetType}
+          onLongPressSetType={onLongPressSetType}
         />
       ))}
       <Button
@@ -983,6 +1000,7 @@ export default function ActiveSession() {
               trainingMode: (s.training_mode as TrainingMode) ?? null,
               tempo: s.tempo ?? null,
               isWarmup: s.is_warmup,
+              setType: s.set_type,
             });
           }
           const created = await addSetsBatch(setsToInsert);
@@ -1336,31 +1354,67 @@ export default function ActiveSession() {
     setNotesOpen((prev) => ({ ...prev, [setId]: !prev[setId] }));
   }, []);
 
-  const handleToggleWarmup = useCallback(async (setId: string) => {
-    let newVal = false;
+  const handleCycleSetType = useCallback(async (setId: string) => {
+    let newType = "normal" as SetType;
     setGroups((prev) =>
       prev.map((g) => ({
         ...g,
         sets: g.sets.map((s) => {
           if (s.id === setId) {
-            newVal = !s.is_warmup;
-            return { ...s, is_warmup: newVal };
+            const idx = SET_TYPE_CYCLE.indexOf(s.set_type);
+            newType = SET_TYPE_CYCLE[(idx + 1) % SET_TYPE_CYCLE.length];
+            return { ...s, set_type: newType, is_warmup: newType === "warmup" };
           }
           return s;
         }),
       }))
     );
-    // Wait for state to settle before DB call (newVal captured in closure)
-    await updateSetWarmup(setId, newVal);
+    await updateSetType(setId, newType);
     Haptics.selectionAsync();
 
-    // First-use tooltip
-    const shown = await getAppSetting("warmup_tooltip_shown");
-    if (!shown) {
-      setSnackbar("Set marked as warm-up. Warm-up sets are excluded from volume and PR tracking.");
-      await setAppSetting("warmup_tooltip_shown", "1");
+    // First-use tooltip for non-warmup types
+    if (newType === "dropset" || newType === "failure") {
+      const shown = await getAppSetting("set_type_tooltip_shown");
+      if (!shown) {
+        setSnackbar("Dropsets count toward volume. Failure sets help track intensity.");
+        await setAppSetting("set_type_tooltip_shown", "1");
+      }
+    }
+    // Keep warmup first-use tooltip as well
+    if (newType === "warmup") {
+      const shown = await getAppSetting("warmup_tooltip_shown");
+      if (!shown) {
+        setSnackbar("Set marked as warm-up. Warm-up sets are excluded from volume and PR tracking.");
+        await setAppSetting("warmup_tooltip_shown", "1");
+      }
     }
   }, []);
+
+  const [setTypeSheetSetId, setSetTypeSheetSetId] = useState<string | null>(null);
+
+  const handleLongPressSetType = useCallback((setId: string) => {
+    Haptics.selectionAsync();
+    setSetTypeSheetSetId(setId);
+  }, []);
+
+  const handleSelectSetType = useCallback(async (type: SetType) => {
+    const setId = setTypeSheetSetId;
+    if (!setId) return;
+    setSetTypeSheetSetId(null);
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        sets: g.sets.map((s) => {
+          if (s.id === setId) {
+            return { ...s, set_type: type, is_warmup: type === "warmup" };
+          }
+          return s;
+        }),
+      }))
+    );
+    await updateSetType(setId, type);
+    Haptics.selectionAsync();
+  }, [setTypeSheetSetId]);
 
   const isPR = (set: SetWithMeta) => {
     if (!set.completed || !set.weight || set.weight <= 0) return false;
@@ -1502,7 +1556,8 @@ export default function ActiveSession() {
             onNotes={handleNotes}
             onNotesDraftChange={handleNotesDraftChange}
             onToggleNotes={toggleNotes}
-            onToggleWarmup={handleToggleWarmup}
+            onCycleSetType={handleCycleSetType}
+            onLongPressSetType={handleLongPressSetType}
             onShowDetail={handleShowDetail}
             onSwap={handleSwapOpen}
           />
@@ -1579,6 +1634,66 @@ export default function ActiveSession() {
         }
       />
       </KeyboardAvoidingView>
+      {!!setTypeSheetSetId && (
+        <Pressable
+          style={[StyleSheet.absoluteFill, styles.setTypeOverlay]}
+          onPress={() => setSetTypeSheetSetId(null)}
+        >
+          <View style={[styles.setTypeSheet, { backgroundColor: theme.colors.surface }]}>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+              Set Type
+            </Text>
+            {SET_TYPE_CYCLE.map((type) => {
+              const label = SET_TYPE_LABELS[type];
+              const isSelected = (() => {
+                if (!setTypeSheetSetId) return false;
+                for (const g of groups) {
+                  for (const s of g.sets) {
+                    if (s.id === setTypeSheetSetId) return s.set_type === type;
+                  }
+                }
+                return false;
+              })();
+              return (
+                <Pressable
+                  key={type}
+                  style={[
+                    styles.setTypeOption,
+                    { backgroundColor: isSelected ? theme.colors.primaryContainer : "transparent" },
+                  ]}
+                  onPress={() => handleSelectSetType(type)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${label.label} set`}
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  {label.short ? (
+                    <View style={[styles.setTypeChipPreview, {
+                      backgroundColor: type === "warmup" ? theme.colors.surfaceVariant
+                        : type === "dropset" ? theme.colors.tertiaryContainer
+                        : type === "failure" ? theme.colors.errorContainer
+                        : theme.colors.surfaceDisabled,
+                    }]}>
+                      <Text style={{
+                        fontSize: 13, fontWeight: "700",
+                        color: type === "warmup" ? theme.colors.onSurfaceVariant
+                          : type === "dropset" ? theme.colors.onTertiaryContainer
+                          : theme.colors.onErrorContainer,
+                      }}>{label.short}</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.setTypeChipPreview, { backgroundColor: theme.colors.surfaceDisabled }]}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: theme.colors.onSurface }}>—</Text>
+                    </View>
+                  )}
+                  <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, marginLeft: 12 }}>
+                    {label.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      )}
       <Snackbar
         visible={!!snackbar}
         onDismiss={() => {
@@ -1904,5 +2019,31 @@ const styles = StyleSheet.create({
   },
   detailSection: {
     marginBottom: 16,
+  },
+  setTypeOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  setTypeSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    paddingBottom: 32,
+  },
+  setTypeOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  setTypeChipPreview: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

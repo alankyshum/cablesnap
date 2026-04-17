@@ -1,4 +1,4 @@
-import type { WorkoutSession, WorkoutSet, TrainingMode, MuscleGroup } from "../types";
+import type { WorkoutSession, WorkoutSet, TrainingMode, MuscleGroup, SetType } from "../types";
 import { uuid } from "../uuid";
 import { query, queryOne, execute, getDatabase, withTransaction } from "./helpers";
 
@@ -22,6 +22,7 @@ type SetRow = {
   swapped_from_exercise_id: string | null;
   swapped_from_name: string | null;
   is_warmup: number;
+  set_type: string;
 };
 
 // ---- Sessions ----
@@ -118,6 +119,7 @@ export async function getSessionSets(
     tempo: r.tempo ?? null,
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
     is_warmup: r.is_warmup === 1,
+    set_type: (r.set_type as SetType) ?? "normal",
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -142,6 +144,7 @@ export type SourceSessionSet = {
   tempo: string | null;
   exercise_exists: boolean;
   is_warmup: boolean;
+  set_type: SetType;
 };
 
 export async function getSourceSessionSets(
@@ -157,9 +160,10 @@ export async function getSourceSessionSets(
     tempo: string | null;
     exercise_exists: string | null;
     is_warmup: number;
+    set_type: string;
   }>(
     `SELECT ws.exercise_id, ws.set_number, ws.weight, ws.reps, ws.link_id,
-            ws.training_mode, ws.tempo, e.id AS exercise_exists, ws.is_warmup
+            ws.training_mode, ws.tempo, e.id AS exercise_exists, ws.is_warmup, ws.set_type
      FROM workout_sets ws
      LEFT JOIN exercises e ON ws.exercise_id = e.id
      WHERE ws.session_id = ? AND ws.completed = 1
@@ -176,6 +180,7 @@ export async function getSourceSessionSets(
     tempo: r.tempo,
     exercise_exists: r.exercise_exists != null,
     is_warmup: r.is_warmup === 1,
+    set_type: (r.set_type as SetType) ?? "normal",
   }));
 }
 
@@ -189,12 +194,15 @@ export async function addSet(
   round?: number | null,
   trainingMode?: TrainingMode | null,
   tempo?: string | null,
-  isWarmup?: boolean
+  isWarmup?: boolean,
+  setType?: SetType
 ): Promise<WorkoutSet> {
   const id = uuid();
+  const resolvedType: SetType = setType ?? (isWarmup ? "warmup" : "normal");
+  const resolvedWarmup = resolvedType === "warmup" ? 1 : 0;
   await execute(
-    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null, trainingMode ?? null, tempo ?? null, isWarmup ? 1 : 0]
+    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null, trainingMode ?? null, tempo ?? null, resolvedWarmup, resolvedType]
   );
   return {
     id,
@@ -212,7 +220,8 @@ export async function addSet(
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     swapped_from_exercise_id: null,
-    is_warmup: isWarmup ?? false,
+    is_warmup: resolvedWarmup === 1,
+    set_type: resolvedType,
   };
 }
 
@@ -226,35 +235,40 @@ export async function addSetsBatch(
     trainingMode?: TrainingMode | null;
     tempo?: string | null;
     isWarmup?: boolean;
+    setType?: SetType;
   }[]
 ): Promise<WorkoutSet[]> {
-  const results: WorkoutSet[] = sets.map((s) => ({
-    id: uuid(),
-    session_id: s.sessionId,
-    exercise_id: s.exerciseId,
-    set_number: s.setNumber,
-    weight: null,
-    reps: null,
-    completed: false,
-    completed_at: null,
-    rpe: null,
-    notes: "",
-    link_id: s.linkId ?? null,
-    round: s.round ?? null,
-    training_mode: s.trainingMode ?? null,
-    tempo: s.tempo ?? null,
-    swapped_from_exercise_id: null,
-    is_warmup: s.isWarmup ?? false,
-  }));
+  const results: WorkoutSet[] = sets.map((s) => {
+    const resolvedType: SetType = s.setType ?? (s.isWarmup ? "warmup" : "normal");
+    return {
+      id: uuid(),
+      session_id: s.sessionId,
+      exercise_id: s.exerciseId,
+      set_number: s.setNumber,
+      weight: null,
+      reps: null,
+      completed: false,
+      completed_at: null,
+      rpe: null,
+      notes: "",
+      link_id: s.linkId ?? null,
+      round: s.round ?? null,
+      training_mode: s.trainingMode ?? null,
+      tempo: s.tempo ?? null,
+      swapped_from_exercise_id: null,
+      is_warmup: resolvedType === "warmup",
+      set_type: resolvedType,
+    };
+  });
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.link_id, r.round, r.training_mode, r.tempo, r.is_warmup ? 1 : 0,
+          r.link_id, r.round, r.training_mode, r.tempo, r.is_warmup ? 1 : 0, r.set_type,
         ]);
       }
     } finally {
@@ -340,9 +354,18 @@ export async function updateSetTempo(id: string, tempo: string | null): Promise<
 }
 
 export async function updateSetWarmup(id: string, isWarmup: boolean): Promise<void> {
+  const setType = isWarmup ? "warmup" : "normal";
   await execute(
-    "UPDATE workout_sets SET is_warmup = ? WHERE id = ?",
-    [isWarmup ? 1 : 0, id]
+    "UPDATE workout_sets SET is_warmup = ?, set_type = ? WHERE id = ?",
+    [isWarmup ? 1 : 0, setType, id]
+  );
+}
+
+export async function updateSetType(id: string, type: SetType): Promise<void> {
+  const isWarmup = type === "warmup" ? 1 : 0;
+  await execute(
+    "UPDATE workout_sets SET set_type = ?, is_warmup = ? WHERE id = ?",
+    [type, isWarmup, id]
   );
 }
 

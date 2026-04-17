@@ -163,11 +163,28 @@ export default function Summary() {
     return total;
   }, [completed]);
 
-  const warmupCount = useMemo(
-    () => completed.filter((s) => s.is_warmup).length,
-    [completed],
-  );
-  const workingCount = completed.length - warmupCount;
+  const setTypeCounts = useMemo(() => {
+    const counts = { normal: 0, warmup: 0, dropset: 0, failure: 0 };
+    for (const s of completed) {
+      const t = (s as { set_type?: string }).set_type ?? (s.is_warmup ? "warmup" : "normal");
+      if (t in counts) counts[t as keyof typeof counts]++;
+    }
+    return counts;
+  }, [completed]);
+
+  const warmupCount = setTypeCounts.warmup;
+  const workingCount = setTypeCounts.normal;
+  const dropsetCount = setTypeCounts.dropset;
+  const failureCount = setTypeCounts.failure;
+
+  const setsBreakdown = useMemo(() => {
+    const parts: string[] = [];
+    if (workingCount > 0) parts.push(`${workingCount} working`);
+    if (warmupCount > 0) parts.push(`${warmupCount} warm-up`);
+    if (dropsetCount > 0) parts.push(`${dropsetCount} dropset`);
+    if (failureCount > 0) parts.push(`${failureCount} failure`);
+    return parts.join(" · ");
+  }, [workingCount, warmupCount, dropsetCount, failureCount]);
 
   const duration = session?.duration_seconds
     ? formatTime(session.duration_seconds)
@@ -402,14 +419,14 @@ export default function Summary() {
               </Card>
               <Card
                 style={[styles.stat, { backgroundColor: theme.colors.surface }]}
-                accessibilityLabel={warmupCount > 0 ? `${workingCount} working sets, ${warmupCount} warm-up sets` : `${completed.length} sets completed`}
+                accessibilityLabel={setsBreakdown ? `${completed.length} sets: ${setsBreakdown}` : `${completed.length} sets completed`}
               >
                 <Card.Content style={styles.statInner}>
                   <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
                     {completed.length}
                   </Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    {warmupCount > 0 ? `Sets (${warmupCount}W / ${workingCount})` : "Sets"}
+                    {setsBreakdown ? `Sets (${setsBreakdown})` : "Sets"}
                   </Text>
                 </Card.Content>
               </Card>

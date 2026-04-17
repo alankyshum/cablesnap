@@ -105,7 +105,7 @@ export type BackupV3Data = {
 };
 
 export type BackupV3 = {
-  version: 3 | 4 | 5;
+  version: 3 | 4 | 5 | 6;
   app_version: string;
   exported_at: string;
   data: BackupV3Data;
@@ -169,7 +169,7 @@ export function validateBackupData(data: unknown): ValidationError | null {
   }
 
   const version = Number(obj.version);
-  if (version >= 6) {
+  if (version >= 7) {
     return { type: "future_version", message: "This backup was created with a newer version of FitForge. Please update the app first." };
   }
 
@@ -286,7 +286,7 @@ export async function exportAllData(
   onProgress?.({ table: "done", tableIndex: tables.length, totalTables: tables.length });
 
   return {
-    version: 5,
+    version: 6,
     app_version: "1.0.0",
     exported_at: new Date().toISOString(),
     data: data as unknown as BackupV3Data,
@@ -449,9 +449,10 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       return r.changes > 0;
     }
     case "workout_sets": {
+      const setType = row.set_type ?? (row.is_warmup ? "warmup" : "normal");
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0]
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0, setType]
       );
       return r.changes > 0;
     }

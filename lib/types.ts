@@ -194,6 +194,17 @@ export type WorkoutSession = {
   rating: number | null;
 };
 
+export type SetType = "normal" | "warmup" | "dropset" | "failure";
+
+export const SET_TYPE_CYCLE: SetType[] = ["normal", "warmup", "dropset", "failure"];
+
+export const SET_TYPE_LABELS: Record<SetType, { label: string; short: string }> = {
+  normal: { label: "Normal", short: "" },
+  warmup: { label: "Warm-up", short: "W" },
+  dropset: { label: "Dropset", short: "D" },
+  failure: { label: "Failure", short: "F" },
+};
+
 export type WorkoutSet = {
   id: string;
   session_id: string;
@@ -211,6 +222,7 @@ export type WorkoutSet = {
   tempo: string | null;
   swapped_from_exercise_id: string | null;
   is_warmup: boolean;
+  set_type: SetType;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {

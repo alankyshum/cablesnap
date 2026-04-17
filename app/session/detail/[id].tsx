@@ -16,7 +16,7 @@ import {
   updateSession,
 } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
-import { TRAINING_MODE_LABELS } from "../../../lib/types";
+import { TRAINING_MODE_LABELS, SET_TYPE_LABELS } from "../../../lib/types";
 import { rpeColor, rpeText } from "../../../lib/rpe";
 import { formatDuration, formatDateShort } from "../../../lib/format";
 import RatingWidget from "../../../components/RatingWidget";
@@ -465,19 +465,37 @@ export default function SessionDetail() {
               .filter((s) => s.completed)
               .map((set) => (
                 <View key={set.id}>
-                  <View style={[styles.setRow, set.is_warmup && { borderLeftWidth: 3, borderLeftColor: theme.colors.surfaceVariant, paddingLeft: 5 }]}>
-                    {set.is_warmup ? (
-                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.surfaceVariant, justifyContent: "center", alignItems: "center", marginRight: 8 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: theme.colors.onSurfaceVariant }}>W</Text>
-                      </View>
-                    ) : (
-                    <Text
-                      variant="bodyMedium"
-                      style={[styles.setNum, { color: theme.colors.onSurface }]}
-                    >
-                      {set.round ? `R${set.round}` : `Set ${set.set_number}`}
-                    </Text>
-                    )}
+                  <View style={[styles.setRow, (() => {
+                    const st = set.set_type ?? (set.is_warmup ? "warmup" : "normal");
+                    if (st === "warmup") return { borderLeftWidth: 3, borderLeftColor: theme.colors.surfaceVariant, paddingLeft: 5 };
+                    if (st === "dropset") return { borderLeftWidth: 3, borderLeftColor: theme.colors.tertiaryContainer, paddingLeft: 5 };
+                    if (st === "failure") return { borderLeftWidth: 3, borderLeftColor: theme.colors.errorContainer, paddingLeft: 5 };
+                    return {};
+                  })()]}>
+                    {(() => {
+                      const st = set.set_type ?? (set.is_warmup ? "warmup" : "normal");
+                      const label = SET_TYPE_LABELS[st];
+                      if (label.short) {
+                        const chipColors = st === "warmup"
+                          ? { bg: theme.colors.surfaceVariant, fg: theme.colors.onSurfaceVariant }
+                          : st === "dropset"
+                          ? { bg: theme.colors.tertiaryContainer, fg: theme.colors.onTertiaryContainer }
+                          : { bg: theme.colors.errorContainer, fg: theme.colors.onErrorContainer };
+                        return (
+                          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: chipColors.bg, justifyContent: "center", alignItems: "center", marginRight: 8 }}>
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: chipColors.fg }}>{label.short}</Text>
+                          </View>
+                        );
+                      }
+                      return (
+                        <Text
+                          variant="bodyMedium"
+                          style={[styles.setNum, { color: theme.colors.onSurface }]}
+                        >
+                          {set.round ? `R${set.round}` : `Set ${set.set_number}`}
+                        </Text>
+                      );
+                    })()}
                     <Text
                       variant="bodyMedium"
                       style={{ color: theme.colors.onSurface }}

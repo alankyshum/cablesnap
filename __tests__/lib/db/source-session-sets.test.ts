@@ -64,6 +64,7 @@ describe('getSourceSessionSets', () => {
       tempo: null,
       exercise_exists: true,
       is_warmup: false,
+      set_type: 'normal',
     });
     expect(result[1].weight).toBe(85);
     expect(result[1].reps).toBe(8);

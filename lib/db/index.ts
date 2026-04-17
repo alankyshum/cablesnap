@@ -52,6 +52,7 @@ export {
   updateSetTrainingMode,
   updateSetTempo,
   updateSetWarmup,
+  updateSetType,
   getPreviousSets,
   getSessionSetCount,
   getSessionAvgRPE,

@@ -180,13 +180,21 @@ describe('validateBackupData v4', () => {
     expect(err).toBeNull();
   });
 
-  it('rejects v6 as future version', () => {
+  it('rejects v7 as future version', () => {
     const err = validateBackupData({
-      version: 6,
+      version: 7,
       data: { exercises: [{ id: '1' }] },
     });
     expect(err).not.toBeNull();
     expect(err!.type).toBe('future_version');
+  });
+
+  it('accepts v6 backup (set_type support)', () => {
+    const err = validateBackupData({
+      version: 6,
+      data: { exercises: [{ id: '1', name: 'Bench' }] },
+    });
+    expect(err).toBeNull();
   });
 
   it('accepts v3 backup (backward compatible)', () => {

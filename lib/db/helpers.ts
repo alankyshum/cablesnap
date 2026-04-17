@@ -342,6 +342,19 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       "ALTER TABLE workout_sets ADD COLUMN is_warmup INTEGER DEFAULT 0"
     );
   }
+  if (!setNames.has("set_type")) {
+    await database.withTransactionAsync(async () => {
+      await database.execAsync(
+        "ALTER TABLE workout_sets ADD COLUMN set_type TEXT DEFAULT 'normal'"
+      );
+      await database.execAsync(
+        "UPDATE workout_sets SET set_type = 'warmup' WHERE is_warmup = 1"
+      );
+      await database.execAsync(
+        "UPDATE workout_sets SET set_type = 'normal' WHERE is_warmup = 0 OR is_warmup IS NULL"
+      );
+    });
+  }
 
   const exCols = await database.getAllAsync<{ name: string }>(
     "PRAGMA table_info(exercises)"
