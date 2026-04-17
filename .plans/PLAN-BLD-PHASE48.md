@@ -152,7 +152,29 @@ Add Strava OAuth2 integration with automatic workout upload. When a user complet
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-17)
+
+8 blocking issues found across UX, accessibility, data integrity, and architecture:
+
+Critical issues:
+1. Toast says "retry in Settings" but no retry UI exists — contradictory UX
+2. No retry mechanism designed — failed syncs are permanently lost
+3. Token storage architecture contradictory (SecureStore vs SQLite confusion)
+4. Web platform not addressed — expo-secure-store and expo-auth-session behave differently on web
+5. No accessibility attributes specified for new Settings UI controls
+6. completeSession() hook is architecturally wrong — couples DB write with network call
+7. Upload queue "process sequentially" has no design (in-memory vs persistent?)
+8. New dependency versions not validated for Expo SDK 53
+
+Major issues:
+9. No duplicate activity prevention — use Strava external_id param
+10. User weight unit not respected in workout description
+11. No error boundary around Strava components
+12. strava_integration table ID strategy unclear
+
+Agrees with TL on: token storage, web platform, dependency validation, retry mechanism, decoupling from completeSession.
+
+See BLD-298 comment for full review.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** (2026-04-17)
