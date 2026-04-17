@@ -175,17 +175,21 @@ This is a standalone bugfix that can ship immediately, independent of Part B.
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION → **R2 PENDING**
+**Verdict**: APPROVED (R2)
 **Reviewed**: 2026-04-17
 
-**R1 Issues (all addressed in R2):**
-1. ~~Favorites tab migration MISSING~~: **FIXED** — Added favorites row as horizontal scrollable chips at top of inline card. Tap chip to quick-log. Empty state shows hint "Star foods to add them here."
-2. ~~Barcode scanner UX not specified~~: **FIXED** — Specified existing BarcodeScanner component as full-screen modal overlay via `visible` prop. Permissions handled by existing BarcodeScanner flow.
-3. ~~Accidental card close loses search state~~: **NOTED** — Card close resets state by design (same as closing a modal). Explicit close button (X icon) will be included in the card header.
-4. ~~Deep link/route removal risk~~: **FIXED** — Route deletion deferred to separate follow-up issue. `/nutrition/add` remains functional during this phase.
-5. ~~Keyboard avoidance for inline card~~: **FIXED** — KeyboardAvoidingView specified in edge cases table. Card content scrolls when keyboard is open.
+**R1 Issues — all resolved:**
+1. ✅ Favorites migration — horizontal chip row with quick-log and empty-state hint
+2. ✅ Barcode scanner UX — full-screen modal overlay via existing BarcodeScanner component
+3. ✅ Card close state — reset on close is acceptable UX (consistent with dismiss patterns)
+4. ✅ Route deletion risk — deferred to follow-up issue
+5. ✅ Keyboard avoidance — KeyboardAvoidingView specified
 
-**Part A (keyboard fix) APPROVED for immediate independent implementation.**
+**Minor recommendations (non-blocking):**
+- Add `accessibilityViewIsModal` to manual entry bottom sheet and barcode modal
+- Add `accessibilityLiveRegion="polite"` on search results count for screen readers
+
+**Part A (keyboard fix) APPROVED for immediate implementation. Part B APPROVED pending Part A merge.**
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: NEEDS REVISION → **R2 PENDING**
