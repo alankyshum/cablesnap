@@ -20,16 +20,19 @@ describe("Workout session exercise header overflow fix (BLD-203)", () => {
     expect(titleMatch![0]).toContain("minWidth");
   });
 
-  it("groupTitleCompact style forces full-width on mobile", () => {
-    expect(sessionSrc).toContain("groupTitleCompact");
-    const compactMatch = sessionSrc.match(/groupTitleCompact:\s*\{[^}]+\}/s);
-    expect(compactMatch).not.toBeNull();
-    expect(compactMatch![0]).toContain("flexBasis");
-    expect(compactMatch![0]).toContain("flexGrow: 0");
+  it("compact layout uses two-row header structure", () => {
+    expect(sessionSrc).toContain("groupHeaderCompactWrap");
+    expect(sessionSrc).toContain("groupHeaderCompactRow");
+    const wrapMatch = sessionSrc.match(/groupHeaderCompactWrap:\s*\{[^}]+\}/s);
+    expect(wrapMatch).not.toBeNull();
+    const rowMatch = sessionSrc.match(/groupHeaderCompactRow:\s*\{[^}]+\}/s);
+    expect(rowMatch).not.toBeNull();
+    expect(rowMatch![0]).toContain('flexDirection: "row"');
   });
 
-  it("applies groupTitleCompact conditionally on compact layout", () => {
-    expect(sessionSrc).toContain("layout.compact && styles.groupTitleCompact");
+  it("applies compact layout conditionally based on layout.compact", () => {
+    expect(sessionSrc).toContain("layout.compact");
+    expect(sessionSrc).toContain("styles.groupHeaderCompactWrap");
   });
 
   it("exercise name has numberOfLines for ellipsis truncation", () => {

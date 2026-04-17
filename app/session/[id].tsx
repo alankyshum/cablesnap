@@ -164,6 +164,7 @@ const SetRow = memo(function SetRow({
           </View>
           <Pressable
             onPress={() => onCheck(set)}
+            hitSlop={6}
             style={[
               styles.circleCheck,
               { borderColor: set.completed ? theme.colors.primary : theme.colors.onSurfaceVariant },
@@ -174,11 +175,12 @@ const SetRow = memo(function SetRow({
             accessibilityState={{ checked: set.completed }}
           >
             {set.completed && (
-              <MaterialCommunityIcons name="check" size={16} color={theme.colors.onPrimary} />
+              <MaterialCommunityIcons name="check" size={18} color={theme.colors.onPrimary} />
             )}
           </Pressable>
           <Pressable
             onPress={() => onToggleNotes(set.id)}
+            hitSlop={6}
             style={styles.actionBtn}
             accessibilityLabel="Set notes"
             accessibilityRole="button"
@@ -191,6 +193,7 @@ const SetRow = memo(function SetRow({
           </Pressable>
           <Pressable
             onPress={() => onDelete(set.id)}
+            hitSlop={6}
             style={styles.actionBtn}
             accessibilityLabel={`Delete set ${set.set_number}`}
             accessibilityRole="button"
@@ -1606,17 +1609,17 @@ const styles = StyleSheet.create({
     width: 96,
   },
   circleCheck: {
-    width: 28,
-    height: 28,
-    borderRadius: radii.xl,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
   },
   actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1722,11 +1725,13 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   notesContainer: {
-    paddingHorizontal: 4,
-    paddingBottom: 6,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    paddingTop: 4,
   },
   notesInput: {
-    fontSize: 12,
+    fontSize: 14,
+    minHeight: 48,
   },
   suggestionChip: {
     paddingHorizontal: 12,
