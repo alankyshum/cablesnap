@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Share,
   StyleSheet,
   TextInput,
@@ -18,7 +20,11 @@ import {
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import BottomSheet from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
+import { captureRef } from "react-native-view-shot";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../../lib/layout";
 import {
@@ -43,6 +49,9 @@ import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { toDisplay } from "../../../lib/units";
 import { formatTime } from "../../../lib/format";
 import RatingWidget from "../../../components/RatingWidget";
+import ShareCard from "../../../components/ShareCard";
+import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
+import ShareSheet from "../../../components/ShareSheet";
 
 type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
 type RepPR = { exercise_id: string; name: string; reps: number; previous_max: number };
@@ -73,6 +82,10 @@ export default function Summary() {
   const [snackbar, setSnackbar] = useState<{ message: string; action?: { label: string; onPress: () => void } } | null>(null);
   const [completedSetCount, setCompletedSetCount] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const shareSheetRef = useRef<BottomSheet>(null);
+  const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -204,6 +217,71 @@ export default function Summary() {
       // User cancelled share
     }
   };
+
+  const shareCardDate = useMemo(() => {
+    if (!session?.started_at) return "";
+    const d = new Date(session.started_at);
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }, [session?.started_at]);
+
+  const shareCardPrs = useMemo((): ShareCardPR[] => {
+    const items: ShareCardPR[] = prs.map((pr) => ({
+      name: pr.name,
+      value: `${toDisplay(pr.weight, unit)} ${unit}`,
+    }));
+    for (const pr of repPrs) {
+      items.push({ name: pr.name, value: `${pr.reps} reps` });
+    }
+    return items;
+  }, [prs, repPrs, unit]);
+
+  const shareCardExercises = useMemo((): ShareCardExercise[] => {
+    return grouped.map((g) => {
+      const maxWeight = Math.max(...g.sets.map((s) => s.weight ?? 0));
+      const repValues = g.sets.map((s) => s.reps ?? 0);
+      const typicalReps = repValues.length > 0 ? repValues[0] : 0;
+      return {
+        name: g.name,
+        sets: g.sets.length,
+        reps: String(typicalReps),
+        weight: maxWeight > 0 ? `${toDisplay(maxWeight, unit)} ${unit}` : undefined,
+      };
+    });
+  }, [grouped, unit]);
+
+  const handleShareImage = useCallback(() => {
+    setImageLoading(true);
+    setPreviewVisible(true);
+  }, []);
+
+  const handleCaptureAndShare = useCallback(async () => {
+    if (!shareCardRef.current) return;
+    let uri: string | null = null;
+    try {
+      setImageLoading(true);
+      uri = await captureRef(shareCardRef, {
+        format: "png",
+        quality: 1.0,
+      });
+      await Sharing.shareAsync(uri, { mimeType: "image/png" });
+    } catch {
+      setSnackbar({ message: "Unable to generate image" });
+    } finally {
+      setImageLoading(false);
+      setPreviewVisible(false);
+      if (uri) {
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      }
+    }
+  }, []);
+
+  const handleShareButtonPress = useCallback(() => {
+    shareSheetRef.current?.snapToIndex(0);
+  }, []);
 
   const handleRatingChange = useCallback(async (newRating: number | null) => {
     if (!id) return;
@@ -728,7 +806,7 @@ export default function Summary() {
             </Button>
             <Button
               mode="outlined"
-              onPress={share}
+              onPress={handleShareButtonPress}
               style={styles.shareBtn}
               contentStyle={styles.btnContent}
               accessibilityRole="button"
@@ -811,6 +889,86 @@ export default function Summary() {
           </View>
         }
       />
+
+      {/* Share options bottom sheet */}
+      <ShareSheet
+        sheetRef={shareSheetRef}
+        onShareText={share}
+        onShareImage={handleShareImage}
+        imageDisabled={completedSetCount === 0}
+        onDismiss={() => {}}
+      />
+
+      {/* Share card preview modal */}
+      <Modal
+        visible={previewVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setPreviewVisible(false);
+          setImageLoading(false);
+        }}
+        accessibilityViewIsModal
+      >
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewContainer}>
+            <ScrollView
+              style={styles.previewScroll}
+              contentContainerStyle={styles.previewScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View
+                ref={shareCardRef}
+                collapsable={false}
+                style={styles.shareCardWrapper}
+              >
+                <ShareCard
+                  name={session?.name ?? "Workout"}
+                  date={shareCardDate}
+                  duration={duration}
+                  sets={completed.length}
+                  volume={volumeDisplay.toLocaleString()}
+                  unit={unit}
+                  rating={rating}
+                  prs={shareCardPrs}
+                  exercises={shareCardExercises}
+                />
+              </View>
+            </ScrollView>
+            <View style={styles.previewActions}>
+              {imageLoading ? (
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              ) : (
+                <>
+                  <Button
+                    mode="contained"
+                    onPress={handleCaptureAndShare}
+                    style={styles.previewBtn}
+                    contentStyle={styles.btnContent}
+                    accessibilityRole="button"
+                    accessibilityHint="Capture and share the workout card image"
+                  >
+                    Share
+                  </Button>
+                  <Button
+                    mode="outlined"
+                    onPress={() => {
+                      setPreviewVisible(false);
+                      setImageLoading(false);
+                    }}
+                    style={styles.previewBtn}
+                    contentStyle={styles.btnContent}
+                    accessibilityRole="button"
+                    accessibilityHint="Cancel and close the preview"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -935,5 +1093,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 8,
+  },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  previewContainer: {
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "85%",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  previewScroll: {
+    flexGrow: 0,
+  },
+  previewScrollContent: {
+    alignItems: "center",
+    padding: 8,
+  },
+  shareCardWrapper: {
+    alignSelf: "center",
+    transform: [{ scale: 0.3 }],
+    transformOrigin: "top center",
+  },
+  previewActions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  previewBtn: {
+    flex: 1,
+    borderRadius: 8,
   },
 });
