@@ -1,0 +1,11 @@
+v0.7.0 — Barcode Scanner & Bug Fixes
+
+New Features:
+* Barcode scanner for food logging — scan barcodes to instantly log packaged foods via Open Food Facts
+
+Bug Fixes:
+* Fix Reanimated Easing import crash
+* Fix responsive exercise header layout on phone viewport
+* Fix starter workout metadata recurring regression
+* Fix gender-based body anatomy display
+* Fix settings profile card tablet layout and session touch targets
