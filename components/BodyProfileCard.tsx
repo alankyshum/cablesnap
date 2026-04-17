@@ -10,6 +10,7 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
+import { flowCardStyle } from "./ui/FlowContainer";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
 import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
@@ -325,7 +326,10 @@ export default function BodyProfileCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: 0 },
+  card: {
+    ...flowCardStyle,
+    maxWidth: undefined,
+  },
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
