@@ -112,7 +112,7 @@ export default function Workouts() {
   const { showSnack } = useSnackbar();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
-  const [segment, setSegment] = useState("templates");
+  const [userSegment, setUserSegment] = useState<string | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
 
   const { data } = useQuery({
@@ -132,11 +132,10 @@ export default function Workouts() {
   const recentPRs = data?.recentPRs ?? [];
   const avgRPEs = data?.avgRPEs ?? {};
   const nextWorkout = data?.nextWorkout ?? null;
+  const segment = userSegment ?? (nextWorkout ? "programs" : "templates");
   const todaySchedule = data?.todaySchedule ?? null;
   const todayDone = data?.todayDone ?? false;
   const adherence = data?.adherence ?? [];
-
-  const effectiveSegment = nextWorkout && segment === "templates" ? "programs" : segment;
 
   const reload = () => queryClient.invalidateQueries({ queryKey: ["home"] });
 
@@ -459,8 +458,8 @@ export default function Workouts() {
 
       {/* Segmented Control */}
       <SegmentedButtons
-        value={effectiveSegment}
-        onValueChange={setSegment}
+        value={segment}
+        onValueChange={setUserSegment}
         buttons={[
           {
             value: "templates",
@@ -476,7 +475,7 @@ export default function Workouts() {
         style={styles.segmented}
       />
 
-      {effectiveSegment === "templates" ? (
+      {segment === "templates" ? (
         <>
           {/* User Templates */}
           <View style={styles.section}>
