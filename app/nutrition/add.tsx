@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import {
+  ActivityIndicator,
   Button,
   Card,
   Chip,
@@ -11,13 +12,19 @@ import {
   useTheme,
 } from "react-native-paper";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import NetInfo from "@react-native-community/netinfo";
 import { useLayout } from "../../lib/layout";
 import {
   addFoodEntry,
   addDailyLog,
   getFavoriteFoods,
+  findDuplicateFoodEntry,
 } from "../../lib/db";
 import { searchFoods, getCategories } from "../../lib/foods";
+import {
+  fetchWithTimeout,
+  type ParsedFood,
+} from "../../lib/openfoodfacts";
 import type { FoodEntry, Meal, BuiltinFood, FoodCategory } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 
@@ -221,10 +228,341 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
   );
 }
 
+function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void; dateKey: string }) {
+  const theme = useTheme();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ParsedFood[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [multiplier, setMultiplier] = useState("1");
+  const [saveFav, setSaveFav] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+
+  const abortRef = useRef<AbortController | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cacheRef = useRef<Map<string, ParsedFood[]>>(new Map());
+  const today = dateKey;
+
+  // Proactive offline detection on mount / tab switch
+  useEffect(() => {
+    let mounted = true;
+    NetInfo.fetch().then((state) => {
+      if (mounted) setOffline(!state.isConnected);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (abortRef.current) abortRef.current.abort();
+
+    setError(null);
+
+    if (!query.trim()) {
+      setResults([]);
+      setHint(null);
+      return;
+    }
+    if (query.trim().length < 2) {
+      setResults([]);
+      setHint("Type at least 2 characters");
+      return;
+    }
+
+    setHint(null);
+
+    const cached = cacheRef.current.get(query.trim().toLowerCase());
+    if (cached) {
+      setResults(cached);
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setLoading(true);
+
+      fetchWithTimeout(query.trim(), controller.signal).then((result) => {
+        if (controller.signal.aborted) return;
+        setLoading(false);
+        if (result.ok) {
+          setResults(result.foods);
+          // Cache (limit to 10 entries)
+          const cache = cacheRef.current;
+          const key = query.trim().toLowerCase();
+          cache.set(key, result.foods);
+          if (cache.size > 10) {
+            const first = cache.keys().next().value;
+            if (first !== undefined) cache.delete(first);
+          }
+        } else {
+          setResults([]);
+          if (result.error === "timeout") {
+            setError("Search timed out. Please try again.");
+          } else if (result.error === "offline") {
+            setError("Could not reach food database. Check your connection.");
+          } else {
+            setError("Could not reach food database. Check your connection.");
+          }
+        }
+      });
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const mult = Math.max(0.25, parseFloat(multiplier) || 0);
+  const valid = parseFloat(multiplier) >= 0.25;
+
+  const expand = (idx: number) => {
+    setExpanded(expanded === idx ? null : idx);
+    setMultiplier("1");
+    setSaveFav(false);
+  };
+
+  const retry = () => {
+    setError(null);
+    // Re-trigger search by cycling query
+    const q = query;
+    setQuery("");
+    setTimeout(() => setQuery(q), 0);
+  };
+
+  const log = async (food: ParsedFood) => {
+    if (!valid) return;
+    onSaving(true);
+    try {
+      // Dedup: check if identical food entry already exists
+      const existing = await findDuplicateFoodEntry(
+        food.name,
+        food.calories,
+        food.protein,
+        food.carbs,
+        food.fat
+      );
+      const entry = existing ?? await addFoodEntry(
+        food.name,
+        food.calories,
+        food.protein,
+        food.carbs,
+        food.fat,
+        food.servingLabel,
+        saveFav
+      );
+      // If existing and user wants favorite, update won't happen here —
+      // but that's acceptable for MVP (they can fav from favorites tab)
+      await addDailyLog(entry.id, today, meal, mult);
+      router.back();
+    } finally {
+      onSaving(false);
+    }
+  };
+
+  if (offline) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text
+          variant="bodyMedium"
+          style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
+          accessibilityLiveRegion="polite"
+        >
+          You&apos;re offline. Connect to search online foods.
+        </Text>
+      </View>
+    );
+  }
+
+  const header = () => (
+    <View>
+      <TextInput
+        mode="outlined"
+        placeholder="Search for foods online"
+        value={query}
+        onChangeText={setQuery}
+        left={<TextInput.Icon icon="magnify" />}
+        style={styles.input}
+        accessibilityLabel="Search online food database"
+      />
+      {hint && (
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}>
+          {hint}
+        </Text>
+      )}
+      {loading && (
+        <ActivityIndicator
+          style={{ marginVertical: 16 }}
+          accessibilityLabel="Searching..."
+          accessibilityRole="progressbar"
+        />
+      )}
+      {error && (
+        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
+          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
+            {error}
+          </Text>
+          <Button
+            mode="outlined"
+            onPress={retry}
+            accessibilityLabel="Retry search"
+            accessibilityRole="button"
+            contentStyle={{ minHeight: 48 }}
+          >
+            Retry
+          </Button>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderItem = ({ item, index }: { item: ParsedFood; index: number }) => {
+    const open = expanded === index;
+    const scaled = {
+      calories: (item.calories * mult).toFixed(0),
+      protein: (item.protein * mult).toFixed(1),
+      carbs: (item.carbs * mult).toFixed(1),
+      fat: (item.fat * mult).toFixed(1),
+    };
+
+    return (
+      <Card
+        style={[styles.dbCard, { backgroundColor: theme.colors.surfaceVariant }]}
+        onPress={() => expand(index)}
+        accessibilityLabel={`${item.name}, ${item.calories} calories per ${item.servingLabel}`}
+        accessibilityRole="button"
+      >
+        <Card.Content>
+          <Text
+            variant="titleSmall"
+            numberOfLines={2}
+            style={{ color: theme.colors.onSurface }}
+          >
+            {item.name}
+          </Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            {item.calories} cal · {item.protein}p · {item.carbs}c · {item.fat}f · per {item.servingLabel}
+          </Text>
+          {open && (
+            <View style={[styles.detail, { borderTopColor: theme.colors.outlineVariant }]}>
+              <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+                Serving: {item.servingLabel}
+              </Text>
+              <Text variant="labelMedium" style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
+                Multiplier
+              </Text>
+              <View style={styles.multChips}>
+                {["0.5", "1", "1.5", "2"].map((v) => (
+                  <Chip
+                    key={v}
+                    selected={multiplier === v}
+                    onPress={() => setMultiplier(v)}
+                    style={styles.chip}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: multiplier === v }}
+                  >
+                    {v}x
+                  </Chip>
+                ))}
+              </View>
+              <TextInput
+                mode="outlined"
+                label="Custom amount"
+                value={multiplier}
+                onChangeText={setMultiplier}
+                keyboardType="numeric"
+                dense
+                style={styles.multInput}
+                accessibilityLabel={`Serving multiplier: ${multiplier} times`}
+              />
+              {!valid && (
+                <Text variant="bodySmall" style={{ color: theme.colors.error, marginBottom: 4 }}>
+                  Minimum 0.25x
+                </Text>
+              )}
+              <View
+                style={styles.macros}
+                accessibilityLiveRegion="polite"
+              >
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                  {scaled.calories} cal · {scaled.protein}p · {scaled.carbs}c · {scaled.fat}f
+                </Text>
+              </View>
+              <Chip
+                selected={saveFav}
+                onPress={() => setSaveFav(!saveFav)}
+                icon={saveFav ? "heart" : "heart-outline"}
+                style={styles.favChip}
+                accessibilityLabel={saveFav ? "Remove from favorites" : "Save as favorite"}
+                accessibilityRole="button"
+                accessibilityState={{ selected: saveFav }}
+              >
+                Save as Favorite
+              </Chip>
+              <Button
+                mode="contained"
+                onPress={() => log(item)}
+                loading={saving}
+                disabled={saving || !valid}
+                style={styles.btn}
+                contentStyle={styles.btnContent}
+                accessibilityLabel="Log food"
+              >
+                Log Food
+              </Button>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
+    );
+  };
+
+  const empty = () => {
+    if (loading || error || !query.trim() || hint) return null;
+    return (
+      <Text
+        variant="bodyMedium"
+        style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
+      >
+        No foods found for &apos;{query.trim()}&apos;. Try different terms or use manual entry.
+      </Text>
+    );
+  };
+
+  return (
+    <FlashList
+      data={results}
+      renderItem={renderItem}
+      keyExtractor={(_item, index) => String(index)}
+      ListHeaderComponent={header}
+      ListEmptyComponent={empty}
+      style={{ backgroundColor: theme.colors.background }}
+    />
+  );
+}
+
 function localDateKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+const TAB_BUTTONS = [
+  { value: "new", label: "New" },
+  { value: "favorites", label: "Favs" },
+  { value: "database", label: "Database" },
+  { value: "online", label: "Online" },
+];
 
 export default function AddFood() {
   const theme = useTheme();
@@ -281,19 +619,16 @@ export default function AddFood() {
     }
   };
 
-  if (tab === "database") {
+  if (tab === "database" || tab === "online") {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <View style={styles.header}>
           <SegmentedButtons
             value={tab}
             onValueChange={setTab}
-            buttons={[
-              { value: "new", label: "New Food" },
-              { value: "favorites", label: "Favorites" },
-              { value: "database", label: "Database" },
-            ]}
+            buttons={TAB_BUTTONS}
             style={styles.tabs}
+            density="medium"
           />
           <View style={styles.meals}>
             {MEALS.map((m) => (
@@ -311,7 +646,11 @@ export default function AddFood() {
             ))}
           </View>
         </View>
-        <DatabaseTab meal={meal} saving={saving} onSaving={setSaving} dateKey={dateKey} />
+        {tab === "database" ? (
+          <DatabaseTab meal={meal} saving={saving} onSaving={setSaving} dateKey={dateKey} />
+        ) : (
+          <OnlineTab meal={meal} saving={saving} onSaving={setSaving} dateKey={dateKey} />
+        )}
       </View>
     );
   }
@@ -346,12 +685,9 @@ export default function AddFood() {
           <SegmentedButtons
             value={tab}
             onValueChange={setTab}
-            buttons={[
-              { value: "new", label: "New Food" },
-              { value: "favorites", label: "Favorites" },
-              { value: "database", label: "Database" },
-            ]}
+            buttons={TAB_BUTTONS}
             style={styles.tabs}
+            density="medium"
           />
 
           <View style={styles.meals}>
@@ -486,4 +822,5 @@ const styles = StyleSheet.create({
   multChips: { flexDirection: "row", gap: 6, marginBottom: 8 },
   multInput: { marginBottom: 8 },
   macros: { marginBottom: 12, padding: 8, borderRadius: 8 },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
 });

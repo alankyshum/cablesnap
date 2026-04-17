@@ -151,6 +151,20 @@ export async function updateMacroTargets(
   );
 }
 
+export async function findDuplicateFoodEntry(
+  name: string,
+  calories: number,
+  protein: number,
+  carbs: number,
+  fat: number
+): Promise<FoodEntry | null> {
+  const row = await queryOne<FoodRow>(
+    "SELECT * FROM food_entries WHERE LOWER(name) = LOWER(?) AND calories = ? AND protein = ? AND carbs = ? AND fat = ? LIMIT 1",
+    [name, calories, protein, carbs, fat]
+  );
+  return row ? mapFood(row) : null;
+}
+
 export async function getDailySummary(
   date: string
 ): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
