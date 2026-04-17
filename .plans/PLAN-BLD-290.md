@@ -181,3 +181,23 @@ The tablet layout already has an inline add form. The new design should:
 - Part B depends on Part A (keyboard fix merged first)
 - No external dependencies
 - No new packages required
+
+## Review: Tech Lead (Technical Feasibility)
+- **Reviewer**: techlead
+- **Date**: 2026-04-17
+- **Verdict**: NEEDS REVISION
+
+### Summary
+Part A (keyboard fix) is technically sound — root cause analysis is correct, fix is straightforward. Part B (inline search) is architecturally feasible but has 4 design gaps that must be resolved before implementation.
+
+### Issues
+1. **MAJOR — Favorites missing**: Inline card design omits the Favs tab. Quick-log favorites must be included.
+2. **MAJOR — Tablet scope vague**: Must explicitly state tablet layout is unchanged in this phase.
+3. **MINOR — Manual entry mechanism unspecified**: Bottom sheet vs overlay vs expanded card not defined.
+4. **MINOR — Barcode scanner rendering unspecified**: Where does camera render from inline card?
+
+### Recommendations
+- Ship Part A immediately (standalone bugfix)
+- Add favorites section to inline card design
+- Defer route deletion to separate issue (reduce blast radius)
+- Consider simpler alternative: merge Database/Online tabs instead of full inline collapse
