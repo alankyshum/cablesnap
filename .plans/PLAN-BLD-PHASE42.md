@@ -3,7 +3,7 @@
 **Issue**: BLD-250
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -224,4 +224,17 @@ const showBarcodeButton = Platform.OS !== "web";
 **No blocking issues found.**
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-17)
+
+Both reviewers approved. QD's required corrections (T1–T5) are incorporated into the implementation spec:
+- T1: Use `CameraView` (not deprecated `Camera`) with `barcodeScannerSettings`
+- T2: Add `expo-camera` to `plugins` in `app.config.ts`
+- T3: Map barcode types to expo-camera format strings
+- T4: Mock expo-camera in CI tests; physical device for manual camera testing
+- T5: Screen reader announces product name, not generic "Barcode detected"
+
+QD's nice-to-have recommendations (extract OnlineTab, dismiss keyboard, update User-Agent) are included as stretch goals.
+
+Tech Lead confirmed feasibility, low risk, ~200-300 lines net new. No blocking issues.
+
+→ Creating implementation issue.
