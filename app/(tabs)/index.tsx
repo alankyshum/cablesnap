@@ -907,6 +907,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   nextBanner: {
     marginBottom: 12,

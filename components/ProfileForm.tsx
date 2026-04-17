@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import {
   Banner,
   Button,
+  Menu,
   SegmentedButtons,
   Text,
   TextInput,
@@ -19,14 +20,6 @@ import {
   type NutritionProfile,
   type Sex,
 } from "../lib/nutrition-calc";
-
-const ACTIVITY_BUTTONS = [
-  { value: "sedentary", label: ACTIVITY_LABELS.sedentary.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.sedentary, style: { minHeight: 48 } },
-  { value: "lightly_active", label: ACTIVITY_LABELS.lightly_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.lightly_active, style: { minHeight: 48 } },
-  { value: "moderately_active", label: ACTIVITY_LABELS.moderately_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.moderately_active, style: { minHeight: 48 } },
-  { value: "very_active", label: ACTIVITY_LABELS.very_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.very_active, style: { minHeight: 48 } },
-  { value: "extra_active", label: ACTIVITY_LABELS.extra_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.extra_active, style: { minHeight: 48 } },
-] as const;
 
 const GOAL_BUTTONS = [
   { value: "cut", label: GOAL_LABELS.cut, accessibilityLabel: GOAL_LABELS.cut },
@@ -57,6 +50,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
   const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [heightUnit, setHeightUnit] = useState<"cm" | "in">("cm");
   const [saving, setSaving] = useState(false);
+  const [activityMenuVisible, setActivityMenuVisible] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -287,12 +281,38 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       >
         Activity Level
       </Text>
-      <SegmentedButtons
-        value={activityLevel}
-        onValueChange={(v) => setActivityLevel(v as ActivityLevel)}
-        buttons={ACTIVITY_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string; style: Record<string, number> }>}
-        style={styles.segmented}
-      />
+      <Menu
+        visible={activityMenuVisible}
+        onDismiss={() => setActivityMenuVisible(false)}
+        anchor={
+          <Pressable
+            onPress={() => setActivityMenuVisible(true)}
+            style={[styles.dropdown, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}
+            accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[activityLevel]}`}
+            accessibilityRole="button"
+          >
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+              {ACTIVITY_LABELS[activityLevel]}
+            </Text>
+            <Text style={{ color: theme.colors.onSurfaceVariant }}>▼</Text>
+          </Pressable>
+        }
+        anchorPosition="bottom"
+        style={{ width: "auto" }}
+      >
+        {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((key) => (
+          <Menu.Item
+            key={key}
+            title={ACTIVITY_LABELS[key]}
+            onPress={() => {
+              setActivityLevel(key);
+              setActivityMenuVisible(false);
+            }}
+            style={key === activityLevel ? { backgroundColor: theme.colors.primaryContainer } : undefined}
+            accessibilityLabel={ACTIVITY_LABELS[key]}
+          />
+        ))}
+      </Menu>
 
       <Text
         variant="labelLarge"
@@ -339,6 +359,16 @@ const styles = StyleSheet.create({
   input: { marginBottom: 4 },
   fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: 14 },
   segmented: { marginBottom: 8 },
+  dropdown: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 8,
+    minHeight: 48,
+  },
   btnContent: { paddingVertical: 8, minHeight: 48 },
   errorText: { fontSize: 14, marginBottom: 8 },
   buttonRow: { flexDirection: "row", marginTop: 16 },

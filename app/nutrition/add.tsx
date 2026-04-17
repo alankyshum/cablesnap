@@ -232,7 +232,7 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
   );
 }
 
-function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void; dateKey: string }) {
+function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void; dateKey: string; autoScan?: boolean }) {
   const theme = useTheme();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ParsedFood[]>([]);
@@ -253,6 +253,15 @@ function OnlineTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: bo
   const barcodeAbortRef = useRef<AbortController | null>(null);
   const cacheRef = useRef<Map<string, ParsedFood[]>>(new Map());
   const today = dateKey;
+
+  // Auto-open scanner when navigated with scan=true
+  const autoScanTriggered = useRef(false);
+  useEffect(() => {
+    if (autoScan && !autoScanTriggered.current && Platform.OS !== "web") {
+      autoScanTriggered.current = true;
+      setScannerVisible(true);
+    }
+  }, [autoScan]);
 
   // Proactive offline detection on mount / tab switch
   useEffect(() => {
@@ -709,9 +718,9 @@ const TAB_BUTTONS = [
 export default function AddFood() {
   const theme = useTheme();
   const layout = useLayout();
-  const params = useLocalSearchParams<{ date?: string }>();
+  const params = useLocalSearchParams<{ date?: string; scan?: string }>();
   const dateKey = params.date || localDateKey();
-  const [tab, setTab] = useState("new");
+  const [tab, setTab] = useState(params.scan === "true" ? "online" : "new");
   const [name, setName] = useState("");
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
@@ -791,7 +800,7 @@ export default function AddFood() {
         {tab === "database" ? (
           <DatabaseTab meal={meal} saving={saving} onSaving={setSaving} dateKey={dateKey} />
         ) : (
-          <OnlineTab meal={meal} saving={saving} onSaving={setSaving} dateKey={dateKey} />
+          <OnlineTab meal={meal} saving={saving} onSaving={setSaving} dateKey={dateKey} autoScan={params.scan === "true"} />
         )}
       </View>
     );
