@@ -443,4 +443,68 @@ describe('Dashboard Acceptance', () => {
       })
     })
   })
+
+  describe('Segment switching with nextWorkout (BLD-277)', () => {
+    const nextWorkoutFixture = {
+      program: { id: 'prog-1', name: 'Push Pull Legs' },
+      day: { id: 'day-1', template_id: 'tpl-1', template_name: 'Push Day', label: 'Day 1' },
+    }
+
+    it('defaults to programs when nextWorkout exists', async () => {
+      mockGetNextWorkout.mockResolvedValue(nextWorkoutFixture)
+
+      const { getByLabelText, queryByLabelText } = renderScreen(<Dashboard />)
+
+      await waitFor(() => {
+        expect(getByLabelText('Create new program')).toBeTruthy()
+      })
+      expect(queryByLabelText('Create new template')).toBeNull()
+    })
+
+    it('allows switching to templates when nextWorkout exists', async () => {
+      mockGetNextWorkout.mockResolvedValue(nextWorkoutFixture)
+
+      const { getByLabelText } = renderScreen(<Dashboard />)
+
+      await waitFor(() => {
+        expect(getByLabelText('Create new program')).toBeTruthy()
+      })
+
+      fireEvent.press(getByLabelText('Templates tab'))
+
+      await waitFor(() => {
+        expect(getByLabelText('Create new template')).toBeTruthy()
+      })
+    })
+
+    it('defaults to templates when no nextWorkout', async () => {
+      mockGetNextWorkout.mockResolvedValue(null)
+
+      const { getByLabelText } = renderScreen(<Dashboard />)
+
+      await waitFor(() => {
+        expect(getByLabelText('Create new template')).toBeTruthy()
+      })
+    })
+
+    it('can freely switch segments with active program', async () => {
+      mockGetNextWorkout.mockResolvedValue(nextWorkoutFixture)
+
+      const { getByLabelText } = renderScreen(<Dashboard />)
+
+      await waitFor(() => {
+        expect(getByLabelText('Create new program')).toBeTruthy()
+      })
+
+      fireEvent.press(getByLabelText('Templates tab'))
+      await waitFor(() => {
+        expect(getByLabelText('Create new template')).toBeTruthy()
+      })
+
+      fireEvent.press(getByLabelText('Programs tab'))
+      await waitFor(() => {
+        expect(getByLabelText('Create new program')).toBeTruthy()
+      })
+    })
+  })
 })
