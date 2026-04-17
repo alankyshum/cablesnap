@@ -828,6 +828,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
+    alignItems: "flex-start",
   },
   banner: {
     marginBottom: 12,
