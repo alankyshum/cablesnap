@@ -104,7 +104,7 @@ export default function Nutrition() {
     load();
   };
 
-  const undo = async () => {
+  const undo = useCallback(async () => {
     if (!deleted.current) return;
     clearTimeout(deleted.current.timer);
     const dl = deleted.current.log;
@@ -112,7 +112,7 @@ export default function Nutrition() {
     deleted.current = null;
     setSnack("");
     load();
-  };
+  }, [load]);
 
   const inlineSave = async () => {
     if (!name.trim()) return;
@@ -331,13 +331,26 @@ export default function Nutrition() {
     setShowAddCard((v) => !v);
   }, []);
 
+  const undoRef = useRef<(() => Promise<void>) | null>(null);
+
   const handleFoodLogged = useCallback(() => {
     load();
   }, [load]);
 
-  const handleSnack = useCallback((message: string) => {
+  const handleSnack = useCallback((message: string, undoFn?: () => Promise<void>) => {
+    undoRef.current = undoFn ?? null;
     setSnack(message);
   }, []);
+
+  const handleUndo = useCallback(async () => {
+    if (undoRef.current) {
+      await undoRef.current();
+      undoRef.current = null;
+    } else {
+      await undo();
+    }
+    setSnack("");
+  }, [undo]);
 
   if (layout.atLeastMedium) {
     return (
@@ -352,7 +365,7 @@ export default function Nutrition() {
           visible={!!snack}
           onDismiss={() => setSnack("")}
           duration={4000}
-          action={{ label: "Undo", onPress: undo }}
+          action={{ label: "Undo", onPress: handleUndo }}
         >
           {snack}
         </Snackbar>
@@ -386,7 +399,7 @@ export default function Nutrition() {
         visible={!!snack}
         onDismiss={() => setSnack("")}
         duration={4000}
-        action={{ label: "Undo", onPress: undo }}
+        action={{ label: "Undo", onPress: handleUndo }}
       >
         {snack}
       </Snackbar>

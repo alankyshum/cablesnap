@@ -22,6 +22,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from "@gorhom/botto
 import {
   addFoodEntry,
   addDailyLog,
+  deleteDailyLog,
   getFavoriteFoods,
   findDuplicateFoodEntry,
 } from "../lib/db";
@@ -45,7 +46,7 @@ type SearchResult =
 type Props = {
   dateKey: string;
   onFoodLogged: () => void;
-  onSnack: (message: string) => void;
+  onSnack: (message: string, undoFn?: () => Promise<void>) => void;
 };
 
 export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Props) {
@@ -176,9 +177,12 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         food.serving,
         false,
       );
-      await addDailyLog(entry.id, dateKey, meal, 1);
+      const log = await addDailyLog(entry.id, dateKey, meal, 1);
       onFoodLogged();
-      onSnack(`${food.name} logged`);
+      onSnack(`${food.name} logged`, async () => {
+        await deleteDailyLog(log.id);
+        onFoodLogged();
+      });
     } catch {
       onSnack("Failed to log food. Please try again.");
     } finally {
@@ -205,9 +209,12 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         food.servingLabel,
         false,
       );
-      await addDailyLog(entry.id, dateKey, meal, 1);
+      const log = await addDailyLog(entry.id, dateKey, meal, 1);
       onFoodLogged();
-      onSnack(`${food.name} logged`);
+      onSnack(`${food.name} logged`, async () => {
+        await deleteDailyLog(log.id);
+        onFoodLogged();
+      });
     } catch {
       onSnack("Failed to log food. Please try again.");
     } finally {
@@ -218,9 +225,12 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
   const logFavorite = useCallback(async (food: FoodEntry) => {
     setSaving(true);
     try {
-      await addDailyLog(food.id, dateKey, meal, 1);
+      const log = await addDailyLog(food.id, dateKey, meal, 1);
       onFoodLogged();
-      onSnack(`${food.name} logged`);
+      onSnack(`${food.name} logged`, async () => {
+        await deleteDailyLog(log.id);
+        onFoodLogged();
+      });
     } catch {
       onSnack("Failed to log food. Please try again.");
     } finally {
@@ -301,12 +311,16 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         manualServing.trim() || "1 serving",
         manualFavorite,
       );
-      await addDailyLog(entry.id, dateKey, meal, 1);
+      const log = await addDailyLog(entry.id, dateKey, meal, 1);
+      const foodName = manualName.trim();
       resetManualForm();
       manualSheetRef.current?.close();
       onFoodLogged();
       getFavoriteFoods().then(setFavorites).catch(() => {});
-      onSnack(`${manualName.trim()} logged`);
+      onSnack(`${foodName} logged`, async () => {
+        await deleteDailyLog(log.id);
+        onFoodLogged();
+      });
     } catch {
       onSnack("Failed to save entry. Please try again.");
     } finally {
