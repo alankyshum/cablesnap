@@ -36,6 +36,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-sqlite",
     "expo-audio",
     "expo-sharing",
+    [
+      "expo-camera",
+      {
+        cameraPermission:
+          "FitForge needs camera access to scan food barcodes for quick nutrition logging.",
+      },
+    ],
   ],
   extra: {
     eas: {
