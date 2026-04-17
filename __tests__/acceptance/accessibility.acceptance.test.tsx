@@ -64,6 +64,7 @@ jest.mock('react-native-reanimated', () => {
     withTiming: <T,>(v: T) => v,
     interpolateColor: () => '#000',
     createAnimatedComponent: <T,>(c: T) => c,
+    Easing: { bezier: () => (t: number) => t },
   }
 })
 

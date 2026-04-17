@@ -60,6 +60,7 @@ jest.mock('react-native-reanimated', () => {
     __esModule: true,
     default: { View, createAnimatedComponent: (c: unknown) => c },
     FadeInDown: { delay: () => ({ duration: () => undefined }) },
+    Easing: { bezier: () => (t: number) => t },
   }
 })
 jest.mock('expo-haptics', () => ({

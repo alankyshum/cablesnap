@@ -1,4 +1,5 @@
-import { Easing, Platform } from "react-native";
+import { Platform } from "react-native";
+import { Easing } from "react-native-reanimated";
 
 // ─── Spacing (4px grid) ────────────────────────────────────────────
 
