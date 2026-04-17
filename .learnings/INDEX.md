@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 118
+Total learnings: 119
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 53 learnings
+- [React Native + Expo](patterns/react-native.md) — 54 learnings
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-290 | FlashList Inline ListHeaderComponent Causes Keyboard Dismiss | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-287 | Expo Managed Workflow Cannot Access Native Platform Logs | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-17 | BLD-287 | DB-Backed Diagnostic Logs Need Count-Based Not Time-Based Pruning | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-276 | Guard console.warn and console.log with __DEV__ in React Native | Pitfalls | [build-config.md](pitfalls/build-config.md) |

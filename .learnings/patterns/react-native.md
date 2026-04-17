@@ -441,3 +441,11 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: Deriving a value that silently overrides user-controlled state on every render creates an invisible UX bug — the UI control appears to work (shows the selected value) but the behavior doesn't follow. This is especially insidious because it only manifests when a runtime condition is true (e.g., `nextWorkout` exists), making it hard to catch in testing without that specific data setup.
 **Action**: When a component needs a "smart default" that can be overridden by user interaction, use a null-initial state pattern: `useState<T | null>(null)` where null means "use computed default." Derive the effective value as `userChoice ?? computedDefault`. Never use a derived variable that can override non-null user state. This ensures the default applies only until the user makes an explicit choice.
 **Tags**: derived-state, user-intent, smart-default, null-initial, segmented-control, ux-bug, react-state
+
+### FlashList Inline ListHeaderComponent Causes Keyboard Dismiss on Every Keystroke
+**Source**: BLD-290 — Nutrition Tab UX Overhaul Plan (GitHub #156)
+**Date**: 2026-04-17
+**Context**: Users reported keyboard dismissing on every keystroke during food search. The TextInput was rendered inside a `header()` function passed as FlashList's `ListHeaderComponent`. The `header` function was defined inline (new reference every render), causing FlashList to re-mount the header — and thus the TextInput — on every state update.
+**Learning**: FlashList re-mounts `ListHeaderComponent` when it receives a new function reference. An inline `header()` function creates a new reference on every render. Any TextInput inside the header loses focus on re-mount, dismissing the keyboard. This applies to `ListFooterComponent` as well.
+**Action**: Never place TextInput inside FlashList's `ListHeaderComponent` or `ListFooterComponent` when those are defined as inline functions. Either (1) render the TextInput above the FlashList as a sibling, or (2) memoize the header component with `useMemo`/`React.memo` to maintain referential stability. Prefer option (1) — it eliminates the class of bugs entirely.
+**Tags**: flashlist, keyboard-dismiss, ListHeaderComponent, referential-stability, useMemo, TextInput, re-mount, react-native
