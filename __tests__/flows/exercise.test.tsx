@@ -48,6 +48,9 @@ jest.mock('expo-file-system', () => ({
 jest.mock('expo-sharing', () => ({
   shareAsync: jest.fn(),
 }))
+jest.mock('../../lib/useProfileGender', () => ({
+  useProfileGender: () => 'male',
+}))
 
 const exercises: Exercise[] = [
   createExercise({ id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest', 'triceps'] }),
