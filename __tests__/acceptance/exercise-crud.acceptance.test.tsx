@@ -26,6 +26,7 @@ jest.mock('expo-router', () => {
 })
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
+jest.mock('../../lib/useProfileGender', () => ({ useProfileGender: () => 'male' as const }))
 jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, width: 375, scale: 1.0 }) }))
 jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest.fn().mockResolvedValue('{}'), getRecentErrors: jest.fn().mockResolvedValue([]), generateGitHubURL: jest.fn().mockReturnValue('https://github.com') }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))

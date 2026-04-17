@@ -128,6 +128,52 @@ export async function getActiveSession(): Promise<WorkoutSession | null> {
   );
 }
 
+// ---- Source session data for repeat workout ----
+
+export type SourceSessionSet = {
+  exercise_id: string;
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+  link_id: string | null;
+  training_mode: string | null;
+  tempo: string | null;
+  exercise_exists: boolean;
+};
+
+export async function getSourceSessionSets(
+  sessionId: string
+): Promise<SourceSessionSet[]> {
+  const rows = await query<{
+    exercise_id: string;
+    set_number: number;
+    weight: number | null;
+    reps: number | null;
+    link_id: string | null;
+    training_mode: string | null;
+    tempo: string | null;
+    exercise_exists: string | null;
+  }>(
+    `SELECT ws.exercise_id, ws.set_number, ws.weight, ws.reps, ws.link_id,
+            ws.training_mode, ws.tempo, e.id AS exercise_exists
+     FROM workout_sets ws
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
+     WHERE ws.session_id = ? AND ws.completed = 1
+     ORDER BY ws.set_number ASC`,
+    [sessionId]
+  );
+  return rows.map((r) => ({
+    exercise_id: r.exercise_id,
+    set_number: r.set_number,
+    weight: r.weight,
+    reps: r.reps,
+    link_id: r.link_id,
+    training_mode: r.training_mode,
+    tempo: r.tempo,
+    exercise_exists: r.exercise_exists != null,
+  }));
+}
+
 // ---- Sets ----
 
 export async function addSet(

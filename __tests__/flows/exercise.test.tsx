@@ -28,6 +28,7 @@ jest.mock('expo-router', () => {
 })
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
+jest.mock('../../lib/useProfileGender', () => ({ useProfileGender: () => 'male' as const }))
 jest.mock('../../lib/layout', () => ({
   useLayout: () => ({ wide: false, width: 375, scale: 1.0 }),
 }))

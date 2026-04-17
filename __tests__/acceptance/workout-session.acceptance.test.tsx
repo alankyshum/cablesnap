@@ -3,13 +3,16 @@ jest.setTimeout(10000)
 jest.mock('../../lib/db', () => ({
   getSessionById: jest.fn(),
   getSessionSets: jest.fn().mockResolvedValue([]),
+  getSourceSessionSets: jest.fn().mockResolvedValue([]),
   getTemplateById: jest.fn().mockResolvedValue(null),
   addSet: jest.fn().mockResolvedValue(undefined),
+  addSetsBatch: jest.fn().mockResolvedValue([]),
   completeSet: jest.fn().mockResolvedValue(undefined),
   uncompleteSet: jest.fn().mockResolvedValue(undefined),
   completeSession: jest.fn().mockResolvedValue(undefined),
   cancelSession: jest.fn().mockResolvedValue(undefined),
   updateSet: jest.fn().mockResolvedValue(undefined),
+  updateSetsBatch: jest.fn().mockResolvedValue(undefined),
   updateSetRPE: jest.fn().mockResolvedValue(undefined),
   updateSetNotes: jest.fn().mockResolvedValue(undefined),
   updateSetTrainingMode: jest.fn().mockResolvedValue(undefined),
@@ -96,6 +99,7 @@ describe('Workout Session Acceptance', () => {
     resetIds()
     delete mockParams.id
     delete mockParams.templateId
+    delete mockParams.sourceSessionId
     mockDb.getSessionSets.mockResolvedValue([])
     mockDb.getSessionById.mockResolvedValue(null)
     mockDb.getExerciseById.mockResolvedValue(null)
@@ -439,5 +443,101 @@ describe('Workout Session Acceptance', () => {
     expect(mockRouter.back).not.toHaveBeenCalled()
 
     alertSpy.mockRestore()
+  })
+
+  describe('sourceSessionId population', () => {
+    it('creates sets from source session with pre-filled weights and reps', async () => {
+      const session = createSession({ id: 'sess-repeat', name: 'Push Day', started_at: Date.now() - 60000 })
+      mockParams.id = 'sess-repeat'
+      mockParams.sourceSessionId = 'source-1'
+      mockDb.getSessionById.mockResolvedValue(session)
+      mockDb.getSessionSets.mockResolvedValue([]) // empty — triggers population
+      mockDb.getSourceSessionSets.mockResolvedValue([
+        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: null, training_mode: 'weight', tempo: null, exercise_exists: true },
+        { exercise_id: 'ex-1', set_number: 2, weight: 85, reps: 8, link_id: null, training_mode: 'weight', tempo: null, exercise_exists: true },
+      ])
+      mockDb.addSetsBatch.mockResolvedValue([
+        { ...createSet({ id: 'new-1', session_id: 'sess-repeat', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
+        { ...createSet({ id: 'new-2', session_id: 'sess-repeat', exercise_id: 'ex-1', set_number: 2 }), exercise_name: 'Bench Press', exercise_deleted: false },
+      ])
+      mockDb.getExerciseById.mockResolvedValue(exercise)
+
+      renderScreen(<ActiveSession />)
+
+      await waitFor(() => {
+        expect(mockDb.getSourceSessionSets).toHaveBeenCalledWith('source-1')
+        expect(mockDb.addSetsBatch).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 1, trainingMode: 'weight' }),
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 2, trainingMode: 'weight' }),
+          ])
+        )
+        expect(mockDb.updateSetsBatch).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'new-1', weight: 80, reps: 10 }),
+            expect.objectContaining({ id: 'new-2', weight: 85, reps: 8 }),
+          ])
+        )
+      })
+    })
+
+    it('filters out deleted exercises and preserves valid ones', async () => {
+      const session = createSession({ id: 'sess-del', name: 'Push Day', started_at: Date.now() - 60000 })
+      mockParams.id = 'sess-del'
+      mockParams.sourceSessionId = 'source-del'
+      mockDb.getSessionById.mockResolvedValue(session)
+      mockDb.getSessionSets.mockResolvedValue([])
+      mockDb.getSourceSessionSets.mockResolvedValue([
+        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: null, training_mode: null, tempo: null, exercise_exists: true },
+        { exercise_id: 'ex-deleted', set_number: 1, weight: 60, reps: 12, link_id: null, training_mode: null, tempo: null, exercise_exists: false },
+      ])
+      mockDb.addSetsBatch.mockResolvedValue([
+        { ...createSet({ id: 'new-1', session_id: 'sess-del', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
+      ])
+      mockDb.getExerciseById.mockResolvedValue(exercise)
+
+      renderScreen(<ActiveSession />)
+
+      await waitFor(() => {
+        expect(mockDb.addSetsBatch).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ exerciseId: 'ex-1' }),
+          ])
+        )
+        // Should NOT include the deleted exercise
+        const batchCall = mockDb.addSetsBatch.mock.calls[0][0]
+        expect(batchCall.every((s: { exerciseId: string }) => s.exerciseId !== 'ex-deleted')).toBe(true)
+      })
+    })
+
+    it('remaps link_ids to new UUIDs for supersets', async () => {
+      const session = createSession({ id: 'sess-link', name: 'Superset Day', started_at: Date.now() - 60000 })
+      mockParams.id = 'sess-link'
+      mockParams.sourceSessionId = 'source-link'
+      mockDb.getSessionById.mockResolvedValue(session)
+      mockDb.getSessionSets.mockResolvedValue([])
+      mockDb.getSourceSessionSets.mockResolvedValue([
+        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: 'old-link-1', training_mode: null, tempo: '3-1-2', exercise_exists: true },
+        { exercise_id: 'ex-2', set_number: 1, weight: 40, reps: 12, link_id: 'old-link-1', training_mode: null, tempo: null, exercise_exists: true },
+      ])
+      mockDb.addSetsBatch.mockResolvedValue([
+        { ...createSet({ id: 'new-1', session_id: 'sess-link', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
+        { ...createSet({ id: 'new-2', session_id: 'sess-link', exercise_id: 'ex-2', set_number: 1 }), exercise_name: 'Curls', exercise_deleted: false },
+      ])
+      mockDb.getExerciseById.mockResolvedValue(exercise)
+
+      renderScreen(<ActiveSession />)
+
+      await waitFor(() => {
+        const batchCall = mockDb.addSetsBatch.mock.calls[0][0] as { linkId: string | null; tempo: string | null }[]
+        // Both should have the same NEW link_id (not the old one)
+        expect(batchCall[0].linkId).not.toBe('old-link-1')
+        expect(batchCall[0].linkId).toBeTruthy()
+        expect(batchCall[0].linkId).toBe(batchCall[1].linkId)
+        // Tempo should be preserved
+        expect(batchCall[0].tempo).toBe('3-1-2')
+        expect(batchCall[1].tempo).toBeNull()
+      })
+    })
   })
 })
