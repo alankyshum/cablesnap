@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 128
+Total learnings: 129
 
 ## How to Use This Knowledge Base
 
@@ -18,7 +18,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
-- [Dependencies](pitfalls/dependencies.md) — 7 learnings
+- [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 14 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-302 | SDK Status Check Must Precede Initialization — Init Failure Masks Availability State | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-17 | BLD-301 | Health Connect SDK Requires Four Setup Steps Beyond the NPM Package | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-301 | Android SDK Feature Availability Is a Four-State Machine — UX Must Branch on All States | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-300 | Expo/React Native Cannot Target Wear OS — Wearable Features Require Separate Native Codebase | Decisions | [architecture.md](decisions/architecture.md) |
