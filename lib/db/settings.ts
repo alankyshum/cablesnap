@@ -123,7 +123,7 @@ export async function insertInteraction(
     );
     await database.runAsync(
       `DELETE FROM interaction_log WHERE id NOT IN (
-        SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 10
+        SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 50
       )`
     );
   });
@@ -133,7 +133,7 @@ export async function getInteractions(): Promise<
   { id: string; action: string; screen: string; detail: string | null; timestamp: number }[]
 > {
   return query(
-    "SELECT * FROM interaction_log ORDER BY timestamp DESC LIMIT 10"
+    "SELECT * FROM interaction_log ORDER BY timestamp DESC LIMIT 50"
   );
 }
 

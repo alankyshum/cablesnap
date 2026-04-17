@@ -259,3 +259,62 @@ describe("generateShareText", () => {
     expect(text).not.toContain("Test error");
   });
 });
+
+describe("device info (BLD-292)", () => {
+  it("buildReportBody includes Device Info section by default", () => {
+    const body = buildReportBody({
+      type: "bug",
+      description: "test",
+      errors: [],
+      interactions: [],
+      includeDiag: true,
+    });
+    expect(body).toContain("## Device Info");
+    expect(body).toContain("Test Model");
+    expect(body).toContain("Test Device");
+    expect(body).toContain("4096 MB");
+  });
+
+  it("buildReportBody excludes Device Info when includeDeviceInfo is false", () => {
+    const body = buildReportBody({
+      type: "bug",
+      description: "test",
+      errors: [],
+      interactions: [],
+      includeDiag: true,
+      includeDeviceInfo: false,
+    });
+    expect(body).not.toContain("## Device Info");
+    expect(body).not.toContain("Test Model");
+  });
+
+  it("generateShareText includes device info", () => {
+    const text = generateShareText({
+      type: "bug",
+      title: "Bug",
+      description: "desc",
+      errors: [],
+      interactions: [],
+      includeDiag: true,
+    });
+    expect(text).toContain("Device Info:");
+    expect(text).toContain("Test Model");
+  });
+
+  it("truncation removes device info first (Phase 0)", () => {
+    const long = "X".repeat(8000);
+    const errors = [makeError()];
+    const interactions = [makeInteraction()];
+    const body = buildReportBody({
+      type: "bug",
+      description: long,
+      errors,
+      interactions,
+      includeDiag: true,
+    });
+    const result = truncateBody(body, errors, interactions, long, "bug", true);
+    expect(result).toContain("[truncated");
+    const url = `https://github.com/alankyshum/fitforge/issues/new?title=x&body=${encodeURIComponent(result)}`;
+    expect(url.length).toBeLessThanOrEqual(8000);
+  });
+});

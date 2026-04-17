@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+import * as Device from "expo-device";
 import { getDatabase } from "./db";
 import { recent as recentInteractions } from "./interactions";
 import { getRecentConsoleLogs, formatConsoleLogs } from "./console-log-buffer";
@@ -92,12 +93,26 @@ export async function generateReport(): Promise<string> {
   const errors = await getRecentErrors(MAX_ERRORS);
   const interactions = await recentInteractions();
   const consoleLogs = getRecentConsoleLogs();
+
+  let deviceInfo: Record<string, string | number | null> = {};
+  try {
+    deviceInfo = {
+      deviceName: Device.deviceName ?? "unknown",
+      modelName: Device.modelName ?? "unknown",
+      totalMemory: Device.totalMemory ?? null,
+      executionEnvironment: Constants.executionEnvironment ?? "unknown",
+    };
+  } catch {
+    deviceInfo = { error: "Device info unavailable" };
+  }
+
   return JSON.stringify(
     {
       generated_at: new Date().toISOString(),
       app_version: Constants.expoConfig?.version ?? "unknown",
       platform: Platform.OS,
       os_version: String(Platform.Version),
+      device: deviceInfo,
       error_count: errors.length,
       errors,
       interactions,
@@ -130,6 +145,19 @@ function formatErrors(items: ErrorEntry[]): string {
     .join("\n");
 }
 
+function getDeviceInfo(): string {
+  try {
+    const lines: string[] = [];
+    lines.push(`- Device: ${Device.modelName ?? "unknown"}`);
+    lines.push(`- Device Name: ${Device.deviceName ?? "unknown"}`);
+    lines.push(`- Total Memory: ${Device.totalMemory != null ? `${Math.round(Device.totalMemory / 1024 / 1024)} MB` : "unknown"}`);
+    lines.push(`- Execution Environment: ${Constants.executionEnvironment ?? "unknown"}`);
+    return lines.join("\n");
+  } catch {
+    return "- Device info unavailable";
+  }
+}
+
 export function buildReportBody(opts: {
   type: ReportType;
   description: string;
@@ -137,6 +165,7 @@ export function buildReportBody(opts: {
   interactions: Interaction[];
   consoleLogs?: ConsoleLogEntry[];
   includeDiag: boolean;
+  includeDeviceInfo?: boolean;
 }): string {
   const version = Constants.expoConfig?.version ?? "unknown";
   const parts: string[] = [];
@@ -150,6 +179,12 @@ export function buildReportBody(opts: {
   parts.push(`- Platform: ${Platform.OS}`);
   parts.push(`- OS Version: ${String(Platform.Version)}`);
   parts.push("");
+
+  if (opts.includeDeviceInfo !== false) {
+    parts.push("## Device Info\n");
+    parts.push(getDeviceInfo());
+    parts.push("");
+  }
 
   if (opts.includeDiag) {
     parts.push("## Recent Interactions\n");
@@ -179,7 +214,19 @@ export function truncateBody(body: string, errors: ErrorEntry[], interactions: I
 
   if (check(body) <= MAX_URL) return body;
 
-  // Phase 0: remove console logs first (they're supplementary)
+  // Phase 0: remove device info first (least valuable for debugging)
+  const noDeviceInfo = buildReportBody({
+    type,
+    description: desc,
+    errors,
+    interactions,
+    consoleLogs,
+    includeDiag,
+    includeDeviceInfo: false,
+  });
+  if (check(noDeviceInfo) <= MAX_URL) return noDeviceInfo + "\n\n[truncated — share full report for details]";
+
+  // Phase 1: also remove console logs
   const noConsoleLogs = buildReportBody({
     type,
     description: desc,
@@ -187,30 +234,33 @@ export function truncateBody(body: string, errors: ErrorEntry[], interactions: I
     interactions,
     consoleLogs: [],
     includeDiag,
+    includeDeviceInfo: false,
   });
   if (check(noConsoleLogs) <= MAX_URL) return noConsoleLogs + "\n\n[truncated — share full report for details]";
 
-  // Phase 1: remove stack traces from errors
+  // Phase 2: remove stack traces from errors
   const noStacks = buildReportBody({
     type,
     description: desc,
     errors: errors.map((e) => ({ ...e, stack: null })),
     interactions,
     includeDiag,
+    includeDeviceInfo: false,
   });
   if (check(noStacks) <= MAX_URL) return noStacks + "\n\n[truncated — share full report for details]";
 
-  // Phase 2: remove errors entirely
+  // Phase 3: remove errors entirely
   const noErrors = buildReportBody({
     type,
     description: desc,
     errors: [],
     interactions,
     includeDiag,
+    includeDeviceInfo: false,
   });
   if (check(noErrors) <= MAX_URL) return noErrors + "\n\n[truncated — share full report for details]";
 
-  // Phase 3: trim interactions
+  // Phase 4: trim interactions
   let trimmed = interactions;
   while (trimmed.length > 0) {
     trimmed = trimmed.slice(0, -1);
@@ -220,11 +270,12 @@ export function truncateBody(body: string, errors: ErrorEntry[], interactions: I
       errors: [],
       interactions: trimmed,
       includeDiag,
+      includeDeviceInfo: false,
     });
     if (check(attempt) <= MAX_URL) return attempt + "\n\n[truncated — share full report for details]";
   }
 
-  // Phase 4: truncate description
+  // Phase 5: truncate description
   let short = desc;
   while (short.length > 20) {
     short = short.slice(0, Math.floor(short.length * 0.7));
@@ -234,11 +285,12 @@ export function truncateBody(body: string, errors: ErrorEntry[], interactions: I
       errors: [],
       interactions: [],
       includeDiag,
+      includeDeviceInfo: false,
     });
     if (check(attempt) <= MAX_URL) return attempt + "\n\n[truncated — share full report for details]";
   }
 
-  return buildReportBody({ type, description: "...", errors: [], interactions: [], includeDiag }) +
+  return buildReportBody({ type, description: "...", errors: [], interactions: [], includeDiag, includeDeviceInfo: false }) +
     "\n\n[truncated — share full report for details]";
 }
 
@@ -281,6 +333,9 @@ export function generateShareText(opts: {
   lines.push(`Date: ${new Date().toISOString()}`);
   lines.push(`App Version: ${version}`);
   lines.push(`Platform: ${Platform.OS} ${String(Platform.Version)}`);
+  lines.push("");
+  lines.push("Device Info:");
+  lines.push(getDeviceInfo());
   lines.push("");
   lines.push("Description:");
   lines.push(opts.description || "(none)");
