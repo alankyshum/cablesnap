@@ -96,6 +96,7 @@ export {
   getMacroTargets,
   updateMacroTargets,
   getDailySummary,
+  findDuplicateFoodEntry,
 } from "./nutrition";
 
 export {
