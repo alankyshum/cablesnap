@@ -465,3 +465,11 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: FlashList relies on measuring the root element of each rendered item to calculate layout. React Fragments produce multiple sibling nodes with no single measurable root, which breaks FlashList's height estimation and causes rendering glitches (blank spaces, overlapping items, incorrect scroll positions). This constraint applies to `renderItem`, `ListHeaderComponent`, and `ListFooterComponent`.
 **Action**: Always return a single `<View>` wrapper (not `<>...</>`) from FlashList's `renderItem` when the item needs to render multiple elements (e.g., a separator label above the item). When reviewing PRs that use FlashList, flag any Fragment usage in renderItem as a MAJOR finding.
 **Tags**: flashlist, fragment, renderitem, view, height-estimation, shopify, react-native, list
+
+### Dynamic import() for Native-Only Module Isolation in Cross-Platform Apps
+**Source**: BLD-299 — Implement Strava Integration (Phase 48)
+**Date**: 2026-04-17
+**Context**: The Strava integration module (`lib/strava.ts`) imports `expo-auth-session`, `expo-web-browser`, and `expo-secure-store` at the top level — all native-only packages. A static import of this module anywhere in the app (e.g., `import { syncSessionToStrava } from "../lib/strava"`) would cause web builds to fail at module resolution time, even if the call site is guarded by `Platform.OS !== "web"`.
+**Learning**: When a module has top-level imports of native-only dependencies, `Platform.OS` guards at the call site are insufficient — the static import itself triggers module resolution and fails on web. Use `await import("./module")` at each call site to defer module loading until runtime, ensuring the native-only module tree is never loaded on web. This applies to any cross-platform Expo app where some features are native-only.
+**Action**: When a feature module imports native-only Expo packages at the top level, never use static imports from consuming code. Instead, use `const { fn } = await import("./module")` inside a `Platform.OS !== "web"` guard. Apply this pattern in both UI components (settings, session) and lifecycle hooks (_layout.tsx startup).
+**Tags**: dynamic-import, platform-gating, native-only, web, expo, cross-platform, module-resolution, import

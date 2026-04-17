@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 124
+Total learnings: 125
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 56 learnings
+- [React Native + Expo](patterns/react-native.md) — 57 learnings
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-299 | Dynamic import() for Native-Only Module Isolation in Cross-Platform Apps | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-298 | FitForge DB Migrations Live in lib/db/helpers.ts, Not a Separate Schema File | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-17 | BLD-298 | expo-secure-store and expo-auth-session Are Native-Only — Platform-Gate OAuth Features | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-17 | BLD-298 | Persistent SQLite Queue for Fire-and-Forget External API Sync | Decisions | [architecture.md](decisions/architecture.md) |
