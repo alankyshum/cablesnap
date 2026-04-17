@@ -211,3 +211,27 @@ export {
   hasSeenRetroactiveBanner,
   markRetroactiveBannerSeen,
 } from "./achievements";
+
+export {
+  getStravaConnection,
+  saveStravaConnection,
+  deleteStravaConnection,
+  createSyncLogEntry,
+  markSyncSuccess,
+  markSyncFailed,
+  markSyncPermanentlyFailed,
+  getPendingOrFailedSyncs,
+  getSyncLogForSession,
+} from "./strava";
+export type { StravaConnection, StravaSyncLog, StravaSyncStatus } from "./strava";
+
+export {
+  createHCSyncLogEntry,
+  markHCSyncSuccess,
+  markHCSyncFailed,
+  markHCSyncPermanentlyFailed,
+  getHCPendingOrFailedSyncs,
+  getHCSyncLogForSession,
+  markAllHCPendingAsFailed,
+} from "./health-connect";
+export type { HCSyncLog, HCSyncStatus } from "./health-connect";

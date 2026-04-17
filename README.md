@@ -15,7 +15,7 @@
 - 📊 **Progress Charts** — Visualize your fitness journey
 - 📱 **Responsive** — Works on phones and tablets
 - 🌙 **Dark Mode** — Auto-detects system preference
-- 📦 **Data Portable** — Full import/export (coming soon)
+- 📦 **Data Portable** — Full import/export (JSON backup, CSV, Strong app import)
 
 ## Tech Stack
 

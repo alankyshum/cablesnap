@@ -67,3 +67,19 @@
 **Learning**: `react-native` and `react-native-reanimated` both export an `Easing` module with identical APIs, but they are not interchangeable. Reanimated's `Easing` produces worklet-compatible functions that run on the UI thread; React Native's `Easing` produces plain JS functions that crash when passed to `withTiming()`, `withSpring()`, or any worklet context. TypeScript cannot catch this — the type signatures match. Jest tests cannot catch this — mocks bypass the worklet runtime. Only real device execution surfaces the crash.
 **Action**: Always import `Easing` from `react-native-reanimated`, never from `react-native`, when the values will be used in any Reanimated animation. When adding `Easing` to a shared constants file, verify the import source. When mocking `react-native-reanimated` in tests, include `Easing: { bezier: () => (t: number) => t }` in the mock object.
 **Tags**: react-native-reanimated, easing, worklet, import, withTiming, animation, crash, type-safety
+
+### expo-secure-store and expo-auth-session Are Native-Only — Platform-Gate OAuth Features
+**Source**: BLD-298 — PLAN: Strava Integration (Phase 48)
+**Date**: 2026-04-17
+**Context**: Phase 48 plan for Strava OAuth integration initially did not address web platform. QD review identified that `expo-secure-store` and `expo-auth-session` have no web support, meaning any feature depending on them must be entirely hidden on web via `Platform.OS` checks.
+**Learning**: `expo-secure-store` (token storage) and `expo-auth-session` (OAuth flows) do not support the web platform in Expo SDK 55. Features that depend on either package must gate their entire UI surface behind `Platform.OS !== 'web'` — not just individual components, but the Settings section, navigation entries, and any code paths that import these packages. Importing them on web causes runtime errors.
+**Action**: When planning features that use OAuth or secure token storage in Expo, verify each dependency's platform support matrix upfront. If any dependency is native-only, gate the entire feature (UI, navigation, sync logic) behind a `Platform.OS` check. Hide the feature section completely on unsupported platforms rather than showing disabled controls.
+**Tags**: expo-secure-store, expo-auth-session, oauth, platform-support, web, native-only, platform-gating, strava
+
+### SDK Status Check Must Precede Initialization — Init Failure Masks Availability State
+**Source**: BLD-302 — Implement Health Connect Integration (Phase 49)
+**Date**: 2026-04-17
+**Context**: Tech lead review caught that `ensureInitialized()` was called before `getSdkStatus()` in the Health Connect wrapper. When HC is not installed, `initialize()` throws (native module bridge fails), and the catch block returned `"unavailable"` — hiding the "Install Health Connect" button that should have appeared. The SDK status was never checked.
+**Learning**: When an SDK has both a status-check API (`getSdkStatus()`) and an initialization API (`initialize()`), the status check must run BEFORE initialization. Initialization may throw on devices where the SDK is not installed or needs an update, and catching that error discards the specific availability state (needs_install vs needs_update vs truly unavailable). Call `getSdkStatus()` first, then only call `initialize()` after confirming the SDK is available.
+**Action**: When wrapping SDKs that have separate status and init APIs (Health Connect, Google Play Services, etc.), structure the wrapper so status-check is independent of init. Call `ensureInitialized()` only AFTER `getSdkStatus()` confirms `SDK_AVAILABLE`. This corrects the BLD-301 guidance that said "call ensureInitialized before every API operation" — `getSdkStatus()` is the exception.
+**Tags**: health-connect, sdk, initialization, status-check, ordering, android, native-module, availability

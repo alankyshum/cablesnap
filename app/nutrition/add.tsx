@@ -73,43 +73,6 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
     }
   };
 
-  const header = () => (
-    <View>
-      <TextInput
-        mode="outlined"
-        placeholder="Search foods..."
-        value={query}
-        onChangeText={setQuery}
-        left={<TextInput.Icon icon="magnify" />}
-        style={styles.input}
-        accessibilityLabel="Search foods"
-      />
-      <View style={styles.chips}>
-        <Chip
-          selected={category === null}
-          onPress={() => setCategory(null)}
-          style={styles.chip}
-          accessibilityRole="button"
-          accessibilityState={{ selected: category === null }}
-        >
-          All
-        </Chip>
-        {categories.map((c) => (
-          <Chip
-            key={c.id}
-            selected={category === c.id}
-            onPress={() => setCategory(category === c.id ? null : c.id)}
-            style={styles.chip}
-            accessibilityRole="button"
-            accessibilityState={{ selected: category === c.id }}
-          >
-            {c.label}
-          </Chip>
-        ))}
-      </View>
-    </View>
-  );
-
   const renderItem = ({ item }: { item: BuiltinFood }) => {
     const open = expanded === item.id;
     const scaled = {
@@ -221,14 +184,47 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
   );
 
   return (
-    <FlashList
-      data={results}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      ListHeaderComponent={header}
-      ListEmptyComponent={empty}
-      style={{ backgroundColor: theme.colors.background }}
-    />
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <TextInput
+        mode="outlined"
+        placeholder="Search foods..."
+        value={query}
+        onChangeText={setQuery}
+        left={<TextInput.Icon icon="magnify" />}
+        style={styles.input}
+        accessibilityLabel="Search foods"
+      />
+      <View style={styles.chips}>
+        <Chip
+          selected={category === null}
+          onPress={() => setCategory(null)}
+          style={styles.chip}
+          accessibilityRole="button"
+          accessibilityState={{ selected: category === null }}
+        >
+          All
+        </Chip>
+        {categories.map((c) => (
+          <Chip
+            key={c.id}
+            selected={category === c.id}
+            onPress={() => setCategory(category === c.id ? null : c.id)}
+            style={styles.chip}
+            accessibilityRole="button"
+            accessibilityState={{ selected: category === c.id }}
+          >
+            {c.label}
+          </Chip>
+        ))}
+      </View>
+      <FlashList
+        data={results}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={empty}
+        style={{ backgroundColor: theme.colors.background }}
+      />
+    </View>
   );
 }
 
@@ -463,111 +459,6 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
     );
   }
 
-  const header = () => (
-    <View>
-      {Platform.OS !== "web" && (
-        <Button
-          mode="outlined"
-          icon="barcode-scan"
-          onPress={openScanner}
-          style={styles.scanBtn}
-          contentStyle={styles.scanBtnContent}
-          accessibilityLabel="Scan food barcode"
-          accessibilityRole="button"
-        >
-          Scan Barcode
-        </Button>
-      )}
-      {barcodeLoading && (
-        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
-          <ActivityIndicator
-            style={{ marginBottom: 8 }}
-            accessibilityLabel="Looking up barcode..."
-            accessibilityRole="progressbar"
-          />
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-            Looking up barcode...
-          </Text>
-        </View>
-      )}
-      {barcodeError && (
-        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
-          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
-            {barcodeError}
-          </Text>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Button
-              mode="outlined"
-              onPress={retryBarcode}
-              accessibilityLabel="Retry barcode scan"
-              accessibilityRole="button"
-              contentStyle={{ minHeight: 48 }}
-            >
-              Retry
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={switchToTextSearch}
-              accessibilityLabel="Search by name instead"
-              accessibilityRole="button"
-              contentStyle={{ minHeight: 48 }}
-            >
-              Search by Name
-            </Button>
-          </View>
-        </View>
-      )}
-      {scannedProductName && (
-        <View accessibilityLiveRegion="polite">
-          <Text
-            variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}
-            accessibilityLabel={`Found: ${scannedProductName}`}
-          >
-            Found: {scannedProductName}
-          </Text>
-        </View>
-      )}
-      <TextInput
-        mode="outlined"
-        placeholder="Search for foods online"
-        value={query}
-        onChangeText={setQuery}
-        left={<TextInput.Icon icon="magnify" />}
-        style={styles.input}
-        accessibilityLabel="Search online food database"
-      />
-      {hint && (
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}>
-          {hint}
-        </Text>
-      )}
-      {loading && (
-        <ActivityIndicator
-          style={{ marginVertical: 16 }}
-          accessibilityLabel="Searching..."
-          accessibilityRole="progressbar"
-        />
-      )}
-      {error && (
-        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
-          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
-            {error}
-          </Text>
-          <Button
-            mode="outlined"
-            onPress={retry}
-            accessibilityLabel="Retry search"
-            accessibilityRole="button"
-            contentStyle={{ minHeight: 48 }}
-          >
-            Retry
-          </Button>
-        </View>
-      )}
-    </View>
-  );
-
   const renderItem = ({ item, index }: { item: ParsedFood; index: number }) => {
     const open = expanded === index;
     const scaled = {
@@ -683,11 +574,110 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      {Platform.OS !== "web" && (
+        <Button
+          mode="outlined"
+          icon="barcode-scan"
+          onPress={openScanner}
+          style={styles.scanBtn}
+          contentStyle={styles.scanBtnContent}
+          accessibilityLabel="Scan food barcode"
+          accessibilityRole="button"
+        >
+          Scan Barcode
+        </Button>
+      )}
+      {barcodeLoading && (
+        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
+          <ActivityIndicator
+            style={{ marginBottom: 8 }}
+            accessibilityLabel="Looking up barcode..."
+            accessibilityRole="progressbar"
+          />
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            Looking up barcode...
+          </Text>
+        </View>
+      )}
+      {barcodeError && (
+        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
+          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
+            {barcodeError}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button
+              mode="outlined"
+              onPress={retryBarcode}
+              accessibilityLabel="Retry barcode scan"
+              accessibilityRole="button"
+              contentStyle={{ minHeight: 48 }}
+            >
+              Retry
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={switchToTextSearch}
+              accessibilityLabel="Search by name instead"
+              accessibilityRole="button"
+              contentStyle={{ minHeight: 48 }}
+            >
+              Search by Name
+            </Button>
+          </View>
+        </View>
+      )}
+      {scannedProductName && (
+        <View accessibilityLiveRegion="polite">
+          <Text
+            variant="bodySmall"
+            style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}
+            accessibilityLabel={`Found: ${scannedProductName}`}
+          >
+            Found: {scannedProductName}
+          </Text>
+        </View>
+      )}
+      <TextInput
+        mode="outlined"
+        placeholder="Search for foods online"
+        value={query}
+        onChangeText={setQuery}
+        left={<TextInput.Icon icon="magnify" />}
+        style={styles.input}
+        accessibilityLabel="Search online food database"
+      />
+      {hint && (
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}>
+          {hint}
+        </Text>
+      )}
+      {loading && (
+        <ActivityIndicator
+          style={{ marginVertical: 16 }}
+          accessibilityLabel="Searching..."
+          accessibilityRole="progressbar"
+        />
+      )}
+      {error && (
+        <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
+          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
+            {error}
+          </Text>
+          <Button
+            mode="outlined"
+            onPress={retry}
+            accessibilityLabel="Retry search"
+            accessibilityRole="button"
+            contentStyle={{ minHeight: 48 }}
+          >
+            Retry
+          </Button>
+        </View>
+      )}
       <FlashList
         data={results}
         renderItem={renderItem}
         keyExtractor={(item, index) => `${item.name}-${item.calories}-${index}`}
-        ListHeaderComponent={header}
         ListEmptyComponent={empty}
         style={{ backgroundColor: theme.colors.background }}
       />

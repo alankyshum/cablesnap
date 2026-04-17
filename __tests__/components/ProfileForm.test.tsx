@@ -30,7 +30,7 @@ jest.mock("@react-navigation/native", () => ({
 }));
 
 const mockProfile = {
-  age: 30,
+  birthYear: 1996,
   weight: 75,
   height: 175,
   sex: "male" as const,
@@ -62,7 +62,7 @@ describe("ProfileForm", () => {
       <ProfileForm onSave={jest.fn()} />
     );
     await waitFor(() => {
-      expect(getByLabelText("Age in years")).toBeTruthy();
+      expect(getByLabelText("Birth year")).toBeTruthy();
       expect(getByLabelText("Weight in kg")).toBeTruthy();
       expect(getByLabelText("Height in cm")).toBeTruthy();
     });
@@ -73,7 +73,7 @@ describe("ProfileForm", () => {
       <ProfileForm initialProfile={mockProfile} onSave={jest.fn()} />
     );
     await waitFor(() => {
-      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Birth year").props.value).toBe("1996");
       expect(getByLabelText("Weight in kg").props.value).toBe("75");
       expect(getByLabelText("Height in cm").props.value).toBe("175");
     });
@@ -85,11 +85,12 @@ describe("ProfileForm", () => {
       <ProfileForm onSave={onSave} />
     );
     await waitFor(() => {
-      expect(getByLabelText("Age in years")).toBeTruthy();
+      expect(getByLabelText("Birth year")).toBeTruthy();
     });
     fireEvent.press(getByText("Calculate & Save"));
+    const currentYear = new Date().getFullYear();
     await waitFor(() => {
-      expect(getByText("Enter a valid age (1–120)")).toBeTruthy();
+      expect(getByText(`Enter a valid birth year (1900–${currentYear - 1})`)).toBeTruthy();
       expect(getByText("Enter a valid weight")).toBeTruthy();
       expect(getByText("Enter a valid height")).toBeTruthy();
     });
@@ -102,7 +103,7 @@ describe("ProfileForm", () => {
       <ProfileForm initialProfile={mockProfile} onSave={onSave} />
     );
     await waitFor(() => {
-      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Birth year").props.value).toBe("1996");
     });
     fireEvent.press(getByText("Calculate & Save"));
     await waitFor(() => {
@@ -133,9 +134,9 @@ describe("ProfileForm", () => {
       <ProfileForm onSave={jest.fn()} onDirtyChange={onDirtyChange} />
     );
     await waitFor(() => {
-      expect(getByLabelText("Age in years")).toBeTruthy();
+      expect(getByLabelText("Birth year")).toBeTruthy();
     });
-    fireEvent.changeText(getByLabelText("Age in years"), "25");
+    fireEvent.changeText(getByLabelText("Birth year"), "1995");
     await waitFor(() => {
       expect(onDirtyChange).toHaveBeenCalledWith(true);
     });
@@ -147,7 +148,7 @@ describe("ProfileForm", () => {
       <ProfileForm initialProfile={mockProfile} onSave={jest.fn()} />
     );
     await waitFor(() => {
-      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Birth year").props.value).toBe("1996");
     });
     fireEvent.press(getByText("Calculate & Save"));
     await waitFor(() => {
@@ -170,7 +171,7 @@ describe("BodyProfileCard", () => {
     const { getByText, getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
       expect(getByText("Body Profile")).toBeTruthy();
-      expect(getByLabelText("Age in years")).toBeTruthy();
+      expect(getByLabelText("Birth year")).toBeTruthy();
       expect(getByLabelText("Weight in kg")).toBeTruthy();
       expect(getByLabelText("Height in cm")).toBeTruthy();
     });
@@ -180,7 +181,7 @@ describe("BodyProfileCard", () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
     const { getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Birth year").props.value).toBe("1996");
       expect(getByLabelText("Weight in kg").props.value).toBe("75");
       expect(getByLabelText("Height in cm").props.value).toBe("175");
     });
@@ -217,10 +218,10 @@ describe("BodyProfileCard", () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
     const { getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Birth year").props.value).toBe("1996");
     });
-    fireEvent.changeText(getByLabelText("Age in years"), "25");
-    fireEvent(getByLabelText("Age in years"), "blur");
+    fireEvent.changeText(getByLabelText("Birth year"), "1995");
+    fireEvent(getByLabelText("Birth year"), "blur");
     await waitFor(() => {
       expect(mockSetAppSetting).toHaveBeenCalledWith(
         "nutrition_profile",
@@ -234,12 +235,13 @@ describe("BodyProfileCard", () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
     const { getByLabelText, getByText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Birth year").props.value).toBe("1996");
     });
-    fireEvent.changeText(getByLabelText("Age in years"), "");
-    fireEvent(getByLabelText("Age in years"), "blur");
+    fireEvent.changeText(getByLabelText("Birth year"), "");
+    fireEvent(getByLabelText("Birth year"), "blur");
+    const currentYear = new Date().getFullYear();
     await waitFor(() => {
-      expect(getByText("Enter a valid age (1–120)")).toBeTruthy();
+      expect(getByText(`Enter a valid birth year (1900–${currentYear - 1})`)).toBeTruthy();
     });
     expect(mockSetAppSetting).not.toHaveBeenCalled();
   });
@@ -248,7 +250,7 @@ describe("BodyProfileCard", () => {
     mockGetAppSetting.mockResolvedValue(JSON.stringify(mockProfile));
     const { getByText, getByLabelText } = renderScreen(<BodyProfileCard />);
     await waitFor(() => {
-      expect(getByLabelText("Age in years").props.value).toBe("30");
+      expect(getByLabelText("Birth year").props.value).toBe("1996");
     });
     fireEvent.press(getByText("Bulk"));
     await waitFor(() => {

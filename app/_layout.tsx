@@ -62,6 +62,21 @@ export default function RootLayout() {
           (window as unknown as Record<string, unknown>).__SKIP_ONBOARDING__ === true;
         const complete = skipOnboarding || (await isOnboardingComplete());
         setOnboarded(complete);
+
+        // Strava retry reconciliation on startup (non-blocking)
+        if (Platform.OS !== "web") {
+          import("../lib/strava")
+            .then(({ reconcileStravaQueue }) => reconcileStravaQueue())
+            .catch((err) => console.error("Strava queue reconciliation failed:", err));
+        }
+
+        // Health Connect retry reconciliation on startup (non-blocking, Android only)
+        if (Platform.OS === "android") {
+          import("../lib/health-connect")
+            .then(({ reconcileHealthConnectQueue }) => reconcileHealthConnectQueue())
+            .catch((err) => console.error("Health Connect queue reconciliation failed:", err));
+        }
+
         setReady(true);
         SplashScreen.hideAsync();
       })

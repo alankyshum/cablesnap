@@ -18,6 +18,7 @@ import {
   ACTIVITY_LABELS,
   GOAL_LABELS,
   calculateFromProfile,
+  migrateProfile,
   type ActivityLevel,
   type Goal,
   type NutritionProfile,
@@ -48,7 +49,7 @@ type CardState = "loading" | "error" | "ready";
 export default function BodyProfileCard() {
   const theme = useTheme();
   const [cardState, setCardState] = useState<CardState>("loading");
-  const [age, setAge] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [sex, setSex] = useState<Sex>("male");
@@ -83,8 +84,8 @@ export default function BodyProfileCard() {
       setHeightUnit(hu);
 
       if (saved) {
-        const profile: NutritionProfile = JSON.parse(saved);
-        setAge(String(profile.age));
+        const profile: NutritionProfile = migrateProfile(JSON.parse(saved));
+        setBirthYear(String(profile.birthYear));
         setWeight(String(profile.weight));
         setHeight(String(profile.height));
         setSex(profile.sex);
@@ -107,8 +108,11 @@ export default function BodyProfileCard() {
 
   function validateField(field: string, value: string): string | null {
     const num = parseFloat(value);
-    if (field === "age") {
-      if (!value || isNaN(num) || num < 1 || num > 120) return "Enter a valid age (1–120)";
+    if (field === "birthYear") {
+      const currentYear = new Date().getFullYear();
+      if (!value || isNaN(num) || !Number.isInteger(num) || num < 1900 || num >= currentYear) {
+        return `Enter a valid birth year (1900–${currentYear - 1})`;
+      }
     } else if (field === "weight") {
       if (!value || isNaN(num) || num <= 0) return "Enter a valid weight";
     } else if (field === "height") {
@@ -118,20 +122,20 @@ export default function BodyProfileCard() {
   }
 
   async function saveProfile(
-    ageVal: string, weightVal: string, heightVal: string,
+    birthYearVal: string, weightVal: string, heightVal: string,
     sexVal: Sex, actVal: ActivityLevel, goalVal: Goal,
   ) {
-    const ageErr = validateField("age", ageVal);
+    const birthYearErr = validateField("birthYear", birthYearVal);
     const weightErr = validateField("weight", weightVal);
     const heightErr = validateField("height", heightVal);
 
-    if (ageErr || weightErr || heightErr) {
+    if (birthYearErr || weightErr || heightErr) {
       return;
     }
 
     try {
       const profile: NutritionProfile = {
-        age: parseFloat(ageVal),
+        birthYear: parseInt(birthYearVal, 10),
         weight: parseFloat(weightVal),
         height: parseFloat(heightVal),
         sex: sexVal,
@@ -150,12 +154,12 @@ export default function BodyProfileCard() {
   }
 
   function debouncedSave(
-    ageVal: string, weightVal: string, heightVal: string,
+    birthYearVal: string, weightVal: string, heightVal: string,
     sexVal: Sex, actVal: ActivityLevel, goalVal: Goal,
   ) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveProfile(ageVal, weightVal, heightVal, sexVal, actVal, goalVal);
+      saveProfile(birthYearVal, weightVal, heightVal, sexVal, actVal, goalVal);
     }, 300);
   }
 
@@ -171,7 +175,7 @@ export default function BodyProfileCard() {
       return next;
     });
     if (!err) {
-      saveProfile(age, weight, height, sex, activityLevel, goal);
+      saveProfile(birthYear, weight, height, sex, activityLevel, goal);
     }
   }
 
@@ -187,7 +191,7 @@ export default function BodyProfileCard() {
     else if (field === "activityLevel") { newAct = value as ActivityLevel; setActivityLevel(newAct); }
     else if (field === "goal") { newGoal = value as Goal; setGoal(newGoal); }
 
-    debouncedSave(age, weight, height, newSex, newAct, newGoal);
+    debouncedSave(birthYear, weight, height, newSex, newAct, newGoal);
   }
 
   if (cardState === "loading") {
@@ -229,20 +233,21 @@ export default function BodyProfileCard() {
           </Text>
 
           <TextInput
-            label="Age"
-            value={age}
-            onChangeText={setAge}
-            onBlur={() => handleFieldBlur("age", age)}
+            label="Birth Year"
+            value={birthYear}
+            onChangeText={setBirthYear}
+            onBlur={() => handleFieldBlur("birthYear", birthYear)}
             keyboardType="numeric"
             mode="outlined"
             style={styles.input}
-            accessibilityLabel="Age in years"
-            accessibilityHint="Enter your age for calorie calculation"
-            error={!!errors.age}
+            placeholder="1990"
+            accessibilityLabel="Birth year"
+            accessibilityHint="Enter your birth year for calorie calculation"
+            error={!!errors.birthYear}
           />
-          {errors.age ? (
+          {errors.birthYear ? (
             <Text style={[styles.errorText, { color: theme.colors.error }]} accessibilityLiveRegion="polite">
-              {errors.age}
+              {errors.birthYear}
             </Text>
           ) : null}
 

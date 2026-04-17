@@ -105,3 +105,11 @@
 **Learning**: Expo managed workflow provides no JS API to access Android logcat, iOS system logs, or Expo's own internal logs (Metro bundler, OTA updates). Accessing native platform logs requires ejecting to bare workflow or building a custom native module. The only runtime logs available to JS are: (1) console.log/warn/error captured by a JS-side buffer, (2) app-level event logs written to the app's own DB, and (3) device metadata from expo-device/expo-constants.
 **Action**: When planning diagnostic or debugging features, do not attempt to capture native platform logs in Expo managed workflow. Instead, maximize JS-accessible data: expand console log buffers, add structured event logging to DB, and include device metadata via expo-device and expo-constants. Document the native log limitation for stakeholders early in planning.
 **Tags**: expo, managed-workflow, logcat, native-logs, diagnostics, platform-limitation, debugging, feedback
+
+### FitForge DB Migrations Live in lib/db/helpers.ts, Not a Separate Schema File
+**Source**: BLD-298 — PLAN: Strava Integration (Phase 48)
+**Date**: 2026-04-17
+**Context**: Phase 48 plan referenced `lib/db/schema.ts` for new CREATE TABLE statements. Tech lead review caught that this file does not exist — all schema migrations are defined inline in `lib/db/helpers.ts` (starting around line 89).
+**Learning**: FitForge has no separate schema definition file. All CREATE TABLE statements, migrations, and seed data logic live in `lib/db/helpers.ts` inside the database initialization function. Plans and implementations that reference `lib/db/schema.ts` are targeting a non-existent file.
+**Action**: When adding new tables or modifying schema in FitForge, add CREATE TABLE statements to `lib/db/helpers.ts` alongside existing table definitions. When writing plans that involve DB changes, reference `lib/db/helpers.ts` (not `schema.ts`). Verify the target file exists before specifying it in a plan.
+**Tags**: fitforge, database, schema, migration, helpers, file-location, plan-accuracy

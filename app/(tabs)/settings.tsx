@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Linking, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
+import { AccessibilityInfo, Linking, Platform, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme, Divider } from "react-native-paper";
 import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
@@ -27,6 +27,7 @@ import {
   getSchedule,
   getBodySettings,
   updateBodySettings,
+  getStravaConnection,
 } from "../../lib/db";
 import type { BackupTableName, ExportProgress } from "../../lib/db";
 
@@ -39,6 +40,8 @@ import {
   cancelAll,
   getPermissionStatus,
 } from "../../lib/notifications";
+import { connectStrava, disconnect as disconnectStrava } from "../../lib/strava";
+import ErrorBoundary from "../../components/ErrorBoundary";
 
 const RANGE_BUTTONS = [
   { value: "7", label: "7 days", accessibilityLabel: "Date range 7 days" },
@@ -77,6 +80,11 @@ export default function Settings() {
   const [weightGoal, setWeightGoal] = useState<number | null>(null);
   const [fatGoal, setFatGoal] = useState<number | null>(null);
   const [exportProgress, setExportProgress] = useState<string | null>(null);
+  const [stravaAthlete, setStravaAthlete] = useState<string | null>(null);
+  const [stravaLoading, setStravaLoading] = useState(false);
+  const [hcEnabled, setHcEnabled] = useState(false);
+  const [hcLoading, setHcLoading] = useState(false);
+  const [hcSdkStatus, setHcSdkStatus] = useState<"available" | "needs_install" | "needs_update" | "unavailable">("unavailable");
 
   useFocusEffect(
     useCallback(() => {
@@ -108,6 +116,40 @@ export default function Settings() {
         setPermDenied(perm === "denied");
         setScheduleCount(sched.length);
       }).catch(() => {});
+      if (Platform.OS !== "web") {
+        getStravaConnection().then((conn) => {
+          setStravaAthlete(conn?.athlete_name ?? null);
+        }).catch(() => {});
+      }
+      // Health Connect status check (Android only, dynamic import)
+      if (Platform.OS === "android") {
+        (async () => {
+          try {
+            const { getHealthConnectSdkStatus, checkHealthConnectPermissionStatus } =
+              await import("../../lib/health-connect");
+            const status = await getHealthConnectSdkStatus();
+            setHcSdkStatus(status);
+            if (status === "available") {
+              const setting = await getAppSetting("health_connect_enabled");
+              if (setting === "true") {
+                const hasPermission = await checkHealthConnectPermissionStatus();
+                if (!hasPermission) {
+                  await setAppSetting("health_connect_enabled", "false");
+                  setHcEnabled(false);
+                  setSnack("Health Connect permission was revoked");
+                  AccessibilityInfo.announceForAccessibility("Health Connect permission was revoked");
+                } else {
+                  setHcEnabled(true);
+                }
+              } else {
+                setHcEnabled(false);
+              }
+            }
+          } catch {
+            setHcSdkStatus("unavailable");
+          }
+        })();
+      }
     }, [])
   );
 
@@ -522,6 +564,193 @@ export default function Settings() {
           </Text>
         </Card.Content>
       </Card>
+
+      {Platform.OS !== "web" && (
+        <ErrorBoundary>
+        <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+          <Card.Content>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+              Integrations
+            </Text>
+
+            {stravaAthlete ? (
+              <View>
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                      Strava
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      Connected as {stravaAthlete}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="outlined"
+                    onPress={async () => {
+                      setStravaLoading(true);
+                      try {
+                        await disconnectStrava();
+                        setStravaAthlete(null);
+                        setSnack("Strava disconnected");
+                      } catch {
+                        setSnack("Failed to disconnect Strava");
+                      } finally {
+                        setStravaLoading(false);
+                      }
+                    }}
+                    loading={stravaLoading}
+                    disabled={stravaLoading}
+                    contentStyle={styles.exportBtnContent}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Disconnect Strava account (${stravaAthlete})`}
+                  >
+                    Disconnect
+                  </Button>
+                </View>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                  Completed workouts are automatically uploaded to Strava.
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <Button
+                  mode="contained"
+                  icon="run"
+                  onPress={async () => {
+                    setStravaLoading(true);
+                    try {
+                      const result = await connectStrava();
+                      if (result) {
+                        setStravaAthlete(result.athleteName);
+                        setSnack("Connected to Strava!");
+                      }
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : "Connection failed";
+                      setSnack(msg);
+                    } finally {
+                      setStravaLoading(false);
+                    }
+                  }}
+                  loading={stravaLoading}
+                  disabled={stravaLoading}
+                  contentStyle={styles.exportBtnContent}
+                  accessibilityRole="button"
+                  accessibilityLabel="Connect your Strava account"
+                >
+                  Connect Strava
+                </Button>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
+                  Automatically upload completed workouts to your Strava account.
+                </Text>
+              </View>
+            )}
+
+            {/* Health Connect toggle (Android only) */}
+            {Platform.OS === "android" && hcSdkStatus !== "unavailable" && (
+              <View style={{ marginTop: 16 }}>
+                <Divider style={{ marginBottom: 16 }} />
+                {hcSdkStatus === "available" ? (
+                  <View>
+                    <View style={styles.row}>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                          Health Connect
+                        </Text>
+                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                          {hcEnabled ? "Enabled" : "Disabled"}
+                        </Text>
+                      </View>
+                      <Switch
+                        value={hcEnabled}
+                        disabled={hcLoading}
+                        accessibilityRole="switch"
+                        accessibilityLabel="Sync workouts to Health Connect"
+                        onValueChange={async (value) => {
+                          if (value) {
+                            setHcLoading(true);
+                            try {
+                              const { requestHealthConnectPermission } =
+                                await import("../../lib/health-connect");
+                              const granted = await requestHealthConnectPermission();
+                              if (granted) {
+                                await setAppSetting("health_connect_enabled", "true");
+                                setHcEnabled(true);
+                                setSnack("Health Connect enabled");
+                              } else {
+                                setHcEnabled(false);
+                                setSnack("Health Connect permission required");
+                                AccessibilityInfo.announceForAccessibility(
+                                  "Health Connect permission required"
+                                );
+                              }
+                            } catch {
+                              setHcEnabled(false);
+                              setSnack("Failed to enable Health Connect");
+                            } finally {
+                              setHcLoading(false);
+                            }
+                          } else {
+                            setHcLoading(true);
+                            try {
+                              const { disableHealthConnect } =
+                                await import("../../lib/health-connect");
+                              await disableHealthConnect();
+                              setHcEnabled(false);
+                              setSnack("Health Connect disabled");
+                            } catch {
+                              setSnack("Failed to disable Health Connect");
+                            } finally {
+                              setHcLoading(false);
+                            }
+                          }
+                        }}
+                      />
+                    </View>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                      Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.
+                    </Text>
+                  </View>
+                ) : (
+                  <View>
+                    <View style={styles.row}>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                          Health Connect
+                        </Text>
+                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                          {hcSdkStatus === "needs_update" ? "Update required" : "Not installed"}
+                        </Text>
+                      </View>
+                      <Button
+                        mode="outlined"
+                        icon="heart-pulse"
+                        onPress={() => {
+                          import("../../lib/health-connect").then(({ openHealthConnectPlayStore }) =>
+                            openHealthConnectPlayStore()
+                          );
+                        }}
+                        contentStyle={{ minHeight: 48 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          hcSdkStatus === "needs_update"
+                            ? "Update Health Connect"
+                            : "Install Health Connect from Play Store"
+                        }
+                      >
+                        {hcSdkStatus === "needs_update" ? "Update" : "Install"}
+                      </Button>
+                    </View>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                      Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </Card.Content>
+        </Card>
+        </ErrorBoundary>
+      )}
 
       <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>

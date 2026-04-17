@@ -86,6 +86,12 @@ jest.mock('../../lib/db', () => ({
   getSchedule: jest.fn().mockResolvedValue([]),
   getTemplates: jest.fn().mockResolvedValue([]),
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
+  getStravaConnection: jest.fn().mockResolvedValue(null),
+}))
+
+jest.mock('../../lib/strava', () => ({
+  connectStrava: jest.fn().mockResolvedValue(null),
+  disconnect: jest.fn().mockResolvedValue(undefined),
 }))
 
 import Settings from '../../app/(tabs)/settings'

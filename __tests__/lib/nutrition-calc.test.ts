@@ -4,6 +4,7 @@ import {
   calculateMacros,
   calculateFromProfile,
   convertToMetric,
+  migrateProfile,
   type NutritionProfile,
 } from "../../lib/nutrition-calc";
 
@@ -123,8 +124,9 @@ describe("nutrition-calc", () => {
   });
 
   describe("calculateFromProfile", () => {
+    const currentYear = new Date().getFullYear();
     const baseProfile: NutritionProfile = {
-      age: 30,
+      birthYear: currentYear - 30,
       weight: 75,
       height: 175,
       sex: "male",
@@ -174,11 +176,35 @@ describe("nutrition-calc", () => {
 
     it("end-to-end: 30yo 75kg 175cm male, moderately active, maintaining", () => {
       const result = calculateFromProfile(baseProfile);
+      // birthYear = currentYear - 30 → age = 30
       // BMR = 10*75 + 6.25*175 - 5*30 + 5 = 1698.75
       // TDEE = 1698.75 * 1.55 = 2633.06
       // calories = round(2633.06) = 2633
       expect(result.calories).toBe(2633);
       expect(result.protein).toBe(165); // 75 * 2.2
+    });
+  });
+
+  describe("migrateProfile", () => {
+    it("converts legacy age to birthYear", () => {
+      const currentYear = new Date().getFullYear();
+      const legacy = { age: 30, weight: 75, height: 175, sex: "male", activityLevel: "moderately_active", goal: "maintain", weightUnit: "kg", heightUnit: "cm" };
+      const migrated = migrateProfile(legacy);
+      expect(migrated.birthYear).toBe(currentYear - 30);
+      expect((migrated as unknown as Record<string, unknown>).age).toBeUndefined();
+    });
+
+    it("keeps birthYear if already present", () => {
+      const modern = { birthYear: 1990, weight: 75, height: 175, sex: "male", activityLevel: "moderately_active", goal: "maintain", weightUnit: "kg", heightUnit: "cm" };
+      const migrated = migrateProfile(modern);
+      expect(migrated.birthYear).toBe(1990);
+    });
+
+    it("prefers birthYear over age when both present", () => {
+      const both = { birthYear: 1990, age: 50, weight: 75, height: 175, sex: "male", activityLevel: "moderately_active", goal: "maintain", weightUnit: "kg", heightUnit: "cm" };
+      const migrated = migrateProfile(both);
+      expect(migrated.birthYear).toBe(1990);
+      expect((migrated as unknown as Record<string, unknown>).age).toBeUndefined();
     });
   });
 });

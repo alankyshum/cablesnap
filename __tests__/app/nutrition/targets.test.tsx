@@ -91,7 +91,7 @@ describe("Targets Screen", () => {
 
   it("shows update profile CTA with summary when profile exists", async () => {
     const profile = JSON.stringify({
-      age: 30,
+      birthYear: 1996,
       weight: 75,
       height: 175,
       sex: "male",
@@ -139,7 +139,7 @@ describe("Targets Screen", () => {
 
   it("resets to profile-calculated values when profile exists", async () => {
     const profile = JSON.stringify({
-      age: 30,
+      birthYear: 1996,
       weight: 75,
       height: 175,
       sex: "male",

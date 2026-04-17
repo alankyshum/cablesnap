@@ -83,6 +83,19 @@ jest.mock('../../lib/db', () => ({
   getFavoriteFoods: (...args: unknown[]) => mockGetFavorites(...(args as [])),
 }))
 
+jest.mock('../../components/InlineFoodSearch', () => {
+  const RealReact = require('react')
+  return {
+    __esModule: true,
+    default: () => {
+      const { View, Text } = require('react-native')
+      return RealReact.createElement(View, { testID: 'inline-food-search' },
+        RealReact.createElement(Text, {}, 'Inline Food Search')
+      )
+    },
+  }
+})
+
 import Nutrition from '../../app/(tabs)/nutrition'
 
 // --- Tests ---
@@ -145,12 +158,27 @@ describe('Nutrition Logging', () => {
     })
   })
 
-  it('add food FAB has a11y label and navigates', async () => {
-    const { findByText, getByLabelText } = renderScreen(<Nutrition />)
+  it('add food FAB toggles inline search card', async () => {
+    const { findByText, getByLabelText, queryByTestId } = renderScreen(<Nutrition />)
     await findByText('Today')
-    const fab = getByLabelText('Add food')
-    fireEvent.press(fab)
-    expect(mockRouter.push).toHaveBeenCalledWith(expect.stringContaining('/nutrition/add?date='))
+
+    // Initially no inline card
+    expect(queryByTestId('inline-food-search')).toBeNull()
+
+    // Tap FAB to open inline card
+    fireEvent.press(getByLabelText('Add food'))
+    await waitFor(() => {
+      expect(queryByTestId('inline-food-search')).toBeTruthy()
+    })
+
+    // FAB label changes to close
+    expect(getByLabelText('Close add food')).toBeTruthy()
+
+    // Tap again to close
+    fireEvent.press(getByLabelText('Close add food'))
+    await waitFor(() => {
+      expect(queryByTestId('inline-food-search')).toBeNull()
+    })
   })
 
   it('edit targets link has a11y label', async () => {

@@ -1446,6 +1446,27 @@ export default function ActiveSession() {
       async () => {
         await completeSession(id!);
 
+        // Strava sync (non-blocking — never prevents workout completion)
+        try {
+          const { syncSessionToStrava } = await import("../../lib/strava");
+          const synced = await syncSessionToStrava(id!);
+          if (synced) {
+            setSnackbar("Synced to Strava ✓");
+          }
+        } catch {
+          setSnackbar("Strava sync failed");
+        }
+
+        // Health Connect sync (non-blocking, silent — no toast on success or failure)
+        if (Platform.OS === "android") {
+          try {
+            const { syncToHealthConnect } = await import("../../lib/health-connect");
+            await syncToHealthConnect(id!);
+          } catch {
+            // HC sync is silent — failures logged to sync table for retry
+          }
+        }
+
         try {
           const dayId = await getSessionProgramDayId(id!);
           if (dayId) {
@@ -1801,6 +1822,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 4,
     paddingHorizontal: 4,
+    minHeight: 28,
   },
   setRow: {
     flexDirection: "row",
@@ -1831,13 +1853,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 8,
+    marginHorizontal: 12,
   },
   colLabel: {
     flex: 1,
     textAlign: "center",
     fontSize: 12,
-    marginHorizontal: 8,
+    marginHorizontal: 12,
   },
   colCheck: {
     width: 32,
@@ -1885,7 +1907,8 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   detailsBtn: {
-    marginLeft: -16,
+    marginLeft: -12,
+    marginRight: -8,
   },
   divider: {
     marginTop: 8,

@@ -22,7 +22,7 @@ export interface MacroTargets {
 }
 
 export interface NutritionProfile {
-  age: number;
+  birthYear: number;
   weight: number;
   height: number;
   sex: Sex;
@@ -94,6 +94,20 @@ export function calculateMacros(
   return { calories, protein, carbs, fat };
 }
 
+/**
+ * Migrate a legacy profile that used `age` to the new `birthYear` format.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- handles legacy profile shape
+export function migrateProfile(raw: any): NutritionProfile {
+  const { age: legacyAge, ...rest } = raw;
+  if (rest.birthYear !== undefined && rest.birthYear !== null) {
+    return rest as NutritionProfile;
+  }
+  const currentYear = new Date().getFullYear();
+  const birthYear = currentYear - (Number(legacyAge) || 0);
+  return { ...rest, birthYear } as NutritionProfile;
+}
+
 export function calculateFromProfile(profile: NutritionProfile): MacroTargets & { belowFloor: boolean } {
   const { weight_kg, height_cm } = convertToMetric(
     profile.weight,
@@ -102,7 +116,8 @@ export function calculateFromProfile(profile: NutritionProfile): MacroTargets & 
     profile.heightUnit
   );
 
-  const bmr = calculateBMR(weight_kg, height_cm, profile.age, profile.sex);
+  const age = new Date().getFullYear() - profile.birthYear;
+  const bmr = calculateBMR(weight_kg, height_cm, age, profile.sex);
   const tdee = calculateTDEE(bmr, profile.activityLevel);
   const rawCalories = tdee + GOAL_ADJUSTMENTS[profile.goal];
   const belowFloor = rawCalories < CALORIE_FLOOR;

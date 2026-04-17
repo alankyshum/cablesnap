@@ -61,6 +61,19 @@ jest.mock('../../lib/db', () => ({
   getFavoriteFoods: (...args: unknown[]) => mockGetFavoriteFoods(...args),
 }))
 
+jest.mock('../../components/InlineFoodSearch', () => {
+  const RealReact = require('react')
+  return {
+    __esModule: true,
+    default: () => {
+      const { View, Text } = require('react-native')
+      return RealReact.createElement(View, { testID: 'inline-food-search' },
+        RealReact.createElement(Text, {}, 'Inline Food Search')
+      )
+    },
+  }
+})
+
 import Nutrition from '../../app/(tabs)/nutrition'
 
 const { router: mockGlobalRouter } = require('expo-router')
@@ -123,13 +136,16 @@ describe('Nutrition Tracking Acceptance', () => {
     expect(await findByText(/Tap \+ to add your first meal\./)).toBeTruthy()
   })
 
-  it('navigates to add food via FAB', async () => {
-    const { findByLabelText } = renderScreen(<Nutrition />)
+  it('toggles inline search card via FAB', async () => {
+    const { findByLabelText, queryByTestId } = renderScreen(<Nutrition />)
 
     const fab = await findByLabelText('Add food')
-    fireEvent.press(fab)
+    expect(queryByTestId('inline-food-search')).toBeNull()
 
-    expect(mockGlobalRouter.push).toHaveBeenCalledWith(expect.stringContaining('/nutrition/add?date='))
+    fireEvent.press(fab)
+    await waitFor(() => {
+      expect(queryByTestId('inline-food-search')).toBeTruthy()
+    })
   })
 
   it('shows Today label for current date', async () => {

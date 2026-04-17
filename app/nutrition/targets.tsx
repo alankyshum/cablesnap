@@ -6,6 +6,7 @@ import { useLayout } from "../../lib/layout";
 import { getAppSetting, getMacroTargets, updateMacroTargets } from "../../lib/db";
 import {
   calculateFromProfile,
+  migrateProfile,
   ACTIVITY_LABELS,
   GOAL_LABELS,
   type NutritionProfile,
@@ -30,7 +31,7 @@ export default function Targets() {
         setFat(String(t.fat));
       });
       getAppSetting("nutrition_profile").then((saved) => {
-        setProfile(saved ? JSON.parse(saved) : null);
+        setProfile(saved ? migrateProfile(JSON.parse(saved)) : null);
       });
     }, [])
   );
@@ -66,7 +67,7 @@ export default function Targets() {
   };
 
   const profileSummary = profile
-    ? profile.age + "yo, " + profile.weight + profile.weightUnit + ", " +
+    ? (new Date().getFullYear() - profile.birthYear) + "yo, " + profile.weight + profile.weightUnit + ", " +
       ACTIVITY_LABELS[profile.activityLevel].toLowerCase() + ", " +
       GOAL_LABELS[profile.goal].toLowerCase()
     : null;

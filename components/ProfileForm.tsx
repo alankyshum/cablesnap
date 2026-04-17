@@ -13,6 +13,7 @@ import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
 import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
 import {
   calculateFromProfile,
+  migrateProfile,
   ACTIVITY_LABELS,
   GOAL_LABELS,
   type ActivityLevel,
@@ -41,7 +42,7 @@ export interface ProfileFormProps {
 
 export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyChange }: ProfileFormProps) {
   const theme = useTheme();
-  const [age, setAge] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [sex, setSex] = useState<Sex>("male");
@@ -77,15 +78,15 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
         setHeightUnit(hu);
 
         if (saved) {
-          const profile: NutritionProfile = typeof saved === "string" ? JSON.parse(saved) : saved;
-          setAge(String(profile.age));
+          const profile: NutritionProfile = migrateProfile(typeof saved === "string" ? JSON.parse(saved) : saved);
+          setBirthYear(String(profile.birthYear));
           setWeight(String(profile.weight));
           setHeight(String(profile.height));
           setSex(profile.sex);
           setActivityLevel(profile.activityLevel);
           setGoal(profile.goal);
           initialSnapshot.current = JSON.stringify({
-            age: String(profile.age),
+            birthYear: String(profile.birthYear),
             weight: String(profile.weight),
             height: String(profile.height),
             sex: profile.sex,
@@ -97,7 +98,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
             setWeight(String(latestWeight.weight));
           }
           initialSnapshot.current = JSON.stringify({
-            age: "",
+            birthYear: "",
             weight: latestWeight ? String(latestWeight.weight) : "",
             height: "",
             sex: "male",
@@ -119,18 +120,19 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
   // Track dirty state
   useEffect(() => {
     if (!loaded || !onDirtyChange) return;
-    const current = JSON.stringify({ age, weight, height, sex, activityLevel, goal });
+    const current = JSON.stringify({ birthYear, weight, height, sex, activityLevel, goal });
     onDirtyChange(current !== initialSnapshot.current);
-  }, [age, weight, height, sex, activityLevel, goal, loaded, onDirtyChange]);
+  }, [birthYear, weight, height, sex, activityLevel, goal, loaded, onDirtyChange]);
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    const ageNum = parseFloat(age);
+    const birthYearNum = parseInt(birthYear, 10);
     const weightNum = parseFloat(weight);
     const heightNum = parseFloat(height);
+    const currentYear = new Date().getFullYear();
 
-    if (!age || isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
-      e.age = "Enter a valid age (1–120)";
+    if (!birthYear || isNaN(birthYearNum) || birthYearNum < 1900 || birthYearNum >= currentYear) {
+      e.birthYear = `Enter a valid birth year (1900–${currentYear - 1})`;
     }
     if (!weight || isNaN(weightNum) || weightNum <= 0) {
       e.weight = "Enter a valid weight";
@@ -148,7 +150,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
     setSaveError(null);
     try {
       const profile: NutritionProfile = {
-        age: parseFloat(age),
+        birthYear: parseInt(birthYear, 10),
         weight: parseFloat(weight),
         height: parseFloat(height),
         sex,
@@ -203,22 +205,23 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       </Text>
 
       <TextInput
-        label="Age"
-        value={age}
-        onChangeText={setAge}
+        label="Birth Year"
+        value={birthYear}
+        onChangeText={setBirthYear}
         keyboardType="numeric"
         mode="outlined"
         style={styles.input}
-        accessibilityLabel="Age in years"
-        accessibilityHint="Enter your age for calorie calculation"
-        error={!!errors.age}
+        placeholder="1990"
+        accessibilityLabel="Birth year"
+        accessibilityHint="Enter your birth year for calorie calculation"
+        error={!!errors.birthYear}
       />
-      {errors.age ? (
+      {errors.birthYear ? (
         <Text
           style={[styles.errorText, { color: theme.colors.error }]}
           accessibilityLiveRegion="polite"
         >
-          {errors.age}
+          {errors.birthYear}
         </Text>
       ) : null}
 

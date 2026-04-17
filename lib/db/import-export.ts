@@ -414,6 +414,19 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       return r.changes > 0;
     }
     case "app_settings": {
+      // Migrate nutrition_profile from age to birthYear on import
+      if (row.key === "nutrition_profile" && typeof row.value === "string") {
+        try {
+          const parsed = JSON.parse(row.value);
+          if (parsed.age !== undefined && parsed.birthYear === undefined) {
+            const { migrateProfile } = require("../nutrition-calc");
+            const migrated = migrateProfile(parsed);
+            row = { ...row, value: JSON.stringify(migrated) };
+          }
+        } catch {
+          // Invalid JSON — import as-is
+        }
+      }
       const r = await database.runAsync(
         "INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)",
         [row.key, row.value]

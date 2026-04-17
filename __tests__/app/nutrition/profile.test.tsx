@@ -77,7 +77,7 @@ describe("Profile Screen", () => {
     const { findByText, getByLabelText } = renderScreen(<ProfileScreen />);
 
     expect(await findByText("Your Profile")).toBeTruthy();
-    expect(getByLabelText("Age in years")).toBeTruthy();
+    expect(getByLabelText("Birth year")).toBeTruthy();
     expect(getByLabelText("Weight in kg")).toBeTruthy();
     expect(getByLabelText("Height in cm")).toBeTruthy();
     expect(getByLabelText("Calculate and save nutrition targets")).toBeTruthy();
@@ -95,7 +95,7 @@ describe("Profile Screen", () => {
 
   it("loads saved profile data", async () => {
     const savedProfile = JSON.stringify({
-      age: 30,
+      birthYear: 1996,
       weight: 80,
       height: 180,
       sex: "male",
@@ -108,9 +108,9 @@ describe("Profile Screen", () => {
 
     const { findByLabelText } = renderScreen(<ProfileScreen />);
 
-    const ageInput = await findByLabelText("Age in years");
+    const birthYearInput = await findByLabelText("Birth year");
     await waitFor(() => {
-      expect(ageInput.props.value).toBe("30");
+      expect(birthYearInput.props.value).toBe("1996");
     });
   });
 
@@ -122,7 +122,8 @@ describe("Profile Screen", () => {
     const { fireEvent } = require("@testing-library/react-native");
     fireEvent.press(saveBtn);
 
-    expect(await findByText("Enter a valid age (1–120)")).toBeTruthy();
+    const currentYear = new Date().getFullYear();
+    expect(await findByText(`Enter a valid birth year (1900–${currentYear - 1})`)).toBeTruthy();
     expect(await findByText("Enter a valid weight")).toBeTruthy();
     expect(await findByText("Enter a valid height")).toBeTruthy();
     expect(mockSetAppSetting).not.toHaveBeenCalled();

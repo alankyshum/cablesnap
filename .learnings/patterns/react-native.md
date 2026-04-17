@@ -449,3 +449,43 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: FlashList re-mounts `ListHeaderComponent` when it receives a new function reference. An inline `header()` function creates a new reference on every render. Any TextInput inside the header loses focus on re-mount, dismissing the keyboard. This applies to `ListFooterComponent` as well.
 **Action**: Never place TextInput inside FlashList's `ListHeaderComponent` or `ListFooterComponent` when those are defined as inline functions. Either (1) render the TextInput above the FlashList as a sibling, or (2) memoize the header component with `useMemo`/`React.memo` to maintain referential stability. Prefer option (1) — it eliminates the class of bugs entirely.
 **Tags**: flashlist, keyboard-dismiss, ListHeaderComponent, referential-stability, useMemo, TextInput, re-mount, react-native
+
+### JSON Settings Field Migration Requires Centralized Transform at ALL Read Sites
+**Source**: BLD-296 — Replace age with birth year in body profile (GitHub #161)
+**Date**: 2026-04-17
+**Context**: The nutrition profile stored as JSON in `app_settings` changed from `age: number` to `birthYear: number`. Unlike SQL column migrations (one-time ALTER TABLE), JSON settings have no schema enforcement — every read site must handle both old and new formats.
+**Learning**: When renaming or restructuring fields in JSON-serialized app_settings values, create a centralized `migrateX()` function that: (1) checks for the new field first, (2) computes the new field from the old if absent, (3) strips the old field. This function must be called at EVERY load point — component mount, screen load, AND the import/export path. Missing a single read site causes silent data bugs.
+**Action**: For any JSON settings field change: (1) create a typed migration function (e.g., `migrateProfile(raw: any): NutritionProfile`), (2) grep for ALL `getAppSetting("<key>")` calls and wrap every `JSON.parse()` with the migration, (3) add migration to `import-export.ts` `insertRow` for the relevant settings key, (4) write explicit tests for legacy→new, modern→passthrough, and both-present→preference scenarios.
+**Tags**: app-settings, json-migration, data-migration, field-rename, import-export, nutrition-profile, backward-compatibility
+
+### FlashList renderItem Must Return a Single View-Based Root — Not a Fragment
+**Source**: BLD-295 — Inline food search on nutrition tab (Part B)
+**Date**: 2026-04-17
+**Context**: The inline food search component needed a labeled separator between local and online search results inside a FlashList. The initial instinct was to wrap the separator label and result item in a React Fragment (`<>...</>`), but this breaks FlashList's internal height estimation.
+**Learning**: FlashList relies on measuring the root element of each rendered item to calculate layout. React Fragments produce multiple sibling nodes with no single measurable root, which breaks FlashList's height estimation and causes rendering glitches (blank spaces, overlapping items, incorrect scroll positions). This constraint applies to `renderItem`, `ListHeaderComponent`, and `ListFooterComponent`.
+**Action**: Always return a single `<View>` wrapper (not `<>...</>`) from FlashList's `renderItem` when the item needs to render multiple elements (e.g., a separator label above the item). When reviewing PRs that use FlashList, flag any Fragment usage in renderItem as a MAJOR finding.
+**Tags**: flashlist, fragment, renderitem, view, height-estimation, shopify, react-native, list
+
+### Dynamic import() for Native-Only Module Isolation in Cross-Platform Apps
+**Source**: BLD-299 — Implement Strava Integration (Phase 48)
+**Date**: 2026-04-17
+**Context**: The Strava integration module (`lib/strava.ts`) imports `expo-auth-session`, `expo-web-browser`, and `expo-secure-store` at the top level — all native-only packages. A static import of this module anywhere in the app (e.g., `import { syncSessionToStrava } from "../lib/strava"`) would cause web builds to fail at module resolution time, even if the call site is guarded by `Platform.OS !== "web"`.
+**Learning**: When a module has top-level imports of native-only dependencies, `Platform.OS` guards at the call site are insufficient — the static import itself triggers module resolution and fails on web. Use `await import("./module")` at each call site to defer module loading until runtime, ensuring the native-only module tree is never loaded on web. This applies to any cross-platform Expo app where some features are native-only.
+**Action**: When a feature module imports native-only Expo packages at the top level, never use static imports from consuming code. Instead, use `const { fn } = await import("./module")` inside a `Platform.OS !== "web"` guard. Apply this pattern in both UI components (settings, session) and lifecycle hooks (_layout.tsx startup).
+**Tags**: dynamic-import, platform-gating, native-only, web, expo, cross-platform, module-resolution, import
+
+### Health Connect SDK Requires Four Setup Steps Beyond the NPM Package
+**Source**: BLD-301 — PLAN: Health Connect Integration (Phase 49)
+**Date**: 2026-04-17
+**Context**: Tech Lead review of the Health Connect integration plan caught two Critical issues where the plan omitted mandatory SDK setup steps. Without these, the integration compiles but crashes at runtime.
+**Learning**: `react-native-health-connect` requires four specific setup steps: (1) `expo-health-connect` config plugin in `app.config.ts` for AndroidManifest permissions and Health Connect activity declaration, (2) `expo-build-properties` config plugin with `minSdkVersion: 26` (Health Connect SDK minimum), (3) an `initialize()` call before ANY Health Connect API use — without it, all subsequent calls throw, (4) `clientRecordId` metadata on every inserted record for deduplication — without it, retries create duplicate records. Permission strings use bare names (e.g., `WRITE_EXERCISE`) without the `android.permission.health.` prefix.
+**Action**: When integrating Health Connect: add all three Expo config plugins first (`expo-health-connect`, `expo-build-properties`, the health-connect npm package), create an `ensureInitialized()` guard that wraps `initialize()` with a singleton flag and call it before every API operation, and always include `clientRecordId: "fitforge-{entityId}"` in record metadata for idempotent writes.
+**Tags**: health-connect, expo, android, sdk-setup, config-plugin, initialization, deduplication, react-native
+
+### Android SDK Feature Availability Is a Four-State Machine — UX Must Branch on All States
+**Source**: BLD-301 — PLAN: Health Connect Integration (Phase 49)
+**Date**: 2026-04-17
+**Context**: Quality Director review found that the initial Health Connect plan treated SDK availability as binary (available/not). Android SDK features like Health Connect actually have four distinct states with different UX requirements, based on OS version and app installation status.
+**Learning**: Android-only SDK features (Health Connect, Google Play Services features, etc.) have four availability states, not two: (1) **Unavailable** — Android version too old (e.g., API < 28 for Health Connect) → hide the feature entirely, (2) **Needs install** — OS supports it but companion app not installed (e.g., HC on Android 9–13) → show "Install" button with Play Store deep link, (3) **Needs update** — app installed but SDK version incompatible (`SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED`) → show "Update" button, (4) **Available** — ready to use (e.g., HC built into Android 14+) → show feature toggle. Use `getSdkStatus()` to determine the state and branch UX accordingly.
+**Action**: When adding any Android-only SDK feature, define the UX for all four availability states before implementation. Use the SDK's status/availability API (e.g., `getSdkStatus()`) to determine which state the device is in. Never treat availability as boolean — always handle the "needs install" and "needs update" intermediate states with actionable UI (deep links to Play Store). Platform-gate the entire feature on iOS and web.
+**Tags**: android, sdk-availability, state-machine, platform-gating, health-connect, play-store, ux-branching, conditional-ui

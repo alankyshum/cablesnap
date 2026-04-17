@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { SectionList, StyleSheet, View } from "react-native";
+import { LayoutAnimation, SectionList, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import {
   Button,
@@ -15,6 +15,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { router, useFocusEffect } from "expo-router";
+import InlineFoodSearch from "../../components/InlineFoodSearch";
 import {
   getDailyLogs,
   getDailySummary,
@@ -54,6 +55,7 @@ export default function Nutrition() {
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const [snack, setSnack] = useState("");
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [showAddCard, setShowAddCard] = useState(false);
 
   // Inline add-form state (tablet only)
   const [name, setName] = useState("");
@@ -86,8 +88,8 @@ export default function Nutrition() {
     }, [load, layout.atLeastMedium])
   );
 
-  const prev = () => setDate((d) => new Date(d.getTime() - DAY_MS));
-  const next = () => setDate((d) => new Date(d.getTime() + DAY_MS));
+  const prev = () => { setDate((d) => new Date(d.getTime() - DAY_MS)); setShowAddCard(false); };
+  const next = () => { setDate((d) => new Date(d.getTime() + DAY_MS)); setShowAddCard(false); };
 
   const remove = async (log: DailyLog) => {
     if (deleted.current) clearTimeout(deleted.current.timer);
@@ -102,7 +104,7 @@ export default function Nutrition() {
     load();
   };
 
-  const undo = async () => {
+  const undo = useCallback(async () => {
     if (!deleted.current) return;
     clearTimeout(deleted.current.timer);
     const dl = deleted.current.log;
@@ -110,7 +112,7 @@ export default function Nutrition() {
     deleted.current = null;
     setSnack("");
     load();
-  };
+  }, [load]);
 
   const inlineSave = async () => {
     if (!name.trim()) return;
@@ -324,6 +326,32 @@ export default function Nutrition() {
     />
   );
 
+  const toggleAddCard = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowAddCard((v) => !v);
+  }, []);
+
+  const undoRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleFoodLogged = useCallback(() => {
+    load();
+  }, [load]);
+
+  const handleSnack = useCallback((message: string, undoFn?: () => Promise<void>) => {
+    undoRef.current = undoFn ?? null;
+    setSnack(message);
+  }, []);
+
+  const handleUndo = useCallback(async () => {
+    if (undoRef.current) {
+      await undoRef.current();
+      undoRef.current = null;
+    } else {
+      await undo();
+    }
+    setSnack("");
+  }, [undo]);
+
   if (layout.atLeastMedium) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
@@ -337,7 +365,7 @@ export default function Nutrition() {
           visible={!!snack}
           onDismiss={() => setSnack("")}
           duration={4000}
-          action={{ label: "Undo", onPress: undo }}
+          action={{ label: "Undo", onPress: handleUndo }}
         >
           {snack}
         </Snackbar>
@@ -349,19 +377,29 @@ export default function Nutrition() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {logContent}
 
+      {showAddCard && (
+        <View style={styles.inlineCardOverlay}>
+          <InlineFoodSearch
+            dateKey={formatDateKey(date.getTime())}
+            onFoodLogged={handleFoodLogged}
+            onSnack={handleSnack}
+          />
+        </View>
+      )}
+
       <FAB
-        icon="plus"
+        icon={showAddCard ? "close" : "plus"}
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         color={theme.colors.onPrimary}
-        onPress={() => router.push(`/nutrition/add?date=${formatDateKey(date.getTime())}`)}
-        accessibilityLabel="Add food"
+        onPress={toggleAddCard}
+        accessibilityLabel={showAddCard ? "Close add food" : "Add food"}
       />
 
       <Snackbar
         visible={!!snack}
         onDismiss={() => setSnack("")}
         duration={4000}
-        action={{ label: "Undo", onPress: undo }}
+        action={{ label: "Undo", onPress: handleUndo }}
       >
         {snack}
       </Snackbar>
@@ -416,6 +454,7 @@ const styles = StyleSheet.create({
   foodCard: { marginBottom: 6, borderRadius: 8 },
   foodRow: { flexDirection: "row", alignItems: "center" },
   fab: { position: "absolute", right: 16, bottom: 16 },
+  inlineCardOverlay: { position: "absolute", left: 0, right: 0, bottom: 80, zIndex: 1 },
   macro: { marginBottom: 8 },
   macroHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   bar: { height: 6, borderRadius: radii.sm },

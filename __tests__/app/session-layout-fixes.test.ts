@@ -14,20 +14,21 @@ const src = fs.readFileSync(
 
 describe("workout session layout fixes (BLD-293)", () => {
   describe("Fix 1: Details button left alignment", () => {
-    it("detailsBtn has marginLeft of -16 or more negative", () => {
+    it("detailsBtn has marginLeft to align text with exercise name", () => {
       const match = src.match(/detailsBtn:\s*\{[^}]*marginLeft:\s*(-?\d+)/);
       expect(match).not.toBeNull();
       const margin = parseInt(match![1], 10);
-      expect(margin).toBeLessThanOrEqual(-12);
+      expect(margin).toBeLessThanOrEqual(-8);
+      expect(margin).toBeGreaterThanOrEqual(-16);
     });
   });
 
   describe("Fix 2: Weight/Reps picker column spacing", () => {
-    it("pickerCol has marginHorizontal of at least 6", () => {
+    it("pickerCol has marginHorizontal of at least 12", () => {
       const match = src.match(/pickerCol:\s*\{[^}]*marginHorizontal:\s*(\d+)/);
       expect(match).not.toBeNull();
       const margin = parseInt(match![1], 10);
-      expect(margin).toBeGreaterThanOrEqual(6);
+      expect(margin).toBeGreaterThanOrEqual(12);
     });
 
     it("colLabel marginHorizontal matches pickerCol spacing", () => {
@@ -48,6 +49,12 @@ describe("workout session layout fixes (BLD-293)", () => {
 
     it("SetRow Pressable has minHeight: 36 inline for touch target", () => {
       expect(src).toMatch(/style=\{\[styles\.colSet,\s*\{\s*minHeight:\s*36\s*\}\]/);
+    });
+
+    it("headerRow has minHeight for consistent label alignment", () => {
+      const match = src.match(/headerRow:\s*\{[^}]*minHeight:\s*(\d+)/);
+      expect(match).not.toBeNull();
+      expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(24);
     });
   });
 });
