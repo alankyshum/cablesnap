@@ -449,3 +449,11 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: FlashList re-mounts `ListHeaderComponent` when it receives a new function reference. An inline `header()` function creates a new reference on every render. Any TextInput inside the header loses focus on re-mount, dismissing the keyboard. This applies to `ListFooterComponent` as well.
 **Action**: Never place TextInput inside FlashList's `ListHeaderComponent` or `ListFooterComponent` when those are defined as inline functions. Either (1) render the TextInput above the FlashList as a sibling, or (2) memoize the header component with `useMemo`/`React.memo` to maintain referential stability. Prefer option (1) — it eliminates the class of bugs entirely.
 **Tags**: flashlist, keyboard-dismiss, ListHeaderComponent, referential-stability, useMemo, TextInput, re-mount, react-native
+
+### JSON Settings Field Migration Requires Centralized Transform at ALL Read Sites
+**Source**: BLD-296 — Replace age with birth year in body profile (GitHub #161)
+**Date**: 2026-04-17
+**Context**: The nutrition profile stored as JSON in `app_settings` changed from `age: number` to `birthYear: number`. Unlike SQL column migrations (one-time ALTER TABLE), JSON settings have no schema enforcement — every read site must handle both old and new formats.
+**Learning**: When renaming or restructuring fields in JSON-serialized app_settings values, create a centralized `migrateX()` function that: (1) checks for the new field first, (2) computes the new field from the old if absent, (3) strips the old field. This function must be called at EVERY load point — component mount, screen load, AND the import/export path. Missing a single read site causes silent data bugs.
+**Action**: For any JSON settings field change: (1) create a typed migration function (e.g., `migrateProfile(raw: any): NutritionProfile`), (2) grep for ALL `getAppSetting("<key>")` calls and wrap every `JSON.parse()` with the migration, (3) add migration to `import-export.ts` `insertRow` for the relevant settings key, (4) write explicit tests for legacy→new, modern→passthrough, and both-present→preference scenarios.
+**Tags**: app-settings, json-migration, data-migration, field-rename, import-export, nutrition-profile, backward-compatibility
