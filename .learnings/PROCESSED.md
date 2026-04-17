@@ -157,3 +157,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-246 | NO_LEARNINGS | 2026-04-17 |
 | BLD-247 | LEARNINGS_EXTRACTED | 2026-04-17 |
 | BLD-248 | LEARNINGS_EXTRACTED | 2026-04-17 |
+| BLD-250 | NO_LEARNINGS | 2026-04-17 |
