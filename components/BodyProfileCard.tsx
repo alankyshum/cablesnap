@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { ActivityIndicator, Button, Card, SegmentedButtons, Snackbar, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/bna-toast";
 import { flowCardStyle } from "./ui/FlowContainer";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
@@ -23,11 +29,11 @@ const SEX_BUTTONS = [
 ] as const;
 
 const ACTIVITY_BUTTONS = [
-  { value: "sedentary", label: ACTIVITY_LABELS.sedentary.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.sedentary, style: { minHeight: 48 } },
-  { value: "lightly_active", label: ACTIVITY_LABELS.lightly_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.lightly_active, style: { minHeight: 48 } },
-  { value: "moderately_active", label: ACTIVITY_LABELS.moderately_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.moderately_active, style: { minHeight: 48 } },
-  { value: "very_active", label: ACTIVITY_LABELS.very_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.very_active, style: { minHeight: 48 } },
-  { value: "extra_active", label: ACTIVITY_LABELS.extra_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.extra_active, style: { minHeight: 48 } },
+  { value: "sedentary", label: ACTIVITY_LABELS.sedentary.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.sedentary },
+  { value: "lightly_active", label: ACTIVITY_LABELS.lightly_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.lightly_active },
+  { value: "moderately_active", label: ACTIVITY_LABELS.moderately_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.moderately_active },
+  { value: "very_active", label: ACTIVITY_LABELS.very_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.very_active },
+  { value: "extra_active", label: ACTIVITY_LABELS.extra_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.extra_active },
 ] as const;
 
 const GOAL_BUTTONS = [
@@ -38,6 +44,7 @@ const GOAL_BUTTONS = [
 
 type CardState = "loading" | "error" | "ready";
 
+// eslint-disable-next-line max-lines-per-function
 export default function BodyProfileCard() {
   const colors = useThemeColors();
   const [cardState, setCardState] = useState<CardState>("loading");
@@ -50,7 +57,7 @@ export default function BodyProfileCard() {
   const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [heightUnit, setHeightUnit] = useState<"cm" | "in">("cm");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [snack, setSnack] = useState("");
+  const toast = useToast();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
 
@@ -139,9 +146,9 @@ export default function BodyProfileCard() {
       await setAppSetting("nutrition_profile", JSON.stringify(profile));
       const result = calculateFromProfile(profile);
       await updateMacroTargets(result.calories, result.protein, result.carbs, result.fat);
-      if (isMounted.current) setSnack("Profile saved");
+      if (isMounted.current) toast.success("Profile saved");
     } catch {
-      if (isMounted.current) setSnack("Could not save profile");
+      if (isMounted.current) toast.error("Could not save profile");
     }
   }
 
@@ -189,14 +196,14 @@ export default function BodyProfileCard() {
   if (cardState === "loading") {
     return (
       <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
+        <CardContent>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" />
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
+            <Spinner size="sm" />
+            <Text variant="body" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
               Loading profile…
             </Text>
           </View>
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
@@ -204,121 +211,96 @@ export default function BodyProfileCard() {
   if (cardState === "error") {
     return (
       <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="bodyMedium" style={{ color: colors.error, marginBottom: 8 }}>
+        <CardContent>
+          <Text variant="body" style={{ color: colors.error, marginBottom: 8 }}>
             Could not load profile
           </Text>
-          <Button mode="outlined" onPress={loadProfile} compact accessibilityLabel="Retry loading profile">
+          <Button variant="outline" onPress={loadProfile} accessibilityLabel="Retry loading profile">
             Retry
           </Button>
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <>
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
-            Body Profile
-          </Text>
+    <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+      <CardContent>
+        <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>
+          Body Profile
+        </Text>
 
-          <TextInput
-            label="Birth Year"
-            value={birthYear}
-            onChangeText={setBirthYear}
-            onBlur={() => handleFieldBlur("birthYear", birthYear)}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
-            placeholder="1990"
-            accessibilityLabel="Birth year"
-            accessibilityHint="Enter your birth year for calorie calculation"
-            error={!!errors.birthYear}
-          />
-          {errors.birthYear ? (
-            <Text style={[styles.errorText, { color: colors.error }]} accessibilityLiveRegion="polite">
-              {errors.birthYear}
-            </Text>
-          ) : null}
+        <Input
+          label="Birth Year"
+          value={birthYear}
+          onChangeText={setBirthYear}
+          onBlur={() => handleFieldBlur("birthYear", birthYear)}
+          keyboardType="numeric"
+          variant="outline"
+          containerStyle={styles.input}
+          placeholder="1990"
+          accessibilityLabel="Birth year"
+          accessibilityHint="Enter your birth year for calorie calculation"
+          error={errors.birthYear}
+        />
 
-          <TextInput
-            label={`Weight (${weightUnit})`}
-            value={weight}
-            onChangeText={setWeight}
-            onBlur={() => handleFieldBlur("weight", weight)}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
-            accessibilityLabel={`Weight in ${weightUnit}`}
-            accessibilityHint="Enter your current body weight"
-            error={!!errors.weight}
-          />
-          {errors.weight ? (
-            <Text style={[styles.errorText, { color: colors.error }]} accessibilityLiveRegion="polite">
-              {errors.weight}
-            </Text>
-          ) : null}
+        <Input
+          label={`Weight (${weightUnit})`}
+          value={weight}
+          onChangeText={setWeight}
+          onBlur={() => handleFieldBlur("weight", weight)}
+          keyboardType="numeric"
+          variant="outline"
+          containerStyle={styles.input}
+          accessibilityLabel={`Weight in ${weightUnit}`}
+          accessibilityHint="Enter your current body weight"
+          error={errors.weight}
+        />
 
-          <TextInput
-            label={`Height (${heightUnit})`}
-            value={height}
-            onChangeText={setHeight}
-            onBlur={() => handleFieldBlur("height", height)}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
-            accessibilityLabel={`Height in ${heightUnit}`}
-            accessibilityHint="Enter your height"
-            error={!!errors.height}
-          />
-          {errors.height ? (
-            <Text style={[styles.errorText, { color: colors.error }]} accessibilityLiveRegion="polite">
-              {errors.height}
-            </Text>
-          ) : null}
+        <Input
+          label={`Height (${heightUnit})`}
+          value={height}
+          onChangeText={setHeight}
+          onBlur={() => handleFieldBlur("height", height)}
+          keyboardType="numeric"
+          variant="outline"
+          containerStyle={styles.input}
+          accessibilityLabel={`Height in ${heightUnit}`}
+          accessibilityHint="Enter your height"
+          error={errors.height}
+        />
 
-          <Text variant="labelLarge" style={[styles.fieldLabel, { color: colors.onSurface }]}>
-            Sex
-          </Text>
-          <SegmentedButtons
-            value={sex}
-            onValueChange={(v) => handleSegmentChange("sex", v)}
-            buttons={SEX_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
-            style={styles.segmented}
-          />
+        <Text variant="subtitle" style={[styles.fieldLabel, { color: colors.onSurface }]}>
+          Sex
+        </Text>
+        <SegmentedControl
+          value={sex}
+          onValueChange={(v) => handleSegmentChange("sex", v)}
+          buttons={SEX_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
+          style={styles.segmented}
+        />
 
-          <Text variant="labelLarge" style={[styles.fieldLabel, { color: colors.onSurface }]}>
-            Activity Level
-          </Text>
-          <SegmentedButtons
-            value={activityLevel}
-            onValueChange={(v) => handleSegmentChange("activityLevel", v)}
-            buttons={ACTIVITY_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string; style: Record<string, number> }>}
-            style={styles.segmented}
-          />
+        <Text variant="subtitle" style={[styles.fieldLabel, { color: colors.onSurface }]}>
+          Activity Level
+        </Text>
+        <SegmentedControl
+          value={activityLevel}
+          onValueChange={(v) => handleSegmentChange("activityLevel", v)}
+          buttons={ACTIVITY_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string; style: Record<string, number> }>}
+          style={styles.segmented}
+        />
 
-          <Text variant="labelLarge" style={[styles.fieldLabel, { color: colors.onSurface }]}>
-            Goal
-          </Text>
-          <SegmentedButtons
-            value={goal}
-            onValueChange={(v) => handleSegmentChange("goal", v)}
-            buttons={GOAL_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
-            style={styles.segmented}
-          />
-        </Card.Content>
-      </Card>
-
-      <Snackbar
-        visible={!!snack}
-        onDismiss={() => setSnack("")}
-        duration={2000}
-      >
-        {snack}
-      </Snackbar>
-    </>
+        <Text variant="subtitle" style={[styles.fieldLabel, { color: colors.onSurface }]}>
+          Goal
+        </Text>
+        <SegmentedControl
+          value={goal}
+          onValueChange={(v) => handleSegmentChange("goal", v)}
+          buttons={GOAL_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
+          style={styles.segmented}
+        />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -335,5 +317,4 @@ const styles = StyleSheet.create({
   input: { marginBottom: 4 },
   fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: 14 },
   segmented: { marginBottom: 8 },
-  errorText: { fontSize: 14, marginBottom: 8 },
 });
