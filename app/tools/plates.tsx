@@ -6,7 +6,9 @@ import {
   StyleSheet,
   View,
 } from "react-native"
-import { Chip, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
+import { Chip } from "@/components/ui/chip";
 import { Stack, useLocalSearchParams } from "expo-router"
 import { useFocusEffect } from "expo-router"
 import { getBodySettings } from "../../lib/db"
@@ -109,24 +111,23 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
       {/* [target] with [bar] */}
       <View style={styles.inputRow}>
         <View style={styles.targetWrap}>
-          <TextInput
-            mode="outlined"
+          <Input
+            variant="outline"
             keyboardType="numeric"
             value={target}
             onChangeText={setTarget}
             placeholder="Total"
-            dense
-            right={<TextInput.Affix text={unit} />}
+            rightComponent={() => <Text variant="caption" style={{ marginRight: 8 }}>{unit}</Text>}
             accessibilityLabel={"Target weight in " + label}
           />
         </View>
-        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
           with bar
         </Text>
         <View style={styles.barWrap} accessibilityRole="radiogroup" accessibilityLabel="Bar weight selection">
           <View style={styles.barInputWrap}>
-            <TextInput
-              mode="outlined"
+            <Input
+              variant="outline"
               keyboardType="numeric"
               value={custom !== "" ? custom : bar != null ? String(bar) : ""}
               onChangeText={v => {
@@ -143,8 +144,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
                 }
               }}
               placeholder="Bar"
-              dense
-              right={<TextInput.Affix text={unit} />}
+              rightComponent={() => <Text variant="caption" style={{ marginRight: 8 }}>{unit}</Text>}
               accessibilityLabel={"Bar weight in " + label}
             />
           </View>
@@ -152,7 +152,6 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
             <Chip
               key={p}
               selected={custom === "" && bar === p}
-              showSelectedOverlay
               onPress={() => selectBar(p)}
               compact
               accessibilityRole="radio"
@@ -169,31 +168,31 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
       {/* Results */}
       <View accessibilityLiveRegion="polite">
         {!valid && target !== "" && (
-          <Text variant="bodySmall" style={{ color: colors.error, textAlign: "center" }}>
+          <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
             Enter a valid weight
           </Text>
         )}
 
         {valid && state && "error" in state && state.error === "low" && (
-          <Text variant="bodySmall" style={{ color: colors.error, textAlign: "center" }}>
+          <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
             Weight must exceed bar weight
           </Text>
         )}
 
         {valid && state && "error" in state && state.error === "empty" && (
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
             Target equals bar weight — no plates needed
           </Text>
         )}
 
         {state && !("error" in state) && (
           <>
-            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
               ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
             </Text>
 
             {state.rounded && (
-              <Text variant="bodySmall" style={{ color: colors.tertiary, textAlign: "center", marginTop: 2 }}>
+              <Text variant="caption" style={{ color: colors.tertiary, textAlign: "center", marginTop: 2 }}>
                 Rounded to {state.achieved}{unit} (nearest achievable)
               </Text>
             )}
@@ -220,7 +219,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
                   },
                 ]}
               />
-              <Text variant="bodyLarge" style={{ color: colors.onBackground }}>
+              <Text variant="body" style={{ color: colors.onBackground }}>
                 {g.count}× {g.weight}{unit}
               </Text>
             </View>
@@ -230,10 +229,10 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
 
       {/* Footer */}
       {state && !("error" in state) && (
-        <Text variant="titleMedium" style={{ color: colors.onBackground, textAlign: "center", marginTop: 16 }}>
+        <Text variant="subtitle" style={{ color: colors.onBackground, textAlign: "center", marginTop: 16 }}>
           Total: {state.achieved}{unit}
           {active != null && (
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
               {" "}(bar {active}{unit} + 2×{state.side}{unit})
             </Text>
           )}

@@ -3,11 +3,16 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { DataTable, IconButton, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
+import { Icon } from "@/components/ui/icon";
+import { Separator } from "@/components/ui/separator";
+import { Weight } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { getBodySettings } from "../../lib/db";
@@ -59,20 +64,20 @@ export function RMCalculatorContent() {
     <View>
       <View style={styles.inputRow}>
         <View style={styles.weightWrap}>
-          <TextInput
-            mode="outlined"
+          <Input
+            variant="outline"
             keyboardType="numeric"
             value={weight}
             onChangeText={setWeight}
             placeholder="Weight"
-            right={<TextInput.Affix text={unit} />}
+            rightComponent={() => <Text variant="caption" style={{ marginRight: 8 }}>{unit}</Text>}
             accessibilityLabel={`Weight in ${label}`}
           />
         </View>
-        <Text variant="titleLarge" style={{ color: colors.onSurfaceVariant }}>×</Text>
+        <Text variant="title" style={{ color: colors.onSurfaceVariant }}>×</Text>
         <View style={styles.repsWrap}>
-          <TextInput
-            mode="outlined"
+          <Input
+            variant="outline"
             keyboardType="numeric"
             value={reps}
             onChangeText={setReps}
@@ -83,85 +88,93 @@ export function RMCalculatorContent() {
       </View>
 
       {!valid && weight !== "" && (
-        <Text variant="bodySmall" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
+        <Text variant="caption" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
           {parsed <= 0 || isNaN(parsed) ? "Enter a weight" : "Enter reps"}
         </Text>
       )}
 
       {warn && (
-        <Text variant="bodySmall" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
+        <Text variant="caption" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
           ⚠ Estimates become less accurate above 12 reps
         </Text>
       )}
 
       {results && (
         <View style={styles.results}>
-          <Text variant="titleMedium" style={{ color: colors.onBackground, marginBottom: 12 }}>
+          <Text variant="subtitle" style={{ color: colors.onBackground, marginBottom: 12 }}>
             Estimated 1RM
           </Text>
-          <DataTable>
-            <DataTable.Header>
-              <DataTable.Title>Formula</DataTable.Title>
-              <DataTable.Title numeric>Est 1RM</DataTable.Title>
-            </DataTable.Header>
-            <DataTable.Row accessibilityLabel={`Epley formula, ${results.epley} ${label}`}>
-              <DataTable.Cell>Epley</DataTable.Cell>
-              <DataTable.Cell numeric>{results.epley} {unit}</DataTable.Cell>
-            </DataTable.Row>
-            <DataTable.Row accessibilityLabel={`Brzycki formula, ${results.brzycki} ${label}`}>
-              <DataTable.Cell>Brzycki</DataTable.Cell>
-              <DataTable.Cell numeric>{results.brzycki} {unit}</DataTable.Cell>
-            </DataTable.Row>
-            <DataTable.Row accessibilityLabel={`Lombardi formula, ${results.lombardi} ${label}`}>
-              <DataTable.Cell>Lombardi</DataTable.Cell>
-              <DataTable.Cell numeric>{results.lombardi} {unit}</DataTable.Cell>
-            </DataTable.Row>
-            <DataTable.Row style={{ backgroundColor: colors.primaryContainer }}>
-              <DataTable.Cell textStyle={{ fontWeight: "700" }}
-                accessibilityLabel={`Average of all formulas, ${results.average} ${label}`}
-              >Average</DataTable.Cell>
-              <DataTable.Cell numeric textStyle={{ fontWeight: "700" }}>{results.average} {unit}</DataTable.Cell>
-            </DataTable.Row>
-          </DataTable>
 
-          <Text variant="titleMedium" style={{ color: colors.onBackground, marginTop: 24, marginBottom: 12 }}>
+          <View style={styles.tableHeader}>
+            <Text variant="caption" style={[styles.tableCell, { color: colors.onSurfaceVariant }]}>Formula</Text>
+            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>Est 1RM</Text>
+          </View>
+          <Separator />
+          {[
+            { name: "Epley", value: results.epley },
+            { name: "Brzycki", value: results.brzycki },
+            { name: "Lombardi", value: results.lombardi },
+          ].map((row) => (
+            <View key={row.name}>
+              <View
+                style={styles.tableRow}
+                accessibilityLabel={`${row.name} formula, ${row.value} ${label}`}
+              >
+                <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>{row.name}</Text>
+                <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{row.value} {unit}</Text>
+              </View>
+              <Separator />
+            </View>
+          ))}
+          <View
+            style={[styles.tableRow, { backgroundColor: colors.primaryContainer }]}
+            accessibilityLabel={`Average of all formulas, ${results.average} ${label}`}
+          >
+            <Text variant="body" style={[styles.tableCell, { color: colors.onSurface, fontWeight: "700" }]}>Average</Text>
+            <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface, fontWeight: "700" }]}>{results.average} {unit}</Text>
+          </View>
+
+          <Text variant="subtitle" style={{ color: colors.onBackground, marginTop: 24, marginBottom: 12 }}>
             % 1RM Table
           </Text>
-          <DataTable>
-            <DataTable.Header>
-              <DataTable.Title>% 1RM</DataTable.Title>
-              <DataTable.Title numeric>Weight</DataTable.Title>
-              <DataTable.Title numeric>Rep Range</DataTable.Title>
-              <DataTable.Title numeric style={{ flex: 0.4 }}> </DataTable.Title>
-            </DataTable.Header>
-            <FlatList
-              data={table}
-              keyExtractor={(item) => String(item.pct)}
-              scrollEnabled={false}
-              renderItem={({ item: row }) => (
-                <DataTable.Row
+
+          <View style={styles.tableHeader}>
+            <Text variant="caption" style={[styles.tableCell, { color: colors.onSurfaceVariant }]}>% 1RM</Text>
+            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>Weight</Text>
+            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>Reps</Text>
+            <View style={styles.tableCellAction} />
+          </View>
+          <Separator />
+          <FlatList
+            data={table}
+            keyExtractor={(item) => String(item.pct)}
+            scrollEnabled={false}
+            renderItem={({ item: row }) => (
+              <View>
+                <View
+                  style={styles.tableRow}
                   accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${label}, ${row.reps} reps`}
                 >
-                  <DataTable.Cell>{row.pct}%</DataTable.Cell>
-                  <DataTable.Cell numeric>{row.weight} {unit}</DataTable.Cell>
-                  <DataTable.Cell numeric>{row.reps}</DataTable.Cell>
-                  <DataTable.Cell numeric style={{ flex: 0.4 }}>
-                    <IconButton
-                      icon="weight"
-                      size={18}
+                  <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>{row.pct}%</Text>
+                  <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{row.weight} {unit}</Text>
+                  <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{row.reps}</Text>
+                  <View style={styles.tableCellAction}>
+                    <Pressable
                       onPress={() => router.push(`/tools/plates?weight=${row.weight}`)}
                       accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
                       accessibilityRole="button"
-                      style={{ minWidth: 48, minHeight: 48 }}
-                      iconColor={colors.onSurfaceVariant}
-                    />
-                  </DataTable.Cell>
-                </DataTable.Row>
-              )}
-            />
-          </DataTable>
+                      style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Icon name={Weight} size={18} color={colors.onSurfaceVariant} />
+                    </Pressable>
+                  </View>
+                </View>
+                <Separator />
+              </View>
+            )}
+          />
 
-          <Text variant="bodySmall" style={[styles.disclaimer, { color: colors.onSurfaceVariant }]}>
+          <Text variant="caption" style={[styles.disclaimer, { color: colors.onSurfaceVariant }]}>
             Estimates based on submaximal performance. Actual 1RM may vary. Estimates become less accurate above 12 reps.
           </Text>
         </View>
@@ -209,6 +222,28 @@ const styles = StyleSheet.create({
   },
   results: {
     marginTop: 24,
+  },
+  tableHeader: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  tableCell: {
+    flex: 1,
+  },
+  tableCellRight: {
+    flex: 1,
+    textAlign: "right",
+  },
+  tableCellAction: {
+    width: 48,
+    alignItems: "center",
   },
   disclaimer: {
     marginTop: 16,

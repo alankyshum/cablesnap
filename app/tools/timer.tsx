@@ -8,7 +8,11 @@ import {
   StyleSheet,
   View,
 } from "react-native"
-import { IconButton, SegmentedButtons, Snackbar, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { useToast } from "@/components/ui/bna-toast";
+import { Icon } from "@/components/ui/icon";
+import { Play, Pause } from "lucide-react-native";
 import { Stack } from "expo-router"
 import { useFocusEffect } from "expo-router"
 import * as Haptics from "expo-haptics"
@@ -68,7 +72,7 @@ export function TimerContent() {
   const [mode, setMode] = useState<Mode>("tabata")
   const [state, setState] = useState<State>(init("tabata"))
   const [pauseMsg, setPauseMsg] = useState("")
-  const [error, setError] = useState("")
+  const toast = useToast()
   const lastTap = useRef(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -84,10 +88,10 @@ export function TimerContent() {
         setAudioEnabled(val !== "false")
       }).catch(() => {
         setAudioEnabled(true)
-        setError("Could not load sound setting")
+        toast.error("Could not load sound setting")
       })
       return () => { unloadAudio() }
-    }, [])
+    }, [toast])
   )
 
   // Keep awake only when timer is active
@@ -125,10 +129,10 @@ export function TimerContent() {
             setState(init(mode, cfg))
           }
         } catch {
-          setError("Could not load saved settings")
+          toast.error("Could not load saved settings")
         }
       })()
-    }, [mode])
+    }, [mode, toast])
   )
 
   // Save config on start
@@ -136,9 +140,9 @@ export function TimerContent() {
     try {
       await setAppSetting(STORAGE_KEYS[m], JSON.stringify(cfg))
     } catch {
-      setError("Could not save settings")
+      toast.error("Could not save settings")
     }
-  }, [])
+  }, [toast])
 
   // Tick interval
   useEffect(() => {
@@ -329,20 +333,20 @@ export function TimerContent() {
     ? "Pause timer"
     : "Resume timer"
 
-  const phaseIcon = state.phase === "work" ? "play" : state.phase === "rest" ? "pause" : undefined
+  const PhaseIcon = state.phase === "work" ? Play : state.phase === "rest" ? Pause : undefined
 
   return (
     <Animated.View style={[styles.container, bgStyle]}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {/* Mode selector */}
           {!active && (
-            <SegmentedButtons
+            <SegmentedControl
               value={mode}
               onValueChange={handleMode}
               buttons={[
-                { value: "tabata", label: "Tabata", accessibilityLabel: "Tabata mode" },
-                { value: "emom", label: "EMOM", accessibilityLabel: "EMOM mode" },
-                { value: "amrap", label: "AMRAP", accessibilityLabel: "AMRAP mode" },
+                { value: "tabata", label: "Tabata" },
+                { value: "emom", label: "EMOM" },
+                { value: "amrap", label: "AMRAP" },
               ]}
               style={styles.modes}
             />
@@ -410,16 +414,13 @@ export function TimerContent() {
           {/* Phase label */}
           {active && (
             <View style={styles.phaseRow}>
-              {phaseIcon && (
-                <IconButton
-                  icon={phaseIcon}
-                  size={20}
-                  iconColor={bgColor}
-                  style={{ margin: 0 }}
-                />
+              {PhaseIcon && (
+                <Pressable style={{ margin: 0 }}>
+                  <Icon name={PhaseIcon} size={20} color={bgColor} />
+                </Pressable>
               )}
               <Text
-                variant="titleMedium"
+                variant="subtitle"
                 style={[styles.phaseText, { color: bgColor }]}
                 accessibilityRole="text"
               >
@@ -430,7 +431,7 @@ export function TimerContent() {
 
           {/* Pause message */}
           {pauseMsg !== "" && state.status === "paused" && (
-            <Text variant="bodyMedium" style={styles.pauseMsg}>
+            <Text variant="body" style={styles.pauseMsg}>
               {pauseMsg}
             </Text>
           )}
@@ -474,7 +475,7 @@ export function TimerContent() {
           {/* Round label */}
           {(state.status === "running" || state.status === "paused") && (
             <Text
-              variant="titleMedium"
+              variant="subtitle"
               style={[styles.rounds, { color: colors.onSurfaceVariant }]}
             >
               {roundLabel(state)}
@@ -484,7 +485,7 @@ export function TimerContent() {
           {/* Completed */}
           {state.status === "completed" && (
             <Text
-              variant="headlineSmall"
+              variant="heading"
               style={[styles.done, { color: colors.primary }]}
               accessibilityRole="text"
             >
@@ -501,7 +502,7 @@ export function TimerContent() {
               accessibilityRole="button"
               accessibilityState={{ disabled: false }}
             >
-              <Text variant="titleLarge" style={{ color: colors.onPrimaryContainer }}>
+              <Text variant="title" style={{ color: colors.onPrimaryContainer }}>
                 +1 Round
               </Text>
             </Pressable>
@@ -516,7 +517,7 @@ export function TimerContent() {
               accessibilityRole="button"
               accessibilityState={{ disabled: false }}
             >
-              <Text variant="titleMedium" style={{ color: colors.onPrimary }}>
+              <Text variant="subtitle" style={{ color: colors.onPrimary }}>
                 {startLabel}
               </Text>
             </Pressable>
@@ -528,21 +529,13 @@ export function TimerContent() {
                 accessibilityRole="button"
                 accessibilityState={{ disabled: false }}
               >
-                <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>
+                <Text variant="subtitle" style={{ color: colors.onSurfaceVariant }}>
                   Reset
                 </Text>
               </Pressable>
             )}
           </View>
       </ScrollView>
-      <Snackbar
-        visible={!!error}
-        onDismiss={() => setError("")}
-        duration={3000}
-        accessibilityLiveRegion="polite"
-      >
-        {error}
-      </Snackbar>
     </Animated.View>
   )
 }
@@ -569,7 +562,7 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
   const colors = useThemeColors()
   return (
     <View style={styles.stepper}>
-      <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
+      <Text variant="body" style={{ color: colors.onSurface }}>
         {label}
       </Text>
       <View style={styles.stepperRow}>
@@ -582,10 +575,10 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
           accessibilityState={{ disabled: value <= min }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}
         >
-          <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>−</Text>
+          <Text variant="subtitle" style={{ color: colors.onSurfaceVariant }}>−</Text>
         </Pressable>
         <Text
-          variant="titleLarge"
+          variant="title"
           style={[styles.stepVal, { color: colors.onSurface }]}
           accessibilityLabel={`${label}: ${value}${suffix}`}
         >
@@ -600,7 +593,7 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
           accessibilityState={{ disabled: value >= max }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}
         >
-          <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>+</Text>
+          <Text variant="subtitle" style={{ color: colors.onSurfaceVariant }}>+</Text>
         </Pressable>
       </View>
     </View>

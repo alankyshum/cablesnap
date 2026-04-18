@@ -726,6 +726,7 @@ export default function Settings() {
                       <Button
                         variant="outline"
                         icon={HeartPulse}
+                        style={{ minHeight: 48 }}
                         onPress={() => {
                           import("../../lib/health-connect").then(({ openHealthConnectPlayStore }) =>
                             openHealthConnectPlayStore()

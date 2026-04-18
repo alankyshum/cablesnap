@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { Button, Card, DataTable, Snackbar, Text } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import {
@@ -11,14 +10,19 @@ import {
 } from "../../lib/db";
 import type { BackupTableName, ImportProgress } from "../../lib/db";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { Text } from "@/components/ui/text";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/bna-toast";
 
 export default function ImportBackup() {
   const colors = useThemeColors();
   const router = useRouter();
   const layout = useLayout();
+  const toast = useToast();
   const { backupJson } = useLocalSearchParams<{ backupJson: string }>();
   const [loading, setLoading] = useState(false);
-  const [snack, setSnack] = useState("");
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [result, setResult] = useState<{
     inserted: number;
@@ -77,14 +81,13 @@ export default function ImportBackup() {
   if (!backupJson) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="bodyLarge" style={{ color: colors.onBackground }}>
+        <Text variant="body" style={{ color: colors.onBackground }}>
           No backup data provided.
         </Text>
         <Button
-          mode="contained"
+          variant="default"
           onPress={() => router.back()}
           style={{ marginTop: 16 }}
-          contentStyle={{ paddingVertical: 8 }}
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >
@@ -97,14 +100,13 @@ export default function ImportBackup() {
   if (!parsed) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="bodyLarge" style={{ color: colors.error }}>
+        <Text variant="body" style={{ color: colors.error }}>
           Invalid backup data.
         </Text>
         <Button
-          mode="contained"
+          variant="default"
           onPress={() => router.back()}
           style={{ marginTop: 16 }}
-          contentStyle={{ paddingVertical: 8 }}
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >
@@ -127,9 +129,9 @@ export default function ImportBackup() {
         }
       });
       setResult(importResult);
-      setSnack(`Import complete — ${importResult.inserted} records added, ${importResult.skipped} skipped`);
+      toast.success(`Import complete — ${importResult.inserted} records added, ${importResult.skipped} skipped`);
     } catch {
-      setSnack("Import failed — all changes have been rolled back");
+      toast.error("Import failed — all changes have been rolled back");
     } finally {
       setLoading(false);
       setImportProgress(null);
@@ -145,65 +147,63 @@ export default function ImportBackup() {
           contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
           ListHeaderComponent={
             <>
-              <Text variant="headlineSmall" style={{ color: colors.onBackground, marginBottom: 16 }}>
+              <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 16 }}>
                 Import Preview
               </Text>
 
               {(exportedAt || appVersion) && (
-                <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-                  <Card.Content>
-                    <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
+                <Card style={styles.card}>
+                  <CardContent>
+                    <Text variant="body" style={{ color: colors.onSurface }}>
                       {exportedAt && `Exported: ${new Date(exportedAt).toLocaleDateString()}`}
                       {exportedAt && appVersion && " · "}
                       {appVersion && `App version: ${appVersion}`}
                     </Text>
-                    <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
+                    <Text variant="body" style={{ color: colors.onSurface }}>
                       Format version: {version} · Total records: {totalRecords}
                     </Text>
-                  </Card.Content>
+                  </CardContent>
                 </Card>
               )}
 
-              <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-                <Card.Content>
-                  <Text variant="titleSmall" style={{ color: colors.onSurface, marginBottom: 8 }}>
+              <Card style={styles.card}>
+                <CardContent>
+                  <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
                     Records to Import
                   </Text>
-                  <DataTable>
-                    <DataTable.Header accessibilityRole="none">
-                      <DataTable.Title accessibilityLabel="Data type">Data</DataTable.Title>
-                      <DataTable.Title numeric accessibilityLabel="Number of records">Count</DataTable.Title>
-                    </DataTable.Header>
-                  </DataTable>
-                </Card.Content>
+                  <View style={{ flexDirection: "row", paddingVertical: 8 }}>
+                    <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>Data</Text>
+                    <Text variant="caption" style={{ width: 60, textAlign: "right", color: colors.onSurfaceVariant }}>Count</Text>
+                  </View>
+                  <Separator />
+                </CardContent>
               </Card>
             </>
           }
           renderItem={({ item: tableName }) => (
             <View style={{ paddingHorizontal: 0 }}>
-              <DataTable>
-                <DataTable.Row accessibilityLabel={`${BACKUP_TABLE_LABELS[tableName]}: ${counts[tableName]} records`}>
-                  <DataTable.Cell>{BACKUP_TABLE_LABELS[tableName]}</DataTable.Cell>
-                  <DataTable.Cell numeric>{counts[tableName]}</DataTable.Cell>
-                </DataTable.Row>
-              </DataTable>
+              <View style={{ flexDirection: "row", paddingVertical: 10 }} accessibilityLabel={`${BACKUP_TABLE_LABELS[tableName]}: ${counts[tableName]} records`}>
+                <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{BACKUP_TABLE_LABELS[tableName]}</Text>
+                <Text variant="body" style={{ width: 60, textAlign: "right", color: colors.onSurface }}>{counts[tableName]}</Text>
+              </View>
+              <Separator />
             </View>
           )}
           ListFooterComponent={
             <>
               {missingTables.length > 0 && (
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                   {missingTables.length} table{missingTables.length !== 1 ? "s" : ""} not present in this v{version} backup (this is normal for older backups).
                 </Text>
               )}
 
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
                 Existing records with the same ID will be skipped — your current data will not be overwritten.
               </Text>
 
               {importProgress && (
                 <Text
-                  variant="bodySmall"
+                  variant="caption"
                   style={{ color: colors.primary, marginBottom: 8 }}
                   accessibilityLiveRegion="polite"
                   accessibilityLabel={importProgress}
@@ -214,23 +214,21 @@ export default function ImportBackup() {
 
               <View style={styles.actions}>
                 <Button
-                  mode="outlined"
+                  variant="outline"
                   onPress={() => router.back()}
                   disabled={loading}
                   style={styles.actionBtn}
-                  contentStyle={{ paddingVertical: 8 }}
                   accessibilityLabel="Cancel import"
                   accessibilityRole="button"
                 >
                   Cancel
                 </Button>
                 <Button
-                  mode="contained"
+                  variant="default"
                   onPress={handleImport}
                   loading={loading}
                   disabled={loading}
                   style={styles.actionBtn}
-                  contentStyle={{ paddingVertical: 8 }}
                   accessibilityLabel={`Import ${totalRecords} records`}
                   accessibilityRole="button"
                 >
@@ -247,51 +245,49 @@ export default function ImportBackup() {
           contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
           ListHeaderComponent={
             <>
-              <Text variant="headlineSmall" style={{ color: colors.onBackground, marginBottom: 16 }}>
+              <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 16 }}>
                 Import Complete
               </Text>
 
-              <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-                <Card.Content>
-                  <Text variant="titleMedium" style={{ color: colors.primary, marginBottom: 8 }}>
+              <Card style={styles.card}>
+                <CardContent>
+                  <Text variant="subtitle" style={{ color: colors.primary, marginBottom: 8 }}>
                     {result.inserted} records imported
                   </Text>
                   {result.skipped > 0 && (
-                    <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
+                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
                       {result.skipped} records skipped (already existed)
                     </Text>
                   )}
 
-                  <DataTable>
-                    <DataTable.Header accessibilityRole="none">
-                      <DataTable.Title accessibilityLabel="Data type">Data</DataTable.Title>
-                      <DataTable.Title numeric accessibilityLabel="Records imported">Imported</DataTable.Title>
-                      <DataTable.Title numeric accessibilityLabel="Records skipped">Skipped</DataTable.Title>
-                    </DataTable.Header>
-                  </DataTable>
-                </Card.Content>
+                  <View style={{ flexDirection: "row", paddingVertical: 8 }}>
+                    <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>Data</Text>
+                    <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>Imported</Text>
+                    <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>Skipped</Text>
+                  </View>
+                  <Separator />
+                </CardContent>
               </Card>
             </>
           }
           renderItem={({ item: tableName }) => (
             <View style={{ paddingHorizontal: 0 }}>
-              <DataTable>
-                <DataTable.Row
-                  accessibilityLabel={`${BACKUP_TABLE_LABELS[tableName]}: ${result.perTable[tableName]?.inserted ?? 0} imported, ${result.perTable[tableName]?.skipped ?? 0} skipped`}
-                >
-                  <DataTable.Cell>{BACKUP_TABLE_LABELS[tableName]}</DataTable.Cell>
-                  <DataTable.Cell numeric>{result.perTable[tableName]?.inserted ?? 0}</DataTable.Cell>
-                  <DataTable.Cell numeric>{result.perTable[tableName]?.skipped ?? 0}</DataTable.Cell>
-                </DataTable.Row>
-              </DataTable>
+              <View
+                style={{ flexDirection: "row", paddingVertical: 10 }}
+                accessibilityLabel={`${BACKUP_TABLE_LABELS[tableName]}: ${result.perTable[tableName]?.inserted ?? 0} imported, ${result.perTable[tableName]?.skipped ?? 0} skipped`}
+              >
+                <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{BACKUP_TABLE_LABELS[tableName]}</Text>
+                <Text variant="body" style={{ width: 70, textAlign: "right", color: colors.onSurface }}>{result.perTable[tableName]?.inserted ?? 0}</Text>
+                <Text variant="body" style={{ width: 70, textAlign: "right", color: colors.onSurface }}>{result.perTable[tableName]?.skipped ?? 0}</Text>
+              </View>
+              <Separator />
             </View>
           )}
           ListFooterComponent={
             <Button
-              mode="contained"
+              variant="default"
               onPress={() => router.back()}
               style={{ marginTop: 16 }}
-              contentStyle={{ paddingVertical: 8 }}
               accessibilityLabel="Done, return to settings"
               accessibilityRole="button"
             >
@@ -300,15 +296,6 @@ export default function ImportBackup() {
           }
         />
       )}
-
-      <Snackbar
-        visible={!!snack}
-        onDismiss={() => setSnack("")}
-        duration={4000}
-        action={{ label: "OK", onPress: () => setSnack("") }}
-      >
-        {snack}
-      </Snackbar>
     </View>
   );
 }

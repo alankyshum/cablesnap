@@ -1,6 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Card, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Card, CardContent } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -45,7 +46,7 @@ function ToolCard({ icon, title, children }: {
   const colors = useThemeColors();
   return (
     <Card style={{ backgroundColor: colors.surface }}>
-      <Card.Content>
+      <CardContent>
         <View style={styles.header}>
           <MaterialCommunityIcons
             name={icon}
@@ -53,14 +54,14 @@ function ToolCard({ icon, title, children }: {
             color={colors.primary}
             style={styles.icon}
           />
-          <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+          <Text variant="subtitle" style={{ color: colors.onSurface }}>
             {title}
           </Text>
         </View>
         <ToolErrorBoundary name={title}>
           {children}
         </ToolErrorBoundary>
-      </Card.Content>
+      </CardContent>
     </Card>
   );
 }
