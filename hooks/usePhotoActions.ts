@@ -1,11 +1,9 @@
 /* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
 import { useCallback, useRef, useState } from "react";
-import { Alert, Linking } from "react-native";
+import { Alert } from "react-native";
 import { useToast } from "@/components/ui/bna-toast";
 import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
-import { File, Directory, Paths } from "expo-file-system";
 import * as LocalAuthentication from "expo-local-authentication";
 
 import {
@@ -16,15 +14,13 @@ import {
   restorePhoto,
   cleanupDeletedPhotos,
   cleanupOrphanFiles,
-  ensurePhotoDirs,
 } from "../lib/db/photos";
 import type { ProgressPhoto, PoseCategory } from "../lib/db/photos";
 import { getAppSetting, setAppSetting } from "../lib/db";
-import { uuid } from "../lib/uuid";
+import { processImage, today } from "../lib/photo-processing";
+import { usePhotoPermissions } from "./usePhotoPermissions";
 
 export const PAGE_SIZE = 20;
-const MAX_DIMENSION = 1200;
-const THUMB_SIZE = 300;
 
 export const POSE_OPTIONS: { label: string; value: PoseCategory }[] = [
   { label: "Front", value: "front" },
@@ -33,11 +29,8 @@ export const POSE_OPTIONS: { label: string; value: PoseCategory }[] = [
   { label: "Side R", value: "side_right" },
 ];
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function usePhotoActions({ router }: { router: ReturnType<typeof import("expo-router").useRouter> }) {
+  const { requestCameraPermission, requestGalleryPermission } = usePhotoPermissions();
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -123,75 +116,16 @@ export function usePhotoActions({ router }: { router: ReturnType<typeof import("
     setPrivacyModal(false);
   };
 
-  const requestCameraPermission = async (): Promise<boolean> => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Camera Permission Required",
-        "Please enable camera access in your device settings to take progress photos.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Open Settings", onPress: () => Linking.openSettings() },
-        ]
-      );
-      return false;
-    }
-    return true;
-  };
-
-  const requestGalleryPermission = async (): Promise<boolean> => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Gallery Permission Required",
-        "Please enable photo library access in your device settings to import progress photos.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Open Settings", onPress: () => Linking.openSettings() },
-        ]
-      );
-      return false;
-    }
-    return true;
-  };
-
   const processAndSave = async (uri: string) => {
-    const resized = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: MAX_DIMENSION } }],
-      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    const thumb = await ImageManipulator.manipulateAsync(
-      resized.uri,
-      [{ resize: { width: THUMB_SIZE } }],
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    ensurePhotoDirs();
-
-    const photoId = uuid();
-    const fileName = `${photoId}.jpg`;
-    const thumbName = `thumb_${photoId}.jpg`;
-    const photoDir = new Directory(Paths.document, "progress-photos");
-    const thumbDir = new Directory(Paths.document, "progress-photos", "thumbnails");
-    const destFile = new File(photoDir, fileName);
-    const thumbFile = new File(thumbDir, thumbName);
-
-    const resizedFile = new File(resized.uri);
-    resizedFile.move(destFile);
-    const thumbSrcFile = new File(thumb.uri);
-    thumbSrcFile.move(thumbFile);
-
-    setPendingUri(destFile.uri);
-    setPendingWidth(resized.width);
-    setPendingHeight(resized.height);
+    const result = await processImage(uri);
+    setPendingUri(result.fullUri);
+    setPendingWidth(result.width);
+    setPendingHeight(result.height);
     setMetaDate(today());
     setMetaPose(null);
     setMetaNote("");
     setMetaModal(true);
-
-    (pendingThumbRef as React.MutableRefObject<string>).current = thumbFile.uri;
+    (pendingThumbRef as React.MutableRefObject<string>).current = result.thumbUri;
   };
 
   const handleTakePhoto = async () => {

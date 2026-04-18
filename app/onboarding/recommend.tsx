@@ -1,9 +1,8 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Alert as AlertComponent, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert as AlertComponent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -16,6 +15,7 @@ import {
 } from "../../lib/starter-templates";
 import { useCompleteOnboarding } from "../../lib/onboarding-context";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { RecommendCard } from "@/components/onboarding/RecommendCard";
 
 type Level = "beginner" | "intermediate" | "advanced";
 
@@ -88,123 +88,58 @@ export default function Recommend() {
 
   if (level === "beginner") {
     return (
-      <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={styles.scroll}
-      >
-        {errorBanner}
-        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
-          We Recommend
-        </Text>
-        <Card style={StyleSheet.flatten([styles.recCard, { backgroundColor: colors.surface }])}>
-          <CardContent>
-            <View style={styles.recHeader}>
-              <Text variant="title" style={{ color: colors.onSurface }}>
-                {FULL_BODY.name}
-              </Text>
-              <Chip
-                compact
-                style={{ backgroundColor: colors.primaryContainer }}
-              >
-                Recommended
-              </Chip>
-            </View>
-            <Text variant="body" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
-              This {FULL_BODY.duration} workout covers all major muscle groups — perfect for building a
-              foundation.
+      <RecommendCard
+        name={FULL_BODY.name}
+        description={`This ${FULL_BODY.duration} workout covers all major muscle groups — perfect for building a foundation.`}
+        chipLabel="Recommended"
+        chipColor={colors.primaryContainer}
+        meta={
+          <>
+            <MaterialCommunityIcons name="clock-outline" size={16} color={colors.onSurfaceVariant} />
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
+              {FULL_BODY.duration}
             </Text>
-            <View style={styles.meta}>
-              <MaterialCommunityIcons name="clock-outline" size={16} color={colors.onSurfaceVariant} />
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
-                {FULL_BODY.duration}
-              </Text>
-              <MaterialCommunityIcons
-                name="dumbbell"
-                size={16}
-                color={colors.onSurfaceVariant}
-                style={{ marginLeft: 12 }}
-              />
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
-                {FULL_BODY.exercises.length} exercises
-              </Text>
-            </View>
-          </CardContent>
-        </Card>
-        <Button
-          variant="default"
-          onPress={() => finish("template")}
-          style={styles.btn}
-          loading={saving}
-          disabled={saving}
-          accessibilityLabel={`Start with ${FULL_BODY.name}`}
-        >
-          Start with {FULL_BODY.name}
-        </Button>
-        <Button
-          variant="ghost"
-          onPress={() => finish()}
-          style={styles.skip}
-          disabled={saving}
-          accessibilityLabel="Skip recommendation and explore on your own"
-          label="I'll explore on my own"
-        />
-      </ScrollView>
+            <MaterialCommunityIcons
+              name="dumbbell"
+              size={16}
+              color={colors.onSurfaceVariant}
+              style={{ marginLeft: 12 }}
+            />
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
+              {FULL_BODY.exercises.length} exercises
+            </Text>
+          </>
+        }
+        onStart={() => finish("template")}
+        onSkip={() => finish()}
+        saving={saving}
+        startLabel={`Start with ${FULL_BODY.name}`}
+        errorBanner={errorBanner}
+      />
     );
   }
 
   if (level === "intermediate") {
     return (
-      <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={styles.scroll}
-      >
-        {errorBanner}
-        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
-          We Recommend
-        </Text>
-        <Card style={StyleSheet.flatten([styles.recCard, { backgroundColor: colors.surface }])}>
-          <CardContent>
-            <View style={styles.recHeader}>
-              <Text variant="title" style={{ color: colors.onSurface }}>
-                {PPL.name}
-              </Text>
-              <Chip
-                compact
-                style={{ backgroundColor: colors.secondaryContainer }}
-              >
-                Program
-              </Chip>
-            </View>
-            <Text variant="body" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
-              {PPL.description}
+      <RecommendCard
+        name={PPL.name}
+        description={PPL.description}
+        chipLabel="Program"
+        chipColor={colors.secondaryContainer}
+        meta={
+          <>
+            <MaterialCommunityIcons name="calendar-sync" size={16} color={colors.onSurfaceVariant} />
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
+              {PPL.days.length}-day cycle
             </Text>
-            <View style={styles.meta}>
-              <MaterialCommunityIcons name="calendar-sync" size={16} color={colors.onSurfaceVariant} />
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
-                {PPL.days.length}-day cycle
-              </Text>
-            </View>
-          </CardContent>
-        </Card>
-        <Button
-          variant="default"
-          onPress={() => finish("program")}
-          style={styles.btn}
-          loading={saving}
-          disabled={saving}
-          accessibilityLabel={`Start with ${PPL.name}`}
-        >
-          Start with {PPL.name}
-        </Button>
-        <Button
-          variant="ghost"
-          onPress={() => finish()}
-          style={styles.skip}
-          disabled={saving}
-          accessibilityLabel="Skip recommendation and explore on your own"
-          label="I'll explore on my own"
-        />
-      </ScrollView>
+          </>
+        }
+        onStart={() => finish("program")}
+        onSkip={() => finish()}
+        saving={saving}
+        startLabel={`Start with ${PPL.name}`}
+        errorBanner={errorBanner}
+      />
     );
   }
 
@@ -277,12 +212,6 @@ export default function Recommend() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flexGrow: 1,
-    padding: 24,
-    paddingTop: 80,
-    paddingBottom: 48,
-  },
   title: {
     textAlign: "center",
     marginBottom: 8,
@@ -291,18 +220,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 24,
   },
-  recCard: {
-    marginBottom: 24,
-    borderRadius: 12,
-  },
   recHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
-  },
-  recDesc: {
-    marginBottom: 12,
   },
   meta: {
     flexDirection: "row",
@@ -315,10 +237,6 @@ const styles = StyleSheet.create({
   btn: {
     marginTop: 16,
     borderRadius: 8,
-  },
-  btnContent: {
-    paddingVertical: 8,
-    minHeight: 48,
   },
   skip: {
     marginTop: 8,

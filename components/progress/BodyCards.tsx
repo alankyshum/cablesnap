@@ -1,15 +1,14 @@
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress as ProgressBar } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
-import { CartesianChart, Line } from "victory-native";
-import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types";
-import { useLayout } from "../../lib/layout";
+import type { BodyWeight, BodyMeasurements } from "../../lib/types";
 import { toDisplay } from "../../lib/units";
-import { movingAvg } from "../../lib/format";
 import { useThemeColors } from "@/hooks/useThemeColors";
+
+export { ChartCard } from "./ChartCard";
+export { GoalsCard } from "./GoalsCard";
 
 type WeightCardProps = {
   latest: BodyWeight;
@@ -60,168 +59,6 @@ export function WeightCard({ latest, delta, deltaLabel, unit, onToggleUnit }: We
       >
         {latest.date}
       </Text>
-    </Card>
-  );
-}
-
-type GoalsCardProps = {
-  settings: BodySettings;
-  latest: BodyWeight | null;
-  measurements: BodyMeasurements | null;
-  unit: "kg" | "lb";
-};
-
-export function GoalsCard({ settings, latest, measurements, unit }: GoalsCardProps) {
-  const colors = useThemeColors();
-  const router = useRouter();
-
-  if (!settings.weight_goal && !settings.body_fat_goal) {
-    return (
-      <Card style={styles.card}>
-        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-          Goals
-        </Text>
-        <Button
-          variant="outline"
-          onPress={() => router.push("/body/goals")}
-          accessibilityLabel="Set body goals"
-          label="Set Goals"
-        />
-      </Card>
-    );
-  }
-
-  return (
-    <Card style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Goals
-        </Text>
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => router.push("/body/goals")}
-          accessibilityLabel="Edit body goals"
-          label="Edit"
-        />
-      </View>
-      {settings.weight_goal && latest && (
-        <View style={{ marginTop: 8 }}>
-          <Text style={{ color: colors.onSurface }}>
-            Weight: {toDisplay(latest.weight, unit)} →{" "}
-            {toDisplay(settings.weight_goal, unit)} {unit}
-          </Text>
-          <ProgressBar
-            value={Math.min(
-              100,
-              Math.max(
-                0,
-                (1 -
-                  Math.abs(latest.weight - settings.weight_goal) /
-                    Math.max(latest.weight, 1)) *
-                  100,
-              ),
-            )}
-            style={{ marginTop: 8 }}
-            height={6}
-          />
-        </View>
-      )}
-      {settings.body_fat_goal && measurements?.body_fat && (
-        <View style={{ marginTop: 12 }}>
-          <Text style={{ color: colors.onSurface }}>
-            Body fat: {measurements.body_fat}% → {settings.body_fat_goal}%
-          </Text>
-          <ProgressBar
-            value={Math.min(
-              100,
-              Math.max(
-                0,
-                (1 -
-                  Math.abs(measurements.body_fat - settings.body_fat_goal) /
-                    Math.max(measurements.body_fat, 1)) *
-                  100,
-              ),
-            )}
-            style={{ marginTop: 8 }}
-            height={6}
-          />
-        </View>
-      )}
-    </Card>
-  );
-}
-
-type ChartCardProps = {
-  chart: { date: string; weight: number }[];
-  unit: "kg" | "lb";
-};
-
-export function ChartCard({ chart, unit }: ChartCardProps) {
-  const colors = useThemeColors();
-  const layout = useLayout();
-  const { width: screenWidth } = useWindowDimensions();
-
-  const chartWidth = layout.atLeastMedium
-    ? (screenWidth - 96) / 2 - 32
-    : screenWidth - 48;
-
-  const avg = movingAvg(chart);
-
-  const paddedLabels = chart.map((d, i) => {
-    if (chart.length <= 8) return d.date.slice(5);
-    if (i % Math.ceil(chart.length / 6) === 0 || i === chart.length - 1)
-      return d.date.slice(5);
-    return "";
-  });
-
-  return (
-    <Card style={styles.card}>
-      <Text
-        variant="subtitle"
-        style={{ color: colors.onSurface, marginBottom: 12 }}
-      >
-        Weight Trend
-      </Text>
-      <View style={{ width: chartWidth, height: 200 }}>
-        <CartesianChart
-          data={chart.map((d, i) => ({
-            date: paddedLabels[i] || "",
-            weight: toDisplay(d.weight, unit),
-            avg: avg[i]
-              ? toDisplay(avg[i].avg, unit)
-              : toDisplay(d.weight, unit),
-          }))}
-          xKey="date"
-          yKeys={["weight", "avg"]}
-          domainPadding={{ left: 10, right: 10 }}
-        >
-          {({ points }) => (
-            <>
-              <Line
-                points={points.weight}
-                color={colors.primary}
-                strokeWidth={2}
-                curveType="natural"
-              />
-              <Line
-                points={points.avg}
-                color={colors.tertiary}
-                strokeWidth={2}
-                curveType="natural"
-              />
-            </>
-          )}
-        </CartesianChart>
-      </View>
-      <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
-        <Text variant="caption" style={{ color: colors.primary }}>
-          ● Actual
-        </Text>
-        <Text variant="caption" style={{ color: colors.tertiary }}>
-          ● 7-day avg
-        </Text>
-      </View>
     </Card>
   );
 }

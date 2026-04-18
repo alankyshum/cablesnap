@@ -28,6 +28,7 @@ import {
 } from "../lib/types";
 import { duration as durationTokens, elevation } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import ExerciseItem, { ITEM_HEIGHT } from "./exercise-picker/ExerciseItem";
 
 type Props = {
   visible: boolean;
@@ -36,7 +37,6 @@ type Props = {
 };
 
 const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.8 };
-const ITEM_HEIGHT = 64;
 
 export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Props) {
   const colors = useThemeColors();
@@ -140,49 +140,9 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
 
   const renderItem = useCallback(
     ({ item }: { item: Exercise }) => (
-      <Pressable
-        onPress={() => handlePick(item)}
-        style={({ pressed }) => [
-          styles.item,
-          {
-            backgroundColor: colors.surface,
-            borderBottomColor: colors.outlineVariant,
-          },
-          pressed && { opacity: 0.7 },
-        ]}
-        accessibilityLabel={`Select ${item.name}${item.is_custom ? " (Custom)" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
-        accessibilityRole="button"
-      >
-        <View>
-          <Text
-            variant="body"
-            numberOfLines={1}
-            style={{ color: colors.onSurface, fontWeight: "600" }}
-          >
-            {item.name}{item.is_custom ? " (Custom)" : ""}
-          </Text>
-          <View style={styles.row}>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: colors.primaryContainer },
-              ]}
-            >
-              <Text style={[styles.chipText, { color: colors.onPrimaryContainer }]}>
-                {CATEGORY_LABELS[item.category]}
-              </Text>
-            </View>
-            <Text
-              variant="caption"
-              style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}
-            >
-              {item.equipment}
-            </Text>
-          </View>
-        </View>
-      </Pressable>
+      <ExerciseItem item={item} onPick={handlePick} />
     ),
-    [colors, handlePick],
+    [handlePick],
   );
 
   if (!mounted) return null;
@@ -323,27 +283,6 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-  },
-  item: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    minHeight: ITEM_HEIGHT,
-    justifyContent: "center",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  badge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: "500",
   },
   empty: {
     alignItems: "center",
