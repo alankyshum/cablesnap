@@ -52,7 +52,6 @@ const STANDALONE_SCREENS: Screen[] = [
   { name: "Add Food", path: "/nutrition/add" },
   { name: "New Exercise", path: "/exercise/create" },
   { name: "New Template", path: "/template/create" },
-  { name: "Pick Exercise", path: "/template/pick-exercise" },
   { name: "New Program", path: "/program/create" },
   { name: "Pick Template", path: "/program/pick-template" },
 ];
