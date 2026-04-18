@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -9,6 +9,7 @@ import { PlateCalculatorContent } from "./plates";
 import { RMCalculatorContent } from "./rm";
 import { TimerContent } from "./timer";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { logError } from "../../lib/errors";
 
 export default function ToolsHub() {
   const colors = useThemeColors();
@@ -76,12 +77,30 @@ class ToolErrorBoundary extends React.Component<BoundaryProps, BoundaryState> {
     return { hasError: true };
   }
 
+  componentDidCatch(error: Error) {
+    logError(error, { component: `ToolsHub/${this.props.name}`, fatal: false });
+  }
+
+  private handleRetry = () => {
+    this.setState({ hasError: false });
+  };
+
   render() {
     if (this.state.hasError) {
       return (
-        <Text style={{ textAlign: "center", opacity: 0.6 }}>
-          {this.props.name} failed to load. Try opening it from the standalone screen.
-        </Text>
+        <View style={styles.errorContainer}>
+          <Text style={{ textAlign: "center", opacity: 0.6 }}>
+            {this.props.name} failed to load.
+          </Text>
+          <Pressable
+            onPress={this.handleRetry}
+            accessibilityRole="button"
+            accessibilityLabel={`Retry loading ${this.props.name}`}
+            style={styles.retryButton}
+          >
+            <Text style={{ textAlign: "center", fontWeight: "600" }}>Tap to retry</Text>
+          </Pressable>
+        </View>
       );
     }
     return this.props.children;
@@ -99,5 +118,14 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: 12,
+  },
+  errorContainer: {
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
 });

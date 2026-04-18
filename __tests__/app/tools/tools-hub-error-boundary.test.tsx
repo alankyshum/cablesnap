@@ -1,6 +1,7 @@
 jest.setTimeout(10000)
 
 import React from 'react'
+import { fireEvent } from '@testing-library/react-native'
 import { renderScreen } from '../../helpers/render'
 
 jest.mock('expo-router', () => {
@@ -91,15 +92,15 @@ describe('ToolsHub', () => {
     expect(await findByText('Plate Calculator')).toBeTruthy()
   })
 
-  it('contains error boundary that catches tool render failures', async () => {
-    // Verify ToolErrorBoundary is structurally present by checking
-    // that the component source wraps children in ToolErrorBoundary
+  it('contains error boundary with componentDidCatch for error logging', () => {
     const source = require('fs').readFileSync(
       require('path').resolve(__dirname, '../../../app/tools/index.tsx'),
       'utf8'
     )
     expect(source).toContain('ToolErrorBoundary')
     expect(source).toContain('getDerivedStateFromError')
+    expect(source).toContain('componentDidCatch')
+    expect(source).toContain('logError')
   })
 })
 
@@ -108,7 +109,6 @@ describe('ToolsHub error isolation', () => {
     const db = require('../../../lib/db')
     db.getBodySettings.mockRejectedValueOnce(new Error('DB unavailable'))
 
-    // Should not throw — unhandled promise rejection would crash
     const { findByText } = renderScreen(<ToolsHub />)
     expect(await findByText('1RM Calculator')).toBeTruthy()
   })
@@ -119,5 +119,70 @@ describe('ToolsHub error isolation', () => {
 
     const { findByText } = renderScreen(<ToolsHub />)
     expect(await findByText('Plate Calculator')).toBeTruthy()
+  })
+
+  it('db failure in getAppSetting does not crash TimerContent', async () => {
+    const db = require('../../../lib/db')
+    db.getAppSetting.mockRejectedValueOnce(new Error('DB unavailable'))
+
+    const { findByText } = renderScreen(<ToolsHub />)
+    expect(await findByText('Interval Timer')).toBeTruthy()
+  })
+
+  it('error boundary shows fallback and retry button when child throws', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    // Make Timer throw by breaking a hook it depends on
+    const reanimated = require('react-native-reanimated')
+    const origUseSharedValue = reanimated.useSharedValue
+    reanimated.useSharedValue = () => { throw new Error('Reanimated crash') }
+
+    const { findByText } = renderScreen(<ToolsHub />)
+
+    // Timer should show error fallback
+    expect(await findByText('Interval Timer failed to load.')).toBeTruthy()
+    expect(await findByText('Tap to retry')).toBeTruthy()
+
+    // Other tools should still render
+    expect(await findByText('1RM Calculator')).toBeTruthy()
+    expect(await findByText('Plate Calculator')).toBeTruthy()
+
+    // Error should be logged
+    const errors = require('../../../lib/errors')
+    expect(errors.logError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ component: 'ToolsHub/Interval Timer', fatal: false })
+    )
+
+    reanimated.useSharedValue = origUseSharedValue
+    spy.mockRestore()
+  })
+
+  it('retry button resets error state and re-renders child', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const reanimated = require('react-native-reanimated')
+    const origUseSharedValue = reanimated.useSharedValue
+
+    let throwCount = 0
+    reanimated.useSharedValue = (v: number) => {
+      throwCount++
+      if (throwCount <= 3) throw new Error('Reanimated crash')
+      return { value: v }
+    }
+
+    const { findByText, findByLabelText } = renderScreen(<ToolsHub />)
+
+    expect(await findByText('Interval Timer failed to load.')).toBeTruthy()
+    const retryButton = await findByLabelText('Retry loading Interval Timer')
+
+    // Reset the throw so retry succeeds
+    reanimated.useSharedValue = origUseSharedValue
+
+    fireEvent.press(retryButton)
+
+    // After retry, the timer card header should still be present
+    expect(await findByText('Interval Timer')).toBeTruthy()
+
+    spy.mockRestore()
   })
 })
