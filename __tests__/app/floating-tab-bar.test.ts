@@ -147,26 +147,28 @@ describe("Tab layout uses FloatingTabBar (BLD-212)", () => {
 });
 
 describe("Tab screens use useFloatingTabBarHeight (BLD-212)", () => {
-  const screenFiles = [
-    "index.tsx",
-    "exercises.tsx",
-    "nutrition.tsx",
-    "progress.tsx",
-    "settings.tsx",
+  // Screen files or their extracted sub-components that must use useFloatingTabBarHeight
+  const screenEntries: { label: string; file: string }[] = [
+    { label: "index.tsx", file: "app/(tabs)/index.tsx" },
+    { label: "exercises.tsx", file: "app/(tabs)/exercises.tsx" },
+    { label: "nutrition.tsx", file: "app/(tabs)/nutrition.tsx" },
+    // progress.tsx delegates to WorkoutSegment which uses tabBarHeight
+    { label: "progress (WorkoutSegment)", file: "components/progress/WorkoutSegment.tsx" },
+    { label: "settings.tsx", file: "app/(tabs)/settings.tsx" },
   ];
 
-  for (const file of screenFiles) {
-    it(`${file} imports useFloatingTabBarHeight`, () => {
+  for (const { label, file } of screenEntries) {
+    it(`${label} imports useFloatingTabBarHeight`, () => {
       const src = fs.readFileSync(
-        path.resolve(__dirname, `../../app/(tabs)/${file}`),
+        path.resolve(__dirname, `../../${file}`),
         "utf-8"
       );
       expect(src).toContain("useFloatingTabBarHeight");
     });
 
-    it(`${file} uses tabBarHeight for padding`, () => {
+    it(`${label} uses tabBarHeight for padding`, () => {
       const src = fs.readFileSync(
-        path.resolve(__dirname, `../../app/(tabs)/${file}`),
+        path.resolve(__dirname, `../../${file}`),
         "utf-8"
       );
       expect(src).toContain("tabBarHeight");
