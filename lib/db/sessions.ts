@@ -325,6 +325,12 @@ export async function deleteSet(id: string): Promise<void> {
   await execute("DELETE FROM workout_sets WHERE id = ?", [id]);
 }
 
+export async function deleteSetsBatch(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => "?").join(",");
+  await execute(`DELETE FROM workout_sets WHERE id IN (${placeholders})`, ids);
+}
+
 export async function updateSetRPE(id: string, rpe: number | null): Promise<void> {
   await execute(
     "UPDATE workout_sets SET rpe = ? WHERE id = ?",

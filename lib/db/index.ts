@@ -47,6 +47,7 @@ export {
   completeSet,
   uncompleteSet,
   deleteSet,
+  deleteSetsBatch,
   updateSetRPE,
   updateSetNotes,
   updateSetTrainingMode,
