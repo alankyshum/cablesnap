@@ -5,7 +5,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import type { TrainingMode } from "../lib/types";
 import { TRAINING_MODE_LABELS } from "../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
