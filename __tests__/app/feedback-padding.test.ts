@@ -30,13 +30,9 @@ describe("feedback screen padding (BLD-177)", () => {
   });
 });
 
-describe("feedback description textarea padding (BLD-204)", () => {
-  it("multiline TextInput has contentStyle for internal padding", () => {
-    expect(src).toMatch(/multiline[\s\S]*?contentStyle=/);
-  });
-
-  it("multilineContent style defines padding", () => {
-    expect(src).toMatch(/multilineContent:\s*\{[\s\S]*?paddingTop/);
-    expect(src).toMatch(/multilineContent:\s*\{[\s\S]*?paddingHorizontal/);
+describe("feedback description textarea (BLD-204)", () => {
+  it("description Input uses type textarea with rows", () => {
+    expect(src).toMatch(/type="textarea"/);
+    expect(src).toMatch(/rows=\{4\}/);
   });
 });
