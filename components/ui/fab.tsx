@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { Text } from "@/components/ui/text";
+import { Colors } from "@/theme/colors";
 
 interface FABAction {
   icon: string;
@@ -43,7 +44,7 @@ export function FAB({
   icon,
   onPress,
   style,
-  color = "#fff",
+  color = Colors.light.onToast,
   accessibilityLabel,
   visible = true,
 }: FABProps) {
@@ -69,7 +70,7 @@ function FABGroup({
   actions,
   onStateChange,
   fabStyle,
-  color = "#fff",
+  color = Colors.light.onToast,
 }: FABGroupProps) {
   if (!visible) return null;
 
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     elevation: 4,
-    shadowColor: "#000",
+    shadowColor: Colors.light.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     elevation: 3,
-    shadowColor: "#000",
+    shadowColor: Colors.light.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 3,

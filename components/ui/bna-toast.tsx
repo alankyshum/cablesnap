@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { Text } from '@/components/ui/text';
+import { Colors } from '@/theme/colors';
 import { AlertCircle, Check, Info, X } from 'lucide-react-native';
 import React, {
   createContext,
@@ -227,7 +228,7 @@ export function Toast({
     position: 'absolute',
     top: getTopPosition(),
     alignSelf: 'center',
-    shadowColor: '#000',
+    shadowColor: Colors.light.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -273,7 +274,7 @@ export function Toast({
                   <Text
                     variant='subtitle'
                     style={{
-                      color: '#FFFFFF',
+                      color: Colors.light.onToast,
                       fontSize: 15,
                       fontWeight: '600',
                       marginBottom: description ? 2 : 0,
@@ -314,7 +315,7 @@ export function Toast({
                   <Text
                     variant='caption'
                     style={{
-                      color: '#FFFFFF',
+                      color: Colors.light.onToast,
                       fontSize: 12,
                       fontWeight: '600',
                     }}

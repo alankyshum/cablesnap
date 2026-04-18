@@ -4,6 +4,7 @@ import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { BORDER_RADIUS, FONT_SIZE } from '@/theme/globals';
+import { Colors } from '@/theme/colors';
 import { X } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import {
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: Colors.light.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.25,
         shadowRadius: 8,
