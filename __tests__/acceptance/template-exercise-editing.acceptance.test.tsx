@@ -32,11 +32,12 @@ jest.mock('expo-router', () => {
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
 
 const mockToast = jest.fn()
+const mockError = jest.fn()
 jest.mock('../../components/ui/bna-toast', () => {
   const RealReact = require('react')
   return {
     __esModule: true,
-    useToast: () => ({ toast: mockToast, success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
+    useToast: () => ({ toast: mockToast, success: jest.fn(), error: mockError, warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
     ToastProvider: ({ children }: { children: React.ReactNode }) => RealReact.createElement(RealReact.Fragment, null, children),
   }
 })
@@ -166,7 +167,7 @@ describe('Template Exercise Editing Acceptance', () => {
     }
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith('Failed to update exercise settings')
+      expect(mockError).toHaveBeenCalledWith('Failed to update exercise settings')
     })
   })
 
