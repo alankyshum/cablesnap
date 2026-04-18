@@ -34,7 +34,7 @@ Add a **Nutrition** segment to the existing Progress tab (fourth option in the S
 1. **Calorie Trend Chart** — Line chart showing daily calorie intake vs target over the last 4 weeks (28 days)
 2. **Macro Breakdown Chart** — Stacked or grouped bar chart showing protein/carbs/fat daily averages per week
 3. **Adherence Card** — Percentage of days where the user met their calorie target (within ±10%)
-4. **Nutrition Streak Card** — Current and longest streak of days meeting all macro targets
+4. **Nutrition Streak Card** — Current and longest streak of days meeting calorie target (within ±10%). Calorie-only criterion avoids unrealistic all-4-macro threshold that would show perpetual 0-1 day streaks.
 5. **Weekly Averages Card** — Average calories, protein, carbs, fat for the current week vs previous week with delta indicators
 
 ### UX Design
@@ -95,14 +95,35 @@ Add a **Nutrition** segment to the existing Progress tab (fourth option in the S
 
 #### Accessibility
 - All charts must have `accessibilityLabel` with summary text (e.g., "Calorie trend chart showing 28 days. Average 2,150 calories per day. Target is 2,000.")
+- Chart containers need `accessibilityRole="image"` to prevent screen readers from traversing SVG internals
+- Adherence progress bar needs `accessibilityRole="progressbar"` with `accessibilityValue={{ min: 0, max: 100, now: N }}`
+- Delta arrows (↓/↑) need natural-language `accessibilityLabel` (e.g., "decreased by 150 calories" not "↓ -150")
 - Streak and adherence cards must announce values via `accessibilityLabel`
 - Period selector chips must have `accessibilityRole="button"` and `accessibilityState={{ selected: true/false }}`
+- Period selector chips must have explicit ≥48dp touch targets
 - All numerical values must be screen-reader friendly (no raw chart-only data)
 
+#### Loading State
+- Show skeleton placeholders matching card layout while data loads (same pattern as BodySegment)
+- Skeleton for chart area: rounded rect with shimmer animation
+- Skeleton for stat cards: text-width placeholders
+- Duration: show skeleton until all queries resolve
+
+#### Error State
+- On DB query failure, show a centered error card: "Couldn't load nutrition data" with a "Retry" button
+- Retry button calls the hook's refetch function
+- Error card replaces all content (not inline per-card)
+
 #### Empty States
-- **No nutrition data at all**: Show an illustration-free card with text: "Start tracking your meals in the Nutrition tab to see trends here." with a button "Go to Nutrition" that navigates to the nutrition tab.
-- **Fewer than 3 days of data**: Show the charts with available data + info text: "Track for a few more days to see meaningful trends."
-- **No macro targets set**: Show data but with info banner: "Set your macro targets to see adherence tracking." with a link to the targets screen.
+Priority order (show highest priority match only):
+1. **No nutrition data at all** (highest): Show card with text: "Start tracking your meals in the Nutrition tab to see trends here." with a button "Go to Nutrition" that navigates to the nutrition tab.
+2. **Fewer than 3 days of data**: Show the charts with available data + info text: "Track for a few more days to see meaningful trends."
+3. **No macro targets set** (lowest): Show data but with info banner: "Set your macro targets to see adherence tracking." with a link to the targets screen.
+
+#### Reduced Motion
+- All chart animations must respect `useReducedMotion()` from react-native-reanimated
+- When reduced motion is enabled: disable victory-native chart entry animations (set `animate={false}` or equivalent)
+- Static rendering of charts is acceptable — data visibility is not degraded
 
 ### Technical Approach
 
@@ -120,12 +141,15 @@ export async function getWeeklyNutritionAverages(
   weeks: number  // number of weeks back from today
 ): Promise<{ weekStart: string; avgCalories: number; avgProtein: number; avgCarbs: number; avgFat: number; daysTracked: number }[]>
 
-// Query adherence stats
+// Query adherence stats — only counts days with ≥1 food entry (tracked days)
 export async function getNutritionAdherence(
   days: number,  // lookback period
   targets: MacroTargets,
   tolerancePercent: number  // e.g., 10 for ±10%
-): Promise<{ totalDays: number; onTargetDays: number; currentStreak: number; longestStreak: number }>
+): Promise<{ trackedDays: number; onTargetDays: number; currentStreak: number; longestStreak: number }>
+// Note: adherence = onTargetDays / trackedDays (NOT calendar days)
+// Display as "X of Y tracked days on target"
+// Streak = consecutive tracked days meeting calorie target within ±tolerancePercent (calorie-only)
 ```
 
 SQL pattern for daily totals (mirrors existing getWeeklyNutrition but for arbitrary ranges):
@@ -149,11 +173,15 @@ Fetches data on focus, supports period switching:
 export function useNutritionProgress() {
   const [period, setPeriod] = useState<4 | 8 | 12>(4);
   // ... fetch dailyTotals, weeklyAverages, adherence, targets
-  // Returns: { dailyTotals, weeklyAverages, adherence, targets, period, setPeriod, loading, error }
+  // Returns: { dailyTotals, weeklyAverages, adherence, targets, period, setPeriod, loading, error, refetch }
+  // loading: true while any query is in flight (show skeleton)
+  // error: Error | null (show error state with retry)
+  // refetch: () => void (retry after error)
 }
 ```
 
 Use `useFocusEffect` + `useCallback` pattern (same as WorkoutSegment/BodySegment).
+Check `useReducedMotion()` and pass to chart components to disable animations.
 
 #### Components
 
@@ -207,8 +235,8 @@ Modify `app/(tabs)/progress.tsx`:
 
 - [ ] Given the user has tracked nutrition for 7+ days WHEN they tap the "Nutrition" segment in Progress THEN they see a calorie trend chart with daily data points and a dashed target line
 - [ ] Given the user selects "8W" period WHEN the chart re-renders THEN it shows 56 days of data (or as many as available)
-- [ ] Given the user has macro targets set WHEN viewing the adherence card THEN it shows the percentage of days within ±10% of calorie target
-- [ ] Given the user has hit their targets for 5 consecutive days WHEN viewing the adherence card THEN current streak shows "5 days"
+- [ ] Given the user has macro targets set WHEN viewing the adherence card THEN it shows "X of Y tracked days on target" (only counting days with ≥1 food entry)
+- [ ] Given the user has hit their calorie target (within ±10%) for 5 consecutive tracked days WHEN viewing the adherence card THEN current streak shows "5 days"
 - [ ] Given the user has NO nutrition data WHEN they tap "Nutrition" segment THEN they see an empty state with a "Go to Nutrition" button
 - [ ] Given the user has nutrition data but NO macro targets WHEN they view the segment THEN charts show data but an info banner says "Set your macro targets to see adherence tracking"
 - [ ] Given screen reader is active WHEN user navigates to the calorie trend card THEN VoiceOver reads a summary label like "Calorie trend: averaging X calories over Y days, target is Z"
@@ -216,6 +244,9 @@ Modify `app/(tabs)/progress.tsx`:
 - [ ] PR passes all tests with no regressions
 - [ ] No new lint warnings
 - [ ] All new components follow BNA UI patterns (Card, Text, Chip from components/ui/)
+- [ ] Given data is loading WHEN the segment is first shown THEN skeleton placeholders are displayed
+- [ ] Given a DB query fails WHEN the error state renders THEN an error card with "Retry" button is shown
+- [ ] Given reduced motion is enabled WHEN charts render THEN no entry animations play
 
 ### Edge Cases
 
@@ -227,7 +258,8 @@ Modify `app/(tabs)/progress.tsx`:
 | User deletes all food entries | Segment shows empty state on next focus |
 | 365+ days of data with 12W selected | Query only 84 days — bounded query range |
 | All days exactly on target (100% adherence) | Show 100% with celebratory color/icon |
-| Zero calories logged on a day | That day counts as "not on target" for adherence |
+| Zero calories logged on a day | Day excluded from adherence count (untracked day) |
+| Weekday-only tracker (5 of 7 days) | Adherence shows "X of 5 tracked days" not "X of 7 days" |
 | Multiple meals logged on same day | Correctly aggregated (SUM in SQL handles this) |
 | Date boundary near midnight | Use date string (YYYY-MM-DD) not timestamps — already the daily_log pattern |
 
@@ -294,4 +326,12 @@ Modify `app/(tabs)/progress.tsx`:
 4. Add barrel re-export from `lib/db/index.ts` if one exists
 
 ### CEO Decision
-_Pending reviews_
+All QD feedback addressed in revision:
+1. ✅ Streak changed to calorie-only criterion (not all-4-macros)
+2. ✅ Adherence counts only tracked days (≥1 food entry), displays as "X of Y tracked days"
+3. ✅ Loading state specified (skeleton placeholders)
+4. ✅ Error state specified (error card with retry button)
+5. ✅ Reduced motion specified (disable chart animations via useReducedMotion)
+6. ✅ Accessibility gaps addressed (accessibilityRole on charts/progress bar, natural-language delta labels, 48dp chip targets)
+
+TL approved with no blocking concerns. Re-requesting QD review on updated plan.
