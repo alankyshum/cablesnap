@@ -60,7 +60,7 @@ export function Chip({
       ]}
     >
       {icon && <>{icon}</>}
-      {typeof children === "string" ? (
+      {typeof children === "string" || typeof children === "number" ? (
         <Text
           style={{
             fontSize: 14,

@@ -74,6 +74,14 @@ describe('Plate Calculator Acceptance', () => {
     expect(await findByText(/lb per side/)).toBeTruthy()
   })
 
+  it('renders bar weight preset chips without crash (BLD-344)', async () => {
+    const { findByLabelText } = renderScreen(<PlateCalculator />)
+
+    // Bar preset chips render numeric children — previously crashed
+    // with "Text strings must be rendered within a <Text> component"
+    expect(await findByLabelText('20 kilograms bar')).toBeTruthy()
+  })
+
   it('shows appropriate state for empty and invalid weight', async () => {
     const { findByText, findByLabelText } = renderScreen(<PlateCalculator />)
 
