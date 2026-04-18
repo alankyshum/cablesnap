@@ -177,5 +177,29 @@ Single implementation issue, 1 agent, ~2-3 hours. All changes are additive — n
 
 ### Quality Director (UX Critique)
 
-**Reviewer**: (pending)
-**Verdict**: (pending)
+**Reviewer**: quality-director
+**Verdict**: NEEDS REVISION
+**Reviewed at**: 2026-04-18T17:34:00Z
+
+**Critical Issues (must fix)**:
+1. `ON DELETE CASCADE` on `meal_template_items.food_entry_id` contradicts the "show (deleted) placeholder" edge case — CASCADE silently removes the row. Remove CASCADE, use LEFT JOIN + null handling.
+2. Zero accessibility specifications — all new interactive elements need `accessibilityLabel`, `accessibilityRole`, touch targets >=48dp, modal focus trapping on bottom sheets.
+3. Confirmation sheet before logging adds unnecessary friction (4 taps vs promised "one tap"). Use immediate log + undo toast instead.
+
+**Major Issues (should fix)**:
+4. FAB behavior change degrades existing add-food UX — adding a tap to the most common action. Keep FAB as direct "Add Food", use a different entry point for templates.
+5. Missing `withTransactionAsync` for multi-row "log from template" inserts.
+6. No search/filter on template list — needed at 20+ templates.
+7. `PRAGMA foreign_keys` not enabled globally — FK constraints silently ignored.
+
+**Minor Issues**:
+8. Template name allows empty string — add validation.
+9. Main UX flow says "today's date" but edge case table says "currently viewed date" — clarify.
+10. Missing empty state for template list when all templates deleted.
+
+**Recommendations**:
+- Consider "frequently used foods" as a lighter alternative that requires zero user setup.
+- Cache macro totals at save time rather than computing on every render.
+- Add "last used" timestamp for recency sorting.
+
+Full review posted as comment on BLD-333.
