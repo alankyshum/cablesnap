@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type ViewStyle } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Card } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -114,7 +114,7 @@ export function FlowCard({
 
   return (
     <Card
-      style={[styles.card, { backgroundColor: colors.surface }]}
+      style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }]) as ViewStyle}
     >
       <View style={styles.content}>
         <Pressable

@@ -7,7 +7,7 @@ import * as Sharing from "expo-sharing";
 import { Colors } from "../theme/colors";
 import { logError, generateReport, generateGitHubURL, getRecentErrors } from "../lib/errors";
 import { recent as recentInteractions } from "../lib/interactions";
-import { Share2, Github, RotateCcw, ChevronDown, ChevronUp } from "lucide-react-native";
+import { Share2, ExternalLink, RotateCcw, ChevronDown, ChevronUp } from "lucide-react-native";
 
 type Props = { children: React.ReactNode };
 type State = { error: Error | null; expanded: boolean };
@@ -112,7 +112,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
           <Button
             variant="outline"
-            icon={Github}
+            icon={ExternalLink}
             onPress={this.handleGitHub}
             style={styles.btn}
           >
