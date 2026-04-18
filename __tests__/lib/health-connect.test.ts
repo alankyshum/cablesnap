@@ -150,8 +150,11 @@ describe("Health Connect settings integration", () => {
 describe("Health Connect session sync integration", () => {
   it("session/[id].tsx uses dynamic import for HC sync", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/session/[id].tsx", "utf8");
-    expect(source).toContain('await import("../../lib/health-connect")');
+    const source = [
+      fs.readFileSync("app/session/[id].tsx", "utf8"),
+      fs.readFileSync("hooks/useSessionActions.ts", "utf8"),
+    ].join("\n");
+    expect(source).toContain('await import("../lib/health-connect")');
     expect(source).toContain("syncToHealthConnect");
     // HC sync must be Android-gated
     expect(source).toContain('Platform.OS === "android"');
@@ -159,7 +162,10 @@ describe("Health Connect session sync integration", () => {
 
   it("session/[id].tsx HC sync is silent (no toast on success or failure)", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/session/[id].tsx", "utf8");
+    const source = [
+      fs.readFileSync("app/session/[id].tsx", "utf8"),
+      fs.readFileSync("hooks/useSessionActions.ts", "utf8"),
+    ].join("\n");
     // Find the HC sync block and verify no setSnackbar calls in it
     const hcBlock = source.match(
       /Health Connect sync[\s\S]*?catch\s*\{[\s\S]*?\}/
