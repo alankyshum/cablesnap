@@ -497,3 +497,19 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: When multiple destructive actions share a countdown-undo UI (snackbar), a second action starting before the first commits creates a desync risk: the first action's undo ref is overwritten, making it uncommittable. The fix is a `commitPendingAction()` guard that immediately commits the first action to the DB (skipping the remaining countdown) before starting the second. This pattern also requires position-aware undo (restoring at `originalIndex`, not appending) and DB-failure rollback (restoring the UI group if the batch delete fails).
 **Action**: When implementing countdown-undo for destructive actions, always add a `commitPending*()` function that is called at the start of each new action. Store enough context in the pending ref to both commit (IDs to delete) and undo (removed data + original position). Wrap the DB commit in try/catch and restore the UI on failure with a user-visible error snackbar.
 **Tags**: optimistic-ui, undo, countdown, concurrent-actions, destructive-action, snackbar, desync, batch-delete, session-data
+
+### BNA UI Card style Prop Requires StyleSheet.flatten — No Array Support
+**Source**: BLD-313 — P4a: Migrate screens batch 1
+**Date**: 2026-04-18
+**Context**: Migrating 10 screens from react-native-paper (RNP) to BNA UI. RNP Card's `style` prop accepts arrays (e.g., `style={[styles.card, { backgroundColor }]}`). BNA UI Card types its `style` prop as `ViewStyle` (not `StyleProp<ViewStyle>`), so arrays cause a TypeScript error.
+**Learning**: BNA UI Card (and potentially other BNA components with `ViewStyle`-typed style props) does not accept style arrays. Use `StyleSheet.flatten()` to merge arrays into a single object: `style={StyleSheet.flatten([styles.card, { backgroundColor }])}`. This is a systematic difference from RNP where `style` props universally accept arrays.
+**Action**: When migrating any component from RNP to BNA UI, check whether the BNA component's `style` prop is typed as `ViewStyle` or `StyleProp<ViewStyle>`. If it's `ViewStyle`, wrap all style arrays with `StyleSheet.flatten()`. Apply this pattern consistently across all migrated screens.
+**Tags**: bna-ui, react-native-paper, migration, stylesheet-flatten, card, style-prop, typescript
+
+### BNA UI Component Gaps — DataTable, List.Item, Card.onPress Require Manual Replacements
+**Source**: BLD-313 — P4a: Migrate screens batch 1
+**Date**: 2026-04-18
+**Context**: The BNA UI migration spec mapped `DataTable → BNA Table` and `Card (with onPress) → Card`. During implementation, BNA Table proved too heavy for simple tabular displays (it includes search, pagination, sorting), and BNA Card has no `onPress` prop or `List.Item` equivalent.
+**Learning**: Three RNP components have no direct BNA equivalent: (1) **DataTable** — BNA Table is a full-featured data grid; for simple key-value rows, use `View` with `flexDirection: "row"` + `Text` + `Separator`. (2) **List.Item** — no BNA equivalent exists; build with `Pressable` + `View` rows containing icon + text + description. (3) **Card onPress** — BNA Card is purely a container; wrap with `Pressable` when tap behavior is needed. These gaps should be anticipated in migration planning.
+**Action**: When planning BNA UI migration for screens using DataTable, List.Item, or pressable Cards, budget extra time for building custom View-based replacements. Do not assume 1:1 component parity — verify each BNA component's API before starting migration.
+**Tags**: bna-ui, react-native-paper, migration, datatable, list-item, card, pressable, component-gaps

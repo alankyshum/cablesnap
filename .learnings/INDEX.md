@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-17
-Total learnings: 129
+Last updated: 2026-04-18
+Total learnings: 131
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 60 learnings
+- [React Native + Expo](patterns/react-native.md) — 62 learnings
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-18 | BLD-313 | BNA UI Card style Prop Requires StyleSheet.flatten — No Array Support | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-313 | BNA UI Component Gaps — DataTable, List.Item, Card.onPress Require Manual Replacements | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-307 | Serializing Concurrent Countdown-Undo Actions to Prevent UI/DB Desync | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-302 | SDK Status Check Must Precede Initialization — Init Failure Masks Availability State | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-17 | BLD-301 | Health Connect SDK Requires Four Setup Steps Beyond the NPM Package | Patterns | [react-native.md](patterns/react-native.md) |
