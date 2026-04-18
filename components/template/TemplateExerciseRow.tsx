@@ -112,7 +112,7 @@ export function TemplateExerciseRow({
         </View>
       )}
 
-      <SwipeToDelete onDelete={() => onRemove(item.id)} enabled={!selecting}>
+      <SwipeToDelete onDelete={() => onRemove(item.id)} enabled={!selecting} showHint={index === 0}>
         <Pressable
           onPress={() => {
             if (selecting) {
@@ -193,9 +193,7 @@ export function TemplateExerciseRow({
               <TouchableOpacity onPress={() => onMove(index, 1)} disabled={index === exercises.length - 1} accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`} hitSlop={8} style={{ padding: 8 }}>
                 <MaterialCommunityIcons name="arrow-down" size={18} color={colors.onSurface} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => onRemove(item.id)} accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`} hitSlop={8} style={{ padding: 8 }}>
-                <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
-              </TouchableOpacity>
+
             </View>
           )}
         </Pressable>

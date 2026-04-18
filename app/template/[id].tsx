@@ -72,7 +72,7 @@ export default function EditTemplate() {
       <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <View style={styles.section}>
           <View style={styles.headerRow}>
-            <Text variant="title" style={{ color: colors.onBackground }}>
+            <Text variant="title" style={{ color: colors.onBackground, flexShrink: 1 }}>
               Exercises ({exercises.length})
             </Text>
             {starter && (
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingVertical: 16 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   section: { marginBottom: 8 },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   list: { flex: 1 },
   addBtn: { marginTop: 8 },
   doneBtn: { marginTop: 16 },
