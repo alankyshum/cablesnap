@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-18
-Total learnings: 141
+Total learnings: 142
 
 ## How to Use This Knowledge Base
 
@@ -21,7 +21,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 14 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 15 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-18 | BLD-335 | New Database Tables Require Five-Point Backup/Restore Integration | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-18 | BLD-334 | moduleNameMapper Enforces __mocks__/ Directory Mock Resolution for Reanimated | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-18 | BLD-334 | Snapshot Composite Entity Before Cascade Delete for Undo Restoration | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-332 | Extract Heavy Constant Data into Companion Data Files | Patterns | [react-native.md](patterns/react-native.md) |
