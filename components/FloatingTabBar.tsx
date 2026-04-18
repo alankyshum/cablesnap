@@ -6,6 +6,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -14,18 +15,19 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withRepeat,
+  withSequence,
   useReducedMotion,
 } from "react-native-reanimated";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 const BAR_HEIGHT = 56;
-const BAR_MARGIN_BOTTOM = 8;
+const BAR_MARGIN_BOTTOM = 24;
 const BAR_BUFFER = 8;
 /** Base height used for content padding (bar + margins + buffer). Add insets.bottom for full value. */
 export const FLOATING_TAB_BAR_HEIGHT = BAR_HEIGHT + BAR_MARGIN_BOTTOM + BAR_BUFFER;
 
-const CENTER_BUTTON_SIZE = 56;
-const CENTER_PROTRUSION = 12;
+const CENTER_BUTTON_SIZE = 72;
 const BAR_BORDER_RADIUS = 24;
 const BAR_HORIZONTAL_MARGIN = 16;
 
@@ -73,10 +75,54 @@ function CenterButton({
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
+  const iconScale = useSharedValue(1);
+  const iconRotate = useSharedValue(0);
+
+  useEffect(() => {
+    if (focused && !reducedMotion) {
+      // Natural arm-flex: rotate like curling a bicep + slight squeeze
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
+      iconRotate.value = withRepeat(
+        withSequence(
+          withTiming(-12, { duration: 400 }),
+          withTiming(8, { duration: 350 }),
+          withTiming(-5, { duration: 300 }),
+          withTiming(0, { duration: 250 }),
+          withTiming(0, { duration: 700 }),
+        ),
+        -1,
+        false,
+      );
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
+      iconScale.value = withRepeat(
+        withSequence(
+          withTiming(1.12, { duration: 400 }),
+          withTiming(1.0, { duration: 350 }),
+          withTiming(1.06, { duration: 300 }),
+          withTiming(1.0, { duration: 250 }),
+          withTiming(1.0, { duration: 700 }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
+      iconScale.value = withTiming(1, { duration: 200 });
+      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
+      iconRotate.value = withTiming(0, { duration: 200 });
+    }
+  }, [focused, reducedMotion, iconScale, iconRotate]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     opacity: opacity.value,
+  }));
+
+  const iconAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: `${iconRotate.value}deg` },
+      { scale: iconScale.value },
+    ],
   }));
 
   const handlePressIn = useCallback(() => {
@@ -118,11 +164,13 @@ function CenterButton({
             },
           ]}
         >
-          <MaterialCommunityIcons
-            name="arm-flex"
-            size={28}
-            color={focused ? theme.colors.onPrimary : color}
-          />
+          <Animated.View style={iconAnimatedStyle}>
+            <MaterialCommunityIcons
+              name="arm-flex"
+              size={28}
+              color={focused ? theme.colors.onPrimary : color}
+            />
+          </Animated.View>
         </Pressable>
       </Animated.View>
     </View>
@@ -132,10 +180,9 @@ function CenterButton({
 const centerStyles = StyleSheet.create({
   wrapper: {
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     width: CENTER_BUTTON_SIZE + 16,
-    height: BAR_HEIGHT + CENTER_PROTRUSION,
-    marginTop: -CENTER_PROTRUSION,
+    height: BAR_HEIGHT,
   },
   button: {
     width: CENTER_BUTTON_SIZE,
@@ -255,13 +302,19 @@ export default function FloatingTabBar({
         styles.container,
         {
           bottom: insets.bottom + BAR_MARGIN_BOTTOM,
-          backgroundColor: theme.colors.surface,
           shadowColor: theme.colors.shadow,
         },
         animatedContainerStyle,
       ]}
       pointerEvents={keyboardVisible ? "none" : "auto"}
     >
+      <View style={styles.blurClip}>
+        <BlurView
+          intensity={80}
+          tint={theme.dark ? "dark" : "light"}
+          style={[StyleSheet.absoluteFill, { backgroundColor: theme.dark ? "rgba(30,30,30,0.7)" : "rgba(255,255,255,0.75)" }]}
+        />
+      </View>
       {orderedTabs.map((name, visualIdx) => {
         const entry = routeMap.get(name)!;
         const focused = state.index === entry.index;
@@ -317,7 +370,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     elevation: 8,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    // @ts-expect-error -- web-only boxShadow for cross-platform shadow
+    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+  },
+  blurClip: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BAR_BORDER_RADIUS,
+    overflow: "hidden",
   },
 });

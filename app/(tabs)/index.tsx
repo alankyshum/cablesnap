@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Alert,
   FlatList,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -47,8 +46,8 @@ import type { Program, WorkoutTemplate } from "../../lib/types";
 
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
-import { DIFFICULTY_LABELS } from "../../lib/types";
 import { formatDuration, formatDateShort, computeStreak } from "../../lib/format";
+import { FlowCard, difficultyBadge, type MetaBadge } from "../../components/FlowCard";
 import { useFocusRefetch } from "../../lib/query";
 import { useSnackbar } from "../../components/SnackbarProvider";
 import { useLayout } from "../../lib/layout";
@@ -516,58 +515,32 @@ export default function Workouts() {
                 </Button>
               </View>
             ) : (
-              <FlatList
-                data={allTemplates}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                contentContainerStyle={styles.flowList}
-                renderItem={({ item }) => {
+              <View style={styles.flowList}>
+                {allTemplates.map((item) => {
                   const meta = starterMeta(item.id);
                   const isStarter = !!meta || item.is_starter;
+                  const metaBadges: MetaBadge[] = meta
+                    ? [
+                        difficultyBadge(meta.difficulty),
+                        { icon: "clock-outline", label: meta.duration },
+                        { icon: "dumbbell", label: `${meta.exercises.length} exercises` },
+                      ]
+                    : [{ icon: "dumbbell", label: `${counts[item.id] ?? 0} exercises` }];
+                  if (isStarter) metaBadges.push({ icon: "star-outline", label: "Starter" });
+                  const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
+                  if (meta?.recommended) badges.push({ label: "RECOMMENDED", type: "recommended" });
                   return (
-                    <Card
-                      style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
-                    >
-                      <Card.Content style={styles.cardContent}>
-                        <Pressable
-                          onPress={() => startFromTemplate(item)}
-                          onLongPress={!isStarter ? () => confirmDelete(item) : undefined}
-                          style={styles.cardInfo}
-                          accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
-                          accessibilityHint={isStarter ? "Double-tap to start workout" : undefined}
-                          accessibilityRole="button"
-                        >
-                          <View style={styles.chipRow}>
-                            <Text
-                              variant="titleSmall"
-                              style={{ color: theme.colors.onSurface }}
-                            >
-                              {meta?.name || item.name}
-                            </Text>
-                            {isStarter && (
-                              <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
-                                <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
-                              </View>
-                            )}
-                            {meta?.recommended && (
-                              <View
-                                style={[styles.badge, { backgroundColor: theme.colors.primaryContainer }]}
-                                accessibilityLabel="Recommended"
-                              >
-                                <Text style={[styles.badgeText, { color: theme.colors.onPrimaryContainer }]}>
-                                  Recommended
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                          <Text
-                            variant="bodySmall"
-                            style={{ color: theme.colors.onSurfaceVariant }}
-                          >
-                            {meta ? `${DIFFICULTY_LABELS[meta.difficulty]} \u00b7 ${meta.duration} \u00b7 ${meta.exercises.length} exercises` : `${counts[item.id] ?? 0} exercises`}
-                          </Text>
-                        </Pressable>
-                        {isStarter ? (
+                    <FlowCard
+                      key={item.id}
+                      name={meta?.name || item.name}
+                      onPress={() => startFromTemplate(item)}
+                      onLongPress={!isStarter ? () => confirmDelete(item) : undefined}
+                      accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
+                      accessibilityHint={isStarter ? "Double-tap to start workout" : undefined}
+                      badges={badges}
+                      meta={metaBadges}
+                      action={
+                        isStarter ? (
                           <Menu
                             visible={menu === item.id}
                             onDismiss={() => setMenu(null)}
@@ -594,12 +567,12 @@ export default function Workouts() {
                             onPress={() => router.push(`/template/${item.id}`)}
                             accessibilityLabel={`Edit template ${item.name}`}
                           />
-                        )}
-                      </Card.Content>
-                    </Card>
+                        )
+                      }
+                    />
                   );
-                }}
-              />
+                })}
+              </View>
             )}
           </View>
         </>
@@ -642,95 +615,53 @@ export default function Workouts() {
                 </Button>
               </View>
             ) : (
-              <FlatList
-                data={allPrograms}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                contentContainerStyle={styles.flowList}
-                renderItem={({ item }) => (
-                  <Card
-                    style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
-                    onPress={!item.is_starter ? () => router.push(`/program/${item.id}`) : undefined}
-                    onLongPress={!item.is_starter ? () => confirmDeleteProgram(item) : undefined}
-                    accessibilityLabel={`${item.is_starter ? "Starter program" : "Program"}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
-                    accessibilityRole="button"
-                  >
-                    <Card.Content style={styles.cardContent}>
-                      {item.is_starter ? (
-                        <Pressable
-                          onPress={() => router.push(`/program/${item.id}`)}
-                          style={styles.cardInfo}
-                          accessibilityLabel={`Starter program: ${item.name}, ${dayCounts[item.id] ?? 0} days`}
-                          accessibilityHint="Double-tap to view program"
-                          accessibilityRole="button"
-                        >
-                          <View style={styles.chipRow}>
-                            <Text
-                              variant="titleSmall"
-                              style={{ color: theme.colors.onSurface }}
-                            >
-                              {item.name}
-                            </Text>
-                            <View style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]} accessibilityLabel="Starter template">
-                              <Text style={[styles.badgeText, { color: theme.colors.onSurfaceVariant }]}>STARTER</Text>
-                            </View>
-                          </View>
-                          <Text
-                            variant="bodySmall"
-                            style={{ color: theme.colors.onSurfaceVariant }}
+              <View style={styles.flowList}>
+                {allPrograms.map((item) => {
+                  const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
+                  if (item.is_active) badges.push({ label: "ACTIVE", type: "active" });
+                  const metaBadges: MetaBadge[] = [
+                    item.is_starter
+                      ? difficultyBadge("intermediate")
+                      : { icon: "signal-cellular-2", label: "Custom" },
+                    { icon: "calendar-blank-outline", label: `${dayCounts[item.id] ?? 0} days` },
+                  ];
+                  if (item.is_starter) metaBadges.push({ icon: "star-outline", label: "Starter" });
+                  return (
+                    <FlowCard
+                      key={item.id}
+                      name={item.name}
+                      onPress={() => router.push(`/program/${item.id}`)}
+                      onLongPress={!item.is_starter ? () => confirmDeleteProgram(item) : undefined}
+                      accessibilityLabel={`${item.is_starter ? "Starter program" : "Program"}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
+                      badges={badges}
+                      meta={metaBadges}
+                      action={
+                        item.is_starter ? (
+                          <Menu
+                            visible={menu === `prog-${item.id}`}
+                            onDismiss={() => setMenu(null)}
+                            anchor={
+                              <IconButton
+                                icon="dots-vertical"
+                                size={20}
+                                onPress={() => setMenu(`prog-${item.id}`)}
+                                accessibilityLabel={`Options for ${item.name}`}
+                              />
+                            }
                           >
-                            {dayCounts[item.id] ?? 0} days \u00b7 Intermediate
-                          </Text>
-                        </Pressable>
-                      ) : (
-                        <View style={styles.cardInfo}>
-                          <Text
-                            variant="titleSmall"
-                            style={{ color: theme.colors.onSurface }}
-                          >
-                            {item.name}
-                          </Text>
-                          <Text
-                            variant="bodySmall"
-                            style={{ color: theme.colors.onSurfaceVariant }}
-                          >
-                            {dayCounts[item.id] ?? 0} days{item.is_active ? " \u00b7 Active" : ""}
-                          </Text>
-                        </View>
-                      )}
-                      {item.is_active && (
-                        <MaterialCommunityIcons
-                          name="check-circle"
-                          size={20}
-                          color={theme.colors.primary}
-                          accessibilityLabel="Active program"
-                        />
-                      )}
-                      {item.is_starter && (
-                        <Menu
-                          visible={menu === `prog-${item.id}`}
-                          onDismiss={() => setMenu(null)}
-                          anchor={
-                            <IconButton
-                              icon="dots-vertical"
-                              size={20}
-                              onPress={() => setMenu(`prog-${item.id}`)}
-                              accessibilityLabel={`Options for ${item.name}`}
+                            <Menu.Item
+                              onPress={() => handleDuplicateProgram(item)}
+                              title="Duplicate"
+                              leadingIcon="content-copy"
+                              accessibilityLabel="Duplicate program for editing"
                             />
-                          }
-                        >
-                          <Menu.Item
-                            onPress={() => handleDuplicateProgram(item)}
-                            title="Duplicate"
-                            leadingIcon="content-copy"
-                            accessibilityLabel="Duplicate program for editing"
-                          />
-                        </Menu>
-                      )}
-                    </Card.Content>
-                  </Card>
-                )}
-              />
+                          </Menu>
+                        ) : <></>
+                      }
+                    />
+                  );
+                })}
+              </View>
             )}
           </View>
         </>
@@ -886,15 +817,7 @@ const styles = StyleSheet.create({
   flowCard: {
     marginBottom: 8,
     ...flowCardStyle,
-  },
-  cardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 4,
-  },
-  cardInfo: {
-    flex: 1,
+    flexGrow: 0,
   },
   empty: {
     alignItems: "center",
@@ -915,22 +838,6 @@ const styles = StyleSheet.create({
   },
   btnContent: {
     paddingVertical: 8,
-  },
-  chipRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  badge: {
-    height: 24,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    justifyContent: "center",
-  },
-  badgeText: {
-    fontSize: 12,
-    lineHeight: 16,
   },
   adherence: {
     marginBottom: 12,
