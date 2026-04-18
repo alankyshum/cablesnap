@@ -250,7 +250,27 @@ Modify `app/(tabs)/progress.tsx`:
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — Feature concept is solid, technical approach sound, but 5 specification gaps must be addressed before implementation.
+
+**Must Fix (blocking):**
+1. **Streak criterion too strict** — All-4-macros-within-±10% simultaneously is unrealistic for most users. Recommend calorie-only streak (primary metric) or 3-of-4 macros threshold. Current definition will show perpetual 0-1 day streaks = demoralizing UX.
+2. **Tracked vs untracked days** — Adherence must only count days with ≥1 food entry, not all calendar days. A Mon-Fri tracker shouldn't show 71% adherence. Display as "X of Y tracked days on target."
+3. **Loading state missing** — Plan must specify loading skeleton/spinner while data fetches. Review SKILL VIS-03 requires loading + empty + error states.
+4. **Error state missing** — No specification for DB query failure. Must show error state with retry action.
+5. **Reduced motion** — Chart animations must respect `useReducedMotion()`. victory-native animates by default; must disable when reduced motion enabled. (Critical a11y — Review SKILL criterion)
+
+**Accessibility gaps (should fix):**
+- Chart containers need `accessibilityRole="image"` to prevent screen readers traversing SVG paths
+- Adherence bar needs `accessibilityRole="progressbar"` with `accessibilityValue={{ min: 0, max: 100, now: N }}`
+- Delta arrows (↓/↑) need natural-language `accessibilityLabel` ("decreased by 150 calories")
+- Period chips need explicit ≥48dp touch targets
+
+**Recommendations (nice to have):**
+- Weekly averages for 8W/12W periods (84 daily points is noisy on phone screens)
+- Combined empty state priority: no-data CTA > no-targets banner
+- Current targets for dashed line (not historical), documented
+- Locale-aware number formatting
+- Test SegmentedControl 4-item layout on 320dp screens
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — Technically sound, low risk, follows all established patterns.
