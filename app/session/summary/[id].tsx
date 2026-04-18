@@ -1,343 +1,74 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Modal,
-  Platform,
-  Pressable,
-  Share,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import { useMemo, useRef } from "react";
+import { Pressable, Share, StyleSheet, TextInput, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { useToast } from "@/components/ui/bna-toast";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import BottomSheet from "@gorhom/bottom-sheet";
-import * as Haptics from "expo-haptics";
-import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
-import { captureRef } from "react-native-view-shot";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../../lib/layout";
-import {
-  createTemplateFromSession,
-  getBodySettings,
-  getSessionById,
-  getSessionComparison,
-  getSessionPRs,
-  getSessionRepPRs,
-  getSessionSetCount,
-  getSessionSets,
-  getSessionWeightIncreases,
-  buildAchievementContext,
-  getEarnedAchievementIds,
-  saveEarnedAchievements,
-  updateSession,
-} from "../../../lib/db";
-import { evaluateAchievements } from "../../../lib/achievements";
-import type { AchievementDef } from "../../../lib/achievements";
-import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
-import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { toDisplay } from "../../../lib/units";
 import { formatTime } from "../../../lib/format";
+import { durationSpoken } from "../../../lib/session-display";
+import { useSummaryData } from "../../../hooks/useSummaryData";
+import { useSummaryActions } from "../../../hooks/useSummaryActions";
 import RatingWidget from "../../../components/RatingWidget";
-import ShareCard from "../../../components/ShareCard";
-import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import ShareSheet from "../../../components/ShareSheet";
+import AchievementsCard from "../../../components/session/summary/AchievementsCard";
+import PRsCard from "../../../components/session/summary/PRsCard";
+import WeightIncreasesCard from "../../../components/session/summary/WeightIncreasesCard";
+import ComparisonCard from "../../../components/session/summary/ComparisonCard";
+import SetsCard from "../../../components/session/summary/SetsCard";
+import SummaryFooter from "../../../components/session/summary/SummaryFooter";
+import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import { useThemeColors } from "@/hooks/useThemeColors";
-
-type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
-type RepPR = { exercise_id: string; name: string; reps: number; previous_max: number };
-type Increase = { exercise_id: string; name: string; current: number; previous: number };
-type Comparison = {
-  previous: { volume: number; duration: number; sets: number } | null;
-  current: { volume: number; duration: number; sets: number };
-} | null;
 
 export default function Summary() {
   const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [session, setSession] = useState<WorkoutSession | null>(null);
-  const [sets, setSets] = useState<(WorkoutSet & { exercise_name?: string })[]>([]);
-  const [prs, setPrs] = useState<PR[]>([]);
-  const [repPrs, setRepPrs] = useState<RepPR[]>([]);
-  const [increases, setIncreases] = useState<Increase[]>([]);
-  const [comparison, setComparison] = useState<Comparison>(null);
-  const [unit, setUnit] = useState<"kg" | "lb">("kg");
-  const [newAchievements, setNewAchievements] = useState<AchievementDef[]>([]);
-  const [rating, setRating] = useState<number | null>(null);
-  const [notesText, setNotesText] = useState("");
-  const [notesExpanded, setNotesExpanded] = useState(false);
-  const [templateModalVisible, setTemplateModalVisible] = useState(false);
-  const [templateName, setTemplateName] = useState("");
-  const { toast } = useToast();
-  const [completedSetCount, setCompletedSetCount] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
-  const shareSheetRef = useRef<BottomSheet>(null);
-  const shareCardRef = useRef<View>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      const [sess, settings] = await Promise.all([
-        getSessionById(id),
-        getBodySettings(),
-      ]);
-      if (!sess) return;
-      setSession(sess);
-      setUnit(settings.weight_unit);
-      setRating(sess.rating ?? null);
-      setNotesText(sess.notes ?? "");
-      setNotesExpanded(!!(sess.notes && sess.notes.length > 0));
+  const data = useSummaryData(id);
+  const { session, completed, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount } = data;
+  const actions = useSummaryActions(id);
 
-      const [setsData, prData, repPrData, incData, compData, setCount] = await Promise.all([
-        getSessionSets(id),
-        getSessionPRs(id),
-        getSessionRepPRs(id),
-        getSessionWeightIncreases(id),
-        getSessionComparison(id),
-        getSessionSetCount(id),
-      ]);
-      setSets(setsData);
-      setPrs(prData);
-      setCompletedSetCount(setCount);
-      setRepPrs(repPrData);
-      // Filter out exercises that are already weight PRs
-      setIncreases(incData.filter(
-        (inc) => !prData.some((pr) => pr.exercise_id === inc.exercise_id)
-      ));
-      setComparison(compData);
+  // Sync rating/notes when session loads
+  const sessionRef = useRef(session);
+  if (session && session !== sessionRef.current) {
+    sessionRef.current = session;
+    actions.setRating(session.rating ?? null);
+    actions.setNotesText(session.notes ?? "");
+    actions.setNotesExpanded(!!(session.notes && session.notes.length > 0));
+  }
 
-      // Achievement evaluation
-      try {
-        const [ctx, alreadyEarnedIds] = await Promise.all([
-          buildAchievementContext(),
-          getEarnedAchievementIds(),
-        ]);
-        const earned = evaluateAchievements(ctx, alreadyEarnedIds);
-        if (earned.length > 0) {
-          await saveEarnedAchievements(earned.map((e) => e.achievement.id));
-          setNewAchievements(earned.map((e) => e.achievement));
-          if (Platform.OS !== "web") {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          }
-        }
-      } catch (e) {
-        if (__DEV__) console.warn("Achievement evaluation failed:", e);
-      }
-
-      AccessibilityInfo.announceForAccessibility("Workout Complete!");
-    })();
-  }, [id]);
-
-  const completed = useMemo(
-    () => sets.filter((s) => s.completed),
-    [sets],
-  );
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, { name: string; sets: typeof completed }>();
-    for (const s of completed) {
-      const key = s.exercise_id;
-      if (!map.has(key)) map.set(key, { name: s.exercise_name ?? key, sets: [] });
-      map.get(key)!.sets.push(s);
-    }
-    return [...map.values()];
-  }, [completed]);
-
-  const volume = useMemo(() => {
-    let total = 0;
-    for (const s of completed) {
-      if (s.weight && s.reps && !s.is_warmup) total += s.weight * s.reps;
-    }
-    return total;
-  }, [completed]);
-
-  const setTypeCounts = useMemo(() => {
-    const counts = { normal: 0, warmup: 0, dropset: 0, failure: 0 };
-    for (const s of completed) {
-      const t = (s as { set_type?: string }).set_type ?? (s.is_warmup ? "warmup" : "normal");
-      if (t in counts) counts[t as keyof typeof counts]++;
-    }
-    return counts;
-  }, [completed]);
-
-  const warmupCount = setTypeCounts.warmup;
-  const workingCount = setTypeCounts.normal;
-  const dropsetCount = setTypeCounts.dropset;
-  const failureCount = setTypeCounts.failure;
-
-  const setsBreakdown = useMemo(() => {
-    const parts: string[] = [];
-    if (workingCount > 0) parts.push(`${workingCount} working`);
-    if (warmupCount > 0) parts.push(`${warmupCount} warm-up`);
-    if (dropsetCount > 0) parts.push(`${dropsetCount} dropset`);
-    if (failureCount > 0) parts.push(`${failureCount} failure`);
-    return parts.join(" · ");
-  }, [workingCount, warmupCount, dropsetCount, failureCount]);
-
-  const duration = session?.duration_seconds
-    ? formatTime(session.duration_seconds)
-    : "0:00";
-
-  const durationSpoken = () => {
-    if (!session?.duration_seconds) return "0 minutes";
-    const h = Math.floor(session.duration_seconds / 3600);
-    const m = Math.floor((session.duration_seconds % 3600) / 60);
-    if (h > 0) return `${h} hour${h > 1 ? "s" : ""} ${m} minute${m !== 1 ? "s" : ""}`;
-    return `${m} minute${m !== 1 ? "s" : ""}`;
-  };
-
+  const duration = session?.duration_seconds ? formatTime(session.duration_seconds) : "0:00";
   const volumeDisplay = toDisplay(volume, unit);
-
-  const delta = (cur: number, prev: number) => {
-    const diff = cur - prev;
-    if (diff > 0) return `↑ ${diff}`;
-    if (diff < 0) return `↓ ${Math.abs(diff)}`;
-    return "—";
-  };
-
-  const deltaTime = (cur: number, prev: number) => {
-    const diff = cur - prev;
-    const m = Math.floor(Math.abs(diff) / 60);
-    if (diff > 0) return `↑ ${m}m`;
-    if (diff < 0) return `↓ ${m}m`;
-    return "—";
-  };
-
-  const share = async () => {
-    const lines = [`🏋️ ${session?.name ?? "Workout"} Complete!`];
-    lines.push(`Duration: ${duration}`);
-    lines.push(`Sets: ${completed.length}`);
-    lines.push(`Volume: ${volumeDisplay.toLocaleString()} ${unit}`);
-    if (prs.length > 0) {
-      lines.push("");
-      lines.push("🏆 New PRs:");
-      for (const pr of prs) {
-        lines.push(`  ${pr.name}: ${toDisplay(pr.weight, unit)} ${unit}`);
-      }
-    }
-    if (repPrs.length > 0) {
-      if (prs.length === 0) lines.push("", "🏆 New PRs:");
-      for (const pr of repPrs) {
-        lines.push(`  ${pr.name}: ${pr.reps} reps`);
-      }
-    }
-    try {
-      await Share.share({ message: lines.join("\n") });
-    } catch {
-      // User cancelled share
-    }
-  };
 
   const shareCardDate = useMemo(() => {
     if (!session?.started_at) return "";
-    const d = new Date(session.started_at);
-    return d.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return new Date(session.started_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
   }, [session?.started_at]);
 
   const shareCardPrs = useMemo((): ShareCardPR[] => {
-    const items: ShareCardPR[] = prs.map((pr) => ({
-      name: pr.name,
-      value: `${toDisplay(pr.weight, unit)} ${unit}`,
-    }));
-    for (const pr of repPrs) {
-      items.push({ name: pr.name, value: `${pr.reps} reps` });
-    }
+    const items: ShareCardPR[] = prs.map((pr) => ({ name: pr.name, value: `${toDisplay(pr.weight, unit)} ${unit}` }));
+    for (const pr of repPrs) items.push({ name: pr.name, value: `${pr.reps} reps` });
     return items;
   }, [prs, repPrs, unit]);
 
   const shareCardExercises = useMemo((): ShareCardExercise[] => {
     return grouped.map((g) => {
       const maxWeight = Math.max(...g.sets.map((s) => s.weight ?? 0));
-      const repValues = g.sets.map((s) => s.reps ?? 0);
-      const typicalReps = repValues.length > 0 ? repValues[0] : 0;
-      return {
-        name: g.name,
-        sets: g.sets.length,
-        reps: String(typicalReps),
-        weight: maxWeight > 0 ? `${toDisplay(maxWeight, unit)} ${unit}` : undefined,
-      };
+      const typicalReps = g.sets.length > 0 ? (g.sets[0].reps ?? 0) : 0;
+      return { name: g.name, sets: g.sets.length, reps: String(typicalReps), weight: maxWeight > 0 ? `${toDisplay(maxWeight, unit)} ${unit}` : undefined };
     });
   }, [grouped, unit]);
 
-  const handleShareImage = useCallback(() => {
-    setImageLoading(true);
-    setPreviewVisible(true);
-  }, []);
-
-  const handleCaptureAndShare = useCallback(async () => {
-    if (!shareCardRef.current) return;
-    let uri: string | null = null;
-    try {
-      setImageLoading(true);
-      uri = await captureRef(shareCardRef, {
-        format: "png",
-        quality: 1.0,
-      });
-      await Sharing.shareAsync(uri, { mimeType: "image/png" });
-    } catch {
-      toast({ description: "Unable to generate image" });
-    } finally {
-      setImageLoading(false);
-      setPreviewVisible(false);
-      if (uri) {
-        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
-      }
-    }
-  }, []);
-
-  const handleShareButtonPress = useCallback(() => {
-    shareSheetRef.current?.snapToIndex(0);
-  }, []);
-
-  const handleRatingChange = useCallback(async (newRating: number | null) => {
-    if (!id) return;
-    const previousRating = rating;
-    setRating(newRating);
-    try {
-      await updateSession(id, { rating: newRating });
-    } catch {
-      setRating(previousRating);
-      toast({ description: "Failed to save rating" });
-    }
-  }, [id, rating]);
-
-  const handleNotesSave = useCallback(async () => {
-    if (!id) return;
-    try {
-      await updateSession(id, { notes: notesText });
-    } catch {
-      toast({ description: "Failed to save notes" });
-    }
-  }, [id, notesText]);
-
-  const handleSaveAsTemplate = useCallback(async () => {
-    if (!id || saving) return;
-    setSaving(true);
-    try {
-      const truncatedName = templateName.slice(0, 100).trim() || "Untitled Template";
-      const newId = await createTemplateFromSession(id, truncatedName);
-      setTemplateModalVisible(false);
-      toast({ description: "Template saved!" });
-    } catch {
-      toast({ description: "Failed to save template" });
-    } finally {
-      setSaving(false);
-    }
-  }, [id, templateName, saving, router]);
+  const share = async () => {
+    const lines = [`🏋️ ${session?.name ?? "Workout"} Complete!`, `Duration: ${duration}`, `Sets: ${completed.length}`, `Volume: ${volumeDisplay.toLocaleString()} ${unit}`];
+    if (prs.length > 0) { lines.push("", "🏆 New PRs:"); for (const pr of prs) lines.push(`  ${pr.name}: ${toDisplay(pr.weight, unit)} ${unit}`); }
+    if (repPrs.length > 0) { if (prs.length === 0) lines.push("", "🏆 New PRs:"); for (const pr of repPrs) lines.push(`  ${pr.name}: ${pr.reps} reps`); }
+    try { await Share.share({ message: lines.join("\n") }); } catch { /* cancelled */ }
+  };
 
   if (!session) {
     return (
@@ -351,765 +82,175 @@ export default function Summary() {
   }
 
   const allPrs = [...prs, ...repPrs];
+  const listData = [
+    ...(newAchievements.length > 0 ? [{ key: "achievements" }] : []),
+    ...(allPrs.length > 0 ? [{ key: "prs" }] : []),
+    ...(increases.length > 0 ? [{ key: "increases" }] : []),
+    ...(comparison?.previous ? [{ key: "comparison" }] : []),
+    ...(grouped.length > 0 ? [{ key: "sets" }] : []),
+  ] as { key: string }[];
 
   return (
     <>
       <Stack.Screen options={{ title: "Workout Complete!" }} />
       <FlashList
-        data={
-          [
-            ...(newAchievements.length > 0 ? [{ key: "achievements" }] : []),
-            ...(allPrs.length > 0 ? [{ key: "prs" }] : []),
-            ...(increases.length > 0 ? [{ key: "increases" }] : []),
-            ...(comparison?.previous ? [{ key: "comparison" }] : []),
-            ...(grouped.length > 0 ? [{ key: "sets" }] : []),
-          ] as { key: string }[]
-        }
+        data={listData}
         keyExtractor={(s) => s.key}
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         ListHeaderComponent={
-          <>
-            {/* Header */}
-            <View style={styles.header}>
-              <MaterialCommunityIcons
-                name="check-circle"
-                size={48}
-                color={colors.primary}
-              />
-              <Text
-                variant="heading"
-                style={[styles.title, { color: colors.onBackground }]}
-                accessibilityRole="header"
-              >
-                Workout Complete!
-              </Text>
-              <Text
-                variant="body"
-                style={{ color: colors.onSurfaceVariant }}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {session.name}
-              </Text>
-            </View>
-
-            {/* Stats Row */}
-            <View style={styles.stats}>
-              <Card
-                style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])}
-                accessibilityLabel={`Duration: ${durationSpoken()}`}
-              >
-                <CardContent style={styles.statInner}>
-                  <Text variant="heading" style={{ color: colors.primary }}>
-                    {duration}
-                  </Text>
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                    Duration
-                  </Text>
-                </CardContent>
-              </Card>
-              <Card
-                style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])}
-                accessibilityLabel={setsBreakdown ? `${completed.length} sets: ${setsBreakdown}` : `${completed.length} sets completed`}
-              >
-                <CardContent style={styles.statInner}>
-                  <Text variant="heading" style={{ color: colors.primary }}>
-                    {completed.length}
-                  </Text>
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                    {setsBreakdown ? `Sets (${setsBreakdown})` : "Sets"}
-                  </Text>
-                </CardContent>
-              </Card>
-              <Card
-                style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])}
-                accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}
-              >
-                <CardContent style={styles.statInner}>
-                  <Text variant="heading" style={{ color: colors.primary }}>
-                    {volumeDisplay.toLocaleString()}
-                  </Text>
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                    Volume ({unit})
-                  </Text>
-                </CardContent>
-              </Card>
-            </View>
-
-            {/* Rating Widget */}
-            {session.completed_at && (
-              <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
-                <CardContent style={{ alignItems: "center" }}>
-                  <Text
-                    variant="title"
-                    style={{ color: colors.onSurface, marginBottom: 12, fontWeight: "600" }}
-                  >
-                    How was your workout?
-                  </Text>
-                  <RatingWidget value={rating} onChange={handleRatingChange} size="large" />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Session Notes */}
-            {session.completed_at && (
-              <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
-                <CardContent>
-                  <Pressable
-                    onPress={() => setNotesExpanded(!notesExpanded)}
-                    style={styles.notesHeader}
-                    accessibilityRole="button"
-                    accessibilityLabel="Session notes"
-                    accessibilityHint="Double tap to add notes about this workout"
-                    accessibilityState={{ expanded: notesExpanded }}
-                  >
-                    <MaterialCommunityIcons
-                      name="note-edit-outline"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text
-                      variant="subtitle"
-                      style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}
-                    >
-                      Session notes
-                    </Text>
-                    <MaterialCommunityIcons
-                      name={notesExpanded ? "chevron-up" : "chevron-down"}
-                      size={20}
-                      color={colors.onSurfaceVariant}
-                    />
-                  </Pressable>
-                  {notesExpanded && (
-                    <View style={{ marginTop: 8 }}>
-                      <TextInput
-                        value={notesText}
-                        onChangeText={(t) => setNotesText(t.slice(0, 500))}
-                        onBlur={handleNotesSave}
-                        placeholder="Add notes about this workout..."
-                        placeholderTextColor={colors.onSurfaceDisabled}
-                        multiline
-                        maxLength={500}
-                        style={[
-                          styles.notesInput,
-                          {
-                            color: colors.onSurface,
-                            backgroundColor: colors.surfaceVariant,
-                            borderColor: colors.outline,
-                          },
-                        ]}
-                        accessibilityLabel="Session notes"
-                      />
-                      <Text
-                        variant="caption"
-                        style={{ color: colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}
-                      >
-                        {notesText.length}/500
-                      </Text>
-                    </View>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </>
+          <SummaryHeader
+            colors={colors}
+            session={session}
+            duration={duration}
+            durationSpokenText={durationSpoken(session.duration_seconds)}
+            completedCount={completed.length}
+            setsBreakdown={setsBreakdown}
+            volumeDisplay={volumeDisplay}
+            unit={unit}
+            rating={actions.rating}
+            onRatingChange={actions.handleRatingChange}
+            notesExpanded={actions.notesExpanded}
+            setNotesExpanded={actions.setNotesExpanded}
+            notesText={actions.notesText}
+            setNotesText={actions.setNotesText}
+            onNotesSave={actions.handleNotesSave}
+          />
         }
         renderItem={({ item }) => {
-          if (item.key === "achievements") {
-            const displayed = newAchievements.slice(0, 3);
-            const extraCount = newAchievements.length - 3;
-            return (
-              <Card
-                style={StyleSheet.flatten([styles.section, { backgroundColor: colors.tertiaryContainer }])}
-                accessibilityLabel={`${newAchievements.length} achievement${newAchievements.length > 1 ? "s" : ""} unlocked`}
-                accessibilityLiveRegion="polite"
-              >
-                <CardContent>
-                  <View style={styles.sectionHeader}>
-                    <Text style={{ fontSize: 20 }}>🏆</Text>
-                    <Text
-                      variant="title"
-                      style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
-                    >
-                      Achievement{newAchievements.length > 1 ? "s" : ""} Unlocked!
-                    </Text>
-                  </View>
-                  {displayed.map((a) => (
-                    <View key={a.id} style={styles.row}>
-                      <Text style={{ fontSize: 18, marginRight: 8 }}>{a.icon}</Text>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          variant="body"
-                          style={{ color: colors.onTertiaryContainer, fontWeight: "600" }}
-                        >
-                          {a.name}
-                        </Text>
-                        <Text
-                          variant="caption"
-                          style={{ color: colors.onTertiaryContainer }}
-                        >
-                          {a.description}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                  {extraCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      onPress={() => router.push("/progress/achievements")}
-                      style={{ marginTop: 4 }}
-                      accessibilityLabel={`View ${extraCount} more achievements`}
-                      accessibilityRole="link"
-                    >
-                      +{extraCount} more
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          }
-
-          if (item.key === "prs") {
-            return (
-              <Card
-                style={StyleSheet.flatten([styles.section, { backgroundColor: colors.tertiaryContainer }])}
-                accessibilityLabel={`${allPrs.length} new personal record${allPrs.length > 1 ? "s" : ""}`}
-              >
-                <CardContent>
-                  <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons
-                      name="trophy"
-                      size={20}
-                      color={colors.onTertiaryContainer}
-                    />
-                    <Text
-                      variant="title"
-                      style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
-                    >
-                      {allPrs.length} New PR{allPrs.length > 1 ? "s" : ""}
-                    </Text>
-                  </View>
-                  {prs.map((pr) => (
-                    <View key={pr.exercise_id} style={styles.row}>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.onTertiaryContainer, flex: 1 }}
-                        accessibilityLabel={`New personal record: ${pr.name}, ${toDisplay(pr.weight, unit)} ${unit}`}
-                      >
-                        {pr.name}
-                      </Text>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.onTertiaryContainer }}
-                      >
-                        {toDisplay(pr.previous_max, unit)} → {toDisplay(pr.weight, unit)} {unit}
-                      </Text>
-                    </View>
-                  ))}
-                  {repPrs.map((pr) => (
-                    <View key={pr.exercise_id} style={styles.row}>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.onTertiaryContainer, flex: 1 }}
-                        accessibilityLabel={`New rep personal record: ${pr.name}, ${pr.reps} reps`}
-                      >
-                        {pr.name}
-                      </Text>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.onTertiaryContainer }}
-                      >
-                        {pr.previous_max} → {pr.reps} reps
-                      </Text>
-                    </View>
-                  ))}
-                </CardContent>
-              </Card>
-            );
-          }
-
-          if (item.key === "increases") {
-            return (
-              <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
-                <CardContent>
-                  <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons
-                      name="trending-up"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text
-                      variant="title"
-                      style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
-                    >
-                      Weight Increases
-                    </Text>
-                  </View>
-                  {increases.map((inc) => (
-                    <View key={inc.exercise_id} style={styles.row}>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.onSurface, flex: 1 }}
-                        accessibilityLabel={`${inc.name}: weight increased from ${toDisplay(inc.previous, unit)} to ${toDisplay(inc.current, unit)} ${unit}`}
-                      >
-                        {inc.name}
-                      </Text>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.primary }}
-                      >
-                        {toDisplay(inc.previous, unit)} → {toDisplay(inc.current, unit)} {unit}
-                      </Text>
-                    </View>
-                  ))}
-                </CardContent>
-              </Card>
-            );
-          }
-
-          if (item.key === "comparison" && comparison?.previous) {
-            return (
-              <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
-                <CardContent>
-                  <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons
-                      name="compare-horizontal"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text
-                      variant="title"
-                      style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
-                    >
-                      vs. Last Time
-                    </Text>
-                  </View>
-                  <View style={styles.compRow}>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
-                      Volume
-                    </Text>
-                    <Text
-                      variant="body"
-                      style={{ color: colors.onSurface }}
-                      accessibilityLabel={`Volume ${comparison.current.volume >= comparison.previous.volume ? "increased" : "decreased"} by ${Math.abs(comparison.current.volume - comparison.previous.volume).toLocaleString()}`}
-                    >
-                      {delta(comparison.current.volume, comparison.previous.volume)}
-                    </Text>
-                  </View>
-                  <View style={styles.compRow}>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
-                      Duration
-                    </Text>
-                    <Text
-                      variant="body"
-                      style={{ color: colors.onSurface }}
-                    >
-                      {deltaTime(comparison.current.duration, comparison.previous.duration)}
-                    </Text>
-                  </View>
-                  <View style={styles.compRow}>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
-                      Sets
-                    </Text>
-                    <Text
-                      variant="body"
-                      style={{ color: colors.onSurface }}
-                    >
-                      {delta(comparison.current.sets, comparison.previous.sets)}
-                    </Text>
-                  </View>
-                </CardContent>
-              </Card>
-            );
-          }
-
-          if (item.key === "sets") {
-            return (
-              <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
-                <CardContent>
-                  <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons
-                      name="dumbbell"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text
-                      variant="title"
-                      style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
-                    >
-                      Sets
-                    </Text>
-                  </View>
-                  {grouped.map((group) => (
-                    <View key={group.name} style={styles.exerciseGroup}>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
-                      >
-                        {group.name}
-                      </Text>
-                      {group.sets.map((set) => (
-                        <View key={set.id} style={styles.setRow}>
-                          <Text variant="body" style={{ color: colors.onSurface }}>
-                            {set.weight ?? 0} × {set.reps ?? 0}
-                          </Text>
-                          {set.training_mode && set.training_mode !== "weight" && (
-                            <View style={[styles.modeBadge, { backgroundColor: colors.secondaryContainer }]}>
-                              <Text style={{ color: colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
-                                {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
-                              </Text>
-                            </View>
-                          )}
-                          {set.tempo && (
-                            <Text
-                              variant="caption"
-                              style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                            >
-                              ♩ {set.tempo}
-                            </Text>
-                          )}
-                          {set.rpe != null && (
-                            <Text
-                              variant="caption"
-                              style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                            >
-                              RPE {set.rpe}
-                            </Text>
-                          )}
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                </CardContent>
-              </Card>
-            );
-          }
-
+          if (item.key === "achievements") return <AchievementsCard achievements={newAchievements} colors={colors} />;
+          if (item.key === "prs") return <PRsCard prs={prs} repPrs={repPrs} unit={unit} colors={colors} />;
+          if (item.key === "increases") return <WeightIncreasesCard increases={increases} unit={unit} colors={colors} />;
+          if (item.key === "comparison" && comparison?.previous) return <ComparisonCard comparison={comparison} colors={colors} />;
+          if (item.key === "sets") return <SetsCard grouped={grouped} colors={colors} />;
           return null;
         }}
         ListFooterComponent={
-          <View style={styles.actions}>
-            {session.completed_at && (
-              <Button
-                variant="outline"
-                onPress={() => {
-                  setTemplateName((session.name ?? "").slice(0, 100));
-                  setTemplateModalVisible(true);
-                }}
-                style={styles.shareBtn}
-                disabled={completedSetCount === 0}
-                accessibilityRole="button"
-                accessibilityHint={completedSetCount === 0 ? "No exercises to save" : "Save this workout as a reusable template"}
-                accessibilityState={{ disabled: completedSetCount === 0 }}
-                label="Save as Template"
-              />
-            )}
-            <Button
-              variant="default"
-              onPress={() => router.replace("/(tabs)")}
-              style={styles.doneBtn}
-              accessibilityRole="button"
-              accessibilityHint="Return to workouts tab"
-              label="Done"
-            />
-            <Button
-              variant="outline"
-              onPress={handleShareButtonPress}
-              style={styles.shareBtn}
-              accessibilityRole="button"
-              accessibilityHint="Share workout summary"
-              label="Share"
-            />
-            <Button
-              variant="ghost"
-              onPress={() => router.replace(`/session/detail/${id}`)}
-              accessibilityRole="button"
-              accessibilityHint="View detailed workout breakdown"
-              label="View Details"
-            />
-
-            {/* Save as Template Modal */}
-            <Modal
-              visible={templateModalVisible}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setTemplateModalVisible(false)}
-            >
-              <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                  <Text
-                    variant="title"
-                    style={{ color: colors.onSurface, marginBottom: 16 }}
-                  >
-                    Save as Template
-                  </Text>
-                  <TextInput
-                    value={templateName}
-                    onChangeText={(t) => setTemplateName(t.slice(0, 100))}
-                    placeholder="Template name"
-                    placeholderTextColor={colors.onSurfaceDisabled}
-                    maxLength={100}
-                    style={[
-                      styles.modalInput,
-                      {
-                        color: colors.onSurface,
-                        backgroundColor: colors.surfaceVariant,
-                        borderColor: colors.outline,
-                      },
-                    ]}
-                    autoFocus
-                    accessibilityLabel="Template name"
-                  />
-                  <View style={styles.modalActions}>
-                    <Button
-                      variant="ghost"
-                      onPress={() => setTemplateModalVisible(false)}
-                      label="Cancel"
-                    />
-                    <Button
-                      variant="default"
-                      onPress={handleSaveAsTemplate}
-                      loading={saving}
-                      disabled={saving || !templateName.trim()}
-                      label="Save"
-                    />
-                  </View>
-                </View>
-              </View>
-            </Modal>
-          </View>
+          <SummaryFooter
+            colors={colors}
+            session={session}
+            completedSetCount={completedSetCount}
+            templateModalVisible={actions.templateModalVisible}
+            setTemplateModalVisible={actions.setTemplateModalVisible}
+            templateName={actions.templateName}
+            setTemplateName={actions.setTemplateName}
+            saving={actions.saving}
+            handleSaveAsTemplate={actions.handleSaveAsTemplate}
+            onDone={() => router.replace("/(tabs)")}
+            onViewDetails={() => router.replace(`/session/detail/${id}`)}
+            onSharePress={actions.handleShareButtonPress}
+            previewVisible={actions.previewVisible}
+            setPreviewVisible={actions.setPreviewVisible}
+            imageLoading={actions.imageLoading}
+            setImageLoading={actions.setImageLoading}
+            shareCardRef={actions.shareCardRef}
+            handleCaptureAndShare={actions.handleCaptureAndShare}
+            shareCardDate={shareCardDate}
+            duration={duration}
+            completedCount={completed.length}
+            volumeDisplay={volumeDisplay.toLocaleString()}
+            unit={unit}
+            rating={actions.rating}
+            shareCardPrs={shareCardPrs}
+            shareCardExercises={shareCardExercises}
+          />
         }
       />
-
-      {/* Share options bottom sheet */}
       <ShareSheet
-        sheetRef={shareSheetRef}
+        sheetRef={actions.shareSheetRef}
         onShareText={share}
-        onShareImage={handleShareImage}
+        onShareImage={actions.handleShareImage}
         imageDisabled={completedSetCount === 0}
         onDismiss={() => {}}
       />
+    </>
+  );
+}
 
-      {/* Share card preview modal */}
-      <Modal
-        visible={previewVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setPreviewVisible(false);
-          setImageLoading(false);
-        }}
-        accessibilityViewIsModal
-      >
-        <View style={styles.previewOverlay}>
-          <View style={styles.previewContainer}>
-            <View style={styles.previewScrollContent}>
-              <View
-                ref={shareCardRef}
-                collapsable={false}
-                style={styles.shareCardWrapper}
-              >
-                <ShareCard
-                  name={session?.name ?? "Workout"}
-                  date={shareCardDate}
-                  duration={duration}
-                  sets={completed.length}
-                  volume={volumeDisplay.toLocaleString()}
-                  unit={unit}
-                  rating={rating}
-                  prs={shareCardPrs}
-                  exercises={shareCardExercises}
-                />
+/* ── Header sub-component ── */
+
+function SummaryHeader({ colors, session, duration, durationSpokenText, completedCount, setsBreakdown, volumeDisplay, unit, rating, onRatingChange, notesExpanded, setNotesExpanded, notesText, setNotesText, onNotesSave }: {
+  colors: ReturnType<typeof useThemeColors>;
+  session: { completed_at?: number | null; name?: string | null; duration_seconds?: number | null };
+  duration: string;
+  durationSpokenText: string;
+  completedCount: number;
+  setsBreakdown: string;
+  volumeDisplay: number;
+  unit: string;
+  rating: number | null;
+  onRatingChange: (r: number | null) => void;
+  notesExpanded: boolean;
+  setNotesExpanded: (v: boolean) => void;
+  notesText: string;
+  setNotesText: (v: string) => void;
+  onNotesSave: () => void;
+}) {
+  return (
+    <>
+      <View style={styles.header}>
+        <MaterialCommunityIcons name="check-circle" size={48} color={colors.primary} />
+        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]} accessibilityRole="header">Workout Complete!</Text>
+        <Text variant="body" style={{ color: colors.onSurfaceVariant }} numberOfLines={1} ellipsizeMode="tail">{session.name}</Text>
+      </View>
+      <View style={styles.stats}>
+        <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Duration: ${durationSpokenText}`}>
+          <CardContent style={styles.statInner}>
+            <Text variant="heading" style={{ color: colors.primary }}>{duration}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Duration</Text>
+          </CardContent>
+        </Card>
+        <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={setsBreakdown ? `${completedCount} sets: ${setsBreakdown}` : `${completedCount} sets completed`}>
+          <CardContent style={styles.statInner}>
+            <Text variant="heading" style={{ color: colors.primary }}>{completedCount}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{setsBreakdown ? `Sets (${setsBreakdown})` : "Sets"}</Text>
+          </CardContent>
+        </Card>
+        <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}>
+          <CardContent style={styles.statInner}>
+            <Text variant="heading" style={{ color: colors.primary }}>{volumeDisplay.toLocaleString()}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Volume ({unit})</Text>
+          </CardContent>
+        </Card>
+      </View>
+      {session.completed_at && (
+        <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
+          <CardContent style={{ alignItems: "center" }}>
+            <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12, fontWeight: "600" }}>How was your workout?</Text>
+            <RatingWidget value={rating} onChange={onRatingChange} size="large" />
+          </CardContent>
+        </Card>
+      )}
+      {session.completed_at && (
+        <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
+          <CardContent>
+            <Pressable onPress={() => setNotesExpanded(!notesExpanded)} style={styles.notesHeader} accessibilityRole="button" accessibilityLabel="Session notes" accessibilityHint="Double tap to add notes about this workout" accessibilityState={{ expanded: notesExpanded }}>
+              <MaterialCommunityIcons name="note-edit-outline" size={20} color={colors.primary} />
+              <Text variant="subtitle" style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}>Session notes</Text>
+              <MaterialCommunityIcons name={notesExpanded ? "chevron-up" : "chevron-down"} size={20} color={colors.onSurfaceVariant} />
+            </Pressable>
+            {notesExpanded && (
+              <View style={{ marginTop: 8 }}>
+                <TextInput value={notesText} onChangeText={(t) => setNotesText(t.slice(0, 500))} onBlur={onNotesSave} placeholder="Add notes about this workout..." placeholderTextColor={colors.onSurfaceDisabled} multiline maxLength={500} style={[styles.notesInput, { color: colors.onSurface, backgroundColor: colors.surfaceVariant, borderColor: colors.outline }]} accessibilityLabel="Session notes" />
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}>{notesText.length}/500</Text>
               </View>
-            </View>
-            <View style={styles.previewActions}>
-              {imageLoading ? (
-                <ActivityIndicator size="large" color={colors.primary} />
-              ) : (
-                <>
-                  <Button
-                    variant="default"
-                    onPress={handleCaptureAndShare}
-                    style={styles.previewBtn}
-                    accessibilityRole="button"
-                    accessibilityHint="Capture and share the workout card image"
-                    label="Share"
-                  />
-                  <Button
-                    variant="outline"
-                    onPress={() => {
-                      setPreviewVisible(false);
-                      setImageLoading(false);
-                    }}
-                    style={styles.previewBtn}
-                    accessibilityRole="button"
-                    accessibilityHint="Cancel and close the preview"
-                    label="Cancel"
-                  />
-                </>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 24,
-    paddingTop: 8,
-  },
-  title: {
-    fontWeight: "700",
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  stats: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-  },
-  stat: {
-    flex: 1,
-  },
-  statInner: {
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  section: {
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  compRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  exerciseGroup: {
-    marginBottom: 8,
-  },
-  setRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 3,
-    paddingLeft: 8,
-  },
-  modeBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  actions: {
-    marginTop: 16,
-    gap: 12,
-  },
-  doneBtn: {
-    borderRadius: 8,
-  },
-  shareBtn: {
-    borderRadius: 8,
-  },
-  btnContent: {
-    paddingVertical: 4,
-  },
-  notesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 48,
-  },
-  notesInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 80,
-    textAlignVertical: "top",
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: {
-    width: "100%",
-    maxWidth: 400,
-    borderRadius: 16,
-    padding: 24,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
-  },
-  previewOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  previewContainer: {
-    width: "100%",
-    maxWidth: 400,
-    maxHeight: "85%",
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  previewScrollContent: {
-    alignItems: "center",
-    padding: 8,
-  },
-  shareCardWrapper: {
-    alignSelf: "center",
-    transform: [{ scale: 0.3 }],
-    transformOrigin: "top center",
-  },
-  previewActions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  previewBtn: {
-    flex: 1,
-    borderRadius: 8,
-  },
+  container: { flex: 1 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  header: { alignItems: "center", marginBottom: 24, paddingTop: 8 },
+  title: { fontWeight: "700", marginTop: 8, marginBottom: 4 },
+  stats: { flexDirection: "row", gap: 8, marginBottom: 16 },
+  stat: { flex: 1 },
+  statInner: { alignItems: "center", paddingVertical: 8 },
+  section: { marginBottom: 16 },
+  notesHeader: { flexDirection: "row", alignItems: "center", minHeight: 48 },
+  notesInput: { borderWidth: 1, borderRadius: 8, padding: 12, minHeight: 80, textAlignVertical: "top", fontSize: 14 },
 });

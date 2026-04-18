@@ -75,3 +75,5 @@ export function useThemeColors() {
     card: t.card,
   };
 }
+
+export type ThemeColors = ReturnType<typeof useThemeColors>;
