@@ -321,7 +321,7 @@ export default function Progress() {
               <Text style={{ color: colors.onSurface, flex: 1 }}>
                 {pr.name}
               </Text>
-              <Text variant="subtitle" style={{ color: colors.primary, fontSize: 15 }}>
+              <Text variant="body" style={{ color: colors.primary, fontWeight: "600" }}>
                 {pr.max_weight} kg
               </Text>
             </View>

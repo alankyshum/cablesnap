@@ -14,7 +14,7 @@ export default function SectionHeader({ title, action, onAction }: Props) {
   const colors = useThemeColors();
   return (
     <View style={styles.container}>
-      <Text variant="subtitle" style={{ color: colors.onSurface, fontSize: 17, fontWeight: "600" }}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, fontWeight: "600" }}>
         {title}
       </Text>
       {action && onAction ? (

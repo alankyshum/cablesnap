@@ -324,7 +324,7 @@ export default function Workouts() {
           accessibilityLabel={`Resume active workout: ${active.name}`}
           accessibilityRole="button"
         >
-          <Text variant="subtitle" style={{ color: colors.onPrimaryContainer, fontSize: 15 }}>
+          <Text variant="body" style={{ color: colors.onPrimaryContainer, fontWeight: "600" }}>
             ⏱ Active Workout: {active.name}
           </Text>
           <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>
@@ -344,7 +344,7 @@ export default function Workouts() {
           <View style={styles.nextContent}>
             <MaterialCommunityIcons name="calendar-check" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="subtitle" style={{ color: colors.onSecondaryContainer, fontSize: 15 }}>
+              <Text variant="body" style={{ color: colors.onSecondaryContainer, fontWeight: "600" }}>
                 Today: {todaySchedule.template_name}
               </Text>
               <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>
@@ -365,7 +365,7 @@ export default function Workouts() {
           <View style={styles.nextContent}>
             <MaterialCommunityIcons name="check-circle" size={24} color={colors.onPrimaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="subtitle" style={{ color: colors.onPrimaryContainer, fontSize: 15 }}>
+              <Text variant="body" style={{ color: colors.onPrimaryContainer, fontWeight: "600" }}>
                 ✅ Completed: {todaySchedule.template_name}
               </Text>
               <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>
@@ -384,7 +384,7 @@ export default function Workouts() {
           <View style={styles.nextContent}>
             <MaterialCommunityIcons name="bed" size={24} color={colors.onSurfaceVariant} />
             <View style={styles.nextText}>
-              <Text variant="subtitle" style={{ color: colors.onSurface, fontSize: 15 }}>
+              <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>
                 Rest Day
               </Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
@@ -406,7 +406,7 @@ export default function Workouts() {
           <View style={styles.nextContent}>
             <MaterialCommunityIcons name="play-circle" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="subtitle" style={{ color: colors.onSecondaryContainer, fontSize: 15 }}>
+              <Text variant="body" style={{ color: colors.onSecondaryContainer, fontWeight: "600" }}>
                 Next: {nextWorkout.day.label || nextWorkout.day.template_name || "Workout"}
               </Text>
               <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>
@@ -715,8 +715,8 @@ export default function Workouts() {
                 accessibilityRole="button"
               >
                 <Text
-                  variant="subtitle"
-                  style={{ color: colors.onSurface, fontSize: 15 }}
+                  variant="body"
+                  style={{ color: colors.onSurface, fontWeight: "600" }}
                 >
                   {item.name}
                 </Text>

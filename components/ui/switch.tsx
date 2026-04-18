@@ -18,6 +18,7 @@ interface SwitchProps extends RNSwitchProps {
 
 export function Switch({ label, error, labelStyle, ...props }: SwitchProps) {
   const mutedColor = useColor('muted');
+  const greenColor = useColor('green');
   const primary = useColor('primary');
   const danger = useColor('red');
 
@@ -51,8 +52,8 @@ export function Switch({ label, error, labelStyle, ...props }: SwitchProps) {
         )}
 
         <RNSwitch
-          trackColor={{ false: mutedColor, true: '#7DD87D' }}
-          thumbColor={props.value ? '#ffffff' : '#f4f3f4'}
+          trackColor={{ false: mutedColor, true: greenColor }}
+          thumbColor={props.value ? '#ffffff' : mutedColor}
           {...props}
         />
       </View>

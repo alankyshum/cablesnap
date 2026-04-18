@@ -56,7 +56,7 @@ function SubstitutionItem({
         <Text
           variant="body"
           numberOfLines={1}
-          style={[styles.itemName, { color: colors.onSurface, fontSize: 15, fontWeight: "600" }]}
+          style={[styles.itemName, { color: colors.onSurface, fontWeight: "600" }]}
         >
           {ex.name}
         </Text>
