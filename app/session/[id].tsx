@@ -1324,19 +1324,36 @@ export default function ActiveSession() {
   }, [id, load]);
 
   // --- Long-press exercise delete with countdown ---
-  const deleteExerciseRef = useRef<{ exerciseId: string; setIds: string[]; removedGroup: ExerciseGroup } | null>(null);
+  const deleteExerciseRef = useRef<{ exerciseId: string; setIds: string[]; removedGroup: ExerciseGroup; originalIndex: number } | null>(null);
   const deleteExerciseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteCountdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Commit a pending delete immediately (used when a second delete starts before first finishes)
+  const commitPendingDelete = useCallback(async () => {
+    if (!deleteExerciseRef.current) return;
+    const { setIds } = deleteExerciseRef.current;
+    deleteExerciseRef.current = null;
+    if (deleteExerciseTimer.current) {
+      clearTimeout(deleteExerciseTimer.current);
+      deleteExerciseTimer.current = null;
+    }
+    if (deleteCountdownInterval.current) {
+      clearInterval(deleteCountdownInterval.current);
+      deleteCountdownInterval.current = null;
+    }
+    await deleteSetsBatch(setIds);
+  }, []);
+
   const handleDeleteExerciseUndo = useCallback(() => {
     if (!deleteExerciseRef.current) return;
-    const { removedGroup } = deleteExerciseRef.current;
-    // Restore the group back into state
+    const { removedGroup, originalIndex } = deleteExerciseRef.current;
     setGroups((prev) => {
-      // Re-insert in original position or at end
       const exists = prev.some((g) => g.exercise_id === removedGroup.exercise_id);
       if (exists) return prev;
-      return [...prev, removedGroup];
+      // Restore at original position
+      const next = [...prev];
+      next.splice(Math.min(originalIndex, next.length), 0, removedGroup);
+      return next;
     });
     deleteExerciseRef.current = null;
     if (deleteExerciseTimer.current) {
@@ -1352,12 +1369,16 @@ export default function ActiveSession() {
   }, []);
 
   const handleDeleteExercise = useCallback((exerciseId: string) => {
-    const group = groups.find((g) => g.exercise_id === exerciseId);
-    if (!group) return;
+    const groupIndex = groups.findIndex((g) => g.exercise_id === exerciseId);
+    if (groupIndex === -1) return;
+    const group = groups[groupIndex];
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const setIds = group.sets.map((s) => s.id);
+
+    // Commit any pending delete before starting a new one (prevents UI/DB desync)
+    commitPendingDelete();
 
     // Optimistically remove the group from UI
     setGroups((prev) => prev.filter((g) => g.exercise_id !== exerciseId));
@@ -1365,12 +1386,8 @@ export default function ActiveSession() {
     // Clear rest timer if it was running for this exercise
     dismissRest();
 
-    // Store undo info
-    deleteExerciseRef.current = { exerciseId, setIds, removedGroup: group };
-
-    // Clear any existing delete countdown
-    if (deleteExerciseTimer.current) clearTimeout(deleteExerciseTimer.current);
-    if (deleteCountdownInterval.current) clearInterval(deleteCountdownInterval.current);
+    // Store undo info with original position for correct restore
+    deleteExerciseRef.current = { exerciseId, setIds, removedGroup: group, originalIndex: groupIndex };
 
     // Start 5s countdown
     let remaining = 5;
@@ -1399,7 +1416,7 @@ export default function ActiveSession() {
       // Actually delete from DB
       await deleteSetsBatch(setIds);
     }, 5000);
-  }, [groups, dismissRest, handleDeleteExerciseUndo]);
+  }, [groups, dismissRest, handleDeleteExerciseUndo, commitPendingDelete]);
 
   const handleRPE = useCallback(async (set: SetWithMeta, val: number) => {
     const next = set.rpe === val ? null : val;
