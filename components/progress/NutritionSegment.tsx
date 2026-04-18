@@ -16,11 +16,7 @@ import {
   MacroTrendCard,
 } from "./NutritionCards";
 
-const PERIODS: { value: NutritionPeriod; label: string }[] = [
-  { value: 4, label: "4W" },
-  { value: 8, label: "8W" },
-  { value: 12, label: "12W" },
-];
+
 
 export default function NutritionSegment() {
   const colors = useThemeColors();
@@ -126,21 +122,7 @@ export default function NutritionSegment() {
       contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
     >
       {/* Period selector */}
-      <View style={styles.periodRow}>
-        {PERIODS.map((p) => (
-          <Chip
-            key={p.value}
-            selected={period === p.value}
-            onPress={() => setPeriod(p.value)}
-            accessibilityLabel={`${p.label} period`}
-            accessibilityRole="button"
-            accessibilityState={{ selected: period === p.value }}
-            style={{ minWidth: 48, minHeight: 48 }}
-          >
-            {p.label}
-          </Chip>
-        ))}
-      </View>
+      <PeriodSelector period={period} onSelect={setPeriod} />
 
       {/* Info banners */}
       {insufficientData && (
@@ -209,6 +191,49 @@ export default function NutritionSegment() {
         </>
       )}
     </ScrollView>
+  );
+}
+
+function PeriodSelector({
+  period,
+  onSelect,
+}: {
+  period: NutritionPeriod;
+  onSelect: (p: NutritionPeriod) => void;
+}) {
+  return (
+    <View style={styles.periodRow}>
+      <Chip
+        selected={period === 4}
+        onPress={() => onSelect(4)}
+        accessibilityLabel="4W period"
+        accessibilityRole="button"
+        accessibilityState={{ selected: period === 4 }}
+        style={{ minWidth: 48, minHeight: 48 }}
+      >
+        {"4W"}
+      </Chip>
+      <Chip
+        selected={period === 8}
+        onPress={() => onSelect(8)}
+        accessibilityLabel="8W period"
+        accessibilityRole="button"
+        accessibilityState={{ selected: period === 8 }}
+        style={{ minWidth: 48, minHeight: 48 }}
+      >
+        {"8W"}
+      </Chip>
+      <Chip
+        selected={period === 12}
+        onPress={() => onSelect(12)}
+        accessibilityLabel="12W period"
+        accessibilityRole="button"
+        accessibilityState={{ selected: period === 12 }}
+        style={{ minWidth: 48, minHeight: 48 }}
+      >
+        {"12W"}
+      </Chip>
+    </View>
   );
 }
 
