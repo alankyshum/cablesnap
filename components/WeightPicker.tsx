@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { Text, TextInput } from "react-native-paper";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Text } from "@/components/ui/text";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -74,15 +74,13 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel, mi
 
       {editing ? (
         <TextInput
-          mode="flat"
-          dense
           value={draft}
           onChangeText={setDraft}
           onBlur={endEdit}
           onSubmitEditing={endEdit}
           keyboardType="numeric"
           autoFocus
-          style={[styles.input, { backgroundColor: colors.surface }]}
+          style={[styles.input, { backgroundColor: colors.surface, color: colors.onSurface }]}
           accessibilityLabel={accessibilityLabel}
         />
       ) : (

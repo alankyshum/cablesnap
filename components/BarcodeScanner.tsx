@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { Linking, StyleSheet, View, Pressable } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { CAMERA_OVERLAY } from "../constants/theme";
@@ -76,33 +77,29 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
       >
         <View style={styles.permissionContent}>
           <Text
-            variant="titleMedium"
+            variant="subtitle"
             style={{ color: colors.onBackground, textAlign: "center", marginBottom: 12 }}
           >
             Camera Access Required
           </Text>
           <Text
-            variant="bodyMedium"
+            variant="body"
             style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 24, paddingHorizontal: 32 }}
           >
             FitForge needs camera access to scan food barcodes. Please enable camera access in your device settings.
           </Text>
           <Button
-            mode="contained"
+            variant="default"
             onPress={() => Linking.openSettings()}
             style={{ marginBottom: 12 }}
-            contentStyle={{ minHeight: 48 }}
             accessibilityLabel="Open device settings"
-            accessibilityRole="button"
           >
             Open Settings
           </Button>
           <Button
-            mode="outlined"
+            variant="outline"
             onPress={onClose}
-            contentStyle={{ minHeight: 48 }}
             accessibilityLabel="Close barcode scanner"
-            accessibilityRole="button"
           >
             Cancel
           </Button>
@@ -121,7 +118,7 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
       >
         <View style={styles.permissionContent}>
           <Text
-            variant="bodyMedium"
+            variant="body"
             style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
           >
             Requesting camera access...
@@ -149,7 +146,7 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
       {/* Semi-transparent overlay around scanning region */}
       <View style={styles.overlayContent}>
         <Text
-          variant="titleMedium"
+          variant="subtitle"
           style={[styles.instruction, { color: CAMERA_OVERLAY.text }]}
         >
           Scan a food barcode

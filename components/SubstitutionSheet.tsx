@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
-import { Chip, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Chip } from "@/components/ui/chip";
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetFlatList,
@@ -53,9 +54,9 @@ function SubstitutionItem({
     >
       <View style={styles.itemHeader}>
         <Text
-          variant="titleSmall"
+          variant="body"
           numberOfLines={1}
-          style={[styles.itemName, { color: colors.onSurface }]}
+          style={[styles.itemName, { color: colors.onSurface, fontSize: 15, fontWeight: "600" }]}
         >
           {ex.name}
         </Text>
@@ -65,7 +66,7 @@ function SubstitutionItem({
             { backgroundColor: matchBgColor(item.score) },
           ]}
         >
-          <Text variant="labelSmall" style={[styles.matchText, { color: matchColor(item.score) }]}>
+          <Text variant="caption" style={[styles.matchText, { color: matchColor(item.score) }]}>
             {item.score}%
           </Text>
         </View>
@@ -77,7 +78,7 @@ function SubstitutionItem({
             { backgroundColor: colors.surfaceVariant },
           ]}
         >
-          <Text variant="labelSmall"
+          <Text variant="caption"
             style={[styles.equipText, { color: colors.onSurfaceVariant }]}
           >
             {EQUIPMENT_LABELS[ex.equipment]}
@@ -89,7 +90,7 @@ function SubstitutionItem({
             { backgroundColor: colors.surfaceVariant },
           ]}
         >
-          <Text variant="labelSmall"
+          <Text variant="caption"
             style={[styles.equipText, { color: colors.onSurfaceVariant }]}
           >
             {DIFFICULTY_LABELS[ex.difficulty]}
@@ -106,7 +107,7 @@ function SubstitutionItem({
                 { backgroundColor: colors.secondaryContainer },
               ]}
             >
-              <Text variant="labelSmall"
+              <Text variant="caption"
                 style={[
                   styles.muscleText,
                   { color: colors.onSecondaryContainer },
@@ -224,7 +225,7 @@ export default function SubstitutionSheet({
       {sourceExercise && (
         <View style={styles.container}>
           <Text
-            variant="titleMedium"
+            variant="subtitle"
             style={[styles.header, { color: colors.onSurface }]}
           >
             Alternatives for {sourceExercise.name}
@@ -240,7 +241,7 @@ export default function SubstitutionSheet({
                     { backgroundColor: colors.primaryContainer },
                   ]}
                 >
-                  <Text variant="labelSmall"
+                  <Text variant="caption"
                     style={[
                       styles.muscleText,
                       { color: colors.onPrimaryContainer },
@@ -256,7 +257,7 @@ export default function SubstitutionSheet({
           {noMuscleData ? (
             <View style={styles.emptyState}>
               <Text
-                variant="bodyMedium"
+                variant="body"
                 style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
               >
                 No muscle data — cannot suggest alternatives
@@ -295,7 +296,7 @@ export default function SubstitutionSheet({
               {scored.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Text
-                    variant="bodyMedium"
+                    variant="body"
                     style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
                   >
                     No alternatives found. Try adding the exercise manually.
@@ -304,7 +305,7 @@ export default function SubstitutionSheet({
               ) : filtered.length === 0 && equipmentFilter ? (
                 <View style={styles.emptyState}>
                   <Text
-                    variant="bodyMedium"
+                    variant="body"
                     style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
                   >
                     No alternatives with this equipment. Try removing the

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Banner, Button, Menu, SegmentedButtons, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
 import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -169,102 +173,74 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
   return (
     <View>
       {loadError ? (
-        <Banner
-          visible
-          actions={[{ label: "Dismiss", onPress: () => setLoadError(null) }]}
-          icon="alert-circle-outline"
-          style={{ marginBottom: 12 }}
-        >
-          {loadError}
-        </Banner>
+        <Alert variant="destructive" style={{ marginBottom: 12 }}>
+          <AlertDescription>{loadError}</AlertDescription>
+          <Button variant="ghost" size="sm" onPress={() => setLoadError(null)} style={{ marginTop: 8 }}>
+            Dismiss
+          </Button>
+        </Alert>
       ) : null}
 
       {saveError ? (
-        <Banner
-          visible
-          actions={[{ label: "Dismiss", onPress: () => setSaveError(null) }]}
-          icon="alert-circle-outline"
-          style={{ marginBottom: 12 }}
-        >
-          {saveError}
-        </Banner>
+        <Alert variant="destructive" style={{ marginBottom: 12 }}>
+          <AlertDescription>{saveError}</AlertDescription>
+          <Button variant="ghost" size="sm" onPress={() => setSaveError(null)} style={{ marginTop: 8 }}>
+            Dismiss
+          </Button>
+        </Alert>
       ) : null}
 
       <Text
-        variant="titleMedium"
+        variant="subtitle"
         style={{ color: colors.onSurface, marginBottom: 16 }}
       >
         Your Profile
       </Text>
 
-      <TextInput
+      <Input
         label="Birth Year"
         value={birthYear}
         onChangeText={setBirthYear}
         keyboardType="numeric"
-        mode="outlined"
-        style={styles.input}
+        variant="outline"
         placeholder="1990"
         accessibilityLabel="Birth year"
         accessibilityHint="Enter your birth year for calorie calculation"
-        error={!!errors.birthYear}
+        error={errors.birthYear}
+        containerStyle={styles.input}
       />
-      {errors.birthYear ? (
-        <Text
-          style={[styles.errorText, { color: colors.error }]}
-          accessibilityLiveRegion="polite"
-        >
-          {errors.birthYear}
-        </Text>
-      ) : null}
 
-      <TextInput
+      <Input
         label={"Weight (" + weightUnit + ")"}
         value={weight}
         onChangeText={setWeight}
         keyboardType="numeric"
-        mode="outlined"
-        style={styles.input}
+        variant="outline"
         accessibilityLabel={"Weight in " + weightUnit}
         accessibilityHint="Enter your current body weight"
-        error={!!errors.weight}
+        error={errors.weight}
+        containerStyle={styles.input}
       />
-      {errors.weight ? (
-        <Text
-          style={[styles.errorText, { color: colors.error }]}
-          accessibilityLiveRegion="polite"
-        >
-          {errors.weight}
-        </Text>
-      ) : null}
 
-      <TextInput
+      <Input
         label={"Height (" + heightUnit + ")"}
         value={height}
         onChangeText={setHeight}
         keyboardType="numeric"
-        mode="outlined"
-        style={styles.input}
+        variant="outline"
         accessibilityLabel={"Height in " + heightUnit}
         accessibilityHint="Enter your height"
-        error={!!errors.height}
+        error={errors.height}
+        containerStyle={styles.input}
       />
-      {errors.height ? (
-        <Text
-          style={[styles.errorText, { color: colors.error }]}
-          accessibilityLiveRegion="polite"
-        >
-          {errors.height}
-        </Text>
-      ) : null}
 
       <Text
-        variant="labelLarge"
-        style={[styles.fieldLabel, { color: colors.onSurface }]}
+        variant="caption"
+        style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}
       >
         Sex
       </Text>
-      <SegmentedButtons
+      <SegmentedControl
         value={sex}
         onValueChange={(v) => setSex(v as Sex)}
         buttons={SEX_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
@@ -272,52 +248,59 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       />
 
       <Text
-        variant="labelLarge"
-        style={[styles.fieldLabel, { color: colors.onSurface }]}
+        variant="caption"
+        style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}
       >
         Activity Level
       </Text>
-      <Menu
-        visible={activityMenuVisible}
-        onDismiss={() => setActivityMenuVisible(false)}
-        anchor={
-          <Pressable
-            onPress={() => setActivityMenuVisible(true)}
-            style={[styles.dropdown, { borderColor: colors.outline, backgroundColor: colors.surface }]}
-            accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[activityLevel]}`}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: activityMenuVisible }}
-          >
-            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
-              {ACTIVITY_LABELS[activityLevel]}
-            </Text>
-            <Text style={{ color: colors.onSurfaceVariant }}>▼</Text>
-          </Pressable>
-        }
-        anchorPosition="bottom"
-        style={{ width: "auto" }}
+      {/* Activity level Menu dropdown */}
+      <Pressable
+        onPress={() => setActivityMenuVisible(!activityMenuVisible)}
+        style={[styles.dropdown, { borderColor: colors.outline, backgroundColor: colors.surface }]}
+        accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[activityLevel]}`}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: activityMenuVisible }}
       >
-        {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((key) => (
-          <Menu.Item
-            key={key}
-            title={ACTIVITY_LABELS[key]}
-            onPress={() => {
-              setActivityLevel(key);
-              setActivityMenuVisible(false);
-            }}
-            style={key === activityLevel ? { backgroundColor: colors.primaryContainer } : undefined}
-            accessibilityLabel={ACTIVITY_LABELS[key]}
-          />
-        ))}
-      </Menu>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
+          {ACTIVITY_LABELS[activityLevel]}
+        </Text>
+        <Text style={{ color: colors.onSurfaceVariant }}>{activityMenuVisible ? "▲" : "▼"}</Text>
+      </Pressable>
+      {activityMenuVisible && (
+        <View style={[styles.dropdownList, { borderColor: colors.outline, backgroundColor: colors.surface }]}>
+          {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((key) => (
+            <Pressable
+              key={key}
+              onPress={() => {
+                setActivityLevel(key);
+                setActivityMenuVisible(false);
+              }}
+              style={[
+                styles.dropdownItem,
+                key === activityLevel ? { backgroundColor: colors.primaryContainer } : undefined,
+              ]}
+              accessibilityLabel={ACTIVITY_LABELS[key]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: key === activityLevel }}
+            >
+              <Text
+                variant="body"
+                style={{ color: key === activityLevel ? colors.onPrimaryContainer : colors.onSurface }}
+              >
+                {ACTIVITY_LABELS[key]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       <Text
-        variant="labelLarge"
-        style={[styles.fieldLabel, { color: colors.onSurface }]}
+        variant="caption"
+        style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}
       >
         Goal
       </Text>
-      <SegmentedButtons
+      <SegmentedControl
         value={goal}
         onValueChange={(v) => setGoal(v as Goal)}
         buttons={GOAL_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
@@ -327,25 +310,23 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       <View style={styles.buttonRow}>
         {onCancel ? (
           <Button
-            mode="outlined"
+            variant="outline"
             onPress={onCancel}
             style={{ flex: 1, marginRight: 8 }}
-            contentStyle={styles.btnContent}
             accessibilityLabel="Cancel profile editing"
           >
             Cancel
           </Button>
         ) : null}
         <Button
-          mode="contained"
+          variant="default"
           onPress={handleSave}
           loading={saving}
           disabled={saving}
           style={onCancel ? { flex: 1 } : { marginTop: 24 }}
-          contentStyle={styles.btnContent}
           accessibilityLabel="Calculate and save nutrition targets"
         >
-          Calculate & Save
+          Calculate &amp; Save
         </Button>
       </View>
     </View>
@@ -366,7 +347,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     minHeight: 48,
   },
-  btnContent: { paddingVertical: 8, minHeight: 48 },
+  dropdownList: {
+    borderWidth: 1,
+    borderRadius: 4,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 44,
+    justifyContent: "center",
+  },
   errorText: { fontSize: 14, marginBottom: 8 },
   buttonRow: { flexDirection: "row", marginTop: 16 },
 });

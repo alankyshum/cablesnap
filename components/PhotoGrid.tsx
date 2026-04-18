@@ -6,7 +6,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import { FlashList } from "@shopify/flash-list";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ProgressPhoto } from "../lib/db/photos";

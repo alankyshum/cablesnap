@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import Body, { type Slug, type ExtendedBodyPart } from "react-native-body-highlighter";
 import type { MuscleGroup } from "../lib/types";
 import { MUSCLE_LABELS } from "../lib/types";
@@ -127,7 +127,7 @@ function Legend({
   if (primary.length === 0) {
     return (
       <Text
-        variant="bodySmall"
+        variant="caption"
         style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 8 }}
       >
         No muscle data
@@ -141,7 +141,7 @@ function Legend({
     <View style={styles.legend}>
       <View style={styles.row}>
         <View style={[styles.dot, { backgroundColor: c.primary }]} />
-        <Text variant="bodySmall" style={{ color: colors.onSurface }}>
+        <Text variant="caption" style={{ color: colors.onSurface }}>
           <Text style={{ fontWeight: "700" }}>Primary: </Text>
           {label}
         </Text>
@@ -149,7 +149,7 @@ function Legend({
       {secondary.length > 0 && (
         <View style={styles.row}>
           <View style={[styles.dot, { backgroundColor: c.secondary }]} />
-          <Text variant="bodySmall" style={{ color: colors.onSurface }}>
+          <Text variant="caption" style={{ color: colors.onSurface }}>
             <Text style={{ fontWeight: "700" }}>Secondary: </Text>
             {names(secondary)}
           </Text>

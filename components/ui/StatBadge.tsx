@@ -1,6 +1,6 @@
 import React from "react";
 import { View, ViewStyle, StyleProp } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import Animated from "react-native-reanimated";
 import { usePulse, useEntrance } from "../../lib/animations/hooks";
 import { spacing, radii } from "../../constants/design-tokens";
@@ -48,17 +48,18 @@ export function StatBadge({
       >
         {icon && (
           <Text
-            variant="labelSmall"
-            style={{ color: colors.onTertiaryContainer }}
+            variant="caption"
+            style={{ color: colors.onTertiaryContainer, fontSize: 12 }}
           >
             {icon}
           </Text>
         )}
         <Text
-          variant="labelMedium"
+          variant="caption"
           style={{
             color: colors.onTertiaryContainer,
             fontWeight: "700",
+            fontSize: 13,
           }}
         >
           {label}

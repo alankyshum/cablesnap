@@ -1,6 +1,7 @@
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { Card, Text } from "react-native-paper";
+import { Pressable, StyleSheet, View, type ViewStyle } from "react-native";
+import { Text } from "@/components/ui/text";
+import { Card } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { flowCardStyle } from "./ui/FlowContainer";
 import type { Difficulty } from "../lib/types";
@@ -46,8 +47,8 @@ export function FlowCard({
     <>
       <View style={styles.chipRow}>
         <Text
-          variant="titleSmall"
-          style={{ color: colors.onSurface, flexShrink: 1 }}
+          variant="body"
+          style={{ color: colors.onSurface, flexShrink: 1, fontWeight: "600", fontSize: 14 }}
           numberOfLines={1}
         >
           {name}
@@ -71,7 +72,7 @@ export function FlowCard({
               style={[styles.badge, { backgroundColor: bg }]}
               accessibilityLabel={b.label}
             >
-              <Text style={[styles.badgeText, { color: fg }]}>{b.label}</Text>
+              <Text variant="caption" style={[styles.badgeText, { color: fg }]}>{b.label}</Text>
             </View>
           );
         })}
@@ -96,6 +97,7 @@ export function FlowCard({
                 color={dc?.fg ?? colors.onSurfaceVariant}
               />
               <Text
+                variant="caption"
                 style={[
                   styles.badgeText,
                   { color: dc?.fg ?? colors.onSurfaceVariant },
@@ -110,17 +112,11 @@ export function FlowCard({
     </>
   );
 
-  const hasInteractiveAction = !!action && action !== null;
-
   return (
     <Card
-      style={[styles.card, { backgroundColor: colors.surface }]}
-      onPress={hasInteractiveAction ? undefined : onPress}
-      onLongPress={hasInteractiveAction ? undefined : onLongPress}
-      accessibilityLabel={hasInteractiveAction ? undefined : accessibilityLabel}
-      accessibilityRole={hasInteractiveAction ? undefined : "button"}
+      style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }]) as ViewStyle}
     >
-      <Card.Content style={styles.content}>
+      <View style={styles.content}>
         <Pressable
           onPress={onPress}
           onLongPress={onLongPress}
@@ -132,7 +128,7 @@ export function FlowCard({
           {body}
         </Pressable>
         {action}
-      </Card.Content>
+      </View>
     </Card>
   );
 }
@@ -150,6 +146,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     ...flowCardStyle,
     flexGrow: 0,
+    padding: 12,
   },
   content: {
     flexDirection: "row",

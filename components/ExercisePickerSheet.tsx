@@ -14,7 +14,11 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Chip, IconButton, Portal, Searchbar, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { SearchBar } from "@/components/ui/searchbar";
+import { X } from "lucide-react-native";
 import { getAllExercises } from "../lib/db";
 import {
   CATEGORIES,
@@ -151,9 +155,9 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
       >
         <View>
           <Text
-            variant="titleSmall"
+            variant="body"
             numberOfLines={1}
-            style={{ color: colors.onSurface }}
+            style={{ color: colors.onSurface, fontSize: 15, fontWeight: "600" }}
           >
             {item.name}{item.is_custom ? " (Custom)" : ""}
           </Text>
@@ -169,7 +173,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
               </Text>
             </View>
             <Text
-              variant="bodySmall"
+              variant="caption"
               style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}
             >
               {item.equipment}
@@ -184,7 +188,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
   if (!mounted) return null;
 
   return (
-    <Portal>
+    <>
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={dismiss}
@@ -211,22 +215,17 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         </GestureDetector>
 
         <View style={styles.header}>
-          <Text variant="titleMedium" style={[styles.title, { color: colors.onBackground }]}>
+          <Text variant="subtitle" style={[styles.title, { color: colors.onBackground }]}>
             Pick Exercise
           </Text>
-          <IconButton
-            icon="close"
-            size={20}
-            onPress={dismiss}
-            accessibilityLabel="Close exercise picker"
-          />
+          <Button variant="ghost" size="icon" icon={X} onPress={dismiss} accessibilityLabel="Close exercise picker" />
         </View>
 
-        <Searchbar
+        <SearchBar
           placeholder="Search exercises..."
           value={query}
           onChangeText={setQuery}
-          style={[styles.search, { backgroundColor: colors.surfaceVariant }]}
+          containerStyle={[styles.search, { backgroundColor: colors.surfaceVariant }]}
           accessibilityLabel="Search exercises"
         />
 
@@ -243,7 +242,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
                 style={styles.filterChip}
                 compact
                 accessibilityLabel={`Filter by ${CATEGORY_LABELS[cat]}`}
-                accessibilityRole="button"
+                accessibilityRole="checkbox"
                 accessibilityState={{ selected: selected.has(cat) }}
               >
                 {CATEGORY_LABELS[cat]}
@@ -266,7 +265,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
             loading ? null : (
               <View style={styles.empty}>
                 <Text
-                  variant="titleMedium"
+                  variant="subtitle"
                   style={{ color: colors.onSurfaceVariant }}
                 >
                   No exercises found
@@ -276,7 +275,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           }
         />
       </Animated.View>
-    </Portal>
+    </>
   );
 }
 

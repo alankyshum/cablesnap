@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
   runOnJS,
 } from "react-native-reanimated";
-import { IconButton } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react-native";
 import { radii, duration as durationTokens } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -67,12 +68,13 @@ export default function SwipeToDelete({
         ]}
       >
         <View style={styles.deleteContent}>
-          <IconButton
-            icon="delete"
-            iconColor={colors.onError}
-            size={24}
+          <Button
+            variant="ghost"
+            size="icon"
+            icon={Trash2}
             onPress={onDelete}
             accessibilityLabel="Delete"
+            style={{ backgroundColor: "transparent" }}
           />
         </View>
       </Animated.View>

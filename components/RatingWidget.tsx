@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -113,7 +113,7 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
       </View>
       {!readOnly && size !== "small" && (
         <Text
-          variant="bodySmall"
+          variant="caption"
           style={{ color: labelColor, marginTop: 4, textAlign: "center" }}
         >
           {ratingInfo ? ratingInfo.label : "Not rated"}

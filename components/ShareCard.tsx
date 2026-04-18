@@ -1,6 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { spacing } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";

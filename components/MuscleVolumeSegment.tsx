@@ -1,13 +1,16 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, Card, IconButton, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { CartesianChart, Line } from "victory-native";
 import { getMuscleVolumeForWeek, getMuscleVolumeTrend } from "../lib/db";
@@ -70,16 +73,16 @@ const MuscleRow = React.memo(function MuscleRow({
       accessibilityState={{ selected }}
     >
       <Text
-        variant="bodyMedium"
+        variant="body"
         style={{ color: text, flex: 1 }}
         numberOfLines={1}
       >
         {MUSCLE_LABELS[item.muscle]}
       </Text>
-      <Text variant="bodySmall" style={{ color: muted, marginRight: 8 }}>
+      <Text variant="caption" style={{ color: muted, marginRight: 8 }}>
         {item.exercises} ex
       </Text>
-      <Text variant="titleSmall" style={{ color: text, width: 40, textAlign: "right" }}>
+      <Text variant="body" style={{ color: text, width: 40, textAlign: "right", fontSize: 15, fontWeight: "600" }}>
         {item.sets}
       </Text>
     </Pressable>
@@ -164,8 +167,8 @@ export default function MuscleVolumeSegment() {
   if (loading) {
     return (
       <View style={styles.center} accessibilityRole="progressbar" accessibilityLabel="Loading muscle volume data">
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 12 }}>
+        <Spinner size="lg" />
+        <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 12 }}>
           Loading…
         </Text>
       </View>
@@ -175,11 +178,11 @@ export default function MuscleVolumeSegment() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text variant="bodyLarge" style={{ color: colors.error, marginBottom: 12 }}>
+        <Text variant="body" style={{ color: colors.error, marginBottom: 12 }}>
           {error}
         </Text>
-        <Button mode="contained" onPress={load} accessibilityLabel="Retry loading muscle volume data">
-          Retry
+        <Button variant="default" onPress={load} accessibilityLabel="Retry loading muscle volume data">
+          <Text>Retry</Text>
         </Button>
       </View>
     );
@@ -192,33 +195,21 @@ export default function MuscleVolumeSegment() {
     <View>
       {/* Week Selector */}
       <View style={styles.weekRow}>
-        <IconButton
-          icon="chevron-left"
-          onPress={() => setOffset(offset - 1)}
-          size={24}
-          accessibilityLabel="Previous week"
-          style={styles.chevron}
-        />
+        <Button variant="ghost" size="icon" icon={ChevronLeft} onPress={() => setOffset(offset - 1)} accessibilityLabel="Previous week" style={styles.chevron} />
         <View
           style={{ flex: 1, alignItems: "center" }}
           accessibilityRole="header"
           accessibilityLiveRegion="polite"
         >
-          <Text variant="titleSmall" style={{ color: colors.onSurface }}>
+          <Text variant="body" style={{ color: colors.onSurface, fontSize: 15, fontWeight: "600" }}>
             {offset === 0 ? "This Week" : formatRange(monday)}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {formatRange(monday)}
           </Text>
         </View>
         {offset < 0 ? (
-          <IconButton
-            icon="chevron-right"
-            onPress={() => setOffset(offset + 1)}
-            size={24}
-            accessibilityLabel="Next week"
-            style={styles.chevron}
-          />
+          <Button variant="ghost" size="icon" icon={ChevronRight} onPress={() => setOffset(offset + 1)} accessibilityLabel="Next week" style={styles.chevron} />
         ) : (
           <View style={{ width: 48 }} />
         )}
@@ -227,34 +218,34 @@ export default function MuscleVolumeSegment() {
       {offset !== 0 && (
         <View style={{ alignItems: "center", marginBottom: 8 }}>
           <Button
-            mode="contained-tonal"
-            compact
+            variant="secondary"
+            size="sm"
             onPress={() => setOffset(0)}
             accessibilityLabel="Go to current week"
           >
-            Today
+            <Text>Today</Text>
           </Button>
         </View>
       )}
 
       {data.length === 0 ? (
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Card.Content>
+        <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+          <CardContent>
             <Text
-              variant="bodyLarge"
+              variant="body"
               style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 32 }}
             >
               No workouts this week. Complete a session to see muscle volume.
             </Text>
-          </Card.Content>
+          </CardContent>
         </Card>
       ) : (
         <>
           {/* Volume Bars + Trend flow side by side on tablet */}
           <View style={layout.atLeastMedium ? styles.flowRow : undefined}>
-          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
-            <Card.Content>
-              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
+          <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
+            <CardContent>
+              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
                 Sets per Muscle Group
               </Text>
               <View style={styles.bars}>
@@ -262,7 +253,7 @@ export default function MuscleVolumeSegment() {
                 <View style={styles.landmarks}>
                   {mevPos < 95 && (
                     <View style={[styles.landmark, { left: `${mevPos}%` }]}>
-                      <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
+                      <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                         MEV
                       </Text>
                       <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
@@ -270,7 +261,7 @@ export default function MuscleVolumeSegment() {
                   )}
                   {mrvPos < 95 && (
                     <View style={[styles.landmark, { left: `${mrvPos}%` }]}>
-                      <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
+                      <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                         MRV
                       </Text>
                       <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
@@ -295,7 +286,7 @@ export default function MuscleVolumeSegment() {
                       accessibilityState={{ selected: active }}
                     >
                       <Text
-                        variant="bodySmall"
+                        variant="caption"
                         style={[styles.barLabel, { color: colors.onSurface }]}
                         numberOfLines={1}
                       >
@@ -316,7 +307,7 @@ export default function MuscleVolumeSegment() {
                         />
                       </View>
                       <Text
-                        variant="labelMedium"
+                        variant="body"
                         style={{ color: colors.onSurface, width: 28, textAlign: "right" }}
                       >
                         {item.sets}
@@ -325,12 +316,12 @@ export default function MuscleVolumeSegment() {
                   );
                 })}
               </View>
-            </Card.Content>
+            </CardContent>
           </Card>
 
-          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
-            <Card.Content>
-              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 4 }}>
+          <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
+            <CardContent>
+              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
                 {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : "Weekly Trend"}
               </Text>
               {hasEnoughTrend ? (
@@ -353,7 +344,7 @@ export default function MuscleVolumeSegment() {
                 </View>
               ) : (
                 <Text
-                  variant="bodyMedium"
+                  variant="body"
                   style={{
                     color: colors.onSurfaceVariant,
                     textAlign: "center",
@@ -363,15 +354,15 @@ export default function MuscleVolumeSegment() {
                   Keep training to see your trends
                 </Text>
               )}
-            </Card.Content>
+            </CardContent>
           </Card>
 
           </View>
 
           {/* Muscle Detail List */}
-          <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-            <Card.Content>
-              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
+          <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+            <CardContent>
+              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
                 Muscle Group Details
               </Text>
               <FlashList
@@ -389,7 +380,7 @@ export default function MuscleVolumeSegment() {
                   />
                 )}
               />
-            </Card.Content>
+            </CardContent>
           </Card>
         </>
       )}

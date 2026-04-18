@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import { useLayout } from "../lib/layout";
 import { withOpacity } from "../lib/format";
 import { radii } from "../constants/design-tokens";
@@ -135,8 +135,8 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
       {grid.map((row, rowIdx) => (
         <View key={rowIdx} style={styles.row}>
           <Text
-            variant="labelSmall"
-            style={[styles.dayLabel, { width: labelWidth, color: colors.onSurfaceVariant }]}
+            variant="caption"
+            style={[styles.dayLabel, { width: labelWidth, fontSize: 12, color: colors.onSurfaceVariant }]}
           >
             {DAY_LABELS[rowIdx]}
           </Text>
@@ -175,7 +175,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
 
       {/* Color Legend */}
       <View style={styles.legend}>
-        <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ fontSize: 12, color: colors.onSurfaceVariant }}>
           Less
         </Text>
         {[0, 1, 2, 3].map((level) => (
@@ -192,7 +192,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
             {renderDots(level, 16)}
           </View>
         ))}
-        <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ fontSize: 12, color: colors.onSurfaceVariant }}>
           More
         </Text>
       </View>
@@ -200,7 +200,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
       {/* Empty state */}
       {!hasAnyWorkout && (
         <View style={styles.emptyState}>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
             Start working out to see your consistency here!
           </Text>
         </View>
