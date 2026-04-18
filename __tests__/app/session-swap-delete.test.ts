@@ -22,7 +22,7 @@ describe("BLD-307: Long-press exercise delete (UI wiring)", () => {
     expect(sessionSrc).toContain("Long press to remove exercise");
   });
 
-  it("shows countdown snackbar with UNDO action", () => {
+  it("shows countdown toast with UNDO action", () => {
     expect(sessionSrc).toMatch(/Removing \$\{group\.name\}\.\.\. \(\d+s\)/);
     expect(sessionSrc).toContain('label: "UNDO"');
   });

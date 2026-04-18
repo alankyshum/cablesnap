@@ -27,6 +27,14 @@ jest.mock('expo-router', () => {
 })
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
+jest.mock('../../components/ui/bna-toast', () => {
+  const RealReact = require('react')
+  return {
+    __esModule: true,
+    useToast: () => ({ toast: jest.fn(), success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
+    ToastProvider: ({ children }: { children: React.ReactNode }) => RealReact.createElement(RealReact.Fragment, null, children),
+  }
+})
 jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, width: 375, scale: 1.0 }) }))
 jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest.fn().mockResolvedValue('{}'), getRecentErrors: jest.fn().mockResolvedValue([]), generateGitHubURL: jest.fn().mockReturnValue('https://github.com') }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
@@ -135,7 +143,7 @@ describe('Template CRUD Acceptance', () => {
     it('creates a new template when name is entered', async () => {
       const { getByPlaceholderText, getByLabelText } = renderScreen(<CreateTemplate />)
 
-      fireEvent.changeText(getByPlaceholderText('e.g. Push Day, Full Body A'), 'Push Day')
+      fireEvent.changeText(getByPlaceholderText('Template Name'), 'Push Day')
       fireEvent.press(getByLabelText('Create template'))
 
       await waitFor(() => {
@@ -161,7 +169,7 @@ describe('Template CRUD Acceptance', () => {
     it('shows exercises section after template is created', async () => {
       const { getByPlaceholderText, getByLabelText, findByLabelText, findByText } = renderScreen(<CreateTemplate />)
 
-      fireEvent.changeText(getByPlaceholderText('e.g. Push Day, Full Body A'), 'Push Day')
+      fireEvent.changeText(getByPlaceholderText('Template Name'), 'Push Day')
       fireEvent.press(getByLabelText('Create template'))
 
       expect(await findByLabelText('Add exercise to template')).toBeTruthy()
@@ -207,7 +215,7 @@ describe('Template CRUD Acceptance', () => {
 
       await findByText('Bench Press')
 
-      fireEvent.changeText(getByPlaceholderText('e.g. Push Day, Full Body A'), 'Pull Day')
+      fireEvent.changeText(getByPlaceholderText('Template Name'), 'Pull Day')
       fireEvent.press(getByLabelText('Done editing template'))
 
       await waitFor(() => {

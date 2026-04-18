@@ -9,7 +9,6 @@ import "react-native-reanimated";
 
 import { useColorScheme, Platform, AppState, View, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PaperProvider, MD3LightTheme, MD3DarkTheme } from "react-native-paper";
 import { Redirect, Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -107,7 +106,6 @@ export default function RootLayout() {
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
       <BNAThemeProvider>
-      <PaperProvider theme={isDark ? MD3DarkTheme : MD3LightTheme}>
         <ToastProvider>
           <LayoutToastBridge />
           {!onboarded && !pathname.startsWith("/onboarding") && (
@@ -387,7 +385,6 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </ToastProvider>
-      </PaperProvider>
       </BNAThemeProvider>
       </OnboardingContext.Provider>
       </QueryProvider>

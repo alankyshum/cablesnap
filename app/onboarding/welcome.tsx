@@ -1,5 +1,6 @@
 import { View, StyleSheet } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -17,23 +18,21 @@ export default function Welcome() {
           color={colors.primary}
           style={styles.icon}
         />
-        <Text variant="headlineLarge" style={[styles.title, { color: colors.onBackground }]}>
+        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
           Welcome to FitForge
         </Text>
-        <Text variant="bodyLarge" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+        <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
           Your free workout & macro tracker
         </Text>
       </View>
       <View style={styles.footer}>
         <Button
-          mode="contained"
+          variant="default"
           onPress={() => router.replace("/onboarding/setup")}
           style={styles.btn}
-          contentStyle={styles.btnContent}
           accessibilityLabel="Get started with FitForge"
-        >
-          Get Started
-        </Button>
+          label="Get Started"
+        />
       </View>
     </View>
   );

@@ -1,6 +1,10 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Banner, Button, Card, Chip, Text } from "react-native-paper";
+import { Alert as AlertComponent, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Text } from "@/components/ui/text";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -70,16 +74,15 @@ export default function Recommend() {
 
   const errorBanner = (
     <>
-      <Banner
-        visible={!!error}
-        actions={[
-          { label: "Retry", onPress: () => finish() },
-          { label: "Skip", onPress: skip },
-        ]}
-        icon="alert-circle-outline"
-      >
-        {error}
-      </Banner>
+      {!!error && (
+        <AlertComponent variant="destructive" style={{ marginBottom: 16 }}>
+          <AlertDescription>{error}</AlertDescription>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+            <Button variant="outline" onPress={() => finish()} label="Retry" size="sm" />
+            <Button variant="ghost" onPress={skip} label="Skip" size="sm" />
+          </View>
+        </AlertComponent>
+      )}
     </>
   );
 
@@ -90,31 +93,29 @@ export default function Recommend() {
         contentContainerStyle={styles.scroll}
       >
         {errorBanner}
-        <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
+        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
           We Recommend
         </Text>
-        <Card style={[styles.recCard, { backgroundColor: colors.surface }]} mode="outlined">
-          <Card.Content>
+        <Card style={StyleSheet.flatten([styles.recCard, { backgroundColor: colors.surface }])}>
+          <CardContent>
             <View style={styles.recHeader}>
-              <Text variant="headlineSmall" style={{ color: colors.onSurface }}>
+              <Text variant="title" style={{ color: colors.onSurface }}>
                 {FULL_BODY.name}
               </Text>
               <Chip
                 compact
-                mode="flat"
                 style={{ backgroundColor: colors.primaryContainer }}
-                textStyle={{ color: colors.onPrimaryContainer }}
               >
                 Recommended
               </Chip>
             </View>
-            <Text variant="bodyMedium" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
+            <Text variant="body" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
               This {FULL_BODY.duration} workout covers all major muscle groups — perfect for building a
               foundation.
             </Text>
             <View style={styles.meta}>
               <MaterialCommunityIcons name="clock-outline" size={16} color={colors.onSurfaceVariant} />
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
                 {FULL_BODY.duration}
               </Text>
               <MaterialCommunityIcons
@@ -123,17 +124,16 @@ export default function Recommend() {
                 color={colors.onSurfaceVariant}
                 style={{ marginLeft: 12 }}
               />
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
                 {FULL_BODY.exercises.length} exercises
               </Text>
             </View>
-          </Card.Content>
+          </CardContent>
         </Card>
         <Button
-          mode="contained"
+          variant="default"
           onPress={() => finish("template")}
           style={styles.btn}
-          contentStyle={styles.btnContent}
           loading={saving}
           disabled={saving}
           accessibilityLabel={`Start with ${FULL_BODY.name}`}
@@ -141,15 +141,13 @@ export default function Recommend() {
           Start with {FULL_BODY.name}
         </Button>
         <Button
-          mode="text"
+          variant="ghost"
           onPress={() => finish()}
           style={styles.skip}
-          contentStyle={styles.btnContent}
           disabled={saving}
           accessibilityLabel="Skip recommendation and explore on your own"
-        >
-          {"I'll explore on my own"}
-        </Button>
+          label="I'll explore on my own"
+        />
       </ScrollView>
     );
   }
@@ -161,40 +159,37 @@ export default function Recommend() {
         contentContainerStyle={styles.scroll}
       >
         {errorBanner}
-        <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
+        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
           We Recommend
         </Text>
-        <Card style={[styles.recCard, { backgroundColor: colors.surface }]} mode="outlined">
-          <Card.Content>
+        <Card style={StyleSheet.flatten([styles.recCard, { backgroundColor: colors.surface }])}>
+          <CardContent>
             <View style={styles.recHeader}>
-              <Text variant="headlineSmall" style={{ color: colors.onSurface }}>
+              <Text variant="title" style={{ color: colors.onSurface }}>
                 {PPL.name}
               </Text>
               <Chip
                 compact
-                mode="flat"
                 style={{ backgroundColor: colors.secondaryContainer }}
-                textStyle={{ color: colors.onSecondaryContainer }}
               >
                 Program
               </Chip>
             </View>
-            <Text variant="bodyMedium" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
+            <Text variant="body" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
               {PPL.description}
             </Text>
             <View style={styles.meta}>
               <MaterialCommunityIcons name="calendar-sync" size={16} color={colors.onSurfaceVariant} />
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
                 {PPL.days.length}-day cycle
               </Text>
             </View>
-          </Card.Content>
+          </CardContent>
         </Card>
         <Button
-          mode="contained"
+          variant="default"
           onPress={() => finish("program")}
           style={styles.btn}
-          contentStyle={styles.btnContent}
           loading={saving}
           disabled={saving}
           accessibilityLabel={`Start with ${PPL.name}`}
@@ -202,15 +197,13 @@ export default function Recommend() {
           Start with {PPL.name}
         </Button>
         <Button
-          mode="text"
+          variant="ghost"
           onPress={() => finish()}
           style={styles.skip}
-          contentStyle={styles.btnContent}
           disabled={saving}
           accessibilityLabel="Skip recommendation and explore on your own"
-        >
-          {"I'll explore on my own"}
-        </Button>
+          label="I'll explore on my own"
+        />
       </ScrollView>
     );
   }
@@ -219,10 +212,10 @@ export default function Recommend() {
   const advancedHeader = (
     <>
       {errorBanner}
-      <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
+      <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
         Browse Our Templates
       </Text>
-      <Text variant="bodyLarge" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+      <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
         Pick a starter template or create your own workouts from scratch.
       </Text>
     </>
@@ -231,26 +224,22 @@ export default function Recommend() {
   const advancedFooter = (
     <>
       <Button
-        mode="contained"
+        variant="default"
         onPress={() => finish("browse")}
         style={styles.btn}
-        contentStyle={styles.btnContent}
         loading={saving}
         disabled={saving}
         accessibilityLabel="Browse all workout templates"
-      >
-        Browse All Templates
-      </Button>
+        label="Browse All Templates"
+      />
       <Button
-        mode="text"
+        variant="ghost"
         onPress={() => finish()}
         style={styles.skip}
-        contentStyle={styles.btnContent}
         disabled={saving}
         accessibilityLabel="Skip and explore on your own"
-      >
-        {"I'll explore on my own"}
-      </Button>
+        label="I'll explore on my own"
+      />
     </>
   );
 
@@ -263,24 +252,24 @@ export default function Recommend() {
       ListFooterComponent={advancedFooter}
       renderItem={({ item: tpl }) => (
         <Card
-          style={[styles.browseCard, { backgroundColor: colors.surface }]}
-          mode="outlined"
+          style={StyleSheet.flatten([styles.browseCard, { backgroundColor: colors.surface }])}
+         
         >
-          <Card.Content>
+          <CardContent>
             <View style={styles.recHeader}>
-              <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+              <Text variant="title" style={{ color: colors.onSurface }}>
                 {tpl.name}
               </Text>
               <View style={styles.meta}>
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                   {tpl.duration}
                 </Text>
               </View>
             </View>
-            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
               {tpl.exercises.length} exercises · {tpl.difficulty}
             </Text>
-          </Card.Content>
+          </CardContent>
         </Card>
       )}
     />

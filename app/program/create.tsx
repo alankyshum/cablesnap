@@ -2,10 +2,14 @@ import { useCallback, useState } from "react";
 import {
   Alert,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, IconButton, Text, TextInput } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -118,38 +122,25 @@ export default function CreateProgram() {
         ]}
       >
         <View style={styles.dayInfo}>
-          <Text variant="titleSmall" style={{ color: colors.onSurface }}>
+          <Text variant="subtitle" style={{ color: colors.onSurface }}>
             Day {index + 1}: {dayName(item)}
           </Text>
           {item.template_id === null && (
-            <Text variant="bodySmall" style={{ color: colors.error }}>
+            <Text variant="caption" style={{ color: colors.error }}>
               Template has been deleted
             </Text>
           )}
         </View>
         <View style={styles.dayActions}>
-          <IconButton
-            icon="arrow-up"
-            size={18}
-            onPress={() => move(index, -1)}
-            disabled={index === 0}
-            accessibilityLabel={`Move ${dayName(item)} up`}
-            accessibilityHint="Reorders workout day"
-          />
-          <IconButton
-            icon="arrow-down"
-            size={18}
-            onPress={() => move(index, 1)}
-            disabled={index === days.length - 1}
-            accessibilityLabel={`Move ${dayName(item)} down`}
-            accessibilityHint="Reorders workout day"
-          />
-          <IconButton
-            icon="close"
-            size={18}
-            onPress={() => remove(item.id)}
-            accessibilityLabel={`Remove ${dayName(item)}`}
-          />
+          <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${dayName(item)} up`} accessibilityHint="Reorders workout day" hitSlop={8} style={{ padding: 8 }}>
+            <MaterialCommunityIcons name="arrow-up" size={18} color={index === 0 ? colors.onSurfaceDisabled : colors.onSurface} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => move(index, 1)} disabled={index === days.length - 1} accessibilityLabel={`Move ${dayName(item)} down`} accessibilityHint="Reorders workout day" hitSlop={8} style={{ padding: 8 }}>
+            <MaterialCommunityIcons name="arrow-down" size={18} color={index === days.length - 1 ? colors.onSurfaceDisabled : colors.onSurface} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${dayName(item)}`} hitSlop={8} style={{ padding: 8 }}>
+            <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
+          </TouchableOpacity>
         </View>
       </View>
     ),
@@ -164,21 +155,19 @@ export default function CreateProgram() {
       <View
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
-        <TextInput
+        <Input
           label="Program Name"
           value={name}
           onChangeText={setName}
-          mode="outlined"
-          style={styles.input}
+          containerStyle={styles.input}
           placeholder="e.g. Push/Pull/Legs"
           accessibilityLabel="Program name"
         />
-        <TextInput
+        <Input
           label="Description (optional)"
           value={description}
           onChangeText={setDescription}
-          mode="outlined"
-          style={styles.input}
+          containerStyle={styles.input}
           placeholder="e.g. 6-day PPL split"
           accessibilityLabel="Program description"
           multiline
@@ -187,7 +176,7 @@ export default function CreateProgram() {
           <>
             <View style={styles.section}>
               <Text
-                variant="titleMedium"
+                variant="title"
                 style={{ color: colors.onBackground }}
               >
                 Workout Days ({days.length})
@@ -200,7 +189,7 @@ export default function CreateProgram() {
               ListEmptyComponent={
                 <View style={styles.empty}>
                   <Text
-                    variant="bodyMedium"
+                    variant="body"
                     style={{ color: colors.onSurfaceVariant }}
                     accessibilityRole="text"
                     accessibilityLabel="No workout days added yet"
@@ -212,26 +201,22 @@ export default function CreateProgram() {
               style={styles.list}
             />
             <Button
-              mode="outlined"
-              icon="plus"
+              variant="outline"
               onPress={() =>
                 router.push(`/program/pick-template?programId=${program.id}`)
               }
               style={styles.addBtn}
-              contentStyle={styles.btnContent}
               accessibilityLabel="Add workout day from template"
-            >
-              Add Day
-            </Button>
+              label="Add Day"
+            />
           </>
         )}
         <Button
-          mode="contained"
+          variant="default"
           onPress={save}
           loading={saving}
           disabled={saving}
           style={styles.saveBtn}
-          contentStyle={styles.btnContent}
           accessibilityLabel={program ? "Done editing program" : "Create program"}
         >
           {program ? "Done" : "Create Program"}

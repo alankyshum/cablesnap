@@ -5,9 +5,15 @@ import {
   Linking,
   Modal,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Chip, FAB, IconButton, Snackbar, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { FAB } from "@/components/ui/fab";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/bna-toast";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -60,7 +66,7 @@ export default function PhotosScreen() {
   const [poseFilter, setPoseFilter] = useState<PoseCategory | undefined>();
   const [compareMode, setCompareMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [snack, setSnack] = useState("");
+  const { success, error: showError } = useToast();
   const [privacyModal, setPrivacyModal] = useState(false);
   const [metaModal, setMetaModal] = useState(false);
   const [pendingUri, setPendingUri] = useState<string | null>(null);
@@ -84,7 +90,7 @@ export default function PhotosScreen() {
       setPhotos(items);
       setTotal(count);
     } catch {
-      setSnack("Failed to load photos");
+      showError("Failed to load photos");
     } finally {
       setLoading(false);
     }
@@ -237,7 +243,7 @@ export default function PhotosScreen() {
     try {
       await processAndSave(result.assets[0].uri);
     } catch {
-      setSnack("Failed to process photo");
+      showError("Failed to process photo");
     } finally {
       setSaving(false);
     }
@@ -259,7 +265,7 @@ export default function PhotosScreen() {
     try {
       await processAndSave(result.assets[0].uri);
     } catch {
-      setSnack("Failed to process photo");
+      showError("Failed to process photo");
     } finally {
       setSaving(false);
     }
@@ -270,7 +276,7 @@ export default function PhotosScreen() {
   const handleSaveMeta = async () => {
     if (!pendingUri) return;
     if (!isValidDate(metaDate)) {
-      setSnack("Please enter a valid date (YYYY-MM-DD)");
+      showError("Please enter a valid date (YYYY-MM-DD)");
       return;
     }
     setSaving(true);
@@ -287,9 +293,9 @@ export default function PhotosScreen() {
       setMetaModal(false);
       setPendingUri(null);
       await load();
-      setSnack("Photo saved");
+      success("Photo saved");
     } catch {
-      setSnack("Failed to save photo");
+      showError("Failed to save photo");
     } finally {
       setSaving(false);
     }
@@ -299,7 +305,9 @@ export default function PhotosScreen() {
     await softDeletePhoto(photo.id);
     undoRef.current = { id: photo.id };
     await load();
-    setSnack("Photo deleted");
+    success("Photo deleted", {
+      action: { label: "Undo", onPress: handleUndo },
+    });
   };
 
   const handleUndo = async () => {
@@ -307,7 +315,6 @@ export default function PhotosScreen() {
     await restorePhoto(undoRef.current.id);
     undoRef.current = null;
     await load();
-    setSnack("");
   };
 
   const handlePhotoPress = (photo: ProgressPhoto) => {
@@ -371,7 +378,7 @@ export default function PhotosScreen() {
           onPress={() => setPoseFilter(undefined)}
           style={styles.chip}
           accessibilityLabel="All poses filter"
-          accessibilityRole="togglebutton"
+          accessibilityRole="checkbox"
         >
           All
         </Chip>
@@ -382,14 +389,13 @@ export default function PhotosScreen() {
             onPress={() => setPoseFilter(poseFilter === p.value ? undefined : p.value)}
             style={styles.chip}
             accessibilityLabel={`${p.label} pose filter`}
-            accessibilityRole="togglebutton"
+            accessibilityRole="checkbox"
           >
             {p.label}
           </Chip>
         ))}
       </View>
-      <IconButton
-        icon="compare"
+      <TouchableOpacity
         onPress={() => {
           if (compareMode) {
             setCompareMode(false);
@@ -402,24 +408,27 @@ export default function PhotosScreen() {
         accessibilityLabel="Compare photos"
         accessibilityRole="button"
         accessibilityHint={total < 2 ? "Need at least 2 photos to compare" : "Select two photos to compare side by side"}
-      />
+        hitSlop={8}
+        style={{ padding: 8 }}
+      >
+        <MaterialCommunityIcons name="compare" size={24} color={colors.onSurface} />
+      </TouchableOpacity>
     </View>
   );
 
   const compareModeHeader = compareMode ? (
     <View style={[styles.compareBanner, { backgroundColor: colors.primaryContainer }]}>
-      <Text variant="bodyMedium" style={{ color: colors.onPrimaryContainer, flex: 1 }}>
+      <Text variant="body" style={{ color: colors.onPrimaryContainer, flex: 1 }}>
         Select 2 photos ({selectedIds.length}/2)
       </Text>
       <Button
-        mode="text"
+        variant="ghost"
         onPress={() => {
           setCompareMode(false);
           setSelectedIds([]);
         }}
-      >
-        Cancel
-      </Button>
+        label="Cancel"
+      />
     </View>
   ) : null;
 
@@ -458,17 +467,15 @@ export default function PhotosScreen() {
               color={colors.primary}
               style={{ alignSelf: "center", marginBottom: 16 }}
             />
-            <Text variant="titleLarge" style={{ color: colors.onSurface, textAlign: "center", marginBottom: 12 }}>
+            <Text variant="title" style={{ color: colors.onSurface, textAlign: "center", marginBottom: 12 }}>
               Your Photos Are Private
             </Text>
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 24 }}>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 24 }}>
               Your progress photos are stored only on this device and never uploaded to any server.
               Photos are not visible in your device&apos;s photo gallery.
               If you reinstall the app, photos will be lost.
             </Text>
-            <Button mode="contained" onPress={dismissPrivacy} contentStyle={{ paddingVertical: 8 }}>
-              I Understand
-            </Button>
+            <Button variant="default" onPress={dismissPrivacy} label="I Understand" />
           </View>
         </View>
       </Modal>
@@ -521,15 +528,13 @@ export default function PhotosScreen() {
       {compareMode && selectedIds.length === 2 && (
         <View style={styles.compareBar}>
           <Button
-            mode="contained"
+            variant="default"
             onPress={handleCompare}
             style={{ flex: 1 }}
-            contentStyle={{ paddingVertical: 8 }}
             accessibilityLabel="Compare photos"
             accessibilityRole="button"
-          >
-            Compare
-          </Button>
+            label="Compare"
+          />
         </View>
       )}
       {/* Meta modal */}
@@ -545,7 +550,7 @@ export default function PhotosScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text variant="titleLarge" style={{ color: colors.onSurface, marginBottom: 16 }}>
+            <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>
               Photo Details
             </Text>
             {pendingUri && (
@@ -555,15 +560,14 @@ export default function PhotosScreen() {
                 resizeMode="contain"
               />
             )}
-            <TextInput
-              label="Date"
+            <Input
+              placeholder="Date (YYYY-MM-DD)"
               value={metaDate}
               onChangeText={setMetaDate}
-              mode="outlined"
               style={styles.input}
-              placeholder="YYYY-MM-DD"
+              accessibilityLabel="Date"
             />
-            <Text variant="bodyMedium" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 4 }}>
+            <Text variant="body" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 4 }}>
               Pose Category
             </Text>
             <View style={styles.chips}>
@@ -574,42 +578,38 @@ export default function PhotosScreen() {
                   onPress={() => setMetaPose(metaPose === p.value ? null : p.value)}
                   style={styles.chip}
                   accessibilityLabel={`${p.label} pose category`}
-                  accessibilityRole="togglebutton"
+                  accessibilityRole="checkbox"
                 >
                   {p.label}
                 </Chip>
               ))}
             </View>
-            <TextInput
-              label="Note (optional)"
+            <Input
+              placeholder="Note (optional)"
               value={metaNote}
               onChangeText={setMetaNote}
-              mode="outlined"
               style={styles.input}
               multiline
+              accessibilityLabel="Note"
             />
             <View style={styles.modalButtons}>
               <Button
-                mode="outlined"
+                variant="outline"
                 onPress={() => {
                   setMetaModal(false);
                   setPendingUri(null);
                 }}
                 style={{ flex: 1, marginRight: 8 }}
-                contentStyle={{ paddingVertical: 8 }}
-              >
-                Cancel
-              </Button>
+                label="Cancel"
+              />
               <Button
-                mode="contained"
+                variant="default"
                 onPress={handleSaveMeta}
                 loading={saving}
                 disabled={saving}
                 style={{ flex: 1 }}
-                contentStyle={{ paddingVertical: 8 }}
-              >
-                Save
-              </Button>
+                label="Save"
+              />
             </View>
           </View>
         </View>
@@ -619,24 +619,13 @@ export default function PhotosScreen() {
       {saving && !metaModal && (
         <View style={styles.savingOverlay}>
           <View style={[styles.savingBox, { backgroundColor: colors.surface }]}>
-            <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
+            <Text variant="body" style={{ color: colors.onSurface }}>
               Saving photo...
             </Text>
           </View>
         </View>
       )}
-      <Snackbar
-        visible={!!snack}
-        onDismiss={() => { setSnack(""); }}
-        duration={10000}
-        action={
-          snack === "Photo deleted"
-            ? { label: "Undo", onPress: handleUndo, accessibilityLabel: "Photo deleted. Undo" }
-            : { label: "OK", onPress: () => setSnack("") }
-        }
-      >
-        {snack}
-      </Snackbar>
+
     </SafeAreaView>
   );
 }

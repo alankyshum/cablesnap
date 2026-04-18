@@ -5,7 +5,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { getPhotoById } from "../../lib/db/photos";
@@ -48,7 +48,7 @@ export default function CompareScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["bottom"]}>
         <View style={styles.center}>
-          <Text variant="bodyLarge" style={{ color: colors.error }}>
+          <Text variant="body" style={{ color: colors.error }}>
             Could not load photos. They may have been deleted.
           </Text>
         </View>
@@ -60,7 +60,7 @@ export default function CompareScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["bottom"]}>
         <View style={styles.center}>
-          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
             Loading photos...
           </Text>
         </View>

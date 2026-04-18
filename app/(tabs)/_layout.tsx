@@ -1,7 +1,7 @@
 import { Tabs, useRouter } from "expo-router";
 import { Text, View } from "react-native";
-import { IconButton } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { TouchableOpacity } from "react-native";
 import FloatingTabBar from "../../components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -46,15 +46,14 @@ export default function TabLayout() {
           title: "Nutrition",
           headerTitle: renderHeaderTitle("food-apple", "Nutrition"),
           headerRight: () => (
-            <IconButton
-              icon="barcode-scan"
-              size={24}
+            <TouchableOpacity
               onPress={() => router.push("/nutrition/add?scan=true")}
               accessibilityLabel="Scan food barcode"
               accessibilityRole="button"
-              iconColor={colors.onSurface}
-              style={{ minWidth: 48, minHeight: 48 }}
-            />
+              style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            >
+              <MaterialCommunityIcons name="barcode-scan" size={24} color={colors.onSurface} />
+            </TouchableOpacity>
           ),
         }}
       />
@@ -64,15 +63,14 @@ export default function TabLayout() {
           title: "Workouts",
           headerTitle: renderHeaderTitle("arm-flex", "Workouts"),
           headerRight: () => (
-            <IconButton
-              icon="wrench"
-              size={24}
+            <TouchableOpacity
               onPress={() => router.push("/tools")}
               accessibilityLabel="Workout tools"
               accessibilityRole="button"
-              iconColor={colors.onSurface}
-              style={{ minWidth: 48, minHeight: 48 }}
-            />
+              style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            >
+              <MaterialCommunityIcons name="wrench" size={24} color={colors.onSurface} />
+            </TouchableOpacity>
           ),
         }}
       />

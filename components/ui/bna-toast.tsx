@@ -338,12 +338,23 @@ export function Toast({
   );
 }
 
+interface ToastAction {
+  label: string;
+  onPress: () => void;
+}
+
+interface ToastOptions {
+  description?: string;
+  action?: ToastAction;
+  duration?: number;
+}
+
 interface ToastContextType {
-  toast: (toast: Omit<ToastData, 'id'>) => void;
-  success: (title: string, description?: string) => void;
-  error: (title: string, description?: string) => void;
-  warning: (title: string, description?: string) => void;
-  info: (title: string, description?: string) => void;
+  toast: (toast: string | Omit<ToastData, 'id'>) => void;
+  success: (title: string, options?: string | ToastOptions) => void;
+  error: (title: string, options?: string | ToastOptions) => void;
+  warning: (title: string, options?: string | ToastOptions) => void;
+  info: (title: string, options?: string | ToastOptions) => void;
   dismiss: (id: string) => void;
   dismissAll: () => void;
 }
@@ -361,12 +372,14 @@ export function ToastProvider({ children, maxToasts = 3 }: ToastProviderProps) {
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
   const addToast = useCallback(
-    (toastData: Omit<ToastData, 'id'>) => {
+    (toastData: string | Omit<ToastData, 'id'>) => {
+      const data: Omit<ToastData, 'id'> =
+        typeof toastData === 'string' ? { title: toastData } : toastData;
       const id = generateId();
       const newToast: ToastData = {
-        ...toastData,
+        ...data,
         id,
-        duration: toastData.duration ?? 4000,
+        duration: data.duration ?? 4000,
       };
 
       setToasts((prev) => {
@@ -393,11 +406,15 @@ export function ToastProvider({ children, maxToasts = 3 }: ToastProviderProps) {
   }, []);
 
   const createVariantToast = useCallback(
-    (variant: ToastVariant, title: string, description?: string) => {
+    (variant: ToastVariant, title: string, options?: string | ToastOptions) => {
+      const opts: ToastOptions | undefined =
+        typeof options === 'string' ? { description: options } : options;
       addToast({
         title,
-        description,
+        description: opts?.description,
         variant,
+        action: opts?.action,
+        duration: opts?.duration,
       });
     },
     [addToast]
@@ -405,14 +422,14 @@ export function ToastProvider({ children, maxToasts = 3 }: ToastProviderProps) {
 
   const contextValue: ToastContextType = {
     toast: addToast,
-    success: (title, description) =>
-      createVariantToast('success', title, description),
-    error: (title, description) =>
-      createVariantToast('error', title, description),
-    warning: (title, description) =>
-      createVariantToast('warning', title, description),
-    info: (title, description) =>
-      createVariantToast('info', title, description),
+    success: (title, options) =>
+      createVariantToast('success', title, options),
+    error: (title, options) =>
+      createVariantToast('error', title, options),
+    warning: (title, options) =>
+      createVariantToast('warning', title, options),
+    info: (title, options) =>
+      createVariantToast('info', title, options),
     dismiss: dismissToast,
     dismissAll,
   };

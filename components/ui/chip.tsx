@@ -13,8 +13,9 @@ interface ChipProps {
   disabled?: boolean;
   icon?: React.ReactNode;
   style?: ViewStyle;
+  textStyle?: { fontSize?: number; [key: string]: unknown };
   accessibilityLabel?: string;
-  accessibilityRole?: "radio" | "checkbox";
+  accessibilityRole?: "radio" | "checkbox" | "button";
   accessibilityState?: { selected?: boolean };
   role?: Role;
 }

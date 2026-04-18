@@ -1,6 +1,8 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, SegmentedButtons, Text, TouchableRipple } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -50,15 +52,15 @@ export default function Setup() {
 
   const header = (
     <>
-      <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
+      <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
         Set Up Your Preferences
       </Text>
 
-      <Text variant="titleMedium" style={[styles.section, { color: colors.onBackground }]}>
+      <Text variant="title" style={[styles.section, { color: colors.onBackground }]}>
         Weight Unit
       </Text>
       <View accessibilityRole="radiogroup" accessibilityLabel="Weight unit">
-        <SegmentedButtons
+        <SegmentedControl
           value={weight}
           onValueChange={(v) => setWeight(v as "kg" | "lb")}
           buttons={[
@@ -69,11 +71,11 @@ export default function Setup() {
         />
       </View>
 
-      <Text variant="titleMedium" style={[styles.section, { color: colors.onBackground }]}>
+      <Text variant="title" style={[styles.section, { color: colors.onBackground }]}>
         Measurement Unit
       </Text>
       <View accessibilityRole="radiogroup" accessibilityLabel="Measurement unit">
-        <SegmentedButtons
+        <SegmentedControl
           value={measurement}
           onValueChange={(v) => setMeasurement(v as "cm" | "in")}
           buttons={[
@@ -84,7 +86,7 @@ export default function Setup() {
         />
       </View>
 
-      <Text variant="titleMedium" style={[styles.section, { color: colors.onBackground }]}>
+      <Text variant="title" style={[styles.section, { color: colors.onBackground }]}>
         Experience Level
       </Text>
     </>
@@ -92,7 +94,7 @@ export default function Setup() {
 
   const footer = (
     <Button
-      mode="contained"
+      variant="default"
       disabled={!level}
       onPress={() => {
         router.replace({
@@ -101,12 +103,9 @@ export default function Setup() {
         });
       }}
       style={styles.btn}
-      contentStyle={styles.btnContent}
       accessibilityLabel={level ? "Continue to recommendations" : "Select an experience level to continue"}
-      accessibilityState={{ disabled: !level }}
-    >
-      Continue
-    </Button>
+      label="Continue"
+    />
   );
 
   return (
@@ -122,7 +121,7 @@ export default function Setup() {
       renderItem={({ item }) => {
         const selected = level === item.value;
         return (
-          <TouchableRipple
+          <Pressable
             onPress={() => setLevel(item.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
@@ -145,13 +144,13 @@ export default function Setup() {
               />
               <View style={styles.cardText}>
                 <Text
-                  variant="titleMedium"
+                  variant="title"
                   style={{ color: selected ? colors.onPrimaryContainer : colors.onSurface }}
                 >
                   {item.label}
                 </Text>
                 <Text
-                  variant="bodyMedium"
+                  variant="body"
                   style={{ color: selected ? colors.onPrimaryContainer : colors.onSurfaceVariant }}
                 >
                   {item.description}
@@ -165,7 +164,7 @@ export default function Setup() {
                 />
               )}
             </View>
-          </TouchableRipple>
+          </Pressable>
         );
       }}
     />

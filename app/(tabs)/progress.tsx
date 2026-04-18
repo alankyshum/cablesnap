@@ -3,12 +3,22 @@ import {
   Alert,
   FlatList,
   Modal,
+  Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, Card, Divider, FAB, IconButton, ProgressBar, SegmentedButtons, Snackbar, Text, TextInput } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { FAB } from "@/components/ui/fab";
+import { Progress as ProgressBar } from "@/components/ui/progress";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/bna-toast";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { CartesianChart, Bar, Line } from "victory-native";
 import {
@@ -52,6 +62,7 @@ export default function Progress() {
   const tabBarHeight = useFloatingTabBarHeight();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
+  const { info: toastInfo } = useToast();
   const [segment, setSegment] = useState("workouts");
 
   // Workout state
@@ -69,7 +80,6 @@ export default function Progress() {
   const [chart, setChart] = useState<{ date: string; weight: number }[]>([]);
   const [measurements, setMeasurements] = useState<BodyMeasurements | null>(null);
   const [modal, setModal] = useState(false);
-  const [snack, setSnack] = useState("");
   const undoRef = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
 
   // Weight log modal state
@@ -176,8 +186,6 @@ export default function Progress() {
     }
     const filtered = entries.filter((e) => e.id !== item.id);
     setEntries(filtered);
-    setSnack("Entry deleted");
-
     const timer = setTimeout(async () => {
       await deleteBodyWeight(item.id);
       undoRef.current = null;
@@ -185,13 +193,16 @@ export default function Progress() {
     }, 3000);
 
     undoRef.current = { id: item.id, timer };
+
+    toastInfo("Entry deleted", {
+      action: { label: "Undo", onPress: handleUndo },
+    });
   };
 
   const handleUndo = () => {
     if (!undoRef.current) return;
     clearTimeout(undoRef.current.timer);
     undoRef.current = null;
-    setSnack("");
     loadBody();
   };
 
@@ -217,7 +228,7 @@ export default function Progress() {
             <WeeklySummary />
           </View>
           <View style={[styles.center, { flex: 1 }]}>
-            <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 32 }}>
+            <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 32 }}>
               Complete your first workout to see progress
             </Text>
           </View>
@@ -226,129 +237,119 @@ export default function Progress() {
     }
 
     const achievementsCard = (
-      <Card
-        style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}
+      <Pressable
+        style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]}
         onPress={() => router.push("/progress/achievements")}
         accessibilityLabel="Achievements"
         accessibilityRole="button"
         accessibilityHint="View your achievements and milestones"
       >
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
-            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
-              Achievements
-            </Text>
-          </View>
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-            Track your milestones and badges
+        <View style={styles.cardHeader}>
+          <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
+          <Text variant="subtitle" style={{ color: colors.onSurface }}>
+            Achievements
           </Text>
-        </Card.Content>
-      </Card>
+        </View>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+          Track your milestones and badges
+        </Text>
+      </Pressable>
     );
 
     const freqCard = freq.length > 0 ? (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
-            Sessions Per Week
-          </Text>
-          <View style={{ width: chartWidth, height: 180 }}>
-            <CartesianChart
-              data={freq.map((f) => ({ week: f.week, count: f.count }))}
-              xKey="week"
-              yKeys={["count"]}
-              domainPadding={{ left: 20, right: 20 }}
-            >
-              {({ points, chartBounds }) => (
-                <Bar
-                  points={points.count}
-                  chartBounds={chartBounds}
-                  color={colors.primary}
-                  roundedCorners={{ topLeft: 4, topRight: 4 }}
-                />
-              )}
-            </CartesianChart>
-          </View>
-        </Card.Content>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard]}>
+        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
+          Sessions Per Week
+        </Text>
+        <View style={{ width: chartWidth, height: 180 }}>
+          <CartesianChart
+            data={freq.map((f) => ({ week: f.week, count: f.count }))}
+            xKey="week"
+            yKeys={["count"]}
+            domainPadding={{ left: 20, right: 20 }}
+          >
+            {({ points, chartBounds }) => (
+              <Bar
+                points={points.count}
+                chartBounds={chartBounds}
+                color={colors.primary}
+                roundedCorners={{ topLeft: 4, topRight: 4 }}
+              />
+            )}
+          </CartesianChart>
+        </View>
       </Card>
     ) : null;
 
     const volCard = vol.length > 0 ? (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
-            Weekly Volume (kg)
-          </Text>
-          <View style={{ width: chartWidth, height: 180 }}>
-            <CartesianChart
-              data={vol.map((v) => ({ week: v.week, volume: v.volume }))}
-              xKey="week"
-              yKeys={["volume"]}
-              domainPadding={{ left: 20, right: 20 }}
-            >
-              {({ points, chartBounds }) => (
-                <Bar
-                  points={points.volume}
-                  chartBounds={chartBounds}
-                  color={colors.primary}
-                  roundedCorners={{ topLeft: 4, topRight: 4 }}
-                />
-              )}
-            </CartesianChart>
-          </View>
-        </Card.Content>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard]}>
+        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
+          Weekly Volume (kg)
+        </Text>
+        <View style={{ width: chartWidth, height: 180 }}>
+          <CartesianChart
+            data={vol.map((v) => ({ week: v.week, volume: v.volume }))}
+            xKey="week"
+            yKeys={["volume"]}
+            domainPadding={{ left: 20, right: 20 }}
+          >
+            {({ points, chartBounds }) => (
+              <Bar
+                points={points.volume}
+                chartBounds={chartBounds}
+                color={colors.primary}
+                roundedCorners={{ topLeft: 4, topRight: 4 }}
+              />
+            )}
+          </CartesianChart>
+        </View>
       </Card>
     ) : null;
 
     const prCard = (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
-            Personal Records
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard]}>
+        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
+          Personal Records
+        </Text>
+        {prs.length === 0 ? (
+          <Text style={{ color: colors.onSurfaceVariant }}>
+            No records yet — start lifting!
           </Text>
-          {prs.length === 0 ? (
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
-              No records yet — start lifting!
-            </Text>
-          ) : (
-            prs.map((pr) => (
-              <View key={pr.exercise_id} style={[styles.prRow, { borderBottomColor: colors.outlineVariant }]}>
-                <Text variant="bodyMedium" style={{ color: colors.onSurface, flex: 1 }}>
-                  {pr.name}
-                </Text>
-                <Text variant="titleSmall" style={{ color: colors.primary }}>
-                  {pr.max_weight} kg
-                </Text>
-              </View>
-            ))
-          )}
-        </Card.Content>
+        ) : (
+          prs.map((pr) => (
+            <View key={pr.exercise_id} style={[styles.prRow, { borderBottomColor: colors.outlineVariant }]}>
+              <Text style={{ color: colors.onSurface, flex: 1 }}>
+                {pr.name}
+              </Text>
+              <Text variant="subtitle" style={{ color: colors.primary, fontSize: 15 }}>
+                {pr.max_weight} kg
+              </Text>
+            </View>
+          ))
+        )}
       </Card>
     );
 
     const sessionsCard = (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
-            Recent Sessions
-          </Text>
-          {sessions.map((s, i) => (
-            <View key={s.id}>
-              <View style={styles.sessionRow}>
-                <View style={{ flex: 1 }}>
-                  <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
-                    {s.name}
-                  </Text>
-                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-                    {formatDateShort(s.started_at)} · {formatDuration(s.duration_seconds)} · {s.set_count} sets
-                  </Text>
-                </View>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard]}>
+        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
+          Recent Sessions
+        </Text>
+        {sessions.map((s, i) => (
+          <View key={s.id}>
+            <View style={styles.sessionRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.onSurface }}>
+                  {s.name}
+                </Text>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                  {formatDateShort(s.started_at)} · {formatDuration(s.duration_seconds)} · {s.set_count} sets
+                </Text>
               </View>
-              {i < sessions.length - 1 && <Divider style={{ marginVertical: 6 }} />}
             </View>
-          ))}
-        </Card.Content>
+            {i < sessions.length - 1 && <Separator style={{ marginVertical: 6 }} />}
+          </View>
+        ))}
       </Card>
     );
 
@@ -396,10 +397,10 @@ export default function Progress() {
     if (total === 0 && !measurements) {
       return (
         <View style={[styles.center, { flex: 1 }]}>
-          <Text variant="headlineMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+          <Text variant="heading" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
             📏
           </Text>
-          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             Log your first weigh-in
           </Text>
           <FAB
@@ -432,104 +433,91 @@ export default function Progress() {
 
     // Weight card
     const weightCard = latest ? (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
-              Current Weight
-            </Text>
-            <Button
-              mode="text"
-              compact
-              onPress={toggleUnit}
-              accessibilityLabel={`Switch to ${unit === "kg" ? "pounds" : "kilograms"}`}
-            >
-              {unit === "kg" ? "kg → lb" : "lb → kg"}
-            </Button>
-          </View>
+      <Card style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text variant="subtitle" style={{ color: colors.onSurface }}>
+            Current Weight
+          </Text>
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={toggleUnit}
+            accessibilityLabel={`Switch to ${unit === "kg" ? "pounds" : "kilograms"}`}
+            label={unit === "kg" ? "kg → lb" : "lb → kg"}
+          />
+        </View>
+        <Text
+          variant="heading"
+          style={{ color: colors.onSurface, marginTop: 4 }}
+          accessibilityLabel={`Current weight ${toDisplay(latest.weight, unit)} ${unit}`}
+        >
+          {toDisplay(latest.weight, unit)} {unit}
+        </Text>
+        {delta !== null && delta !== 0 && (
           <Text
-            variant="displaySmall"
-            style={{ color: colors.onSurface, marginTop: 4 }}
-            accessibilityLabel={`Current weight ${toDisplay(latest.weight, unit)} ${unit}`}
+            style={{ color: delta > 0 ? colors.error : colors.primary, marginTop: 4 }}
+            accessibilityValue={{ text: `${deltaLabel} since previous entry` }}
           >
-            {toDisplay(latest.weight, unit)} {unit}
+            {deltaLabel} since previous
           </Text>
-          {delta !== null && delta !== 0 && (
-            <Text
-              variant="bodyMedium"
-              style={{ color: delta > 0 ? colors.error : colors.primary, marginTop: 4 }}
-              accessibilityValue={{ text: `${deltaLabel} since previous entry` }}
-            >
-              {deltaLabel} since previous
-            </Text>
-          )}
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-            {latest.date}
-          </Text>
-        </Card.Content>
+        )}
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+          {latest.date}
+        </Text>
       </Card>
     ) : null;
 
     // Goals card
     const goalsCard = (settings.weight_goal || settings.body_fat_goal) ? (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
-              Goals
-            </Text>
-            <Button
-              mode="text"
-              compact
-              onPress={() => router.push("/body/goals")}
-              accessibilityLabel="Edit body goals"
-            >
-              Edit
-            </Button>
-          </View>
-          {settings.weight_goal && latest && (
-            <View style={{ marginTop: 8 }}>
-              <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
-                Weight: {toDisplay(latest.weight, unit)} → {toDisplay(settings.weight_goal, unit)} {unit}
-              </Text>
-              <ProgressBar
-                progress={Math.min(1, Math.max(0, 1 - Math.abs(latest.weight - settings.weight_goal) / Math.max(latest.weight, 1)))}
-                color={colors.primary}
-                style={{ marginTop: 8, borderRadius: 4 }}
-                accessibilityLabel={`Weight goal progress`}
-              />
-            </View>
-          )}
-          {settings.body_fat_goal && measurements?.body_fat && (
-            <View style={{ marginTop: 12 }}>
-              <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
-                Body fat: {measurements.body_fat}% → {settings.body_fat_goal}%
-              </Text>
-              <ProgressBar
-                progress={Math.min(1, Math.max(0, 1 - Math.abs(measurements.body_fat - settings.body_fat_goal) / Math.max(measurements.body_fat, 1)))}
-                color={colors.primary}
-                style={{ marginTop: 8, borderRadius: 4 }}
-                accessibilityLabel={`Body fat goal progress`}
-              />
-            </View>
-          )}
-        </Card.Content>
-      </Card>
-    ) : (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
+      <Card style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text variant="subtitle" style={{ color: colors.onSurface }}>
             Goals
           </Text>
           <Button
-            mode="outlined"
+            variant="ghost"
+            size="sm"
             onPress={() => router.push("/body/goals")}
-            contentStyle={styles.btnContent}
-            accessibilityLabel="Set body goals"
-          >
-            Set Goals
-          </Button>
-        </Card.Content>
+            accessibilityLabel="Edit body goals"
+            label="Edit"
+          />
+        </View>
+        {settings.weight_goal && latest && (
+          <View style={{ marginTop: 8 }}>
+            <Text style={{ color: colors.onSurface }}>
+              Weight: {toDisplay(latest.weight, unit)} → {toDisplay(settings.weight_goal, unit)} {unit}
+            </Text>
+            <ProgressBar
+              value={Math.min(100, Math.max(0, (1 - Math.abs(latest.weight - settings.weight_goal) / Math.max(latest.weight, 1)) * 100))}
+              style={{ marginTop: 8 }}
+              height={6}
+            />
+          </View>
+        )}
+        {settings.body_fat_goal && measurements?.body_fat && (
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: colors.onSurface }}>
+              Body fat: {measurements.body_fat}% → {settings.body_fat_goal}%
+            </Text>
+            <ProgressBar
+              value={Math.min(100, Math.max(0, (1 - Math.abs(measurements.body_fat - settings.body_fat_goal) / Math.max(measurements.body_fat, 1)) * 100))}
+              style={{ marginTop: 8 }}
+              height={6}
+            />
+          </View>
+        )}
+      </Card>
+    ) : (
+      <Card style={styles.card}>
+        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
+          Goals
+        </Text>
+        <Button
+          variant="outline"
+          onPress={() => router.push("/body/goals")}
+          accessibilityLabel="Set body goals"
+          label="Set Goals"
+        />
       </Card>
     );
 
@@ -544,94 +532,86 @@ export default function Progress() {
       });
 
       return (
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Card.Content>
-            <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
-              Weight Trend
-            </Text>
-            <View style={{ width: chartWidth, height: 200 }}>
-              <CartesianChart
-                data={chart.map((d, i) => ({
-                  date: paddedLabels[i] || "",
-                  weight: toDisplay(d.weight, unit),
-                  avg: avg[i] ? toDisplay(avg[i].avg, unit) : toDisplay(d.weight, unit),
-                }))}
-                xKey="date"
-                yKeys={["weight", "avg"]}
-                domainPadding={{ left: 10, right: 10 }}
-              >
-                {({ points }) => (
-                  <>
-                    <Line
-                      points={points.weight}
-                      color={colors.primary}
-                      strokeWidth={2}
-                      curveType="natural"
-                    />
-                    <Line
-                      points={points.avg}
-                      color={colors.tertiary}
-                      strokeWidth={2}
-                      curveType="natural"
-                    />
-                  </>
-                )}
-              </CartesianChart>
-            </View>
-            <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
-              <Text variant="bodySmall" style={{ color: colors.primary }}>● Actual</Text>
-              <Text variant="bodySmall" style={{ color: colors.tertiary }}>● 7-day avg</Text>
-            </View>
-          </Card.Content>
+        <Card style={styles.card}>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
+            Weight Trend
+          </Text>
+          <View style={{ width: chartWidth, height: 200 }}>
+            <CartesianChart
+              data={chart.map((d, i) => ({
+                date: paddedLabels[i] || "",
+                weight: toDisplay(d.weight, unit),
+                avg: avg[i] ? toDisplay(avg[i].avg, unit) : toDisplay(d.weight, unit),
+              }))}
+              xKey="date"
+              yKeys={["weight", "avg"]}
+              domainPadding={{ left: 10, right: 10 }}
+            >
+              {({ points }) => (
+                <>
+                  <Line
+                    points={points.weight}
+                    color={colors.primary}
+                    strokeWidth={2}
+                    curveType="natural"
+                  />
+                  <Line
+                    points={points.avg}
+                    color={colors.tertiary}
+                    strokeWidth={2}
+                    curveType="natural"
+                  />
+                </>
+              )}
+            </CartesianChart>
+          </View>
+          <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
+            <Text variant="caption" style={{ color: colors.primary }}>● Actual</Text>
+            <Text variant="caption" style={{ color: colors.tertiary }}>● 7-day avg</Text>
+          </View>
         </Card>
       );
     })() : null;
 
     // Single entry: card only, no chart
     const singleCard = chart.length === 1 && latest ? (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
-            Weight Trend
-          </Text>
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
-            {toDisplay(latest.weight, unit)} {unit} on {latest.date}
-          </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-            Log more entries to see a chart
-          </Text>
-        </Card.Content>
+      <Card style={styles.card}>
+        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
+          Weight Trend
+        </Text>
+        <Text style={{ color: colors.onSurfaceVariant }}>
+          {toDisplay(latest.weight, unit)} {unit} on {latest.date}
+        </Text>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+          Log more entries to see a chart
+        </Text>
       </Card>
     ) : null;
 
     // Measurements card
     const measCard = (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
-              Measurements
-            </Text>
-          </View>
-          {measurements ? (
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-              Last logged: {measurements.date}
-            </Text>
-          ) : (
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-              No measurements logged yet
-            </Text>
-          )}
-          <Button
-            mode="outlined"
-            onPress={() => router.push("/body/measurements")}
-            style={{ marginTop: 8 }}
-            contentStyle={styles.btnContent}
-            accessibilityLabel="Log body measurements"
-          >
-            {measurements ? "Log Measurements" : "Add First Measurement"}
-          </Button>
-        </Card.Content>
+      <Card style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text variant="subtitle" style={{ color: colors.onSurface }}>
+            Measurements
+          </Text>
+        </View>
+        {measurements ? (
+          <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+            Last logged: {measurements.date}
+          </Text>
+        ) : (
+          <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+            No measurements logged yet
+          </Text>
+        )}
+        <Button
+          variant="outline"
+          onPress={() => router.push("/body/measurements")}
+          style={{ marginTop: 8 }}
+          accessibilityLabel="Log body measurements"
+          label={measurements ? "Log Measurements" : "Add First Measurement"}
+        />
       </Card>
     );
 
@@ -639,19 +619,21 @@ export default function Progress() {
     const renderEntry = ({ item }: { item: BodyWeight }) => (
       <View style={[styles.entryRow, { borderBottomColor: colors.outlineVariant }]}>
         <View style={{ flex: 1 }}>
-          <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
+          <Text style={{ color: colors.onSurface }}>
             {toDisplay(item.weight, unit)} {unit}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {item.date}{item.notes ? ` · ${item.notes}` : ""}
           </Text>
         </View>
-        <IconButton
-          icon="delete-outline"
-          size={20}
+        <Pressable
           onPress={() => handleDelete(item)}
           accessibilityLabel={`Delete weight entry for ${item.date}`}
-        />
+          hitSlop={8}
+          style={{ padding: 8 }}
+        >
+          <MaterialCommunityIcons name="delete-outline" size={20} color={colors.onSurfaceVariant} />
+        </Pressable>
       </View>
     );
 
@@ -671,31 +653,29 @@ export default function Progress() {
               {singleCard}
               {measCard}
               {/* Progress Photos card */}
-              <Card
-                style={[styles.card, { backgroundColor: colors.surface }]}
+              <Pressable
+                style={[styles.card, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]}
                 onPress={() => router.push("/body/photos")}
                 accessibilityLabel="Progress Photos"
                 accessibilityRole="button"
                 accessibilityHint="View and manage your progress photos"
               >
-                <Card.Content>
-                  <View style={styles.cardHeader}>
-                    <Text variant="titleMedium" style={{ color: colors.onSurface }}>
-                      Progress Photos
-                    </Text>
-                  </View>
-                  <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-                    Track your visual transformation
+                <View style={styles.cardHeader}>
+                  <Text variant="subtitle" style={{ color: colors.onSurface }}>
+                    Progress Photos
                   </Text>
-                </Card.Content>
-              </Card>
-              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8, marginTop: 8 }}>
+                </View>
+                <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+                  Track your visual transformation
+                </Text>
+              </Pressable>
+              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8, marginTop: 8 }}>
                 Recent Entries
               </Text>
             </>
           }
           ListEmptyComponent={
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+            <Text style={{ color: colors.onSurfaceVariant }}>
               No entries yet
             </Text>
           }
@@ -707,14 +687,6 @@ export default function Progress() {
           color={colors.onPrimary}
           accessibilityLabel="Log body weight"
         />
-        <Snackbar
-          visible={!!snack}
-          onDismiss={() => { setSnack(""); }}
-          duration={3000}
-          action={{ label: "Undo", onPress: handleUndo }}
-        >
-          {snack}
-        </Snackbar>
       </View>
     );
   };
@@ -731,59 +703,55 @@ export default function Progress() {
     >
       <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
         <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          <Text variant="titleLarge" style={{ color: colors.onSurface, marginBottom: 16 }}>
+          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Log Weight
           </Text>
 
-          <TextInput
+          <Input
             label={`Weight (${settings?.weight_unit ?? "kg"})`}
             value={logWeight}
             onChangeText={setLogWeight}
             keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
+            variant="outline"
+            containerStyle={styles.input}
             accessibilityLabel={`Weight in ${settings?.weight_unit ?? "kg"}`}
           />
 
-          <TextInput
+          <Input
             label="Date (YYYY-MM-DD)"
             value={logDate}
             onChangeText={setLogDate}
-            mode="outlined"
-            style={styles.input}
+            variant="outline"
+            containerStyle={styles.input}
             accessibilityLabel="Date for weight entry"
           />
 
-          <TextInput
+          <Input
             label="Notes (optional)"
             value={logNotes}
             onChangeText={setLogNotes}
-            mode="outlined"
-            style={styles.input}
+            variant="outline"
+            containerStyle={styles.input}
             accessibilityLabel="Optional notes"
           />
 
           <View style={styles.modalButtons}>
             <Button
-              mode="outlined"
+              variant="outline"
               onPress={() => setModal(false)}
               style={{ flex: 1, marginRight: 8 }}
-              contentStyle={styles.btnContent}
               accessibilityLabel="Cancel weight log"
-            >
-              Cancel
-            </Button>
+              label="Cancel"
+            />
             <Button
-              mode="contained"
+              variant="default"
               onPress={handleSave}
               loading={saving}
               disabled={saving || !logWeight}
               style={{ flex: 1 }}
-              contentStyle={styles.btnContent}
               accessibilityLabel="Save weight entry"
-            >
-              Save
-            </Button>
+              label="Save"
+            />
           </View>
         </View>
       </View>
@@ -793,7 +761,7 @@ export default function Progress() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.segmentContainer, { paddingHorizontal: layout.horizontalPadding }]}>
-        <SegmentedButtons
+        <SegmentedControl
           value={segment}
           onValueChange={setSegment}
           buttons={[
@@ -898,8 +866,5 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: "row",
     marginTop: 8,
-  },
-  btnContent: {
-    paddingVertical: 8,
   },
 });

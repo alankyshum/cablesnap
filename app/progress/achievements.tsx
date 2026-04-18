@@ -4,7 +4,9 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Card, ProgressBar, Text } from "react-native-paper";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Text } from "@/components/ui/text";
 import { Stack } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import {
@@ -139,8 +141,8 @@ export default function AchievementsScreen() {
       <>
         <Stack.Screen options={{ title: "Achievements" }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text variant="headlineMedium" style={{ marginBottom: 8 }}>⚠️</Text>
-          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+          <Text variant="heading" style={{ marginBottom: 8 }}>⚠️</Text>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             {error}
           </Text>
         </View>
@@ -153,8 +155,8 @@ export default function AchievementsScreen() {
       <>
         <Stack.Screen options={{ title: "Achievements" }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text variant="headlineMedium" style={{ marginBottom: 8 }}>🏆</Text>
-          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+          <Text variant="heading" style={{ marginBottom: 8 }}>🏆</Text>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             Complete your first workout to start earning achievements!
           </Text>
         </View>
@@ -188,7 +190,7 @@ export default function AchievementsScreen() {
         }
         accessibilityRole="summary"
       >
-        <Card.Content style={styles.badgeContent}>
+        <CardContent style={styles.badgeContent}>
           <View style={styles.iconContainer}>
             <Text style={[styles.icon, !item.earned && styles.iconLocked]}>
               {item.icon}
@@ -200,21 +202,21 @@ export default function AchievementsScreen() {
             )}
           </View>
           <Text
-            variant="labelMedium"
+            variant="caption"
             numberOfLines={1}
             style={[styles.badgeName, { color: textColor }]}
           >
             {item.name}
           </Text>
           <Text
-            variant="bodySmall"
+            variant="caption"
             numberOfLines={2}
             style={[styles.badgeDesc, { color: textColor }]}
           >
             {item.description}
           </Text>
           {item.earned ? (
-            <Text variant="bodySmall" style={{ color: textColor, marginTop: 4 }}>
+            <Text variant="caption" style={{ color: textColor, marginTop: 4 }}>
               {formatDate(item.earnedAt!)}
             </Text>
           ) : (
@@ -227,17 +229,16 @@ export default function AchievementsScreen() {
                 text: `${Math.round(item.progress * 100)}% complete`,
               }}
             >
-              <ProgressBar
-                progress={item.progress}
-                color={colors.primary}
+              <Progress
+                value={item.progress * 100}
                 style={styles.progressBar}
               />
-              <Text variant="bodySmall" style={{ color: textColor, marginTop: 2 }}>
+              <Text variant="caption" style={{ color: textColor, marginTop: 2 }}>
                 {Math.round(item.progress * 100)}%
               </Text>
             </View>
           )}
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   };
@@ -254,11 +255,11 @@ export default function AchievementsScreen() {
           if (item.key === "header") {
             return (
               <View style={styles.header}>
-                <Text variant="headlineMedium" style={{ color: colors.onBackground }}>
+                <Text variant="heading" style={{ color: colors.onBackground }}>
                   🏆
                 </Text>
                 <Text
-                  variant="titleLarge"
+                  variant="title"
                   style={{ color: colors.onBackground, fontWeight: "700", marginTop: 4 }}
                   accessibilityRole="header"
                 >
@@ -269,11 +270,11 @@ export default function AchievementsScreen() {
                     style={[styles.retroBanner, { backgroundColor: colors.tertiaryContainer }]}
                     accessibilityLiveRegion="polite"
                   >
-                    <Card.Content>
-                      <Text variant="bodyMedium" style={{ color: colors.onTertiaryContainer }}>
+                    <CardContent>
+                      <Text variant="body" style={{ color: colors.onTertiaryContainer }}>
                         Welcome back! We found {retroBanner} achievement{retroBanner !== 1 ? "s" : ""} from your workout history.
                       </Text>
-                    </Card.Content>
+                    </CardContent>
                   </Card>
                 )}
               </View>
@@ -284,7 +285,7 @@ export default function AchievementsScreen() {
           return (
             <View style={styles.section}>
               <Text
-                variant="titleMedium"
+                variant="title"
                 style={{ color: colors.onBackground, marginBottom: 8, fontWeight: "700" }}
                 accessibilityRole="header"
               >

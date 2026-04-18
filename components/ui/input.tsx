@@ -28,6 +28,7 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
   type?: 'input' | 'textarea';
   placeholder?: string;
   rows?: number; // Only used when type="textarea"
+  style?: ViewStyle;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(

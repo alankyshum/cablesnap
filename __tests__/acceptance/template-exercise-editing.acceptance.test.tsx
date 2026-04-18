@@ -30,6 +30,17 @@ jest.mock('expo-router', () => {
 })
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
+
+const mockToast = jest.fn()
+const mockError = jest.fn()
+jest.mock('../../components/ui/bna-toast', () => {
+  const RealReact = require('react')
+  return {
+    __esModule: true,
+    useToast: () => ({ toast: mockToast, success: jest.fn(), error: mockError, warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
+    ToastProvider: ({ children }: { children: React.ReactNode }) => RealReact.createElement(RealReact.Fragment, null, children),
+  }
+})
 jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, width: 375, scale: 1.0, horizontalPadding: 16 }) }))
 jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest.fn().mockResolvedValue('{}'), getRecentErrors: jest.fn().mockResolvedValue([]), generateGitHubURL: jest.fn().mockReturnValue('https://github.com') }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
@@ -143,7 +154,7 @@ describe('Template Exercise Editing Acceptance', () => {
     })
   })
 
-  it('shows snackbar on save failure', async () => {
+  it('shows toast on save failure', async () => {
     mockUpdateTemplateExercise.mockRejectedValueOnce(new Error('DB error'))
     const { findByText, findByTestId } = renderScreen(<EditTemplate />)
 
@@ -155,7 +166,9 @@ describe('Template Exercise Editing Acceptance', () => {
       mockEditSheetProps.onSave(4, '6-8', 120)
     }
 
-    expect(await findByText('Failed to update exercise settings')).toBeTruthy()
+    await waitFor(() => {
+      expect(mockError).toHaveBeenCalledWith('Failed to update exercise settings')
+    })
   })
 
   it('refetches template data after successful save', async () => {

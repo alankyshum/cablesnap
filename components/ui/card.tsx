@@ -3,19 +3,21 @@ import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { BORDER_RADIUS } from '@/theme/globals';
-import { TextStyle, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, TextStyle, ViewStyle, type ViewProps } from 'react-native';
 
-interface CardProps {
+interface CardProps extends Omit<ViewProps, 'style'> {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  onPress?: () => void;
 }
 
-export function Card({ children, style }: CardProps) {
+export function Card({ children, style, onPress, ...viewProps }: CardProps) {
   const cardColor = useColor('card');
   const foregroundColor = useColor('foreground');
 
-  return (
+  const content = (
     <View
+      {...viewProps}
       style={[
         {
           width: '100%',
@@ -34,6 +36,16 @@ export function Card({ children, style }: CardProps) {
       {children}
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} accessibilityRole="button">
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
 }
 
 interface CardHeaderProps {

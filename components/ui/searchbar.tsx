@@ -25,6 +25,7 @@ interface SearchBarProps extends Omit<TextInputProps, 'style'> {
   containerStyle?: ViewStyle | ViewStyle[];
   inputStyle?: TextStyle | TextStyle[];
   debounceMs?: number;
+  style?: ViewStyle | ViewStyle[];
 }
 
 export function SearchBar({
@@ -40,6 +41,7 @@ export function SearchBar({
   placeholder = 'Search...',
   value,
   onChangeText,
+  style,
   ...props
 }: SearchBarProps) {
   const [internalValue, setInternalValue] = useState(value || '');
@@ -104,7 +106,7 @@ export function SearchBar({
   const showClear = showClearButton && displayValue.length > 0;
 
   return (
-    <View style={[baseStyle, containerStyle]}>
+    <View style={[baseStyle, containerStyle, style]}>
       {/* Left Icon */}
       {leftIcon || <Icon name={Search} size={16} color={muted} />}
 

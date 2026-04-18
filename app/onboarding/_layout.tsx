@@ -1,6 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import { View, StyleSheet } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
 import React from "react";
 import { setAppSetting } from "../../lib/db";
 import { useCompleteOnboarding } from "../../lib/onboarding-context";
@@ -29,26 +30,24 @@ function Fallback() {
 
   return (
     <View style={[styles.fallback, { backgroundColor: colors.background }]}>
-      <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
+      <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
         Something went wrong
       </Text>
-      <Text variant="bodyMedium" style={[styles.sub, { color: colors.onSurfaceVariant }]}>
+      <Text variant="body" style={[styles.sub, { color: colors.onSurfaceVariant }]}>
         {"We couldn't load onboarding. You can skip straight to the app."}
       </Text>
       {err && (
-        <Text variant="bodySmall" style={[styles.sub, { color: colors.error }]}>
+        <Text variant="caption" style={[styles.sub, { color: colors.error }]}>
           {err}
         </Text>
       )}
       <Button
-        mode="contained"
+        variant="default"
         onPress={err ? force : skip}
         style={styles.btn}
-        contentStyle={{ minHeight: 48 }}
         accessibilityLabel="Skip to app"
-      >
-        {err ? "Continue Without Saving" : "Skip to App"}
-      </Button>
+        label={err ? "Continue Without Saving" : "Skip to App"}
+      />
     </View>
   );
 }

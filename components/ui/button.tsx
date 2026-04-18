@@ -52,6 +52,7 @@ export const Button = forwardRef<View, ButtonProps>(
   (
     {
       children,
+      label,
       icon,
       onPress,
       variant = 'default',
@@ -322,6 +323,7 @@ export const Button = forwardRef<View, ButtonProps>(
     const contentColor = getColor();
     const iconSize = getIconSize();
     const styleWithoutFlex = getStyleWithoutFlex();
+    const content = children ?? label;
 
     return animation ? (
       <Pressable
@@ -340,14 +342,14 @@ export const Button = forwardRef<View, ButtonProps>(
               variant={loadingVariant}
               color={contentColor}
             />
-          ) : typeof children === 'string' ? (
+          ) : typeof content === 'string' ? (
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
             >
               {icon && (
                 <Icon name={icon} color={contentColor} size={iconSize} />
               )}
-              <Text style={[finalTextStyle, textStyle]}>{children}</Text>
+              <Text style={[finalTextStyle, textStyle]}>{content}</Text>
             </View>
           ) : (
             <View
@@ -356,7 +358,7 @@ export const Button = forwardRef<View, ButtonProps>(
               {icon && (
                 <Icon name={icon} color={contentColor} size={iconSize} />
               )}
-              {children}
+              {content}
             </View>
           )}
         </Animated.View>
@@ -376,13 +378,13 @@ export const Button = forwardRef<View, ButtonProps>(
             variant={loadingVariant}
             color={contentColor}
           />
-        ) : typeof children === 'string' ? (
+        ) : typeof content === 'string' ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {icon && <Icon name={icon} color={contentColor} size={iconSize} />}
-            <Text style={[finalTextStyle, textStyle]}>{children}</Text>
+            <Text style={[finalTextStyle, textStyle]}>{content}</Text>
           </View>
         ) : (
-          children
+          content
         )}
       </TouchableOpacity>
     );

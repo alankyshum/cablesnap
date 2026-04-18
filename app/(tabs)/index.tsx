@@ -2,12 +2,15 @@ import { useState } from "react";
 import {
   Alert,
   FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { Button, Card, IconButton, Menu, SegmentedButtons, Text } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -105,7 +108,6 @@ export default function Workouts() {
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
   const [userSegment, setUserSegment] = useState<string | null>(null);
-  const [menu, setMenu] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["home"],
@@ -200,17 +202,38 @@ export default function Workouts() {
   };
 
   const handleDuplicateTemplate = async (tpl: WorkoutTemplate) => {
-    setMenu(null);
     const newId = await duplicateTemplate(tpl.id);
     reload();
     router.push(`/template/${newId}`);
   };
 
   const handleDuplicateProgram = async (prog: Program) => {
-    setMenu(null);
     const newId = await duplicateProgram(prog.id);
     reload();
     router.push(`/program/${newId}`);
+  };
+
+  const showTemplateOptions = (item: WorkoutTemplate) => {
+    const meta = starterMeta(item.id);
+    Alert.alert(
+      meta?.name || item.name,
+      undefined,
+      [
+        { text: "Duplicate", onPress: () => handleDuplicateTemplate(item) },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const showProgramOptions = (item: Program) => {
+    Alert.alert(
+      item.name,
+      undefined,
+      [
+        { text: "Duplicate", onPress: () => handleDuplicateProgram(item) },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
   };
 
   const starterMeta = (id: string) =>
@@ -250,10 +273,10 @@ export default function Workouts() {
             size={24}
             color={streak > 0 ? colors.primary : colors.onSurfaceVariant}
           />
-          <Text variant="titleLarge" style={{ color: streak > 0 ? colors.onSurface : colors.onSurfaceVariant }}>
+          <Text variant="title" style={{ color: streak > 0 ? colors.onSurface : colors.onSurfaceVariant, fontSize: 20 }}>
             {streak}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {streak === 1 ? "week" : "weeks"}
           </Text>
         </Animated.View>
@@ -267,10 +290,10 @@ export default function Workouts() {
             size={24}
             color={weekDone > 0 ? colors.primary : colors.onSurfaceVariant}
           />
-          <Text variant="titleLarge" style={{ color: weekDone > 0 ? colors.onSurface : colors.onSurfaceVariant }}>
+          <Text variant="title" style={{ color: weekDone > 0 ? colors.onSurface : colors.onSurfaceVariant, fontSize: 20 }}>
             {weekLabel}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {weekSub}
           </Text>
         </Animated.View>
@@ -284,10 +307,10 @@ export default function Workouts() {
             size={24}
             color={prCount > 0 ? colors.primary : colors.onSurfaceVariant}
           />
-          <Text variant="titleLarge" style={{ color: prCount > 0 ? colors.onSurface : colors.onSurfaceVariant }}>
+          <Text variant="title" style={{ color: prCount > 0 ? colors.onSurface : colors.onSurfaceVariant, fontSize: 20 }}>
             {prCount}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             recent
           </Text>
         </Animated.View>
@@ -295,111 +318,109 @@ export default function Workouts() {
 
       {/* Resume active session banner */}
       {active && (
-        <Card
-          style={[styles.banner, { backgroundColor: colors.primaryContainer }]}
+        <Pressable
+          style={[styles.banner, { backgroundColor: colors.primaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={() => router.push(`/session/${active.id}`)}
           accessibilityLabel={`Resume active workout: ${active.name}`}
           accessibilityRole="button"
         >
-          <Card.Content>
-            <Text variant="titleSmall" style={{ color: colors.onPrimaryContainer }}>
-              ⏱ Active Workout: {active.name}
-            </Text>
-            <Text variant="bodySmall" style={{ color: colors.onPrimaryContainer }}>
-              Tap to resume
-            </Text>
-          </Card.Content>
-        </Card>
+          <Text variant="subtitle" style={{ color: colors.onPrimaryContainer, fontSize: 15 }}>
+            ⏱ Active Workout: {active.name}
+          </Text>
+          <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>
+            Tap to resume
+          </Text>
+        </Pressable>
       )}
 
       {/* Today's Schedule Card — overrides next workout when schedule exists */}
       {todaySchedule && !todayDone && (
-        <Card
-          style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer }]}
+        <Pressable
+          style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={startFromSchedule}
           accessibilityLabel={`Today's workout: ${todaySchedule.template_name}. Tap to start.`}
           accessibilityRole="button"
         >
-          <Card.Content style={styles.nextContent}>
+          <View style={styles.nextContent}>
             <MaterialCommunityIcons name="calendar-check" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: colors.onSecondaryContainer }}>
+              <Text variant="subtitle" style={{ color: colors.onSecondaryContainer, fontSize: 15 }}>
                 Today: {todaySchedule.template_name}
               </Text>
-              <Text variant="bodySmall" style={{ color: colors.onSecondaryContainer }}>
+              <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>
                 {todaySchedule.exercise_count} exercises · Tap to start
               </Text>
             </View>
-          </Card.Content>
-        </Card>
+          </View>
+        </Pressable>
       )}
 
       {todaySchedule && todayDone && (
-        <Card
-          style={[styles.nextBanner, { backgroundColor: colors.primaryContainer }]}
+        <Pressable
+          style={[styles.nextBanner, { backgroundColor: colors.primaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={startFromSchedule}
           accessibilityLabel={`Completed: ${todaySchedule.template_name}. Tap to train again.`}
           accessibilityRole="button"
         >
-          <Card.Content style={styles.nextContent}>
+          <View style={styles.nextContent}>
             <MaterialCommunityIcons name="check-circle" size={24} color={colors.onPrimaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: colors.onPrimaryContainer }}>
+              <Text variant="subtitle" style={{ color: colors.onPrimaryContainer, fontSize: 15 }}>
                 ✅ Completed: {todaySchedule.template_name}
               </Text>
-              <Text variant="bodySmall" style={{ color: colors.onPrimaryContainer }}>
+              <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>
                 Train again
               </Text>
             </View>
-          </Card.Content>
-        </Card>
+          </View>
+        </Pressable>
       )}
 
       {!todaySchedule && adherence.some((a) => a.scheduled) && (
-        <Card
-          style={[styles.nextBanner, { backgroundColor: colors.surface }]}
+        <View
+          style={[styles.nextBanner, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]}
           accessibilityLabel="Rest day. No workout scheduled."
         >
-          <Card.Content style={styles.nextContent}>
+          <View style={styles.nextContent}>
             <MaterialCommunityIcons name="bed" size={24} color={colors.onSurfaceVariant} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: colors.onSurface }}>
+              <Text variant="subtitle" style={{ color: colors.onSurface, fontSize: 15 }}>
                 Rest Day
               </Text>
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                 No workout scheduled
               </Text>
             </View>
-          </Card.Content>
-        </Card>
+          </View>
+        </View>
       )}
 
       {/* Next Workout Banner (visible when NO schedule exists) */}
       {nextWorkout && !todaySchedule && !adherence.some((a) => a.scheduled) && (
-        <Card
-          style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer }]}
+        <Pressable
+          style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={startNextWorkout}
           accessibilityLabel={`Next workout: ${nextWorkout.day.label || nextWorkout.day.template_name || "workout"} from ${nextWorkout.program.name}`}
           accessibilityRole="button"
         >
-          <Card.Content style={styles.nextContent}>
+          <View style={styles.nextContent}>
             <MaterialCommunityIcons name="play-circle" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: colors.onSecondaryContainer }}>
+              <Text variant="subtitle" style={{ color: colors.onSecondaryContainer, fontSize: 15 }}>
                 Next: {nextWorkout.day.label || nextWorkout.day.template_name || "Workout"}
               </Text>
-              <Text variant="bodySmall" style={{ color: colors.onSecondaryContainer }}>
+              <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>
                 {nextWorkout.program.name} · Tap to start
               </Text>
             </View>
-          </Card.Content>
-        </Card>
+          </View>
+        </Pressable>
       )}
 
       {/* Program indicator when schedule is active */}
       {nextWorkout && adherence.some((a) => a.scheduled) && (
         <Text
-          variant="bodySmall"
+          variant="caption"
           style={{ color: colors.onSurfaceVariant, marginBottom: 8, textAlign: "center" }}
           accessibilityLabel={`Program ${nextWorkout.program.name}: Schedule active`}
         >
@@ -431,7 +452,7 @@ export default function Workouts() {
               )}
             />
           </View>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
             {adherence.filter((a) => a.scheduled && a.completed).length} of{" "}
             {adherence.filter((a) => a.scheduled).length} this week{" "}
             {adherence.filter((a) => a.scheduled).every((a) => a.completed) && adherence.some((a) => a.scheduled) ? "🔥" : "🎯"}
@@ -442,20 +463,21 @@ export default function Workouts() {
       {/* Quick Start */}
       <View style={styles.actionRow}>
         <Button
-          mode="contained"
-          icon="flash"
+          variant="default"
           onPress={quickStart}
-          contentStyle={styles.quickStartContent}
           accessibilityLabel="Quick start workout"
         >
-          Quick Start
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <MaterialCommunityIcons name="flash" size={18} color={colors.onPrimary} />
+            <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Quick Start</Text>
+          </View>
         </Button>
       </View>
 
       {/* Segmented Control */}
-      <SegmentedButtons
+      <SegmentedControl
         value={segment}
-        onValueChange={setUserSegment}
+        onValueChange={(v) => setUserSegment(v)}
         buttons={[
           {
             value: "templates",
@@ -476,36 +498,35 @@ export default function Workouts() {
           {/* Templates */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" style={{ color: colors.onBackground }}>
+              <Text variant="subtitle" style={{ color: colors.onBackground }}>
                 Templates
               </Text>
               <Button
-                mode="text"
-                icon="plus"
-                compact
+                variant="ghost"
+                size="sm"
                 onPress={() => router.push("/template/create")}
                 accessibilityLabel="Create new template"
               >
-                Create
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14 }}>Create</Text>
+                </View>
               </Button>
             </View>
             {allTemplates.length === 0 ? (
               <View style={styles.empty}>
                 <Text
-                  variant="bodyMedium"
                   style={{ color: colors.onSurfaceVariant }}
                 >
                   Create your first workout template
                 </Text>
                 <Button
-                  mode="outlined"
+                  variant="outline"
                   onPress={() => router.push("/template/create")}
                   style={styles.emptyBtn}
-                  contentStyle={styles.btnContent}
                   accessibilityLabel="Create your first template"
-                >
-                  Create Template
-                </Button>
+                  label="Create Template"
+                />
               </View>
             ) : (
               <View style={styles.flowList}>
@@ -534,32 +555,23 @@ export default function Workouts() {
                       meta={metaBadges}
                       action={
                         isStarter ? (
-                          <Menu
-                            visible={menu === item.id}
-                            onDismiss={() => setMenu(null)}
-                            anchor={
-                              <IconButton
-                                icon="dots-vertical"
-                                size={20}
-                                onPress={() => setMenu(item.id)}
-                                accessibilityLabel={`Options for ${meta?.name || item.name}`}
-                              />
-                            }
+                          <Pressable
+                            onPress={() => showTemplateOptions(item)}
+                            accessibilityLabel={`Options for ${meta?.name || item.name}`}
+                            hitSlop={8}
+                            style={{ padding: 8 }}
                           >
-                            <Menu.Item
-                              onPress={() => handleDuplicateTemplate(item)}
-                              title="Duplicate"
-                              leadingIcon="content-copy"
-                              accessibilityLabel="Duplicate template for editing"
-                            />
-                          </Menu>
+                            <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.onSurfaceVariant} />
+                          </Pressable>
                         ) : (
-                          <IconButton
-                            icon="pencil"
-                            size={20}
+                          <Pressable
                             onPress={() => router.push(`/template/${item.id}`)}
                             accessibilityLabel={`Edit template ${item.name}`}
-                          />
+                            hitSlop={8}
+                            style={{ padding: 8 }}
+                          >
+                            <MaterialCommunityIcons name="pencil" size={20} color={colors.onSurfaceVariant} />
+                          </Pressable>
                         )
                       }
                     />
@@ -574,23 +586,24 @@ export default function Workouts() {
           {/* Programs */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" style={{ color: colors.onBackground }}>
+              <Text variant="subtitle" style={{ color: colors.onBackground }}>
                 Programs
               </Text>
               <Button
-                mode="text"
-                icon="plus"
-                compact
+                variant="ghost"
+                size="sm"
                 onPress={() => router.push("/program/create")}
                 accessibilityLabel="Create new program"
               >
-                Create
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14 }}>Create</Text>
+                </View>
               </Button>
             </View>
             {allPrograms.length === 0 ? (
               <View style={styles.empty}>
                 <Text
-                  variant="bodyMedium"
                   style={{ color: colors.onSurfaceVariant }}
                   accessibilityRole="text"
                   accessibilityLabel="No programs yet. Create your first program."
@@ -598,14 +611,12 @@ export default function Workouts() {
                   Create your first program
                 </Text>
                 <Button
-                  mode="outlined"
+                  variant="outline"
                   onPress={() => router.push("/program/create")}
                   style={styles.emptyBtn}
-                  contentStyle={styles.btnContent}
                   accessibilityLabel="Create your first program"
-                >
-                  Create Program
-                </Button>
+                  label="Create Program"
+                />
               </View>
             ) : (
               <View style={styles.flowList}>
@@ -630,25 +641,14 @@ export default function Workouts() {
                       meta={metaBadges}
                       action={
                         item.is_starter ? (
-                          <Menu
-                            visible={menu === `prog-${item.id}`}
-                            onDismiss={() => setMenu(null)}
-                            anchor={
-                              <IconButton
-                                icon="dots-vertical"
-                                size={20}
-                                onPress={() => setMenu(`prog-${item.id}`)}
-                                accessibilityLabel={`Options for ${item.name}`}
-                              />
-                            }
+                          <Pressable
+                            onPress={() => showProgramOptions(item)}
+                            accessibilityLabel={`Options for ${item.name}`}
+                            hitSlop={8}
+                            style={{ padding: 8 }}
                           >
-                            <Menu.Item
-                              onPress={() => handleDuplicateProgram(item)}
-                              title="Duplicate"
-                              leadingIcon="content-copy"
-                              accessibilityLabel="Duplicate program for editing"
-                            />
-                          </Menu>
+                            <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.onSurfaceVariant} />
+                          </Pressable>
                         ) : <></>
                       }
                     />
@@ -664,26 +664,24 @@ export default function Workouts() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text
-            variant="titleMedium"
+            variant="subtitle"
             style={{ color: colors.onBackground }}
           >
             Recent Workouts
           </Text>
           {sessions.length > 0 && (
             <Button
-              mode="text"
-              compact
+              variant="ghost"
+              size="sm"
               onPress={() => router.push("/history")}
               accessibilityLabel="View all workout history"
-            >
-              View All History
-            </Button>
+              label="View All History"
+            />
           )}
         </View>
         {sessions.length === 0 ? (
           <View style={styles.empty}>
             <Text
-              variant="bodyMedium"
               style={{ color: colors.onSurfaceVariant }}
             >
               No workouts yet. Start one above!
@@ -700,39 +698,37 @@ export default function Workouts() {
               const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
               return (
               <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
-              <Card
-                style={[styles.flowCard, { backgroundColor: colors.surface }]}
+              <Pressable
+                style={[styles.flowCard, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]}
                 onPress={() =>
                   router.push(`/session/detail/${item.id}`)
                 }
                 accessibilityLabel={`View workout: ${item.name}, ${formatDateShort(item.started_at)}, ${formatDuration(item.duration_seconds)}, ${setCounts2[item.id] ?? 0} sets${rpeStr}`}
                 accessibilityRole="button"
               >
-                <Card.Content>
+                <Text
+                  variant="subtitle"
+                  style={{ color: colors.onSurface, fontSize: 15 }}
+                >
+                  {item.name}
+                </Text>
+                <View style={styles.recentRow}>
                   <Text
-                    variant="titleSmall"
-                    style={{ color: colors.onSurface }}
+                    variant="caption"
+                    style={{ color: colors.onSurfaceVariant, flex: 1 }}
                   >
-                    {item.name}
+                    {formatDateShort(item.started_at)} · {formatDuration(item.duration_seconds)} ·{" "}
+                    {setCounts2[item.id] ?? 0} sets
                   </Text>
-                  <View style={styles.recentRow}>
-                    <Text
-                      variant="bodySmall"
-                      style={{ color: colors.onSurfaceVariant, flex: 1 }}
-                    >
-                      {formatDateShort(item.started_at)} · {formatDuration(item.duration_seconds)} ·{" "}
-                      {setCounts2[item.id] ?? 0} sets
-                    </Text>
-                    {rpe != null && (
-                      <View style={[styles.rpeTag, { backgroundColor: rpeColor(rpe) }]}>
-                        <Text style={{ color: rpeText(rpe), fontSize: 12, fontWeight: "600" }}>
-                          RPE {Math.round(rpe * 10) / 10}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </Card.Content>
-              </Card>
+                  {rpe != null && (
+                    <View style={[styles.rpeTag, { backgroundColor: rpeColor(rpe) }]}>
+                      <Text style={{ color: rpeText(rpe), fontSize: 12, fontWeight: "600" }}>
+                        RPE {Math.round(rpe * 10) / 10}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </Pressable>
               </Animated.View>
               );
             }}
@@ -792,9 +788,6 @@ const styles = StyleSheet.create({
   segmented: {
     marginBottom: 16,
   },
-  quickStartContent: {
-    paddingVertical: 8,
-  },
   section: {
     marginBottom: 20,
   },
@@ -828,9 +821,6 @@ const styles = StyleSheet.create({
   },
   emptyBtn: {
     marginTop: 8,
-  },
-  btnContent: {
-    paddingVertical: 8,
   },
   adherence: {
     marginBottom: 12,

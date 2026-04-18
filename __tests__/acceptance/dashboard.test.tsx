@@ -61,7 +61,17 @@ jest.mock('react-native-reanimated', () => {
     __esModule: true,
     default: { View, createAnimatedComponent: (c: unknown) => c },
     FadeInDown: { delay: () => ({ duration: () => undefined }) },
+    FadeIn: { duration: () => ({ delay: () => undefined }) },
+    FadeOut: { duration: () => undefined },
+    SlideInDown: { duration: () => undefined },
+    SlideOutDown: { duration: () => undefined },
     Easing: { bezier: () => (t: number) => t },
+    useSharedValue: (init: unknown) => ({ value: init }),
+    useAnimatedStyle: () => ({}),
+    withTiming: (v: unknown) => v,
+    withSpring: (v: unknown) => v,
+    withDelay: (_d: unknown, v: unknown) => v,
+    runOnJS: (fn: Function) => fn,
   }
 })
 jest.mock('expo-haptics', () => ({
