@@ -226,7 +226,7 @@ export default function BodyProfileCard() {
   return (
     <Card style={[styles.card, { backgroundColor: colors.surface }]}>
       <CardContent>
-        <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>
+        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
           Body Profile
         </Text>
 
@@ -270,7 +270,7 @@ export default function BodyProfileCard() {
           error={errors.height}
         />
 
-        <Text variant="subtitle" style={[styles.fieldLabel, { color: colors.onSurface }]}>
+        <Text variant="caption" style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}>
           Sex
         </Text>
         <SegmentedControl
@@ -280,17 +280,17 @@ export default function BodyProfileCard() {
           style={styles.segmented}
         />
 
-        <Text variant="subtitle" style={[styles.fieldLabel, { color: colors.onSurface }]}>
+        <Text variant="caption" style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}>
           Activity Level
         </Text>
         <SegmentedControl
           value={activityLevel}
           onValueChange={(v) => handleSegmentChange("activityLevel", v)}
-          buttons={ACTIVITY_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string; style: Record<string, number> }>}
+          buttons={ACTIVITY_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
           style={styles.segmented}
         />
 
-        <Text variant="subtitle" style={[styles.fieldLabel, { color: colors.onSurface }]}>
+        <Text variant="caption" style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}>
           Goal
         </Text>
         <SegmentedControl

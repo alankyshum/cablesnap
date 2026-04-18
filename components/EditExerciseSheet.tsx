@@ -5,7 +5,9 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Button, Portal, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { TemplateExercise } from "../lib/types";
 import { elevation } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -63,7 +65,7 @@ export default function EditExerciseSheet({
   if (!visible) return null;
 
   return (
-    <Portal>
+    <>
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={onDismiss}
@@ -88,62 +90,60 @@ export default function EditExerciseSheet({
         </View>
 
         <Text
-          variant="titleMedium"
+          variant="title"
           style={[styles.title, { color: colors.onSurface }]}
           numberOfLines={2}
         >
           {exercise?.exercise?.name ?? "Edit Exercise"}
         </Text>
 
-        <TextInput
+        <Input
           label="Target Sets"
           value={sets}
           onChangeText={setSets}
           keyboardType="numeric"
-          mode="outlined"
-          style={styles.input}
+          variant="outline"
+          containerStyle={styles.input}
           accessibilityLabel="Target sets"
-          error={sets.length > 0 && !setsValid}
+          error={sets.length > 0 && !setsValid ? "Invalid sets" : undefined}
         />
 
-        <TextInput
+        <Input
           label="Target Reps"
           value={reps}
           onChangeText={setReps}
-          mode="outlined"
-          style={styles.input}
+          variant="outline"
+          containerStyle={styles.input}
           accessibilityLabel="Target reps"
           placeholder="e.g. 8-12, 5, AMRAP"
-          error={reps.length > 0 && !repsValid}
+          error={reps.length > 0 && !repsValid ? "Invalid reps" : undefined}
         />
 
-        <TextInput
+        <Input
           label="Rest (seconds)"
           value={rest}
           onChangeText={setRest}
           keyboardType="numeric"
-          mode="outlined"
-          style={styles.input}
+          variant="outline"
+          containerStyle={styles.input}
           accessibilityLabel="Rest time in seconds"
-          error={rest.length > 0 && !restValid}
+          error={rest.length > 0 && !restValid ? "Invalid rest time" : undefined}
         />
 
         <View style={styles.buttons}>
           <Button
-            mode="text"
+            variant="ghost"
             onPress={onDismiss}
             style={styles.button}
-            contentStyle={styles.buttonContent}
             accessibilityLabel="Cancel editing"
           >
             Cancel
           </Button>
           <Button
-            mode="contained"
+            variant="default"
             onPress={handleSave}
             disabled={!canSave}
             style={styles.button}
-            contentStyle={styles.buttonContent}
             accessibilityRole="button"
             accessibilityLabel="Save exercise settings"
           >
@@ -151,7 +151,7 @@ export default function EditExerciseSheet({
           </Button>
         </View>
       </View>
-    </Portal>
+    </>
   );
 }
 
@@ -183,7 +183,6 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
-    fontSize: 16,
   },
   buttons: {
     flexDirection: "row",
@@ -193,10 +192,6 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 56,
-    minHeight: 56,
-  },
-  buttonContent: {
-    paddingVertical: 8,
     minHeight: 56,
   },
 });

@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, type ViewStyle, type TextStyle } from "react-native";
+import { Pressable, StyleSheet, type ViewStyle, type TextStyle, type AccessibilityRole, type AccessibilityState, type Role } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -16,8 +16,13 @@ type ChipProps = {
   onPress?: () => void;
   icon?: React.ReactNode;
   compact?: boolean;
+  disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityState?: AccessibilityState;
+  role?: Role;
 };
 
 export function Chip({
@@ -26,8 +31,10 @@ export function Chip({
   onPress,
   icon,
   compact = false,
+  disabled,
   style,
   textStyle,
+  ...accessibilityProps
 }: ChipProps) {
   const rawScheme = useColorScheme() ?? "light";
   const scheme = rawScheme === "dark" ? "dark" as const : "light" as const;
@@ -47,6 +54,7 @@ export function Chip({
         scale.value = withTiming(1, { duration: 100 });
       }}
       onPress={onPress}
+      disabled={disabled}
       style={[
         styles.chip,
         compact && styles.compact,
@@ -56,6 +64,7 @@ export function Chip({
         animatedStyle,
         style,
       ]}
+      {...accessibilityProps}
     >
       {icon && <>{icon}</>}
       <Animated.Text
