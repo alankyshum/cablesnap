@@ -134,6 +134,14 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   extra_active: "Extra Active",
 };
 
+export const ACTIVITY_DESCRIPTIONS: Record<ActivityLevel, string> = {
+  sedentary: "Little or no exercise, desk job",
+  lightly_active: "Light exercise 1–3 days/week",
+  moderately_active: "Moderate exercise 3–5 days/week",
+  very_active: "Hard exercise 6–7 days/week",
+  extra_active: "Very hard exercise, physical job",
+};
+
 export const GOAL_LABELS: Record<Goal, string> = {
   cut: "Cut",
   maintain: "Maintain",
