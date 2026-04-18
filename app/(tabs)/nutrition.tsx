@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FAB } from "@/components/ui/fab";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/bna-toast";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import InlineFoodSearch from "../../components/InlineFoodSearch";
 import {
   getDailyLogs,
@@ -47,6 +47,8 @@ export default function Nutrition() {
   const { info } = useToast();
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
+  const { scan } = useLocalSearchParams<{ scan?: string }>();
+  const shouldScan = scan === "true";
 
   const load = useCallback(async () => {
     const ds = formatDateKey(date.getTime());
@@ -63,7 +65,11 @@ export default function Nutrition() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+      if (shouldScan) {
+        setShowAddCard(true);
+        router.setParams({ scan: undefined });
+      }
+    }, [load, shouldScan])
   );
 
   const prev = () => { setDate((d) => new Date(d.getTime() - DAY_MS)); setShowAddCard(false); };
@@ -209,6 +215,7 @@ export default function Nutrition() {
               dateKey={formatDateKey(date.getTime())}
               onFoodLogged={handleFoodLogged}
               onSnack={handleSnack}
+              scanOnMount={shouldScan}
             />
           </View>
         </View>
@@ -226,6 +233,7 @@ export default function Nutrition() {
             dateKey={formatDateKey(date.getTime())}
             onFoodLogged={handleFoodLogged}
             onSnack={handleSnack}
+            scanOnMount={shouldScan}
           />
         </View>
       )}

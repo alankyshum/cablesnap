@@ -45,6 +45,16 @@ export default function TabLayout() {
         options={{
           title: "Nutrition",
           headerTitle: renderHeaderTitle("food-apple", "Nutrition"),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push("/nutrition?scan=true")}
+              accessibilityLabel="Scan food barcode"
+              accessibilityRole="button"
+              style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            >
+              <MaterialCommunityIcons name="barcode-scan" size={24} color={colors.onSurface} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <Tabs.Screen

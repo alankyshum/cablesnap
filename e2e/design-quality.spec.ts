@@ -49,7 +49,6 @@ const STANDALONE_SCREENS: Screen[] = [
   { name: "Body Measurements", path: "/body/measurements" },
   { name: "Body Goals", path: "/body/goals" },
   { name: "Macro Targets", path: "/nutrition/targets" },
-  { name: "Add Food", path: "/nutrition/add" },
   { name: "New Exercise", path: "/exercise/create" },
   { name: "New Template", path: "/template/create" },
   { name: "New Program", path: "/program/create" },

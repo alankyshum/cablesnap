@@ -9,8 +9,9 @@ import type { DailyLog } from '../../../lib/types'
 jest.mock('expo-router', () => {
   const RealReact = require('react')
   return {
-    router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
+    router: { push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: jest.fn() },
     useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
+    useLocalSearchParams: () => ({}),
     useFocusEffect: (cb: () => (() => void) | void) => {
       RealReact.useEffect(() => {
         const cleanup = cb()
