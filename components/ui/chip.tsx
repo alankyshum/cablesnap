@@ -3,17 +3,20 @@ import { Text } from "@/components/ui/text";
 import { useColor } from "@/hooks/useColor";
 import { BORDER_RADIUS } from "@/theme/globals";
 import React from "react";
-import { Pressable, ViewStyle } from "react-native";
+import { Pressable, ViewStyle, type Role } from "react-native";
 
 interface ChipProps {
   children: React.ReactNode;
   selected?: boolean;
   onPress?: () => void;
   compact?: boolean;
+  disabled?: boolean;
+  icon?: React.ReactNode;
   style?: ViewStyle;
   accessibilityLabel?: string;
   accessibilityRole?: "radio" | "checkbox";
   accessibilityState?: { selected?: boolean };
+  role?: Role;
 }
 
 export function Chip({
@@ -21,10 +24,13 @@ export function Chip({
   selected = false,
   onPress,
   compact = false,
+  disabled,
+  icon,
   style,
   accessibilityLabel,
   accessibilityRole = "radio",
   accessibilityState,
+  role,
 }: ChipProps) {
   const primaryColor = useColor("primary");
   const primaryFg = useColor("primaryForeground");
@@ -34,9 +40,11 @@ export function Chip({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={accessibilityRole}
       accessibilityState={accessibilityState ?? { selected }}
+      role={role}
       style={[
         {
           flexDirection: "row",
@@ -50,6 +58,7 @@ export function Chip({
         style,
       ]}
     >
+      {icon && <>{icon}</>}
       {typeof children === "string" ? (
         <Text
           style={{

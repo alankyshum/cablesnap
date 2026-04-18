@@ -9,7 +9,12 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, Button, Card, Chip, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from "@gorhom/bottom-sheet";
 import {
   addFoodEntry,
@@ -28,6 +33,7 @@ import {
 import type { FoodEntry, Meal, BuiltinFood } from "../lib/types";
 import { MEALS, MEAL_LABELS } from "../lib/types";
 import BarcodeScanner from "./BarcodeScanner";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -337,12 +343,12 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
           onPress={() => logLocalFood(food)}
           disabled={saving}
           accessibilityLabel={`Log ${food.name}, ${food.calories} calories`}
-          accessibilityRole="button"
+          role="button"
         >
-          <Text variant="bodyMedium" numberOfLines={1} style={{ color: colors.onSurface }}>
+          <Text variant="body" numberOfLines={1} style={{ color: colors.onSurface }}>
             {food.name}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {food.calories} cal · {food.protein}p · {food.carbs}c · {food.fat}f
           </Text>
         </Pressable>
@@ -356,12 +362,12 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         onPress={() => logOnlineFood(food)}
         disabled={saving}
         accessibilityLabel={`Log ${food.name}, ${food.calories} calories`}
-        accessibilityRole="button"
+        role="button"
       >
-        <Text variant="bodyMedium" numberOfLines={2} style={{ color: colors.onSurface }}>
+        <Text variant="body" numberOfLines={2} style={{ color: colors.onSurface }}>
           {food.name}
         </Text>
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
           {food.calories} cal · {food.protein}p · {food.carbs}c · {food.fat}f · per {food.servingLabel}
         </Text>
       </Pressable>
@@ -386,7 +392,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
       return (
         <View>
           <Text
-            variant="labelSmall"
+            variant="caption"
             style={[styles.separator, { color: colors.onSurfaceVariant }]}
           >
             Online Results
@@ -402,8 +408,8 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
   const showEmptyMessage = query.trim().length >= 2 && !hasResults && !onlineLoading && !onlineError;
 
   return (
-    <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-      <Card.Content style={styles.content}>
+    <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+      <CardContent style={styles.content}>
         {/* Meal selector */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealRow}>
           {MEALS.map((m) => (
@@ -413,7 +419,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
               onPress={() => setMeal(m)}
               style={styles.mealChip}
               accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
-              accessibilityRole="button"
+              role="button"
               accessibilityState={{ selected: meal === m }}
             >
               {MEAL_LABELS[m]}
@@ -432,12 +438,11 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
             {favorites.map((f) => (
               <Chip
                 key={f.id}
-                icon="heart"
                 onPress={() => logFavorite(f)}
                 style={styles.favChip}
                 disabled={saving}
                 accessibilityLabel={`Quick log ${f.name}`}
-                accessibilityRole="button"
+                role="button"
               >
                 {f.name}
               </Chip>
@@ -445,7 +450,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
           </ScrollView>
         ) : (
           <Text
-            variant="bodySmall"
+            variant="caption"
             style={[styles.favHint, { color: colors.onSurfaceVariant }]}
           >
             ★ Star foods to add them here
@@ -453,38 +458,36 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         )}
 
         {/* Search input */}
-        <TextInput
-          mode="outlined"
+        <Input
+          variant="outline"
           placeholder="Search foods..."
           value={query}
           onChangeText={setQuery}
-          left={<TextInput.Icon icon="magnify" />}
-          right={
-            Platform.OS !== "web" ? (
-              <TextInput.Icon icon="barcode-scan" onPress={openScanner} />
-            ) : undefined
-          }
-          style={styles.searchInput}
+          containerStyle={styles.searchInput}
           accessibilityLabel="Search foods"
+          rightComponent={
+            <Pressable onPress={openScanner} accessibilityLabel="Scan barcode" style={{ padding: 4 }}>
+              <MaterialCommunityIcons name="barcode-scan" size={20} color={colors.onSurfaceVariant} />
+            </Pressable>
+          }
         />
 
         {/* Barcode loading/error */}
         {barcodeLoading && (
           <View style={styles.statusRow} accessibilityLiveRegion="polite">
-            <ActivityIndicator size="small" style={{ marginRight: 8 }} />
-            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+            <View style={{ marginRight: 8 }}><Spinner size="sm" /></View>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
               Looking up barcode...
             </Text>
           </View>
         )}
         {barcodeError && (
           <View style={styles.statusRow} accessibilityLiveRegion="polite">
-            <Text variant="bodySmall" style={{ color: colors.error, flex: 1 }}>
+            <Text variant="caption" style={{ color: colors.error, flex: 1 }}>
               {barcodeError}
             </Text>
             <Button
-              mode="text"
-              compact
+              variant="ghost"
               onPress={() => { setBarcodeError(null); setScannerVisible(true); }}
               accessibilityLabel="Retry barcode scan"
             >
@@ -494,7 +497,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         )}
         {scannedProductName && (
           <Text
-            variant="bodySmall"
+            variant="caption"
             style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
             accessibilityLiveRegion="polite"
           >
@@ -505,10 +508,8 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         {/* Action buttons row */}
         <View style={styles.actionRow}>
           <Button
-            mode="outlined"
-            icon="pencil"
+            variant="outline"
             onPress={openManualEntry}
-            compact
             style={styles.actionBtn}
             accessibilityLabel="Manual entry"
           >
@@ -522,20 +523,16 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
           style={styles.resultsList}
         >
           {onlineLoading && (
-            <ActivityIndicator
-              size="small"
-              style={{ marginVertical: 8 }}
-              accessibilityLabel="Searching online..."
-            />
+            <View style={{ marginVertical: 8 }} accessibilityLabel="Searching online..."><Spinner size="sm" /></View>
           )}
           {onlineError && (
-            <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 4 }}>
+            <Text variant="caption" style={{ color: colors.error, marginBottom: 4 }}>
               {onlineError}
             </Text>
           )}
           {showEmptyMessage && (
             <Text
-              variant="bodySmall"
+              variant="caption"
               style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 8 }}
             >
               No foods found. Try different terms or use Manual Entry.
@@ -550,7 +547,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
             />
           )}
         </KeyboardAvoidingView>
-      </Card.Content>
+      </CardContent>
 
       {/* Barcode scanner modal */}
       <BarcodeScanner
@@ -577,76 +574,74 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
           style={styles.sheetContent}
           accessibilityViewIsModal
         >
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
             Manual Food Entry
           </Text>
-          <TextInput
+          <Input
             label="Food name"
             value={manualName}
             onChangeText={setManualName}
-            mode="outlined"
-            style={styles.sheetInput}
+            variant="outline"
+            containerStyle={styles.sheetInput}
           />
-          <TextInput
+          <Input
             label="Calories"
             value={manualCalories}
             onChangeText={setManualCalories}
             keyboardType="numeric"
-            mode="outlined"
-            style={styles.sheetInput}
+            variant="outline"
+            containerStyle={styles.sheetInput}
           />
           <View style={styles.macroRow}>
-            <TextInput
+            <Input
               label="Protein (g)"
               value={manualProtein}
               onChangeText={setManualProtein}
               keyboardType="numeric"
-              mode="outlined"
-              style={[styles.sheetInput, styles.flex]}
+              variant="outline"
+              containerStyle={StyleSheet.flatten([styles.sheetInput, styles.flex])}
             />
             <View style={{ width: 8 }} />
-            <TextInput
+            <Input
               label="Carbs (g)"
               value={manualCarbs}
               onChangeText={setManualCarbs}
               keyboardType="numeric"
-              mode="outlined"
-              style={[styles.sheetInput, styles.flex]}
+              variant="outline"
+              containerStyle={StyleSheet.flatten([styles.sheetInput, styles.flex])}
             />
             <View style={{ width: 8 }} />
-            <TextInput
+            <Input
               label="Fat (g)"
               value={manualFat}
               onChangeText={setManualFat}
               keyboardType="numeric"
-              mode="outlined"
-              style={[styles.sheetInput, styles.flex]}
+              variant="outline"
+              containerStyle={StyleSheet.flatten([styles.sheetInput, styles.flex])}
             />
           </View>
-          <TextInput
+          <Input
             label="Serving size"
             value={manualServing}
             onChangeText={setManualServing}
-            mode="outlined"
-            style={styles.sheetInput}
+            variant="outline"
+            containerStyle={styles.sheetInput}
           />
           <Chip
             selected={manualFavorite}
             onPress={() => setManualFavorite(!manualFavorite)}
-            icon={manualFavorite ? "heart" : "heart-outline"}
             style={styles.sheetFavChip}
             accessibilityLabel={manualFavorite ? "Remove from favorites" : "Save as favorite"}
-            accessibilityRole="button"
+            role="button"
             accessibilityState={{ selected: manualFavorite }}
           >
             Save as favorite
           </Chip>
           <Button
-            mode="contained"
+            variant="default"
             onPress={saveManualEntry}
             loading={saving}
             disabled={saving || !manualName.trim()}
-            contentStyle={styles.sheetBtnContent}
             accessibilityLabel="Log food"
           >
             Log Food
@@ -732,8 +727,5 @@ const styles = StyleSheet.create({
   sheetFavChip: {
     marginBottom: 16,
     alignSelf: "flex-start",
-  },
-  sheetBtnContent: {
-    paddingVertical: 8,
   },
 });
