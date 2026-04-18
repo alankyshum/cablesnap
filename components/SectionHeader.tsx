@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
@@ -13,13 +14,11 @@ export default function SectionHeader({ title, action, onAction }: Props) {
   const colors = useThemeColors();
   return (
     <View style={styles.container}>
-      <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, fontSize: 17, fontWeight: "600" }}>
         {title}
       </Text>
       {action && onAction ? (
-        <Button compact mode="text" onPress={onAction}>
-          {action}
-        </Button>
+        <Button variant="ghost" size="sm" onPress={onAction} label={action} />
       ) : null}
     </View>
   );

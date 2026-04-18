@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -24,23 +25,21 @@ export default function EmptyState({ icon, title, subtitle, action }: Props) {
         color={colors.onSurfaceVariant}
       />
       <Text
-        variant="titleMedium"
-        style={[styles.title, { color: colors.onSurface }]}
+        variant="subtitle"
+        style={[styles.title, { color: colors.onSurface, fontSize: 17 }]}
       >
         {title}
       </Text>
       {subtitle ? (
         <Text
-          variant="bodyMedium"
+          variant="body"
           style={[styles.subtitle, { color: colors.onSurfaceVariant }]}
         >
           {subtitle}
         </Text>
       ) : null}
       {action ? (
-        <Button mode="contained" onPress={action.onPress} style={styles.button}>
-          {action.label}
-        </Button>
+        <Button variant="default" onPress={action.onPress} label={action.label} style={styles.button} />
       ) : null}
     </View>
   );

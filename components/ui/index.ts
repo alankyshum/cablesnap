@@ -1,4 +1,4 @@
 export { StatBadge } from "./StatBadge";
 export { NumberTicker } from "./NumberTicker";
-export { SkeletonLoader } from "./SkeletonLoader";
-export { AnimatedFAB } from "./AnimatedFAB";
+export { SegmentedControl } from "./segmented-control";
+export { Chip } from "./chip";

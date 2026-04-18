@@ -1,11 +1,13 @@
 import React from "react";
 import { Appearance, Linking, ScrollView, StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Colors } from "../theme/colors";
 import { logError, generateReport, generateGitHubURL, getRecentErrors } from "../lib/errors";
 import { recent as recentInteractions } from "../lib/interactions";
+import { Share2, Github, RotateCcw, ChevronDown, ChevronUp } from "lucide-react-native";
 
 type Props = { children: React.ReactNode };
 type State = { error: Error | null; expanded: boolean };
@@ -72,27 +74,25 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     return (
       <View style={[styles.container, { backgroundColor: t.background }]}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text variant="headlineLarge" style={[styles.heading, { color: t.foreground }]}>
+          <Text variant="heading" style={[styles.heading, { color: t.foreground }]}>
             Something went wrong
           </Text>
-          <Text variant="bodyMedium" style={[styles.sub, { color: t.mutedForeground }]}>
+          <Text variant="body" style={[styles.sub, { color: t.mutedForeground }]}>
             The app encountered an unexpected error. You can share a crash
             report to help us fix the issue, or restart the app.
           </Text>
 
           <Button
-            mode="outlined"
+            variant="outline"
             onPress={() => this.setState((s) => ({ expanded: !s.expanded }))}
             style={styles.btn}
-            icon={this.state.expanded ? "chevron-up" : "chevron-down"}
-            accessibilityLabel={this.state.expanded ? "Hide error details" : "Show error details"}
-          >
-            {this.state.expanded ? "Hide Details" : "Show Details"}
-          </Button>
+            icon={this.state.expanded ? ChevronUp : ChevronDown}
+            label={this.state.expanded ? "Hide Details" : "Show Details"}
+          />
 
           {this.state.expanded && (
             <ScrollView style={[styles.stack, { backgroundColor: t.muted }]} nestedScrollEnabled>
-              <Text variant="bodySmall" style={[styles.mono, { color: t.mutedForeground }]}>
+              <Text variant="caption" style={[styles.mono, { color: t.mutedForeground }]}>
                 {this.state.error.message}
                 {"\n\n"}
                 {this.state.error.stack}
@@ -101,34 +101,28 @@ export default class ErrorBoundary extends React.Component<Props, State> {
           )}
 
           <Button
-            mode="contained"
-            icon="share-variant"
+            variant="default"
+            icon={Share2}
             onPress={this.handleShare}
             style={styles.btn}
-            accessibilityLabel="Share crash report"
-          >
-            Share Crash Report
-          </Button>
+            label="Share Crash Report"
+          />
 
           <Button
-            mode="outlined"
-            icon="github"
+            variant="outline"
+            icon={Github}
             onPress={this.handleGitHub}
             style={styles.btn}
-            accessibilityLabel="Report crash on GitHub"
-          >
-            Report on GitHub
-          </Button>
+            label="Report on GitHub"
+          />
 
           <Button
-            mode="contained-tonal"
-            icon="restart"
+            variant="secondary"
+            icon={RotateCcw}
             onPress={this.handleRestart}
             style={styles.btn}
-            accessibilityLabel="Restart app"
-          >
-            Restart
-          </Button>
+            label="Restart"
+          />
         </ScrollView>
       </View>
     );
