@@ -238,6 +238,18 @@ export {
 export type { HCSyncLog, HCSyncStatus } from "./health-connect";
 
 export {
+  getDailyNutritionTotals,
+  getWeeklyNutritionAverages,
+  getNutritionAdherence,
+  getNutritionTargets,
+} from "./nutrition-progress";
+export type {
+  DailyNutritionTotal,
+  WeeklyNutritionAverage,
+  NutritionAdherence,
+} from "./nutrition-progress";
+
+export {
   createMealTemplate,
   getMealTemplates,
   getMealTemplateById,

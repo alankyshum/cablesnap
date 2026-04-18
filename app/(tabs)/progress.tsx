@@ -5,6 +5,7 @@ import { useLayout } from "../../lib/layout";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import WorkoutSegment from "@/components/progress/WorkoutSegment";
 import BodySegment from "@/components/progress/BodySegment";
+import NutritionSegment from "@/components/progress/NutritionSegment";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function Progress() {
@@ -22,6 +23,7 @@ export default function Progress() {
             { value: "workouts", label: "Workouts", accessibilityLabel: "Workouts progress" },
             { value: "body", label: "Body", accessibilityLabel: "Body metrics" },
             { value: "muscles", label: "Muscles", accessibilityLabel: "Muscle volume analysis" },
+            { value: "nutrition", label: "Nutrition", accessibilityLabel: "Nutrition trends" },
           ]}
         />
       </View>
@@ -29,7 +31,9 @@ export default function Progress() {
         ? <WorkoutSegment />
         : segment === "body"
           ? <BodySegment />
-          : <MuscleVolumeSegment />}
+          : segment === "muscles"
+            ? <MuscleVolumeSegment />
+            : <NutritionSegment />}
     </View>
   );
 }
