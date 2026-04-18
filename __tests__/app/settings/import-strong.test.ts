@@ -59,7 +59,7 @@ describe("Import Strong wizard screen structure", () => {
   });
 
   it("should show import progress", () => {
-    expect(importStrongSource).toContain("ProgressBar");
+    expect(importStrongSource).toContain("Progress");
     expect(importStrongSource).toContain("progress");
   });
 

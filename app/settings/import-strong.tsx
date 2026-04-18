@@ -2,11 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { Button, Card, List, ProgressBar, RadioButton, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Progress } from "@/components/ui/progress";
+import { RadioGroup } from "@/components/ui/radio";
+import { FileUp, CheckCircle, HelpCircle, XCircle, ChevronDown, ChevronUp } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import { File } from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
@@ -100,7 +107,7 @@ function StepSelectFile({
       accessibilityRole="none"
     >
       <Text
-        variant="headlineSmall"
+        variant="heading"
         style={{ color: colors.onBackground, marginBottom: 16 }}
         accessibilityRole="header"
       >
@@ -108,42 +115,41 @@ function StepSelectFile({
       </Text>
 
       <Button
-        mode="contained"
-        icon="file-upload-outline"
+        variant="default"
+        icon={FileUp}
         onPress={handlePickFile}
         loading={loading}
         disabled={loading}
         accessibilityLabel="Select Strong CSV file"
         accessibilityRole="button"
         style={{ marginBottom: 16 }}
-        contentStyle={{ paddingVertical: 8 }}
       >
         Select CSV File
       </Button>
 
       {error && (
         <Card
-          style={[styles.card, { backgroundColor: colors.errorContainer }]}
+          style={{ ...styles.card, backgroundColor: colors.errorContainer }}
         >
-          <Card.Content>
+          <CardContent>
             <Text
               style={{ color: colors.onErrorContainer }}
               accessibilityRole="alert"
             >
               {error}
             </Text>
-          </Card.Content>
+          </CardContent>
         </Card>
       )}
 
       {parsed && parsed.rows.length > 0 && (
         <>
           <Card
-            style={[styles.card, { backgroundColor: colors.surface }]}
+            style={{ ...styles.card, backgroundColor: colors.surface }}
           >
-            <Card.Content>
+            <CardContent>
               <Text
-                variant="titleMedium"
+                variant="subtitle"
                 style={{ color: colors.onSurface, marginBottom: 8 }}
               >
                 File Summary
@@ -167,44 +173,37 @@ function StepSelectFile({
                   errors)
                 </Text>
               )}
-            </Card.Content>
+            </CardContent>
           </Card>
 
           <Card
-            style={[styles.card, { backgroundColor: colors.surface }]}
+            style={{ ...styles.card, backgroundColor: colors.surface }}
           >
-            <Card.Content>
+            <CardContent>
               <Text
-                variant="titleMedium"
+                variant="subtitle"
                 style={{ color: colors.onSurface, marginBottom: 12 }}
               >
                 What unit did you use in Strong?
               </Text>
-              <RadioButton.Group
+              <RadioGroup
                 value={sourceUnit}
                 onValueChange={(val) => setSourceUnit(val as "kg" | "lb")}
-              >
-                <RadioButton.Item
-                  label="Kilograms (kg)"
-                  value="kg"
-                  accessibilityLabel="Kilograms"
-                />
-                <RadioButton.Item
-                  label="Pounds (lbs)"
-                  value="lb"
-                  accessibilityLabel="Pounds"
-                />
-              </RadioButton.Group>
-            </Card.Content>
+                options={[
+                  { label: "Kilograms (kg)", value: "kg" },
+                  { label: "Pounds (lbs)", value: "lb" },
+                ]}
+              />
+            </CardContent>
           </Card>
 
           {sampleRows.length > 0 && (
             <Card
-              style={[styles.card, { backgroundColor: colors.surface }]}
+              style={{ ...styles.card, backgroundColor: colors.surface }}
             >
-              <Card.Content>
+              <CardContent>
                 <Text
-                  variant="titleMedium"
+                  variant="subtitle"
                   style={{
                     color: colors.onSurface,
                     marginBottom: 8,
@@ -240,15 +239,14 @@ function StepSelectFile({
                     }}
                   />
                 )}
-              </Card.Content>
+              </CardContent>
             </Card>
           )}
 
           <Button
-            mode="contained"
+            variant="default"
             onPress={() => onNext(parsed, sourceUnit, targetUnit)}
             style={{ marginTop: 8 }}
-            contentStyle={{ paddingVertical: 8 }}
             accessibilityLabel="Continue to exercise mapping"
             accessibilityRole="button"
           >
@@ -276,12 +274,12 @@ function ExerciseMatchItem({
 }) {
   const colors = useThemeColors();
 
-  const icon =
+  const iconComponent =
     match.confidence === "exact"
-      ? "check-circle"
+      ? CheckCircle
       : match.confidence === "possible"
-        ? "help-circle"
-        : "close-circle";
+        ? HelpCircle
+        : XCircle;
 
   const label =
     match.confidence === "exact"
@@ -303,33 +301,31 @@ function ExerciseMatchItem({
     match.userOverrideExercise ?? match.matchedExercise;
 
   return (
-    <List.Item
-      title={match.strongName}
-      description={
-        displayedExercise
-          ? `→ ${displayedExercise.name} (${label})`
-          : label
-      }
-      left={(props) => (
-        <List.Icon {...props} icon={icon} color={iconColor} />
-      )}
-      right={
-        match.confidence === "possible" && !match.userConfirmed
-          ? () => (
-              <Button
-                mode="text"
-                compact
-                onPress={() => onConfirm(match.strongName)}
-                accessibilityLabel={`Confirm match for ${match.strongName}`}
-                accessibilityRole="button"
-              >
-                Confirm
-              </Button>
-            )
-          : undefined
-      }
+    <View
+      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16 }}
       accessibilityLabel={`${match.strongName}: ${label}${displayedExercise ? `, mapped to ${displayedExercise.name}` : ""}`}
-    />
+    >
+      <Icon name={iconComponent} size={24} color={iconColor} style={{ marginRight: 12 }} />
+      <View style={{ flex: 1 }}>
+        <Text variant="body" style={{ color: colors.onSurface }}>{match.strongName}</Text>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+          {displayedExercise
+            ? `→ ${displayedExercise.name} (${label})`
+            : label}
+        </Text>
+      </View>
+      {match.confidence === "possible" && !match.userConfirmed && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={() => onConfirm(match.strongName)}
+          accessibilityLabel={`Confirm match for ${match.strongName}`}
+          accessibilityRole="button"
+        >
+          Confirm
+        </Button>
+      )}
+    </View>
   );
 }
 
@@ -434,14 +430,14 @@ function StepReviewMapping({
       <Stack.Screen options={{ title: "Import from Strong" }} />
       <View style={styles.stepHeader}>
         <Text
-          variant="headlineSmall"
+          variant="heading"
           style={{ color: colors.onBackground }}
           accessibilityRole="header"
         >
           Step 2: Review Exercise Mapping
         </Text>
         <Text
-          variant="bodySmall"
+          variant="caption"
           style={{
             color: colors.onSurfaceVariant,
             marginTop: 4,
@@ -460,36 +456,21 @@ function StepReviewMapping({
             const title = item.data as string;
             const isExact = title.startsWith("Exact");
             return (
-              <List.Item
-                title={title}
-                titleStyle={{
-                  fontWeight: "bold",
-                  color: colors.onSurface,
-                }}
-                accessibilityRole="header"
+              <Pressable
                 onPress={
                   isExact
                     ? () => setExactCollapsed((prev) => !prev)
                     : undefined
                 }
-                right={
-                  isExact
-                    ? (props) => (
-                        <List.Icon
-                          {...props}
-                          icon={
-                            exactCollapsed
-                              ? "chevron-down"
-                              : "chevron-up"
-                          }
-                        />
-                      )
-                    : undefined
-                }
+                style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16 }}
+                accessibilityRole="header"
                 accessibilityState={
                   isExact ? { expanded: !exactCollapsed } : undefined
                 }
-              />
+              >
+                <Text variant="body" style={{ flex: 1, fontWeight: "bold", color: colors.onSurface }}>{title}</Text>
+                {isExact && <Icon name={exactCollapsed ? ChevronDown : ChevronUp} size={20} color={colors.onSurfaceVariant} />}
+              </Pressable>
             );
           }
           return (
@@ -504,18 +485,16 @@ function StepReviewMapping({
 
       <View style={styles.bottomBar}>
         <Button
-          mode="outlined"
+          variant="outline"
           onPress={onBack}
-          contentStyle={{ paddingVertical: 8 }}
           accessibilityLabel="Go back to file selection"
           accessibilityRole="button"
         >
           Back
         </Button>
         <Button
-          mode="contained"
+          variant="default"
           onPress={() => onNext(matches)}
-          contentStyle={{ paddingVertical: 8 }}
           accessibilityLabel="Continue to import confirmation"
           accessibilityRole="button"
         >
@@ -751,7 +730,7 @@ function StepConfirmImport({
       accessibilityRole="none"
     >
       <Text
-        variant="headlineSmall"
+        variant="heading"
         style={{ color: colors.onBackground, marginBottom: 16 }}
         accessibilityRole="header"
       >
@@ -759,11 +738,11 @@ function StepConfirmImport({
       </Text>
 
       <Card
-        style={[styles.card, { backgroundColor: colors.surface }]}
+        style={{ ...styles.card, backgroundColor: colors.surface }}
       >
-        <Card.Content>
+        <CardContent>
           <Text
-            variant="titleMedium"
+            variant="subtitle"
             style={{ color: colors.onSurface, marginBottom: 8 }}
           >
             Import Summary
@@ -791,16 +770,16 @@ function StepConfirmImport({
           >
             Unit conversion: {sourceUnit} → {targetUnit}
           </Text>
-        </Card.Content>
+        </CardContent>
       </Card>
 
       {sampleSessions.length > 0 && (
         <Card
-          style={[styles.card, { backgroundColor: colors.surface }]}
+          style={{ ...styles.card, backgroundColor: colors.surface }}
         >
-          <Card.Content>
+          <CardContent>
             <Text
-              variant="titleMedium"
+              variant="subtitle"
               style={{ color: colors.onSurface, marginBottom: 8 }}
             >
               Sample Sessions
@@ -818,18 +797,18 @@ function StepConfirmImport({
                 </Text>
               )}
             />
-          </Card.Content>
+          </CardContent>
         </Card>
       )}
 
       {(skippedTimed > 0 || skippedDistance > 0) && (
         <Card
-          style={[
-            styles.card,
-            { backgroundColor: colors.tertiaryContainer },
-          ]}
+          style={{
+            ...styles.card,
+            backgroundColor: colors.tertiaryContainer,
+          }}
         >
-          <Card.Content>
+          <CardContent>
             <Text
               style={{ color: colors.onTertiaryContainer }}
               accessibilityRole="alert"
@@ -839,20 +818,20 @@ function StepConfirmImport({
               {skippedTimed + skippedDistance !== 1 ? "s" : ""} will be
               skipped (not supported yet)
             </Text>
-          </Card.Content>
+          </CardContent>
         </Card>
       )}
 
       {duplicates.length > 0 && (
         <Card
-          style={[
-            styles.card,
-            { backgroundColor: colors.errorContainer },
-          ]}
+          style={{
+            ...styles.card,
+            backgroundColor: colors.errorContainer,
+          }}
         >
-          <Card.Content>
+          <CardContent>
             <Text
-              variant="titleSmall"
+              variant="subtitle"
               style={{
                 color: colors.onErrorContainer,
                 marginBottom: 4,
@@ -892,19 +871,18 @@ function StepConfirmImport({
                 ...and {duplicates.length - 5} more
               </Text>
             )}
-          </Card.Content>
+          </CardContent>
         </Card>
       )}
 
       {importing && (
         <View style={{ marginVertical: 16 }}>
-          <ProgressBar
-            progress={progress}
-            color={colors.primary}
-            accessibilityLabel={`Import progress: ${Math.round(progress * 100)}%`}
+          <Progress
+            value={progress * 100}
+            height={4}
           />
           <Text
-            variant="bodySmall"
+            variant="caption"
             style={{
               color: colors.onSurfaceVariant,
               textAlign: "center",
@@ -918,21 +896,19 @@ function StepConfirmImport({
 
       <View style={[styles.bottomBar, { paddingHorizontal: 0 }]}>
         <Button
-          mode="outlined"
+          variant="outline"
           onPress={onBack}
           disabled={importing}
-          contentStyle={{ paddingVertical: 8 }}
           accessibilityLabel="Go back to exercise mapping"
           accessibilityRole="button"
         >
           Back
         </Button>
         <Button
-          mode="contained"
+          variant="default"
           onPress={handleImport}
           loading={importing}
           disabled={importing}
-          contentStyle={{ paddingVertical: 8 }}
           accessibilityLabel="Start import"
           accessibilityRole="button"
         >
@@ -963,7 +939,7 @@ function ImportComplete({
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
       <Text
-        variant="headlineSmall"
+        variant="heading"
         style={{
           color: colors.primary,
           marginBottom: 16,
@@ -975,9 +951,9 @@ function ImportComplete({
       </Text>
 
       <Card
-        style={[styles.card, { backgroundColor: colors.surface }]}
+        style={{ ...styles.card, backgroundColor: colors.surface }}
       >
-        <Card.Content>
+        <CardContent>
           <Text style={{ color: colors.onSurface, marginBottom: 4 }}>
             Sessions imported: {result.sessionsImported}
           </Text>
@@ -993,14 +969,13 @@ function ImportComplete({
               {result.skippedDistance} distance
             </Text>
           )}
-        </Card.Content>
+        </CardContent>
       </Card>
 
       <Button
-        mode="contained"
+        variant="default"
         onPress={onDone}
         style={{ marginTop: 16 }}
-        contentStyle={{ paddingVertical: 8 }}
         accessibilityLabel="Return to settings"
         accessibilityRole="button"
       >
