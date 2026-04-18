@@ -577,3 +577,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: When a higher-level data function internally calls a lower-level query, and consumers also need the lower-level data directly, the query silently runs twice. This doubles DB load and is invisible to callers reviewing the hook code. The antipattern emerges whenever convenience functions wrap shared queries.
 **Action**: Design composable data-layer functions in two ways: (1) Accept pre-fetched data as an optional parameter — `getWeeklyAverages(weeks, prefetchedDaily?)` — so callers who already have the data can skip the re-query. (2) Alternatively, split into a pure computation function (`computeWeeklyAverages(dailyTotals)`) and a fetch-and-compute wrapper. Choose option 2 when the computation is reusable across different data sources.
 **Tags**: data-layer, api-design, performance, sqlite, redundant-query, composition, hook-pattern
+
+### expo-localization firstWeekday Is 1-Indexed — Not JS Convention
+**Source**: BLD-341 — Phase 52: Workout Calendar View
+**Date**: 2026-04-18
+**Context**: When implementing a locale-aware calendar grid, the week start day needed to come from the device locale. expo-localization's `getCalendars()[0].firstWeekday` was used, but its indexing differs from JavaScript's `Date.getDay()`.
+**Learning**: expo-localization `firstWeekday` uses 1-based indexing where 1=Sunday, 2=Monday, ..., 7=Saturday. JavaScript's `Date.getDay()` uses 0-based indexing where 0=Sunday. To convert: `(firstWeekday - 1) % 7`. Failing to convert produces off-by-one week alignment errors in calendar grids. Also wrap `getCalendars()` in try/catch — it throws in test environments where expo-localization is not available.
+**Action**: When using `getCalendars()[0].firstWeekday`, always convert with `(firstWeekday - 1) % 7` before passing to JS date logic. Cache the result at module level since locale does not change at runtime. Wrap in try/catch with a fallback default (0 = Sunday).
+**Tags**: expo-localization, calendar, locale, firstWeekday, indexing, getCalendars, date
