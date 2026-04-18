@@ -82,7 +82,7 @@ const MuscleRow = React.memo(function MuscleRow({
       <Text variant="caption" style={{ color: muted, marginRight: 8 }}>
         {item.exercises} ex
       </Text>
-      <Text variant="body" style={{ color: text, width: 40, textAlign: "right", fontSize: 15, fontWeight: "600" }}>
+      <Text variant="body" style={{ color: text, width: 40, textAlign: "right", fontWeight: "600" }}>
         {item.sets}
       </Text>
     </Pressable>
@@ -201,7 +201,7 @@ export default function MuscleVolumeSegment() {
           accessibilityRole="header"
           accessibilityLiveRegion="polite"
         >
-          <Text variant="body" style={{ color: colors.onSurface, fontSize: 15, fontWeight: "600" }}>
+          <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>
             {offset === 0 ? "This Week" : formatRange(monday)}
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>

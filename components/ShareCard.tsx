@@ -266,7 +266,7 @@ const cardStyles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   sessionName: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: "800",
     lineHeight: 44,
     marginBottom: spacing.xs,
@@ -364,7 +364,7 @@ const cardStyles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   exerciseDetail: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
   },
   moreText: {

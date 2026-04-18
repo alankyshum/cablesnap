@@ -26,7 +26,7 @@ export default function EmptyState({ icon, title, subtitle, action }: Props) {
       />
       <Text
         variant="subtitle"
-        style={[styles.title, { color: colors.onSurface, fontSize: 17 }]}
+        style={[styles.title, { color: colors.onSurface }]}
       >
         {title}
       </Text>

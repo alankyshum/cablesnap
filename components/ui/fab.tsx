@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   miniFab: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",

@@ -21,7 +21,7 @@ export function useThemeColors() {
     // Secondary
     secondary: t.secondary,
     onSecondary: t.secondaryForeground,
-    secondaryContainer: isDark ? "#2D3350" : "#E0E4ED",
+    secondaryContainer: t.muted,
     onSecondaryContainer: t.foreground,
 
     // Tertiary (mapped to orange/warning tones)

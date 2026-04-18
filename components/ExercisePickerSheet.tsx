@@ -157,7 +157,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           <Text
             variant="body"
             numberOfLines={1}
-            style={{ color: colors.onSurface, fontSize: 15, fontWeight: "600" }}
+            style={{ color: colors.onSurface, fontWeight: "600" }}
           >
             {item.name}{item.is_custom ? " (Custom)" : ""}
           </Text>

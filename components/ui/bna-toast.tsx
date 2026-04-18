@@ -275,7 +275,7 @@ export function Toast({
                     variant='subtitle'
                     style={{
                       color: Colors.light.onToast,
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: '600',
                       marginBottom: description ? 2 : 0,
                     }}
