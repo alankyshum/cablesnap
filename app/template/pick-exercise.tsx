@@ -6,7 +6,9 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Chip, Searchbar, Text } from "react-native-paper";
+import { Chip } from "@/components/ui/chip";
+import { SearchBar } from "@/components/ui/searchbar";
+import { Text } from "@/components/ui/text";
 // Note: Chip is still used for filter chips at the top (they ARE interactive).
 // The category badge inside each list item uses View+Text to avoid nested
 // <button> elements on web (Chip renders as <button> even without onPress).
@@ -98,7 +100,7 @@ export default function PickExercise() {
       >
         <View>
           <Text
-            variant="titleSmall"
+            variant="subtitle"
             numberOfLines={1}
             style={{ color: colors.onSurface }}
           >
@@ -116,7 +118,7 @@ export default function PickExercise() {
               </Text>
             </View>
             <Text
-              variant="bodySmall"
+              variant="caption"
               style={{
                 color: colors.onSurfaceVariant,
                 marginLeft: 8,
@@ -137,7 +139,7 @@ export default function PickExercise() {
       <View
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
-        <Searchbar
+        <SearchBar
           placeholder="Search exercises..."
           value={query}
           onChangeText={setQuery}
@@ -173,7 +175,7 @@ export default function PickExercise() {
             loading ? null : (
               <View style={styles.empty}>
                 <Text
-                  variant="titleMedium"
+                  variant="title"
                   style={{ color: colors.onSurfaceVariant }}
                 >
                   No exercises found

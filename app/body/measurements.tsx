@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { Button, Text, TextInput } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   getLatestMeasurements,
@@ -117,14 +119,13 @@ export default function Measurements() {
   };
 
   const fieldInputs = FIELDS.map((f) => (
-    <TextInput
+    <Input
       key={f.key}
       label={`${f.label} (${unit})`}
       value={form[f.key]}
       onChangeText={(v) => update(f.key, v)}
       keyboardType="numeric"
-      mode="outlined"
-      style={layout.atLeastMedium ? styles.wideInput : styles.input}
+      containerStyle={layout.atLeastMedium ? styles.wideInput : styles.input}
       accessibilityLabel={`${f.label} in ${unit}`}
     />
   ));
@@ -138,16 +139,15 @@ export default function Measurements() {
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
         <>
-          <Text variant="titleLarge" style={{ color: colors.onBackground, marginBottom: 16 }}>
+          <Text variant="title" style={{ color: colors.onBackground, marginBottom: 16 }}>
             Log Measurements
           </Text>
 
-          <TextInput
+          <Input
             label="Date (YYYY-MM-DD)"
             value={date}
             onChangeText={setDate}
-            mode="outlined"
-            style={styles.input}
+            containerStyle={styles.input}
             accessibilityLabel="Measurement date"
           />
 
@@ -159,46 +159,40 @@ export default function Measurements() {
             fieldInputs
           )}
 
-          <TextInput
+          <Input
             label="Body Fat %"
             value={form.body_fat}
             onChangeText={(v) => update("body_fat", v)}
             keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
+            containerStyle={styles.input}
             accessibilityLabel="Body fat percentage"
           />
 
-          <TextInput
+          <Input
             label="Notes (optional)"
             value={notes}
             onChangeText={setNotes}
-            mode="outlined"
-            style={styles.input}
+            containerStyle={styles.input}
             accessibilityLabel="Optional notes"
           />
 
           <View style={styles.buttons}>
             <Button
-              mode="outlined"
+              variant="outline"
               onPress={() => router.back()}
               style={{ flex: 1, marginRight: 8 }}
-              contentStyle={styles.btnContent}
               accessibilityLabel="Cancel measurement log"
-            >
-              Cancel
-            </Button>
+              label="Cancel"
+            />
             <Button
-              mode="contained"
+              variant="default"
               onPress={handleSave}
               loading={saving}
               disabled={saving}
               style={{ flex: 1 }}
-              contentStyle={styles.btnContent}
               accessibilityLabel="Save measurements"
-            >
-              Save
-            </Button>
+              label="Save"
+            />
           </View>
         </>
       }

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, Button, Card, Chip, SegmentedButtons, Text, TextInput } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import NetInfo from "@react-native-community/netinfo";
 import { useLayout } from "../../lib/layout";
@@ -75,29 +80,31 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
     };
 
     return (
-      <Card
-        style={[styles.dbCard, { backgroundColor: colors.surfaceVariant }]}
+      <Pressable
         onPress={() => expand(item.id)}
         accessibilityLabel={`${item.name}, ${item.calories} calories per ${item.serving}`}
         accessibilityRole="button"
       >
-        <Card.Content>
+      <Card
+        style={StyleSheet.flatten([styles.dbCard, { backgroundColor: colors.surfaceVariant }])}
+      >
+        <CardContent>
           <Text
-            variant="titleSmall"
+            variant="subtitle"
             numberOfLines={1}
             style={{ color: colors.onSurface }}
           >
             {item.name}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {item.calories} cal · {item.protein}p · {item.carbs}c · {item.fat}f · {item.serving}
           </Text>
           {open && (
             <View style={[styles.detail, { borderTopColor: colors.outlineVariant }]}>
-              <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                 Serving: {item.serving}
               </Text>
-              <Text variant="labelMedium" style={{ color: colors.onSurface, marginBottom: 4 }}>
+              <Text variant="caption" style={{ color: colors.onSurface, marginBottom: 4 }}>
                 Multiplier
               </Text>
               <View style={styles.multChips}>
@@ -107,25 +114,22 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
                     selected={multiplier === v}
                     onPress={() => setMultiplier(v)}
                     style={styles.chip}
-                    accessibilityRole="button"
                     accessibilityState={{ selected: multiplier === v }}
                   >
                     {v}x
                   </Chip>
                 ))}
               </View>
-              <TextInput
-                mode="outlined"
+              <Input
                 label="Custom amount"
                 value={multiplier}
                 onChangeText={setMultiplier}
                 keyboardType="numeric"
-                dense
-                style={styles.multInput}
+                containerStyle={styles.multInput}
                 accessibilityLabel={`Serving multiplier: ${multiplier} times`}
               />
               {!valid && (
-                <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 4 }}>
+                <Text variant="caption" style={{ color: colors.error, marginBottom: 4 }}>
                   Minimum 0.25x
                 </Text>
               )}
@@ -133,7 +137,7 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
                 style={styles.macros}
                 accessibilityLiveRegion="polite"
               >
-                <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
+                <Text variant="body" style={{ color: colors.onSurface }}>
                   {scaled.calories} cal · {scaled.protein}p · {scaled.carbs}c · {scaled.fat}f
                 </Text>
               </View>
@@ -143,32 +147,30 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
                 icon={saveFav ? "heart" : "heart-outline"}
                 style={styles.favChip}
                 accessibilityLabel={saveFav ? "Remove from favorites" : "Save as favorite"}
-                accessibilityRole="button"
                 accessibilityState={{ selected: saveFav }}
               >
                 Save as Favorite
               </Chip>
               <Button
-                mode="contained"
+                variant="default"
                 onPress={() => log(item)}
                 loading={saving}
                 disabled={saving || !valid}
                 style={styles.btn}
-                contentStyle={styles.btnContent}
                 accessibilityLabel="Log food"
-              >
-                Log Food
-              </Button>
+                label="Log Food"
+              />
             </View>
           )}
-        </Card.Content>
+        </CardContent>
       </Card>
+      </Pressable>
     );
   };
 
   const empty = () => (
     <Text
-      variant="bodyMedium"
+      variant="body"
       style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
     >
       No foods found. Try a different search term.
@@ -177,13 +179,12 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TextInput
-        mode="outlined"
+      <Input
         placeholder="Search foods..."
         value={query}
         onChangeText={setQuery}
-        left={<TextInput.Icon icon="magnify" />}
-        style={styles.input}
+        
+        containerStyle={styles.input}
         accessibilityLabel="Search foods"
       />
       <View style={styles.chips}>
@@ -191,7 +192,6 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
           selected={category === null}
           onPress={() => setCategory(null)}
           style={styles.chip}
-          accessibilityRole="button"
           accessibilityState={{ selected: category === null }}
         >
           All
@@ -202,7 +202,6 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
             selected={category === c.id}
             onPress={() => setCategory(category === c.id ? null : c.id)}
             style={styles.chip}
-            accessibilityRole="button"
             accessibilityState={{ selected: category === c.id }}
           >
             {c.label}
@@ -441,7 +440,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
     return (
       <View style={styles.emptyContainer}>
         <Text
-          variant="bodyMedium"
+          variant="body"
           style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
           accessibilityLiveRegion="polite"
         >
@@ -461,29 +460,31 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
     };
 
     return (
-      <Card
-        style={[styles.dbCard, { backgroundColor: colors.surfaceVariant }]}
+      <Pressable
         onPress={() => expand(index)}
         accessibilityLabel={`${item.name}, ${item.calories} calories per ${item.servingLabel}`}
         accessibilityRole="button"
       >
-        <Card.Content>
+      <Card
+        style={StyleSheet.flatten([styles.dbCard, { backgroundColor: colors.surfaceVariant }])}
+      >
+        <CardContent>
           <Text
-            variant="titleSmall"
+            variant="subtitle"
             numberOfLines={2}
             style={{ color: colors.onSurface }}
           >
             {item.name}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {item.calories} cal · {item.protein}p · {item.carbs}c · {item.fat}f · per {item.servingLabel}
           </Text>
           {open && (
             <View style={[styles.detail, { borderTopColor: colors.outlineVariant }]}>
-              <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                 Serving: {item.servingLabel}
               </Text>
-              <Text variant="labelMedium" style={{ color: colors.onSurface, marginBottom: 4 }}>
+              <Text variant="caption" style={{ color: colors.onSurface, marginBottom: 4 }}>
                 Multiplier
               </Text>
               <View style={styles.multChips}>
@@ -493,25 +494,22 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
                     selected={multiplier === v}
                     onPress={() => setMultiplier(v)}
                     style={styles.chip}
-                    accessibilityRole="button"
                     accessibilityState={{ selected: multiplier === v }}
                   >
                     {v}x
                   </Chip>
                 ))}
               </View>
-              <TextInput
-                mode="outlined"
+              <Input
                 label="Custom amount"
                 value={multiplier}
                 onChangeText={setMultiplier}
                 keyboardType="numeric"
-                dense
-                style={styles.multInput}
+                containerStyle={styles.multInput}
                 accessibilityLabel={`Serving multiplier: ${multiplier} times`}
               />
               {!valid && (
-                <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 4 }}>
+                <Text variant="caption" style={{ color: colors.error, marginBottom: 4 }}>
                   Minimum 0.25x
                 </Text>
               )}
@@ -519,7 +517,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
                 style={styles.macros}
                 accessibilityLiveRegion="polite"
               >
-                <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
+                <Text variant="body" style={{ color: colors.onSurface }}>
                   {scaled.calories} cal · {scaled.protein}p · {scaled.carbs}c · {scaled.fat}f
                 </Text>
               </View>
@@ -529,26 +527,24 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
                 icon={saveFav ? "heart" : "heart-outline"}
                 style={styles.favChip}
                 accessibilityLabel={saveFav ? "Remove from favorites" : "Save as favorite"}
-                accessibilityRole="button"
                 accessibilityState={{ selected: saveFav }}
               >
                 Save as Favorite
               </Chip>
               <Button
-                mode="contained"
+                variant="default"
                 onPress={() => log(item)}
                 loading={saving}
                 disabled={saving || !valid}
                 style={styles.btn}
-                contentStyle={styles.btnContent}
                 accessibilityLabel="Log food"
-              >
-                Log Food
-              </Button>
+                label="Log Food"
+              />
             </View>
           )}
-        </Card.Content>
+        </CardContent>
       </Card>
+      </Pressable>
     );
   };
 
@@ -556,7 +552,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
     if (loading || error || !query.trim() || hint) return null;
     return (
       <Text
-        variant="bodyMedium"
+        variant="body"
         style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
       >
         No foods found for &apos;{query.trim()}&apos;. Try different terms or use manual entry.
@@ -568,16 +564,11 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {Platform.OS !== "web" && (
         <Button
-          mode="outlined"
-          icon="barcode-scan"
+          variant="outline"
           onPress={openScanner}
           style={styles.scanBtn}
-          contentStyle={styles.scanBtnContent}
           accessibilityLabel="Scan food barcode"
-          accessibilityRole="button"
-        >
-          Scan Barcode
-        </Button>
+         label="Scan Barcode" />
       )}
       {barcodeLoading && (
         <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
@@ -586,42 +577,34 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
             accessibilityLabel="Looking up barcode..."
             accessibilityRole="progressbar"
           />
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
             Looking up barcode...
           </Text>
         </View>
       )}
       {barcodeError && (
         <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
-          <Text variant="bodyMedium" style={{ color: colors.error, textAlign: "center", marginBottom: 12 }}>
+          <Text variant="body" style={{ color: colors.error, textAlign: "center", marginBottom: 12 }}>
             {barcodeError}
           </Text>
           <View style={{ flexDirection: "row", gap: 12 }}>
             <Button
-              mode="outlined"
+              variant="outline"
               onPress={retryBarcode}
               accessibilityLabel="Retry barcode scan"
-              accessibilityRole="button"
-              contentStyle={{ minHeight: 48 }}
-            >
-              Retry
-            </Button>
+             label="Retry" />
             <Button
-              mode="outlined"
+              variant="outline"
               onPress={switchToTextSearch}
               accessibilityLabel="Search by name instead"
-              accessibilityRole="button"
-              contentStyle={{ minHeight: 48 }}
-            >
-              Search by Name
-            </Button>
+             label="Search by Name" />
           </View>
         </View>
       )}
       {scannedProductName && (
         <View accessibilityLiveRegion="polite">
           <Text
-            variant="bodySmall"
+            variant="caption"
             style={{ color: colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}
             accessibilityLabel={`Found: ${scannedProductName}`}
           >
@@ -629,17 +612,16 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
           </Text>
         </View>
       )}
-      <TextInput
-        mode="outlined"
+      <Input
         placeholder="Search for foods online"
         value={query}
         onChangeText={setQuery}
-        left={<TextInput.Icon icon="magnify" />}
-        style={styles.input}
+        
+        containerStyle={styles.input}
         accessibilityLabel="Search online food database"
       />
       {hint && (
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}>
           {hint}
         </Text>
       )}
@@ -652,18 +634,14 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
       )}
       {error && (
         <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
-          <Text variant="bodyMedium" style={{ color: colors.error, textAlign: "center", marginBottom: 12 }}>
+          <Text variant="body" style={{ color: colors.error, textAlign: "center", marginBottom: 12 }}>
             {error}
           </Text>
           <Button
-            mode="outlined"
+            variant="outline"
             onPress={retry}
             accessibilityLabel="Retry search"
-            accessibilityRole="button"
-            contentStyle={{ minHeight: 48 }}
-          >
-            Retry
-          </Button>
+           label="Retry" />
         </View>
       )}
       <FlashList
@@ -756,12 +734,11 @@ export default function AddFood() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <View style={styles.header}>
-          <SegmentedButtons
+          <SegmentedControl
             value={tab}
             onValueChange={setTab}
             buttons={TAB_BUTTONS}
             style={styles.tabs}
-            density="medium"
           />
           <View style={styles.meals}>
             {MEALS.map((m) => (
@@ -771,7 +748,6 @@ export default function AddFood() {
                 onPress={() => setMeal(m)}
                 style={styles.chip}
                 accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
-                accessibilityRole="button"
                 accessibilityState={{ selected: meal === m }}
               >
                 {MEAL_LABELS[m]}
@@ -789,21 +765,24 @@ export default function AddFood() {
   }
 
   const renderFav = ({ item: f }: { item: FoodEntry }) => (
-    <Card
-      style={[styles.favCard, { backgroundColor: colors.surfaceVariant }]}
+    <Pressable
       onPress={() => quickLog(f)}
       accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
       accessibilityRole="button"
     >
-      <Card.Content>
-        <Text variant="titleSmall" style={{ color: colors.onSurface }}>
+    <Card
+      style={StyleSheet.flatten([styles.favCard, { backgroundColor: colors.surfaceVariant }])}
+    >
+      <CardContent>
+        <Text variant="subtitle" style={{ color: colors.onSurface }}>
           {f.name}
         </Text>
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
           {f.calories} cal · {f.protein}p · {f.carbs}c · {f.fat}f · {f.serving_size}
         </Text>
-      </Card.Content>
+      </CardContent>
     </Card>
+    </Pressable>
   );
 
   return (
@@ -815,12 +794,11 @@ export default function AddFood() {
       contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 32 }}
       ListHeaderComponent={
         <>
-          <SegmentedButtons
+          <SegmentedControl
             value={tab}
             onValueChange={setTab}
             buttons={TAB_BUTTONS}
             style={styles.tabs}
-            density="medium"
           />
 
           <View style={styles.meals}>
@@ -831,7 +809,6 @@ export default function AddFood() {
                 onPress={() => setMeal(m)}
                 style={styles.chip}
                 accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
-                accessibilityRole="button"
                 accessibilityState={{ selected: meal === m }}
               >
                 {MEAL_LABELS[m]}
@@ -840,57 +817,51 @@ export default function AddFood() {
           </View>
 
           {tab === "new" ? (
-            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Card.Content>
-                <TextInput
+            <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+              <CardContent>
+                <Input
                   label="Food name"
                   value={name}
                   onChangeText={setName}
-                  mode="outlined"
-                  style={styles.input}
+                  containerStyle={styles.input}
                 />
-                <TextInput
+                <Input
                   label="Calories"
                   value={calories}
                   onChangeText={setCalories}
                   keyboardType="numeric"
-                  mode="outlined"
-                  style={styles.input}
+                  containerStyle={styles.input}
                 />
                 <View style={styles.row}>
-                  <TextInput
+                  <Input
                     label="Protein (g)"
                     value={protein}
                     onChangeText={setProtein}
                     keyboardType="numeric"
-                    mode="outlined"
-                    style={[styles.input, styles.flex]}
+                    containerStyle={[styles.input, styles.flex]}
                   />
                   <View style={{ width: 8 }} />
-                  <TextInput
+                  <Input
                     label="Carbs (g)"
                     value={carbs}
                     onChangeText={setCarbs}
                     keyboardType="numeric"
-                    mode="outlined"
-                    style={[styles.input, styles.flex]}
+                    containerStyle={[styles.input, styles.flex]}
                   />
                   <View style={{ width: 8 }} />
-                  <TextInput
+                  <Input
                     label="Fat (g)"
                     value={fat}
                     onChangeText={setFat}
                     keyboardType="numeric"
-                    mode="outlined"
-                    style={[styles.input, styles.flex]}
+                    containerStyle={[styles.input, styles.flex]}
                   />
                 </View>
-                <TextInput
+                <Input
                   label="Serving size"
                   value={serving}
                   onChangeText={setServing}
-                  mode="outlined"
-                  style={styles.input}
+                  containerStyle={styles.input}
                 />
                 <Chip
                   selected={favorite}
@@ -898,34 +869,30 @@ export default function AddFood() {
                   icon={favorite ? "heart" : "heart-outline"}
                   style={styles.favChip}
                   accessibilityLabel={favorite ? "Remove from favorites" : "Save as favorite"}
-                  accessibilityRole="button"
                   accessibilityState={{ selected: favorite }}
                 >
                   Save as favorite
                 </Chip>
                 <Button
-                  mode="contained"
+                  variant="default"
                   onPress={save}
                   loading={saving}
                   disabled={saving || !name.trim()}
                   style={styles.btn}
-                  contentStyle={styles.btnContent}
                   accessibilityLabel="Log food"
-                >
-                  Log Food
-                </Button>
-              </Card.Content>
+                 label="Log Food" />
+              </CardContent>
             </Card>
           ) : favorites.length === 0 ? (
-            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Card.Content>
+            <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+              <CardContent>
                 <Text
-                  variant="bodyMedium"
+                  variant="body"
                   style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}
                 >
                   No favorites yet. Save foods as favorites when logging them.
                 </Text>
-              </Card.Content>
+              </CardContent>
             </Card>
           ) : null}
         </>

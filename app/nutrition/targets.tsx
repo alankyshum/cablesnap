@@ -1,6 +1,9 @@
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
-import { Button, Card, Text, TextInput } from "react-native-paper";
+import { Pressable, ScrollView, StyleSheet } from "react-native";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
 import { router, useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { getAppSetting, getMacroTargets, updateMacroTargets } from "../../lib/db";
@@ -78,72 +81,67 @@ export default function Targets() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
-      <Card
-        style={[styles.card, { backgroundColor: colors.primaryContainer }]}
+      <Pressable
         onPress={() => router.push("/nutrition/profile")}
         accessibilityLabel={profile ? "Update your nutrition profile" : "Set your profile for personalized targets"}
         accessibilityRole="button"
       >
-        <Card.Content>
-          <Text variant="titleSmall" style={{ color: colors.onPrimaryContainer, fontSize: 16 }}>
+      <Card
+        style={StyleSheet.flatten([styles.card, { backgroundColor: colors.primaryContainer }])}
+      >
+        <CardContent>
+          <Text variant="subtitle" style={{ color: colors.onPrimaryContainer, fontSize: 16 }}>
             {profile ? "Update your profile" : "Set your profile for personalized targets"}
           </Text>
           {profileSummary ? (
-            <Text variant="bodySmall" style={{ color: colors.onPrimaryContainer, marginTop: 4, fontSize: 14 }}>
+            <Text variant="caption" style={{ color: colors.onPrimaryContainer, marginTop: 4, fontSize: 14 }}>
               {"Based on: " + profileSummary}
             </Text>
           ) : null}
-        </Card.Content>
+        </CardContent>
       </Card>
+      </Pressable>
 
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
+      <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Daily Macro Targets
           </Text>
-          <TextInput
+          <Input
             label="Calories"
             value={calories}
             onChangeText={setCalories}
             keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
+            containerStyle={styles.input}
             accessibilityLabel="Calories"
           />
-          <TextInput
+          <Input
             label="Protein (g)"
             value={protein}
             onChangeText={setProtein}
             keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
+            containerStyle={styles.input}
             accessibilityLabel="Protein"
           />
-          <TextInput
+          <Input
             label="Carbs (g)"
             value={carbs}
             onChangeText={setCarbs}
             keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
+            containerStyle={styles.input}
             accessibilityLabel="Carbs"
           />
-          <TextInput
+          <Input
             label="Fat (g)"
             value={fat}
             onChangeText={setFat}
             keyboardType="numeric"
-            mode="outlined"
-            style={styles.input}
+            containerStyle={styles.input}
             accessibilityLabel="Fat"
           />
-          <Button mode="contained" onPress={save} loading={saving} disabled={saving} style={styles.btn} contentStyle={styles.btnContent} accessibilityLabel="Save macro targets">
-            Save Targets
-          </Button>
-          <Button mode="outlined" onPress={reset} style={styles.btn} contentStyle={styles.btnContent} accessibilityLabel="Reset to default targets">
-            Reset to Defaults
-          </Button>
-        </Card.Content>
+          <Button variant="default" onPress={save} loading={saving} disabled={saving} style={styles.btn} accessibilityLabel="Save macro targets" label="Save Targets" />
+          <Button variant="outline" onPress={reset} style={styles.btn} accessibilityLabel="Reset to default targets" label="Reset to Defaults" />
+        </CardContent>
       </Card>
     </ScrollView>
   );

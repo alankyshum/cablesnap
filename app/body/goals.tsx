@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Text, TextInput } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { getBodySettings, updateBodySettings } from "../../lib/db";
@@ -55,51 +57,45 @@ export default function Goals() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
-      <Text variant="titleLarge" style={{ color: colors.onBackground, marginBottom: 16 }}>
+      <Text variant="title" style={{ color: colors.onBackground, marginBottom: 16 }}>
         Body Goals
       </Text>
 
-      <TextInput
+      <Input
         label={`Weight Goal (${unit})`}
         value={weight}
         onChangeText={setWeight}
         keyboardType="numeric"
-        mode="outlined"
-        style={styles.input}
+        containerStyle={styles.input}
         accessibilityLabel={`Weight goal in ${unit}`}
       />
 
-      <TextInput
+      <Input
         label="Body Fat Goal (%)"
         value={fat}
         onChangeText={setFat}
         keyboardType="numeric"
-        mode="outlined"
-        style={styles.input}
+        containerStyle={styles.input}
         accessibilityLabel="Body fat percentage goal"
       />
 
       <View style={styles.buttons}>
         <Button
-          mode="outlined"
+          variant="outline"
           onPress={() => router.back()}
           style={{ flex: 1, marginRight: 8 }}
-          contentStyle={styles.btnContent}
           accessibilityLabel="Cancel goal editing"
-        >
-          Cancel
-        </Button>
+          label="Cancel"
+        />
         <Button
-          mode="contained"
+          variant="default"
           onPress={handleSave}
           loading={saving}
           disabled={saving}
           style={{ flex: 1 }}
-          contentStyle={styles.btnContent}
           accessibilityLabel="Save body goals"
-        >
-          Save
-        </Button>
+          label="Save"
+        />
       </View>
     </ScrollView>
   );

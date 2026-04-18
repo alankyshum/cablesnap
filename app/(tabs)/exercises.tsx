@@ -7,7 +7,10 @@ import {
   useColorScheme,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Chip, FAB, Searchbar, Text } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Chip } from "@/components/ui/chip";
+import { SearchBar } from "@/components/ui/searchbar";
+import { FAB } from "@/components/ui/fab";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -103,7 +106,7 @@ export default function Exercises() {
       >
         <View style={styles.cardInner}>
           <View style={styles.titleRow}>
-            <Text variant="titleSmall" numberOfLines={1} style={[{ color: colors.onSurface }, styles.titleText]}>
+            <Text variant="subtitle" numberOfLines={1} style={[{ color: colors.onSurface }, styles.titleText]}>
               {item.name}
             </Text>
             {item.is_custom && (
@@ -113,7 +116,7 @@ export default function Exercises() {
             )}
           </View>
           <Text
-            variant="bodySmall"
+            variant="caption"
             style={{ color: colors.onSurfaceVariant, marginTop: 2 }}
             numberOfLines={1}
           >
@@ -146,10 +149,10 @@ export default function Exercises() {
     () =>
       loading ? null : (
         <View style={styles.empty}>
-          <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="title" style={{ color: colors.onSurfaceVariant }}>
             No exercises found
           </Text>
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
             Try adjusting your search or filters
           </Text>
         </View>
@@ -161,7 +164,7 @@ export default function Exercises() {
 
   const list = (
     <View style={layout.atLeastMedium ? { flex: 2 } : { flex: 1 }}>
-      <Searchbar
+      <SearchBar
         placeholder="Search exercises..."
         value={query}
         onChangeText={setQuery}
@@ -251,7 +254,7 @@ export default function Exercises() {
             contentContainerStyle={styles.detailContent}
             ListHeaderComponent={
               <>
-                <Text variant="headlineSmall" style={{ color: colors.onSurface, marginBottom: 12 }}>
+                <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 12 }}>
                   {detail.name}
                 </Text>
                 {detail.is_custom && (
@@ -277,11 +280,11 @@ export default function Exercises() {
                 </View>
                 {detail.mount_position && (
                   <>
-                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
                       Mount Position
                     </Text>
                     <Text
-                      variant="bodyLarge"
+                      variant="body"
                       style={{ color: colors.onSurface, marginTop: 4 }}
                       accessibilityLabel={`Mount position: ${detail.mount_position} on rack`}
                     >
@@ -291,11 +294,11 @@ export default function Exercises() {
                 )}
                 {detail.attachment && (
                   <>
-                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
                       Attachment
                     </Text>
                     <Text
-                      variant="bodyLarge"
+                      variant="body"
                       style={{ color: colors.onSurface, marginTop: 4 }}
                       accessibilityLabel={`Attachment: ${detail.attachment}`}
                     >
@@ -305,7 +308,7 @@ export default function Exercises() {
                 )}
                 {detail.training_modes && detail.training_modes.length > 0 && (
                   <View accessibilityLabel={`Compatible training modes: ${detail.training_modes.join(", ")}`}>
-                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
                       Training Modes
                     </Text>
                     <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
@@ -327,7 +330,7 @@ export default function Exercises() {
                 />
                 <View style={styles.muscleColumns}>
                   <View style={{ flex: 1 }}>
-                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
+                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                       Primary Muscles
                     </Text>
                     <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
@@ -340,7 +343,7 @@ export default function Exercises() {
                   </View>
                   {detail.secondary_muscles.length > 0 && (
                     <View style={{ flex: 1 }}>
-                      <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
+                      <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                         Secondary Muscles
                       </Text>
                       <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
@@ -355,11 +358,11 @@ export default function Exercises() {
                 </View>
                 {steps && steps.length > 0 && (
                   <>
-                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
+                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                       Instructions
                     </Text>
                     {steps.map((step, i) => (
-                      <Text key={i} variant="bodyMedium" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
+                      <Text key={i} variant="body" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
                         {step}
                       </Text>
                     ))}
@@ -370,7 +373,7 @@ export default function Exercises() {
           />
         ) : (
           <View style={styles.detailEmpty}>
-            <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
               Select an exercise to view details
             </Text>
           </View>

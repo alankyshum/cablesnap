@@ -4,11 +4,17 @@ import {
   Alert,
   Pressable,
   StyleSheet,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, Card, Chip, IconButton, Snackbar, Text } from "react-native-paper";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Text } from "@/components/ui/text";
+import { useToast } from "@/components/ui/bna-toast";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { CartesianChart, Line } from "victory-native";
 import {
@@ -54,7 +60,7 @@ export default function ExerciseDetail() {
   const profileGender = useProfileGender();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [toast, setToast] = useState("");
+  const { toast: showToast } = useToast();
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
 
   // Records state
@@ -165,10 +171,10 @@ export default function ExerciseDetail() {
         onPress: async () => {
           try {
             await softDeleteCustomExercise(id);
-            setToast("Exercise deleted");
+            showToast({ description: "Exercise deleted" });
             setTimeout(() => router.back(), 400);
           } catch {
-            setToast("Failed to delete exercise");
+            showToast({ description: "Failed to delete exercise" });
           }
         },
       },
@@ -219,7 +225,6 @@ export default function ExerciseDetail() {
         <Chip
           compact
           style={[styles.badge, { backgroundColor: colors.tertiaryContainer }]}
-          textStyle={{ fontSize: 12 }}
         >
           Custom
         </Chip>
@@ -230,14 +235,12 @@ export default function ExerciseDetail() {
         <Chip
           compact
           style={{ backgroundColor: colors.primaryContainer }}
-          textStyle={{ color: colors.onPrimaryContainer }}
         >
           {CATEGORY_LABELS[exercise.category]}
         </Chip>
         <Chip
           compact
           style={[styles.difficultyChip, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }]}
-          textStyle={[styles.difficultyText, { color: difficultyText(exercise.difficulty) }]}
         >
           {exercise.difficulty}
         </Chip>
@@ -246,11 +249,11 @@ export default function ExerciseDetail() {
       {/* Voltra Metadata */}
       {exercise.mount_position && (
         <View style={styles.section}>
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
             Mount Position
           </Text>
           <Text
-            variant="bodyLarge"
+            variant="body"
             style={[styles.value, { color: colors.onSurface }]}
             accessibilityLabel={`Mount position: ${MOUNT_POSITION_LABELS[exercise.mount_position]} on rack`}
           >
@@ -260,11 +263,11 @@ export default function ExerciseDetail() {
       )}
       {exercise.attachment && (
         <View style={styles.section}>
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
             Attachment
           </Text>
           <Text
-            variant="bodyLarge"
+            variant="body"
             style={[styles.value, { color: colors.onSurface }]}
             accessibilityLabel={`Attachment: ${ATTACHMENT_LABELS[exercise.attachment]}`}
           >
@@ -277,7 +280,7 @@ export default function ExerciseDetail() {
           style={styles.section}
           accessibilityLabel={`Compatible training modes: ${exercise.training_modes.join(", ")}`}
         >
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
             Training Modes
           </Text>
           <View style={styles.chipRow}>
@@ -298,7 +301,7 @@ export default function ExerciseDetail() {
       {layout.atLeastMedium ? (
         <View style={styles.infoRow}>
           <View style={{ flex: 1 }}>
-            <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant }}>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
               Muscles Involved
             </Text>
             <MuscleMap
@@ -311,13 +314,13 @@ export default function ExerciseDetail() {
           <View style={{ flex: 1 }}>
             {steps.length > 0 && (
               <View style={styles.section}>
-                <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant }}>
+                <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
                   Instructions
                 </Text>
                 {steps.map((step, i) => (
                   <Text
                     key={i}
-                    variant="bodyMedium"
+                    variant="body"
                     style={[styles.step, { color: colors.onSurface }]}
                   >
                     {step}
@@ -330,7 +333,7 @@ export default function ExerciseDetail() {
       ) : (
         <>
           <View style={styles.section}>
-            <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant }}>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
               Muscles Involved
             </Text>
             <MuscleMap
@@ -342,13 +345,13 @@ export default function ExerciseDetail() {
           </View>
           {steps.length > 0 && (
             <View style={styles.section}>
-              <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant }}>
+              <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
                 Instructions
               </Text>
               {steps.map((step, i) => (
                 <Text
                   key={i}
-                  variant="bodyMedium"
+                  variant="body"
                   style={[styles.step, { color: colors.onSurface }]}
                 >
                   {step}
@@ -361,9 +364,9 @@ export default function ExerciseDetail() {
 
       {/* Personal Records + Chart flow into row on tablet */}
       <FlowContainer gap={16}>
-      <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
+      <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>
             Personal Records
           </Text>
           {recordsLoading ? (
@@ -371,10 +374,10 @@ export default function ExerciseDetail() {
           ) : recordsError ? (
             <View style={styles.errorBox}>
               <Text style={{ color: colors.error }}>Failed to load records</Text>
-              <Button mode="text" onPress={() => id && loadRecords(id)}>Retry</Button>
+              <Button variant="ghost" onPress={() => id && loadRecords(id)} label="Retry" />
             </View>
           ) : records && records.total_sessions === 0 ? (
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
               No workout data yet — start a session to build your history
             </Text>
           ) : records ? (
@@ -383,51 +386,51 @@ export default function ExerciseDetail() {
               {bw ? (
                 <>
                   <View style={styles.stat} accessibilityLabel={`Maximum reps: ${records.max_reps ?? 0}`}>
-                    <Text variant="headlineSmall" style={{ color: colors.primary }}>
+                    <Text variant="heading" style={{ color: colors.primary }}>
                       {records.max_reps ?? "—"}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>Max Reps</Text>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Max Reps</Text>
                   </View>
                   <View style={styles.stat} accessibilityLabel={`Total sessions: ${records.total_sessions}`}>
-                    <Text variant="headlineSmall" style={{ color: colors.primary }}>
+                    <Text variant="heading" style={{ color: colors.primary }}>
                       {records.total_sessions}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>Sessions</Text>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Sessions</Text>
                   </View>
                   <View style={styles.stat} accessibilityLabel={`Best volume: ${records.max_volume ?? 0}`}>
-                    <Text variant="headlineSmall" style={{ color: colors.primary }}>
+                    <Text variant="heading" style={{ color: colors.primary }}>
                       {records.max_volume != null ? Math.round(records.max_volume) : "—"}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>Best Vol</Text>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Best Vol</Text>
                   </View>
                 </>
               ) : (
                 <>
                   <View style={styles.stat} accessibilityLabel={`Maximum weight: ${records.max_weight != null ? toDisplay(records.max_weight, unit) : 0} ${unit}`}>
-                    <Text variant="headlineSmall" style={{ color: colors.primary }}>
+                    <Text variant="heading" style={{ color: colors.primary }}>
                       {records.max_weight != null ? toDisplay(records.max_weight, unit) : "—"}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>Max {unit}</Text>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Max {unit}</Text>
                   </View>
                   <View style={styles.stat} accessibilityLabel={`Maximum reps: ${records.max_reps ?? 0}`}>
-                    <Text variant="headlineSmall" style={{ color: colors.primary }}>
+                    <Text variant="heading" style={{ color: colors.primary }}>
                       {records.max_reps ?? "—"}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>Max Reps</Text>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Max Reps</Text>
                   </View>
                   <View style={styles.stat} accessibilityLabel={`Estimated one rep max: ${records.est_1rm != null ? toDisplay(records.est_1rm, unit) : 0} ${unit}`}>
-                    <Text variant="headlineSmall" style={{ color: colors.primary }}>
+                    <Text variant="heading" style={{ color: colors.primary }}>
                       {records.est_1rm != null ? toDisplay(records.est_1rm, unit) : "—"}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                       {best && best.reps === 1 ? "Tested 1RM" : "Est 1RM"}
                     </Text>
                   </View>
                   <View style={styles.stat} accessibilityLabel={`Total sessions: ${records.total_sessions}`}>
-                    <Text variant="headlineSmall" style={{ color: colors.primary }}>
+                    <Text variant="heading" style={{ color: colors.primary }}>
                       {records.total_sessions}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>Sessions</Text>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Sessions</Text>
                   </View>
                 </>
               )}
@@ -443,19 +446,19 @@ export default function ExerciseDetail() {
                 : "";
               return (
                 <View style={[styles.pctSection, { borderTopColor: colors.outlineVariant }]}>
-                  <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
+                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
                     {tested ? "Tested 1RM" : "Estimated 1RM"}: {orm} {unit}
                   </Text>
                   {source ? (
-                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                       {source} · Epley
                     </Text>
                   ) : null}
                   <View style={styles.pctTable}>
                     <View style={styles.pctRow}>
-                      <Text variant="labelSmall" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>% 1RM</Text>
-                      <Text variant="labelSmall" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>Weight</Text>
-                      <Text variant="labelSmall" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>Reps</Text>
+                      <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>% 1RM</Text>
+                      <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>Weight</Text>
+                      <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>Reps</Text>
                     </View>
                     {table.map((row) => (
                       <Pressable
@@ -466,33 +469,31 @@ export default function ExerciseDetail() {
                         accessibilityRole="button"
                         accessibilityHint="Opens plate calculator with this weight"
                       >
-                        <Text variant="bodySmall" style={[styles.pctCol, { color: colors.onSurface }]}>{row.pct}%</Text>
-                        <Text variant="bodySmall" style={[styles.pctCol, { color: colors.onSurface }]}>{row.weight} {unit}</Text>
-                        <Text variant="bodySmall" style={[styles.pctCol, { color: colors.onSurface }]}>{row.reps}</Text>
+                        <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.pct}%</Text>
+                        <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.weight} {unit}</Text>
+                        <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.reps}</Text>
                       </Pressable>
                     ))}
                   </View>
                   <Button
-                    mode="text"
-                    compact
-                    icon="calculator"
+                    variant="ghost"
+                    size="sm"
                     onPress={() => router.push("/tools/rm")}
                     style={{ alignSelf: "flex-start", marginTop: 4 }}
                     accessibilityLabel="Open 1RM calculator"
-                  >
-                    1RM Calculator
-                  </Button>
+                    label="1RM Calculator"
+                  />
                 </View>
               );
             })()}
             </>
           ) : null}
-        </Card.Content>
+        </CardContent>
       </Card>
 
-      <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
+      <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>
             {bw ? "Reps Progression" : "Weight Progression"}
           </Text>
           {!bw && chart.length >= 2 && (
@@ -520,10 +521,10 @@ export default function ExerciseDetail() {
           ) : chartError ? (
             <View style={styles.errorBox}>
               <Text style={{ color: colors.error }}>Failed to load chart</Text>
-              <Button mode="text" onPress={() => id && loadChart(id)}>Retry</Button>
+              <Button variant="ghost" onPress={() => id && loadChart(id)} label="Retry" />
             </View>
           ) : activeChart.length < 2 ? (
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
               {activeChart.length === 0
                 ? "No data to chart yet"
                 : "Log more sessions to see a trend chart"}
@@ -551,19 +552,19 @@ export default function ExerciseDetail() {
                 </CartesianChart>
               </View>
               {chartSummary && (
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
                   {chartSummary}
                 </Text>
               )}
             </View>
           )}
-        </Card.Content>
+        </CardContent>
       </Card>
 
       </FlowContainer>
 
       {/* History section header */}
-      <Text variant="titleMedium" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 8 }}>
+      <Text variant="title" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 8 }}>
         Session History
       </Text>
 
@@ -572,10 +573,10 @@ export default function ExerciseDetail() {
       ) : historyError ? (
         <View style={styles.errorBox}>
           <Text style={{ color: colors.error }}>Failed to load history</Text>
-          <Button mode="text" onPress={() => id && loadHistory(id)}>Retry</Button>
+          <Button variant="ghost" onPress={() => id && loadHistory(id)} label="Retry" />
         </View>
       ) : history.length === 0 ? (
-        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
+        <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
           No sessions recorded for this exercise
         </Text>
       ) : null}
@@ -595,15 +596,15 @@ export default function ExerciseDetail() {
         accessibilityRole="button"
       >
         <View style={styles.historyLeft}>
-          <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
+          <Text variant="body" style={{ color: colors.onSurface }}>
             {formatDateLong(item.started_at)}
           </Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {item.session_name} · {item.set_count} sets · {item.total_reps} reps
           </Text>
         </View>
         <View style={styles.historyRight}>
-          <Text variant="titleMedium" style={{ color: colors.primary }}>
+          <Text variant="title" style={{ color: colors.primary }}>
             {bw ? `${item.max_reps} reps` : `${toDisplay(item.max_weight, unit)} ${unit}`}
           </Text>
           {item.avg_rpe != null && (
@@ -622,7 +623,7 @@ export default function ExerciseDetail() {
     if (loadingMore) return <ActivityIndicator style={{ padding: 16 }} />;
     if (!hasMore && history.length >= MAX_ITEMS) {
       return (
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
           Showing last {history.length} sessions
         </Text>
       );
@@ -638,18 +639,12 @@ export default function ExerciseDetail() {
           headerRight: exercise.is_custom
             ? () => (
                 <View style={styles.headerActions}>
-                  <IconButton
-                    icon="pencil"
-                    size={22}
-                    onPress={edit}
-                    accessibilityLabel="Edit exercise"
-                  />
-                  <IconButton
-                    icon="delete"
-                    size={22}
-                    onPress={remove}
-                    accessibilityLabel="Delete exercise"
-                  />
+                  <TouchableOpacity onPress={edit} accessibilityLabel="Edit exercise" hitSlop={8} style={{ padding: 8 }}>
+                    <MaterialCommunityIcons name="pencil" size={22} color={colors.onSurface} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={remove} accessibilityLabel="Delete exercise" hitSlop={8} style={{ padding: 8 }}>
+                    <MaterialCommunityIcons name="delete" size={22} color={colors.onSurface} />
+                  </TouchableOpacity>
                 </View>
               )
             : undefined,
@@ -666,10 +661,6 @@ export default function ExerciseDetail() {
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
       />
-
-      <Snackbar visible={!!toast} onDismiss={() => setToast("")} duration={3000}>
-        {toast}
-      </Snackbar>
     </>
   );
 }

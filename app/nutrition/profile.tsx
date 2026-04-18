@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet } from "react-native";
-import { Card } from "react-native-paper";
+import { Card, CardContent } from "@/components/ui/card";
 import { router } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import ProfileForm from "../../components/ProfileForm";
@@ -15,9 +15,9 @@ export default function ProfileScreen() {
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
       <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Card.Content>
+        <CardContent>
           <ProfileForm onSave={() => router.back()} />
-        </Card.Content>
+        </CardContent>
       </Card>
     </ScrollView>
   );

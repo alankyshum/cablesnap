@@ -2,10 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, Checkbox, Chip, IconButton, Snackbar, Text } from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/bna-toast";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -46,11 +52,11 @@ export default function EditTemplate() {
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [snackbar, setSnackbar] = useState("");
   const [undo, setUndo] = useState<(() => Promise<void>) | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editing, setEditing] = useState<TemplateExercise | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toast } = useToast();
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -126,14 +132,13 @@ export default function EditTemplate() {
     setSelecting(false);
     setSelected(new Set());
     await load();
-    setSnackbar("Exercises linked as superset");
+    toast("Exercises linked as superset");
     setUndo(() => async () => {
       await unlinkExerciseGroup(linkId);
       await load();
     });
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
-      setSnackbar("");
       setUndo(null);
     }, 5000);
   };
@@ -142,7 +147,7 @@ export default function EditTemplate() {
     await unlinkExerciseGroup(linkId);
     await load();
     const prev = exercises.filter((e) => e.link_id === linkId).map((e) => e.id);
-    setSnackbar("Exercises unlinked");
+    toast("Exercises unlinked");
     setUndo(() => async () => {
       if (id) {
         await createExerciseLink(id, prev);
@@ -151,7 +156,6 @@ export default function EditTemplate() {
     });
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
-      setSnackbar("");
       setUndo(null);
     }, 5000);
   }, [exercises, id, load]);
@@ -176,7 +180,7 @@ export default function EditTemplate() {
       setEditing(null);
       await load();
     } catch {
-      setSnackbar("Failed to update exercise settings");
+      toast("Failed to update exercise settings");
     }
   }, [editing, id, load]);
 
@@ -200,15 +204,12 @@ export default function EditTemplate() {
                 .map((e) => e.exercise?.name)
                 .join(" and ")}, ${exercises.filter((e) => e.link_id === item.link_id).length} exercises linked`}
             >
-              <Text variant="labelMedium" style={{ color, flex: 1, fontWeight: "700" }}>
+              <Text variant="caption" style={{ color, flex: 1, fontWeight: "700" }}>
                 {groupLabel}
               </Text>
-              <IconButton
-                icon="link-off"
-                size={18}
-                onPress={() => handleUnlink(item.link_id!)}
-                accessibilityLabel={`Unlink ${groupLabel}`}
-              />
+              <TouchableOpacity onPress={() => handleUnlink(item.link_id!)} accessibilityLabel={`Unlink ${groupLabel}`} hitSlop={8} style={{ padding: 8 }}>
+                <MaterialCommunityIcons name="link-off" size={18} color={colors.onSurface} />
+              </TouchableOpacity>
             </View>
           )}
 
@@ -241,13 +242,13 @@ export default function EditTemplate() {
             >
               {selecting && (
                 <Checkbox
-                  status={selected.has(item.id) ? "checked" : "unchecked"}
-                  onPress={() => toggleSelect(item.id)}
+                  checked={selected.has(item.id)}
+                  onCheckedChange={() => toggleSelect(item.id)}
                 />
               )}
               <View style={styles.info}>
                 <Text
-                  variant="titleSmall"
+                  variant="subtitle"
                   style={{
                     color: item.exercise?.deleted_at ? colors.onSurfaceVariant : colors.onSurface,
                     fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
@@ -256,65 +257,46 @@ export default function EditTemplate() {
                   {item.exercise?.name ?? "Unknown"}{item.exercise?.deleted_at ? " (removed)" : ""}
                 </Text>
                 <Text
-                  variant="bodySmall"
+                  variant="caption"
                   style={{ color: colors.onSurfaceVariant }}
                 >
                   {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
                 </Text>
                 {item.exercise?.deleted_at && !selecting && (
                   <Button
-                    mode="text"
-                    compact
+                    variant="ghost"
                     onPress={() => router.push(`/template/${id}?replaceTeId=${item.id}`)}
                     style={{ alignSelf: "flex-start", minHeight: 48, minWidth: 48 }}
                     accessibilityLabel={`Replace ${item.exercise.name}`}
                     accessibilityRole="button"
-                  >
-                    Replace
-                  </Button>
+                    label="Replace"
+                  />
                 )}
                 {item.link_id && !selecting && !item.exercise?.deleted_at && (
-                  <Text variant="labelSmall" style={{ color, marginTop: 2 }}>
+                  <Text variant="caption" style={{ color, marginTop: 2 }}>
                     Linked — rotate in session
                   </Text>
                 )}
               </View>
               {!selecting && (
                 <View style={styles.actions}>
-                  <IconButton
-                    icon="pencil-outline"
-                    size={16}
-                    onPress={() => setEditing(item)}
-                    accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`}
-                  />
+                  <TouchableOpacity onPress={() => setEditing(item)} accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`} hitSlop={8} style={{ padding: 8 }}>
+                    <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.onSurface} />
+                  </TouchableOpacity>
                   {item.link_id && (
-                    <IconButton
-                      icon="link-off"
-                      size={16}
-                      onPress={() => handleUnlinkSingle(item.id, item.link_id!)}
-                      accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"} from superset`}
-                    />
+                    <TouchableOpacity onPress={() => handleUnlinkSingle(item.id, item.link_id!)} accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"} from superset`} hitSlop={8} style={{ padding: 8 }}>
+                      <MaterialCommunityIcons name="link-off" size={16} color={colors.onSurface} />
+                    </TouchableOpacity>
                   )}
-                  <IconButton
-                    icon="arrow-up"
-                    size={18}
-                    onPress={() => move(index, -1)}
-                    disabled={index === 0}
-                    accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} up`}
-                  />
-                  <IconButton
-                    icon="arrow-down"
-                    size={18}
-                    onPress={() => move(index, 1)}
-                    disabled={index === exercises.length - 1}
-                    accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`}
-                  />
-                  <IconButton
-                    icon="close"
-                    size={18}
-                    onPress={() => remove(item.id)}
-                    accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`}
-                  />
+                  <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} up`} hitSlop={8} style={{ padding: 8 }}>
+                    <MaterialCommunityIcons name="arrow-up" size={18} color={colors.onSurface} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => move(index, 1)} disabled={index === exercises.length - 1} accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`} hitSlop={8} style={{ padding: 8 }}>
+                    <MaterialCommunityIcons name="arrow-down" size={18} color={colors.onSurface} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`} hitSlop={8} style={{ padding: 8 }}>
+                    <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
+                  </TouchableOpacity>
                 </View>
               )}
             </Pressable>
@@ -364,15 +346,13 @@ export default function EditTemplate() {
         <View style={styles.section}>
           <View style={styles.headerRow}>
             <Text
-              variant="titleMedium"
+              variant="title"
               style={{ color: colors.onBackground }}
             >
               Exercises ({exercises.length})
             </Text>
             {starter && (
               <Chip
-                mode="flat"
-                compact
                 accessibilityLabel="Starter template, read-only. Duplicate to edit."
               >
                 STARTER
@@ -384,29 +364,25 @@ export default function EditTemplate() {
         {/* Selection mode toolbar */}
         {selecting && !starter && (
           <View style={[styles.selectionBar, { backgroundColor: colors.primaryContainer }]}>
-            <Text variant="bodyMedium" style={{ color: colors.onPrimaryContainer, flex: 1 }}
+            <Text variant="body" style={{ color: colors.onPrimaryContainer, flex: 1 }}
               accessibilityLiveRegion="polite"
             >
               {selected.size} selected
             </Text>
             <Button
-              mode="contained"
-              compact
+              variant="default"
               onPress={confirmLink}
               disabled={selected.size < 2}
               style={{ marginRight: 8 }}
               accessibilityLabel="Link selected exercises"
-            >
-              Link
-            </Button>
+              label="Link"
+            />
             <Button
-              mode="text"
-              compact
+              variant="ghost"
               onPress={cancelSelection}
               accessibilityLabel="Cancel selection"
-            >
-              Cancel
-            </Button>
+              label="Cancel"
+            />
           </View>
         )}
 
@@ -430,7 +406,7 @@ export default function EditTemplate() {
               >
                 <View style={styles.info}>
                   <Text
-                    variant="titleSmall"
+                    variant="subtitle"
                     style={{
                       color: item.exercise?.deleted_at ? colors.onSurfaceVariant : colors.onSurface,
                       fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
@@ -439,7 +415,7 @@ export default function EditTemplate() {
                     {item.exercise?.name ?? "Unknown"}{item.exercise?.deleted_at ? " (removed)" : ""}
                   </Text>
                   <Text
-                    variant="bodySmall"
+                    variant="caption"
                     style={{ color: colors.onSurfaceVariant }}
                   >
                     {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
@@ -453,7 +429,7 @@ export default function EditTemplate() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text
-                variant="bodyMedium"
+                variant="body"
                 style={{ color: colors.onSurfaceVariant }}
               >
                 No exercises. Add some below.
@@ -465,63 +441,36 @@ export default function EditTemplate() {
 
         {starter ? (
           <Button
-            mode="contained"
-            icon="content-copy"
+            variant="default"
             onPress={handleDuplicate}
             style={styles.doneBtn}
-            contentStyle={styles.btnContent}
             accessibilityLabel="Duplicate to edit"
-          >
-            Duplicate to Edit
-          </Button>
+            label="Duplicate to Edit"
+          />
         ) : (
           <>
             {!selecting && exercises.length >= 2 && (
               <Button
-                mode="outlined"
-                icon="link-variant"
+                variant="outline"
                 onPress={() => startSelection()}
                 style={styles.addBtn}
-                contentStyle={styles.btnContent}
                 accessibilityLabel="Create superset"
                 accessibilityRole="button"
-              >
-                Create Superset
-              </Button>
+                label="Create Superset"
+              />
             )}
 
             <Button
-              mode="outlined"
-              icon="plus"
+              variant="outline"
               onPress={() => setPickerOpen(true)}
               style={styles.addBtn}
-              contentStyle={styles.btnContent}
               accessibilityLabel="Add exercise to template"
-            >
-              Add Exercise
-            </Button>
-            <Button mode="contained" onPress={() => router.back()} style={styles.doneBtn} contentStyle={styles.btnContent} accessibilityLabel="Done editing template">
-              Done
-            </Button>
+              label="Add Exercise"
+            />
+            <Button variant="default" onPress={() => router.back()} style={styles.doneBtn} accessibilityLabel="Done editing template" label="Done" />
           </>
         )}
       </View>
-      <Snackbar
-        visible={!!snackbar}
-        onDismiss={() => {
-          setSnackbar("");
-          setUndo(null);
-        }}
-        duration={5000}
-        accessibilityLiveRegion="polite"
-        action={undo ? { label: "Undo", onPress: async () => {
-          if (undo) await undo();
-          setSnackbar("");
-          setUndo(null);
-        }} : undefined}
-      >
-        {snackbar}
-      </Snackbar>
       <ExercisePickerSheet
         visible={pickerOpen}
         onDismiss={() => setPickerOpen(false)}
@@ -578,9 +527,6 @@ const styles = StyleSheet.create({
   },
   doneBtn: {
     marginTop: 16,
-  },
-  btnContent: {
-    paddingVertical: 8,
   },
   empty: {
     alignItems: "center",

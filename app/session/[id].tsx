@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   useWindowDimensions,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
@@ -15,7 +16,11 @@ import Reanimated, {
   withTiming,
   interpolateColor,
 } from "react-native-reanimated";
-import { Button, Divider, IconButton, Snackbar, Text, TextInput } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/bna-toast";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -162,12 +167,12 @@ const SetRow = memo(function SetRow({
                 <Text style={{ color: chipStyle!.fg, fontSize: 13, fontWeight: "700" }}>{chipLabel}</Text>
               </View>
             ) : (
-              <Text variant="bodyMedium" style={{ color: colors.onSurface, textAlign: "center" }}>
+              <Text variant="body" style={{ color: colors.onSurface, textAlign: "center" }}>
                 {set.round ? `R${set.round}` : set.set_number}
               </Text>
             )}
           </Pressable>
-          <Text variant="bodySmall" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>
+          <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>
             {set.previous}
           </Text>
           <View style={styles.pickerCol}>
@@ -244,7 +249,7 @@ const SetRow = memo(function SetRow({
 
       {halfStep && halfStep.setId === set.id && (
         <View style={[styles.halfStepRow, { backgroundColor: colors.surfaceVariant }]}>
-          <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant, marginRight: 8, fontSize: 12 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginRight: 8, fontSize: 12 }}>
             Half-step:
           </Text>
           {halfStep.base > 6 && (
@@ -390,7 +395,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
         accessibilityHint={s.type === "rep_increase" ? "Double tap to fill suggested reps" : "Double tap to fill suggested weight"}
       >
         <Text
-          variant="labelSmall"
+          variant="caption"
           style={{
             color: isIncrease ? colors.onPrimaryContainer : colors.onSurfaceVariant,
             fontWeight: "600",
@@ -416,7 +421,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
               accessibilityHint="Long press to remove exercise"
             >
               <Text
-                variant="titleMedium"
+                variant="title"
                 numberOfLines={2}
                 ellipsizeMode="tail"
                 style={[styles.groupTitle, { color: colors.primary }]}
@@ -472,7 +477,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
             accessibilityHint="Long press to remove exercise"
           >
             <Text
-              variant="titleMedium"
+              variant="title"
               numberOfLines={2}
               ellipsizeMode="tail"
               style={[styles.groupTitle, { color: colors.primary }]}
@@ -517,9 +522,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
       )}
       {exerciseNotesOpen && (
         <View style={styles.notesContainer}>
-          <TextInput
-            mode="outlined"
-            dense
+          <Input
             placeholder="Add exercise notes..."
             value={exerciseNotesValue}
             onChangeText={(v) => onExerciseNotesDraftChange(group.exercise_id, v)}
@@ -529,7 +532,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
             style={styles.notesInput}
             accessibilityLabel="Exercise notes"
           />
-          <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant, textAlign: "right", fontSize: 12 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", fontSize: 12 }}>
             {exerciseNotesValue.length}/200
           </Text>
         </View>
@@ -540,10 +543,10 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   const setTable = (
     <>
       <View style={styles.headerRow}>
-        <Text variant="labelSmall" style={[styles.colSet, { color: colors.onSurfaceVariant }]}>SET</Text>
-        <Text variant="labelSmall" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>PREV</Text>
-        <Text variant="labelSmall" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{unit === "lb" ? "LB" : "KG"}</Text>
-        <Text variant="labelSmall" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>REPS</Text>
+        <Text variant="caption" style={[styles.colSet, { color: colors.onSurfaceVariant }]}>SET</Text>
+        <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>PREV</Text>
+        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{unit === "lb" ? "LB" : "KG"}</Text>
+        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>REPS</Text>
         <View style={styles.colTrailing} />
       </View>
       {group.sets.map((set) => (
@@ -585,10 +588,10 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
           accessibilityRole="header"
           accessibilityLabel={`Round ${completedRounds + 1} of ${totalRounds}`}
         >
-          <Text variant="labelMedium" style={{ color: groupColor, fontWeight: "700" }}>
+          <Text variant="caption" style={{ color: groupColor, fontWeight: "700" }}>
             {linked.length >= 3 ? "Circuit" : "Superset"} — Round {completedRounds + 1}/{totalRounds}
           </Text>
-          <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
             Rest after round
           </Text>
         </View>
@@ -614,7 +617,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
           </>
         )}
       </View>
-      <Divider style={styles.divider} />
+      <Separator style={styles.divider} />
     </View>
   );
 });
@@ -651,27 +654,27 @@ function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
       </View>
       {exercise.mount_position && (
         <View style={styles.detailSection}>
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
             Mount Position
           </Text>
-          <Text variant="bodyMedium" style={{ color: colors.onSurface, marginTop: 2 }}>
+          <Text variant="body" style={{ color: colors.onSurface, marginTop: 2 }}>
             {exercise.mount_position}
           </Text>
         </View>
       )}
       {exercise.attachment && (
         <View style={styles.detailSection}>
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
             Attachment
           </Text>
-          <Text variant="bodyMedium" style={{ color: colors.onSurface, marginTop: 2 }}>
+          <Text variant="body" style={{ color: colors.onSurface, marginTop: 2 }}>
             {ATTACHMENT_LABELS[exercise.attachment]}
           </Text>
         </View>
       )}
       {exercise.primary_muscles.length > 0 && (
         <View style={styles.detailSection}>
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
             Primary Muscles
           </Text>
           <View style={styles.detailChips}>
@@ -685,7 +688,7 @@ function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
       )}
       {exercise.secondary_muscles.length > 0 && (
         <View style={styles.detailSection}>
-          <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
             Secondary Muscles
           </Text>
           <View style={styles.detailChips}>
@@ -702,11 +705,11 @@ function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
 
   const instructions = steps.length > 0 ? (
     <View style={styles.detailSection}>
-      <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+      <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
         Instructions
       </Text>
       {steps.map((step, i) => (
-        <Text key={i} variant="bodyMedium" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
+        <Text key={i} variant="body" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
           {step}
         </Text>
       ))}
@@ -778,8 +781,7 @@ export default function ActiveSession() {
   const [maxes, setMaxes] = useState<Record<string, number>>({});
   const prevExerciseIds = useRef<string>("");
   const prHapticFired = useRef<Set<string>>(new Set());
-  const [snackbar, setSnackbar] = useState("");
-  const [snackbarAction, setSnackbarAction] = useState<{ label: string; onPress: () => void } | undefined>();
+  const { toast: showToast } = useToast();
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
   const [exerciseNotesDraft, setExerciseNotesDraft] = useState<Record<string, string>>({});
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
@@ -803,7 +805,7 @@ export default function ActiveSession() {
       setAudioEnabled(val !== "false")
     }).catch(() => {
       setAudioEnabled(true)
-      setSnackbar("Could not load sound setting")
+      showToast("Could not load sound setting")
     })
   }, []);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
@@ -983,7 +985,7 @@ export default function ActiveSession() {
         });
 
         if (deletedExerciseIds.size > 0) {
-          setSnackbar(
+          showToast(
             `${deletedExerciseIds.size} exercise${deletedExerciseIds.size > 1 ? "s were" : " was"} skipped (no longer available)`
           );
         }
@@ -1251,7 +1253,7 @@ export default function ActiveSession() {
     // Check if all sets are completed
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (group && group.sets.every((s) => s.completed)) {
-      setSnackbar("All sets completed — nothing to swap");
+      showToast("All sets completed — nothing to swap");
       return;
     }
     const ex = await getExerciseById(exerciseId);
@@ -1271,11 +1273,9 @@ export default function ActiveSession() {
         clearTimeout(swapUndoTimer.current);
         swapUndoTimer.current = null;
       }
-      setSnackbar("");
-      setSnackbarAction(undefined);
       await load();
     } catch {
-      setSnackbar("Failed to undo swap");
+      showToast("Failed to undo swap");
     }
   }, [load]);
 
@@ -1284,7 +1284,7 @@ export default function ActiveSession() {
     try {
       const modifiedIds = await swapExerciseInSession(id, swapSource.id, newExercise.id);
       if (modifiedIds.length === 0) {
-        setSnackbar("All sets completed — nothing to swap");
+        showToast("All sets completed — nothing to swap");
         setSwapSource(null);
         return;
       }
@@ -1300,14 +1300,13 @@ export default function ActiveSession() {
 
       // Undo snackbar (5s)
       if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
-      setSnackbar(`Swapped to ${newExercise.name}`);
-      setSnackbarAction({ label: "UNDO", onPress: () => handleSwapUndo() });
+      showToast(`Swapped to ${newExercise.name}`);
       swapUndoTimer.current = setTimeout(() => {
         swapUndoTimer.current = null;
         swapUndoRef.current = null;
       }, 5000);
     } catch {
-      setSnackbar("Failed to swap exercise");
+      showToast("Failed to swap exercise");
     }
   }, [id, swapSource, load, startRest, handleSwapUndo]);
 
@@ -1365,8 +1364,7 @@ export default function ActiveSession() {
       clearInterval(deleteCountdownInterval.current);
       deleteCountdownInterval.current = null;
     }
-    setSnackbar("");
-    setSnackbarAction(undefined);
+
   }, []);
 
   const handleDeleteExercise = useCallback((exerciseId: string) => {
@@ -1392,8 +1390,7 @@ export default function ActiveSession() {
 
     // Start 5s countdown
     let remaining = 5;
-    setSnackbar(`Removing ${group.name}... (5s)`);
-    setSnackbarAction({ label: "UNDO", onPress: () => handleDeleteExerciseUndo() });
+    showToast(`Removing ${group.name}... (5s)`);
 
     deleteCountdownInterval.current = setInterval(() => {
       remaining -= 1;
@@ -1403,7 +1400,7 @@ export default function ActiveSession() {
           deleteCountdownInterval.current = null;
         }
       } else {
-        setSnackbar(`Removing ${group.name}... (${remaining}s)`);
+        showToast(`Removing ${group.name}... (${remaining}s)`);
       }
     }, 1000);
 
@@ -1426,7 +1423,7 @@ export default function ActiveSession() {
           next.splice(Math.min(groupIndex, next.length), 0, group as ExerciseGroup);
           return next;
         });
-        setSnackbar('Failed to delete exercise. Restored.');
+        showToast('Failed to delete exercise. Restored.');
       }
     }, 5000);
   }, [groups, dismissRest, handleDeleteExerciseUndo, commitPendingDelete]);
@@ -1502,7 +1499,7 @@ export default function ActiveSession() {
     if (newType === "dropset" || newType === "failure") {
       const shown = await getAppSetting("set_type_tooltip_shown");
       if (!shown) {
-        setSnackbar("Dropsets count toward volume. Failure sets help track intensity.");
+        showToast("Dropsets count toward volume. Failure sets help track intensity.");
         await setAppSetting("set_type_tooltip_shown", "1");
       }
     }
@@ -1510,7 +1507,7 @@ export default function ActiveSession() {
     if (newType === "warmup") {
       const shown = await getAppSetting("warmup_tooltip_shown");
       if (!shown) {
-        setSnackbar("Set marked as warm-up. Warm-up sets are excluded from volume and PR tracking.");
+        showToast("Set marked as warm-up. Warm-up sets are excluded from volume and PR tracking.");
         await setAppSetting("warmup_tooltip_shown", "1");
       }
     }
@@ -1577,10 +1574,10 @@ export default function ActiveSession() {
           const { syncSessionToStrava } = await import("../../lib/strava");
           const synced = await syncSessionToStrava(id!);
           if (synced) {
-            setSnackbar("Synced to Strava ✓");
+            showToast("Synced to Strava ✓");
           }
         } catch {
-          setSnackbar("Strava sync failed");
+          showToast("Strava sync failed");
         }
 
         // Health Connect sync (non-blocking, silent — no toast on success or failure)
@@ -1600,7 +1597,7 @@ export default function ActiveSession() {
             if (day) {
               const result = await advanceProgram(day.program_id, dayId, id!);
               if (result.wrapped) {
-                setSnackbar(`Cycle ${result.cycle} complete!`);
+                showToast(`Cycle ${result.cycle} complete!`);
                 AccessibilityInfo.announceForAccessibility(
                   `Cycle ${result.cycle} complete! Program wrapping to day 1.`
                 );
@@ -1666,7 +1663,7 @@ export default function ActiveSession() {
           headerRight: () => (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Text
-                variant="labelLarge"
+                variant="body"
                 style={{ color: colors.primary, marginRight: 8 }}
               >
                 {formatTime(elapsed)}
@@ -1720,10 +1717,10 @@ export default function ActiveSession() {
                 style={[styles.restBanner, restFlashStyle]}
                 accessibilityLiveRegion="polite"
               >
-                <Text variant="headlineLarge" style={{ color: colors.onPrimaryContainer, fontWeight: "700" }} accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds`}>
+                <Text variant="heading" style={{ color: colors.onPrimaryContainer, fontWeight: "700" }} accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds`}>
                   {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
                 </Text>
-                <Text variant="bodySmall" style={{ color: colors.onPrimaryContainer, marginTop: 4 }}>
+                <Text variant="caption" style={{ color: colors.onPrimaryContainer, marginTop: 4 }}>
                   Rest Timer
                 </Text>
                 <Button
@@ -1740,7 +1737,7 @@ export default function ActiveSession() {
             )}
             {nextHint && (
               <View style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer }]} accessibilityLiveRegion="polite">
-                <Text variant="titleSmall" style={{ color: colors.onSecondaryContainer, fontWeight: "700" }}>
+                <Text variant="subtitle" style={{ color: colors.onSecondaryContainer, fontWeight: "700" }}>
                   {nextHint}
                 </Text>
               </View>
@@ -1788,7 +1785,7 @@ export default function ActiveSession() {
           onPress={() => setSetTypeSheetSetId(null)}
         >
           <View style={[styles.setTypeSheet, { backgroundColor: colors.surface }]}>
-            <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
+            <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>
               Set Type
             </Text>
             {SET_TYPE_CYCLE.map((type) => {
@@ -1833,7 +1830,7 @@ export default function ActiveSession() {
                       <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onSurface }}>—</Text>
                     </View>
                   )}
-                  <Text variant="bodyLarge" style={{ color: colors.onSurface, marginLeft: 12 }}>
+                  <Text variant="body" style={{ color: colors.onSurface, marginLeft: 12 }}>
                     {label.label}
                   </Text>
                 </Pressable>
@@ -1842,18 +1839,7 @@ export default function ActiveSession() {
           </View>
         </Pressable>
       )}
-      <Snackbar
-        visible={!!snackbar}
-        onDismiss={() => {
-          setSnackbar("");
-          setSnackbarAction(undefined);
-        }}
-        duration={snackbarAction ? 5000 : 3000}
-        action={snackbarAction}
-        accessibilityLiveRegion="polite"
-      >
-        {snackbar}
-      </Snackbar>
+
       <ExercisePickerSheet
         visible={pickerOpen}
         onDismiss={() => setPickerOpen(false)}
@@ -1875,7 +1861,7 @@ export default function ActiveSession() {
         {detailExercise && (
           <>
             <View style={styles.detailHeader}>
-              <Text variant="titleLarge" style={{ color: colors.onSurface, flex: 1 }}>
+              <Text variant="title" style={{ color: colors.onSurface, flex: 1 }}>
                 {detailExercise.name}
               </Text>
               <IconButton

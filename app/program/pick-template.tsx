@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Pressable,
   StyleSheet,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Searchbar, Text, TouchableRipple } from "react-native-paper";
+import { SearchBar } from "@/components/ui/searchbar";
+import { Text } from "@/components/ui/text";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { getTemplates } from "../../lib/db";
@@ -50,7 +52,7 @@ export default function PickTemplate() {
 
   const renderItem = useCallback(
     ({ item }: { item: WorkoutTemplate }) => (
-      <TouchableRipple
+      <Pressable
         onPress={() => pick(item)}
         style={[
           styles.item,
@@ -64,20 +66,20 @@ export default function PickTemplate() {
       >
         <View>
           <Text
-            variant="titleSmall"
+            variant="subtitle"
             numberOfLines={1}
             style={{ color: colors.onSurface }}
           >
             {item.name}
           </Text>
           <Text
-            variant="bodySmall"
+            variant="caption"
             style={{ color: colors.onSurfaceVariant }}
           >
             Created {new Date(item.created_at).toLocaleDateString()}
           </Text>
         </View>
-      </TouchableRipple>
+      </Pressable>
     ),
     [colors, pick]
   );
@@ -88,7 +90,7 @@ export default function PickTemplate() {
       <View
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
-        <Searchbar
+        <SearchBar
           placeholder="Search templates..."
           value={query}
           onChangeText={setQuery}
@@ -103,7 +105,7 @@ export default function PickTemplate() {
             loading ? null : (
               <View style={styles.empty}>
                 <Text
-                  variant="titleMedium"
+                  variant="title"
                   style={{ color: colors.onSurfaceVariant }}
                 >
                   {templates.length === 0

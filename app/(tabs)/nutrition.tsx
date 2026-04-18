@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { LayoutAnimation, SectionList, StyleSheet, View } from "react-native";
-import { Card, FAB, IconButton, ProgressBar, Snackbar, Text } from "react-native-paper";
+import { LayoutAnimation, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Text } from "@/components/ui/text";
+import { Card, CardContent } from "@/components/ui/card";
+import { FAB } from "@/components/ui/fab";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/components/ui/bna-toast";
 import { router, useFocusEffect } from "expo-router";
 import InlineFoodSearch from "../../components/InlineFoodSearch";
 import {
@@ -39,7 +44,7 @@ export default function Nutrition() {
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [summary, setSummary] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [targets, setTargets] = useState<MacroTargets | null>(null);
-  const [snack, setSnack] = useState("");
+  const { toast } = useToast();
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
 
@@ -73,7 +78,7 @@ export default function Nutrition() {
         deleted.current = null;
       }, 4000),
     };
-    setSnack(`${log.food?.name ?? "Food"} removed`);
+    toast(`${log.food?.name ?? "Food"} removed`);
     load();
   };
 
@@ -83,7 +88,6 @@ export default function Nutrition() {
     const dl = deleted.current.log;
     await addDailyLog(dl.food_entry_id, dl.date, dl.meal, dl.servings);
     deleted.current = null;
-    setSnack("");
     load();
   }, [load]);
 
@@ -102,20 +106,19 @@ export default function Nutrition() {
       contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
       stickySectionHeadersEnabled={false}
       renderSectionHeader={({ section }) => (
-        <Text variant="titleSmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+        <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
           {section.title}
         </Text>
       )}
       renderItem={({ item }) => (
         <SwipeToDelete onDelete={() => remove(item)}>
           <Card style={[styles.foodCard, { backgroundColor: colors.surface }]}>
-            <Card.Content style={styles.foodRow}>
+            <CardContent style={styles.foodRow}>
               <View style={{ flex: 1 }}>
-                <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
+                <Text variant="body" style={{ color: colors.onSurface }}>
                   {item.food?.name ?? "Unknown"}
                 </Text>
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-                  {Math.round((item.food?.calories ?? 0) * item.servings)} cal
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                   {item.servings !== 1 ? ` · ${item.servings}×` : ""}
                   {" · "}
                   {Math.round((item.food?.protein ?? 0) * item.servings)}p
@@ -125,8 +128,8 @@ export default function Nutrition() {
                   {Math.round((item.food?.fat ?? 0) * item.servings)}f
                 </Text>
               </View>
-              <IconButton icon="delete-outline" size={20} onPress={() => remove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} />
-            </Card.Content>
+              <TouchableOpacity onPress={() => remove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="delete-outline" size={20} color={colors.onSurface} /></TouchableOpacity>
+            </CardContent>
           </Card>
         </SwipeToDelete>
       )}
@@ -134,22 +137,22 @@ export default function Nutrition() {
       ListHeaderComponent={
         <>
           <View style={styles.header}>
-            <IconButton icon="chevron-left" onPress={prev} accessibilityLabel="Previous day" />
-            <Text variant="titleMedium" style={{ color: colors.onBackground }}>
+            <TouchableOpacity onPress={prev} accessibilityLabel="Previous day" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="chevron-left" size={24} color={colors.onSurface} /></TouchableOpacity>
+            <Text variant="title" style={{ color: colors.onBackground }}>
               {label(date)}
             </Text>
-            <IconButton icon="chevron-right" onPress={next} accessibilityLabel="Next day" />
+            <TouchableOpacity onPress={next} accessibilityLabel="Next day" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="chevron-right" size={24} color={colors.onSurface} /></TouchableOpacity>
           </View>
 
           {targets && (
             <Card style={[styles.card, { backgroundColor: colors.surface, marginHorizontal: 16 }]}>
-              <Card.Content>
+              <CardContent>
                 <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={colors.primary} colors={colors} />
                 <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" colors={colors} />
                 <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" colors={colors} />
                 <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" colors={colors} />
                 <Text
-                  variant="labelSmall"
+                  variant="caption"
                   style={{ color: colors.primary, marginTop: 8 }}
                   onPress={() => router.push("/nutrition/targets")}
                   accessibilityLabel="Edit macro targets"
@@ -157,14 +160,14 @@ export default function Nutrition() {
                 >
                   Edit Targets →
                 </Text>
-              </Card.Content>
+              </CardContent>
             </Card>
           )}
         </>
       }
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
             No food logged yet.{"\n"}Tap + to add your first meal.
           </Text>
         </View>
@@ -185,8 +188,8 @@ export default function Nutrition() {
 
   const handleSnack = useCallback((message: string, undoFn?: () => Promise<void>) => {
     undoRef.current = undoFn ?? null;
-    setSnack(message);
-  }, []);
+    toast(message);
+  }, [toast]);
 
   const handleUndo = useCallback(async () => {
     if (undoRef.current) {
@@ -195,7 +198,6 @@ export default function Nutrition() {
     } else {
       await undo();
     }
-    setSnack("");
   }, [undo]);
 
   if (layout.atLeastMedium) {
@@ -211,14 +213,6 @@ export default function Nutrition() {
             />
           </View>
         </View>
-        <Snackbar
-          visible={!!snack}
-          onDismiss={() => setSnack("")}
-          duration={4000}
-          action={{ label: "Undo", onPress: handleUndo }}
-        >
-          {snack}
-        </Snackbar>
       </View>
     );
   }
@@ -244,15 +238,6 @@ export default function Nutrition() {
         onPress={toggleAddCard}
         accessibilityLabel={showAddCard ? "Close add food" : "Add food"}
       />
-
-      <Snackbar
-        visible={!!snack}
-        onDismiss={() => setSnack("")}
-        duration={4000}
-        action={{ label: "Undo", onPress: handleUndo }}
-      >
-        {snack}
-      </Snackbar>
     </View>
   );
 }
@@ -276,15 +261,15 @@ function MacroRow({
   return (
     <View style={styles.macro}>
       <View style={styles.macroHeader}>
-        <Text variant="bodySmall" style={{ color: colors.onSurface }}>
+        <Text variant="caption" style={{ color: colors.onSurface }}>
           {name}
         </Text>
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
           {Math.round(value)}{u} / {Math.round(target)}{u}
         </Text>
       </View>
-      <ProgressBar
-        progress={target > 0 ? Math.min(value / target, 1) : 0}
+      <Progress
+        value={target > 0 ? Math.min(value / target, 1) * 100 : 0}
         color={color}
         style={styles.bar}
       />
