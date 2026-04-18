@@ -249,7 +249,7 @@ describe("Health Connect lib module", () => {
 describe("Health Connect DB schema", () => {
   it("helpers.ts includes health_connect_sync_log table migration", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("lib/db/helpers.ts", "utf8");
+    const source = fs.readFileSync("lib/db/migrations.ts", "utf8");
     expect(source).toContain("health_connect_sync_log");
     expect(source).toContain("health_connect_record_id");
     expect(source).toContain("idx_hc_sync_log_status");

@@ -13,7 +13,7 @@ const stravaDbSrc = fs.readFileSync(
 );
 
 const helpersSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../lib/db/helpers.ts"),
+  path.resolve(__dirname, "../../lib/db/migrations.ts"),
   "utf-8"
 );
 
