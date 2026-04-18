@@ -236,3 +236,18 @@ export {
   markAllHCPendingAsFailed,
 } from "./health-connect";
 export type { HCSyncLog, HCSyncStatus } from "./health-connect";
+
+export {
+  createMealTemplate,
+  getMealTemplates,
+  getMealTemplateById,
+  updateMealTemplate,
+  deleteMealTemplate,
+  logFromTemplate,
+  undoLogFromTemplate,
+} from "./meal-templates";
+export type {
+  CreateMealTemplateInput,
+  UpdateMealTemplateInput,
+  LogFromTemplateResult,
+} from "./meal-templates";

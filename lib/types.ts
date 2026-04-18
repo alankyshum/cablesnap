@@ -311,6 +311,31 @@ export type MacroTargets = {
   updated_at: number;
 };
 
+// --------------- Meal Templates ---------------
+
+export type MealTemplate = {
+  id: string;
+  name: string;
+  meal: Meal;
+  cached_calories: number;
+  cached_protein: number;
+  cached_carbs: number;
+  cached_fat: number;
+  last_used_at: number | null;
+  created_at: number;
+  updated_at: number;
+  items?: MealTemplateItem[];
+};
+
+export type MealTemplateItem = {
+  id: string;
+  template_id: string;
+  food_entry_id: string;
+  servings: number;
+  sort_order: number;
+  food?: FoodEntry;
+};
+
 // --------------- Body Tracking ---------------
 
 export type BodyWeight = {
