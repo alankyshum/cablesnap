@@ -18,7 +18,6 @@ const auditedFiles = [
   { rel: "app/session/summary/[id].tsx", label: "session summary" },
   { rel: "app/template/[id].tsx", label: "template detail" },
   { rel: "app/template/create.tsx", label: "create template" },
-  { rel: "app/template/pick-exercise.tsx", label: "pick exercise" },
   { rel: "app/history.tsx", label: "history" },
 ];
 

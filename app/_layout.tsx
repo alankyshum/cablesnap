@@ -190,17 +190,6 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="template/pick-exercise"
-              options={{
-                headerShown: true,
-                title: "Pick Exercise",
-                presentation: "modal",
-                animation: "slide_from_bottom",
-                headerStyle,
-                headerTintColor,
-              }}
-            />
-            <Stack.Screen
               name="program/[id]"
               options={{
                 headerShown: true,
