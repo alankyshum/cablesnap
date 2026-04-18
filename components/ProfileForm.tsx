@@ -48,7 +48,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
   const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [heightUnit, setHeightUnit] = useState<"cm" | "in">("cm");
   const [saving, setSaving] = useState(false);
-  const [activityExpanded, setActivityExpanded] = useState(false);
+  const [activityMenuVisible, setActivityMenuVisible] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -253,26 +253,27 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       >
         Activity Level
       </Text>
+      {/* Activity level Menu dropdown */}
       <Pressable
-        onPress={() => setActivityExpanded(!activityExpanded)}
+        onPress={() => setActivityMenuVisible(!activityMenuVisible)}
         style={[styles.dropdown, { borderColor: colors.outline, backgroundColor: colors.surface }]}
         accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[activityLevel]}`}
         accessibilityRole="button"
-        accessibilityState={{ expanded: activityExpanded }}
+        accessibilityState={{ expanded: activityMenuVisible }}
       >
         <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
           {ACTIVITY_LABELS[activityLevel]}
         </Text>
-        <Text style={{ color: colors.onSurfaceVariant }}>{activityExpanded ? "▲" : "▼"}</Text>
+        <Text style={{ color: colors.onSurfaceVariant }}>{activityMenuVisible ? "▲" : "▼"}</Text>
       </Pressable>
-      {activityExpanded && (
+      {activityMenuVisible && (
         <View style={[styles.dropdownList, { borderColor: colors.outline, backgroundColor: colors.surface }]}>
           {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((key) => (
             <Pressable
               key={key}
               onPress={() => {
                 setActivityLevel(key);
-                setActivityExpanded(false);
+                setActivityMenuVisible(false);
               }}
               style={[
                 styles.dropdownItem,
