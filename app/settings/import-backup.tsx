@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { Button, Card, DataTable, Snackbar, Text, useTheme } from "react-native-paper";
+import { Button, Card, DataTable, Snackbar, Text } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import {
@@ -10,9 +10,10 @@ import {
   IMPORT_TABLE_ORDER,
 } from "../../lib/db";
 import type { BackupTableName, ImportProgress } from "../../lib/db";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function ImportBackup() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const layout = useLayout();
   const { backupJson } = useLocalSearchParams<{ backupJson: string }>();
@@ -75,8 +76,8 @@ export default function ImportBackup() {
 
   if (!backupJson) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, padding: 24 }]}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
+        <Text variant="bodyLarge" style={{ color: colors.onBackground }}>
           No backup data provided.
         </Text>
         <Button
@@ -95,8 +96,8 @@ export default function ImportBackup() {
 
   if (!parsed) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, padding: 24 }]}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.error }}>
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
+        <Text variant="bodyLarge" style={{ color: colors.error }}>
           Invalid backup data.
         </Text>
         <Button
@@ -136,7 +137,7 @@ export default function ImportBackup() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {!result ? (
         <FlatList
           data={tablesToShow}
@@ -144,28 +145,28 @@ export default function ImportBackup() {
           contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
           ListHeaderComponent={
             <>
-              <Text variant="headlineSmall" style={{ color: theme.colors.onBackground, marginBottom: 16 }}>
+              <Text variant="headlineSmall" style={{ color: colors.onBackground, marginBottom: 16 }}>
                 Import Preview
               </Text>
 
               {(exportedAt || appVersion) && (
-                <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+                <Card style={[styles.card, { backgroundColor: colors.surface }]}>
                   <Card.Content>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                    <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                       {exportedAt && `Exported: ${new Date(exportedAt).toLocaleDateString()}`}
                       {exportedAt && appVersion && " · "}
                       {appVersion && `App version: ${appVersion}`}
                     </Text>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                    <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                       Format version: {version} · Total records: {totalRecords}
                     </Text>
                   </Card.Content>
                 </Card>
               )}
 
-              <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.card, { backgroundColor: colors.surface }]}>
                 <Card.Content>
-                  <Text variant="titleSmall" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+                  <Text variant="titleSmall" style={{ color: colors.onSurface, marginBottom: 8 }}>
                     Records to Import
                   </Text>
                   <DataTable>
@@ -191,19 +192,19 @@ export default function ImportBackup() {
           ListFooterComponent={
             <>
               {missingTables.length > 0 && (
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                   {missingTables.length} table{missingTables.length !== 1 ? "s" : ""} not present in this v{version} backup (this is normal for older backups).
                 </Text>
               )}
 
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
                 Existing records with the same ID will be skipped — your current data will not be overwritten.
               </Text>
 
               {importProgress && (
                 <Text
                   variant="bodySmall"
-                  style={{ color: theme.colors.primary, marginBottom: 8 }}
+                  style={{ color: colors.primary, marginBottom: 8 }}
                   accessibilityLiveRegion="polite"
                   accessibilityLabel={importProgress}
                 >
@@ -246,17 +247,17 @@ export default function ImportBackup() {
           contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
           ListHeaderComponent={
             <>
-              <Text variant="headlineSmall" style={{ color: theme.colors.onBackground, marginBottom: 16 }}>
+              <Text variant="headlineSmall" style={{ color: colors.onBackground, marginBottom: 16 }}>
                 Import Complete
               </Text>
 
-              <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.card, { backgroundColor: colors.surface }]}>
                 <Card.Content>
-                  <Text variant="titleMedium" style={{ color: theme.colors.primary, marginBottom: 8 }}>
+                  <Text variant="titleMedium" style={{ color: colors.primary, marginBottom: 8 }}>
                     {result.inserted} records imported
                   </Text>
                   {result.skipped > 0 && (
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}>
+                    <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
                       {result.skipped} records skipped (already existed)
                     </Text>
                   )}

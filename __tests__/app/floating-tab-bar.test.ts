@@ -40,15 +40,14 @@ describe("FloatingTabBar component (BLD-212)", () => {
     expect(floatingTabBarSrc).toContain("shadowOffset");
   });
 
-  it("uses theme.colors.shadow instead of hardcoded #000 for shadowColor", () => {
-    expect(floatingTabBarSrc).toContain("theme.colors.shadow");
+  it("uses theme-aware colors instead of hardcoded #000 for shadowColor", () => {
+    expect(floatingTabBarSrc).toContain("colors.");
     expect(floatingTabBarSrc).not.toContain('shadowColor: "#000"');
     expect(floatingTabBarSrc).not.toContain("shadowColor: '#000'");
   });
 
-  it("CenterButton uses useTheme for theme-aware styling", () => {
-    // useTheme must appear at least twice: once in CenterButton, once in FloatingTabBar
-    const themeUsages = (floatingTabBarSrc.match(/const theme = useTheme\(\)/g) || []);
+  it("CenterButton uses useThemeColors for theme-aware styling", () => {
+    const themeUsages = (floatingTabBarSrc.match(/const colors = useThemeColors\(\)/g) || []);
     expect(themeUsages.length).toBeGreaterThanOrEqual(2);
   });
 

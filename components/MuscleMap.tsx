@@ -1,11 +1,13 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import Body, { type Slug, type ExtendedBodyPart } from "react-native-body-highlighter";
 import type { MuscleGroup } from "../lib/types";
 import { MUSCLE_LABELS } from "../lib/types";
 import { muscle } from "../constants/theme";
 import { radii } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 type Props = {
   primary: MuscleGroup[];
@@ -54,8 +56,7 @@ function buildData(
 }
 
 function MuscleMapInner({ primary, secondary, width: w, gender = "male" }: Props) {
-  const theme = useTheme();
-  const isDark = theme.dark;
+  const isDark = useColorScheme() === "dark";
   const c = isDark ? muscle.dark : muscle.light;
   const total = w ?? 280;
   const scale = Math.min((total - 8) / 400, 1.2);
@@ -118,7 +119,7 @@ function Legend({
   secondary: MuscleGroup[];
   isDark: boolean;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const c = isDark ? muscle.dark : muscle.light;
   const names = (list: MuscleGroup[]) =>
     list.filter((m) => m !== "full_body").map((m) => MUSCLE_LABELS[m]).join(", ");
@@ -127,7 +128,7 @@ function Legend({
     return (
       <Text
         variant="bodySmall"
-        style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 8 }}
+        style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 8 }}
       >
         No muscle data
       </Text>
@@ -140,7 +141,7 @@ function Legend({
     <View style={styles.legend}>
       <View style={styles.row}>
         <View style={[styles.dot, { backgroundColor: c.primary }]} />
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurface }}>
+        <Text variant="bodySmall" style={{ color: colors.onSurface }}>
           <Text style={{ fontWeight: "700" }}>Primary: </Text>
           {label}
         </Text>
@@ -148,7 +149,7 @@ function Legend({
       {secondary.length > 0 && (
         <View style={styles.row}>
           <View style={[styles.dot, { backgroundColor: c.secondary }]} />
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurface }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurface }}>
             <Text style={{ fontWeight: "700" }}>Secondary: </Text>
             {names(secondary)}
           </Text>

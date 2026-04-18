@@ -1,15 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LayoutAnimation, SectionList, StyleSheet, View } from "react-native";
-import {
-  Card,
-  FAB,
-  IconButton,
-  MD3Theme,
-  ProgressBar,
-  Snackbar,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Card, FAB, IconButton, ProgressBar, Snackbar, Text } from "react-native-paper";
 import { router, useFocusEffect } from "expo-router";
 import InlineFoodSearch from "../../components/InlineFoodSearch";
 import {
@@ -27,6 +18,7 @@ import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { todayKey, formatDateKey } from "../../lib/format";
 import SwipeToDelete from "../../components/SwipeToDelete";
 import { radii } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const DAY_MS = 86_400_000;
 
@@ -40,7 +32,7 @@ function label(d: Date): string {
 }
 
 export default function Nutrition() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
   const [date, setDate] = useState(new Date());
@@ -110,19 +102,19 @@ export default function Nutrition() {
       contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
       stickySectionHeadersEnabled={false}
       renderSectionHeader={({ section }) => (
-        <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+        <Text variant="titleSmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
           {section.title}
         </Text>
       )}
       renderItem={({ item }) => (
         <SwipeToDelete onDelete={() => remove(item)}>
-          <Card style={[styles.foodCard, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.foodCard, { backgroundColor: colors.surface }]}>
             <Card.Content style={styles.foodRow}>
               <View style={{ flex: 1 }}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                   {item.food?.name ?? "Unknown"}
                 </Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                   {Math.round((item.food?.calories ?? 0) * item.servings)} cal
                   {item.servings !== 1 ? ` · ${item.servings}×` : ""}
                   {" · "}
@@ -143,22 +135,22 @@ export default function Nutrition() {
         <>
           <View style={styles.header}>
             <IconButton icon="chevron-left" onPress={prev} accessibilityLabel="Previous day" />
-            <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+            <Text variant="titleMedium" style={{ color: colors.onBackground }}>
               {label(date)}
             </Text>
             <IconButton icon="chevron-right" onPress={next} accessibilityLabel="Next day" />
           </View>
 
           {targets && (
-            <Card style={[styles.card, { backgroundColor: theme.colors.surface, marginHorizontal: 16 }]}>
+            <Card style={[styles.card, { backgroundColor: colors.surface, marginHorizontal: 16 }]}>
               <Card.Content>
-                <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={theme.colors.primary} theme={theme} />
-                <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" theme={theme} />
-                <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" theme={theme} />
-                <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" theme={theme} />
+                <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={colors.primary} colors={colors} />
+                <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" colors={colors} />
+                <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" colors={colors} />
+                <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" colors={colors} />
                 <Text
                   variant="labelSmall"
-                  style={{ color: theme.colors.primary, marginTop: 8 }}
+                  style={{ color: colors.primary, marginTop: 8 }}
                   onPress={() => router.push("/nutrition/targets")}
                   accessibilityLabel="Edit macro targets"
                   accessibilityRole="link"
@@ -172,7 +164,7 @@ export default function Nutrition() {
       }
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
+          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
             No food logged yet.{"\n"}Tap + to add your first meal.
           </Text>
         </View>
@@ -208,10 +200,10 @@ export default function Nutrition() {
 
   if (layout.atLeastMedium) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <View style={styles.wideRow}>
           <View style={styles.wideLog}>{logContent}</View>
-          <View style={[styles.wideAdd, { borderLeftColor: theme.colors.outlineVariant }]}>
+          <View style={[styles.wideAdd, { borderLeftColor: colors.outlineVariant }]}>
             <InlineFoodSearch
               dateKey={formatDateKey(date.getTime())}
               onFoodLogged={handleFoodLogged}
@@ -232,7 +224,7 @@ export default function Nutrition() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {logContent}
 
       {showAddCard && (
@@ -247,8 +239,8 @@ export default function Nutrition() {
 
       <FAB
         icon={showAddCard ? "close" : "plus"}
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        color={theme.colors.onPrimary}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        color={colors.onPrimary}
         onPress={toggleAddCard}
         accessibilityLabel={showAddCard ? "Close add food" : "Add food"}
       />
@@ -271,23 +263,23 @@ function MacroRow({
   target,
   color,
   unit,
-  theme,
+  colors,
 }: {
   label: string;
   value: number;
   target: number;
   color: string;
   unit?: string;
-  theme: MD3Theme;
+  colors: { onSurface: string; onSurfaceVariant: string };
 }) {
   const u = unit ?? "";
   return (
     <View style={styles.macro}>
       <View style={styles.macroHeader}>
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurface }}>
+        <Text variant="bodySmall" style={{ color: colors.onSurface }}>
           {name}
         </Text>
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
           {Math.round(value)}{u} / {Math.round(target)}{u}
         </Text>
       </View>

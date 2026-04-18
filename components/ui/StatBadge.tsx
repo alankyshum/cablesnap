@@ -1,9 +1,10 @@
 import React from "react";
 import { View, ViewStyle, StyleProp } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import Animated from "react-native-reanimated";
 import { usePulse, useEntrance } from "../../lib/animations/hooks";
 import { spacing, radii } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface StatBadgeProps {
   label: string;
@@ -20,7 +21,7 @@ export function StatBadge({
   delay = 0,
   style,
 }: StatBadgeProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const { animatedStyle: pulseStyle, start } = usePulse();
   const entranceStyle = useEntrance(delay);
 
@@ -36,7 +37,7 @@ export function StatBadge({
           {
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: theme.colors.tertiaryContainer,
+            backgroundColor: colors.tertiaryContainer,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.xs,
             borderRadius: radii.pill,
@@ -48,7 +49,7 @@ export function StatBadge({
         {icon && (
           <Text
             variant="labelSmall"
-            style={{ color: theme.colors.onTertiaryContainer }}
+            style={{ color: colors.onTertiaryContainer }}
           >
             {icon}
           </Text>
@@ -56,7 +57,7 @@ export function StatBadge({
         <Text
           variant="labelMedium"
           style={{
-            color: theme.colors.onTertiaryContainer,
+            color: colors.onTertiaryContainer,
             fontWeight: "700",
           }}
         >

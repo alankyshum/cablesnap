@@ -6,15 +6,7 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  Card,
-  Chip,
-  IconButton,
-  Text,
-  TouchableRipple,
-  useTheme,
-} from "react-native-paper";
+import { Button, Card, Chip, IconButton, Text, TouchableRipple } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
@@ -38,9 +30,10 @@ import { scheduleReminders } from "../../lib/notifications";
 import { DAYS } from "../../lib/format";
 import type { Program, ProgramDay, WorkoutTemplate } from "../../lib/types";
 import type { ScheduleEntry } from "../../lib/db/settings";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function ProgramDetail() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   
@@ -151,8 +144,8 @@ export default function ProgramDetail() {
     return (
       <>
         <Stack.Screen options={{ title: "Program" }} />
-        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>Loading...</Text>
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
+          <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
         </View>
       </>
     );
@@ -221,7 +214,7 @@ export default function ProgramDetail() {
     <>
       <Stack.Screen options={{ title: program.name }} />
       <FlashList
-        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         data={days}
         keyExtractor={(item) => item.id}
@@ -241,20 +234,20 @@ export default function ProgramDetail() {
             {program.description ? (
               <Text
                 variant="bodyMedium"
-                style={[styles.desc, { color: theme.colors.onSurfaceVariant }]}
+                style={[styles.desc, { color: colors.onSurfaceVariant }]}
               >
                 {program.description}
               </Text>
             ) : null}
 
             <View style={styles.meta}>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onBackground }}>
+              <Text variant="bodyMedium" style={{ color: colors.onBackground }}>
                 {days.length} day{days.length !== 1 ? "s" : ""} · {cycle} cycle{cycle !== 1 ? "s" : ""} completed
               </Text>
               {program.is_active && currentIdx >= 0 && (
                 <Text
                   variant="bodyMedium"
-                  style={{ color: theme.colors.primary, fontWeight: "600" }}
+                  style={{ color: colors.primary, fontWeight: "600" }}
                   accessibilityLabel={`Currently on day ${currentIdx + 1} of ${days.length}: ${dayName(days[currentIdx])}`}
                 >
                   Current: Day {currentIdx + 1} — {dayName(days[currentIdx])}
@@ -315,7 +308,7 @@ export default function ProgramDetail() {
             )}
 
             <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+              <Text variant="titleMedium" style={{ color: colors.onBackground }}>
                 Workout Days ({days.length})
               </Text>
               {!starter && (
@@ -336,9 +329,9 @@ export default function ProgramDetail() {
           <Card
             style={[
               styles.card,
-              { backgroundColor: theme.colors.surface },
+              { backgroundColor: colors.surface },
               item.id === program.current_day_id && {
-                borderColor: theme.colors.primary,
+                borderColor: colors.primary,
                 borderWidth: 2,
               },
             ]}
@@ -346,16 +339,16 @@ export default function ProgramDetail() {
           >
             <Card.Content style={styles.cardContent}>
               <View style={styles.cardInfo}>
-                <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+                <Text variant="titleSmall" style={{ color: colors.onSurface }}>
                   Day {index + 1}: {dayName(item)}
                 </Text>
                 {item.template_id === null && (
-                  <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+                  <Text variant="bodySmall" style={{ color: colors.error }}>
                     Deleted Template
                   </Text>
                 )}
                 {item.label && item.template_name && item.label !== item.template_name && (
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                     {item.template_name}
                   </Text>
                 )}
@@ -393,7 +386,7 @@ export default function ProgramDetail() {
           <View style={styles.empty}>
             <Text
               variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant }}
+              style={{ color: colors.onSurfaceVariant }}
               accessibilityRole="text"
               accessibilityLabel="No workout days added yet"
             >
@@ -406,14 +399,14 @@ export default function ProgramDetail() {
             {/* Weekly Schedule */}
             <View style={styles.scheduleSection}>
               <View style={styles.sectionHeader}>
-                <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+                <Text variant="titleMedium" style={{ color: colors.onBackground }}>
                   Weekly Schedule
                 </Text>
                 {schedule.length > 0 && !starter && (
                   <Button
                     mode="text"
                     compact
-                    textColor={theme.colors.error}
+                    textColor={colors.error}
                     onPress={confirmClearSchedule}
                     accessibilityLabel="Clear weekly schedule"
                   >
@@ -423,7 +416,7 @@ export default function ProgramDetail() {
               </View>
 
               {templates.length === 0 ? (
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                   Create a template first to set a schedule.
                 </Text>
               ) : (
@@ -437,22 +430,22 @@ export default function ProgramDetail() {
                         disabled={starter}
                         style={[
                           styles.daySlot,
-                          { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant },
+                          { backgroundColor: colors.surface, borderColor: colors.outlineVariant },
                         ]}
                         accessibilityRole="button"
                         accessibilityLabel={`${label}: ${e ? e.template_name : "Rest day"}`}
                       >
                         <View style={styles.dayRow}>
-                          <Text variant="titleSmall" style={[styles.dayLabel, { color: theme.colors.onSurface }]}>
+                          <Text variant="titleSmall" style={[styles.dayLabel, { color: colors.onSurface }]}>
                             {label}
                           </Text>
                           <View style={styles.dayInfo}>
                             {e ? (
-                              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }} numberOfLines={1}>
+                              <Text variant="bodyMedium" style={{ color: colors.onSurface }} numberOfLines={1}>
                                 {e.template_name}
                               </Text>
                             ) : (
-                              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                              <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
                                 Rest
                               </Text>
                             )}
@@ -461,7 +454,7 @@ export default function ProgramDetail() {
                             <MaterialCommunityIcons
                               name="chevron-right"
                               size={20}
-                              color={theme.colors.onSurfaceVariant}
+                              color={colors.onSurfaceVariant}
                             />
                           )}
                         </View>
@@ -481,9 +474,9 @@ export default function ProgramDetail() {
               accessibilityViewIsModal
             >
               <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
-                <Card style={[styles.picker, { backgroundColor: theme.colors.surface }]}>
+                <Card style={[styles.picker, { backgroundColor: colors.surface }]}>
                   <Card.Content>
-                    <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+                    <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
                       {picker !== null ? DAYS[picker] : ""} — Pick Template
                     </Text>
 
@@ -500,11 +493,11 @@ export default function ProgramDetail() {
                           return (
                             <TouchableRipple
                               onPress={() => assignDay(picker!, null)}
-                              style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                              style={[styles.pickItem, { borderBottomColor: colors.outlineVariant }]}
                               accessibilityRole="button"
                               accessibilityLabel="Remove template, set as rest day"
                             >
-                              <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
+                              <Text variant="bodyMedium" style={{ color: colors.error }}>
                                 Remove (Rest Day)
                               </Text>
                             </TouchableRipple>
@@ -513,7 +506,7 @@ export default function ProgramDetail() {
                         return (
                           <TouchableRipple
                             onPress={() => picker !== null && assignDay(picker, item)}
-                            style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                            style={[styles.pickItem, { borderBottomColor: colors.outlineVariant }]}
                             accessibilityRole="button"
                             accessibilityLabel={`Select template: ${item.name}`}
                           >
@@ -521,8 +514,8 @@ export default function ProgramDetail() {
                               variant="bodyMedium"
                               style={{
                                 color: picker !== null && schedEntry(picker)?.template_id === item.id
-                                  ? theme.colors.primary
-                                  : theme.colors.onSurface,
+                                  ? colors.primary
+                                  : colors.onSurface,
                               }}
                               numberOfLines={1}
                             >
@@ -548,22 +541,22 @@ export default function ProgramDetail() {
 
             {history.length > 0 && (
             <View style={styles.history}>
-              <Text variant="titleMedium" style={[styles.historyTitle, { color: theme.colors.onBackground }]}>
+              <Text variant="titleMedium" style={[styles.historyTitle, { color: colors.onBackground }]}>
                 History
               </Text>
               {history.map((h) => (
                 <Card
                   key={h.session_id}
-                  style={[styles.historyCard, { backgroundColor: theme.colors.surface }]}
+                  style={[styles.historyCard, { backgroundColor: colors.surface }]}
                   onPress={() => router.push(`/session/detail/${h.session_id}`)}
                   accessibilityLabel={`Completed ${h.day_label || h.template_name || "workout"} on ${dateStr(h.completed_at)}`}
                   accessibilityRole="button"
                 >
                   <Card.Content style={styles.historyRow}>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, flex: 1 }}>
+                    <Text variant="bodyMedium" style={{ color: colors.onSurface, flex: 1 }}>
                       {h.day_label || h.template_name || "Workout"}
                     </Text>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                       {dateStr(h.completed_at)}
                     </Text>
                   </Card.Content>

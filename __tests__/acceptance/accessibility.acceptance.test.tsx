@@ -82,7 +82,7 @@ jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
 jest.mock('../../components/MuscleMap', () => ({ MuscleMap: 'MuscleMap' }))
 jest.mock('../../components/WeightPicker', () => 'WeightPicker')
 jest.mock('../../components/ExercisePickerSheet', () => 'ExercisePickerSheet')
-jest.mock('../../components/SnackbarProvider', () => ({ useSnackbar: () => ({ showSnack: jest.fn() }) }))
+jest.mock('../../components/ui/bna-toast', () => ({ ToastProvider: ({ children }: { children: unknown }) => children, useToast: () => ({ toast: jest.fn(), success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }) }))
 jest.mock('../../lib/query', () => ({ useFocusRefetch: jest.fn() }))
 
 jest.mock('../../components/ui/FlowContainer', () => {

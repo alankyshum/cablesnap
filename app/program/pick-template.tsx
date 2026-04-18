@@ -4,22 +4,18 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Searchbar,
-  Text,
-  TouchableRipple,
-  useTheme,
-} from "react-native-paper";
+import { Searchbar, Text, TouchableRipple } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { getTemplates } from "../../lib/db";
 import { addProgramDay, getProgramDayCount } from "../../lib/programs";
 import type { WorkoutTemplate } from "../../lib/types";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const ITEM_HEIGHT = 64;
 
 export default function PickTemplate() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const { programId } = useLocalSearchParams<{ programId: string }>();
@@ -59,8 +55,8 @@ export default function PickTemplate() {
         style={[
           styles.item,
           {
-            backgroundColor: theme.colors.surface,
-            borderBottomColor: theme.colors.outlineVariant,
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.outlineVariant,
           },
         ]}
         accessibilityLabel={`Select template: ${item.name}`}
@@ -70,33 +66,33 @@ export default function PickTemplate() {
           <Text
             variant="titleSmall"
             numberOfLines={1}
-            style={{ color: theme.colors.onSurface }}
+            style={{ color: colors.onSurface }}
           >
             {item.name}
           </Text>
           <Text
             variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant }}
+            style={{ color: colors.onSurfaceVariant }}
           >
             Created {new Date(item.created_at).toLocaleDateString()}
           </Text>
         </View>
       </TouchableRipple>
     ),
-    [theme, pick]
+    [colors, pick]
   );
 
   return (
     <>
       <Stack.Screen options={{ title: "Pick Template" }} />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
+        style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <Searchbar
           placeholder="Search templates..."
           value={query}
           onChangeText={setQuery}
-          style={[styles.search, { backgroundColor: theme.colors.surface }]}
+          style={[styles.search, { backgroundColor: colors.surface }]}
           accessibilityLabel="Search templates"
         />
         <FlashList
@@ -108,7 +104,7 @@ export default function PickTemplate() {
               <View style={styles.empty}>
                 <Text
                   variant="titleMedium"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   {templates.length === 0
                     ? "No templates yet. Create one first."

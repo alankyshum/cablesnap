@@ -16,15 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Card,
-  Chip,
-  Icon,
-  IconButton,
-  Searchbar,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Card, Chip, Icon, IconButton, Searchbar, Text } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   getAllCompletedSessionWeeks,
@@ -49,6 +41,7 @@ import {
   withOpacity,
 } from "../lib/format";
 import { duration as animDuration, radii, spacing } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type SessionRow = WorkoutSession & { set_count: number };
 
@@ -71,7 +64,7 @@ const SWIPE_THRESHOLD = 20;
 const MIN_TOUCH_TARGET = 48;
 
 function HistoryScreen() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const layout = useLayout();
   const reducedMotion = useReducedMotion();
@@ -332,11 +325,11 @@ function HistoryScreen() {
 
     let cellBg = "transparent";
     if (isSel) {
-      cellBg = theme.colors.primary;
+      cellBg = colors.primary;
     } else if (count > 0) {
-      cellBg = withOpacity(theme.colors.primaryContainer, 0.4);
+      cellBg = withOpacity(colors.primaryContainer, 0.4);
     } else if (isScheduled) {
-      cellBg = withOpacity(theme.colors.primaryContainer, 0.2);
+      cellBg = withOpacity(colors.primaryContainer, 0.2);
     }
 
     const label =
@@ -362,7 +355,7 @@ function HistoryScreen() {
             height: cellSize,
             borderRadius: cellSize / 2,
             borderWidth: isToday ? 2 : 0,
-            borderColor: isToday ? theme.colors.primary : "transparent",
+            borderColor: isToday ? colors.primary : "transparent",
             backgroundColor: cellBg,
           },
         ]}
@@ -371,8 +364,8 @@ function HistoryScreen() {
           variant="bodySmall"
           style={{
             color: isSel
-              ? theme.colors.onPrimary
-              : theme.colors.onBackground,
+              ? colors.onPrimary
+              : colors.onBackground,
             fontSize: 14 * layout.scale,
           }}
         >
@@ -386,8 +379,8 @@ function HistoryScreen() {
                   styles.countBadge,
                   {
                     backgroundColor: isSel
-                      ? theme.colors.onPrimary
-                      : theme.colors.primary,
+                      ? colors.onPrimary
+                      : colors.primary,
                   },
                 ]}
               >
@@ -396,8 +389,8 @@ function HistoryScreen() {
                     styles.countBadgeText,
                     {
                       color: isSel
-                        ? theme.colors.primary
-                        : theme.colors.onPrimary,
+                        ? colors.primary
+                        : colors.onPrimary,
                     },
                   ]}
                 >
@@ -411,8 +404,8 @@ function HistoryScreen() {
                     styles.dot,
                     {
                       backgroundColor: isSel
-                        ? theme.colors.onPrimary
-                        : theme.colors.primary,
+                        ? colors.onPrimary
+                        : colors.primary,
                     },
                   ]}
                 />
@@ -422,8 +415,8 @@ function HistoryScreen() {
                       styles.dot,
                       {
                         backgroundColor: isSel
-                          ? theme.colors.onPrimary
-                          : theme.colors.primary,
+                          ? colors.onPrimary
+                          : colors.primary,
                       },
                     ]}
                   />
@@ -481,14 +474,14 @@ function HistoryScreen() {
     return (
       <View
         ref={dayDetailRef}
-        style={[styles.dayDetailPanel, { backgroundColor: theme.colors.surfaceVariant }]}
+        style={[styles.dayDetailPanel, { backgroundColor: colors.surfaceVariant }]}
         accessibilityLiveRegion="polite"
         accessibilityRole="summary"
         accessible
       >
         <Text
           variant="titleSmall"
-          style={{ color: theme.colors.onSurface, marginBottom: spacing.xs }}
+          style={{ color: colors.onSurface, marginBottom: spacing.xs }}
         >
           {dayLabel}
         </Text>
@@ -499,7 +492,7 @@ function HistoryScreen() {
               onPress={() => router.push(`/session/detail/${s.id}`)}
               style={[
                 styles.dayDetailItem,
-                { backgroundColor: theme.colors.surface },
+                { backgroundColor: colors.surface },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`${s.name || "Untitled workout"}, ${formatDuration(s.duration_seconds)}, ${s.set_count} sets`}
@@ -508,13 +501,13 @@ function HistoryScreen() {
                 <Text
                   variant="bodyMedium"
                   numberOfLines={1}
-                  style={{ color: theme.colors.onSurface }}
+                  style={{ color: colors.onSurface }}
                 >
                   {s.name || "Untitled workout"}
                 </Text>
                 <Text
                   variant="bodySmall"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   {formatDuration(s.duration_seconds)} · {s.set_count} sets
                 </Text>
@@ -522,15 +515,15 @@ function HistoryScreen() {
               {s.rating != null && s.rating > 0 && (
                 <RatingWidget value={s.rating} readOnly size="small" />
               )}
-              <Icon source="chevron-right" size={20} color={theme.colors.onSurfaceVariant} />
+              <Icon source="chevron-right" size={20} color={colors.onSurfaceVariant} />
             </Pressable>
           ))
         ) : isSelectedDayFuture && selectedDayScheduleEntry ? (
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
             Scheduled: {selectedDayScheduleEntry.template_name}
           </Text>
         ) : (
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
             Rest day
           </Text>
         )}
@@ -547,14 +540,14 @@ function HistoryScreen() {
     return (
       <Animated.View entering={FadeIn.duration(200)}>
         <Card
-          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          style={[styles.card, { backgroundColor: colors.surface }]}
           onPress={() => router.push(`/session/detail/${item.id}`)}
           accessibilityLabel={`${item.name || "Untitled workout"}, ${date}, ${formatDuration(item.duration_seconds)}, ${item.set_count} sets${item.rating ? `, rated ${item.rating} out of 5` : ""}`}
           accessibilityRole="button"
         >
           <Card.Content>
             <View style={styles.cardHeader}>
-              <Text variant="titleSmall" style={{ color: theme.colors.onSurface, flex: 1, minWidth: 0 }} numberOfLines={1}>
+              <Text variant="titleSmall" style={{ color: colors.onSurface, flex: 1, minWidth: 0 }} numberOfLines={1}>
                 {item.name || "Untitled workout"}
               </Text>
               {item.rating != null && item.rating > 0 && (
@@ -563,7 +556,7 @@ function HistoryScreen() {
             </View>
             <Text
               variant="bodySmall"
-              style={{ color: theme.colors.onSurfaceVariant }}
+              style={{ color: colors.onSurfaceVariant }}
             >
               {date} · {formatDuration(item.duration_seconds)} · {item.set_count} sets
             </Text>
@@ -571,7 +564,7 @@ function HistoryScreen() {
         </Card>
       </Animated.View>
     );
-  }, [theme, router]);
+  }, [colors, router]);
 
   const emptyMessage = () => {
     if (query.trim()) return `No workouts matching "${query}"`;
@@ -585,27 +578,27 @@ function HistoryScreen() {
       data={filtered}
       keyExtractor={(item) => item.id}
       renderItem={renderSession}
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 40 }}
       ListHeaderComponent={
         <>
           {/* Streak Summary Bar */}
-          <Card style={[styles.streakCard, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.streakCard, { backgroundColor: colors.surface }]}>
             <Card.Content style={styles.streakRow}>
               <View style={styles.streakItem} accessibilityLabel={`Current streak: ${currentStreak} weeks`}>
-                <Icon source="whatshot" size={20} color={theme.colors.primary} />
-                <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>{currentStreak}</Text>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>weeks</Text>
+                <Icon source="whatshot" size={20} color={colors.primary} />
+                <Text variant="titleMedium" style={{ color: colors.onSurface }}>{currentStreak}</Text>
+                <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>weeks</Text>
               </View>
               <View style={styles.streakItem} accessibilityLabel={`Longest streak: ${longestStreak} weeks`}>
-                <Icon source="emoji-events" size={20} color={theme.colors.primary} />
-                <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>{longestStreak}</Text>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>weeks</Text>
+                <Icon source="emoji-events" size={20} color={colors.primary} />
+                <Text variant="titleMedium" style={{ color: colors.onSurface }}>{longestStreak}</Text>
+                <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>weeks</Text>
               </View>
               <View style={styles.streakItem} accessibilityLabel={`Total workouts: ${totalWorkouts}`}>
-                <Icon source="fitness-center" size={20} color={theme.colors.primary} />
-                <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>{totalWorkouts}</Text>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>total</Text>
+                <Icon source="fitness-center" size={20} color={colors.primary} />
+                <Text variant="titleMedium" style={{ color: colors.onSurface }}>{totalWorkouts}</Text>
+                <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>total</Text>
               </View>
             </Card.Content>
           </Card>
@@ -619,23 +612,23 @@ function HistoryScreen() {
               accessibilityLabel={`Last 16 Weeks, ${heatmapExpanded ? "collapse" : "expand"}`}
               accessibilityState={{ expanded: heatmapExpanded }}
             >
-              <Text variant="titleSmall" style={{ color: theme.colors.onBackground }}>
+              <Text variant="titleSmall" style={{ color: colors.onBackground }}>
                 Last 16 Weeks
               </Text>
               <Icon
                 source={heatmapExpanded ? "chevron-up" : "chevron-down"}
                 size={20}
-                color={theme.colors.onSurfaceVariant}
+                color={colors.onSurfaceVariant}
               />
             </Pressable>
             {heatmapExpanded && (
               heatmapLoading ? (
                 <View style={styles.heatmapLoading}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 </View>
               ) : heatmapError ? (
                 <View style={styles.heatmapLoading}>
-                  <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+                  <Text variant="bodySmall" style={{ color: colors.error }}>
                     Unable to load heatmap data. Pull down to retry.
                   </Text>
                 </View>
@@ -654,7 +647,7 @@ function HistoryScreen() {
             placeholder="Search workouts"
             value={query}
             onChangeText={onSearch}
-            style={[styles.search, { backgroundColor: theme.colors.surface }]}
+            style={[styles.search, { backgroundColor: colors.surface }]}
             accessibilityLabel="Search workout history"
           />
 
@@ -667,7 +660,7 @@ function HistoryScreen() {
             />
             <Text
               variant="titleMedium"
-              style={{ color: theme.colors.onBackground }}
+              style={{ color: colors.onBackground }}
             >
               {monthLabel(year, month)}
             </Text>
@@ -683,7 +676,7 @@ function HistoryScreen() {
             variant="bodySmall"
             style={[
               styles.monthSummary,
-              { color: theme.colors.onSurfaceVariant },
+              { color: colors.onSurfaceVariant },
             ]}
             accessibilityLabel={
               monthSummary.count > 0
@@ -702,7 +695,7 @@ function HistoryScreen() {
               <View key={d} style={[styles.cell, { width: cellSize, height: 28 }]}>
                 <Text
                   variant="labelSmall"
-                  style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 * layout.scale }}
+                  style={{ color: colors.onSurfaceVariant, fontSize: 12 * layout.scale }}
                 >
                   {d}
                 </Text>
@@ -739,7 +732,7 @@ function HistoryScreen() {
         <View style={styles.empty}>
           <Text
             variant="bodyMedium"
-            style={{ color: theme.colors.onSurfaceVariant }}
+            style={{ color: colors.onSurfaceVariant }}
           >
             {emptyMessage()}
           </Text>

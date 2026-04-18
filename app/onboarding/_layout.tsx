@@ -1,12 +1,13 @@
 import { Stack, useRouter } from "expo-router";
 import { View, StyleSheet } from "react-native";
-import { Button, Text, useTheme } from "react-native-paper";
+import { Button, Text } from "react-native-paper";
 import React from "react";
 import { setAppSetting } from "../../lib/db";
 import { useCompleteOnboarding } from "../../lib/onboarding-context";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 function Fallback() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const completeOnboarding = useCompleteOnboarding();
   const [err, setErr] = React.useState<string | null>(null);
@@ -27,15 +28,15 @@ function Fallback() {
   }
 
   return (
-    <View style={[styles.fallback, { backgroundColor: theme.colors.background }]}>
-      <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
+    <View style={[styles.fallback, { backgroundColor: colors.background }]}>
+      <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
         Something went wrong
       </Text>
-      <Text variant="bodyMedium" style={[styles.sub, { color: theme.colors.onSurfaceVariant }]}>
+      <Text variant="bodyMedium" style={[styles.sub, { color: colors.onSurfaceVariant }]}>
         {"We couldn't load onboarding. You can skip straight to the app."}
       </Text>
       {err && (
-        <Text variant="bodySmall" style={[styles.sub, { color: theme.colors.error }]}>
+        <Text variant="bodySmall" style={[styles.sub, { color: colors.error }]}>
           {err}
         </Text>
       )}

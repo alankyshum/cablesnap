@@ -7,19 +7,14 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  Card,
-  IconButton,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Button, Card, IconButton, Text } from "react-native-paper";
 import { useFocusEffect } from "expo-router";
 import { CartesianChart, Line } from "victory-native";
 import { getMuscleVolumeForWeek, getMuscleVolumeTrend } from "../lib/db";
 import type { MuscleGroup } from "../lib/types";
 import { MUSCLE_LABELS } from "../lib/types";
 import { useLayout } from "../lib/layout";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type VolumeRow = { muscle: MuscleGroup; sets: number; exercises: number };
 type TrendRow = { week: string; sets: number };
@@ -92,7 +87,7 @@ const MuscleRow = React.memo(function MuscleRow({
 });
 
 export default function MuscleVolumeSegment() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<VolumeRow[]>([]);
@@ -169,8 +164,8 @@ export default function MuscleVolumeSegment() {
   if (loading) {
     return (
       <View style={styles.center} accessibilityRole="progressbar" accessibilityLabel="Loading muscle volume data">
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 12 }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 12 }}>
           Loading…
         </Text>
       </View>
@@ -180,7 +175,7 @@ export default function MuscleVolumeSegment() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.error, marginBottom: 12 }}>
+        <Text variant="bodyLarge" style={{ color: colors.error, marginBottom: 12 }}>
           {error}
         </Text>
         <Button mode="contained" onPress={load} accessibilityLabel="Retry loading muscle volume data">
@@ -209,10 +204,10 @@ export default function MuscleVolumeSegment() {
           accessibilityRole="header"
           accessibilityLiveRegion="polite"
         >
-          <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+          <Text variant="titleSmall" style={{ color: colors.onSurface }}>
             {offset === 0 ? "This Week" : formatRange(monday)}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {formatRange(monday)}
           </Text>
         </View>
@@ -243,11 +238,11 @@ export default function MuscleVolumeSegment() {
       )}
 
       {data.length === 0 ? (
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
             <Text
               variant="bodyLarge"
-              style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 32 }}
+              style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 32 }}
             >
               No workouts this week. Complete a session to see muscle volume.
             </Text>
@@ -257,9 +252,9 @@ export default function MuscleVolumeSegment() {
         <>
           {/* Volume Bars + Trend flow side by side on tablet */}
           <View style={layout.atLeastMedium ? styles.flowRow : undefined}>
-          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
             <Card.Content>
-              <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
                 Sets per Muscle Group
               </Text>
               <View style={styles.bars}>
@@ -267,18 +262,18 @@ export default function MuscleVolumeSegment() {
                 <View style={styles.landmarks}>
                   {mevPos < 95 && (
                     <View style={[styles.landmark, { left: `${mevPos}%` }]}>
-                      <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
                         MEV
                       </Text>
-                      <View style={[styles.dottedLine, { borderColor: theme.colors.outlineVariant }]} />
+                      <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
                     </View>
                   )}
                   {mrvPos < 95 && (
                     <View style={[styles.landmark, { left: `${mrvPos}%` }]}>
-                      <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
                         MRV
                       </Text>
-                      <View style={[styles.dottedLine, { borderColor: theme.colors.outlineVariant }]} />
+                      <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
                     </View>
                   )}
                 </View>
@@ -292,7 +287,7 @@ export default function MuscleVolumeSegment() {
                       onPress={() => selectMuscle(item.muscle)}
                       style={[
                         styles.barRow,
-                        active && { backgroundColor: theme.colors.primary + "18" },
+                        active && { backgroundColor: colors.primary + "18" },
                       ]}
                       accessibilityRole="button"
                       accessibilityLabel={`${MUSCLE_LABELS[item.muscle]}: ${item.sets} sets`}
@@ -301,7 +296,7 @@ export default function MuscleVolumeSegment() {
                     >
                       <Text
                         variant="bodySmall"
-                        style={[styles.barLabel, { color: theme.colors.onSurface }]}
+                        style={[styles.barLabel, { color: colors.onSurface }]}
                         numberOfLines={1}
                       >
                         {MUSCLE_LABELS[item.muscle]}
@@ -313,8 +308,8 @@ export default function MuscleVolumeSegment() {
                             {
                               width: `${pct}%`,
                               backgroundColor: active
-                                ? theme.colors.primary
-                                : theme.colors.primary + "99",
+                                ? colors.primary
+                                : colors.primary + "99",
                               borderRadius: 4,
                             },
                           ]}
@@ -322,7 +317,7 @@ export default function MuscleVolumeSegment() {
                       </View>
                       <Text
                         variant="labelMedium"
-                        style={{ color: theme.colors.onSurface, width: 28, textAlign: "right" }}
+                        style={{ color: colors.onSurface, width: 28, textAlign: "right" }}
                       >
                         {item.sets}
                       </Text>
@@ -333,9 +328,9 @@ export default function MuscleVolumeSegment() {
             </Card.Content>
           </Card>
 
-          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
             <Card.Content>
-              <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
+              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 4 }}>
                 {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : "Weekly Trend"}
               </Text>
               {hasEnoughTrend ? (
@@ -349,7 +344,7 @@ export default function MuscleVolumeSegment() {
                     {({ points }) => (
                       <Line
                         points={points.sets}
-                        color={theme.colors.primary}
+                        color={colors.primary}
                         strokeWidth={2}
                         curveType={reduced ? "linear" : "natural"}
                       />
@@ -360,7 +355,7 @@ export default function MuscleVolumeSegment() {
                 <Text
                   variant="bodyMedium"
                   style={{
-                    color: theme.colors.onSurfaceVariant,
+                    color: colors.onSurfaceVariant,
                     textAlign: "center",
                     padding: 24,
                   }}
@@ -374,9 +369,9 @@ export default function MuscleVolumeSegment() {
           </View>
 
           {/* Muscle Detail List */}
-          <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.card, { backgroundColor: colors.surface }]}>
             <Card.Content>
-              <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
                 Muscle Group Details
               </Text>
               <FlashList
@@ -388,9 +383,9 @@ export default function MuscleVolumeSegment() {
                     item={item}
                     selected={item.muscle === selected}
                     onPress={() => selectMuscle(item.muscle)}
-                    color={theme.colors.primary}
-                    text={theme.colors.onSurface}
-                    muted={theme.colors.outlineVariant}
+                    color={colors.primary}
+                    text={colors.onSurface}
+                    muted={colors.outlineVariant}
                   />
                 )}
               />

@@ -7,8 +7,8 @@ import Animated, {
   withTiming,
   useReducedMotion,
 } from "react-native-reanimated";
-import { useTheme } from "react-native-paper";
 import { duration, radii } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface SkeletonLoaderProps {
   width: number | string;
@@ -23,7 +23,7 @@ export function SkeletonLoader({
   borderRadius = radii.md,
   style,
 }: SkeletonLoaderProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const opacity = useSharedValue(0.3);
   const reducedMotion = useReducedMotion();
 
@@ -51,7 +51,7 @@ export function SkeletonLoader({
           width: width as number,
           height,
           borderRadius,
-          backgroundColor: theme.colors.surfaceVariant,
+          backgroundColor: colors.surfaceVariant,
         },
         animatedStyle,
         style,

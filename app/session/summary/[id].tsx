@@ -11,13 +11,7 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  Card,
-  Snackbar,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Button, Card, Snackbar, Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import BottomSheet from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
@@ -51,6 +45,7 @@ import RatingWidget from "../../../components/RatingWidget";
 import ShareCard from "../../../components/ShareCard";
 import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import ShareSheet from "../../../components/ShareSheet";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
 type RepPR = { exercise_id: string; name: string; reps: number; previous_max: number };
@@ -61,7 +56,7 @@ type Comparison = {
 } | null;
 
 export default function Summary() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -351,8 +346,8 @@ export default function Summary() {
     return (
       <>
         <Stack.Screen options={{ title: "Summary" }} />
-        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>Loading...</Text>
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
+          <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
         </View>
       </>
     );
@@ -374,7 +369,7 @@ export default function Summary() {
           ] as { key: string }[]
         }
         keyExtractor={(s) => s.key}
-        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         ListHeaderComponent={
           <>
@@ -383,18 +378,18 @@ export default function Summary() {
               <MaterialCommunityIcons
                 name="check-circle"
                 size={48}
-                color={theme.colors.primary}
+                color={colors.primary}
               />
               <Text
                 variant="headlineMedium"
-                style={[styles.title, { color: theme.colors.onBackground }]}
+                style={[styles.title, { color: colors.onBackground }]}
                 accessibilityRole="header"
               >
                 Workout Complete!
               </Text>
               <Text
                 variant="bodyLarge"
-                style={{ color: theme.colors.onSurfaceVariant }}
+                style={{ color: colors.onSurfaceVariant }}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
@@ -405,40 +400,40 @@ export default function Summary() {
             {/* Stats Row */}
             <View style={styles.stats}>
               <Card
-                style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+                style={[styles.stat, { backgroundColor: colors.surface }]}
                 accessibilityLabel={`Duration: ${durationSpoken()}`}
               >
                 <Card.Content style={styles.statInner}>
-                  <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                  <Text variant="headlineSmall" style={{ color: colors.primary }}>
                     {duration}
                   </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                     Duration
                   </Text>
                 </Card.Content>
               </Card>
               <Card
-                style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+                style={[styles.stat, { backgroundColor: colors.surface }]}
                 accessibilityLabel={setsBreakdown ? `${completed.length} sets: ${setsBreakdown}` : `${completed.length} sets completed`}
               >
                 <Card.Content style={styles.statInner}>
-                  <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                  <Text variant="headlineSmall" style={{ color: colors.primary }}>
                     {completed.length}
                   </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                     {setsBreakdown ? `Sets (${setsBreakdown})` : "Sets"}
                   </Text>
                 </Card.Content>
               </Card>
               <Card
-                style={[styles.stat, { backgroundColor: theme.colors.surface }]}
+                style={[styles.stat, { backgroundColor: colors.surface }]}
                 accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}
               >
                 <Card.Content style={styles.statInner}>
-                  <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                  <Text variant="headlineSmall" style={{ color: colors.primary }}>
                     {volumeDisplay.toLocaleString()}
                   </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                     Volume ({unit})
                   </Text>
                 </Card.Content>
@@ -447,11 +442,11 @@ export default function Summary() {
 
             {/* Rating Widget */}
             {session.completed_at && (
-              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.section, { backgroundColor: colors.surface }]}>
                 <Card.Content style={{ alignItems: "center" }}>
                   <Text
                     variant="titleMedium"
-                    style={{ color: theme.colors.onSurface, marginBottom: 12, fontWeight: "600" }}
+                    style={{ color: colors.onSurface, marginBottom: 12, fontWeight: "600" }}
                   >
                     How was your workout?
                   </Text>
@@ -462,7 +457,7 @@ export default function Summary() {
 
             {/* Session Notes */}
             {session.completed_at && (
-              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.section, { backgroundColor: colors.surface }]}>
                 <Card.Content>
                   <Pressable
                     onPress={() => setNotesExpanded(!notesExpanded)}
@@ -475,18 +470,18 @@ export default function Summary() {
                     <MaterialCommunityIcons
                       name="note-edit-outline"
                       size={20}
-                      color={theme.colors.primary}
+                      color={colors.primary}
                     />
                     <Text
                       variant="titleSmall"
-                      style={{ color: theme.colors.onSurface, marginLeft: 8, flex: 1 }}
+                      style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}
                     >
                       Session notes
                     </Text>
                     <MaterialCommunityIcons
                       name={notesExpanded ? "chevron-up" : "chevron-down"}
                       size={20}
-                      color={theme.colors.onSurfaceVariant}
+                      color={colors.onSurfaceVariant}
                     />
                   </Pressable>
                   {notesExpanded && (
@@ -496,22 +491,22 @@ export default function Summary() {
                         onChangeText={(t) => setNotesText(t.slice(0, 500))}
                         onBlur={handleNotesSave}
                         placeholder="Add notes about this workout..."
-                        placeholderTextColor={theme.colors.onSurfaceDisabled}
+                        placeholderTextColor={colors.onSurfaceDisabled}
                         multiline
                         maxLength={500}
                         style={[
                           styles.notesInput,
                           {
-                            color: theme.colors.onSurface,
-                            backgroundColor: theme.colors.surfaceVariant,
-                            borderColor: theme.colors.outline,
+                            color: colors.onSurface,
+                            backgroundColor: colors.surfaceVariant,
+                            borderColor: colors.outline,
                           },
                         ]}
                         accessibilityLabel="Session notes"
                       />
                       <Text
                         variant="bodySmall"
-                        style={{ color: theme.colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}
+                        style={{ color: colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}
                       >
                         {notesText.length}/500
                       </Text>
@@ -528,7 +523,7 @@ export default function Summary() {
             const extraCount = newAchievements.length - 3;
             return (
               <Card
-                style={[styles.section, { backgroundColor: theme.colors.tertiaryContainer }]}
+                style={[styles.section, { backgroundColor: colors.tertiaryContainer }]}
                 accessibilityLabel={`${newAchievements.length} achievement${newAchievements.length > 1 ? "s" : ""} unlocked`}
                 accessibilityLiveRegion="polite"
               >
@@ -537,7 +532,7 @@ export default function Summary() {
                     <Text style={{ fontSize: 20 }}>🏆</Text>
                     <Text
                       variant="titleMedium"
-                      style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                      style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
                     >
                       Achievement{newAchievements.length > 1 ? "s" : ""} Unlocked!
                     </Text>
@@ -548,13 +543,13 @@ export default function Summary() {
                       <View style={{ flex: 1 }}>
                         <Text
                           variant="bodyMedium"
-                          style={{ color: theme.colors.onTertiaryContainer, fontWeight: "600" }}
+                          style={{ color: colors.onTertiaryContainer, fontWeight: "600" }}
                         >
                           {a.name}
                         </Text>
                         <Text
                           variant="bodySmall"
-                          style={{ color: theme.colors.onTertiaryContainer }}
+                          style={{ color: colors.onTertiaryContainer }}
                         >
                           {a.description}
                         </Text>
@@ -565,7 +560,7 @@ export default function Summary() {
                     <Button
                       mode="text"
                       onPress={() => router.push("/progress/achievements")}
-                      textColor={theme.colors.onTertiaryContainer}
+                      textColor={colors.onTertiaryContainer}
                       style={{ marginTop: 4 }}
                       accessibilityLabel={`View ${extraCount} more achievements`}
                       accessibilityRole="link"
@@ -581,7 +576,7 @@ export default function Summary() {
           if (item.key === "prs") {
             return (
               <Card
-                style={[styles.section, { backgroundColor: theme.colors.tertiaryContainer }]}
+                style={[styles.section, { backgroundColor: colors.tertiaryContainer }]}
                 accessibilityLabel={`${allPrs.length} new personal record${allPrs.length > 1 ? "s" : ""}`}
               >
                 <Card.Content>
@@ -589,11 +584,11 @@ export default function Summary() {
                     <MaterialCommunityIcons
                       name="trophy"
                       size={20}
-                      color={theme.colors.onTertiaryContainer}
+                      color={colors.onTertiaryContainer}
                     />
                     <Text
                       variant="titleMedium"
-                      style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                      style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
                     >
                       {allPrs.length} New PR{allPrs.length > 1 ? "s" : ""}
                     </Text>
@@ -602,14 +597,14 @@ export default function Summary() {
                     <View key={pr.exercise_id} style={styles.row}>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                        style={{ color: colors.onTertiaryContainer, flex: 1 }}
                         accessibilityLabel={`New personal record: ${pr.name}, ${toDisplay(pr.weight, unit)} ${unit}`}
                       >
                         {pr.name}
                       </Text>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onTertiaryContainer }}
+                        style={{ color: colors.onTertiaryContainer }}
                       >
                         {toDisplay(pr.previous_max, unit)} → {toDisplay(pr.weight, unit)} {unit}
                       </Text>
@@ -619,14 +614,14 @@ export default function Summary() {
                     <View key={pr.exercise_id} style={styles.row}>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                        style={{ color: colors.onTertiaryContainer, flex: 1 }}
                         accessibilityLabel={`New rep personal record: ${pr.name}, ${pr.reps} reps`}
                       >
                         {pr.name}
                       </Text>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onTertiaryContainer }}
+                        style={{ color: colors.onTertiaryContainer }}
                       >
                         {pr.previous_max} → {pr.reps} reps
                       </Text>
@@ -639,17 +634,17 @@ export default function Summary() {
 
           if (item.key === "increases") {
             return (
-              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.section, { backgroundColor: colors.surface }]}>
                 <Card.Content>
                   <View style={styles.sectionHeader}>
                     <MaterialCommunityIcons
                       name="trending-up"
                       size={20}
-                      color={theme.colors.primary}
+                      color={colors.primary}
                     />
                     <Text
                       variant="titleMedium"
-                      style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                      style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
                     >
                       Weight Increases
                     </Text>
@@ -658,14 +653,14 @@ export default function Summary() {
                     <View key={inc.exercise_id} style={styles.row}>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onSurface, flex: 1 }}
+                        style={{ color: colors.onSurface, flex: 1 }}
                         accessibilityLabel={`${inc.name}: weight increased from ${toDisplay(inc.previous, unit)} to ${toDisplay(inc.current, unit)} ${unit}`}
                       >
                         {inc.name}
                       </Text>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.primary }}
+                        style={{ color: colors.primary }}
                       >
                         {toDisplay(inc.previous, unit)} → {toDisplay(inc.current, unit)} {unit}
                       </Text>
@@ -678,51 +673,51 @@ export default function Summary() {
 
           if (item.key === "comparison" && comparison?.previous) {
             return (
-              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.section, { backgroundColor: colors.surface }]}>
                 <Card.Content>
                   <View style={styles.sectionHeader}>
                     <MaterialCommunityIcons
                       name="compare-horizontal"
                       size={20}
-                      color={theme.colors.primary}
+                      color={colors.primary}
                     />
                     <Text
                       variant="titleMedium"
-                      style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                      style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
                     >
                       vs. Last Time
                     </Text>
                   </View>
                   <View style={styles.compRow}>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                    <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
                       Volume
                     </Text>
                     <Text
                       variant="bodyMedium"
-                      style={{ color: theme.colors.onSurface }}
+                      style={{ color: colors.onSurface }}
                       accessibilityLabel={`Volume ${comparison.current.volume >= comparison.previous.volume ? "increased" : "decreased"} by ${Math.abs(comparison.current.volume - comparison.previous.volume).toLocaleString()}`}
                     >
                       {delta(comparison.current.volume, comparison.previous.volume)}
                     </Text>
                   </View>
                   <View style={styles.compRow}>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                    <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
                       Duration
                     </Text>
                     <Text
                       variant="bodyMedium"
-                      style={{ color: theme.colors.onSurface }}
+                      style={{ color: colors.onSurface }}
                     >
                       {deltaTime(comparison.current.duration, comparison.previous.duration)}
                     </Text>
                   </View>
                   <View style={styles.compRow}>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                    <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
                       Sets
                     </Text>
                     <Text
                       variant="bodyMedium"
-                      style={{ color: theme.colors.onSurface }}
+                      style={{ color: colors.onSurface }}
                     >
                       {delta(comparison.current.sets, comparison.previous.sets)}
                     </Text>
@@ -734,17 +729,17 @@ export default function Summary() {
 
           if (item.key === "sets") {
             return (
-              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.section, { backgroundColor: colors.surface }]}>
                 <Card.Content>
                   <View style={styles.sectionHeader}>
                     <MaterialCommunityIcons
                       name="dumbbell"
                       size={20}
-                      color={theme.colors.primary}
+                      color={colors.primary}
                     />
                     <Text
                       variant="titleMedium"
-                      style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                      style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
                     >
                       Sets
                     </Text>
@@ -753,18 +748,18 @@ export default function Summary() {
                     <View key={group.name} style={styles.exerciseGroup}>
                       <Text
                         variant="labelLarge"
-                        style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}
+                        style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
                       >
                         {group.name}
                       </Text>
                       {group.sets.map((set) => (
                         <View key={set.id} style={styles.setRow}>
-                          <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                          <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                             {set.weight ?? 0} × {set.reps ?? 0}
                           </Text>
                           {set.training_mode && set.training_mode !== "weight" && (
-                            <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
-                              <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
+                            <View style={[styles.modeBadge, { backgroundColor: colors.secondaryContainer }]}>
+                              <Text style={{ color: colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
                                 {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
                               </Text>
                             </View>
@@ -772,7 +767,7 @@ export default function Summary() {
                           {set.tempo && (
                             <Text
                               variant="bodySmall"
-                              style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}
+                              style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
                             >
                               ♩ {set.tempo}
                             </Text>
@@ -780,7 +775,7 @@ export default function Summary() {
                           {set.rpe != null && (
                             <Text
                               variant="bodySmall"
-                              style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}
+                              style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
                             >
                               RPE {set.rpe}
                             </Text>
@@ -854,10 +849,10 @@ export default function Summary() {
               onRequestClose={() => setTemplateModalVisible(false)}
             >
               <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+                <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                   <Text
                     variant="titleMedium"
-                    style={{ color: theme.colors.onSurface, marginBottom: 16 }}
+                    style={{ color: colors.onSurface, marginBottom: 16 }}
                   >
                     Save as Template
                   </Text>
@@ -865,14 +860,14 @@ export default function Summary() {
                     value={templateName}
                     onChangeText={(t) => setTemplateName(t.slice(0, 100))}
                     placeholder="Template name"
-                    placeholderTextColor={theme.colors.onSurfaceDisabled}
+                    placeholderTextColor={colors.onSurfaceDisabled}
                     maxLength={100}
                     style={[
                       styles.modalInput,
                       {
-                        color: theme.colors.onSurface,
-                        backgroundColor: theme.colors.surfaceVariant,
-                        borderColor: theme.colors.outline,
+                        color: colors.onSurface,
+                        backgroundColor: colors.surfaceVariant,
+                        borderColor: colors.outline,
                       },
                     ]}
                     autoFocus
@@ -955,7 +950,7 @@ export default function Summary() {
             </View>
             <View style={styles.previewActions}>
               {imageLoading ? (
-                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <ActivityIndicator size="large" color={colors.primary} />
               ) : (
                 <>
                   <Button

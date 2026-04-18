@@ -7,16 +7,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import {
-  Button,
-  Chip,
-  FAB,
-  IconButton,
-  Snackbar,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Button, Chip, FAB, IconButton, Snackbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -41,6 +32,7 @@ import type { ProgressPhoto, PoseCategory } from "../../lib/db/photos";
 import { getAppSetting, setAppSetting } from "../../lib/db";
 import { uuid } from "../../lib/uuid";
 import { scrim } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const PAGE_SIZE = 20;
 const MAX_DIMENSION = 1200;
@@ -58,7 +50,7 @@ function today(): string {
 }
 
 export default function PhotosScreen() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
 
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
@@ -415,8 +407,8 @@ export default function PhotosScreen() {
   );
 
   const compareModeHeader = compareMode ? (
-    <View style={[styles.compareBanner, { backgroundColor: theme.colors.primaryContainer }]}>
-      <Text variant="bodyMedium" style={{ color: theme.colors.onPrimaryContainer, flex: 1 }}>
+    <View style={[styles.compareBanner, { backgroundColor: colors.primaryContainer }]}>
+      <Text variant="bodyMedium" style={{ color: colors.onPrimaryContainer, flex: 1 }}>
         Select 2 photos ({selectedIds.length}/2)
       </Text>
       <Button
@@ -459,17 +451,17 @@ export default function PhotosScreen() {
         accessibilityViewIsModal
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <MaterialCommunityIcons
               name="shield-lock-outline"
               size={48}
-              color={theme.colors.primary}
+              color={colors.primary}
               style={{ alignSelf: "center", marginBottom: 16 }}
             />
-            <Text variant="titleLarge" style={{ color: theme.colors.onSurface, textAlign: "center", marginBottom: 12 }}>
+            <Text variant="titleLarge" style={{ color: colors.onSurface, textAlign: "center", marginBottom: 12 }}>
               Your Photos Are Private
             </Text>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginBottom: 24 }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 24 }}>
               Your progress photos are stored only on this device and never uploaded to any server.
               Photos are not visible in your device&apos;s photo gallery.
               If you reinstall the app, photos will be lost.
@@ -520,8 +512,8 @@ export default function PhotosScreen() {
             },
           ]}
           onStateChange={({ open }) => setFabOpen(open)}
-          fabStyle={{ backgroundColor: theme.colors.primary }}
-          color={theme.colors.onPrimary}
+          fabStyle={{ backgroundColor: colors.primary }}
+          color={colors.onPrimary}
           accessibilityLabel="Add progress photo"
         />
       )}
@@ -552,8 +544,8 @@ export default function PhotosScreen() {
         accessibilityViewIsModal
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <Text variant="titleLarge" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text variant="titleLarge" style={{ color: colors.onSurface, marginBottom: 16 }}>
               Photo Details
             </Text>
             {pendingUri && (
@@ -571,7 +563,7 @@ export default function PhotosScreen() {
               style={styles.input}
               placeholder="YYYY-MM-DD"
             />
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 8, marginBottom: 4 }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 4 }}>
               Pose Category
             </Text>
             <View style={styles.chips}>
@@ -626,8 +618,8 @@ export default function PhotosScreen() {
       {/* Saving overlay */}
       {saving && !metaModal && (
         <View style={styles.savingOverlay}>
-          <View style={[styles.savingBox, { backgroundColor: theme.colors.surface }]}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+          <View style={[styles.savingBox, { backgroundColor: colors.surface }]}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
               Saving photo...
             </Text>
           </View>

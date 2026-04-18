@@ -5,14 +5,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import {
-  Button,
-  Card,
-  Divider,
-  IconButton,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Button, Card, Divider, IconButton, Text } from "react-native-paper";
 import { useFocusEffect } from "expo-router";
 import Animated, {
   useSharedValue,
@@ -30,6 +23,7 @@ import type { BodySettings } from "../lib/types";
 import { mondayOf, formatDuration } from "../lib/format";
 import { toDisplay } from "../lib/units";
 import { duration, easing } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -57,7 +51,7 @@ function volumeChangePercent(current: number, previous: number | null): string |
 // ─── Component ─────────────────────────────────────────────────────
 
 export default function WeeklySummary() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const reducedMotion = useReducedMotion();
 
   const [expanded, setExpanded] = useState(false);
@@ -244,13 +238,13 @@ export default function WeeklySummary() {
   if (error) {
     return (
       <Card
-        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+        style={[styles.card, { backgroundColor: colors.surface }]}
         accessibilityLabel="Weekly summary unavailable"
       >
         <Card.Content>
           <Text
             variant="bodyMedium"
-            style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}
+            style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
           >
             Couldn&apos;t load summary
           </Text>
@@ -261,10 +255,10 @@ export default function WeeklySummary() {
 
   if (loading || !data) {
     return (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
           <View style={styles.headerRow}>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
               📊 Loading…
             </Text>
           </View>
@@ -296,7 +290,7 @@ export default function WeeklySummary() {
 
   return (
     <Card
-      style={[styles.card, { backgroundColor: theme.colors.surface }]}
+      style={[styles.card, { backgroundColor: colors.surface }]}
       accessibilityLabel={`Weekly summary for ${formatWeekRange(weekStartMs)}`}
       accessibilityState={{ expanded }}
     >
@@ -306,7 +300,7 @@ export default function WeeklySummary() {
           <Text style={{ fontSize: 20, marginRight: 8 }}>📊</Text>
           <Text
             variant="titleMedium"
-            style={{ color: theme.colors.onSurface, flex: 1 }}
+            style={{ color: colors.onSurface, flex: 1 }}
           >
             Week of {formatWeekRange(weekStartMs)}
           </Text>
@@ -331,7 +325,7 @@ export default function WeeklySummary() {
         {isEmpty ? (
           <Text
             variant="bodyMedium"
-            style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}
+            style={{ color: colors.onSurfaceVariant, marginTop: 8 }}
           >
             No workouts logged this week. Start one from the Workouts tab!
           </Text>
@@ -340,7 +334,7 @@ export default function WeeklySummary() {
             {/* Collapsed headline */}
             <Text
               variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}
+              style={{ color: colors.onSurfaceVariant, marginTop: 4 }}
               accessibilityLabel={headline}
             >
               {headline}
@@ -356,7 +350,7 @@ export default function WeeklySummary() {
             >
               <Text
                 variant="labelMedium"
-                style={{ color: theme.colors.primary }}
+                style={{ color: colors.primary }}
               >
                 {expanded ? "Hide Details" : "View Details"}
               </Text>
@@ -370,7 +364,7 @@ export default function WeeklySummary() {
                 {/* WORKOUTS */}
                 <Text
                   variant="labelLarge"
-                  style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
+                  style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
                 >
                   WORKOUTS
                 </Text>
@@ -378,19 +372,19 @@ export default function WeeklySummary() {
                   <StatRow
                     label="Completed"
                     value={`${workouts.sessionCount} of ${workouts.scheduledCount} scheduled (${Math.round((workouts.sessionCount / workouts.scheduledCount) * 100)}%)`}
-                    theme={theme}
+                    colors={colors}
                   />
                 ) : (
                   <StatRow
                     label="Completed"
                     value={`${workouts.sessionCount} workout${workouts.sessionCount !== 1 ? "s" : ""}`}
-                    theme={theme}
+                    colors={colors}
                   />
                 )}
                 <StatRow
                   label="Total duration"
                   value={formatDuration(workouts.totalDurationSeconds)}
-                  theme={theme}
+                  colors={colors}
                 />
                 {workouts.sessionCount > 0 && (
                   <StatRow
@@ -398,7 +392,7 @@ export default function WeeklySummary() {
                     value={formatDuration(
                       Math.round(workouts.totalDurationSeconds / workouts.sessionCount)
                     )}
-                    theme={theme}
+                    colors={colors}
                   />
                 )}
 
@@ -406,26 +400,26 @@ export default function WeeklySummary() {
                 <Divider style={{ marginVertical: 12 }} />
                 <Text
                   variant="labelLarge"
-                  style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
+                  style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
                 >
                   VOLUME
                 </Text>
                 <StatRow
                   label="Total"
                   value={`${formatNumber(Math.round(toDisplay(workouts.totalVolume, unit)))} ${unit}${volChange ? `  ▲ ${volChange} vs last` : ""}`}
-                  theme={theme}
+                  colors={colors}
                 />
                 {workouts.sessionCount > 0 && (
                   <StatRow
                     label="Avg per session"
                     value={`${formatNumber(Math.round(toDisplay(workouts.totalVolume / workouts.sessionCount, unit)))} ${unit}`}
-                    theme={theme}
+                    colors={colors}
                   />
                 )}
                 {workouts.hasBodyweightOnly && (
                   <Text
                     variant="bodySmall"
-                    style={{ color: theme.colors.onSurfaceVariant, fontStyle: "italic", marginTop: 4 }}
+                    style={{ color: colors.onSurfaceVariant, fontStyle: "italic", marginTop: 4 }}
                   >
                     Volume tracks weighted exercises only
                   </Text>
@@ -437,7 +431,7 @@ export default function WeeklySummary() {
                     <Divider style={{ marginVertical: 12 }} />
                     <Text
                       variant="labelLarge"
-                      style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
+                      style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
                     >
                       PERSONAL RECORDS
                     </Text>
@@ -452,13 +446,13 @@ export default function WeeklySummary() {
                           <Text style={{ fontSize: 16, marginRight: 8 }}>🏆</Text>
                           <Text
                             variant="bodyMedium"
-                            style={{ color: theme.colors.onSurface, flex: 1 }}
+                            style={{ color: colors.onSurface, flex: 1 }}
                           >
                             {pr.exerciseName}
                           </Text>
                           <Text
                             variant="bodyMedium"
-                            style={{ color: theme.colors.primary }}
+                            style={{ color: colors.primary }}
                           >
                             {w} {unit}{delta}
                           </Text>
@@ -474,24 +468,24 @@ export default function WeeklySummary() {
                     <Divider style={{ marginVertical: 12 }} />
                     <Text
                       variant="labelLarge"
-                      style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
+                      style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
                     >
                       NUTRITION ({nutrition.daysTracked}/7 days tracked)
                     </Text>
                     <StatRow
                       label="Avg calories"
                       value={`${formatNumber(nutrition.avgCalories)} / ${formatNumber(nutrition.calorieTarget)} target`}
-                      theme={theme}
+                      colors={colors}
                     />
                     <StatRow
                       label={`Protein avg`}
                       value={`${nutrition.avgProtein}g / ${nutrition.proteinTarget}g target${nutrition.avgProtein >= nutrition.proteinTarget ? " ✓" : ""}`}
-                      theme={theme}
+                      colors={colors}
                     />
                     <StatRow
                       label="Days on target"
                       value={`${nutrition.daysOnTarget}/${nutrition.daysTracked}`}
-                      theme={theme}
+                      colors={colors}
                     />
                   </>
                 )}
@@ -502,7 +496,7 @@ export default function WeeklySummary() {
                     <Divider style={{ marginVertical: 12 }} />
                     <Text
                       variant="labelLarge"
-                      style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
+                      style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
                     >
                       BODY
                     </Text>
@@ -510,7 +504,7 @@ export default function WeeklySummary() {
                       <StatRow
                         label="Weight"
                         value={`${toDisplay(body.startWeight!, unit)} ${unit}`}
-                        theme={theme}
+                        colors={colors}
                       />
                     ) : (
                       <>
@@ -523,12 +517,12 @@ export default function WeeklySummary() {
                             const sign = d > 0 ? "+" : "";
                             return `${s} ${unit} → ${e} ${unit} (${sign}${d})`;
                           })()}
-                          theme={theme}
+                          colors={colors}
                         />
                         {body.entryCount >= 3 && (
                           <Text
                             variant="bodySmall"
-                            style={{ color: theme.colors.onSurfaceVariant, fontStyle: "italic", marginTop: 2 }}
+                            style={{ color: colors.onSurfaceVariant, fontStyle: "italic", marginTop: 2 }}
                           >
                             (3-day rolling avg)
                           </Text>
@@ -544,14 +538,14 @@ export default function WeeklySummary() {
                     <Divider style={{ marginVertical: 12 }} />
                     <Text
                       variant="labelLarge"
-                      style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
+                      style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
                     >
                       STREAK
                     </Text>
                     <View style={styles.streakRow}>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onSurface }}
+                        style={{ color: colors.onSurface }}
                       >
                         Current: {streak} week{streak !== 1 ? "s" : ""}  🔥
                       </Text>
@@ -559,7 +553,7 @@ export default function WeeklySummary() {
                     {weekOffset === 0 && (
                       <Text
                         variant="bodySmall"
-                        style={{ color: theme.colors.onSurfaceVariant, fontStyle: "italic", marginTop: 2 }}
+                        style={{ color: colors.onSurfaceVariant, fontStyle: "italic", marginTop: 2 }}
                       >
                         (current week in progress)
                       </Text>
@@ -595,18 +589,18 @@ export default function WeeklySummary() {
 function StatRow({
   label,
   value,
-  theme,
+  colors,
 }: {
   label: string;
   value: string;
-  theme: { colors: { onSurface: string; onSurfaceVariant: string } };
+  colors: { onSurface: string; onSurfaceVariant: string };
 }) {
   return (
     <View style={styles.statRow}>
-      <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+      <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
         {label}
       </Text>
-      <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+      <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
         {value}
       </Text>
     </View>

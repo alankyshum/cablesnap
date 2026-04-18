@@ -1,13 +1,14 @@
 import { useCallback, useState } from "react";
 import { Stack, useRouter } from "expo-router";
-import { Snackbar, useTheme } from "react-native-paper";
+import { Snackbar } from "react-native-paper";
 import { View } from "react-native";
 import ExerciseForm from "../../components/ExerciseForm";
 import { createCustomExercise } from "../../lib/db";
 import type { Exercise } from "../../lib/types";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function CreateExercise() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const [toast, setToast] = useState("");
 
@@ -21,7 +22,7 @@ export default function CreateExercise() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: "New Exercise" }} />
       <ExerciseForm title="exercise" onSave={save} />
       <Snackbar visible={!!toast} onDismiss={() => setToast("")} duration={2000}>

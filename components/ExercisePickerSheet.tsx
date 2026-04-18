@@ -14,14 +14,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import {
-  Chip,
-  IconButton,
-  Portal,
-  Searchbar,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Chip, IconButton, Portal, Searchbar, Text } from "react-native-paper";
 import { getAllExercises } from "../lib/db";
 import {
   CATEGORIES,
@@ -30,6 +23,7 @@ import {
   type Exercise,
 } from "../lib/types";
 import { duration as durationTokens, elevation } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   visible: boolean;
@@ -41,7 +35,7 @@ const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.8 };
 const ITEM_HEIGHT = 64;
 
 export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const { height: SCREEN_H } = useWindowDimensions();
   const SNAP_MID = SCREEN_H * 0.45;
   const SNAP_TOP = SCREEN_H * 0.06;
@@ -147,8 +141,8 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         style={({ pressed }) => [
           styles.item,
           {
-            backgroundColor: theme.colors.surface,
-            borderBottomColor: theme.colors.outlineVariant,
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.outlineVariant,
           },
           pressed && { opacity: 0.7 },
         ]}
@@ -159,7 +153,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           <Text
             variant="titleSmall"
             numberOfLines={1}
-            style={{ color: theme.colors.onSurface }}
+            style={{ color: colors.onSurface }}
           >
             {item.name}{item.is_custom ? " (Custom)" : ""}
           </Text>
@@ -167,16 +161,16 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
             <View
               style={[
                 styles.badge,
-                { backgroundColor: theme.colors.primaryContainer },
+                { backgroundColor: colors.primaryContainer },
               ]}
             >
-              <Text style={[styles.chipText, { color: theme.colors.onPrimaryContainer }]}>
+              <Text style={[styles.chipText, { color: colors.onPrimaryContainer }]}>
                 {CATEGORY_LABELS[item.category]}
               </Text>
             </View>
             <Text
               variant="bodySmall"
-              style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}
+              style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}
             >
               {item.equipment}
             </Text>
@@ -184,7 +178,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         </View>
       </Pressable>
     ),
-    [theme, handlePick],
+    [colors, handlePick],
   );
 
   if (!mounted) return null;
@@ -198,7 +192,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         accessibilityRole="button"
       >
         <Animated.View
-          style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.backdrop }, backdropStyle]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.backdrop }, backdropStyle]}
           pointerEvents="none"
         />
       </Pressable>
@@ -206,18 +200,18 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
       <Animated.View
         style={[
           styles.sheet,
-          { backgroundColor: theme.colors.background, height: SCREEN_H },
+          { backgroundColor: colors.background, height: SCREEN_H },
           sheetStyle,
         ]}
       >
         <GestureDetector gesture={panGesture}>
           <Animated.View style={styles.handleZone}>
-            <View style={[styles.handle, { backgroundColor: theme.colors.onSurfaceVariant }]} />
+            <View style={[styles.handle, { backgroundColor: colors.onSurfaceVariant }]} />
           </Animated.View>
         </GestureDetector>
 
         <View style={styles.header}>
-          <Text variant="titleMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
+          <Text variant="titleMedium" style={[styles.title, { color: colors.onBackground }]}>
             Pick Exercise
           </Text>
           <IconButton
@@ -232,7 +226,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           placeholder="Search exercises..."
           value={query}
           onChangeText={setQuery}
-          style={[styles.search, { backgroundColor: theme.colors.surfaceVariant }]}
+          style={[styles.search, { backgroundColor: colors.surfaceVariant }]}
           accessibilityLabel="Search exercises"
         />
 
@@ -273,7 +267,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
               <View style={styles.empty}>
                 <Text
                   variant="titleMedium"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   No exercises found
                 </Text>

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
-import { Chip, Text, useTheme } from "react-native-paper";
+import { Chip, Text } from "react-native-paper";
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetFlatList,
@@ -12,6 +12,7 @@ import {
   type SubstitutionScore,
 } from "../lib/exercise-substitutions";
 import { radii } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheet | null>;
@@ -40,12 +41,12 @@ function SubstitutionItem({
   item: SubstitutionScore;
   onPress: (exercise: Exercise) => void;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const ex = item.exercise;
 
   return (
     <Pressable
-      style={[styles.item, { backgroundColor: theme.colors.surface }]}
+      style={[styles.item, { backgroundColor: colors.surface }]}
       onPress={() => onPress(ex)}
       accessibilityRole="button"
       accessibilityLabel={`${ex.name}, ${item.score}% match, ${EQUIPMENT_LABELS[ex.equipment]}, ${DIFFICULTY_LABELS[ex.difficulty]}`}
@@ -54,7 +55,7 @@ function SubstitutionItem({
         <Text
           variant="titleSmall"
           numberOfLines={1}
-          style={[styles.itemName, { color: theme.colors.onSurface }]}
+          style={[styles.itemName, { color: colors.onSurface }]}
         >
           {ex.name}
         </Text>
@@ -73,11 +74,11 @@ function SubstitutionItem({
         <View
           style={[
             styles.equipBadge,
-            { backgroundColor: theme.colors.surfaceVariant },
+            { backgroundColor: colors.surfaceVariant },
           ]}
         >
           <Text variant="labelSmall"
-            style={[styles.equipText, { color: theme.colors.onSurfaceVariant }]}
+            style={[styles.equipText, { color: colors.onSurfaceVariant }]}
           >
             {EQUIPMENT_LABELS[ex.equipment]}
           </Text>
@@ -85,11 +86,11 @@ function SubstitutionItem({
         <View
           style={[
             styles.equipBadge,
-            { backgroundColor: theme.colors.surfaceVariant },
+            { backgroundColor: colors.surfaceVariant },
           ]}
         >
           <Text variant="labelSmall"
-            style={[styles.equipText, { color: theme.colors.onSurfaceVariant }]}
+            style={[styles.equipText, { color: colors.onSurfaceVariant }]}
           >
             {DIFFICULTY_LABELS[ex.difficulty]}
           </Text>
@@ -102,13 +103,13 @@ function SubstitutionItem({
               key={m}
               style={[
                 styles.muscleChip,
-                { backgroundColor: theme.colors.secondaryContainer },
+                { backgroundColor: colors.secondaryContainer },
               ]}
             >
               <Text variant="labelSmall"
                 style={[
                   styles.muscleText,
-                  { color: theme.colors.onSecondaryContainer },
+                  { color: colors.onSecondaryContainer },
                 ]}
               >
                 {MUSCLE_LABELS[m]}
@@ -128,7 +129,7 @@ export default function SubstitutionSheet({
   onSelect,
   onDismiss,
 }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const snapPoints = useMemo(() => ["50%", "90%"], []);
   const [equipmentFilter, setEquipmentFilter] = useState<Equipment | null>(null);
 
@@ -217,14 +218,14 @@ export default function SubstitutionSheet({
           pressBehavior="close"
         />
       )}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.onSurfaceVariant }}
+      backgroundStyle={{ backgroundColor: colors.surface }}
+      handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
     >
       {sourceExercise && (
         <View style={styles.container}>
           <Text
             variant="titleMedium"
-            style={[styles.header, { color: theme.colors.onSurface }]}
+            style={[styles.header, { color: colors.onSurface }]}
           >
             Alternatives for {sourceExercise.name}
           </Text>
@@ -236,13 +237,13 @@ export default function SubstitutionSheet({
                   key={m}
                   style={[
                     styles.muscleChip,
-                    { backgroundColor: theme.colors.primaryContainer },
+                    { backgroundColor: colors.primaryContainer },
                   ]}
                 >
                   <Text variant="labelSmall"
                     style={[
                       styles.muscleText,
-                      { color: theme.colors.onPrimaryContainer },
+                      { color: colors.onPrimaryContainer },
                     ]}
                   >
                     {MUSCLE_LABELS[m]}
@@ -256,7 +257,7 @@ export default function SubstitutionSheet({
             <View style={styles.emptyState}>
               <Text
                 variant="bodyMedium"
-                style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}
+                style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
               >
                 No muscle data — cannot suggest alternatives
               </Text>
@@ -295,7 +296,7 @@ export default function SubstitutionSheet({
                 <View style={styles.emptyState}>
                   <Text
                     variant="bodyMedium"
-                    style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}
+                    style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
                   >
                     No alternatives found. Try adding the exercise manually.
                   </Text>
@@ -304,7 +305,7 @@ export default function SubstitutionSheet({
                 <View style={styles.emptyState}>
                   <Text
                     variant="bodyMedium"
-                    style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}
+                    style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
                   >
                     No alternatives with this equipment. Try removing the
                     filter.

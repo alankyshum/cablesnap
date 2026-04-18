@@ -1,22 +1,23 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Card, Text, useTheme } from "react-native-paper";
+import { Card, Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { PlateCalculatorContent } from "./plates";
 import { RMCalculatorContent } from "./rm";
 import { TimerContent } from "./timer";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function ToolsHub() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
 
   return (
     <>
       <Stack.Screen options={{ title: "Workout Tools" }} />
       <ScrollView
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{ padding: layout.horizontalPadding, paddingVertical: 24, gap: 24 }}
         keyboardShouldPersistTaps="handled"
       >
@@ -41,18 +42,18 @@ function ToolCard({ icon, title, children }: {
   title: string;
   children: React.ReactNode;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   return (
-    <Card style={{ backgroundColor: theme.colors.surface }}>
+    <Card style={{ backgroundColor: colors.surface }}>
       <Card.Content>
         <View style={styles.header}>
           <MaterialCommunityIcons
             name={icon}
             size={24}
-            color={theme.colors.primary}
+            color={colors.primary}
             style={styles.icon}
           />
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface }}>
             {title}
           </Text>
         </View>

@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import {
-  Banner,
-  Button,
-  Menu,
-  SegmentedButtons,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Banner, Button, Menu, SegmentedButtons, Text, TextInput } from "react-native-paper";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
 import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   calculateFromProfile,
   migrateProfile,
@@ -41,7 +34,7 @@ export interface ProfileFormProps {
 }
 
 export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyChange }: ProfileFormProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [birthYear, setBirthYear] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
@@ -199,7 +192,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
 
       <Text
         variant="titleMedium"
-        style={{ color: theme.colors.onSurface, marginBottom: 16 }}
+        style={{ color: colors.onSurface, marginBottom: 16 }}
       >
         Your Profile
       </Text>
@@ -218,7 +211,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       />
       {errors.birthYear ? (
         <Text
-          style={[styles.errorText, { color: theme.colors.error }]}
+          style={[styles.errorText, { color: colors.error }]}
           accessibilityLiveRegion="polite"
         >
           {errors.birthYear}
@@ -238,7 +231,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       />
       {errors.weight ? (
         <Text
-          style={[styles.errorText, { color: theme.colors.error }]}
+          style={[styles.errorText, { color: colors.error }]}
           accessibilityLiveRegion="polite"
         >
           {errors.weight}
@@ -258,7 +251,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       />
       {errors.height ? (
         <Text
-          style={[styles.errorText, { color: theme.colors.error }]}
+          style={[styles.errorText, { color: colors.error }]}
           accessibilityLiveRegion="polite"
         >
           {errors.height}
@@ -267,7 +260,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
 
       <Text
         variant="labelLarge"
-        style={[styles.fieldLabel, { color: theme.colors.onSurface }]}
+        style={[styles.fieldLabel, { color: colors.onSurface }]}
       >
         Sex
       </Text>
@@ -280,7 +273,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
 
       <Text
         variant="labelLarge"
-        style={[styles.fieldLabel, { color: theme.colors.onSurface }]}
+        style={[styles.fieldLabel, { color: colors.onSurface }]}
       >
         Activity Level
       </Text>
@@ -290,15 +283,15 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
         anchor={
           <Pressable
             onPress={() => setActivityMenuVisible(true)}
-            style={[styles.dropdown, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}
+            style={[styles.dropdown, { borderColor: colors.outline, backgroundColor: colors.surface }]}
             accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[activityLevel]}`}
             accessibilityRole="button"
             accessibilityState={{ expanded: activityMenuVisible }}
           >
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
               {ACTIVITY_LABELS[activityLevel]}
             </Text>
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>▼</Text>
+            <Text style={{ color: colors.onSurfaceVariant }}>▼</Text>
           </Pressable>
         }
         anchorPosition="bottom"
@@ -312,7 +305,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
               setActivityLevel(key);
               setActivityMenuVisible(false);
             }}
-            style={key === activityLevel ? { backgroundColor: theme.colors.primaryContainer } : undefined}
+            style={key === activityLevel ? { backgroundColor: colors.primaryContainer } : undefined}
             accessibilityLabel={ACTIVITY_LABELS[key]}
           />
         ))}
@@ -320,7 +313,7 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
 
       <Text
         variant="labelLarge"
-        style={[styles.fieldLabel, { color: theme.colors.onSurface }]}
+        style={[styles.fieldLabel, { color: colors.onSurface }]}
       >
         Goal
       </Text>

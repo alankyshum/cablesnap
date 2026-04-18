@@ -10,9 +10,9 @@ import { render } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
 import ShareCard from '../../components/ShareCard';
 import type { ShareCardProps } from '../../components/ShareCard';
-import { light, dark } from '../../constants/theme';
+import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 
-function renderCard(overrides: Partial<ShareCardProps> = {}, themeProp = light) {
+function renderCard(overrides: Partial<ShareCardProps> = {}, themeProp = MD3LightTheme) {
   const defaultProps: ShareCardProps = {
     name: 'Push Day',
     date: 'April 17, 2026',
@@ -110,7 +110,7 @@ describe('ShareCard', () => {
   });
 
   it('renders with dark theme', () => {
-    const { getByText } = renderCard({}, dark);
+    const { getByText } = renderCard({}, MD3DarkTheme);
     expect(getByText('FitForge')).toBeTruthy();
   });
 

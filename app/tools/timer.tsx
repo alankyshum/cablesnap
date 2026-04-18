@@ -8,13 +8,7 @@ import {
   StyleSheet,
   View,
 } from "react-native"
-import {
-  IconButton,
-  SegmentedButtons,
-  Snackbar,
-  Text,
-  useTheme,
-} from "react-native-paper"
+import { IconButton, SegmentedButtons, Snackbar, Text } from "react-native-paper";
 import { Stack } from "expo-router"
 import { useFocusEffect } from "expo-router"
 import * as Haptics from "expo-haptics"
@@ -52,6 +46,7 @@ import {
 import { getAppSetting, setAppSetting } from "../../lib/db"
 import { hexToRgb } from "../../lib/format"
 import { radii, typography } from "../../constants/design-tokens"
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
@@ -68,7 +63,7 @@ const STORAGE_KEYS: Record<Mode, string> = {
 }
 
 export function TimerContent() {
-  const theme = useTheme()
+  const colors = useThemeColors()
   const reduced = useReducedMotion()
   const [mode, setMode] = useState<Mode>("tabata")
   const [state, setState] = useState<State>(init("tabata"))
@@ -307,15 +302,15 @@ export function TimerContent() {
   }, [])
 
   const bgColor = state.phase === "work"
-    ? theme.colors.primary
+    ? colors.primary
     : state.phase === "rest"
-    ? theme.colors.error
+    ? colors.error
     : "transparent"
 
   const bgStyle = useAnimatedStyle(() => ({
     backgroundColor: isWork.value
-      ? `rgba(${hexToRgb(theme.colors.primary)}, ${bgOpacity.value})`
-      : `rgba(${hexToRgb(theme.colors.error)}, ${bgOpacity.value})`,
+      ? `rgba(${hexToRgb(colors.primary)}, ${bgOpacity.value})`
+      : `rgba(${hexToRgb(colors.error)}, ${bgOpacity.value})`,
   }))
 
   const ringAnimated = useAnimatedProps(() => ({
@@ -447,7 +442,7 @@ export function TimerContent() {
                 cx={RING_SIZE / 2}
                 cy={RING_SIZE / 2}
                 r={RING_RADIUS}
-                stroke={theme.colors.surfaceVariant}
+                stroke={colors.surfaceVariant}
                 strokeWidth={RING_STROKE}
                 fill="none"
               />
@@ -455,7 +450,7 @@ export function TimerContent() {
                 cx={RING_SIZE / 2}
                 cy={RING_SIZE / 2}
                 r={RING_RADIUS}
-                stroke={bgColor || theme.colors.primary}
+                stroke={bgColor || colors.primary}
                 strokeWidth={RING_STROKE}
                 fill="none"
                 strokeDasharray={RING_CIRCUMFERENCE}
@@ -467,7 +462,7 @@ export function TimerContent() {
             </Svg>
             <View style={styles.countdown}>
               <Text
-                style={[styles.time, { color: theme.colors.onSurface }]}
+                style={[styles.time, { color: colors.onSurface }]}
                 accessibilityLabel={`${state.remaining} seconds remaining`}
                 accessibilityLiveRegion="polite"
               >
@@ -480,7 +475,7 @@ export function TimerContent() {
           {(state.status === "running" || state.status === "paused") && (
             <Text
               variant="titleMedium"
-              style={[styles.rounds, { color: theme.colors.onSurfaceVariant }]}
+              style={[styles.rounds, { color: colors.onSurfaceVariant }]}
             >
               {roundLabel(state)}
             </Text>
@@ -490,7 +485,7 @@ export function TimerContent() {
           {state.status === "completed" && (
             <Text
               variant="headlineSmall"
-              style={[styles.done, { color: theme.colors.primary }]}
+              style={[styles.done, { color: colors.primary }]}
               accessibilityRole="text"
             >
               Complete!
@@ -501,12 +496,12 @@ export function TimerContent() {
           {mode === "amrap" && state.status === "running" && (
             <Pressable
               onPress={handleAddRound}
-              style={[styles.addRound, { backgroundColor: theme.colors.primaryContainer }]}
+              style={[styles.addRound, { backgroundColor: colors.primaryContainer }]}
               accessibilityLabel={`Add round. Current: ${state.amrapRounds} rounds`}
               accessibilityRole="button"
               accessibilityState={{ disabled: false }}
             >
-              <Text variant="titleLarge" style={{ color: theme.colors.onPrimaryContainer }}>
+              <Text variant="titleLarge" style={{ color: colors.onPrimaryContainer }}>
                 +1 Round
               </Text>
             </Pressable>
@@ -516,24 +511,24 @@ export function TimerContent() {
           <View style={styles.controls}>
             <Pressable
               onPress={handleStart}
-              style={[styles.btn, { backgroundColor: theme.colors.primary }]}
+              style={[styles.btn, { backgroundColor: colors.primary }]}
               accessibilityLabel={startA11y}
               accessibilityRole="button"
               accessibilityState={{ disabled: false }}
             >
-              <Text variant="titleMedium" style={{ color: theme.colors.onPrimary }}>
+              <Text variant="titleMedium" style={{ color: colors.onPrimary }}>
                 {startLabel}
               </Text>
             </Pressable>
             {(state.status === "paused" || state.status === "completed") && (
               <Pressable
                 onPress={handleReset}
-                style={[styles.btn, { backgroundColor: theme.colors.surfaceVariant }]}
+                style={[styles.btn, { backgroundColor: colors.surfaceVariant }]}
                 accessibilityLabel="Reset timer"
                 accessibilityRole="button"
                 accessibilityState={{ disabled: false }}
               >
-                <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>
                   Reset
                 </Text>
               </Pressable>
@@ -571,27 +566,27 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
   onUp: () => void
   onDown: () => void
 }) {
-  const theme = useTheme()
+  const colors = useThemeColors()
   return (
     <View style={styles.stepper}>
-      <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+      <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
         {label}
       </Text>
       <View style={styles.stepperRow}>
         <Pressable
           onPress={onDown}
           disabled={value <= min}
-          style={[styles.stepBtn, { backgroundColor: theme.colors.surfaceVariant, opacity: value <= min ? 0.4 : 1 }]}
+          style={[styles.stepBtn, { backgroundColor: colors.surfaceVariant, opacity: value <= min ? 0.4 : 1 }]}
           accessibilityLabel={`Decrease ${label}`}
           accessibilityRole="button"
           accessibilityState={{ disabled: value <= min }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}
         >
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>−</Text>
+          <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>−</Text>
         </Pressable>
         <Text
           variant="titleLarge"
-          style={[styles.stepVal, { color: theme.colors.onSurface }]}
+          style={[styles.stepVal, { color: colors.onSurface }]}
           accessibilityLabel={`${label}: ${value}${suffix}`}
         >
           {value}{suffix}
@@ -599,13 +594,13 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
         <Pressable
           onPress={onUp}
           disabled={value >= max}
-          style={[styles.stepBtn, { backgroundColor: theme.colors.surfaceVariant, opacity: value >= max ? 0.4 : 1 }]}
+          style={[styles.stepBtn, { backgroundColor: colors.surfaceVariant, opacity: value >= max ? 0.4 : 1 }]}
           accessibilityLabel={`Increase ${label}`}
           accessibilityRole="button"
           accessibilityState={{ disabled: value >= max }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}
         >
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>+</Text>
+          <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>+</Text>
         </Pressable>
       </View>
     </View>

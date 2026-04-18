@@ -1,70 +1,6 @@
-import {
-  MD3LightTheme,
-  MD3DarkTheme,
-  adaptNavigationTheme,
-} from "react-native-paper";
-import {
-  DefaultTheme as NavigationDefaultTheme,
-  DarkTheme as NavigationDarkTheme,
-} from "@react-navigation/native";
-
 // ─── Electric Coral Energy Palette ─────────────────────────────────
-
-const base = {
-  primary: "#FF6038",
-  secondary: "#1A2138",
-  tertiary: "#FFB830",
-};
-
-const lightColors = {
-  ...base,
-  primaryContainer: "#FFE0D6",
-  secondaryContainer: "#E0E4ED",
-  tertiaryContainer: "#FFF0D1",
-  onPrimary: "#FFFFFF",
-  onSecondary: "#FFFFFF",
-  onTertiary: "#1A2138",
-  onPrimaryContainer: "#6B1F0A",
-  onSecondaryContainer: "#1A2138",
-  onTertiaryContainer: "#5C3D00",
-  surface: "#FFFFFF",
-  surfaceVariant: "#F3F4F6",
-  onSurface: "#1A2138",
-  onSurfaceVariant: "#6B7280",
-  background: "#FAFAFA",
-  outline: "#D1D5DB",
-  outlineVariant: "#E5E7EB",
-  error: "#EF4444",
-  onError: "#FFFFFF",
-  errorContainer: "#FEE2E2",
-  onErrorContainer: "#7F1D1D",
-};
-
-const darkColors = {
-  ...base,
-  primary: "#FF7A55",
-  tertiary: "#FFD166",
-  primaryContainer: "#6B1F0A",
-  secondaryContainer: "#2D3350",
-  tertiaryContainer: "#5C3D00",
-  onPrimary: "#FFFFFF",
-  onSecondary: "#FFFFFF",
-  onTertiary: "#1A2138",
-  onPrimaryContainer: "#FFE0D6",
-  onSecondaryContainer: "#A8B4D4",
-  onTertiaryContainer: "#FFF0D1",
-  surface: "#161B22",
-  surfaceVariant: "#21262D",
-  onSurface: "#F0F2F5",
-  onSurfaceVariant: "#8B949E",
-  background: "#0D1117",
-  outline: "#30363D",
-  outlineVariant: "#21262D",
-  error: "#F87171",
-  onError: "#FFFFFF",
-  errorContainer: "#7F1D1D",
-  onErrorContainer: "#FEE2E2",
-};
+// Brand palette constants moved to theme/colors.ts (BNA UI).
+// Domain-specific color tokens remain below.
 
 // ─── Accent Colors (spot usage) ────────────────────────────────────
 
@@ -179,36 +115,6 @@ export function difficultyText(level: string): string {
   if (level === "advanced") return semantic.onAdvanced;
   return semantic.onBeginner;
 }
-
-// ─── MD3 Themes ────────────────────────────────────────────────────
-
-export const light = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    ...lightColors,
-  },
-};
-
-export const dark = {
-  ...MD3DarkTheme,
-  colors: {
-    ...MD3DarkTheme.colors,
-    ...darkColors,
-  },
-};
-
-// ─── Navigation Themes ─────────────────────────────────────────────
-
-const { LightTheme: navLight, DarkTheme: navDark } = adaptNavigationTheme({
-  reactNavigationLight: NavigationDefaultTheme,
-  reactNavigationDark: NavigationDarkTheme,
-  materialLight: light,
-  materialDark: dark,
-});
-
-export const navigationLight = navLight;
-export const navigationDark = navDark;
 
 // ─── Camera Overlay ─────────────────────────────────────────────────
 // Fixed colors for the camera viewfinder — must contrast against a live

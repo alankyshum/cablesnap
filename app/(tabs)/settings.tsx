@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AccessibilityInfo, Linking, Platform, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
-import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme, Divider } from "react-native-paper";
+import { Button, Card, SegmentedButtons, Snackbar, Text, Divider } from "react-native-paper";
 import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
@@ -42,6 +42,7 @@ import {
 } from "../../lib/notifications";
 import { connectStrava, disconnect as disconnectStrava } from "../../lib/strava";
 import ErrorBoundary from "../../components/ErrorBoundary";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const RANGE_BUTTONS = [
   { value: "7", label: "7 days", accessibilityLabel: "Date range 7 days" },
@@ -61,7 +62,7 @@ function dateStamp(): string {
 }
 
 export default function Settings() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
@@ -346,22 +347,22 @@ export default function Settings() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding, paddingBottom: tabBarHeight + 16 }]}
     >
-      <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
+      <Text variant="headlineMedium" style={{ color: colors.onBackground, marginBottom: 24 }}>
         Settings
       </Text>
 
       <FlowContainer gap={16}>
-      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Units
           </Text>
 
           <View style={styles.row}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
               Weight
             </Text>
             <View style={styles.unitToggle}>
@@ -386,7 +387,7 @@ export default function Settings() {
           </View>
 
           <View style={[styles.row, { marginTop: 12 }]}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
               Measurements
             </Text>
             <View style={styles.unitToggle}>
@@ -414,14 +415,14 @@ export default function Settings() {
 
       <BodyProfileCard />
 
-      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Preferences
           </Text>
 
           <View style={styles.row}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
               Workout Reminders
             </Text>
             <Switch
@@ -466,11 +467,11 @@ export default function Settings() {
 
           {reminders && (
             <>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                 {`You'll be reminded at ${reminderTime} on days with scheduled workouts`}
               </Text>
               <View style={styles.row}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, marginRight: 12 }}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurface, marginRight: 12 }}>
                   Time
                 </Text>
                 <TextInput
@@ -504,9 +505,9 @@ export default function Settings() {
                   style={[
                     styles.timeInput,
                     {
-                      color: theme.colors.onSurface,
-                      borderColor: theme.colors.outlineVariant,
-                      backgroundColor: theme.colors.surfaceVariant,
+                      color: colors.onSurface,
+                      borderColor: colors.outlineVariant,
+                      backgroundColor: colors.surfaceVariant,
                     },
                   ]}
                   accessibilityLabel="Reminder time"
@@ -517,14 +518,14 @@ export default function Settings() {
           )}
 
           {!reminders && scheduleCount === 0 && (
-            <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 4 }}>
+            <Text variant="bodySmall" style={{ color: colors.error, marginTop: 4 }}>
               No workout days scheduled. Set a weekly schedule on your active program to enable reminders.
             </Text>
           )}
 
           {permDenied && !reminders && (
             <View style={{ marginTop: 8 }}>
-              <Text variant="bodySmall" style={{ color: theme.colors.error, marginBottom: 8 }}>
+              <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 8 }}>
                 Notification permission is denied. Enable it in your device settings to use reminders.
               </Text>
               <Button
@@ -540,7 +541,7 @@ export default function Settings() {
           )}
 
           <View style={[styles.row, { marginTop: 16 }]}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
               Timer Sound
             </Text>
             <Switch
@@ -559,7 +560,7 @@ export default function Settings() {
               accessibilityHint="Enable or disable audio cues for workout timers"
             />
           </View>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             Audio cues for interval timers and rest countdowns.
           </Text>
         </Card.Content>
@@ -567,9 +568,9 @@ export default function Settings() {
 
       {Platform.OS !== "web" && (
         <ErrorBoundary>
-        <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+        <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
           <Card.Content>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
               Integrations
             </Text>
 
@@ -577,10 +578,10 @@ export default function Settings() {
               <View>
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                    <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
                       Strava
                     </Text>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                       Connected as {stravaAthlete}
                     </Text>
                   </View>
@@ -607,7 +608,7 @@ export default function Settings() {
                     Disconnect
                   </Button>
                 </View>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
                   Completed workouts are automatically uploaded to Strava.
                 </Text>
               </View>
@@ -639,7 +640,7 @@ export default function Settings() {
                 >
                   Connect Strava
                 </Button>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
                   Automatically upload completed workouts to your Strava account.
                 </Text>
               </View>
@@ -653,10 +654,10 @@ export default function Settings() {
                   <View>
                     <View style={styles.row}>
                       <View style={{ flex: 1 }}>
-                        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                        <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
                           Health Connect
                         </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                           {hcEnabled ? "Enabled" : "Disabled"}
                         </Text>
                       </View>
@@ -706,7 +707,7 @@ export default function Settings() {
                         }}
                       />
                     </View>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
                       Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.
                     </Text>
                   </View>
@@ -714,10 +715,10 @@ export default function Settings() {
                   <View>
                     <View style={styles.row}>
                       <View style={{ flex: 1 }}>
-                        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                        <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
                           Health Connect
                         </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                           {hcSdkStatus === "needs_update" ? "Update required" : "Not installed"}
                         </Text>
                       </View>
@@ -740,7 +741,7 @@ export default function Settings() {
                         {hcSdkStatus === "needs_update" ? "Update" : "Install"}
                       </Button>
                     </View>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
                       Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.
                     </Text>
                   </View>
@@ -752,9 +753,9 @@ export default function Settings() {
         </ErrorBoundary>
       )}
 
-      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Data Management
           </Text>
 
@@ -789,7 +790,7 @@ export default function Settings() {
           {exportProgress && (
             <Text
               variant="bodySmall"
-              style={{ color: theme.colors.primary, marginTop: 8 }}
+              style={{ color: colors.primary, marginTop: 8 }}
               accessibilityLiveRegion="polite"
               accessibilityLabel={exportProgress}
             >
@@ -797,7 +798,7 @@ export default function Settings() {
             </Text>
           )}
 
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}>
             Export your complete FitForge data as a JSON backup file, or restore from a previous backup. Duplicates are skipped.
           </Text>
 
@@ -814,15 +815,15 @@ export default function Settings() {
             Import from Strong
           </Button>
 
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
             Import workout history from the Strong app using a CSV export file.
           </Text>
         </Card.Content>
       </Card>
 
-      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
             CSV Export
           </Text>
 
@@ -835,7 +836,7 @@ export default function Settings() {
 
           <Text
             variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12, marginTop: 8 }}
+            style={{ color: colors.onSurfaceVariant, marginBottom: 12, marginTop: 8 }}
             accessibilityLabel={`${counts.sessions} workout sessions, ${counts.entries} nutrition entries`}
           >
             {counts.sessions} session{counts.sessions !== 1 ? "s" : ""}, {counts.entries} entr{counts.entries !== 1 ? "ies" : "y"}
@@ -893,9 +894,9 @@ export default function Settings() {
         </Card.Content>
       </Card>
 
-      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Feedback &amp; Reports
           </Text>
 
@@ -934,12 +935,12 @@ export default function Settings() {
         </Card.Content>
       </Card>
 
-      <Card style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
             About
           </Text>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
             FitForge v1.0.0{"\n"}Free & open-source workout tracker.
           </Text>
         </Card.Content>

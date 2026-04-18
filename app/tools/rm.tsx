@@ -7,20 +7,15 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import {
-  DataTable,
-  IconButton,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { DataTable, IconButton, Text, TextInput } from "react-native-paper";
 import { Stack, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { getBodySettings } from "../../lib/db";
 import { epley, brzycki, lombardi, average, percentageTable } from "../../lib/rm";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export function RMCalculatorContent() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [weight, setWeight] = useState("");
@@ -74,7 +69,7 @@ export function RMCalculatorContent() {
             accessibilityLabel={`Weight in ${label}`}
           />
         </View>
-        <Text variant="titleLarge" style={{ color: theme.colors.onSurfaceVariant }}>×</Text>
+        <Text variant="titleLarge" style={{ color: colors.onSurfaceVariant }}>×</Text>
         <View style={styles.repsWrap}>
           <TextInput
             mode="outlined"
@@ -88,20 +83,20 @@ export function RMCalculatorContent() {
       </View>
 
       {!valid && weight !== "" && (
-        <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 8, textAlign: "center" }}>
+        <Text variant="bodySmall" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
           {parsed <= 0 || isNaN(parsed) ? "Enter a weight" : "Enter reps"}
         </Text>
       )}
 
       {warn && (
-        <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 8, textAlign: "center" }}>
+        <Text variant="bodySmall" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
           ⚠ Estimates become less accurate above 12 reps
         </Text>
       )}
 
       {results && (
         <View style={styles.results}>
-          <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ color: colors.onBackground, marginBottom: 12 }}>
             Estimated 1RM
           </Text>
           <DataTable>
@@ -121,7 +116,7 @@ export function RMCalculatorContent() {
               <DataTable.Cell>Lombardi</DataTable.Cell>
               <DataTable.Cell numeric>{results.lombardi} {unit}</DataTable.Cell>
             </DataTable.Row>
-            <DataTable.Row style={{ backgroundColor: theme.colors.primaryContainer }}>
+            <DataTable.Row style={{ backgroundColor: colors.primaryContainer }}>
               <DataTable.Cell textStyle={{ fontWeight: "700" }}
                 accessibilityLabel={`Average of all formulas, ${results.average} ${label}`}
               >Average</DataTable.Cell>
@@ -129,7 +124,7 @@ export function RMCalculatorContent() {
             </DataTable.Row>
           </DataTable>
 
-          <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 24, marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ color: colors.onBackground, marginTop: 24, marginBottom: 12 }}>
             % 1RM Table
           </Text>
           <DataTable>
@@ -158,7 +153,7 @@ export function RMCalculatorContent() {
                       accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
                       accessibilityRole="button"
                       style={{ minWidth: 48, minHeight: 48 }}
-                      iconColor={theme.colors.onSurfaceVariant}
+                      iconColor={colors.onSurfaceVariant}
                     />
                   </DataTable.Cell>
                 </DataTable.Row>
@@ -166,7 +161,7 @@ export function RMCalculatorContent() {
             />
           </DataTable>
 
-          <Text variant="bodySmall" style={[styles.disclaimer, { color: theme.colors.onSurfaceVariant }]}>
+          <Text variant="bodySmall" style={[styles.disclaimer, { color: colors.onSurfaceVariant }]}>
             Estimates based on submaximal performance. Actual 1RM may vary. Estimates become less accurate above 12 reps.
           </Text>
         </View>
@@ -176,7 +171,7 @@ export function RMCalculatorContent() {
 }
 
 export default function RMCalculator() {
-  const theme = useTheme();
+  const colors = useThemeColors();
 
   return (
     <>
@@ -187,7 +182,7 @@ export default function RMCalculator() {
         keyboardVerticalOffset={100}
       >
         <ScrollView
-          style={{ backgroundColor: theme.colors.background }}
+          style={{ backgroundColor: colors.background }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         >
           <RMCalculatorContent />

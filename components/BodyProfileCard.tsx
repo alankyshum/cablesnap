@@ -1,19 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import {
-  ActivityIndicator,
-  Button,
-  Card,
-  SegmentedButtons,
-  Snackbar,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { ActivityIndicator, Button, Card, SegmentedButtons, Snackbar, Text, TextInput } from "react-native-paper";
 import { flowCardStyle } from "./ui/FlowContainer";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
 import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   ACTIVITY_LABELS,
   GOAL_LABELS,
@@ -47,7 +39,7 @@ const GOAL_BUTTONS = [
 type CardState = "loading" | "error" | "ready";
 
 export default function BodyProfileCard() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [cardState, setCardState] = useState<CardState>("loading");
   const [birthYear, setBirthYear] = useState("");
   const [weight, setWeight] = useState("");
@@ -196,11 +188,11 @@ export default function BodyProfileCard() {
 
   if (cardState === "loading") {
     return (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" />
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
               Loading profile…
             </Text>
           </View>
@@ -211,9 +203,9 @@ export default function BodyProfileCard() {
 
   if (cardState === "error") {
     return (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="bodyMedium" style={{ color: theme.colors.error, marginBottom: 8 }}>
+          <Text variant="bodyMedium" style={{ color: colors.error, marginBottom: 8 }}>
             Could not load profile
           </Text>
           <Button mode="outlined" onPress={loadProfile} compact accessibilityLabel="Retry loading profile">
@@ -226,9 +218,9 @@ export default function BodyProfileCard() {
 
   return (
     <>
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Body Profile
           </Text>
 
@@ -246,7 +238,7 @@ export default function BodyProfileCard() {
             error={!!errors.birthYear}
           />
           {errors.birthYear ? (
-            <Text style={[styles.errorText, { color: theme.colors.error }]} accessibilityLiveRegion="polite">
+            <Text style={[styles.errorText, { color: colors.error }]} accessibilityLiveRegion="polite">
               {errors.birthYear}
             </Text>
           ) : null}
@@ -264,7 +256,7 @@ export default function BodyProfileCard() {
             error={!!errors.weight}
           />
           {errors.weight ? (
-            <Text style={[styles.errorText, { color: theme.colors.error }]} accessibilityLiveRegion="polite">
+            <Text style={[styles.errorText, { color: colors.error }]} accessibilityLiveRegion="polite">
               {errors.weight}
             </Text>
           ) : null}
@@ -282,12 +274,12 @@ export default function BodyProfileCard() {
             error={!!errors.height}
           />
           {errors.height ? (
-            <Text style={[styles.errorText, { color: theme.colors.error }]} accessibilityLiveRegion="polite">
+            <Text style={[styles.errorText, { color: colors.error }]} accessibilityLiveRegion="polite">
               {errors.height}
             </Text>
           ) : null}
 
-          <Text variant="labelLarge" style={[styles.fieldLabel, { color: theme.colors.onSurface }]}>
+          <Text variant="labelLarge" style={[styles.fieldLabel, { color: colors.onSurface }]}>
             Sex
           </Text>
           <SegmentedButtons
@@ -297,7 +289,7 @@ export default function BodyProfileCard() {
             style={styles.segmented}
           />
 
-          <Text variant="labelLarge" style={[styles.fieldLabel, { color: theme.colors.onSurface }]}>
+          <Text variant="labelLarge" style={[styles.fieldLabel, { color: colors.onSurface }]}>
             Activity Level
           </Text>
           <SegmentedButtons
@@ -307,7 +299,7 @@ export default function BodyProfileCard() {
             style={styles.segmented}
           />
 
-          <Text variant="labelLarge" style={[styles.fieldLabel, { color: theme.colors.onSurface }]}>
+          <Text variant="labelLarge" style={[styles.fieldLabel, { color: colors.onSurface }]}>
             Goal
           </Text>
           <SegmentedButtons

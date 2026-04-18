@@ -43,8 +43,9 @@ jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().m
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('../../lib/query', () => ({ useFocusRefetch: jest.fn() }))
-jest.mock('../../components/SnackbarProvider', () => ({
-  useSnackbar: () => ({ showSnack: jest.fn() }),
+jest.mock('../../components/ui/bna-toast', () => ({
+  ToastProvider: ({ children }: { children: unknown }) => children,
+  useToast: () => ({ toast: jest.fn(), success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
 }))
 jest.mock('../../components/ui/FlowContainer', () => {
   const { View } = require('react-native')

@@ -1,10 +1,11 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Card, Text, useTheme } from "react-native-paper";
+import { Card, Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { flowCardStyle } from "./ui/FlowContainer";
 import type { Difficulty } from "../lib/types";
 import { DIFFICULTY_LABELS } from "../lib/types";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const DIFFICULTY_COLORS: Record<Difficulty, { bg: string; fg: string }> = {
   beginner: { bg: "#D1FAE5", fg: "#065F46" },
@@ -39,14 +40,14 @@ export function FlowCard({
   action,
   accessibilityHint,
 }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
 
   const body = (
     <>
       <View style={styles.chipRow}>
         <Text
           variant="titleSmall"
-          style={{ color: theme.colors.onSurface, flexShrink: 1 }}
+          style={{ color: colors.onSurface, flexShrink: 1 }}
           numberOfLines={1}
         >
           {name}
@@ -54,16 +55,16 @@ export function FlowCard({
         {badges?.map((b) => {
           const bg =
             b.type === "active"
-              ? theme.colors.primaryContainer
+              ? colors.primaryContainer
               : b.type === "recommended"
-                ? theme.colors.primaryContainer
-                : theme.colors.surfaceVariant;
+                ? colors.primaryContainer
+                : colors.surfaceVariant;
           const fg =
             b.type === "active"
-              ? theme.colors.onPrimaryContainer
+              ? colors.onPrimaryContainer
               : b.type === "recommended"
-                ? theme.colors.onPrimaryContainer
-                : theme.colors.onSurfaceVariant;
+                ? colors.onPrimaryContainer
+                : colors.onSurfaceVariant;
           return (
             <View
               key={b.label}
@@ -85,19 +86,19 @@ export function FlowCard({
                 styles.metaBadge,
                 {
                   backgroundColor:
-                    dc?.bg ?? theme.colors.surfaceVariant,
+                    dc?.bg ?? colors.surfaceVariant,
                 },
               ]}
             >
               <MaterialCommunityIcons
                 name={m.icon}
                 size={14}
-                color={dc?.fg ?? theme.colors.onSurfaceVariant}
+                color={dc?.fg ?? colors.onSurfaceVariant}
               />
               <Text
                 style={[
                   styles.badgeText,
-                  { color: dc?.fg ?? theme.colors.onSurfaceVariant },
+                  { color: dc?.fg ?? colors.onSurfaceVariant },
                 ]}
               >
                 {m.label}
@@ -113,7 +114,7 @@ export function FlowCard({
 
   return (
     <Card
-      style={[styles.card, { backgroundColor: theme.colors.surface }]}
+      style={[styles.card, { backgroundColor: colors.surface }]}
       onPress={hasInteractiveAction ? undefined : onPress}
       onLongPress={hasInteractiveAction ? undefined : onLongPress}
       accessibilityLabel={hasInteractiveAction ? undefined : accessibilityLabel}

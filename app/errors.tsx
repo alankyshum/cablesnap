@@ -1,16 +1,17 @@
 import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, Card, Chip, Snackbar, Text, useTheme } from "react-native-paper";
+import { Button, Card, Chip, Snackbar, Text } from "react-native-paper";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { getRecentErrors, clearErrorLog } from "../lib/errors";
 import { useLayout } from "../lib/layout";
 import type { ErrorEntry } from "../lib/types";
 import { radii } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function Errors() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const nav = useNavigation();
   const [errors, setErrors] = useState<ErrorEntry[]>([]);
@@ -40,12 +41,12 @@ export default function Errors() {
       nav.setOptions({
         headerRight: () =>
           errors.length > 0 ? (
-            <Button onPress={handleClear} compact textColor={theme.colors.error} accessibilityLabel="Clear all errors">
+            <Button onPress={handleClear} compact textColor={colors.error} accessibilityLabel="Clear all errors">
               Clear All
             </Button>
           ) : null,
       });
-    }, [errors.length, nav, theme.colors.error])
+    }, [errors.length, nav, colors.error])
   );
 
   const toggle = (id: string) => {
@@ -59,15 +60,15 @@ export default function Errors() {
 
   if (errors.length === 0) {
     return (
-      <View style={[styles.empty, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
+      <View style={[styles.empty, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <MaterialCommunityIcons
           name="check-circle-outline"
           size={64}
-          color={theme.colors.primary}
+          color={colors.primary}
         />
         <Text
           variant="titleMedium"
-          style={{ color: theme.colors.onBackground, marginTop: 16 }}
+          style={{ color: colors.onBackground, marginTop: 16 }}
         >
           No errors recorded
         </Text>
@@ -84,14 +85,14 @@ export default function Errors() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlashList
         data={errors}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding }}
         renderItem={({ item }) => (
           <Card
-            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            style={[styles.card, { backgroundColor: colors.surface }]}
             onPress={() => toggle(item.id)}
             accessibilityLabel={`Error: ${item.message}, ${fmt(item.timestamp)}${item.fatal ? ", fatal" : ""}`}
             accessibilityRole="button"
@@ -100,7 +101,7 @@ export default function Errors() {
               <View style={styles.row}>
                 <Text
                   variant="bodySmall"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   {fmt(item.timestamp)}
                 </Text>
@@ -108,7 +109,7 @@ export default function Errors() {
                   <Chip
                     compact
                     textStyle={{ fontSize: 12 }}
-                    style={{ backgroundColor: theme.colors.errorContainer }}
+                    style={{ backgroundColor: colors.errorContainer }}
                   >
                     FATAL
                   </Chip>
@@ -117,17 +118,17 @@ export default function Errors() {
               <Text
                 variant="bodyMedium"
                 numberOfLines={expanded === item.id ? undefined : 2}
-                style={{ color: theme.colors.onSurface, marginTop: 4 }}
+                style={{ color: colors.onSurface, marginTop: 4 }}
               >
                 {item.message}
               </Text>
               {expanded === item.id && item.stack && (
-                <View style={[styles.stackBox, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <View style={[styles.stackBox, { backgroundColor: colors.surfaceVariant }]}>
                   <Text
                     variant="bodySmall"
                     style={{
                       fontFamily: "monospace",
-                      color: theme.colors.onSurfaceVariant,
+                      color: colors.onSurfaceVariant,
                       fontSize: 12,
                     }}
                     selectable

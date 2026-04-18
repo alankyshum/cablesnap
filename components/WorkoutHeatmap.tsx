@@ -1,9 +1,10 @@
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import { useLayout } from "../lib/layout";
 import { withOpacity } from "../lib/format";
 import { radii } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type HeatmapProps = {
   data: Map<string, number>;
@@ -37,12 +38,12 @@ function formatDateKey(date: Date): string {
 
 function heatmapColor(
   count: number,
-  theme: { colors: { surfaceVariant: string; primaryContainer: string; primary: string } }
+  colors: { surfaceVariant: string; primaryContainer: string; primary: string }
 ): string {
-  if (count === 0) return theme.colors.surfaceVariant;
-  if (count === 1) return theme.colors.primaryContainer;
-  if (count === 2) return withOpacity(theme.colors.primary, 0.7);
-  return theme.colors.primary;
+  if (count === 0) return colors.surfaceVariant;
+  if (count === 1) return colors.primaryContainer;
+  if (count === 2) return withOpacity(colors.primary, 0.7);
+  return colors.primary;
 }
 
 type CellData = {
@@ -78,7 +79,7 @@ function buildGrid(weeks: number): CellData[][] {
 }
 
 export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: HeatmapProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
 
   const grid = useMemo(() => {
@@ -110,7 +111,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
     if (count === 0) return null;
     if (count >= 3) {
       return (
-        <Text style={[styles.cellText, { fontSize: Math.max(12, size * 0.5), color: theme.colors.onPrimary }]}>
+        <Text style={[styles.cellText, { fontSize: Math.max(12, size * 0.5), color: colors.onPrimary }]}>
           3+
         </Text>
       );
@@ -118,9 +119,9 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
     const dotSize = Math.max(3, size * 0.15);
     return (
       <View style={styles.dotsRow}>
-        <View style={[styles.cellDot, { width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: count === 1 ? theme.colors.onPrimaryContainer : theme.colors.onPrimary }]} />
+        <View style={[styles.cellDot, { width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: count === 1 ? colors.onPrimaryContainer : colors.onPrimary }]} />
         {count >= 2 && (
-          <View style={[styles.cellDot, { width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: theme.colors.onPrimary }]} />
+          <View style={[styles.cellDot, { width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: colors.onPrimary }]} />
         )}
       </View>
     );
@@ -135,7 +136,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
         <View key={rowIdx} style={styles.row}>
           <Text
             variant="labelSmall"
-            style={[styles.dayLabel, { width: labelWidth, color: theme.colors.onSurfaceVariant }]}
+            style={[styles.dayLabel, { width: labelWidth, color: colors.onSurfaceVariant }]}
           >
             {DAY_LABELS[rowIdx]}
           </Text>
@@ -144,7 +145,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
             const isFuture = cell.date > today;
             const bgColor = isFuture
               ? "transparent"
-              : heatmapColor(cell.count, theme);
+              : heatmapColor(cell.count, colors);
             const label = `${formatDateForLabel(cell.date)}, ${cell.count} workout${cell.count !== 1 ? "s" : ""}`;
             return (
               <Pressable
@@ -174,7 +175,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
 
       {/* Color Legend */}
       <View style={styles.legend}>
-        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
           Less
         </Text>
         {[0, 1, 2, 3].map((level) => (
@@ -183,7 +184,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
             style={[
               styles.legendCell,
               {
-                backgroundColor: heatmapColor(level, theme),
+                backgroundColor: heatmapColor(level, colors),
                 borderRadius: radii.sm,
               },
             ]}
@@ -191,7 +192,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
             {renderDots(level, 16)}
           </View>
         ))}
-        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
           More
         </Text>
       </View>
@@ -199,7 +200,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
       {/* Empty state */}
       {!hasAnyWorkout && (
         <View style={styles.emptyState}>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
             Start working out to see your consistency here!
           </Text>
         </View>

@@ -6,15 +6,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import {
-  Button,
-  Card,
-  List,
-  ProgressBar,
-  RadioButton,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Button, Card, List, ProgressBar, RadioButton, Text } from "react-native-paper";
 import { Stack, useRouter } from "expo-router";
 import { File } from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
@@ -37,6 +29,7 @@ import { getAllExercises, createCustomExercise } from "../../lib/db/exercises";
 import { getBodySettings } from "../../lib/db/body";
 import { getDatabase } from "../../lib/db/helpers";
 import type { Exercise } from "../../lib/types";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 // ---- Step 1: Select File & Unit ----
 
@@ -49,7 +42,7 @@ function StepSelectFile({
     targetUnit: "kg" | "lb"
   ) => void;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [sourceUnit, setSourceUnit] = useState<"kg" | "lb">("kg");
   const [targetUnit, setTargetUnit] = useState<"kg" | "lb">("kg");
   const [parsed, setParsed] = useState<ParseResult | null>(null);
@@ -108,7 +101,7 @@ function StepSelectFile({
     >
       <Text
         variant="headlineSmall"
-        style={{ color: theme.colors.onBackground, marginBottom: 16 }}
+        style={{ color: colors.onBackground, marginBottom: 16 }}
         accessibilityRole="header"
       >
         Step 1: Select File & Unit
@@ -130,11 +123,11 @@ function StepSelectFile({
 
       {error && (
         <Card
-          style={[styles.card, { backgroundColor: theme.colors.errorContainer }]}
+          style={[styles.card, { backgroundColor: colors.errorContainer }]}
         >
           <Card.Content>
             <Text
-              style={{ color: theme.colors.onErrorContainer }}
+              style={{ color: colors.onErrorContainer }}
               accessibilityRole="alert"
             >
               {error}
@@ -146,16 +139,16 @@ function StepSelectFile({
       {parsed && parsed.rows.length > 0 && (
         <>
           <Card
-            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            style={[styles.card, { backgroundColor: colors.surface }]}
           >
             <Card.Content>
               <Text
                 variant="titleMedium"
-                style={{ color: theme.colors.onSurface, marginBottom: 8 }}
+                style={{ color: colors.onSurface, marginBottom: 8 }}
               >
                 File Summary
               </Text>
-              <Text style={{ color: theme.colors.onSurfaceVariant }}>
+              <Text style={{ color: colors.onSurfaceVariant }}>
                 {parsed.sessions.length} session
                 {parsed.sessions.length !== 1 ? "s" : ""},{" "}
                 {parsed.exerciseNames.length} exercise
@@ -165,7 +158,7 @@ function StepSelectFile({
               {parsed.errors.length > 0 && (
                 <Text
                   style={{
-                    color: theme.colors.error,
+                    color: colors.error,
                     marginTop: 4,
                   }}
                 >
@@ -178,12 +171,12 @@ function StepSelectFile({
           </Card>
 
           <Card
-            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            style={[styles.card, { backgroundColor: colors.surface }]}
           >
             <Card.Content>
               <Text
                 variant="titleMedium"
-                style={{ color: theme.colors.onSurface, marginBottom: 12 }}
+                style={{ color: colors.onSurface, marginBottom: 12 }}
               >
                 What unit did you use in Strong?
               </Text>
@@ -207,13 +200,13 @@ function StepSelectFile({
 
           {sampleRows.length > 0 && (
             <Card
-              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+              style={[styles.card, { backgroundColor: colors.surface }]}
             >
               <Card.Content>
                 <Text
                   variant="titleMedium"
                   style={{
-                    color: theme.colors.onSurface,
+                    color: colors.onSurface,
                     marginBottom: 8,
                   }}
                 >
@@ -233,7 +226,7 @@ function StepSelectFile({
                       return (
                         <View style={styles.previewRow}>
                           <Text
-                            style={{ color: theme.colors.onSurface }}
+                            style={{ color: colors.onSurface }}
                             accessibilityLabel={`Sample row ${i + 1}: ${row.exerciseName}, ${converted ?? "bodyweight"} ${targetUnit}, ${row.reps ?? 0} reps`}
                           >
                             {row.exerciseName} —{" "}
@@ -281,7 +274,7 @@ function ExerciseMatchItem({
   match: MatchState;
   onConfirm: (strongName: string) => void;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
 
   const icon =
     match.confidence === "exact"
@@ -301,10 +294,10 @@ function ExerciseMatchItem({
 
   const iconColor =
     match.confidence === "exact"
-      ? theme.colors.primary
+      ? colors.primary
       : match.confidence === "possible"
-        ? theme.colors.tertiary
-        : theme.colors.error;
+        ? colors.tertiary
+        : colors.error;
 
   const displayedExercise =
     match.userOverrideExercise ?? match.matchedExercise;
@@ -353,7 +346,7 @@ function StepReviewMapping({
   ) => void;
   onBack: () => void;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
 
   const initialMatches = useMemo(() => {
     const raw = matchAllExercises(exerciseNames, exercises);
@@ -442,7 +435,7 @@ function StepReviewMapping({
       <View style={styles.stepHeader}>
         <Text
           variant="headlineSmall"
-          style={{ color: theme.colors.onBackground }}
+          style={{ color: colors.onBackground }}
           accessibilityRole="header"
         >
           Step 2: Review Exercise Mapping
@@ -450,7 +443,7 @@ function StepReviewMapping({
         <Text
           variant="bodySmall"
           style={{
-            color: theme.colors.onSurfaceVariant,
+            color: colors.onSurfaceVariant,
             marginTop: 4,
           }}
         >
@@ -471,7 +464,7 @@ function StepReviewMapping({
                 title={title}
                 titleStyle={{
                   fontWeight: "bold",
-                  color: theme.colors.onSurface,
+                  color: colors.onSurface,
                 }}
                 accessibilityRole="header"
                 onPress={
@@ -556,7 +549,7 @@ function StepConfirmImport({
     skippedDistance: number;
   }) => void;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -759,41 +752,41 @@ function StepConfirmImport({
     >
       <Text
         variant="headlineSmall"
-        style={{ color: theme.colors.onBackground, marginBottom: 16 }}
+        style={{ color: colors.onBackground, marginBottom: 16 }}
         accessibilityRole="header"
       >
         Step 3: Confirm & Import
       </Text>
 
       <Card
-        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+        style={[styles.card, { backgroundColor: colors.surface }]}
       >
         <Card.Content>
           <Text
             variant="titleMedium"
-            style={{ color: theme.colors.onSurface, marginBottom: 8 }}
+            style={{ color: colors.onSurface, marginBottom: 8 }}
           >
             Import Summary
           </Text>
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text style={{ color: colors.onSurfaceVariant }}>
             {parsed.sessions.length} session
             {parsed.sessions.length !== 1 ? "s" : ""}
           </Text>
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text style={{ color: colors.onSurfaceVariant }}>
             {matches.length} exercise
             {matches.length !== 1 ? "s" : ""}{" "}
             ({newExercises.length} new)
           </Text>
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text style={{ color: colors.onSurfaceVariant }}>
             {importableSets} set{importableSets !== 1 ? "s" : ""}
           </Text>
           {dateRange && (
-            <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+            <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
               Date range: {dateRange.earliest} → {dateRange.latest}
             </Text>
           )}
           <Text
-            style={{ color: theme.colors.onSurfaceVariant }}
+            style={{ color: colors.onSurfaceVariant }}
             accessibilityLabel={`Import summary: ${parsed.sessions.length} sessions, ${matches.length} exercises, ${importableSets} sets`}
           >
             Unit conversion: {sourceUnit} → {targetUnit}
@@ -803,12 +796,12 @@ function StepConfirmImport({
 
       {sampleSessions.length > 0 && (
         <Card
-          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          style={[styles.card, { backgroundColor: colors.surface }]}
         >
           <Card.Content>
             <Text
               variant="titleMedium"
-              style={{ color: theme.colors.onSurface, marginBottom: 8 }}
+              style={{ color: colors.onSurface, marginBottom: 8 }}
             >
               Sample Sessions
             </Text>
@@ -818,7 +811,7 @@ function StepConfirmImport({
               keyExtractor={(_, i) => `session-${i}`}
               renderItem={({ item: s }) => (
                 <Text
-                  style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}
+                  style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
                   accessibilityLabel={`Sample session: ${s.name} on ${s.date}, ${s.setCount} sets`}
                 >
                   {s.name} — {s.date} ({s.setCount} sets)
@@ -833,12 +826,12 @@ function StepConfirmImport({
         <Card
           style={[
             styles.card,
-            { backgroundColor: theme.colors.tertiaryContainer },
+            { backgroundColor: colors.tertiaryContainer },
           ]}
         >
           <Card.Content>
             <Text
-              style={{ color: theme.colors.onTertiaryContainer }}
+              style={{ color: colors.onTertiaryContainer }}
               accessibilityRole="alert"
             >
               ⚠️{" "}
@@ -854,20 +847,20 @@ function StepConfirmImport({
         <Card
           style={[
             styles.card,
-            { backgroundColor: theme.colors.errorContainer },
+            { backgroundColor: colors.errorContainer },
           ]}
         >
           <Card.Content>
             <Text
               variant="titleSmall"
               style={{
-                color: theme.colors.onErrorContainer,
+                color: colors.onErrorContainer,
                 marginBottom: 4,
               }}
             >
               Potential Duplicates
             </Text>
-            <Text style={{ color: theme.colors.onErrorContainer }}>
+            <Text style={{ color: colors.onErrorContainer }}>
               {duplicates.length} session
               {duplicates.length !== 1 ? "s" : ""} already exist with the
               same date and name. They will be skipped (INSERT OR IGNORE).
@@ -879,7 +872,7 @@ function StepConfirmImport({
               renderItem={({ item: d }) => (
                 <Text
                   style={{
-                    color: theme.colors.onErrorContainer,
+                    color: colors.onErrorContainer,
                     fontSize: 12,
                     marginTop: 2,
                   }}
@@ -891,7 +884,7 @@ function StepConfirmImport({
             {duplicates.length > 5 && (
               <Text
                 style={{
-                  color: theme.colors.onErrorContainer,
+                  color: colors.onErrorContainer,
                   fontSize: 12,
                   marginTop: 2,
                 }}
@@ -907,13 +900,13 @@ function StepConfirmImport({
         <View style={{ marginVertical: 16 }}>
           <ProgressBar
             progress={progress}
-            color={theme.colors.primary}
+            color={colors.primary}
             accessibilityLabel={`Import progress: ${Math.round(progress * 100)}%`}
           />
           <Text
             variant="bodySmall"
             style={{
-              color: theme.colors.onSurfaceVariant,
+              color: colors.onSurfaceVariant,
               textAlign: "center",
               marginTop: 4,
             }}
@@ -965,14 +958,14 @@ function ImportComplete({
   };
   onDone: () => void;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
       <Text
         variant="headlineSmall"
         style={{
-          color: theme.colors.primary,
+          color: colors.primary,
           marginBottom: 16,
           textAlign: "center",
         }}
@@ -982,20 +975,20 @@ function ImportComplete({
       </Text>
 
       <Card
-        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+        style={[styles.card, { backgroundColor: colors.surface }]}
       >
         <Card.Content>
-          <Text style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
+          <Text style={{ color: colors.onSurface, marginBottom: 4 }}>
             Sessions imported: {result.sessionsImported}
           </Text>
-          <Text style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
+          <Text style={{ color: colors.onSurface, marginBottom: 4 }}>
             Exercises created: {result.exercisesCreated}
           </Text>
-          <Text style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
+          <Text style={{ color: colors.onSurface, marginBottom: 4 }}>
             Sets imported: {result.setsImported}
           </Text>
           {(result.skippedTimed > 0 || result.skippedDistance > 0) && (
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text style={{ color: colors.onSurfaceVariant }}>
               Skipped: {result.skippedTimed} timed,{" "}
               {result.skippedDistance} distance
             </Text>
@@ -1020,7 +1013,7 @@ function ImportComplete({
 // ---- Main Screen ----
 
 export default function ImportStrongScreen() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [parsed, setParsed] = useState<ParseResult | null>(null);
@@ -1078,7 +1071,7 @@ export default function ImportStrongScreen() {
     <View
       style={[
         styles.flex,
-        { backgroundColor: theme.colors.background },
+        { backgroundColor: colors.background },
       ]}
     >
       <Stack.Screen options={{ title: "Import from Strong" }} />

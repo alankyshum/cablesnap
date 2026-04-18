@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { Button, Text, TextInput, useTheme } from "react-native-paper";
+import { Button, Text, TextInput } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   getLatestMeasurements,
@@ -9,6 +9,7 @@ import {
 } from "../../lib/db";
 import { useLayout } from "../../lib/layout";
 import { CM_TO_IN, IN_TO_CM } from "../../lib/units";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const FIELDS = [
   { key: "waist", label: "Waist" },
@@ -31,7 +32,7 @@ function today(): string {
 }
 
 export default function Measurements() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const layout = useLayout();
   const [date, setDate] = useState(today());
@@ -132,12 +133,12 @@ export default function Measurements() {
     <FlatList
       data={[]}
       renderItem={null}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
         <>
-          <Text variant="titleLarge" style={{ color: theme.colors.onBackground, marginBottom: 16 }}>
+          <Text variant="titleLarge" style={{ color: colors.onBackground, marginBottom: 16 }}>
             Log Measurements
           </Text>
 

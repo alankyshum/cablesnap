@@ -1,8 +1,10 @@
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { spacing } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 export type ShareCardExercise = {
   name: string;
@@ -32,7 +34,7 @@ const MAX_EXERCISES = 6;
 const CARD_WIDTH = 1080;
 
 function StarRow({ rating }: { rating: number }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   return (
     <View style={cardStyles.starRow}>
       {[1, 2, 3, 4, 5].map((i) => (
@@ -40,7 +42,7 @@ function StarRow({ rating }: { rating: number }) {
           key={i}
           name={i <= rating ? "star" : "star-outline"}
           size={28}
-          color={i <= rating ? theme.colors.primary : theme.colors.onSurfaceVariant}
+          color={i <= rating ? colors.primary : colors.onSurfaceVariant}
         />
       ))}
     </View>
@@ -48,8 +50,8 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 export default function ShareCard(props: ShareCardProps) {
-  const theme = useTheme();
-  const isDark = theme.dark;
+  const colors = useThemeColors();
+  const isDark = useColorScheme() === "dark";
   const { name, date, duration, sets, volume, unit, rating, prs, exercises } =
     props;
 
@@ -62,8 +64,8 @@ export default function ShareCard(props: ShareCardProps) {
         cardStyles.card,
         {
           width: CARD_WIDTH,
-          backgroundColor: theme.colors.surface,
-          borderColor: isDark ? theme.colors.outline : "transparent",
+          backgroundColor: colors.surface,
+          borderColor: isDark ? colors.outline : "transparent",
           borderWidth: isDark ? 1 : 0,
         },
       ]}
@@ -73,10 +75,10 @@ export default function ShareCard(props: ShareCardProps) {
         <MaterialCommunityIcons
           name="dumbbell"
           size={32}
-          color={theme.colors.primary}
+          color={colors.primary}
         />
         <Text
-          style={[cardStyles.brandText, { color: theme.colors.primary }]}
+          style={[cardStyles.brandText, { color: colors.primary }]}
         >
           FitForge
         </Text>
@@ -85,14 +87,14 @@ export default function ShareCard(props: ShareCardProps) {
       {/* Session name & date */}
       <View style={cardStyles.titleSection}>
         <Text
-          style={[cardStyles.sessionName, { color: theme.colors.onSurface }]}
+          style={[cardStyles.sessionName, { color: colors.onSurface }]}
           numberOfLines={2}
           ellipsizeMode="tail"
         >
           {name}
         </Text>
         <Text
-          style={[cardStyles.dateText, { color: theme.colors.onSurfaceVariant }]}
+          style={[cardStyles.dateText, { color: colors.onSurfaceVariant }]}
         >
           {date}
         </Text>
@@ -102,37 +104,37 @@ export default function ShareCard(props: ShareCardProps) {
       <View
         style={[
           cardStyles.statsContainer,
-          { backgroundColor: theme.colors.surfaceVariant },
+          { backgroundColor: colors.surfaceVariant },
         ]}
       >
         <View style={cardStyles.statItem}>
-          <Text style={[cardStyles.statValue, { color: theme.colors.onSurface }]}>
+          <Text style={[cardStyles.statValue, { color: colors.onSurface }]}>
             {duration}
           </Text>
           <Text
-            style={[cardStyles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+            style={[cardStyles.statLabel, { color: colors.onSurfaceVariant }]}
           >
             Duration
           </Text>
         </View>
-        <View style={[cardStyles.statDivider, { backgroundColor: theme.colors.outline }]} />
+        <View style={[cardStyles.statDivider, { backgroundColor: colors.outline }]} />
         <View style={cardStyles.statItem}>
-          <Text style={[cardStyles.statValue, { color: theme.colors.onSurface }]}>
+          <Text style={[cardStyles.statValue, { color: colors.onSurface }]}>
             {sets}
           </Text>
           <Text
-            style={[cardStyles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+            style={[cardStyles.statLabel, { color: colors.onSurfaceVariant }]}
           >
             Sets
           </Text>
         </View>
-        <View style={[cardStyles.statDivider, { backgroundColor: theme.colors.outline }]} />
+        <View style={[cardStyles.statDivider, { backgroundColor: colors.outline }]} />
         <View style={cardStyles.statItem}>
-          <Text style={[cardStyles.statValue, { color: theme.colors.onSurface }]}>
+          <Text style={[cardStyles.statValue, { color: colors.onSurface }]}>
             {volume}
           </Text>
           <Text
-            style={[cardStyles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+            style={[cardStyles.statLabel, { color: colors.onSurfaceVariant }]}
           >
             Volume ({unit})
           </Text>
@@ -151,25 +153,25 @@ export default function ShareCard(props: ShareCardProps) {
         <View
           style={[
             cardStyles.prSection,
-            { backgroundColor: theme.colors.primaryContainer },
+            { backgroundColor: colors.primaryContainer },
           ]}
         >
           <View style={cardStyles.prHeader}>
-            <Text style={[cardStyles.prTitle, { color: theme.colors.onPrimaryContainer }]}>
+            <Text style={[cardStyles.prTitle, { color: colors.onPrimaryContainer }]}>
               🏆 New PRs
             </Text>
           </View>
           {prs.map((pr, i) => (
             <View key={i} style={cardStyles.prRow}>
               <Text
-                style={[cardStyles.prName, { color: theme.colors.onPrimaryContainer }]}
+                style={[cardStyles.prName, { color: colors.onPrimaryContainer }]}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
                 {pr.name}
               </Text>
               <Text
-                style={[cardStyles.prValue, { color: theme.colors.onPrimaryContainer }]}
+                style={[cardStyles.prValue, { color: colors.onPrimaryContainer }]}
               >
                 {pr.value}
               </Text>
@@ -184,7 +186,7 @@ export default function ShareCard(props: ShareCardProps) {
           <Text
             style={[
               cardStyles.exerciseSectionTitle,
-              { color: theme.colors.onSurfaceVariant },
+              { color: colors.onSurfaceVariant },
             ]}
           >
             Exercises
@@ -194,7 +196,7 @@ export default function ShareCard(props: ShareCardProps) {
               <Text
                 style={[
                   cardStyles.exerciseName,
-                  { color: theme.colors.onSurface },
+                  { color: colors.onSurface },
                 ]}
                 numberOfLines={1}
                 ellipsizeMode="tail"
@@ -204,7 +206,7 @@ export default function ShareCard(props: ShareCardProps) {
               <Text
                 style={[
                   cardStyles.exerciseDetail,
-                  { color: theme.colors.onSurfaceVariant },
+                  { color: colors.onSurfaceVariant },
                 ]}
               >
                 {ex.weight
@@ -217,7 +219,7 @@ export default function ShareCard(props: ShareCardProps) {
             <Text
               style={[
                 cardStyles.moreText,
-                { color: theme.colors.onSurfaceVariant },
+                { color: colors.onSurfaceVariant },
               ]}
             >
               and {remaining} more
@@ -230,11 +232,11 @@ export default function ShareCard(props: ShareCardProps) {
       <View
         style={[
           cardStyles.footer,
-          { borderTopColor: theme.colors.outlineVariant },
+          { borderTopColor: colors.outlineVariant },
         ]}
       >
         <Text
-          style={[cardStyles.footerText, { color: theme.colors.onSurfaceVariant }]}
+          style={[cardStyles.footerText, { color: colors.onSurfaceVariant }]}
         >
           fitforge.app
         </Text>

@@ -8,8 +8,9 @@ import Animated, {
   withTiming,
   runOnJS,
 } from "react-native-reanimated";
-import { IconButton, useTheme } from "react-native-paper";
+import { IconButton } from "react-native-paper";
 import { radii, duration as durationTokens } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface SwipeToDeleteProps {
   children: React.ReactNode;
@@ -25,7 +26,7 @@ export default function SwipeToDelete({
   onDelete,
   enabled = true,
 }: SwipeToDeleteProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const translateX = useSharedValue(0);
 
   const panGesture = Gesture.Pan()
@@ -61,14 +62,14 @@ export default function SwipeToDelete({
       <Animated.View
         style={[
           styles.deleteBackground,
-          { backgroundColor: theme.colors.error },
+          { backgroundColor: colors.error },
           bgStyle,
         ]}
       >
         <View style={styles.deleteContent}>
           <IconButton
             icon="delete"
-            iconColor={theme.colors.onError}
+            iconColor={colors.onError}
             size={24}
             onPress={onDelete}
             accessibilityLabel="Delete"

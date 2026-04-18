@@ -6,18 +6,14 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Chip,
-  Searchbar,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Chip, Searchbar, Text } from "react-native-paper";
 // Note: Chip is still used for filter chips at the top (they ARE interactive).
 // The category badge inside each list item uses View+Text to avoid nested
 // <button> elements on web (Chip renders as <button> even without onPress).
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { addExerciseToTemplate, addSet, getAllExercises, getTemplateExerciseCount } from "../../lib/db";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -28,7 +24,7 @@ import {
 const ITEM_HEIGHT = 72;
 
 export default function PickExercise() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const { templateId, sessionId } = useLocalSearchParams<{
@@ -92,8 +88,8 @@ export default function PickExercise() {
         style={({ pressed }) => [
           styles.item,
           {
-            backgroundColor: theme.colors.surface,
-            borderBottomColor: theme.colors.outlineVariant,
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.outlineVariant,
           },
           pressed && { opacity: 0.7 },
         ]}
@@ -104,7 +100,7 @@ export default function PickExercise() {
           <Text
             variant="titleSmall"
             numberOfLines={1}
-            style={{ color: theme.colors.onSurface }}
+            style={{ color: colors.onSurface }}
           >
             {item.name}{item.is_custom ? " (Custom)" : ""}
           </Text>
@@ -112,17 +108,17 @@ export default function PickExercise() {
             <View
               style={[
                 styles.badge,
-                { backgroundColor: theme.colors.primaryContainer },
+                { backgroundColor: colors.primaryContainer },
               ]}
             >
-              <Text style={[styles.chipText, { color: theme.colors.onPrimaryContainer }]}>
+              <Text style={[styles.chipText, { color: colors.onPrimaryContainer }]}>
                 {CATEGORY_LABELS[item.category]}
               </Text>
             </View>
             <Text
               variant="bodySmall"
               style={{
-                color: theme.colors.onSurfaceVariant,
+                color: colors.onSurfaceVariant,
                 marginLeft: 8,
               }}
             >
@@ -132,20 +128,20 @@ export default function PickExercise() {
         </View>
       </Pressable>
     ),
-    [theme, pick]
+    [colors, pick]
   );
 
   return (
     <>
       <Stack.Screen options={{ title: "Pick Exercise" }} />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
+        style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <Searchbar
           placeholder="Search exercises..."
           value={query}
           onChangeText={setQuery}
-          style={[styles.search, { backgroundColor: theme.colors.surface }]}
+          style={[styles.search, { backgroundColor: colors.surface }]}
           accessibilityLabel="Search exercises"
         />
         <View style={styles.chips}>
@@ -178,7 +174,7 @@ export default function PickExercise() {
               <View style={styles.empty}>
                 <Text
                   variant="titleMedium"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   No exercises found
                 </Text>

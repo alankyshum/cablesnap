@@ -1,7 +1,8 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, Text, useTheme } from "react-native-paper";
+import { Button, Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   icon: string;
@@ -14,24 +15,24 @@ type Props = {
 };
 
 export default function EmptyState({ icon, title, subtitle, action }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   return (
     <View style={styles.container}>
       <MaterialCommunityIcons
         name={icon as never}
         size={48}
-        color={theme.colors.onSurfaceVariant}
+        color={colors.onSurfaceVariant}
       />
       <Text
         variant="titleMedium"
-        style={[styles.title, { color: theme.colors.onSurface }]}
+        style={[styles.title, { color: colors.onSurface }]}
       >
         {title}
       </Text>
       {subtitle ? (
         <Text
           variant="bodyMedium"
-          style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}
+          style={[styles.subtitle, { color: colors.onSurfaceVariant }]}
         >
           {subtitle}
         </Text>

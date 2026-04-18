@@ -4,12 +4,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import {
-  Card,
-  ProgressBar,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Card, ProgressBar, Text } from "react-native-paper";
 import { Stack } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import {
@@ -26,6 +21,7 @@ import {
 } from "../../lib/achievements";
 import type { AchievementCategory } from "../../lib/achievements";
 import { radii, typography } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type AchievementItem = {
   id: string;
@@ -47,7 +43,7 @@ const CATEGORY_LABELS: Record<AchievementCategory, string> = {
 };
 
 export default function AchievementsScreen() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [items, setItems] = useState<AchievementItem[]>([]);
   const [earnedCount, setEarnedCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -131,8 +127,8 @@ export default function AchievementsScreen() {
     return (
       <>
         <Stack.Screen options={{ title: "Achievements" }} />
-        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>Loading achievements...</Text>
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
+          <Text style={{ color: colors.onSurfaceVariant }}>Loading achievements...</Text>
         </View>
       </>
     );
@@ -142,9 +138,9 @@ export default function AchievementsScreen() {
     return (
       <>
         <Stack.Screen options={{ title: "Achievements" }} />
-        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
           <Text variant="headlineMedium" style={{ marginBottom: 8 }}>⚠️</Text>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             {error}
           </Text>
         </View>
@@ -156,9 +152,9 @@ export default function AchievementsScreen() {
     return (
       <>
         <Stack.Screen options={{ title: "Achievements" }} />
-        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
           <Text variant="headlineMedium" style={{ marginBottom: 8 }}>🏆</Text>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             Complete your first workout to start earning achievements!
           </Text>
         </View>
@@ -176,11 +172,11 @@ export default function AchievementsScreen() {
 
   const renderBadge = ({ item }: { item: AchievementItem }) => {
     const badgeColor = item.earned
-      ? theme.colors.primaryContainer
-      : theme.colors.surfaceVariant;
+      ? colors.primaryContainer
+      : colors.surfaceVariant;
     const textColor = item.earned
-      ? theme.colors.onPrimaryContainer
-      : theme.colors.onSurfaceVariant;
+      ? colors.onPrimaryContainer
+      : colors.onSurfaceVariant;
 
     return (
       <Card
@@ -233,7 +229,7 @@ export default function AchievementsScreen() {
             >
               <ProgressBar
                 progress={item.progress}
-                color={theme.colors.primary}
+                color={colors.primary}
                 style={styles.progressBar}
               />
               <Text variant="bodySmall" style={{ color: textColor, marginTop: 2 }}>
@@ -252,29 +248,29 @@ export default function AchievementsScreen() {
       <FlatList
         data={[{ key: "header" }, ...sections.map((s) => ({ key: s.category, ...s }))]}
         keyExtractor={(item) => item.key}
-        style={{ backgroundColor: theme.colors.background }}
+        style={{ backgroundColor: colors.background }}
         contentContainerStyle={styles.content}
         renderItem={({ item }) => {
           if (item.key === "header") {
             return (
               <View style={styles.header}>
-                <Text variant="headlineMedium" style={{ color: theme.colors.onBackground }}>
+                <Text variant="headlineMedium" style={{ color: colors.onBackground }}>
                   🏆
                 </Text>
                 <Text
                   variant="titleLarge"
-                  style={{ color: theme.colors.onBackground, fontWeight: "700", marginTop: 4 }}
+                  style={{ color: colors.onBackground, fontWeight: "700", marginTop: 4 }}
                   accessibilityRole="header"
                 >
                   {earnedCount} / {ACHIEVEMENTS.length} Achievements Earned
                 </Text>
                 {retroBanner !== null && (
                   <Card
-                    style={[styles.retroBanner, { backgroundColor: theme.colors.tertiaryContainer }]}
+                    style={[styles.retroBanner, { backgroundColor: colors.tertiaryContainer }]}
                     accessibilityLiveRegion="polite"
                   >
                     <Card.Content>
-                      <Text variant="bodyMedium" style={{ color: theme.colors.onTertiaryContainer }}>
+                      <Text variant="bodyMedium" style={{ color: colors.onTertiaryContainer }}>
                         Welcome back! We found {retroBanner} achievement{retroBanner !== 1 ? "s" : ""} from your workout history.
                       </Text>
                     </Card.Content>
@@ -289,7 +285,7 @@ export default function AchievementsScreen() {
             <View style={styles.section}>
               <Text
                 variant="titleMedium"
-                style={{ color: theme.colors.onBackground, marginBottom: 8, fontWeight: "700" }}
+                style={{ color: colors.onBackground, marginBottom: 8, fontWeight: "700" }}
                 accessibilityRole="header"
               >
                 {section.label}

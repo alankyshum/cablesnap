@@ -68,7 +68,7 @@ describe("Home screen stats row (index.tsx)", () => {
   });
 
   it("shows 0 with muted styling when streak is zero", () => {
-    expect(indexSrc).toContain("streak > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant");
+    expect(indexSrc).toContain("streak > 0 ? colors.onSurface : colors.onSurfaceVariant");
   });
 
   it("handles weekly count with and without schedule", () => {

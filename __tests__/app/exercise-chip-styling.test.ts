@@ -17,12 +17,12 @@ describe("Exercise category chip active/inactive styling (BLD-189)", () => {
 
   it("applies primaryContainer background only when active", () => {
     expect(exercisesSrc).toContain(
-      "active && { backgroundColor: theme.colors.primaryContainer }"
+      "active && { backgroundColor: colors.primaryContainer }"
     );
   });
 
   it("applies onPrimaryContainer text color only when active", () => {
-    expect(exercisesSrc).toContain("color: theme.colors.onPrimaryContainer");
+    expect(exercisesSrc).toContain("color: colors.onPrimaryContainer");
   });
 
   it("sets flexShrink: 0 on chip text to prevent ellipsis truncation", () => {
@@ -45,7 +45,7 @@ describe("Exercise category chip active/inactive styling (BLD-189)", () => {
   it("uses theme tokens for chip icon colors (no hardcoded hex)", () => {
     // Icon color should use theme.colors, not raw hex values
     expect(exercisesSrc).toContain(
-      "color={active ? theme.colors.onPrimaryContainer : theme.colors.onSurface}"
+      "color={active ? colors.onPrimaryContainer : colors.onSurface}"
     );
   });
 });

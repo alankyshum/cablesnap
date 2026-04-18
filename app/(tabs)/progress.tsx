@@ -8,19 +8,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  Card,
-  Divider,
-  FAB,
-  IconButton,
-  ProgressBar,
-  SegmentedButtons,
-  Snackbar,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Button, Card, Divider, FAB, IconButton, ProgressBar, SegmentedButtons, Snackbar, Text, TextInput } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import { CartesianChart, Bar, Line } from "victory-native";
 import {
@@ -47,6 +35,7 @@ import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import WeeklySummary from "../../components/WeeklySummary";
 import { formatDuration, formatDateShort, movingAvg } from "../../lib/format";
 import { radii } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type PR = { exercise_id: string; name: string; max_weight: number };
 type SessionRow = { id: string; name: string; started_at: number; duration_seconds: number | null; set_count: number };
@@ -58,7 +47,7 @@ function today(): string {
 }
 
 export default function Progress() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
   const router = useRouter();
@@ -228,7 +217,7 @@ export default function Progress() {
             <WeeklySummary />
           </View>
           <View style={[styles.center, { flex: 1 }]}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 32 }}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 32 }}>
               Complete your first workout to see progress
             </Text>
           </View>
@@ -238,7 +227,7 @@ export default function Progress() {
 
     const achievementsCard = (
       <Card
-        style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}
+        style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}
         onPress={() => router.push("/progress/achievements")}
         accessibilityLabel="Achievements"
         accessibilityRole="button"
@@ -247,11 +236,11 @@ export default function Progress() {
         <Card.Content>
           <View style={styles.cardHeader}>
             <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
               Achievements
             </Text>
           </View>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
             Track your milestones and badges
           </Text>
         </Card.Content>
@@ -259,9 +248,9 @@ export default function Progress() {
     );
 
     const freqCard = freq.length > 0 ? (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
             Sessions Per Week
           </Text>
           <View style={{ width: chartWidth, height: 180 }}>
@@ -275,7 +264,7 @@ export default function Progress() {
                 <Bar
                   points={points.count}
                   chartBounds={chartBounds}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                   roundedCorners={{ topLeft: 4, topRight: 4 }}
                 />
               )}
@@ -286,9 +275,9 @@ export default function Progress() {
     ) : null;
 
     const volCard = vol.length > 0 ? (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
             Weekly Volume (kg)
           </Text>
           <View style={{ width: chartWidth, height: 180 }}>
@@ -302,7 +291,7 @@ export default function Progress() {
                 <Bar
                   points={points.volume}
                   chartBounds={chartBounds}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                   roundedCorners={{ topLeft: 4, topRight: 4 }}
                 />
               )}
@@ -313,22 +302,22 @@ export default function Progress() {
     ) : null;
 
     const prCard = (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
             Personal Records
           </Text>
           {prs.length === 0 ? (
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
               No records yet — start lifting!
             </Text>
           ) : (
             prs.map((pr) => (
-              <View key={pr.exercise_id} style={[styles.prRow, { borderBottomColor: theme.colors.outlineVariant }]}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, flex: 1 }}>
+              <View key={pr.exercise_id} style={[styles.prRow, { borderBottomColor: colors.outlineVariant }]}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurface, flex: 1 }}>
                   {pr.name}
                 </Text>
-                <Text variant="titleSmall" style={{ color: theme.colors.primary }}>
+                <Text variant="titleSmall" style={{ color: colors.primary }}>
                   {pr.max_weight} kg
                 </Text>
               </View>
@@ -339,19 +328,19 @@ export default function Progress() {
     );
 
     const sessionsCard = (
-      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, layout.atLeastMedium && styles.wideCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
             Recent Sessions
           </Text>
           {sessions.map((s, i) => (
             <View key={s.id}>
               <View style={styles.sessionRow}>
                 <View style={{ flex: 1 }}>
-                  <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                  <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                     {s.name}
                   </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                     {formatDateShort(s.started_at)} · {formatDuration(s.duration_seconds)} · {s.set_count} sets
                   </Text>
                 </View>
@@ -407,17 +396,17 @@ export default function Progress() {
     if (total === 0 && !measurements) {
       return (
         <View style={[styles.center, { flex: 1 }]}>
-          <Text variant="headlineMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+          <Text variant="headlineMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
             📏
           </Text>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
+          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             Log your first weigh-in
           </Text>
           <FAB
             icon="plus"
             onPress={() => setModal(true)}
-            style={[styles.emptyFab, { backgroundColor: theme.colors.primary }]}
-            color={theme.colors.onPrimary}
+            style={[styles.emptyFab, { backgroundColor: colors.primary }]}
+            color={colors.onPrimary}
             accessibilityLabel="Log body weight"
           />
         </View>
@@ -443,10 +432,10 @@ export default function Progress() {
 
     // Weight card
     const weightCard = latest ? (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
           <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
               Current Weight
             </Text>
             <Button
@@ -460,7 +449,7 @@ export default function Progress() {
           </View>
           <Text
             variant="displaySmall"
-            style={{ color: theme.colors.onSurface, marginTop: 4 }}
+            style={{ color: colors.onSurface, marginTop: 4 }}
             accessibilityLabel={`Current weight ${toDisplay(latest.weight, unit)} ${unit}`}
           >
             {toDisplay(latest.weight, unit)} {unit}
@@ -468,13 +457,13 @@ export default function Progress() {
           {delta !== null && delta !== 0 && (
             <Text
               variant="bodyMedium"
-              style={{ color: delta > 0 ? theme.colors.error : theme.colors.primary, marginTop: 4 }}
+              style={{ color: delta > 0 ? colors.error : colors.primary, marginTop: 4 }}
               accessibilityValue={{ text: `${deltaLabel} since previous entry` }}
             >
               {deltaLabel} since previous
             </Text>
           )}
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
             {latest.date}
           </Text>
         </Card.Content>
@@ -483,10 +472,10 @@ export default function Progress() {
 
     // Goals card
     const goalsCard = (settings.weight_goal || settings.body_fat_goal) ? (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
           <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
               Goals
             </Text>
             <Button
@@ -500,12 +489,12 @@ export default function Progress() {
           </View>
           {settings.weight_goal && latest && (
             <View style={{ marginTop: 8 }}>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+              <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                 Weight: {toDisplay(latest.weight, unit)} → {toDisplay(settings.weight_goal, unit)} {unit}
               </Text>
               <ProgressBar
                 progress={Math.min(1, Math.max(0, 1 - Math.abs(latest.weight - settings.weight_goal) / Math.max(latest.weight, 1)))}
-                color={theme.colors.primary}
+                color={colors.primary}
                 style={{ marginTop: 8, borderRadius: 4 }}
                 accessibilityLabel={`Weight goal progress`}
               />
@@ -513,12 +502,12 @@ export default function Progress() {
           )}
           {settings.body_fat_goal && measurements?.body_fat && (
             <View style={{ marginTop: 12 }}>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+              <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                 Body fat: {measurements.body_fat}% → {settings.body_fat_goal}%
               </Text>
               <ProgressBar
                 progress={Math.min(1, Math.max(0, 1 - Math.abs(measurements.body_fat - settings.body_fat_goal) / Math.max(measurements.body_fat, 1)))}
-                color={theme.colors.primary}
+                color={colors.primary}
                 style={{ marginTop: 8, borderRadius: 4 }}
                 accessibilityLabel={`Body fat goal progress`}
               />
@@ -527,9 +516,9 @@ export default function Progress() {
         </Card.Content>
       </Card>
     ) : (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
             Goals
           </Text>
           <Button
@@ -555,9 +544,9 @@ export default function Progress() {
       });
 
       return (
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
               Weight Trend
             </Text>
             <View style={{ width: chartWidth, height: 200 }}>
@@ -575,13 +564,13 @@ export default function Progress() {
                   <>
                     <Line
                       points={points.weight}
-                      color={theme.colors.primary}
+                      color={colors.primary}
                       strokeWidth={2}
                       curveType="natural"
                     />
                     <Line
                       points={points.avg}
-                      color={theme.colors.tertiary}
+                      color={colors.tertiary}
                       strokeWidth={2}
                       curveType="natural"
                     />
@@ -590,8 +579,8 @@ export default function Progress() {
               </CartesianChart>
             </View>
             <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
-              <Text variant="bodySmall" style={{ color: theme.colors.primary }}>● Actual</Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.tertiary }}>● 7-day avg</Text>
+              <Text variant="bodySmall" style={{ color: colors.primary }}>● Actual</Text>
+              <Text variant="bodySmall" style={{ color: colors.tertiary }}>● 7-day avg</Text>
             </View>
           </Card.Content>
         </Card>
@@ -600,15 +589,15 @@ export default function Progress() {
 
     // Single entry: card only, no chart
     const singleCard = chart.length === 1 && latest ? (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
             Weight Trend
           </Text>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
             {toDisplay(latest.weight, unit)} {unit} on {latest.date}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
             Log more entries to see a chart
           </Text>
         </Card.Content>
@@ -617,19 +606,19 @@ export default function Progress() {
 
     // Measurements card
     const measCard = (
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
         <Card.Content>
           <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
               Measurements
             </Text>
           </View>
           {measurements ? (
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
               Last logged: {measurements.date}
             </Text>
           ) : (
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
               No measurements logged yet
             </Text>
           )}
@@ -648,12 +637,12 @@ export default function Progress() {
 
     // Recent entries list
     const renderEntry = ({ item }: { item: BodyWeight }) => (
-      <View style={[styles.entryRow, { borderBottomColor: theme.colors.outlineVariant }]}>
+      <View style={[styles.entryRow, { borderBottomColor: colors.outlineVariant }]}>
         <View style={{ flex: 1 }}>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
             {toDisplay(item.weight, unit)} {unit}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {item.date}{item.notes ? ` · ${item.notes}` : ""}
           </Text>
         </View>
@@ -683,7 +672,7 @@ export default function Progress() {
               {measCard}
               {/* Progress Photos card */}
               <Card
-                style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                style={[styles.card, { backgroundColor: colors.surface }]}
                 onPress={() => router.push("/body/photos")}
                 accessibilityLabel="Progress Photos"
                 accessibilityRole="button"
@@ -691,22 +680,22 @@ export default function Progress() {
               >
                 <Card.Content>
                   <View style={styles.cardHeader}>
-                    <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+                    <Text variant="titleMedium" style={{ color: colors.onSurface }}>
                       Progress Photos
                     </Text>
                   </View>
-                  <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                  <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
                     Track your visual transformation
                   </Text>
                 </Card.Content>
               </Card>
-              <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8, marginTop: 8 }}>
+              <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8, marginTop: 8 }}>
                 Recent Entries
               </Text>
             </>
           }
           ListEmptyComponent={
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
               No entries yet
             </Text>
           }
@@ -714,8 +703,8 @@ export default function Progress() {
         <FAB
           icon="plus"
           onPress={() => setModal(true)}
-          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-          color={theme.colors.onPrimary}
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          color={colors.onPrimary}
           accessibilityLabel="Log body weight"
         />
         <Snackbar
@@ -741,8 +730,8 @@ export default function Progress() {
       accessibilityViewIsModal
     >
       <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
-        <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-          <Text variant="titleLarge" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <Text variant="titleLarge" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Log Weight
           </Text>
 
@@ -802,7 +791,7 @@ export default function Progress() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.segmentContainer, { paddingHorizontal: layout.horizontalPadding }]}>
         <SegmentedButtons
           value={segment}

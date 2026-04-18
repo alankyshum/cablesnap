@@ -4,13 +4,15 @@ import {
   Pressable,
   StyleSheet,
   View,
+  useColorScheme,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Chip, FAB, Searchbar, Text, useTheme } from "react-native-paper";
+import { Chip, FAB, Searchbar, Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { getAllExercises, getExerciseById } from "../../lib/db";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -30,12 +32,13 @@ type FilterType = Category | "custom";
 const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
 
 export default function Exercises() {
-  const theme = useTheme();
+  const colors = useThemeColors();
+  const isDark = useColorScheme() === "dark";
   const router = useRouter();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
   const profileGender = useProfileGender();
-  const mc = theme.dark ? muscle.dark : muscle.light;
+  const mc = isDark ? muscle.dark : muscle.light;
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<FilterType>>(new Set());
   const [detail, setDetail] = useState<Exercise | null>(null);
@@ -91,8 +94,8 @@ export default function Exercises() {
         onPress={() => onPress(item)}
         style={({ pressed }) => [
           styles.exerciseCard,
-          { borderLeftColor: color, borderLeftWidth: 3, backgroundColor: theme.colors.surface, shadowColor: theme.colors.shadow },
-          selected && { backgroundColor: theme.colors.primaryContainer },
+          { borderLeftColor: color, borderLeftWidth: 3, backgroundColor: colors.surface, shadowColor: colors.shadow },
+          selected && { backgroundColor: colors.primaryContainer },
           pressed && { opacity: 0.7 },
         ]}
         accessibilityLabel={`${item.name}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}, Difficulty: ${diff}`}
@@ -100,18 +103,18 @@ export default function Exercises() {
       >
         <View style={styles.cardInner}>
           <View style={styles.titleRow}>
-            <Text variant="titleSmall" numberOfLines={1} style={[{ color: theme.colors.onSurface }, styles.titleText]}>
+            <Text variant="titleSmall" numberOfLines={1} style={[{ color: colors.onSurface }, styles.titleText]}>
               {item.name}
             </Text>
             {item.is_custom && (
-              <View style={[styles.customBadge, { backgroundColor: theme.colors.tertiaryContainer }]}>
-                <Text style={[styles.customBadgeText, { color: theme.colors.onSurface }]}>Custom</Text>
+              <View style={[styles.customBadge, { backgroundColor: colors.tertiaryContainer }]}>
+                <Text style={[styles.customBadgeText, { color: colors.onSurface }]}>Custom</Text>
               </View>
             )}
           </View>
           <Text
             variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}
+            style={{ color: colors.onSurfaceVariant, marginTop: 2 }}
             numberOfLines={1}
           >
             {CATEGORY_LABELS[item.category]} · {item.equipment}{item.attachment ? ` · ${ATTACHMENT_LABELS[item.attachment]}` : ""}
@@ -120,13 +123,13 @@ export default function Exercises() {
             {item.primary_muscles.map((m) => (
               <View key={m} style={styles.muscleBadge}>
                 <View style={[styles.muscleDot, { backgroundColor: mc.primary }]} />
-                <Text style={[styles.muscleLabel, { color: theme.colors.onSurfaceVariant }]}>{m}</Text>
+                <Text style={[styles.muscleLabel, { color: colors.onSurfaceVariant }]}>{m}</Text>
               </View>
             ))}
             {item.secondary_muscles.map((m) => (
               <View key={`s-${m}`} style={styles.muscleBadge}>
                 <View style={[styles.muscleDot, { backgroundColor: mc.secondary }]} />
-                <Text style={[styles.muscleLabel, { color: theme.colors.onSurfaceVariant }]}>{m}</Text>
+                <Text style={[styles.muscleLabel, { color: colors.onSurfaceVariant }]}>{m}</Text>
               </View>
             ))}
           </View>
@@ -134,7 +137,7 @@ export default function Exercises() {
       </Pressable>
       );
     },
-    [onPress, theme, layout.atLeastMedium, detail, mc]
+    [onPress, colors, layout.atLeastMedium, detail, mc]
   );
 
   const keyExtractor = useCallback((item: Exercise) => item.id, []);
@@ -143,15 +146,15 @@ export default function Exercises() {
     () =>
       loading ? null : (
         <View style={styles.empty}>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant }}>
             No exercises found
           </Text>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
             Try adjusting your search or filters
           </Text>
         </View>
       ),
-    [loading, theme]
+    [loading, colors]
   );
 
   const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : CATEGORY_LABELS[f]);
@@ -162,7 +165,7 @@ export default function Exercises() {
         placeholder="Search exercises..."
         value={query}
         onChangeText={setQuery}
-        style={[styles.search, { backgroundColor: theme.colors.surface }]}
+        style={[styles.search, { backgroundColor: colors.surface }]}
         accessibilityLabel="Search exercises"
       />
       <View style={styles.chips}>
@@ -180,11 +183,11 @@ export default function Exercises() {
               onPress={() => toggle(f)}
               style={[
                 styles.filterChip,
-                active && { backgroundColor: theme.colors.primaryContainer },
+                active && { backgroundColor: colors.primaryContainer },
               ]}
               textStyle={[
                 { flexShrink: 0 },
-                active ? { color: theme.colors.onPrimaryContainer, fontWeight: "600" } : undefined,
+                active ? { color: colors.onPrimaryContainer, fontWeight: "600" } : undefined,
               ]}
               compact
               showSelectedOverlay={active}
@@ -192,7 +195,7 @@ export default function Exercises() {
                 <MaterialCommunityIcons
                   name={CATEGORY_ICONS[f] as keyof typeof MaterialCommunityIcons.glyphMap}
                   size={16}
-                  color={active ? theme.colors.onPrimaryContainer : theme.colors.onSurface}
+                  color={active ? colors.onPrimaryContainer : colors.onSurface}
                 />
               ) : undefined}
               accessibilityLabel={`Filter by ${filterLabel(f)}`}
@@ -216,8 +219,8 @@ export default function Exercises() {
       <FAB
         icon="plus"
         onPress={() => router.push("/exercise/create")}
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        color={theme.colors.onPrimary}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        color={colors.onPrimary}
         accessibilityLabel="Add custom exercise"
         accessibilityRole="button"
       />
@@ -226,7 +229,7 @@ export default function Exercises() {
 
   if (!layout.atLeastMedium) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {list}
       </View>
     );
@@ -238,9 +241,9 @@ export default function Exercises() {
     .filter(Boolean);
 
   return (
-    <View style={[styles.container, styles.wideRow, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, styles.wideRow, { backgroundColor: colors.background }]}>
       {list}
-      <View style={[styles.detailPane, { borderLeftColor: theme.colors.outlineVariant }]}>
+      <View style={[styles.detailPane, { borderLeftColor: colors.outlineVariant }]}>
         {detail ? (
           <FlatList
             data={[]}
@@ -248,21 +251,21 @@ export default function Exercises() {
             contentContainerStyle={styles.detailContent}
             ListHeaderComponent={
               <>
-                <Text variant="headlineSmall" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+                <Text variant="headlineSmall" style={{ color: colors.onSurface, marginBottom: 12 }}>
                   {detail.name}
                 </Text>
                 {detail.is_custom && (
                   <Chip
                     compact
-                    style={{ backgroundColor: theme.colors.tertiaryContainer, alignSelf: "flex-start", marginBottom: 8 }}
+                    style={{ backgroundColor: colors.tertiaryContainer, alignSelf: "flex-start", marginBottom: 8 }}
                     textStyle={{ fontSize: 12 }}
                   >
                     Custom
                   </Chip>
                 )}
                 <View style={styles.row}>
-                  <View style={[styles.detailBadge, { backgroundColor: theme.colors.primaryContainer }]}>
-                    <Text style={[styles.detailBadgeText, { color: theme.colors.onPrimaryContainer }]}>
+                  <View style={[styles.detailBadge, { backgroundColor: colors.primaryContainer }]}>
+                    <Text style={[styles.detailBadgeText, { color: colors.onPrimaryContainer }]}>
                       {CATEGORY_LABELS[detail.category]}
                     </Text>
                   </View>
@@ -274,12 +277,12 @@ export default function Exercises() {
                 </View>
                 {detail.mount_position && (
                   <>
-                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
                       Mount Position
                     </Text>
                     <Text
                       variant="bodyLarge"
-                      style={{ color: theme.colors.onSurface, marginTop: 4 }}
+                      style={{ color: colors.onSurface, marginTop: 4 }}
                       accessibilityLabel={`Mount position: ${detail.mount_position} on rack`}
                     >
                       {detail.mount_position}
@@ -288,12 +291,12 @@ export default function Exercises() {
                 )}
                 {detail.attachment && (
                   <>
-                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
                       Attachment
                     </Text>
                     <Text
                       variant="bodyLarge"
-                      style={{ color: theme.colors.onSurface, marginTop: 4 }}
+                      style={{ color: colors.onSurface, marginTop: 4 }}
                       accessibilityLabel={`Attachment: ${detail.attachment}`}
                     >
                       {detail.attachment}
@@ -302,13 +305,13 @@ export default function Exercises() {
                 )}
                 {detail.training_modes && detail.training_modes.length > 0 && (
                   <View accessibilityLabel={`Compatible training modes: ${detail.training_modes.join(", ")}`}>
-                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
                       Training Modes
                     </Text>
                     <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
                       {detail.training_modes.map((m) => (
-                        <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
-                          <Text style={[styles.detailBadgeText, { color: theme.colors.onSecondaryContainer }]}>
+                        <View key={m} style={[styles.detailBadge, { backgroundColor: colors.secondaryContainer }]}>
+                          <Text style={[styles.detailBadgeText, { color: colors.onSecondaryContainer }]}>
                             {m.replace(/_/g, " ")}
                           </Text>
                         </View>
@@ -324,26 +327,26 @@ export default function Exercises() {
                 />
                 <View style={styles.muscleColumns}>
                   <View style={{ flex: 1 }}>
-                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                       Primary Muscles
                     </Text>
                     <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
                       {detail.primary_muscles.map((m) => (
-                        <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
-                          <Text style={[styles.detailBadgeText, { color: theme.colors.onSecondaryContainer }]}>{m}</Text>
+                        <View key={m} style={[styles.detailBadge, { backgroundColor: colors.secondaryContainer }]}>
+                          <Text style={[styles.detailBadgeText, { color: colors.onSecondaryContainer }]}>{m}</Text>
                         </View>
                       ))}
                     </View>
                   </View>
                   {detail.secondary_muscles.length > 0 && (
                     <View style={{ flex: 1 }}>
-                      <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                      <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                         Secondary Muscles
                       </Text>
                       <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
                         {detail.secondary_muscles.map((m) => (
-                          <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.tertiaryContainer }]}>
-                            <Text style={[styles.detailBadgeText, { color: theme.colors.onTertiaryContainer }]}>{m}</Text>
+                          <View key={m} style={[styles.detailBadge, { backgroundColor: colors.tertiaryContainer }]}>
+                            <Text style={[styles.detailBadgeText, { color: colors.onTertiaryContainer }]}>{m}</Text>
                           </View>
                         ))}
                       </View>
@@ -352,11 +355,11 @@ export default function Exercises() {
                 </View>
                 {steps && steps.length > 0 && (
                   <>
-                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
+                    <Text variant="labelLarge" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                       Instructions
                     </Text>
                     {steps.map((step, i) => (
-                      <Text key={i} variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 6, lineHeight: 22 }}>
+                      <Text key={i} variant="bodyMedium" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
                         {step}
                       </Text>
                     ))}
@@ -367,7 +370,7 @@ export default function Exercises() {
           />
         ) : (
           <View style={styles.detailEmpty}>
-            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
               Select an exercise to view details
             </Text>
           </View>

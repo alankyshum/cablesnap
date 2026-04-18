@@ -5,9 +5,10 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import type { TrainingMode } from "../lib/types";
 import { TRAINING_MODE_LABELS } from "../lib/types";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   modes: TrainingMode[];
@@ -18,7 +19,7 @@ type Props = {
 };
 
 function TrainingModeSelector({ modes, selected, exercise, onSelect, compact: isCompact }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [tooltip, setTooltip] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -58,8 +59,8 @@ function TrainingModeSelector({ modes, selected, exercise, onSelect, compact: is
               onLongPress={() => showTooltip(mode)}
               style={[
                 isCompact ? styles.chipCompact : styles.chip,
-                { borderColor: theme.colors.primary },
-                active && { backgroundColor: theme.colors.primary },
+                { borderColor: colors.primary },
+                active && { backgroundColor: colors.primary },
               ]}
               accessibilityRole="radio"
               accessibilityState={{ selected: active }}
@@ -67,7 +68,7 @@ function TrainingModeSelector({ modes, selected, exercise, onSelect, compact: is
             >
               <Text style={[
                 isCompact ? styles.labelCompact : styles.label,
-                { color: active ? theme.colors.onPrimary : theme.colors.primary },
+                { color: active ? colors.onPrimary : colors.primary },
               ]}>
                 {info.label}
               </Text>
@@ -77,8 +78,8 @@ function TrainingModeSelector({ modes, selected, exercise, onSelect, compact: is
       </View>
 
       {tooltip && (
-        <View style={[styles.tooltip, { backgroundColor: theme.colors.inverseSurface }]}>
-          <Text style={{ color: theme.colors.inverseOnSurface, fontSize: 12 }}>
+        <View style={[styles.tooltip, { backgroundColor: colors.inverseSurface }]}>
+          <Text style={{ color: colors.inverseOnSurface, fontSize: 12 }}>
             {tooltip}
           </Text>
         </View>

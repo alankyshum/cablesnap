@@ -1,10 +1,10 @@
 import { Stack } from "expo-router";
-import { useTheme } from "react-native-paper";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function BodyLayout() {
-  const theme = useTheme();
-  const headerStyle = { backgroundColor: theme.colors.surface };
-  const headerTintColor = theme.colors.onSurface;
+  const colors = useThemeColors();
+  const headerStyle = { backgroundColor: colors.surface };
+  const headerTintColor = colors.onSurface;
 
   return (
     <Stack

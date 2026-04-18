@@ -5,15 +5,10 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import {
-  Button,
-  Portal,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Button, Portal, Text, TextInput } from "react-native-paper";
 import type { TemplateExercise } from "../lib/types";
 import { elevation } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   visible: boolean;
@@ -32,7 +27,7 @@ export default function EditExerciseSheet({
   onSave,
   onDismiss,
 }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const initialSets = visible ? String((exercise?.target_sets ?? DEFAULT_SETS)) : "";
   const initialReps = visible ? (exercise?.target_reps ?? DEFAULT_REPS) : "";
   const initialRest = visible ? String((exercise?.rest_seconds ?? DEFAULT_REST)) : "";
@@ -76,7 +71,7 @@ export default function EditExerciseSheet({
         accessibilityRole="button"
       >
         <View
-          style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.backdrop }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.backdrop }]}
           pointerEvents="none"
         />
       </Pressable>
@@ -84,17 +79,17 @@ export default function EditExerciseSheet({
       <View
         style={[
           styles.sheet,
-          { backgroundColor: theme.colors.surface },
+          { backgroundColor: colors.surface },
         ]}
         accessibilityViewIsModal={true}
       >
         <View style={styles.handle}>
-          <View style={[styles.handleBar, { backgroundColor: theme.colors.onSurfaceVariant }]} />
+          <View style={[styles.handleBar, { backgroundColor: colors.onSurfaceVariant }]} />
         </View>
 
         <Text
           variant="titleMedium"
-          style={[styles.title, { color: theme.colors.onSurface }]}
+          style={[styles.title, { color: colors.onSurface }]}
           numberOfLines={2}
         >
           {exercise?.exercise?.name ?? "Edit Exercise"}

@@ -7,15 +7,7 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import {
-  Button,
-  Card,
-  IconButton,
-  Menu,
-  SegmentedButtons,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Button, Card, IconButton, Menu, SegmentedButtons, Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,11 +41,12 @@ import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { formatDuration, formatDateShort, computeStreak } from "../../lib/format";
 import { FlowCard, difficultyBadge, type MetaBadge } from "../../components/FlowCard";
 import { useFocusRefetch } from "../../lib/query";
-import { useSnackbar } from "../../components/SnackbarProvider";
+import { useToast } from "../../components/ui/bna-toast";
 import { useLayout } from "../../lib/layout";
 import { flowCardStyle } from "../../components/ui/FlowContainer";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { radii } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 async function loadHomeData() {
   const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
@@ -105,10 +98,10 @@ async function loadHomeData() {
 }
 
 export default function Workouts() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { showSnack } = useSnackbar();
+  const { info } = useToast();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
   const [userSegment, setUserSegment] = useState<string | null>(null);
@@ -151,7 +144,7 @@ export default function Workouts() {
   const startNextWorkout = async () => {
     if (!nextWorkout) return;
     if (!nextWorkout.day.template_id) {
-      showSnack("Template no longer exists");
+      info("Template no longer exists");
       return;
     }
     const session = await startSession(
@@ -242,59 +235,59 @@ export default function Workouts() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}
     >
       {/* Stats Row */}
       <View style={styles.statsRow}>
         <Animated.View
           entering={FadeInDown.delay(0).duration(300)}
-          style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
+          style={[styles.statCard, { backgroundColor: colors.surface }]}
           accessibilityLabel={`${streak} week streak`}
         >
           <MaterialCommunityIcons
             name="fire"
             size={24}
-            color={streak > 0 ? theme.colors.primary : theme.colors.onSurfaceVariant}
+            color={streak > 0 ? colors.primary : colors.onSurfaceVariant}
           />
-          <Text variant="titleLarge" style={{ color: streak > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant }}>
+          <Text variant="titleLarge" style={{ color: streak > 0 ? colors.onSurface : colors.onSurfaceVariant }}>
             {streak}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {streak === 1 ? "week" : "weeks"}
           </Text>
         </Animated.View>
         <Animated.View
           entering={FadeInDown.delay(60).duration(300)}
-          style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
+          style={[styles.statCard, { backgroundColor: colors.surface }]}
           accessibilityLabel={scheduled.length > 0 ? `${weekDone} of ${scheduled.length} workouts this week` : `${weekDone} workouts this week`}
         >
           <MaterialCommunityIcons
             name="dumbbell"
             size={24}
-            color={weekDone > 0 ? theme.colors.primary : theme.colors.onSurfaceVariant}
+            color={weekDone > 0 ? colors.primary : colors.onSurfaceVariant}
           />
-          <Text variant="titleLarge" style={{ color: weekDone > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant }}>
+          <Text variant="titleLarge" style={{ color: weekDone > 0 ? colors.onSurface : colors.onSurfaceVariant }}>
             {weekLabel}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {weekSub}
           </Text>
         </Animated.View>
         <Animated.View
           entering={FadeInDown.delay(120).duration(300)}
-          style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
+          style={[styles.statCard, { backgroundColor: colors.surface }]}
           accessibilityLabel={`${prCount} recent personal records`}
         >
           <MaterialCommunityIcons
             name="trophy"
             size={24}
-            color={prCount > 0 ? theme.colors.primary : theme.colors.onSurfaceVariant}
+            color={prCount > 0 ? colors.primary : colors.onSurfaceVariant}
           />
-          <Text variant="titleLarge" style={{ color: prCount > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant }}>
+          <Text variant="titleLarge" style={{ color: prCount > 0 ? colors.onSurface : colors.onSurfaceVariant }}>
             {prCount}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             recent
           </Text>
         </Animated.View>
@@ -303,16 +296,16 @@ export default function Workouts() {
       {/* Resume active session banner */}
       {active && (
         <Card
-          style={[styles.banner, { backgroundColor: theme.colors.primaryContainer }]}
+          style={[styles.banner, { backgroundColor: colors.primaryContainer }]}
           onPress={() => router.push(`/session/${active.id}`)}
           accessibilityLabel={`Resume active workout: ${active.name}`}
           accessibilityRole="button"
         >
           <Card.Content>
-            <Text variant="titleSmall" style={{ color: theme.colors.onPrimaryContainer }}>
+            <Text variant="titleSmall" style={{ color: colors.onPrimaryContainer }}>
               ⏱ Active Workout: {active.name}
             </Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer }}>
+            <Text variant="bodySmall" style={{ color: colors.onPrimaryContainer }}>
               Tap to resume
             </Text>
           </Card.Content>
@@ -322,18 +315,18 @@ export default function Workouts() {
       {/* Today's Schedule Card — overrides next workout when schedule exists */}
       {todaySchedule && !todayDone && (
         <Card
-          style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]}
+          style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer }]}
           onPress={startFromSchedule}
           accessibilityLabel={`Today's workout: ${todaySchedule.template_name}. Tap to start.`}
           accessibilityRole="button"
         >
           <Card.Content style={styles.nextContent}>
-            <MaterialCommunityIcons name="calendar-check" size={24} color={theme.colors.onSecondaryContainer} />
+            <MaterialCommunityIcons name="calendar-check" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: theme.colors.onSecondaryContainer }}>
+              <Text variant="titleSmall" style={{ color: colors.onSecondaryContainer }}>
                 Today: {todaySchedule.template_name}
               </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSecondaryContainer }}>
+              <Text variant="bodySmall" style={{ color: colors.onSecondaryContainer }}>
                 {todaySchedule.exercise_count} exercises · Tap to start
               </Text>
             </View>
@@ -343,18 +336,18 @@ export default function Workouts() {
 
       {todaySchedule && todayDone && (
         <Card
-          style={[styles.nextBanner, { backgroundColor: theme.colors.primaryContainer }]}
+          style={[styles.nextBanner, { backgroundColor: colors.primaryContainer }]}
           onPress={startFromSchedule}
           accessibilityLabel={`Completed: ${todaySchedule.template_name}. Tap to train again.`}
           accessibilityRole="button"
         >
           <Card.Content style={styles.nextContent}>
-            <MaterialCommunityIcons name="check-circle" size={24} color={theme.colors.onPrimaryContainer} />
+            <MaterialCommunityIcons name="check-circle" size={24} color={colors.onPrimaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: theme.colors.onPrimaryContainer }}>
+              <Text variant="titleSmall" style={{ color: colors.onPrimaryContainer }}>
                 ✅ Completed: {todaySchedule.template_name}
               </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer }}>
+              <Text variant="bodySmall" style={{ color: colors.onPrimaryContainer }}>
                 Train again
               </Text>
             </View>
@@ -364,16 +357,16 @@ export default function Workouts() {
 
       {!todaySchedule && adherence.some((a) => a.scheduled) && (
         <Card
-          style={[styles.nextBanner, { backgroundColor: theme.colors.surface }]}
+          style={[styles.nextBanner, { backgroundColor: colors.surface }]}
           accessibilityLabel="Rest day. No workout scheduled."
         >
           <Card.Content style={styles.nextContent}>
-            <MaterialCommunityIcons name="bed" size={24} color={theme.colors.onSurfaceVariant} />
+            <MaterialCommunityIcons name="bed" size={24} color={colors.onSurfaceVariant} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+              <Text variant="titleSmall" style={{ color: colors.onSurface }}>
                 Rest Day
               </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                 No workout scheduled
               </Text>
             </View>
@@ -384,18 +377,18 @@ export default function Workouts() {
       {/* Next Workout Banner (visible when NO schedule exists) */}
       {nextWorkout && !todaySchedule && !adherence.some((a) => a.scheduled) && (
         <Card
-          style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]}
+          style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer }]}
           onPress={startNextWorkout}
           accessibilityLabel={`Next workout: ${nextWorkout.day.label || nextWorkout.day.template_name || "workout"} from ${nextWorkout.program.name}`}
           accessibilityRole="button"
         >
           <Card.Content style={styles.nextContent}>
-            <MaterialCommunityIcons name="play-circle" size={24} color={theme.colors.onSecondaryContainer} />
+            <MaterialCommunityIcons name="play-circle" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.nextText}>
-              <Text variant="titleSmall" style={{ color: theme.colors.onSecondaryContainer }}>
+              <Text variant="titleSmall" style={{ color: colors.onSecondaryContainer }}>
                 Next: {nextWorkout.day.label || nextWorkout.day.template_name || "Workout"}
               </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSecondaryContainer }}>
+              <Text variant="bodySmall" style={{ color: colors.onSecondaryContainer }}>
                 {nextWorkout.program.name} · Tap to start
               </Text>
             </View>
@@ -407,7 +400,7 @@ export default function Workouts() {
       {nextWorkout && adherence.some((a) => a.scheduled) && (
         <Text
           variant="bodySmall"
-          style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8, textAlign: "center" }}
+          style={{ color: colors.onSurfaceVariant, marginBottom: 8, textAlign: "center" }}
           accessibilityLabel={`Program ${nextWorkout.program.name}: Schedule active`}
         >
           {nextWorkout.program.name} (Schedule active)
@@ -428,17 +421,17 @@ export default function Workouts() {
                   style={[
                     styles.dot,
                     a.completed
-                      ? { backgroundColor: theme.colors.primary }
+                      ? { backgroundColor: colors.primary }
                       : a.scheduled
-                      ? { backgroundColor: "transparent", borderWidth: 2, borderColor: theme.colors.onSurfaceVariant }
-                      : { backgroundColor: theme.colors.surfaceVariant },
+                      ? { backgroundColor: "transparent", borderWidth: 2, borderColor: colors.onSurfaceVariant }
+                      : { backgroundColor: colors.surfaceVariant },
                   ]}
                   accessibilityLabel={`${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}: ${a.completed ? "completed" : a.scheduled ? "scheduled" : "rest day"}`}
                 />
               )}
             />
           </View>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
             {adherence.filter((a) => a.scheduled && a.completed).length} of{" "}
             {adherence.filter((a) => a.scheduled).length} this week{" "}
             {adherence.filter((a) => a.scheduled).every((a) => a.completed) && adherence.some((a) => a.scheduled) ? "🔥" : "🎯"}
@@ -483,7 +476,7 @@ export default function Workouts() {
           {/* Templates */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+              <Text variant="titleMedium" style={{ color: colors.onBackground }}>
                 Templates
               </Text>
               <Button
@@ -500,7 +493,7 @@ export default function Workouts() {
               <View style={styles.empty}>
                 <Text
                   variant="bodyMedium"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   Create your first workout template
                 </Text>
@@ -581,7 +574,7 @@ export default function Workouts() {
           {/* Programs */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+              <Text variant="titleMedium" style={{ color: colors.onBackground }}>
                 Programs
               </Text>
               <Button
@@ -598,7 +591,7 @@ export default function Workouts() {
               <View style={styles.empty}>
                 <Text
                   variant="bodyMedium"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                   accessibilityRole="text"
                   accessibilityLabel="No programs yet. Create your first program."
                 >
@@ -672,7 +665,7 @@ export default function Workouts() {
         <View style={styles.sectionHeader}>
           <Text
             variant="titleMedium"
-            style={{ color: theme.colors.onBackground }}
+            style={{ color: colors.onBackground }}
           >
             Recent Workouts
           </Text>
@@ -691,7 +684,7 @@ export default function Workouts() {
           <View style={styles.empty}>
             <Text
               variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant }}
+              style={{ color: colors.onSurfaceVariant }}
             >
               No workouts yet. Start one above!
             </Text>
@@ -708,7 +701,7 @@ export default function Workouts() {
               return (
               <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
               <Card
-                style={[styles.flowCard, { backgroundColor: theme.colors.surface }]}
+                style={[styles.flowCard, { backgroundColor: colors.surface }]}
                 onPress={() =>
                   router.push(`/session/detail/${item.id}`)
                 }
@@ -718,14 +711,14 @@ export default function Workouts() {
                 <Card.Content>
                   <Text
                     variant="titleSmall"
-                    style={{ color: theme.colors.onSurface }}
+                    style={{ color: colors.onSurface }}
                   >
                     {item.name}
                   </Text>
                   <View style={styles.recentRow}>
                     <Text
                       variant="bodySmall"
-                      style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}
+                      style={{ color: colors.onSurfaceVariant, flex: 1 }}
                     >
                       {formatDateShort(item.started_at)} · {formatDuration(item.duration_seconds)} ·{" "}
                       {setCounts2[item.id] ?? 0} sets

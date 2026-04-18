@@ -6,12 +6,7 @@ import {
   StyleSheet,
   View,
 } from "react-native"
-import {
-  Chip,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper"
+import { Chip, Text, TextInput } from "react-native-paper";
 import { Stack, useLocalSearchParams } from "expo-router"
 import { useFocusEffect } from "expo-router"
 import { getBodySettings } from "../../lib/db"
@@ -26,6 +21,7 @@ import {
   LB_BARS,
 } from "../../lib/plates"
 import { radii } from "../../constants/design-tokens"
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const HEIGHT: Record<number, number> = {
   25: 80, 55: 80,
@@ -43,7 +39,7 @@ function plateHeight(w: number): number {
 }
 
 export function PlateCalculatorContent({ initialWeight }: { initialWeight?: string }) {
-  const theme = useTheme()
+  const colors = useThemeColors()
   const [unit, setUnit] = useState<"kg" | "lb">("kg")
   const [target, setTarget] = useState(initialWeight ?? "")
   const [bar, setBar] = useState<number | null>(null)
@@ -124,7 +120,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
             accessibilityLabel={"Target weight in " + label}
           />
         </View>
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
           with bar
         </Text>
         <View style={styles.barWrap} accessibilityRole="radiogroup" accessibilityLabel="Bar weight selection">
@@ -173,31 +169,31 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
       {/* Results */}
       <View accessibilityLiveRegion="polite">
         {!valid && target !== "" && (
-          <Text variant="bodySmall" style={{ color: theme.colors.error, textAlign: "center" }}>
+          <Text variant="bodySmall" style={{ color: colors.error, textAlign: "center" }}>
             Enter a valid weight
           </Text>
         )}
 
         {valid && state && "error" in state && state.error === "low" && (
-          <Text variant="bodySmall" style={{ color: theme.colors.error, textAlign: "center" }}>
+          <Text variant="bodySmall" style={{ color: colors.error, textAlign: "center" }}>
             Weight must exceed bar weight
           </Text>
         )}
 
         {valid && state && "error" in state && state.error === "empty" && (
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
             Target equals bar weight — no plates needed
           </Text>
         )}
 
         {state && !("error" in state) && (
           <>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
+            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
               ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
             </Text>
 
             {state.rounded && (
-              <Text variant="bodySmall" style={{ color: theme.colors.tertiary, textAlign: "center", marginTop: 2 }}>
+              <Text variant="bodySmall" style={{ color: colors.tertiary, textAlign: "center", marginTop: 2 }}>
                 Rounded to {state.achieved}{unit} (nearest achievable)
               </Text>
             )}
@@ -219,12 +215,12 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
                   styles.swatch,
                   {
                     backgroundColor: c.bg,
-                    borderColor: c.border ? theme.colors[c.border] : "transparent",
+                    borderColor: c.border ? colors[c.border] : "transparent",
                     borderWidth: c.border ? 1 : 0,
                   },
                 ]}
               />
-              <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
+              <Text variant="bodyLarge" style={{ color: colors.onBackground }}>
                 {g.count}× {g.weight}{unit}
               </Text>
             </View>
@@ -234,10 +230,10 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
 
       {/* Footer */}
       {state && !("error" in state) && (
-        <Text variant="titleMedium" style={{ color: theme.colors.onBackground, textAlign: "center", marginTop: 16 }}>
+        <Text variant="titleMedium" style={{ color: colors.onBackground, textAlign: "center", marginTop: 16 }}>
           Total: {state.achieved}{unit}
           {active != null && (
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
               {" "}(bar {active}{unit} + 2×{state.side}{unit})
             </Text>
           )}
@@ -248,7 +244,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
 }
 
 export default function PlateCalculator() {
-  const theme = useTheme()
+  const colors = useThemeColors()
   const params = useLocalSearchParams<{ weight?: string }>()
 
   return (
@@ -262,7 +258,7 @@ export default function PlateCalculator() {
         <FlatList
           data={[]}
           renderItem={null}
-          style={{ backgroundColor: theme.colors.background }}
+          style={{ backgroundColor: colors.background }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           ListHeaderComponent={<PlateCalculatorContent initialWeight={params.weight} />}
         />
@@ -272,7 +268,7 @@ export default function PlateCalculator() {
 }
 
 function PlateView({ weight, unit }: { weight: number; unit: "kg" | "lb" }) {
-  const theme = useTheme()
+  const colors = useThemeColors()
   const c = color(weight, unit)
   return (
     <View
@@ -281,7 +277,7 @@ function PlateView({ weight, unit }: { weight: number; unit: "kg" | "lb" }) {
         {
           height: plateHeight(weight),
           backgroundColor: c.bg,
-          borderColor: c.border ? theme.colors[c.border] : "transparent",
+          borderColor: c.border ? colors[c.border] : "transparent",
           borderWidth: c.border ? 1 : 0,
         },
       ]}
@@ -290,7 +286,7 @@ function PlateView({ weight, unit }: { weight: number; unit: "kg" | "lb" }) {
 }
 
 function Barbell({ plates, unit, barbell: label }: { plates: number[]; unit: "kg" | "lb"; barbell: string }) {
-  const theme = useTheme()
+  const colors = useThemeColors()
   return (
     <View
       style={plateStyles.barbell}
@@ -302,7 +298,7 @@ function Barbell({ plates, unit, barbell: label }: { plates: number[]; unit: "kg
           <PlateView key={"l" + i} weight={p} unit={unit} />
         ))}
       </View>
-      <View style={[plateStyles.bar, { backgroundColor: theme.colors.outlineVariant }]} />
+      <View style={[plateStyles.bar, { backgroundColor: colors.outlineVariant }]} />
       <View style={plateStyles.side}>
         {plates.map((p, i) => (
           <PlateView key={"r" + i} weight={p} unit={unit} />

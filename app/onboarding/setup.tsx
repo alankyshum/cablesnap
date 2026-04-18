@@ -1,9 +1,10 @@
 import { StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, SegmentedButtons, Text, TouchableRipple, useTheme } from "react-native-paper";
+import { Button, SegmentedButtons, Text, TouchableRipple } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Level = "beginner" | "intermediate" | "advanced";
 
@@ -40,7 +41,7 @@ const LEVELS: { value: Level; label: string; description: string; icon: string }
 ];
 
 export default function Setup() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const defaults = detectUnits();
   const [weight, setWeight] = useState<"kg" | "lb">(defaults.weight);
@@ -49,11 +50,11 @@ export default function Setup() {
 
   const header = (
     <>
-      <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
+      <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
         Set Up Your Preferences
       </Text>
 
-      <Text variant="titleMedium" style={[styles.section, { color: theme.colors.onBackground }]}>
+      <Text variant="titleMedium" style={[styles.section, { color: colors.onBackground }]}>
         Weight Unit
       </Text>
       <View accessibilityRole="radiogroup" accessibilityLabel="Weight unit">
@@ -68,7 +69,7 @@ export default function Setup() {
         />
       </View>
 
-      <Text variant="titleMedium" style={[styles.section, { color: theme.colors.onBackground }]}>
+      <Text variant="titleMedium" style={[styles.section, { color: colors.onBackground }]}>
         Measurement Unit
       </Text>
       <View accessibilityRole="radiogroup" accessibilityLabel="Measurement unit">
@@ -83,7 +84,7 @@ export default function Setup() {
         />
       </View>
 
-      <Text variant="titleMedium" style={[styles.section, { color: theme.colors.onBackground }]}>
+      <Text variant="titleMedium" style={[styles.section, { color: colors.onBackground }]}>
         Experience Level
       </Text>
     </>
@@ -112,7 +113,7 @@ export default function Setup() {
     <FlashList
       data={LEVELS}
       keyExtractor={(item) => item.value}
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={styles.scroll}
       ListHeaderComponent={header}
       ListFooterComponent={footer}
@@ -129,9 +130,9 @@ export default function Setup() {
             style={[
               styles.card,
               {
-                borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
+                borderColor: selected ? colors.primary : colors.outlineVariant,
                 borderWidth: selected ? 2 : 1,
-                backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surface,
+                backgroundColor: selected ? colors.primaryContainer : colors.surface,
               },
             ]}
           >
@@ -139,19 +140,19 @@ export default function Setup() {
               <MaterialCommunityIcons
                 name={item.icon as React.ComponentProps<typeof MaterialCommunityIcons>["name"]}
                 size={28}
-                color={selected ? theme.colors.primary : theme.colors.onSurfaceVariant}
+                color={selected ? colors.primary : colors.onSurfaceVariant}
                 style={styles.cardIcon}
               />
               <View style={styles.cardText}>
                 <Text
                   variant="titleMedium"
-                  style={{ color: selected ? theme.colors.onPrimaryContainer : theme.colors.onSurface }}
+                  style={{ color: selected ? colors.onPrimaryContainer : colors.onSurface }}
                 >
                   {item.label}
                 </Text>
                 <Text
                   variant="bodyMedium"
-                  style={{ color: selected ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant }}
+                  style={{ color: selected ? colors.onPrimaryContainer : colors.onSurfaceVariant }}
                 >
                   {item.description}
                 </Text>
@@ -160,7 +161,7 @@ export default function Setup() {
                 <MaterialCommunityIcons
                   name="check-circle"
                   size={24}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                 />
               )}
             </View>

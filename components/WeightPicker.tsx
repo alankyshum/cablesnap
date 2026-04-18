@@ -1,7 +1,8 @@
 import React, { memo, useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Text, TextInput, useTheme } from "react-native-paper";
+import { Text, TextInput } from "react-native-paper";
 import * as Haptics from "expo-haptics";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   value: number | null;
@@ -14,7 +15,7 @@ type Props = {
 };
 
 function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel, min = 0, max = 500 }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -64,11 +65,11 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel, mi
         onPress={decrement}
         onLongPress={() => startRepeat(decrement)}
         onPressOut={stopRepeat}
-        style={[styles.stepBtn, { backgroundColor: theme.colors.surfaceVariant }]}
+        style={[styles.stepBtn, { backgroundColor: colors.surfaceVariant }]}
         accessibilityLabel={`Decrease weight by ${step}`}
         accessibilityRole="button"
       >
-        <Text style={[styles.stepText, { color: theme.colors.onSurfaceVariant }]}>−</Text>
+        <Text style={[styles.stepText, { color: colors.onSurfaceVariant }]}>−</Text>
       </Pressable>
 
       {editing ? (
@@ -81,16 +82,16 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel, mi
           onSubmitEditing={endEdit}
           keyboardType="numeric"
           autoFocus
-          style={[styles.input, { backgroundColor: theme.colors.surface }]}
+          style={[styles.input, { backgroundColor: colors.surface }]}
           accessibilityLabel={accessibilityLabel}
         />
       ) : (
         <Pressable onPress={startEdit} style={styles.valueTap} accessibilityLabel={accessibilityLabel} accessibilityRole="button">
-          <Text style={[styles.valueText, { color: theme.colors.onSurface }]}>
+          <Text style={[styles.valueText, { color: colors.onSurface }]}>
             {display}
           </Text>
           {unit ? (
-            <Text style={[styles.unitText, { color: theme.colors.onSurfaceVariant }]}>
+            <Text style={[styles.unitText, { color: colors.onSurfaceVariant }]}>
               {unit}
             </Text>
           ) : null}
@@ -101,11 +102,11 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel, mi
         onPress={increment}
         onLongPress={() => startRepeat(increment)}
         onPressOut={stopRepeat}
-        style={[styles.stepBtn, { backgroundColor: theme.colors.primaryContainer }]}
+        style={[styles.stepBtn, { backgroundColor: colors.primaryContainer }]}
         accessibilityLabel={`Increase weight by ${step}`}
         accessibilityRole="button"
       >
-        <Text style={[styles.stepText, { color: theme.colors.onPrimaryContainer }]}>+</Text>
+        <Text style={[styles.stepText, { color: colors.onPrimaryContainer }]}>+</Text>
       </Pressable>
     </View>
   );

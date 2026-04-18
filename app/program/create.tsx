@@ -5,13 +5,7 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  IconButton,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Button, IconButton, Text, TextInput } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -24,9 +18,10 @@ import {
   reorderProgramDays,
 } from "../../lib/programs";
 import type { Program, ProgramDay } from "../../lib/types";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function CreateProgram() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -117,17 +112,17 @@ export default function CreateProgram() {
         style={[
           styles.dayRow,
           {
-            backgroundColor: theme.colors.surface,
-            borderBottomColor: theme.colors.outlineVariant,
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.outlineVariant,
           },
         ]}
       >
         <View style={styles.dayInfo}>
-          <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+          <Text variant="titleSmall" style={{ color: colors.onSurface }}>
             Day {index + 1}: {dayName(item)}
           </Text>
           {item.template_id === null && (
-            <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+            <Text variant="bodySmall" style={{ color: colors.error }}>
               Template has been deleted
             </Text>
           )}
@@ -158,7 +153,7 @@ export default function CreateProgram() {
         </View>
       </View>
     ),
-    [theme, days.length, move, remove]
+    [colors, days.length, move, remove]
   );
 
   return (
@@ -167,7 +162,7 @@ export default function CreateProgram() {
         options={{ title: program ? "Edit Program" : "New Program" }}
       />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
+        style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <TextInput
           label="Program Name"
@@ -193,7 +188,7 @@ export default function CreateProgram() {
             <View style={styles.section}>
               <Text
                 variant="titleMedium"
-                style={{ color: theme.colors.onBackground }}
+                style={{ color: colors.onBackground }}
               >
                 Workout Days ({days.length})
               </Text>
@@ -206,7 +201,7 @@ export default function CreateProgram() {
                 <View style={styles.empty}>
                   <Text
                     variant="bodyMedium"
-                    style={{ color: theme.colors.onSurfaceVariant }}
+                    style={{ color: colors.onSurfaceVariant }}
                     accessibilityRole="text"
                     accessibilityLabel="No workout days added yet"
                   >

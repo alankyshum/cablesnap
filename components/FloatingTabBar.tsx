@@ -5,10 +5,10 @@ import {
   Pressable,
   StyleSheet,
   View,
+  useColorScheme,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated, {
   useSharedValue,
@@ -20,6 +20,7 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const BAR_HEIGHT = 56;
 const BAR_MARGIN_BOTTOM = 24;
@@ -71,7 +72,7 @@ function CenterButton({
   activeColor: string;
   backgroundColor: string;
 }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
@@ -160,7 +161,7 @@ function CenterButton({
             centerStyles.button,
             {
               backgroundColor: focused ? activeColor : backgroundColor,
-              shadowColor: theme.colors.shadow,
+              shadowColor: colors.shadow,
             },
           ]}
         >
@@ -168,7 +169,7 @@ function CenterButton({
             <MaterialCommunityIcons
               name="arm-flex"
               size={28}
-              color={focused ? theme.colors.onPrimary : color}
+              color={focused ? colors.onPrimary : color}
             />
           </Animated.View>
         </Pressable>
@@ -258,7 +259,8 @@ export default function FloatingTabBar({
   state,
   navigation,
 }: BottomTabBarProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
+  const isDark = useColorScheme() === "dark";
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const translateY = useSharedValue(0);
@@ -302,7 +304,7 @@ export default function FloatingTabBar({
         styles.container,
         {
           bottom: insets.bottom + BAR_MARGIN_BOTTOM,
-          shadowColor: theme.colors.shadow,
+          shadowColor: colors.shadow,
         },
         animatedContainerStyle,
       ]}
@@ -311,8 +313,8 @@ export default function FloatingTabBar({
       <View style={styles.blurClip}>
         <BlurView
           intensity={80}
-          tint={theme.dark ? "dark" : "light"}
-          style={[StyleSheet.absoluteFill, { backgroundColor: theme.dark ? "rgba(30,30,30,0.7)" : "rgba(255,255,255,0.75)" }]}
+          tint={isDark ? "dark" : "light"}
+          style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "rgba(30,30,30,0.7)" : "rgba(255,255,255,0.75)" }]}
         />
       </View>
       {orderedTabs.map((name, visualIdx) => {
@@ -336,9 +338,9 @@ export default function FloatingTabBar({
               key={name}
               focused={focused}
               onPress={handlePress}
-              color={theme.colors.onSurfaceVariant}
-              activeColor={theme.colors.primary}
-              backgroundColor={theme.colors.surfaceVariant}
+              color={colors.onSurfaceVariant}
+              activeColor={colors.primary}
+              backgroundColor={colors.surfaceVariant}
             />
           );
         }
@@ -349,8 +351,8 @@ export default function FloatingTabBar({
             routeName={name}
             focused={focused}
             onPress={handlePress}
-            activeColor={theme.colors.primary}
-            inactiveColor={theme.colors.onSurfaceVariant}
+            activeColor={colors.primary}
+            inactiveColor={colors.onSurfaceVariant}
           />
         );
       })}

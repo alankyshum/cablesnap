@@ -5,15 +5,7 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  Checkbox,
-  Chip,
-  IconButton,
-  Snackbar,
-  Text,
-  useTheme,
-} from "react-native-paper";
+import { Button, Checkbox, Chip, IconButton, Snackbar, Text } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -33,6 +25,7 @@ import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/type
 import SwipeToDelete from "../../components/SwipeToDelete";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import EditExerciseSheet from "../../components/EditExerciseSheet";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
   const count = exercises.filter((e) => e.link_id === linkId).length;
@@ -43,7 +36,7 @@ function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): 
 }
 
 export default function EditTemplate() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{
@@ -68,8 +61,8 @@ export default function EditTemplate() {
   }, [exercises]);
 
   const palette = useMemo(
-    () => [theme.colors.tertiary, theme.colors.secondary, theme.colors.primary, theme.colors.error, theme.colors.inversePrimary],
-    [theme],
+    () => [colors.tertiary, colors.secondary, colors.primary, colors.error, colors.inversePrimary],
+    [colors],
   );
 
   const load = useCallback(async () => {
@@ -234,8 +227,8 @@ export default function EditTemplate() {
               style={[
                 styles.row,
                 {
-                  backgroundColor: theme.colors.surface,
-                  borderBottomColor: theme.colors.outlineVariant,
+                  backgroundColor: colors.surface,
+                  borderBottomColor: colors.outlineVariant,
                   borderLeftWidth: color ? 4 : 0,
                   borderLeftColor: color ?? "transparent",
                 },
@@ -256,7 +249,7 @@ export default function EditTemplate() {
                 <Text
                   variant="titleSmall"
                   style={{
-                    color: item.exercise?.deleted_at ? theme.colors.onSurfaceVariant : theme.colors.onSurface,
+                    color: item.exercise?.deleted_at ? colors.onSurfaceVariant : colors.onSurface,
                     fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
                   }}
                 >
@@ -264,7 +257,7 @@ export default function EditTemplate() {
                 </Text>
                 <Text
                   variant="bodySmall"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
                 </Text>
@@ -334,7 +327,7 @@ export default function EditTemplate() {
         </View>
       );
     },
-    [theme, exercises, linkIds, palette, selecting, selected, move, remove, handleUnlink, handleUnlinkSingle, id, router]
+    [colors, exercises, linkIds, palette, selecting, selected, move, remove, handleUnlink, handleUnlinkSingle, id, router]
   );
 
   if (!template) {
@@ -344,10 +337,10 @@ export default function EditTemplate() {
         <View
           style={[
             styles.center,
-            { backgroundColor: theme.colors.background },
+            { backgroundColor: colors.background },
           ]}
         >
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text style={{ color: colors.onSurfaceVariant }}>
             Loading...
           </Text>
         </View>
@@ -366,13 +359,13 @@ export default function EditTemplate() {
     <>
       <Stack.Screen options={{ title: template.name }} />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
+        style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <View style={styles.section}>
           <View style={styles.headerRow}>
             <Text
               variant="titleMedium"
-              style={{ color: theme.colors.onBackground }}
+              style={{ color: colors.onBackground }}
             >
               Exercises ({exercises.length})
             </Text>
@@ -390,8 +383,8 @@ export default function EditTemplate() {
 
         {/* Selection mode toolbar */}
         {selecting && !starter && (
-          <View style={[styles.selectionBar, { backgroundColor: theme.colors.primaryContainer }]}>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onPrimaryContainer, flex: 1 }}
+          <View style={[styles.selectionBar, { backgroundColor: colors.primaryContainer }]}>
+            <Text variant="bodyMedium" style={{ color: colors.onPrimaryContainer, flex: 1 }}
               accessibilityLiveRegion="polite"
             >
               {selected.size} selected
@@ -427,8 +420,8 @@ export default function EditTemplate() {
                 style={[
                   styles.row,
                   {
-                    backgroundColor: theme.colors.surface,
-                    borderBottomColor: theme.colors.outlineVariant,
+                    backgroundColor: colors.surface,
+                    borderBottomColor: colors.outlineVariant,
                     borderLeftWidth: color ? 4 : 0,
                     borderLeftColor: color ?? "transparent",
                   },
@@ -439,7 +432,7 @@ export default function EditTemplate() {
                   <Text
                     variant="titleSmall"
                     style={{
-                      color: item.exercise?.deleted_at ? theme.colors.onSurfaceVariant : theme.colors.onSurface,
+                      color: item.exercise?.deleted_at ? colors.onSurfaceVariant : colors.onSurface,
                       fontStyle: item.exercise?.deleted_at ? "italic" : "normal",
                     }}
                   >
@@ -447,7 +440,7 @@ export default function EditTemplate() {
                   </Text>
                   <Text
                     variant="bodySmall"
-                    style={{ color: theme.colors.onSurfaceVariant }}
+                    style={{ color: colors.onSurfaceVariant }}
                   >
                     {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
                   </Text>
@@ -461,7 +454,7 @@ export default function EditTemplate() {
             <View style={styles.empty}>
               <Text
                 variant="bodyMedium"
-                style={{ color: theme.colors.onSurfaceVariant }}
+                style={{ color: colors.onSurfaceVariant }}
               >
                 No exercises. Add some below.
               </Text>

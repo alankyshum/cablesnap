@@ -1,25 +1,26 @@
 import { View, StyleSheet } from "react-native";
-import { Button, Text, useTheme } from "react-native-paper";
+import { Button, Text } from "react-native-paper";
 import { useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function Welcome() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         <MaterialCommunityIcons
           name="dumbbell"
           size={80}
-          color={theme.colors.primary}
+          color={colors.primary}
           style={styles.icon}
         />
-        <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.onBackground }]}>
+        <Text variant="headlineLarge" style={[styles.title, { color: colors.onBackground }]}>
           Welcome to FitForge
         </Text>
-        <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+        <Text variant="bodyLarge" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
           Your free workout & macro tracker
         </Text>
       </View>

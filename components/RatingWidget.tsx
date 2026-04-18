@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const RATING_LABELS: { label: string; colorKey: "error" | "tertiary" | "secondary" | "primary" }[] = [
   { label: "Terrible", colorKey: "error" },
@@ -25,7 +26,7 @@ const SIZES = {
 };
 
 export default function RatingWidget({ value, onChange, readOnly = false, size = "medium" }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const longPressRef = useRef(false);
   const { star: starSize, touch: touchSize } = SIZES[size];
 
@@ -33,8 +34,8 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
     ? RATING_LABELS[value - 1]
     : null;
   const labelColor = ratingInfo
-    ? theme.colors[ratingInfo.colorKey]
-    : theme.colors.onSurfaceDisabled;
+    ? colors[ratingInfo.colorKey]
+    : colors.onSurfaceDisabled;
 
   const handlePress = (starNum: number) => {
     if (readOnly || !onChange) return;
@@ -104,7 +105,7 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
               color={
                 value != null && starNum <= value
                   ? labelColor
-                  : theme.colors.onSurfaceDisabled
+                  : colors.onSurfaceDisabled
               }
             />
           </Pressable>

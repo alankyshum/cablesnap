@@ -2,15 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Linking, StyleSheet, View } from "react-native";
 import { useLayout } from "../lib/layout";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  SegmentedButtons,
-  Snackbar,
-  Switch,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Button, SegmentedButtons, Snackbar, Switch, Text, TextInput } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import NetInfo from "@react-native-community/netinfo";
@@ -23,6 +15,7 @@ import {
 import { recent as recentInteractions } from "../lib/interactions";
 import { getRecentConsoleLogs } from "../lib/console-log-buffer";
 import type { ConsoleLogEntry, ErrorEntry, Interaction, ReportType } from "../lib/types";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 const MAX_TITLE = 150;
 
@@ -33,7 +26,7 @@ const TYPE_OPTIONS = [
 ] as const;
 
 export default function FeedbackScreen() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const params = useLocalSearchParams<{ type?: string }>();
 
@@ -211,11 +204,11 @@ export default function FeedbackScreen() {
       <FlashList
         data={ITEMS}
         keyExtractor={(item) => item}
-        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
         renderItem={() => (
           <View>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
               Report Type
             </Text>
             <SegmentedButtons
@@ -227,7 +220,7 @@ export default function FeedbackScreen() {
               style={styles.segment}
             />
 
-      <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginTop: 16, marginBottom: 8 }}>
+      <Text variant="titleMedium" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
         Title ({title.length}/{MAX_TITLE})
       </Text>
       <TextInput
@@ -240,7 +233,7 @@ export default function FeedbackScreen() {
         accessibilityLabel="Report title"
       />
 
-      <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginTop: 16, marginBottom: 8 }}>
+      <Text variant="titleMedium" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
         Description{type !== "crash" ? " (required)" : " (optional)"}
       </Text>
       <TextInput
@@ -257,10 +250,10 @@ export default function FeedbackScreen() {
 
       <View style={styles.diagHeader}>
         <View style={{ flex: 1 }}>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface }}>
             Include diagnostic data
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             Diagnostic data helps us fix issues faster. No personal data is collected.
           </Text>
         </View>
@@ -282,8 +275,8 @@ export default function FeedbackScreen() {
       </Button>
 
       {expanded && (
-        <View style={[styles.preview, { backgroundColor: theme.colors.surfaceVariant }]}>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, fontFamily: "monospace" }}>
+        <View style={[styles.preview, { backgroundColor: colors.surfaceVariant }]}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, fontFamily: "monospace" }}>
             {diag ? diagText : "Diagnostic data disabled — only app version and platform will be included."}
           </Text>
         </View>

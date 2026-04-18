@@ -1,13 +1,14 @@
 import { useState, useCallback } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Text, TextInput, useTheme } from "react-native-paper";
+import { Button, Text, TextInput } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { getBodySettings, updateBodySettings } from "../../lib/db";
 import { KG_TO_LB, LB_TO_KG } from "../../lib/units";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function Goals() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
@@ -51,10 +52,10 @@ export default function Goals() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
-      <Text variant="titleLarge" style={{ color: theme.colors.onBackground, marginBottom: 16 }}>
+      <Text variant="titleLarge" style={{ color: colors.onBackground, marginBottom: 16 }}>
         Body Goals
       </Text>
 

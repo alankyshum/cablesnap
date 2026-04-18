@@ -6,14 +6,7 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  Button,
-  IconButton,
-  Snackbar,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Button, IconButton, Snackbar, Text, TextInput } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -30,9 +23,10 @@ import {
 import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/types";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import EditExerciseSheet from "../../components/EditExerciseSheet";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function CreateTemplate() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -141,18 +135,18 @@ export default function CreateTemplate() {
         onPress={() => setEditing(item)}
         style={[
           styles.exerciseRow,
-          { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
+          { backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant },
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`}
       >
         <View style={styles.exerciseInfo}>
-          <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+          <Text variant="titleSmall" style={{ color: colors.onSurface }}>
             {item.exercise?.name ?? "Unknown Exercise"}
           </Text>
           <Text
             variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant }}
+            style={{ color: colors.onSurfaceVariant }}
           >
             {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
           </Text>
@@ -187,7 +181,7 @@ export default function CreateTemplate() {
         </View>
       </Pressable>
     ),
-    [theme, exercises.length, move, remove]
+    [colors, exercises.length, move, remove]
   );
 
   return (
@@ -196,7 +190,7 @@ export default function CreateTemplate() {
         options={{ title: template ? "Edit Template" : "New Template" }}
       />
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}
+        style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <TextInput
           label="Template Name"
@@ -211,7 +205,7 @@ export default function CreateTemplate() {
             <View style={styles.section}>
               <Text
                 variant="titleMedium"
-                style={{ color: theme.colors.onBackground }}
+                style={{ color: colors.onBackground }}
               >
                 Exercises ({exercises.length})
               </Text>
@@ -224,7 +218,7 @@ export default function CreateTemplate() {
                 <View style={styles.empty}>
                   <Text
                     variant="bodyMedium"
-                    style={{ color: theme.colors.onSurfaceVariant }}
+                    style={{ color: colors.onSurfaceVariant }}
                   >
                     No exercises yet. Add some below.
                   </Text>

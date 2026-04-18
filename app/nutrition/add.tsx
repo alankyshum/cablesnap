@@ -1,16 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Platform, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  ActivityIndicator,
-  Button,
-  Card,
-  Chip,
-  SegmentedButtons,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { ActivityIndicator, Button, Card, Chip, SegmentedButtons, Text, TextInput } from "react-native-paper";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import NetInfo from "@react-native-community/netinfo";
 import { useLayout } from "../../lib/layout";
@@ -31,9 +22,10 @@ import {
 import type { FoodEntry, Meal, BuiltinFood, FoodCategory } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 import BarcodeScanner from "../../components/BarcodeScanner";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void; dateKey: string }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<FoodCategory | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -84,7 +76,7 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
 
     return (
       <Card
-        style={[styles.dbCard, { backgroundColor: theme.colors.surfaceVariant }]}
+        style={[styles.dbCard, { backgroundColor: colors.surfaceVariant }]}
         onPress={() => expand(item.id)}
         accessibilityLabel={`${item.name}, ${item.calories} calories per ${item.serving}`}
         accessibilityRole="button"
@@ -93,19 +85,19 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
           <Text
             variant="titleSmall"
             numberOfLines={1}
-            style={{ color: theme.colors.onSurface }}
+            style={{ color: colors.onSurface }}
           >
             {item.name}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {item.calories} cal · {item.protein}p · {item.carbs}c · {item.fat}f · {item.serving}
           </Text>
           {open && (
-            <View style={[styles.detail, { borderTopColor: theme.colors.outlineVariant }]}>
-              <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+            <View style={[styles.detail, { borderTopColor: colors.outlineVariant }]}>
+              <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                 Serving: {item.serving}
               </Text>
-              <Text variant="labelMedium" style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
+              <Text variant="labelMedium" style={{ color: colors.onSurface, marginBottom: 4 }}>
                 Multiplier
               </Text>
               <View style={styles.multChips}>
@@ -133,7 +125,7 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
                 accessibilityLabel={`Serving multiplier: ${multiplier} times`}
               />
               {!valid && (
-                <Text variant="bodySmall" style={{ color: theme.colors.error, marginBottom: 4 }}>
+                <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 4 }}>
                   Minimum 0.25x
                 </Text>
               )}
@@ -141,7 +133,7 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
                 style={styles.macros}
                 accessibilityLiveRegion="polite"
               >
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                   {scaled.calories} cal · {scaled.protein}p · {scaled.carbs}c · {scaled.fat}f
                 </Text>
               </View>
@@ -177,14 +169,14 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
   const empty = () => (
     <Text
       variant="bodyMedium"
-      style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
+      style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
     >
       No foods found. Try a different search term.
     </Text>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <TextInput
         mode="outlined"
         placeholder="Search foods..."
@@ -222,14 +214,14 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={empty}
-        style={{ backgroundColor: theme.colors.background }}
+        style={{ backgroundColor: colors.background }}
       />
     </View>
   );
 }
 
 function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void; dateKey: string; autoScan?: boolean }) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ParsedFood[]>([]);
   const [loading, setLoading] = useState(false);
@@ -450,7 +442,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
       <View style={styles.emptyContainer}>
         <Text
           variant="bodyMedium"
-          style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
+          style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
           accessibilityLiveRegion="polite"
         >
           You&apos;re offline. Connect to search online foods.
@@ -470,7 +462,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
 
     return (
       <Card
-        style={[styles.dbCard, { backgroundColor: theme.colors.surfaceVariant }]}
+        style={[styles.dbCard, { backgroundColor: colors.surfaceVariant }]}
         onPress={() => expand(index)}
         accessibilityLabel={`${item.name}, ${item.calories} calories per ${item.servingLabel}`}
         accessibilityRole="button"
@@ -479,19 +471,19 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
           <Text
             variant="titleSmall"
             numberOfLines={2}
-            style={{ color: theme.colors.onSurface }}
+            style={{ color: colors.onSurface }}
           >
             {item.name}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {item.calories} cal · {item.protein}p · {item.carbs}c · {item.fat}f · per {item.servingLabel}
           </Text>
           {open && (
-            <View style={[styles.detail, { borderTopColor: theme.colors.outlineVariant }]}>
-              <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+            <View style={[styles.detail, { borderTopColor: colors.outlineVariant }]}>
+              <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                 Serving: {item.servingLabel}
               </Text>
-              <Text variant="labelMedium" style={{ color: theme.colors.onSurface, marginBottom: 4 }}>
+              <Text variant="labelMedium" style={{ color: colors.onSurface, marginBottom: 4 }}>
                 Multiplier
               </Text>
               <View style={styles.multChips}>
@@ -519,7 +511,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
                 accessibilityLabel={`Serving multiplier: ${multiplier} times`}
               />
               {!valid && (
-                <Text variant="bodySmall" style={{ color: theme.colors.error, marginBottom: 4 }}>
+                <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 4 }}>
                   Minimum 0.25x
                 </Text>
               )}
@@ -527,7 +519,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
                 style={styles.macros}
                 accessibilityLiveRegion="polite"
               >
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
                   {scaled.calories} cal · {scaled.protein}p · {scaled.carbs}c · {scaled.fat}f
                 </Text>
               </View>
@@ -565,7 +557,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
     return (
       <Text
         variant="bodyMedium"
-        style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
+        style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 24 }}
       >
         No foods found for &apos;{query.trim()}&apos;. Try different terms or use manual entry.
       </Text>
@@ -573,7 +565,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {Platform.OS !== "web" && (
         <Button
           mode="outlined"
@@ -594,14 +586,14 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
             accessibilityLabel="Looking up barcode..."
             accessibilityRole="progressbar"
           />
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
             Looking up barcode...
           </Text>
         </View>
       )}
       {barcodeError && (
         <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
-          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
+          <Text variant="bodyMedium" style={{ color: colors.error, textAlign: "center", marginBottom: 12 }}>
             {barcodeError}
           </Text>
           <View style={{ flexDirection: "row", gap: 12 }}>
@@ -630,7 +622,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
         <View accessibilityLiveRegion="polite">
           <Text
             variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}
+            style={{ color: colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}
             accessibilityLabel={`Found: ${scannedProductName}`}
           >
             Found: {scannedProductName}
@@ -647,7 +639,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
         accessibilityLabel="Search online food database"
       />
       {hint && (
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}>
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, paddingHorizontal: 4, marginBottom: 8 }}>
           {hint}
         </Text>
       )}
@@ -660,7 +652,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
       )}
       {error && (
         <View style={{ alignItems: "center", padding: 16 }} accessibilityLiveRegion="polite">
-          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginBottom: 12 }}>
+          <Text variant="bodyMedium" style={{ color: colors.error, textAlign: "center", marginBottom: 12 }}>
             {error}
           </Text>
           <Button
@@ -679,7 +671,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
         renderItem={renderItem}
         keyExtractor={(item, index) => `${item.name}-${item.calories}-${index}`}
         ListEmptyComponent={empty}
-        style={{ backgroundColor: theme.colors.background }}
+        style={{ backgroundColor: colors.background }}
       />
       <BarcodeScanner
         visible={scannerVisible}
@@ -706,7 +698,7 @@ const TAB_BUTTONS = [
 ];
 
 export default function AddFood() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const params = useLocalSearchParams<{ date?: string; scan?: string }>();
   const dateKey = params.date || localDateKey();
@@ -762,7 +754,7 @@ export default function AddFood() {
 
   if (tab === "database" || tab === "online") {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         <View style={styles.header}>
           <SegmentedButtons
             value={tab}
@@ -798,16 +790,16 @@ export default function AddFood() {
 
   const renderFav = ({ item: f }: { item: FoodEntry }) => (
     <Card
-      style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}
+      style={[styles.favCard, { backgroundColor: colors.surfaceVariant }]}
       onPress={() => quickLog(f)}
       accessibilityLabel={`Quick log ${f.name}, ${f.calories} calories`}
       accessibilityRole="button"
     >
       <Card.Content>
-        <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
+        <Text variant="titleSmall" style={{ color: colors.onSurface }}>
           {f.name}
         </Text>
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
           {f.calories} cal · {f.protein}p · {f.carbs}c · {f.fat}f · {f.serving_size}
         </Text>
       </Card.Content>
@@ -819,7 +811,7 @@ export default function AddFood() {
       data={tab === "favorites" ? favorites : []}
       keyExtractor={(f) => f.id}
       renderItem={renderFav}
-      style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+      style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
       contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 32 }}
       ListHeaderComponent={
         <>
@@ -848,7 +840,7 @@ export default function AddFood() {
           </View>
 
           {tab === "new" ? (
-            <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
               <Card.Content>
                 <TextInput
                   label="Food name"
@@ -925,11 +917,11 @@ export default function AddFood() {
               </Card.Content>
             </Card>
           ) : favorites.length === 0 ? (
-            <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
               <Card.Content>
                 <Text
                   variant="bodyMedium"
-                  style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 16 }}
+                  style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}
                 >
                   No favorites yet. Save foods as favorites when logging them.
                 </Text>

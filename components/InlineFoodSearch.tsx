@@ -9,15 +9,7 @@ import {
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import {
-  ActivityIndicator,
-  Button,
-  Card,
-  Chip,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { ActivityIndicator, Button, Card, Chip, Text, TextInput } from "react-native-paper";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from "@gorhom/bottom-sheet";
 import {
   addFoodEntry,
@@ -37,6 +29,7 @@ import type { FoodEntry, Meal, BuiltinFood } from "../lib/types";
 import { MEALS, MEAL_LABELS } from "../lib/types";
 import BarcodeScanner from "./BarcodeScanner";
 import { radii } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 // Unified result type for combined local + online search
 type SearchResult =
@@ -50,7 +43,7 @@ type Props = {
 };
 
 export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
 
   // Search state
   const [query, setQuery] = useState("");
@@ -340,16 +333,16 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
       const food = item.food;
       return (
         <Pressable
-          style={[styles.resultItem, { backgroundColor: theme.colors.surfaceVariant }]}
+          style={[styles.resultItem, { backgroundColor: colors.surfaceVariant }]}
           onPress={() => logLocalFood(food)}
           disabled={saving}
           accessibilityLabel={`Log ${food.name}, ${food.calories} calories`}
           accessibilityRole="button"
         >
-          <Text variant="bodyMedium" numberOfLines={1} style={{ color: theme.colors.onSurface }}>
+          <Text variant="bodyMedium" numberOfLines={1} style={{ color: colors.onSurface }}>
             {food.name}
           </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
             {food.calories} cal · {food.protein}p · {food.carbs}c · {food.fat}f
           </Text>
         </Pressable>
@@ -359,21 +352,21 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
     const food = item.food;
     return (
       <Pressable
-        style={[styles.resultItem, { backgroundColor: theme.colors.surfaceVariant }]}
+        style={[styles.resultItem, { backgroundColor: colors.surfaceVariant }]}
         onPress={() => logOnlineFood(food)}
         disabled={saving}
         accessibilityLabel={`Log ${food.name}, ${food.calories} calories`}
         accessibilityRole="button"
       >
-        <Text variant="bodyMedium" numberOfLines={2} style={{ color: theme.colors.onSurface }}>
+        <Text variant="bodyMedium" numberOfLines={2} style={{ color: colors.onSurface }}>
           {food.name}
         </Text>
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
           {food.calories} cal · {food.protein}p · {food.carbs}c · {food.fat}f · per {food.servingLabel}
         </Text>
       </Pressable>
     );
-  }, [theme, saving, logLocalFood, logOnlineFood]);
+  }, [colors, saving, logLocalFood, logOnlineFood]);
 
   const keyExtractor = useCallback(
     (item: SearchResult, index: number) =>
@@ -394,7 +387,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         <View>
           <Text
             variant="labelSmall"
-            style={[styles.separator, { color: theme.colors.onSurfaceVariant }]}
+            style={[styles.separator, { color: colors.onSurfaceVariant }]}
           >
             Online Results
           </Text>
@@ -403,13 +396,13 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
       );
     }
     return renderItem({ item });
-  }, [renderItem, showSeparator, separatorIndex, theme]);
+  }, [renderItem, showSeparator, separatorIndex, colors]);
 
   const hasResults = combinedResults.length > 0;
   const showEmptyMessage = query.trim().length >= 2 && !hasResults && !onlineLoading && !onlineError;
 
   return (
-    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+    <Card style={[styles.card, { backgroundColor: colors.surface }]}>
       <Card.Content style={styles.content}>
         {/* Meal selector */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealRow}>
@@ -453,7 +446,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         ) : (
           <Text
             variant="bodySmall"
-            style={[styles.favHint, { color: theme.colors.onSurfaceVariant }]}
+            style={[styles.favHint, { color: colors.onSurfaceVariant }]}
           >
             ★ Star foods to add them here
           </Text>
@@ -479,14 +472,14 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         {barcodeLoading && (
           <View style={styles.statusRow} accessibilityLiveRegion="polite">
             <ActivityIndicator size="small" style={{ marginRight: 8 }} />
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
               Looking up barcode...
             </Text>
           </View>
         )}
         {barcodeError && (
           <View style={styles.statusRow} accessibilityLiveRegion="polite">
-            <Text variant="bodySmall" style={{ color: theme.colors.error, flex: 1 }}>
+            <Text variant="bodySmall" style={{ color: colors.error, flex: 1 }}>
               {barcodeError}
             </Text>
             <Button
@@ -502,7 +495,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         {scannedProductName && (
           <Text
             variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}
+            style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
             accessibilityLiveRegion="polite"
           >
             Found: {scannedProductName}
@@ -536,14 +529,14 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
             />
           )}
           {onlineError && (
-            <Text variant="bodySmall" style={{ color: theme.colors.error, marginBottom: 4 }}>
+            <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 4 }}>
               {onlineError}
             </Text>
           )}
           {showEmptyMessage && (
             <Text
               variant="bodySmall"
-              style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", padding: 8 }}
+              style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 8 }}
             >
               No foods found. Try different terms or use Manual Entry.
             </Text>
@@ -577,14 +570,14 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
         enablePanDownToClose
         backdropComponent={renderBackdrop}
         onClose={resetManualForm}
-        backgroundStyle={{ backgroundColor: theme.colors.surface }}
-        handleIndicatorStyle={{ backgroundColor: theme.colors.onSurfaceVariant }}
+        backgroundStyle={{ backgroundColor: colors.surface }}
+        handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
       >
         <BottomSheetView
           style={styles.sheetContent}
           accessibilityViewIsModal
         >
-          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 12 }}>
             Manual Food Entry
           </Text>
           <TextInput

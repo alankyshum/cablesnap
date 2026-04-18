@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Banner, Button, Card, Chip, Text, useTheme } from "react-native-paper";
+import { Banner, Button, Card, Chip, Text } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -11,6 +11,7 @@ import {
   STARTER_PROGRAM,
 } from "../../lib/starter-templates";
 import { useCompleteOnboarding } from "../../lib/onboarding-context";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Level = "beginner" | "intermediate" | "advanced";
 
@@ -19,7 +20,7 @@ const PPL = STARTER_PROGRAM;
 const BROWSE_TEMPLATES = STARTER_TEMPLATES.slice(0, 3);
 
 export default function Recommend() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const params = useLocalSearchParams<{ weight: string; measurement: string; level: string }>();
   const level = (params.level ?? "beginner") as Level;
@@ -85,44 +86,44 @@ export default function Recommend() {
   if (level === "beginner") {
     return (
       <ScrollView
-        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={styles.scroll}
       >
         {errorBanner}
-        <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
+        <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
           We Recommend
         </Text>
-        <Card style={[styles.recCard, { backgroundColor: theme.colors.surface }]} mode="outlined">
+        <Card style={[styles.recCard, { backgroundColor: colors.surface }]} mode="outlined">
           <Card.Content>
             <View style={styles.recHeader}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.onSurface }}>
+              <Text variant="headlineSmall" style={{ color: colors.onSurface }}>
                 {FULL_BODY.name}
               </Text>
               <Chip
                 compact
                 mode="flat"
-                style={{ backgroundColor: theme.colors.primaryContainer }}
-                textStyle={{ color: theme.colors.onPrimaryContainer }}
+                style={{ backgroundColor: colors.primaryContainer }}
+                textStyle={{ color: colors.onPrimaryContainer }}
               >
                 Recommended
               </Chip>
             </View>
-            <Text variant="bodyMedium" style={[styles.recDesc, { color: theme.colors.onSurfaceVariant }]}>
+            <Text variant="bodyMedium" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
               This {FULL_BODY.duration} workout covers all major muscle groups — perfect for building a
               foundation.
             </Text>
             <View style={styles.meta}>
-              <MaterialCommunityIcons name="clock-outline" size={16} color={theme.colors.onSurfaceVariant} />
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}>
+              <MaterialCommunityIcons name="clock-outline" size={16} color={colors.onSurfaceVariant} />
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
                 {FULL_BODY.duration}
               </Text>
               <MaterialCommunityIcons
                 name="dumbbell"
                 size={16}
-                color={theme.colors.onSurfaceVariant}
+                color={colors.onSurfaceVariant}
                 style={{ marginLeft: 12 }}
               />
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}>
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
                 {FULL_BODY.exercises.length} exercises
               </Text>
             </View>
@@ -156,34 +157,34 @@ export default function Recommend() {
   if (level === "intermediate") {
     return (
       <ScrollView
-        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={styles.scroll}
       >
         {errorBanner}
-        <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
+        <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
           We Recommend
         </Text>
-        <Card style={[styles.recCard, { backgroundColor: theme.colors.surface }]} mode="outlined">
+        <Card style={[styles.recCard, { backgroundColor: colors.surface }]} mode="outlined">
           <Card.Content>
             <View style={styles.recHeader}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.onSurface }}>
+              <Text variant="headlineSmall" style={{ color: colors.onSurface }}>
                 {PPL.name}
               </Text>
               <Chip
                 compact
                 mode="flat"
-                style={{ backgroundColor: theme.colors.secondaryContainer }}
-                textStyle={{ color: theme.colors.onSecondaryContainer }}
+                style={{ backgroundColor: colors.secondaryContainer }}
+                textStyle={{ color: colors.onSecondaryContainer }}
               >
                 Program
               </Chip>
             </View>
-            <Text variant="bodyMedium" style={[styles.recDesc, { color: theme.colors.onSurfaceVariant }]}>
+            <Text variant="bodyMedium" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>
               {PPL.description}
             </Text>
             <View style={styles.meta}>
-              <MaterialCommunityIcons name="calendar-sync" size={16} color={theme.colors.onSurfaceVariant} />
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}>
+              <MaterialCommunityIcons name="calendar-sync" size={16} color={colors.onSurfaceVariant} />
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
                 {PPL.days.length}-day cycle
               </Text>
             </View>
@@ -218,10 +219,10 @@ export default function Recommend() {
   const advancedHeader = (
     <>
       {errorBanner}
-      <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
+      <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
         Browse Our Templates
       </Text>
-      <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+      <Text variant="bodyLarge" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
         Pick a starter template or create your own workouts from scratch.
       </Text>
     </>
@@ -257,26 +258,26 @@ export default function Recommend() {
     <FlashList
       data={BROWSE_TEMPLATES}
       keyExtractor={(tpl) => tpl.id}
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       ListHeaderComponent={advancedHeader}
       ListFooterComponent={advancedFooter}
       renderItem={({ item: tpl }) => (
         <Card
-          style={[styles.browseCard, { backgroundColor: theme.colors.surface }]}
+          style={[styles.browseCard, { backgroundColor: colors.surface }]}
           mode="outlined"
         >
           <Card.Content>
             <View style={styles.recHeader}>
-              <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+              <Text variant="titleMedium" style={{ color: colors.onSurface }}>
                 {tpl.name}
               </Text>
               <View style={styles.meta}>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
                   {tpl.duration}
                 </Text>
               </View>
             </View>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
               {tpl.exercises.length} exercises · {tpl.difficulty}
             </Text>
           </Card.Content>

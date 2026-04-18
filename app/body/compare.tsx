@@ -5,15 +5,16 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { getPhotoById } from "../../lib/db/photos";
 import type { ProgressPhoto } from "../../lib/db/photos";
 import { radii, scrim } from "../../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function CompareScreen() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const { width, height } = useWindowDimensions();
   const params = useLocalSearchParams<{ id1: string; id2: string }>();
   const [photo1, setPhoto1] = useState<ProgressPhoto | null>(null);
@@ -45,9 +46,9 @@ export default function CompareScreen() {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["bottom"]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["bottom"]}>
         <View style={styles.center}>
-          <Text variant="bodyLarge" style={{ color: theme.colors.error }}>
+          <Text variant="bodyLarge" style={{ color: colors.error }}>
             Could not load photos. They may have been deleted.
           </Text>
         </View>
@@ -57,9 +58,9 @@ export default function CompareScreen() {
 
   if (!photo1 || !photo2) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["bottom"]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["bottom"]}>
         <View style={styles.center}>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
             Loading photos...
           </Text>
         </View>
@@ -77,9 +78,9 @@ export default function CompareScreen() {
       />
       <View style={styles.label}>
         {/* White text on dark overlay for WCAG AA contrast on photos */}
-        <Text style={[styles.labelText, { color: theme.colors.onPrimary }]}>{photo.display_date}</Text>
+        <Text style={[styles.labelText, { color: colors.onPrimary }]}>{photo.display_date}</Text>
         {photo.pose_category && (
-          <Text style={[styles.labelPose, { color: theme.colors.onPrimary }]}>{photo.pose_category.replace("_", " ")}</Text>
+          <Text style={[styles.labelPose, { color: colors.onPrimary }]}>{photo.pose_category.replace("_", " ")}</Text>
         )}
       </View>
     </View>
@@ -89,7 +90,7 @@ export default function CompareScreen() {
     <SafeAreaView
       style={[
         styles.container,
-        { backgroundColor: theme.colors.background },
+        { backgroundColor: colors.background },
         isLandscape ? styles.row : styles.column,
       ]}
       edges={["bottom"]}
@@ -97,7 +98,7 @@ export default function CompareScreen() {
       {renderPhoto(photo1)}
       <View style={[
         isLandscape ? styles.dividerVertical : styles.dividerHorizontal,
-        { backgroundColor: theme.colors.outlineVariant },
+        { backgroundColor: colors.outlineVariant },
       ]} />
       {renderPhoto(photo2)}
     </SafeAreaView>

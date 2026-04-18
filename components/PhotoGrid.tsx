@@ -6,11 +6,12 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import { FlashList } from "@shopify/flash-list";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ProgressPhoto } from "../lib/db/photos";
 import { radii, scrim } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   photos: ProgressPhoto[];
@@ -33,7 +34,7 @@ export default function PhotoGrid({
   selectedIds = [],
   ListHeaderComponent,
 }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const numColumns = width >= TABLET_BREAKPOINT ? 4 : 3;
   const spacing = 2;
@@ -56,7 +57,7 @@ export default function PhotoGrid({
               height: itemSize,
               margin: spacing / 2,
             },
-            isSelected && { borderWidth: 3, borderColor: theme.colors.primary },
+            isSelected && { borderWidth: 3, borderColor: colors.primary },
           ]}
           accessibilityLabel={`${item.pose_category ?? "Progress"} pose photo, ${item.display_date}`}
           accessibilityRole="button"
@@ -69,33 +70,33 @@ export default function PhotoGrid({
           />
           {/* Date overlay — white text for WCAG AA contrast on photo backgrounds */}
           <View style={styles.dateOverlay}>
-            <Text style={[styles.dateText, { color: theme.colors.onPrimary }]}>{dateLabel}</Text>
+            <Text style={[styles.dateText, { color: colors.onPrimary }]}>{dateLabel}</Text>
           </View>
           {/* Pose icon */}
           {item.pose_category && (
-            <View style={[styles.poseIcon, { backgroundColor: theme.colors.primaryContainer }]}>
+            <View style={[styles.poseIcon, { backgroundColor: colors.primaryContainer }]}>
               <MaterialCommunityIcons
                 name={getPoseIcon(item.pose_category) as React.ComponentProps<typeof MaterialCommunityIcons>["name"]}
                 size={14}
-                color={theme.colors.onPrimaryContainer}
+                color={colors.onPrimaryContainer}
               />
             </View>
           )}
           {/* Compare mode badge */}
           {compareMode && isSelected && (
-            <View style={[styles.badge, { backgroundColor: theme.colors.primary }]}>
-              <Text style={[styles.badgeText, { color: theme.colors.onPrimary }]}>
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.badgeText, { color: colors.onPrimary }]}>
                 {selectionIndex}
               </Text>
             </View>
           )}
           {compareMode && !isSelected && (
-            <View style={[styles.checkbox, { borderColor: theme.colors.onSurface, backgroundColor: theme.colors.backdrop }]} />
+            <View style={[styles.checkbox, { borderColor: colors.onSurface, backgroundColor: colors.backdrop }]} />
           )}
         </Pressable>
       );
     },
-    [itemSize, spacing, compareMode, selectedIds, onPhotoPress, onPhotoLongPress, theme]
+    [itemSize, spacing, compareMode, selectedIds, onPhotoPress, onPhotoLongPress, colors]
   );
 
   return (

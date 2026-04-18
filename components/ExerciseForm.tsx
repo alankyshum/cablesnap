@@ -8,16 +8,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import {
-  Button,
-  Chip,
-  IconButton,
-  SegmentedButtons,
-  Snackbar,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { Button, Chip, IconButton, SegmentedButtons, Snackbar, Text, TextInput } from "react-native-paper";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import {
@@ -36,6 +27,7 @@ import {
   MUSCLE_LABELS,
 } from "../lib/types";
 import { parseExerciseDescription } from "../lib/exercise-nlp";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   initial?: Exercise;
@@ -53,7 +45,7 @@ const NL_EXAMPLES = [
 ];
 
 export default function ExerciseForm({ initial, onSave, title }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const [name, setName] = useState(initial?.name ?? "");
   const [category, setCategory] = useState<Category | null>(initial?.category ?? null);
@@ -127,7 +119,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
 
   const autoFillHighlight = flashAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["transparent", theme.colors.primaryContainer],
+    outputRange: ["transparent", colors.primaryContainer],
   });
 
   const toggleMuscle = useCallback(
@@ -189,23 +181,23 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
       <FlatList
         data={[]}
         renderItem={null}
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <>
             {/* Quick-fill from description */}
             {!initial && (
-              <View style={[styles.nlSection, { borderBottomColor: theme.colors.outlineVariant }]}>
+              <View style={[styles.nlSection, { borderBottomColor: colors.outlineVariant }]}>
                 <Text
                   variant="labelLarge"
-                  style={{ color: theme.colors.onSurface, marginBottom: 4 }}
+                  style={{ color: colors.onSurface, marginBottom: 4 }}
                 >
                   Describe your exercise
                 </Text>
                 <Text
                   variant="bodySmall"
-                  style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}
+                  style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}
                 >
                   Type a description and we&apos;ll fill in the details
                 </Text>
@@ -235,7 +227,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 {autoFilledFields.size > 0 && (
                   <Text
                     variant="bodySmall"
-                    style={{ color: theme.colors.primary, marginTop: 4 }}
+                    style={{ color: colors.primary, marginTop: 4 }}
                     accessibilityLiveRegion="polite"
                   >
                     Fields highlighted below were auto-filled. Tap any to adjust.
@@ -259,7 +251,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
             <View style={styles.counter}>
               <Text
                 variant="bodySmall"
-                style={{ color: errors.name ? theme.colors.error : theme.colors.onSurfaceVariant }}
+                style={{ color: errors.name ? colors.error : colors.onSurfaceVariant }}
                 accessibilityLabel={errors.name ?? `${name.length} of 100 characters used`}
                 accessibilityLiveRegion="polite"
               >
@@ -270,7 +262,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
 
             {/* Category */}
             <Animated.View style={{ backgroundColor: autoFilledFields.has("category") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
-            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+            <Text variant="labelLarge" style={[styles.label, { color: colors.onSurface }]}>
               Category *
             </Text>
             <FlatList
@@ -297,7 +289,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
             {errors.category && (
               <Text
                 variant="bodySmall"
-                style={{ color: theme.colors.error, marginTop: 2, marginHorizontal: 16 }}
+                style={{ color: colors.error, marginTop: 2, marginHorizontal: 16 }}
                 accessibilityLiveRegion="polite"
               >
                 {errors.category}
@@ -307,7 +299,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
 
             {/* Equipment */}
             <Animated.View style={{ backgroundColor: autoFilledFields.has("equipment") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
-            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+            <Text variant="labelLarge" style={[styles.label, { color: colors.onSurface }]}>
               Equipment
             </Text>
             <FlatList
@@ -335,7 +327,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
 
             {/* Difficulty */}
             <Animated.View style={{ backgroundColor: autoFilledFields.has("difficulty") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
-            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+            <Text variant="labelLarge" style={[styles.label, { color: colors.onSurface }]}>
               Difficulty
             </Text>
             <SegmentedButtons
@@ -348,12 +340,12 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
 
             {/* Primary Muscles */}
             <Animated.View style={{ backgroundColor: autoFilledFields.has("primary_muscles") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
-            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+            <Text variant="labelLarge" style={[styles.label, { color: colors.onSurface }]}>
               Primary Muscles *
             </Text>
             {MUSCLE_GROUPS_BY_REGION.map((region) => (
               <View key={region.label} style={styles.region}>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
                   {region.label}
                 </Text>
                 <View style={styles.chipWrap}>
@@ -377,7 +369,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
             {errors.muscles && (
               <Text
                 variant="bodySmall"
-                style={{ color: theme.colors.error, marginHorizontal: 16 }}
+                style={{ color: colors.error, marginHorizontal: 16 }}
                 accessibilityLiveRegion="polite"
               >
                 {errors.muscles}
@@ -387,12 +379,12 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
 
             {/* Secondary Muscles */}
             <Animated.View style={{ backgroundColor: autoFilledFields.has("secondary_muscles") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
-            <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurface }]}>
+            <Text variant="labelLarge" style={[styles.label, { color: colors.onSurface }]}>
               Secondary Muscles
             </Text>
             {MUSCLE_GROUPS_BY_REGION.map((region) => (
               <View key={region.label} style={styles.region}>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
                   {region.label}
                 </Text>
                 <View style={styles.chipWrap}>

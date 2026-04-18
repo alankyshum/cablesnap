@@ -3,15 +3,16 @@ import { Appearance, Linking, ScrollView, StyleSheet, View } from "react-native"
 import { Button, Text } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { Colors } from "../theme/colors";
 import { logError, generateReport, generateGitHubURL, getRecentErrors } from "../lib/errors";
 import { recent as recentInteractions } from "../lib/interactions";
-import { light, dark } from "../constants/theme";
 
 type Props = { children: React.ReactNode };
 type State = { error: Error | null; expanded: boolean };
 
-function theme() {
-  return Appearance.getColorScheme() === "dark" ? dark : light;
+function themeColors() {
+  const scheme = Appearance.getColorScheme() === "dark" ? "dark" : "light";
+  return Colors[scheme];
 }
 
 export default class ErrorBoundary extends React.Component<Props, State> {
@@ -66,15 +67,15 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (!this.state.error) return this.props.children;
 
-    const t = theme();
+    const t = themeColors();
 
     return (
-      <View style={[styles.container, { backgroundColor: t.colors.background }]}>
+      <View style={[styles.container, { backgroundColor: t.background }]}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text variant="headlineLarge" style={[styles.heading, { color: t.colors.onBackground }]}>
+          <Text variant="headlineLarge" style={[styles.heading, { color: t.foreground }]}>
             Something went wrong
           </Text>
-          <Text variant="bodyMedium" style={[styles.sub, { color: t.colors.onSurfaceVariant }]}>
+          <Text variant="bodyMedium" style={[styles.sub, { color: t.mutedForeground }]}>
             The app encountered an unexpected error. You can share a crash
             report to help us fix the issue, or restart the app.
           </Text>
@@ -90,8 +91,8 @@ export default class ErrorBoundary extends React.Component<Props, State> {
           </Button>
 
           {this.state.expanded && (
-            <ScrollView style={[styles.stack, { backgroundColor: t.colors.surfaceVariant }]} nestedScrollEnabled>
-              <Text variant="bodySmall" style={[styles.mono, { color: t.colors.onSurfaceVariant }]}>
+            <ScrollView style={[styles.stack, { backgroundColor: t.muted }]} nestedScrollEnabled>
+              <Text variant="bodySmall" style={[styles.mono, { color: t.mutedForeground }]}>
                 {this.state.error.message}
                 {"\n\n"}
                 {this.state.error.stack}

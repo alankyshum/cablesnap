@@ -1,21 +1,22 @@
 import { Tabs, useRouter } from "expo-router";
 import { Text, View } from "react-native";
-import { IconButton, useTheme } from "react-native-paper";
+import { IconButton } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import FloatingTabBar from "../../components/FloatingTabBar";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 export default function TabLayout() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
 
   const renderHeaderTitle = (icon: IconName, title: string) =>
     function HeaderTitle() {
       return (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <MaterialCommunityIcons name={icon} size={22} color={theme.colors.onSurface} />
-          <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
+          <MaterialCommunityIcons name={icon} size={22} color={colors.onSurface} />
+          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
         </View>
       );
     };
@@ -26,9 +27,9 @@ export default function TabLayout() {
       screenOptions={{
         animation: "fade",
         headerStyle: {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: colors.surface,
         },
-        headerTintColor: theme.colors.onSurface,
+        headerTintColor: colors.onSurface,
       }}
     >
       {/* Tab order: Exercises | Nutrition | Workouts (center) | Progress | Settings */}
@@ -51,7 +52,7 @@ export default function TabLayout() {
               onPress={() => router.push("/nutrition/add?scan=true")}
               accessibilityLabel="Scan food barcode"
               accessibilityRole="button"
-              iconColor={theme.colors.onSurface}
+              iconColor={colors.onSurface}
               style={{ minWidth: 48, minHeight: 48 }}
             />
           ),
@@ -69,7 +70,7 @@ export default function TabLayout() {
               onPress={() => router.push("/tools")}
               accessibilityLabel="Workout tools"
               accessibilityRole="button"
-              iconColor={theme.colors.onSurface}
+              iconColor={colors.onSurface}
               style={{ minWidth: 48, minHeight: 48 }}
             />
           ),

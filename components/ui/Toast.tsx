@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback } from "react";
 import { Pressable, ViewStyle, StyleProp } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,6 +10,7 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   spacing,
   radii,
@@ -36,7 +37,7 @@ export function Toast({
   durationMs = 3000,
   style,
 }: ToastProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
@@ -96,7 +97,7 @@ export function Toast({
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              backgroundColor: theme.colors.inverseSurface,
+              backgroundColor: colors.inverseSurface,
               paddingHorizontal: spacing.base,
               paddingVertical: spacing.md,
               borderRadius: radii.lg,
@@ -108,7 +109,7 @@ export function Toast({
           <Text
             variant="bodyMedium"
             style={{
-              color: theme.colors.inverseOnSurface,
+              color: colors.inverseOnSurface,
               flex: 1,
             }}
           >
@@ -119,7 +120,7 @@ export function Toast({
               <Text
                 variant="labelLarge"
                 style={{
-                  color: theme.colors.inversePrimary,
+                  color: colors.inversePrimary,
                   marginLeft: spacing.md,
                 }}
               >

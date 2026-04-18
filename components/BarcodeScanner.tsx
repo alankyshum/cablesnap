@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { Linking, StyleSheet, View, Pressable } from "react-native";
-import { Button, Text, useTheme } from "react-native-paper";
+import { Button, Text } from "react-native-paper";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { CAMERA_OVERLAY } from "../constants/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type BarcodeScanResult = {
   type: string;
@@ -19,7 +20,7 @@ type Props = {
 const DEBOUNCE_MS = 2000;
 
 export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const [permission, requestPermission] = useCameraPermissions();
   const lastScannedRef = useRef<string | null>(null);
   const lastScannedTimeRef = useRef<number>(0);
@@ -69,20 +70,20 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
   if (permission && !permission.granted && !permission.canAskAgain) {
     return (
       <View
-        style={[styles.overlay, { backgroundColor: theme.colors.background }]}
+        style={[styles.overlay, { backgroundColor: colors.background }]}
         accessibilityLabel="Camera permission required"
         accessibilityViewIsModal
       >
         <View style={styles.permissionContent}>
           <Text
             variant="titleMedium"
-            style={{ color: theme.colors.onBackground, textAlign: "center", marginBottom: 12 }}
+            style={{ color: colors.onBackground, textAlign: "center", marginBottom: 12 }}
           >
             Camera Access Required
           </Text>
           <Text
             variant="bodyMedium"
-            style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginBottom: 24, paddingHorizontal: 32 }}
+            style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 24, paddingHorizontal: 32 }}
           >
             FitForge needs camera access to scan food barcodes. Please enable camera access in your device settings.
           </Text>
@@ -114,14 +115,14 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
   if (!permission || !permission.granted) {
     return (
       <View
-        style={[styles.overlay, { backgroundColor: theme.colors.background }]}
+        style={[styles.overlay, { backgroundColor: colors.background }]}
         accessibilityLabel="Requesting camera permission"
         accessibilityViewIsModal
       >
         <View style={styles.permissionContent}>
           <Text
             variant="bodyMedium"
-            style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}
+            style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
           >
             Requesting camera access...
           </Text>
@@ -155,7 +156,7 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
         </Text>
 
         <View style={styles.scanRegion}>
-          <View style={[styles.scanFrame, { borderColor: theme.colors.primary }]} />
+          <View style={[styles.scanFrame, { borderColor: colors.primary }]} />
         </View>
 
         <Pressable

@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { spacing, radii } from "../constants/design-tokens";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheet | null>;
@@ -22,12 +23,12 @@ type OptionProps = {
 };
 
 function ShareOption({ icon, label, description, onPress, disabled }: OptionProps) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   return (
     <Pressable
       style={[
         styles.option,
-        { backgroundColor: theme.colors.surfaceVariant, opacity: disabled ? 0.5 : 1 },
+        { backgroundColor: colors.surfaceVariant, opacity: disabled ? 0.5 : 1 },
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -39,20 +40,20 @@ function ShareOption({ icon, label, description, onPress, disabled }: OptionProp
       <MaterialCommunityIcons
         name={icon}
         size={28}
-        color={theme.colors.primary}
+        color={colors.primary}
       />
       <View style={styles.optionText}>
-        <Text style={[styles.optionLabel, { color: theme.colors.onSurface }]}>
+        <Text style={[styles.optionLabel, { color: colors.onSurface }]}>
           {label}
         </Text>
-        <Text style={[styles.optionDesc, { color: theme.colors.onSurfaceVariant }]}>
+        <Text style={[styles.optionDesc, { color: colors.onSurfaceVariant }]}>
           {description}
         </Text>
       </View>
       <MaterialCommunityIcons
         name="chevron-right"
         size={24}
-        color={theme.colors.onSurfaceVariant}
+        color={colors.onSurfaceVariant}
       />
     </Pressable>
   );
@@ -65,7 +66,7 @@ export default function ShareSheet({
   imageDisabled,
   onDismiss,
 }: Props) {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const snapPoints = useMemo(() => ["30%"], []);
   const showImageOption = Platform.OS !== "web";
 
@@ -91,12 +92,12 @@ export default function ShareSheet({
         if (index === -1) onDismiss();
       }}
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.onSurfaceVariant }}
+      backgroundStyle={{ backgroundColor: colors.surface }}
+      handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
     >
       <View style={styles.container}>
         <Text
-          style={[styles.title, { color: theme.colors.onSurface }]}
+          style={[styles.title, { color: colors.onSurface }]}
         >
           Share Workout
         </Text>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, Card, Divider, IconButton, Snackbar, Text, useTheme } from "react-native-paper";
+import { Button, Card, Divider, IconButton, Snackbar, Text } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../../lib/layout";
@@ -20,6 +20,7 @@ import { TRAINING_MODE_LABELS, SET_TYPE_LABELS } from "../../../lib/types";
 import { rpeColor, rpeText } from "../../../lib/rpe";
 import { formatDuration, formatDateShort } from "../../../lib/format";
 import RatingWidget from "../../../components/RatingWidget";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 type SetWithName = WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean; swapped_from_name?: string };
 
@@ -32,7 +33,7 @@ type ExerciseGroup = {
 };
 
 export default function SessionDetail() {
-  const theme = useTheme();
+  const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -57,8 +58,8 @@ export default function SessionDetail() {
   }, [groups]);
 
   const palette = useMemo(
-    () => [theme.colors.tertiary, theme.colors.secondary, theme.colors.primary, theme.colors.error, theme.colors.inversePrimary],
-    [theme],
+    () => [colors.tertiary, colors.secondary, colors.primary, colors.error, colors.inversePrimary],
+    [colors],
   );
 
   useEffect(() => {
@@ -195,10 +196,10 @@ export default function SessionDetail() {
         <View
           style={[
             styles.center,
-            { backgroundColor: theme.colors.background },
+            { backgroundColor: colors.background },
           ]}
         >
-          <Text style={{ color: theme.colors.onSurfaceVariant }}>
+          <Text style={{ color: colors.onSurfaceVariant }}>
             Loading...
           </Text>
         </View>
@@ -230,18 +231,18 @@ export default function SessionDetail() {
       <FlashList
         data={groups}
         keyExtractor={(group) => group.exercise_id}
-        style={StyleSheet.flatten([styles.container, { backgroundColor: theme.colors.background }])}
+        style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         ListHeaderComponent={
           <>
             {/* Summary */}
             <Card
-              style={[styles.summary, { backgroundColor: theme.colors.surface }]}
+              style={[styles.summary, { backgroundColor: colors.surface }]}
             >
               <Card.Content>
                 <Text
                   variant="bodyMedium"
-                  style={{ color: theme.colors.onSurfaceVariant }}
+                  style={{ color: colors.onSurfaceVariant }}
                 >
                   {formatDateShort(session.started_at)}
                 </Text>
@@ -249,13 +250,13 @@ export default function SessionDetail() {
                   <View style={styles.stat}>
                     <Text
                       variant="headlineSmall"
-                      style={{ color: theme.colors.primary }}
+                      style={{ color: colors.primary }}
                     >
                       {formatDuration(session.duration_seconds)}
                     </Text>
                     <Text
                       variant="bodySmall"
-                      style={{ color: theme.colors.onSurfaceVariant }}
+                      style={{ color: colors.onSurfaceVariant }}
                     >
                       Duration
                     </Text>
@@ -263,13 +264,13 @@ export default function SessionDetail() {
                   <View style={styles.stat}>
                     <Text
                       variant="headlineSmall"
-                      style={{ color: theme.colors.primary }}
+                      style={{ color: colors.primary }}
                     >
                       {completedSets()}
                     </Text>
                     <Text
                       variant="bodySmall"
-                      style={{ color: theme.colors.onSurfaceVariant }}
+                      style={{ color: colors.onSurfaceVariant }}
                     >
                       Sets
                     </Text>
@@ -277,13 +278,13 @@ export default function SessionDetail() {
                   <View style={styles.stat}>
                     <Text
                       variant="headlineSmall"
-                      style={{ color: theme.colors.primary }}
+                      style={{ color: colors.primary }}
                     >
                       {volume().toLocaleString()}
                     </Text>
                     <Text
                       variant="bodySmall"
-                      style={{ color: theme.colors.onSurfaceVariant }}
+                      style={{ color: colors.onSurfaceVariant }}
                     >
                       Volume
                     </Text>
@@ -294,11 +295,11 @@ export default function SessionDetail() {
 
             {/* Rating & Notes */}
             {session.completed_at && (
-              <Card style={[styles.summary, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.summary, { backgroundColor: colors.surface }]}>
                 <Card.Content style={{ alignItems: "center" }}>
                   <Text
                     variant="titleSmall"
-                    style={{ color: theme.colors.onSurface, marginBottom: 8 }}
+                    style={{ color: colors.onSurface, marginBottom: 8 }}
                   >
                     Rating
                   </Text>
@@ -308,7 +309,7 @@ export default function SessionDetail() {
             )}
 
             {session.completed_at && (
-              <Card style={[styles.summary, { backgroundColor: theme.colors.surface }]}>
+              <Card style={[styles.summary, { backgroundColor: colors.surface }]}>
                 <Card.Content>
                   <Pressable
                     onPress={() => setNotesExpanded(!notesExpanded)}
@@ -320,18 +321,18 @@ export default function SessionDetail() {
                     <MaterialCommunityIcons
                       name="note-edit-outline"
                       size={20}
-                      color={theme.colors.primary}
+                      color={colors.primary}
                     />
                     <Text
                       variant="titleSmall"
-                      style={{ color: theme.colors.onSurface, marginLeft: 8, flex: 1 }}
+                      style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}
                     >
                       Session notes
                     </Text>
                     <MaterialCommunityIcons
                       name={notesExpanded ? "chevron-up" : "chevron-down"}
                       size={20}
-                      color={theme.colors.onSurfaceVariant}
+                      color={colors.onSurfaceVariant}
                     />
                   </Pressable>
                   {notesExpanded && (
@@ -341,22 +342,22 @@ export default function SessionDetail() {
                         onChangeText={(t) => setNotesText(t.slice(0, 500))}
                         onBlur={handleNotesSave}
                         placeholder="Add notes about this workout..."
-                        placeholderTextColor={theme.colors.onSurfaceDisabled}
+                        placeholderTextColor={colors.onSurfaceDisabled}
                         multiline
                         maxLength={500}
                         style={[
                           styles.notesInput,
                           {
-                            color: theme.colors.onSurface,
-                            backgroundColor: theme.colors.surfaceVariant,
-                            borderColor: theme.colors.outline,
+                            color: colors.onSurface,
+                            backgroundColor: colors.surfaceVariant,
+                            borderColor: colors.outline,
                           },
                         ]}
                         accessibilityLabel="Session notes"
                       />
                       <Text
                         variant="bodySmall"
-                        style={{ color: theme.colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}
+                        style={{ color: colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}
                       >
                         {notesText.length}/500
                       </Text>
@@ -369,15 +370,15 @@ export default function SessionDetail() {
             {/* Personal Records */}
             {prs.length > 0 && (
               <Card
-                style={[styles.prCard, { backgroundColor: theme.colors.tertiaryContainer }]}
+                style={[styles.prCard, { backgroundColor: colors.tertiaryContainer }]}
                 accessibilityLabel={`${prs.length} new personal record${prs.length > 1 ? "s" : ""} achieved in this workout`}
               >
                 <Card.Content>
                   <View style={styles.prHeader}>
-                    <MaterialCommunityIcons name="trophy" size={20} color={theme.colors.onTertiaryContainer} />
+                    <MaterialCommunityIcons name="trophy" size={20} color={colors.onTertiaryContainer} />
                     <Text
                       variant="titleMedium"
-                      style={{ color: theme.colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
+                      style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
                     >
                       {prs.length} New PR{prs.length > 1 ? "s" : ""}
                     </Text>
@@ -386,14 +387,14 @@ export default function SessionDetail() {
                     <View key={pr.exercise_id} style={styles.prRow}>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onTertiaryContainer, flex: 1 }}
+                        style={{ color: colors.onTertiaryContainer, flex: 1 }}
                         accessibilityLabel={`New personal record: ${pr.name}, ${pr.previous_max} to ${pr.weight}`}
                       >
                         {pr.name}
                       </Text>
                       <Text
                         variant="bodyMedium"
-                        style={{ color: theme.colors.onTertiaryContainer }}
+                        style={{ color: colors.onTertiaryContainer }}
                       >
                         {pr.previous_max} → {pr.weight}
                       </Text>
@@ -448,14 +449,14 @@ export default function SessionDetail() {
             <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
             <Text
               variant="titleMedium"
-              style={[styles.groupTitle, { color: theme.colors.primary }]}
+              style={[styles.groupTitle, { color: colors.primary }]}
             >
               {group.name}
             </Text>
             {group.swapped_from_name && (
               <Text
                 variant="bodySmall"
-                style={{ color: theme.colors.onSurfaceVariant, fontStyle: "italic", marginBottom: 4, marginTop: -2 }}
+                style={{ color: colors.onSurfaceVariant, fontStyle: "italic", marginBottom: 4, marginTop: -2 }}
                 accessibilityLabel={`Swapped from ${group.swapped_from_name}`}
               >
                 Swapped from {group.swapped_from_name}
@@ -467,9 +468,9 @@ export default function SessionDetail() {
                 <View key={set.id}>
                   <View style={[styles.setRow, (() => {
                     const st = set.set_type ?? (set.is_warmup ? "warmup" : "normal");
-                    if (st === "warmup") return { borderLeftWidth: 3, borderLeftColor: theme.colors.surfaceVariant, paddingLeft: 5 };
-                    if (st === "dropset") return { borderLeftWidth: 3, borderLeftColor: theme.colors.tertiaryContainer, paddingLeft: 5 };
-                    if (st === "failure") return { borderLeftWidth: 3, borderLeftColor: theme.colors.errorContainer, paddingLeft: 5 };
+                    if (st === "warmup") return { borderLeftWidth: 3, borderLeftColor: colors.surfaceVariant, paddingLeft: 5 };
+                    if (st === "dropset") return { borderLeftWidth: 3, borderLeftColor: colors.tertiaryContainer, paddingLeft: 5 };
+                    if (st === "failure") return { borderLeftWidth: 3, borderLeftColor: colors.errorContainer, paddingLeft: 5 };
                     return {};
                   })()]}>
                     {(() => {
@@ -477,10 +478,10 @@ export default function SessionDetail() {
                       const label = SET_TYPE_LABELS[st];
                       if (label.short) {
                         const chipColors = st === "warmup"
-                          ? { bg: theme.colors.surfaceVariant, fg: theme.colors.onSurfaceVariant }
+                          ? { bg: colors.surfaceVariant, fg: colors.onSurfaceVariant }
                           : st === "dropset"
-                          ? { bg: theme.colors.tertiaryContainer, fg: theme.colors.onTertiaryContainer }
-                          : { bg: theme.colors.errorContainer, fg: theme.colors.onErrorContainer };
+                          ? { bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer }
+                          : { bg: colors.errorContainer, fg: colors.onErrorContainer };
                         return (
                           <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: chipColors.bg, justifyContent: "center", alignItems: "center", marginRight: 8 }}>
                             <Text style={{ fontSize: 13, fontWeight: "700", color: chipColors.fg }}>{label.short}</Text>
@@ -490,7 +491,7 @@ export default function SessionDetail() {
                       return (
                         <Text
                           variant="bodyMedium"
-                          style={[styles.setNum, { color: theme.colors.onSurface }]}
+                          style={[styles.setNum, { color: colors.onSurface }]}
                         >
                           {set.round ? `R${set.round}` : `Set ${set.set_number}`}
                         </Text>
@@ -498,13 +499,13 @@ export default function SessionDetail() {
                     })()}
                     <Text
                       variant="bodyMedium"
-                      style={{ color: theme.colors.onSurface }}
+                      style={{ color: colors.onSurface }}
                     >
                       {set.weight ?? 0} × {set.reps ?? 0}
                     </Text>
                     {set.training_mode && set.training_mode !== "weight" && (
-                      <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
-                        <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
+                      <View style={[styles.modeBadge, { backgroundColor: colors.secondaryContainer }]}>
+                        <Text style={{ color: colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
                           {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
                         </Text>
                       </View>
@@ -512,7 +513,7 @@ export default function SessionDetail() {
                     {set.tempo && (
                       <Text
                         variant="bodySmall"
-                        style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}
+                        style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}
                       >
                         ♩ {set.tempo}
                       </Text>
@@ -528,7 +529,7 @@ export default function SessionDetail() {
                   {set.notes ? (
                     <Text
                       variant="bodySmall"
-                      style={[styles.setNote, { color: theme.colors.onSurfaceVariant }]}
+                      style={[styles.setNote, { color: colors.onSurfaceVariant }]}
                     >
                       {set.notes}
                     </Text>
@@ -553,10 +554,10 @@ export default function SessionDetail() {
               onRequestClose={() => setTemplateModalVisible(false)}
             >
               <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+                <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                   <Text
                     variant="titleMedium"
-                    style={{ color: theme.colors.onSurface, marginBottom: 16 }}
+                    style={{ color: colors.onSurface, marginBottom: 16 }}
                   >
                     Save as Template
                   </Text>
@@ -564,14 +565,14 @@ export default function SessionDetail() {
                     value={templateName}
                     onChangeText={(t) => setTemplateName(t.slice(0, 100))}
                     placeholder="Template name"
-                    placeholderTextColor={theme.colors.onSurfaceDisabled}
+                    placeholderTextColor={colors.onSurfaceDisabled}
                     maxLength={100}
                     style={[
                       styles.modalInput,
                       {
-                        color: theme.colors.onSurface,
-                        backgroundColor: theme.colors.surfaceVariant,
-                        borderColor: theme.colors.outline,
+                        color: colors.onSurface,
+                        backgroundColor: colors.surfaceVariant,
+                        borderColor: colors.outline,
                       },
                     ]}
                     autoFocus
