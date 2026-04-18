@@ -176,7 +176,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
               accessibilityRole="radio"
               accessibilityState={{ selected: custom === "" && bar === p }}
               accessibilityLabel={p + " " + label + " bar"}
-            >{p}</Chip>
+            >{`${p}`}</Chip>
           ))}
         </View>
       </View>
