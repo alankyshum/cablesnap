@@ -27,6 +27,14 @@ jest.mock('expo-router', () => {
 })
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
+jest.mock('../../components/ui/bna-toast', () => {
+  const RealReact = require('react')
+  return {
+    __esModule: true,
+    useToast: () => ({ toast: jest.fn(), success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
+    ToastProvider: ({ children }: { children: React.ReactNode }) => RealReact.createElement(RealReact.Fragment, null, children),
+  }
+})
 jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, width: 375, scale: 1.0 }) }))
 jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest.fn().mockResolvedValue('{}'), getRecentErrors: jest.fn().mockResolvedValue([]), generateGitHubURL: jest.fn().mockReturnValue('https://github.com') }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
@@ -103,7 +111,7 @@ describe('Template → Add Exercise Flow', () => {
 
     const { getByPlaceholderText, getByLabelText, findByLabelText, findByText, getByTestId } = renderScreen(<CreateTemplate />)
 
-    fireEvent.changeText(getByPlaceholderText('e.g. Push Day, Full Body A'), 'Push Day')
+    fireEvent.changeText(getByPlaceholderText('Template Name'), 'Push Day')
     fireEvent.press(getByLabelText('Create template'))
 
     await waitFor(() => {

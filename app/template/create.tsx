@@ -3,10 +3,15 @@ import {
   Alert,
   Pressable,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Button, IconButton, Snackbar, Text, TextInput } from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/bna-toast";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -29,16 +34,14 @@ export default function CreateTemplate() {
   const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    templateId?: string;
-  }>();
+  const params = useLocalSearchParams<{ templateId?: string }>();
   const [name, setName] = useState("");
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editing, setEditing] = useState<TemplateExercise | null>(null);
-  const [snackbar, setSnackbar] = useState("");
+  const { toast } = useToast();
 
   useFocusEffect(
     useCallback(() => {
@@ -75,10 +78,7 @@ export default function CreateTemplate() {
       if (!template) {
         const tpl = await createTemplate(trimmed);
         setTemplate(tpl);
-        Alert.alert(
-          "Template Created",
-          "Now add exercises to your template.",
-        );
+        Alert.alert("Template Created", "Now add exercises to your template.");
       } else {
         if (exercises.length === 0) {
           Alert.alert("Validation", "Add at least 1 exercise to your template.");
@@ -125,88 +125,65 @@ export default function CreateTemplate() {
       setEditing(null);
       await load();
     } catch {
-      setSnackbar("Failed to update exercise settings");
+      toast("Failed to update exercise settings");
     }
-  }, [editing, template, load]);
+  }, [editing, template, load, toast]);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: TemplateExercise; index: number }) => (
+    ({ item, index }: { item: TemplateExercise; index: number }) => {
+      const exName = item.exercise?.name ?? "exercise";
+      return (
       <Pressable
         onPress={() => setEditing(item)}
-        style={[
-          styles.exerciseRow,
-          { backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant },
-        ]}
+        style={[styles.exerciseRow, { backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant }]}
         accessibilityRole="button"
-        accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`}
+        accessibilityLabel={`Edit ${exName} settings`}
       >
         <View style={styles.exerciseInfo}>
-          <Text variant="titleSmall" style={{ color: colors.onSurface }}>
+          <Text variant="subtitle" style={{ color: colors.onSurface }}>
             {item.exercise?.name ?? "Unknown Exercise"}
           </Text>
-          <Text
-            variant="bodySmall"
-            style={{ color: colors.onSurfaceVariant }}
-          >
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
           </Text>
         </View>
         <View style={styles.actions}>
-          <IconButton
-            icon="pencil-outline"
-            size={16}
-            onPress={() => setEditing(item)}
-            accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`}
-          />
-          <IconButton
-            icon="arrow-up"
-            size={18}
-            onPress={() => move(index, -1)}
-            disabled={index === 0}
-            accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} up`}
-          />
-          <IconButton
-            icon="arrow-down"
-            size={18}
-            onPress={() => move(index, 1)}
-            disabled={index === exercises.length - 1}
-            accessibilityLabel={`Move ${item.exercise?.name ?? "exercise"} down`}
-          />
-          <IconButton
-            icon="close"
-            size={18}
-            onPress={() => remove(item.id)}
-            accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`}
-          />
+          <TouchableOpacity onPress={() => setEditing(item)} accessibilityLabel={`Edit ${exName} settings`} hitSlop={8} style={styles.iconBtn}>
+            <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.onSurface} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${exName} up`} hitSlop={8} style={styles.iconBtn}>
+            <MaterialCommunityIcons name="arrow-up" size={18} color={colors.onSurface} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => move(index, 1)} disabled={index === exercises.length - 1} accessibilityLabel={`Move ${exName} down`} hitSlop={8} style={styles.iconBtn}>
+            <MaterialCommunityIcons name="arrow-down" size={18} color={colors.onSurface} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${exName}`} hitSlop={8} style={styles.iconBtn}>
+            <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
+          </TouchableOpacity>
         </View>
       </Pressable>
-    ),
+      );
+    },
     [colors, exercises.length, move, remove]
   );
 
   return (
     <>
-      <Stack.Screen
-        options={{ title: template ? "Edit Template" : "New Template" }}
-      />
+      <Stack.Screen options={{ title: template ? "Edit Template" : "New Template" }} />
       <View
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
-        <TextInput
-          label="Template Name"
+        <Input
+          placeholder="Template Name"
           value={name}
           onChangeText={setName}
-          mode="outlined"
           style={styles.input}
-          placeholder="e.g. Push Day, Full Body A"
+          accessibilityLabel="Template Name"
         />
         {template && (
           <>
             <View style={styles.section}>
-              <Text
-                variant="titleMedium"
-                style={{ color: colors.onBackground }}
-              >
+              <Text variant="title" style={{ color: colors.onBackground }}>
                 Exercises ({exercises.length})
               </Text>
             </View>
@@ -216,10 +193,7 @@ export default function CreateTemplate() {
               keyExtractor={(item) => item.id}
               ListEmptyComponent={
                 <View style={styles.empty}>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: colors.onSurfaceVariant }}
-                  >
+                  <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
                     No exercises yet. Add some below.
                   </Text>
                 </View>
@@ -227,48 +201,26 @@ export default function CreateTemplate() {
               style={styles.list}
             />
             <Button
-              mode="outlined"
-              icon="plus"
+              variant="outline"
               onPress={() => setPickerOpen(true)}
               style={styles.addBtn}
-              contentStyle={styles.btnContent}
               accessibilityLabel="Add exercise to template"
-            >
-              Add Exercise
-            </Button>
+              label="Add Exercise"
+            />
           </>
         )}
         <Button
-          mode="contained"
+          variant="default"
           onPress={save}
           loading={saving}
           disabled={saving}
           style={styles.saveBtn}
-          contentStyle={styles.btnContent}
           accessibilityLabel={template ? "Done editing template" : "Create template"}
-        >
-          {template ? "Done" : "Create Template"}
-        </Button>
+          label={template ? "Done" : "Create Template"}
+        />
       </View>
-      <ExercisePickerSheet
-        visible={pickerOpen}
-        onDismiss={() => setPickerOpen(false)}
-        onPick={handlePickExercise}
-      />
-      <EditExerciseSheet
-        visible={!!editing}
-        exercise={editing}
-        onSave={handleEditSave}
-        onDismiss={() => setEditing(null)}
-      />
-      <Snackbar
-        visible={!!snackbar}
-        onDismiss={() => setSnackbar("")}
-        duration={4000}
-        accessibilityLiveRegion="polite"
-      >
-        {snackbar}
-      </Snackbar>
+      <ExercisePickerSheet visible={pickerOpen} onDismiss={() => setPickerOpen(false)} onPick={handlePickExercise} />
+      <EditExerciseSheet visible={!!editing} exercise={editing} onSave={handleEditSave} onDismiss={() => setEditing(null)} />
     </>
   );
 }
@@ -301,15 +253,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  iconBtn: {
+    padding: 8,
+  },
   addBtn: {
     marginTop: 8,
   },
   saveBtn: {
     marginTop: 16,
   },
-  btnContent: {
-    paddingVertical: 8,
-  },
+
   empty: {
     alignItems: "center",
     paddingVertical: 24,
