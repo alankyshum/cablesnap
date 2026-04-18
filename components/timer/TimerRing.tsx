@@ -2,8 +2,8 @@ import { Platform, StyleSheet, View } from "react-native"
 import { Text } from "@/components/ui/text"
 import Svg, { Circle } from "react-native-svg"
 import Animated, { useAnimatedProps, SharedValue } from "react-native-reanimated"
-import { format } from "../../../lib/timer"
-import { typography } from "../../../constants/design-tokens"
+import { format } from "../../lib/timer"
+import { typography } from "../../constants/design-tokens"
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 

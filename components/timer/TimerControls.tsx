@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native"
 import { Text } from "@/components/ui/text"
-import type { Status } from "../../../lib/timer"
-import { radii } from "../../../constants/design-tokens"
+import type { Status } from "../../lib/timer"
+import { radii } from "../../constants/design-tokens"
 
 type TimerControlsProps = {
   status: Status

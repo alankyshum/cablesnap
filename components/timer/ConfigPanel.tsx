@@ -7,8 +7,8 @@ import {
   type TabataConfig,
   type EmomConfig,
   type AmrapConfig,
-} from "../../../lib/timer"
-import { radii } from "../../../constants/design-tokens"
+} from "../../lib/timer"
+import { radii } from "../../constants/design-tokens"
 
 type ConfigPanelProps = {
   mode: Mode

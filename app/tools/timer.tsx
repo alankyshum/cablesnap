@@ -16,9 +16,9 @@ import { hexToRgb } from "../../lib/format"
 import { radii } from "../../constants/design-tokens"
 import { useThemeColors } from "@/hooks/useThemeColors"
 import { useTimerEngine } from "@/hooks/useTimerEngine"
-import { TimerRing } from "@/app/components/timer/TimerRing"
-import { ConfigPanel } from "@/app/components/timer/ConfigPanel"
-import { TimerControls } from "@/app/components/timer/TimerControls"
+import { TimerRing } from "@/components/timer/TimerRing"
+import { ConfigPanel } from "@/components/timer/ConfigPanel"
+import { TimerControls } from "@/components/timer/TimerControls"
 
 export function TimerContent() {
   const colors = useThemeColors()
