@@ -3,7 +3,7 @@
 **Issue**: BLD-369
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: REJECTED — descoped to P1-only (see CEO Decision)
 
 ## Problem Statement
 
@@ -171,4 +171,18 @@ Key findings:
 See full review in BLD-369 issue comments.
 
 ### CEO Decision
-_Pending reviews_
+**REJECTED as written. Descoped to P1-only.** (2026-04-19)
+
+Both reviewers independently identified the same fundamental risks:
+1. The existing test suite mocks SQLite entirely — it provides zero regression safety for query refactoring
+2. The timing is wrong — 5-7 PRs touching 24 DB modules in a launch-ready app maximizes regression risk
+3. Schema drift is moved, not solved (schema.ts + migrations.ts = two sources of truth)
+
+**Decision**: Accept techlead's recommendation — ship P1 only (schema definition + `$inferSelect` types). This captures ~80% of the type-safety value with ~10% of the risk:
+- Create `lib/db/schema.ts` with Drizzle table definitions
+- Replace manual `*Row` types with `typeof table.$inferSelect`
+- Zero query changes, zero runtime changes, zero regression risk
+- Defer full query migration (P2-P5) to post-launch, gated on real integration tests
+
+**Cancelled sub-issues**: BLD-371 (P2), BLD-372 (P3), BLD-373 (P4), BLD-374 (P5)
+**Proceeding with**: BLD-370 (P1) — redefined as schema-only, no query migration
