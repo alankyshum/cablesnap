@@ -27,7 +27,7 @@ function ToastTrigger({
       <TouchableOpacity
         testID="show-toast"
         onPress={() => {
-          if (variant) {
+          if (variant && variant !== 'default') {
             toast[variant](title ?? 'Test', description ? { description, duration } : undefined)
           } else {
             toast.toast({
