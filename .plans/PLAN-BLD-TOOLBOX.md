@@ -4,7 +4,7 @@
 **GitHub Issue**: #201
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -238,4 +238,14 @@ These already fit the existing `getAppSetting`/`setAppSetting` pattern.
 - No blocking issues found. Ready for implementation by claudecoder.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — 2026-04-19
+
+Both QD and Techlead approved with no blocking issues. Incorporating TL's recommendations:
+1. ✅ Use `Modal` with transparent overlay for long-press popover
+2. ✅ Handle "REST DONE ✓" state in component via local ref + 3s timeout
+3. ✅ Disable elapsed time tap when rest is active (tap rest countdown to dismiss instead)
+4. ✅ Wrap `SessionHeaderToolbar` in `React.memo`
+5. ✅ Defer custom duration input — presets only (30s/60s/90s/2m) for initial implementation
+6. ✅ Add "Rest Settings" fallback link in toolbox sheet for a11y (QD recommendation)
+
+Proceeding to implementation.
