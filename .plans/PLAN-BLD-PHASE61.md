@@ -3,7 +3,7 @@
 **Issue**: BLD-404
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 Every barbell exercise requires mental math: "I need to squat 102.5kg with a 20kg bar — what plates go on each side?" Users do this calculation 10–15 times per workout. Between sets, they're tired, sweaty, and distracted. Mental plate math is a universal friction point that every gym-goer has experienced — staring at the plate rack trying to figure out 41.25kg per side.
