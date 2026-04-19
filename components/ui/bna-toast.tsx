@@ -25,8 +25,6 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -50,17 +48,10 @@ interface ToastProps extends ToastData {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const DYNAMIC_ISLAND_HEIGHT = 37;
-const EXPANDED_HEIGHT = 85;
+const TOAST_HEIGHT = 52;
 const TOAST_MARGIN = 8;
-const DYNAMIC_ISLAND_WIDTH = 126;
-const EXPANDED_WIDTH = screenWidth - 32;
-
-// Reanimated spring configuration
-const SPRING_CONFIG = {
-  stiffness: 120,
-  damping: 8,
-};
+const MIN_TOAST_WIDTH = 200;
+const MAX_TOAST_WIDTH = screenWidth - 64;
 
 export function Toast({
   id,
@@ -71,48 +62,22 @@ export function Toast({
   index,
   action,
 }: ToastProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   // Reanimated shared values
-  const translateY = useSharedValue(-100);
+  const translateY = useSharedValue(-20);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.8);
-  const width = useSharedValue(DYNAMIC_ISLAND_WIDTH);
-  const height = useSharedValue(DYNAMIC_ISLAND_HEIGHT);
-  const borderRadius = useSharedValue(18.5);
-  const contentOpacity = useSharedValue(0);
+  const scale = useSharedValue(0.85);
 
   // Dynamic Island colors (dark theme optimized)
   const backgroundColor = '#1C1C1E'; // iOS Dynamic Island background
   const mutedTextColor = '#8E8E93'; // iOS secondary text color
 
   useEffect(() => {
-    const hasContentToShow = Boolean(title || description || action);
-
-    if (hasContentToShow) {
-      // If there's content, start directly with expanded state
-      width.value = EXPANDED_WIDTH;
-      height.value = EXPANDED_HEIGHT;
-      borderRadius.value = 20;
-      setIsExpanded(true);
-
-      // Animate in expanded toast
-      translateY.value = withSpring(0, SPRING_CONFIG);
-      opacity.value = withTiming(1, { duration: 300 });
-      scale.value = withSpring(1, SPRING_CONFIG);
-      // CORRECTED LINE: Use withDelay to wrap withTiming
-      contentOpacity.value = withDelay(100, withTiming(1, { duration: 300 }));
-    } else {
-      // If no content, show compact Dynamic Island with icon only
-      setIsExpanded(false);
-
-      // Animate in compact toast
-      translateY.value = withSpring(0, SPRING_CONFIG);
-      opacity.value = withTiming(1, { duration: 200 });
-      scale.value = withSpring(1, SPRING_CONFIG);
-    }
-  }, []); // This effect should only run once when the toast mounts
+    // Punch-in animation: scale 0.85→1.0 + opacity 0→1, 200ms
+    translateY.value = withTiming(0, { duration: 200 });
+    opacity.value = withTiming(1, { duration: 200 });
+    scale.value = withTiming(1, { duration: 200 });
+  }, []);
 
   const getVariantColor = () => {
     switch (variant) {
@@ -147,19 +112,18 @@ export function Toast({
   };
 
   const dismiss = useCallback(() => {
-    // This function will be called from the UI thread
     const onDismissAction = () => {
       'worklet';
       runOnJS(onDismiss)(id);
     };
 
-    translateY.value = withSpring(-100, SPRING_CONFIG);
-    opacity.value = withTiming(0, { duration: 250 }, (finished) => {
+    // Fade out, 150ms
+    opacity.value = withTiming(0, { duration: 150 }, (finished) => {
       if (finished) {
         onDismissAction();
       }
     });
-    scale.value = withSpring(0.8, SPRING_CONFIG);
+    scale.value = withTiming(0.85, { duration: 150 });
   }, [id, onDismiss]);
 
   const panGesture = Gesture.Pan()
@@ -173,7 +137,6 @@ export function Toast({
         Math.abs(translationX) > screenWidth * 0.25 ||
         Math.abs(velocityX) > 800
       ) {
-        // Dismiss action to be called from the UI thread
         const onDismissAction = () => {
           'worklet';
           runOnJS(onDismiss)(id);
@@ -182,25 +145,24 @@ export function Toast({
         // Animate out horizontally
         translateX.value = withTiming(
           translationX > 0 ? screenWidth : -screenWidth,
-          { duration: 250 }
+          { duration: 200 }
         );
-        opacity.value = withTiming(0, { duration: 250 }, (finished) => {
+        opacity.value = withTiming(0, { duration: 150 }, (finished) => {
           if (finished) {
             onDismissAction();
           }
         });
       } else {
-        // Snap back with spring animation
-        translateX.value = withSpring(0, SPRING_CONFIG);
+        // Snap back
+        translateX.value = withTiming(0, { duration: 150 });
       }
     });
 
   const getTopPosition = () => {
     const statusBarHeight = Platform.OS === 'ios' ? 59 : 20;
-    return statusBarHeight + index * (EXPANDED_HEIGHT + TOAST_MARGIN);
+    return statusBarHeight + index * (TOAST_HEIGHT + TOAST_MARGIN);
   };
 
-  // Animated styles
   const animatedContainerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [
@@ -210,130 +172,101 @@ export function Toast({
     ],
   }));
 
-  const animatedIslandStyle = useAnimatedStyle(() => ({
-    width: width.value,
-    height: height.value,
-    borderRadius: borderRadius.value,
-    backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  }));
-
-  const animatedContentStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
-  }));
-
   const toastStyle: ViewStyle = {
     position: 'absolute',
     top: getTopPosition(),
     alignSelf: 'center',
     shadowColor: Colors.light.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
     zIndex: 1000 + index,
+  };
+
+  const islandStyle: ViewStyle = {
+    minWidth: MIN_TOAST_WIDTH,
+    maxWidth: MAX_TOAST_WIDTH,
+    borderRadius: 14,
+    backgroundColor,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
   };
 
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[toastStyle, animatedContainerStyle]}>
-        <Animated.View style={animatedIslandStyle}>
-          {/* Compact state - just icon or indicator */}
-          {!isExpanded && (
-            <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-              {getIcon()}
-            </View>
+        <View style={islandStyle}>
+          {getIcon() && (
+            <View style={{ marginRight: 10 }}>{getIcon()}</View>
           )}
 
-          {/* Expanded state - full content */}
-          {isExpanded && (
-            <Animated.View
-              style={[
-                {
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                },
-                animatedContentStyle,
-              ]}
-            >
-              {getIcon() && (
-                <View style={{ marginRight: 12 }}>{getIcon()}</View>
-              )}
-
-              <View style={{ flex: 1, minWidth: 0 }}>
-                {title && (
-                  <Text
-                    variant='subtitle'
-                    style={{
-                      color: Colors.light.onToast,
-                      fontSize: 14,
-                      fontWeight: '600',
-                      marginBottom: description ? 2 : 0,
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode='tail'
-                  >
-                    {title}
-                  </Text>
-                )}
-                {description && (
-                  <Text
-                    variant='caption'
-                    style={{
-                      color: mutedTextColor,
-                      fontSize: 13,
-                      fontWeight: '400',
-                    }}
-                    numberOfLines={2}
-                    ellipsizeMode='tail'
-                  >
-                    {description}
-                  </Text>
-                )}
-              </View>
-
-              {action && (
-                <TouchableOpacity
-                  onPress={action.onPress}
-                  style={{
-                    marginLeft: 12,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    backgroundColor: getVariantColor(),
-                    borderRadius: 12,
-                  }}
-                >
-                  <Text
-                    variant='caption'
-                    style={{
-                      color: Colors.light.onToast,
-                      fontSize: 12,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {action.label}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                onPress={dismiss}
-                style={{ marginLeft: 8, padding: 4, borderRadius: 8 }}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {title && (
+              <Text
+                variant='subtitle'
+                style={{
+                  color: Colors.light.onToast,
+                  fontSize: 14,
+                  fontWeight: '600',
+                  marginBottom: description ? 2 : 0,
+                }}
+                numberOfLines={1}
+                ellipsizeMode='tail'
               >
-                <X size={14} color={mutedTextColor} />
-              </TouchableOpacity>
-            </Animated.View>
+                {title}
+              </Text>
+            )}
+            {description && (
+              <Text
+                variant='caption'
+                style={{
+                  color: mutedTextColor,
+                  fontSize: 13,
+                  fontWeight: '400',
+                }}
+                numberOfLines={2}
+                ellipsizeMode='tail'
+              >
+                {description}
+              </Text>
+            )}
+          </View>
+
+          {action && (
+            <TouchableOpacity
+              onPress={action.onPress}
+              style={{
+                marginLeft: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                backgroundColor: getVariantColor(),
+                borderRadius: 12,
+              }}
+            >
+              <Text
+                variant='caption'
+                style={{
+                  color: Colors.light.onToast,
+                  fontSize: 12,
+                  fontWeight: '600',
+                }}
+              >
+                {action.label}
+              </Text>
+            </TouchableOpacity>
           )}
-        </Animated.View>
+
+          <TouchableOpacity
+            onPress={dismiss}
+            style={{ marginLeft: 8, padding: 4, borderRadius: 8 }}
+          >
+            <X size={14} color={mutedTextColor} />
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </GestureDetector>
   );

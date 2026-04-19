@@ -193,7 +193,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginBottom: 8,
-    flexWrap: "wrap",
   },
   groupTitle: {
     fontWeight: "700",
