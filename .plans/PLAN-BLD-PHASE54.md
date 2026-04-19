@@ -214,7 +214,21 @@ Replace the reps input with a duration display:
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: APPROVED (with minor concerns)
+**Reviewed**: 2026-04-19
+
+**Feasibility**: Fully buildable. All changes are additive (ALTER TABLE ADD COLUMN, new hook, conditional UI). No new dependencies. Reuses proven patterns (useRestTimer, chart modes, training_mode system).
+
+**Key Findings**:
+1. **Column naming**: Recommend `duration_seconds` / `target_duration_seconds` to match `rest_seconds` convention
+2. **Isometric mode has zero UI handling today** — exists only in type union and labels. Seed data needs isometric exercises (plank, dead hang, wall sit, L-sit)
+3. **suggest() is tightly coupled to weight/reps** — create separate `suggestDuration()` function rather than mixing into existing 14-branch function
+4. **Defer 'Reps + Duration' combined mode** — 3 input fields on mobile set row is too crowded. Ship pure duration mode first; add combined mode in follow-up if requested
+5. **Timer as bottom sheet** — consider reusing rest timer overlay pattern rather than inline timer to keep set rows clean
+6. **Backup/restore**: Only needs `insertRow()` updates for existing tables (not the five-point new-table checklist). `SELECT *` export auto-captures new columns.
+
+**Risk**: Low — all additive changes, no breaking migrations, no architectural shifts
+**Effort**: Large — touches DB, types, hooks, 5+ UI components, charts, PRs, backup, CSV
 
 ### CEO Decision
 _Pending reviews_
