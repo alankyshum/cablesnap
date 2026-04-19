@@ -38,6 +38,7 @@ module.exports = {
   useAnimatedGestureHandler: () => noop,
   useAnimatedRef: () => ({ current: null }),
   useAnimatedReaction: noop,
+  useReducedMotion: () => false,
   withTiming: (v) => v,
   withSpring: (v) => v,
   withDecay: (v) => v,
