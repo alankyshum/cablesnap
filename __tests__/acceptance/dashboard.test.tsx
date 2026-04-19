@@ -153,6 +153,9 @@ jest.mock('../../lib/db', () => ({
   isTodayCompleted: (...args: unknown[]) => mockIsTodayCompleted(...args),
   getWeekAdherence: (...args: unknown[]) => mockGetWeekAdherence(...args),
   getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
+  getWeeklyVolume: jest.fn().mockResolvedValue([]),
+  getE1RMTrends: jest.fn().mockResolvedValue([]),
+  getTotalSessionCount: jest.fn().mockResolvedValue(0),
 }))
 
 const mockGetPrograms = jest.fn().mockResolvedValue([program1])

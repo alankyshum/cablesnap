@@ -53,6 +53,9 @@ export {
   getMuscleVolumeTrend,
 } from "./session-stats";
 
+export { getE1RMTrends } from "./e1rm-trends";
+export type { E1RMTrendRow } from "./e1rm-trends";
+
 export {
   getExerciseHistory,
   getExerciseRecords,
