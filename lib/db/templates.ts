@@ -330,6 +330,20 @@ export async function getTemplateExerciseCount(
   return row?.count ?? 0;
 }
 
+export async function getTemplateExerciseCounts(
+  templateIds: string[]
+): Promise<Record<string, number>> {
+  if (templateIds.length === 0) return {};
+  const placeholders = templateIds.map(() => "?").join(",");
+  const rows = await query<{ template_id: string; count: number }>(
+    `SELECT template_id, COUNT(*) as count FROM template_exercises WHERE template_id IN (${placeholders}) GROUP BY template_id`,
+    templateIds
+  );
+  const result: Record<string, number> = {};
+  for (const r of rows) result[r.template_id] = r.count;
+  return result;
+}
+
 // ---- Superset / Circuit Linking ----
 
 export async function createExerciseLink(

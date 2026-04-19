@@ -56,6 +56,20 @@ export async function getExerciseById(id: string): Promise<Exercise | null> {
   return mapRow(row);
 }
 
+export async function getExercisesByIds(
+  exerciseIds: string[]
+): Promise<Record<string, Exercise>> {
+  if (exerciseIds.length === 0) return {};
+  const placeholders = exerciseIds.map(() => "?").join(",");
+  const rows = await query<ExerciseRow>(
+    `SELECT * FROM exercises WHERE id IN (${placeholders})`,
+    exerciseIds
+  );
+  const result: Record<string, Exercise> = {};
+  for (const row of rows) result[row.id] = mapRow(row);
+  return result;
+}
+
 export async function createCustomExercise(
   exercise: Omit<Exercise, "id" | "is_custom">
 ): Promise<Exercise> {

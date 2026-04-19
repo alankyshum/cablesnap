@@ -529,10 +529,23 @@ async function createExtensionTables(database: SQLite.SQLiteDatabase): Promise<v
   `);
 }
 
+async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<void> {
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_daily_log_date ON daily_log(date)"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_workout_sessions_started_at ON workout_sessions(started_at)"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_template_exercises_template ON template_exercises(template_id)"
+  );
+}
+
 export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await createCoreTables(database);
   await addColumnMigrations(database);
   await migrateExerciseAndFeatureColumns(database);
   await createScheduleAndMigrate(database);
   await createExtensionTables(database);
+  await addPerformanceIndexes(database);
 }

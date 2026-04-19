@@ -7,11 +7,11 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNextWorkout, getPrograms, getProgramDayCount, softDeleteProgram } from "../../lib/programs";
+import { getNextWorkout, getPrograms, getProgramDayCounts, softDeleteProgram } from "../../lib/programs";
 import {
   deleteTemplate, duplicateTemplate, duplicateProgram, getActiveSession,
   getAllCompletedSessionWeeks, getRecentPRs, getRecentSessions,
-  getSessionAvgRPE, getSessionSetCount, getTemplateExerciseCount,
+  getSessionAvgRPEs, getSessionSetCounts, getTemplateExerciseCounts,
   getTemplates, getTodaySchedule, getWeekAdherence, isTodayCompleted, startSession,
 } from "../../lib/db";
 import type { Program, WorkoutTemplate } from "../../lib/types";
@@ -35,13 +35,12 @@ async function loadHomeData() {
     getTemplates(), getRecentSessions(5), getActiveSession(), getAllCompletedSessionWeeks(),
     getRecentPRs(5), getPrograms(), getNextWorkout(), getTodaySchedule(), isTodayCompleted(), getWeekAdherence(),
   ]);
-  const counts: Record<string, number> = {};
-  for (const t of tpls) counts[t.id] = await getTemplateExerciseCount(t.id);
-  const setCounts: Record<string, number> = {};
-  const avgRPEs: Record<string, number | null> = {};
-  for (const s of sess) { setCounts[s.id] = await getSessionSetCount(s.id); avgRPEs[s.id] = await getSessionAvgRPE(s.id); }
-  const dayCounts: Record<string, number> = {};
-  for (const p of progs) dayCounts[p.id] = await getProgramDayCount(p.id);
+  const [counts, setCounts, avgRPEs, dayCounts] = await Promise.all([
+    getTemplateExerciseCounts(tpls.map((t) => t.id)),
+    getSessionSetCounts(sess.map((s) => s.id)),
+    getSessionAvgRPEs(sess.map((s) => s.id)),
+    getProgramDayCounts(progs.map((p) => p.id)),
+  ]);
   return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts };
 }
 

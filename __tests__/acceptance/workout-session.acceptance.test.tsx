@@ -20,10 +20,13 @@ jest.mock('../../lib/db', () => ({
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
   getPreviousSets: jest.fn().mockResolvedValue([]),
+  getPreviousSetsBatch: jest.fn().mockResolvedValue({}),
   getRecentExerciseSets: jest.fn().mockResolvedValue([]),
+  getRecentExerciseSetsBatch: jest.fn().mockResolvedValue({}),
   getRestSecondsForExercise: jest.fn().mockResolvedValue(90),
   getRestSecondsForLink: jest.fn().mockResolvedValue(90),
   getExerciseById: jest.fn(),
+  getExercisesByIds: jest.fn().mockResolvedValue({}),
   getAppSetting: jest.fn().mockResolvedValue('true'),
   getSessionPRs: jest.fn().mockResolvedValue([]),
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
@@ -31,6 +34,7 @@ jest.mock('../../lib/db', () => ({
   getSessionComparison: jest.fn().mockResolvedValue(null),
   updateSession: jest.fn().mockResolvedValue(undefined),
   getSessionSetCount: jest.fn().mockResolvedValue(0),
+  getSessionSetCounts: jest.fn().mockResolvedValue({}),
   createTemplateFromSession: jest.fn().mockResolvedValue('new-template-id'),
   buildAchievementContext: jest.fn().mockResolvedValue({}),
   getEarnedAchievementIds: jest.fn().mockResolvedValue([]),
@@ -103,10 +107,13 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionSets.mockResolvedValue([])
     mockDb.getSessionById.mockResolvedValue(null)
     mockDb.getExerciseById.mockResolvedValue(null)
+    mockDb.getExercisesByIds.mockResolvedValue({})
     mockDb.getBodySettings.mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null })
     mockDb.getMaxWeightByExercise.mockResolvedValue({})
     mockDb.getPreviousSets.mockResolvedValue([])
+    mockDb.getPreviousSetsBatch.mockResolvedValue({})
     mockDb.getRecentExerciseSets.mockResolvedValue([])
+    mockDb.getRecentExerciseSetsBatch.mockResolvedValue({})
     mockDb.getRestSecondsForExercise.mockResolvedValue(90)
     mockDb.getAppSetting.mockResolvedValue('true')
     mockDb.getSessionPRs.mockResolvedValue([])
@@ -122,6 +129,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByText } = renderScreen(<ActiveSession />)
 
@@ -136,6 +144,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
@@ -165,6 +174,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
@@ -250,6 +260,7 @@ describe('Workout Session Acceptance', () => {
       if (eid === 'ex-2') return Promise.resolve(squat)
       return Promise.resolve(null)
     })
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise, 'ex-2': squat })
 
     const { findByText } = renderScreen(<ActiveSession />)
 
@@ -279,10 +290,17 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
     mockDb.getPreviousSets.mockResolvedValue([
       { set_number: 1, weight: 75, reps: 8 },
       { set_number: 2, weight: 75, reps: 7 },
     ])
+    mockDb.getPreviousSetsBatch.mockResolvedValue({
+      'ex-1': [
+        { set_number: 1, weight: 75, reps: 8 },
+        { set_number: 2, weight: 75, reps: 7 },
+      ],
+    })
 
     const { findByText } = renderScreen(<ActiveSession />)
 
@@ -298,6 +316,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
@@ -316,6 +335,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
@@ -336,6 +356,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const screen = renderScreen(<ActiveSession />)
     await screen.findByText('Bench Press')
@@ -357,6 +378,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const screen = renderScreen(<ActiveSession />)
     await screen.findByText('Bench Press')
@@ -378,6 +400,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
@@ -404,6 +427,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(uncompleted)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
@@ -428,6 +452,7 @@ describe('Workout Session Acceptance', () => {
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
     mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
@@ -461,6 +486,7 @@ describe('Workout Session Acceptance', () => {
         { ...createSet({ id: 'new-2', session_id: 'sess-repeat', exercise_id: 'ex-1', set_number: 2 }), exercise_name: 'Bench Press', exercise_deleted: false },
       ])
       mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
       renderScreen(<ActiveSession />)
 
@@ -495,6 +521,7 @@ describe('Workout Session Acceptance', () => {
         { ...createSet({ id: 'new-1', session_id: 'sess-del', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
       ])
       mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
       renderScreen(<ActiveSession />)
 
@@ -525,6 +552,7 @@ describe('Workout Session Acceptance', () => {
         { ...createSet({ id: 'new-2', session_id: 'sess-link', exercise_id: 'ex-2', set_number: 1 }), exercise_name: 'Curls', exercise_deleted: false },
       ])
       mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
       renderScreen(<ActiveSession />)
 
