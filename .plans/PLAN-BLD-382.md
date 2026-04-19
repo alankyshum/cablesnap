@@ -1,9 +1,9 @@
-# Feature Plan: Smart Training Insights Card (Rev 2)
+# Feature Plan: Smart Training Insights Card (Rev 3)
 
 **Issue**: BLD-382
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: IN_REVIEW (Rev 2 — addresses QD feedback)
+**Status**: IN_REVIEW (Rev 3 — addresses TL Rev 2 feedback)
 
 ## Problem Statement
 The home screen shows raw stats (streak count, week count, PR count) but doesn't synthesize the user's training data into actionable, motivating insights. Users see numbers but don't get contextual meaning — "Is my training improving? Am I making progress?" The app is a logbook but not yet a training partner.
@@ -65,16 +65,16 @@ Add a single, compact "Training Insight" card to the home screen showing ONE con
 | `components/home/InsightCard.tsx` | Presentational component: renders the insight with icon, text, tap target, and dismiss button |
 
 #### Data Queries Needed
-All data can be derived from existing tables — **no schema changes, only 1 new query**:
-- **E1RM trend**: 1 new dedicated batch query: top-5 most-trained exercises with their e1RM from current vs previous 30-day window, single SQL pass. Cannot reuse per-exercise `getExercise1RMChartData()` on home load (TL feedback — too expensive). Add to existing `Promise.all` batch.
-- **Volume trend**: 1 new query: `SELECT COUNT(*) as set_count FROM workout_sets WHERE completed = 1 AND completed_at > ?` for current vs previous 30-day window. Add to existing `Promise.all` batch in `loadHomeData()`.
-- **Consistency data**: Already available from `computeStreak()` and session counts in home data.
+All data can be derived from existing tables — **no schema changes, 1 new query**:
+- **E1RM trend**: 1 new dedicated batch query: top-5 most-trained exercises with their e1RM from current vs previous 30-day window, single SQL pass. `loadHomeData()` does NOT currently fetch per-exercise e1RM history — this is genuinely new. Cannot reuse per-exercise `getExercise1RMChartData()` on home load (too expensive per TL). Add to existing `Promise.all` batch.
+- **Volume trend**: Reuse existing `getWeeklyVolume(weeks)` from `lib/db/session-stats.ts` — no new query needed (per TL Rev 2 feedback).
+- **Consistency data**: Use existing `getWeeklySessionCounts()` from `lib/db/session-stats.ts` for per-week counts. Note: `computeStreak()` returns consecutive weeks, not per-week counts — use `getWeeklySessionCounts()` instead for the "best in M weeks" comparison.
 
-**Query count impact on `loadHomeData()`:** +2 new queries (volume trend + e1RM batch trend). Consistency data reuses existing query results. Net: 16 → 18 parallel queries (~12% increase).
+**Query count impact on `loadHomeData()`:** +1 new query (e1RM batch trend only). Volume and consistency reuse existing queries. Net: 15 → 16 parallel queries (~7% increase).
 
 #### Architecture
 ```
-loadHomeData() → adds volumeTrendData to return value (1 new query)
+loadHomeData() → adds e1rmTrendData to return value (1 new query, reuses getWeeklyVolume + getWeeklySessionCounts)
   ↓
 lib/insights.ts → generateInsight(homeData) → Insight | null
   ↓
@@ -197,16 +197,25 @@ Good velocity profile. Architecture fits existing patterns (pure functions in `l
 | **A11Y-01** (missing a11y) | FIXED — Full accessibility section added: accessibilityRole, accessibilityLabel, 48x48dp dismiss target, text alternatives via Ionicons + parent label (no emoji). |
 | **COGNITIVE-03** (placement) | FIXED — Exact position: immediately below StatsRow, above HomeBanners. Card is ~56dp, minimal impact on Quick Start reachability. |
 | **OVERLAP-01** (heatmap contradiction) | FIXED — Muscle group gap insight type removed entirely. No contradiction possible. |
-| **PERF-01** (query count) | ADDRESSED — Only 1 new query added (volume trend). Strength trend reuses existing home data. Net: 16 to 17 queries (<7% increase). |
+| **PERF-01** (query count) | FIXED (Rev 3) — Corrected: 1 new query (e1RM batch trend). Volume reuses `getWeeklyVolume()`, consistency reuses `getWeeklySessionCounts()`. Net: 15 → 16 queries (~7% increase). |
+
+**TL Rev 2 resolutions (Rev 3):**
+
+| TL Rev 2 Finding | Resolution |
+|------------|------------|
+| **CRITICAL**: e1RM data not in loadHomeData() | FIXED — Plan now correctly states 1 new dedicated e1RM batch query required. No false claim of reuse. |
+| Volume trend: reuse `getWeeklyVolume(weeks)` | FIXED — Plan updated to reuse existing `getWeeklyVolume()` from `lib/db/session-stats.ts`. No new volume query. |
+| Consistency: use `getWeeklySessionCounts()` not `computeStreak()` | FIXED — Plan updated to use `getWeeklySessionCounts()` for per-week counts. `computeStreak()` only provides consecutive weeks. |
+| Query count baseline: 15 not 16 | FIXED — Corrected to 15 → 16. |
 | Rapid app opens (new edge case) | ADDED — Same deterministic insight each time (computed from same underlying data). |
 | Recommendation: replace StatsRow | DEFERRED — StatsRow replacement is a separate, larger UX change. This plan is additive but minimal (1 compact card). Will consider StatsRow consolidation as a future phase if the InsightCard proves valuable. |
 
-**TL-specific resolutions:**
+**Prior TL Rev 1 resolutions:**
 
 | TL Finding | Resolution |
 |------------|------------|
 | Feature overlap (3 duplicate types) | FIXED — Same as COGNITIVE-01. Reduced to 3 non-overlapping types. |
-| E1RM trend query cost | FIXED — Dedicated batch query for top-5 exercises (single SQL pass), NOT per-exercise reuse. +2 total new queries. |
+| E1RM trend query cost | FIXED — Dedicated batch query for top-5 exercises (single SQL pass), NOT per-exercise reuse. +1 new query total. |
 | Dismissal persistence | SIMPLIFIED — Dismiss is React state only (session scope, not day). Simpler than SecureStore approach, adequate for v1. |
 | Dismiss-rotation complexity | FIXED — No rotation. Dismiss hides card entirely. |
 | Home screen density | ACKNOWLEDGED — Card adds 1 compact element (~56dp). No cycling, hidden when no insight qualifies. Density is additive but minimal. |
