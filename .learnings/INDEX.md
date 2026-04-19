@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 170
+Total learnings: 171
 
 ## How to Use This Knowledge Base
 
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-389 | JSON Snapshot Dirty-Check for Auto-Save Forms | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-384 | Audit Existing Screen Elements for Information Overlap Before Adding New UI Components | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-19 | BLD-384 | Verify Data Query Availability Claims Against Actual Code Before Plan Approval | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-19 | BLD-385 | Detect Dark Mode via useColorScheme — Never Compare Background Hex Strings | Pitfalls | [theming.md](pitfalls/theming.md) |
