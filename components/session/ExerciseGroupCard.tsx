@@ -106,6 +106,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
             unit={unit}
             halfStep={halfStep}
             trackingMode={isDurationMode ? "duration" : "reps"}
+            equipment={group.equipment}
             onUpdate={onUpdate}
             onCheck={onCheck}
             onDelete={onDelete}

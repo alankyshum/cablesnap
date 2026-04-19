@@ -8,8 +8,9 @@ import { rpeColor, rpeText } from "../../lib/rpe";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { RPE_CHIPS, RPE_LABELS, type SetWithMeta } from "./types";
-import { SET_TYPE_LABELS } from "../../lib/types";
+import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
+import { PlateHint } from "./PlateHint";
 
 export function formatDurationDisplay(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "0:00";
@@ -30,6 +31,7 @@ export type SetRowProps = {
   unit: "kg" | "lb";
   halfStep: { setId: string; base: number } | null;
   trackingMode: "reps" | "duration";
+  equipment: Equipment;
   onUpdate: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onCheck: (set: SetWithMeta) => void;
   onDelete: (setId: string) => void;
@@ -48,7 +50,7 @@ export type SetRowProps = {
 };
 
 export const SetRow = memo(function SetRow({
-  set, step, unit, halfStep, trackingMode,
+  set, step, unit, halfStep, trackingMode, equipment,
   onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onCycleSetType, onLongPressSetType,
   isTimerRunning, isTimerActive, timerDisplaySeconds,
@@ -206,6 +208,8 @@ export const SetRow = memo(function SetRow({
             <MaterialCommunityIcons name="delete-outline" size={22} color={colors.error} />
           </Pressable>
         </View>
+
+      <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
 
       {set.completed && (
         <View style={styles.rpeRow} accessibilityLabel="Rate of perceived exertion" accessibilityRole="radiogroup">
