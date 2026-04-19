@@ -1,4 +1,4 @@
-import type { WorkoutTemplate, TemplateExercise } from "../types";
+import type { WorkoutTemplate, TemplateExercise, MuscleGroup } from "../types";
 import { uuid } from "../uuid";
 import { query, queryOne, execute, getDatabase } from "./helpers";
 import { mapRow } from "./exercises";
@@ -436,6 +436,41 @@ export async function unlinkSingleExercise(
       );
     }
   });
+}
+
+/**
+ * Get the unique primary muscles for each template, grouped by template ID.
+ * Excludes deleted exercises and the "full_body" pseudo-muscle.
+ */
+export async function getTemplatePrimaryMuscles(
+  templateIds: string[]
+): Promise<Record<string, MuscleGroup[]>> {
+  if (templateIds.length === 0) return {};
+  const placeholders = templateIds.map(() => "?").join(",");
+  const rows = await query<{ template_id: string; primary_muscles: string }>(
+    `SELECT te.template_id, e.primary_muscles
+     FROM template_exercises te
+     JOIN exercises e ON te.exercise_id = e.id
+     WHERE te.template_id IN (${placeholders})
+       AND e.deleted_at IS NULL
+       AND e.primary_muscles IS NOT NULL`,
+    templateIds
+  );
+
+  const result: Record<string, Set<MuscleGroup>> = {};
+  for (const row of rows) {
+    if (!result[row.template_id]) result[row.template_id] = new Set();
+    const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
+    for (const m of muscles) {
+      if (m !== "full_body") result[row.template_id].add(m);
+    }
+  }
+
+  const out: Record<string, MuscleGroup[]> = {};
+  for (const [id, set] of Object.entries(result)) {
+    out[id] = Array.from(set);
+  }
+  return out;
 }
 
 export async function updateLinkLabel(

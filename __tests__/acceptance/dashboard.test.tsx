@@ -141,6 +141,7 @@ jest.mock('../../lib/db', () => ({
   startSession: (...args: unknown[]) => mockStartSession(...args),
   getTemplateExerciseCount: (...args: unknown[]) => mockGetTemplateExerciseCount(...args),
   getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
+  getTemplatePrimaryMuscles: jest.fn().mockResolvedValue({}),
   getSessionSetCount: (...args: unknown[]) => mockGetSessionSetCount(...args),
   getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getSessionAvgRPE: (...args: unknown[]) => mockGetSessionAvgRPE(...args),

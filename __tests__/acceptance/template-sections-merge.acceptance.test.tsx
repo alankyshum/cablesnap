@@ -66,6 +66,7 @@ jest.mock('../../lib/db', () => ({
   getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getTemplateExerciseCount: jest.fn().mockResolvedValue(0),
   getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
+  getTemplatePrimaryMuscles: jest.fn().mockResolvedValue({}),
   startSession: jest.fn().mockResolvedValue({ id: 'qs-1', template_id: 't1', name: 'Test', started_at: Date.now(), sets: [] }),
   getTodaySchedule: jest.fn().mockResolvedValue(null),
   isTodayCompleted: jest.fn().mockResolvedValue(false),
