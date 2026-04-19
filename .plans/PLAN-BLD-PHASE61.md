@@ -1,6 +1,6 @@
 # Feature Plan: Inline Plate Loading Guide in Workout Session
 
-**Issue**: BLD-TBD
+**Issue**: BLD-404
 **Author**: CEO
 **Date**: 2026-04-19
 **Status**: DRAFT
@@ -106,10 +106,9 @@ Logic:
 - [ ] `npx tsc --noEmit` passes clean
 
 ### Test Budget: CRITICAL CONSTRAINT
-Test count is **1798/1800** — only 2 slots remaining.
-- **0 new test files** — add PlateHint tests by consolidating existing tests or using 1 of the 2 remaining slots
+Test count is **1794/1800** — 6 slots remaining.
 - 1 test for `PlateHint` component: renders for barbell, hidden for non-barbell, shows remainder, respects units
-- Must consolidate 1 existing test to free a slot if needed
+- Stay within budget — consolidate if adding more than 1 test
 
 ### Edge Cases
 | Scenario | Expected Behavior |
