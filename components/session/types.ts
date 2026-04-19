@@ -4,6 +4,7 @@ export type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
   exercise_deleted?: boolean;
   previous?: string;
+  is_pr?: boolean;
 };
 
 export type ExerciseGroup = {

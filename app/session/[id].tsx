@@ -29,6 +29,7 @@ import { useSessionActions } from "../../hooks/useSessionActions";
 import { useExerciseManagement } from "../../hooks/useExerciseManagement";
 import { useSetTypeActions } from "../../hooks/useSetTypeActions";
 import { useSessionTimer } from "../../hooks/useSessionTimer";
+import { usePRCelebration } from "../../hooks/usePRCelebration";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
 import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDetailDrawer";
 import { SetTypeSheet } from "../../components/session/SetTypeSheet";
@@ -36,6 +37,7 @@ import { SessionListHeader } from "../../components/session/SessionListHeader";
 import { SessionListFooter } from "../../components/session/SessionListFooter";
 import { SessionToolboxSheet } from "../../components/session/SessionToolboxSheet";
 import { SessionHeaderToolbar } from "../../components/session/SessionHeaderToolbar";
+import { PRCelebration } from "../../components/session/PRCelebration";
 
 export default function ActiveSession() {
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function ActiveSession() {
   }, []);
 
   const {
-    session, groups, setGroups, step, unit, suggestions, modes, setModes, maxes,
+    session, groups, setGroups, step, unit, suggestions, modes, setModes,
     allExercises, linkIds, palette, updateGroupSet, load,
   } = useSessionData({ id, templateId, sourceSessionId });
 
@@ -85,7 +87,9 @@ export default function ActiveSession() {
   const {
     setTypeSheetSetId, setSetTypeSheetSetId,
     handleCycleSetType, handleLongPressSetType, handleSelectSetType,
-  } = useSetTypeActions({ groups, setGroups, maxes });
+  } = useSetTypeActions({ groups, setGroups });
+
+  const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
 
   const {
     elapsed, exerciseNotesOpen, exerciseNotesDraft, halfStep, nextHint, hintTimer,
@@ -93,7 +97,7 @@ export default function ActiveSession() {
     handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleDelete,
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, finish, cancel,
   } = useSessionActions({
-    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError,
+    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError, triggerPR,
   });
 
   const {
@@ -140,6 +144,7 @@ export default function ActiveSession() {
       if (cleanupRefs.swapUndoTimer.current) clearTimeout(cleanupRefs.swapUndoTimer.current);
       if (cleanupRefs.deleteExerciseTimer.current) clearTimeout(cleanupRefs.deleteExerciseTimer.current);
       if (cleanupRefs.deleteCountdownInterval.current) clearInterval(cleanupRefs.deleteCountdownInterval.current);
+      cleanupCelebration();
     };
   }, []);
 
@@ -251,6 +256,7 @@ export default function ActiveSession() {
         }}
       />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
+      <PRCelebration celebration={celebration} />
       <FlashList
         data={groups}
         renderItem={renderExerciseGroup}
