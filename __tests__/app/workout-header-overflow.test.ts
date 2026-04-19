@@ -6,40 +6,38 @@ const sessionSrc = [
   fs.readFileSync(path.resolve(__dirname, "../../components/session/GroupCardHeader.tsx"), "utf-8"),
 ].join("\n");
 
-describe("Workout session exercise header overflow fix (BLD-203, updated BLD-390)", () => {
-  it("groupHeader does NOT use flexWrap (removed in BLD-390 to fix alignment)", () => {
-    const headerMatch = sessionSrc.match(/groupHeader:\s*\{[^}]+\}/s);
-    expect(headerMatch).not.toBeNull();
-    expect(headerMatch![0]).not.toContain("flexWrap");
-  });
-
-  it("groupTitle has minWidth to prevent overflow", () => {
-    const titleMatch = sessionSrc.match(/groupTitle:\s*\{[^}]+\}/s);
-    expect(titleMatch).not.toBeNull();
-    expect(titleMatch![0]).toContain("minWidth");
-  });
-
-  it("compact layout uses two-row header structure", () => {
-    expect(sessionSrc).toContain("groupHeaderCompactWrap");
-    expect(sessionSrc).toContain("groupHeaderCompactRow");
-    const wrapMatch = sessionSrc.match(/groupHeaderCompactWrap:\s*\{[^}]+\}/s);
+describe("Workout session exercise header two-row layout (BLD-203, updated BLD-390)", () => {
+  it("uses two-row header structure with headerWrap", () => {
+    expect(sessionSrc).toContain("headerWrap");
+    expect(sessionSrc).toContain("headerRow1");
+    expect(sessionSrc).toContain("headerRow2");
+    const wrapMatch = sessionSrc.match(/headerWrap:\s*\{[^}]+\}/s);
     expect(wrapMatch).not.toBeNull();
-    const rowMatch = sessionSrc.match(/groupHeaderCompactRow:\s*\{[^}]+\}/s);
-    expect(rowMatch).not.toBeNull();
-    expect(rowMatch![0]).toContain('flexDirection: "row"');
   });
 
-  it("applies compact layout conditionally based on layout.compact", () => {
-    expect(sessionSrc).toContain("layout.compact");
-    expect(sessionSrc).toContain("styles.groupHeaderCompactWrap");
+  it("row 1 has exercise name and swap/notes buttons", () => {
+    const row1Match = sessionSrc.match(/headerRow1:\s*\{[^}]+\}/s);
+    expect(row1Match).not.toBeNull();
+    expect(row1Match![0]).toContain('flexDirection: "row"');
+    expect(sessionSrc).toContain("headerActions");
+    expect(sessionSrc).toContain("swap-horizontal");
   });
 
-  it("exercise name has numberOfLines for ellipsis truncation", () => {
-    expect(sessionSrc).toContain("numberOfLines={2}");
+  it("row 2 has Details and training mode", () => {
+    const row2Match = sessionSrc.match(/headerRow2:\s*\{[^}]+\}/s);
+    expect(row2Match).not.toBeNull();
+    expect(row2Match![0]).toContain('flexDirection: "row"');
+    expect(sessionSrc).toContain("Details");
+    expect(sessionSrc).toContain("TrainingModeSelector");
   });
 
-  it("groupHeader contains exercise name and Details button", () => {
-    expect(sessionSrc).toContain("styles.groupHeader");
+  it("exercise name is never truncated (no numberOfLines)", () => {
+    // The exercise name Text should not have numberOfLines
+    expect(sessionSrc).toContain("styles.groupTitle");
+    expect(sessionSrc).not.toContain("numberOfLines");
+  });
+
+  it("header contains exercise name and Details button", () => {
     expect(sessionSrc).toContain("styles.groupTitle");
     expect(sessionSrc).toContain("Details");
   });

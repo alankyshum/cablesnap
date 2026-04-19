@@ -303,8 +303,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   prBadge: {
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
   },
   colPrev: {
     width: 64,

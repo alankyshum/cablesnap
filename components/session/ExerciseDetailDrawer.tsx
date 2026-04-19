@@ -8,9 +8,15 @@ import { useLayout } from "../../lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
+import { ExerciseDrawerStats } from "./ExerciseDrawerStats";
 import type { Exercise } from "../../lib/types";
 
-export function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
+type Props = {
+  exercise: Exercise;
+  unit?: "kg" | "lb";
+};
+
+export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
   const colors = useThemeColors();
   const layout = useLayout();
   const profileGender = useProfileGender();
@@ -116,6 +122,9 @@ export function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }
       contentContainerStyle={{ paddingBottom: 32 }}
       ListHeaderComponent={
         <>
+          {unit && (
+            <ExerciseDrawerStats exerciseId={exercise.id} unit={unit} />
+          )}
           {layout.atLeastMedium ? (
             <>
               <View style={styles.detailRow}>

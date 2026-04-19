@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 176
+Total learnings: 179
 
 ## How to Use This Knowledge Base
 
@@ -14,8 +14,8 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 93 learnings
-- [Testing](patterns/testing.md) — 11 learnings
+- [React Native + Expo](patterns/react-native.md) — 94 learnings
+- [Testing](patterns/testing.md) — 12 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
@@ -26,7 +26,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 11 learnings
-- [PR Workflow](process/pr-workflow.md) — 3 learnings
+- [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
 - [Architecture](decisions/architecture.md) — 6 learnings
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-403 | Proactive Sweep Task to Silence Recurring Automated Reviewer Findings | Process | [pr-workflow.md](process/pr-workflow.md) |
+| 2026-04-19 | BLD-402 | Consolidate Single-Assertion it() Blocks to Free Test Budget Slots | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-19 | BLD-402 | Track fetchedId in useReducer to Prevent Stale Data on Rapid Prop Changes | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-400 | Event-Driven Side Effects Over Reactive useEffect for Action-Triggered Features | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-400 | Non-Blocking try/catch for Optional Delight Features | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-400 | cancelAnimation on Every Shared Value in useEffect Cleanup | Patterns | [react-native.md](patterns/react-native.md) |

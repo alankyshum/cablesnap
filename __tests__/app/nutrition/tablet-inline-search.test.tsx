@@ -74,42 +74,24 @@ describe('Nutrition Tab — Tablet Layout', () => {
     resetIds()
   })
 
-  it('renders InlineFoodSearch in the tablet right pane instead of the old addForm', async () => {
-    const { findByTestId, queryByText } = renderScreen(<Nutrition />)
+  it('does not render InlineFoodSearch inline — uses BottomSheet instead', async () => {
+    const { queryByTestId, findByText } = renderScreen(<Nutrition />)
 
-    // InlineFoodSearch should be rendered in the tablet pane
-    const search = await findByTestId('inline-food-search')
-    expect(search).toBeTruthy()
+    // InlineFoodSearch should NOT be visible by default (it's in a closed BottomSheet)
+    expect(queryByTestId('inline-food-search')).toBeNull()
 
-    // Old addForm elements should NOT be present
-    expect(queryByText('Add Food')).toBeNull()
-    expect(queryByText('Log Food')).toBeNull()
-    expect(queryByText('Save as favorite')).toBeNull()
-    expect(queryByText('Quick Log Favorites')).toBeNull()
-  })
-
-  it('does not render FAB on tablet layout', async () => {
-    const { findByTestId, queryByLabelText } = renderScreen(<Nutrition />)
-
-    await findByTestId('inline-food-search')
-
-    // FAB is phone-only
-    expect(queryByLabelText('Add food')).toBeNull()
-  })
-
-  it('still shows food log entries in the left pane', async () => {
-    const { findByText } = renderScreen(<Nutrition />)
-
+    // Food log entries should still display
     expect(await findByText('Chicken Breast')).toBeTruthy()
     expect(await findByText('Lunch')).toBeTruthy()
   })
 
-  it('does not call getFavoriteFoods (removed dead code)', async () => {
-    const { findByTestId } = renderScreen(<Nutrition />)
-    await findByTestId('inline-food-search')
+  it('does not render FAB on any layout', async () => {
+    const { findByText, queryByLabelText } = renderScreen(<Nutrition />)
 
-    // getFavoriteFoods was removed — verify it's not in the mock
-    const db = require('../../../lib/db')
-    expect(db.getFavoriteFoods).toBeUndefined()
+    await findByText('Chicken Breast')
+
+    // FAB has been removed — add food is via header "+" button
+    expect(queryByLabelText('Add food')).toBeNull()
+    expect(queryByLabelText('Close add food')).toBeNull()
   })
 })

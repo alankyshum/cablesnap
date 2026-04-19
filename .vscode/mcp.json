@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "expo-mcp": {
+      "command": "npx",
+      "args": [
+        "expo-mcp@latest",
+        "--root",
+        "${workspaceFolder}",
+        "--dev-server-url",
+        "http://localhost:8081"
+      ]
+    }
+  }
+}

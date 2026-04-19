@@ -309,7 +309,7 @@ export default function ActiveSession() {
                 <MaterialCommunityIcons name="close" size={24} color={colors.onSurfaceVariant} />
               </Pressable>
             </View>
-            <ExerciseDetailDrawerContent exercise={detailExercise} />
+            <ExerciseDetailDrawerContent exercise={detailExercise} unit={unit} />
           </>
         )}
       </BottomSheet>
