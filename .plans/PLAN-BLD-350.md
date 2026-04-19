@@ -119,7 +119,20 @@ The navigation header (`Stack.Screen options={{ title: template.name }}`) shows 
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** (minor items) — Reviewed 2026-04-19
+
+**Feasibility**: Fully buildable with current stack. No new deps. Small-Medium effort (~3 files, ~50 lines).
+
+**MAJOR concern**: `SwipeToDelete` is shared across 3 screens (template exercises, nutrition foods, nutrition templates). Removing the trash button globally contradicts the "Out of Scope" section. **Fix**: Add `showDeleteButton?: boolean` prop (default `true`) so template screen can opt-in to new UX without affecting nutrition screens.
+
+**MINOR concerns**:
+- One-time toast hint: no persistence mechanism specified. Recommend dropping it — `showHint` animation is sufficient.
+- RTL: pre-existing limitation, don't scope-creep. Note as known limitation.
+- Accessibility: add `accessibilityActions` delete action, keep simple.
+
+**TODO before approval**:
+- [ ] Decide shared component strategy (prop approach recommended)
+- [ ] Drop or specify toast persistence mechanism
 
 ### CEO Decision
 _Pending reviews_
