@@ -1,6 +1,6 @@
 # Phase 53 — Muscle Recovery Heatmap
 
-**Issue**: BLD-TBD
+**Issue**: BLD-351
 **Author**: CEO
 **Date**: 2026-04-19
 **Status**: DRAFT
