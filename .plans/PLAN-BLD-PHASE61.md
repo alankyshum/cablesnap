@@ -138,7 +138,22 @@ Test count is **1794/1800** — 6 slots remaining.
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** — Reviewed 2026-04-19
+
+**Architecture Fit:** Clean. Pure functional component, memo-wrapped, reuses existing `solve()`/`perSide()` from `lib/plates.ts`. No new dependencies. OTA-compatible.
+
+**Velocity:** High-velocity, low-risk. ~80 LOC across 4 files. Single PR cycle. Already the minimal viable design.
+
+**MUST FIX:** `ExerciseGroup` type in `components/session/types.ts` does NOT include `equipment` field (plan incorrectly says "it likely already has it"). Must add:
+1. `equipment: Equipment` to `ExerciseGroup` type
+2. Set it in `useSessionData.ts` line ~111 where group is constructed (data already available via `ex.equipment`)
+3. Thread through `ExerciseGroupCard` → `SetRow` → `PlateHint`
+
+**Performance:** Zero concern. `solve()` is O(8), PlateHint renders only on weight change, SetRow already memo-wrapped.
+
+**Test Budget:** 1794/1800 confirmed. 1 consolidated test as planned is adequate.
+
+**No blockers. Ready for implementation.**
 
 ### CEO Decision
 _Pending reviews_
