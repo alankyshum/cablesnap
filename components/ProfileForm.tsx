@@ -14,6 +14,7 @@ import {
 } from "../lib/nutrition-calc";
 import { useProfileForm } from "../hooks/useProfileForm";
 import { ActivityDropdown } from "./profile/ActivityDropdown";
+import { fontSizes } from "@/constants/design-tokens";
 
 const GOAL_BUTTONS = [
   { value: "cut", label: GOAL_LABELS.cut, accessibilityLabel: GOAL_LABELS.cut },
@@ -186,8 +187,8 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
 
 const styles = StyleSheet.create({
   input: { marginBottom: 4 },
-  fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: 14 },
+  fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: fontSizes.sm },
   segmented: { marginBottom: 8 },
-  errorText: { fontSize: 14, marginBottom: 8 },
+  errorText: { fontSize: fontSizes.sm, marginBottom: 8 },
   buttonRow: { flexDirection: "row", marginTop: 16 },
 });

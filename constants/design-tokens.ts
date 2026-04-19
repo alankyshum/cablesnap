@@ -39,16 +39,33 @@ export function radius(key: RadiiKey): number {
   return radii[key];
 }
 
+// ─── Font Sizes ────────────────────────────────────────────────────
+
+export const fontSizes = {
+  xs: 12,
+  sm: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
+  xxl: 24,
+  heading: 28,
+  stat: 32,
+  display: 56,
+  hero: 72,
+} as const;
+
+export type FontSizeKey = keyof typeof fontSizes;
+
 // ─── Typography ────────────────────────────────────────────────────
 
 export const typography = {
   display: {
-    fontSize: 56,
+    fontSize: fontSizes.display,
     lineHeight: 64,
     fontWeight: "800" as const,
   },
   heroNumber: {
-    fontSize: 72,
+    fontSize: fontSizes.hero,
     lineHeight: 80,
     fontWeight: "800" as const,
     fontVariant: ["tabular-nums"] as const,
@@ -59,7 +76,7 @@ export const typography = {
     }),
   },
   statValue: {
-    fontSize: 32,
+    fontSize: fontSizes.stat,
     lineHeight: 40,
     fontWeight: "700" as const,
     fontVariant: ["tabular-nums"] as const,

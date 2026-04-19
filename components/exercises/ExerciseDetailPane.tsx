@@ -6,6 +6,7 @@ import type { ThemeColors } from "@/hooks/useThemeColors";
 import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
+import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseDetailPaneProps {
   detail: Exercise | null;
@@ -35,7 +36,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender }: ExerciseDe
                 <Chip
                   compact
                   style={{ backgroundColor: colors.tertiaryContainer, alignSelf: "flex-start", marginBottom: 8 }}
-                  textStyle={{ fontSize: 12 }}
+                  textStyle={{ fontSize: fontSizes.xs }}
                 >
                   Custom
                 </Chip>
@@ -54,7 +55,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender }: ExerciseDe
               </View>
               {detail.mount_position && (
                 <>
-                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: fontSizes.xs }}>
                     Mount Position
                   </Text>
                   <Text
@@ -68,7 +69,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender }: ExerciseDe
               )}
               {detail.attachment && (
                 <>
-                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: fontSizes.xs }}>
                     Attachment
                   </Text>
                   <Text
@@ -82,7 +83,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender }: ExerciseDe
               )}
               {detail.training_modes && detail.training_modes.length > 0 && (
                 <View accessibilityLabel={`Compatible training modes: ${detail.training_modes.join(", ")}`}>
-                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
+                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: fontSizes.xs }}>
                     Training Modes
                   </Text>
                   <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   detailBadgeText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     lineHeight: 16,
   },
 });

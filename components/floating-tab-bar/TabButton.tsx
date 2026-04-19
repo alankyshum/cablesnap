@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated from "react-native-reanimated";
+import { fontSizes } from "@/constants/design-tokens";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -69,7 +70,7 @@ const tabStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   label: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     lineHeight: 16,
     marginTop: 2,
     textAlign: "center",

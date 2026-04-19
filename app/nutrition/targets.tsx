@@ -15,6 +15,7 @@ import {
   GOAL_LABELS,
   type NutritionProfile,
 } from "../../lib/nutrition-calc";
+import { fontSizes } from "@/constants/design-tokens";
 
 export default function Targets() {
   const colors = useThemeColors();
@@ -90,11 +91,11 @@ export default function Targets() {
         style={StyleSheet.flatten([styles.card, { backgroundColor: colors.primaryContainer }])}
       >
         <CardContent>
-          <Text variant="subtitle" style={{ color: colors.onPrimaryContainer, fontSize: 16 }}>
+          <Text variant="subtitle" style={{ color: colors.onPrimaryContainer, fontSize: fontSizes.base }}>
             {profile ? "Update your profile" : "Set your profile for personalized targets"}
           </Text>
           {profileSummary ? (
-            <Text variant="caption" style={{ color: colors.onPrimaryContainer, marginTop: 4, fontSize: 14 }}>
+            <Text variant="caption" style={{ color: colors.onPrimaryContainer, marginTop: 4, fontSize: fontSizes.sm }}>
               {"Based on: " + profileSummary}
             </Text>
           ) : null}

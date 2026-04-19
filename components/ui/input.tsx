@@ -13,6 +13,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { fontSizes } from "@/constants/design-tokens";
 
 export interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -280,7 +281,7 @@ export const Input = forwardRef<TextInput, InputProps>(
               {
                 marginLeft: 14,
                 marginTop: 4,
-                fontSize: 14,
+                fontSize: fontSizes.sm,
                 color: danger,
               },
               errorStyle,
@@ -365,7 +366,7 @@ export const GroupedInput = ({
             <Text
               key={i}
               style={{
-                fontSize: 14,
+                fontSize: fontSizes.sm,
                 color: danger,
                 marginTop: i === 0 ? 0 : 1,
                 marginLeft: 8,

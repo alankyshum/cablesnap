@@ -35,6 +35,8 @@ import { getPermissionStatus } from "../../lib/notifications";
 import PreferencesCard from "../../components/settings/PreferencesCard";
 import IntegrationsCard from "../../components/settings/IntegrationsCard";
 import CSVExportCard from "../../components/settings/CSVExportCard";
+import AppearanceCard from "../../components/settings/AppearanceCard";
+import ReminderSection from "../../components/settings/ReminderSection";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 function dateStamp(): string {
@@ -172,8 +174,11 @@ export default function Settings() {
       <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 24 }}>Settings</Text>
       <FlowContainer gap={16}>
         <UnitsCard colors={colors} toast={toast} weightUnit={weightUnit} setWeightUnit={setWeightUnit} measureUnit={measureUnit} setMeasureUnit={setMeasureUnit} weightGoal={weightGoal} fatGoal={fatGoal} />
+        <AppearanceCard colors={colors} />
         <BodyProfileCard />
-        <PreferencesCard colors={colors} toast={toast} reminders={reminders} setReminders={setReminders} reminderTime={reminderTime} setReminderTime={setReminderTime} permDenied={permDenied} setPermDenied={setPermDenied} scheduleCount={scheduleCount} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} restNotifications={restNotifications} setRestNotifications={setRestNotifications} />
+        <PreferencesCard colors={colors} toast={toast} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled}>
+          <ReminderSection colors={colors} toast={toast} reminders={reminders} setReminders={setReminders} reminderTime={reminderTime} setReminderTime={setReminderTime} permDenied={permDenied} setPermDenied={setPermDenied} scheduleCount={scheduleCount} restNotifications={restNotifications} setRestNotifications={setRestNotifications} />
+        </PreferencesCard>
         <IntegrationsCard colors={colors} toast={toast} stravaAthlete={stravaAthlete} setStravaAthlete={setStravaAthlete} stravaLoading={stravaLoading} setStravaLoading={setStravaLoading} hcEnabled={hcEnabled} setHcEnabled={setHcEnabled} hcLoading={hcLoading} setHcLoading={setHcLoading} hcSdkStatus={hcSdkStatus} />
         <DataManagementCard colors={colors} loading={loading} exportProgress={exportProgress} onExport={handleExport} onImport={handleImport} onImportStrong={() => router.push("/settings/import-strong")} />
         <CSVExportCard colors={colors} />

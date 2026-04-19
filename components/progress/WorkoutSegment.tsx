@@ -20,6 +20,7 @@ import WeeklySummary from "../../components/WeeklySummary";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { WorkoutChartCard, PRCard, SessionsCard } from "./WorkoutCards";
 import CalendarView from "./CalendarView";
+import { fontSizes } from "@/constants/design-tokens";
 
 let cachedWeekStart: number | null = null;
 function getWeekStartDay(): number {
@@ -100,7 +101,7 @@ export default function WorkoutSegment() {
         viewMode === "list" ? "Switch to calendar view" : "Switch to list view"
       }
     >
-      <Text style={{ color: colors.onSurface, fontSize: 16 }}>
+      <Text style={{ color: colors.onSurface, fontSize: fontSizes.base }}>
         {viewMode === "list" ? "📅" : "📋"}
       </Text>
     </Pressable>
@@ -152,7 +153,7 @@ export default function WorkoutSegment() {
       accessibilityHint="View your achievements and milestones"
     >
       <View style={styles.cardHeader}>
-        <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
+        <Text style={{ fontSize: fontSizes.xl, marginRight: 8 }}>🏆</Text>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
           Achievements
         </Text>

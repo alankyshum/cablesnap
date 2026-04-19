@@ -22,6 +22,7 @@ import {
   type NutritionProfile,
   type Sex,
 } from "../lib/nutrition-calc";
+import { fontSizes } from "@/constants/design-tokens";
 
 const SEX_BUTTONS = [
   { value: "male", label: "Male", accessibilityLabel: "Male" },
@@ -318,6 +319,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   input: { marginBottom: 4 },
-  fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: 14 },
+  fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: fontSizes.sm },
   segmented: { marginBottom: 8 },
 });

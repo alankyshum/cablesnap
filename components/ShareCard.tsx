@@ -7,6 +7,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { ShareCardStats } from "./share/ShareCardStats";
 import { ShareCardExercises } from "./share/ShareCardExercises";
+import { fontSizes } from "@/constants/design-tokens";
 
 export type ShareCardExercise = {
   name: string;
@@ -145,20 +146,20 @@ const cardStyles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   brandText: {
-    fontSize: 24,
+    fontSize: fontSizes.xxl,
     fontWeight: "700",
   },
   titleSection: {
     marginBottom: spacing.xl,
   },
   sessionName: {
-    fontSize: 34,
+    fontSize: fontSizes.stat,
     fontWeight: "800",
     lineHeight: 44,
     marginBottom: spacing.xs,
   },
   dateText: {
-    fontSize: 18,
+    fontSize: fontSizes.lg,
     lineHeight: 24,
   },
   ratingSection: {
@@ -175,7 +176,7 @@ const cardStyles = StyleSheet.create({
     alignItems: "center",
   },
   footerText: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     fontWeight: "500",
     letterSpacing: 0.5,
   },

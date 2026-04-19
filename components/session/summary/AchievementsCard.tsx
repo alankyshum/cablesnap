@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "expo-router";
 import type { AchievementDef } from "@/lib/achievements";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   achievements: AchievementDef[];
@@ -24,7 +25,7 @@ export default function AchievementsCard({ achievements, colors }: Props) {
     >
       <CardContent>
         <View style={styles.sectionHeader}>
-          <Text style={{ fontSize: 20 }}>🏆</Text>
+          <Text style={{ fontSize: fontSizes.xl }}>🏆</Text>
           <Text
             variant="title"
             style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
@@ -34,7 +35,7 @@ export default function AchievementsCard({ achievements, colors }: Props) {
         </View>
         {displayed.map((a) => (
           <View key={a.id} style={styles.row}>
-            <Text style={{ fontSize: 18, marginRight: 8 }}>{a.icon}</Text>
+            <Text style={{ fontSize: fontSizes.lg, marginRight: 8 }}>{a.icon}</Text>
             <View style={{ flex: 1 }}>
               <Text
                 variant="body"

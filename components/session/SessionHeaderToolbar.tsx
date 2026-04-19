@@ -12,6 +12,7 @@ import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatTime } from "../../lib/format";
 import { getAppSetting, setAppSetting } from "../../lib/db";
+import { fontSizes } from "@/constants/design-tokens";
 
 const REST_PRESETS = [30, 60, 90, 120] as const;
 const DEFAULT_REST_SECONDS = 90;
@@ -152,7 +153,7 @@ function SessionHeaderToolbarInner({
               style={{
                 color: colors.primary,
                 fontWeight: "700",
-                fontSize: 16,
+                fontSize: fontSizes.base,
               }}
             >
               {showRestDone
@@ -180,7 +181,7 @@ function SessionHeaderToolbarInner({
             variant="body"
             style={{
               color: isRestActive ? colors.onSurfaceVariant : colors.primary,
-              fontSize: isRestActive ? 13 : 14,
+              fontSize: fontSizes.sm,
             }}
           >
             {formatTime(elapsed)}

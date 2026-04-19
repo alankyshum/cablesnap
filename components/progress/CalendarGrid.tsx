@@ -6,6 +6,7 @@ import {
   getWeekDayLabels,
   dateToISO,
 } from "@/lib/db/calendar";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   year: number;
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   headerText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "600",
   },
   gridWrap: {
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   dayText: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
   },
   dot: {
     width: 6,

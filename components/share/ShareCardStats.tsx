@@ -3,6 +3,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { spacing } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   duration: string;
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statValue: {
-    fontSize: 24,
+    fontSize: fontSizes.xxl,
     fontWeight: "700",
     ...Platform.select({
       ios: { fontVariant: ["tabular-nums"] },
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
     }),
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.sm,
     marginTop: 2,
   },
   statDivider: {

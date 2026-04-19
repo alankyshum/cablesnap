@@ -9,6 +9,7 @@ import { Text } from "@/components/ui/text";
 import type { TrainingMode } from "../lib/types";
 import { TRAINING_MODE_LABELS } from "../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   modes: TrainingMode[];
@@ -79,7 +80,7 @@ function TrainingModeSelector({ modes, selected, exercise, onSelect, compact: is
 
       {tooltip && (
         <View style={[styles.tooltip, { backgroundColor: colors.inverseSurface }]}>
-          <Text style={{ color: colors.inverseOnSurface, fontSize: 12 }}>
+          <Text style={{ color: colors.inverseOnSurface, fontSize: fontSizes.xs }}>
             {tooltip}
           </Text>
         </View>
@@ -130,11 +131,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "600",
   },
   labelCompact: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "600",
   },
   tooltip: {

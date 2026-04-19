@@ -10,6 +10,7 @@ import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { ExerciseDrawerStats } from "./ExerciseDrawerStats";
 import type { Exercise } from "../../lib/types";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   exercise: Exercise;
@@ -48,7 +49,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
       </View>
       {exercise.mount_position && (
         <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
             Mount Position
           </Text>
           <Text variant="body" style={{ color: colors.onSurface, marginTop: 2 }}>
@@ -58,7 +59,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
       )}
       {exercise.attachment && (
         <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
             Attachment
           </Text>
           <Text variant="body" style={{ color: colors.onSurface, marginTop: 2 }}>
@@ -68,7 +69,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
       )}
       {exercise.primary_muscles.length > 0 && (
         <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
             Primary Muscles
           </Text>
           <View style={styles.detailChips}>
@@ -82,7 +83,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
       )}
       {exercise.secondary_muscles.length > 0 && (
         <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
             Secondary Muscles
           </Text>
           <View style={styles.detailChips}>
@@ -99,7 +100,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
 
   const instructions = steps.length > 0 ? (
     <View style={styles.detailSection}>
-      <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+      <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
         Instructions
       </Text>
       {steps.map((step, i) => (
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   detailBadgeText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     lineHeight: 16,
   },
   detailRow: {

@@ -12,6 +12,7 @@ import { getPhotoById } from "../../lib/db/photos";
 import type { ProgressPhoto } from "../../lib/db/photos";
 import { radii, scrim } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 export default function CompareScreen() {
   const colors = useThemeColors();
@@ -142,11 +143,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   labelText: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     fontWeight: "600",
   },
   labelPose: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     textTransform: "capitalize",
   },
   dividerVertical: {

@@ -13,6 +13,7 @@ import { SuggestionChip } from "./SuggestionChip";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
 import type { Suggestion } from "../../lib/rm";
+import { fontSizes } from "@/constants/design-tokens";
 
 export type GroupCardProps = {
   group: ExerciseGroup;
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
   colLabel: {
     flex: 1,
     textAlign: "center",
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     marginHorizontal: 12,
   },
   colTrailing: {

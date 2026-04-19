@@ -21,6 +21,7 @@ import SetsCard from "../../../components/session/summary/SetsCard";
 import SummaryFooter from "../../../components/session/summary/SummaryFooter";
 import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 export default function Summary() {
   const colors = useThemeColors();
@@ -255,5 +256,5 @@ const styles = StyleSheet.create({
   statInner: { alignItems: "center", paddingVertical: 8 },
   section: { marginBottom: 16 },
   notesHeader: { flexDirection: "row", alignItems: "center", minHeight: 48 },
-  notesInput: { borderWidth: 1, borderRadius: 8, padding: 12, minHeight: 80, textAlignVertical: "top", fontSize: 14 },
+  notesInput: { borderWidth: 1, borderRadius: 8, padding: 12, minHeight: 80, textAlignVertical: "top", fontSize: fontSizes.sm },
 });

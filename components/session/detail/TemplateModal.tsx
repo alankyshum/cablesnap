@@ -2,6 +2,7 @@ import { Modal, StyleSheet, TextInput, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   visible: boolean;
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: fontSizes.base,
     marginBottom: 16,
   },
   modalActions: {

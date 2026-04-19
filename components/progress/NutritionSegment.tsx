@@ -15,6 +15,7 @@ import {
   AdherenceCard,
   MacroTrendCard,
 } from "./NutritionCards";
+import { fontSizes } from "@/constants/design-tokens";
 
 
 
@@ -90,7 +91,7 @@ export default function NutritionSegment() {
   if (dailyTotals.length === 0) {
     return (
       <View style={[styles.center, { flex: 1 }]}>
-        <Text style={{ fontSize: 40, marginBottom: 8 }}>🥗</Text>
+        <Text style={{ fontSize: fontSizes.xl, marginBottom: 8 }}>🥗</Text>
         <Text
           style={{
             color: colors.onSurfaceVariant,

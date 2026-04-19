@@ -5,6 +5,7 @@ import Animated from "react-native-reanimated";
 import { usePulse, useEntrance } from "../../lib/animations/hooks";
 import { spacing, radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 interface StatBadgeProps {
   label: string;
@@ -49,7 +50,7 @@ export function StatBadge({
         {icon && (
           <Text
             variant="caption"
-            style={{ color: colors.onTertiaryContainer, fontSize: 12 }}
+            style={{ color: colors.onTertiaryContainer, fontSize: fontSizes.xs }}
           >
             {icon}
           </Text>
@@ -59,7 +60,7 @@ export function StatBadge({
           style={{
             color: colors.onTertiaryContainer,
             fontWeight: "700",
-            fontSize: 13,
+            fontSize: fontSizes.sm,
           }}
         >
           {label}

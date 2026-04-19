@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text";
 import { radii, typography } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { AchievementItem } from "../../hooks/useAchievements";
+import { fontSizes } from "@/constants/design-tokens";
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString(undefined, {
@@ -110,13 +111,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -4,
     right: -8,
-    fontSize: 14,
+    fontSize: fontSizes.sm,
   },
   lockOverlay: {
     position: "absolute",
     bottom: -4,
     right: -8,
-    fontSize: 14,
+    fontSize: fontSizes.sm,
   },
   badgeName: {
     fontWeight: "700",

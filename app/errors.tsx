@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/bna-toast";
+import { fontSizes } from "@/constants/design-tokens";
 
 export default function Errors() {
   const colors = useThemeColors();
@@ -126,7 +127,7 @@ export default function Errors() {
                       style={{
                         fontFamily: "monospace",
                         color: colors.onSurfaceVariant,
-                        fontSize: 12,
+                        fontSize: fontSizes.xs,
                       }}
                       selectable
                     >

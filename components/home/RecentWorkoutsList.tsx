@@ -8,6 +8,7 @@ import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { Button } from "@/components/ui/button";
 import type { WorkoutSession } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   colors: ThemeColors;
@@ -54,7 +55,7 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
                     </Text>
                     {rpe != null && (
                       <View style={[styles.rpeTag, { backgroundColor: rpeColor(rpe) }]}>
-                        <Text style={{ color: rpeText(rpe), fontSize: 12, fontWeight: "600" }}>RPE {Math.round(rpe * 10) / 10}</Text>
+                        <Text style={{ color: rpeText(rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>RPE {Math.round(rpe * 10) / 10}</Text>
                       </View>
                     )}
                   </View>

@@ -4,6 +4,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { TouchableOpacity } from "react-native";
 import FloatingTabBar from "../../components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -16,7 +17,7 @@ export default function TabLayout() {
       return (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <MaterialCommunityIcons name={icon} size={22} color={colors.onSurface} />
-          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
+          <Text style={{ fontSize: fontSizes.base, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
         </View>
       );
     };

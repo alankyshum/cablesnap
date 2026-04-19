@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import type { Program } from "../../lib/types";
 import { FlowCard, difficultyBadge, type MetaBadge, type FlowCardMenuItem } from "../FlowCard";
 import type { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   colors: ReturnType<typeof useThemeColors>;
@@ -24,7 +25,7 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
       <View style={styles.sectionHeader}>
         <Text variant="subtitle" style={{ color: colors.onBackground }}>Programs</Text>
         <Button variant="ghost" size="sm" onPress={() => router.push("/program/create")} accessibilityLabel="Create new program">
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: 14 }}>Create</Text></View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: fontSizes.sm }}>Create</Text></View>
         </Button>
       </View>
       {programs.length === 0 ? (

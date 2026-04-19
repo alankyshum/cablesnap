@@ -9,6 +9,7 @@ import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { FlowCard, difficultyBadge, type MetaBadge, type FlowCardMenuItem } from "../FlowCard";
 import type { TemplateReadiness } from "../../lib/recovery-readiness";
 import type { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   colors: ReturnType<typeof useThemeColors>;
@@ -30,7 +31,7 @@ export function TemplatesList({ colors, templates, counts, starterMeta, template
       <View style={styles.sectionHeader}>
         <Text variant="subtitle" style={{ color: colors.onBackground }}>Templates</Text>
         <Button variant="ghost" size="sm" onPress={() => router.push("/template/create")} accessibilityLabel="Create new template">
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: 14 }}>Create</Text></View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: fontSizes.sm }}>Create</Text></View>
         </Button>
       </View>
       {templates.length === 0 ? (

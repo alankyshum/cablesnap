@@ -9,6 +9,7 @@ import {
   SwitchProps as RNSwitchProps,
   TextStyle,
 } from 'react-native';
+import { fontSizes } from "@/constants/design-tokens";
 
 interface SwitchProps extends RNSwitchProps {
   label?: string;
@@ -65,7 +66,7 @@ export function Switch({ label, error, labelStyle, ...props }: SwitchProps) {
           ellipsizeMode='tail'
           style={[
             {
-              fontSize: 12, // Slightly smaller for error text
+              fontSize: fontSizes.xs, // Slightly smaller for error text
               color: danger, // Always use danger color for errors
               marginTop: 4, // Add spacing above error text
             },

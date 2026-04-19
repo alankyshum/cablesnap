@@ -8,6 +8,7 @@ import {
 } from "../../lib/types";
 import { semantic, DIFFICULTY_COLORS } from "../../constants/theme";
 import { radii } from "../../constants/design-tokens";
+import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseCardProps {
   item: Exercise;
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   customBadgeText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "600",
   },
   muscleRow: {
@@ -120,6 +121,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   muscleLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
   },
 });

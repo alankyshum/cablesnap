@@ -5,6 +5,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useExerciseDrawerStats } from "@/hooks/useExerciseDrawerStats";
 import { toDisplay } from "@/lib/units";
 import type { ExerciseRecords, ExerciseSession } from "@/lib/db/exercise-history";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   exerciseId: string;
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "700",
     letterSpacing: 1,
     marginBottom: 8,
@@ -280,11 +281,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     marginBottom: 2,
   },
   statValue: {
-    fontSize: 15,
+    fontSize: fontSizes.base,
     fontWeight: "600",
   },
   divider: {
@@ -296,11 +297,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   lastSessionDate: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     marginBottom: 2,
   },
   emptyText: {
-    fontSize: 13,
+    fontSize: fontSizes.sm,
     fontStyle: "italic",
   },
 });

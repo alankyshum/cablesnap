@@ -14,6 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { PRCelebrationState } from "@/hooks/usePRCelebration";
+import { fontSizes } from "@/constants/design-tokens";
 
 const PARTICLE_COUNT = 18;
 
@@ -198,10 +199,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   badgeEmoji: {
-    fontSize: 24,
+    fontSize: fontSizes.xxl,
   },
   badgeText: {
-    fontSize: 18,
+    fontSize: fontSizes.lg,
     fontWeight: "800",
     letterSpacing: 1,
   },

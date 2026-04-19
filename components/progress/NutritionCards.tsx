@@ -5,6 +5,7 @@ import { CartesianChart, Line } from "victory-native";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { semantic } from "../../constants/theme";
 import type { DailyNutritionTotal, WeeklyNutritionAverage, NutritionAdherence } from "../../lib/db";
+import { fontSizes } from "@/constants/design-tokens";
 
 // ─── Calorie Trend Card ────────────────────────────────────────────
 
@@ -130,7 +131,7 @@ export function WeeklyAveragesCard({ weeklyAverages, style }: WeeklyAveragesCard
       <View style={styles.weekCompare}>
         <View style={{ flex: 1 }}>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>This Week</Text>
-          <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: "600" }}>
+          <Text style={{ color: colors.onSurface, fontSize: fontSizes.xl, fontWeight: "600" }}>
             {thisWeek.avgCalories} cal
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
@@ -140,7 +141,7 @@ export function WeeklyAveragesCard({ weeklyAverages, style }: WeeklyAveragesCard
         {lastWeek && (
           <View style={{ flex: 1 }}>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Last Week</Text>
-            <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: "600" }}>
+            <Text style={{ color: colors.onSurface, fontSize: fontSizes.xl, fontWeight: "600" }}>
               {lastWeek.avgCalories} cal
             </Text>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
@@ -169,8 +170,8 @@ export function WeeklyAveragesCard({ weeklyAverages, style }: WeeklyAveragesCard
 function MacroPill({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
   return (
     <View style={[styles.macroPill, { borderColor: color }]}>
-      <Text style={{ color, fontWeight: "600", fontSize: 12 }}>{label}</Text>
-      <Text style={{ color, fontSize: 14, fontWeight: "600", marginLeft: 4 }}>{value}{unit}</Text>
+      <Text style={{ color, fontWeight: "600", fontSize: fontSizes.xs }}>{label}</Text>
+      <Text style={{ color, fontSize: fontSizes.sm, fontWeight: "600", marginLeft: 4 }}>{value}{unit}</Text>
     </View>
   );
 }
@@ -198,11 +199,11 @@ export function AdherenceCard({ adherence, style }: AdherenceCardProps) {
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
           Adherence
         </Text>
-        {isPerfect && <Text style={{ fontSize: 18 }}>🎯</Text>}
+        {isPerfect && <Text style={{ fontSize: fontSizes.lg }}>🎯</Text>}
       </View>
 
       <Text
-        style={{ color: colors.onSurface, fontSize: 28, fontWeight: "700", marginTop: 4 }}
+        style={{ color: colors.onSurface, fontSize: fontSizes.heading, fontWeight: "700", marginTop: 4 }}
         accessibilityLabel={`${pct}% of tracked days on target`}
       >
         {pct}%
@@ -323,7 +324,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <View style={styles.legendItem}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
-      <Text style={{ fontSize: 12, color }}>{label}</Text>
+      <Text style={{ fontSize: fontSizes.xs, color }}>{label}</Text>
     </View>
   );
 }

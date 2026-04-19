@@ -6,6 +6,7 @@ import { DIFFICULTY_COLORS, READINESS_COLORS } from "./ui/flow-card-colors";
 import type { ReadinessBadge } from "../lib/recovery-readiness";
 import type { MetaBadge } from "./FlowCard";
 import type { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 export function BadgeRow({ badges, readiness, isDark, colors }: {
   badges?: { label: string; type: "active" | "starter" | "recommended" }[];
@@ -56,6 +57,6 @@ export function MetaRow({ meta, colors }: { meta: MetaBadge[]; colors: ReturnTyp
 
 const styles = StyleSheet.create({
   badge: { height: 24, paddingHorizontal: 8, borderRadius: 8, justifyContent: "center" },
-  badgeText: { fontSize: 12, lineHeight: 16 },
+  badgeText: { fontSize: fontSizes.xs, lineHeight: 16 },
   metaBadge: { flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: 8 },
 });

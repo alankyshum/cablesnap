@@ -8,6 +8,7 @@ import {
   type DayDetail,
 } from "@/lib/db/calendar";
 import { formatDuration } from "@/lib/format";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   dateStr: string;
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sessionName: {
-    fontSize: 15,
+    fontSize: fontSizes.base,
     fontWeight: "600",
   },
   muscleRow: {

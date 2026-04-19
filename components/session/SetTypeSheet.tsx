@@ -5,6 +5,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { SET_TYPE_CYCLE, SET_TYPE_LABELS } from "../../lib/types";
 import type { SetType } from "../../lib/types";
 import type { ExerciseGroup } from "./types";
+import { fontSizes } from "@/constants/design-tokens";
 
 type SetTypeSheetProps = {
   setId: string;
@@ -55,7 +56,7 @@ export function SetTypeSheet({ setId, groups, onSelect, onDismiss }: SetTypeShee
                     : colors.surfaceDisabled,
                 }]}>
                   <Text style={{
-                    fontSize: 13, fontWeight: "700",
+                    fontSize: fontSizes.sm, fontWeight: "700",
                     color: type === "warmup" ? colors.onSurfaceVariant
                       : type === "dropset" ? colors.onTertiaryContainer
                       : colors.onErrorContainer,
@@ -63,7 +64,7 @@ export function SetTypeSheet({ setId, groups, onSelect, onDismiss }: SetTypeShee
                 </View>
               ) : (
                 <View style={[styles.setTypeChipPreview, { backgroundColor: colors.surfaceDisabled }]}>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onSurface }}>—</Text>
+                  <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: colors.onSurface }}>—</Text>
                 </View>
               )}
               <Text variant="body" style={{ color: colors.onSurface, marginLeft: 12 }}>

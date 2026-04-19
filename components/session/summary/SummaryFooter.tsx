@@ -5,6 +5,7 @@ import ShareCard from "@/components/ShareCard";
 import type { ShareCardExercise, ShareCardPR } from "@/components/ShareCard";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { RefObject } from "react";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   colors: ThemeColors;
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
   actionBtn: { borderRadius: 8 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 },
   modalContent: { width: "100%", maxWidth: 400, borderRadius: 16, padding: 24 },
-  modalInput: { borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16 },
+  modalInput: { borderWidth: 1, borderRadius: 8, padding: 12, fontSize: fontSizes.base, marginBottom: 16 },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },
   previewOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 16 },
   previewContainer: { width: "100%", maxWidth: 400, maxHeight: "85%", borderRadius: 16, overflow: "hidden" },

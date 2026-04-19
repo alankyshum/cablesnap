@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   currentStreak: number;
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   streakValue: {
-    fontSize: 24,
+    fontSize: fontSizes.xxl,
     fontWeight: "700",
     marginBottom: 4,
   },

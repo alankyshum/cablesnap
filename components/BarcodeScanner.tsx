@@ -6,6 +6,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { CAMERA_OVERLAY } from "../constants/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type BarcodeScanResult = {
   type: string;
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 80,
     textAlign: "center",
-    fontSize: 18,
+    fontSize: fontSizes.lg,
     fontWeight: "600",
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 0, height: 1 },
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   closeText: {
-    fontSize: 22,
+    fontSize: fontSizes.xxl,
     fontWeight: "bold",
   },
 });
