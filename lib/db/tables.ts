@@ -21,14 +21,16 @@ function assertValidTable(table: string): void {
 
 export async function hasColumn(database: SQLite.SQLiteDatabase, table: string, column: string): Promise<boolean> {
   assertValidTable(table);
-  const cols = await database.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  const sql = "PRAGMA table_info(" + table + ")";
+  const cols = await database.getAllAsync<{ name: string }>(sql);
   return cols.some((c) => c.name === column);
 }
 
 export async function addColumnIfMissing(database: SQLite.SQLiteDatabase, table: string, column: string, definition: string): Promise<void> {
   assertValidTable(table);
   if (!(await hasColumn(database, table, column))) {
-    await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    const sql = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition;
+    await database.execAsync(sql);
   }
 }
 

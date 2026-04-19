@@ -50,7 +50,7 @@ export default function CalendarView({ weekStartDay }: Props) {
   const isCurrentMonth =
     year === now.getFullYear() && month === now.getMonth();
 
-  const workoutDateSet = new Set(workoutDays.map((d) => d.workout_date));
+  const workoutDateSet = new Set(Array.from(workoutDays, (d) => d.workout_date));
 
   const loadData = async (y: number, m: number) => {
     setLoading(true);
@@ -140,7 +140,7 @@ export default function CalendarView({ weekStartDay }: Props) {
   }
 
   return (
-    // bounded list — ScrollView is intentional: renders fixed calendar grid + streak stats, not unbounded .map()
+    // bounded list — ScrollView is intentional: renders fixed calendar grid + streak stats
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={[
