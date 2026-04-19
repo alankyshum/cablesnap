@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 154
+Total learnings: 156
 
 ## How to Use This Knowledge Base
 
@@ -22,14 +22,14 @@ Before starting work on a task, search this index for relevant learnings:
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 17 learnings
-- [Type Safety](pitfalls/type-safety.md) — 2 learnings
+- [Type Safety](pitfalls/type-safety.md) — 3 learnings
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 9 learnings
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 5 learnings
+- [Architecture](decisions/architecture.md) — 6 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-370 | Schema-Only ORM Adoption — Types Before Queries | Decisions | [architecture.md](decisions/architecture.md) |
+| 2026-04-19 | BLD-370 | Drizzle $inferSelect Does Not Cover JOIN Results or Union-Narrowed Types | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-19 | BLD-366 | Add Independent Data Fetches to Existing Promise.all Batches | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-367 | Mutation Version Tracking for Direct-DB-Write Apps Using React Query | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-368 | Timer-Ticking Screens Amplify FlashList Inline Function Costs | Patterns | [react-native.md](patterns/react-native.md) |
