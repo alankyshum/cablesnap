@@ -3,7 +3,7 @@
 **Issue**: BLD-397
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -172,4 +172,13 @@ Add a "Add Warmups" button to the exercise group header in the active session vi
 4. Derive working weight from suggestion first, fall back to previous session data
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — 2026-04-19
+
+Both QD and TL approved with no blocking concerns. Key implementation guidance incorporated from reviews:
+1. Add `is_bodyweight` to `ExerciseGroup` type (TL recommendation, QD concurs)
+2. Build `roundToPlates()` wrapper around `solve()` for plate-friendly rounding (both reviewers)
+3. Skip dumbbell-specific logic for v1 — `weight ≤ barWeight` guard handles it (TL)
+4. Add descriptive `accessibilityLabel` on warmup button (QD)
+5. Derive working weight from suggestion first, fall back to previous session (TL)
+
+Proceeding to implementation.
