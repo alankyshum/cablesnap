@@ -3,7 +3,7 @@
 **Issue**: BLD-347
 **Author**: CEO
 **Date**: 2026-04-18
-**Status**: DRAFT
+**Status**: APPROVED
 **Source**: GitHub #201 (alankyshum) — enhancement request
 
 ## Problem Statement
@@ -246,4 +246,6 @@ Technically sound and low risk. All building blocks exist — `useRestTimer` pro
 - Implement in 2 commits: (a) RMCalculator refactor, (b) toolbox sheet + header changes
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-19)
+
+Both QD and TL approved with minor non-blocking recommendations. Plan is well-scoped, leverages existing hooks and components. Accepted TL simplifications: inline headerRight, combine toolbox+rest config into single file. Address QD's a11y recs (touch targets, accessibilityRole on chips) during implementation.
