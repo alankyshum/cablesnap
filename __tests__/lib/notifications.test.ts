@@ -9,11 +9,12 @@ jest.mock("expo-notifications", () => {
     getPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
     requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
     cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
+    cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
     scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setNotificationHandler: jest.fn((h: any) => { handler = h; }),
     addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
-    SchedulableTriggerInputTypes: { WEEKLY: "weekly" },
+    SchedulableTriggerInputTypes: { WEEKLY: "weekly", TIME_INTERVAL: "timeInterval" },
     _getHandler: () => handler,
   };
 });
@@ -25,6 +26,7 @@ jest.mock("../../lib/db", () => ({
   getTemplateById: jest.fn().mockResolvedValue(null),
 }));
 
+// eslint-disable-next-line max-lines-per-function
 describe("notifications", () => {
   let notifications: typeof import("../../lib/notifications");
   let Notifications: typeof import("expo-notifications");
@@ -42,11 +44,12 @@ describe("notifications", () => {
         getPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
         requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
         cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
+        cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
         scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setNotificationHandler: jest.fn((h: any) => { handler = h; }),
         addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
-        SchedulableTriggerInputTypes: { WEEKLY: "weekly" },
+        SchedulableTriggerInputTypes: { WEEKLY: "weekly", TIME_INTERVAL: "timeInterval" },
         _getHandler: () => handler,
       };
     });
@@ -222,6 +225,63 @@ describe("notifications", () => {
         shouldShowBanner: true,
         shouldShowList: true,
       });
+    });
+  });
+
+  describe("scheduleRestComplete", () => {
+    it("schedules a time-interval notification", async () => {
+      const id = await notifications.scheduleRestComplete(60, "session-1");
+      expect(id).toBe("notif-id");
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
+        content: {
+          title: "Rest Complete",
+          body: "Time for your next set 💪",
+          sound: "default",
+          data: { sessionId: "session-1", type: "rest_complete" },
+        },
+        trigger: {
+          type: "timeInterval",
+          seconds: 60,
+          repeats: false,
+        },
+      });
+    });
+
+    it("returns null when schedule throws", async () => {
+      (Notifications.scheduleNotificationAsync as jest.Mock).mockRejectedValueOnce(new Error("fail"));
+      const id = await notifications.scheduleRestComplete(60, "s1");
+      expect(id).toBeNull();
+    });
+  });
+
+  describe("cancelRestComplete", () => {
+    it("cancels a specific scheduled notification", async () => {
+      await notifications.cancelRestComplete("notif-123");
+      expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("notif-123");
+    });
+
+    it("does not throw when cancel fails", async () => {
+      (Notifications.cancelScheduledNotificationAsync as jest.Mock).mockRejectedValueOnce(new Error("gone"));
+      await expect(notifications.cancelRestComplete("notif-123")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("handleResponse — rest_complete", () => {
+    const navigate = jest.fn();
+    const showSnackbar = jest.fn();
+
+    beforeEach(() => {
+      navigate.mockClear();
+      showSnackbar.mockClear();
+    });
+
+    it("navigates to session on rest_complete notification tap", async () => {
+      const response = {
+        notification: { request: { content: { data: { type: "rest_complete", sessionId: "sess-42" } } } },
+      };
+      await notifications.handleResponse(response, navigate, showSnackbar);
+      expect(navigate).toHaveBeenCalledWith("/session/sess-42");
+      expect(showSnackbar).not.toHaveBeenCalled();
     });
   });
 });
