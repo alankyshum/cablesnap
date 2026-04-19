@@ -1,5 +1,5 @@
 import { eq, sql, asc } from "drizzle-orm";
-import { getDrizzle, execute } from "./helpers";
+import { getDrizzle } from "./helpers";
 import { healthConnectSyncLog } from "./schema";
 import { uuid } from "../uuid";
 
@@ -41,20 +41,20 @@ export async function markHCSyncFailed(
   sessionId: string,
   error: string
 ): Promise<void> {
-  await execute(
-    "UPDATE health_connect_sync_log SET status = 'failed', error = ?, retry_count = retry_count + 1 WHERE session_id = ?",
-    [error, sessionId]
-  );
+  const db = await getDrizzle();
+  await db.update(healthConnectSyncLog)
+    .set({ status: "failed", error, retry_count: sql`retry_count + 1` })
+    .where(eq(healthConnectSyncLog.session_id, sessionId));
 }
 
 export async function markHCSyncPermanentlyFailed(
   sessionId: string,
   reason?: string
 ): Promise<void> {
-  await execute(
-    "UPDATE health_connect_sync_log SET status = 'permanently_failed', error = COALESCE(?, error) WHERE session_id = ?",
-    [reason ?? null, sessionId]
-  );
+  const db = await getDrizzle();
+  await db.update(healthConnectSyncLog)
+    .set({ status: "permanently_failed", error: sql`COALESCE(${reason ?? null}, error)` })
+    .where(eq(healthConnectSyncLog.session_id, sessionId));
 }
 
 export async function getHCPendingOrFailedSyncs(): Promise<HCSyncLog[]> {
@@ -77,8 +77,8 @@ export async function getHCSyncLogForSession(
 }
 
 export async function markAllHCPendingAsFailed(reason: string): Promise<void> {
-  await execute(
-    "UPDATE health_connect_sync_log SET status = 'permanently_failed', error = ? WHERE status IN ('pending', 'failed')",
-    [reason]
-  );
+  const db = await getDrizzle();
+  await db.update(healthConnectSyncLog)
+    .set({ status: "permanently_failed", error: reason })
+    .where(sql`${healthConnectSyncLog.status} IN ('pending', 'failed')`);
 }

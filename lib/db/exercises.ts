@@ -1,8 +1,8 @@
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, inArray } from "drizzle-orm";
 import type { Exercise } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, query, getDatabase } from "./helpers";
-import { exercises } from "./schema";
+import { exercises, templateExercises } from "./schema";
 import type { ExerciseRow } from "./schema";
 
 function mapRow(row: ExerciseRow): Exercise {
@@ -49,13 +49,10 @@ export async function getExercisesByIds(
   exerciseIds: string[]
 ): Promise<Record<string, Exercise>> {
   if (exerciseIds.length === 0) return {};
-  const placeholders = exerciseIds.map(() => "?").join(",");
-  const rows = await query<ExerciseRow>(
-    `SELECT * FROM exercises WHERE id IN (${placeholders})`,
-    exerciseIds
-  );
+  const db = await getDrizzle();
+  const rows = await db.select().from(exercises).where(inArray(exercises.id, exerciseIds));
   const result: Record<string, Exercise> = {};
-  for (const row of rows) result[row.id] = mapRow(row);
+  for (const row of rows as unknown as ExerciseRow[]) result[row.id] = mapRow(row);
   return result;
 }
 
@@ -101,14 +98,11 @@ export async function updateCustomExercise(
 export async function softDeleteCustomExercise(id: string): Promise<void> {
   const database = await getDatabase();
   await database.withTransactionAsync(async () => {
-    await database.runAsync(
-      "DELETE FROM template_exercises WHERE exercise_id = ?",
-      [id]
-    );
-    await database.runAsync(
-      "UPDATE exercises SET deleted_at = ? WHERE id = ? AND is_custom = 1",
-      [Date.now(), id]
-    );
+    const db = await getDrizzle();
+    await db.delete(templateExercises).where(eq(templateExercises.exercise_id, id));
+    await db.update(exercises)
+      .set({ deleted_at: Date.now() })
+      .where(and(eq(exercises.id, id), eq(exercises.is_custom, 1)));
   });
 }
 

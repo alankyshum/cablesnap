@@ -1,6 +1,8 @@
 import type { Meal, MealTemplate, MealTemplateItem } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, getDatabase } from "./helpers";
+import { query, queryOne, getDatabase, getDrizzle } from "./helpers";
+import { mealTemplates, foodEntries } from "./schema";
+import { desc, eq } from "drizzle-orm";
 import type { MealTemplateRow as SchemaMealTemplateRow } from "./schema";
 
 type MealTemplateRow = SchemaMealTemplateRow;
@@ -96,10 +98,11 @@ export async function createMealTemplate(
 }
 
 export async function getMealTemplates(): Promise<MealTemplate[]> {
-  const rows = await query<MealTemplateRow>(
-    "SELECT * FROM meal_templates ORDER BY last_used_at DESC NULLS LAST, created_at DESC"
-  );
-  return rows.map(mapTemplate);
+  const db = await getDrizzle();
+  const rows = await db.select()
+    .from(mealTemplates)
+    .orderBy(desc(mealTemplates.last_used_at), desc(mealTemplates.created_at));
+  return (rows as unknown as MealTemplateRow[]).map(mapTemplate);
 }
 
 export async function getMealTemplateById(id: string): Promise<MealTemplate | null> {
@@ -253,16 +256,17 @@ async function computeMacros(
   let carbs = 0;
   let fat = 0;
 
+  const db = await getDrizzle();
   for (const item of items) {
-    const food = await queryOne<{
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    }>(
-      "SELECT calories, protein, carbs, fat FROM food_entries WHERE id = ?",
-      [item.food_entry_id]
-    );
+    const food = await db.select({
+      calories: foodEntries.calories,
+      protein: foodEntries.protein,
+      carbs: foodEntries.carbs,
+      fat: foodEntries.fat,
+    })
+      .from(foodEntries)
+      .where(eq(foodEntries.id, item.food_entry_id))
+      .get();
     if (food) {
       calories += food.calories * item.servings;
       protein += food.protein * item.servings;

@@ -1,4 +1,6 @@
-import { query, queryOne } from "./helpers";
+import { asc, gte } from "drizzle-orm";
+import { query, queryOne, getDrizzle } from "./helpers";
+import { bodyWeight, bodyMeasurements } from "./schema";
 
 export type WorkoutCSVRow = {
   date: string;
@@ -108,16 +110,32 @@ export async function getCSVCounts(since: number): Promise<{ sessions: number; e
 
 export async function getBodyWeightCSVData(since: number): Promise<BodyWeightCSVRow[]> {
   const cutoff = since === 0 ? "0000-01-01" : new Date(since).toISOString().slice(0, 10);
-  return query<BodyWeightCSVRow>(
-    "SELECT date, weight, notes FROM body_weight WHERE date >= ? ORDER BY date ASC",
-    [cutoff]
-  );
+  const db = await getDrizzle();
+  return db.select({ date: bodyWeight.date, weight: bodyWeight.weight, notes: bodyWeight.notes })
+    .from(bodyWeight)
+    .where(gte(bodyWeight.date, cutoff))
+    .orderBy(asc(bodyWeight.date)) as unknown as Promise<BodyWeightCSVRow[]>;
 }
 
 export async function getBodyMeasurementsCSVData(since: number): Promise<BodyMeasurementsCSVRow[]> {
   const cutoff = since === 0 ? "0000-01-01" : new Date(since).toISOString().slice(0, 10);
-  return query<BodyMeasurementsCSVRow>(
-    "SELECT date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes FROM body_measurements WHERE date >= ? ORDER BY date ASC",
-    [cutoff]
-  );
+  const db = await getDrizzle();
+  return db.select({
+    date: bodyMeasurements.date,
+    waist: bodyMeasurements.waist,
+    chest: bodyMeasurements.chest,
+    hips: bodyMeasurements.hips,
+    left_arm: bodyMeasurements.left_arm,
+    right_arm: bodyMeasurements.right_arm,
+    left_thigh: bodyMeasurements.left_thigh,
+    right_thigh: bodyMeasurements.right_thigh,
+    left_calf: bodyMeasurements.left_calf,
+    right_calf: bodyMeasurements.right_calf,
+    neck: bodyMeasurements.neck,
+    body_fat: bodyMeasurements.body_fat,
+    notes: bodyMeasurements.notes,
+  })
+    .from(bodyMeasurements)
+    .where(gte(bodyMeasurements.date, cutoff))
+    .orderBy(asc(bodyMeasurements.date)) as unknown as Promise<BodyMeasurementsCSVRow[]>;
 }

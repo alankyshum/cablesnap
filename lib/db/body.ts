@@ -1,7 +1,7 @@
 import { eq, sql, desc, asc } from "drizzle-orm";
 import type { BodyWeight, BodyMeasurements, BodySettings } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, execute } from "./helpers";
+import { getDrizzle } from "./helpers";
 import { bodyWeight, bodyMeasurements, bodySettings } from "./schema";
 
 export async function getBodySettings(): Promise<BodySettings> {
@@ -44,12 +44,13 @@ export async function upsertBodyWeight(
 ): Promise<BodyWeight> {
   const id = uuid();
   const now = Date.now();
-  await execute(
-    `INSERT INTO body_weight (id, weight, date, notes, logged_at) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(date) DO UPDATE SET weight = excluded.weight, notes = excluded.notes, logged_at = excluded.logged_at`,
-    [id, weight, date, notes, now]
-  );
   const db = await getDrizzle();
+  await db.insert(bodyWeight)
+    .values({ id, weight, date, notes, logged_at: now })
+    .onConflictDoUpdate({
+      target: bodyWeight.date,
+      set: { weight, notes, logged_at: now },
+    });
   const row = await db.select().from(bodyWeight).where(eq(bodyWeight.date, date)).get();
   return row as unknown as BodyWeight;
 }
@@ -118,19 +119,28 @@ export async function upsertBodyMeasurements(
 ): Promise<BodyMeasurements> {
   const id = uuid();
   const now = Date.now();
-  await execute(
-    `INSERT INTO body_measurements (id, date, waist, chest, hips, left_arm, right_arm, left_thigh, right_thigh, left_calf, right_calf, neck, body_fat, notes, logged_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(date) DO UPDATE SET
-       waist = excluded.waist, chest = excluded.chest, hips = excluded.hips,
-       left_arm = excluded.left_arm, right_arm = excluded.right_arm,
-       left_thigh = excluded.left_thigh, right_thigh = excluded.right_thigh,
-       left_calf = excluded.left_calf, right_calf = excluded.right_calf,
-       neck = excluded.neck, body_fat = excluded.body_fat,
-       notes = excluded.notes, logged_at = excluded.logged_at`,
-    [id, date, vals.waist, vals.chest, vals.hips, vals.left_arm, vals.right_arm, vals.left_thigh, vals.right_thigh, vals.left_calf, vals.right_calf, vals.neck, vals.body_fat, vals.notes, now]
-  );
   const db = await getDrizzle();
+  await db.insert(bodyMeasurements)
+    .values({
+      id, date,
+      waist: vals.waist, chest: vals.chest, hips: vals.hips,
+      left_arm: vals.left_arm, right_arm: vals.right_arm,
+      left_thigh: vals.left_thigh, right_thigh: vals.right_thigh,
+      left_calf: vals.left_calf, right_calf: vals.right_calf,
+      neck: vals.neck, body_fat: vals.body_fat,
+      notes: vals.notes, logged_at: now,
+    })
+    .onConflictDoUpdate({
+      target: bodyMeasurements.date,
+      set: {
+        waist: vals.waist, chest: vals.chest, hips: vals.hips,
+        left_arm: vals.left_arm, right_arm: vals.right_arm,
+        left_thigh: vals.left_thigh, right_thigh: vals.right_thigh,
+        left_calf: vals.left_calf, right_calf: vals.right_calf,
+        neck: vals.neck, body_fat: vals.body_fat,
+        notes: vals.notes, logged_at: now,
+      },
+    });
   const row = await db.select().from(bodyMeasurements).where(eq(bodyMeasurements.date, date)).get();
   return row as unknown as BodyMeasurements;
 }

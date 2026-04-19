@@ -297,14 +297,9 @@ describe("exercises CRUD", () => {
     await initDb();
     await db.softDeleteCustomExercise("ex1");
     expect(mockDb.withTransactionAsync).toHaveBeenCalled();
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM template_exercises"),
-      ["ex1"]
-    );
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE exercises SET deleted_at"),
-      expect.arrayContaining(["ex1"])
-    );
+    // Now uses Drizzle delete + update inside the transaction
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("getExerciseById returns soft-deleted exercise for historical lookup", async () => {
@@ -606,16 +601,21 @@ describe("body tracking CRUD", () => {
   it("upsertBodyWeight inserts with ON CONFLICT", async () => {
     await initDb();
     const row = { id: "bw1", weight: 80, date: "2024-01-15", notes: "morning", logged_at: 100 };
-    // upsertBodyWeight: first execute() → runAsync, then Drizzle .get() for the select
+    // upsertBodyWeight: Drizzle insert().values().onConflictDoUpdate(), then Drizzle .get()
     mockDrizzleGet(row);
+
+    // Need to add onConflictDoUpdate to the insert chain
+    const insertChain: any = {
+      values: jest.fn().mockReturnThis(),
+      onConflictDoUpdate: jest.fn().mockReturnThis(),
+      then: (r: any) => Promise.resolve().then(r),
+    };
+    mockDrizzleDb.insert.mockReturnValueOnce(insertChain);
 
     const result = await db.upsertBodyWeight(80, "2024-01-15", "morning");
     expect(result.weight).toBe(80);
     expect(result.date).toBe("2024-01-15");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("ON CONFLICT(date)"),
-      expect.any(Array)
-    );
+    expect(mockDrizzleDb.insert).toHaveBeenCalled();
   });
 
   it("getBodyWeightEntries queries with limit and offset", async () => {
@@ -654,16 +654,20 @@ describe("body tracking CRUD", () => {
       notes: "post-cut",
     };
     const row = { id: "bm1", date: "2024-01-15", ...vals, logged_at: 100 };
-    // upsertBodyMeasurements: first execute() → runAsync, then Drizzle .get()
+    // upsertBodyMeasurements: Drizzle insert().values().onConflictDoUpdate(), then Drizzle .get()
     mockDrizzleGet(row);
+
+    const insertChain: any = {
+      values: jest.fn().mockReturnThis(),
+      onConflictDoUpdate: jest.fn().mockReturnThis(),
+      then: (r: any) => Promise.resolve().then(r),
+    };
+    mockDrizzleDb.insert.mockReturnValueOnce(insertChain);
 
     const result = await db.upsertBodyMeasurements("2024-01-15", vals);
     expect(result.waist).toBe(80);
     expect(result.body_fat).toBe(15);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("ON CONFLICT(date)"),
-      expect.any(Array)
-    );
+    expect(mockDrizzleDb.insert).toHaveBeenCalled();
   });
 
   it("getLatestMeasurements returns most recent", async () => {

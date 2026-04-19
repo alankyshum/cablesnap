@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 let mockUuidCounter = 0;
 
 jest.mock("expo-crypto", () => ({
@@ -16,8 +17,34 @@ const mockDb = {
   }),
 };
 
+// Drizzle mock for getDrizzle() calls
+let drizzleGetResults: any[] = [];
+let drizzleQueryResult: any = [];
+
+const mockDrizzleDb = {
+  select: jest.fn(() => {
+    const chain: any = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      get: jest.fn(() => drizzleGetResults.shift()),
+      then: (r: any, rj: any) => Promise.resolve(drizzleQueryResult).then(r, rj),
+    };
+    return chain;
+  }),
+  insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), onConflictDoNothing: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+};
+
 jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
+}));
+
+jest.mock("drizzle-orm/expo-sqlite", () => ({
+  drizzle: jest.fn(() => mockDrizzleDb),
 }));
 
 import {
@@ -34,11 +61,15 @@ import { getDatabase } from "../../../lib/db/helpers";
 async function initDb() {
   await getDatabase();
   jest.clearAllMocks();
+  drizzleGetResults = [];
+  drizzleQueryResult = [];
 }
 
 beforeEach(async () => {
   jest.clearAllMocks();
   mockUuidCounter = 0;
+  drizzleGetResults = [];
+  drizzleQueryResult = [];
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue(null);
   mockDb.runAsync.mockResolvedValue({ changes: 1 });
@@ -50,10 +81,11 @@ beforeEach(async () => {
 
 describe("createMealTemplate", () => {
   it("creates a template with items and cached macros", async () => {
-    // Mock food lookups for macro computation
-    mockDb.getFirstAsync
-      .mockResolvedValueOnce({ calories: 200, protein: 10, carbs: 30, fat: 5 })
-      .mockResolvedValueOnce({ calories: 150, protein: 20, carbs: 10, fat: 3 });
+    // Mock food lookups for macro computation (now via Drizzle .get())
+    drizzleGetResults = [
+      { calories: 200, protein: 10, carbs: 30, fat: 5 },
+      { calories: 150, protein: 20, carbs: 10, fat: 3 },
+    ];
 
     const result = await createMealTemplate({
       name: "My Breakfast",
@@ -94,18 +126,16 @@ describe("createMealTemplate", () => {
 
 describe("getMealTemplates", () => {
   it("returns templates sorted by last_used_at", async () => {
-    mockDb.getAllAsync.mockResolvedValueOnce([
+    drizzleQueryResult = [
       { id: "t1", name: "Breakfast", meal: "breakfast", cached_calories: 500, cached_protein: 30, cached_carbs: 60, cached_fat: 15, last_used_at: 2000, created_at: 1000, updated_at: 1000 },
       { id: "t2", name: "Lunch", meal: "lunch", cached_calories: 700, cached_protein: 40, cached_carbs: 80, cached_fat: 20, last_used_at: 1000, created_at: 900, updated_at: 900 },
-    ]);
+    ];
 
     const templates = await getMealTemplates();
     expect(templates).toHaveLength(2);
     expect(templates[0].name).toBe("Breakfast");
     expect(templates[1].name).toBe("Lunch");
-    expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      expect.stringContaining("ORDER BY last_used_at DESC")
-    );
+    expect(mockDrizzleDb.select).toHaveBeenCalled();
   });
 });
 
@@ -148,8 +178,9 @@ describe("getMealTemplateById", () => {
 
 describe("updateMealTemplate", () => {
   it("updates template, deletes old items, inserts new items", async () => {
-    mockDb.getFirstAsync
-      .mockResolvedValueOnce({ calories: 300, protein: 15, carbs: 40, fat: 10 });
+    drizzleGetResults = [
+      { calories: 300, protein: 15, carbs: 40, fat: 10 },
+    ];
 
     await updateMealTemplate("t1", {
       name: "Updated Breakfast",

@@ -90,10 +90,10 @@ export async function getPhotoCount(poseFilter?: PoseCategory): Promise<number> 
 }
 
 export async function softDeletePhoto(id: string): Promise<void> {
-  await execute(
-    "UPDATE progress_photos SET deleted_at = datetime('now') WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  await db.update(progressPhotos)
+    .set({ deleted_at: sql`datetime('now')` })
+    .where(eq(progressPhotos.id, id));
 }
 
 export async function restorePhoto(id: string): Promise<void> {

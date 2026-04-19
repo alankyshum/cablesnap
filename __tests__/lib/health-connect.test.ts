@@ -65,26 +65,17 @@ describe("Health Connect DB functions", () => {
 
   it("markHCSyncFailed increments retry_count", async () => {
     await markHCSyncFailed("session-abc", "Network error");
-    expect(mockExecute).toHaveBeenCalledWith(
-      expect.stringContaining("retry_count = retry_count + 1"),
-      ["Network error", "session-abc"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("markHCSyncPermanentlyFailed sets status and optional reason", async () => {
     await markHCSyncPermanentlyFailed("session-abc", "Max retries exceeded");
-    expect(mockExecute).toHaveBeenCalledWith(
-      expect.stringContaining("permanently_failed"),
-      ["Max retries exceeded", "session-abc"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("markAllHCPendingAsFailed marks all pending/failed entries", async () => {
     await markAllHCPendingAsFailed("User disabled Health Connect");
-    expect(mockExecute).toHaveBeenCalledWith(
-      expect.stringContaining("WHERE status IN ('pending', 'failed')"),
-      ["User disabled Health Connect"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("getHCPendingOrFailedSyncs queries pending and failed entries", async () => {

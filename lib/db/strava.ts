@@ -1,5 +1,5 @@
 import { eq, sql, asc } from "drizzle-orm";
-import { getDrizzle, execute } from "./helpers";
+import { getDrizzle } from "./helpers";
 import { stravaConnection, stravaSyncLog } from "./schema";
 import { uuid } from "../uuid";
 import type { StravaConnectionRow } from "./schema";
@@ -73,10 +73,10 @@ export async function markSyncFailed(
   sessionId: string,
   error: string
 ): Promise<void> {
-  await execute(
-    "UPDATE strava_sync_log SET status = 'failed', error = ?, retry_count = retry_count + 1 WHERE session_id = ?",
-    [error, sessionId]
-  );
+  const db = await getDrizzle();
+  await db.update(stravaSyncLog)
+    .set({ status: "failed", error, retry_count: sql`retry_count + 1` })
+    .where(eq(stravaSyncLog.session_id, sessionId));
 }
 
 export async function markSyncPermanentlyFailed(

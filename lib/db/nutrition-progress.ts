@@ -1,5 +1,7 @@
-import { query, queryOne } from "./helpers";
+import { query } from "./helpers";
+import { getDrizzle } from "./helpers";
 import type { MacroTargets } from "../types";
+import { macroTargets } from "./schema";
 import { NUTRITION_ON_TARGET_TOLERANCE } from "./weekly-summary";
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -201,7 +203,7 @@ export async function getNutritionAdherence(
  * Get macro targets. Returns null if no targets are set.
  */
 export async function getNutritionTargets(): Promise<MacroTargets | null> {
-  return queryOne<MacroTargets>(
-    "SELECT * FROM macro_targets LIMIT 1",
-  );
+  const db = await getDrizzle();
+  const row = await db.select().from(macroTargets).limit(1).get();
+  return (row as unknown as MacroTargets) ?? null;
 }

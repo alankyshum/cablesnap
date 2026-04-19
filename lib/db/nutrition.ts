@@ -1,4 +1,4 @@
-import { eq, desc, asc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import type { FoodEntry, DailyLog, MacroTargets, Meal } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, query, queryOne } from "./helpers";
@@ -158,11 +158,19 @@ export async function findDuplicateFoodEntry(
   carbs: number,
   fat: number
 ): Promise<FoodEntry | null> {
-  const row = await queryOne<FoodRow>(
-    "SELECT * FROM food_entries WHERE LOWER(name) = LOWER(?) AND calories = ? AND protein = ? AND carbs = ? AND fat = ? LIMIT 1",
-    [name, calories, protein, carbs, fat]
-  );
-  return row ? mapFood(row) : null;
+  const db = await getDrizzle();
+  const row = await db.select()
+    .from(foodEntries)
+    .where(and(
+      sql`LOWER(${foodEntries.name}) = LOWER(${name})`,
+      eq(foodEntries.calories, calories),
+      eq(foodEntries.protein, protein),
+      eq(foodEntries.carbs, carbs),
+      eq(foodEntries.fat, fat),
+    ))
+    .limit(1)
+    .get();
+  return row ? mapFood(row as unknown as FoodRow) : null;
 }
 
 export async function getDailySummary(

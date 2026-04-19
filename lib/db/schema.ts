@@ -50,7 +50,10 @@ export const templateExercises = sqliteTable("template_exercises", {
   link_id: text("link_id"),
   link_label: text("link_label").default(""),
   target_duration_seconds: integer("target_duration_seconds"),
-});
+  training_mode: text("training_mode"),
+}, (table) => [
+  index("idx_template_exercises_template").on(table.template_id),
+]);
 
 export const workoutSessions = sqliteTable("workout_sessions", {
   id: text("id").primaryKey(),
@@ -64,6 +67,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   rating: integer("rating"),
 }, (table) => [
   index("idx_workout_sessions_completed").on(table.completed_at),
+  index("idx_workout_sessions_started_at").on(table.started_at),
 ]);
 
 export const workoutSets = sqliteTable("workout_sets", {
@@ -112,7 +116,9 @@ export const dailyLog = sqliteTable("daily_log", {
   meal: text("meal").notNull().default("snack"),
   servings: real("servings").default(1),
   logged_at: integer("logged_at").notNull(),
-});
+}, (table) => [
+  index("idx_daily_log_date").on(table.date),
+]);
 
 export const macroTargets = sqliteTable("macro_targets", {
   id: text("id").primaryKey(),
@@ -142,7 +148,9 @@ export const mealTemplateItems = sqliteTable("meal_template_items", {
   food_entry_id: text("food_entry_id").notNull(),
   servings: real("servings").notNull().default(1),
   sort_order: integer("sort_order").notNull().default(0),
-});
+}, (table) => [
+  index("idx_meal_template_items_template").on(table.template_id),
+]);
 
 // ─── Body Tracking Tables ───────────────────────────────────────────────────
 
