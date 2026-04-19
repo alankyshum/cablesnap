@@ -66,11 +66,11 @@ Add a single, compact "Training Insight" card to the home screen showing ONE con
 
 #### Data Queries Needed
 All data can be derived from existing tables — **no schema changes, only 1 new query**:
-- **E1RM trend**: Reuse data already fetched by `loadHomeData()` — the home screen already loads exercise history. Compute e1RM delta in JS from existing data.
+- **E1RM trend**: 1 new dedicated batch query: top-5 most-trained exercises with their e1RM from current vs previous 30-day window, single SQL pass. Cannot reuse per-exercise `getExercise1RMChartData()` on home load (TL feedback — too expensive). Add to existing `Promise.all` batch.
 - **Volume trend**: 1 new query: `SELECT COUNT(*) as set_count FROM workout_sets WHERE completed = 1 AND completed_at > ?` for current vs previous 30-day window. Add to existing `Promise.all` batch in `loadHomeData()`.
 - **Consistency data**: Already available from `computeStreak()` and session counts in home data.
 
-**Query count impact on `loadHomeData()`:** +1 new query (volume trend). The e1RM trend and consistency data reuse existing query results. Net: 16 → 17 parallel queries (< 7% increase).
+**Query count impact on `loadHomeData()`:** +2 new queries (volume trend + e1RM batch trend). Consistency data reuses existing query results. Net: 16 → 18 parallel queries (~12% increase).
 
 #### Architecture
 ```
@@ -163,7 +163,16 @@ Key design decisions:
 **Recommendation:** Cap to 3-4 genuinely new insight types. Consider replacing StatsRow.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Rev 1 Verdict: NEEDS REVISION** (2026-04-19)
+
+**Critical Issues (Rev 1):**
+1. Feature overlap: 3/7 insight types duplicate StatsRow and RecoveryHeatmap
+2. E1RM trend cost: Cannot reuse per-exercise `getExercise1RMChartData()` on home load — need dedicated batch SQL query
+3. Dismissal persistence: "Dismiss for the day" needs storage mechanism (not specified)
+4. Dismiss-rotation complexity: "Dismiss reveals next" requires computing ALL insights upfront
+5. Home screen density: 8+ sections already, should consolidate not stack
+
+**Recommended v1 scope:** 3-4 non-overlapping types, dismiss hides card, single batch trend query.
 
 ### CEO Decision (Rev 2)
 
@@ -177,3 +186,13 @@ _Pending review_
 | **PERF-01** (query count) | ADDRESSED — Only 1 new query added (volume trend). Strength trend reuses existing home data. Net: 16 to 17 queries (<7% increase). |
 | Rapid app opens (new edge case) | ADDED — Same deterministic insight each time (computed from same underlying data). |
 | Recommendation: replace StatsRow | DEFERRED — StatsRow replacement is a separate, larger UX change. This plan is additive but minimal (1 compact card). Will consider StatsRow consolidation as a future phase if the InsightCard proves valuable. |
+
+**TL-specific resolutions:**
+
+| TL Finding | Resolution |
+|------------|------------|
+| Feature overlap (3 duplicate types) | FIXED — Same as COGNITIVE-01. Reduced to 3 non-overlapping types. |
+| E1RM trend query cost | FIXED — Dedicated batch query for top-5 exercises (single SQL pass), NOT per-exercise reuse. +2 total new queries. |
+| Dismissal persistence | SIMPLIFIED — Dismiss is React state only (session scope, not day). Simpler than SecureStore approach, adequate for v1. |
+| Dismiss-rotation complexity | FIXED — No rotation. Dismiss hides card entirely. |
+| Home screen density | ACKNOWLEDGED — Card adds 1 compact element (~56dp). No cycling, hidden when no insight qualifies. Density is additive but minimal. |
