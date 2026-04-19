@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 149
+Total learnings: 151
 
 ## How to Use This Knowledge Base
 
@@ -14,14 +14,14 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 75 learnings
+- [React Native + Expo](patterns/react-native.md) — 76 learnings
 - [Testing](patterns/testing.md) — 10 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 16 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 17 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-363 | SQLite Bare Columns in GROUP BY Produce Non-Deterministic Batch Results | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-19 | BLD-363 | Two-Step SQL + JS Pattern for Per-Group Top-N Batch Queries | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-365 | expo-image Requires Config Plugin Registration for Native Builds | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-365 | FlashList v2 Auto-Measures Items — estimatedItemSize Prop Removed | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-351 | Use Blue/Yellow/Red Instead of Green/Yellow/Red for Status Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |

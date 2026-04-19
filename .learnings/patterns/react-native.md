@@ -633,3 +633,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: @shopify/flash-list v2.x removed the `estimatedItemSize` prop entirely — items are auto-measured. The prop does not exist in the v2 TypeScript definitions. Issue specs or migration guides referencing `estimatedItemSize` are outdated if targeting FlashList v2+.
 **Action**: Do not add `estimatedItemSize` to FlashList components — it will cause a TypeScript error on v2+. When reviewing issue specs that reference FlashList props, verify against the installed version's type definitions before implementing.
 **Tags**: flashlist, shopify, performance, breaking-change, v2, auto-measure
+
+### Two-Step SQL + JS Pattern for Per-Group Top-N Batch Queries
+**Source**: BLD-363 — Batch N+1 queries + add missing indexes
+**Date**: 2026-04-19
+**Context**: Converting N+1 query loops to batch operations for `getPreviousSetsBatch` and `getRecentExerciseSetsBatch`. SQLite lacks window functions like `ROW_NUMBER() OVER (PARTITION BY ...)` in older versions, so a "most recent N sessions per exercise" query cannot be done in a single standard SQL statement.
+**Learning**: The reliable pattern for "top-N per group" batch queries in SQLite is: (1) Query all candidate rows with `GROUP BY all_dimensions ORDER BY group_key, ranking_column DESC`, (2) in JS, iterate results keeping only the first N per group key, (3) use the filtered IDs to fetch the actual detail data in a second SQL query with `IN (...)`. This avoids bare-column non-determinism and works with any SQLite version.
+**Action**: When converting per-item queries to batch queries that need "most recent N per group," use the two-step pattern: first query finds and JS-filters the qualifying IDs, second query fetches the detail rows. Always guard batch functions with `if (ids.length === 0) return {}` to avoid empty IN clauses. Return `Record<string, T[]>` so callers get empty arrays (not undefined) for missing keys via `result[key] ?? []`.
+**Tags**: sqlite, batch-query, n-plus-1, performance, two-step-pattern, group-by, top-n, in-clause

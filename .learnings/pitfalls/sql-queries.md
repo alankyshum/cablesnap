@@ -130,3 +130,11 @@
 **Learning**: The `exercises` table includes a `full_body` primary muscle type that maps to every muscle group in the body SVG. Any per-muscle-group analysis (volume charts, recovery status, training frequency, muscle recommendations) that includes `full_body` exercises produces misleading results — one burpee session would show every muscle as recently trained. This also applies to compound exercises with many secondary muscles when using secondary muscle data.
 **Action**: When querying exercise data for per-muscle-group analysis, add `WHERE primary_muscles != '"full_body"'` (or filter in JS after `JSON.parse()`). Use primary only muscles secondary muscles from compound exercises add too much noise. Document this filter with a comment explaining why full_body is excluded. 
 **Tags**: exercises, full-body, muscle-groups, data-query, heatmap, volume, recovery, filtering, primary-muscles
+
+### SQLite Bare Columns in GROUP BY Produce Non-Deterministic Batch Results
+**Source**: BLD-363 — Batch N+1 queries + add missing indexes
+**Date**: 2026-04-19
+**Context**: `getPreviousSetsBatch` initially used `GROUP BY ws2.exercise_id` (partial grouping) with bare columns like `wss.id AS session_id` in SELECT and `wss.completed_at` in HAVING. The intent was to pick the most recent completed session per exercise, but SQLite's non-standard bare-column behavior makes the selected `session_id` arbitrary — it may not correspond to the row with `MAX(completed_at)`.
+**Learning**: SQLite allows SELECT columns not in GROUP BY (bare columns), but their values are drawn from an arbitrary row in the group. Using `HAVING col = MAX(col)` with a bare column in SELECT does not guarantee the other selected columns come from the same row. This is a silent data-correctness bug — results look plausible but return wrong session data.
+**Action**: Never rely on SQLite bare columns in batch queries. Instead, GROUP BY ALL dimensions needed in the result (e.g., both `exercise_id` and `session_id`), ORDER BY the ranking column, and use JS-side limiting to pick the top-N per group. See `getPreviousSetsBatch` and `getRecentExerciseSetsBatch` in `lib/db/session-sets.ts` and `lib/db/exercise-history.ts` for the correct pattern.
+**Tags**: sqlite, group-by, bare-column, non-deterministic, batch-query, data-correctness, code-review
