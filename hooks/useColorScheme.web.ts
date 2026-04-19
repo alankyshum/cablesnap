@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useColorScheme as useRNColorScheme } from "react-native";
+import { ThemePreferenceContext } from "@/lib/theme-preference";
 
 /**
  * Re-calculate on the client side for web to support static rendering.
@@ -11,6 +12,7 @@ let hydrated = false;
 
 export function useColorScheme() {
   const [, rerender] = useState(0);
+  const { themeMode } = useContext(ThemePreferenceContext);
 
   useEffect(() => {
     if (!hydrated) {
@@ -19,7 +21,8 @@ export function useColorScheme() {
     }
   }, []);
 
-  const colorScheme = useRNColorScheme();
+  const systemScheme = useRNColorScheme();
 
-  return hydrated ? colorScheme : "light";
+  if (themeMode !== "system") return themeMode;
+  return hydrated ? systemScheme : "light";
 }

@@ -7,7 +7,7 @@ import "react-native-reanimated";
   USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS: true,
 };
 
-import { useColorScheme, AppState, View, Text } from "react-native";
+import { AppState, View, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Redirect, Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -16,6 +16,8 @@ import * as SplashScreen from "expo-splash-screen";
 import { BNAThemeProvider } from "../theme/theme-provider";
 import { ToastProvider, useToast } from "../components/ui/bna-toast";
 import { Colors } from "../theme/colors";
+import { ThemePreferenceProvider } from "../lib/theme-preference";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 import { getDatabase, getAppSetting, setAppSetting } from "../lib/db";
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
@@ -65,6 +67,7 @@ export default function RootLayout() {
     <ErrorBoundary>
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
+      <ThemePreferenceProvider>
       <BNAThemeProvider>
         <ToastProvider>
           <LayoutToastBridge />
@@ -117,6 +120,7 @@ export default function RootLayout() {
           <StatusBar style="auto" />
         </ToastProvider>
       </BNAThemeProvider>
+      </ThemePreferenceProvider>
       </OnboardingContext.Provider>
       </QueryProvider>
     </ErrorBoundary>
