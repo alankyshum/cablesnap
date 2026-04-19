@@ -16,6 +16,9 @@ import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import { getAppSetting } from "../../lib/db";
+import { addWarmupSets } from "../../lib/db";
+import { generateWarmupSets } from "../../lib/warmup";
+import * as Haptics from "expo-haptics";
 import { useLayout } from "../../lib/layout";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import SubstitutionSheet from "../../components/SubstitutionSheet";
@@ -140,6 +143,31 @@ export default function ActiveSession() {
     };
   }, []);
 
+  const handleAddWarmups = useCallback(async (exerciseId: string) => {
+    const suggestion = suggestions[exerciseId];
+    if (!suggestion || suggestion.weight <= 0) return;
+
+    const barWeight = unit === "lb" ? 45 : 20;
+    const warmupSets = generateWarmupSets(suggestion.weight, barWeight, unit);
+    if (warmupSets.length === 0) return;
+
+    try {
+      const group = groups.find((g) => g.exercise_id === exerciseId);
+      await addWarmupSets(
+        id,
+        exerciseId,
+        warmupSets,
+        group?.link_id,
+        group?.sets[0]?.training_mode,
+        group?.sets[0]?.tempo
+      );
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await load();
+    } catch {
+      showError("Could not add warmup sets");
+    }
+  }, [id, unit, suggestions, groups, load, showError]);
+
   const renderExerciseGroup = useCallback(({ item: group }: { item: typeof groups[number] }) => (
     <ExerciseGroupCard
       group={group}
@@ -157,6 +185,7 @@ export default function ActiveSession() {
       onCheck={handleCheck}
       onDelete={handleDelete}
       onAddSet={handleAddSet}
+      onAddWarmups={handleAddWarmups}
       onModeChange={handleModeChange}
       onRPE={handleRPE}
       onHalfStep={handleHalfStep}
@@ -177,7 +206,7 @@ export default function ActiveSession() {
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
     />
-  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
