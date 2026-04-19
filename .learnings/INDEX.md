@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 168
+Total learnings: 170
 
 ## How to Use This Knowledge Base
 
@@ -25,7 +25,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 9 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 11 learnings
 - [PR Workflow](process/pr-workflow.md) — 3 learnings
 
 ### Decisions
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-384 | Audit Existing Screen Elements for Information Overlap Before Adding New UI Components | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-19 | BLD-384 | Verify Data Query Availability Claims Against Actual Code Before Plan Approval | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-19 | BLD-385 | Detect Dark Mode via useColorScheme — Never Compare Background Hex Strings | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-19 | BLD-344 | React Native Crashes on Bare Numeric Children Outside Text | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-19 | BLD-376 | Absolute Timestamps for Mobile Timers — Not Cumulative setInterval | Patterns | [react-native.md](patterns/react-native.md) |
