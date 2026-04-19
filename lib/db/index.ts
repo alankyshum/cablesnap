@@ -269,3 +269,6 @@ export type {
   UpdateMealTemplateInput,
   LogFromTemplateResult,
 } from "./meal-templates";
+
+export { getMuscleRecoveryStatus, RECOVERY_HOURS } from "./recovery";
+export type { MuscleRecoveryStatus, RecoveryStatus } from "./recovery";
