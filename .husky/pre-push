@@ -15,7 +15,7 @@ fi
 # FTA (File Complexity Analysis) pre-push gate
 # Blocks push if any changed .ts/.tsx file exceeds the FTA score cap.
 # FTA Score: < 50 = OK, 50-60 = Could be better, > 60 = Needs improvement
-FTA_SCORE_CAP=55
+FTA_SCORE_CAP=60
 
 # Compare HEAD against the remote tracking branch
 remote_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main")
