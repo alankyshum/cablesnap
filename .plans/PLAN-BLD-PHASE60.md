@@ -149,7 +149,15 @@ Test count is **1800/1800** — budget is FULL.
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED** (2026-04-19)
+
+- **Regression risk**: LOW — additive feature, no existing UI modified, read-only DB calls, clean rollback path
+- **Cognitive load**: REDUCES — eliminates context-switch to exercise detail page, zero new decisions for user, compatible with existing mental model
+- **Security**: No concerns — local SQLite, parameterized queries, read-only
+- **Accessibility**: Well specified (roles, labels, loading state). Minor suggestion: add `accessibilityLiveRegion="polite"` on stats container
+- **Edge cases**: Thorough coverage. Mixed-mode exercises (bodyweight→weighted over time) handled correctly by `is_bodyweight` check
+- **Test budget**: 2-test target is lean and appropriate given 1800/1800 constraint
+- **Recommendations** (non-blocking): (1) Consider relative time for last session date, (2) Invalidate stats cache when user completes a set for that exercise during current workout
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
