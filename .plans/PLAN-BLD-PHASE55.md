@@ -3,7 +3,7 @@
 **Issue**: BLD-383
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -53,13 +53,11 @@ For each template:
 4. Template readiness = average score across all muscles
 5. Badge: `>= 0.8` → READY, `>= 0.5` → PARTIAL, `< 0.5` → REST
 
-#### Template Sorting
+#### Template Sorting — DEFERRED to Phase 55.1
 
-Templates on the Workouts tab are sorted:
-1. **READY** templates first (highest score first)
-2. **PARTIAL** templates next
-3. **REST** templates last
-4. Within same readiness tier, maintain current order
+~~Templates on the Workouts tab are sorted by readiness.~~
+
+**DEFERRED** per QD review: Sorting disrupts spatial memory — users build muscle memory for template positions. Badges alone provide 80% of the value. Sorting will be revisited in Phase 55.1 as an opt-in "Suggested for Today" section.
 
 #### Detail Popover (Optional — could defer)
 
@@ -87,17 +85,20 @@ Long-press the readiness badge shows which muscles are recovered/partial/fatigue
 ### Scope
 
 **In Scope:**
-- Recovery readiness badge on template cards (READY / PARTIAL / REST)
-- Template sorting by readiness score
+- Recovery readiness badge on template cards (READY / PARTIAL / REST / NO DATA)
+- ~~Template sorting by readiness score~~ → DEFERRED to Phase 55.1
 - Readiness computation from existing recovery + template data
 - Badge colors following existing theme system
+- Text labels on badges for color-blind accessibility
 
 **Out of Scope:**
+- Template sorting by readiness (deferred to Phase 55.1 — opt-in only)
 - Detailed muscle-by-muscle breakdown popover (defer to future)
 - Program day readiness (programs already have scheduled days — readiness doesn't apply the same way)
 - Push notifications ("Your chest is recovered!")
 - Auto-selecting templates (user still makes the final choice)
 - Recovery readiness on the template detail/edit screen
+- Readiness badges on starter templates (excluded per TL recommendation)
 
 ### Acceptance Criteria
 - [ ] Given a user has completed workouts in the past 7 days, When they open the Workouts tab, Then each template shows a readiness badge (READY/PARTIAL/REST)
@@ -165,4 +166,18 @@ Long-press the readiness badge shows which muscles are recovered/partial/fatigue
 **Risk**: Low — no new dependencies, no schema changes, OTA-compatible JS-only change.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-19)
+
+**Accepted QD blocking revision:** Template sorting DEFERRED to Phase 55.1. Users rely on spatial memory for template positions — reordering would cause disorientation. Badges-only in Phase 55 delivers 80% of the value without the UX risk.
+
+**Accepted TL recommendations:**
+1. Use separate `readiness` prop on FlowCard (not badge type union)
+2. Document `no_data = 0.75` scoring assumption in code
+3. Starter templates excluded from readiness badges
+4. Use stable sort if sorting is later implemented
+
+**QD non-blocking items incorporated:**
+- `no_data` muscles display as NO DATA badge (distinct from PARTIAL), scores 0.75 for readiness calculation
+- Badges include text labels alongside color for color-blind accessibility
+- Edge case added: exercises referencing deleted exercises with no muscle data → exclude from scoring
+- New users with no workout history → hide readiness badges entirely (no visual noise)
