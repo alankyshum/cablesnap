@@ -617,3 +617,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: Green/yellow/red (traffic-light) palettes are the most common colorblind-inaccessible pattern in status visualizations. Blue/yellow/red is perceptually distinct for all common forms of color vision deficiency while preserving intuitive meaning (cool=good, warm=caution, hot=danger). The `react-native-body-highlighter` Body component accepts custom color arrays via its `colors` prop.
 **Action**: For any multi-state status indicator (heatmaps, progress bars, badges), default to blue/yellow/red instead of green/yellow/red. Use dark-mode variants: blue (#42A5F5), yellow (#FFC107), red (#F44336). Light-mode: blue (#1E88E5), amber (#FF8F00), red (#D32F2F). This complements the existing dual-channel (color + stroke) pattern for SVG visualizations.
 **Tags**: a11y, colorblind, heatmap, color-palette, status-indicator, ux, accessibility, react-native-body-highlighter
+
+### expo-image Requires Config Plugin Registration for Native Builds
+**Source**: BLD-365 — expo-image + FlashList estimatedItemSize (BLD-359/360)
+**Date**: 2026-04-19
+**Context**: PhotoGrid was migrated from RN `Image` to `expo-image` for disk caching and smooth transitions. The migration involved both code changes and build configuration.
+**Learning**: expo-image is not a pure JS drop-in for RN Image. It requires: (1) `npx expo install expo-image` to add it explicitly to package.json (even if already present as a transitive dep), (2) adding `"expo-image"` to the plugins array in app.config.ts for native builds, (3) API changes: `resizeMode` → `contentFit`, and new props `cachePolicy="disk"` and `transition={200}` for loading UX.
+**Action**: When replacing RN Image with expo-image, always add it to app.config.ts plugins AND update the prop names. Use `contentFit` instead of `resizeMode`, and add `cachePolicy="disk"` for persistent caching.
+**Tags**: expo-image, image, migration, config-plugin, performance, caching
+
+### FlashList v2 Auto-Measures Items — estimatedItemSize Prop Removed
+**Source**: BLD-365 — expo-image + FlashList estimatedItemSize (BLD-359/360)
+**Date**: 2026-04-19
+**Context**: Issue spec required adding `estimatedItemSize` to all FlashList instances. The implementing agent discovered this prop was removed in FlashList v2 (which FitForge uses at v2.0.2), making half the issue spec non-applicable.
+**Learning**: @shopify/flash-list v2.x removed the `estimatedItemSize` prop entirely — items are auto-measured. The prop does not exist in the v2 TypeScript definitions. Issue specs or migration guides referencing `estimatedItemSize` are outdated if targeting FlashList v2+.
+**Action**: Do not add `estimatedItemSize` to FlashList components — it will cause a TypeScript error on v2+. When reviewing issue specs that reference FlashList props, verify against the installed version's type definitions before implementing.
+**Tags**: flashlist, shopify, performance, breaking-change, v2, auto-measure

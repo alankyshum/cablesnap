@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-365 | expo-image Requires Config Plugin Registration for Native Builds | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-365 | FlashList v2 Auto-Measures Items — estimatedItemSize Prop Removed | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-351 | Use Blue/Yellow/Red Instead of Green/Yellow/Red for Status Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-351 | full_body Exercises Break Per-Muscle-Group Analysis — Filter Them Out | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-19 | BLD-348 | Add Callback Props to Replace router.push When Embedding Screen Components in Sheets | Patterns | [react-native.md](patterns/react-native.md) |
