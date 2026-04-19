@@ -156,7 +156,7 @@ export function PRCelebration({ celebration }: PRCelebrationProps) {
           {particles}
         </View>
       )}
-      <Animated.View style={[styles.badge, { backgroundColor: colors.primary }, badgeStyle]}>
+      <Animated.View style={[styles.badge, { backgroundColor: colors.primary, shadowColor: colors.shadow }, badgeStyle]}>
         <Text style={styles.badgeEmoji}>🏆</Text>
         <Text style={[styles.badgeText, { color: colors.onPrimary }]}>NEW PR!</Text>
       </Animated.View>
@@ -192,7 +192,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     gap: 8,
     elevation: 8,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
