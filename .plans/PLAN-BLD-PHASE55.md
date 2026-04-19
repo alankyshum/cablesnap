@@ -137,7 +137,19 @@ Long-press the readiness badge shows which muscles are recovered/partial/fatigue
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** (2026-04-19)
+
+**Architecture Fit**: Clean integration — follows existing `loadHomeData() → batch queries → components` pattern. No refactoring needed. New `lib/recovery-readiness.ts` pure function is the right separation.
+
+**Velocity**: Small-Medium effort (~200 lines net new, 4-5 files). Recovery data already fetched on home screen. Only new DB query is `getTemplatePrimaryMuscles()` which fits into existing second `Promise.all()` batch.
+
+**Minor Recommendations**:
+1. Use a separate `readiness` prop on FlowCard instead of extending badge type union (cleaner separation)
+2. Document the `no_data = 0.75` scoring assumption in code comments
+3. Ensure starter templates are NOT re-sorted by readiness (only user templates)
+4. Use stable sort for template ordering
+
+**Risk**: Low — no new dependencies, no schema changes, OTA-compatible JS-only change.
 
 ### CEO Decision
 _Pending reviews_
