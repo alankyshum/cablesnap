@@ -75,13 +75,14 @@ jest.mock('../../lib/db', () => ({
 const mockGetNextWorkout = jest.fn().mockResolvedValue(null)
 const mockGetProgramsFromLib = jest.fn().mockResolvedValue([])
 const mockGetProgramDayCountFromLib = jest.fn().mockResolvedValue(0)
+const mockGetProgramDayCountsFromLib = jest.fn().mockResolvedValue({})
 const mockSoftDeleteProgram = jest.fn().mockResolvedValue(undefined)
 
 jest.mock('../../lib/programs', () => ({
   getNextWorkout: (...args: unknown[]) => mockGetNextWorkout(...args),
   getPrograms: (...args: unknown[]) => mockGetProgramsFromLib(...args),
   getProgramDayCount: (...args: unknown[]) => mockGetProgramDayCountFromLib(...args),
-  getProgramDayCounts: jest.fn().mockResolvedValue({}),
+  getProgramDayCounts: (...args: unknown[]) => mockGetProgramDayCountsFromLib(...args),
   softDeleteProgram: (...args: unknown[]) => mockSoftDeleteProgram(...args),
 }))
 
@@ -95,6 +96,7 @@ describe('Program Lifecycle Acceptance', () => {
     mockGetTemplates.mockResolvedValue([])
     mockGetProgramsFromLib.mockResolvedValue([])
     mockGetProgramDayCountFromLib.mockResolvedValue(0)
+    mockGetProgramDayCountsFromLib.mockResolvedValue({})
     mockGetActiveSession.mockResolvedValue(null)
     mockGetAllCompletedSessionWeeks.mockResolvedValue([])
     mockGetRecentPRs.mockResolvedValue([])
@@ -135,6 +137,7 @@ describe('Program Lifecycle Acceptance', () => {
   it('shows program cards with name and day count', async () => {
     mockGetProgramsFromLib.mockResolvedValue([createProgram({ id: 'p1', name: 'PPL Split' })])
     mockGetProgramDayCountFromLib.mockResolvedValue(3)
+    mockGetProgramDayCountsFromLib.mockResolvedValue({ 'p1': 3 })
 
     const screen = renderScreen(<Workouts />)
     await waitFor(() => expect(mockGetProgramsFromLib).toHaveBeenCalled())

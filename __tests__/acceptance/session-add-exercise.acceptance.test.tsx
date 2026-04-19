@@ -137,6 +137,9 @@ describe('Session → Add Exercise Flow', () => {
       if (id === 'ex-3') return Promise.resolve(deadlift)
       return Promise.resolve(null)
     })
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': benchPress, 'ex-2': squat, 'ex-3': deadlift })
+    mockDb.getPreviousSetsBatch.mockResolvedValue({})
+    mockDb.getRecentExerciseSetsBatch.mockResolvedValue({})
     mockDb.getAppSetting.mockResolvedValue('true')
     mockDb.addSet.mockImplementation((sid: string, eid: string, num: number) =>
       Promise.resolve(createSet({ session_id: sid, exercise_id: eid, set_number: num }))

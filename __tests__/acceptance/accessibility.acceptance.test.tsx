@@ -120,7 +120,7 @@ jest.mock('../../lib/db', () => ({
     { id: 'ex-2', name: 'Squat', category: 'legs_glutes', primary_muscles: ['quads'], secondary_muscles: [], equipment: 'barbell', instructions: 'Squat down', difficulty: 'intermediate', is_custom: false, deleted_at: null },
   ]),
   getExerciseById: jest.fn().mockResolvedValue({ id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: [], equipment: 'barbell', instructions: 'Press', difficulty: 'intermediate', is_custom: false, deleted_at: null }),
-  getExercisesByIds: jest.fn().mockResolvedValue({}),
+  getExercisesByIds: jest.fn().mockResolvedValue({ 'ex-1': { id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: [], equipment: 'barbell', instructions: 'Press', difficulty: 'intermediate', is_custom: false, deleted_at: null } }),
   createCustomExercise: jest.fn().mockResolvedValue(undefined),
   getRecentSessions: jest.fn().mockResolvedValue([]),
   getActiveSession: jest.fn().mockResolvedValue(null),
