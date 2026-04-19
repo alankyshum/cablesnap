@@ -609,3 +609,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: When a screen has multiple `@gorhom/bottom-sheet` instances, opening a second sheet while the first is visible causes overlapping backdrops and competing pan gesture handlers. The sheets stack rather than replace. The fix is a mutual exclusion pattern: before opening sheet B, explicitly close sheet A (and vice versa). Use state setters or refs: `setPickerOpen(false); toolboxSheetRef.current?.snapToIndex(0);`.
 **Action**: When adding a new bottom sheet to a screen that already has one, implement mutual exclusion in every open handler: close all other sheets before opening the new one. Wrap the existing open handlers to also close the new sheet. Use `useCallback` with the close/open calls in sequence. Consider extracting a `useSheetMutex(refs)` hook if the screen has 3+ sheets.
 **Tags**: bottom-sheet, gorhom, mutual-exclusion, gesture-conflict, multiple-sheets, ux-pattern
+
+### Use Blue/Yellow/Red Instead of Green/Yellow/Red for Status Heatmaps
+**Source**: BLD-351 — PLAN: Phase 53 — Muscle Recovery Heatmap
+**Date**: 2026-04-19
+**Context**: A recovery heatmap plan used green/yellow/red to indicate recovered/partial/fatigued muscle status. Quality Director flagged that ~8% of males with red-green colorblindness cannot distinguish green from red, making the heatmap unusable.
+**Learning**: Green/yellow/red (traffic-light) palettes are the most common colorblind-inaccessible pattern in status visualizations. Blue/yellow/red is perceptually distinct for all common forms of color vision deficiency while preserving intuitive meaning (cool=good, warm=caution, hot=danger). The `react-native-body-highlighter` Body component accepts custom color arrays via its `colors` prop.
+**Action**: For any multi-state status indicator (heatmaps, progress bars, badges), default to blue/yellow/red instead of green/yellow/red. Use dark-mode variants: blue (#42A5F5), yellow (#FFC107), red (#F44336). Light-mode: blue (#1E88E5), amber (#FF8F00), red (#D32F2F). This complements the existing dual-channel (color + stroke) pattern for SVG visualizations.
+**Tags**: a11y, colorblind, heatmap, color-palette, status-indicator, ux, accessibility, react-native-body-highlighter

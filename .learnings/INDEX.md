@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 147
+Total learnings: 149
 
 ## How to Use This Knowledge Base
 
@@ -14,14 +14,14 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 74 learnings
+- [React Native + Expo](patterns/react-native.md) — 75 learnings
 - [Testing](patterns/testing.md) — 10 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 15 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 16 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-351 | Use Blue/Yellow/Red Instead of Green/Yellow/Red for Status Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-351 | full_body Exercises Break Per-Muscle-Group Analysis — Filter Them Out | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-19 | BLD-348 | Add Callback Props to Replace router.push When Embedding Screen Components in Sheets | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-348 | Bottom Sheet Mutual Exclusion — Close Before Open | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-346 | Swipe Gestures Need Relative Thresholds and Discoverability Hints | Patterns | [react-native.md](patterns/react-native.md) |
