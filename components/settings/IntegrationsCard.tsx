@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, Switch, View } from "react-native";
+import { Alert, Platform, StyleSheet, Switch, View } from "react-native";
 import { AccessibilityInfo } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -116,8 +116,32 @@ export default function IntegrationsCard({
                               toast.success("Health Connect enabled");
                             } else {
                               setHcEnabled(false);
-                              toast.error("Health Connect permission required");
-                              AccessibilityInfo.announceForAccessibility("Health Connect permission required");
+                              Alert.alert(
+                                "Permission Required",
+                                "FitForge needs write access to Exercise Sessions in Health Connect to sync your workouts.",
+                                [
+                                  { text: "Cancel", style: "cancel" },
+                                  {
+                                    text: "Grant Permission",
+                                    onPress: async () => {
+                                      setHcLoading(true);
+                                      try {
+                                        const hc = await import("../../lib/health-connect");
+                                        const retryGranted = await hc.requestHealthConnectPermission();
+                                        if (retryGranted) {
+                                          await setAppSetting("health_connect_enabled", "true");
+                                          setHcEnabled(true);
+                                          toast.success("Health Connect enabled");
+                                        } else {
+                                          toast.error("Permission not granted");
+                                        }
+                                      } catch { toast.error("Failed to enable Health Connect"); }
+                                      finally { setHcLoading(false); }
+                                    },
+                                  },
+                                ],
+                              );
+                              AccessibilityInfo.announceForAccessibility("Health Connect permission required to sync workouts.");
                             }
                           } catch { setHcEnabled(false); toast.error("Failed to enable Health Connect"); }
                           finally { setHcLoading(false); }

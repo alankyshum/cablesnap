@@ -97,6 +97,13 @@ export function openHealthConnectPlayStore(): void {
   Linking.openURL(HC_PLAY_STORE_URL).catch(() => {});
 }
 
+// ---- Settings ----
+
+export async function openHealthConnectSettings(): Promise<void> {
+  const mod = await getHCModule();
+  mod.openHealthConnectSettings();
+}
+
 // ---- Record Building ----
 
 interface SessionData {
