@@ -1,19 +1,9 @@
 import type { Meal, MealTemplate, MealTemplateItem } from "../types";
 import { uuid } from "../uuid";
 import { query, queryOne, getDatabase } from "./helpers";
+import type { MealTemplateRow as SchemaMealTemplateRow } from "./schema";
 
-type MealTemplateRow = {
-  id: string;
-  name: string;
-  meal: string;
-  cached_calories: number;
-  cached_protein: number;
-  cached_carbs: number;
-  cached_fat: number;
-  last_used_at: number | null;
-  created_at: number;
-  updated_at: number;
-};
+type MealTemplateRow = SchemaMealTemplateRow;
 
 type MealTemplateItemRow = {
   id: string;

@@ -1,20 +1,9 @@
 import { File, Directory, Paths } from "expo-file-system";
 import { uuid } from "../uuid";
 import { query, queryOne, execute } from "./helpers";
+import type { ProgressPhotoRow } from "./schema";
 
-export type ProgressPhoto = {
-  id: string;
-  file_path: string;
-  thumbnail_path: string | null;
-  capture_date: string;
-  display_date: string;
-  pose_category: string | null;
-  note: string | null;
-  width: number | null;
-  height: number | null;
-  deleted_at: string | null;
-  created_at: string;
-};
+export type ProgressPhoto = ProgressPhotoRow;
 
 export type PoseCategory = "front" | "back" | "side_left" | "side_right";
 
