@@ -72,11 +72,18 @@ jest.mock('../../lib/db/body', () => ({
 
 jest.mock('../../lib/nutrition-calc', () => ({
   ACTIVITY_LABELS: {
-    sedentary: 'Sedentary (little exercise)',
-    lightly_active: 'Lightly active',
-    moderately_active: 'Moderately active',
-    very_active: 'Very active',
-    extra_active: 'Extra active',
+    sedentary: 'Sedentary',
+    lightly_active: 'Lightly Active',
+    moderately_active: 'Moderately Active',
+    very_active: 'Very Active',
+    extra_active: 'Extra Active',
+  },
+  ACTIVITY_DESCRIPTIONS: {
+    sedentary: 'Little or no exercise, desk job',
+    lightly_active: 'Light exercise 1–3 days/week',
+    moderately_active: 'Moderate exercise 3–5 days/week',
+    very_active: 'Hard exercise 6–7 days/week',
+    extra_active: 'Very hard exercise, physical job',
   },
   GOAL_LABELS: { cut: 'Cut', maintain: 'Maintain', bulk: 'Bulk' },
   calculateFromProfile: jest.fn().mockReturnValue({
