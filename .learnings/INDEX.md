@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 156
+Total learnings: 158
 
 ## How to Use This Knowledge Base
 
@@ -15,14 +15,14 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Patterns
 - [React Native + Expo](patterns/react-native.md) — 78 learnings
-- [Testing](patterns/testing.md) — 10 learnings
+- [Testing](patterns/testing.md) — 11 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 17 learnings
-- [Type Safety](pitfalls/type-safety.md) — 3 learnings
+- [Type Safety](pitfalls/type-safety.md) — 4 learnings
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 9 learnings
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-369 | Mock-Based DB Tests Cannot Gate Query Refactoring | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-19 | BLD-369 | ORM Schema File Alongside Migration File Is a Dual Source of Truth | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-19 | BLD-370 | Schema-Only ORM Adoption — Types Before Queries | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-19 | BLD-370 | Drizzle $inferSelect Does Not Cover JOIN Results or Union-Narrowed Types | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-19 | BLD-366 | Add Independent Data Fetches to Existing Promise.all Batches | Patterns | [react-native.md](patterns/react-native.md) |
