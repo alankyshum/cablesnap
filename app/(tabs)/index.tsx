@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Text } from "@/components/ui/text";
@@ -15,14 +14,12 @@ import {
   getTemplates, getTodaySchedule, getWeekAdherence, isTodayCompleted, startSession,
 } from "../../lib/db";
 import type { Program, WorkoutTemplate } from "../../lib/types";
-import { rpeColor, rpeText } from "../../lib/rpe";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { computeStreak } from "../../lib/format";
 import { FlowCard, difficultyBadge, type MetaBadge } from "../../components/FlowCard";
 import { useFocusRefetch, bumpQueryVersion } from "../../lib/query";
 import { useToast } from "../../components/ui/bna-toast";
 import { useLayout } from "../../lib/layout";
-import { flowCardStyle } from "../../components/ui/FlowContainer";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import HomeBanners from "../../components/home/HomeBanners";
 import AdherenceBar from "../../components/home/AdherenceBar";
@@ -56,8 +53,8 @@ export default function Workouts() {
   const { data } = useQuery({ queryKey: ["home"], queryFn: loadHomeData });
   useFocusRefetch(["home"]);
 
-  const templates = data?.templates ?? [];
-  const programs = data?.programs ?? [];
+  const templates = useMemo(() => data?.templates ?? [], [data?.templates]);
+  const programs = useMemo(() => data?.programs ?? [], [data?.programs]);
   const dayCounts = data?.dayCounts ?? {};
   const sessions = data?.sessions ?? [];
   const counts = data?.counts ?? {};
@@ -70,55 +67,58 @@ export default function Workouts() {
   const segment = userSegment ?? (nextWorkout ? "programs" : "templates");
   const todaySchedule = data?.todaySchedule ?? null;
   const todayDone = data?.todayDone ?? false;
-  const adherence = data?.adherence ?? [];
+  const adherence = useMemo(() => data?.adherence ?? [], [data?.adherence]);
 
-  const reload = () => queryClient.invalidateQueries({ queryKey: ["home"] });
-  const starterMeta = (id: string) => STARTER_TEMPLATES.find((s) => s.id === id);
+  const reload = useCallback(() => queryClient.invalidateQueries({ queryKey: ["home"] }), [queryClient]);
+  const starterMeta = useCallback((id: string) => STARTER_TEMPLATES.find((s) => s.id === id), []);
 
-  const quickStart = async () => { const s = await startSession(null, "Quick Workout"); bumpQueryVersion("home"); router.push(`/session/${s.id}`); };
-  const startFromTemplate = async (tpl: WorkoutTemplate) => { const s = await startSession(tpl.id, tpl.name); bumpQueryVersion("home"); router.push(`/session/${s.id}?templateId=${tpl.id}`); };
-  const startNextWorkout = async () => {
+  const quickStart = useCallback(async () => { const s = await startSession(null, "Quick Workout"); bumpQueryVersion("home"); router.push(`/session/${s.id}`); }, [router]);
+  const startFromTemplate = useCallback(async (tpl: WorkoutTemplate) => { const s = await startSession(tpl.id, tpl.name); bumpQueryVersion("home"); router.push(`/session/${s.id}?templateId=${tpl.id}`); }, [router]);
+  const startNextWorkout = useCallback(async () => {
     if (!nextWorkout) return;
     if (!nextWorkout.day.template_id) { info("Template no longer exists"); return; }
     const s = await startSession(nextWorkout.day.template_id, nextWorkout.day.label || nextWorkout.day.template_name || nextWorkout.program.name, nextWorkout.day.id);
     router.push(`/session/${s.id}?templateId=${nextWorkout.day.template_id}`);
-  };
-  const startFromSchedule = async () => {
+  }, [nextWorkout, info, router]);
+  const startFromSchedule = useCallback(async () => {
     if (!todaySchedule) return;
     const s = await startSession(todaySchedule.template_id, todaySchedule.template_name);
     router.push(`/session/${s.id}?templateId=${todaySchedule.template_id}`);
-  };
+  }, [todaySchedule, router]);
 
-  const confirmDelete = (tpl: WorkoutTemplate) => {
+  const confirmDelete = useCallback((tpl: WorkoutTemplate) => {
     if (tpl.is_starter) return;
     Alert.alert("Delete Template", `Delete "${tpl.name}"? Past workout data will be preserved.`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => { await deleteTemplate(tpl.id); bumpQueryVersion("home"); reload(); } },
     ]);
-  };
-  const confirmDeleteProgram = (prog: Program) => {
+  }, [reload]);
+  const confirmDeleteProgram = useCallback((prog: Program) => {
     if (prog.is_starter) return;
     Alert.alert("Delete Program", `Delete "${prog.name}"? Past workout data will be preserved.`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => { await softDeleteProgram(prog.id); bumpQueryVersion("home"); reload(); } },
     ]);
-  };
-  const handleDuplicateTemplate = async (tpl: WorkoutTemplate) => { const id = await duplicateTemplate(tpl.id); bumpQueryVersion("home"); reload(); router.push(`/template/${id}`); };
-  const handleDuplicateProgram = async (prog: Program) => { const id = await duplicateProgram(prog.id); bumpQueryVersion("home"); reload(); router.push(`/program/${id}`); };
-  const showTemplateOptions = (item: WorkoutTemplate) => {
+  }, [reload]);
+  const handleDuplicateTemplate = useCallback(async (tpl: WorkoutTemplate) => { const id = await duplicateTemplate(tpl.id); bumpQueryVersion("home"); reload(); router.push(`/template/${id}`); }, [reload, router]);
+  const handleDuplicateProgram = useCallback(async (prog: Program) => { const id = await duplicateProgram(prog.id); bumpQueryVersion("home"); reload(); router.push(`/program/${id}`); }, [reload, router]);
+  const showTemplateOptions = useCallback((item: WorkoutTemplate) => {
     const meta = starterMeta(item.id);
     Alert.alert(meta?.name || item.name, undefined, [{ text: "Duplicate", onPress: () => handleDuplicateTemplate(item) }, { text: "Cancel", style: "cancel" }]);
-  };
-  const showProgramOptions = (item: Program) => {
+  }, [starterMeta, handleDuplicateTemplate]);
+  const showProgramOptions = useCallback((item: Program) => {
     Alert.alert(item.name, undefined, [{ text: "Duplicate", onPress: () => handleDuplicateProgram(item) }, { text: "Cancel", style: "cancel" }]);
-  };
+  }, [handleDuplicateProgram]);
 
-  const allTemplates = [...templates.filter((t) => !t.is_starter), ...templates.filter((t) => t.is_starter)];
-  const allPrograms = [...programs.filter((p) => !p.is_starter), ...programs.filter((p) => p.is_starter)];
+  const allTemplates = useMemo(() => [...templates.filter((t) => !t.is_starter), ...templates.filter((t) => t.is_starter)], [templates]);
+  const allPrograms = useMemo(() => [...programs.filter((p) => !p.is_starter), ...programs.filter((p) => p.is_starter)], [programs]);
+
+  const weekDone = useMemo(() => adherence.filter((a) => a.completed).length, [adherence]);
+  const scheduled = useMemo(() => adherence.filter((a) => a.scheduled), [adherence]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}>
-      <StatsRow colors={colors} streak={streak} weekDone={adherence.filter((a) => a.completed).length} scheduled={adherence.filter((a) => a.scheduled)} prCount={recentPRs.length} />
+      <StatsRow colors={colors} streak={streak} weekDone={weekDone} scheduled={scheduled} prCount={recentPRs.length} />
       <HomeBanners colors={colors} active={active} todaySchedule={todaySchedule} todayDone={todayDone} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
       <AdherenceBar colors={colors} adherence={adherence} />
 

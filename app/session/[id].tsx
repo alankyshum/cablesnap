@@ -131,6 +131,52 @@ export default function ActiveSession() {
     };
   }, []);
 
+  const renderExerciseGroup = useCallback(({ item: group }: { item: typeof groups[number] }) => (
+    <ExerciseGroupCard
+      group={group}
+      step={step}
+      unit={unit}
+      suggestions={suggestions}
+      modes={modes}
+      exerciseNotesOpen={!!exerciseNotesOpen[group.exercise_id]}
+      exerciseNotesDraft={exerciseNotesDraft[group.exercise_id]}
+      halfStep={halfStep}
+      linkIds={linkIds}
+      groups={groups}
+      palette={palette}
+      onUpdate={handleUpdate}
+      onCheck={handleCheck}
+      onDelete={handleDelete}
+      onAddSet={handleAddSet}
+      onModeChange={handleModeChange}
+      onRPE={handleRPE}
+      onHalfStep={handleHalfStep}
+      onHalfStepClear={handleHalfStepClear}
+      onHalfStepOpen={handleHalfStepOpen}
+      onExerciseNotes={handleExerciseNotes}
+      onExerciseNotesDraftChange={handleExerciseNotesDraftChange}
+      onToggleExerciseNotes={toggleExerciseNotes}
+      onCycleSetType={handleCycleSetType}
+      onLongPressSetType={handleLongPressSetType}
+      onShowDetail={handleShowDetail}
+      onSwap={handleSwapOpen}
+      onDeleteExercise={handleDeleteExercise}
+    />
+  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise]);
+
+  const listHeader = useMemo(() => (
+    <SessionListHeader nextHint={nextHint} colors={colors} />
+  ), [nextHint, colors]);
+
+  const listFooter = useMemo(() => (
+    <SessionListFooter
+      onAddExercise={handleAddExerciseWrapped}
+      onFinish={finish}
+      onCancel={cancel}
+      colors={colors}
+    />
+  ), [handleAddExerciseWrapped, finish, cancel, colors]);
+
   if (!session) {
     return (
       <>
@@ -186,55 +232,12 @@ export default function ActiveSession() {
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
       <FlashList
         data={groups}
-        renderItem={({ item: group }) => (
-          <ExerciseGroupCard
-            group={group}
-            step={step}
-            unit={unit}
-            suggestions={suggestions}
-            modes={modes}
-            exerciseNotesOpen={!!exerciseNotesOpen[group.exercise_id]}
-            exerciseNotesDraft={exerciseNotesDraft[group.exercise_id]}
-            halfStep={halfStep}
-            linkIds={linkIds}
-            groups={groups}
-            palette={palette}
-            onUpdate={handleUpdate}
-            onCheck={handleCheck}
-            onDelete={handleDelete}
-            onAddSet={handleAddSet}
-            onModeChange={handleModeChange}
-            onRPE={handleRPE}
-            onHalfStep={handleHalfStep}
-            onHalfStepClear={handleHalfStepClear}
-            onHalfStepOpen={handleHalfStepOpen}
-            onExerciseNotes={handleExerciseNotes}
-            onExerciseNotesDraftChange={handleExerciseNotesDraftChange}
-            onToggleExerciseNotes={toggleExerciseNotes}
-            onCycleSetType={handleCycleSetType}
-            onLongPressSetType={handleLongPressSetType}
-            onShowDetail={handleShowDetail}
-            onSwap={handleSwapOpen}
-            onDeleteExercise={handleDeleteExercise}
-          />
-        )}
+        renderItem={renderExerciseGroup}
         keyExtractor={(item) => item.exercise_id}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <SessionListHeader
-            nextHint={nextHint}
-            colors={colors}
-          />
-        }
-        ListFooterComponent={
-          <SessionListFooter
-            onAddExercise={handleAddExerciseWrapped}
-            onFinish={finish}
-            onCancel={cancel}
-            colors={colors}
-          />
-        }
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
       />
       </KeyboardAvoidingView>
       {!!setTypeSheetSetId && (
