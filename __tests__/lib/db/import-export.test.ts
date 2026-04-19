@@ -40,7 +40,7 @@ describe("exportAllData", () => {
     expect(result.app_version).toBeDefined();
   });
 
-  it("includes all 18 tables", async () => {
+  it("includes all 20 tables", async () => {
     mockDb.getAllAsync.mockResolvedValue([]);
     const result = await exportAllData();
     for (const table of IMPORT_TABLE_ORDER) {
@@ -53,7 +53,7 @@ describe("exportAllData", () => {
     mockDb.getAllAsync.mockResolvedValue([]);
     const progress: string[] = [];
     await exportAllData((p) => progress.push(p.table));
-    // Should have 18 table calls plus "done"
+    // Should have 20 table calls plus "done"
     expect(progress.length).toBe(IMPORT_TABLE_ORDER.length + 1);
     expect(progress[progress.length - 1]).toBe("done");
   });
@@ -432,9 +432,110 @@ describe("importData", () => {
     expect(inserted).toContain("weekly_schedule");
     expect(inserted).toContain("program_schedule");
   });
+  it("imports meal_templates and meal_template_items", async () => {
+    const inserted: string[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string) => {
+      const match = sql.match(/INSERT OR IGNORE INTO (\w+)/);
+      if (match) inserted.push(match[1]);
+      return { changes: 1 };
+    });
+
+    const data = {
+      version: 6,
+      data: {
+        meal_templates: [
+          { id: "mt1", name: "Breakfast Bowl", meal: "breakfast", cached_calories: 500, cached_protein: 30, cached_carbs: 60, cached_fat: 15, last_used_at: null, created_at: 1000, updated_at: 1000 },
+        ],
+        meal_template_items: [
+          { id: "mti1", template_id: "mt1", food_entry_id: "f1", servings: 2, sort_order: 0 },
+          { id: "mti2", template_id: "mt1", food_entry_id: "f2", servings: 1, sort_order: 1 },
+        ],
+      },
+    };
+
+    await importData(data);
+    expect(inserted).toContain("meal_templates");
+    expect(inserted).toContain("meal_template_items");
+  });
+
+  it("imports meal_templates before meal_template_items (FK order)", async () => {
+    const importOrder: string[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string) => {
+      const match = sql.match(/INSERT OR IGNORE INTO (\w+)/);
+      if (match) importOrder.push(match[1]);
+      return { changes: 1 };
+    });
+
+    const data = {
+      version: 6,
+      data: {
+        meal_templates: [{ id: "mt1", name: "Lunch", meal: "lunch", cached_calories: 0, cached_protein: 0, cached_carbs: 0, cached_fat: 0, last_used_at: null, created_at: 1, updated_at: 1 }],
+        meal_template_items: [{ id: "mti1", template_id: "mt1", food_entry_id: "f1", servings: 1, sort_order: 0 }],
+      },
+    };
+
+    await importData(data);
+    const mtIdx = importOrder.indexOf("meal_templates");
+    const mtiIdx = importOrder.indexOf("meal_template_items");
+    expect(mtIdx).toBeGreaterThanOrEqual(0);
+    expect(mtiIdx).toBeGreaterThanOrEqual(0);
+    expect(mtIdx).toBeLessThan(mtiIdx);
+  });
+
+  it("handles old backups without meal template tables gracefully", async () => {
+    mockDb.runAsync.mockResolvedValue({ changes: 1 });
+
+    const data = {
+      version: 5,
+      data: {
+        exercises: [{ id: "e1", name: "Bench", category: "chest", primary_muscles: "", secondary_muscles: "", equipment: "barbell", instructions: "", difficulty: "beginner", is_custom: 0 }],
+      },
+    };
+
+    const result = await importData(data);
+    expect(result.perTable.meal_templates).toEqual({ inserted: 0, skipped: 0 });
+    expect(result.perTable.meal_template_items).toEqual({ inserted: 0, skipped: 0 });
+  });
+
+  it("defaults cached macros to 0 for meal_templates with missing fields", async () => {
+    const sqlCalls: { sql: string; params: unknown[] }[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
+      sqlCalls.push({ sql, params: params ?? [] });
+      return { changes: 1 };
+    });
+
+    const data = {
+      version: 6,
+      data: {
+        meal_templates: [{ id: "mt1", name: "Quick Meal", meal: "dinner", created_at: 1, updated_at: 1 }],
+      },
+    };
+
+    await importData(data);
+    const mtInserts = sqlCalls.filter((c) => c.sql.includes("INSERT OR IGNORE INTO meal_templates"));
+    expect(mtInserts).toHaveLength(1);
+    // cached_calories (idx 3), cached_protein (idx 4), cached_carbs (idx 5), cached_fat (idx 6) should default to 0
+    expect(mtInserts[0].params[3]).toBe(0);
+    expect(mtInserts[0].params[4]).toBe(0);
+    expect(mtInserts[0].params[5]).toBe(0);
+    expect(mtInserts[0].params[6]).toBe(0);
+  });
 });
 
-// ---- estimateExportSize ----
+// ---- Meal Template in IMPORT_TABLE_ORDER ----
+
+describe("IMPORT_TABLE_ORDER includes meal templates", () => {
+  it("contains meal_templates and meal_template_items", () => {
+    expect(IMPORT_TABLE_ORDER).toContain("meal_templates");
+    expect(IMPORT_TABLE_ORDER).toContain("meal_template_items");
+  });
+
+  it("has meal_templates before meal_template_items", () => {
+    const mtIdx = IMPORT_TABLE_ORDER.indexOf("meal_templates");
+    const mtiIdx = IMPORT_TABLE_ORDER.indexOf("meal_template_items");
+    expect(mtIdx).toBeLessThan(mtiIdx);
+  });
+});
 
 describe("estimateExportSize", () => {
   it("returns size estimate based on row counts", async () => {

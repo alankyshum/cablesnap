@@ -1,11 +1,13 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useEffect } from "react";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withDelay,
+  withSequence,
   runOnJS,
 } from "react-native-reanimated";
 import { Button } from "@/components/ui/button";
@@ -17,18 +19,36 @@ interface SwipeToDeleteProps {
   children: React.ReactNode;
   onDelete: () => void;
   enabled?: boolean;
+  /** Show a brief swipe-hint animation on mount */
+  showHint?: boolean;
 }
 
-const THRESHOLD = -80;
-const DISMISS_THRESHOLD = -160;
+const REVEAL_THRESHOLD = -80;
 
 export default function SwipeToDelete({
   children,
   onDelete,
   enabled = true,
+  showHint = false,
 }: SwipeToDeleteProps) {
   const colors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
   const translateX = useSharedValue(0);
+
+  // Dismiss requires swiping past 40% of screen width
+  const dismissThreshold = -(screenWidth * 0.4);
+
+  useEffect(() => {
+    if (showHint && enabled) {
+      translateX.value = withDelay(
+        600,
+        withSequence(
+          withTiming(-40, { duration: 300 }),
+          withSpring(0, { damping: 15, stiffness: 200 }),
+        ),
+      );
+    }
+  }, [showHint, enabled, translateX]);
 
   const panGesture = Gesture.Pan()
     .enabled(enabled)
@@ -37,12 +57,12 @@ export default function SwipeToDelete({
       translateX.value = Math.min(0, e.translationX);
     })
     .onEnd((e) => {
-      if (e.translationX < DISMISS_THRESHOLD) {
-        translateX.value = withTiming(-500, { duration: durationTokens.fast }, () => {
+      if (e.translationX < dismissThreshold) {
+        translateX.value = withTiming(-screenWidth, { duration: durationTokens.fast }, () => {
           runOnJS(onDelete)();
         });
-      } else if (e.translationX < THRESHOLD) {
-        translateX.value = withSpring(THRESHOLD, { damping: 20, stiffness: 200 });
+      } else if (e.translationX < REVEAL_THRESHOLD) {
+        translateX.value = withSpring(REVEAL_THRESHOLD, { damping: 20, stiffness: 200 });
       } else {
         translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
       }

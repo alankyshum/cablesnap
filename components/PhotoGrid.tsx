@@ -1,11 +1,11 @@
 import React, { useCallback } from "react";
 import {
-  Image,
   Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
 } from "react-native";
+import { Image } from "expo-image";
 import { Text } from "@/components/ui/text";
 import { FlashList } from "@shopify/flash-list";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -66,7 +66,9 @@ export default function PhotoGrid({
           <Image
             source={{ uri: item.thumbnail_path || item.file_path }}
             style={styles.image}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="disk"
+            transition={200}
           />
           {/* Date overlay — white text for WCAG AA contrast on photo backgrounds */}
           <View style={styles.dateOverlay}>

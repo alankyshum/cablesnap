@@ -10,6 +10,8 @@ import type {
   Program,
   ProgramDay,
   ProgramLog,
+  MealTemplate,
+  MealTemplateItem,
 } from "../types";
 import { getDatabase } from "./helpers";
 
@@ -33,7 +35,9 @@ export type BackupTableName =
   | "daily_log"
   | "program_log"
   | "weekly_schedule"
-  | "program_schedule";
+  | "program_schedule"
+  | "meal_templates"
+  | "meal_template_items";
 
 export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   exercises: "Exercises",
@@ -54,6 +58,8 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   program_log: "Program Log",
   weekly_schedule: "Weekly Schedule",
   program_schedule: "Program Schedule",
+  meal_templates: "Meal Templates",
+  meal_template_items: "Meal Template Items",
 };
 
 // FK-dependency order for import — parents before children
@@ -76,12 +82,12 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "program_log",
   "weekly_schedule",
   "program_schedule",
+  "meal_templates",
+  "meal_template_items",
 ];
 
-export type AppSettingRow = { key: string; value: string };
-export type AchievementEarnedRow = { achievement_id: string; earned_at: number };
-export type WeeklyScheduleRow = { id: string; day_of_week: number; template_id: string; created_at: number };
-export type ProgramScheduleRow = { program_id: string; day_of_week: number; template_id: string };
+import type { AppSettingRow, AchievementEarnedRow, WeeklyScheduleRow, ProgramScheduleRow } from "./schema";
+export type { AppSettingRow, AchievementEarnedRow, WeeklyScheduleRow, ProgramScheduleRow };
 
 export type BackupV3Data = {
   exercises: unknown[];
@@ -102,6 +108,8 @@ export type BackupV3Data = {
   weekly_schedule: WeeklyScheduleRow[];
   program_schedule: ProgramScheduleRow[];
   achievements_earned: AchievementEarnedRow[];
+  meal_templates: MealTemplate[];
+  meal_template_items: MealTemplateItem[];
 };
 
 export type BackupV3 = {
@@ -135,8 +143,8 @@ const NUMERIC_NONNEG_FIELDS: Record<string, string[]> = {
   food_entries: ["calories", "protein", "carbs", "fat"],
   macro_targets: ["calories", "protein", "carbs", "fat"],
   body_weight: ["weight"],
-  workout_sets: ["weight", "reps", "set_number"],
-  template_exercises: ["position", "target_sets", "rest_seconds"],
+  workout_sets: ["weight", "reps", "set_number", "duration_seconds"],
+  template_exercises: ["position", "target_sets", "rest_seconds", "target_duration_seconds"],
   program_days: ["position"],
 };
 
@@ -156,6 +164,7 @@ export function validateBackupFileSize(sizeBytes: number): ValidationError | nul
   return null;
 }
 
+// eslint-disable-next-line complexity -- pre-existing; split would break backup format contract
 export function validateBackupData(data: unknown): ValidationError | null {
   if (typeof data !== "object" || data === null) {
     return { type: "corrupt_json", message: "This file doesn't appear to be a valid FitForge backup." };
@@ -354,7 +363,7 @@ async function importTable(database: any, tableName: BackupTableName, rows: unkn
   return { inserted, skipped };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic database interface
+// eslint-disable-next-line complexity, @typescript-eslint/no-explicit-any -- pre-existing complexity; generic database interface
 async function insertRow(database: any, tableName: BackupTableName, row: Record<string, unknown>): Promise<boolean> {
   switch (tableName) {
     case "exercises": {
@@ -442,8 +451,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "template_exercises": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.template_id, row.exercise_id, row.position, row.target_sets, row.target_reps, row.rest_seconds, row.link_id ?? null, row.link_label ?? ""]
+        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label, target_duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.exercise_id, row.position, row.target_sets, row.target_reps, row.rest_seconds, row.link_id ?? null, row.link_label ?? "", row.target_duration_seconds ?? null]
       );
       return r.changes > 0;
     }
@@ -464,8 +473,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     case "workout_sets": {
       const setType = row.set_type ?? (row.is_warmup ? "warmup" : "normal");
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0, setType]
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup, set_type, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0, setType, row.duration_seconds ?? null]
       );
       return r.changes > 0;
     }
@@ -494,6 +503,20 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       const r = await database.runAsync(
         "INSERT OR IGNORE INTO program_schedule (program_id, day_of_week, template_id) VALUES (?, ?, ?)",
         [row.program_id, row.day_of_week, row.template_id]
+      );
+      return r.changes > 0;
+    }
+    case "meal_templates": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO meal_templates (id, name, meal, cached_calories, cached_protein, cached_carbs, cached_fat, last_used_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.meal, row.cached_calories ?? 0, row.cached_protein ?? 0, row.cached_carbs ?? 0, row.cached_fat ?? 0, row.last_used_at ?? null, row.created_at, row.updated_at]
+      );
+      return r.changes > 0;
+    }
+    case "meal_template_items": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO meal_template_items (id, template_id, food_entry_id, servings, sort_order) VALUES (?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.food_entry_id, row.servings ?? 1, row.sort_order ?? 0]
       );
       return r.changes > 0;
     }

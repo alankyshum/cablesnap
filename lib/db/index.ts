@@ -6,6 +6,7 @@ export { getDatabase, getDrizzle, isMemoryFallback } from "./helpers";
 export {
   getAllExercises,
   getExerciseById,
+  getExercisesByIds,
   createCustomExercise,
   updateCustomExercise,
   softDeleteCustomExercise,
@@ -25,6 +26,8 @@ export {
   reorderTemplateExercises,
   updateTemplateExercise,
   getTemplateExerciseCount,
+  getTemplateExerciseCounts,
+  getTemplatePrimaryMuscles,
   createExerciseLink,
   unlinkExerciseGroup,
   addToExerciseLink,
@@ -42,8 +45,10 @@ export {
   getActiveSession,
   addSet,
   addSetsBatch,
+  addWarmupSets,
   updateSet,
   updateSetsBatch,
+  updateSetDuration,
   completeSet,
   uncompleteSet,
   deleteSet,
@@ -55,8 +60,11 @@ export {
   updateSetWarmup,
   updateSetType,
   getPreviousSets,
+  getPreviousSetsBatch,
   getSessionSetCount,
+  getSessionSetCounts,
   getSessionAvgRPE,
+  getSessionAvgRPEs,
   getRestSecondsForExercise,
   getRestSecondsForLink,
   getSessionsByMonth,
@@ -68,20 +76,25 @@ export {
   getCompletedSessionsWithSetCount,
   getMaxWeightByExercise,
   getSessionPRs,
+  checkSetPR,
   getRecentPRs,
   getExerciseHistory,
   getExerciseRecords,
   getExerciseChartData,
+  getExerciseDurationChartData,
   getExercise1RMChartData,
   getRecentExerciseSets,
+  getRecentExerciseSetsBatch,
   getBestSet,
   getMuscleVolumeForWeek,
   getMuscleVolumeTrend,
   getSessionRepPRs,
   getSessionComparison,
   getSessionWeightIncreases,
+  getSessionDurationPRs,
   getSessionCountsByDay,
   getTotalSessionCount,
+  getE1RMTrends,
   updateSession,
   createTemplateFromSession,
   swapExerciseInSession,
@@ -89,6 +102,7 @@ export {
   getSourceSessionSets,
 } from "./sessions";
 export type { ExerciseSession, ExerciseRecords, SourceSessionSet } from "./sessions";
+export type { E1RMTrendRow } from "./sessions";
 
 export {
   addFoodEntry,
@@ -236,3 +250,33 @@ export {
   markAllHCPendingAsFailed,
 } from "./health-connect";
 export type { HCSyncLog, HCSyncStatus } from "./health-connect";
+
+export {
+  getDailyNutritionTotals,
+  getWeeklyNutritionAverages,
+  getNutritionAdherence,
+  getNutritionTargets,
+} from "./nutrition-progress";
+export type {
+  DailyNutritionTotal,
+  WeeklyNutritionAverage,
+  NutritionAdherence,
+} from "./nutrition-progress";
+
+export {
+  createMealTemplate,
+  getMealTemplates,
+  getMealTemplateById,
+  updateMealTemplate,
+  deleteMealTemplate,
+  logFromTemplate,
+  undoLogFromTemplate,
+} from "./meal-templates";
+export type {
+  CreateMealTemplateInput,
+  UpdateMealTemplateInput,
+  LogFromTemplateResult,
+} from "./meal-templates";
+
+export { getMuscleRecoveryStatus, RECOVERY_HOURS } from "./recovery";
+export type { MuscleRecoveryStatus, RecoveryStatus } from "./recovery";

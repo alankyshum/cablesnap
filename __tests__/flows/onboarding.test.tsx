@@ -178,7 +178,7 @@ describe('Onboarding Flow', () => {
     })
 
     it('shows error banner when save fails', async () => {
-      ;(getBodySettings as jest.Mock).mockRejectedValueOnce(new Error('DB error'))
+      (getBodySettings as jest.Mock).mockRejectedValueOnce(new Error('DB error'))
 
       const { getByLabelText, findByText } = renderScreen(<Recommend />)
       fireEvent.press(getByLabelText(/Start with Full Body/))

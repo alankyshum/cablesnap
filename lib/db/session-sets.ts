@@ -25,6 +25,7 @@ type SetRow = {
   swapped_from_name: string | null;
   is_warmup: number;
   set_type: string;
+  duration_seconds: number | null;
 };
 
 export async function getSessionSets(
@@ -58,6 +59,7 @@ export async function getSessionSets(
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
     is_warmup: r.is_warmup === 1,
     set_type: (r.set_type as SetType) ?? "normal",
+    duration_seconds: r.duration_seconds ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -159,6 +161,7 @@ export async function addSet(
     swapped_from_exercise_id: null,
     is_warmup: resolvedWarmup === 1,
     set_type: resolvedType,
+    duration_seconds: null,
   };
 }
 
@@ -195,6 +198,7 @@ export async function addSetsBatch(
       swapped_from_exercise_id: null,
       is_warmup: resolvedType === "warmup",
       set_type: resolvedType,
+      duration_seconds: null,
     };
   });
   // Use prepared statements for batch insert performance
@@ -213,6 +217,64 @@ export async function addSetsBatch(
       await stmt.finalizeAsync();
     }
   });
+  return results;
+}
+
+export async function addWarmupSets(
+  sessionId: string,
+  exerciseId: string,
+  warmupSets: { weight: number; reps: number }[],
+  linkId?: string | null,
+  trainingMode?: TrainingMode | null,
+  tempo?: string | null
+): Promise<WorkoutSet[]> {
+  if (warmupSets.length === 0) return [];
+  const count = warmupSets.length;
+
+  const results: WorkoutSet[] = warmupSets.map((ws, i) => ({
+    id: uuid(),
+    session_id: sessionId,
+    exercise_id: exerciseId,
+    set_number: i + 1,
+    weight: ws.weight,
+    reps: ws.reps,
+    completed: false,
+    completed_at: null,
+    rpe: null,
+    notes: "",
+    link_id: linkId ?? null,
+    round: null,
+    training_mode: trainingMode ?? null,
+    tempo: tempo ?? null,
+    swapped_from_exercise_id: null,
+    is_warmup: true,
+    set_type: "warmup" as SetType,
+    duration_seconds: null,
+  }));
+
+  await withTransaction(async (db) => {
+    // Shift existing sets up by count
+    await db.runAsync(
+      "UPDATE workout_sets SET set_number = set_number + ? WHERE session_id = ? AND exercise_id = ?",
+      [count, sessionId, exerciseId]
+    );
+
+    // Insert warmup sets
+    const stmt = await db.prepareAsync(
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    try {
+      for (const r of results) {
+        await stmt.executeAsync([
+          r.id, r.session_id, r.exercise_id, r.set_number,
+          r.weight, r.reps, r.link_id, r.round, r.training_mode, r.tempo, 1, "warmup",
+        ]);
+      }
+    } finally {
+      await stmt.finalizeAsync();
+    }
+  });
+
   return results;
 }
 
@@ -237,12 +299,30 @@ export async function updateSetsBatch(
 export async function updateSet(
   id: string,
   weight: number | null,
-  reps: number | null
+  reps: number | null,
+  durationSeconds?: number | null
 ): Promise<void> {
-  const db = await getDrizzle();
-  await db.update(workoutSets)
-    .set({ weight, reps })
-    .where(eq(workoutSets.id, id));
+  if (durationSeconds !== undefined) {
+    await execute(
+      "UPDATE workout_sets SET weight = ?, reps = ?, duration_seconds = ? WHERE id = ?",
+      [weight, reps, durationSeconds, id]
+    );
+  } else {
+    await execute(
+      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
+      [weight, reps, id]
+    );
+  }
+}
+
+export async function updateSetDuration(
+  id: string,
+  durationSeconds: number | null
+): Promise<void> {
+  await execute(
+    "UPDATE workout_sets SET duration_seconds = ? WHERE id = ?",
+    [durationSeconds, id]
+  );
 }
 
 export async function completeSet(id: string): Promise<void> {
@@ -337,6 +417,55 @@ export async function getPreviousSets(
   );
 }
 
+export async function getPreviousSetsBatch(
+  exerciseIds: string[],
+  currentSessionId: string
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]>> {
+  if (exerciseIds.length === 0) return {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]> = {};
+  const eidPlaceholders = exerciseIds.map(() => "?").join(",");
+  // Step 1: Find all completed sessions per exercise, ordered by most recent
+  const sessionRows = await query<{ exercise_id: string; session_id: string }>(
+    `SELECT ws2.exercise_id, wss.id AS session_id
+     FROM workout_sessions wss
+     JOIN workout_sets ws2 ON ws2.session_id = wss.id
+     WHERE ws2.exercise_id IN (${eidPlaceholders})
+       AND wss.completed_at IS NOT NULL
+       AND wss.id != ?
+     GROUP BY ws2.exercise_id, wss.id
+     ORDER BY ws2.exercise_id, wss.completed_at DESC`,
+    [...exerciseIds, currentSessionId]
+  );
+  if (sessionRows.length === 0) return result;
+  // Keep only the first (most recent) session per exercise
+  const sessionMap: Record<string, string> = {};
+  for (const row of sessionRows) {
+    if (!sessionMap[row.exercise_id]) {
+      sessionMap[row.exercise_id] = row.session_id;
+    }
+  }
+  const sessionIds = [...new Set(Object.values(sessionMap))];
+  // Step 2: Fetch all completed sets from those sessions for the requested exercises
+  const sidPlaceholders = sessionIds.map(() => "?").join(",");
+  const rows = await query<{ exercise_id: string; session_id: string; set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }>(
+    `SELECT ws.exercise_id, ws.session_id, ws.set_number, ws.weight, ws.reps, ws.duration_seconds
+     FROM workout_sets ws
+     WHERE ws.session_id IN (${sidPlaceholders})
+       AND ws.exercise_id IN (${eidPlaceholders})
+       AND ws.completed = 1
+     ORDER BY ws.exercise_id, ws.set_number ASC`,
+    [...sessionIds, ...exerciseIds]
+  );
+  // Filter rows to only include sets from the correct session per exercise
+  for (const row of rows) {
+    const correctSession = sessionMap[row.exercise_id];
+    if (!correctSession || row.session_id !== correctSession) continue;
+    if (!result[row.exercise_id]) result[row.exercise_id] = [];
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds });
+  }
+  return result;
+}
+
 export async function getSessionSetCount(
   sessionId: string
 ): Promise<number> {
@@ -348,6 +477,20 @@ export async function getSessionSetCount(
   return row?.count ?? 0;
 }
 
+export async function getSessionSetCounts(
+  sessionIds: string[]
+): Promise<Record<string, number>> {
+  if (sessionIds.length === 0) return {};
+  const placeholders = sessionIds.map(() => "?").join(",");
+  const rows = await query<{ session_id: string; count: number }>(
+    `SELECT session_id, COUNT(*) as count FROM workout_sets WHERE session_id IN (${placeholders}) AND completed = 1 AND is_warmup = 0 GROUP BY session_id`,
+    sessionIds
+  );
+  const result: Record<string, number> = {};
+  for (const r of rows) result[r.session_id] = r.count;
+  return result;
+}
+
 export async function getSessionAvgRPE(
   sessionId: string
 ): Promise<number | null> {
@@ -356,6 +499,20 @@ export async function getSessionAvgRPE(
     [sessionId]
   );
   return row?.val ?? null;
+}
+
+export async function getSessionAvgRPEs(
+  sessionIds: string[]
+): Promise<Record<string, number | null>> {
+  if (sessionIds.length === 0) return {};
+  const placeholders = sessionIds.map(() => "?").join(",");
+  const rows = await query<{ session_id: string; val: number | null }>(
+    `SELECT session_id, AVG(rpe) AS val FROM workout_sets WHERE session_id IN (${placeholders}) AND completed = 1 AND rpe IS NOT NULL AND is_warmup = 0 GROUP BY session_id`,
+    sessionIds
+  );
+  const result: Record<string, number | null> = {};
+  for (const r of rows) result[r.session_id] = r.val;
+  return result;
 }
 
 export async function getRestSecondsForExercise(

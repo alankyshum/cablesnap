@@ -29,6 +29,7 @@ import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/type
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import EditExerciseSheet from "../../components/EditExerciseSheet";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { bumpQueryVersion } from "../../lib/query";
 
 export default function CreateTemplate() {
   const colors = useThemeColors();
@@ -78,6 +79,7 @@ export default function CreateTemplate() {
       if (!template) {
         const tpl = await createTemplate(trimmed);
         setTemplate(tpl);
+        bumpQueryVersion("home");
         Alert.alert("Template Created", "Now add exercises to your template.");
       } else {
         if (exercises.length === 0) {
@@ -88,6 +90,7 @@ export default function CreateTemplate() {
         if (trimmed !== template.name) {
           await updateTemplateName(template.id, trimmed);
         }
+        bumpQueryVersion("home");
         router.back();
       }
     } finally {

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { WorkoutSession, MuscleGroup } from "../types";
 import { query, queryOne } from "./helpers";
 
@@ -45,6 +46,31 @@ export async function getAllCompletedSessionWeeks(): Promise<number[]> {
     [twoYearsAgo]
   );
   return rows.map((r) => r.started_at);
+}
+
+// ---- Live PR Detection ----
+
+export async function checkSetPR(
+  exerciseId: string,
+  weight: number,
+  currentSessionId: string
+): Promise<boolean> {
+  if (!weight || weight <= 0) return false;
+  const row = await queryOne<{ max_weight: number | null }>(
+    `SELECT MAX(ws.weight) AS max_weight
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ?
+       AND ws.completed = 1
+       AND ws.weight IS NOT NULL
+       AND ws.weight > 0
+       AND ws.is_warmup = 0
+       AND wss.completed_at IS NOT NULL
+       AND ws.session_id != ?`,
+    [exerciseId, currentSessionId]
+  );
+  if (!row || row.max_weight === null) return false;
+  return weight > row.max_weight;
 }
 
 // ---- Progress Queries ----
@@ -509,4 +535,41 @@ export async function getMuscleVolumeTrend(
   }
 
   return buckets.map((sets, i) => ({ week: `W${i + 1}`, sets }));
+}
+
+export async function getSessionDurationPRs(
+  sessionId: string
+): Promise<{ exercise_id: string; name: string; duration: number; previous_max: number }[]> {
+  return query<{ exercise_id: string; name: string; duration: number; previous_max: number }>(
+    `SELECT cur.exercise_id,
+            COALESCE(e.name, 'Deleted Exercise') AS name,
+            cur.max_duration AS duration,
+            hist.max_duration AS previous_max
+     FROM (
+       SELECT ws.exercise_id, MAX(ws.duration_seconds) AS max_duration
+       FROM workout_sets ws
+       WHERE ws.session_id = ?
+         AND ws.completed = 1
+         AND ws.duration_seconds IS NOT NULL
+         AND ws.duration_seconds > 0
+         AND ws.is_warmup = 0
+       GROUP BY ws.exercise_id
+     ) cur
+     JOIN (
+       SELECT ws.exercise_id, MAX(ws.duration_seconds) AS max_duration
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.session_id != ?
+         AND ws.completed = 1
+         AND ws.duration_seconds IS NOT NULL
+         AND ws.duration_seconds > 0
+         AND ws.is_warmup = 0
+         AND wss.completed_at IS NOT NULL
+       GROUP BY ws.exercise_id
+     ) hist ON cur.exercise_id = hist.exercise_id
+     LEFT JOIN exercises e ON cur.exercise_id = e.id
+     WHERE cur.max_duration > hist.max_duration
+     ORDER BY name ASC`,
+    [sessionId, sessionId]
+  );
 }

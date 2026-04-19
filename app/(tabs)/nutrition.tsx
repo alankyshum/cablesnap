@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/bna-toast";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import InlineFoodSearch from "../../components/InlineFoodSearch";
+import SaveAsTemplateSheet from "../../components/SaveAsTemplateSheet";
 import {
   getDailyLogs,
   getDailySummary,
@@ -15,7 +16,7 @@ import {
   deleteDailyLog,
   addDailyLog,
 } from "../../lib/db";
-import type { DailyLog, MacroTargets } from "../../lib/types";
+import type { DailyLog, MacroTargets, Meal } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 import { semantic } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
@@ -47,6 +48,9 @@ export default function Nutrition() {
   const { info } = useToast();
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
+  const [templateSheet, setTemplateSheet] = useState<{ visible: boolean; meal: Meal; items: DailyLog[] }>({
+    visible: false, meal: "breakfast", items: [],
+  });
   const { scan } = useLocalSearchParams<{ scan?: string }>();
   const shouldScan = scan === "true";
 
@@ -114,9 +118,13 @@ export default function Nutrition() {
       contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
       stickySectionHeadersEnabled={false}
       renderSectionHeader={({ section }) => (
-        <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
-          {section.title}
-        </Text>
+        <MealSectionHeader
+          section={section}
+          colors={colors}
+          onSaveAsTemplate={(m, data) =>
+            setTemplateSheet({ visible: true, meal: m, items: data })
+          }
+        />
       )}
       renderItem={({ item }) => (
         <SwipeToDelete onDelete={() => remove(item)}>
@@ -143,35 +151,14 @@ export default function Nutrition() {
       )}
       SectionSeparatorComponent={() => <View style={{ height: 16 }} />}
       ListHeaderComponent={
-        <>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={prev} accessibilityLabel="Previous day" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="chevron-left" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <Text variant="title" style={{ color: colors.onBackground }}>
-              {label(date)}
-            </Text>
-            <TouchableOpacity onPress={next} accessibilityLabel="Next day" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="chevron-right" size={24} color={colors.onSurface} /></TouchableOpacity>
-          </View>
-
-          {targets && (
-            <Card style={[styles.card, { backgroundColor: colors.surface, marginHorizontal: 16 }]}>
-              <CardContent>
-                <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={colors.primary} colors={colors} />
-                <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" colors={colors} />
-                <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" colors={colors} />
-                <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" colors={colors} />
-                <Text
-                  variant="caption"
-                  style={{ color: colors.primary, marginTop: 8 }}
-                  onPress={() => router.push("/nutrition/targets")}
-                  accessibilityLabel="Edit macro targets"
-                  accessibilityRole="link"
-                >
-                  Edit Targets →
-                </Text>
-              </CardContent>
-            </Card>
-          )}
-        </>
+        <NutritionListHeader
+          date={date}
+          summary={summary}
+          targets={targets}
+          colors={colors}
+          onPrev={prev}
+          onNext={next}
+        />
       }
       ListEmptyComponent={
         <View style={styles.empty}>
@@ -219,6 +206,13 @@ export default function Nutrition() {
             />
           </View>
         </View>
+        <SaveAsTemplateSheet
+          visible={templateSheet.visible}
+          onClose={() => setTemplateSheet((s) => ({ ...s, visible: false }))}
+          meal={templateSheet.meal}
+          items={templateSheet.items}
+          onSaved={load}
+        />
       </View>
     );
   }
@@ -245,7 +239,87 @@ export default function Nutrition() {
         onPress={toggleAddCard}
         accessibilityLabel={showAddCard ? "Close add food" : "Add food"}
       />
+      <SaveAsTemplateSheet
+        visible={templateSheet.visible}
+        onClose={() => setTemplateSheet((s) => ({ ...s, visible: false }))}
+        meal={templateSheet.meal}
+        items={templateSheet.items}
+        onSaved={load}
+      />
     </View>
+  );
+}
+
+function MealSectionHeader({
+  section,
+  colors,
+  onSaveAsTemplate,
+}: {
+  section: { title: string; meal: Meal; data: DailyLog[] };
+  colors: ReturnType<typeof useThemeColors>;
+  onSaveAsTemplate: (meal: Meal, items: DailyLog[]) => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+        {section.title}
+      </Text>
+      {section.data.length > 0 && (
+        <TouchableOpacity
+          onPress={() => onSaveAsTemplate(section.meal, section.data)}
+          accessibilityLabel={`Save ${section.title} as template`}
+          accessibilityRole="button"
+          hitSlop={8}
+          style={{ padding: 8, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+        >
+          <MaterialCommunityIcons name="content-save-outline" size={20} color={colors.onSurfaceVariant} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+function NutritionListHeader({
+  date,
+  summary,
+  targets,
+  colors,
+  onPrev,
+  onNext,
+}: {
+  date: Date;
+  summary: { calories: number; protein: number; carbs: number; fat: number };
+  targets: MacroTargets | null;
+  colors: ReturnType<typeof useThemeColors>;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onPrev} accessibilityLabel="Previous day" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="chevron-left" size={24} color={colors.onSurface} /></TouchableOpacity>
+        <Text variant="title" style={{ color: colors.onBackground }}>
+          {label(date)}
+        </Text>
+        <TouchableOpacity onPress={onNext} accessibilityLabel="Next day" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="chevron-right" size={24} color={colors.onSurface} /></TouchableOpacity>
+      </View>
+      {targets && (
+        <Card style={[styles.card, { backgroundColor: colors.surface, marginHorizontal: 16 }]}>
+          <CardContent>
+            <MacroRow label="Calories" value={summary.calories} target={targets.calories} color={colors.primary} colors={colors} />
+            <MacroRow label="Protein" value={summary.protein} target={targets.protein} color={semantic.protein} unit="g" colors={colors} />
+            <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} color={semantic.carbs} unit="g" colors={colors} />
+            <MacroRow label="Fat" value={summary.fat} target={targets.fat} color={semantic.fat} unit="g" colors={colors} />
+            <Text variant="caption" style={{ color: colors.primary, marginTop: 8 }} onPress={() => router.push("/nutrition/targets")} accessibilityLabel="Edit macro targets" accessibilityRole="link">
+              Edit Targets →
+            </Text>
+            <Text variant="caption" style={{ color: colors.primary, marginTop: 4 }} onPress={() => router.push("/nutrition/templates")} accessibilityLabel="View meal templates" accessibilityRole="link">
+              Meal Templates →
+            </Text>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 }
 

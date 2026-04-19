@@ -30,6 +30,7 @@ describe("Settings profile card layout (BLD-258, GitHub #125)", () => {
 describe("Session notes/delete button touch targets (BLD-258, GitHub #126)", () => {
   const sessionSource = [
     fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"), "utf-8"),
+    fs.readFileSync(path.resolve(__dirname, "../../components/session/GroupCardHeader.tsx"), "utf-8"),
     fs.readFileSync(path.resolve(__dirname, "../../components/session/SetRow.tsx"), "utf-8"),
   ].join("\n");
 

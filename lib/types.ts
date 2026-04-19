@@ -180,6 +180,7 @@ export type TemplateExercise = {
   rest_seconds: number;
   link_id: string | null;
   link_label: string;
+  target_duration_seconds: number | null;
   exercise?: Exercise;
 };
 
@@ -223,6 +224,7 @@ export type WorkoutSet = {
   swapped_from_exercise_id: string | null;
   is_warmup: boolean;
   set_type: SetType;
+  duration_seconds: number | null;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {
@@ -309,6 +311,31 @@ export type MacroTargets = {
   carbs: number;
   fat: number;
   updated_at: number;
+};
+
+// --------------- Meal Templates ---------------
+
+export type MealTemplate = {
+  id: string;
+  name: string;
+  meal: Meal;
+  cached_calories: number;
+  cached_protein: number;
+  cached_carbs: number;
+  cached_fat: number;
+  last_used_at: number | null;
+  created_at: number;
+  updated_at: number;
+  items?: MealTemplateItem[];
+};
+
+export type MealTemplateItem = {
+  id: string;
+  template_id: string;
+  food_entry_id: string;
+  servings: number;
+  sort_order: number;
+  food?: FoodEntry;
 };
 
 // --------------- Body Tracking ---------------

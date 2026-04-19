@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import * as Haptics from "expo-haptics";
 import { useToast } from "@/components/ui/bna-toast";
 import {
@@ -9,18 +9,16 @@ import {
 } from "../lib/db";
 import { SET_TYPE_CYCLE } from "../lib/types";
 import type { SetType } from "../lib/types";
-import type { ExerciseGroup, SetWithMeta } from "../components/session/types";
+import type { ExerciseGroup } from "../components/session/types";
 
 type UseSetTypeActionsArgs = {
-  groups: ExerciseGroup[];
+  groups?: ExerciseGroup[];
   setGroups: React.Dispatch<React.SetStateAction<ExerciseGroup[]>>;
-  maxes: Record<string, number>;
 };
 
-export function useSetTypeActions({ groups, setGroups, maxes }: UseSetTypeActionsArgs) {
+export function useSetTypeActions({ setGroups }: UseSetTypeActionsArgs) {
   const { info: showToast } = useToast();
   const [setTypeSheetSetId, setSetTypeSheetSetId] = useState<string | null>(null);
-  const prHapticFired = useRef<Set<string>>(new Set());
 
   const handleCycleSetType = useCallback(async (setId: string) => {
     let newType = "normal" as SetType;
@@ -79,29 +77,6 @@ export function useSetTypeActions({ groups, setGroups, maxes }: UseSetTypeAction
     await updateSetType(setId, type);
     Haptics.selectionAsync();
   }, [setTypeSheetSetId]);
-
-  // PR detection with haptic feedback
-  const isPR = (set: SetWithMeta) => {
-    if (!set.completed || !set.weight || set.weight <= 0) return false;
-    const max = maxes[set.exercise_id];
-    if (max === undefined) return false;
-    return set.weight > max;
-  };
-
-  useEffect(() => {
-    for (const g of groups) {
-      for (const s of g.sets) {
-        if (isPR(s) && !prHapticFired.current.has(s.id)) {
-          prHapticFired.current.add(s.id);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-        if (!isPR(s) && prHapticFired.current.has(s.id)) {
-          prHapticFired.current.delete(s.id);
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups, maxes]);
 
   return {
     setTypeSheetSetId,

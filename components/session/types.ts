@@ -4,6 +4,7 @@ export type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
   exercise_deleted?: boolean;
   previous?: string;
+  is_pr?: boolean;
 };
 
 export type ExerciseGroup = {
@@ -13,6 +14,8 @@ export type ExerciseGroup = {
   link_id: string | null;
   training_modes: TrainingMode[];
   is_voltra: boolean;
+  is_bodyweight: boolean;
+  trackingMode: "reps" | "duration";
 };
 
 export const RPE_CHIPS = [6, 7, 8, 9, 10] as const;

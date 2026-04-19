@@ -1,6 +1,17 @@
+/**
+ * Drizzle ORM schema definitions for all FitForge tables.
+ *
+ * This file is the single source of truth for TypeScript types derived from
+ * the database schema. Table definitions here must match the runtime schema
+ * created by migrations.ts exactly.
+ *
+ * Usage:
+ *   import { exercises, workoutSets } from "./schema";
+ *   type ExerciseRow = typeof exercises.$inferSelect;
+ */
 import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
 
-// ─── Core Tables ───────────────────────────────────────────────────
+// ─── Core Tables ────────────────────────────────────────────────────────────
 
 export const exercises = sqliteTable("exercises", {
   id: text("id").primaryKey(),
@@ -13,6 +24,7 @@ export const exercises = sqliteTable("exercises", {
   difficulty: text("difficulty").notNull(),
   is_custom: integer("is_custom").default(0),
   deleted_at: integer("deleted_at"),
+  // Voltra-specific columns (added via ALTER TABLE)
   mount_position: text("mount_position"),
   attachment: text("attachment").default("handle"),
   training_modes: text("training_modes").default('["weight"]'),
@@ -37,6 +49,7 @@ export const templateExercises = sqliteTable("template_exercises", {
   rest_seconds: integer("rest_seconds").default(90),
   link_id: text("link_id"),
   link_label: text("link_label").default(""),
+  target_duration_seconds: integer("target_duration_seconds"),
 });
 
 export const workoutSessions = sqliteTable("workout_sessions", {
@@ -71,23 +84,24 @@ export const workoutSets = sqliteTable("workout_sets", {
   swapped_from_exercise_id: text("swapped_from_exercise_id"),
   is_warmup: integer("is_warmup").default(0),
   set_type: text("set_type").default("normal"),
+  duration_seconds: integer("duration_seconds"),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),
   index("idx_workout_sets_session_exercise").on(table.session_id, table.exercise_id),
 ]);
 
-// ─── Nutrition Tables ──────────────────────────────────────────────
+// ─── Nutrition Tables ───────────────────────────────────────────────────────
 
 export const foodEntries = sqliteTable("food_entries", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  calories: real("calories").default(0),
-  protein: real("protein").default(0),
-  carbs: real("carbs").default(0),
-  fat: real("fat").default(0),
-  serving_size: text("serving_size").default("1 serving"),
-  is_favorite: integer("is_favorite").default(0),
+  calories: real("calories").notNull().default(0),
+  protein: real("protein").notNull().default(0),
+  carbs: real("carbs").notNull().default(0),
+  fat: real("fat").notNull().default(0),
+  serving_size: text("serving_size").notNull().default("1 serving"),
+  is_favorite: integer("is_favorite").notNull().default(0),
   created_at: integer("created_at").notNull(),
 });
 
@@ -109,7 +123,28 @@ export const macroTargets = sqliteTable("macro_targets", {
   updated_at: integer("updated_at").notNull(),
 });
 
-// ─── Body Tables ───────────────────────────────────────────────────
+export const mealTemplates = sqliteTable("meal_templates", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  meal: text("meal").notNull(),
+  cached_calories: real("cached_calories").notNull().default(0),
+  cached_protein: real("cached_protein").notNull().default(0),
+  cached_carbs: real("cached_carbs").notNull().default(0),
+  cached_fat: real("cached_fat").notNull().default(0),
+  last_used_at: integer("last_used_at"),
+  created_at: integer("created_at").notNull(),
+  updated_at: integer("updated_at").notNull(),
+});
+
+export const mealTemplateItems = sqliteTable("meal_template_items", {
+  id: text("id").primaryKey(),
+  template_id: text("template_id").notNull(),
+  food_entry_id: text("food_entry_id").notNull(),
+  servings: real("servings").notNull().default(1),
+  sort_order: integer("sort_order").notNull().default(0),
+});
+
+// ─── Body Tracking Tables ───────────────────────────────────────────────────
 
 export const bodyWeight = sqliteTable("body_weight", {
   id: text("id").primaryKey(),
@@ -146,7 +181,7 @@ export const bodySettings = sqliteTable("body_settings", {
   updated_at: integer("updated_at").notNull(),
 });
 
-// ─── Program Tables ────────────────────────────────────────────────
+// ─── Program Tables ─────────────────────────────────────────────────────────
 
 export const programs = sqliteTable("programs", {
   id: text("id").primaryKey(),
@@ -176,12 +211,14 @@ export const programLog = sqliteTable("program_log", {
   completed_at: integer("completed_at").notNull(),
 });
 
-// ─── Settings & Schedule Tables ────────────────────────────────────
+// ─── Settings & Config Tables ───────────────────────────────────────────────
 
 export const appSettings = sqliteTable("app_settings", {
   key: text("key").primaryKey(),
   value: text("value"),
 });
+
+// ─── Schedule Tables ────────────────────────────────────────────────────────
 
 export const weeklySchedule = sqliteTable("weekly_schedule", {
   id: text("id").primaryKey(),
@@ -196,7 +233,7 @@ export const programSchedule = sqliteTable("program_schedule", {
   template_id: text("template_id").notNull(),
 });
 
-// ─── Extension Tables ──────────────────────────────────────────────
+// ─── Logging & Analytics Tables ─────────────────────────────────────────────
 
 export const errorLog = sqliteTable("error_log", {
   id: text("id").primaryKey(),
@@ -218,6 +255,8 @@ export const interactionLog = sqliteTable("interaction_log", {
   timestamp: integer("timestamp").notNull(),
 });
 
+// ─── Progress Photos ────────────────────────────────────────────────────────
+
 export const progressPhotos = sqliteTable("progress_photos", {
   id: text("id").primaryKey(),
   file_path: text("file_path").notNull(),
@@ -235,12 +274,14 @@ export const progressPhotos = sqliteTable("progress_photos", {
   index("idx_progress_photos_deleted").on(table.deleted_at),
 ]);
 
+// ─── Achievements ───────────────────────────────────────────────────────────
+
 export const achievementsEarned = sqliteTable("achievements_earned", {
   achievement_id: text("achievement_id").primaryKey(),
   earned_at: integer("earned_at").notNull(),
 });
 
-// ─── Integration Tables ────────────────────────────────────────────
+// ─── Integration Tables ─────────────────────────────────────────────────────
 
 export const stravaConnection = sqliteTable("strava_connection", {
   id: integer("id").primaryKey().default(1),
@@ -274,3 +315,33 @@ export const healthConnectSyncLog = sqliteTable("health_connect_sync_log", {
 }, (table) => [
   index("idx_hc_sync_log_status").on(table.status),
 ]);
+
+// ─── Inferred Select Types ─────────────────────────────────────────────────
+// Use these instead of manually-defined Row types.
+
+export type ExerciseRow = typeof exercises.$inferSelect;
+export type WorkoutTemplateRow = typeof workoutTemplates.$inferSelect;
+export type TemplateExerciseBaseRow = typeof templateExercises.$inferSelect;
+export type WorkoutSessionRow = typeof workoutSessions.$inferSelect;
+export type WorkoutSetRow = typeof workoutSets.$inferSelect;
+export type FoodEntryRow = typeof foodEntries.$inferSelect;
+export type DailyLogBaseRow = typeof dailyLog.$inferSelect;
+export type MacroTargetsRow = typeof macroTargets.$inferSelect;
+export type MealTemplateRow = typeof mealTemplates.$inferSelect;
+export type MealTemplateItemBaseRow = typeof mealTemplateItems.$inferSelect;
+export type BodyWeightRow = typeof bodyWeight.$inferSelect;
+export type BodyMeasurementsRow = typeof bodyMeasurements.$inferSelect;
+export type BodySettingsRow = typeof bodySettings.$inferSelect;
+export type ProgramRow = typeof programs.$inferSelect;
+export type ProgramDayRow = typeof programDays.$inferSelect;
+export type ProgramLogRow = typeof programLog.$inferSelect;
+export type AppSettingRow = typeof appSettings.$inferSelect;
+export type WeeklyScheduleRow = typeof weeklySchedule.$inferSelect;
+export type ProgramScheduleRow = typeof programSchedule.$inferSelect;
+export type ErrorLogRow = typeof errorLog.$inferSelect;
+export type InteractionLogRow = typeof interactionLog.$inferSelect;
+export type ProgressPhotoRow = typeof progressPhotos.$inferSelect;
+export type AchievementEarnedRow = typeof achievementsEarned.$inferSelect;
+export type StravaConnectionRow = typeof stravaConnection.$inferSelect;
+export type StravaSyncLogRow = typeof stravaSyncLog.$inferSelect;
+export type HealthConnectSyncLogRow = typeof healthConnectSyncLog.$inferSelect;

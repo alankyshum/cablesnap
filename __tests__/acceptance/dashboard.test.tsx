@@ -42,7 +42,7 @@ jest.mock('../../lib/errors', () => ({
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
-jest.mock('../../lib/query', () => ({ useFocusRefetch: jest.fn() }))
+jest.mock('../../lib/query', () => ({ useFocusRefetch: jest.fn(), bumpQueryVersion: jest.fn(), getQueryVersion: jest.fn().mockReturnValue(0) }))
 jest.mock('../../components/ui/bna-toast', () => ({
   ToastProvider: ({ children }: { children: unknown }) => children,
   useToast: () => ({ toast: jest.fn(), success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
@@ -71,7 +71,7 @@ jest.mock('react-native-reanimated', () => {
     withTiming: (v: unknown) => v,
     withSpring: (v: unknown) => v,
     withDelay: (_d: unknown, v: unknown) => v,
-    runOnJS: (fn: Function) => fn,
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
   }
 })
 jest.mock('expo-haptics', () => ({
@@ -140,14 +140,22 @@ jest.mock('../../lib/db', () => ({
   getRecentPRs: (...args: unknown[]) => mockGetRecentPRs(...args),
   startSession: (...args: unknown[]) => mockStartSession(...args),
   getTemplateExerciseCount: (...args: unknown[]) => mockGetTemplateExerciseCount(...args),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
+  getTemplatePrimaryMuscles: jest.fn().mockResolvedValue({}),
   getSessionSetCount: (...args: unknown[]) => mockGetSessionSetCount(...args),
+  getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getSessionAvgRPE: (...args: unknown[]) => mockGetSessionAvgRPE(...args),
+  getSessionAvgRPEs: jest.fn().mockResolvedValue({}),
   deleteTemplate: (...args: unknown[]) => mockDeleteTemplate(...args),
   duplicateTemplate: (...args: unknown[]) => mockDuplicateTemplate(...args),
   duplicateProgram: (...args: unknown[]) => mockDuplicateProgram(...args),
   getTodaySchedule: (...args: unknown[]) => mockGetTodaySchedule(...args),
   isTodayCompleted: (...args: unknown[]) => mockIsTodayCompleted(...args),
   getWeekAdherence: (...args: unknown[]) => mockGetWeekAdherence(...args),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
+  getWeeklyVolume: jest.fn().mockResolvedValue([]),
+  getE1RMTrends: jest.fn().mockResolvedValue([]),
+  getTotalSessionCount: jest.fn().mockResolvedValue(0),
 }))
 
 const mockGetPrograms = jest.fn().mockResolvedValue([program1])
@@ -159,6 +167,7 @@ jest.mock('../../lib/programs', () => ({
   getPrograms: (...args: unknown[]) => mockGetPrograms(...args),
   getNextWorkout: (...args: unknown[]) => mockGetNextWorkout(...args),
   getProgramDayCount: (...args: unknown[]) => mockGetProgramDayCount(...args),
+  getProgramDayCounts: jest.fn().mockResolvedValue({}),
   softDeleteProgram: (...args: unknown[]) => mockSoftDeleteProgram(...args),
   duplicateProgram: (...args: unknown[]) => mockDuplicateProgram(...args),
 }))
@@ -170,9 +179,18 @@ jest.mock('../../lib/rpe', () => ({
 jest.mock('../../lib/starter-templates', () => ({
   STARTER_TEMPLATES: [],
 }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 
 import Dashboard from '../../app/(tabs)/index'
 
+// eslint-disable-next-line max-lines-per-function
 describe('Dashboard Acceptance', () => {
   beforeEach(() => {
     jest.clearAllMocks()

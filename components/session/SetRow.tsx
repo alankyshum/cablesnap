@@ -1,4 +1,4 @@
-/* eslint-disable complexity */
+/* eslint-disable complexity, max-lines-per-function */
 import React, { useCallback, useMemo, memo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -10,12 +10,26 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { RPE_CHIPS, RPE_LABELS, type SetWithMeta } from "./types";
 import { SET_TYPE_LABELS } from "../../lib/types";
 
+export function formatDurationDisplay(seconds: number | null): string {
+  if (seconds == null || seconds <= 0) return "0:00";
+  if (seconds >= 3600) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export type SetRowProps = {
   set: SetWithMeta;
   step: number;
   unit: "kg" | "lb";
   halfStep: { setId: string; base: number } | null;
-  onUpdate: (setId: string, field: "weight" | "reps", val: string) => void;
+  trackingMode: "reps" | "duration";
+  onUpdate: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onCheck: (set: SetWithMeta) => void;
   onDelete: (setId: string) => void;
   onRPE: (set: SetWithMeta, val: number) => void;
@@ -24,17 +38,28 @@ export type SetRowProps = {
   onHalfStepOpen: (setId: string, base: number) => void;
   onCycleSetType: (setId: string) => void;
   onLongPressSetType: (setId: string) => void;
+  // Timer controls (duration mode only)
+  isTimerRunning?: boolean;
+  isTimerActive?: boolean;
+  timerDisplaySeconds?: number;
+  onTimerStart?: (setId: string) => void;
+  onTimerStop?: (setId: string) => void;
 };
 
 export const SetRow = memo(function SetRow({
-  set, step, unit, halfStep,
+  set, step, unit, halfStep, trackingMode,
   onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onCycleSetType, onLongPressSetType,
+  isTimerRunning, isTimerActive, timerDisplaySeconds,
+  onTimerStart, onTimerStop,
 }: SetRowProps) {
   const colors = useThemeColors();
 
   const onWeightChange = useCallback((v: number) => onUpdate(set.id, "weight", String(v)), [set.id, onUpdate]);
   const onRepsChange = useCallback((v: number) => onUpdate(set.id, "reps", String(v)), [set.id, onUpdate]);
+  const onDurationChange = useCallback((v: number) => onUpdate(set.id, "duration_seconds", String(v)), [set.id, onUpdate]);
+
+  const isDurationMode = trackingMode === "duration";
 
   const chipStyle = useMemo(() => {
     switch (set.set_type) {
@@ -74,9 +99,12 @@ export const SetRow = memo(function SetRow({
                 <Text style={{ color: chipStyle!.fg, fontSize: 13, fontWeight: "700" }}>{chipLabel}</Text>
               </View>
             ) : (
-              <Text variant="body" style={{ color: colors.onSurface, textAlign: "center" }}>
-                {set.round ? `R${set.round}` : set.set_number}
-              </Text>
+              <View style={styles.setNumberContainer}>
+                {set.is_pr && <Text style={styles.prBadge}>🏆</Text>}
+                <Text variant="body" style={{ color: colors.onSurface, textAlign: "center" }}>
+                  {set.round ? `R${set.round}` : set.set_number}
+                </Text>
+              </View>
             )}
           </Pressable>
           <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>
@@ -91,15 +119,66 @@ export const SetRow = memo(function SetRow({
               accessibilityLabel={`Set ${set.set_number} weight`}
             />
           </View>
-          <View style={styles.pickerCol}>
-            <WeightPicker
-              value={set.reps}
-              step={1}
-              onValueChange={onRepsChange}
-              accessibilityLabel={`Set ${set.set_number} reps`}
-              max={999}
-            />
-          </View>
+          {isDurationMode ? (
+            <View style={styles.durationCol}>
+              <View style={styles.durationRow}>
+                <Pressable
+                  onPress={() => {
+                    if (isTimerActive && isTimerRunning) {
+                      onTimerStop?.(set.id);
+                    } else {
+                      onTimerStart?.(set.id);
+                    }
+                  }}
+                  style={[
+                    styles.timerButton,
+                    { backgroundColor: isTimerActive && isTimerRunning ? colors.error : colors.primary },
+                  ]}
+                  accessibilityLabel={isTimerActive && isTimerRunning ? "Stop set timer" : "Start set timer"}
+                  accessibilityHint={isTimerActive && isTimerRunning
+                    ? "Double tap to stop and record duration"
+                    : "Double tap to start timing this set"}
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons
+                    name={isTimerActive && isTimerRunning ? "stop" : "play"}
+                    size={22}
+                    color={isTimerActive && isTimerRunning ? colors.onError : colors.onPrimary}
+                  />
+                </Pressable>
+                {isTimerActive && isTimerRunning ? (
+                  <Text
+                    style={[styles.timerDisplay, { color: colors.primary }]}
+                    accessibilityRole="timer"
+                    accessibilityLiveRegion="polite"
+                    accessibilityLabel={`Timer: ${formatDurationDisplay(timerDisplaySeconds ?? 0)}`}
+                  >
+                    {formatDurationDisplay(timerDisplaySeconds ?? 0)}
+                  </Text>
+                ) : (
+                  <View style={{ flex: 1 }}>
+                    <WeightPicker
+                      value={set.duration_seconds}
+                      step={1}
+                      onValueChange={onDurationChange}
+                      accessibilityLabel={`Set ${set.set_number} duration, ${set.duration_seconds ?? 0} seconds`}
+                      max={36000}
+                    />
+                  </View>
+                )}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.pickerCol}>
+              <WeightPicker
+                value={set.reps}
+                step={1}
+                onValueChange={onRepsChange}
+                accessibilityLabel={`Set ${set.set_number} reps`}
+                max={999}
+              />
+            </View>
+          )}
           <Pressable
             onPress={() => onCheck(set)}
             hitSlop={6}
@@ -219,6 +298,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  setNumberContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  prBadge: {
+    fontSize: 10,
+    lineHeight: 14,
+  },
   colPrev: {
     width: 64,
     textAlign: "center",
@@ -297,5 +384,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
+  },
+  durationCol: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  durationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  timerButton: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 56,
+    minHeight: 56,
+  },
+  timerDisplay: {
+    fontSize: 20,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    flex: 1,
+    textAlign: "center",
   },
 });

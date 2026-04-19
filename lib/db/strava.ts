@@ -2,15 +2,11 @@ import { eq, sql, asc } from "drizzle-orm";
 import { getDrizzle, execute } from "./helpers";
 import { stravaConnection, stravaSyncLog } from "./schema";
 import { uuid } from "../uuid";
+import type { StravaConnectionRow } from "./schema";
 
 // ---- Strava Connection (singleton) ----
 
-export type StravaConnection = {
-  id: number;
-  athlete_id: number;
-  athlete_name: string;
-  connected_at: number;
-};
+export type StravaConnection = StravaConnectionRow;
 
 export async function getStravaConnection(): Promise<StravaConnection | null> {
   const db = await getDrizzle();

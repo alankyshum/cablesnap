@@ -1,23 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { View } from "react-native";
+import { StyleSheet } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
-import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import {
-  calculateFromProfile,
-  migrateProfile,
-  ACTIVITY_LABELS,
   GOAL_LABELS,
-  type ActivityLevel,
   type Goal,
   type NutritionProfile,
   type Sex,
 } from "../lib/nutrition-calc";
+import { useProfileForm } from "../hooks/useProfileForm";
+import { ActivityDropdown } from "./profile/ActivityDropdown";
 
 const GOAL_BUTTONS = [
   { value: "cut", label: GOAL_LABELS.cut, accessibilityLabel: GOAL_LABELS.cut },
@@ -39,136 +35,22 @@ export interface ProfileFormProps {
 
 export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyChange }: ProfileFormProps) {
   const colors = useThemeColors();
-  const [birthYear, setBirthYear] = useState("");
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
-  const [sex, setSex] = useState<Sex>("male");
-  const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderately_active");
-  const [goal, setGoal] = useState<Goal>("maintain");
-  const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
-  const [heightUnit, setHeightUnit] = useState<"cm" | "in">("cm");
-  const [saving, setSaving] = useState(false);
-  const [activityMenuVisible, setActivityMenuVisible] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const initialSnapshot = useRef<string>("");
-
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        const [saved, bodySettings, latestWeight] = await Promise.all([
-          initialProfile
-            ? Promise.resolve(JSON.stringify(initialProfile))
-            : getAppSetting("nutrition_profile"),
-          getBodySettings(),
-          getLatestBodyWeight(),
-        ]);
-
-        if (!active) return;
-
-        const wu = bodySettings.weight_unit;
-        const hu = bodySettings.measurement_unit;
-        setWeightUnit(wu);
-        setHeightUnit(hu);
-
-        if (saved) {
-          const profile: NutritionProfile = migrateProfile(typeof saved === "string" ? JSON.parse(saved) : saved);
-          setBirthYear(String(profile.birthYear));
-          setWeight(String(profile.weight));
-          setHeight(String(profile.height));
-          setSex(profile.sex);
-          setActivityLevel(profile.activityLevel);
-          setGoal(profile.goal);
-          initialSnapshot.current = JSON.stringify({
-            birthYear: String(profile.birthYear),
-            weight: String(profile.weight),
-            height: String(profile.height),
-            sex: profile.sex,
-            activityLevel: profile.activityLevel,
-            goal: profile.goal,
-          });
-        } else {
-          if (latestWeight) {
-            setWeight(String(latestWeight.weight));
-          }
-          initialSnapshot.current = JSON.stringify({
-            birthYear: "",
-            weight: latestWeight ? String(latestWeight.weight) : "",
-            height: "",
-            sex: "male",
-            activityLevel: "moderately_active",
-            goal: "maintain",
-          });
-        }
-        setLoadError(null);
-        setLoaded(true);
-      } catch {
-        if (!active) return;
-        setLoadError("Could not load your profile. Please try again.");
-      }
-    }
-    load();
-    return () => { active = false; };
-  }, [initialProfile]);
-
-  // Track dirty state
-  useEffect(() => {
-    if (!loaded || !onDirtyChange) return;
-    const current = JSON.stringify({ birthYear, weight, height, sex, activityLevel, goal });
-    onDirtyChange(current !== initialSnapshot.current);
-  }, [birthYear, weight, height, sex, activityLevel, goal, loaded, onDirtyChange]);
-
-  function validate(): boolean {
-    const e: Record<string, string> = {};
-    const birthYearNum = parseInt(birthYear, 10);
-    const weightNum = parseFloat(weight);
-    const heightNum = parseFloat(height);
-    const currentYear = new Date().getFullYear();
-
-    if (!birthYear || isNaN(birthYearNum) || birthYearNum < 1900 || birthYearNum >= currentYear) {
-      e.birthYear = `Enter a valid birth year (1900–${currentYear - 1})`;
-    }
-    if (!weight || isNaN(weightNum) || weightNum <= 0) {
-      e.weight = "Enter a valid weight";
-    }
-    if (!height || isNaN(heightNum) || heightNum <= 0) {
-      e.height = "Enter a valid height";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  async function handleSave() {
-    if (!validate()) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const profile: NutritionProfile = {
-        birthYear: parseInt(birthYear, 10),
-        weight: parseFloat(weight),
-        height: parseFloat(height),
-        sex,
-        activityLevel,
-        goal,
-        weightUnit,
-        heightUnit,
-      };
-
-      await setAppSetting("nutrition_profile", JSON.stringify(profile));
-
-      const result = calculateFromProfile(profile);
-      await updateMacroTargets(result.calories, result.protein, result.carbs, result.fat);
-
-      onSave();
-    } catch {
-      setSaveError("Could not save your profile. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const {
+    birthYear, setBirthYear,
+    weight, setWeight,
+    height, setHeight,
+    sex, setSex,
+    activityLevel, setActivityLevel,
+    goal, setGoal,
+    weightUnit,
+    heightUnit,
+    saving,
+    activityMenuVisible, setActivityMenuVisible,
+    errors,
+    loadError, setLoadError,
+    saveError, setSaveError,
+    handleSave,
+  } = useProfileForm({ initialProfile, onSave, onDirtyChange });
 
   return (
     <View>
@@ -253,46 +135,15 @@ export default function ProfileForm({ initialProfile, onSave, onCancel, onDirtyC
       >
         Activity Level
       </Text>
-      {/* Activity level Menu dropdown */}
-      <Pressable
-        onPress={() => setActivityMenuVisible(!activityMenuVisible)}
-        style={[styles.dropdown, { borderColor: colors.outline, backgroundColor: colors.surface }]}
-        accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[activityLevel]}`}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: activityMenuVisible }}
-      >
-        <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
-          {ACTIVITY_LABELS[activityLevel]}
-        </Text>
-        <Text style={{ color: colors.onSurfaceVariant }}>{activityMenuVisible ? "▲" : "▼"}</Text>
-      </Pressable>
-      {activityMenuVisible && (
-        <View style={[styles.dropdownList, { borderColor: colors.outline, backgroundColor: colors.surface }]}>
-          {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((key) => (
-            <Pressable
-              key={key}
-              onPress={() => {
-                setActivityLevel(key);
-                setActivityMenuVisible(false);
-              }}
-              style={[
-                styles.dropdownItem,
-                key === activityLevel ? { backgroundColor: colors.primaryContainer } : undefined,
-              ]}
-              accessibilityLabel={ACTIVITY_LABELS[key]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: key === activityLevel }}
-            >
-              <Text
-                variant="body"
-                style={{ color: key === activityLevel ? colors.onPrimaryContainer : colors.onSurface }}
-              >
-                {ACTIVITY_LABELS[key]}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <ActivityDropdown
+        value={activityLevel}
+        onChange={(key) => {
+          setActivityLevel(key);
+          setActivityMenuVisible(false);
+        }}
+        visible={activityMenuVisible}
+        onToggle={() => setActivityMenuVisible(!activityMenuVisible)}
+      />
 
       <Text
         variant="caption"
@@ -337,28 +188,6 @@ const styles = StyleSheet.create({
   input: { marginBottom: 4 },
   fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: 14 },
   segmented: { marginBottom: 8 },
-  dropdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 8,
-    minHeight: 48,
-  },
-  dropdownList: {
-    borderWidth: 1,
-    borderRadius: 4,
-    marginBottom: 8,
-    overflow: "hidden",
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 44,
-    justifyContent: "center",
-  },
   errorText: { fontSize: 14, marginBottom: 8 },
   buttonRow: { flexDirection: "row", marginTop: 16 },
 });

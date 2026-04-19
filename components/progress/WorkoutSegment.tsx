@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -19,6 +19,27 @@ import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import WeeklySummary from "../../components/WeeklySummary";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { WorkoutChartCard, PRCard, SessionsCard } from "./WorkoutCards";
+import CalendarView from "./CalendarView";
+
+let cachedWeekStart: number | null = null;
+function getWeekStartDay(): number {
+  if (cachedWeekStart !== null) return cachedWeekStart;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getCalendars } = require("expo-localization");
+    const calendars = getCalendars();
+    if (calendars.length > 0 && calendars[0].firstWeekday != null) {
+      // expo-localization firstWeekday: 1 = Sunday, 2 = Monday, ...
+      // We need 0 = Sunday, 1 = Monday, ...
+      cachedWeekStart = (calendars[0].firstWeekday - 1) % 7;
+      return cachedWeekStart;
+    }
+  } catch {
+    // expo-localization not available (e.g. testing), default Sunday
+  }
+  cachedWeekStart = 0;
+  return 0;
+}
 
 type PR = {
   exercise_id: string;
@@ -39,6 +60,8 @@ export default function WorkoutSegment() {
   const tabBarHeight = useFloatingTabBarHeight();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const weekStartDay = useMemo(() => getWeekStartDay(), []);
 
   const [freq, setFreq] = useState<{ week: string; count: number }[]>([]);
   const [vol, setVol] = useState<{ week: string; volume: number }[]>([]);
@@ -68,9 +91,34 @@ export default function WorkoutSegment() {
 
   const empty = sessions.length === 0 && freq.length === 0;
 
+  const toggleButton = (
+    <Pressable
+      onPress={() => setViewMode((m) => (m === "list" ? "calendar" : "list"))}
+      style={[styles.toggleButton, { borderColor: colors.outlineVariant }]}
+      accessibilityRole="button"
+      accessibilityLabel={
+        viewMode === "list" ? "Switch to calendar view" : "Switch to list view"
+      }
+    >
+      <Text style={{ color: colors.onSurface, fontSize: 16 }}>
+        {viewMode === "list" ? "📅" : "📋"}
+      </Text>
+    </Pressable>
+  );
+
+  if (viewMode === "calendar") {
+    return (
+      <View style={{ flex: 1 }}>
+        <View style={styles.toggleRow}>{toggleButton}</View>
+        <CalendarView weekStartDay={weekStartDay} />
+      </View>
+    );
+  }
+
   if (empty) {
     return (
       <View style={{ flex: 1 }}>
+        <View style={styles.toggleRow}>{toggleButton}</View>
         <View style={{ padding: 16 }}>
           <WeeklySummary />
         </View>
@@ -154,6 +202,7 @@ export default function WorkoutSegment() {
       ListHeaderComponent={
         layout.atLeastMedium ? (
           <>
+            <View style={styles.toggleRow}>{toggleButton}</View>
             <WeeklySummary />
             {achievementsCard}
             <View style={styles.grid}>
@@ -167,6 +216,7 @@ export default function WorkoutSegment() {
           </>
         ) : (
           <>
+            <View style={styles.toggleRow}>{toggleButton}</View>
             <WeeklySummary />
             {achievementsCard}
             {freqCard}
@@ -195,6 +245,20 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 16,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  toggleButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   wideCard: {
     flex: 1,

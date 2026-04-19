@@ -461,7 +461,10 @@ describe("sets CRUD", () => {
   it("updateSet updates weight and reps", async () => {
     await initDb();
     await db.updateSet("set1", 100, 8);
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
+    expect(mockDb.runAsync).toHaveBeenCalledWith(
+      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
+      [100, 8, "set1"]
+    );
   });
 
   it("completeSet marks set completed", async () => {

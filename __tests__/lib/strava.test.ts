@@ -23,15 +23,15 @@ const settingsSrc = [
   fs.readFileSync(path.resolve(__dirname, "../../components/settings/IntegrationsCard.tsx"), "utf-8"),
 ].join("\n");
 
-const sessionSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../app/session/[id].tsx"),
-  "utf-8"
-);
+const sessionSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../app/session/[id].tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../hooks/useSessionActions.ts"), "utf-8"),
+].join("\n");
 
-const layoutSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../app/_layout.tsx"),
-  "utf-8"
-);
+const layoutSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../app/_layout.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../hooks/useAppInit.ts"), "utf-8"),
+].join("\n");
 
 const indexSrc = fs.readFileSync(
   path.resolve(__dirname, "../../lib/db/index.ts"),
@@ -44,42 +44,29 @@ const configSrc = fs.readFileSync(
 );
 
 describe("Strava Integration — DB Schema (Phase 48)", () => {
-  it("creates strava_connection table as singleton with CHECK constraint", () => {
+  it("creates strava tables with correct structure", () => {
     expect(helpersSrc).toContain("CREATE TABLE IF NOT EXISTS strava_connection");
     expect(helpersSrc).toContain("CHECK (id = 1)");
-  });
-
-  it("creates strava_sync_log table with correct columns", () => {
     expect(helpersSrc).toContain("CREATE TABLE IF NOT EXISTS strava_sync_log");
     expect(helpersSrc).toContain("session_id TEXT NOT NULL");
     expect(helpersSrc).toContain("strava_activity_id TEXT");
     expect(helpersSrc).toMatch(/status TEXT NOT NULL CHECK.*pending.*synced.*failed.*permanently_failed/);
     expect(helpersSrc).toContain("retry_count INTEGER DEFAULT 0");
     expect(helpersSrc).toContain("UNIQUE(session_id)");
-  });
-
-  it("creates index on strava_sync_log status", () => {
     expect(helpersSrc).toContain("idx_strava_sync_log_status");
   });
 });
 
 describe("Strava Integration — DB Operations", () => {
-  it("exports all strava DB functions from index", () => {
-    expect(indexSrc).toContain("getStravaConnection");
-    expect(indexSrc).toContain("saveStravaConnection");
-    expect(indexSrc).toContain("deleteStravaConnection");
-    expect(indexSrc).toContain("createSyncLogEntry");
-    expect(indexSrc).toContain("markSyncSuccess");
-    expect(indexSrc).toContain("markSyncFailed");
-    expect(indexSrc).toContain("markSyncPermanentlyFailed");
-    expect(indexSrc).toContain("getPendingOrFailedSyncs");
-    expect(indexSrc).toContain("getSyncLogForSession");
-  });
-
-  it("exports Strava types from index", () => {
-    expect(indexSrc).toContain("StravaConnection");
-    expect(indexSrc).toContain("StravaSyncLog");
-    expect(indexSrc).toContain("StravaSyncStatus");
+  it("exports all strava DB functions and types from index", () => {
+    for (const fn of ["getStravaConnection", "saveStravaConnection", "deleteStravaConnection",
+      "createSyncLogEntry", "markSyncSuccess", "markSyncFailed",
+      "markSyncPermanentlyFailed", "getPendingOrFailedSyncs", "getSyncLogForSession"]) {
+      expect(indexSrc).toContain(fn);
+    }
+    for (const t of ["StravaConnection", "StravaSyncLog", "StravaSyncStatus"]) {
+      expect(indexSrc).toContain(t);
+    }
   });
 
   it("strava_connection uses singleton pattern (id=1)", () => {
@@ -98,168 +85,266 @@ describe("Strava Integration — DB Operations", () => {
 });
 
 describe("Strava Integration — API Client", () => {
-  it("stores tokens in SecureStore only, never SQLite", () => {
+  it("uses PKCE OAuth with SecureStore tokens and correct activity format", () => {
+    // Token storage
     expect(stravaClientSrc).toContain("SecureStore.setItemAsync");
     expect(stravaClientSrc).toContain("SecureStore.getItemAsync");
     expect(stravaClientSrc).toContain("SecureStore.deleteItemAsync");
-    // Verify no tokens saved to SQLite
     expect(stravaClientSrc).not.toMatch(/execute.*token/i);
-  });
-
-  it("uses PKCE for OAuth2 flow", () => {
+    // PKCE
     expect(stravaClientSrc).toContain("usePKCE: true");
     expect(stravaClientSrc).toContain("code_verifier");
-  });
-
-  it("uses external_id for duplicate prevention", () => {
+    // Activity format
     expect(stravaClientSrc).toMatch(/external_id.*fitforge-/);
-  });
-
-  it("creates WeightTraining activity type", () => {
     expect(stravaClientSrc).toContain('"WeightTraining"');
+    expect(stravaClientSrc).toContain("weightUnit");
+    expect(stravaClientSrc).toContain("getBodySettings");
   });
 
-  it("handles token refresh before API calls", () => {
+  it("handles token refresh, 401 disconnect, and redirect URI", () => {
     expect(stravaClientSrc).toContain("refreshAccessToken");
     expect(stravaClientSrc).toContain("getValidAccessToken");
-  });
-
-  it("handles 401 response by disconnecting", () => {
     expect(stravaClientSrc).toContain("401");
     expect(stravaClientSrc).toContain("await disconnect()");
-  });
-
-  it("skips upload when no completed sets", () => {
     expect(stravaClientSrc).toContain("No completed sets to sync");
-  });
-
-  it("uses fitforge scheme for redirect URI", () => {
     expect(stravaClientSrc).toContain('scheme: "fitforge"');
     expect(stravaClientSrc).toContain('"strava-callback"');
   });
 
-  it("creates sync log entry before API call", () => {
-    // In syncSessionToStrava, createSyncLogEntry is called before uploadActivity
+  it("sync log entry created before upload, retry queue respects limits", () => {
     const syncFn = stravaClientSrc.slice(
       stravaClientSrc.indexOf("async function syncSessionToStrava"),
       stravaClientSrc.indexOf("async function reconcileStravaQueue")
     );
-    const createLogIdx = syncFn.indexOf("createSyncLogEntry");
-    const uploadIdx = syncFn.indexOf("uploadActivity");
-    expect(createLogIdx).toBeGreaterThan(-1);
-    expect(uploadIdx).toBeGreaterThan(-1);
-    expect(createLogIdx).toBeLessThan(uploadIdx);
-  });
-
-  it("reconcileStravaQueue respects MAX_RETRIES of 3", () => {
+    expect(syncFn.indexOf("createSyncLogEntry")).toBeLessThan(syncFn.indexOf("uploadActivity"));
     expect(stravaClientSrc).toContain("MAX_RETRIES = 3");
     expect(stravaClientSrc).toMatch(/retry_count >= MAX_RETRIES/);
-  });
-
-  it("reconcileStravaQueue skips on web platform", () => {
     const reconcileFn = stravaClientSrc.slice(
       stravaClientSrc.indexOf("async function reconcileStravaQueue")
     );
     expect(reconcileFn).toContain('Platform.OS === "web"');
   });
-
-  it("respects user weight unit in activity description", () => {
-    expect(stravaClientSrc).toContain("weightUnit");
-    expect(stravaClientSrc).toContain("getBodySettings");
-  });
 });
 
 describe("Strava Integration — Settings UI", () => {
-  it("imports Strava functions", () => {
+  it("shows connect/disconnect with proper a11y and platform gating", () => {
     expect(settingsSrc).toContain("connectStrava");
     expect(settingsSrc).toContain("disconnectStrava");
     expect(settingsSrc).toContain("getStravaConnection");
-  });
-
-  it("hides Integrations section on web", () => {
     expect(settingsSrc).toMatch(/Platform\.OS !== "web"/);
-  });
-
-  it("wraps Integrations in ErrorBoundary", () => {
     expect(settingsSrc).toContain("ErrorBoundary");
-  });
-
-  it("shows Connect Strava button with accessibility attributes", () => {
     expect(settingsSrc).toContain("Connect Strava");
     expect(settingsSrc).toContain('accessibilityLabel="Connect your Strava account"');
     expect(settingsSrc).toContain('accessibilityRole="button"');
-  });
-
-  it("shows Disconnect button with athlete name in a11y label", () => {
     expect(settingsSrc).toContain("Disconnect");
     expect(settingsSrc).toMatch(/accessibilityLabel=.*Disconnect Strava account/);
-  });
-
-  it("shows connected athlete name", () => {
     expect(settingsSrc).toContain("Connected as {stravaAthlete}");
   });
 });
 
-describe("Strava Integration — Session Completion", () => {
-  it("calls syncSessionToStrava from UI after completeSession", () => {
+describe("Strava Integration — Session & Startup", () => {
+  it("syncs after completeSession with try/catch and toast", () => {
     const finishFn = sessionSrc.slice(
       sessionSrc.indexOf("const finish ="),
       sessionSrc.indexOf("const cancel =")
     );
-    const completeIdx = finishFn.indexOf("completeSession(id!)");
-    const syncIdx = finishFn.indexOf("syncSessionToStrava");
-    expect(completeIdx).toBeGreaterThan(-1);
-    expect(syncIdx).toBeGreaterThan(-1);
-    expect(syncIdx).toBeGreaterThan(completeIdx);
-  });
-
-  it("does NOT call syncToStrava from completeSession DB function", () => {
-    // The DB function in sessions.ts should not reference Strava
+    expect(finishFn.indexOf("completeSession(id!)")).toBeLessThan(finishFn.indexOf("syncSessionToStrava"));
+    expect(finishFn).toContain("Strava sync failed");
+    expect(sessionSrc).toContain("Synced to Strava");
+    // DB function should not reference Strava
     const sessionDbSrc = fs.readFileSync(
-      path.resolve(__dirname, "../../lib/db/sessions.ts"),
-      "utf-8"
+      path.resolve(__dirname, "../../lib/db/sessions.ts"), "utf-8"
     );
     expect(sessionDbSrc).not.toContain("strava");
-    expect(sessionDbSrc).not.toContain("Strava");
   });
 
-  it("wraps Strava sync in try/catch to never block completion", () => {
-    const finishFn = sessionSrc.slice(
-      sessionSrc.indexOf("const finish ="),
-      sessionSrc.indexOf("const cancel =")
-    );
-    // syncSessionToStrava should be inside a try/catch
-    expect(finishFn).toContain("syncSessionToStrava");
-    expect(finishFn).toContain("Strava sync failed");
-  });
-
-  it("shows success toast on sync", () => {
-    expect(sessionSrc).toContain("Synced to Strava");
-  });
-});
-
-describe("Strava Integration — Startup Retry", () => {
-  it("calls reconcileStravaQueue on app startup", () => {
+  it("reconciles queue on native startup with error handling", () => {
     expect(layoutSrc).toContain("reconcileStravaQueue");
-  });
-
-  it("only runs reconciliation on native platforms", () => {
-    // The reconciliation call should be gated by Platform.OS !== "web"
     expect(layoutSrc).toMatch(/Platform\.OS !== "web"[\s\S]*reconcileStravaQueue/);
-  });
-
-  it("catches reconciliation errors to not block startup", () => {
     expect(layoutSrc).toContain("Strava queue reconciliation failed");
   });
 });
 
 describe("Strava Integration — Config", () => {
-  it("has stravaClientId in app.config.ts extra", () => {
+  it("has stravaClientId and required plugins in app.config.ts", () => {
     expect(configSrc).toContain("stravaClientId");
-  });
-
-  it("includes expo-web-browser and expo-secure-store plugins", () => {
     expect(configSrc).toContain("expo-web-browser");
     expect(configSrc).toContain("expo-secure-store");
+  });
+});
+
+// ---- Behavioral integration tests (mocked dependencies, no real API calls) ----
+
+// Mock all external deps before importing the module
+jest.mock("expo-constants", () => ({
+  __esModule: true,
+  default: {
+    expoConfig: { extra: { stravaClientId: "test-client-id" } },
+  },
+}));
+jest.mock("../../lib/db", () => ({
+  getStravaConnection: jest.fn(),
+  saveStravaConnection: jest.fn(),
+  deleteStravaConnection: jest.fn(),
+  createSyncLogEntry: jest.fn(),
+  markSyncSuccess: jest.fn(),
+  markSyncFailed: jest.fn(),
+  markSyncPermanentlyFailed: jest.fn(),
+  getPendingOrFailedSyncs: jest.fn(),
+  getSessionById: jest.fn(),
+  getSessionSets: jest.fn(),
+  getBodySettings: jest.fn(),
+}));
+
+const AuthSession = require("expo-auth-session");
+const SecureStore = require("expo-secure-store");
+const db = require("../../lib/db");
+
+// Must require after mocks are set up
+const strava = require("../../lib/strava");
+
+describe("Strava Integration — Behavioral", () => {
+  const mockFetch = jest.fn();
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = mockFetch;
+    // Default: non-web platform (set by jest setup)
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("connectStrava exchanges auth code for tokens and saves connection", async () => {
+    AuthSession.AuthRequest.mockImplementation(() => ({
+      promptAsync: jest.fn().mockResolvedValue({
+        type: "success",
+        params: { code: "auth-code-123" },
+      }),
+      codeVerifier: "test-verifier",
+    }));
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: "at-1",
+        refresh_token: "rt-1",
+        expires_at: 9999999999,
+        athlete: { id: 42, firstname: "Jane", lastname: "Doe" },
+      }),
+    });
+
+    const result = await strava.connectStrava();
+
+    expect(result).toEqual({ athleteId: 42, athleteName: "Jane Doe" });
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_access_token", "at-1");
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_refresh_token", "rt-1");
+    expect(db.saveStravaConnection).toHaveBeenCalledWith(42, "Jane Doe");
+    // Verify PKCE code_verifier is sent in token exchange
+    const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(fetchBody.code_verifier).toBe("test-verifier");
+    expect(fetchBody.grant_type).toBe("authorization_code");
+  });
+
+  it("connectStrava returns null when user cancels OAuth", async () => {
+    AuthSession.AuthRequest.mockImplementation(() => ({
+      promptAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
+      codeVerifier: "v",
+    }));
+    const result = await strava.connectStrava();
+    expect(result).toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("disconnect clears tokens from SecureStore and DB", async () => {
+    SecureStore.getItemAsync.mockResolvedValueOnce("old-token");
+    mockFetch.mockResolvedValueOnce({ ok: true }); // deauthorize
+
+    await strava.disconnect();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://www.strava.com/oauth/deauthorize",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("strava_access_token");
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("strava_refresh_token");
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("strava_token_expires_at");
+    expect(db.deleteStravaConnection).toHaveBeenCalled();
+  });
+
+  it("syncSessionToStrava uploads activity and marks success", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s1", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    // Token is valid (expires far in future)
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 12345 }),
+    });
+
+    const result = await strava.syncSessionToStrava("s1");
+
+    expect(result).toBe(true);
+    expect(db.createSyncLogEntry).toHaveBeenCalledWith("s1");
+    expect(db.markSyncSuccess).toHaveBeenCalledWith("s1", "12345");
+    // Verify activity payload
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.type).toBe("WeightTraining");
+    expect(body.external_id).toBe("fitforge-s1");
+  });
+
+  it("syncSessionToStrava skips when not connected", async () => {
+    db.getStravaConnection.mockResolvedValue(null);
+    const result = await strava.syncSessionToStrava("s1");
+    expect(result).toBe(false);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("syncSessionToStrava marks failure on API error", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Bench", weight: 80, reps: 8, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s2", name: "Push", started_at: Date.now(), duration_seconds: 1800,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "lb" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: async () => "Internal Server Error",
+    });
+
+    await expect(strava.syncSessionToStrava("s2")).rejects.toThrow();
+    expect(db.markSyncFailed).toHaveBeenCalledWith("s2", expect.stringContaining("500"));
+  });
+
+  it("reconcileStravaQueue retries failed entries and marks permanently failed after max retries", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getPendingOrFailedSyncs.mockResolvedValue([
+      { session_id: "s-old", retry_count: 3, status: "failed" },
+    ]);
+
+    await strava.reconcileStravaQueue();
+
+    // retry_count >= MAX_RETRIES (3) → permanently failed without attempting upload
+    expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-old");
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

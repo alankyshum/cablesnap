@@ -41,3 +41,11 @@
 **Learning**: When two unit systems (kg/lb, cm/in) share numeric values that map to different outputs, using plain numeric keys in a lookup map causes silent collisions. The code compiles fine and appears correct when tested with only one unit system.
 **Action**: Use composite string keys that include the unit (e.g., `"25kg"`, `"25lb"`) in any lookup map where kg and lb values overlap. Always test features with the non-default unit system — collisions only surface when both systems are exercised.
 **Tags**: units, lookup-map, key-collision, kg-lb, theming, plate-colors, dual-unit, testing
+
+### Detect Dark Mode via useColorScheme — Never Compare Background Hex Strings
+**Source**: BLD-385 — Recovery Readiness Badges on Template Cards
+**Date**: 2026-04-19
+**Context**: A new component needed different badge colors in light vs dark mode. The implementation detected dark mode by comparing `colors.background === "#0D1117"` — a hardcoded hex string match against the current theme background. Tech lead flagged this as a blocking issue.
+**Learning**: Comparing a theme color token against a hardcoded hex value to infer dark mode is fragile — if the theme palette changes, the detection silently breaks and wrong colors render with no error. This is distinct from the "never hardcode hex in styles" rule: the hex value here isn't styling, it's conditional logic, making it harder to catch with hex-grep audits.
+**Action**: Always detect dark mode via `useColorScheme() === "dark"` from `@/hooks/useColorScheme`. For theme-conditional styling, prefer adding new color tokens to the theme system (e.g., readiness badge colors in `constants/theme.ts`) over branching on dark/light in components.
+**Tags**: dark-mode, useColorScheme, theming, hardcoded-colors, conditional-logic, fragile-detection

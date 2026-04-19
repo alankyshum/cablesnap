@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
-  Pressable,
   StyleSheet,
   View,
   useColorScheme,
@@ -19,17 +18,17 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
-  ATTACHMENT_LABELS,
   type Category,
   type Exercise,
 } from "../../lib/types";
-import { semantic, difficultyText, CATEGORY_ICONS, DIFFICULTY_COLORS, muscle } from "../../constants/theme";
+import { CATEGORY_ICONS, muscle } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
-import { MuscleMap } from "../../components/MuscleMap";
 import { useFocusRefetch } from "../../lib/query";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { useProfileGender } from "../../lib/useProfileGender";
 import { radii } from "../../constants/design-tokens";
+import { ExerciseCard } from "../../components/exercises/ExerciseCard";
+import { ExerciseDetailPane } from "../../components/exercises/ExerciseDetailPane";
 
 type FilterType = Category | "custom";
 const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
@@ -88,58 +87,15 @@ export default function Exercises() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: Exercise }) => {
-      const diff = item.difficulty || "intermediate";
-      const color = DIFFICULTY_COLORS[diff] || semantic.intermediate;
-      const selected = layout.atLeastMedium && detail?.id === item.id;
-      return (
-      <Pressable
+    ({ item }: { item: Exercise }) => (
+      <ExerciseCard
+        item={item}
+        selected={layout.atLeastMedium && detail?.id === item.id}
         onPress={() => onPress(item)}
-        style={({ pressed }) => [
-          styles.exerciseCard,
-          { borderLeftColor: color, borderLeftWidth: 3, backgroundColor: colors.surface, shadowColor: colors.shadow },
-          selected && { backgroundColor: colors.primaryContainer },
-          pressed && { opacity: 0.7 },
-        ]}
-        accessibilityLabel={`${item.name}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}, Difficulty: ${diff}`}
-        accessibilityRole="button"
-      >
-        <View style={styles.cardInner}>
-          <View style={styles.titleRow}>
-            <Text variant="subtitle" numberOfLines={1} style={[{ color: colors.onSurface }, styles.titleText]}>
-              {item.name}
-            </Text>
-            {item.is_custom && (
-              <View style={[styles.customBadge, { backgroundColor: colors.tertiaryContainer }]}>
-                <Text style={[styles.customBadgeText, { color: colors.onSurface }]}>Custom</Text>
-              </View>
-            )}
-          </View>
-          <Text
-            variant="caption"
-            style={{ color: colors.onSurfaceVariant, marginTop: 2 }}
-            numberOfLines={1}
-          >
-            {CATEGORY_LABELS[item.category]} · {item.equipment}{item.attachment ? ` · ${ATTACHMENT_LABELS[item.attachment]}` : ""}
-          </Text>
-          <View style={styles.muscleRow}>
-            {item.primary_muscles.map((m) => (
-              <View key={m} style={styles.muscleBadge}>
-                <View style={[styles.muscleDot, { backgroundColor: mc.primary }]} />
-                <Text style={[styles.muscleLabel, { color: colors.onSurfaceVariant }]}>{m}</Text>
-              </View>
-            ))}
-            {item.secondary_muscles.map((m) => (
-              <View key={`s-${m}`} style={styles.muscleBadge}>
-                <View style={[styles.muscleDot, { backgroundColor: mc.secondary }]} />
-                <Text style={[styles.muscleLabel, { color: colors.onSurfaceVariant }]}>{m}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </Pressable>
-      );
-    },
+        colors={colors}
+        mc={mc}
+      />
+    ),
     [onPress, colors, layout.atLeastMedium, detail, mc]
   );
 
@@ -235,147 +191,10 @@ export default function Exercises() {
     );
   }
 
-  const steps = detail?.instructions
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
   return (
     <View style={[styles.container, styles.wideRow, { backgroundColor: colors.background }]}>
       {list}
-      <View style={[styles.detailPane, { borderLeftColor: colors.outlineVariant }]}>
-        {detail ? (
-          <FlatList
-            data={[]}
-            renderItem={null}
-            contentContainerStyle={styles.detailContent}
-            ListHeaderComponent={
-              <>
-                <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 12 }}>
-                  {detail.name}
-                </Text>
-                {detail.is_custom && (
-                  <Chip
-                    compact
-                    style={{ backgroundColor: colors.tertiaryContainer, alignSelf: "flex-start", marginBottom: 8 }}
-                    textStyle={{ fontSize: 12 }}
-                  >
-                    Custom
-                  </Chip>
-                )}
-                <View style={styles.row}>
-                  <View style={[styles.detailBadge, { backgroundColor: colors.primaryContainer }]}>
-                    <Text style={[styles.detailBadgeText, { color: colors.onPrimaryContainer }]}>
-                      {CATEGORY_LABELS[detail.category]}
-                    </Text>
-                  </View>
-                  <View style={[styles.detailBadge, { backgroundColor: DIFFICULTY_COLORS[detail.difficulty] }]}>
-                    <Text style={[styles.detailBadgeText, { color: difficultyText(detail.difficulty), fontWeight: "600" }]}>
-                      {detail.difficulty}
-                    </Text>
-                  </View>
-                </View>
-                {detail.mount_position && (
-                  <>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
-                      Mount Position
-                    </Text>
-                    <Text
-                      variant="body"
-                      style={{ color: colors.onSurface, marginTop: 4 }}
-                      accessibilityLabel={`Mount position: ${detail.mount_position} on rack`}
-                    >
-                      {detail.mount_position}
-                    </Text>
-                  </>
-                )}
-                {detail.attachment && (
-                  <>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
-                      Attachment
-                    </Text>
-                    <Text
-                      variant="body"
-                      style={{ color: colors.onSurface, marginTop: 4 }}
-                      accessibilityLabel={`Attachment: ${detail.attachment}`}
-                    >
-                      {detail.attachment}
-                    </Text>
-                  </>
-                )}
-                {detail.training_modes && detail.training_modes.length > 0 && (
-                  <View accessibilityLabel={`Compatible training modes: ${detail.training_modes.join(", ")}`}>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: 12 }}>
-                      Training Modes
-                    </Text>
-                    <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-                      {detail.training_modes.map((m) => (
-                        <View key={m} style={[styles.detailBadge, { backgroundColor: colors.secondaryContainer }]}>
-                          <Text style={[styles.detailBadgeText, { color: colors.onSecondaryContainer }]}>
-                            {m.replace(/_/g, " ")}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-                <MuscleMap
-                  primary={detail.primary_muscles}
-                  secondary={detail.secondary_muscles}
-                  width={360}
-                  gender={profileGender}
-                />
-                <View style={styles.muscleColumns}>
-                  <View style={{ flex: 1 }}>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
-                      Primary Muscles
-                    </Text>
-                    <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-                      {detail.primary_muscles.map((m) => (
-                        <View key={m} style={[styles.detailBadge, { backgroundColor: colors.secondaryContainer }]}>
-                          <Text style={[styles.detailBadgeText, { color: colors.onSecondaryContainer }]}>{m}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                  {detail.secondary_muscles.length > 0 && (
-                    <View style={{ flex: 1 }}>
-                      <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
-                        Secondary Muscles
-                      </Text>
-                      <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-                        {detail.secondary_muscles.map((m) => (
-                          <View key={m} style={[styles.detailBadge, { backgroundColor: colors.tertiaryContainer }]}>
-                            <Text style={[styles.detailBadgeText, { color: colors.onTertiaryContainer }]}>{m}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-                </View>
-                {steps && steps.length > 0 && (
-                  <>
-                    <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
-                      Instructions
-                    </Text>
-                    {steps.map((step, i) => (
-                      <Text key={i} variant="body" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
-                        {step}
-                      </Text>
-                    ))}
-                  </>
-                )}
-              </>
-            }
-          />
-        ) : (
-          <View style={styles.detailEmpty}>
-            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-              Select an exercise to view details
-            </Text>
-          </View>
-        )}
-      </View>
+      <ExerciseDetailPane detail={detail} colors={colors} profileGender={profileGender} />
     </View>
   );
 }
@@ -398,65 +217,7 @@ const styles = StyleSheet.create({
   filterChip: {
     marginRight: 6,
   },
-  exerciseCard: {
-    flex: 1,
-    marginHorizontal: 6,
-    marginVertical: 4,
-    borderRadius: radii.lg,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  cardInner: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  titleText: {
-    flexShrink: 1,
-  },
-  customBadge: {
-    height: 20,
-    paddingHorizontal: 6,
-    borderRadius: radii.lg,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  customBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  muscleRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 4,
-  },
-  muscleBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  muscleDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-  muscleLabel: {
-    fontSize: 12,
-  },
+
   empty: {
     alignItems: "center",
     paddingTop: 48,
@@ -474,30 +235,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  muscleColumns: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  detailBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  detailBadgeText: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  detailPane: {
-    flex: 3,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-  },
-  detailContent: {
-    padding: 24,
-    paddingBottom: 32,
-  },
-  detailEmpty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+
 });

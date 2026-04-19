@@ -21,6 +21,8 @@ type Props = {
   scheduleCount: number;
   soundEnabled: boolean;
   setSoundEnabled: (v: boolean) => void;
+  restNotifications: boolean;
+  setRestNotifications: (v: boolean) => void;
 };
 
 export default function PreferencesCard({
@@ -28,6 +30,7 @@ export default function PreferencesCard({
   reminders, setReminders, reminderTime, setReminderTime,
   permDenied, setPermDenied, scheduleCount,
   soundEnabled, setSoundEnabled,
+  restNotifications, setRestNotifications,
 }: Props) {
   return (
     <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
@@ -119,6 +122,43 @@ export default function PreferencesCard({
           />
         </View>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Audio cues for interval timers and rest countdowns.</Text>
+
+        <View style={[styles.row, { marginTop: 16 }]}>
+          <View style={{ flex: 1 }}>
+            <Text variant="body" style={{ color: colors.onSurface }}>Rest Timer Notifications</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Get notified when rest is done while using other apps</Text>
+          </View>
+          <Switch
+            value={restNotifications}
+            onValueChange={async (val) => {
+              if (val) {
+                try {
+                  const granted = await requestPermission();
+                  if (!granted) {
+                    setPermDenied(true);
+                    toast.error("Notification permission denied. Tap 'Open Settings' below to enable.");
+                    return;
+                  }
+                  setPermDenied(false);
+                  await setAppSetting("rest_notification_enabled", "true");
+                  setRestNotifications(true);
+                } catch {
+                  toast.error("Couldn't enable rest notifications. Try again later.");
+                }
+              } else {
+                try {
+                  await setAppSetting("rest_notification_enabled", "false");
+                  setRestNotifications(false);
+                } catch {
+                  toast.error("Couldn't disable rest notifications. Try again later.");
+                }
+              }
+            }}
+            accessibilityLabel="Rest Timer Notifications"
+            accessibilityRole="switch"
+            accessibilityHint="Enable or disable push notifications when rest timer completes while app is in background"
+          />
+        </View>
       </CardContent>
     </Card>
   );

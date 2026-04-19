@@ -34,6 +34,14 @@ jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache'
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/starter-templates', () => ({ STARTER_TEMPLATES: [] }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 
 const mockGetTemplates = jest.fn().mockResolvedValue([])
 const mockGetActiveSession = jest.fn().mockResolvedValue(null)
@@ -58,12 +66,20 @@ jest.mock('../../lib/db', () => ({
   getRecentPRs: (...args: unknown[]) => mockGetRecentPRs(...args),
   getRecentSessions: (...args: unknown[]) => mockGetRecentSessions(...args),
   getSessionAvgRPE: (...args: unknown[]) => mockGetSessionAvgRPE(...args),
+  getSessionAvgRPEs: jest.fn().mockResolvedValue({}),
   getSessionSetCount: (...args: unknown[]) => mockGetSessionSetCount(...args),
+  getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getTemplateExerciseCount: (...args: unknown[]) => mockGetTemplateExerciseCount(...args),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
+  getTemplatePrimaryMuscles: jest.fn().mockResolvedValue({}),
   startSession: (...args: unknown[]) => mockStartSession(...args),
   getTodaySchedule: (...args: unknown[]) => mockGetTodaySchedule(...args),
   isTodayCompleted: (...args: unknown[]) => mockIsTodayCompleted(...args),
   getWeekAdherence: (...args: unknown[]) => mockGetWeekAdherence(...args),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
+  getWeeklyVolume: jest.fn().mockResolvedValue([]),
+  getE1RMTrends: jest.fn().mockResolvedValue([]),
+  getTotalSessionCount: jest.fn().mockResolvedValue(0),
   deleteTemplate: (...args: unknown[]) => mockDeleteTemplate(...args),
   duplicateTemplate: (...args: unknown[]) => mockDuplicateTemplate(...args),
   duplicateProgram: (...args: unknown[]) => mockDuplicateProgram(...args),
@@ -72,12 +88,14 @@ jest.mock('../../lib/db', () => ({
 const mockGetNextWorkout = jest.fn().mockResolvedValue(null)
 const mockGetProgramsFromLib = jest.fn().mockResolvedValue([])
 const mockGetProgramDayCountFromLib = jest.fn().mockResolvedValue(0)
+const mockGetProgramDayCountsFromLib = jest.fn().mockResolvedValue({})
 const mockSoftDeleteProgram = jest.fn().mockResolvedValue(undefined)
 
 jest.mock('../../lib/programs', () => ({
   getNextWorkout: (...args: unknown[]) => mockGetNextWorkout(...args),
   getPrograms: (...args: unknown[]) => mockGetProgramsFromLib(...args),
   getProgramDayCount: (...args: unknown[]) => mockGetProgramDayCountFromLib(...args),
+  getProgramDayCounts: (...args: unknown[]) => mockGetProgramDayCountsFromLib(...args),
   softDeleteProgram: (...args: unknown[]) => mockSoftDeleteProgram(...args),
 }))
 
@@ -91,6 +109,7 @@ describe('Program Lifecycle Acceptance', () => {
     mockGetTemplates.mockResolvedValue([])
     mockGetProgramsFromLib.mockResolvedValue([])
     mockGetProgramDayCountFromLib.mockResolvedValue(0)
+    mockGetProgramDayCountsFromLib.mockResolvedValue({})
     mockGetActiveSession.mockResolvedValue(null)
     mockGetAllCompletedSessionWeeks.mockResolvedValue([])
     mockGetRecentPRs.mockResolvedValue([])
@@ -131,6 +150,7 @@ describe('Program Lifecycle Acceptance', () => {
   it('shows program cards with name and day count', async () => {
     mockGetProgramsFromLib.mockResolvedValue([createProgram({ id: 'p1', name: 'PPL Split' })])
     mockGetProgramDayCountFromLib.mockResolvedValue(3)
+    mockGetProgramDayCountsFromLib.mockResolvedValue({ 'p1': 3 })
 
     const screen = renderScreen(<Workouts />)
     await waitFor(() => expect(mockGetProgramsFromLib).toHaveBeenCalled())

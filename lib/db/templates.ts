@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import type { WorkoutTemplate, TemplateExercise } from "../types";
+import type { WorkoutTemplate, TemplateExercise, MuscleGroup } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, query, queryOne, execute, getDatabase } from "./helpers";
 import { workoutTemplates, templateExercises } from "./schema";
@@ -15,6 +15,7 @@ type TemplateExerciseRow = {
   rest_seconds: number;
   link_id: string | null;
   link_label: string;
+  target_duration_seconds: number | null;
   exercise_name: string | null;
   exercise_category: string | null;
   exercise_primary_muscles: string | null;
@@ -84,6 +85,7 @@ export async function getTemplateById(
     rest_seconds: r.rest_seconds,
     link_id: r.link_id ?? null,
     link_label: r.link_label ?? "",
+    target_duration_seconds: r.target_duration_seconds ?? null,
     exercise: r.exercise_name
       ? mapRow({
           id: r.exercise_id,
@@ -244,6 +246,7 @@ export async function addExerciseToTemplate(
     rest_seconds: restSeconds,
     link_id: null,
     link_label: "",
+    target_duration_seconds: null,
   };
 }
 
@@ -335,6 +338,20 @@ export async function getTemplateExerciseCount(
   return row?.count ?? 0;
 }
 
+export async function getTemplateExerciseCounts(
+  templateIds: string[]
+): Promise<Record<string, number>> {
+  if (templateIds.length === 0) return {};
+  const placeholders = templateIds.map(() => "?").join(",");
+  const rows = await query<{ template_id: string; count: number }>(
+    `SELECT template_id, COUNT(*) as count FROM template_exercises WHERE template_id IN (${placeholders}) GROUP BY template_id`,
+    templateIds
+  );
+  const result: Record<string, number> = {};
+  for (const r of rows) result[r.template_id] = r.count;
+  return result;
+}
+
 // ---- Superset / Circuit Linking ----
 
 export async function createExerciseLink(
@@ -424,6 +441,41 @@ export async function unlinkSingleExercise(
       );
     }
   });
+}
+
+/**
+ * Get the unique primary muscles for each template, grouped by template ID.
+ * Excludes deleted exercises and the "full_body" pseudo-muscle.
+ */
+export async function getTemplatePrimaryMuscles(
+  templateIds: string[]
+): Promise<Record<string, MuscleGroup[]>> {
+  if (templateIds.length === 0) return {};
+  const placeholders = templateIds.map(() => "?").join(",");
+  const rows = await query<{ template_id: string; primary_muscles: string }>(
+    `SELECT te.template_id, e.primary_muscles
+     FROM template_exercises te
+     JOIN exercises e ON te.exercise_id = e.id
+     WHERE te.template_id IN (${placeholders})
+       AND e.deleted_at IS NULL
+       AND e.primary_muscles IS NOT NULL`,
+    templateIds
+  );
+
+  const result: Record<string, Set<MuscleGroup>> = {};
+  for (const row of rows) {
+    if (!result[row.template_id]) result[row.template_id] = new Set();
+    const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
+    for (const m of muscles) {
+      if (m !== "full_body") result[row.template_id].add(m);
+    }
+  }
+
+  const out: Record<string, MuscleGroup[]> = {};
+  for (const [id, set] of Object.entries(result)) {
+    out[id] = Array.from(set);
+  }
+  return out;
 }
 
 export async function updateLinkLabel(

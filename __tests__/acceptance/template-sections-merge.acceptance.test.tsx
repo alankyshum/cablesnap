@@ -37,6 +37,14 @@ jest.mock('../../lib/starter-templates', () => ({
     { id: 'starter-1', name: 'Full Body Starter', difficulty: 'beginner', duration: '45 min', recommended: true, exercises: [{ name: 'Squat' }] },
   ],
 }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 
 const userTemplate: WorkoutTemplate = createWorkoutTemplate({ id: 'user-1', name: 'My Push Day' })
 const starterTemplate: WorkoutTemplate = createWorkoutTemplate({ id: 'starter-1', name: 'Full Body Starter', is_starter: true })
@@ -53,12 +61,20 @@ jest.mock('../../lib/db', () => ({
   getRecentPRs: jest.fn().mockResolvedValue([]),
   getRecentSessions: jest.fn().mockResolvedValue([]),
   getSessionAvgRPE: jest.fn().mockResolvedValue(null),
+  getSessionAvgRPEs: jest.fn().mockResolvedValue({}),
   getSessionSetCount: jest.fn().mockResolvedValue(0),
+  getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getTemplateExerciseCount: jest.fn().mockResolvedValue(0),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
+  getTemplatePrimaryMuscles: jest.fn().mockResolvedValue({}),
   startSession: jest.fn().mockResolvedValue({ id: 'qs-1', template_id: 't1', name: 'Test', started_at: Date.now(), sets: [] }),
   getTodaySchedule: jest.fn().mockResolvedValue(null),
   isTodayCompleted: jest.fn().mockResolvedValue(false),
   getWeekAdherence: jest.fn().mockResolvedValue([]),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
+  getWeeklyVolume: jest.fn().mockResolvedValue([]),
+  getE1RMTrends: jest.fn().mockResolvedValue([]),
+  getTotalSessionCount: jest.fn().mockResolvedValue(0),
   deleteTemplate: jest.fn().mockResolvedValue(undefined),
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   duplicateProgram: jest.fn().mockResolvedValue('dup-p1'),
@@ -68,6 +84,7 @@ jest.mock('../../lib/programs', () => ({
   getNextWorkout: jest.fn().mockResolvedValue(null),
   getPrograms: (...args: unknown[]) => mockGetPrograms(...args),
   getProgramDayCount: jest.fn().mockResolvedValue(3),
+  getProgramDayCounts: jest.fn().mockResolvedValue({}),
   softDeleteProgram: jest.fn().mockResolvedValue(undefined),
 }))
 

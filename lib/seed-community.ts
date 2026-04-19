@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { Exercise } from "./types";
 
 /**
@@ -652,6 +653,57 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "advanced",
     instructions:
       "1. Kneel on a pad with feet anchored under a heavy object or held by a partner.\n2. Cross arms over your chest or hold them ready to catch yourself.\n3. Slowly lower your torso toward the floor by straightening your knees.\n4. Use your hamstrings to control the descent as long as possible.\n5. Catch yourself at the bottom and push back up, or use hamstrings to pull back up.",
+  }),
+  // ── Isometric / Timed Exercises ──
+  bwExercise(41, {
+    name: "Plank",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["shoulders", "glutes"],
+    difficulty: "beginner",
+    instructions:
+      "1. Start face down with forearms on the floor, elbows directly under shoulders.\n2. Lift your body off the floor, forming a straight line from head to heels.\n3. Engage your core and squeeze your glutes to maintain the position.\n4. Keep your neck neutral, looking at the floor.\n5. Hold for the target duration without letting your hips sag or pike.",
+    training_modes: ["isometric"],
+  }),
+  bwExercise(42, {
+    name: "Dead Hang",
+    category: "back",
+    primary_muscles: ["forearms", "lats"],
+    secondary_muscles: ["shoulders", "biceps"],
+    difficulty: "beginner",
+    instructions:
+      "1. Grip a pull-up bar with an overhand grip, hands shoulder-width apart.\n2. Step off the platform or let your feet hang freely.\n3. Relax your shoulders slightly while maintaining grip.\n4. Keep your core lightly engaged to prevent excessive swinging.\n5. Hang for the target duration, then step down safely.",
+    training_modes: ["isometric"],
+  }),
+  bwExercise(43, {
+    name: "Wall Sit",
+    category: "legs_glutes",
+    primary_muscles: ["quads"],
+    secondary_muscles: ["glutes", "calves"],
+    difficulty: "beginner",
+    instructions:
+      "1. Stand with your back flat against a wall.\n2. Slide down until your thighs are parallel to the floor, knees at 90 degrees.\n3. Keep your back pressed against the wall and feet flat on the floor.\n4. Place your arms at your sides or on your thighs — not on your knees.\n5. Hold for the target duration, then stand up by pressing through your heels.",
+    training_modes: ["isometric"],
+  }),
+  bwExercise(44, {
+    name: "L-Sit",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["quads", "triceps", "shoulders"],
+    difficulty: "advanced",
+    instructions:
+      "1. Sit on the floor between two parallettes, dip bars, or sturdy surfaces.\n2. Place your hands on the supports and straighten your arms to lift your body.\n3. Raise your legs until they are parallel to the floor, forming an L shape.\n4. Keep your legs straight and together, toes pointed.\n5. Hold for the target duration, keeping your core tight and arms locked.",
+    training_modes: ["isometric"],
+  }),
+  bwExercise(45, {
+    name: "Farmer's Carry",
+    category: "abs_core",
+    primary_muscles: ["forearms", "core"],
+    secondary_muscles: ["traps", "shoulders", "glutes"],
+    difficulty: "beginner",
+    instructions:
+      "1. Pick up a heavy weight in each hand (dumbbells, kettlebells, or farmer's handles).\n2. Stand tall with shoulders back and down, chest up.\n3. Walk forward with controlled, even steps.\n4. Keep your core braced and avoid leaning to either side.\n5. Walk for the target duration or distance, then set the weights down carefully.",
+    training_modes: ["isometric"],
   }),
 ];
 

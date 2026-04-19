@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-18
-Total learnings: 138
+Last updated: 2026-04-19
+Total learnings: 173
 
 ## How to Use This Knowledge Base
 
@@ -14,22 +14,22 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 67 learnings
-- [Testing](patterns/testing.md) — 9 learnings
+- [React Native + Expo](patterns/react-native.md) — 90 learnings
+- [Testing](patterns/testing.md) — 11 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
-- [Theming](pitfalls/theming.md) — 5 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 14 learnings
-- [Type Safety](pitfalls/type-safety.md) — 2 learnings
+- [Theming](pitfalls/theming.md) — 6 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 18 learnings
+- [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 9 learnings
-- [PR Workflow](process/pr-workflow.md) — 2 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 11 learnings
+- [PR Workflow](process/pr-workflow.md) — 3 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 5 learnings
+- [Architecture](decisions/architecture.md) — 6 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,43 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-398 | solve() Is Plate Decomposition Not Rounding — Use roundToPlates() Wrapper | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-396 | Settings UI Must Be Wired End-to-End — Don't Ship Cosmetic Toggles | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-389 | JSON Snapshot Dirty-Check for Auto-Save Forms | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-384 | Audit Existing Screen Elements for Information Overlap Before Adding New UI Components | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-19 | BLD-384 | Verify Data Query Availability Claims Against Actual Code Before Plan Approval | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-19 | BLD-385 | Detect Dark Mode via useColorScheme — Never Compare Background Hex Strings | Pitfalls | [theming.md](pitfalls/theming.md) |
+| 2026-04-19 | BLD-344 | React Native Crashes on Bare Numeric Children Outside Text | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
+| 2026-04-19 | BLD-376 | Absolute Timestamps for Mobile Timers — Not Cumulative setInterval | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-376 | Persistence Write Without Restore Path Is Incomplete Crash Recovery | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-376 | Idempotent ALTER TABLE ADD COLUMN via PRAGMA table_info Guard | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-19 | BLD-369 | Mock-Based DB Tests Cannot Gate Query Refactoring | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-19 | BLD-369 | ORM Schema File Alongside Migration File Is a Dual Source of Truth | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
+| 2026-04-19 | BLD-370 | Schema-Only ORM Adoption — Types Before Queries | Decisions | [architecture.md](decisions/architecture.md) |
+| 2026-04-19 | BLD-370 | Drizzle $inferSelect Does Not Cover JOIN Results or Union-Narrowed Types | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
+| 2026-04-19 | BLD-366 | Add Independent Data Fetches to Existing Promise.all Batches | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-367 | Mutation Version Tracking for Direct-DB-Write Apps Using React Query | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-368 | Timer-Ticking Screens Amplify FlashList Inline Function Costs | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-363 | SQLite Bare Columns in GROUP BY Produce Non-Deterministic Batch Results | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-19 | BLD-363 | Two-Step SQL + JS Pattern for Per-Group Top-N Batch Queries | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-365 | expo-image Requires Config Plugin Registration for Native Builds | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-365 | FlashList v2 Auto-Measures Items — estimatedItemSize Prop Removed | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-351 | Use Blue/Yellow/Red Instead of Green/Yellow/Red for Status Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-351 | full_body Exercises Break Per-Muscle-Group Analysis — Filter Them Out | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-19 | BLD-348 | Add Callback Props to Replace router.push When Embedding Screen Components in Sheets | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-348 | Bottom Sheet Mutual Exclusion — Close Before Open | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | React Compiler: Ref Writes During Render Are Real Bugs | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | React Compiler: Hoist Impure Calls Out of Render Loops | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | React Compiler: Extract Optional Chaining from useMemo Deps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-381 | Scheduled Notification Lifecycle: Cancel from Every Exit Path | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | Automated Reviewer Scans Entire Repo, Not PR Diff | Process | [pr-workflow.md](process/pr-workflow.md) |
+| 2026-04-19 | BLD-346 | Swipe Gestures Need Relative Thresholds and Discoverability Hints | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-341 | expo-localization firstWeekday Is 1-Indexed — Not JS Convention | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-339 | Avoid Hidden Re-Queries in Composed Data-Layer Functions | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-335 | New Database Tables Require Five-Point Backup/Restore Integration | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-18 | BLD-334 | moduleNameMapper Enforces __mocks__/ Directory Mock Resolution for Reanimated | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-18 | BLD-334 | Snapshot Composite Entity Before Cascade Delete for Undo Restoration | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-332 | Extract Heavy Constant Data into Companion Data Files | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-322 | Barrel Re-Export for Non-Breaking Module Splits | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-322 | FitForge DB Migrations Live in lib/db/migrations.ts (UPDATE) | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-18 | BLD-318 | Decompose Large Components via Domain-Specific Hook Extraction | Patterns | [react-native.md](patterns/react-native.md) |

@@ -7,19 +7,20 @@ import {
   getBodySettings,
   getAllExercises,
   getMaxWeightByExercise,
-  getRecentExerciseSets,
+  getRecentExerciseSetsBatch,
   getSessionById,
   getSessionSets,
   getSourceSessionSets,
   getTemplateById,
-  getPreviousSets,
-  getExerciseById,
+  getPreviousSetsBatch,
+  getExercisesByIds,
   updateSetsBatch,
 } from "../lib/db";
 import type { WorkoutSession, TrainingMode, Exercise } from "../lib/types";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 import { epley, suggest, type Suggestion } from "../lib/rm";
 import { uuid } from "../lib/uuid";
+import { getQueryVersion } from "../lib/query";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 type UseSessionDataArgs = {
@@ -44,6 +45,8 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
   const initialized = useRef(false);
   const prevExerciseIds = useRef<string>("");
+  const lastSessionVersion = useRef(-1);
+  const lastExercisesVersion = useRef(-1);
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -87,19 +90,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
 
-    const [prevResults, exerciseResults, recentResults] = await Promise.all([
-      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))),
-      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getExerciseById(eid) }))),
-      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getRecentExerciseSets(eid, 2) }))),
+    const [prevCache, exerciseMeta, recentByExercise] = await Promise.all([
+      getPreviousSetsBatch(exerciseIds, id),
+      getExercisesByIds(exerciseIds),
+      getRecentExerciseSetsBatch(exerciseIds, 2),
     ]);
-
-    const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
-    for (const { eid, data } of prevResults) prevCache[eid] = data;
-
-    const exerciseMeta: Record<string, Exercise> = {};
-    for (const { eid, data } of exerciseResults) {
-      if (data) exerciseMeta[eid] = data;
-    }
 
     const key = exerciseIds.sort().join(",");
     if (key !== prevExerciseIds.current) {
@@ -120,26 +115,40 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           link_id: s.link_id ?? null,
           training_modes: parsed,
           is_voltra: ex?.is_voltra ?? false,
+          is_bodyweight: ex ? ex.equipment === "bodyweight" : false,
+          trackingMode: parsed.includes("isometric" as TrainingMode) ? "duration" : "reps",
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
         (p) => p.set_number === s.set_number
       );
-      map.get(s.exercise_id)!.sets.push({
+      const group = map.get(s.exercise_id)!;
+      const isDuration = group.trackingMode === "duration";
+      let prevDisplay = "-";
+      if (prev) {
+        if (isDuration && prev.duration_seconds != null && prev.duration_seconds > 0) {
+          const m = Math.floor(prev.duration_seconds / 60);
+          const sec = prev.duration_seconds % 60;
+          const durStr = `${m}:${sec.toString().padStart(2, "0")}`;
+          prevDisplay = prev.weight != null && prev.weight > 0
+            ? `${prev.weight} × ${durStr}`
+            : durStr;
+        } else if (prev.weight != null && prev.reps != null) {
+          prevDisplay = prev.weight > 0 && prev.reps > 1
+            ? `${prev.weight}×${prev.reps} (1RM: ${Math.round(epley(prev.weight, prev.reps))})`
+            : `${prev.weight}×${prev.reps}`;
+        }
+      }
+      group.sets.push({
         ...s,
-        previous:
-          prev && prev.weight != null && prev.reps != null
-            ? prev.weight > 0 && prev.reps > 1
-              ? `${prev.weight}×${prev.reps} (1RM: ${Math.round(epley(prev.weight, prev.reps))})`
-              : `${prev.weight}×${prev.reps}`
-            : "-",
+        previous: prevDisplay,
       });
     }
     setGroups([...map.values()]);
 
     const entries: [string, Suggestion | null][] = exerciseIds.map((eid) => {
       try {
-        const recent = recentResults.find((r) => r.eid === eid)?.data ?? [];
+        const recent = recentByExercise[eid] ?? [];
         if (recent.length === 0) return [eid, null];
         const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
         if (timeBased) return [eid, null];
@@ -185,11 +194,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
           const created = await getSessionSets(id);
           const exerciseIds = [...new Set(created.map((s) => s.exercise_id))];
-          const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
-          const prevResults = await Promise.all(
-            exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))
-          );
-          for (const { eid, data } of prevResults) prevCache[eid] = data;
+          const prevCache = await getPreviousSetsBatch(exerciseIds, id);
 
           const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
           for (const s of created) {
@@ -261,15 +266,40 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     })();
   }, [id, templateId, sourceSessionId, load]);
 
-  // Reload exercises when returning from exercise picker
+  // Reload only when session or exercises data has changed since last focus.
+  // First focus always reloads; subsequent focuses only reload if version bumped.
   useFocusEffect(
     useCallback(() => {
-      if (initialized.current && id) {
+      if (!initialized.current) return;
+
+      const sessionVer = getQueryVersion("session");
+      const exercisesVer = getQueryVersion("exercises");
+      const isFirstFocus = lastSessionVersion.current === -1;
+
+      let needsSessionReload = isFirstFocus;
+      let needsExerciseReload = isFirstFocus;
+
+      if (!isFirstFocus) {
+        if (sessionVer !== lastSessionVersion.current) {
+          needsSessionReload = true;
+        }
+        if (exercisesVer !== lastExercisesVersion.current) {
+          needsExerciseReload = true;
+          needsSessionReload = true;
+        }
+      }
+
+      lastSessionVersion.current = sessionVer;
+      lastExercisesVersion.current = exercisesVer;
+
+      if (needsSessionReload && id) {
         load();
       }
-      getAllExercises().then(setAllExercises).catch((err) => {
-        if (__DEV__) console.warn("Failed to load exercises for substitution:", err);
-      });
+      if (needsExerciseReload) {
+        getAllExercises().then(setAllExercises).catch((err) => {
+          if (__DEV__) console.warn("Failed to load exercises for substitution:", err);
+        });
+      }
     }, [id, load])
   );
 

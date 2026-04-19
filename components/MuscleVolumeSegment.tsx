@@ -1,48 +1,18 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import React from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
-import { useFocusEffect } from "expo-router";
-import { CartesianChart, Line } from "victory-native";
-import { getMuscleVolumeForWeek, getMuscleVolumeTrend } from "../lib/db";
-import type { MuscleGroup } from "../lib/types";
 import { MUSCLE_LABELS } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
-
-type VolumeRow = { muscle: MuscleGroup; sets: number; exercises: number };
-type TrendRow = { week: string; sets: number };
-
-const MEV = 10;
-const MRV = 20;
-const TREND_WEEKS = 8;
-
-function mondayOfWeek(offset: number): Date {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? 6 : day - 1;
-  const monday = new Date(now);
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - diff + offset * 7);
-  return monday;
-}
-
-function formatRange(start: Date): string {
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return `${fmt(start)} – ${fmt(end)}`;
-}
+import { useMuscleVolume } from "@/hooks/useMuscleVolume";
+import type { VolumeRow } from "@/hooks/useMuscleVolume";
+import VolumeBarChart from "./muscle-volume/VolumeBarChart";
+import VolumeTrendChart from "./muscle-volume/VolumeTrendChart";
 
 const MuscleRow = React.memo(function MuscleRow({
   item,
@@ -92,75 +62,14 @@ const MuscleRow = React.memo(function MuscleRow({
 export default function MuscleVolumeSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
-  const [offset, setOffset] = useState(0);
-  const [data, setData] = useState<VolumeRow[]>([]);
-  const [trend, setTrend] = useState<TrendRow[]>([]);
-  const [selected, setSelected] = useState<MuscleGroup | null>(null);
-  const selectedRef = useRef<MuscleGroup | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reduced, setReduced] = useState(false);
-
-  const monday = useMemo(() => mondayOfWeek(offset), [offset]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const rows = await getMuscleVolumeForWeek(monday.getTime());
-      setData(rows);
-      if (rows.length > 0) {
-        const cur = selectedRef.current;
-        const muscle = cur && rows.some((r) => r.muscle === cur)
-          ? cur
-          : rows[0].muscle;
-        selectedRef.current = muscle;
-        setSelected(muscle);
-        const t = await getMuscleVolumeTrend(muscle, TREND_WEEKS);
-        setTrend(t);
-      } else {
-        selectedRef.current = null;
-        setSelected(null);
-        setTrend([]);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load data");
-    } finally {
-      setLoading(false);
-    }
-  }, [monday]);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-      AccessibilityInfo.isReduceMotionEnabled().then(setReduced);
-    }, [load])
-  );
-
-  const selectMuscle = useCallback(async (muscle: MuscleGroup) => {
-    selectedRef.current = muscle;
-    setSelected(muscle);
-    try {
-      const t = await getMuscleVolumeTrend(muscle, TREND_WEEKS);
-      setTrend(t);
-    } catch {
-      // trend load failure is non-critical
-    }
-  }, []);
-
-  const maxSets = useMemo(
-    () => Math.max(...data.map((d) => d.sets), MRV),
-    [data]
-  );
+  const {
+    offset, setOffset, data, trend, selected, selectMuscle,
+    loading, error, load, monday, maxSets, hasEnoughTrend, reduced, formatRange,
+  } = useMuscleVolume();
 
   const chartWidth = layout.atLeastMedium
     ? (layout.width - 96) / 2 - 32
     : layout.width - 48;
-
-  const hasEnoughTrend = useMemo(
-    () => trend.filter((t) => t.sets > 0).length >= 2,
-    [trend]
-  );
 
   // ---- Render ----
 
@@ -187,9 +96,6 @@ export default function MuscleVolumeSegment() {
       </View>
     );
   }
-
-  const mevPos = (MEV / maxSets) * 100;
-  const mrvPos = (MRV / maxSets) * 100;
 
   return (
     <View>
@@ -244,117 +150,24 @@ export default function MuscleVolumeSegment() {
           {/* Volume Bars + Trend flow side by side on tablet */}
           <View style={layout.atLeastMedium ? styles.flowRow : undefined}>
           <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
-            <CardContent>
-              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
-                Sets per Muscle Group
-              </Text>
-              <View style={styles.bars}>
-                {/* Landmark labels */}
-                <View style={styles.landmarks}>
-                  {mevPos < 95 && (
-                    <View style={[styles.landmark, { left: `${mevPos}%` }]}>
-                      <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                        MEV
-                      </Text>
-                      <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
-                    </View>
-                  )}
-                  {mrvPos < 95 && (
-                    <View style={[styles.landmark, { left: `${mrvPos}%` }]}>
-                      <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                        MRV
-                      </Text>
-                      <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
-                    </View>
-                  )}
-                </View>
-
-                {data.map((item) => {
-                  const pct = (item.sets / maxSets) * 100;
-                  const active = item.muscle === selected;
-                  return (
-                    <Pressable
-                      key={item.muscle}
-                      onPress={() => selectMuscle(item.muscle)}
-                      style={[
-                        styles.barRow,
-                        active && { backgroundColor: colors.primary + "18" },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${MUSCLE_LABELS[item.muscle]}: ${item.sets} sets`}
-                      accessibilityHint="Double tap to see weekly trend"
-                      accessibilityState={{ selected: active }}
-                    >
-                      <Text
-                        variant="caption"
-                        style={[styles.barLabel, { color: colors.onSurface }]}
-                        numberOfLines={1}
-                      >
-                        {MUSCLE_LABELS[item.muscle]}
-                      </Text>
-                      <View style={styles.barTrack}>
-                        <View
-                          style={[
-                            styles.barFill,
-                            {
-                              width: `${pct}%`,
-                              backgroundColor: active
-                                ? colors.primary
-                                : colors.primary + "99",
-                              borderRadius: 4,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <Text
-                        variant="body"
-                        style={{ color: colors.onSurface, width: 28, textAlign: "right" }}
-                      >
-                        {item.sets}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </CardContent>
+            <VolumeBarChart
+              data={data}
+              selected={selected}
+              maxSets={maxSets}
+              onSelect={selectMuscle}
+              colors={colors}
+            />
           </Card>
 
           <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
-            <CardContent>
-              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
-                {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : "Weekly Trend"}
-              </Text>
-              {hasEnoughTrend ? (
-                <View style={{ width: chartWidth, height: 180 }}>
-                  <CartesianChart
-                    data={trend.map((t) => ({ week: t.week, sets: t.sets }))}
-                    xKey="week"
-                    yKeys={["sets"]}
-                    domainPadding={{ left: 10, right: 10 }}
-                  >
-                    {({ points }) => (
-                      <Line
-                        points={points.sets}
-                        color={colors.primary}
-                        strokeWidth={2}
-                        curveType={reduced ? "linear" : "natural"}
-                      />
-                    )}
-                  </CartesianChart>
-                </View>
-              ) : (
-                <Text
-                  variant="body"
-                  style={{
-                    color: colors.onSurfaceVariant,
-                    textAlign: "center",
-                    padding: 24,
-                  }}
-                >
-                  Keep training to see your trends
-                </Text>
-              )}
-            </CardContent>
+            <VolumeTrendChart
+              selected={selected}
+              trend={trend}
+              hasEnoughTrend={hasEnoughTrend}
+              chartWidth={chartWidth}
+              reduced={reduced}
+              colors={colors}
+            />
           </Card>
 
           </View>
@@ -416,50 +229,7 @@ const styles = StyleSheet.create({
   flowCard: {
     flex: 1,
   },
-  bars: {
-    position: "relative",
-  },
-  landmarks: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 72,
-    right: 36,
-  },
-  landmark: {
-    position: "absolute",
-    top: -4,
-    bottom: 0,
-    alignItems: "center",
-    width: 1,
-  },
-  dottedLine: {
-    flex: 1,
-    width: 0,
-    borderLeftWidth: 1,
-    borderStyle: "dashed",
-  },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    borderRadius: 4,
-    minHeight: 48,
-  },
-  barLabel: {
-    width: 64,
-    marginRight: 8,
-  },
-  barTrack: {
-    flex: 1,
-    height: 16,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-  },
+
   row: {
     flexDirection: "row",
     alignItems: "center",

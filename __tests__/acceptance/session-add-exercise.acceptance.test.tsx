@@ -20,13 +20,17 @@ jest.mock('../../lib/db', () => ({
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
   getPreviousSets: jest.fn().mockResolvedValue([]),
+  getPreviousSetsBatch: jest.fn().mockResolvedValue({}),
   getRecentExerciseSets: jest.fn().mockResolvedValue([]),
+  getRecentExerciseSetsBatch: jest.fn().mockResolvedValue({}),
   getRestSecondsForExercise: jest.fn().mockResolvedValue(90),
   getRestSecondsForLink: jest.fn().mockResolvedValue(90),
   getExerciseById: jest.fn(),
+  getExercisesByIds: jest.fn().mockResolvedValue({}),
   getAppSetting: jest.fn().mockResolvedValue('true'),
   getAllExercises: jest.fn().mockResolvedValue([]),
   getTemplateExerciseCount: jest.fn().mockResolvedValue(0),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
   addExerciseToTemplate: jest.fn().mockResolvedValue(undefined),
 }))
 
@@ -133,6 +137,9 @@ describe('Session → Add Exercise Flow', () => {
       if (id === 'ex-3') return Promise.resolve(deadlift)
       return Promise.resolve(null)
     })
+    mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': benchPress, 'ex-2': squat, 'ex-3': deadlift })
+    mockDb.getPreviousSetsBatch.mockResolvedValue({})
+    mockDb.getRecentExerciseSetsBatch.mockResolvedValue({})
     mockDb.getAppSetting.mockResolvedValue('true')
     mockDb.addSet.mockImplementation((sid: string, eid: string, num: number) =>
       Promise.resolve(createSet({ session_id: sid, exercise_id: eid, set_number: num }))

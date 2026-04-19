@@ -17,10 +17,13 @@ jest.mock('../../lib/db', () => ({
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
   getPreviousSets: jest.fn().mockResolvedValue([]),
+  getPreviousSetsBatch: jest.fn().mockResolvedValue({}),
   getRecentExerciseSets: jest.fn().mockResolvedValue([]),
+  getRecentExerciseSetsBatch: jest.fn().mockResolvedValue({}),
   getRestSecondsForExercise: jest.fn().mockResolvedValue(90),
   getRestSecondsForLink: jest.fn().mockResolvedValue(90),
   getExerciseById: jest.fn(),
+  getExercisesByIds: jest.fn().mockResolvedValue({}),
   getAppSetting: jest.fn().mockResolvedValue('true'),
   getSessionPRs: jest.fn().mockResolvedValue([]),
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
@@ -101,6 +104,7 @@ function setupSession() {
   mockDb.getSessionById.mockResolvedValue(session)
   mockDb.getSessionSets.mockResolvedValue(sets)
   mockDb.getExerciseById.mockResolvedValue(exercise)
+  mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
   return { session, sets }
 }
 
@@ -114,10 +118,13 @@ describe('Session UX Acceptance', () => {
     mockDb.getSessionSets.mockResolvedValue([])
     mockDb.getSessionById.mockResolvedValue(null)
     mockDb.getExerciseById.mockResolvedValue(null)
+    mockDb.getExercisesByIds.mockResolvedValue({})
     mockDb.getBodySettings.mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null })
     mockDb.getMaxWeightByExercise.mockResolvedValue({})
     mockDb.getPreviousSets.mockResolvedValue([])
+    mockDb.getPreviousSetsBatch.mockResolvedValue({})
     mockDb.getRecentExerciseSets.mockResolvedValue([])
+    mockDb.getRecentExerciseSetsBatch.mockResolvedValue({})
     mockDb.getRestSecondsForExercise.mockResolvedValue(90)
     mockDb.getAppSetting.mockResolvedValue('true')
     mockDb.getSessionPRs.mockResolvedValue([])
@@ -213,7 +220,7 @@ describe('Session UX Acceptance', () => {
   })
 
   describe('Rest Timer', () => {
-    it('shows skip button when rest timer is active', async () => {
+    it('rest timer skip button no longer in list (moved to header)', async () => {
       setupSession()
       mockDb.getRestSecondsForExercise.mockResolvedValue(60)
 
@@ -222,15 +229,13 @@ describe('Session UX Acceptance', () => {
 
       // Complete a set to trigger rest timer
       const checkBtn = await findByLabelText('Mark set 1 complete')
-      await waitFor(async () => {
-        fireEvent.press(checkBtn)
-      })
+      fireEvent.press(checkBtn)
 
-      // After completing a set, rest timer should start
-      // The skip button should appear
-      await waitFor(() => {
-        expect(queryByLabelText('Skip rest timer')).toBeTruthy()
-      })
+      // Wait for state to settle
+      await findByText('Squat')
+
+      // Old "Skip rest timer" banner button no longer exists in list content
+      expect(queryByLabelText('Skip rest timer')).toBeNull()
     })
   })
 

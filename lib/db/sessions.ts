@@ -9,8 +9,10 @@ export {
   getSessionSets,
   addSet,
   addSetsBatch,
+  addWarmupSets,
   updateSet,
   updateSetsBatch,
+  updateSetDuration,
   completeSet,
   uncompleteSet,
   deleteSet,
@@ -22,8 +24,11 @@ export {
   updateSetWarmup,
   updateSetType,
   getPreviousSets,
+  getPreviousSetsBatch,
   getSessionSetCount,
+  getSessionSetCounts,
   getSessionAvgRPE,
+  getSessionAvgRPEs,
   getRestSecondsForExercise,
   getRestSecondsForLink,
   getSourceSessionSets,
@@ -40,22 +45,29 @@ export {
   getCompletedSessionsWithSetCount,
   getMaxWeightByExercise,
   getSessionPRs,
+  checkSetPR,
   getRecentPRs,
   getSessionRepPRs,
   getSessionComparison,
   getSessionWeightIncreases,
+  getSessionDurationPRs,
   getSessionCountsByDay,
   getTotalSessionCount,
   getMuscleVolumeForWeek,
   getMuscleVolumeTrend,
 } from "./session-stats";
 
+export { getE1RMTrends } from "./e1rm-trends";
+export type { E1RMTrendRow } from "./e1rm-trends";
+
 export {
   getExerciseHistory,
   getExerciseRecords,
   getExercise1RMChartData,
   getExerciseChartData,
+  getExerciseDurationChartData,
   getRecentExerciseSets,
+  getRecentExerciseSetsBatch,
   getBestSet,
 } from "./exercise-history";
 export type { ExerciseSession, ExerciseRecords } from "./exercise-history";

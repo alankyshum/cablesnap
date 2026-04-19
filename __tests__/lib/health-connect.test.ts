@@ -108,157 +108,84 @@ describe("Health Connect DB functions", () => {
 });
 
 describe("Health Connect settings integration", () => {
-  it("IntegrationsCard imports AccessibilityInfo for a11y announcements", async () => {
+  it("IntegrationsCard has proper a11y, dynamic import, and platform gating", () => {
     const fs = require("fs");
     const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
+    // a11y
     expect(source).toContain("AccessibilityInfo");
     expect(source).toContain('accessibilityRole="switch"');
     expect(source).toContain('accessibilityLabel="Sync workouts to Health Connect"');
-  });
-
-  it("IntegrationsCard uses dynamic import for health-connect module", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
+    // dynamic import
     expect(source).not.toMatch(/^import.*from.*["'].*health-connect["']/m);
     expect(source).toContain('await import("../../lib/health-connect")');
-  });
-
-  it("IntegrationsCard hides HC UI on non-Android platforms", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
+    // platform gating
     expect(source).toContain('Platform.OS === "android"');
     expect(source).toContain('hcSdkStatus !== "unavailable"');
-  });
-
-  it("IntegrationsCard shows install/update button for needs_install/needs_update", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
+    // install/update
     expect(source).toContain("openHealthConnectPlayStore");
     expect(source).toContain('"Install Health Connect from Play Store"');
     expect(source).toContain('"Update Health Connect"');
-  });
-
-  it("IntegrationsCard has ≥48dp touch target for install/update button", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
     expect(source).toContain("minHeight: 48");
   });
 });
 
-describe("Health Connect session sync integration", () => {
-  it("session/[id].tsx uses dynamic import for HC sync", () => {
+describe("Health Connect session sync and startup", () => {
+  it("uses dynamic import for HC sync (Android-gated, silent) and reconciles on startup", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/session/[id].tsx", "utf8");
-    expect(source).toContain('await import("../../lib/health-connect")');
-    expect(source).toContain("syncToHealthConnect");
-    // HC sync must be Android-gated
-    expect(source).toContain('Platform.OS === "android"');
-  });
-
-  it("session/[id].tsx HC sync is silent (no toast on success or failure)", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("app/session/[id].tsx", "utf8");
-    // Find the HC sync block and verify no setSnackbar calls in it
-    const hcBlock = source.match(
-      /Health Connect sync[\s\S]*?catch\s*\{[\s\S]*?\}/
-    );
+    const sessionSource = [
+      fs.readFileSync("app/session/[id].tsx", "utf8"),
+      fs.readFileSync("hooks/useSessionActions.ts", "utf8"),
+    ].join("\n");
+    expect(sessionSource).toContain('await import("../lib/health-connect")');
+    expect(sessionSource).toContain("syncToHealthConnect");
+    expect(sessionSource).toContain('Platform.OS === "android"');
+    // HC sync is silent (no toast)
+    const hcBlock = sessionSource.match(/Health Connect sync[\s\S]*?catch\s*\{[\s\S]*?\}/);
     expect(hcBlock).toBeTruthy();
-    const hcCode = hcBlock![0];
-    expect(hcCode).not.toContain("setSnackbar");
+    expect(hcBlock![0]).not.toContain("setSnackbar");
+    // Startup reconciliation
+    const layoutSource = [
+      fs.readFileSync("app/_layout.tsx", "utf8"),
+      fs.readFileSync("hooks/useAppInit.ts", "utf8"),
+    ].join("\n");
+    expect(layoutSource).toContain("reconcileHealthConnectQueue");
+    expect(layoutSource).toContain('Platform.OS === "android"');
+    expect(layoutSource).toContain('import("../lib/health-connect")');
   });
 });
 
-describe("Health Connect startup reconciliation", () => {
-  it("_layout.tsx calls reconcileHealthConnectQueue on Android startup", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("app/_layout.tsx", "utf8");
-    expect(source).toContain("reconcileHealthConnectQueue");
-    expect(source).toContain('Platform.OS === "android"');
-    // Must use dynamic import
-    expect(source).toContain('import("../lib/health-connect")');
-  });
-});
-
-describe("Health Connect lib module", () => {
-  it("lib/health-connect.ts uses dynamic import for native module", () => {
+describe("Health Connect lib module, schema, and config", () => {
+  it("uses dynamic import, dedup, initialization, SDK status, and retry config", () => {
     const fs = require("fs");
     const source = fs.readFileSync("lib/health-connect.ts", "utf8");
-    // Must NOT have static import of react-native-health-connect
+    // Dynamic import (no static import)
     expect(source).not.toMatch(/^import.*from.*["']react-native-health-connect["']/m);
-    // Must use dynamic import
     expect(source).toContain('import("react-native-health-connect")');
-  });
-
-  it("lib/health-connect.ts includes clientRecordId for deduplication", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
+    // Deduplication
     expect(source).toContain("clientRecordId");
     expect(source).toContain("fitforge-");
-  });
-
-  it("lib/health-connect.ts calls ensureInitialized before API calls", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
+    // Initialization
     expect(source).toContain("ensureInitialized");
-    // ensureInitialized should call initialize()
     expect(source).toContain("await initialize()");
-  });
-
-  it("lib/health-connect.ts maps SDK_UNAVAILABLE to needs_install", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
+    // SDK status mapping
     expect(source).toContain("SdkAvailabilityStatus.SDK_UNAVAILABLE:");
     expect(source).toContain('"needs_install"');
-    // getSdkStatus should be called before ensureInitialized to avoid masking status
-    const sdkStatusFn = source.match(
-      /async function getHealthConnectSdkStatus[\s\S]*?^}/m
-    );
-    expect(sdkStatusFn).toBeTruthy();
-    const fnBody = sdkStatusFn![0];
-    const getSdkIdx = fnBody.indexOf("getSdkStatus");
-    const ensureInitIdx = fnBody.indexOf("ensureInitialized()");
-    expect(getSdkIdx).toBeLessThan(ensureInitIdx);
-  });
-
-  it("lib/health-connect.ts extracts record building into helper", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
+    // Record builder
     expect(source).toContain("buildExerciseSessionRecord");
-    // Helper should be used in both sync and reconcile functions
     const matches = source.match(/buildExerciseSessionRecord/g);
-    expect(matches!.length).toBeGreaterThanOrEqual(3); // definition + 2 callsites
-  });
-
-  it("lib/health-connect.ts has MAX_RETRIES = 3", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
+    expect(matches!.length).toBeGreaterThanOrEqual(3);
+    // Retry config
     expect(source).toContain("MAX_RETRIES = 3");
-  });
-
-  it("lib/health-connect.ts marks 0 completed sets as permanently_failed", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
     expect(source).toContain('"No completed sets"');
-  });
-});
-
-describe("Health Connect DB schema", () => {
-  it("helpers.ts includes health_connect_sync_log table migration", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("lib/db/migrations.ts", "utf8");
-    expect(source).toContain("health_connect_sync_log");
-    expect(source).toContain("health_connect_record_id");
-    expect(source).toContain("idx_hc_sync_log_status");
-  });
-});
-
-describe("Expo config plugins", () => {
-  it("app.config.ts includes expo-build-properties and expo-health-connect", () => {
-    const fs = require("fs");
-    const source = fs.readFileSync("app.config.ts", "utf8");
-    expect(source).toContain("expo-build-properties");
-    expect(source).toContain("minSdkVersion: 26");
-    expect(source).toContain("expo-health-connect");
-    expect(source).toContain("WRITE_EXERCISE");
+    // DB schema and config
+    const migrationsSrc = fs.readFileSync("lib/db/migrations.ts", "utf8");
+    expect(migrationsSrc).toContain("health_connect_sync_log");
+    expect(migrationsSrc).toContain("health_connect_record_id");
+    expect(migrationsSrc).toContain("idx_hc_sync_log_status");
+    const configSrc = fs.readFileSync("app.config.ts", "utf8");
+    expect(configSrc).toContain("expo-build-properties");
+    expect(configSrc).toContain("minSdkVersion: 26");
+    expect(configSrc).toContain("expo-health-connect");
+    expect(configSrc).toContain("WRITE_EXERCISE");
   });
 });

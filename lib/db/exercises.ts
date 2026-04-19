@@ -3,23 +3,7 @@ import type { Exercise } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, query, getDatabase } from "./helpers";
 import { exercises } from "./schema";
-
-type ExerciseRow = {
-  id: string;
-  name: string;
-  category: string;
-  primary_muscles: string;
-  secondary_muscles: string;
-  equipment: string;
-  instructions: string;
-  difficulty: string;
-  is_custom: number;
-  deleted_at: number | null;
-  mount_position: string | null;
-  attachment: string | null;
-  training_modes: string | null;
-  is_voltra: number | null;
-};
+import type { ExerciseRow } from "./schema";
 
 function mapRow(row: ExerciseRow): Exercise {
   return {
@@ -59,6 +43,20 @@ export async function getExerciseById(id: string): Promise<Exercise | null> {
     .get();
   if (!row) return null;
   return mapRow(row as unknown as ExerciseRow);
+}
+
+export async function getExercisesByIds(
+  exerciseIds: string[]
+): Promise<Record<string, Exercise>> {
+  if (exerciseIds.length === 0) return {};
+  const placeholders = exerciseIds.map(() => "?").join(",");
+  const rows = await query<ExerciseRow>(
+    `SELECT * FROM exercises WHERE id IN (${placeholders})`,
+    exerciseIds
+  );
+  const result: Record<string, Exercise> = {};
+  for (const row of rows) result[row.id] = mapRow(row);
+  return result;
 }
 
 export async function createCustomExercise(

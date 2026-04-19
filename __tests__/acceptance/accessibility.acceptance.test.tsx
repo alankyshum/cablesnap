@@ -61,7 +61,13 @@ jest.mock('react-native-reanimated', () => {
     FadeInDown: chainable(),
     useAnimatedStyle: () => ({}),
     useSharedValue: <T,>(v: T) => ({ value: v }),
-    withTiming: <T,>(v: T) => v,
+    useReducedMotion: () => false,
+    withTiming: <T,>(v: T, _cfg?: unknown, cb?: (f: boolean) => void) => { if (cb) cb(true); return v },
+    withSpring: <T,>(v: T) => v,
+    withDelay: <T,>(_d: number, v: T) => v,
+    withSequence: <T,>(...args: T[]) => args[args.length - 1],
+    cancelAnimation: () => {},
+    runOnJS: <T extends (...args: unknown[]) => unknown>(fn: T) => fn,
     interpolateColor: () => '#000',
     createAnimatedComponent: <T,>(c: T) => c,
     Easing: { bezier: () => (t: number) => t },
@@ -75,6 +81,14 @@ jest.mock('../../components/MuscleVolumeSegment', () => 'MuscleVolumeSegment')
 jest.mock('../../components/WeeklySummary', () => 'WeeklySummary')
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/starter-templates', () => ({ STARTER_TEMPLATES: [] }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
 jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/confirm', () => ({ confirmAction: jest.fn() }))
@@ -83,7 +97,7 @@ jest.mock('../../components/MuscleMap', () => ({ MuscleMap: 'MuscleMap' }))
 jest.mock('../../components/WeightPicker', () => 'WeightPicker')
 jest.mock('../../components/ExercisePickerSheet', () => 'ExercisePickerSheet')
 jest.mock('../../components/ui/bna-toast', () => ({ ToastProvider: ({ children }: { children: unknown }) => children, useToast: () => ({ toast: jest.fn(), success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }) }))
-jest.mock('../../lib/query', () => ({ useFocusRefetch: jest.fn() }))
+jest.mock('../../lib/query', () => ({ useFocusRefetch: jest.fn(), bumpQueryVersion: jest.fn(), getQueryVersion: jest.fn().mockReturnValue(0) }))
 
 jest.mock('../../components/ui/FlowContainer', () => {
   const RN = require('react-native')
@@ -118,6 +132,7 @@ jest.mock('../../lib/db', () => ({
     { id: 'ex-2', name: 'Squat', category: 'legs_glutes', primary_muscles: ['quads'], secondary_muscles: [], equipment: 'barbell', instructions: 'Squat down', difficulty: 'intermediate', is_custom: false, deleted_at: null },
   ]),
   getExerciseById: jest.fn().mockResolvedValue({ id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: [], equipment: 'barbell', instructions: 'Press', difficulty: 'intermediate', is_custom: false, deleted_at: null }),
+  getExercisesByIds: jest.fn().mockResolvedValue({ 'ex-1': { id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: [], equipment: 'barbell', instructions: 'Press', difficulty: 'intermediate', is_custom: false, deleted_at: null } }),
   createCustomExercise: jest.fn().mockResolvedValue(undefined),
   getRecentSessions: jest.fn().mockResolvedValue([]),
   getActiveSession: jest.fn().mockResolvedValue(null),
@@ -175,7 +190,9 @@ jest.mock('../../lib/db', () => ({
   updateSetTempo: jest.fn().mockResolvedValue(undefined),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
   getPreviousSets: jest.fn().mockResolvedValue([]),
+  getPreviousSetsBatch: jest.fn().mockResolvedValue({}),
   getRecentExerciseSets: jest.fn().mockResolvedValue([]),
+  getRecentExerciseSetsBatch: jest.fn().mockResolvedValue({}),
   getRestSecondsForExercise: jest.fn().mockResolvedValue(90),
   getRestSecondsForLink: jest.fn().mockResolvedValue(90),
   getSessionPRs: jest.fn().mockResolvedValue([]),
@@ -191,12 +208,16 @@ jest.mock('../../lib/db', () => ({
   getSchedule: jest.fn().mockResolvedValue(null),
   getRecentPRs: jest.fn().mockResolvedValue([]),
   getSessionAvgRPE: jest.fn().mockResolvedValue(null),
+  getSessionAvgRPEs: jest.fn().mockResolvedValue({}),
   getSessionSetCount: jest.fn().mockResolvedValue(0),
+  getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getTemplateExerciseCount: jest.fn().mockResolvedValue(0),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
   startSession: jest.fn().mockResolvedValue({ id: 'qs-1', name: 'Quick Start', started_at: Date.now() }),
   getTodaySchedule: jest.fn().mockResolvedValue(null),
   isTodayCompleted: jest.fn().mockResolvedValue(false),
   getWeekAdherence: jest.fn().mockResolvedValue([]),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
   deleteTemplate: jest.fn().mockResolvedValue(undefined),
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   duplicateProgram: jest.fn().mockResolvedValue('dup-p1'),
@@ -216,6 +237,7 @@ jest.mock('../../lib/programs', () => ({
   getNextWorkout: jest.fn().mockResolvedValue(null),
   getPrograms: jest.fn().mockResolvedValue([]),
   getProgramDayCount: jest.fn().mockResolvedValue(0),
+  getProgramDayCounts: jest.fn().mockResolvedValue({}),
   softDeleteProgram: jest.fn().mockResolvedValue(undefined),
   getSessionProgramDayId: jest.fn().mockResolvedValue(null),
   getProgramDayById: jest.fn().mockResolvedValue(null),

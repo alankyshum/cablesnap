@@ -1,5 +1,5 @@
-import { epley, brzycki, lombardi, average, percentageTable, suggest } from "../../lib/rm";
-import type { HistorySet, Suggestion } from "../../lib/rm";
+import { epley, brzycki, lombardi, average, percentageTable, suggest, suggestDuration } from "../../lib/rm";
+import type { HistorySet, DurationHistorySet } from "../../lib/rm";
 
 describe("1RM formulas", () => {
   describe("epley", () => {
@@ -244,5 +244,110 @@ describe("suggest (progressive overload)", () => {
     ]);
     const result = suggest(sets, 2.5, false);
     expect(result).toBeNull();
+  });
+});
+
+// ---- suggestDuration ----
+
+describe("suggestDuration", () => {
+  function makeDSet(
+    overrides: Partial<DurationHistorySet> = {},
+  ): DurationHistorySet {
+    return {
+      session_id: "s1",
+      duration_seconds: 60,
+      completed: 1,
+      started_at: 1000,
+      ...overrides,
+    };
+  }
+
+  it("returns null for empty history", () => {
+    expect(suggestDuration([])).toBeNull();
+  });
+
+  it("returns null when last session has only null durations", () => {
+    const sets = [
+      makeDSet({ duration_seconds: null }),
+      makeDSet({ duration_seconds: null }),
+    ];
+    expect(suggestDuration(sets)).toBeNull();
+  });
+
+  it("returns null when last session has only zero durations", () => {
+    const sets = [
+      makeDSet({ duration_seconds: 0 }),
+      makeDSet({ duration_seconds: 0 }),
+    ];
+    expect(suggestDuration(sets)).toBeNull();
+  });
+
+  it("suggests +5s increase when all sets completed", () => {
+    const sets = [
+      makeDSet({ duration_seconds: 60, completed: 1 }),
+      makeDSet({ duration_seconds: 60, completed: 1 }),
+    ];
+    const result = suggestDuration(sets);
+    expect(result).toEqual({
+      type: "increase",
+      duration: 65,
+      reason: expect.stringContaining("increase"),
+    });
+  });
+
+  it("suggests maintain when not all sets completed", () => {
+    const sets = [
+      makeDSet({ duration_seconds: 60, completed: 1 }),
+      makeDSet({ duration_seconds: 45, completed: 0 }),
+    ];
+    const result = suggestDuration(sets);
+    expect(result).toEqual({
+      type: "maintain",
+      duration: 60,
+      reason: expect.stringContaining("maintain"),
+    });
+  });
+
+  it("uses max duration from attempted sets for maintain suggestion", () => {
+    const sets = [
+      makeDSet({ duration_seconds: 30, completed: 1 }),
+      makeDSet({ duration_seconds: 90, completed: 0 }),
+    ];
+    const result = suggestDuration(sets);
+    expect(result?.type).toBe("maintain");
+    expect(result?.duration).toBe(90);
+  });
+
+  it("uses most recent session only (highest started_at)", () => {
+    const sets = [
+      // Older session: all completed at 120s
+      makeDSet({ session_id: "old", duration_seconds: 120, completed: 1, started_at: 1000 }),
+      // Newer session: not completed at 60s
+      makeDSet({ session_id: "new", duration_seconds: 60, completed: 0, started_at: 2000 }),
+    ];
+    const result = suggestDuration(sets);
+    expect(result?.type).toBe("maintain");
+    expect(result?.duration).toBe(60);
+  });
+
+  it("increases from max of newest session when all completed", () => {
+    const sets = [
+      makeDSet({ session_id: "old", duration_seconds: 30, completed: 1, started_at: 1000 }),
+      makeDSet({ session_id: "new", duration_seconds: 45, completed: 1, started_at: 2000 }),
+      makeDSet({ session_id: "new", duration_seconds: 50, completed: 1, started_at: 2000 }),
+    ];
+    const result = suggestDuration(sets);
+    expect(result).toEqual({
+      type: "increase",
+      duration: 55,
+      reason: expect.stringContaining("increase"),
+    });
+  });
+
+  it("handles single set session", () => {
+    const sets = [makeDSet({ duration_seconds: 90, completed: 1 })];
+    const result = suggestDuration(sets);
+    expect(result?.type).toBe("increase");
+    expect(result?.duration).toBe(95);
   });
 });

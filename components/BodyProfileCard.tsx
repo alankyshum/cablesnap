@@ -8,12 +8,12 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/bna-toast";
 import { flowCardStyle } from "./ui/FlowContainer";
+import { ActivityDropdown } from "./profile/ActivityDropdown";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
 import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import {
-  ACTIVITY_LABELS,
   GOAL_LABELS,
   calculateFromProfile,
   migrateProfile,
@@ -26,14 +26,6 @@ import {
 const SEX_BUTTONS = [
   { value: "male", label: "Male", accessibilityLabel: "Male" },
   { value: "female", label: "Female", accessibilityLabel: "Female" },
-] as const;
-
-const ACTIVITY_BUTTONS = [
-  { value: "sedentary", label: ACTIVITY_LABELS.sedentary.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.sedentary },
-  { value: "lightly_active", label: ACTIVITY_LABELS.lightly_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.lightly_active },
-  { value: "moderately_active", label: ACTIVITY_LABELS.moderately_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.moderately_active },
-  { value: "very_active", label: ACTIVITY_LABELS.very_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.very_active },
-  { value: "extra_active", label: ACTIVITY_LABELS.extra_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.extra_active },
 ] as const;
 
 const GOAL_BUTTONS = [
@@ -57,9 +49,11 @@ export default function BodyProfileCard() {
   const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [heightUnit, setHeightUnit] = useState<"cm" | "in">("cm");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [activityMenuVisible, setActivityMenuVisible] = useState(false);
   const toast = useToast();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
+  const initialSnapshot = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -90,6 +84,7 @@ export default function BodyProfileCard() {
         setSex(profile.sex);
         setActivityLevel(profile.activityLevel);
         setGoal(profile.goal);
+        initialSnapshot.current = JSON.stringify(profile);
       } else if (latestWeight) {
         setWeight(String(latestWeight.weight));
       }
@@ -143,9 +138,14 @@ export default function BodyProfileCard() {
         weightUnit,
         heightUnit,
       };
+
+      const profileJson = JSON.stringify(profile);
+      if (profileJson === initialSnapshot.current) return;
+
       await setAppSetting("nutrition_profile", JSON.stringify(profile));
       const result = calculateFromProfile(profile);
       await updateMacroTargets(result.calories, result.protein, result.carbs, result.fat);
+      initialSnapshot.current = profileJson;
       if (isMounted.current) toast.success("Profile saved");
     } catch {
       if (isMounted.current) toast.error("Could not save profile");
@@ -283,11 +283,14 @@ export default function BodyProfileCard() {
         <Text variant="caption" style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}>
           Activity Level
         </Text>
-        <SegmentedControl
+        <ActivityDropdown
           value={activityLevel}
-          onValueChange={(v) => handleSegmentChange("activityLevel", v)}
-          buttons={ACTIVITY_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
-          style={styles.segmented}
+          onChange={(key) => {
+            handleSegmentChange("activityLevel", key);
+            setActivityMenuVisible(false);
+          }}
+          visible={activityMenuVisible}
+          onToggle={() => setActivityMenuVisible(!activityMenuVisible)}
         />
 
         <Text variant="caption" style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600" }]}>

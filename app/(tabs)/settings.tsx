@@ -50,6 +50,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
   const [count, setCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [restNotifications, setRestNotifications] = useState(true);
   const [reminders, setReminders] = useState(false);
   const [reminderTime, setReminderTime] = useState("08:00");
   const [permDenied, setPermDenied] = useState(false);
@@ -79,6 +80,9 @@ export default function Settings() {
         setSoundEnabled(on);
         setAudioEnabled(on);
       }).catch(() => { setSoundEnabled(true); setAudioEnabled(true); toast.error("Could not load sound setting"); });
+      getAppSetting("rest_notification_enabled").then((val) => {
+        setRestNotifications(val !== "false");
+      }).catch(() => { setRestNotifications(true); });
       Promise.all([getAppSetting("reminders_enabled"), getAppSetting("reminder_time"), getPermissionStatus(), getSchedule()])
         .then(([enabled, time, perm, sched]) => {
           setReminders(enabled === "true" && perm === "granted");
@@ -169,7 +173,7 @@ export default function Settings() {
       <FlowContainer gap={16}>
         <UnitsCard colors={colors} toast={toast} weightUnit={weightUnit} setWeightUnit={setWeightUnit} measureUnit={measureUnit} setMeasureUnit={setMeasureUnit} weightGoal={weightGoal} fatGoal={fatGoal} />
         <BodyProfileCard />
-        <PreferencesCard colors={colors} toast={toast} reminders={reminders} setReminders={setReminders} reminderTime={reminderTime} setReminderTime={setReminderTime} permDenied={permDenied} setPermDenied={setPermDenied} scheduleCount={scheduleCount} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
+        <PreferencesCard colors={colors} toast={toast} reminders={reminders} setReminders={setReminders} reminderTime={reminderTime} setReminderTime={setReminderTime} permDenied={permDenied} setPermDenied={setPermDenied} scheduleCount={scheduleCount} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} restNotifications={restNotifications} setRestNotifications={setRestNotifications} />
         <IntegrationsCard colors={colors} toast={toast} stravaAthlete={stravaAthlete} setStravaAthlete={setStravaAthlete} stravaLoading={stravaLoading} setStravaLoading={setStravaLoading} hcEnabled={hcEnabled} setHcEnabled={setHcEnabled} hcLoading={hcLoading} setHcLoading={setHcLoading} hcSdkStatus={hcSdkStatus} />
         <DataManagementCard colors={colors} loading={loading} exportProgress={exportProgress} onExport={handleExport} onImport={handleImport} onImportStrong={() => router.push("/settings/import-strong")} />
         <CSVExportCard colors={colors} />
@@ -246,7 +250,7 @@ function FeedbackCard({ colors, count, onBug, onFeature, onErrors }: {
         <View style={styles.buttonFlow}>
           <Button variant="default" icon={Bug} onPress={onBug} accessibilityLabel="Report a bug">Report Bug</Button>
           <Button variant="outline" icon={Lightbulb} onPress={onFeature} accessibilityLabel="Request a feature">Feature Request</Button>
-          <Button variant="outline" icon={List} onPress={onErrors} accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}>Errors ({count})</Button>
+          <Button variant="outline" icon={List} onPress={onErrors} accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}>{`Errors (${count})`}</Button>
         </View>
       </CardContent>
     </Card>

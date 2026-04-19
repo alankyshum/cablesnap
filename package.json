@@ -1,6 +1,6 @@
 {
   "name": "fitforge",
-  "version": "0.9.2",
+  "version": "0.14.1",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -47,11 +47,13 @@
     "expo-file-system": "~55.0.16",
     "expo-haptics": "~55.0.14",
     "expo-health-connect": "^0.1.1",
+    "expo-image": "~55.0.8",
     "expo-image-manipulator": "~55.0.15",
     "expo-image-picker": "~55.0.18",
     "expo-keep-awake": "~55.0.6",
     "expo-linking": "~55.0.13",
     "expo-local-authentication": "~55.0.13",
+    "expo-localization": "~55.0.13",
     "expo-modules-core": "~55.0.22",
     "expo-notifications": "~55.0.19",
     "expo-router": "~55.0.12",

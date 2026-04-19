@@ -1,26 +1,22 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Keyboard,
   Platform,
-  Pressable,
   StyleSheet,
   View,
   useColorScheme,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
-  withRepeat,
-  withSequence,
-  useReducedMotion,
 } from "react-native-reanimated";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { CenterButton } from "./floating-tab-bar/CenterButton";
+import { TabButton } from "./floating-tab-bar/TabButton";
 
 const BAR_HEIGHT = 56;
 const BAR_MARGIN_BOTTOM = 24;
@@ -28,27 +24,8 @@ const BAR_BUFFER = 8;
 /** Base height used for content padding (bar + margins + buffer). Add insets.bottom for full value. */
 export const FLOATING_TAB_BAR_HEIGHT = BAR_HEIGHT + BAR_MARGIN_BOTTOM + BAR_BUFFER;
 
-const CENTER_BUTTON_SIZE = 72;
 const BAR_BORDER_RADIUS = 24;
 const BAR_HORIZONTAL_MARGIN = 16;
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
-
-const TAB_ICONS: Record<string, IconName> = {
-  exercises: "format-list-bulleted",
-  nutrition: "food-apple",
-  index: "arm-flex",
-  progress: "chart-line",
-  settings: "cog",
-};
-
-const TAB_LABELS: Record<string, string> = {
-  exercises: "Exercises",
-  nutrition: "Nutrition",
-  index: "Workouts",
-  progress: "Progress",
-  settings: "Settings",
-};
 
 /**
  * Hook to get the total floating tab bar height including safe area.
@@ -58,199 +35,6 @@ export function useFloatingTabBarHeight(): number {
   const insets = useSafeAreaInsets();
   return FLOATING_TAB_BAR_HEIGHT + insets.bottom;
 }
-
-function CenterButton({
-  focused,
-  onPress,
-  color,
-  activeColor,
-  backgroundColor,
-}: {
-  focused: boolean;
-  onPress: () => void;
-  color: string;
-  activeColor: string;
-  backgroundColor: string;
-}) {
-  const colors = useThemeColors();
-  const reducedMotion = useReducedMotion();
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
-  const iconScale = useSharedValue(1);
-  const iconRotate = useSharedValue(0);
-
-  useEffect(() => {
-    if (focused && !reducedMotion) {
-      // Natural arm-flex: rotate like curling a bicep + slight squeeze
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      iconRotate.value = withRepeat(
-        withSequence(
-          withTiming(-12, { duration: 400 }),
-          withTiming(8, { duration: 350 }),
-          withTiming(-5, { duration: 300 }),
-          withTiming(0, { duration: 250 }),
-          withTiming(0, { duration: 700 }),
-        ),
-        -1,
-        false,
-      );
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      iconScale.value = withRepeat(
-        withSequence(
-          withTiming(1.12, { duration: 400 }),
-          withTiming(1.0, { duration: 350 }),
-          withTiming(1.06, { duration: 300 }),
-          withTiming(1.0, { duration: 250 }),
-          withTiming(1.0, { duration: 700 }),
-        ),
-        -1,
-        false,
-      );
-    } else {
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      iconScale.value = withTiming(1, { duration: 200 });
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      iconRotate.value = withTiming(0, { duration: 200 });
-    }
-  }, [focused, reducedMotion, iconScale, iconRotate]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  const iconAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { rotate: `${iconRotate.value}deg` },
-      { scale: iconScale.value },
-    ],
-  }));
-
-  const handlePressIn = useCallback(() => {
-    if (reducedMotion) {
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      opacity.value = withTiming(0.7, { duration: 0 });
-    } else {
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      scale.value = withSpring(0.9, { damping: 15, stiffness: 200 });
-    }
-  }, [reducedMotion, scale, opacity]);
-
-  const handlePressOut = useCallback(() => {
-    if (reducedMotion) {
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      opacity.value = withTiming(1, { duration: 0 });
-    } else {
-      // eslint-disable-next-line react-hooks/immutability -- reanimated shared value
-      scale.value = withSpring(1, { damping: 15, stiffness: 200 });
-    }
-  }, [reducedMotion, scale, opacity]);
-
-  return (
-    <View style={centerStyles.wrapper}>
-      <Animated.View style={animatedStyle}>
-        <Pressable
-          onPress={onPress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          accessibilityRole="tab"
-          accessibilityLabel="Workouts"
-          accessibilityHint="Navigate to workout screen"
-          accessibilityState={{ selected: focused }}
-          style={[
-            centerStyles.button,
-            {
-              backgroundColor: focused ? activeColor : backgroundColor,
-              shadowColor: colors.shadow,
-            },
-          ]}
-        >
-          <Animated.View style={iconAnimatedStyle}>
-            <MaterialCommunityIcons
-              name="arm-flex"
-              size={28}
-              color={focused ? colors.onPrimary : color}
-            />
-          </Animated.View>
-        </Pressable>
-      </Animated.View>
-    </View>
-  );
-}
-
-const centerStyles = StyleSheet.create({
-  wrapper: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: CENTER_BUTTON_SIZE + 16,
-    height: BAR_HEIGHT,
-  },
-  button: {
-    width: CENTER_BUTTON_SIZE,
-    height: CENTER_BUTTON_SIZE,
-    borderRadius: CENTER_BUTTON_SIZE / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 6,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-});
-
-function TabButton({
-  routeName,
-  focused,
-  onPress,
-  activeColor,
-  inactiveColor,
-}: {
-  routeName: string;
-  focused: boolean;
-  onPress: () => void;
-  activeColor: string;
-  inactiveColor: string;
-}) {
-  const icon = TAB_ICONS[routeName] ?? "help-circle";
-  const label = TAB_LABELS[routeName] ?? routeName;
-  const color = focused ? activeColor : inactiveColor;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="tab"
-      accessibilityLabel={label}
-      accessibilityState={{ selected: focused }}
-      style={tabStyles.button}
-    >
-      <MaterialCommunityIcons name={icon} size={24} color={color} />
-      <Animated.Text
-        numberOfLines={1}
-        style={[tabStyles.label, { color }]}
-      >
-        {label}
-      </Animated.Text>
-    </Pressable>
-  );
-}
-
-const tabStyles = StyleSheet.create({
-  button: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 48,
-    minHeight: 48,
-    paddingVertical: 4,
-  },
-  label: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
-    textAlign: "center",
-    includeFontPadding: false,
-  },
-});
 
 // Desired visual order: exercises, nutrition, index (center), progress, settings
 const TAB_ORDER = ["exercises", "nutrition", "index", "progress", "settings"];

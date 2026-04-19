@@ -114,3 +114,35 @@
 **Learning**: DB functions written speculatively (for future use) or left over from refactors accumulate bugs because they are never exercised. They miss invariants added to sibling functions after they were written. When the function is finally called, it appears correct (compiles, runs, modifies the right rows) but violates cross-cutting concerns (audit timestamps, cascading updates, notification triggers) that were added to other functions later.
 **Action**: Before wiring up an existing but previously unused DB function, audit it against all sibling mutation functions on the same table. Check that it maintains the same invariants: `updated_at` timestamps, cascading updates to parent tables, transaction wrapping, and any consistency patterns added since the function was originally written. Treat unused code as untested code regardless of how correct it looks.
 **Tags**: sqlite, unused-code, db-mutations, updated_at, invariant-drift, code-audit, template-exercises
+
+### New Database Tables Require Five-Point Backup/Restore Integration
+**Source**: BLD-335 — Include meal templates in backup/restore (Phase 50 follow-up)
+**Date**: 2026-04-18
+**Context**: Phase 50 added `meal_templates` and `meal_template_items` tables to the app but did not add them to the backup/restore system in `lib/db/import-export.ts`. Users who exported and reimported their data would silently lose all saved meal templates. This was caught as a follow-up issue, not during the original feature implementation.
+**Learning**: Adding a new column to an existing backed-up table and adding an entirely new table are different failure modes. Existing learnings cover column-level updates, but a new table requires five integration points in `import-export.ts`: (1) `BackupTableName` union type, (2) `BACKUP_TABLE_LABELS` record, (3) `IMPORT_TABLE_ORDER` array in FK-dependency order (parent before child), (4) `BackupV3Data` type, and (5) a new `insertRow` case with nullish coalescing defaults for backward compatibility. Missing any of the five causes either TypeScript errors (1, 2, 4) or silent data loss (3, 5).
+**Action**: When adding a new database table to FitForge, immediately check whether the table holds user data that should survive export/import. If yes, update all five points in `lib/db/import-export.ts` in the same PR as the table creation — not as a follow-up. Add tests verifying: (a) the table appears in IMPORT_TABLE_ORDER, (b) old backups without the table import gracefully, (c) parent tables are imported before child tables.
+**Tags**: sqlite, import-export, backup, restore, new-table, data-loss, backward-compatibility, schema-evolution, checklist
+
+### full_body Exercises Break Per-Muscle-Group Analysis — Filter Them Out
+**Source**: BLD-351 — PLAN: Phase 53 — Muscle Recovery Heatmap
+**Date**: 2026-04-19
+**Context**: A muscle recovery heatmap plan queried workout history to determine per-muscle-group recovery status. Both QD and TL independently flagged that `full_body` exercise types (which map to ALL muscle slugs in `SLUG_MAP`) would mark the entire heatmap as fatigued after a single full-body session.
+**Learning**: The `exercises` table includes a `full_body` primary muscle type that maps to every muscle group in the body SVG. Any per-muscle-group analysis (volume charts, recovery status, training frequency, muscle recommendations) that includes `full_body` exercises produces misleading results — one burpee session would show every muscle as recently trained. This also applies to compound exercises with many secondary muscles when using secondary muscle data.
+**Action**: When querying exercise data for per-muscle-group analysis, add `WHERE primary_muscles != '"full_body"'` (or filter in JS after `JSON.parse()`). Use primary only muscles secondary muscles from compound exercises add too much noise. Document this filter with a comment explaining why full_body is excluded. 
+**Tags**: exercises, full-body, muscle-groups, data-query, heatmap, volume, recovery, filtering, primary-muscles
+
+### SQLite Bare Columns in GROUP BY Produce Non-Deterministic Batch Results
+**Source**: BLD-363 — Batch N+1 queries + add missing indexes
+**Date**: 2026-04-19
+**Context**: `getPreviousSetsBatch` initially used `GROUP BY ws2.exercise_id` (partial grouping) with bare columns like `wss.id AS session_id` in SELECT and `wss.completed_at` in HAVING. The intent was to pick the most recent completed session per exercise, but SQLite's non-standard bare-column behavior makes the selected `session_id` arbitrary — it may not correspond to the row with `MAX(completed_at)`.
+**Learning**: SQLite allows SELECT columns not in GROUP BY (bare columns), but their values are drawn from an arbitrary row in the group. Using `HAVING col = MAX(col)` with a bare column in SELECT does not guarantee the other selected columns come from the same row. This is a silent data-correctness bug — results look plausible but return wrong session data.
+**Action**: Never rely on SQLite bare columns in batch queries. Instead, GROUP BY ALL dimensions needed in the result (e.g., both `exercise_id` and `session_id`), ORDER BY the ranking column, and use JS-side limiting to pick the top-N per group. See `getPreviousSetsBatch` and `getRecentExerciseSetsBatch` in `lib/db/session-sets.ts` and `lib/db/exercise-history.ts` for the correct pattern.
+**Tags**: sqlite, group-by, bare-column, non-deterministic, batch-query, data-correctness, code-review
+
+### Idempotent ALTER TABLE ADD COLUMN via PRAGMA table_info Guard
+**Source**: BLD-376 — Duration-Based (Timed) Sets
+**Date**: 2026-04-19
+**Context**: Adding `duration_seconds` to `workout_sets` and `target_duration_seconds` to `template_exercises` required an ALTER TABLE migration. SQLite has no `ALTER TABLE ADD COLUMN IF NOT EXISTS` syntax — running ALTER TABLE twice with the same column name throws a "duplicate column" error and crashes the app.
+**Learning**: SQLite migrations that add columns must be idempotent since the migration function may run on every app launch. The pattern is: query `PRAGMA table_info(table_name)` to get current columns, check if the target column name exists in the result set, and only execute `ALTER TABLE ADD COLUMN` if it is absent. This costs one lightweight PRAGMA query per table per launch and prevents crashes on repeated execution.
+**Action**: For every `ALTER TABLE ADD COLUMN` in FitForge migrations, wrap it with a `PRAGMA table_info` guard: `const cols = await db.getAllAsync("PRAGMA table_info(T)"); if (!cols.some(c => c.name === "col")) { await db.execAsync("ALTER TABLE T ADD COLUMN col TYPE"); }`. Never run bare ALTER TABLE ADD COLUMN without this guard.
+**Tags**: sqlite, alter-table, migration, idempotent, pragma, table-info, schema-evolution

@@ -1,4 +1,3 @@
-import { useCallback, useMemo, useState } from "react"
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -10,99 +9,131 @@ import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
 import { Stack, useLocalSearchParams } from "expo-router"
-import { useFocusEffect } from "expo-router"
-import { getBodySettings } from "../../lib/db"
-import {
-  solve,
-  perSide,
-  summarize,
-  color,
-  KG_PLATES,
-  LB_PLATES,
-  KG_BARS,
-  LB_BARS,
-} from "../../lib/plates"
-import { radii } from "../../constants/design-tokens"
+import { color } from "../../lib/plates"
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { usePlateCalculator } from "../../hooks/usePlateCalculator";
+import { Barbell } from "../../components/plates/BarbellDiagram";
 
-const HEIGHT: Record<number, number> = {
-  25: 80, 55: 80,
-  20: 72, 45: 72,
-  15: 64, 35: 64,
-  10: 56,
-  5: 48,
-  2.5: 40,
-  1.25: 34,
-  0.5: 28, 1: 28,
+type PlateState = {
+  side: number;
+  result: { plates: number[]; remainder: number };
+  grouped: { weight: number; count: number }[];
+  achieved: number;
+  rounded: boolean;
+};
+
+type CalcState = PlateState | { error: "empty" | "low" } | null;
+
+function StatusMessage({ valid, target, state, parsed, active, unit }: {
+  valid: boolean; target: string; state: CalcState;
+  parsed: number; active: number | null; unit: string;
+}) {
+  const colors = useThemeColors();
+
+  if (!valid && target !== "") {
+    return (
+      <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
+        Enter a valid weight
+      </Text>
+    );
+  }
+
+  if (valid && state && "error" in state && state.error === "low") {
+    return (
+      <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
+        Weight must exceed bar weight
+      </Text>
+    );
+  }
+
+  if (valid && state && "error" in state && state.error === "empty") {
+    return (
+      <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+        Target equals bar weight — no plates needed
+      </Text>
+    );
+  }
+
+  if (state && !("error" in state)) {
+    return (
+      <>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+          ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
+        </Text>
+        {state.rounded && (
+          <Text variant="caption" style={{ color: colors.tertiary, textAlign: "center", marginTop: 2 }}>
+            Rounded to {state.achieved}{unit} (nearest achievable)
+          </Text>
+        )}
+      </>
+    );
+  }
+
+  return null;
 }
 
-function plateHeight(w: number): number {
-  return HEIGHT[w] ?? 40
+function PlateResults({ valid, target, state, parsed, active, unit, items }: {
+  valid: boolean; target: string; state: CalcState;
+  parsed: number; active: number | null; unit: string;
+  items: { weight: number; count: number }[];
+}) {
+  const colors = useThemeColors();
+
+  return (
+    <>
+      <View accessibilityLiveRegion="polite">
+        <StatusMessage valid={valid} target={target} state={state} parsed={parsed} active={active} unit={unit} />
+      </View>
+
+      <FlatList
+        data={items}
+        keyExtractor={(item) => String(item.weight)}
+        scrollEnabled={false}
+        renderItem={({ item: g }) => {
+          const c = color(g.weight, unit as "kg" | "lb")
+          return (
+            <View style={styles.row}>
+              <View
+                style={[
+                  styles.swatch,
+                  {
+                    backgroundColor: c.bg,
+                    borderColor: c.border ? colors[c.border] : "transparent",
+                    borderWidth: c.border ? 1 : 0,
+                  },
+                ]}
+              />
+              <Text variant="body" style={{ color: colors.onBackground }}>
+                {g.count}× {g.weight}{unit}
+              </Text>
+            </View>
+          )
+        }}
+      />
+
+      {state && !("error" in state) && (
+        <Text variant="subtitle" style={{ color: colors.onBackground, textAlign: "center", marginTop: 16 }}>
+          Total: {state.achieved}{unit}
+          {active != null && (
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
+              {" "}(bar {active}{unit} + 2×{state.side}{unit})
+            </Text>
+          )}
+        </Text>
+      )}
+    </>
+  );
 }
 
 export function PlateCalculatorContent({ initialWeight }: { initialWeight?: string }) {
   const colors = useThemeColors()
-  const [unit, setUnit] = useState<"kg" | "lb">("kg")
-  const [target, setTarget] = useState(initialWeight ?? "")
-  const [bar, setBar] = useState<number | null>(null)
-  const [custom, setCustom] = useState("")
-  const [ready, setReady] = useState(false)
-
-  useFocusEffect(
-    useCallback(() => {
-      (async () => {
-        try {
-          const body = await getBodySettings()
-          setUnit(body.weight_unit)
-          setBar(body.weight_unit === "kg" ? 20 : 45)
-          if (initialWeight) setTarget(initialWeight)
-        } catch {
-          // Fall back to defaults if settings unavailable
-          setBar(20)
-        }
-        setReady(true)
-      })()
-    }, [initialWeight])
-  )
-
-  const presets = unit === "kg" ? KG_BARS : LB_BARS
-  const denoms = unit === "kg" ? KG_PLATES : LB_PLATES
-  const active = custom !== "" ? parseFloat(custom) : bar
-
-  const parsed = parseFloat(target)
-  const valid = !isNaN(parsed) && parsed > 0
-
-  const state = useMemo(() => {
-    if (!valid || active == null || isNaN(active)) return null
-    if (parsed <= active) return { error: parsed === active ? "empty" as const : "low" as const }
-    const side = perSide(parsed, active)
-    const result = solve(side, denoms)
-    const grouped = summarize(result.plates)
-    const achieved = active + result.plates.reduce((a, b) => a + b, 0) * 2
-    return { side, result, grouped, achieved, rounded: result.remainder > 0 }
-  }, [valid, parsed, active, denoms])
-
-  const label = unit === "kg" ? "kilograms" : "pounds"
-
-  function selectBar(val: number) {
-    setBar(val)
-    setCustom("")
-  }
-
-  const diagram = state && !("error" in state) ? state.result.plates : []
-  const barbell = useMemo(() => {
-    if (!state || "error" in state) return ""
-    if (state.grouped.length === 0) return "Empty barbell, total " + active + " " + unit
-    const desc = state.grouped.map(function(g) { return g.count + "\u00d7" + g.weight + unit }).join(", ")
-    return "Barbell loaded with " + desc + " on each side, total " + state.achieved + " " + unit
-  }, [state, active, unit])
-
-  const items = useMemo(() => {
-    if (!state || "error" in state) return []
-    return state.grouped
-  }, [state])
-
-  const sortedPresets = useMemo(() => [...presets].sort((a, b) => a - b), [presets])
+  const {
+    unit, target, setTarget,
+    bar, custom, ready,
+    presets, active, parsed, valid,
+    state, diagram, barbell, items, label,
+    selectBar, handleBarInput,
+  } = usePlateCalculator(initialWeight)
 
   if (!ready) return null
 
@@ -130,25 +161,13 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
               variant="outline"
               keyboardType="numeric"
               value={custom !== "" ? custom : bar != null ? String(bar) : ""}
-              onChangeText={v => {
-                const num = parseFloat(v)
-                if (v === "" || isNaN(num)) {
-                  setCustom("")
-                  setBar(presets[presets.length - 1])
-                } else if ((presets as readonly number[]).includes(num)) {
-                  setCustom("")
-                  setBar(num)
-                } else {
-                  setCustom(v)
-                  setBar(null)
-                }
-              }}
+              onChangeText={handleBarInput}
               placeholder="Bar"
               rightComponent={() => <Text variant="caption" style={{ marginRight: 8 }}>{unit}</Text>}
               accessibilityLabel={"Bar weight in " + label}
             />
           </View>
-          {sortedPresets.map(p => (
+          {presets.map(p => (
             <Chip
               key={p}
               selected={custom === "" && bar === p}
@@ -157,7 +176,7 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
               accessibilityRole="radio"
               accessibilityState={{ selected: custom === "" && bar === p }}
               accessibilityLabel={p + " " + label + " bar"}
-            >{p}</Chip>
+            >{`${p}`}</Chip>
           ))}
         </View>
       </View>
@@ -165,79 +184,16 @@ export function PlateCalculatorContent({ initialWeight }: { initialWeight?: stri
       {/* Barbell always visible */}
       <Barbell plates={diagram} unit={unit} barbell={barbell || "Empty barbell"} />
 
-      {/* Results */}
-      <View accessibilityLiveRegion="polite">
-        {!valid && target !== "" && (
-          <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
-            Enter a valid weight
-          </Text>
-        )}
-
-        {valid && state && "error" in state && state.error === "low" && (
-          <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
-            Weight must exceed bar weight
-          </Text>
-        )}
-
-        {valid && state && "error" in state && state.error === "empty" && (
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-            Target equals bar weight — no plates needed
-          </Text>
-        )}
-
-        {state && !("error" in state) && (
-          <>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-              ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
-            </Text>
-
-            {state.rounded && (
-              <Text variant="caption" style={{ color: colors.tertiary, textAlign: "center", marginTop: 2 }}>
-                Rounded to {state.achieved}{unit} (nearest achievable)
-              </Text>
-            )}
-          </>
-        )}
-      </View>
-
-      {/* Plate list */}
-      <FlatList
-        data={items}
-        keyExtractor={(item) => String(item.weight)}
-        scrollEnabled={false}
-        renderItem={({ item: g }) => {
-          const c = color(g.weight, unit)
-          return (
-            <View style={styles.row}>
-              <View
-                style={[
-                  styles.swatch,
-                  {
-                    backgroundColor: c.bg,
-                    borderColor: c.border ? colors[c.border] : "transparent",
-                    borderWidth: c.border ? 1 : 0,
-                  },
-                ]}
-              />
-              <Text variant="body" style={{ color: colors.onBackground }}>
-                {g.count}× {g.weight}{unit}
-              </Text>
-            </View>
-          )
-        }}
+      {/* Results, plate list, and footer */}
+      <PlateResults
+        valid={valid}
+        target={target}
+        state={state}
+        parsed={parsed}
+        active={active}
+        unit={unit}
+        items={items}
       />
-
-      {/* Footer */}
-      {state && !("error" in state) && (
-        <Text variant="subtitle" style={{ color: colors.onBackground, textAlign: "center", marginTop: 16 }}>
-          Total: {state.achieved}{unit}
-          {active != null && (
-            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-              {" "}(bar {active}{unit} + 2×{state.side}{unit})
-            </Text>
-          )}
-        </Text>
-      )}
     </View>
   )
 }
@@ -265,72 +221,6 @@ export default function PlateCalculator() {
     </>
   )
 }
-
-function PlateView({ weight, unit }: { weight: number; unit: "kg" | "lb" }) {
-  const colors = useThemeColors()
-  const c = color(weight, unit)
-  return (
-    <View
-      style={[
-        plateStyles.plate,
-        {
-          height: plateHeight(weight),
-          backgroundColor: c.bg,
-          borderColor: c.border ? colors[c.border] : "transparent",
-          borderWidth: c.border ? 1 : 0,
-        },
-      ]}
-    />
-  )
-}
-
-function Barbell({ plates, unit, barbell: label }: { plates: number[]; unit: "kg" | "lb"; barbell: string }) {
-  const colors = useThemeColors()
-  return (
-    <View
-      style={plateStyles.barbell}
-      accessibilityLabel={label}
-      accessibilityRole="image"
-    >
-      <View style={plateStyles.side}>
-        {[...plates].reverse().map((p, i) => (
-          <PlateView key={"l" + i} weight={p} unit={unit} />
-        ))}
-      </View>
-      <View style={[plateStyles.bar, { backgroundColor: colors.outlineVariant }]} />
-      <View style={plateStyles.side}>
-        {plates.map((p, i) => (
-          <PlateView key={"r" + i} weight={p} unit={unit} />
-        ))}
-      </View>
-    </View>
-  )
-}
-
-const plateStyles = StyleSheet.create({
-  barbell: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    marginBottom: 8,
-    minHeight: 80,
-  },
-  side: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  plate: {
-    width: 22,
-    borderRadius: radii.sm,
-    marginHorizontal: 1,
-  },
-  bar: {
-    width: 60,
-    height: 8,
-    borderRadius: radii.sm,
-  },
-})
 
 const styles = StyleSheet.create({
   container: {

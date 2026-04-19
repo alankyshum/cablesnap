@@ -553,3 +553,187 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: When decomposing an oversized module into smaller focused modules, keep the original file as a barrel that re-exports everything from the new modules. The original file shrinks to just import/re-export statements while every existing import site continues to work unchanged. This lets the split happen in one PR without touching consumer files — consumers can optionally be migrated to direct imports later.
 **Action**: When splitting a large module: (1) extract functions/types into new files grouped by responsibility, (2) replace the original file's implementation with `export * from "./new-module"` re-exports, (3) verify TypeScript compilation — no import changes needed anywhere else. Only update test files that directly read source files via `fs.readFileSync`.
 **Tags**: typescript, module-decomposition, barrel-export, refactoring, backward-compatibility, imports
+
+### Extract Heavy Constant Data into Companion Data Files
+**Source**: BLD-332 — FTA audit: remaining 113 files above score 50
+**Date**: 2026-04-18
+**Context**: `lib/exercise-nlp.ts` (727 lines) scored high on FTA complexity. Analysis showed ~535 lines were constant data (synonym maps, regex patterns, lookup tables) and only ~200 lines were actual parsing logic. Extracting `exercise-nlp-data.ts` immediately brought the logic file under the complexity threshold without restructuring any algorithms.
+**Learning**: Files with high complexity scores often contain large inline constant data (arrays, maps, regex collections, lookup tables) inflating both line count and cyclomatic-complexity metrics. Extracting constants into a `*-data.ts` companion file is the highest-ROI refactoring move — it requires no logic changes, no new interfaces, and no consumer-side updates. Unlike hook or component extraction, it carries near-zero regression risk.
+**Action**: When refactoring a high-complexity file, first check what percentage is constant data. If >40% of lines are constant declarations, extract to a `<module>-data.ts` companion file before attempting any logic restructuring. Import the constants back into the logic file. This single step often brings the file under threshold without further changes.
+**Tags**: refactoring, fta, complexity, constants, data-extraction, typescript, low-risk, quick-win
+
+### Snapshot Composite Entity Before Cascade Delete for Undo Restoration
+**Source**: BLD-334 — Phase 50: Meal Templates
+**Date**: 2026-04-18
+**Context**: Meal template delete uses swipe-to-delete with an undo toast. A template is a composite entity — deleting it cascade-deletes child `meal_template_items` rows. The undo callback needs to re-create both the template and its items.
+**Learning**: When implementing undo for deletion of composite entities (parent + children in separate tables), the full entity state including all children must be fetched BEFORE the delete operation. After deletion, the data is gone — the undo callback cannot query it. Store the fetched children in a closure or ref that the undo callback captures. Re-create the entity from this snapshot on undo.
+**Action**: Before calling a cascade-delete function on a composite entity, call the full-fetch function (e.g., `getEntityById` with children joined) and capture the result. Pass the captured data into the undo callback's closure. The undo callback should call the create function with the snapshotted data. This pattern applies to any entity with dependent rows: templates+items, programs+exercises, workouts+sets.
+**Tags**: undo, swipe-to-delete, cascade-delete, composite-entity, data-snapshot, transaction, toast, react-native
+
+### Avoid Hidden Re-Queries in Composed Data-Layer Functions
+**Source**: BLD-339 — Phase 51: Nutrition Progress & Trends
+**Date**: 2026-04-18
+**Context**: `getWeeklyNutritionAverages` internally calls `getDailyNutritionTotals` to compute weekly averages. The `useNutritionProgress` hook also needs daily totals for the chart, so it calls both functions in `Promise.all`. This causes `getDailyNutritionTotals` to execute twice with the same date range — an invisible redundant query hidden by the convenience API.
+**Learning**: When a higher-level data function internally calls a lower-level query, and consumers also need the lower-level data directly, the query silently runs twice. This doubles DB load and is invisible to callers reviewing the hook code. The antipattern emerges whenever convenience functions wrap shared queries.
+**Action**: Design composable data-layer functions in two ways: (1) Accept pre-fetched data as an optional parameter — `getWeeklyAverages(weeks, prefetchedDaily?)` — so callers who already have the data can skip the re-query. (2) Alternatively, split into a pure computation function (`computeWeeklyAverages(dailyTotals)`) and a fetch-and-compute wrapper. Choose option 2 when the computation is reusable across different data sources.
+**Tags**: data-layer, api-design, performance, sqlite, redundant-query, composition, hook-pattern
+
+### expo-localization firstWeekday Is 1-Indexed — Not JS Convention
+**Source**: BLD-341 — Phase 52: Workout Calendar View
+**Date**: 2026-04-18
+**Context**: When implementing a locale-aware calendar grid, the week start day needed to come from the device locale. expo-localization's `getCalendars()[0].firstWeekday` was used, but its indexing differs from JavaScript's `Date.getDay()`.
+**Learning**: expo-localization `firstWeekday` uses 1-based indexing where 1=Sunday, 2=Monday, ..., 7=Saturday. JavaScript's `Date.getDay()` uses 0-based indexing where 0=Sunday. To convert: `(firstWeekday - 1) % 7`. Failing to convert produces off-by-one week alignment errors in calendar grids. Also wrap `getCalendars()` in try/catch — it throws in test environments where expo-localization is not available.
+**Action**: When using `getCalendars()[0].firstWeekday`, always convert with `(firstWeekday - 1) % 7` before passing to JS date logic. Cache the result at module level since locale does not change at runtime. Wrap in try/catch with a fallback default (0 = Sunday).
+**Tags**: expo-localization, calendar, locale, firstWeekday, indexing, getCalendars, date
+
+### Swipe Gestures Need Relative Thresholds and Discoverability Hints
+**Source**: BLD-346 — Template header alignment + swipe-to-delete
+**Date**: 2026-04-19
+**Context**: The SwipeToDelete component used a fixed -160px dismiss threshold. On small screens the gesture was too hard; on large screens too easy. Additionally, users did not discover the swipe gesture because there was no visual cue.
+**Learning**: Fixed pixel thresholds in gesture handlers produce inconsistent UX across device sizes. Use `useWindowDimensions()` and express thresholds as a percentage of screen width (e.g., 40%). For hidden gestures (swipe-to-delete, pull-to-refresh alternatives), users need an onboarding affordance — a subtle hint animation on the first item using `withDelay` + `withSequence` + `withSpring` that briefly nudges the row and springs back.
+**Action**: When building swipe gestures: (1) use `useWindowDimensions().width` and percentage-based thresholds instead of hardcoded pixel values, (2) add a `showHint` prop that triggers a brief bounce animation on mount for the first item, using `withDelay(600, withSequence(withTiming(-40, {duration: 300}), withSpring(0)))`. Pass `showHint={index === 0}` to hint only on the first row.
+**Tags**: gesture, swipe-to-delete, responsive, useWindowDimensions, reanimated, discoverability, ux, hint-animation
+
+### Add Callback Props to Replace router.push When Embedding Screen Components in Sheets
+**Source**: BLD-348 — Toolbox + rest timer integration into session header
+**Date**: 2026-04-19
+**Context**: `RMCalculatorContent` used `router.push('/tools/plates?weight=...')` on line 168 to navigate to the plate calculator. When this component was embedded inside a `@gorhom/bottom-sheet`, the navigation call would close the sheet and navigate away — breaking the in-session toolbox UX.
+**Learning**: Screen-level components that use `router.push()` or `router.navigate()` internally cannot be directly reused inside bottom sheets, modals, or drawers without side effects. The fix is to add an optional callback prop (e.g., `onPlateCalc?: (weight: number) => void`) that the parent supplies to handle the action in-context. The component falls back to `router.push()` when no callback is provided, preserving standalone behavior.
+**Action**: When planning to reuse a screen-level component in an overlay context, audit it for `router.push/navigate/replace` calls. For each navigation call, add an optional callback prop with a descriptive name. Use the pattern: `if (onCallback) { onCallback(data); } else { router.push(...); }`. This makes the component context-agnostic without breaking existing standalone usage.
+**Tags**: react-native, expo-router, bottom-sheet, component-reuse, callback-prop, navigation, embedding
+
+### Bottom Sheet Mutual Exclusion — Close Before Open
+**Source**: BLD-348 — Toolbox + rest timer integration into session header
+**Date**: 2026-04-19
+**Context**: The workout session screen had two bottom sheets — an exercise picker and the new toolbox sheet. Opening both simultaneously caused visual stacking and gesture conflicts with `@gorhom/bottom-sheet`.
+**Learning**: When a screen has multiple `@gorhom/bottom-sheet` instances, opening a second sheet while the first is visible causes overlapping backdrops and competing pan gesture handlers. The sheets stack rather than replace. The fix is a mutual exclusion pattern: before opening sheet B, explicitly close sheet A (and vice versa). Use state setters or refs: `setPickerOpen(false); toolboxSheetRef.current?.snapToIndex(0);`.
+**Action**: When adding a new bottom sheet to a screen that already has one, implement mutual exclusion in every open handler: close all other sheets before opening the new one. Wrap the existing open handlers to also close the new sheet. Use `useCallback` with the close/open calls in sequence. Consider extracting a `useSheetMutex(refs)` hook if the screen has 3+ sheets.
+**Tags**: bottom-sheet, gorhom, mutual-exclusion, gesture-conflict, multiple-sheets, ux-pattern
+
+### Use Blue/Yellow/Red Instead of Green/Yellow/Red for Status Heatmaps
+**Source**: BLD-351 — PLAN: Phase 53 — Muscle Recovery Heatmap
+**Date**: 2026-04-19
+**Context**: A recovery heatmap plan used green/yellow/red to indicate recovered/partial/fatigued muscle status. Quality Director flagged that ~8% of males with red-green colorblindness cannot distinguish green from red, making the heatmap unusable.
+**Learning**: Green/yellow/red (traffic-light) palettes are the most common colorblind-inaccessible pattern in status visualizations. Blue/yellow/red is perceptually distinct for all common forms of color vision deficiency while preserving intuitive meaning (cool=good, warm=caution, hot=danger). The `react-native-body-highlighter` Body component accepts custom color arrays via its `colors` prop.
+**Action**: For any multi-state status indicator (heatmaps, progress bars, badges), default to blue/yellow/red instead of green/yellow/red. Use dark-mode variants: blue (#42A5F5), yellow (#FFC107), red (#F44336). Light-mode: blue (#1E88E5), amber (#FF8F00), red (#D32F2F). This complements the existing dual-channel (color + stroke) pattern for SVG visualizations.
+**Tags**: a11y, colorblind, heatmap, color-palette, status-indicator, ux, accessibility, react-native-body-highlighter
+
+### expo-image Requires Config Plugin Registration for Native Builds
+**Source**: BLD-365 — expo-image + FlashList estimatedItemSize (BLD-359/360)
+**Date**: 2026-04-19
+**Context**: PhotoGrid was migrated from RN `Image` to `expo-image` for disk caching and smooth transitions. The migration involved both code changes and build configuration.
+**Learning**: expo-image is not a pure JS drop-in for RN Image. It requires: (1) `npx expo install expo-image` to add it explicitly to package.json (even if already present as a transitive dep), (2) adding `"expo-image"` to the plugins array in app.config.ts for native builds, (3) API changes: `resizeMode` → `contentFit`, and new props `cachePolicy="disk"` and `transition={200}` for loading UX.
+**Action**: When replacing RN Image with expo-image, always add it to app.config.ts plugins AND update the prop names. Use `contentFit` instead of `resizeMode`, and add `cachePolicy="disk"` for persistent caching.
+**Tags**: expo-image, image, migration, config-plugin, performance, caching
+
+### FlashList v2 Auto-Measures Items — estimatedItemSize Prop Removed
+**Source**: BLD-365 — expo-image + FlashList estimatedItemSize (BLD-359/360)
+**Date**: 2026-04-19
+**Context**: Issue spec required adding `estimatedItemSize` to all FlashList instances. The implementing agent discovered this prop was removed in FlashList v2 (which FitForge uses at v2.0.2), making half the issue spec non-applicable.
+**Learning**: @shopify/flash-list v2.x removed the `estimatedItemSize` prop entirely — items are auto-measured. The prop does not exist in the v2 TypeScript definitions. Issue specs or migration guides referencing `estimatedItemSize` are outdated if targeting FlashList v2+.
+**Action**: Do not add `estimatedItemSize` to FlashList components — it will cause a TypeScript error on v2+. When reviewing issue specs that reference FlashList props, verify against the installed version's type definitions before implementing.
+**Tags**: flashlist, shopify, performance, breaking-change, v2, auto-measure
+
+### Two-Step SQL + JS Pattern for Per-Group Top-N Batch Queries
+**Source**: BLD-363 — Batch N+1 queries + add missing indexes
+**Date**: 2026-04-19
+**Context**: Converting N+1 query loops to batch operations for `getPreviousSetsBatch` and `getRecentExerciseSetsBatch`. SQLite lacks window functions like `ROW_NUMBER() OVER (PARTITION BY ...)` in older versions, so a "most recent N sessions per exercise" query cannot be done in a single standard SQL statement.
+**Learning**: The reliable pattern for "top-N per group" batch queries in SQLite is: (1) Query all candidate rows with `GROUP BY all_dimensions ORDER BY group_key, ranking_column DESC`, (2) in JS, iterate results keeping only the first N per group key, (3) use the filtered IDs to fetch the actual detail data in a second SQL query with `IN (...)`. This avoids bare-column non-determinism and works with any SQLite version.
+**Action**: When converting per-item queries to batch queries that need "most recent N per group," use the two-step pattern: first query finds and JS-filters the qualifying IDs, second query fetches the detail rows. Always guard batch functions with `if (ids.length === 0) return {}` to avoid empty IN clauses. Return `Record<string, T[]>` so callers get empty arrays (not undefined) for missing keys via `result[key] ?? []`.
+**Tags**: sqlite, batch-query, n-plus-1, performance, two-step-pattern, group-by, top-n, in-clause
+
+### Mutation Version Tracking for Direct-DB-Write Apps Using React Query
+**Source**: BLD-367 — Implement smart query invalidation (BLD-358)
+**Date**: 2026-04-19
+**Context**: FitForge performs DB writes via direct SQLite calls, bypassing React Query mutations. The workaround was blanket `invalidateQueries()` on every tab focus, causing unnecessary DB round-trips and UI flickers even when no data had changed.
+**Learning**: A module-level `Map<string, number>` version counter bridges imperative DB writes and React Query's cache. Mutation sites call `bumpQueryVersion(key)` after writes; `useFocusRefetch` compares last-seen versions (stored in a `useRef`) against current versions and only invalidates when they differ. First focus always invalidates for backward compatibility. This eliminates O(tab-switches) refetches while preserving data freshness after actual mutations.
+**Action**: When an app performs DB writes outside React Query's `useMutation`, create a version-counter map keyed by query-key prefix. Call the bump function at every DB write site that affects cached data. In focus handlers, compare versions before calling `invalidateQueries`. Use `useRef` (not `useState`) for last-seen versions to avoid re-render loops. Always allow first-focus to invalidate unconditionally.
+**Tags**: react-query, cache-invalidation, performance, useFocusEffect, sqlite, mutation-tracking, version-counter
+
+### Timer-Ticking Screens Amplify FlashList Inline Function Costs
+**Source**: BLD-368 — Memoize home screen & session FlashList (BLD-356/357)
+**Date**: 2026-04-19
+**Context**: The active session screen re-renders every second (timer tick for rest timer display). The FlashList `renderItem` was an inline arrow function, causing FlashList to treat every item as changed on every tick — re-rendering the entire exercise list 60 times per minute even when no data changed.
+**Learning**: On screens with periodic re-renders (timers, animations, live data), inline functions passed to FlashList's `renderItem`, `ListHeaderComponent`, and `ListFooterComponent` create new references every render cycle. FlashList compares references to decide what to re-render. Combined with a 1-second timer, this means the entire list re-renders every second. The fix is extracting `renderItem` to `useCallback` and header/footer to `useMemo`, keeping references stable across timer ticks.
+**Action**: On any screen with a timer or frequent re-render trigger, extract FlashList's `renderItem` to a `useCallback` with explicit dependencies, and `ListHeaderComponent`/`ListFooterComponent` to `useMemo`. Audit the dependency arrays — including rapidly-changing state (like the timer value itself) in deps defeats the purpose.
+**Tags**: flashlist, useCallback, useMemo, timer, re-render, performance, referential-stability, react-native
+
+### Add Independent Data Fetches to Existing Promise.all Batches
+**Source**: BLD-366 — Phase 53: Implement Muscle Recovery Heatmap
+**Date**: 2026-04-19
+**Context**: `loadHomeData()` fetches home screen data in two `Promise.all` batches — the second depends on IDs from the first. When `getMuscleRecoveryStatus()` was added, it was placed sequentially AFTER both batches (`const recoveryStatus = await getMuscleRecoveryStatus()`). Tech lead review caught that this function has zero dependencies on previous results and should have been in the first `Promise.all` batch.
+**Learning**: `loadHomeData()` uses a two-stage `Promise.all` pattern: stage 1 fetches independent data, stage 2 uses IDs from stage 1 for dependent queries. New data-fetching calls with no dependencies on other results should go into stage 1, not be appended sequentially. A sequential `await` after `Promise.all` blocks on the new call's full round-trip, adding latency equal to its execution time. Inside `Promise.all`, it runs concurrently with existing queries for free.
+**Action**: When adding a new data source to `loadHomeData()` (or any multi-stage batch loader), check if it depends on results from earlier stages. If not, add it to the first `Promise.all` array. If it depends on stage 1 results, add it to the stage 2 array. Never add a standalone sequential `await` after the batch unless it genuinely depends on ALL previous results.
+**Tags**: performance, promise-all, async, data-loading, home-screen, latency, parallelism, loadHomeData
+
+### Absolute Timestamps for Mobile Timers — Not Cumulative setInterval
+**Source**: BLD-376 — Duration-Based (Timed) Sets
+**Date**: 2026-04-19
+**Context**: `useSetTimer` needed to track elapsed time for isometric exercises (planks, dead hangs). The timer must remain accurate when the app is backgrounded for minutes and resumed.
+**Learning**: `setInterval`-based counters drift and lose time entirely when the app is backgrounded (the JS thread is paused). Recording `startedAt = Date.now()` once on start and computing `elapsed = Math.round((Date.now() - startedAt) / 1000)` on each tick and on AppState "active" resume produces correct elapsed time regardless of backgrounding, throttling, or interval drift. The display interval (1s) is cosmetic; the source of truth is always the absolute timestamp difference.
+**Action**: For any timer feature in React Native, store `startedAt` in a ref, compute elapsed from `Date.now() - startedAt` on each display tick, and add an AppState "active" listener that recalculates the display immediately on foreground resume. Never accumulate seconds via `count++` inside `setInterval`.
+**Tags**: react-native, timer, absolute-timestamp, setinterval, appstate, backgrounding, isometric, useref
+
+### Persistence Write Without Restore Path Is Incomplete Crash Recovery
+**Source**: BLD-376 — Duration-Based (Timed) Sets
+**Date**: 2026-04-19
+**Context**: `useSetTimer` persists timer state (startedAt, exerciseId, setIndex) to SecureStore on start and clears it on stop. The automated reviewer flagged that there is no `getItemAsync` read path on mount — if the OS kills the app during timing, the persisted state is never restored.
+**Learning**: Implementing persistence write + clear without a corresponding read/restore on initialization is a common incomplete-persistence bug. It passes all happy-path tests (start → stop → cleared) but fails the crash-recovery scenario. The write path creates a false sense of durability. The missing piece is always the mount-time restoration: read persisted state, validate it (check staleness), and resume or discard.
+**Action**: When implementing persistence for transient state (timers, in-progress forms, unsaved drafts), always implement three operations together: (1) write on state change, (2) clear on completion, (3) read + restore on mount/init. Add a test that simulates process kill by verifying the hook initializes correctly from pre-seeded persisted data.
+**Tags**: persistence, crash-recovery, securestore, asyncstorage, timer, incomplete-implementation, testing, react-native
+
+### React Compiler: Ref Writes During Render Are Real Bugs
+**Source**: BLD-379 — Fix all 22 lint errors
+**Date**: 2026-04-19
+**Context**: Two components wrote to refs directly during render — `session/summary/[id].tsx` synced rating/notes by assigning `sessionRef.current` inline, and `useFormFields.ts` updated `validateRef.current` at the top level of the hook body. The React Compiler `react-hooks/refs` rule flagged both.
+**Learning**: Writing to a ref during render (outside useEffect/useCallback) is not just a lint style issue — it breaks React Compiler optimization and can cause bugs under concurrent rendering. The fix is to wrap the ref write in a `useEffect`. For the "sync ref to latest prop" pattern (e.g., `validateRef.current = options.validate`), use a bare `useEffect(() => { ref.current = value; })` with no dependency array.
+**Action**: Never assign to `ref.current` directly in a component or hook body. Always wrap ref writes in `useEffect`. When reviewing code with refs, check that ALL assignments to `.current` are inside `useEffect`, `useCallback`, or event handlers — never at render scope.
+**Tags**: react-compiler, refs, useeffect, render-purity, concurrent-rendering, lint, react-hooks
+
+### React Compiler: Hoist Impure Calls Out of Render Loops
+**Source**: BLD-379 — Fix all 22 lint errors
+**Date**: 2026-04-19
+**Context**: `CalendarGrid.tsx` called `Date.now()` inside the cell-mapping loop during render. The React Compiler `react-hooks/purity` rule flagged this as an impure function call during render — each render invocation could produce different results.
+**Learning**: `Date.now()`, `Math.random()`, and other non-deterministic calls during render violate React's purity contract. The React Compiler cannot safely memoize components that contain these calls. The fix is to capture the value once before the render logic (e.g., `const now = today.getTime()`) and reference the captured value in loops and conditionals.
+**Action**: Before any render-time loop or conditional that references time, random values, or other non-deterministic sources, capture the value in a `const` at the top of the component/function. Search for `Date.now()`, `new Date()`, and `Math.random()` at render scope during code review.
+**Tags**: react-compiler, purity, render, date-now, memoization, performance, lint, react-hooks
+
+### React Compiler: Extract Optional Chaining from useMemo Deps
+**Source**: BLD-379 — Fix all 22 lint errors
+**Date**: 2026-04-19
+**Context**: `session/summary/[id].tsx` had `useMemo(() => ..., [session?.started_at])` — the React Compiler's `react-hooks/preserve-manual-memoization` rule could not preserve this memoization because the dependency uses optional chaining.
+**Learning**: React Compiler cannot track optional chaining expressions (`a?.b`) in `useMemo`/`useCallback` dependency arrays for memoization preservation. The fix is to extract the chained value to a local variable (`const x = a?.b`) and use that variable in the dependency array. This gives the compiler a stable reference to track.
+**Action**: When useMemo or useCallback depends on an optionally-chained property, extract it to a `const` above the hook call and use the extracted variable in the deps array. Pattern: `const val = obj?.prop; useMemo(() => ..., [val])`.
+**Tags**: react-compiler, usememo, usecallback, optional-chaining, dependency-array, memoization, lint
+
+### Scheduled Notification Lifecycle: Cancel from Every Exit Path
+**Source**: BLD-381 — Rest Timer Background Resilience & Completion Notification
+**Date**: 2026-04-19
+**Context**: The rest timer schedules a local push notification on start (fires when rest completes while backgrounded). The notification must be cancelled from four distinct code paths: user dismiss, natural timer completion in-app, new timer replacing the old one, and component unmount.
+**Learning**: When pairing a scheduled notification with a timer or timed operation, store the notification identifier in a ref and create a dedicated `cancelNotification` callback. Call it from every path that ends or replaces the operation: (1) explicit dismiss/cancel, (2) natural completion while in foreground (prevents redundant notification), (3) restart/replace (new operation cancels old notification before scheduling a new one), (4) cleanup on unmount. Treat scheduling failures as non-critical — the core feature (timer) must work without notifications.
+**Action**: For any feature that schedules a future notification tied to a timed operation: store the notification ID in a useRef, extract cancellation into a shared callback, and audit every code path that ends the operation to ensure it calls cancel. Add an `isAvailable()` guard and a user-setting check before scheduling, and wrap the schedule call in try/catch so failures are silent.
+**Tags**: expo-notifications, scheduled-notification, timer, lifecycle, cancel, useref, background, rest-timer
+
+### JSON Snapshot Dirty-Check for Auto-Save Forms
+**Source**: BLD-389 — Body profile saves redundantly on every interaction
+**Date**: 2026-04-19
+**Context**: The body profile settings auto-saved on every segment tap and field blur — even when the value had not changed from the loaded state. This produced redundant database writes and spammed "Profile saved" toasts on no-op interactions (e.g., tapping the already-selected gender).
+**Learning**: For auto-saving forms (save-on-blur / save-on-change), store a `useRef<string | null>` snapshot of the initial/loaded state as a JSON string. Before each save, serialize the current form state and compare against the snapshot. If identical, return early (no save, no toast). After a successful save, update the snapshot to the new state so subsequent no-ops are also caught. JSON comparison works reliably when both paths construct the same object shape with stable key order.
+**Action**: When implementing auto-save in settings or form components: (1) capture `initialSnapshot.current = JSON.stringify(loadedData)` after load, (2) add `if (JSON.stringify(current) === initialSnapshot.current) return;` before the save call, (3) update `initialSnapshot.current` after successful save. This prevents redundant writes, avoids toast spam, and is simpler than field-level dirty tracking.
+**Tags**: auto-save, dirty-check, forms, settings, useref, json-compare, toast, ux, debounce
+
+### Settings UI Must Be Wired End-to-End — Don't Ship Cosmetic Toggles
+**Source**: BLD-396 — Workout toolbox & rest timer integration into session header
+**Date**: 2026-04-19
+**Context**: A new `SessionHeaderToolbar` component added vibrate/sound toggle switches that persisted user preferences to `app_settings`, but the `useRestTimer` hook unconditionally fired haptics and played audio on rest completion — ignoring the stored settings entirely. TL flagged this as MAJOR: toggles misled users into thinking they controlled behavior.
+**Learning**: Settings controls that write to storage but are never read by the consuming code are "cosmetic toggles" — they create a false sense of user control. The bug is invisible in testing because the default behavior (vibrate ON, sound ON) matches the expected default, so toggling ON "works" by coincidence.
+**Action**: When adding user-facing settings: (1) trace the full path from UI toggle → storage write → consumer read → behavior change, (2) verify the consumer code has a read call gated on the setting value, (3) add a test that toggles the setting OFF and asserts the behavior is suppressed, not just that the setting was stored.
+**Tags**: settings, user-preferences, app-settings, haptics, audio, end-to-end, cosmetic-toggle, code-review
+
+### solve() Is Plate Decomposition Not Rounding — Use roundToPlates() Wrapper
+**Source**: BLD-398 — Smart Warmup Set Generator
+**Date**: 2026-04-19
+**Context**: The warmup set generator needed plate-friendly weight rounding (e.g., 50% of 225lb = 112.5lb → nearest achievable plate combination). The existing `solve()` in `lib/plates.ts` is a greedy plate DECOMPOSITION algorithm — it returns which plates fit a per-side target and a remainder. It does not round to the nearest achievable weight.
+**Learning**: `solve(perSide, plates)` decomposes a per-side weight into plates, returning `{ plates, remainder }`. To get a plate-friendly TOTAL weight, build a wrapper: compute per-side from target, call `solve()`, subtract the remainder from per-side, then reconstruct total as `(achievablePerSide * 2) + barWeight`. This wrapper is now `roundToPlates()` in `lib/warmup.ts`.
+**Action**: When implementing any feature that needs plate-friendly weight values (warmup generators, weight suggestions, progressive overload calculators), use `roundToPlates(target, barWeight, unit)` from `lib/warmup.ts`. Do NOT call `solve()` directly and expect a rounded total weight — it returns a decomposition, not a rounded value.
+**Tags**: plates, solve, rounding, weight-calculation, warmup, lib-plates, lib-warmup, domain-logic

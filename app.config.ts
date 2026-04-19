@@ -4,14 +4,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "FitForge",
   slug: "fitforge",
-  version: "0.9.2",
+  version: "0.14.1",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#ffffff", // eslint-disable-line no-restricted-syntax
   },
   ios: {
     supportsTablet: true,
@@ -20,10 +20,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#ffffff", // eslint-disable-line no-restricted-syntax
     },
     package: "com.anomalyco.fitforge",
-    versionCode: 4,
+    versionCode: 5,
   },
   web: {
     favicon: "./assets/favicon.png",
@@ -45,6 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     "expo-web-browser",
     "expo-secure-store",
+    "expo-image",
     [
       "expo-build-properties",
       {
@@ -66,6 +67,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: "f15d9aef-342e-4a5d-9007-4f98eff3ba23",
     },
-    stravaClientId: process.env.STRAVA_CLIENT_ID ?? "",
+    stravaClientId: "227474",
   },
 });

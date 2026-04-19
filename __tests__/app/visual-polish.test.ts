@@ -12,10 +12,11 @@ const statsRowSrc = fs.readFileSync(
   "utf-8"
 );
 
-const exercisesSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../app/(tabs)/exercises.tsx"),
-  "utf-8"
-);
+const exercisesSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../app/(tabs)/exercises.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/exercises/ExerciseCard.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/exercises/ExerciseDetailPane.tsx"), "utf-8"),
+].join("\n");
 
 describe("CATEGORY_ICONS (constants/theme.ts)", () => {
   const expected = ["abs_core", "arms", "back", "chest", "legs_glutes", "shoulders"];

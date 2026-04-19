@@ -97,6 +97,13 @@ export async function handleResponse(
   const data = response.notification.request.content.data as
     | Record<string, unknown>
     | undefined;
+
+  // Handle rest-complete notification: navigate to active session
+  if (data?.type === "rest_complete" && typeof data.sessionId === "string") {
+    navigate(`/session/${data.sessionId}`);
+    return;
+  }
+
   const id = data?.templateId;
   if (typeof id !== "string") {
     navigate("/");
@@ -138,5 +145,50 @@ export function addNotificationResponseReceivedListener(
     return mod.addNotificationResponseReceivedListener(listener);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Schedule a "Rest Complete" notification to fire after `seconds` seconds.
+ * Returns the notification identifier for later cancellation, or null if unavailable.
+ */
+export async function scheduleRestComplete(
+  seconds: number,
+  sessionId: string
+): Promise<string | null> {
+  const mod = getModule();
+  if (!mod) return null;
+  try {
+    const id = await mod.scheduleNotificationAsync({
+      content: {
+        title: "Rest Complete",
+        body: "Time for your next set 💪",
+        sound: "default",
+        data: { sessionId, type: "rest_complete" },
+      },
+      trigger: {
+        type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds,
+        repeats: false,
+      },
+    });
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cancel a previously scheduled rest-complete notification by its identifier.
+ */
+export async function cancelRestComplete(
+  notificationId: string
+): Promise<void> {
+  const mod = getModule();
+  if (!mod) return;
+  try {
+    await mod.cancelScheduledNotificationAsync(notificationId);
+  } catch {
+    // Notification may already have fired or been dismissed
   }
 }

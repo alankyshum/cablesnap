@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as SQLite from "expo-sqlite";
 
 let migSeq = 0;
@@ -512,6 +513,53 @@ async function createExtensionTables(database: SQLite.SQLiteDatabase): Promise<v
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_hc_sync_log_status ON health_connect_sync_log(status)"
   );
+
+  // Meal templates (Phase 50)
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS meal_templates (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, meal TEXT NOT NULL,
+      cached_calories REAL NOT NULL DEFAULT 0, cached_protein REAL NOT NULL DEFAULT 0,
+      cached_carbs REAL NOT NULL DEFAULT 0, cached_fat REAL NOT NULL DEFAULT 0,
+      last_used_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS meal_template_items (
+      id TEXT PRIMARY KEY, template_id TEXT NOT NULL, food_entry_id TEXT NOT NULL,
+      servings REAL NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_meal_template_items_template ON meal_template_items(template_id);
+  `);
+}
+
+async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<void> {
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_daily_log_date ON daily_log(date)"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_workout_sessions_started_at ON workout_sessions(started_at)"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_template_exercises_template ON template_exercises(template_id)"
+  );
+}
+
+async function addDurationColumns(database: SQLite.SQLiteDatabase): Promise<void> {
+  const setCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(workout_sets)"
+  );
+  if (!setCols.some((c) => c.name === "duration_seconds")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sets ADD COLUMN duration_seconds INTEGER"
+    );
+  }
+
+  const teCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(template_exercises)"
+  );
+  if (!teCols.some((c) => c.name === "target_duration_seconds")) {
+    await database.execAsync(
+      "ALTER TABLE template_exercises ADD COLUMN target_duration_seconds INTEGER"
+    );
+  }
 }
 
 export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -520,4 +568,6 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await migrateExerciseAndFeatureColumns(database);
   await createScheduleAndMigrate(database);
   await createExtensionTables(database);
+  await addPerformanceIndexes(database);
+  await addDurationColumns(database);
 }

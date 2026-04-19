@@ -1,50 +1,61 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNextWorkout, getPrograms, getProgramDayCount, softDeleteProgram } from "../../lib/programs";
+import { getNextWorkout, getPrograms, getProgramDayCounts, softDeleteProgram } from "../../lib/programs";
 import {
   deleteTemplate, duplicateTemplate, duplicateProgram, getActiveSession,
   getAllCompletedSessionWeeks, getRecentPRs, getRecentSessions,
-  getSessionAvgRPE, getSessionSetCount, getTemplateExerciseCount,
+  getSessionAvgRPEs, getSessionSetCounts, getTemplateExerciseCounts,
   getTemplates, getTodaySchedule, getWeekAdherence, isTodayCompleted, startSession,
+  getMuscleRecoveryStatus, getTemplatePrimaryMuscles, getWeeklyVolume, getE1RMTrends,
+  getTotalSessionCount,
 } from "../../lib/db";
 import type { Program, WorkoutTemplate } from "../../lib/types";
-import { rpeColor, rpeText } from "../../lib/rpe";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { computeStreak } from "../../lib/format";
 import { FlowCard, difficultyBadge, type MetaBadge } from "../../components/FlowCard";
-import { useFocusRefetch } from "../../lib/query";
+import { computeAllTemplateReadiness, hasWorkoutHistory, type TemplateReadiness } from "../../lib/recovery-readiness";
+import { useFocusRefetch, bumpQueryVersion } from "../../lib/query";
 import { useToast } from "../../components/ui/bna-toast";
 import { useLayout } from "../../lib/layout";
-import { flowCardStyle } from "../../components/ui/FlowContainer";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import HomeBanners from "../../components/home/HomeBanners";
 import AdherenceBar from "../../components/home/AdherenceBar";
 import RecentWorkoutsList from "../../components/home/RecentWorkoutsList";
 import StatsRow from "../../components/home/StatsRow";
+import InsightCard from "../../components/home/InsightCard";
+import { RecoveryHeatmap } from "../../components/home/RecoveryHeatmap";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { generateInsight } from "../../lib/insights";
 
 async function loadHomeData() {
   const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
     getTemplates(), getRecentSessions(5), getActiveSession(), getAllCompletedSessionWeeks(),
     getRecentPRs(5), getPrograms(), getNextWorkout(), getTodaySchedule(), isTodayCompleted(), getWeekAdherence(),
   ]);
-  const counts: Record<string, number> = {};
-  for (const t of tpls) counts[t.id] = await getTemplateExerciseCount(t.id);
-  const setCounts: Record<string, number> = {};
-  const avgRPEs: Record<string, number | null> = {};
-  for (const s of sess) { setCounts[s.id] = await getSessionSetCount(s.id); avgRPEs[s.id] = await getSessionAvgRPE(s.id); }
-  const dayCounts: Record<string, number> = {};
-  for (const p of progs) dayCounts[p.id] = await getProgramDayCount(p.id);
-  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts };
+  const [counts, setCounts, avgRPEs, dayCounts, templateMuscles, weeklyVolume, e1rmTrends, totalSessions] = await Promise.all([
+    getTemplateExerciseCounts(tpls.map((t) => t.id)),
+    getSessionSetCounts(sess.map((s) => s.id)),
+    getSessionAvgRPEs(sess.map((s) => s.id)),
+    getProgramDayCounts(progs.map((p) => p.id)),
+    getTemplatePrimaryMuscles(tpls.map((t) => t.id)),
+    getWeeklyVolume(8),
+    getE1RMTrends(),
+    getTotalSessionCount(),
+  ]);
+  const recoveryStatus = await getMuscleRecoveryStatus();
+  const templateReadiness = computeAllTemplateReadiness(templateMuscles, recoveryStatus);
+  const showReadiness = hasWorkoutHistory(recoveryStatus);
+  const insight = generateInsight({ totalSessions, timestamps, e1rmTrends, weeklyVolume });
+  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight };
 }
 
+// eslint-disable-next-line complexity
 export default function Workouts() {
   const colors = useThemeColors();
   const router = useRouter();
@@ -57,8 +68,8 @@ export default function Workouts() {
   const { data } = useQuery({ queryKey: ["home"], queryFn: loadHomeData });
   useFocusRefetch(["home"]);
 
-  const templates = data?.templates ?? [];
-  const programs = data?.programs ?? [];
+  const templates = useMemo(() => data?.templates ?? [], [data?.templates]);
+  const programs = useMemo(() => data?.programs ?? [], [data?.programs]);
   const dayCounts = data?.dayCounts ?? {};
   const sessions = data?.sessions ?? [];
   const counts = data?.counts ?? {};
@@ -71,57 +82,78 @@ export default function Workouts() {
   const segment = userSegment ?? (nextWorkout ? "programs" : "templates");
   const todaySchedule = data?.todaySchedule ?? null;
   const todayDone = data?.todayDone ?? false;
-  const adherence = data?.adherence ?? [];
+  const adherence = useMemo(() => data?.adherence ?? [], [data?.adherence]);
+  const recoveryStatus = data?.recoveryStatus ?? [];
+  const templateReadiness = data?.templateReadiness ?? {};
+  const showReadiness = data?.showReadiness ?? false;
+  const insight = data?.insight ?? null;
+  const [insightDismissed, setInsightDismissed] = useState(false);
 
-  const reload = () => queryClient.invalidateQueries({ queryKey: ["home"] });
-  const starterMeta = (id: string) => STARTER_TEMPLATES.find((s) => s.id === id);
+  const reload = useCallback(() => queryClient.invalidateQueries({ queryKey: ["home"] }), [queryClient]);
+  const starterMeta = useCallback((id: string) => STARTER_TEMPLATES.find((s) => s.id === id), []);
 
-  const quickStart = async () => { const s = await startSession(null, "Quick Workout"); router.push(`/session/${s.id}`); };
-  const startFromTemplate = async (tpl: WorkoutTemplate) => { const s = await startSession(tpl.id, tpl.name); router.push(`/session/${s.id}?templateId=${tpl.id}`); };
-  const startNextWorkout = async () => {
+  const quickStart = useCallback(async () => { const s = await startSession(null, "Quick Workout"); bumpQueryVersion("home"); router.push(`/session/${s.id}`); }, [router]);
+  const startFromTemplate = useCallback(async (tpl: WorkoutTemplate) => { const s = await startSession(tpl.id, tpl.name); bumpQueryVersion("home"); router.push(`/session/${s.id}?templateId=${tpl.id}`); }, [router]);
+  const startNextWorkout = useCallback(async () => {
     if (!nextWorkout) return;
     if (!nextWorkout.day.template_id) { info("Template no longer exists"); return; }
     const s = await startSession(nextWorkout.day.template_id, nextWorkout.day.label || nextWorkout.day.template_name || nextWorkout.program.name, nextWorkout.day.id);
     router.push(`/session/${s.id}?templateId=${nextWorkout.day.template_id}`);
-  };
-  const startFromSchedule = async () => {
+  }, [nextWorkout, info, router]);
+  const startFromSchedule = useCallback(async () => {
     if (!todaySchedule) return;
     const s = await startSession(todaySchedule.template_id, todaySchedule.template_name);
     router.push(`/session/${s.id}?templateId=${todaySchedule.template_id}`);
-  };
+  }, [todaySchedule, router]);
 
-  const confirmDelete = (tpl: WorkoutTemplate) => {
+  const confirmDelete = useCallback((tpl: WorkoutTemplate) => {
     if (tpl.is_starter) return;
     Alert.alert("Delete Template", `Delete "${tpl.name}"? Past workout data will be preserved.`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { await deleteTemplate(tpl.id); reload(); } },
+      { text: "Delete", style: "destructive", onPress: async () => { await deleteTemplate(tpl.id); bumpQueryVersion("home"); reload(); } },
     ]);
-  };
-  const confirmDeleteProgram = (prog: Program) => {
+  }, [reload]);
+  const confirmDeleteProgram = useCallback((prog: Program) => {
     if (prog.is_starter) return;
     Alert.alert("Delete Program", `Delete "${prog.name}"? Past workout data will be preserved.`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { await softDeleteProgram(prog.id); reload(); } },
+      { text: "Delete", style: "destructive", onPress: async () => { await softDeleteProgram(prog.id); bumpQueryVersion("home"); reload(); } },
     ]);
-  };
-  const handleDuplicateTemplate = async (tpl: WorkoutTemplate) => { const id = await duplicateTemplate(tpl.id); reload(); router.push(`/template/${id}`); };
-  const handleDuplicateProgram = async (prog: Program) => { const id = await duplicateProgram(prog.id); reload(); router.push(`/program/${id}`); };
-  const showTemplateOptions = (item: WorkoutTemplate) => {
+  }, [reload]);
+  const handleDuplicateTemplate = useCallback(async (tpl: WorkoutTemplate) => { const id = await duplicateTemplate(tpl.id); bumpQueryVersion("home"); reload(); router.push(`/template/${id}`); }, [reload, router]);
+  const handleDuplicateProgram = useCallback(async (prog: Program) => { const id = await duplicateProgram(prog.id); bumpQueryVersion("home"); reload(); router.push(`/program/${id}`); }, [reload, router]);
+  const showTemplateOptions = useCallback((item: WorkoutTemplate) => {
     const meta = starterMeta(item.id);
     Alert.alert(meta?.name || item.name, undefined, [{ text: "Duplicate", onPress: () => handleDuplicateTemplate(item) }, { text: "Cancel", style: "cancel" }]);
-  };
-  const showProgramOptions = (item: Program) => {
+  }, [starterMeta, handleDuplicateTemplate]);
+  const showProgramOptions = useCallback((item: Program) => {
     Alert.alert(item.name, undefined, [{ text: "Duplicate", onPress: () => handleDuplicateProgram(item) }, { text: "Cancel", style: "cancel" }]);
-  };
+  }, [handleDuplicateProgram]);
 
-  const allTemplates = [...templates.filter((t) => !t.is_starter), ...templates.filter((t) => t.is_starter)];
-  const allPrograms = [...programs.filter((p) => !p.is_starter), ...programs.filter((p) => p.is_starter)];
+  const allTemplates = useMemo(() => [...templates.filter((t) => !t.is_starter), ...templates.filter((t) => t.is_starter)], [templates]);
+  const allPrograms = useMemo(() => [...programs.filter((p) => !p.is_starter), ...programs.filter((p) => p.is_starter)], [programs]);
+
+  const weekDone = useMemo(() => adherence.filter((a) => a.completed).length, [adherence]);
+  const scheduled = useMemo(() => adherence.filter((a) => a.scheduled), [adherence]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}>
-      <StatsRow colors={colors} streak={streak} weekDone={adherence.filter((a) => a.completed).length} scheduled={adherence.filter((a) => a.scheduled)} prCount={recentPRs.length} />
+      <StatsRow colors={colors} streak={streak} weekDone={weekDone} scheduled={scheduled} prCount={recentPRs.length} />
+      {insight && !insightDismissed && (
+        <InsightCard
+          colors={colors}
+          insight={insight}
+          onPress={() => {
+            if (insight.type === "strength" && insight.exerciseId) {
+              router.push(`/exercise/${insight.exerciseId}`);
+            }
+          }}
+          onDismiss={() => setInsightDismissed(true)}
+        />
+      )}
       <HomeBanners colors={colors} active={active} todaySchedule={todaySchedule} todayDone={todayDone} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
       <AdherenceBar colors={colors} adherence={adherence} />
+      <RecoveryHeatmap recoveryStatus={recoveryStatus} colors={colors} />
 
       <View style={styles.actionRow}>
         <Button variant="default" onPress={quickStart} accessibilityLabel="Quick start workout">
@@ -135,7 +167,7 @@ export default function Workouts() {
       <SegmentedControl value={segment} onValueChange={(v) => setUserSegment(v)} buttons={[{ value: "templates", label: "Templates", accessibilityLabel: "Templates tab" }, { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" }]} style={styles.segmented} />
 
       {segment === "templates" ? (
-        <TemplatesList colors={colors} templates={allTemplates} counts={counts} starterMeta={starterMeta} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} />
+        <TemplatesList colors={colors} templates={allTemplates} counts={counts} starterMeta={starterMeta} templateReadiness={templateReadiness} showReadiness={showReadiness} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} />
       ) : (
         <ProgramsList colors={colors} programs={allPrograms} dayCounts={dayCounts} onPress={(id) => router.push(`/program/${id}`)} onDelete={confirmDeleteProgram} onOptions={showProgramOptions} />
       )}
@@ -147,9 +179,10 @@ export default function Workouts() {
 
 /* ── Inline sub-components ── */
 
-function TemplatesList({ colors, templates, counts, starterMeta, onStart, onDelete, onOptions, onEdit }: {
+function TemplatesList({ colors, templates, counts, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit }: {
   colors: ReturnType<typeof useThemeColors>; templates: WorkoutTemplate[]; counts: Record<string, number>;
   starterMeta: (id: string) => (typeof STARTER_TEMPLATES)[number] | undefined;
+  templateReadiness: Record<string, TemplateReadiness>; showReadiness: boolean;
   onStart: (t: WorkoutTemplate) => void; onDelete: (t: WorkoutTemplate) => void; onOptions: (t: WorkoutTemplate) => void; onEdit: (id: string) => void;
 }) {
   const router = useRouter();
@@ -174,12 +207,14 @@ function TemplatesList({ colors, templates, counts, starterMeta, onStart, onDele
           if (isStarter) metaBadges.push({ icon: "star-outline", label: "Starter" });
           const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
           if (meta?.recommended) badges.push({ label: "RECOMMENDED", type: "recommended" });
+          const readiness = !isStarter && showReadiness ? (templateReadiness[item.id]?.badge ?? null) : null;
+          const displayName = meta?.name || item.name;
           return (
-            <FlowCard key={item.id} name={meta?.name || item.name} onPress={() => onStart(item)} onLongPress={!isStarter ? () => onDelete(item) : undefined}
-              accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
-              accessibilityHint={isStarter ? "Double-tap to start workout" : undefined} badges={badges} meta={metaBadges}
+            <FlowCard key={item.id} name={displayName} onPress={() => onStart(item)} onLongPress={!isStarter ? () => onDelete(item) : undefined}
+              accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${displayName}, ${counts[item.id] ?? 0} exercises`}
+              accessibilityHint={isStarter ? "Double-tap to start workout" : undefined} badges={badges} readiness={readiness} meta={metaBadges}
               action={isStarter
-                ? <Pressable onPress={() => onOptions(item)} accessibilityLabel={`Options for ${meta?.name || item.name}`} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="dots-vertical" size={20} color={colors.onSurfaceVariant} /></Pressable>
+                ? <Pressable onPress={() => onOptions(item)} accessibilityLabel={`Options for ${displayName}`} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="dots-vertical" size={20} color={colors.onSurfaceVariant} /></Pressable>
                 : <Pressable onPress={() => onEdit(item.id)} accessibilityLabel={`Edit template ${item.name}`} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="pencil" size={20} color={colors.onSurfaceVariant} /></Pressable>
               } />
           );

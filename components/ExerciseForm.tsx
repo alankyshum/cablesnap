@@ -1,6 +1,5 @@
-import { useCallback, useRef, useState } from "react";
+/* eslint-disable max-lines-per-function */
 import {
-  Alert,
   Animated,
   FlatList,
   KeyboardAvoidingView,
@@ -13,27 +12,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { useToast } from "@/components/ui/bna-toast";
 import { Wand2 } from "lucide-react-native";
-import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
-  type Category,
   DIFFICULTIES,
   DIFFICULTY_LABELS,
   type Difficulty,
   EQUIPMENT_LIST,
   EQUIPMENT_LABELS,
-  type Equipment,
   type Exercise,
-  type MuscleGroup,
-  MUSCLE_GROUPS_BY_REGION,
-  MUSCLE_LABELS,
 } from "../lib/types";
-import { parseExerciseDescription } from "../lib/exercise-nlp";
-import { useThemeColors } from "@/hooks/useThemeColors";
+import { useExerciseForm } from "@/hooks/useExerciseForm";
+import { MuscleGroupPicker } from "@/components/exercise-form/MuscleGroupPicker";
 
 type Props = {
   initial?: Exercise;
@@ -41,143 +32,38 @@ type Props = {
   title: string;
 };
 
-const NL_EXAMPLES = [
-  "incline dumbbell bench press",
-  "barbell back squat",
-  "cable lat pulldown",
-  "bodyweight pull-ups",
-  "kettlebell goblet squat",
-  "seated dumbbell shoulder press",
-];
-
 export default function ExerciseForm({ initial, onSave, title }: Props) {
-  const colors = useThemeColors();
-  const router = useRouter();
-  const toast = useToast();
-  const [name, setName] = useState(initial?.name ?? "");
-  const [category, setCategory] = useState<Category | null>(initial?.category ?? null);
-  const [equipment, setEquipment] = useState<Equipment>(initial?.equipment ?? "bodyweight");
-  const [difficulty, setDifficulty] = useState<Difficulty>(initial?.difficulty ?? "beginner");
-  const [primary, setPrimary] = useState<Set<MuscleGroup>>(
-    new Set(initial?.primary_muscles ?? [])
-  );
-  const [secondary, setSecondary] = useState<Set<MuscleGroup>>(
-    new Set(initial?.secondary_muscles ?? [])
-  );
-  const [instructions, setInstructions] = useState(initial?.instructions ?? "");
-  const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; category?: string; muscles?: string }>({});
-
-  const [nlInput, setNlInput] = useState("");
-  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
-  const [nlPlaceholderIdx] = useState(() => Math.floor(Math.random() * NL_EXAMPLES.length));
-  const flashAnim = useRef(new Animated.Value(0)).current;
-
-  const applyNlParse = useCallback(() => {
-    const text = nlInput.trim();
-    if (!text) return;
-
-    const result = parseExerciseDescription(text);
-    const filled = new Set<string>();
-
-    if (result.name) {
-      setName(result.name);
-      filled.add("name");
-    }
-    if (result.category) {
-      setCategory(result.category);
-      filled.add("category");
-    }
-    if (result.equipment) {
-      setEquipment(result.equipment);
-      filled.add("equipment");
-    }
-    if (result.difficulty) {
-      setDifficulty(result.difficulty);
-      filled.add("difficulty");
-    }
-    if (result.primary_muscles.length > 0) {
-      setPrimary(new Set(result.primary_muscles));
-      filled.add("primary_muscles");
-    }
-    if (result.secondary_muscles.length > 0) {
-      setSecondary(new Set(result.secondary_muscles));
-      filled.add("secondary_muscles");
-    }
-
-    setAutoFilledFields(filled);
-    setDirty(true);
-    setErrors({});
-
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    flashAnim.setValue(1);
-    Animated.timing(flashAnim, {
-      toValue: 0,
-      duration: 1200,
-      useNativeDriver: false,
-    }).start();
-
-    const fieldCount = filled.size;
-    toast.success(`Auto-filled ${fieldCount} field${fieldCount === 1 ? "" : "s"}`);
-  }, [nlInput, flashAnim, toast]);
-
-  const autoFillHighlight = flashAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["transparent", colors.primaryContainer],
-  });
-
-  const toggleMuscle = useCallback(
-    (set: Set<MuscleGroup>, setter: (s: Set<MuscleGroup>) => void, muscle: MuscleGroup) => {
-      const next = new Set(set);
-      if (next.has(muscle)) next.delete(muscle);
-      else next.add(muscle);
-      setter(next);
-      setDirty(true);
-    },
-    []
-  );
-
-  const validate = useCallback(() => {
-    const e: typeof errors = {};
-    if (!name.trim()) e.name = "Name is required";
-    if (!category) e.category = "Category is required";
-    if (primary.size === 0) e.muscles = "Select at least one primary muscle";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }, [name, category, primary]);
-
-  const save = useCallback(async () => {
-    if (!validate()) return;
-    setSaving(true);
-    try {
-      await onSave({
-        name: name.trim(),
-        category: category!,
-        equipment,
-        difficulty,
-        primary_muscles: Array.from(primary),
-        secondary_muscles: Array.from(secondary),
-        instructions: instructions.trim(),
-      });
-    } catch {
-      toast.error("Failed to save exercise");
-    } finally {
-      setSaving(false);
-    }
-  }, [validate, onSave, name, category, equipment, difficulty, primary, secondary, instructions, toast]);
-
-  const back = useCallback(() => {
-    if (dirty) {
-      Alert.alert("Discard changes?", "You have unsaved changes.", [
-        { text: "Keep editing", style: "cancel" },
-        { text: "Discard", style: "destructive", onPress: () => router.back() },
-      ]);
-      return;
-    }
-    router.back();
-  }, [dirty, router]);
+  const {
+    colors,
+    name,
+    setName,
+    category,
+    setCategory,
+    equipment,
+    setEquipment,
+    difficulty,
+    setDifficulty,
+    primary,
+    setPrimary,
+    secondary,
+    setSecondary,
+    instructions,
+    setInstructions,
+    saving,
+    setDirty,
+    errors,
+    setErrors,
+    nlInput,
+    setNlInput,
+    autoFilledFields,
+    nlPlaceholderIdx,
+    nlExamples,
+    autoFillHighlight,
+    applyNlParse,
+    toggleMuscle,
+    save,
+    back,
+  } = useExerciseForm({ initial, onSave, title });
 
   return (
     <KeyboardAvoidingView
@@ -212,7 +98,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                     value={nlInput}
                     onChangeText={setNlInput}
                     onSubmitEditing={applyNlParse}
-                    placeholder={`e.g. "${NL_EXAMPLES[nlPlaceholderIdx]}"`}
+                    placeholder={`e.g. "${nlExamples[nlPlaceholderIdx]}"`}
                     variant="outline"
                     containerStyle={styles.nlInput}
                     accessibilityLabel="Describe exercise in natural language"
@@ -344,74 +230,27 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
             </Animated.View>
 
             {/* Primary Muscles */}
-            <Animated.View style={{ backgroundColor: autoFilledFields.has("primary_muscles") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
-            <Text variant="caption" style={[styles.label, { color: colors.onSurface, fontWeight: "600" }]}>
-              Primary Muscles *
-            </Text>
-            {MUSCLE_GROUPS_BY_REGION.map((region) => (
-              <View key={region.label} style={styles.region}>
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
-                  {region.label}
-                </Text>
-                <View style={styles.chipWrap}>
-                  {region.muscles.map((m) => (
-                    <Chip
-                      key={m}
-                      selected={primary.has(m)}
-                      onPress={() => { toggleMuscle(primary, setPrimary, m); setErrors((e) => ({ ...e, muscles: undefined })); }}
-                      style={styles.chip}
-                      compact
-                      accessibilityLabel={`Primary muscle: ${MUSCLE_LABELS[m]}`}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ selected: primary.has(m) }}
-                    >
-                      {MUSCLE_LABELS[m]}
-                    </Chip>
-                  ))}
-                </View>
-              </View>
-            ))}
-            {errors.muscles && (
-              <Text
-                variant="caption"
-                style={{ color: colors.error, marginHorizontal: 16 }}
-                accessibilityLiveRegion="polite"
-              >
-                {errors.muscles}
-              </Text>
-            )}
-            </Animated.View>
+            <MuscleGroupPicker
+              label="Primary Muscles *"
+              muscles={primary}
+              onToggle={(m) => { toggleMuscle(primary, setPrimary, m); setErrors((e) => ({ ...e, muscles: undefined })); }}
+              autoFillHighlight={autoFillHighlight}
+              isAutoFilled={autoFilledFields.has("primary_muscles")}
+              error={errors.muscles}
+              colors={colors}
+              accessibilityPrefix="Primary muscle"
+            />
 
             {/* Secondary Muscles */}
-            <Animated.View style={{ backgroundColor: autoFilledFields.has("secondary_muscles") ? autoFillHighlight : "transparent", borderRadius: 8, paddingHorizontal: 4 }}>
-            <Text variant="caption" style={[styles.label, { color: colors.onSurface, fontWeight: "600" }]}>
-              Secondary Muscles
-            </Text>
-            {MUSCLE_GROUPS_BY_REGION.map((region) => (
-              <View key={region.label} style={styles.region}>
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
-                  {region.label}
-                </Text>
-                <View style={styles.chipWrap}>
-                  {region.muscles.map((m) => (
-                    <Chip
-                      key={m}
-                      selected={secondary.has(m)}
-                      onPress={() => toggleMuscle(secondary, setSecondary, m)}
-                      style={styles.chip}
-                      compact
-                      accessibilityLabel={`Secondary muscle: ${MUSCLE_LABELS[m]}`}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ selected: secondary.has(m) }}
-                    >
-                      {MUSCLE_LABELS[m]}
-                    </Chip>
-                  ))}
-                </View>
-              </View>
-            ))}
-
-            </Animated.View>
+            <MuscleGroupPicker
+              label="Secondary Muscles"
+              muscles={secondary}
+              onToggle={(m) => toggleMuscle(secondary, setSecondary, m)}
+              autoFillHighlight={autoFillHighlight}
+              isAutoFilled={autoFilledFields.has("secondary_muscles")}
+              colors={colors}
+              accessibilityPrefix="Secondary muscle"
+            />
 
             {/* Instructions */}
             <Input
@@ -462,10 +301,8 @@ const styles = StyleSheet.create({
   label: { marginTop: 16, marginBottom: 8 },
   chipScroll: { marginBottom: 4 },
   chipRow: { flexDirection: "row", gap: 6, paddingRight: 16 },
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: { marginBottom: 2 },
   segment: { marginHorizontal: 0 },
-  region: { marginBottom: 8, marginLeft: 4 },
   actions: { marginTop: 24, gap: 12 },
   saveBtn: { borderRadius: 8 },
   cancelBtn: { borderRadius: 8 },

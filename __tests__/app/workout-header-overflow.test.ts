@@ -1,17 +1,16 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const sessionSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"),
-  "utf-8"
-);
+const sessionSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/GroupCardHeader.tsx"), "utf-8"),
+].join("\n");
 
-describe("Workout session exercise header overflow fix (BLD-203)", () => {
-  it("groupHeader uses flexWrap: wrap", () => {
-    expect(sessionSrc).toContain('flexWrap: "wrap"');
+describe("Workout session exercise header overflow fix (BLD-203, updated BLD-390)", () => {
+  it("groupHeader does NOT use flexWrap (removed in BLD-390 to fix alignment)", () => {
     const headerMatch = sessionSrc.match(/groupHeader:\s*\{[^}]+\}/s);
     expect(headerMatch).not.toBeNull();
-    expect(headerMatch![0]).toContain('flexWrap: "wrap"');
+    expect(headerMatch![0]).not.toContain("flexWrap");
   });
 
   it("groupTitle has minWidth to prevent overflow", () => {
