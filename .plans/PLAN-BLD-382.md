@@ -128,7 +128,18 @@ Key design decisions:
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-19)
+
+**Critical Issues:**
+1. **COGNITIVE-01**: 4 of 7 insight types duplicate existing home screen UI (StatsRow shows streak/PRs, RecoveryHeatmap shows muscle gaps, AdherenceBar shows frequency). Remove duplicates or replace the overlapping components — net visual elements must NOT increase.
+2. **COGNITIVE-02**: Dismiss-to-reveal-next creates slot-machine decision overhead. Show ONE insight, dismiss hides card entirely.
+3. **A11Y-01**: Missing accessibilityLabel, accessibilityRole, 48x48dp dismiss target, and text alternatives for emoji icons.
+
+**Major Issues:**
+4. **COGNITIVE-03**: "Between StatsRow and RecentWorkoutsList" spans 6 components — specify exact position and justify impact on Quick Start button reachability.
+5. **OVERLAP-01**: RecoveryHeatmap vs muscle-gap-insight can show contradictory signals. Suppress muscle gap insight when RecoveryHeatmap is visible.
+
+**Recommendation:** Consider replacing StatsRow with InsightCard for net-zero density. Cap insight types to 3-4 genuinely new ones (strength trend, volume trend, consistency praise).
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
