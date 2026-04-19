@@ -4,7 +4,7 @@ import * as path from "path";
 const root = path.resolve(__dirname, "../..");
 const layout = [
   fs.readFileSync(path.join(root, "app/_layout.tsx"), "utf-8"),
-  fs.readFileSync(path.join(root, "app/screen-config.ts"), "utf-8"),
+  fs.readFileSync(path.join(root, "app/_screen-config.ts"), "utf-8"),
 ].join("\n");
 const names = [...layout.matchAll(/name:\s*"([^"]+)"/g), ...layout.matchAll(/name="([^"]+)"/g)].map((m) => m[1]);
 // Deduplicate

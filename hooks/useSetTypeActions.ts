@@ -29,7 +29,7 @@ export function useSetTypeActions({ setGroups }: UseSetTypeActionsArgs) {
           if (s.id === setId) {
             const idx = SET_TYPE_CYCLE.indexOf(s.set_type);
             newType = SET_TYPE_CYCLE[(idx + 1) % SET_TYPE_CYCLE.length];
-            return { ...s, set_type: newType, is_warmup: newType === "warmup" };
+            return { ...s, set_type: newType };
           }
           return s;
         }),
@@ -68,7 +68,7 @@ export function useSetTypeActions({ setGroups }: UseSetTypeActionsArgs) {
         ...g,
         sets: g.sets.map((s) => {
           if (s.id === setId) {
-            return { ...s, set_type: type, is_warmup: type === "warmup" };
+            return { ...s, set_type: type };
           }
           return s;
         }),

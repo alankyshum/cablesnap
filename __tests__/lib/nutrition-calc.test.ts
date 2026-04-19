@@ -186,25 +186,11 @@ describe("nutrition-calc", () => {
   });
 
   describe("migrateProfile", () => {
-    it("converts legacy age to birthYear", () => {
-      const currentYear = new Date().getFullYear();
-      const legacy = { age: 30, weight: 75, height: 175, sex: "male", activityLevel: "moderately_active", goal: "maintain", weightUnit: "kg", heightUnit: "cm" };
-      const migrated = migrateProfile(legacy);
-      expect(migrated.birthYear).toBe(currentYear - 30);
-      expect((migrated as unknown as Record<string, unknown>).age).toBeUndefined();
-    });
-
-    it("keeps birthYear if already present", () => {
+    it("passes through a valid profile", () => {
       const modern = { birthYear: 1990, weight: 75, height: 175, sex: "male", activityLevel: "moderately_active", goal: "maintain", weightUnit: "kg", heightUnit: "cm" };
       const migrated = migrateProfile(modern);
       expect(migrated.birthYear).toBe(1990);
-    });
-
-    it("prefers birthYear over age when both present", () => {
-      const both = { birthYear: 1990, age: 50, weight: 75, height: 175, sex: "male", activityLevel: "moderately_active", goal: "maintain", weightUnit: "kg", heightUnit: "cm" };
-      const migrated = migrateProfile(both);
-      expect(migrated.birthYear).toBe(1990);
-      expect((migrated as unknown as Record<string, unknown>).age).toBeUndefined();
+      expect(migrated.weight).toBe(75);
     });
   });
 });

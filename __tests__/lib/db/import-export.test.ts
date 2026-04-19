@@ -262,7 +262,8 @@ describe("getBackupCounts", () => {
 // ---- Import FK Ordering ----
 
 describe("importData", () => {
-  it("imports tables in FK-dependency order", async () => {
+  it("imports tables in FK-dependency order", // eslint-disable-next-line max-lines-per-function
+  async () => {
     const importOrder: string[] = [];
     mockDb.withTransactionAsync.mockImplementation(async (cb: () => Promise<void>) => {
       await cb();
@@ -424,7 +425,6 @@ describe("importData", () => {
         app_settings: [{ key: "theme", value: "dark" }],
         program_days: [{ id: "pd1", program_id: "p1", template_id: null, position: 0, label: "Day 1" }],
         program_log: [{ id: "pl1", program_id: "p1", day_id: "pd1", session_id: "s1", completed_at: 1 }],
-        weekly_schedule: [{ id: "ws1", day_of_week: 1, template_id: "t1", created_at: 1 }],
         program_schedule: [{ program_id: "p1", day_of_week: 1, template_id: "t1" }],
       },
     };
@@ -435,9 +435,13 @@ describe("importData", () => {
     expect(inserted).toContain("app_settings");
     expect(inserted).toContain("program_days");
     expect(inserted).toContain("program_log");
-    expect(inserted).toContain("weekly_schedule");
     expect(inserted).toContain("program_schedule");
   });
+});
+
+// ---- Import Meal Templates ----
+
+describe("importData — meal templates", () => {
   it("imports meal_templates and meal_template_items", async () => {
     const inserted: string[] = [];
     mockDb.runAsync.mockImplementation(async (sql: string) => {

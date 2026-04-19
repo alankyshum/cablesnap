@@ -1,8 +1,8 @@
 import { useLocalSearchParams } from "expo-router";
-import { useOnboardingFinish } from "./use-onboarding-finish";
-import { AdvancedRecommend } from "./recommend-advanced";
-import { BeginnerRecommend } from "./recommend-beginner";
-import { ErrorBanner } from "./recommend-error-banner";
+import { useOnboardingFinish } from "./_use-onboarding-finish";
+import { AdvancedRecommend } from "./_recommend-advanced";
+import { BeginnerRecommend } from "./_recommend-beginner";
+import { ErrorBanner } from "./_recommend-error-banner";
 
 type Level = "beginner" | "intermediate" | "advanced";
 

@@ -52,7 +52,7 @@ export function SearchBar({
   const cardColor = useColor('card');
   const textColor = useColor('text');
   const muted = useColor('textMuted');
-  const icon = useColor('icon');
+  const icon = useColor('mutedForeground');
 
   // Handle text change with debouncing
   const handleTextChange = useCallback(

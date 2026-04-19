@@ -162,6 +162,3 @@ export const STARTER_PROGRAMS: StarterProgram[] = [
     ],
   },
 ];
-
-/** @deprecated Use STARTER_PROGRAMS[0] instead */
-export const STARTER_PROGRAM: StarterProgram = STARTER_PROGRAMS[0];

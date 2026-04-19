@@ -55,14 +55,14 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
           .map((set) => (
             <View key={set.id}>
               <View style={[styles.setRow, (() => {
-                const st = set.set_type ?? (set.is_warmup ? "warmup" : "normal");
+                const st = set.set_type ?? "normal";
                 if (st === "warmup") return { borderLeftWidth: 3, borderLeftColor: colors.surfaceVariant, paddingLeft: 5 };
                 if (st === "dropset") return { borderLeftWidth: 3, borderLeftColor: colors.tertiaryContainer, paddingLeft: 5 };
                 if (st === "failure") return { borderLeftWidth: 3, borderLeftColor: colors.errorContainer, paddingLeft: 5 };
                 return {};
               })()]}>
                 {(() => {
-                  const st = set.set_type ?? (set.is_warmup ? "warmup" : "normal");
+                  const st = set.set_type ?? "normal";
                   const label = SET_TYPE_LABELS[st];
                   if (label.short) {
                     const chipColors = st === "warmup"

@@ -56,34 +56,34 @@ beforeEach(() => {
   mockDb.withTransactionAsync.mockImplementation(async (cb: () => Promise<void>) => cb());
 });
 
-// ---- updateSetWarmup (dual-writes both columns) ----
+// ---- updateSetWarmup ----
 
 describe('updateSetWarmup', () => {
-  it('sets is_warmup = 1 and set_type = warmup when true', async () => {
+  it('sets set_type = warmup when true', async () => {
     await expect(updateSetWarmup('set-1', true)).resolves.toBeUndefined();
   });
 
-  it('sets is_warmup = 0 and set_type = normal when false', async () => {
+  it('sets set_type = normal when false', async () => {
     await expect(updateSetWarmup('set-2', false)).resolves.toBeUndefined();
   });
 });
 
-// ---- updateSetType (dual-writes both columns) ----
+// ---- updateSetType ----
 
 describe('updateSetType', () => {
-  it('sets set_type and is_warmup = 1 for warmup', async () => {
+  it('sets set_type = warmup', async () => {
     await expect(updateSetType('set-1', 'warmup')).resolves.toBeUndefined();
   });
 
-  it('sets set_type = dropset and is_warmup = 0', async () => {
+  it('sets set_type = dropset', async () => {
     await expect(updateSetType('set-2', 'dropset')).resolves.toBeUndefined();
   });
 
-  it('sets set_type = failure and is_warmup = 0', async () => {
+  it('sets set_type = failure', async () => {
     await expect(updateSetType('set-3', 'failure')).resolves.toBeUndefined();
   });
 
-  it('sets set_type = normal and is_warmup = 0', async () => {
+  it('sets set_type = normal', async () => {
     await expect(updateSetType('set-4', 'normal')).resolves.toBeUndefined();
   });
 });
@@ -91,22 +91,19 @@ describe('updateSetType', () => {
 // ---- addSet includes set_type ----
 
 describe('addSet with setType', () => {
-  it('inserts set with set_type = dropset and is_warmup = 0', async () => {
+  it('inserts set with set_type = dropset', async () => {
     const result = await addSet('sess-1', 'ex-1', 1, null, null, null, null, false, 'dropset');
     expect(result.set_type).toBe('dropset');
-    expect(result.is_warmup).toBe(false);
   });
 
   it('defaults to set_type = normal when no type provided', async () => {
     const result = await addSet('sess-1', 'ex-1', 1);
     expect(result.set_type).toBe('normal');
-    expect(result.is_warmup).toBe(false);
   });
 
-  it('resolves setType from isWarmup when setType not provided', async () => {
+  it('defaults to normal when no setType provided', async () => {
     const result = await addSet('sess-1', 'ex-1', 1, null, null, null, null, true);
-    expect(result.set_type).toBe('warmup');
-    expect(result.is_warmup).toBe(true);
+    expect(result.set_type).toBe('normal');
   });
 });
 
@@ -123,11 +120,8 @@ describe('addSetsBatch with setType', () => {
 
     expect(result).toHaveLength(3);
     expect(result[0].set_type).toBe('normal');
-    expect(result[0].is_warmup).toBe(false);
     expect(result[1].set_type).toBe('dropset');
-    expect(result[1].is_warmup).toBe(false);
     expect(result[2].set_type).toBe('failure');
-    expect(result[2].is_warmup).toBe(false);
   });
 
   it('batch resolves warmup from isWarmup when setType not provided', async () => {
@@ -137,14 +131,13 @@ describe('addSetsBatch with setType', () => {
     const result = await addSetsBatch(sets);
 
     expect(result[0].set_type).toBe('warmup');
-    expect(result[0].is_warmup).toBe(true);
   });
 });
 
 // ---- getSessionSets includes set_type ----
 
 describe('getSessionSets', () => {
-  it('maps is_warmup and set_type from row data', async () => {
+  it('maps set_type from row data', async () => {
     mockDrizzleAllResult = [
       {
         id: 's1', session_id: 'sess-1', exercise_id: 'ex-1',
@@ -153,7 +146,7 @@ describe('getSessionSets', () => {
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
         training_mode: null, tempo: null,
-        swapped_from_exercise_id: null, is_warmup: 1, set_type: 'warmup',
+        swapped_from_exercise_id: null, set_type: 'warmup',
         duration_seconds: null,
       },
       {
@@ -163,7 +156,7 @@ describe('getSessionSets', () => {
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
         training_mode: null, tempo: null,
-        swapped_from_exercise_id: null, is_warmup: 0, set_type: 'dropset',
+        swapped_from_exercise_id: null, set_type: 'dropset',
         duration_seconds: null,
       },
       {
@@ -173,15 +166,13 @@ describe('getSessionSets', () => {
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
         training_mode: null, tempo: null,
-        swapped_from_exercise_id: null, is_warmup: 0, set_type: 'failure',
+        swapped_from_exercise_id: null, set_type: 'failure',
         duration_seconds: null,
       },
     ];
 
     const sets = await getSessionSets('sess-1');
-    expect(sets[0].is_warmup).toBe(true);
     expect(sets[0].set_type).toBe('warmup');
-    expect(sets[1].is_warmup).toBe(false);
     expect(sets[1].set_type).toBe('dropset');
     expect(sets[2].set_type).toBe('failure');
   });
@@ -195,7 +186,7 @@ describe('getSessionSets', () => {
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
         training_mode: null, tempo: null,
-        swapped_from_exercise_id: null, is_warmup: 0,
+        swapped_from_exercise_id: null,
         duration_seconds: null,
         // set_type intentionally missing
       },
@@ -232,7 +223,7 @@ describe('metric queries exclude warm-ups', () => {
   it('getPersonalRecords excludes warm-up sets', async () => {
     mockDrizzleAllResult = [{ exercise_id: 'ex1', name: 'Bench Press', max_weight: 100 }];
     const records = await getPersonalRecords();
-    // Now uses Drizzle ORM with eq(workoutSets.is_warmup, 0) in the where clause
+    // Uses Drizzle ORM with ne(workoutSets.set_type, 'warmup') in the where clause
     expect(records).toEqual([{ exercise_id: 'ex1', name: 'Bench Press', max_weight: 100 }]);
   });
 });

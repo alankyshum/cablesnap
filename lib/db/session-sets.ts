@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { eq, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
+import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, TrainingMode, SetType } from "../types";
 import { uuid } from "../uuid";
@@ -28,7 +28,6 @@ export async function getSessionSets(
       training_mode: workoutSets.training_mode,
       tempo: workoutSets.tempo,
       swapped_from_exercise_id: workoutSets.swapped_from_exercise_id,
-      is_warmup: workoutSets.is_warmup,
       set_type: workoutSets.set_type,
       duration_seconds: workoutSets.duration_seconds,
       exercise_name: exercises.name,
@@ -57,7 +56,6 @@ export async function getSessionSets(
     training_mode: (r.training_mode as TrainingMode) ?? null,
     tempo: r.tempo ?? null,
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
-    is_warmup: r.is_warmup === 1,
     set_type: (r.set_type as SetType) ?? "normal",
     duration_seconds: r.duration_seconds ?? null,
     exercise_name: r.exercise_name ?? undefined,
@@ -75,7 +73,6 @@ export type SourceSessionSet = {
   training_mode: string | null;
   tempo: string | null;
   exercise_exists: boolean;
-  is_warmup: boolean;
   set_type: SetType;
 };
 
@@ -93,7 +90,6 @@ export async function getSourceSessionSets(
       training_mode: workoutSets.training_mode,
       tempo: workoutSets.tempo,
       exercise_exists: exercises.id,
-      is_warmup: workoutSets.is_warmup,
       set_type: workoutSets.set_type,
     })
     .from(workoutSets)
@@ -110,7 +106,6 @@ export async function getSourceSessionSets(
     training_mode: r.training_mode,
     tempo: r.tempo,
     exercise_exists: r.exercise_exists != null,
-    is_warmup: r.is_warmup === 1,
     set_type: (r.set_type as SetType) ?? "normal",
   }));
 }
@@ -123,12 +118,11 @@ export async function addSet(
   round?: number | null,
   trainingMode?: TrainingMode | null,
   tempo?: string | null,
-  isWarmup?: boolean,
+  _isWarmup?: boolean,
   setType?: SetType
 ): Promise<WorkoutSet> {
   const id = uuid();
-  const resolvedType: SetType = setType ?? (isWarmup ? "warmup" : "normal");
-  const resolvedWarmup = resolvedType === "warmup" ? 1 : 0;
+  const resolvedType: SetType = setType ?? "normal";
   const db = await getDrizzle();
   await db.insert(workoutSets).values({
     id,
@@ -139,7 +133,6 @@ export async function addSet(
     round: round ?? null,
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
-    is_warmup: resolvedWarmup,
     set_type: resolvedType,
   });
   return {
@@ -158,7 +151,6 @@ export async function addSet(
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     swapped_from_exercise_id: null,
-    is_warmup: resolvedWarmup === 1,
     set_type: resolvedType,
     duration_seconds: null,
   };
@@ -195,7 +187,6 @@ export async function addSetsBatch(
       training_mode: s.trainingMode ?? null,
       tempo: s.tempo ?? null,
       swapped_from_exercise_id: null,
-      is_warmup: resolvedType === "warmup",
       set_type: resolvedType,
       duration_seconds: null,
     };
@@ -203,13 +194,13 @@ export async function addSetsBatch(
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.link_id, r.round, r.training_mode, r.tempo, r.is_warmup ? 1 : 0, r.set_type,
+          r.link_id, r.round, r.training_mode, r.tempo, r.set_type,
         ]);
       }
     } finally {
@@ -246,7 +237,6 @@ export async function addWarmupSets(
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     swapped_from_exercise_id: null,
-    is_warmup: true,
     set_type: "warmup" as SetType,
     duration_seconds: null,
   }));
@@ -260,13 +250,13 @@ export async function addWarmupSets(
 
     // Insert warmup sets
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, training_mode, tempo, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.weight, r.reps, r.link_id, r.round, r.training_mode, r.tempo, 1, "warmup",
+          r.weight, r.reps, r.link_id, r.round, r.training_mode, r.tempo, "warmup",
         ]);
       }
     } finally {
@@ -374,15 +364,14 @@ export async function updateSetWarmup(id: string, isWarmup: boolean): Promise<vo
   const setType = isWarmup ? "warmup" : "normal";
   const db = await getDrizzle();
   await db.update(workoutSets)
-    .set({ is_warmup: isWarmup ? 1 : 0, set_type: setType })
+    .set({ set_type: setType })
     .where(eq(workoutSets.id, id));
 }
 
 export async function updateSetType(id: string, type: SetType): Promise<void> {
-  const isWarmup = type === "warmup" ? 1 : 0;
   const db = await getDrizzle();
   await db.update(workoutSets)
-    .set({ set_type: type, is_warmup: isWarmup })
+    .set({ set_type: type })
     .where(eq(workoutSets.id, id));
 }
 
@@ -479,7 +468,7 @@ export async function getSessionSetCount(
   const db = await getDrizzle();
   const row = await db.select({ count: sql<number>`COUNT(*)` })
     .from(workoutSets)
-    .where(sql`${workoutSets.session_id} = ${sessionId} AND ${workoutSets.completed} = 1 AND ${workoutSets.is_warmup} = 0`)
+    .where(sql`${workoutSets.session_id} = ${sessionId} AND ${workoutSets.completed} = 1 AND ${workoutSets.set_type} != 'warmup'`)
     .get();
   return row?.count ?? 0;
 }
@@ -498,7 +487,7 @@ export async function getSessionSetCounts(
     .where(and(
       inArray(workoutSets.session_id, sessionIds),
       eq(workoutSets.completed, 1),
-      eq(workoutSets.is_warmup, 0)
+      ne(workoutSets.set_type, 'warmup')
     ))
     .groupBy(workoutSets.session_id)
     .all();
@@ -518,7 +507,7 @@ export async function getSessionAvgRPE(
       eq(workoutSets.session_id, sessionId),
       eq(workoutSets.completed, 1),
       isNotNull(workoutSets.rpe),
-      eq(workoutSets.is_warmup, 0)
+      ne(workoutSets.set_type, 'warmup')
     ))
     .get();
   return row?.val != null ? Number(row.val) : null;
@@ -539,7 +528,7 @@ export async function getSessionAvgRPEs(
       inArray(workoutSets.session_id, sessionIds),
       eq(workoutSets.completed, 1),
       isNotNull(workoutSets.rpe),
-      eq(workoutSets.is_warmup, 0)
+      ne(workoutSets.set_type, 'warmup')
     ))
     .groupBy(workoutSets.session_id)
     .all();

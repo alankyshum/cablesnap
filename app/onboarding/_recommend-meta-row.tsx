@@ -2,7 +2,7 @@ import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { styles } from "./recommend-styles";
+import { styles } from "./_recommend-styles";
 
 type MetaItem = { icon: "clock-outline" | "dumbbell" | "calendar-sync"; label: string };
 

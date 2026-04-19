@@ -78,7 +78,6 @@ function makeSet(overrides: Partial<SetWithMeta> = {}): SetWithMeta {
     training_mode: null,
     tempo: null,
     swapped_from_exercise_id: null,
-    is_warmup: false,
     set_type: "normal",
     duration_seconds: null,
     ...overrides,

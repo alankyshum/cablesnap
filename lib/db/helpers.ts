@@ -8,9 +8,21 @@ import * as schema from "./schema";
 
 const DB_NAME = "fitforge.db";
 
-let db: SQLite.SQLiteDatabase | null = null;
-let drizzleDb: ExpoSQLiteDatabase<typeof schema> | null = null;
-let init: Promise<SQLite.SQLiteDatabase> | null = null;
+// Store singleton on globalThis so hot-reload doesn't orphan connections
+const g = globalThis as unknown as {
+  __fitforge_db?: SQLite.SQLiteDatabase;
+  __fitforge_drizzle?: ExpoSQLiteDatabase<typeof schema>;
+  __fitforge_init?: Promise<SQLite.SQLiteDatabase>;
+  __fitforge_memfb?: boolean;
+};
+
+function getDb() { return g.__fitforge_db ?? null; }
+function setDb(v: SQLite.SQLiteDatabase | null) { g.__fitforge_db = v ?? undefined; }
+function getDrizzleDb() { return g.__fitforge_drizzle ?? null; }
+function setDrizzleDb(v: ExpoSQLiteDatabase<typeof schema> | null) { g.__fitforge_drizzle = v ?? undefined; }
+function getInit() { return g.__fitforge_init ?? null; }
+function setInit(v: Promise<SQLite.SQLiteDatabase> | null) { g.__fitforge_init = v ?? undefined; }
+
 let memoryFallback = false;
 
 export function isMemoryFallback(): boolean {
@@ -18,15 +30,18 @@ export function isMemoryFallback(): boolean {
 }
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (db) return db;
-  if (!init) {
-    init = (async () => {
+  const cached = getDb();
+  if (cached) return cached;
+  let pending = getInit();
+  if (!pending) {
+    pending = (async () => {
       try {
         const instance = await SQLite.openDatabaseAsync(DB_NAME);
+        await instance.execAsync("PRAGMA journal_mode = WAL");
         await migrate(instance);
         await seed(instance);
-        db = instance;
-        drizzleDb = drizzle(instance, { schema });
+        setDb(instance);
+        setDrizzleDb(drizzle(instance, { schema }));
         return instance;
       } catch (err) {
         if (Platform.OS === "web") {
@@ -35,26 +50,27 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
             await migrate(instance);
             await seed(instance);
             memoryFallback = true;
-            db = instance;
-            drizzleDb = drizzle(instance, { schema });
+            setDb(instance);
+            setDrizzleDb(drizzle(instance, { schema }));
             return instance;
           } catch (fallbackErr) {
-            init = null;
+            setInit(null);
             throw fallbackErr;
           }
         }
-        init = null;
+        setInit(null);
         throw err;
       }
     })();
+    setInit(pending);
   }
-  return init;
+  return pending;
 }
 
 /** Get the Drizzle ORM instance. Initializes the database if not already done. */
 export async function getDrizzle(): Promise<ExpoSQLiteDatabase<typeof schema>> {
   await getDatabase();
-  return drizzleDb!;
+  return getDrizzleDb()!;
 }
 
 // ---- Query helpers (raw SQL — used by modules not yet migrated to Drizzle) ----
@@ -77,7 +93,19 @@ export async function execute(sql: string, params?: SQLite.SQLiteBindParams) {
   return database.runAsync(sql, params);
 }
 
+// Serialize transactions to prevent "database is locked" from concurrent
+// withTransactionAsync calls (e.g., double-tap creating overlapping writes).
+let txQueue: Promise<void> = Promise.resolve();
+
 export async function withTransaction(fn: (db: SQLite.SQLiteDatabase) => Promise<void>): Promise<void> {
   const database = await getDatabase();
-  await database.withTransactionAsync(() => fn(database));
+  const prev = txQueue;
+  let resolve!: () => void;
+  txQueue = new Promise<void>((r) => { resolve = r; });
+  await prev;
+  try {
+    await database.withTransactionAsync(() => fn(database));
+  } finally {
+    resolve();
+  }
 }

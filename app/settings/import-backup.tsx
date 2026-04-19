@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/bna-toast";
 
+// eslint-disable-next-line max-lines-per-function, complexity
 export default function ImportBackup() {
   const colors = useThemeColors();
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function ImportBackup() {
         ? IMPORT_TABLE_ORDER.filter(
             (t) =>
               (counts[t] ?? 0) === 0 &&
-              ["programs", "program_days", "program_log", "app_settings", "weekly_schedule", "program_schedule", "achievements_earned"].includes(t),
+              ["programs", "program_days", "program_log", "app_settings", "program_schedule", "achievements_earned"].includes(t),
           )
         : [],
     [parsed, version, counts],

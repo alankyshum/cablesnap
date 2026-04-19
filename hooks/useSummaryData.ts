@@ -111,7 +111,7 @@ export function useSummaryData(id: string | undefined) {
   const volume = useMemo(() => {
     let total = 0;
     for (const s of completed) {
-      if (s.weight && s.reps && !s.is_warmup) total += s.weight * s.reps;
+      if (s.weight && s.reps && s.set_type !== 'warmup') total += s.weight * s.reps;
     }
     return total;
   }, [completed]);
@@ -119,7 +119,7 @@ export function useSummaryData(id: string | undefined) {
   const setTypeCounts = useMemo(() => {
     const counts = { normal: 0, warmup: 0, dropset: 0, failure: 0 };
     for (const s of completed) {
-      const t = (s as { set_type?: string }).set_type ?? (s.is_warmup ? "warmup" : "normal");
+      const t = (s as { set_type?: string }).set_type ?? "normal";
       if (t in counts) counts[t as keyof typeof counts]++;
     }
     return counts;

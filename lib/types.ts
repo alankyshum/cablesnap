@@ -222,7 +222,6 @@ export type WorkoutSet = {
   training_mode: TrainingMode | null;
   tempo: string | null;
   swapped_from_exercise_id: string | null;
-  is_warmup: boolean;
   set_type: SetType;
   duration_seconds: number | null;
 };

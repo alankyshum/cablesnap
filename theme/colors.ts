@@ -43,12 +43,6 @@ const lightColors = {
   text: "#1A2138",
   textMuted: "#6B7280",
 
-  // Legacy support
-  tint: "#FF6038",
-  icon: "#6B7280",
-  tabIconDefault: "#6B7280",
-  tabIconSelected: "#FF6038",
-
   // Banner backgrounds
   warningBanner: "#FFF8E1",
   errorBanner: "#FEE2E2",
@@ -110,12 +104,6 @@ const darkColors = {
   // Text colors
   text: "#F0F2F5",
   textMuted: "#8B949E",
-
-  // Legacy support
-  tint: "#FF7A55",
-  icon: "#8B949E",
-  tabIconDefault: "#8B949E",
-  tabIconSelected: "#FF7A55",
 
   // Banner backgrounds
   warningBanner: "#332200",

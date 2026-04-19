@@ -34,7 +34,6 @@ export type BackupTableName =
   | "workout_sets"
   | "daily_log"
   | "program_log"
-  | "weekly_schedule"
   | "program_schedule"
   | "meal_templates"
   | "meal_template_items";
@@ -56,7 +55,6 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   workout_sets: "Workout Sets",
   daily_log: "Daily Log",
   program_log: "Program Log",
-  weekly_schedule: "Weekly Schedule",
   program_schedule: "Program Schedule",
   meal_templates: "Meal Templates",
   meal_template_items: "Meal Template Items",
@@ -80,14 +78,13 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "workout_sets",
   "daily_log",
   "program_log",
-  "weekly_schedule",
   "program_schedule",
   "meal_templates",
   "meal_template_items",
 ];
 
-import type { AppSettingRow, AchievementEarnedRow, WeeklyScheduleRow, ProgramScheduleRow } from "./schema";
-export type { AppSettingRow, AchievementEarnedRow, WeeklyScheduleRow, ProgramScheduleRow };
+import type { AppSettingRow, AchievementEarnedRow, ProgramScheduleRow } from "./schema";
+export type { AppSettingRow, AchievementEarnedRow, ProgramScheduleRow };
 
 export type BackupV3Data = {
   exercises: unknown[];
@@ -105,7 +102,6 @@ export type BackupV3Data = {
   program_days: ProgramDay[];
   program_log: ProgramLog[];
   app_settings: AppSettingRow[];
-  weekly_schedule: WeeklyScheduleRow[];
   program_schedule: ProgramScheduleRow[];
   achievements_earned: AchievementEarnedRow[];
   meal_templates: MealTemplate[];
@@ -423,19 +419,6 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       return r.changes > 0;
     }
     case "app_settings": {
-      // Migrate nutrition_profile from age to birthYear on import
-      if (row.key === "nutrition_profile" && typeof row.value === "string") {
-        try {
-          const parsed = JSON.parse(row.value);
-          if (parsed.age !== undefined && parsed.birthYear === undefined) {
-            const { migrateProfile } = require("../nutrition-calc");
-            const migrated = migrateProfile(parsed);
-            row = { ...row, value: JSON.stringify(migrated) };
-          }
-        } catch {
-          // Invalid JSON — import as-is
-        }
-      }
       const r = await database.runAsync(
         "INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)",
         [row.key, row.value]
@@ -473,8 +456,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     case "workout_sets": {
       const setType = row.set_type ?? (row.is_warmup ? "warmup" : "normal");
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup, set_type, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0, setType, row.duration_seconds ?? null]
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, set_type, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null]
       );
       return r.changes > 0;
     }
@@ -489,13 +472,6 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       const r = await database.runAsync(
         "INSERT OR IGNORE INTO program_log (id, program_id, day_id, session_id, completed_at) VALUES (?, ?, ?, ?, ?)",
         [row.id, row.program_id, row.day_id, row.session_id, row.completed_at]
-      );
-      return r.changes > 0;
-    }
-    case "weekly_schedule": {
-      const r = await database.runAsync(
-        "INSERT OR IGNORE INTO weekly_schedule (id, day_of_week, template_id, created_at) VALUES (?, ?, ?, ?)",
-        [row.id, row.day_of_week, row.template_id, row.created_at ?? Date.now()]
       );
       return r.changes > 0;
     }

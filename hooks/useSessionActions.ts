@@ -132,7 +132,7 @@ export function useSessionActions({
       await completeSet(set.id);
 
       // Live PR detection (non-blocking — errors never prevent set completion)
-      if (!set.is_warmup && set.weight && set.weight > 0 && id && triggerPR) {
+      if (set.set_type !== 'warmup' && set.weight && set.weight > 0 && id && triggerPR) {
         try {
           const isPR = await checkSetPR(set.exercise_id, set.weight, id);
           if (isPR) {
