@@ -26,6 +26,7 @@ import { useSessionData } from "../../hooks/useSessionData";
 import { useSessionActions } from "../../hooks/useSessionActions";
 import { useExerciseManagement } from "../../hooks/useExerciseManagement";
 import { useSetTypeActions } from "../../hooks/useSetTypeActions";
+import { useSessionTimer } from "../../hooks/useSessionTimer";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
 import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDetailDrawer";
 import { SetTypeSheet } from "../../components/session/SetTypeSheet";
@@ -57,10 +58,8 @@ export default function ActiveSession() {
   }, []);
 
   const {
-    session, groups, setGroups, step, unit,
-    suggestions, modes, setModes, maxes,
-    allExercises, linkIds, palette,
-    updateGroupSet, load,
+    session, groups, setGroups, step, unit, suggestions, modes, setModes, maxes,
+    allExercises, linkIds, palette, updateGroupSet, load,
   } = useSessionData({ id, templateId, sourceSessionId });
 
   const {
@@ -87,16 +86,17 @@ export default function ActiveSession() {
 
   const {
     elapsed, exerciseNotesOpen, exerciseNotesDraft, halfStep, nextHint, hintTimer,
-    handleUpdate, handleCheck, handleAddSet, handleModeChange,
-    handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen,
-    handleDelete, handleExerciseNotes, handleExerciseNotesDraftChange,
-    toggleExerciseNotes, finish, cancel,
+    handleUpdate, handleCheck, handleAddSet, handleModeChange, handleRPE,
+    handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleDelete,
+    handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, finish, cancel,
   } = useSessionActions({
-    id, groups, setGroups, modes, setModes,
-    updateGroupSet, startRest, startRestWithDuration, session,
-    showToast, showError,
+    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError,
   });
 
+  const {
+    activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex,
+    isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, handleTimerStart, handleTimerStop,
+  } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
 
@@ -161,8 +161,14 @@ export default function ActiveSession() {
       onShowDetail={handleShowDetail}
       onSwap={handleSwapOpen}
       onDeleteExercise={handleDeleteExercise}
+      timerActiveExerciseId={timerExerciseId}
+      timerActiveSetIndex={timerSetIndex}
+      timerIsRunning={timerIsRunning}
+      timerDisplaySeconds={timerDisplaySeconds}
+      onTimerStart={handleTimerStart}
+      onTimerStop={handleTimerStop}
     />
-  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise]);
+  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />

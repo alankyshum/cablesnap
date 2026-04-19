@@ -23,6 +23,7 @@ type SetRow = {
   swapped_from_name: string | null;
   is_warmup: number;
   set_type: string;
+  duration_seconds: number | null;
 };
 
 export async function getSessionSets(
@@ -56,6 +57,7 @@ export async function getSessionSets(
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
     is_warmup: r.is_warmup === 1,
     set_type: (r.set_type as SetType) ?? "normal",
+    duration_seconds: r.duration_seconds ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -148,6 +150,7 @@ export async function addSet(
     swapped_from_exercise_id: null,
     is_warmup: resolvedWarmup === 1,
     set_type: resolvedType,
+    duration_seconds: null,
   };
 }
 
@@ -184,6 +187,7 @@ export async function addSetsBatch(
       swapped_from_exercise_id: null,
       is_warmup: resolvedType === "warmup",
       set_type: resolvedType,
+      duration_seconds: null,
     };
   });
   await withTransaction(async (db) => {
@@ -225,11 +229,29 @@ export async function updateSetsBatch(
 export async function updateSet(
   id: string,
   weight: number | null,
-  reps: number | null
+  reps: number | null,
+  durationSeconds?: number | null
+): Promise<void> {
+  if (durationSeconds !== undefined) {
+    await execute(
+      "UPDATE workout_sets SET weight = ?, reps = ?, duration_seconds = ? WHERE id = ?",
+      [weight, reps, durationSeconds, id]
+    );
+  } else {
+    await execute(
+      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
+      [weight, reps, id]
+    );
+  }
+}
+
+export async function updateSetDuration(
+  id: string,
+  durationSeconds: number | null
 ): Promise<void> {
   await execute(
-    "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
-    [weight, reps, id]
+    "UPDATE workout_sets SET duration_seconds = ? WHERE id = ?",
+    [durationSeconds, id]
   );
 }
 
@@ -327,9 +349,9 @@ export async function getPreviousSets(
 export async function getPreviousSetsBatch(
   exerciseIds: string[],
   currentSessionId: string
-): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null }[]>> {
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]>> {
   if (exerciseIds.length === 0) return {};
-  const result: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]> = {};
   const eidPlaceholders = exerciseIds.map(() => "?").join(",");
   // Step 1: Find all completed sessions per exercise, ordered by most recent
   const sessionRows = await query<{ exercise_id: string; session_id: string }>(
@@ -354,8 +376,8 @@ export async function getPreviousSetsBatch(
   const sessionIds = [...new Set(Object.values(sessionMap))];
   // Step 2: Fetch all completed sets from those sessions for the requested exercises
   const sidPlaceholders = sessionIds.map(() => "?").join(",");
-  const rows = await query<{ exercise_id: string; session_id: string; set_number: number; weight: number | null; reps: number | null }>(
-    `SELECT ws.exercise_id, ws.session_id, ws.set_number, ws.weight, ws.reps
+  const rows = await query<{ exercise_id: string; session_id: string; set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }>(
+    `SELECT ws.exercise_id, ws.session_id, ws.set_number, ws.weight, ws.reps, ws.duration_seconds
      FROM workout_sets ws
      WHERE ws.session_id IN (${sidPlaceholders})
        AND ws.exercise_id IN (${eidPlaceholders})
@@ -368,7 +390,7 @@ export async function getPreviousSetsBatch(
     const correctSession = sessionMap[row.exercise_id];
     if (!correctSession || row.session_id !== correctSession) continue;
     if (!result[row.exercise_id]) result[row.exercise_id] = [];
-    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps });
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds });
   }
   return result;
 }

@@ -30,6 +30,7 @@ jest.mock('../../lib/db', () => ({
   getAppSetting: jest.fn().mockResolvedValue('true'),
   getSessionPRs: jest.fn().mockResolvedValue([]),
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
+  getSessionDurationPRs: jest.fn().mockResolvedValue([]),
   getSessionWeightIncreases: jest.fn().mockResolvedValue([]),
   getSessionComparison: jest.fn().mockResolvedValue(null),
   updateSession: jest.fn().mockResolvedValue(undefined),
@@ -97,6 +98,7 @@ function makeSessionSets(sessionId: string) {
   ]
 }
 
+// eslint-disable-next-line max-lines-per-function
 describe('Workout Session Acceptance', () => {
   beforeEach(() => {
     jest.clearAllMocks()

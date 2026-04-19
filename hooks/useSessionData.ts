@@ -115,19 +115,32 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           link_id: s.link_id ?? null,
           training_modes: parsed,
           is_voltra: ex?.is_voltra ?? false,
+          trackingMode: parsed.includes("isometric" as TrainingMode) ? "duration" : "reps",
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
         (p) => p.set_number === s.set_number
       );
-      map.get(s.exercise_id)!.sets.push({
+      const group = map.get(s.exercise_id)!;
+      const isDuration = group.trackingMode === "duration";
+      let prevDisplay = "-";
+      if (prev) {
+        if (isDuration && prev.duration_seconds != null && prev.duration_seconds > 0) {
+          const m = Math.floor(prev.duration_seconds / 60);
+          const sec = prev.duration_seconds % 60;
+          const durStr = `${m}:${sec.toString().padStart(2, "0")}`;
+          prevDisplay = prev.weight != null && prev.weight > 0
+            ? `${prev.weight} × ${durStr}`
+            : durStr;
+        } else if (prev.weight != null && prev.reps != null) {
+          prevDisplay = prev.weight > 0 && prev.reps > 1
+            ? `${prev.weight}×${prev.reps} (1RM: ${Math.round(epley(prev.weight, prev.reps))})`
+            : `${prev.weight}×${prev.reps}`;
+        }
+      }
+      group.sets.push({
         ...s,
-        previous:
-          prev && prev.weight != null && prev.reps != null
-            ? prev.weight > 0 && prev.reps > 1
-              ? `${prev.weight}×${prev.reps} (1RM: ${Math.round(epley(prev.weight, prev.reps))})`
-              : `${prev.weight}×${prev.reps}`
-            : "-",
+        previous: prevDisplay,
       });
     }
     setGroups([...map.values()]);

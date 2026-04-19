@@ -16,6 +16,7 @@ import {
   updateSetNotes,
   updateSetTrainingMode,
   getSessionSets,
+  updateSetDuration,
 } from "../lib/db";
 import { bumpQueryVersion } from "../lib/query";
 import {
@@ -90,7 +91,7 @@ export function useSessionActions({
 
   const handleUpdate = useCallback(async (
     setId: string,
-    field: "weight" | "reps",
+    field: "weight" | "reps" | "duration_seconds",
     val: string
   ) => {
     let resolvedSet: SetWithMeta | undefined;
@@ -107,6 +108,10 @@ export function useSessionActions({
     if (field === "weight") {
       updateGroupSet(setId, { weight: num });
       await updateSet(setId, num, resolvedSet.reps);
+    } else if (field === "duration_seconds") {
+      const rounded = num !== null ? Math.round(num) : null;
+      updateGroupSet(setId, { duration_seconds: rounded });
+      await updateSetDuration(setId, rounded);
     } else {
       const rounded = num !== null ? Math.round(num) : null;
       updateGroupSet(setId, { reps: rounded });

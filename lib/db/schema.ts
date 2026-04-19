@@ -49,6 +49,7 @@ export const templateExercises = sqliteTable("template_exercises", {
   rest_seconds: integer("rest_seconds").default(90),
   link_id: text("link_id"),
   link_label: text("link_label").default(""),
+  target_duration_seconds: integer("target_duration_seconds"),
 });
 
 export const workoutSessions = sqliteTable("workout_sessions", {
@@ -81,6 +82,7 @@ export const workoutSets = sqliteTable("workout_sets", {
   swapped_from_exercise_id: text("swapped_from_exercise_id"),
   is_warmup: integer("is_warmup").default(0),
   set_type: text("set_type").default("normal"),
+  duration_seconds: integer("duration_seconds"),
 });
 
 // ─── Nutrition Tables ───────────────────────────────────────────────────────

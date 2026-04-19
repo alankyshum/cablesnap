@@ -180,6 +180,7 @@ export type TemplateExercise = {
   rest_seconds: number;
   link_id: string | null;
   link_label: string;
+  target_duration_seconds: number | null;
   exercise?: Exercise;
 };
 
@@ -223,6 +224,7 @@ export type WorkoutSet = {
   swapped_from_exercise_id: string | null;
   is_warmup: boolean;
   set_type: SetType;
+  duration_seconds: number | null;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {
