@@ -35,6 +35,41 @@ function bwExercise(
   };
 }
 
+function bbExercise(
+  num: number,
+  ex: Omit<Exercise, "id" | "is_custom" | "equipment">
+): Exercise {
+  return {
+    id: `mw-bb-${num.toString().padStart(3, "0")}`,
+    ...ex,
+    equipment: "barbell",
+    is_custom: false,
+  };
+}
+
+// ─── Barbell Exercises ───────────────────────────────────────────────────────
+
+const barbellExercises: Exercise[] = [
+  bbExercise(1, {
+    name: "Barbell Bent Over Row",
+    category: "back",
+    primary_muscles: ["back", "lats"],
+    secondary_muscles: ["biceps", "core"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Stand with feet shoulder-width apart, holding a barbell with an overhand grip.\n2. Hinge at the hips until your torso is roughly 45 degrees to the floor.\n3. Let the bar hang at arm's length below your shoulders.\n4. Pull the bar toward your lower chest, squeezing shoulder blades together.\n5. Lower the bar with control to full arm extension and repeat.",
+  }),
+  bbExercise(2, {
+    name: "Barbell Squat",
+    category: "legs_glutes",
+    primary_muscles: ["quads", "glutes"],
+    secondary_muscles: ["hamstrings", "core"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Position a barbell across your upper back (high bar) or rear delts (low bar).\n2. Stand with feet shoulder-width apart, toes slightly turned out.\n3. Brace your core and descend by pushing hips back and bending knees.\n4. Lower until thighs are at least parallel to the floor.\n5. Drive through your heels to stand back up, keeping your chest up throughout.",
+  }),
+];
+
 // ─── Cable Exercises (non-Voltra) ────────────────────────────────────────────
 
 const cableExercises: Exercise[] = [
@@ -708,5 +743,5 @@ const bodyweightExercises: Exercise[] = [
 ];
 
 export function communityExercises(): Exercise[] {
-  return [...cableExercises, ...bodyweightExercises];
+  return [...cableExercises, ...bodyweightExercises, ...barbellExercises];
 }

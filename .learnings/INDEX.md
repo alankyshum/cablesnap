@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 173
+Total learnings: 176
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 90 learnings
+- [React Native + Expo](patterns/react-native.md) — 93 learnings
 - [Testing](patterns/testing.md) — 11 learnings
 
 ### Pitfalls
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-400 | Event-Driven Side Effects Over Reactive useEffect for Action-Triggered Features | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-400 | Non-Blocking try/catch for Optional Delight Features | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-400 | cancelAnimation on Every Shared Value in useEffect Cleanup | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-398 | solve() Is Plate Decomposition Not Rounding — Use roundToPlates() Wrapper | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-396 | Settings UI Must Be Wired End-to-End — Don't Ship Cosmetic Toggles | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-389 | JSON Snapshot Dirty-Check for Auto-Save Forms | Patterns | [react-native.md](patterns/react-native.md) |

@@ -1,4 +1,4 @@
-import type { Difficulty } from "./types";
+import type { Difficulty, TrainingMode } from "./types";
 
 export type StarterExercise = {
   id: string;
@@ -6,6 +6,7 @@ export type StarterExercise = {
   target_sets: number;
   target_reps: string;
   rest_seconds: number;
+  training_mode?: TrainingMode;
 };
 
 export type StarterTemplate = {
@@ -24,7 +25,7 @@ export type StarterProgram = {
   days: { id: string; label: string; template_id: string }[];
 };
 
-export const STARTER_VERSION = 2;
+export const STARTER_VERSION = 4;
 
 export const STARTER_TEMPLATES: StarterTemplate[] = [
   {
@@ -113,32 +114,54 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     ],
   },
   {
-    id: "starter-tpl-7",
-    name: "Founder's Favourite",
+    id: "starter-tpl-7a",
+    name: "Founder's Favourite A",
     difficulty: "advanced",
-    duration: "~75 min",
+    duration: "~45 min",
     exercises: [
-      { id: "starter-te-7-triceps-pushdown", exercise_id: "voltra-017", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
-      { id: "starter-te-7-chest-press", exercise_id: "voltra-035", target_sets: 5, target_reps: "10-12", rest_seconds: 90 },
-      { id: "starter-te-7-face-pulls", exercise_id: "voltra-046", target_sets: 5, target_reps: "10-12", rest_seconds: 60 },
-      { id: "starter-te-7-chest-press-bar", exercise_id: "voltra-034", target_sets: 5, target_reps: "10", rest_seconds: 90 },
-      { id: "starter-te-7-seated-row", exercise_id: "voltra-021", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
-      { id: "starter-te-7-goblet-squat", exercise_id: "voltra-039", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
-      { id: "starter-te-7-supinated-row", exercise_id: "voltra-027", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
-      { id: "starter-te-7-overhead-press", exercise_id: "voltra-055", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
-      { id: "starter-te-7-kneeling-crunch", exercise_id: "voltra-056", target_sets: 5, target_reps: "10-12", rest_seconds: 60 },
-      { id: "starter-te-7-decline-fly", exercise_id: "voltra-036", target_sets: 5, target_reps: "6-8", rest_seconds: 90 },
+      { id: "starter-te-7a-triceps-pushdown", exercise_id: "voltra-017", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7a-chest-press", exercise_id: "voltra-033", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7a-face-pulls", exercise_id: "voltra-046", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7a-push-up", exercise_id: "mw-bw-001", target_sets: 5, target_reps: "6, 10", rest_seconds: 30 },
+      { id: "starter-te-7a-seated-row", exercise_id: "voltra-021", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+    ],
+  },
+  {
+    id: "starter-tpl-7b",
+    name: "Founder's Favourite B",
+    difficulty: "advanced",
+    duration: "~45 min",
+    exercises: [
+      { id: "starter-te-7b-goblet-squat", exercise_id: "voltra-039", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7b-supinated-row", exercise_id: "voltra-027", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7b-overhead-press", exercise_id: "voltra-055", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7b-kneeling-crunch", exercise_id: "voltra-056", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7b-decline-fly", exercise_id: "voltra-036", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
     ],
   },
 ];
 
-export const STARTER_PROGRAM: StarterProgram = {
-  id: "starter-prog-1",
-  name: "Push / Pull / Legs",
-  description: "3-day training split. Push muscles on day 1, pull muscles on day 2, legs and core on day 3. Repeat the cycle.",
-  days: [
-    { id: "starter-day-1-push", label: "Push", template_id: "starter-tpl-2" },
-    { id: "starter-day-2-pull", label: "Pull", template_id: "starter-tpl-3" },
-    { id: "starter-day-3-legs", label: "Legs & Core", template_id: "starter-tpl-4" },
-  ],
-};
+export const STARTER_PROGRAMS: StarterProgram[] = [
+  {
+    id: "starter-prog-1",
+    name: "Push / Pull / Legs",
+    description: "3-day training split. Push muscles on day 1, pull muscles on day 2, legs and core on day 3. Repeat the cycle.",
+    days: [
+      { id: "starter-day-1-push", label: "Push", template_id: "starter-tpl-2" },
+      { id: "starter-day-2-pull", label: "Pull", template_id: "starter-tpl-3" },
+      { id: "starter-day-3-legs", label: "Legs & Core", template_id: "starter-tpl-4" },
+    ],
+  },
+  {
+    id: "starter-prog-2",
+    name: "Founder's Favourite",
+    description: "2-day alternating split. Alternate between Day A and Day B each session — Day A focuses on push, chest and back, Day B on squats, shoulders and core.",
+    days: [
+      { id: "starter-day-ff-a", label: "Day A", template_id: "starter-tpl-7a" },
+      { id: "starter-day-ff-b", label: "Day B", template_id: "starter-tpl-7b" },
+    ],
+  },
+];
+
+/** @deprecated Use STARTER_PROGRAMS[0] instead */
+export const STARTER_PROGRAM: StarterProgram = STARTER_PROGRAMS[0];

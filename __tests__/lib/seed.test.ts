@@ -25,16 +25,16 @@ describe("seedExercises", () => {
   const voltra = exercises.filter((e) => e.is_voltra);
   const mw = exercises.filter((e) => !e.is_voltra);
 
-  it("returns 126 total exercises (56 Voltra + 70 community)", () => {
-    expect(exercises).toHaveLength(126);
+  it("returns 128 total exercises (56 Voltra + 72 community)", () => {
+    expect(exercises).toHaveLength(128);
     expect(voltra).toHaveLength(56);
-    expect(mw).toHaveLength(70);
+    expect(mw).toHaveLength(72);
   });
 
   it("all exercises have unique IDs", () => {
     const ids = new Set<string>();
     for (const e of exercises) ids.add(e.id);
-    expect(ids.size).toBe(126);
+    expect(ids.size).toBe(128);
   });
 
   it("all exercises are not custom", () => {
@@ -100,19 +100,19 @@ describe("Voltra exercises", () => {
 describe("community exercises", () => {
   const mw = communityExercises();
 
-  it("returns 70 exercises", () => {
-    expect(mw).toHaveLength(70);
+  it("returns 72 exercises", () => {
+    expect(mw).toHaveLength(72);
   });
 
   it("all have unique IDs", () => {
     const ids = new Set<string>();
     for (const e of mw) ids.add(e.id);
-    expect(ids.size).toBe(70);
+    expect(ids.size).toBe(72);
   });
 
-  it("all use cable or bodyweight equipment", () => {
+  it("all use cable, bodyweight, or barbell equipment", () => {
     for (const e of mw) {
-      expect(["cable", "bodyweight"]).toContain(e.equipment);
+      expect(["cable", "bodyweight", "barbell"]).toContain(e.equipment);
     }
   });
 

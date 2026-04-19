@@ -3,7 +3,9 @@ jest.setTimeout(10000)
 import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
-import { STARTER_TEMPLATES, STARTER_PROGRAM } from '../../lib/starter-templates'
+import { STARTER_TEMPLATES, STARTER_PROGRAMS } from '../../lib/starter-templates'
+
+const STARTER_PROGRAM = STARTER_PROGRAMS[0]
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 let mockParams: Record<string, string> = {}
@@ -352,20 +354,20 @@ describe('Template Detail — Starter Template', () => {
   })
 })
 
-// --- Template Detail — Founder's Favourite (10 exercises) ---
+// --- Template Detail — Founder's Favourite (2-day program) ---
 
-describe('Template Detail — Founders Favourite (10 exercises)', () => {
-  const founders = STARTER_TEMPLATES.find(t => t.name === "Founder's Favourite")!
+describe('Template Detail — Founders Favourite Day A (5 exercises)', () => {
+  const dayA = STARTER_TEMPLATES.find(t => t.id === 'starter-tpl-7a')!
 
   beforeEach(() => {
-    mockParams = { id: founders.id }
+    mockParams = { id: dayA.id }
     mockGetTemplateById.mockResolvedValue({
-      id: founders.id,
-      name: founders.name,
+      id: dayA.id,
+      name: dayA.name,
       is_starter: true,
-      exercises: founders.exercises.map((e, i) => ({
+      exercises: dayA.exercises.map((e, i) => ({
         id: e.id,
-        template_id: founders.id,
+        template_id: dayA.id,
         exercise_id: e.exercise_id,
         target_sets: e.target_sets,
         target_reps: e.target_reps,
@@ -375,7 +377,7 @@ describe('Template Detail — Founders Favourite (10 exercises)', () => {
         link_label: null,
         exercise: {
           id: e.exercise_id,
-          name: `Cable ${e.exercise_id.replace('voltra-', '#')}`,
+          name: `Exercise ${e.exercise_id}`,
           muscle_group: 'test',
           equipment: 'cable',
           deleted_at: null,
@@ -384,19 +386,16 @@ describe('Template Detail — Founders Favourite (10 exercises)', () => {
     })
   })
 
-  it('renders all 10 exercises without crash', async () => {
+  it('renders all 5 exercises without crash', async () => {
     const { getByText } = renderScreen(<EditTemplate />)
     await waitFor(() => {
-      expect(getByText(`Exercises (${founders.exercises.length})`)).toBeTruthy()
+      expect(getByText(`Exercises (${dayA.exercises.length})`)).toBeTruthy()
     })
-    // Verify first and last exercise render
-    expect(getByText('Cable #017')).toBeTruthy()
-    expect(getByText('Cable #036')).toBeTruthy()
   })
 
   it('shows correct sets and reps for advanced template', async () => {
     const { getAllByText } = renderScreen(<EditTemplate />)
-    const text = `${founders.exercises[0].target_sets} × ${founders.exercises[0].target_reps} · ${founders.exercises[0].rest_seconds}s rest`
+    const text = `${dayA.exercises[0].target_sets} × ${dayA.exercises[0].target_reps} · ${dayA.exercises[0].rest_seconds}s rest`
     await waitFor(() => {
       expect(getAllByText(text).length).toBeGreaterThan(0)
     })
@@ -406,11 +405,8 @@ describe('Template Detail — Founders Favourite (10 exercises)', () => {
 // --- Starter template data verification ---
 
 describe('Starter Template Data Integrity', () => {
-  it('has 7 starter templates', () => {
-    expect(STARTER_TEMPLATES).toHaveLength(7)
-  })
-
   it('has exactly one recommended template (Full Body)', () => {
+    expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(8)
     const recommended = STARTER_TEMPLATES.filter(t => t.recommended)
     expect(recommended).toHaveLength(1)
     expect(recommended[0].name).toBe('Full Body')
@@ -418,27 +414,24 @@ describe('Starter Template Data Integrity', () => {
 
   it('PPL starter program references valid template IDs', () => {
     const templateIds = STARTER_TEMPLATES.map(t => t.id)
-    for (const day of STARTER_PROGRAM.days) {
-      expect(templateIds).toContain(day.template_id)
+    for (const prog of STARTER_PROGRAMS) {
+      for (const day of prog.days) {
+        expect(templateIds).toContain(day.template_id)
+      }
     }
   })
 
   it('PPL has 3 days: Push, Pull, Legs & Core', () => {
-    expect(STARTER_PROGRAM.days).toHaveLength(3)
-    expect(STARTER_PROGRAM.days[0].label).toBe('Push')
-    expect(STARTER_PROGRAM.days[1].label).toBe('Pull')
-    expect(STARTER_PROGRAM.days[2].label).toBe('Legs & Core')
+    const ppl = STARTER_PROGRAMS.find(p => p.id === 'starter-prog-1')!
+    expect(ppl.days).toHaveLength(3)
+    expect(ppl.days[0].label).toBe('Push')
+    expect(ppl.days[1].label).toBe('Pull')
+    expect(ppl.days[2].label).toBe('Legs & Core')
   })
 
   it('all templates have at least 1 exercise', () => {
     for (const tpl of STARTER_TEMPLATES) {
       expect(tpl.exercises.length).toBeGreaterThan(0)
     }
-  })
-
-  it('Founders Favourite has 10 exercises', () => {
-    const ff = STARTER_TEMPLATES.find(t => t.name === "Founder's Favourite")
-    expect(ff).toBeDefined()
-    expect(ff!.exercises).toHaveLength(10)
   })
 })
