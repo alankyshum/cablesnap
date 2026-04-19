@@ -222,7 +222,19 @@ The component renders:
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** (2026-04-19)
+
+Technically sound and low risk. All building blocks exist — `useRestTimer` provides `startRestWithDuration()`, tool components are standalone, `@gorhom/bottom-sheet` is already in use. No new dependencies. Estimated effort: Medium (1-2 days).
+
+**Minor concerns:**
+1. `RMCalculatorContent` has `router.push()` on line 168 — must parameterize to callback prop before embedding in bottom sheet
+2. Header layout on small/folded screens — suggest hiding session name when rest timer is active
+3. Bottom sheet stacking — ensure mutual exclusion (close toolbox before opening exercise picker, etc.)
+
+**Simplification recommendations:**
+- Skip `SessionHeaderRight` extraction — inline in `headerRight` is fine
+- Combine `SessionToolboxSheet` + `RestTimerConfig` into single file
+- Implement in 2 commits: (a) RMCalculator refactor, (b) toolbox sheet + header changes
 
 ### CEO Decision
 _Pending reviews_
