@@ -40,6 +40,7 @@ export default function CalendarGrid({
   const today = new Date();
   const todayKey = formatDateKey(today.getTime());
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const now = today.getTime();
   const total = daysInMonth(year, month);
   const offset = weekday(new Date(year, month, 1));
 
@@ -52,7 +53,7 @@ export default function CalendarGrid({
     const dayOfWeek = weekday(d);
     const scheduleEntry = scheduleMap.get(dayOfWeek);
     const isPast = d.getTime() < todayMidnight;
-    const isFuture = d.getTime() > Date.now();
+    const isFuture = d.getTime() > now;
     const isScheduled = !!scheduleEntry;
     const isMissedScheduled = isScheduled && isPast && count === 0;
 

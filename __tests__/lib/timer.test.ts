@@ -14,7 +14,6 @@ import {
   progress,
   duration,
   totalDuration,
-  DEFAULTS,
   type TabataConfig,
   type EmomConfig,
   type AmrapConfig,
@@ -429,7 +428,7 @@ describe("timer", () => {
     })
 
     it("mode switching resets state", () => {
-      const s1 = start(init("tabata"), 1000)
+      start(init("tabata"), 1000)
       const s2 = init("emom")
       expect(s2.status).toBe("idle")
       expect(s2.mode).toBe("emom")

@@ -4,7 +4,6 @@ import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
 import { createBodyWeight, createBodySettings, resetIds } from '../helpers/factories'
-import type { BodyWeight, BodySettings } from '../../lib/types'
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 

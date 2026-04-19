@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Pressable, Share, StyleSheet, TextInput, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,20 +34,23 @@ export default function Summary() {
 
   // Sync rating/notes when session loads
   const sessionRef = useRef(session);
-  if (session && session !== sessionRef.current) {
-    sessionRef.current = session;
-    actions.setRating(session.rating ?? null);
-    actions.setNotesText(session.notes ?? "");
-    actions.setNotesExpanded(!!(session.notes && session.notes.length > 0));
-  }
+  useEffect(() => {
+    if (session && session !== sessionRef.current) {
+      sessionRef.current = session;
+      actions.setRating(session.rating ?? null);
+      actions.setNotesText(session.notes ?? "");
+      actions.setNotesExpanded(!!(session.notes && session.notes.length > 0));
+    }
+  }, [session, actions]);
 
   const duration = session?.duration_seconds ? formatTime(session.duration_seconds) : "0:00";
   const volumeDisplay = toDisplay(volume, unit);
 
+  const sessionStartedAt = session?.started_at;
   const shareCardDate = useMemo(() => {
-    if (!session?.started_at) return "";
-    return new Date(session.started_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-  }, [session?.started_at]);
+    if (!sessionStartedAt) return "";
+    return new Date(sessionStartedAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  }, [sessionStartedAt]);
 
   const shareCardPrs = useMemo((): ShareCardPR[] => {
     const items: ShareCardPR[] = prs.map((pr) => ({ name: pr.name, value: `${toDisplay(pr.weight, unit)} ${unit}` }));

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type FieldErrors<T> = Partial<Record<keyof T, string>>;
 
@@ -12,7 +12,9 @@ export function useFormFields<T extends Record<string, unknown>>(options: FormOp
   const [errors, setErrors] = useState<FieldErrors<T>>({});
   const [dirty, setDirty] = useState(false);
   const validateRef = useRef(options.validate);
-  validateRef.current = options.validate;
+  useEffect(() => {
+    validateRef.current = options.validate;
+  });
 
   const setValue = useCallback(<K extends keyof T>(key: K, value: T[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));

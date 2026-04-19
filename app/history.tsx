@@ -8,7 +8,7 @@ import { X } from "lucide-react-native";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { useLayout } from "../lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { useHistoryData, monthLabel } from "@/hooks/useHistoryData";
+import { useHistoryData } from "@/hooks/useHistoryData";
 import StreakAndHeatmap from "@/components/history/StreakAndHeatmap";
 import CalendarGrid from "@/components/history/CalendarGrid";
 import DayDetailPanel from "@/components/history/DayDetailPanel";

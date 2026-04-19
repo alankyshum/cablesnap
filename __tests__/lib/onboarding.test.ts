@@ -117,7 +117,7 @@ describe("seedStarters existing-user migration", () => {
 
     const calls = mockDb.runAsync.mock.calls;
     const onboardingCall = calls.find(
-      (c: any[]) =>
+      (c: [string, ...unknown[]]) =>
         typeof c[0] === "string" &&
         c[0].includes("onboarding_complete")
     );
@@ -138,7 +138,7 @@ describe("seedStarters existing-user migration", () => {
 
     const calls = mockDb.runAsync.mock.calls;
     const onboardingCall = calls.find(
-      (c: any[]) =>
+      (c: [string, ...unknown[]]) =>
         typeof c[0] === "string" &&
         c[0].includes("onboarding_complete")
     );

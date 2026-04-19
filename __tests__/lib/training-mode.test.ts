@@ -1,5 +1,5 @@
 import { TRAINING_MODE_LABELS } from '../../lib/types'
-import type { TrainingMode, WorkoutSet } from '../../lib/types'
+import type { TrainingMode } from '../../lib/types'
 import { createSet } from '../helpers/factories'
 
 describe('TrainingMode types and labels', () => {

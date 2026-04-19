@@ -18,7 +18,7 @@ function extractHandler(name: string): string {
   const match = src.match(pattern);
   if (!match || match.index === undefined) return "";
   let depth = 0;
-  let start = match.index + match[0].length;
+  const start = match.index + match[0].length;
   for (let i = start; i < src.length; i++) {
     if (src[i] === "{") depth++;
     if (src[i] === "}") {
