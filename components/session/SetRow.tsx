@@ -10,7 +10,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { RPE_CHIPS, RPE_LABELS, type SetWithMeta } from "./types";
 import { SET_TYPE_LABELS } from "../../lib/types";
 
-function formatDurationDisplay(seconds: number | null): string {
+export function formatDurationDisplay(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "0:00";
   if (seconds >= 3600) {
     const h = Math.floor(seconds / 3600);
