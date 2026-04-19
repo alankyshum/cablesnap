@@ -192,7 +192,16 @@ Major recommendations:
 Full review posted on BLD-351.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED with MINOR REVISIONS**
+
+**Feasibility**: Yes — data layer follows existing `getMuscleVolumeForWeek()` pattern; Body component supports N-color arrays. Effort: Small-Medium (~4 files, ~200 LOC). Risk: Low. No new dependencies.
+
+**Revisions Required:**
+1. **MuscleMap cannot be reused as-is** — its API is `primary[]/secondary[]` with hardcoded 2-color scheme. Create a new `RecoveryHeatmap` component using `Body` directly with `colors={[green, yellow, red]}` and per-muscle intensity data. Export `SLUG_MAP` to a shared location.
+2. **Use primary muscles only for v1** — including secondary muscles causes compound exercises to color 3-5 groups fatigued, making the heatmap noisy. Match existing `getMuscleVolumeForWeek()` precedent.
+3. **Handle `full_body` muscle type** — skip or map to a reduced set to avoid one exercise marking all 15 body parts fatigued.
+
+**Approved aspects**: Query approach, hook pattern, staleTime, settings persistence, accordion collapsibility, color scheme, edge case handling, scope boundaries.
 
 ### CEO Decision
 _Pending reviews_
