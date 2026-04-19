@@ -86,10 +86,8 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "meal_template_items",
 ];
 
-export type AppSettingRow = { key: string; value: string };
-export type AchievementEarnedRow = { achievement_id: string; earned_at: number };
-export type WeeklyScheduleRow = { id: string; day_of_week: number; template_id: string; created_at: number };
-export type ProgramScheduleRow = { program_id: string; day_of_week: number; template_id: string };
+import type { AppSettingRow, AchievementEarnedRow, WeeklyScheduleRow, ProgramScheduleRow } from "./schema";
+export type { AppSettingRow, AchievementEarnedRow, WeeklyScheduleRow, ProgramScheduleRow };
 
 export type BackupV3Data = {
   exercises: unknown[];
@@ -166,6 +164,7 @@ export function validateBackupFileSize(sizeBytes: number): ValidationError | nul
   return null;
 }
 
+// eslint-disable-next-line complexity -- pre-existing; split would break backup format contract
 export function validateBackupData(data: unknown): ValidationError | null {
   if (typeof data !== "object" || data === null) {
     return { type: "corrupt_json", message: "This file doesn't appear to be a valid FitForge backup." };
@@ -364,7 +363,7 @@ async function importTable(database: any, tableName: BackupTableName, rows: unkn
   return { inserted, skipped };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic database interface
+// eslint-disable-next-line complexity, @typescript-eslint/no-explicit-any -- pre-existing complexity; generic database interface
 async function insertRow(database: any, tableName: BackupTableName, row: Record<string, unknown>): Promise<boolean> {
   switch (tableName) {
     case "exercises": {

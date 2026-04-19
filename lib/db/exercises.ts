@@ -1,23 +1,7 @@
 import type { Exercise } from "../types";
 import { uuid } from "../uuid";
 import { query, queryOne, execute, getDatabase } from "./helpers";
-
-type ExerciseRow = {
-  id: string;
-  name: string;
-  category: string;
-  primary_muscles: string;
-  secondary_muscles: string;
-  equipment: string;
-  instructions: string;
-  difficulty: string;
-  is_custom: number;
-  deleted_at: number | null;
-  mount_position: string | null;
-  attachment: string | null;
-  training_modes: string | null;
-  is_voltra: number | null;
-};
+import type { ExerciseRow } from "./schema";
 
 function mapRow(row: ExerciseRow): Exercise {
   return {

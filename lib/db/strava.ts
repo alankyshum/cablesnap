@@ -1,14 +1,10 @@
 import { query, queryOne, execute } from "./helpers";
 import { uuid } from "../uuid";
+import type { StravaConnectionRow } from "./schema";
 
 // ---- Strava Connection (singleton) ----
 
-export type StravaConnection = {
-  id: number;
-  athlete_id: number;
-  athlete_name: string;
-  connected_at: number;
-};
+export type StravaConnection = StravaConnectionRow;
 
 export async function getStravaConnection(): Promise<StravaConnection | null> {
   return queryOne<StravaConnection>(

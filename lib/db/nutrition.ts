@@ -1,18 +1,9 @@
 import type { FoodEntry, DailyLog, MacroTargets, Meal } from "../types";
 import { uuid } from "../uuid";
 import { query, queryOne, execute } from "./helpers";
+import type { FoodEntryRow } from "./schema";
 
-type FoodRow = {
-  id: string;
-  name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  serving_size: string;
-  is_favorite: number;
-  created_at: number;
-};
+type FoodRow = FoodEntryRow;
 
 function mapFood(row: FoodRow): FoodEntry {
   return {
