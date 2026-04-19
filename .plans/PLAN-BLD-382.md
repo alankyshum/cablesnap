@@ -3,7 +3,7 @@
 **Issue**: BLD-382
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: IN_REVIEW (Rev 4 — corrects query count post-BLD-385 merge, accurate data source mapping)
+**Status**: APPROVED
 
 ## Problem Statement
 The home screen shows raw stats (streak count, week count, PR count) but doesn't synthesize the user's training data into actionable, motivating insights. Users see numbers but don't get contextual meaning — "Is my training improving? Am I making progress?" The app is a logbook but not yet a training partner.
