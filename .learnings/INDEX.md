@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 161
+Total learnings: 162
 
 ## How to Use This Knowledge Base
 
@@ -22,7 +22,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 18 learnings
-- [Type Safety](pitfalls/type-safety.md) — 4 learnings
+- [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 9 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-344 | React Native Crashes on Bare Numeric Children Outside Text | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-19 | BLD-376 | Absolute Timestamps for Mobile Timers — Not Cumulative setInterval | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-376 | Persistence Write Without Restore Path Is Incomplete Crash Recovery | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-376 | Idempotent ALTER TABLE ADD COLUMN via PRAGMA table_info Guard | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
