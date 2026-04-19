@@ -19,7 +19,11 @@ import { getBodySettings } from "../../lib/db";
 import { epley, brzycki, lombardi, average, percentageTable } from "../../lib/rm";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
-export function RMCalculatorContent() {
+type RMCalculatorContentProps = {
+  onPlateCalc?: (weight: number) => void;
+};
+
+export function RMCalculatorContent({ onPlateCalc }: RMCalculatorContentProps = {}) {
   const colors = useThemeColors();
   const router = useRouter();
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
@@ -165,7 +169,13 @@ export function RMCalculatorContent() {
                   <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{row.reps}</Text>
                   <View style={styles.tableCellAction}>
                     <Pressable
-                      onPress={() => router.push(`/tools/plates?weight=${row.weight}`)}
+                      onPress={() => {
+                        if (onPlateCalc) {
+                          onPlateCalc(row.weight);
+                        } else {
+                          router.push(`/tools/plates?weight=${row.weight}`);
+                        }
+                      }}
                       accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
                       accessibilityRole="button"
                       style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
