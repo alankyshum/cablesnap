@@ -43,6 +43,7 @@ export {
   getCompletedSessionsWithSetCount,
   getMaxWeightByExercise,
   getSessionPRs,
+  checkSetPR,
   getRecentPRs,
   getSessionRepPRs,
   getSessionComparison,

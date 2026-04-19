@@ -17,6 +17,7 @@ import {
   updateSetTrainingMode,
   getSessionSets,
   updateSetDuration,
+  checkSetPR,
 } from "../lib/db";
 import { bumpQueryVersion } from "../lib/query";
 import {
@@ -41,6 +42,7 @@ type Params = {
   session: { started_at: number; name: string } | null;
   showToast: (msg: string) => void;
   showError: (msg: string) => void;
+  triggerPR?: (exerciseName: string) => void;
 };
 
 export function useSessionActions({
@@ -55,6 +57,7 @@ export function useSessionActions({
   session,
   showToast,
   showError,
+  triggerPR,
 }: Params) {
   const router = useRouter();
 
@@ -128,6 +131,20 @@ export function useSessionActions({
       updateGroupSet(set.id, { completed: true, completed_at: now });
       await completeSet(set.id);
 
+      // Live PR detection (non-blocking — errors never prevent set completion)
+      if (!set.is_warmup && set.weight && set.weight > 0 && id && triggerPR) {
+        try {
+          const isPR = await checkSetPR(set.exercise_id, set.weight, id);
+          if (isPR) {
+            const group = groups.find((g) => g.exercise_id === set.exercise_id);
+            triggerPR(group?.name ?? "exercise");
+            updateGroupSet(set.id, { is_pr: true });
+          }
+        } catch {
+          // PR detection must never block set completion
+        }
+      }
+
       if (set.link_id) {
         const linked = groups.filter((g) => g.link_id === set.link_id);
         const idx = linked.findIndex((g) => g.exercise_id === set.exercise_id);
@@ -147,7 +164,7 @@ export function useSessionActions({
         startRest(set.exercise_id);
       }
     }
-  }, [updateGroupSet, groups, id, startRest, startRestWithDuration]);
+  }, [updateGroupSet, groups, id, startRest, startRestWithDuration, triggerPR]);
 
   const handleAddSet = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);

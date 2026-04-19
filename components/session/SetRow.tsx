@@ -99,9 +99,12 @@ export const SetRow = memo(function SetRow({
                 <Text style={{ color: chipStyle!.fg, fontSize: 13, fontWeight: "700" }}>{chipLabel}</Text>
               </View>
             ) : (
-              <Text variant="body" style={{ color: colors.onSurface, textAlign: "center" }}>
-                {set.round ? `R${set.round}` : set.set_number}
-              </Text>
+              <View style={styles.setNumberContainer}>
+                {set.is_pr && <Text style={styles.prBadge}>🏆</Text>}
+                <Text variant="body" style={{ color: colors.onSurface, textAlign: "center" }}>
+                  {set.round ? `R${set.round}` : set.set_number}
+                </Text>
+              </View>
             )}
           </Pressable>
           <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>
@@ -294,6 +297,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     alignItems: "center",
     justifyContent: "center",
+  },
+  setNumberContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  prBadge: {
+    fontSize: 10,
+    lineHeight: 14,
   },
   colPrev: {
     width: 64,
