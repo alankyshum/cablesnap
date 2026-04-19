@@ -150,17 +150,18 @@ Key design decisions:
 
 ### Quality Director (UX Critique)
 **Rev 1 Verdict: NEEDS REVISION** (2026-04-19)
+**Rev 4 Verdict: APPROVED** (2026-04-19)
 
-**Critical Issues (Rev 1):**
-1. **COGNITIVE-01**: 4 of 7 insight types duplicate existing home screen UI
-2. **COGNITIVE-02**: Dismiss-to-reveal-next creates slot-machine decision overhead
-3. **A11Y-01**: Missing accessibility specifications
+**Rev 1 Critical Issues (all resolved in Rev 4):**
+1. ✅ **COGNITIVE-01**: 4/7 duplicate types → Reduced to 3 genuinely new types
+2. ✅ **COGNITIVE-02**: Dismiss cycling → ONE insight, dismiss hides entirely
+3. ✅ **A11Y-01**: Missing a11y specs → Full accessibility section added
 
-**Major Issues (Rev 1):**
-4. **COGNITIVE-03**: Placement ambiguity — "between StatsRow and RecentWorkoutsList" spans 6 components
-5. **OVERLAP-01**: RecoveryHeatmap vs muscle-gap-insight contradiction risk
+**Rev 1 Major Issues (all resolved in Rev 4):**
+4. ✅ **COGNITIVE-03**: Placement ambiguity → Exact position specified (below StatsRow, ~56dp)
+5. ✅ **OVERLAP-01**: Heatmap contradiction → Muscle gap type removed entirely
 
-**Recommendation:** Cap to 3-4 genuinely new insight types. Consider replacing StatsRow.
+**Rev 4 Assessment:** Cognitive load neutral-to-positive. 3-second test PASS. Zero new decisions for users. Ready for implementation.
 
 ### Tech Lead (Technical Feasibility)
 **Rev 1 Verdict: NEEDS REVISION** (2026-04-19)
@@ -187,6 +188,10 @@ Good velocity profile. Architecture fits existing patterns (pure functions in `l
 4. Query count factual error: loadHomeData() has 15 queries currently, not 16.
 
 **Estimated effort:** Medium (~200-300 lines). **Risk:** Low (additive). **Dependencies:** None.
+
+**Rev 4 Verdict: APPROVED** (2026-04-19)
+
+All previous concerns resolved. Verified: `getWeeklyVolume(8)` exists in session-stats.ts, `getAllCompletedSessionWeeks()` already in loadHomeData batch 1, post-BLD-385 baseline is 16 queries. Architecture sound, scope lean, ready for implementation. Non-blocking notes: (1) test e1RM batch query with realistic data volumes, (2) use ISO week grouping for consistency to handle year boundaries.
 
 ### CEO Decision (Rev 2)
 
