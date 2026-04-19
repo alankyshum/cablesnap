@@ -737,3 +737,27 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: `solve(perSide, plates)` decomposes a per-side weight into plates, returning `{ plates, remainder }`. To get a plate-friendly TOTAL weight, build a wrapper: compute per-side from target, call `solve()`, subtract the remainder from per-side, then reconstruct total as `(achievablePerSide * 2) + barWeight`. This wrapper is now `roundToPlates()` in `lib/warmup.ts`.
 **Action**: When implementing any feature that needs plate-friendly weight values (warmup generators, weight suggestions, progressive overload calculators), use `roundToPlates(target, barWeight, unit)` from `lib/warmup.ts`. Do NOT call `solve()` directly and expect a rounded total weight — it returns a decomposition, not a rounded value.
 **Tags**: plates, solve, rounding, weight-calculation, warmup, lib-plates, lib-warmup, domain-logic
+
+### Event-Driven Side Effects Over Reactive useEffect for Action-Triggered Features
+**Source**: BLD-400 — Live PR Detection & Celebration (Phase 59)
+**Date**: 2026-04-19
+**Context**: The original PR detection used a `useEffect` watching `groups` and `maxes` state in `useSetTypeActions.ts`, checking every set on every render cycle and tracking fired haptics in a ref Set. Phase 59 replaced it with event-driven detection: `checkSetPR()` fires once inside `handleCheck` immediately after `completeSet()`.
+**Learning**: Reactive detection (useEffect watching state arrays) runs on EVERY change state including re-renders from unrelated updates. It requires dedup tracking (ref Set), grows with array size, and can false-trigger during state transitions. Event-driven detection fires exactly once at the action point, needs no dedup, and avoids scanning the entire state tree. The old approach also required passing `maxes` (a derived data dependency) down through props; the new approach queries the DB directly at the point of action. 
+**Action**: When a feature reacts to a specific user ACTION (completing a set, saving a form, deleting an item), fire the side effect at the action handler callsite — not in a useEffect watching derived state. Reserve useEffect-based detection for features that react to external state changes (incoming data, screen focus, prop changes from parent).
+**Tags**: useeffect, event-driven, side-effects, performance, react, haptics, pr-detection, architecture
+
+### Non-Blocking try/catch for Optional Delight Features
+**Source**: BLD-400 — Live PR Detection & Celebration (Phase 59)
+**Date**: 2026-04-19
+**Context**: PR celebration (confetti, haptic, badge) must NEVER prevent set completion — the core workout flow. The check runs AFTER `completeSet()` succeeds, wrapped in a try/catch with an empty catch block.
+**Learning**: Optional "delight" features (celebrations, animations, analytics, badges) that enhance but aren't essential to the core flow should use a fire-after-core pattern: complete the critical operation first, then attempt the optional feature in a separate try/catch with an intentionally empty catch. This is distinct from the standard try/catch/finally pattern (which shows error feedback) — here, silent failure IS the correct UX because the user's primary action succeeded.
+**Action**: Structure action handlers as: (1) core operation (must succeed), (2) optional enhancement in try/catch with empty catch and a comment explaining why. Add a guard clause before the optional block (`if (!precondition) return` early) to skip unnecessary async work. Never put the core operation inside the same try/catch as the optional feature.
+**Tags**: error-handling, try-catch, delight-features, non-blocking, fire-and-forget, resilience, ux, workout
+
+### cancelAnimation on Every Shared Value in useEffect Cleanup
+**Source**: BLD-400 — Live PR Detection & Celebration (Phase 59)
+**Date**: 2026-04-19
+**Context**: The confetti particle component creates 5 shared values per particle (translateX, translateY, opacity, rotate, scale) with `withDelay`/`withSequence` chains. Without cleanup, unmounting mid-animation leaks the animation driver — Reanimated continues running worklets that write to deallocated memory.
+**Learning**: Every `useSharedValue` that receives an animated assignment (`value = withTiming(...)`) in a useEffect MUST have `cancelAnimation(sharedValue)` in the cleanup return. This is especially critical for components with multiple animated values (confetti particles: 5 values × 18 particles = 90 active animations) and short-lived components that unmount before animations complete (2-second auto-dismiss).
+**Action**: In any component using Reanimated animations triggered in useEffect, add cleanup: `return () => { cancelAnimation(val1); cancelAnimation(val2); ... }`. When reviewing animation code, count shared values and verify each has a corresponding `cancelAnimation` in cleanup. For components with many particles/items, consider using `cancelAnimation` in a loop over an array of refs.
+**Tags**: reanimated, cancelanimation, useeffect, cleanup, memory-leak, animation, shared-value, confetti, performance
