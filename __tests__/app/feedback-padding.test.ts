@@ -12,18 +12,12 @@ const src = fs.readFileSync(
 );
 
 describe("feedback screen padding (BLD-177)", () => {
-  it("FlashList contentContainerStyle includes styles.content", () => {
+  it("FlashList contentContainerStyle includes styles.content with vertical padding", () => {
     expect(src).toContain(
       "contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}"
     );
-  });
-
-  it("styles.content defines vertical padding", () => {
     expect(src).toMatch(/content:\s*\{[^}]*padding:\s*16/);
     expect(src).toMatch(/content:\s*\{[^}]*paddingBottom:\s*40/);
-  });
-
-  it("does NOT use bare contentContainerStyle without styles.content", () => {
     expect(src).not.toMatch(
       /contentContainerStyle=\{\{\s*paddingHorizontal/
     );
