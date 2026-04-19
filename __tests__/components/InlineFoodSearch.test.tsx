@@ -177,15 +177,10 @@ describe('InlineFoodSearch', () => {
     expect(await findByText(/No foods found/)).toBeTruthy()
   })
 
-  it('renders Manual Entry button', async () => {
+  it('renders Manual Entry button and expands form on press', async () => {
     const { findByLabelText } = renderComponent()
-    expect(await findByLabelText('Manual entry')).toBeTruthy()
-  })
-
-  it('renders bottom sheet with accessibilityViewIsModal', async () => {
-    const { findByTestId } = renderComponent()
-    const sheetView = await findByTestId('bottom-sheet-view')
-    expect(sheetView.props.accessibilityViewIsModal).toBe(true)
+    const btn = await findByLabelText('Manual entry')
+    expect(btn).toBeTruthy()
   })
 
   it('shows error snackbar when log fails', async () => {

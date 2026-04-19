@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform } from "react-native";
 import { searchFoods } from "../lib/foods";
 import { getFavoriteFoods } from "../lib/db";
-import {
-  fetchWithTimeout,
-  lookupBarcodeWithTimeout,
-  type ParsedFood,
-  type BarcodeResult,
-} from "../lib/openfoodfacts";
+import { fetchWithTimeout, type ParsedFood } from "../lib/openfoodfacts";
 import type { FoodEntry, BuiltinFood } from "../lib/types";
+import { useBarcodeScanner } from "./useBarcodeScanner";
+import { useOnlineFoodSearch } from "./useOnlineFoodSearch";
+
+const SEARCH_ERRORS: Record<string, string> = {
+  timeout: "Search timed out. Try again.",
+  default: "Could not reach food database. Check your connection.",
+};
 
 export type SearchResult =
   | { type: "local"; food: BuiltinFood }
@@ -20,99 +21,20 @@ export function useFoodSearch(scanOnMount?: boolean) {
   const [onlineResults, setOnlineResults] = useState<ParsedFood[]>([]);
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [onlineError, setOnlineError] = useState<string | null>(null);
-
-  // Barcode state
-  const [scannerVisible, setScannerVisible] = useState(false);
-  const [barcodeLoading, setBarcodeLoading] = useState(false);
-  const [barcodeError, setBarcodeError] = useState<string | null>(null);
-  const [scannedProductName, setScannedProductName] = useState<string | null>(null);
-
   const abortRef = useRef<AbortController | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const barcodeAbortRef = useRef<AbortController | null>(null);
-  const cacheRef = useRef<Map<string, ParsedFood[]>>(new Map());
 
-  useEffect(() => {
-    getFavoriteFoods().then(setFavorites).catch(() => {});
+  const onBarcodeFound = useCallback((food: ParsedFood) => {
+    setOnlineResults([food]);
+    setQuery("");
   }, []);
 
-  const localResults = useMemo(() => {
-    if (!query.trim()) return [];
-    return searchFoods(query);
-  }, [query]);
+  const barcode = useBarcodeScanner(scanOnMount, onBarcodeFound);
 
-  // Derive onlineError reset from query changes via ref
-  const prevQueryRef = useRef(query);
+  useEffect(() => { getFavoriteFoods().then(setFavorites).catch(() => {}); }, []);
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (abortRef.current) abortRef.current.abort();
+  const localResults = useMemo(() => query.trim() ? searchFoods(query) : [], [query]);
 
-    const trimmed = query.trim();
-    const queryChanged = prevQueryRef.current !== query;
-    prevQueryRef.current = query;
-
-    if (!trimmed || trimmed.length < 2) {
-      if (queryChanged) {
-        // Defer state updates to avoid synchronous setState in effect
-        queueMicrotask(() => {
-          setOnlineResults([]);
-          setOnlineError(null);
-        });
-      }
-      return;
-    }
-
-    const cached = cacheRef.current.get(trimmed.toLowerCase());
-    if (cached) {
-      queueMicrotask(() => {
-        setOnlineResults(cached);
-        setOnlineError(null);
-      });
-      return;
-    }
-
-    debounceRef.current = setTimeout(() => {
-      const controller = new AbortController();
-      abortRef.current = controller;
-      setOnlineLoading(true);
-      setOnlineError(null);
-      fetchWithTimeout(trimmed, controller.signal).then((result) => {
-        if (controller.signal.aborted) return;
-        setOnlineLoading(false);
-        if (result.ok) {
-          setOnlineResults(result.foods);
-          const cache = cacheRef.current;
-          cache.set(trimmed.toLowerCase(), result.foods);
-          if (cache.size > 10) {
-            const first = cache.keys().next().value;
-            if (first !== undefined) cache.delete(first);
-          }
-        } else {
-          setOnlineResults([]);
-          setOnlineError(result.error === "timeout" ? "Search timed out. Try again." : "Could not reach food database. Check your connection.");
-        }
-      });
-    }, 400);
-
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]);
-
-  useEffect(() => {
-    return () => {
-      if (abortRef.current) abortRef.current.abort();
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (barcodeAbortRef.current) barcodeAbortRef.current.abort();
-    };
-  }, []);
-
-  const scanMountTriggered = useRef(false);
-  useEffect(() => {
-    if (scanOnMount && !scanMountTriggered.current && Platform.OS !== "web") {
-      scanMountTriggered.current = true;
-      queueMicrotask(() => setScannerVisible(true));
-    }
-  }, [scanOnMount]);
+  const { cacheRef } = useOnlineFoodSearch(query, setOnlineResults, setOnlineLoading, setOnlineError);
 
   const combinedResults: SearchResult[] = useMemo(() => {
     const items: SearchResult[] = [];
@@ -121,73 +43,25 @@ export function useFoodSearch(scanOnMount?: boolean) {
     return items;
   }, [localResults, onlineResults]);
 
-  const handleBarcodeScanned = useCallback(async (barcode: string) => {
-    setScannerVisible(false);
-    setBarcodeError(null);
-    setBarcodeLoading(true);
-    setScannedProductName(null);
-
-    if (barcodeAbortRef.current) barcodeAbortRef.current.abort();
-    const controller = new AbortController();
-    barcodeAbortRef.current = controller;
-
-    const result: BarcodeResult = await lookupBarcodeWithTimeout(barcode, controller.signal);
-    if (controller.signal.aborted) return;
-    setBarcodeLoading(false);
-
-    if (!result.ok) {
-      setBarcodeError(result.error === "timeout" ? "Lookup timed out. Please try again." : "Could not look up barcode. Check your connection.");
-      return;
-    }
-    if (result.status === "not_found") { setBarcodeError("Product not found. Try searching by name."); return; }
-    if (result.status === "incomplete") { setBarcodeError("Product found but nutrition data is incomplete."); return; }
-
-    setScannedProductName(result.food.name);
-    setOnlineResults([result.food]);
-    setQuery("");
-  }, []);
-
-  const openScanner = useCallback(() => {
-    setBarcodeError(null);
-    setScannerVisible(true);
-  }, []);
-
-  const closeScanner = useCallback(() => {
-    setScannerVisible(false);
-    if (barcodeAbortRef.current) barcodeAbortRef.current.abort();
-  }, []);
-
   const retrySearch = useCallback(() => {
     const trimmed = query.trim();
-    if (trimmed && trimmed.length >= 2) {
-      cacheRef.current.delete(trimmed.toLowerCase());
-      setOnlineError(null);
-      setOnlineLoading(true);
-      const controller = new AbortController();
-      if (abortRef.current) abortRef.current.abort();
-      abortRef.current = controller;
-      fetchWithTimeout(trimmed, controller.signal).then((result) => {
-        if (controller.signal.aborted) return;
-        setOnlineLoading(false);
-        if (result.ok) {
-          setOnlineResults(result.foods);
-          cacheRef.current.set(trimmed.toLowerCase(), result.foods);
-        } else {
-          setOnlineResults([]);
-          setOnlineError(result.error === "timeout" ? "Search timed out. Try again." : "Could not reach food database. Check your connection.");
-        }
-      });
-    }
-  }, [query]);
+    if (!trimmed || trimmed.length < 2) return;
+    cacheRef.current.delete(trimmed.toLowerCase());
+    setOnlineError(null);
+    setOnlineLoading(true);
+    const ctrl = new AbortController();
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = ctrl;
+    fetchWithTimeout(trimmed, ctrl.signal).then((r) => {
+      if (ctrl.signal.aborted) return;
+      setOnlineLoading(false);
+      if (r.ok) { setOnlineResults(r.foods); cacheRef.current.set(trimmed.toLowerCase(), r.foods); }
+      else { setOnlineResults([]); setOnlineError(SEARCH_ERRORS[r.error] ?? SEARCH_ERRORS.default); }
+    });
+  }, [query, cacheRef]);
 
   return {
-    query, setQuery,
-    favorites, setFavorites,
-    localResults, onlineResults,
-    onlineLoading, onlineError,
-    combinedResults,
-    scannerVisible, barcodeLoading, barcodeError, scannedProductName,
-    handleBarcodeScanned, openScanner, closeScanner,
-    retrySearch,
+    query, setQuery, favorites, setFavorites, localResults, onlineResults,
+    onlineLoading, onlineError, combinedResults, ...barcode, retrySearch,
   };
 }

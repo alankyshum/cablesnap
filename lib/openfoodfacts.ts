@@ -4,16 +4,16 @@
  * No API key required.
  */
 
-const BASE_URL =
-  "https://world.openfoodfacts.org/api/v2/search";
-const BARCODE_BASE_URL =
-  "https://world.openfoodfacts.org/api/v2/product";
-const USER_AGENT =
-  "FitForge/0.6.0 (https://github.com/alankyshum/fitforge)";
-const TIMEOUT_MS = 10000;
-const PAGE_SIZE = 20;
-const FIELDS =
-  "product_name,brands,nutriments,serving_size,serving_quantity";
+import { isValidProduct, parseProduct, type ParsedFood } from "./openfoodfacts-parse";
+export { isValidProduct, parseProduct, formatProductName } from "./openfoodfacts-parse";
+export type { ParsedFood } from "./openfoodfacts-parse";
+
+const BASE = "https://world.openfoodfacts.net";
+const SEARCH_URL = `${BASE}/cgi/search.pl`;
+const BARCODE_URL = `${BASE}/api/v2/product`;
+const UA = "FitForge/0.6.0 (https://github.com/alankyshum/fitforge)";
+const TIMEOUT = 10000;
+const FIELDS = "product_name,brands,nutriments,serving_size,serving_quantity";
 
 export type OFFProduct = {
   product_name: string;
@@ -38,76 +38,10 @@ export type OFFProductResponse = {
   product: OFFProduct;
 };
 
-export type ParsedFood = {
-  /** Composite key for dedup: lowercased name */
-  name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  servingLabel: string;
-  /** Whether this is per-serving (true) or per-100g (false) */
-  isPerServing: boolean;
-};
-
-// ── Validation ──────────────────────────────────────────────────
-
-function isFiniteInRange(v: unknown, min: number, max: number): v is number {
-  return typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
-}
-
-export function isValidProduct(p: OFFProduct): boolean {
-  if (!p.product_name || typeof p.product_name !== "string" || !p.product_name.trim()) {
-    return false;
-  }
-  const n = p.nutriments;
-  if (!n) return false;
-
-  if (!isFiniteInRange(n["energy-kcal_100g"], 0, 2000)) return false;
-  if (!isFiniteInRange(n.proteins_100g, 0, 200)) return false;
-  if (!isFiniteInRange(n.carbohydrates_100g, 0, 200)) return false;
-  if (!isFiniteInRange(n.fat_100g, 0, 200)) return false;
-
-  return true;
-}
-
-// ── Name formatting ─────────────────────────────────────────────
-
-export function formatProductName(p: OFFProduct): string {
-  const brand = p.brands?.trim();
-  const name = p.product_name.trim();
-  const combined = brand ? `${brand} — ${name}` : name;
-  return combined.length > 100 ? combined.slice(0, 97) + "..." : combined;
-}
-
-// ── Serving logic ───────────────────────────────────────────────
-
-function truncateServing(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max - 3) + "..." : s;
-}
-
-export function parseProduct(p: OFFProduct): ParsedFood {
-  const n = p.nutriments;
-  const hasServing =
-    typeof p.serving_quantity === "number" &&
-    p.serving_quantity > 0 &&
-    typeof p.serving_size === "string" &&
-    p.serving_size.trim().length > 0;
-
-  const servingScale = hasServing ? p.serving_quantity! / 100 : 1;
-  const servingLabel = hasServing
-    ? truncateServing(p.serving_size!.trim(), 30)
-    : "100g";
-
-  return {
-    name: formatProductName(p),
-    calories: Math.round((n["energy-kcal_100g"] ?? 0) * servingScale),
-    protein: Math.round((n.proteins_100g ?? 0) * servingScale * 10) / 10,
-    carbs: Math.round((n.carbohydrates_100g ?? 0) * servingScale * 10) / 10,
-    fat: Math.round((n.fat_100g ?? 0) * servingScale * 10) / 10,
-    servingLabel,
-    isPerServing: hasServing,
-  };
+function classifyFetchError(err: unknown): SearchError {
+  if (err instanceof Error && err.name === "AbortError") return "abort" as SearchError;
+  if (err instanceof TypeError) return "offline";
+  return "unknown";
 }
 
 // ── API fetch ───────────────────────────────────────────────────
@@ -128,112 +62,52 @@ export async function lookupBarcode(
   barcode: string,
   signal?: AbortSignal
 ): Promise<BarcodeResult> {
-  const url = `${BARCODE_BASE_URL}/${encodeURIComponent(barcode)}?fields=${FIELDS}`;
+  const url = `${BARCODE_URL}/${encodeURIComponent(barcode)}?fields=${FIELDS}`;
 
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT },
+      headers: { "User-Agent": UA },
       signal,
     });
-
-    if (!response.ok) {
-      return { ok: false, error: "unknown" };
-    }
-
+    if (!response.ok) return { ok: false, error: "unknown" };
     const data: OFFProductResponse = await response.json();
-
-    if (data.status === 0 || !data.product) {
-      return { ok: true, status: "not_found" };
-    }
-
-    if (!isValidProduct(data.product)) {
-      return { ok: true, status: "incomplete" };
-    }
-
+    if (data.status === 0 || !data.product) return { ok: true, status: "not_found" };
+    if (!isValidProduct(data.product)) return { ok: true, status: "incomplete" };
     return { ok: true, status: "found", food: parseProduct(data.product) };
   } catch (err: unknown) {
-    if (err instanceof Error && err.name === "AbortError") {
-      return { ok: true, status: "not_found" };
-    }
-    if (err instanceof TypeError) {
-      return { ok: false, error: "offline" };
-    }
-    return { ok: false, error: "unknown" };
+    const kind = classifyFetchError(err);
+    if (kind === ("abort" as SearchError)) return { ok: true, status: "not_found" };
+    return { ok: false, error: kind };
   }
 }
 
-export function lookupBarcodeWithTimeout(
-  barcode: string,
-  signal?: AbortSignal
-): Promise<BarcodeResult> {
+function withTimeout<T>(fn: Promise<T>, fallback: T): Promise<T> {
   return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      resolve({ ok: false, error: "timeout" });
-    }, TIMEOUT_MS);
-
-    lookupBarcode(barcode, signal).then((result) => {
-      clearTimeout(timeout);
-      resolve(result);
-    });
+    const timer = setTimeout(() => resolve(fallback), TIMEOUT);
+    fn.then((r) => { clearTimeout(timer); resolve(r); });
   });
 }
 
-export async function searchOnlineFoods(
-  query: string,
-  signal?: AbortSignal
-): Promise<SearchResult> {
-  const url = `${BASE_URL}?${new URLSearchParams({
-    search_terms: query,
-    page_size: String(PAGE_SIZE),
-    fields: FIELDS,
+export function lookupBarcodeWithTimeout(barcode: string, signal?: AbortSignal): Promise<BarcodeResult> {
+  return withTimeout(lookupBarcode(barcode, signal), { ok: false, error: "timeout" });
+}
+
+export async function searchOnlineFoods(query: string, signal?: AbortSignal): Promise<SearchResult> {
+  const url = `${SEARCH_URL}?${new URLSearchParams({
+    search_terms: query, search_simple: "1", action: "process", json: "1", page_size: "20", fields: FIELDS,
   })}`;
-
   try {
-    const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT },
-      signal,
-    });
-
-    if (!response.ok) {
-      return { ok: false, error: "unknown" };
-    }
-
+    const response = await fetch(url, { headers: { "User-Agent": UA }, signal });
+    if (!response.ok) return { ok: false, error: "unknown" };
     const data: OFFSearchResponse = await response.json();
-    const foods = (data.products ?? [])
-      .filter(isValidProduct)
-      .map(parseProduct);
-
-    return { ok: true, foods };
+    return { ok: true, foods: (data.products ?? []).filter(isValidProduct).map(parseProduct) };
   } catch (err: unknown) {
-    if (err instanceof Error && err.name === "AbortError") {
-      // Caller cancelled — treat as empty (not an error to display)
-      return { ok: true, foods: [] };
-    }
-    if (err instanceof TypeError) {
-      // Network error (fetch throws TypeError for network failures)
-      return { ok: false, error: "offline" };
-    }
-    return { ok: false, error: "unknown" };
+    const kind = classifyFetchError(err);
+    if (kind === ("abort" as SearchError)) return { ok: true, foods: [] };
+    return { ok: false, error: kind };
   }
 }
 
-/**
- * Creates a fetch with a timeout wrapper.
- * The caller should use AbortController for cancellation;
- * this adds an additional timeout safety net.
- */
-export function fetchWithTimeout(
-  query: string,
-  signal?: AbortSignal
-): Promise<SearchResult> {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      resolve({ ok: false, error: "timeout" });
-    }, TIMEOUT_MS);
-
-    searchOnlineFoods(query, signal).then((result) => {
-      clearTimeout(timeout);
-      resolve(result);
-    });
-  });
+export function fetchWithTimeout(query: string, signal?: AbortSignal): Promise<SearchResult> {
+  return withTimeout(searchOnlineFoods(query, signal), { ok: false, error: "timeout" });
 }
