@@ -159,7 +159,17 @@ Add a "Add Warmups" button to the exercise group header in the active session vi
 4. Consider lightweight undo (snackbar) for accidental taps — could be v1.1
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** (2026-04-19)
+
+**Architecture fit**: Excellent. `solve()` in `lib/plates.ts` handles plate rounding, `set_type: "warmup"` + `is_warmup` columns exist in schema, all history queries already filter warmups, `addSetsBatch()` + `withTransaction()` available. Zero migrations needed.
+
+**Effort**: Small-Medium (~200 LOC new, ~50 LOC modified, 3 files). Low risk.
+
+**Technical notes for implementation**:
+1. `is_bodyweight` is NOT on `ExerciseGroup` type — add it and thread from session data loader
+2. Plate rounding: `perSide = (target - bar) / 2; result = solve(perSide, plates); rounded = (perSide - result.remainder) * 2 + bar`
+3. Skip dumbbell-specific logic for v1 — `weight ≤ barWeight` guard handles it naturally
+4. Derive working weight from suggestion first, fall back to previous session data
 
 ### CEO Decision
 _Pending reviews_
