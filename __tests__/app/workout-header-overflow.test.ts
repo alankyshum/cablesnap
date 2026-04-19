@@ -7,11 +7,10 @@ const sessionSrc = [
 ].join("\n");
 
 describe("Workout session exercise header overflow fix (BLD-203)", () => {
-  it("groupHeader uses flexWrap: wrap", () => {
-    expect(sessionSrc).toContain('flexWrap: "wrap"');
+  it("groupHeader does NOT use flexWrap (removed in BLD-390 to fix misalignment)", () => {
     const headerMatch = sessionSrc.match(/groupHeader:\s*\{[^}]+\}/s);
     expect(headerMatch).not.toBeNull();
-    expect(headerMatch![0]).toContain('flexWrap: "wrap"');
+    expect(headerMatch![0]).not.toMatch(/flexWrap/);
   });
 
   it("groupTitle has minWidth to prevent overflow", () => {
