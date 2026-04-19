@@ -3,7 +3,7 @@
 **Issue**: BLD-401
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: IN_REVIEW (v2 — addressing TL feedback)
 
 ## Problem Statement
 When a user taps the info/detail button on an exercise during a workout, the `ExerciseDetailDrawer` shows only static metadata: category, difficulty, equipment, muscles targeted, and instructions. This is helpful for beginners learning exercises, but experienced users — the majority of active gym-goers — already know what a bench press is. What they DON'T know at a glance is: "What did I lift last time? What's my best ever? Am I progressing?"
@@ -38,8 +38,8 @@ Add a "Your Stats" section to the existing `ExerciseDetailDrawer` component. Thi
 │  └─────────┴─────────┴───────────┘  │
 │                                     │
 │  Last Session (Apr 17):             │
-│  102.5kg × 6, 102.5kg × 5,         │
-│  100kg × 5                          │
+│  Best: 102.5kg × 6 • 3 sets        │
+│  Volume: 1,525kg                    │
 │                                     │
 ├─────────────────────────────────────┤
 │  [existing: category, muscles,      │
@@ -53,7 +53,7 @@ Stats section appears in the left column above the existing metadata.
 #### Key UX Decisions
 - **Stats at the top** — this is what the user actually wants to see. Static metadata moves below.
 - **Compact 3-stat row** — Best weight×reps, estimated 1RM, total sessions. Glanceable in <1 second.
-- **Last session summary** — The most recent completed session's sets, one line. "102.5kg × 6, 102.5kg × 5, 100kg × 5"
+- **Last session summary** — The most recent completed session's aggregates: best set (max_weight × max_reps), set count, total volume. "Best: 102.5kg × 6 • 3 sets • Volume: 1,525kg" — simple, glanceable, accurate.
 - **Loading state** — Show skeleton/placeholder while data loads (it's an async DB query). Use a subtle shimmer or "—" placeholders.
 - **Empty state** — If no history exists for this exercise, show "No history yet — complete your first set!" in a muted style. Don't show the stats row at all if empty (avoid "0" values that look broken).
 - **Bodyweight exercises** — If exercise is bodyweight-only (weight=0 in all sets), show reps-based stats instead of weight (max reps, last session reps).
@@ -71,14 +71,14 @@ Stats section appears in the left column above the existing metadata.
 #### Data Fetching
 Reuse existing DB functions — NO new queries needed:
 - `getExerciseRecords(exerciseId)` → returns `{ max_weight, max_reps, max_volume, est_1rm, total_sessions, is_bodyweight, max_duration }`
-- `getExerciseHistory(exerciseId, 1, 0)` → returns most recent session summary (limit=1)
+- `getBestSet(exerciseId)` → returns `{ weight, reps } | null` — the single set with highest e1RM. **This is the accurate "Best" display** (TL fix #1: `max_weight`/`max_reps` from records are independent maxima from potentially different sets).
+- `getExerciseHistory(exerciseId, 1, 0)` → returns most recent session **aggregates** (max_weight, max_reps, total_reps, set_count, volume). **Simplified to aggregates** (TL fix #2: no per-set detail in v1).
 
 Create a small hook `useExerciseDrawerStats(exerciseId: string | null)` that:
 1. Takes exerciseId (null when drawer is closed)
-2. Fetches records + last session in parallel via `Promise.all`
-3. Returns `{ records, lastSession, loading, error }`
-4. Caches per exerciseId during the session (avoid re-fetching when reopening same exercise)
-5. Clears stale data when exerciseId changes
+2. Fetches records + bestSet + lastSession in parallel via `Promise.all`
+3. Returns `{ records, bestSet, lastSession, loading, error }`
+4. ~~Caches per exerciseId~~ **No caching in v1** (TL fix #3: drawer is conditionally rendered so hook state is lost on close; queries are ~10ms indexed, no user-visible delay)
 
 #### Component Changes
 - `ExerciseDetailDrawer.tsx` — Add `exerciseId` prop and render `ExerciseDrawerStats` above existing content
@@ -94,28 +94,29 @@ All data and UI primitives already exist. Uses:
 
 ### Scope
 **In Scope:**
-- "Your Stats" section in ExerciseDetailDrawer with: best weight×reps, e1RM, total sessions, last session sets
+- "Your Stats" section in ExerciseDetailDrawer with: best weight×reps (from `getBestSet`), e1RM, total sessions, last session aggregates
 - Loading and empty states
 - Bodyweight exercise variant (show reps/duration instead of weight)
 - Unit-aware display (kg/lb)
-- Accessibility labels
-- Caching within session
+- Accessibility labels (including `accessibilityLiveRegion="polite"` per QD recommendation)
 
 **Out of Scope:**
 - Charts/sparklines in the drawer (too complex for a glanceable summary — users can tap through to full exercise detail page for charts)
 - Editing or navigating to exercise detail page from the drawer (separate feature)
 - Historical trend arrows (requires comparing current month vs previous — out of scope for v1)
 - PR badges in the stats section
+- Per-set detail in "Last Session" (show aggregates only in v1 — per TL feedback)
+- In-session caching (drawer conditionally rendered = state lost on close; not needed since queries are ~10ms)
 
 ### Acceptance Criteria
 - [ ] Given a user opens the exercise detail drawer during a workout, When the exercise has completed history, Then "Your Stats" section shows: personal best (weight × reps), estimated 1RM, and total sessions count
-- [ ] Given a user opens the exercise detail drawer, When the exercise has completed history, Then the most recent session's sets are shown below the stats row (e.g., "102.5kg × 6, 100kg × 5, 100kg × 5")
+- [ ] Given a user opens the exercise detail drawer, When the exercise has completed history, Then the most recent session's aggregates are shown below the stats row (e.g., "Best: 102.5kg × 6 • 3 sets • Volume: 1,525kg")
 - [ ] Given a user opens the exercise detail drawer, When the exercise has NO completed history, Then the stats section shows "No history yet" message instead of zeros
 - [ ] Given a bodyweight exercise (is_bodyweight=true), When the drawer opens, Then stats show max reps and last session reps (not weight)
 - [ ] Given the user's unit preference is "lb", When the drawer opens, Then all weights are displayed in lb with proper conversion
 - [ ] Given the drawer is loading data, When the user opens it, Then placeholder/loading state is visible briefly before data appears
 - [ ] Given the stats section is visible, When VoiceOver/TalkBack is active, Then all stats have descriptive accessibility labels
-- [ ] Given the drawer is opened and closed for the same exercise, When reopened, Then data loads from cache (no visible loading flash)
+- [ ] Given the drawer is opened for an exercise, When data loads, Then it fetches in <50ms with no visible loading flash (no caching needed)
 - [ ] Existing exercise metadata (category, muscles, instructions) still displays correctly below the stats section
 - [ ] PR passes all existing tests, no regressions
 - [ ] No new lint warnings
@@ -172,4 +173,13 @@ Test count is **1800/1800** — budget is FULL.
 **Simplification recommendations**: Use `exercise.id` directly (already available), drop per-set last-session display for v1, drop caching for v1.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-19, v2)
+
+All three TL issues addressed:
+1. ✅ **`getBestSet()` added** — "Best" display now uses the accurate paired weight×reps from the single highest-e1RM set
+2. ✅ **Last Session simplified to aggregates** — shows max_weight, max_reps, set_count, volume from `getExerciseHistory` (no per-set detail in v1)
+3. ✅ **Caching dropped for v1** — queries are ~10ms indexed, drawer is conditionally rendered (hook state lost on close anyway)
+
+QD's accessibility recommendation (`accessibilityLiveRegion="polite"`) added to scope.
+
+**Ready for implementation.**
