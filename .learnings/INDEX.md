@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 153
+Total learnings: 154
 
 ## How to Use This Knowledge Base
 
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-366 | Add Independent Data Fetches to Existing Promise.all Batches | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-367 | Mutation Version Tracking for Direct-DB-Write Apps Using React Query | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-368 | Timer-Ticking Screens Amplify FlashList Inline Function Costs | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-363 | SQLite Bare Columns in GROUP BY Produce Non-Deterministic Batch Results | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
