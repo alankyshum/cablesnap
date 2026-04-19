@@ -729,3 +729,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: Settings controls that write to storage but are never read by the consuming code are "cosmetic toggles" — they create a false sense of user control. The bug is invisible in testing because the default behavior (vibrate ON, sound ON) matches the expected default, so toggling ON "works" by coincidence.
 **Action**: When adding user-facing settings: (1) trace the full path from UI toggle → storage write → consumer read → behavior change, (2) verify the consumer code has a read call gated on the setting value, (3) add a test that toggles the setting OFF and asserts the behavior is suppressed, not just that the setting was stored.
 **Tags**: settings, user-preferences, app-settings, haptics, audio, end-to-end, cosmetic-toggle, code-review
+
+### solve() Is Plate Decomposition Not Rounding — Use roundToPlates() Wrapper
+**Source**: BLD-398 — Smart Warmup Set Generator
+**Date**: 2026-04-19
+**Context**: The warmup set generator needed plate-friendly weight rounding (e.g., 50% of 225lb = 112.5lb → nearest achievable plate combination). The existing `solve()` in `lib/plates.ts` is a greedy plate DECOMPOSITION algorithm — it returns which plates fit a per-side target and a remainder. It does not round to the nearest achievable weight.
+**Learning**: `solve(perSide, plates)` decomposes a per-side weight into plates, returning `{ plates, remainder }`. To get a plate-friendly TOTAL weight, build a wrapper: compute per-side from target, call `solve()`, subtract the remainder from per-side, then reconstruct total as `(achievablePerSide * 2) + barWeight`. This wrapper is now `roundToPlates()` in `lib/warmup.ts`.
+**Action**: When implementing any feature that needs plate-friendly weight values (warmup generators, weight suggestions, progressive overload calculators), use `roundToPlates(target, barWeight, unit)` from `lib/warmup.ts`. Do NOT call `solve()` directly and expect a rounded total weight — it returns a decomposition, not a rounded value.
+**Tags**: plates, solve, rounding, weight-calculation, warmup, lib-plates, lib-warmup, domain-logic
