@@ -161,7 +161,7 @@ Test count is **1800/1800** — budget is FULL.
 - **Recommendations** (non-blocking): (1) Consider relative time for last session date, (2) Invalidate stats cache when user completes a set for that exercise during current workout
 
 ### Tech Lead (Technical Feasibility)
-**Verdict**: NEEDS REVISION — two data-layer gaps must be fixed.
+**Verdict**: APPROVED (v2) — all issues from initial review addressed.
 
 **Architecture**: Compatible with existing patterns. Small scope (~4 files, ~150 lines), no new deps. ✅
 
