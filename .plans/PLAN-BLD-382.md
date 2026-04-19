@@ -1,44 +1,60 @@
-# Feature Plan: Smart Training Insights Card
+# Feature Plan: Smart Training Insights Card (Rev 2)
 
 **Issue**: BLD-382
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: IN_REVIEW (Rev 2 — addresses QD feedback)
 
 ## Problem Statement
-The home screen shows raw stats (streak count, week count, PR count) but doesn't synthesize the user's training data into actionable, motivating insights. Users see numbers but don't get contextual meaning — "Is my training going well? Am I missing muscle groups? Am I improving?" These are the questions that keep people coming back to the gym, and right now the app doesn't answer them proactively.
+The home screen shows raw stats (streak count, week count, PR count) but doesn't synthesize the user's training data into actionable, motivating insights. Users see numbers but don't get contextual meaning — "Is my training improving? Am I making progress?" The app is a logbook but not yet a training partner.
 
 ## User's Emotional Journey
-**Without this feature:** The user opens the app, sees "Streak: 3, This Week: 2" — useful but dry. They don't feel a sense of progress or accomplishment. They might not realize they've been neglecting leg day for 10 days, or that their bench press has improved significantly this month.
+**Without this feature:** The user opens the app, sees "Streak: 3, This Week: 2" — useful but dry. They don't feel a sense of progress beyond the numbers. They can't tell at a glance whether their strength is trending up or their training volume is growing.
 
-**After:** The user opens the app and sees "🔥 Your bench press is up 5kg this month — nice work!" or "⚠️ Shoulders haven't been trained in 9 days." They feel seen, motivated, and informed. The app becomes a training partner, not just a log book.
+**After:** The user opens the app and sees "Your bench press is up 5kg this month — nice work!" They feel seen, motivated, and informed. The app contextualizes their effort into meaningful progress signals.
 
 ## User Stories
 - As a gym-goer, I want to see a personalized training insight when I open the app so that I feel motivated and informed about my progress
 - As a lifter tracking progressive overload, I want to know when my lifts are trending up so that I feel rewarded for consistency
-- As someone following a balanced program, I want to be alerted when I've neglected a muscle group so I can adjust my next workout
 
 ## Proposed Solution
 
 ### Overview
-Add a single "Training Insight" card to the home screen, positioned between the StatsRow and the RecentWorkoutsList. The card displays ONE insight per session (refreshes when the user opens the app), selected from a prioritized list of insight generators based on the user's recent training data.
+Add a single, compact "Training Insight" card to the home screen showing ONE contextual insight per app open. The card surfaces **only information not already visible** on the home screen — specifically strength trends, volume trends, and consistency comparisons. No cycling, no slot-machine dismiss pattern.
 
 ### UX Design
-- **Placement:** Below StatsRow, above RecentWorkoutsList
-- **Visual:** A compact card with an emoji icon, a bold insight headline, and an optional supporting detail line
-- **Interaction:** Tapping the card navigates to the relevant screen (e.g., tap a PR insight → exercise detail, tap a muscle gap insight → exercise library filtered to that muscle)
-- **Dismissal:** Small "×" button to dismiss the current insight and reveal the next one (or hide the card for the day)
-- **One-handed use:** Card is tappable, no complex gestures
-- **Empty state:** If there's not enough data (fewer than 3 completed sessions), show a welcoming message: "Complete a few more workouts and I'll start showing you insights! 💪"
+- **Placement:** Immediately below StatsRow, above HomeBanners. This is a fixed, predictable position. The card is compact (2 lines max, ~56dp height) and does NOT push Quick Start significantly further down.
+- **Visual:** A compact card with a text icon label, a bold insight headline, and an optional supporting detail line. Uses theme colors — no hardcoded values.
+- **Interaction:** Tapping the card navigates to the relevant detail screen (e.g., tap a strength trend → exercise detail with chart)
+- **Dismissal:** Small "×" button (minimum 48×48dp touch target) to dismiss. Dismissing hides the card entirely for the current app session. NO cycling to next insight — the card simply disappears. On next app open, a fresh insight is computed.
+- **One-handed use:** Card is a single large tap target, dismiss is in the top-right corner with adequate touch area
+- **Empty state:** If there's not enough data (fewer than 5 completed sessions), card is NOT shown. No welcoming message in this slot — the existing HomeBanners handle onboarding prompts.
+- **Stability:** The card always appears in the same position when visible. It does not move, change size, or change behavior based on content type. Users build spatial memory: "the insight is always right below my stats."
 
-### Insight Types (Priority Order)
-1. **New PR celebration** — "🏆 New PR! Bench Press: 100kg" (highest priority — show immediately after a PR session)
-2. **Streak milestone** — "🔥 5-week streak! Your longest yet!" (show at milestone streaks: 3, 5, 10, 15, 20, 25, 50, 100)
-3. **Muscle group gap** — "⚠️ You haven't trained [muscle] in [N] days" (show when any primary muscle group hasn't been hit in 7+ days)
-4. **Strength trend** — "📈 Your [exercise] is up [X]kg/lbs this month" (show for exercises with 3+ sessions in the last 30 days with positive e1RM trend)
-5. **Volume trend** — "💪 Training volume up [X]% vs last month" (positive trend in total weekly sets)
-6. **Consistency praise** — "⭐ [N] workouts this week — your best in [M] weeks!" (when current week count exceeds recent average)
-7. **Workout frequency** — "📊 You've averaged [N] workouts/week this month" (informational, shown when no higher-priority insight available)
+### Accessibility
+- `accessibilityRole="button"` on the card (tappable)
+- `accessibilityLabel` dynamically set: e.g., "Training insight: Your bench press is up 5 kilograms this month. Tap to view details."
+- Dismiss button: `accessibilityRole="button"`, `accessibilityLabel="Dismiss insight"`, minimum 48×48dp touch target
+- Text alternatives for all icons: icons are rendered as themed `<Ionicons>` components with `accessibilityElementsHidden={true}`, not emoji. The `accessibilityLabel` on the parent card provides the full text.
+- No screen reader announcement on content change (card content only changes between app opens, not during a session)
+
+### Insight Types (Reduced to 3 — No Overlap with Existing UI)
+
+**Removed insight types** (duplicate existing home screen elements per QD review):
+- ~~PR celebration~~ → StatsRow already shows PR count; RecentWorkoutsList shows PR badges
+- ~~Streak milestone~~ → StatsRow already shows streak count
+- ~~Muscle group gap~~ → RecoveryHeatmap shows muscle recovery state; BLD-385 adds recovery badges to template cards
+- ~~Workout frequency~~ → StatsRow shows "This Week: N/M"; AdherenceBar shows weekly dots
+
+**Remaining insight types (all genuinely new information):**
+
+1. **Strength trend** — "Your [exercise] is up [X]kg this month" (show for exercises with 3+ sessions in the last 30 days with positive e1RM trend). Navigation: tap → exercise detail screen with chart. Icon: `trending-up` (Ionicons)
+2. **Volume trend** — "Training volume up [X]% vs last month" (positive trend in total weekly sets completed). Navigation: tap → home screen scrolls to recent workouts. Icon: `bar-chart` (Ionicons)
+3. **Consistency praise** — "[N] workouts this week — your best in [M] weeks!" (current week count exceeds average of previous 4 weeks). Navigation: tap → no navigation (informational). Icon: `star` (Ionicons)
+
+**Priority order:** Strength trend > Volume trend > Consistency praise. First non-null result wins. If none qualify, card is hidden entirely.
+
+**Returning user special case:** If the user hasn't worked out in 14+ days and then completes a session, show: "Welcome back! You crushed it today." (one-time, until next regular insight qualifies). Icon: `heart` (Ionicons).
 
 ### Technical Approach
 
@@ -46,57 +62,63 @@ Add a single "Training Insight" card to the home screen, positioned between the 
 | File | Purpose |
 |------|---------|
 | `lib/insights.ts` | Pure functions: each insight generator takes data, returns `Insight | null`. Prioritizer selects the top insight. |
-| `components/home/InsightCard.tsx` | Presentational component: renders the insight with emoji, text, and tap target |
-| `hooks/useInsightData.ts` | Data hook: fetches the data needed by insight generators (recent PRs, muscle group dates, e1RM trends, volume) |
+| `components/home/InsightCard.tsx` | Presentational component: renders the insight with icon, text, tap target, and dismiss button |
 
 #### Data Queries Needed
-All data can be derived from existing tables — no schema changes:
-- **Recent PRs**: Already available from `getRecentPRs()` in home data
-- **Muscle group last trained**: `SELECT MAX(s.completed_at), e.primary_muscles FROM workout_sets ws JOIN workout_sessions s ... GROUP BY muscle` — new query
-- **E1RM trend**: Already available from `getExercise1RMChartData()` — reuse for top exercises
-- **Volume trend**: `SELECT COUNT(*) FROM workout_sets WHERE completed = 1 AND completed_at > [date]` — new query
-- **Streak info**: Already computed via `computeStreak()`
+All data can be derived from existing tables — **no schema changes, only 1 new query**:
+- **E1RM trend**: Reuse data already fetched by `loadHomeData()` — the home screen already loads exercise history. Compute e1RM delta in JS from existing data.
+- **Volume trend**: 1 new query: `SELECT COUNT(*) as set_count FROM workout_sets WHERE completed = 1 AND completed_at > ?` for current vs previous 30-day window. Add to existing `Promise.all` batch in `loadHomeData()`.
+- **Consistency data**: Already available from `computeStreak()` and session counts in home data.
+
+**Query count impact on `loadHomeData()`:** +1 new query (volume trend). The e1RM trend and consistency data reuse existing query results. Net: 16 → 17 parallel queries (< 7% increase).
 
 #### Architecture
 ```
-loadHomeData() → adds insightData to return value
+loadHomeData() → adds volumeTrendData to return value (1 new query)
   ↓
-useInsightData(insightData) → computes insights via lib/insights.ts
+lib/insights.ts → generateInsight(homeData) → Insight | null
   ↓
-InsightCard(insight) → renders the selected insight
+InsightCard(insight) → renders if non-null, hidden if null
 ```
 
 Key design decisions:
-- **Pure insight generators**: Each generator is a pure function `(data) => Insight | null` — easy to test, easy to add new types
+- **Pure insight generators**: Each generator is a pure function `(data) => Insight | null` — easy to test, easy to add new types later
 - **Priority-based selection**: Generators are called in priority order; first non-null result wins
 - **No new dependencies**: Uses existing data queries and SQLite
 - **No caching/persistence**: Insight is computed fresh on each app open — simple, no stale data
+- **Dismiss state**: Stored in React state (not persisted). Dismiss hides card for current session only.
 
 ### Scope
 **In Scope:**
-- InsightCard component on home screen
-- 7 insight types as listed above
-- Tap-to-navigate for PR and muscle gap insights
-- Dismiss button to hide current insight
-- Empty state for new users (< 3 sessions)
+- InsightCard component on home screen (immediately below StatsRow)
+- 3 insight types: strength trend, volume trend, consistency praise
+- Returning user "welcome back" message
+- Tap-to-navigate for strength trend insight
+- Dismiss button hides card for current session (no cycling)
+- Card hidden when no qualifying insight exists
+- Full accessibility (see Accessibility section above)
 - Unit tests for all insight generators
 
 **Out of Scope:**
-- Notification-based insights (push notifications with insights)
+- Notification-based insights (push notifications)
 - AI/ML-based insights (all rules are deterministic)
 - Insight history (no "past insights" screen)
 - User preference for which insight types to show
-- Animated transitions or confetti (keep it clean and simple)
+- Animated transitions or confetti
 - Insight sharing
+- Replacing or modifying StatsRow, RecoveryHeatmap, or AdherenceBar (those components are stable and serve different purposes)
+- PR celebration, streak milestone, muscle gap, workout frequency insights (covered by existing UI)
 
 ### Acceptance Criteria
-- [ ] Given the user has completed 3+ sessions, when they open the home screen, then an InsightCard appears between StatsRow and RecentWorkoutsList
-- [ ] Given the user just completed a session with a new PR, when they return to the home screen, then the insight shows the PR celebration
-- [ ] Given no muscle group has been neglected (all trained within 7 days), when a strength trend exists, then the insight shows the strength trend
-- [ ] Given the user has fewer than 3 completed sessions, when they open the home screen, then the insight shows a welcoming message
-- [ ] Given the user taps the dismiss button, when the insight is dismissed, then the next-priority insight is shown (or the card hides)
-- [ ] Given the user taps a PR insight, when the exercise detail screen opens, then it navigates to the correct exercise
-- [ ] Given the user taps a muscle gap insight, when the exercise library opens, then it's filtered to exercises for that muscle group
+- [ ] Given the user has completed 5+ sessions and a strength trend exists, when they open the home screen, then an InsightCard appears immediately below StatsRow showing the strength trend
+- [ ] Given no strength trend but volume is up vs last month, when they open the home screen, then the InsightCard shows the volume trend
+- [ ] Given no strength or volume trend but weekly count exceeds 4-week average, when they open the home screen, then the InsightCard shows consistency praise
+- [ ] Given no qualifying insight, when they open the home screen, then the InsightCard is NOT rendered (no empty state card)
+- [ ] Given the user has fewer than 5 completed sessions, when they open the home screen, then the InsightCard is NOT rendered
+- [ ] Given the user taps the dismiss button, when the card is dismissed, then it disappears for the remainder of the app session (no cycling)
+- [ ] Given the user taps a strength trend insight, when they tap, then it navigates to the exercise detail screen
+- [ ] Given the card is visible, when a screen reader is active, then `accessibilityLabel` provides the full insight text and dismiss is announced as "Dismiss insight"
+- [ ] Given the dismiss button, it has a minimum 48×48dp touch target
 - [ ] PR passes all existing tests with no regressions
 - [ ] No new lint warnings
 - [ ] `npx eslint . --ext .ts,.tsx --quiet` → 0 errors
@@ -106,56 +128,52 @@ Key design decisions:
 ### Edge Cases
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| New user (0 sessions) | Card hidden entirely |
-| User with 1-2 sessions | Show welcoming message |
-| All muscle groups recently trained, no PRs, no trends | Show workout frequency insight (fallback) |
-| User hasn't worked out in 30+ days | Show encouraging "Welcome back!" message |
-| Very long muscle group name | Truncate with ellipsis |
-| Multiple PRs in same session | Show the heaviest/most impressive one |
-| User dismisses all insights | Card hides for the day |
+| New user (< 5 sessions) | Card NOT shown |
+| No qualifying insights | Card NOT shown (no fallback/filler content) |
+| User hasn't worked out in 14+ days, then completes a session | Show "Welcome back! You crushed it today." |
+| All exercises have flat/negative e1RM trends | Strength trend skipped, check volume and consistency |
+| Volume down vs last month | Volume trend skipped |
+| User dismisses card | Card hidden for current session, reappears on next app open |
 | Dark mode | Card uses theme colors (no hardcoded colors) |
-| Small screen (320px) | Card text wraps gracefully |
+| Small screen (320px) | Card text wraps gracefully, max 2 lines |
+| Rapid app opens (5 times in 1 minute) | Same insight shown each time (computed from same data, deterministic) |
+| Very long exercise name in strength trend | Truncate with ellipsis at card boundary |
 
 ### Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Home screen feels cluttered | Medium | Medium | Card is compact (max 2 lines), dismissible, positioned naturally in the flow |
-| Insight queries slow down home load | Low | Medium | Queries are simple aggregations on indexed columns; add to existing Promise.all batch |
-| Insights feel generic/unhelpful | Medium | Low | Priority system ensures the most relevant insight surfaces; can tune thresholds based on feedback |
-| Muscle gap false positives (user intentionally skips) | Low | Low | 7-day threshold is generous; "×" dismiss handles edge cases |
+| Home screen feels cluttered | Low | Medium | Card is compact (2 lines, ~56dp), only shown when meaningful insight exists, dismissible. Only adds 1 element to 8 existing ones. |
+| Insight query slows home load | Low | Low | Only 1 new query added; other data reused from existing queries. |
+| Insights feel generic | Medium | Low | Only 3 types, all personalized with specific numbers (kg, %, weeks). If none qualify, card hidden entirely — better than showing filler. |
 
 ## Review Feedback
-<!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-**Verdict: NEEDS REVISION** (2026-04-19)
+**Rev 1 Verdict: NEEDS REVISION** (2026-04-19)
 
-**Critical Issues:**
-1. **COGNITIVE-01**: 4 of 7 insight types duplicate existing home screen UI (StatsRow shows streak/PRs, RecoveryHeatmap shows muscle gaps, AdherenceBar shows frequency). Remove duplicates or replace the overlapping components — net visual elements must NOT increase.
-2. **COGNITIVE-02**: Dismiss-to-reveal-next creates slot-machine decision overhead. Show ONE insight, dismiss hides card entirely.
-3. **A11Y-01**: Missing accessibilityLabel, accessibilityRole, 48x48dp dismiss target, and text alternatives for emoji icons.
+**Critical Issues (Rev 1):**
+1. **COGNITIVE-01**: 4 of 7 insight types duplicate existing home screen UI
+2. **COGNITIVE-02**: Dismiss-to-reveal-next creates slot-machine decision overhead
+3. **A11Y-01**: Missing accessibility specifications
 
-**Major Issues:**
-4. **COGNITIVE-03**: "Between StatsRow and RecentWorkoutsList" spans 6 components — specify exact position and justify impact on Quick Start button reachability.
-5. **OVERLAP-01**: RecoveryHeatmap vs muscle-gap-insight can show contradictory signals. Suppress muscle gap insight when RecoveryHeatmap is visible.
+**Major Issues (Rev 1):**
+4. **COGNITIVE-03**: Placement ambiguity — "between StatsRow and RecentWorkoutsList" spans 6 components
+5. **OVERLAP-01**: RecoveryHeatmap vs muscle-gap-insight contradiction risk
 
-**Recommendation:** Consider replacing StatsRow with InsightCard for net-zero density. Cap insight types to 3-4 genuinely new ones (strength trend, volume trend, consistency praise).
+**Recommendation:** Cap to 3-4 genuinely new insight types. Consider replacing StatsRow.
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION**
+_Pending review_
 
-**Architecture Fit:** Compatible — pure function + component + hook matches existing patterns. No refactoring needed.
+### CEO Decision (Rev 2)
 
-**Critical Issues:**
-1. **Feature overlap**: 3/7 insight types (PR celebration, streak milestone, muscle group gap) duplicate StatsRow and RecoveryHeatmap. Cut them — ship insights that provide genuinely NEW information.
-2. **E1RM trend cost**: Cannot reuse per-exercise `getExercise1RMChartData()` on home load. Need a dedicated batch SQL query (top-5 exercises, single pass).
-3. **Dismissal persistence**: "Dismiss for the day" needs storage mechanism (recommend SecureStore with date key). Not specified in plan.
-4. **Dismiss-rotation complexity**: "Dismiss reveals next" requires computing ALL insights upfront. Simplify: dismiss hides card entirely for v1.
-5. **Home screen density**: 8+ sections already. InsightCard should replace or consolidate existing elements, not stack on top.
-
-**Recommended v1 scope:** 3-4 non-overlapping types (strength trend, volume trend, consistency praise, welcome-back). Dismiss hides card. Defer tap-to-navigate. Single batch trend query. Ships in ~1 day with high confidence.
-
-**Estimated effort:** Medium | **Risk:** Medium | **New deps:** None
-
-### CEO Decision
-_Pending reviews_
+| QD Finding | Resolution |
+|------------|------------|
+| **COGNITIVE-01** (4 duplicate types) | FIXED — Removed all 4 overlapping types (PR celebration, streak milestone, muscle group gap, workout frequency). Reduced to 3 genuinely new types: strength trend, volume trend, consistency praise. |
+| **COGNITIVE-02** (dismiss cycling) | FIXED — ONE insight per app open. Dismiss hides card entirely for the session. No cycling. |
+| **A11Y-01** (missing a11y) | FIXED — Full accessibility section added: accessibilityRole, accessibilityLabel, 48x48dp dismiss target, text alternatives via Ionicons + parent label (no emoji). |
+| **COGNITIVE-03** (placement) | FIXED — Exact position: immediately below StatsRow, above HomeBanners. Card is ~56dp, minimal impact on Quick Start reachability. |
+| **OVERLAP-01** (heatmap contradiction) | FIXED — Muscle group gap insight type removed entirely. No contradiction possible. |
+| **PERF-01** (query count) | ADDRESSED — Only 1 new query added (volume trend). Strength trend reuses existing home data. Net: 16 to 17 queries (<7% increase). |
+| Rapid app opens (new edge case) | ADDED — Same deterministic insight each time (computed from same underlying data). |
+| Recommendation: replace StatsRow | DEFERRED — StatsRow replacement is a separate, larger UX change. This plan is additive but minimal (1 compact card). Will consider StatsRow consolidation as a future phase if the InsightCard proves valuable. |
