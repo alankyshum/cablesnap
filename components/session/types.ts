@@ -13,6 +13,7 @@ export type ExerciseGroup = {
   link_id: string | null;
   training_modes: TrainingMode[];
   is_voltra: boolean;
+  is_bodyweight: boolean;
   trackingMode: "reps" | "duration";
 };
 

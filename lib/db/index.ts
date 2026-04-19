@@ -45,6 +45,7 @@ export {
   getActiveSession,
   addSet,
   addSetsBatch,
+  addWarmupSets,
   updateSet,
   updateSetsBatch,
   updateSetDuration,

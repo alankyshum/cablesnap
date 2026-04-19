@@ -208,6 +208,64 @@ export async function addSetsBatch(
   return results;
 }
 
+export async function addWarmupSets(
+  sessionId: string,
+  exerciseId: string,
+  warmupSets: { weight: number; reps: number }[],
+  linkId?: string | null,
+  trainingMode?: TrainingMode | null,
+  tempo?: string | null
+): Promise<WorkoutSet[]> {
+  if (warmupSets.length === 0) return [];
+  const count = warmupSets.length;
+
+  const results: WorkoutSet[] = warmupSets.map((ws, i) => ({
+    id: uuid(),
+    session_id: sessionId,
+    exercise_id: exerciseId,
+    set_number: i + 1,
+    weight: ws.weight,
+    reps: ws.reps,
+    completed: false,
+    completed_at: null,
+    rpe: null,
+    notes: "",
+    link_id: linkId ?? null,
+    round: null,
+    training_mode: trainingMode ?? null,
+    tempo: tempo ?? null,
+    swapped_from_exercise_id: null,
+    is_warmup: true,
+    set_type: "warmup" as SetType,
+    duration_seconds: null,
+  }));
+
+  await withTransaction(async (db) => {
+    // Shift existing sets up by count
+    await db.runAsync(
+      "UPDATE workout_sets SET set_number = set_number + ? WHERE session_id = ? AND exercise_id = ?",
+      [count, sessionId, exerciseId]
+    );
+
+    // Insert warmup sets
+    const stmt = await db.prepareAsync(
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    try {
+      for (const r of results) {
+        await stmt.executeAsync([
+          r.id, r.session_id, r.exercise_id, r.set_number,
+          r.weight, r.reps, r.link_id, r.round, r.training_mode, r.tempo, 1, "warmup",
+        ]);
+      }
+    } finally {
+      await stmt.finalizeAsync();
+    }
+  });
+
+  return results;
+}
+
 export async function updateSetsBatch(
   updates: { id: string; weight: number | null; reps: number | null }[]
 ): Promise<void> {

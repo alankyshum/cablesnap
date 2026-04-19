@@ -7,6 +7,7 @@ export {
   getSessionSets,
   addSet,
   addSetsBatch,
+  addWarmupSets,
   updateSet,
   updateSetsBatch,
   updateSetDuration,

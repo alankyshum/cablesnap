@@ -30,6 +30,7 @@ export type GroupCardProps = {
   onCheck: (set: SetWithMeta) => void;
   onDelete: (setId: string) => void;
   onAddSet: (exerciseId: string) => void;
+  onAddWarmups: (exerciseId: string) => void;
   onModeChange: (exerciseId: string, mode: TrainingMode) => void;
   onRPE: (set: SetWithMeta, val: number) => void;
   onHalfStep: (setId: string, val: number) => void;
@@ -55,7 +56,7 @@ export type GroupCardProps = {
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   group, step, unit, suggestions, modes,
   exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette,
-  onUpdate, onCheck, onDelete, onAddSet, onModeChange,
+  onUpdate, onCheck, onDelete, onAddSet, onAddWarmups, onModeChange,
   onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onShowDetail, onSwap, onDeleteExercise,
@@ -76,6 +77,10 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
 
   const suggestion = suggestions[group.exercise_id];
+
+  const hasExistingWarmups = group.sets.some((s) => s.set_type === "warmup");
+  const hasWorkingWeight = suggestion != null && suggestion.weight > 0;
+  const showWarmupButton = !group.is_bodyweight && hasWorkingWeight && !hasExistingWarmups;
 
   const firstSet = group.sets[0];
 
@@ -117,18 +122,34 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           />
         );
       })}
-      <Button
-        variant="ghost"
-        size="sm"
-        onPress={() => onAddSet(group.exercise_id)}
-        style={styles.addSetBtn}
-        accessibilityLabel={`Add set to ${group.name}`}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontWeight: "600" }}>Add Set</Text>
-        </View>
-      </Button>
+      <View style={styles.actionRow}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={() => onAddSet(group.exercise_id)}
+          style={styles.addSetBtn}
+          accessibilityLabel={`Add set to ${group.name}`}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontWeight: "600" }}>Add Set</Text>
+          </View>
+        </Button>
+        {showWarmupButton && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={() => onAddWarmups(group.exercise_id)}
+            style={styles.addSetBtn}
+            accessibilityLabel={`Add warmup sets for ${group.name}`}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <MaterialCommunityIcons name="fire" size={18} color={colors.tertiary ?? colors.primary} />
+              <Text style={{ color: colors.tertiary ?? colors.primary, fontWeight: "600" }}>Add Warmups</Text>
+            </View>
+          </Button>
+        )}
+      </View>
     </>
   );
 
@@ -241,6 +262,12 @@ const styles = StyleSheet.create({
   addSetBtn: {
     alignSelf: "flex-start",
     marginTop: 4,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
   },
   divider: {
     marginTop: 8,

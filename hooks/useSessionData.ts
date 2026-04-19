@@ -115,6 +115,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           link_id: s.link_id ?? null,
           training_modes: parsed,
           is_voltra: ex?.is_voltra ?? false,
+          is_bodyweight: ex ? ex.equipment === "bodyweight" : false,
           trackingMode: parsed.includes("isometric" as TrainingMode) ? "duration" : "reps",
         });
       }
