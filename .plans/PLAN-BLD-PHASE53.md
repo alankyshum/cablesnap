@@ -166,7 +166,30 @@ export function useRecoveryStatus() {
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: NEEDS REVISION** (2026-04-19)
+
+Critical issues that must be fixed:
+
+1. **[C] Colorblind inaccessibility** — Green/yellow/red palette is indistinguishable for ~8% of males with red-green colorblindness. Use a colorblind-safe palette (e.g., blue→yellow→red) or add pattern overlays.
+
+2. **[C] Per-muscle-group recovery thresholds** — Universal 24h/72h thresholds are inaccurate. Small muscles (biceps) recover in 24-48h; large muscles (quads) need 48-96h. Use a per-muscle lookup table — zero additional SQL complexity.
+
+3. **[C] `full_body` exercise handling unspecified** — A `full_body` exercise maps to ALL muscle slugs in `SLUG_MAP`. One full-body session would make the entire heatmap red, rendering it useless.
+
+4. **[C] Missing a11y attributes for collapse header** — Must specify `accessibilityRole="button"`, `accessibilityState={{ expanded }}`, dynamic `accessibilityLabel`, and ≥48dp touch target.
+
+Major recommendations:
+
+5. **[M] Create `RecoveryMap` instead of reusing `MuscleMap`** — Current `MuscleMap` Props (`primary`/`secondary` arrays with fixed intensity) don't fit recovery semantics. Wrap `Body` directly; share `SLUG_MAP`/`buildData`.
+
+6. **[M] Remove `totalSetsLast48h` from type** — Dead field since volume weighting is out of scope.
+
+7. **[M] Use JS-side JSON parsing, not `json_each()`** — Zero existing `json_each()` usage in codebase.
+
+8. **[M] Integrate recovery query into `loadHomeData()` batch** — Separate hook causes extra render cycle and visual pop-in.
+
+Full review posted on BLD-351.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
