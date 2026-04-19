@@ -214,7 +214,14 @@ These already fit the existing `getAppSetting`/`setAppSetting` pattern.
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED** (2026-04-19)
+
+- **Regression risk**: LOW — no data model changes, component extraction is reversible, existing `useRestTimer` tests cover timer logic
+- **Cognitive load**: REDUCES — 4 taps → 1 tap for most-used tool. Progressive disclosure via long-press preserves power-user access without burdening casual users
+- **Security**: No concerns — all local storage via existing patterns
+- **A11y**: Adequate — minor gap: long-press not screen-reader-friendly. Recommend toolbox sheet retain a "Rest Settings" fallback link for a11y users
+- **Edge cases**: Well covered. Verify `onStartRest(duration)` API doesn't break per-exercise rest override from `startRest(exerciseId)`
+- **No blocking issues found**
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — 2026-04-19
