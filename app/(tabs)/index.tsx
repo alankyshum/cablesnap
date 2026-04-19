@@ -12,6 +12,7 @@ import {
   getAllCompletedSessionWeeks, getRecentPRs, getRecentSessions,
   getSessionAvgRPEs, getSessionSetCounts, getTemplateExerciseCounts,
   getTemplates, getTodaySchedule, getWeekAdherence, isTodayCompleted, startSession,
+  getMuscleRecoveryStatus,
 } from "../../lib/db";
 import type { Program, WorkoutTemplate } from "../../lib/types";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
@@ -25,6 +26,7 @@ import HomeBanners from "../../components/home/HomeBanners";
 import AdherenceBar from "../../components/home/AdherenceBar";
 import RecentWorkoutsList from "../../components/home/RecentWorkoutsList";
 import StatsRow from "../../components/home/StatsRow";
+import { RecoveryHeatmap } from "../../components/home/RecoveryHeatmap";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 async function loadHomeData() {
@@ -38,9 +40,11 @@ async function loadHomeData() {
     getSessionAvgRPEs(sess.map((s) => s.id)),
     getProgramDayCounts(progs.map((p) => p.id)),
   ]);
-  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts };
+  const recoveryStatus = await getMuscleRecoveryStatus();
+  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus };
 }
 
+// eslint-disable-next-line complexity
 export default function Workouts() {
   const colors = useThemeColors();
   const router = useRouter();
@@ -68,6 +72,7 @@ export default function Workouts() {
   const todaySchedule = data?.todaySchedule ?? null;
   const todayDone = data?.todayDone ?? false;
   const adherence = useMemo(() => data?.adherence ?? [], [data?.adherence]);
+  const recoveryStatus = data?.recoveryStatus ?? [];
 
   const reload = useCallback(() => queryClient.invalidateQueries({ queryKey: ["home"] }), [queryClient]);
   const starterMeta = useCallback((id: string) => STARTER_TEMPLATES.find((s) => s.id === id), []);
@@ -121,6 +126,7 @@ export default function Workouts() {
       <StatsRow colors={colors} streak={streak} weekDone={weekDone} scheduled={scheduled} prCount={recentPRs.length} />
       <HomeBanners colors={colors} active={active} todaySchedule={todaySchedule} todayDone={todayDone} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
       <AdherenceBar colors={colors} adherence={adherence} />
+      <RecoveryHeatmap recoveryStatus={recoveryStatus} colors={colors} />
 
       <View style={styles.actionRow}>
         <Button variant="default" onPress={quickStart} accessibilityLabel="Quick start workout">
