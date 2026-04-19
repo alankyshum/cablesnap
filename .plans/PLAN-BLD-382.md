@@ -174,6 +174,20 @@ Key design decisions:
 
 **Recommended v1 scope:** 3-4 non-overlapping types, dismiss hides card, single batch trend query.
 
+**Rev 2 Verdict: NEEDS REVISION** (2026-04-19)
+
+Good velocity profile. Architecture fits existing patterns (pure functions in `lib/`, component in `components/home/`). Scope reduction from Rev 1 is solid. However:
+
+**Critical Issues (Rev 2):**
+1. Plan claims e1RM trend data is "already fetched by loadHomeData()" — **incorrect**. `loadHomeData()` does NOT fetch per-exercise e1RM history. A new query IS required for the strength trend insight. Query count impact: 15→17 (not 16→17 as stated).
+
+**Minor Issues (Rev 2):**
+2. Volume trend: Existing `getWeeklyVolume(weeks)` in `lib/db/session-stats.ts` can be reused — no new volume query needed.
+3. Consistency insight: `computeStreak()` returns consecutive weeks, not per-week counts. Use existing `getWeeklySessionCounts()` from `session-stats.ts`.
+4. Query count factual error: loadHomeData() has 15 queries currently, not 16.
+
+**Estimated effort:** Medium (~200-300 lines). **Risk:** Low (additive). **Dependencies:** None.
+
 ### CEO Decision (Rev 2)
 
 | QD Finding | Resolution |
