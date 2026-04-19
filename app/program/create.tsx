@@ -23,6 +23,7 @@ import {
 } from "../../lib/programs";
 import type { Program, ProgramDay } from "../../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { bumpQueryVersion } from "../../lib/query";
 
 export default function CreateProgram() {
   const colors = useThemeColors();
@@ -71,6 +72,7 @@ export default function CreateProgram() {
       if (!program) {
         const p = await createProgram(trimmed, description.trim());
         setProgram(p);
+        bumpQueryVersion("home");
         Alert.alert("Program Created", "Now add workout days to your program.");
       } else {
         if (days.length === 0) {
@@ -79,6 +81,7 @@ export default function CreateProgram() {
           return;
         }
         await updateProgram(program.id, trimmed, description.trim());
+        bumpQueryVersion("home");
         router.back();
       }
     } finally {

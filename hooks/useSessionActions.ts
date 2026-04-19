@@ -17,6 +17,7 @@ import {
   updateSetTrainingMode,
   getSessionSets,
 } from "../lib/db";
+import { bumpQueryVersion } from "../lib/query";
 import {
   getSessionProgramDayId,
   getProgramDayById,
@@ -229,6 +230,7 @@ export function useSessionActions({
       `Duration: ${formatTime(elapsed)}`,
       async () => {
         await completeSession(id!);
+        bumpQueryVersion("home");
 
         // Strava sync (non-blocking — never prevents workout completion)
         try {
@@ -292,6 +294,7 @@ export function useSessionActions({
       "All logged sets will be lost.",
       async () => {
         await cancelSession(id!);
+        bumpQueryVersion("home");
         router.back();
       },
       true

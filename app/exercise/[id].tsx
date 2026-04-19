@@ -21,6 +21,7 @@ import {
   getTemplatesUsingExercise,
   type ExerciseSession,
 } from "../../lib/db";
+import { bumpQueryVersion } from "../../lib/query";
 import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
@@ -58,7 +59,7 @@ export default function ExerciseDetail() {
     Alert.alert("Delete Exercise", msg, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
-        try { await softDeleteCustomExercise(id); showToast({ description: "Exercise deleted" }); setTimeout(() => router.back(), 400); }
+        try { await softDeleteCustomExercise(id); bumpQueryVersion("exercises"); bumpQueryVersion("session"); bumpQueryVersion("home"); showToast({ description: "Exercise deleted" }); setTimeout(() => router.back(), 400); }
         catch { showToast({ description: "Failed to delete exercise" }); }
       }},
     ]);

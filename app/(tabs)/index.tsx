@@ -19,7 +19,7 @@ import { rpeColor, rpeText } from "../../lib/rpe";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { computeStreak } from "../../lib/format";
 import { FlowCard, difficultyBadge, type MetaBadge } from "../../components/FlowCard";
-import { useFocusRefetch } from "../../lib/query";
+import { useFocusRefetch, bumpQueryVersion } from "../../lib/query";
 import { useToast } from "../../components/ui/bna-toast";
 import { useLayout } from "../../lib/layout";
 import { flowCardStyle } from "../../components/ui/FlowContainer";
@@ -76,8 +76,8 @@ export default function Workouts() {
   const reload = () => queryClient.invalidateQueries({ queryKey: ["home"] });
   const starterMeta = (id: string) => STARTER_TEMPLATES.find((s) => s.id === id);
 
-  const quickStart = async () => { const s = await startSession(null, "Quick Workout"); router.push(`/session/${s.id}`); };
-  const startFromTemplate = async (tpl: WorkoutTemplate) => { const s = await startSession(tpl.id, tpl.name); router.push(`/session/${s.id}?templateId=${tpl.id}`); };
+  const quickStart = async () => { const s = await startSession(null, "Quick Workout"); bumpQueryVersion("home"); router.push(`/session/${s.id}`); };
+  const startFromTemplate = async (tpl: WorkoutTemplate) => { const s = await startSession(tpl.id, tpl.name); bumpQueryVersion("home"); router.push(`/session/${s.id}?templateId=${tpl.id}`); };
   const startNextWorkout = async () => {
     if (!nextWorkout) return;
     if (!nextWorkout.day.template_id) { info("Template no longer exists"); return; }
@@ -94,18 +94,18 @@ export default function Workouts() {
     if (tpl.is_starter) return;
     Alert.alert("Delete Template", `Delete "${tpl.name}"? Past workout data will be preserved.`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { await deleteTemplate(tpl.id); reload(); } },
+      { text: "Delete", style: "destructive", onPress: async () => { await deleteTemplate(tpl.id); bumpQueryVersion("home"); reload(); } },
     ]);
   };
   const confirmDeleteProgram = (prog: Program) => {
     if (prog.is_starter) return;
     Alert.alert("Delete Program", `Delete "${prog.name}"? Past workout data will be preserved.`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { await softDeleteProgram(prog.id); reload(); } },
+      { text: "Delete", style: "destructive", onPress: async () => { await softDeleteProgram(prog.id); bumpQueryVersion("home"); reload(); } },
     ]);
   };
-  const handleDuplicateTemplate = async (tpl: WorkoutTemplate) => { const id = await duplicateTemplate(tpl.id); reload(); router.push(`/template/${id}`); };
-  const handleDuplicateProgram = async (prog: Program) => { const id = await duplicateProgram(prog.id); reload(); router.push(`/program/${id}`); };
+  const handleDuplicateTemplate = async (tpl: WorkoutTemplate) => { const id = await duplicateTemplate(tpl.id); bumpQueryVersion("home"); reload(); router.push(`/template/${id}`); };
+  const handleDuplicateProgram = async (prog: Program) => { const id = await duplicateProgram(prog.id); bumpQueryVersion("home"); reload(); router.push(`/program/${id}`); };
   const showTemplateOptions = (item: WorkoutTemplate) => {
     const meta = starterMeta(item.id);
     Alert.alert(meta?.name || item.name, undefined, [{ text: "Duplicate", onPress: () => handleDuplicateTemplate(item) }, { text: "Cancel", style: "cancel" }]);

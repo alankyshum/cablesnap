@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/bna-toast";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import ExerciseForm from "../../../components/ExerciseForm";
 import { getExerciseById, updateCustomExercise } from "../../../lib/db";
+import { bumpQueryVersion } from "../../../lib/query";
 import type { Exercise } from "../../../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -29,6 +30,8 @@ export default function EditExercise() {
     async (data: Omit<Exercise, "id" | "is_custom">) => {
       if (!id) return;
       await updateCustomExercise(id, data);
+      bumpQueryVersion("exercises");
+      bumpQueryVersion("session");
       success("Exercise updated");
       timer.current = setTimeout(() => router.back(), 400);
     },
