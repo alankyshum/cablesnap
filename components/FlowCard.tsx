@@ -8,6 +8,7 @@ import type { Difficulty } from "../lib/types";
 import { DIFFICULTY_LABELS } from "../lib/types";
 import type { ReadinessBadge } from "../lib/recovery-readiness";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 const DIFFICULTY_COLORS: Record<Difficulty, { bg: string; fg: string }> = {
   beginner: { bg: "#D1FAE5", fg: "#065F46" },
@@ -51,7 +52,7 @@ export function FlowCard({
   accessibilityHint,
 }: Props) {
   const colors = useThemeColors();
-  const isDark = colors.background === "#0D1117";
+  const isDark = useColorScheme() === "dark";
 
   const body = (
     <>
