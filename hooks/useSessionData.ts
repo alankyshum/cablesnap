@@ -7,13 +7,13 @@ import {
   getBodySettings,
   getAllExercises,
   getMaxWeightByExercise,
-  getRecentExerciseSets,
+  getRecentExerciseSetsBatch,
   getSessionById,
   getSessionSets,
   getSourceSessionSets,
   getTemplateById,
-  getPreviousSets,
-  getExerciseById,
+  getPreviousSetsBatch,
+  getExercisesByIds,
   updateSetsBatch,
 } from "../lib/db";
 import type { WorkoutSession, TrainingMode, Exercise } from "../lib/types";
@@ -90,19 +90,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
 
-    const [prevResults, exerciseResults, recentResults] = await Promise.all([
-      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))),
-      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getExerciseById(eid) }))),
-      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getRecentExerciseSets(eid, 2) }))),
+    const [prevCache, exerciseMeta, recentByExercise] = await Promise.all([
+      getPreviousSetsBatch(exerciseIds, id),
+      getExercisesByIds(exerciseIds),
+      getRecentExerciseSetsBatch(exerciseIds, 2),
     ]);
-
-    const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
-    for (const { eid, data } of prevResults) prevCache[eid] = data;
-
-    const exerciseMeta: Record<string, Exercise> = {};
-    for (const { eid, data } of exerciseResults) {
-      if (data) exerciseMeta[eid] = data;
-    }
 
     const key = exerciseIds.sort().join(",");
     if (key !== prevExerciseIds.current) {
@@ -142,7 +134,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const entries: [string, Suggestion | null][] = exerciseIds.map((eid) => {
       try {
-        const recent = recentResults.find((r) => r.eid === eid)?.data ?? [];
+        const recent = recentByExercise[eid] ?? [];
         if (recent.length === 0) return [eid, null];
         const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
         if (timeBased) return [eid, null];
@@ -188,11 +180,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
           const created = await getSessionSets(id);
           const exerciseIds = [...new Set(created.map((s) => s.exercise_id))];
-          const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
-          const prevResults = await Promise.all(
-            exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))
-          );
-          for (const { eid, data } of prevResults) prevCache[eid] = data;
+          const prevCache = await getPreviousSetsBatch(exerciseIds, id);
 
           const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
           for (const s of created) {

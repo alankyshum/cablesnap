@@ -20,16 +20,20 @@ jest.mock('../../lib/db', () => ({
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
   getPreviousSets: jest.fn().mockResolvedValue([]),
+  getPreviousSetsBatch: jest.fn().mockResolvedValue({}),
   getRecentExerciseSets: jest.fn().mockResolvedValue([]),
+  getRecentExerciseSetsBatch: jest.fn().mockResolvedValue({}),
   getRestSecondsForExercise: jest.fn().mockResolvedValue(90),
   getRestSecondsForLink: jest.fn().mockResolvedValue(30),
   getExerciseById: jest.fn(),
+  getExercisesByIds: jest.fn().mockResolvedValue({}),
   getAppSetting: jest.fn().mockResolvedValue('true'),
   getSessionPRs: jest.fn().mockResolvedValue([]),
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
   getSessionWeightIncreases: jest.fn().mockResolvedValue([]),
   getSessionComparison: jest.fn().mockResolvedValue(null),
   getTemplateExerciseCount: jest.fn().mockResolvedValue(0),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   removeExerciseFromTemplate: jest.fn().mockResolvedValue(undefined),
   reorderTemplateExercises: jest.fn().mockResolvedValue(undefined),
@@ -208,8 +212,11 @@ beforeEach(() => {
     if (id === 'ex-c') return Promise.resolve(exerciseC)
     return Promise.resolve(null)
   })
+  mockDb.getExercisesByIds.mockResolvedValue({ 'ex-a': exerciseA, 'ex-b': exerciseB, 'ex-c': exerciseC })
   mockDb.getPreviousSets.mockResolvedValue([])
+  mockDb.getPreviousSetsBatch.mockResolvedValue({})
   mockDb.getRecentExerciseSets.mockResolvedValue([])
+  mockDb.getRecentExerciseSetsBatch.mockResolvedValue({})
   mockDb.getRestSecondsForExercise.mockResolvedValue(90)
   mockDb.getRestSecondsForLink.mockResolvedValue(30)
   mockDb.getAppSetting.mockResolvedValue('true')

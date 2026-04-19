@@ -20,8 +20,11 @@ export {
   updateSetWarmup,
   updateSetType,
   getPreviousSets,
+  getPreviousSetsBatch,
   getSessionSetCount,
+  getSessionSetCounts,
   getSessionAvgRPE,
+  getSessionAvgRPEs,
   getRestSecondsForExercise,
   getRestSecondsForLink,
   getSourceSessionSets,
@@ -54,6 +57,7 @@ export {
   getExercise1RMChartData,
   getExerciseChartData,
   getRecentExerciseSets,
+  getRecentExerciseSetsBatch,
   getBestSet,
 } from "./exercise-history";
 export type { ExerciseSession, ExerciseRecords } from "./exercise-history";
