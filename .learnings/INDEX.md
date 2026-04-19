@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 145
+Total learnings: 147
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 72 learnings
+- [React Native + Expo](patterns/react-native.md) — 74 learnings
 - [Testing](patterns/testing.md) — 10 learnings
 
 ### Pitfalls
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-348 | Add Callback Props to Replace router.push When Embedding Screen Components in Sheets | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-348 | Bottom Sheet Mutual Exclusion — Close Before Open | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-346 | Swipe Gestures Need Relative Thresholds and Discoverability Hints | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-341 | expo-localization firstWeekday Is 1-Indexed — Not JS Convention | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-339 | Avoid Hidden Re-Queries in Composed Data-Layer Functions | Patterns | [react-native.md](patterns/react-native.md) |

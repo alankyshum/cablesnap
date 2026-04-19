@@ -593,3 +593,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: Fixed pixel thresholds in gesture handlers produce inconsistent UX across device sizes. Use `useWindowDimensions()` and express thresholds as a percentage of screen width (e.g., 40%). For hidden gestures (swipe-to-delete, pull-to-refresh alternatives), users need an onboarding affordance — a subtle hint animation on the first item using `withDelay` + `withSequence` + `withSpring` that briefly nudges the row and springs back.
 **Action**: When building swipe gestures: (1) use `useWindowDimensions().width` and percentage-based thresholds instead of hardcoded pixel values, (2) add a `showHint` prop that triggers a brief bounce animation on mount for the first item, using `withDelay(600, withSequence(withTiming(-40, {duration: 300}), withSpring(0)))`. Pass `showHint={index === 0}` to hint only on the first row.
 **Tags**: gesture, swipe-to-delete, responsive, useWindowDimensions, reanimated, discoverability, ux, hint-animation
+
+### Add Callback Props to Replace router.push When Embedding Screen Components in Sheets
+**Source**: BLD-348 — Toolbox + rest timer integration into session header
+**Date**: 2026-04-19
+**Context**: `RMCalculatorContent` used `router.push('/tools/plates?weight=...')` on line 168 to navigate to the plate calculator. When this component was embedded inside a `@gorhom/bottom-sheet`, the navigation call would close the sheet and navigate away — breaking the in-session toolbox UX.
+**Learning**: Screen-level components that use `router.push()` or `router.navigate()` internally cannot be directly reused inside bottom sheets, modals, or drawers without side effects. The fix is to add an optional callback prop (e.g., `onPlateCalc?: (weight: number) => void`) that the parent supplies to handle the action in-context. The component falls back to `router.push()` when no callback is provided, preserving standalone behavior.
+**Action**: When planning to reuse a screen-level component in an overlay context, audit it for `router.push/navigate/replace` calls. For each navigation call, add an optional callback prop with a descriptive name. Use the pattern: `if (onCallback) { onCallback(data); } else { router.push(...); }`. This makes the component context-agnostic without breaking existing standalone usage.
+**Tags**: react-native, expo-router, bottom-sheet, component-reuse, callback-prop, navigation, embedding
+
+### Bottom Sheet Mutual Exclusion — Close Before Open
+**Source**: BLD-348 — Toolbox + rest timer integration into session header
+**Date**: 2026-04-19
+**Context**: The workout session screen had two bottom sheets — an exercise picker and the new toolbox sheet. Opening both simultaneously caused visual stacking and gesture conflicts with `@gorhom/bottom-sheet`.
+**Learning**: When a screen has multiple `@gorhom/bottom-sheet` instances, opening a second sheet while the first is visible causes overlapping backdrops and competing pan gesture handlers. The sheets stack rather than replace. The fix is a mutual exclusion pattern: before opening sheet B, explicitly close sheet A (and vice versa). Use state setters or refs: `setPickerOpen(false); toolboxSheetRef.current?.snapToIndex(0);`.
+**Action**: When adding a new bottom sheet to a screen that already has one, implement mutual exclusion in every open handler: close all other sheets before opening the new one. Wrap the existing open handlers to also close the new sheet. Use `useCallback` with the close/open calls in sequence. Consider extracting a `useSheetMutex(refs)` hook if the screen has 3+ sheets.
+**Tags**: bottom-sheet, gorhom, mutual-exclusion, gesture-conflict, multiple-sheets, ux-pattern
