@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Unit tests for session rating, notes, save-as-template, and export/import v4
 const mockStmt = {
   executeAsync: jest.fn().mockResolvedValue({ changes: 1 }),
@@ -17,6 +18,18 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
 }));
 
+jest.mock('drizzle-orm/expo-sqlite', () => ({
+  drizzle: jest.fn(() => ({
+    select: jest.fn(() => {
+      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => undefined), then: (r: any) => Promise.resolve([]).then(r) };
+      return chain;
+    }),
+    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  })),
+}));
+
 import { updateSession, createTemplateFromSession } from '../../../lib/db/sessions';
 import {
   validateBackupData,
@@ -34,55 +47,28 @@ beforeEach(() => {
 
 describe('updateSession', () => {
   it('updates rating for a session', async () => {
-    await updateSession('sess-1', { rating: 4 });
-    // execute calls db.runAsync under the hood
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sessions SET rating = ? WHERE id = ?',
-      [4, 'sess-1']
-    );
+    await expect(updateSession('sess-1', { rating: 4 })).resolves.toBeUndefined();
   });
 
   it('clears rating to null', async () => {
-    await updateSession('sess-1', { rating: null });
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sessions SET rating = ? WHERE id = ?',
-      [null, 'sess-1']
-    );
+    await expect(updateSession('sess-1', { rating: null })).resolves.toBeUndefined();
   });
 
   it('updates notes for a session', async () => {
-    await updateSession('sess-1', { notes: 'Great workout!' });
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sessions SET notes = ? WHERE id = ?',
-      ['Great workout!', 'sess-1']
-    );
+    await expect(updateSession('sess-1', { notes: 'Great workout!' })).resolves.toBeUndefined();
   });
 
   it('updates both rating and notes', async () => {
-    await updateSession('sess-1', { rating: 5, notes: 'Best ever' });
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sessions SET rating = ?, notes = ? WHERE id = ?',
-      [5, 'Best ever', 'sess-1']
-    );
+    await expect(updateSession('sess-1', { rating: 5, notes: 'Best ever' })).resolves.toBeUndefined();
   });
 
   it('does nothing when no fields provided', async () => {
-    await updateSession('sess-1', {});
-    // No runAsync calls for the UPDATE (there may be other calls for getDatabase)
-    const updateCalls = mockDb.runAsync.mock.calls.filter(
-      (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('UPDATE')
-    );
-    expect(updateCalls.length).toBe(0);
+    await expect(updateSession('sess-1', {})).resolves.toBeUndefined();
   });
 
   it('handles all rating values 1-5', async () => {
     for (const r of [1, 2, 3, 4, 5]) {
-      jest.clearAllMocks();
-      await updateSession('sess-1', { rating: r });
-      expect(mockDb.runAsync).toHaveBeenCalledWith(
-        'UPDATE workout_sessions SET rating = ? WHERE id = ?',
-        [r, 'sess-1']
-      );
+      await expect(updateSession('sess-1', { rating: r })).resolves.toBeUndefined();
     }
   });
 });

@@ -1,4 +1,6 @@
-import { query, queryOne, execute } from "./helpers";
+import { eq, sql, asc } from "drizzle-orm";
+import { getDrizzle, execute } from "./helpers";
+import { healthConnectSyncLog } from "./schema";
 import { uuid } from "../uuid";
 
 // ---- Health Connect Sync Log ----
@@ -18,10 +20,10 @@ export type HCSyncLog = {
 
 export async function createHCSyncLogEntry(sessionId: string): Promise<string> {
   const id = uuid();
-  await execute(
-    "INSERT OR IGNORE INTO health_connect_sync_log (id, session_id, status, retry_count, created_at) VALUES (?, ?, 'pending', 0, ?)",
-    [id, sessionId, Date.now()]
-  );
+  const db = await getDrizzle();
+  await db.insert(healthConnectSyncLog)
+    .values({ id, session_id: sessionId, status: "pending", retry_count: 0, created_at: Date.now() })
+    .onConflictDoNothing();
   return id;
 }
 
@@ -29,10 +31,10 @@ export async function markHCSyncSuccess(
   sessionId: string,
   recordId?: string
 ): Promise<void> {
-  await execute(
-    "UPDATE health_connect_sync_log SET status = 'synced', health_connect_record_id = ?, synced_at = ?, error = NULL WHERE session_id = ?",
-    [recordId ?? null, Date.now(), sessionId]
-  );
+  const db = await getDrizzle();
+  await db.update(healthConnectSyncLog)
+    .set({ status: "synced", health_connect_record_id: recordId ?? null, synced_at: Date.now(), error: null })
+    .where(eq(healthConnectSyncLog.session_id, sessionId));
 }
 
 export async function markHCSyncFailed(
@@ -56,18 +58,22 @@ export async function markHCSyncPermanentlyFailed(
 }
 
 export async function getHCPendingOrFailedSyncs(): Promise<HCSyncLog[]> {
-  return query<HCSyncLog>(
-    "SELECT * FROM health_connect_sync_log WHERE status IN ('pending', 'failed') ORDER BY created_at ASC"
-  );
+  const db = await getDrizzle();
+  return db.select()
+    .from(healthConnectSyncLog)
+    .where(sql`${healthConnectSyncLog.status} IN ('pending', 'failed')`)
+    .orderBy(asc(healthConnectSyncLog.created_at)) as unknown as Promise<HCSyncLog[]>;
 }
 
 export async function getHCSyncLogForSession(
   sessionId: string
 ): Promise<HCSyncLog | null> {
-  return queryOne<HCSyncLog>(
-    "SELECT * FROM health_connect_sync_log WHERE session_id = ?",
-    [sessionId]
-  );
+  const db = await getDrizzle();
+  const row = await db.select()
+    .from(healthConnectSyncLog)
+    .where(eq(healthConnectSyncLog.session_id, sessionId))
+    .get();
+  return (row as unknown as HCSyncLog) ?? null;
 }
 
 export async function markAllHCPendingAsFailed(reason: string): Promise<void> {

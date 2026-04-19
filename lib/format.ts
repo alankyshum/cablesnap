@@ -91,7 +91,7 @@ export function computeLongestStreak(timestamps: number[]): number {
   const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
   for (let i = 1; i < sorted.length; i++) {
     const diff = sorted[i] - sorted[i - 1];
-    if (diff === oneWeekMs) {
+    if (Math.abs(diff - oneWeekMs) <= 3600000) {
       current++;
       if (current > max) max = current;
     } else {

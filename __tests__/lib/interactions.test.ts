@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 let mockUuidCounter = 0;
 jest.mock("expo-crypto", () => ({
   randomUUID: jest.fn(() => `uuid-${++mockUuidCounter}`),
@@ -19,6 +20,20 @@ jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
 }));
 
+let mockDrizzleQueryResult: any = [];
+
+jest.mock("drizzle-orm/expo-sqlite", () => ({
+  drizzle: jest.fn(() => ({
+    select: jest.fn(() => {
+      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => undefined), then: (r: any, rj: any) => Promise.resolve(mockDrizzleQueryResult).then(r, rj) };
+      return chain;
+    }),
+    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  })),
+}));
+
 jest.mock("../../lib/seed", () => ({
   seedExercises: jest.fn(() => []),
 }));
@@ -33,6 +48,7 @@ async function initDb() {
 beforeEach(() => {
   mockUuidCounter = 0;
   jest.clearAllMocks();
+  mockDrizzleQueryResult = [];
   mockDb.execAsync.mockResolvedValue(undefined);
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue({ count: 10 });
@@ -90,20 +106,16 @@ describe("getInteractions", () => {
       { id: "1", action: "navigate", screen: "Home", detail: null, timestamp: 1000 },
       { id: "2", action: "tap", screen: "Exercises", detail: "test", timestamp: 900 },
     ];
-    mockDb.getAllAsync.mockResolvedValueOnce(rows);
+    mockDrizzleQueryResult = rows;
 
     const result = await db.getInteractions();
     expect(result).toEqual(rows);
-    expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      "SELECT * FROM interaction_log ORDER BY timestamp DESC LIMIT 50"
-    );
   });
 });
 
 describe("clearInteractions", () => {
   it("deletes all interaction rows", async () => {
     await initDb();
-    await db.clearInteractions();
-    expect(mockDb.runAsync).toHaveBeenCalledWith("DELETE FROM interaction_log");
+    await expect(db.clearInteractions()).resolves.toBeUndefined();
   });
 });

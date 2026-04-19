@@ -1,7 +1,7 @@
 // Re-export everything from domain modules for backward compatibility.
 // Consumers can import from "lib/db" as before, or from specific modules.
 
-export { getDatabase, isMemoryFallback } from "./helpers";
+export { getDatabase, getDrizzle, isMemoryFallback } from "./helpers";
 
 export {
   getAllExercises,

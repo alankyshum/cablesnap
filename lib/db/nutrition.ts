@@ -1,6 +1,8 @@
+import { eq, desc, asc, sql } from "drizzle-orm";
 import type { FoodEntry, DailyLog, MacroTargets, Meal } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, execute } from "./helpers";
+import { getDrizzle, query, queryOne } from "./helpers";
+import { foodEntries, dailyLog, macroTargets } from "./schema";
 
 type FoodRow = {
   id: string;
@@ -49,30 +51,36 @@ export async function addFoodEntry(
 ): Promise<FoodEntry> {
   const id = uuid();
   const now = Date.now();
-  await execute(
-    "INSERT INTO food_entries (id, name, calories, protein, carbs, fat, serving_size, is_favorite, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [id, name, calories, protein, carbs, fat, serving, favorite ? 1 : 0, now]
-  );
+  const db = await getDrizzle();
+  await db.insert(foodEntries).values({
+    id, name, calories, protein, carbs, fat,
+    serving_size: serving,
+    is_favorite: favorite ? 1 : 0,
+    created_at: now,
+  });
   return { id, name, calories, protein, carbs, fat, serving_size: serving, is_favorite: favorite, created_at: now };
 }
 
 export async function getFoodEntries(): Promise<FoodEntry[]> {
-  const rows = await query<FoodRow>("SELECT * FROM food_entries ORDER BY created_at DESC");
-  return rows.map(mapFood);
+  const db = await getDrizzle();
+  const rows = await db.select().from(foodEntries).orderBy(desc(foodEntries.created_at));
+  return (rows as unknown as FoodRow[]).map(mapFood);
 }
 
 export async function getFavoriteFoods(): Promise<FoodEntry[]> {
-  const rows = await query<FoodRow>(
-    "SELECT * FROM food_entries WHERE is_favorite = 1 ORDER BY name ASC"
-  );
-  return rows.map(mapFood);
+  const db = await getDrizzle();
+  const rows = await db.select()
+    .from(foodEntries)
+    .where(eq(foodEntries.is_favorite, 1))
+    .orderBy(asc(foodEntries.name));
+  return (rows as unknown as FoodRow[]).map(mapFood);
 }
 
 export async function toggleFavorite(id: string): Promise<void> {
-  await execute(
-    "UPDATE food_entries SET is_favorite = CASE WHEN is_favorite = 1 THEN 0 ELSE 1 END WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  await db.update(foodEntries)
+    .set({ is_favorite: sql`CASE WHEN ${foodEntries.is_favorite} = 1 THEN 0 ELSE 1 END` })
+    .where(eq(foodEntries.id, id));
 }
 
 export async function addDailyLog(
@@ -83,10 +91,10 @@ export async function addDailyLog(
 ): Promise<DailyLog> {
   const id = uuid();
   const now = Date.now();
-  await execute(
-    "INSERT INTO daily_log (id, food_entry_id, date, meal, servings, logged_at) VALUES (?, ?, ?, ?, ?, ?)",
-    [id, foodId, date, meal, servings, now]
-  );
+  const db = await getDrizzle();
+  await db.insert(dailyLog).values({
+    id, food_entry_id: foodId, date, meal, servings, logged_at: now,
+  });
   return { id, food_entry_id: foodId, date, meal, servings, logged_at: now };
 }
 
@@ -123,18 +131,19 @@ export async function getDailyLogs(date: string): Promise<DailyLog[]> {
 }
 
 export async function deleteDailyLog(id: string): Promise<void> {
-  await execute("DELETE FROM daily_log WHERE id = ?", [id]);
+  const db = await getDrizzle();
+  await db.delete(dailyLog).where(eq(dailyLog.id, id));
 }
 
 export async function getMacroTargets(): Promise<MacroTargets> {
-  const row = await queryOne<MacroTargets>("SELECT * FROM macro_targets LIMIT 1");
-  if (row) return row;
+  const db = await getDrizzle();
+  const row = await db.select().from(macroTargets).limit(1).get();
+  if (row) return row as unknown as MacroTargets;
   const id = uuid();
   const now = Date.now();
-  await execute(
-    "INSERT INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, 2000, 150, 250, 65, ?)",
-    [id, now]
-  );
+  await db.insert(macroTargets).values({
+    id, calories: 2000, protein: 150, carbs: 250, fat: 65, updated_at: now,
+  });
   return { id, calories: 2000, protein: 150, carbs: 250, fat: 65, updated_at: now };
 }
 
@@ -145,10 +154,10 @@ export async function updateMacroTargets(
   fat: number
 ): Promise<void> {
   const targets = await getMacroTargets();
-  await execute(
-    "UPDATE macro_targets SET calories = ?, protein = ?, carbs = ?, fat = ?, updated_at = ? WHERE id = ?",
-    [calories, protein, carbs, fat, Date.now(), targets.id]
-  );
+  const db = await getDrizzle();
+  await db.update(macroTargets)
+    .set({ calories, protein, carbs, fat, updated_at: Date.now() })
+    .where(eq(macroTargets.id, targets.id));
 }
 
 export async function findDuplicateFoodEntry(

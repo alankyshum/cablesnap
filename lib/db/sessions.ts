@@ -1,6 +1,8 @@
+import { eq, sql, desc, isNotNull } from "drizzle-orm";
 import type { WorkoutSession } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, execute, getDatabase } from "./helpers";
+import { getDrizzle, query, execute, getDatabase } from "./helpers";
+import { workoutSessions, workoutSets } from "./schema";
 
 // Re-export from split modules for backward compatibility
 export {
@@ -67,10 +69,15 @@ export async function startSession(
 ): Promise<WorkoutSession> {
   const id = uuid();
   const now = Date.now();
-  await execute(
-    "INSERT INTO workout_sessions (id, template_id, name, started_at, notes, program_day_id) VALUES (?, ?, ?, ?, '', ?)",
-    [id, templateId, name, now, programDayId ?? null]
-  );
+  const db = await getDrizzle();
+  await db.insert(workoutSessions).values({
+    id,
+    template_id: templateId,
+    name,
+    started_at: now,
+    notes: "",
+    program_day_id: programDayId ?? null,
+  });
   return {
     id,
     template_id: templateId,
@@ -88,44 +95,54 @@ export async function completeSession(
   notes?: string
 ): Promise<void> {
   const now = Date.now();
-  const session = await queryOne<{ started_at: number }>(
-    "SELECT started_at FROM workout_sessions WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  const session = await db.select({ started_at: workoutSessions.started_at })
+    .from(workoutSessions)
+    .where(eq(workoutSessions.id, id))
+    .get();
   const duration = session ? Math.floor((now - session.started_at) / 1000) : 0;
-  await execute(
-    "UPDATE workout_sessions SET completed_at = ?, duration_seconds = ?, notes = ? WHERE id = ?",
-    [now, duration, notes ?? "", id]
-  );
+  await db.update(workoutSessions)
+    .set({ completed_at: now, duration_seconds: duration, notes: notes ?? "" })
+    .where(eq(workoutSessions.id, id));
 }
 
 export async function cancelSession(id: string): Promise<void> {
-  await execute("DELETE FROM workout_sets WHERE session_id = ?", [id]);
-  await execute("DELETE FROM workout_sessions WHERE id = ?", [id]);
+  const db = await getDrizzle();
+  await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
+  await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
 }
 
 export async function getRecentSessions(
   limit = 20
 ): Promise<WorkoutSession[]> {
-  return query<WorkoutSession>(
-    "SELECT * FROM workout_sessions WHERE completed_at IS NOT NULL ORDER BY started_at DESC LIMIT ?",
-    [limit]
-  );
+  const db = await getDrizzle();
+  return db.select()
+    .from(workoutSessions)
+    .where(isNotNull(workoutSessions.completed_at))
+    .orderBy(desc(workoutSessions.started_at))
+    .limit(limit) as unknown as Promise<WorkoutSession[]>;
 }
 
 export async function getSessionById(
   id: string
 ): Promise<WorkoutSession | null> {
-  return queryOne<WorkoutSession>(
-    "SELECT * FROM workout_sessions WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  const row = await db.select()
+    .from(workoutSessions)
+    .where(eq(workoutSessions.id, id))
+    .get();
+  return (row as unknown as WorkoutSession) ?? null;
 }
 
 export async function getActiveSession(): Promise<WorkoutSession | null> {
-  return queryOne<WorkoutSession>(
-    "SELECT * FROM workout_sessions WHERE completed_at IS NULL ORDER BY started_at DESC LIMIT 1"
-  );
+  const db = await getDrizzle();
+  const row = await db.select()
+    .from(workoutSessions)
+    .where(sql`${workoutSessions.completed_at} IS NULL`)
+    .orderBy(desc(workoutSessions.started_at))
+    .limit(1)
+    .get();
+  return (row as unknown as WorkoutSession) ?? null;
 }
 
 // ---- Session Rating & Notes ----
@@ -134,24 +151,15 @@ export async function updateSession(
   id: string,
   fields: { rating?: number | null; notes?: string }
 ): Promise<void> {
-  const clauses: string[] = [];
-  const params: (string | number | null)[] = [];
+  const updates: Record<string, unknown> = {};
+  if (fields.rating !== undefined) updates.rating = fields.rating;
+  if (fields.notes !== undefined) updates.notes = fields.notes;
+  if (Object.keys(updates).length === 0) return;
 
-  if (fields.rating !== undefined) {
-    clauses.push("rating = ?");
-    params.push(fields.rating);
-  }
-  if (fields.notes !== undefined) {
-    clauses.push("notes = ?");
-    params.push(fields.notes);
-  }
-  if (clauses.length === 0) return;
-
-  params.push(id);
-  await execute(
-    `UPDATE workout_sessions SET ${clauses.join(", ")} WHERE id = ?`,
-    params
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSessions)
+    .set(updates)
+    .where(eq(workoutSessions.id, id));
 }
 
 // ---- Save Session as Template ----

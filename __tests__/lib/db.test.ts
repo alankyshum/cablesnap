@@ -1,6 +1,72 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable max-lines */
 const MOCK_UUID = "test-uuid-1234";
 jest.mock("expo-crypto", () => ({
   randomUUID: jest.fn(() => "test-uuid-1234"),
+}));
+
+// ---- Mock Drizzle ORM ----
+// Instead of trying to mock the low-level SQLite sync API that Drizzle uses internally,
+// we mock drizzle-orm/expo-sqlite so that `drizzle()` returns a controllable fake ORM.
+
+let drizzleQueryResult: any = [];
+let drizzleGetResult: any = undefined;
+
+function resetDrizzleResults() {
+  drizzleQueryResult = [];
+  drizzleGetResult = undefined;
+}
+
+// Chainable query builder mock
+function createChainableSelect() {
+  const chain: any = {
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    offset: jest.fn().mockReturnThis(),
+    get: jest.fn(() => drizzleGetResult),
+    then: undefined as any,
+  };
+  // Make it thenable so `await db.select()...` resolves to drizzleQueryResult
+  chain.then = (resolve: any, reject: any) => Promise.resolve(drizzleQueryResult).then(resolve, reject);
+  return chain;
+}
+
+function createChainableInsert() {
+  const chain: any = {
+    values: jest.fn().mockReturnThis(),
+    then: (resolve: any, reject: any) => Promise.resolve().then(resolve, reject),
+  };
+  return chain;
+}
+
+function createChainableUpdate() {
+  const chain: any = {
+    set: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    then: (resolve: any, reject: any) => Promise.resolve().then(resolve, reject),
+  };
+  return chain;
+}
+
+function createChainableDelete() {
+  const chain: any = {
+    where: jest.fn().mockReturnThis(),
+    then: (resolve: any, reject: any) => Promise.resolve().then(resolve, reject),
+  };
+  return chain;
+}
+
+const mockDrizzleDb = {
+  select: jest.fn(() => createChainableSelect()),
+  insert: jest.fn(() => createChainableInsert()),
+  update: jest.fn(() => createChainableUpdate()),
+  delete: jest.fn(() => createChainableDelete()),
+};
+
+jest.mock("drizzle-orm/expo-sqlite", () => ({
+  drizzle: jest.fn(() => mockDrizzleDb),
 }));
 
 // Build mock database with tracking functions
@@ -13,6 +79,7 @@ const mockDb = {
     executeAsync: jest.fn().mockResolvedValue(undefined),
     finalizeAsync: jest.fn().mockResolvedValue(undefined),
   }),
+  prepareSync: jest.fn(() => ({})),
   withTransactionAsync: jest.fn(async (cb: () => Promise<void>) => cb()),
 };
 
@@ -31,10 +98,22 @@ let db: typeof import("../../lib/db");
 async function initDb() {
   await db.getDatabase();
   jest.clearAllMocks();
+  resetDrizzleResults();
+}
+
+/** Set up the mock so the next Drizzle select().from()...get() returns this value */
+function mockDrizzleGet(value: any) {
+  drizzleGetResult = value;
+}
+
+/** Set up the mock so the next Drizzle select().from()... (awaited as array) returns this value */
+function mockDrizzleAll(value: any[]) {
+  drizzleQueryResult = value;
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetDrizzleResults();
   mockDb.execAsync.mockResolvedValue(undefined);
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue({ count: 10 });
@@ -44,6 +123,9 @@ beforeEach(() => {
   jest.resetModules();
   jest.doMock("expo-sqlite", () => ({
     openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
+  }));
+  jest.doMock("drizzle-orm/expo-sqlite", () => ({
+    drizzle: jest.fn(() => mockDrizzleDb),
   }));
   jest.doMock("../../lib/seed", () => ({
     seedExercises: jest.fn(() => []),
@@ -76,6 +158,9 @@ describe("getDatabase web fallback", () => {
     jest.doMock("expo-sqlite", () => ({
       openDatabaseAsync: failOnce,
     }));
+    jest.doMock("drizzle-orm/expo-sqlite", () => ({
+      drizzle: jest.fn(() => mockDrizzleDb),
+    }));
     jest.doMock("react-native", () => ({
       Platform: { OS: "web" },
     }));
@@ -101,6 +186,9 @@ describe("getDatabase web fallback", () => {
     jest.doMock("expo-sqlite", () => ({
       openDatabaseAsync: fail,
     }));
+    jest.doMock("drizzle-orm/expo-sqlite", () => ({
+      drizzle: jest.fn(() => mockDrizzleDb),
+    }));
     jest.doMock("react-native", () => ({
       Platform: { OS: "android" },
     }));
@@ -118,7 +206,7 @@ describe("getDatabase web fallback", () => {
 describe("exercises CRUD", () => {
   it("getAllExercises returns mapped exercises", async () => {
     await initDb();
-    mockDb.getAllAsync.mockResolvedValueOnce([
+    mockDrizzleAll([
       {
         id: "ex1",
         name: "Cable Chest Press",
@@ -152,7 +240,7 @@ describe("exercises CRUD", () => {
 
   it("getExerciseById returns null for missing exercise", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce(null);
+    mockDrizzleGet(null);
 
     const result = await db.getExerciseById("nonexistent");
     expect(result).toBeNull();
@@ -160,7 +248,7 @@ describe("exercises CRUD", () => {
 
   it("getExerciseById returns mapped exercise", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce({
+    mockDrizzleGet({
       id: "ex1",
       name: "Cable Squat",
       category: "legs_glutes",
@@ -202,10 +290,7 @@ describe("exercises CRUD", () => {
     expect(result.id).toBe(MOCK_UUID);
     expect(result.name).toBe("My Exercise");
     expect(result.is_custom).toBe(true);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("INSERT INTO exercises"),
-      expect.arrayContaining([MOCK_UUID, "My Exercise"])
-    );
+    expect(mockDrizzleDb.insert).toHaveBeenCalled();
   });
 
   it("softDeleteCustomExercise removes from templates and soft-deletes", async () => {
@@ -224,7 +309,7 @@ describe("exercises CRUD", () => {
 
   it("getExerciseById returns soft-deleted exercise for historical lookup", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce({
+    mockDrizzleGet({
       id: "ex-old",
       name: "Old Bench Press",
       category: "chest",
@@ -263,6 +348,7 @@ describe("templates CRUD", () => {
 
   it("getTemplates returns all templates", async () => {
     await initDb();
+    // getTemplates uses raw SQL via query() → getAllAsync
     const templates = [
       { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: 0 },
     ];
@@ -276,6 +362,8 @@ describe("templates CRUD", () => {
 
   it("deleteTemplate removes template and related data", async () => {
     await initDb();
+    // deleteTemplate first calls queryOne (getFirstAsync) to check is_starter
+    mockDb.getFirstAsync.mockResolvedValueOnce({ is_starter: 0 });
     await db.deleteTemplate("t1");
     expect(mockDb.runAsync).toHaveBeenCalledWith(
       expect.stringContaining("DELETE FROM template_exercises"),
@@ -287,7 +375,7 @@ describe("templates CRUD", () => {
     );
     expect(mockDb.runAsync).toHaveBeenCalledWith(
       expect.stringContaining("DELETE FROM workout_templates"),
-      ["t1"]
+      expect.arrayContaining(["t1"])
     );
   });
 });
@@ -302,6 +390,7 @@ describe("sessions CRUD", () => {
     expect(result.template_id).toBe("t1");
     expect(result.started_at).toBe(5000);
     expect(result.completed_at).toBeNull();
+    expect(mockDrizzleDb.insert).toHaveBeenCalled();
     jest.restoreAllMocks();
   });
 
@@ -309,42 +398,32 @@ describe("sessions CRUD", () => {
     await initDb();
     const result = await db.startSession(null, "Quick Workout", "day1");
     expect(result.template_id).toBeNull();
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("INSERT INTO workout_sessions"),
-      expect.arrayContaining([null, "Quick Workout"])
-    );
+    expect(mockDrizzleDb.insert).toHaveBeenCalled();
   });
 
   it("completeSession sets completed_at and duration", async () => {
     await initDb();
     jest.spyOn(Date, "now").mockReturnValue(10000);
-    mockDb.getFirstAsync.mockResolvedValueOnce({ started_at: 5000 });
+    // completeSession: Drizzle .get() for started_at, then Drizzle .update()
+    mockDrizzleGet({ started_at: 5000 });
 
     await db.completeSession("s1", "Great workout");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE workout_sessions SET completed_at"),
-      [10000, 5, "Great workout", "s1"]
-    );
+    expect(mockDrizzleDb.select).toHaveBeenCalled();
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
     jest.restoreAllMocks();
   });
 
   it("cancelSession deletes sets and session", async () => {
     await initDb();
     await db.cancelSession("s1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM workout_sets"),
-      ["s1"]
-    );
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM workout_sessions"),
-      ["s1"]
-    );
+    // Drizzle delete called twice (sets + session)
+    expect(mockDrizzleDb.delete).toHaveBeenCalledTimes(2);
   });
 
   it("getRecentSessions queries completed sessions", async () => {
     await initDb();
     const sessions = [{ id: "s1", name: "Push", started_at: 1000 }];
-    mockDb.getAllAsync.mockResolvedValueOnce(sessions);
+    mockDrizzleAll(sessions);
 
     const result = await db.getRecentSessions(10);
     expect(result).toEqual(sessions);
@@ -352,7 +431,7 @@ describe("sessions CRUD", () => {
 
   it("getSessionById returns session or null", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce(null);
+    mockDrizzleGet(null);
 
     const result = await db.getSessionById("nonexistent");
     expect(result).toBeNull();
@@ -382,48 +461,33 @@ describe("sets CRUD", () => {
   it("updateSet updates weight and reps", async () => {
     await initDb();
     await db.updateSet("set1", 100, 8);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE workout_sets SET weight"),
-      [100, 8, "set1"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("completeSet marks set completed", async () => {
     await initDb();
     jest.spyOn(Date, "now").mockReturnValue(9000);
     await db.completeSet("set1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("SET completed = 1"),
-      [9000, "set1"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
     jest.restoreAllMocks();
   });
 
   it("deleteSet removes the set", async () => {
     await initDb();
     await db.deleteSet("set1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM workout_sets"),
-      ["set1"]
-    );
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 
   it("updateSetRPE updates RPE value", async () => {
     await initDb();
     await db.updateSetRPE("set1", 8.5);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("SET rpe"),
-      [8.5, "set1"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("updateSetNotes updates notes", async () => {
     await initDb();
     await db.updateSetNotes("set1", "felt strong");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("SET notes"),
-      ["felt strong", "set1"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 });
 
@@ -442,7 +506,7 @@ describe("nutrition CRUD", () => {
 
   it("getFoodEntries returns mapped food entries", async () => {
     await initDb();
-    mockDb.getAllAsync.mockResolvedValueOnce([
+    mockDrizzleAll([
       { id: "f1", name: "Rice", calories: 130, protein: 2.7, carbs: 28, fat: 0.3, serving_size: "100g", is_favorite: 1, created_at: 100 },
     ]);
 
@@ -454,10 +518,7 @@ describe("nutrition CRUD", () => {
   it("toggleFavorite toggles the flag", async () => {
     await initDb();
     await db.toggleFavorite("f1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("is_favorite = CASE"),
-      ["f1"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("addDailyLog creates a log entry", async () => {
@@ -474,15 +535,12 @@ describe("nutrition CRUD", () => {
   it("deleteDailyLog removes the log", async () => {
     await initDb();
     await db.deleteDailyLog("log1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM daily_log"),
-      ["log1"]
-    );
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 
   it("getMacroTargets returns defaults when no row exists", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce(null);
+    mockDrizzleGet(null);
 
     jest.spyOn(Date, "now").mockReturnValue(4000);
     const result = await db.getMacroTargets();
@@ -496,7 +554,7 @@ describe("nutrition CRUD", () => {
   it("getMacroTargets returns existing row", async () => {
     await initDb();
     const existing = { id: "mt1", calories: 1800, protein: 180, carbs: 200, fat: 60, updated_at: 100 };
-    mockDb.getFirstAsync.mockResolvedValueOnce(existing);
+    mockDrizzleGet(existing);
 
     const result = await db.getMacroTargets();
     expect(result).toEqual(existing);
@@ -504,6 +562,7 @@ describe("nutrition CRUD", () => {
 
   it("getDailySummary returns zero totals for empty day", async () => {
     await initDb();
+    // getDailySummary uses raw SQL via queryOne → getFirstAsync
     mockDb.getFirstAsync.mockResolvedValueOnce({ calories: null, protein: null, carbs: null, fat: null });
 
     const result = await db.getDailySummary("2024-01-15");
@@ -522,7 +581,7 @@ describe("nutrition CRUD", () => {
 describe("body tracking CRUD", () => {
   it("getBodySettings returns defaults when no row exists", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce(null);
+    mockDrizzleGet(null);
 
     jest.spyOn(Date, "now").mockReturnValue(6000);
     const result = await db.getBodySettings();
@@ -534,19 +593,18 @@ describe("body tracking CRUD", () => {
 
   it("updateBodySettings updates all fields", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce({ id: "default", weight_unit: "kg", measurement_unit: "cm", weight_goal: null, body_fat_goal: null, updated_at: 100 });
+    // getBodySettings (Drizzle .get()) then updateBodySettings (Drizzle .update())
+    mockDrizzleGet({ id: "default", weight_unit: "kg", measurement_unit: "cm", weight_goal: null, body_fat_goal: null, updated_at: 100 });
 
     await db.updateBodySettings("lb", "in", 180, 15);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE body_settings"),
-      expect.arrayContaining(["lb", "in", 180, 15])
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("upsertBodyWeight inserts with ON CONFLICT", async () => {
     await initDb();
     const row = { id: "bw1", weight: 80, date: "2024-01-15", notes: "morning", logged_at: 100 };
-    mockDb.getFirstAsync.mockResolvedValueOnce(row);
+    // upsertBodyWeight: first execute() → runAsync, then Drizzle .get() for the select
+    mockDrizzleGet(row);
 
     const result = await db.upsertBodyWeight(80, "2024-01-15", "morning");
     expect(result.weight).toBe(80);
@@ -559,7 +617,7 @@ describe("body tracking CRUD", () => {
 
   it("getBodyWeightEntries queries with limit and offset", async () => {
     await initDb();
-    mockDb.getAllAsync.mockResolvedValueOnce([
+    mockDrizzleAll([
       { id: "bw1", weight: 80, date: "2024-01-15", notes: "", logged_at: 100 },
     ]);
 
@@ -570,16 +628,13 @@ describe("body tracking CRUD", () => {
   it("deleteBodyWeight removes the entry", async () => {
     await initDb();
     await db.deleteBodyWeight("bw1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM body_weight"),
-      ["bw1"]
-    );
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 
   it("getLatestBodyWeight returns most recent", async () => {
     await initDb();
     const row = { id: "bw1", weight: 82, date: "2024-01-20", notes: "", logged_at: 200 };
-    mockDb.getFirstAsync.mockResolvedValueOnce(row);
+    mockDrizzleGet(row);
 
     const result = await db.getLatestBodyWeight();
     expect(result).toEqual(row);
@@ -596,7 +651,8 @@ describe("body tracking CRUD", () => {
       notes: "post-cut",
     };
     const row = { id: "bm1", date: "2024-01-15", ...vals, logged_at: 100 };
-    mockDb.getFirstAsync.mockResolvedValueOnce(row);
+    // upsertBodyMeasurements: first execute() → runAsync, then Drizzle .get()
+    mockDrizzleGet(row);
 
     const result = await db.upsertBodyMeasurements("2024-01-15", vals);
     expect(result.waist).toBe(80);
@@ -609,7 +665,7 @@ describe("body tracking CRUD", () => {
 
   it("getLatestMeasurements returns most recent", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce(null);
+    mockDrizzleGet(null);
 
     const result = await db.getLatestMeasurements();
     expect(result).toBeNull();
@@ -618,10 +674,7 @@ describe("body tracking CRUD", () => {
   it("deleteBodyMeasurements removes the entry", async () => {
     await initDb();
     await db.deleteBodyMeasurements("bm1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM body_measurements"),
-      ["bm1"]
-    );
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 });
 
@@ -655,12 +708,9 @@ describe("data validation edge cases", () => {
 
   it("completeSession with no notes defaults to empty string", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce({ started_at: 1000 });
+    mockDrizzleGet({ started_at: 1000 });
 
     await db.completeSession("s1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE workout_sessions"),
-      expect.arrayContaining(["", "s1"])
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 });

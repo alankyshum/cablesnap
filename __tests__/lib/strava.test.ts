@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as fs from "fs";
 import * as path from "path";
 
@@ -82,16 +83,17 @@ describe("Strava Integration — DB Operations", () => {
   });
 
   it("strava_connection uses singleton pattern (id=1)", () => {
-    expect(stravaDbSrc).toContain("WHERE id = 1");
-    expect(stravaDbSrc).toMatch(/INSERT OR REPLACE INTO strava_connection \(id.*1/);
+    // Drizzle uses eq(stravaConnection.id, 1) and values({ id: 1, ... })
+    expect(stravaDbSrc).toMatch(/eq\(stravaConnection\.id,\s*1\)/);
+    expect(stravaDbSrc).toMatch(/id:\s*1/);
   });
 
-  it("sync log uses INSERT OR IGNORE to prevent duplicates", () => {
-    expect(stravaDbSrc).toContain("INSERT OR IGNORE INTO strava_sync_log");
+  it("sync log uses onConflictDoNothing to prevent duplicates", () => {
+    expect(stravaDbSrc).toContain("onConflictDoNothing");
   });
 
   it("getPendingOrFailedSyncs queries correct statuses", () => {
-    expect(stravaDbSrc).toMatch(/status IN \('pending', 'failed'\)/);
+    expect(stravaDbSrc).toMatch(/IN \('pending', 'failed'\)/);
   });
 });
 

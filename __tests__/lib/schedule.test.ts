@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Mock crypto.randomUUID
 const MOCK_UUID = "sched-uuid-1234";
 Object.defineProperty(global, "crypto", {
@@ -20,6 +21,20 @@ jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
 }));
 
+let mockDrizzleGetResult: any = undefined;
+
+jest.mock("drizzle-orm/expo-sqlite", () => ({
+  drizzle: jest.fn(() => ({
+    select: jest.fn(() => {
+      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => mockDrizzleGetResult), then: (r: any) => Promise.resolve([]).then(r) };
+      return chain;
+    }),
+    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), onConflictDoUpdate: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  })),
+}));
+
 jest.mock("../../lib/seed", () => ({
   seedExercises: jest.fn(() => []),
 }));
@@ -33,6 +48,7 @@ async function initDb() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockDrizzleGetResult = undefined;
   mockDb.execAsync.mockResolvedValue(undefined);
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue({ count: 10 });
@@ -107,7 +123,7 @@ describe("getTodaySchedule", () => {
 describe("isTodayCompleted", () => {
   it("returns true when a session was completed today", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce({ count: 1 });
+    mockDrizzleGetResult = { count: 1 };
 
     const result = await db.isTodayCompleted();
     expect(result).toBe(true);
@@ -115,7 +131,7 @@ describe("isTodayCompleted", () => {
 
   it("returns false when no session was completed today", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce({ count: 0 });
+    mockDrizzleGetResult = { count: 0 };
 
     const result = await db.isTodayCompleted();
     expect(result).toBe(false);
@@ -123,7 +139,7 @@ describe("isTodayCompleted", () => {
 
   it("returns false when query returns null", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce(null);
+    mockDrizzleGetResult = null;
 
     const result = await db.isTodayCompleted();
     expect(result).toBe(false);

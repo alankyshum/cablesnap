@@ -1,6 +1,8 @@
+import { eq, and, isNull } from "drizzle-orm";
 import type { Exercise } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, execute, getDatabase } from "./helpers";
+import { getDrizzle, query, getDatabase } from "./helpers";
+import { exercises } from "./schema";
 
 type ExerciseRow = {
   id: string;
@@ -41,39 +43,40 @@ function mapRow(row: ExerciseRow): Exercise {
 export { mapRow, type ExerciseRow };
 
 export async function getAllExercises(): Promise<Exercise[]> {
-  const rows = await query<ExerciseRow>(
-    "SELECT * FROM exercises WHERE deleted_at IS NULL ORDER BY name ASC"
-  );
-  return rows.map(mapRow);
+  const db = await getDrizzle();
+  const rows = await db.select()
+    .from(exercises)
+    .where(isNull(exercises.deleted_at))
+    .orderBy(exercises.name);
+  return (rows as unknown as ExerciseRow[]).map(mapRow);
 }
 
 export async function getExerciseById(id: string): Promise<Exercise | null> {
-  const row = await queryOne<ExerciseRow>(
-    "SELECT * FROM exercises WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  const row = await db.select()
+    .from(exercises)
+    .where(eq(exercises.id, id))
+    .get();
   if (!row) return null;
-  return mapRow(row);
+  return mapRow(row as unknown as ExerciseRow);
 }
 
 export async function createCustomExercise(
   exercise: Omit<Exercise, "id" | "is_custom">
 ): Promise<Exercise> {
   const id = uuid();
-  await execute(
-    `INSERT INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-    [
-      id,
-      exercise.name,
-      exercise.category,
-      JSON.stringify(exercise.primary_muscles),
-      JSON.stringify(exercise.secondary_muscles),
-      exercise.equipment,
-      exercise.instructions,
-      exercise.difficulty,
-    ]
-  );
+  const db = await getDrizzle();
+  await db.insert(exercises).values({
+    id,
+    name: exercise.name,
+    category: exercise.category,
+    primary_muscles: JSON.stringify(exercise.primary_muscles),
+    secondary_muscles: JSON.stringify(exercise.secondary_muscles),
+    equipment: exercise.equipment,
+    instructions: exercise.instructions,
+    difficulty: exercise.difficulty,
+    is_custom: 1,
+  });
   return { ...exercise, id, is_custom: true };
 }
 
@@ -81,21 +84,20 @@ export async function updateCustomExercise(
   id: string,
   exercise: Partial<Omit<Exercise, "id" | "is_custom">>
 ): Promise<void> {
-  const fields: string[] = [];
-  const values: (string | number)[] = [];
-  if (exercise.name !== undefined) { fields.push("name = ?"); values.push(exercise.name); }
-  if (exercise.category !== undefined) { fields.push("category = ?"); values.push(exercise.category); }
-  if (exercise.primary_muscles !== undefined) { fields.push("primary_muscles = ?"); values.push(JSON.stringify(exercise.primary_muscles)); }
-  if (exercise.secondary_muscles !== undefined) { fields.push("secondary_muscles = ?"); values.push(JSON.stringify(exercise.secondary_muscles)); }
-  if (exercise.equipment !== undefined) { fields.push("equipment = ?"); values.push(exercise.equipment); }
-  if (exercise.instructions !== undefined) { fields.push("instructions = ?"); values.push(exercise.instructions); }
-  if (exercise.difficulty !== undefined) { fields.push("difficulty = ?"); values.push(exercise.difficulty); }
-  if (fields.length === 0) return;
-  values.push(id);
-  await execute(
-    `UPDATE exercises SET ${fields.join(", ")} WHERE id = ? AND is_custom = 1`,
-    values
-  );
+  const updates: Record<string, unknown> = {};
+  if (exercise.name !== undefined) updates.name = exercise.name;
+  if (exercise.category !== undefined) updates.category = exercise.category;
+  if (exercise.primary_muscles !== undefined) updates.primary_muscles = JSON.stringify(exercise.primary_muscles);
+  if (exercise.secondary_muscles !== undefined) updates.secondary_muscles = JSON.stringify(exercise.secondary_muscles);
+  if (exercise.equipment !== undefined) updates.equipment = exercise.equipment;
+  if (exercise.instructions !== undefined) updates.instructions = exercise.instructions;
+  if (exercise.difficulty !== undefined) updates.difficulty = exercise.difficulty;
+  if (Object.keys(updates).length === 0) return;
+
+  const db = await getDrizzle();
+  await db.update(exercises)
+    .set(updates)
+    .where(and(eq(exercises.id, id), eq(exercises.is_custom, 1)));
 }
 
 export async function softDeleteCustomExercise(id: string): Promise<void> {

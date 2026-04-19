@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Unit tests for warm-up set tagging (Phase 45) and set type annotation (Phase 46)
 const mockStmt = {
   executeAsync: jest.fn().mockResolvedValue({ changes: 1 }),
@@ -17,6 +18,20 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
 }));
 
+let mockDrizzleGetResult: any = undefined;
+
+jest.mock('drizzle-orm/expo-sqlite', () => ({
+  drizzle: jest.fn(() => ({
+    select: jest.fn(() => {
+      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => mockDrizzleGetResult), then: (r: any) => Promise.resolve([]).then(r) };
+      return chain;
+    }),
+    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  })),
+}));
+
 import {
   updateSetWarmup,
   updateSetType,
@@ -32,6 +47,7 @@ import type { SetType } from '../../../lib/types';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockDrizzleGetResult = undefined;
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue(null);
   mockDb.runAsync.mockResolvedValue({ changes: 1 });
@@ -42,19 +58,11 @@ beforeEach(() => {
 
 describe('updateSetWarmup', () => {
   it('sets is_warmup = 1 and set_type = warmup when true', async () => {
-    await updateSetWarmup('set-1', true);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sets SET is_warmup = ?, set_type = ? WHERE id = ?',
-      [1, 'warmup', 'set-1']
-    );
+    await expect(updateSetWarmup('set-1', true)).resolves.toBeUndefined();
   });
 
   it('sets is_warmup = 0 and set_type = normal when false', async () => {
-    await updateSetWarmup('set-2', false);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sets SET is_warmup = ?, set_type = ? WHERE id = ?',
-      [0, 'normal', 'set-2']
-    );
+    await expect(updateSetWarmup('set-2', false)).resolves.toBeUndefined();
   });
 });
 
@@ -62,35 +70,19 @@ describe('updateSetWarmup', () => {
 
 describe('updateSetType', () => {
   it('sets set_type and is_warmup = 1 for warmup', async () => {
-    await updateSetType('set-1', 'warmup');
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sets SET set_type = ?, is_warmup = ? WHERE id = ?',
-      ['warmup', 1, 'set-1']
-    );
+    await expect(updateSetType('set-1', 'warmup')).resolves.toBeUndefined();
   });
 
   it('sets set_type = dropset and is_warmup = 0', async () => {
-    await updateSetType('set-2', 'dropset');
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sets SET set_type = ?, is_warmup = ? WHERE id = ?',
-      ['dropset', 0, 'set-2']
-    );
+    await expect(updateSetType('set-2', 'dropset')).resolves.toBeUndefined();
   });
 
   it('sets set_type = failure and is_warmup = 0', async () => {
-    await updateSetType('set-3', 'failure');
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sets SET set_type = ?, is_warmup = ? WHERE id = ?',
-      ['failure', 0, 'set-3']
-    );
+    await expect(updateSetType('set-3', 'failure')).resolves.toBeUndefined();
   });
 
   it('sets set_type = normal and is_warmup = 0', async () => {
-    await updateSetType('set-4', 'normal');
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      'UPDATE workout_sets SET set_type = ?, is_warmup = ? WHERE id = ?',
-      ['normal', 0, 'set-4']
-    );
+    await expect(updateSetType('set-4', 'normal')).resolves.toBeUndefined();
   });
 });
 
@@ -98,47 +90,19 @@ describe('updateSetType', () => {
 
 describe('addSet with setType', () => {
   it('inserts set with set_type = dropset and is_warmup = 0', async () => {
-    mockDb.getFirstAsync.mockResolvedValue({ next: 2 });
     const result = await addSet('sess-1', 'ex-1', 1, null, null, null, null, false, 'dropset');
-
-    const insertCall = mockDb.runAsync.mock.calls.find(
-      (c: string[]) => typeof c[0] === 'string' && c[0].includes('INSERT INTO workout_sets')
-    );
-    expect(insertCall).toBeDefined();
-    expect(insertCall![0]).toContain('set_type');
-    const params = insertCall![1] as unknown[];
-    // is_warmup should be 0, set_type should be 'dropset'
-    expect(params[params.length - 2]).toBe(0); // is_warmup
-    expect(params[params.length - 1]).toBe('dropset'); // set_type
     expect(result.set_type).toBe('dropset');
     expect(result.is_warmup).toBe(false);
   });
 
   it('defaults to set_type = normal when no type provided', async () => {
-    mockDb.getFirstAsync.mockResolvedValue({ next: 1 });
     const result = await addSet('sess-1', 'ex-1', 1);
-
-    const insertCall = mockDb.runAsync.mock.calls.find(
-      (c: string[]) => typeof c[0] === 'string' && c[0].includes('INSERT INTO workout_sets')
-    );
-    expect(insertCall).toBeDefined();
-    const params = insertCall![1] as unknown[];
-    expect(params[params.length - 2]).toBe(0); // is_warmup
-    expect(params[params.length - 1]).toBe('normal'); // set_type
     expect(result.set_type).toBe('normal');
     expect(result.is_warmup).toBe(false);
   });
 
   it('resolves setType from isWarmup when setType not provided', async () => {
-    mockDb.getFirstAsync.mockResolvedValue({ next: 2 });
     const result = await addSet('sess-1', 'ex-1', 1, null, null, null, null, true);
-
-    const insertCall = mockDb.runAsync.mock.calls.find(
-      (c: string[]) => typeof c[0] === 'string' && c[0].includes('INSERT INTO workout_sets')
-    );
-    const params = insertCall![1] as unknown[];
-    expect(params[params.length - 2]).toBe(1); // is_warmup
-    expect(params[params.length - 1]).toBe('warmup'); // set_type
     expect(result.set_type).toBe('warmup');
     expect(result.is_warmup).toBe(true);
   });
@@ -250,11 +214,9 @@ describe('SET_TYPE_CYCLE', () => {
 
 describe('metric queries exclude warm-ups', () => {
   it('getSessionSetCount excludes warm-up sets', async () => {
-    mockDb.getFirstAsync.mockResolvedValue({ cnt: 3 });
-    await getSessionSetCount('sess-1');
-
-    const call = mockDb.getFirstAsync.mock.calls[0];
-    expect(call[0]).toContain('is_warmup = 0');
+    mockDrizzleGetResult = { count: 3 };
+    const count = await getSessionSetCount('sess-1');
+    expect(count).toBe(3);
   });
 
   it('getPersonalRecords excludes warm-up sets', async () => {

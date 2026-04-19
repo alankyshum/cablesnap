@@ -16,9 +16,8 @@ describe("interaction log limits (BLD-292)", () => {
   });
 
   it("getInteractions returns up to 50 entries", () => {
-    const match = src.match(/SELECT \* FROM interaction_log ORDER BY timestamp DESC LIMIT (\d+)/);
-    expect(match).not.toBeNull();
-    expect(parseInt(match![1], 10)).toBe(50);
+    // With Drizzle migration, getInteractions uses .limit(50) instead of raw SQL
+    expect(src).toMatch(/\.limit\(50\)/);
   });
 
   it("does NOT use time-based pruning", () => {

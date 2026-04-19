@@ -1,6 +1,8 @@
 import { File, Directory, Paths } from "expo-file-system";
+import { eq, and, isNull, sql, desc } from "drizzle-orm";
 import { uuid } from "../uuid";
-import { query, queryOne, execute } from "./helpers";
+import { getDrizzle, query, execute } from "./helpers";
+import { progressPhotos } from "./schema";
 
 export type ProgressPhoto = {
   id: string;
@@ -52,11 +54,9 @@ export async function insertPhoto(params: {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, params.filePath, params.thumbnailPath, params.displayDate, params.poseCategory, params.note, params.width, params.height]
   );
-  const row = await queryOne<ProgressPhoto>(
-    "SELECT * FROM progress_photos WHERE id = ?",
-    [id]
-  );
-  return row!;
+  const db = await getDrizzle();
+  const row = await db.select().from(progressPhotos).where(eq(progressPhotos.id, id)).get();
+  return row as unknown as ProgressPhoto;
 }
 
 export async function getPhotos(
@@ -64,42 +64,39 @@ export async function getPhotos(
   offset = 0,
   poseFilter?: PoseCategory
 ): Promise<ProgressPhoto[]> {
-  if (poseFilter) {
-    return query<ProgressPhoto>(
-      `SELECT * FROM progress_photos
-       WHERE deleted_at IS NULL AND pose_category = ?
-       ORDER BY display_date DESC, created_at DESC
-       LIMIT ? OFFSET ?`,
-      [poseFilter, limit, offset]
-    );
-  }
-  return query<ProgressPhoto>(
-    `SELECT * FROM progress_photos
-     WHERE deleted_at IS NULL
-     ORDER BY display_date DESC, created_at DESC
-     LIMIT ? OFFSET ?`,
-    [limit, offset]
-  );
+  const db = await getDrizzle();
+  const baseQuery = db.select()
+    .from(progressPhotos)
+    .where(
+      poseFilter
+        ? and(isNull(progressPhotos.deleted_at), eq(progressPhotos.pose_category, poseFilter))
+        : isNull(progressPhotos.deleted_at)
+    )
+    .orderBy(desc(progressPhotos.display_date), desc(progressPhotos.created_at))
+    .limit(limit)
+    .offset(offset);
+  return baseQuery as unknown as Promise<ProgressPhoto[]>;
 }
 
 export async function getPhotoById(id: string): Promise<ProgressPhoto | null> {
-  return queryOne<ProgressPhoto>(
-    "SELECT * FROM progress_photos WHERE id = ? AND deleted_at IS NULL",
-    [id]
-  );
+  const db = await getDrizzle();
+  const row = await db.select()
+    .from(progressPhotos)
+    .where(and(eq(progressPhotos.id, id), isNull(progressPhotos.deleted_at)))
+    .get();
+  return (row as unknown as ProgressPhoto) ?? null;
 }
 
 export async function getPhotoCount(poseFilter?: PoseCategory): Promise<number> {
-  if (poseFilter) {
-    const row = await queryOne<{ count: number }>(
-      "SELECT COUNT(*) as count FROM progress_photos WHERE deleted_at IS NULL AND pose_category = ?",
-      [poseFilter]
-    );
-    return row?.count ?? 0;
-  }
-  const row = await queryOne<{ count: number }>(
-    "SELECT COUNT(*) as count FROM progress_photos WHERE deleted_at IS NULL"
-  );
+  const db = await getDrizzle();
+  const row = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(progressPhotos)
+    .where(
+      poseFilter
+        ? and(isNull(progressPhotos.deleted_at), eq(progressPhotos.pose_category, poseFilter))
+        : isNull(progressPhotos.deleted_at)
+    )
+    .get();
   return row?.count ?? 0;
 }
 
@@ -111,20 +108,21 @@ export async function softDeletePhoto(id: string): Promise<void> {
 }
 
 export async function restorePhoto(id: string): Promise<void> {
-  await execute(
-    "UPDATE progress_photos SET deleted_at = NULL WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  await db.update(progressPhotos)
+    .set({ deleted_at: null })
+    .where(eq(progressPhotos.id, id));
 }
 
 export async function permanentlyDeletePhoto(id: string): Promise<void> {
-  const photo = await queryOne<ProgressPhoto>(
-    "SELECT * FROM progress_photos WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  const photo = await db.select()
+    .from(progressPhotos)
+    .where(eq(progressPhotos.id, id))
+    .get();
   if (!photo) return;
 
-  await execute("DELETE FROM progress_photos WHERE id = ?", [id]);
+  await db.delete(progressPhotos).where(eq(progressPhotos.id, id));
 
   // Delete files after DB row is removed
   try {
@@ -194,10 +192,10 @@ export async function updatePhotoMeta(
   poseCategory: PoseCategory | null,
   note: string | null
 ): Promise<void> {
-  await execute(
-    "UPDATE progress_photos SET display_date = ?, pose_category = ?, note = ? WHERE id = ?",
-    [displayDate, poseCategory, note, id]
-  );
+  const db = await getDrizzle();
+  await db.update(progressPhotos)
+    .set({ display_date: displayDate, pose_category: poseCategory, note })
+    .where(eq(progressPhotos.id, id));
 }
 
 export async function getPhotosByMonth(): Promise<{ month: string; count: number }[]> {

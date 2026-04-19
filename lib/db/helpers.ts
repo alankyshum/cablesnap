@@ -1,11 +1,15 @@
 import * as SQLite from "expo-sqlite";
+import { drizzle } from "drizzle-orm/expo-sqlite";
+import type { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
 import { Platform } from "react-native";
 import { migrate } from "./migrations";
 import { seed } from "./seed";
+import * as schema from "./schema";
 
 const DB_NAME = "fitforge.db";
 
 let db: SQLite.SQLiteDatabase | null = null;
+let drizzleDb: ExpoSQLiteDatabase<typeof schema> | null = null;
 let init: Promise<SQLite.SQLiteDatabase> | null = null;
 let memoryFallback = false;
 
@@ -22,6 +26,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         await migrate(instance);
         await seed(instance);
         db = instance;
+        drizzleDb = drizzle(instance, { schema });
         return instance;
       } catch (err) {
         if (Platform.OS === "web") {
@@ -31,6 +36,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
             await seed(instance);
             memoryFallback = true;
             db = instance;
+            drizzleDb = drizzle(instance, { schema });
             return instance;
           } catch (fallbackErr) {
             init = null;
@@ -45,7 +51,13 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return init;
 }
 
-// ---- Query helpers ----
+/** Get the Drizzle ORM instance. Initializes the database if not already done. */
+export async function getDrizzle(): Promise<ExpoSQLiteDatabase<typeof schema>> {
+  await getDatabase();
+  return drizzleDb!;
+}
+
+// ---- Query helpers (raw SQL — used by modules not yet migrated to Drizzle) ----
 
 export async function query<T>(sql: string, params?: SQLite.SQLiteBindParams): Promise<T[]> {
   const database = await getDatabase();

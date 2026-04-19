@@ -1,21 +1,24 @@
-import { query, queryOne, execute, getDatabase } from "./helpers";
+import { eq, and, sql } from "drizzle-orm";
+import { getDrizzle, query, queryOne, getDatabase } from "./helpers";
+import { appSettings, interactionLog, workoutSessions } from "./schema";
 import { uuid } from "../uuid";
 
 // ---- App Settings ----
 
 export async function getAppSetting(key: string): Promise<string | null> {
-  const row = await queryOne<{ value: string }>(
-    "SELECT value FROM app_settings WHERE key = ?",
-    [key]
-  );
+  const db = await getDrizzle();
+  const row = await db.select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, key))
+    .get();
   return row?.value ?? null;
 }
 
 export async function setAppSetting(key: string, value: string): Promise<void> {
-  await execute(
-    "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
-    [key, value]
-  );
+  const db = await getDrizzle();
+  await db.insert(appSettings)
+    .values({ key, value })
+    .onConflictDoUpdate({ target: appSettings.key, set: { value } });
 }
 
 export async function isOnboardingComplete(): Promise<boolean> {
@@ -66,11 +69,15 @@ export async function isTodayCompleted(): Promise<boolean> {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const end = start + 24 * 60 * 60 * 1000;
-  const row = await queryOne<{ count: number }>(
-    `SELECT COUNT(*) as count FROM workout_sessions
-     WHERE completed_at IS NOT NULL AND started_at >= ? AND started_at < ?`,
-    [start, end]
-  );
+  const db = await getDrizzle();
+  const row = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(workoutSessions)
+    .where(and(
+      sql`${workoutSessions.completed_at} IS NOT NULL`,
+      sql`${workoutSessions.started_at} >= ${start}`,
+      sql`${workoutSessions.started_at} < ${end}`,
+    ))
+    .get();
   return (row?.count ?? 0) > 0;
 }
 
@@ -132,11 +139,14 @@ export async function insertInteraction(
 export async function getInteractions(): Promise<
   { id: string; action: string; screen: string; detail: string | null; timestamp: number }[]
 > {
-  return query(
-    "SELECT * FROM interaction_log ORDER BY timestamp DESC LIMIT 50"
-  );
+  const db = await getDrizzle();
+  return db.select()
+    .from(interactionLog)
+    .orderBy(sql`${interactionLog.timestamp} DESC`)
+    .limit(50);
 }
 
 export async function clearInteractions(): Promise<void> {
-  await execute("DELETE FROM interaction_log");
+  const db = await getDrizzle();
+  await db.delete(interactionLog);
 }

@@ -1,6 +1,8 @@
+import { eq, sql } from "drizzle-orm";
 import type { WorkoutSet, TrainingMode, SetType } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, execute, withTransaction } from "./helpers";
+import { getDrizzle, query, queryOne, execute, withTransaction } from "./helpers";
+import { workoutSets } from "./schema";
 
 type SetRow = {
   id: string;
@@ -126,10 +128,19 @@ export async function addSet(
   const id = uuid();
   const resolvedType: SetType = setType ?? (isWarmup ? "warmup" : "normal");
   const resolvedWarmup = resolvedType === "warmup" ? 1 : 0;
-  await execute(
-    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null, trainingMode ?? null, tempo ?? null, resolvedWarmup, resolvedType]
-  );
+  const db = await getDrizzle();
+  await db.insert(workoutSets).values({
+    id,
+    session_id: sessionId,
+    exercise_id: exerciseId,
+    set_number: setNumber,
+    link_id: linkId ?? null,
+    round: round ?? null,
+    training_mode: trainingMode ?? null,
+    tempo: tempo ?? null,
+    is_warmup: resolvedWarmup,
+    set_type: resolvedType,
+  });
   return {
     id,
     session_id: sessionId,
@@ -186,6 +197,7 @@ export async function addSetsBatch(
       set_type: resolvedType,
     };
   });
+  // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
       "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -227,28 +239,29 @@ export async function updateSet(
   weight: number | null,
   reps: number | null
 ): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
-    [weight, reps, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ weight, reps })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function completeSet(id: string): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET completed = 1, completed_at = ? WHERE id = ?",
-    [Date.now(), id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ completed: 1, completed_at: Date.now() })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function uncompleteSet(id: string): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET completed = 0, completed_at = NULL WHERE id = ?",
-    [id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ completed: 0, completed_at: null })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function deleteSet(id: string): Promise<void> {
-  await execute("DELETE FROM workout_sets WHERE id = ?", [id]);
+  const db = await getDrizzle();
+  await db.delete(workoutSets).where(eq(workoutSets.id, id));
 }
 
 export async function deleteSetsBatch(ids: string[]): Promise<void> {
@@ -258,47 +271,47 @@ export async function deleteSetsBatch(ids: string[]): Promise<void> {
 }
 
 export async function updateSetRPE(id: string, rpe: number | null): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET rpe = ? WHERE id = ?",
-    [rpe, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ rpe })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function updateSetNotes(id: string, notes: string): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET notes = ? WHERE id = ?",
-    [notes, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ notes })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function updateSetTrainingMode(id: string, mode: TrainingMode | null): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET training_mode = ? WHERE id = ?",
-    [mode, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ training_mode: mode })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function updateSetTempo(id: string, tempo: string | null): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET tempo = ? WHERE id = ?",
-    [tempo, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ tempo })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function updateSetWarmup(id: string, isWarmup: boolean): Promise<void> {
   const setType = isWarmup ? "warmup" : "normal";
-  await execute(
-    "UPDATE workout_sets SET is_warmup = ?, set_type = ? WHERE id = ?",
-    [isWarmup ? 1 : 0, setType, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ is_warmup: isWarmup ? 1 : 0, set_type: setType })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function updateSetType(id: string, type: SetType): Promise<void> {
   const isWarmup = type === "warmup" ? 1 : 0;
-  await execute(
-    "UPDATE workout_sets SET set_type = ?, is_warmup = ? WHERE id = ?",
-    [type, isWarmup, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ set_type: type, is_warmup: isWarmup })
+    .where(eq(workoutSets.id, id));
 }
 
 export async function getPreviousSets(
@@ -327,10 +340,11 @@ export async function getPreviousSets(
 export async function getSessionSetCount(
   sessionId: string
 ): Promise<number> {
-  const row = await queryOne<{ count: number }>(
-    "SELECT COUNT(*) as count FROM workout_sets WHERE session_id = ? AND completed = 1 AND is_warmup = 0",
-    [sessionId]
-  );
+  const db = await getDrizzle();
+  const row = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(workoutSets)
+    .where(sql`${workoutSets.session_id} = ${sessionId} AND ${workoutSets.completed} = 1 AND ${workoutSets.is_warmup} = 0`)
+    .get();
   return row?.count ?? 0;
 }
 

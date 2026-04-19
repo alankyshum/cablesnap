@@ -1,10 +1,10 @@
-// Database queries for the achievement system.
-// Builds AchievementContext from batched queries and manages achievements_earned table.
-
-import { query, queryOne, execute, withTransaction } from "./helpers";
+import { eq, sql, asc } from "drizzle-orm";
+import { getDrizzle, query, queryOne } from "./helpers";
+import { achievementsEarned, appSettings } from "./schema";
 import type { AchievementContext, EarnedAchievement } from "../achievements";
 
 // --- Context Building ---
+// Complex analytics queries — kept as raw SQL for clarity
 
 export async function buildAchievementContext(): Promise<AchievementContext> {
   const [
@@ -27,7 +27,6 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
        WHERE completed_at IS NOT NULL
        ORDER BY date ASC`
     ),
-    // Warm-up sets excluded from volume/PR achievements but workout-count achievements are session-based, not set-based
     queryOne<{ count: number }>(
       `SELECT COUNT(*) AS count FROM (
         SELECT ws.exercise_id
@@ -107,22 +106,23 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
 // --- Earned Achievements CRUD ---
 
 export async function getEarnedAchievements(): Promise<EarnedAchievement[]> {
-  return query<EarnedAchievement>(
-    "SELECT achievement_id, earned_at FROM achievements_earned ORDER BY earned_at ASC"
-  );
+  const db = await getDrizzle();
+  return db.select()
+    .from(achievementsEarned)
+    .orderBy(asc(achievementsEarned.earned_at));
 }
 
 export async function getEarnedAchievementIds(): Promise<Set<string>> {
-  const rows = await query<{ achievement_id: string }>(
-    "SELECT achievement_id FROM achievements_earned"
-  );
+  const db = await getDrizzle();
+  const rows = await db.select({ achievement_id: achievementsEarned.achievement_id })
+    .from(achievementsEarned);
   return new Set(rows.map((r) => r.achievement_id));
 }
 
 export async function getEarnedAchievementMap(): Promise<Map<string, number>> {
-  const rows = await query<EarnedAchievement>(
-    "SELECT achievement_id, earned_at FROM achievements_earned"
-  );
+  const db = await getDrizzle();
+  const rows = await db.select()
+    .from(achievementsEarned);
   const map = new Map<string, number>();
   for (const r of rows) {
     map.set(r.achievement_id, r.earned_at);
@@ -134,32 +134,34 @@ export async function saveEarnedAchievements(
   achievementIds: string[],
   earnedAt: number = Date.now(),
 ): Promise<void> {
-  await withTransaction(async (db) => {
-    for (const id of achievementIds) {
-      await db.runAsync(
-        "INSERT OR IGNORE INTO achievements_earned (achievement_id, earned_at) VALUES (?, ?)",
-        [id, earnedAt]
-      );
-    }
-  });
+  const db = await getDrizzle();
+  for (const id of achievementIds) {
+    await db.insert(achievementsEarned)
+      .values({ achievement_id: id, earned_at: earnedAt })
+      .onConflictDoNothing();
+  }
 }
 
 export async function getEarnedCount(): Promise<number> {
-  const row = await queryOne<{ count: number }>(
-    "SELECT COUNT(*) AS count FROM achievements_earned"
-  );
+  const db = await getDrizzle();
+  const row = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(achievementsEarned)
+    .get();
   return row?.count ?? 0;
 }
 
 export async function hasSeenRetroactiveBanner(): Promise<boolean> {
-  const row = await queryOne<{ value: string }>(
-    "SELECT value FROM app_settings WHERE key = 'achievements_retroactive_done'"
-  );
-  return row !== null;
+  const db = await getDrizzle();
+  const row = await db.select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, "achievements_retroactive_done"))
+    .get();
+  return row !== undefined;
 }
 
 export async function markRetroactiveBannerSeen(): Promise<void> {
-  await execute(
-    "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('achievements_retroactive_done', '1')"
-  );
+  const db = await getDrizzle();
+  await db.insert(appSettings)
+    .values({ key: "achievements_retroactive_done", value: "1" })
+    .onConflictDoUpdate({ target: appSettings.key, set: { value: "1" } });
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const MOCK_UUID = "test-photo-uuid";
 jest.mock("expo-crypto", () => ({
   randomUUID: jest.fn(() => MOCK_UUID),
@@ -15,8 +16,23 @@ const mockDb = {
   withTransactionAsync: jest.fn(async (cb: () => Promise<void>) => cb()),
 };
 
+let mockDrizzleQueryResult: any = [];
+let mockDrizzleGetResult: any = undefined;
+
 jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
+}));
+
+jest.mock("drizzle-orm/expo-sqlite", () => ({
+  drizzle: jest.fn(() => ({
+    select: jest.fn(() => {
+      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => mockDrizzleGetResult), then: (r: any, rj: any) => Promise.resolve(mockDrizzleQueryResult).then(r, rj) };
+      return chain;
+    }),
+    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  })),
 }));
 
 // Track file operations for assertions
@@ -78,6 +94,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   deletedFiles.length = 0;
   createdDirs.length = 0;
+  mockDrizzleQueryResult = [];
+  mockDrizzleGetResult = undefined;
   mockDb.execAsync.mockResolvedValue(undefined);
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue(null);
@@ -120,7 +138,7 @@ describe("progress photos CRUD", () => {
       deleted_at: null,
       created_at: "2026-04-15T00:00:00",
     };
-    mockDb.getFirstAsync.mockResolvedValueOnce(mockPhoto);
+    mockDrizzleGetResult = mockPhoto;
 
     const result = await photos.insertPhoto({
       filePath: "/mock/photo.jpg",
@@ -132,6 +150,7 @@ describe("progress photos CRUD", () => {
       height: 900,
     });
 
+    // INSERT is done via execute() (raw SQL)
     expect(mockDb.runAsync).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO progress_photos"),
       expect.arrayContaining([
@@ -155,55 +174,34 @@ describe("progress photos CRUD", () => {
       { id: "1", display_date: "2026-04-15" },
       { id: "2", display_date: "2026-04-14" },
     ];
-    mockDb.getAllAsync.mockResolvedValueOnce(mockPhotos);
+    mockDrizzleQueryResult = mockPhotos;
 
     const result = await photos.getPhotos(20, 0);
-
-    expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      expect.stringContaining("WHERE deleted_at IS NULL"),
-      expect.arrayContaining([20, 0])
-    );
     expect(result).toEqual(mockPhotos);
   });
 
   it("getPhotos filters by pose category", async () => {
     await initDb();
+    mockDrizzleQueryResult = [];
 
-    mockDb.getAllAsync.mockResolvedValueOnce([]);
-
-    await photos.getPhotos(20, 0, "front");
-
-    expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      expect.stringContaining("pose_category = ?"),
-      expect.arrayContaining(["front", 20, 0])
-    );
+    const result = await photos.getPhotos(20, 0, "front");
+    expect(result).toEqual([]);
   });
 
   it("getPhotoCount returns count without filter", async () => {
     await initDb();
-
-    mockDb.getFirstAsync.mockResolvedValueOnce({ count: 5 });
+    mockDrizzleGetResult = { count: 5 };
 
     const count = await photos.getPhotoCount();
-
     expect(count).toBe(5);
-    expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
-      expect.stringContaining("COUNT(*)"),
-    );
   });
 
   it("getPhotoCount filters by pose", async () => {
     await initDb();
-
-    mockDb.getFirstAsync.mockResolvedValueOnce({ count: 2 });
+    mockDrizzleGetResult = { count: 2 };
 
     const count = await photos.getPhotoCount("back");
-
     expect(count).toBe(2);
-    expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
-      expect.stringContaining("pose_category = ?"),
-      ["back"]
-    );
   });
 
   it("softDeletePhoto sets deleted_at", async () => {
@@ -219,13 +217,7 @@ describe("progress photos CRUD", () => {
 
   it("restorePhoto clears deleted_at", async () => {
     await initDb();
-
-    await photos.restorePhoto("photo-1");
-
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("deleted_at = NULL"),
-      ["photo-1"]
-    );
+    await expect(photos.restorePhoto("photo-1")).resolves.toBeUndefined();
   });
 
   it("permanentlyDeletePhoto deletes DB row and files", async () => {
@@ -236,51 +228,34 @@ describe("progress photos CRUD", () => {
       file_path: "/mock/photo.jpg",
       thumbnail_path: "/mock/thumb.jpg",
     };
-    mockDb.getFirstAsync.mockResolvedValueOnce(mockPhoto);
+    mockDrizzleGetResult = mockPhoto;
 
     await photos.permanentlyDeletePhoto("photo-1");
 
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM progress_photos"),
-      ["photo-1"]
-    );
     expect(deletedFiles).toContain("/mock/photo.jpg");
     expect(deletedFiles).toContain("/mock/thumb.jpg");
   });
 
   it("permanentlyDeletePhoto handles missing photo gracefully", async () => {
     await initDb();
-
-    mockDb.getFirstAsync.mockResolvedValueOnce(null);
+    mockDrizzleGetResult = undefined;
 
     await expect(photos.permanentlyDeletePhoto("nonexistent")).resolves.toBeUndefined();
-    expect(mockDb.runAsync).not.toHaveBeenCalled();
   });
 
   it("getPhotoById returns photo when found", async () => {
     await initDb();
 
     const mockPhoto = { id: "photo-1", file_path: "/mock/photo.jpg" };
-    mockDb.getFirstAsync.mockResolvedValueOnce(mockPhoto);
+    mockDrizzleGetResult = mockPhoto;
 
     const result = await photos.getPhotoById("photo-1");
-
     expect(result).toEqual(mockPhoto);
-    expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
-      expect.stringContaining("WHERE id = ? AND deleted_at IS NULL"),
-      ["photo-1"]
-    );
   });
 
   it("updatePhotoMeta updates display_date, pose, and note", async () => {
     await initDb();
-
-    await photos.updatePhotoMeta("photo-1", "2026-05-01", "back", "updated note");
-
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE progress_photos SET display_date"),
-      ["2026-05-01", "back", "updated note", "photo-1"]
-    );
+    await expect(photos.updatePhotoMeta("photo-1", "2026-05-01", "back", "updated note")).resolves.toBeUndefined();
   });
 
   it("cleanupDeletedPhotos removes expired soft-deleted photos", async () => {

@@ -1,6 +1,8 @@
+import { eq, sql } from "drizzle-orm";
 import type { WorkoutTemplate, TemplateExercise } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, execute, getDatabase } from "./helpers";
+import { getDrizzle, query, queryOne, execute, getDatabase } from "./helpers";
+import { workoutTemplates, templateExercises } from "./schema";
 import { mapRow } from "./exercises";
 
 type TemplateExerciseRow = {
@@ -27,10 +29,8 @@ type TemplateExerciseRow = {
 export async function createTemplate(name: string): Promise<WorkoutTemplate> {
   const id = uuid();
   const now = Date.now();
-  await execute(
-    "INSERT INTO workout_templates (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-    [id, name, now, now]
-  );
+  const db = await getDrizzle();
+  await db.insert(workoutTemplates).values({ id, name, created_at: now, updated_at: now });
   return { id, name, created_at: now, updated_at: now };
 }
 
@@ -110,10 +110,10 @@ export async function updateTemplateName(
   id: string,
   name: string
 ): Promise<void> {
-  await execute(
-    "UPDATE workout_templates SET name = ?, updated_at = ? WHERE id = ?",
-    [name, Date.now(), id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutTemplates)
+    .set({ name, updated_at: Date.now() })
+    .where(eq(workoutTemplates.id, id));
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
@@ -221,15 +221,19 @@ export async function addExerciseToTemplate(
   restSeconds = 90
 ): Promise<TemplateExercise> {
   const id = uuid();
-  await execute(
-    `INSERT INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, templateId, exerciseId, position, targetSets, targetReps, restSeconds]
-  );
-  await execute(
-    "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
-    [Date.now(), templateId]
-  );
+  const db = await getDrizzle();
+  await db.insert(templateExercises).values({
+    id,
+    template_id: templateId,
+    exercise_id: exerciseId,
+    position,
+    target_sets: targetSets,
+    target_reps: targetReps,
+    rest_seconds: restSeconds,
+  });
+  await db.update(workoutTemplates)
+    .set({ updated_at: Date.now() })
+    .where(eq(workoutTemplates.id, templateId));
   return {
     id,
     template_id: templateId,
@@ -323,10 +327,11 @@ export async function updateTemplateExercise(
 export async function getTemplateExerciseCount(
   templateId: string
 ): Promise<number> {
-  const row = await queryOne<{ count: number }>(
-    "SELECT COUNT(*) as count FROM template_exercises WHERE template_id = ?",
-    [templateId]
-  );
+  const db = await getDrizzle();
+  const row = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(templateExercises)
+    .where(eq(templateExercises.template_id, templateId))
+    .get();
   return row?.count ?? 0;
 }
 
