@@ -1,9 +1,9 @@
-# Feature Plan: Smart Training Insights Card (Rev 3)
+# Feature Plan: Smart Training Insights Card (Rev 4)
 
 **Issue**: BLD-382
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: IN_REVIEW (Rev 3 — addresses TL Rev 2 feedback)
+**Status**: IN_REVIEW (Rev 4 — corrects query count post-BLD-385 merge, accurate data source mapping)
 
 ## Problem Statement
 The home screen shows raw stats (streak count, week count, PR count) but doesn't synthesize the user's training data into actionable, motivating insights. Users see numbers but don't get contextual meaning — "Is my training improving? Am I making progress?" The app is a logbook but not yet a training partner.
@@ -65,16 +65,16 @@ Add a single, compact "Training Insight" card to the home screen showing ONE con
 | `components/home/InsightCard.tsx` | Presentational component: renders the insight with icon, text, tap target, and dismiss button |
 
 #### Data Queries Needed
-All data can be derived from existing tables — **no schema changes, 1 new query**:
+All data can be derived from existing tables — **no schema changes, 2 new queries added to loadHomeData()**:
 - **E1RM trend**: 1 new dedicated batch query: top-5 most-trained exercises with their e1RM from current vs previous 30-day window, single SQL pass. `loadHomeData()` does NOT currently fetch per-exercise e1RM history — this is genuinely new. Cannot reuse per-exercise `getExercise1RMChartData()` on home load (too expensive per TL). Add to existing `Promise.all` batch.
-- **Volume trend**: Reuse existing `getWeeklyVolume(weeks)` from `lib/db/session-stats.ts` — no new query needed (per TL Rev 2 feedback).
-- **Consistency data**: Use existing `getWeeklySessionCounts()` from `lib/db/session-stats.ts` for per-week counts. Note: `computeStreak()` returns consecutive weeks, not per-week counts — use `getWeeklySessionCounts()` instead for the "best in M weeks" comparison.
+- **Volume trend**: Add `getWeeklyVolume(8)` to `loadHomeData()` batch. Function already exists in `lib/db/session-stats.ts` but is NOT currently called in loadHomeData(). This is a new call (+1 query).
+- **Consistency data**: Derive per-week session counts from `getAllCompletedSessionWeeks()` timestamps, which are ALREADY loaded by `loadHomeData()` (batch 1, stored as `timestamps`). Group timestamps by ISO week in JS to compute "N sessions this week vs average of previous 4 weeks." NO new query needed — pure JS computation on existing data. Note: `computeStreak()` returns consecutive weeks, not per-week counts — derive weekly counts directly from the raw timestamps array instead.
 
-**Query count impact on `loadHomeData()`:** +1 new query (e1RM batch trend only). Volume and consistency reuse existing queries. Net: 15 → 16 parallel queries (~7% increase).
+**Query count impact on `loadHomeData()`:** +2 new queries (e1RM batch trend + getWeeklyVolume). Consistency reuses existing `getAllCompletedSessionWeeks()` data. Base count post-BLD-385: 16 queries in 3 batches. Net: 16 → 18 parallel queries (~12% increase).
 
 #### Architecture
 ```
-loadHomeData() → adds e1rmTrendData to return value (1 new query, reuses getWeeklyVolume + getWeeklySessionCounts)
+loadHomeData() → adds e1rmTrendData + weeklyVolume to return value (2 new queries, consistency derived from existing timestamps)
   ↓
 lib/insights.ts → generateInsight(homeData) → Insight | null
   ↓
@@ -197,17 +197,17 @@ Good velocity profile. Architecture fits existing patterns (pure functions in `l
 | **A11Y-01** (missing a11y) | FIXED — Full accessibility section added: accessibilityRole, accessibilityLabel, 48x48dp dismiss target, text alternatives via Ionicons + parent label (no emoji). |
 | **COGNITIVE-03** (placement) | FIXED — Exact position: immediately below StatsRow, above HomeBanners. Card is ~56dp, minimal impact on Quick Start reachability. |
 | **OVERLAP-01** (heatmap contradiction) | FIXED — Muscle group gap insight type removed entirely. No contradiction possible. |
-| **PERF-01** (query count) | FIXED (Rev 3) — Corrected: 1 new query (e1RM batch trend). Volume reuses `getWeeklyVolume()`, consistency reuses `getWeeklySessionCounts()`. Net: 15 → 16 queries (~7% increase). |
+| **PERF-01** (query count) | FIXED (Rev 4) — Corrected: 2 new queries (e1RM batch trend + getWeeklyVolume). Consistency derived from existing `getAllCompletedSessionWeeks()` timestamps in JS (no new query). Base count post-BLD-385: 16. Net: 16 → 18 queries (~12% increase). |
 
-**TL Rev 2 resolutions (Rev 3):**
+**TL Rev 2 resolutions (Rev 3→4):**
 
 | TL Rev 2 Finding | Resolution |
 |------------|------------|
-| **CRITICAL**: e1RM data not in loadHomeData() | FIXED — Plan now correctly states 1 new dedicated e1RM batch query required. No false claim of reuse. |
-| Volume trend: reuse `getWeeklyVolume(weeks)` | FIXED — Plan updated to reuse existing `getWeeklyVolume()` from `lib/db/session-stats.ts`. No new volume query. |
-| Consistency: use `getWeeklySessionCounts()` not `computeStreak()` | FIXED — Plan updated to use `getWeeklySessionCounts()` for per-week counts. `computeStreak()` only provides consecutive weeks. |
-| Query count baseline: 15 not 16 | FIXED — Corrected to 15 → 16. |
-| Rapid app opens (new edge case) | ADDED — Same deterministic insight each time (computed from same underlying data). |
+| **CRITICAL**: e1RM data not in loadHomeData() | FIXED (Rev 3) — Plan correctly states 1 new dedicated e1RM batch query required. No false claim of reuse. |
+| Volume trend: reuse `getWeeklyVolume(weeks)` | FIXED (Rev 4) — Function exists in `lib/db/session-stats.ts` but is NOT currently called in loadHomeData(). Adding `getWeeklyVolume(8)` to batch (+1 new call). |
+| Consistency: use `getWeeklySessionCounts()` not `computeStreak()` | FIXED (Rev 4) — Derive weekly session counts from existing `getAllCompletedSessionWeeks()` timestamps (already loaded in batch 1). Group by ISO week in JS. No new query needed — `getWeeklySessionCounts()` is NOT needed because raw timestamps are already available. |
+| Query count baseline: 15 not 16 | FIXED (Rev 4) — TL reviewed pre-BLD-385 (15 queries). Post-BLD-385 merge, `getTemplatePrimaryMuscles` was added → base is now 16. Net with insights: 16 → 18. |
+| Rapid app opens (new edge case) | ADDED (Rev 3) — Same deterministic insight each time (computed from same underlying data). |
 | Recommendation: replace StatsRow | DEFERRED — StatsRow replacement is a separate, larger UX change. This plan is additive but minimal (1 compact card). Will consider StatsRow consolidation as a future phase if the InsightCard proves valuable. |
 
 **Prior TL Rev 1 resolutions:**
