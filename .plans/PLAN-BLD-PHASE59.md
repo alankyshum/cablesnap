@@ -189,7 +189,21 @@ Modify `components/session/SetRow.tsx`:
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED** (2026-04-19)
+
+**Cognitive load**: Strongly positive — zero new decisions, aligns with user expectations. Pure passive positive feedback.
+
+**Regression risk**: Low — additive feature, core `completeSet()` untouched. Must wrap `checkSetPR` in try/catch so DB errors never block set completion.
+
+**Must address during implementation:**
+- [M] Consolidate haptic: existing PR haptic in `useSetTypeActions.ts:94-96` will double-fire with new hook. Remove or integrate.
+- [M] `useReducedMotion()`: suppress confetti for users with reduced motion preference.
+- [m] Test budget at 1797/1800 — consolidate into ≤2 multi-assertion tests.
+
+**Additional recommendations:**
+- 2s auto-dismiss timer must have useEffect cleanup (memory leak risk).
+- Add `accessibilityLiveRegion="assertive"` for Android TalkBack.
+- Consider consolidating existing `isPR` logic from `useSetTypeActions.ts` into the new hook to avoid maintaining PR detection in two places.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
