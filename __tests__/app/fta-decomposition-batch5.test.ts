@@ -15,39 +15,23 @@ describe("FTA Batch 5 — session/[id].tsx decomposition", () => {
   const headerSrc = readSrc("components/session/SessionListHeader.tsx");
   const footerSrc = readSrc("components/session/SessionListFooter.tsx");
 
-  it("parent imports useSessionActions hook", () => {
+  it("parent imports extracted components and hook", () => {
     expect(parentSrc).toContain("useSessionActions");
-  });
-
-  it("parent imports SessionListHeader", () => {
     expect(parentSrc).toContain("SessionListHeader");
-  });
-
-  it("parent imports SessionListFooter", () => {
     expect(parentSrc).toContain("SessionListFooter");
   });
 
-  it("useSessionActions hook exports the function", () => {
+  it("extracted modules have expected exports and content", () => {
     expect(hookSrc).toContain("export function useSessionActions");
-  });
-
-  it("useSessionActions manages elapsed timer state", () => {
     expect(hookSrc).toContain("elapsed");
     expect(hookSrc).toContain("setElapsed");
-  });
-
-  it("SessionListHeader renders nextHint banner", () => {
     expect(headerSrc).toContain("nextHint");
-  });
-
-  it("SessionListFooter renders finish and cancel buttons", () => {
     expect(footerSrc).toContain("Finish Workout");
     expect(footerSrc).toContain("Cancel Workout");
   });
 
   it("parent file is under 350 lines", () => {
-    const lines = parentSrc.split("\n").length;
-    expect(lines).toBeLessThan(350);
+    expect(parentSrc.split("\n").length).toBeLessThan(350);
   });
 });
 
@@ -56,25 +40,15 @@ describe("FTA Batch 5 — SubstitutionSheet decomposition", () => {
   const itemSrc = readSrc("components/substitution/SubstitutionItem.tsx");
   const filterSrc = readSrc("components/substitution/EquipmentFilter.tsx");
 
-  it("parent imports SubstitutionItem", () => {
+  it("parent imports extracted components with expected content", () => {
     expect(parentSrc).toContain("SubstitutionItem");
-  });
-
-  it("parent imports EquipmentFilter", () => {
     expect(parentSrc).toContain("EquipmentFilter");
-  });
-
-  it("SubstitutionItem has matchColor helper", () => {
     expect(itemSrc).toContain("matchColor");
-  });
-
-  it("EquipmentFilter renders chip row", () => {
     expect(filterSrc).toContain("Chip");
   });
 
   it("parent file is under 260 lines", () => {
-    const lines = parentSrc.split("\n").length;
-    expect(lines).toBeLessThan(260);
+    expect(parentSrc.split("\n").length).toBeLessThan(260);
   });
 });
 
@@ -83,29 +57,16 @@ describe("FTA Batch 5 — achievements.tsx decomposition", () => {
   const hookSrc = readSrc("hooks/useAchievements.ts");
   const badgeSrc = readSrc("components/achievements/AchievementBadge.tsx");
 
-  it("parent imports useAchievements hook", () => {
+  it("parent imports extracted hook, badge, and type", () => {
     expect(parentSrc).toContain("useAchievements");
-  });
-
-  it("parent imports AchievementBadge", () => {
     expect(parentSrc).toContain("AchievementBadge");
-  });
-
-  it("useAchievements hook exports the function", () => {
     expect(hookSrc).toContain("export function useAchievements");
-  });
-
-  it("useAchievements exports AchievementItem type", () => {
     expect(hookSrc).toContain("export type AchievementItem");
-  });
-
-  it("AchievementBadge renders progress bar for locked items", () => {
     expect(badgeSrc).toContain("Progress");
   });
 
   it("parent file is under 200 lines", () => {
-    const lines = parentSrc.split("\n").length;
-    expect(lines).toBeLessThan(200);
+    expect(parentSrc.split("\n").length).toBeLessThan(200);
   });
 });
 
@@ -114,26 +75,16 @@ describe("FTA Batch 5 — ShareCard decomposition", () => {
   const statsSrc = readSrc("components/share/ShareCardStats.tsx");
   const exercisesSrc = readSrc("components/share/ShareCardExercises.tsx");
 
-  it("parent imports ShareCardStats", () => {
+  it("parent imports extracted components with expected content", () => {
     expect(parentSrc).toContain("ShareCardStats");
-  });
-
-  it("parent imports ShareCardExercises", () => {
     expect(parentSrc).toContain("ShareCardExercises");
-  });
-
-  it("ShareCardStats renders duration, sets, volume", () => {
     expect(statsSrc).toContain("Duration");
     expect(statsSrc).toContain("Sets");
     expect(statsSrc).toContain("Volume");
-  });
-
-  it("ShareCardExercises renders PR section", () => {
     expect(exercisesSrc).toContain("New PRs");
   });
 
   it("parent file is under 200 lines", () => {
-    const lines = parentSrc.split("\n").length;
-    expect(lines).toBeLessThan(200);
+    expect(parentSrc.split("\n").length).toBeLessThan(200);
   });
 });
