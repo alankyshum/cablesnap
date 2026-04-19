@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
 import { useToast } from "@/components/ui/bna-toast";
@@ -63,7 +62,7 @@ export default function ExerciseDetail() {
         catch { showToast({ description: "Failed to delete exercise" }); }
       }},
     ]);
-  }, [id, d.exercise, router]);
+  }, [id, d.exercise, router, showToast]);
 
   if (!d.exercise) {
     return (<><Stack.Screen options={{ title: "Exercise" }} /><View style={[styles.center, { backgroundColor: colors.background }]}><Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text></View></>);

@@ -22,7 +22,7 @@ import {
   truncateBody,
   formatInteractions,
 } from "../../lib/errors";
-import type { ErrorEntry, Interaction, ReportType } from "../../lib/types";
+import type { ErrorEntry, Interaction } from "../../lib/types";
 
 function makeInteraction(overrides?: Partial<Interaction>): Interaction {
   return {

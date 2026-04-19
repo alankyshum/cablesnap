@@ -175,7 +175,7 @@ describe('Onboarding Acceptance', () => {
 
   describe('Error handling', () => {
     it('shows error banner when getBodySettings rejects', async () => {
-      ;(getBodySettings as jest.Mock).mockRejectedValueOnce(new Error('DB error'))
+      (getBodySettings as jest.Mock).mockRejectedValueOnce(new Error('DB error'))
 
       mockParams.weight = 'kg'
       mockParams.measurement = 'cm'

@@ -1,6 +1,5 @@
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 import { rpeColor, rpeText } from "@/lib/rpe";

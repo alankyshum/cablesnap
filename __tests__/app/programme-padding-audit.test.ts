@@ -27,7 +27,7 @@ const sources = auditedFiles.map(({ rel, label }) => ({
 }));
 
 describe("programme padding audit (BLD-190)", () => {
-  describe.each(sources)("$label ($rel)", ({ src, label }) => {
+  describe.each(sources)("$label ($rel)", ({ src }) => {
     it("imports useLayout from lib/layout", () => {
       expect(src).toMatch(/import\s*\{[^}]*useLayout[^}]*\}\s*from\s*["'][^"']*lib\/layout["']/);
     });
