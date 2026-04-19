@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 166
+Total learnings: 167
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 83 learnings
+- [React Native + Expo](patterns/react-native.md) — 89 learnings
 - [Testing](patterns/testing.md) — 11 learnings
 
 ### Pitfalls
@@ -60,6 +60,7 @@ Before starting work on a task, search this index for relevant learnings:
 | 2026-04-19 | BLD-379 | React Compiler: Ref Writes During Render Are Real Bugs | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-379 | React Compiler: Hoist Impure Calls Out of Render Loops | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-379 | React Compiler: Extract Optional Chaining from useMemo Deps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-381 | Scheduled Notification Lifecycle: Cancel from Every Exit Path | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-379 | Automated Reviewer Scans Entire Repo, Not PR Diff | Process | [pr-workflow.md](process/pr-workflow.md) |
 | 2026-04-19 | BLD-346 | Swipe Gestures Need Relative Thresholds and Discoverability Hints | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-341 | expo-localization firstWeekday Is 1-Indexed — Not JS Convention | Patterns | [react-native.md](patterns/react-native.md) |

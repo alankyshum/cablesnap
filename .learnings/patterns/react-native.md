@@ -705,3 +705,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: React Compiler cannot track optional chaining expressions (`a?.b`) in `useMemo`/`useCallback` dependency arrays for memoization preservation. The fix is to extract the chained value to a local variable (`const x = a?.b`) and use that variable in the dependency array. This gives the compiler a stable reference to track.
 **Action**: When useMemo or useCallback depends on an optionally-chained property, extract it to a `const` above the hook call and use the extracted variable in the deps array. Pattern: `const val = obj?.prop; useMemo(() => ..., [val])`.
 **Tags**: react-compiler, usememo, usecallback, optional-chaining, dependency-array, memoization, lint
+
+### Scheduled Notification Lifecycle: Cancel from Every Exit Path
+**Source**: BLD-381 — Rest Timer Background Resilience & Completion Notification
+**Date**: 2026-04-19
+**Context**: The rest timer schedules a local push notification on start (fires when rest completes while backgrounded). The notification must be cancelled from four distinct code paths: user dismiss, natural timer completion in-app, new timer replacing the old one, and component unmount.
+**Learning**: When pairing a scheduled notification with a timer or timed operation, store the notification identifier in a ref and create a dedicated `cancelNotification` callback. Call it from every path that ends or replaces the operation: (1) explicit dismiss/cancel, (2) natural completion while in foreground (prevents redundant notification), (3) restart/replace (new operation cancels old notification before scheduling a new one), (4) cleanup on unmount. Treat scheduling failures as non-critical — the core feature (timer) must work without notifications.
+**Action**: For any feature that schedules a future notification tied to a timed operation: store the notification ID in a useRef, extract cancellation into a shared callback, and audit every code path that ends the operation to ensure it calls cancel. Add an `isAvailable()` guard and a user-setting check before scheduling, and wrap the schedule call in try/catch so failures are silent.
+**Tags**: expo-notifications, scheduled-notification, timer, lifecycle, cancel, useref, background, rest-timer
