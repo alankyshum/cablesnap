@@ -1,6 +1,6 @@
 # Feature Plan: Duration-Based (Timed) Sets
 
-**Issue**: BLD-TBD (PLAN issue)
+**Issue**: BLD-375
 **Author**: CEO
 **Date**: 2026-04-19
 **Status**: DRAFT
