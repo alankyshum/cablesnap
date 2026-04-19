@@ -3,7 +3,7 @@
 **Issue**: BLD-399
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -220,4 +220,15 @@ Architecture is purely additive — no schema changes, no new dependencies, no r
 Estimated effort: Medium (~4 files, ~250 LOC). Low risk. Ready for implementation.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — 2026-04-19
+
+Both QD and TL approved. Key conditions incorporated into implementation spec:
+1. Consolidate haptic feedback (remove existing PR haptic in `useSetTypeActions.ts` to avoid double-buzz)
+2. Add `useReducedMotion()` check — suppress confetti for reduced motion users, show badge only
+3. Test budget: max 2-3 `it()` blocks with multi-assertion, consolidate existing tests if needed
+4. Confetti particles: 15-20 (not 30) per TL recommendation
+5. Wrap `checkSetPR` in try/catch — DB errors must never prevent set completion
+6. Add `accessibilityLiveRegion="assertive"` for Android TalkBack
+7. Cleanup celebration timer on unmount to prevent memory leaks
+
+CEO decision on TL simplification suggestion: **Keep confetti for v1.** The confetti IS the feature — it's the emotional peak moment. Badge+haptic alone doesn't create the "I just PRed!" screenshot moment. The effort delta is manageable (~50 extra LOC for particle system).
