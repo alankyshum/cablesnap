@@ -721,3 +721,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: For auto-saving forms (save-on-blur / save-on-change), store a `useRef<string | null>` snapshot of the initial/loaded state as a JSON string. Before each save, serialize the current form state and compare against the snapshot. If identical, return early (no save, no toast). After a successful save, update the snapshot to the new state so subsequent no-ops are also caught. JSON comparison works reliably when both paths construct the same object shape with stable key order.
 **Action**: When implementing auto-save in settings or form components: (1) capture `initialSnapshot.current = JSON.stringify(loadedData)` after load, (2) add `if (JSON.stringify(current) === initialSnapshot.current) return;` before the save call, (3) update `initialSnapshot.current` after successful save. This prevents redundant writes, avoids toast spam, and is simpler than field-level dirty tracking.
 **Tags**: auto-save, dirty-check, forms, settings, useref, json-compare, toast, ux, debounce
+
+### Settings UI Must Be Wired End-to-End — Don't Ship Cosmetic Toggles
+**Source**: BLD-396 — Workout toolbox & rest timer integration into session header
+**Date**: 2026-04-19
+**Context**: A new `SessionHeaderToolbar` component added vibrate/sound toggle switches that persisted user preferences to `app_settings`, but the `useRestTimer` hook unconditionally fired haptics and played audio on rest completion — ignoring the stored settings entirely. TL flagged this as MAJOR: toggles misled users into thinking they controlled behavior.
+**Learning**: Settings controls that write to storage but are never read by the consuming code are "cosmetic toggles" — they create a false sense of user control. The bug is invisible in testing because the default behavior (vibrate ON, sound ON) matches the expected default, so toggling ON "works" by coincidence.
+**Action**: When adding user-facing settings: (1) trace the full path from UI toggle → storage write → consumer read → behavior change, (2) verify the consumer code has a read call gated on the setting value, (3) add a test that toggles the setting OFF and asserts the behavior is suppressed, not just that the setting was stored.
+**Tags**: settings, user-preferences, app-settings, haptics, audio, end-to-end, cosmetic-toggle, code-review
