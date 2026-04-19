@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     gap: 8,
     elevation: 8,
-    shadowColor: "#000",
+    shadowColor: "#000", // shadow colors are theme-independent per platform conventions
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
