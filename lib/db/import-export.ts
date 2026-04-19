@@ -263,7 +263,7 @@ export async function estimateExportSize(): Promise<{ bytes: number; label: stri
   const database = await getDatabase();
   let totalRows = 0;
   for (const table of IMPORT_TABLE_ORDER) {
-    const result = await database.getFirstAsync<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM ${table}`);
+    const result = await database.getFirstAsync<{ cnt: number }>("SELECT COUNT(*) as cnt FROM " + table);
     totalRows += result?.cnt ?? 0;
   }
   // ~200 bytes per row average for JSON representation
@@ -287,7 +287,7 @@ export async function exportAllData(
   for (let i = 0; i < tables.length; i++) {
     const table = tables[i];
     onProgress?.({ table, tableIndex: i, totalTables: tables.length });
-    const rows = await database.getAllAsync(`SELECT * FROM ${table}`);
+    const rows = await database.getAllAsync("SELECT * FROM " + table);
     data[table] = rows;
     counts[table] = rows.length;
   }

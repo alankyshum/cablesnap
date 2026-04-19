@@ -68,30 +68,33 @@ export const typography = {
 
 // ─── Elevation / Shadows ───────────────────────────────────────────
 
+// Platform convention: shadow color is always black regardless of theme
+const SHADOW_COLOR = "#000";
+
 export const elevation = {
   none: {
-    shadowColor: "#000",
+    shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 0,
     shadowOpacity: 0,
     elevation: 0,
   },
   low: {
-    shadowColor: "#000",
+    shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 3,
     shadowOpacity: 0.08,
     elevation: 1,
   },
   medium: {
-    shadowColor: "#000",
+    shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     shadowOpacity: 0.12,
     elevation: 3,
   },
   high: {
-    shadowColor: "#000",
+    shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 16,
     shadowOpacity: 0.16,
