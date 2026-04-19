@@ -121,16 +121,29 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   // Haptic + audio feedback on rest timer completion and countdown
   useEffect(() => {
     if (prevRest.current > 0 && rest === 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      const t1 = setTimeout(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      }, 300);
-      const t2 = setTimeout(() => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      }, 600);
-      restHapticTimers.current = [t1, t2];
+      // Check user settings before firing haptics/audio
+      Promise.all([
+        getAppSetting("rest_timer_vibrate"),
+        getAppSetting("rest_timer_sound"),
+      ]).then(([vibrateSetting, soundSetting]) => {
+        const shouldVibrate = vibrateSetting !== "false";
+        const shouldSound = soundSetting !== "false";
 
-      playAudio("complete");
+        if (shouldVibrate) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          const t1 = setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          }, 300);
+          const t2 = setTimeout(() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          }, 600);
+          restHapticTimers.current = [t1, t2];
+        }
+
+        if (shouldSound) {
+          playAudio("complete");
+        }
+      });
 
       // eslint-disable-next-line react-hooks/immutability
       restFlash.value = 1;
@@ -139,7 +152,11 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     }
 
     if (rest > 0 && rest <= 3) {
-      playAudio("tick");
+      getAppSetting("rest_timer_sound").then((soundSetting) => {
+        if (soundSetting !== "false") {
+          playAudio("tick");
+        }
+      });
     }
 
     prevRest.current = rest;
