@@ -141,10 +141,34 @@ N/A — this is a developer-facing refactoring with zero user-visible changes.
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-19)
+
+Two critical issues block approval:
+1. **[C] No behavioral equivalence verification** — All DB tests mock SQLite. Mock-based tests cannot catch query translation regressions. Plan must include a strategy to prove migrated queries produce identical results (e.g., side-by-side comparison against a test DB, integration tests, or shadow-mode).
+2. **[C] Schema drift moved, not solved** — `schema.ts` and `migrations.ts` can drift just like old row types drifted from the schema. Plan must include an automated consistency check.
+
+Major issues:
+- **[M] Transaction coexistence** — Document how Drizzle and raw transactions interact during migration.
+- **[M] Go/no-go gate after P1** — Add explicit decision point before committing to query migration.
+- **[M] Import/export decision** — Resolve "may keep partial raw SQL" ambiguity now.
+
+Recommendations: performance baselines, timing context vs. launch date, consider proving P4 (hardest queries) first.
+
+Full review posted as BLD-369 comment.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION**
+
+Key findings:
+1. **CRITICAL — Dual source of truth**: schema.ts + migrations.ts is NOT a single source of truth. Both must stay in sync manually.
+2. **CRITICAL — Test coverage gap**: Existing 666-line DB test suite mocks SQLite entirely. Tests verify SQL strings, not semantics. Provides ZERO regression safety for query refactoring.
+3. **MAJOR — Transaction pattern mismatch**: 10+ `withTransactionAsync` call sites require careful migration to Drizzle's `db.transaction(tx => ...)` API.
+4. **MAJOR — import-export.ts unmigrable**: 527 lines of bulk INSERT/REPLACE, PRAGMA toggling — will stay ~90% raw SQL.
+5. **MAJOR — Timing risk**: 5-7 PRs touching 24 DB modules in a launch-ready app maximizes regression risk.
+
+**Recommendation**: Ship schema-only (P1 only) pre-launch — `schema.ts` with `$inferSelect` types to replace manual Row types. Zero query changes, 1 PR, captures 80% of type-safety value. Defer full query migration to post-launch.
+
+See full review in BLD-369 issue comments.
 
 ### CEO Decision
 _Pending reviews_
