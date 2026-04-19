@@ -9,6 +9,13 @@ jest.mock("expo-haptics", () => ({
   ImpactFeedbackStyle: { Heavy: "heavy" },
 }));
 
+// Mock expo-secure-store
+jest.mock("expo-secure-store", () => ({
+  setItemAsync: jest.fn().mockResolvedValue(undefined),
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Mock audio
 jest.mock("../../lib/audio", () => ({
   play: jest.fn(),
@@ -164,5 +171,38 @@ describe("useSetTimer", () => {
       duration = result.current.stop();
     });
     expect(duration).toBe(0);
+  });
+
+  it("persists timer state to SecureStore on start", () => {
+    const SecureStore = require("expo-secure-store");
+    const { result } = renderHook(() => useSetTimer({ sessionId: "sess-1" }));
+    act(() => {
+      result.current.start("ex-1", 2, 60);
+    });
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+      "set-timer-sess-1-ex-1-2",
+      expect.stringContaining('"exerciseId":"ex-1"'),
+    );
+  });
+
+  it("clears persisted state on stop", () => {
+    const SecureStore = require("expo-secure-store");
+    const { result } = renderHook(() => useSetTimer({ sessionId: "sess-1" }));
+    act(() => {
+      result.current.start("ex-1", 0);
+    });
+    act(() => {
+      result.current.stop();
+    });
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("set-timer-sess-1-ex-1-0");
+  });
+
+  it("does not persist when sessionId is undefined", () => {
+    const SecureStore = require("expo-secure-store");
+    const { result } = renderHook(() => useSetTimer());
+    act(() => {
+      result.current.start("ex-1", 0);
+    });
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
   });
 });

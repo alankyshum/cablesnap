@@ -1,15 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import * as Haptics from "expo-haptics";
+import * as SecureStore from "expo-secure-store";
 import { play as playAudio } from "../lib/audio";
 
-// sessionId reserved for future persistence (e.g. crash recovery via AsyncStorage)
 export type UseSetTimerOptions = {
   sessionId?: string;
 };
 
+type PersistedTimerState = {
+  startedAt: number;
+  exerciseId: string;
+  setIndex: number;
+  targetDuration?: number;
+};
+
+function storageKey(sessionId: string, exerciseId: string, setIndex: number): string {
+  return `set-timer-${sessionId}-${exerciseId}-${setIndex}`;
+}
+
+// Persist timer start to survive process kill
+function persistTimerState(sessionId: string | undefined, state: PersistedTimerState): void {
+  if (!sessionId) return;
+  const key = storageKey(sessionId, state.exerciseId, state.setIndex);
+  SecureStore.setItemAsync(key, JSON.stringify(state)).catch(() => {});
+}
+
+function clearPersistedTimerState(sessionId: string | undefined, exerciseId: string, setIndex: number): void {
+  if (!sessionId) return;
+  SecureStore.deleteItemAsync(storageKey(sessionId, exerciseId, setIndex)).catch(() => {});
+}
+
 export function useSetTimer(options: UseSetTimerOptions = {}) {
-  void options;
+  const sessionId = options.sessionId;
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [targetDuration, setTargetDuration] = useState<number | undefined>();
@@ -66,14 +89,20 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     setActiveExerciseId(exerciseId);
     setActiveSetIndex(setIndex);
 
+    persistTimerState(sessionId, { startedAt: now, exerciseId, setIndex, targetDuration: target });
+
     intervalRef.current = setInterval(updateDisplay, 1000);
-  }, [clearTimer, updateDisplay]);
+  }, [clearTimer, updateDisplay, sessionId]);
 
   const stop = useCallback((): number => {
     clearTimer();
     const duration = startedAtRef.current
       ? Math.round((Date.now() - startedAtRef.current) / 1000)
       : 0;
+
+    if (activeExerciseId != null && activeSetIndex != null) {
+      clearPersistedTimerState(sessionId, activeExerciseId, activeSetIndex);
+    }
 
     startedAtRef.current = null;
     targetRef.current = undefined;
@@ -86,10 +115,15 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     setActiveSetIndex(null);
 
     return duration;
-  }, [clearTimer]);
+  }, [clearTimer, sessionId, activeExerciseId, activeSetIndex]);
 
   const dismiss = useCallback(() => {
     clearTimer();
+
+    if (activeExerciseId != null && activeSetIndex != null) {
+      clearPersistedTimerState(sessionId, activeExerciseId, activeSetIndex);
+    }
+
     startedAtRef.current = null;
     targetRef.current = undefined;
     completedRef.current = false;
@@ -98,7 +132,7 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     setTargetDuration(undefined);
     setActiveExerciseId(null);
     setActiveSetIndex(null);
-  }, [clearTimer]);
+  }, [clearTimer, sessionId, activeExerciseId, activeSetIndex]);
 
   // AppState listener — recalculate elapsed on foreground resume (absolute timestamp)
   useEffect(() => {
