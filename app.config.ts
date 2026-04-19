@@ -45,6 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     "expo-web-browser",
     "expo-secure-store",
+    "expo-image",
     [
       "expo-build-properties",
       {
