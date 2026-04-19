@@ -1,0 +1,357 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Switch,
+  View,
+} from "react-native";
+import type { ViewStyle } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Text } from "@/components/ui/text";
+import { Chip } from "@/components/ui/chip";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { formatTime } from "../../lib/format";
+import { getAppSetting, setAppSetting } from "../../lib/db";
+
+const REST_PRESETS = [30, 60, 90, 120] as const;
+const DEFAULT_REST_SECONDS = 90;
+const REST_DONE_DISPLAY_MS = 3000;
+
+function presetLabel(seconds: number): string {
+  if (seconds >= 60) return `${seconds / 60}m`;
+  return `${seconds}s`;
+}
+
+type Props = {
+  rest: number;
+  elapsed: number;
+  onStartRest: (duration: number) => void;
+  onDismissRest: () => void;
+  onOpenToolbox: () => void;
+  restFlashStyle?: ViewStyle;
+  pickerRequested?: boolean;
+  onPickerDismissed?: () => void;
+};
+
+function SessionHeaderToolbarInner({
+  rest,
+  elapsed,
+  onStartRest,
+  onDismissRest,
+  onOpenToolbox,
+  pickerRequested,
+  onPickerDismissed,
+}: Props) {
+  const colors = useThemeColors();
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [showRestDone, setShowRestDone] = useState(false);
+  const prevRestRef = useRef(0);
+  const restDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Settings state for the picker modal
+  const [vibrateSetting, setVibrateSetting] = useState(true);
+  const [soundSetting, setSoundSetting] = useState(true);
+
+  // Detect rest completion: previous rest > 0 → current rest === 0
+  useEffect(() => {
+    if (prevRestRef.current > 0 && rest === 0) {
+      setShowRestDone(true); // eslint-disable-line react-hooks/set-state-in-effect
+      restDoneTimerRef.current = setTimeout(() => {
+        setShowRestDone(false);
+      }, REST_DONE_DISPLAY_MS);
+    }
+    prevRestRef.current = rest;
+  }, [rest]);
+
+  // Cleanup rest done timer on unmount
+  useEffect(() => {
+    return () => {
+      if (restDoneTimerRef.current) clearTimeout(restDoneTimerRef.current);
+    };
+  }, []);
+
+  const handleElapsedTap = useCallback(async () => {
+    if (rest > 0) return; // Disabled when rest is active
+    const savedDefault = await getAppSetting("rest_timer_default_seconds");
+    const duration = savedDefault ? parseInt(savedDefault, 10) : DEFAULT_REST_SECONDS;
+    onStartRest(isNaN(duration) || duration < 1 ? DEFAULT_REST_SECONDS : duration);
+  }, [rest, onStartRest]);
+
+  const handleRestTap = useCallback(() => {
+    onDismissRest();
+    setShowRestDone(false);
+    if (restDoneTimerRef.current) {
+      clearTimeout(restDoneTimerRef.current);
+      restDoneTimerRef.current = null;
+    }
+  }, [onDismissRest]);
+
+  const handleLongPress = useCallback(async () => {
+    // Load current settings before opening picker
+    const [vibrate, sound] = await Promise.all([
+      getAppSetting("rest_timer_vibrate"),
+      getAppSetting("rest_timer_sound"),
+    ]);
+    setVibrateSetting(vibrate !== "false");
+    setSoundSetting(sound !== "false");
+    setPickerVisible(true);
+  }, []);
+
+  // Open picker when externally requested (e.g., from toolbox sheet "Rest Settings")
+  useEffect(() => {
+    if (!pickerRequested) return;
+    Promise.all([
+      getAppSetting("rest_timer_vibrate"),
+      getAppSetting("rest_timer_sound"),
+    ]).then(([vibrate, sound]) => {
+      setVibrateSetting(vibrate !== "false");
+      setSoundSetting(sound !== "false");
+      setPickerVisible(true);
+    });
+    onPickerDismissed?.();
+  }, [pickerRequested, onPickerDismissed]);
+
+  const handlePresetSelect = useCallback(async (seconds: number) => {
+    setPickerVisible(false);
+    await setAppSetting("rest_timer_default_seconds", String(seconds));
+    onStartRest(seconds);
+  }, [onStartRest]);
+
+  const handleVibrateToggle = useCallback(async (value: boolean) => {
+    setVibrateSetting(value);
+    await setAppSetting("rest_timer_vibrate", String(value));
+  }, []);
+
+  const handleSoundToggle = useCallback(async (value: boolean) => {
+    setSoundSetting(value);
+    await setAppSetting("rest_timer_sound", String(value));
+  }, []);
+
+  const handlePickerDismiss = useCallback(() => {
+    setPickerVisible(false);
+  }, []);
+
+  const isRestActive = rest > 0;
+
+  return (
+    <>
+      <View style={styles.container}>
+        {/* Rest countdown or "REST DONE ✓" */}
+        {(isRestActive || showRestDone) && (
+          <Pressable
+            onPress={handleRestTap}
+            accessibilityLabel={
+              showRestDone
+                ? "Rest complete. Tap to dismiss."
+                : `Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds. Tap to dismiss.`
+            }
+            accessibilityLiveRegion="polite"
+            style={styles.timerButton}
+          >
+            <Text
+              variant="body"
+              style={{
+                color: showRestDone ? colors.primary : colors.primary,
+                fontWeight: "700",
+                fontSize: 16,
+              }}
+            >
+              {showRestDone
+                ? "REST DONE ✓"
+                : `${String(Math.floor(rest / 60)).padStart(2, "0")}:${String(rest % 60).padStart(2, "0")}`}
+            </Text>
+          </Pressable>
+        )}
+
+        {/* Elapsed time */}
+        <Pressable
+          onPress={handleElapsedTap}
+          onLongPress={handleLongPress}
+          delayLongPress={400}
+          disabled={false}
+          accessibilityLabel={
+            isRestActive
+              ? `Elapsed time: ${formatTime(elapsed)}`
+              : `Elapsed time: ${formatTime(elapsed)}. Tap to start rest timer. Long press for rest settings.`
+          }
+          accessibilityRole="button"
+          style={styles.elapsedButton}
+        >
+          <Text
+            variant="body"
+            style={{
+              color: isRestActive ? colors.onSurfaceVariant : colors.primary,
+              fontSize: isRestActive ? 13 : 14,
+            }}
+          >
+            {formatTime(elapsed)}
+          </Text>
+        </Pressable>
+
+        {/* Wrench / toolbox button */}
+        <Pressable
+          onPress={onOpenToolbox}
+          accessibilityLabel="Open workout toolbox"
+          accessibilityRole="button"
+          style={styles.toolboxButton}
+        >
+          <MaterialCommunityIcons
+            name="wrench"
+            size={22}
+            color={colors.onSurfaceVariant}
+          />
+        </Pressable>
+      </View>
+
+      {/* Duration Picker Modal */}
+      <RestDurationPicker
+        visible={pickerVisible}
+        vibrateSetting={vibrateSetting}
+        soundSetting={soundSetting}
+        onSelectPreset={handlePresetSelect}
+        onVibrateToggle={handleVibrateToggle}
+        onSoundToggle={handleSoundToggle}
+        onDismiss={handlePickerDismiss}
+      />
+    </>
+  );
+}
+
+type PickerProps = {
+  visible: boolean;
+  vibrateSetting: boolean;
+  soundSetting: boolean;
+  onSelectPreset: (seconds: number) => void;
+  onVibrateToggle: (value: boolean) => void;
+  onSoundToggle: (value: boolean) => void;
+  onDismiss: () => void;
+};
+
+function RestDurationPicker({
+  visible,
+  vibrateSetting,
+  soundSetting,
+  onSelectPreset,
+  onVibrateToggle,
+  onSoundToggle,
+  onDismiss,
+}: PickerProps) {
+  const colors = useThemeColors();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onDismiss}
+    >
+      <Pressable style={styles.modalOverlay} onPress={onDismiss} accessibilityLabel="Dismiss rest settings" accessibilityRole="button">
+        <Pressable
+          style={[styles.pickerContainer, { backgroundColor: colors.surface }]}
+          onPress={(e) => e.stopPropagation()}
+          accessibilityRole="none"
+        >
+          <Text
+            variant="subtitle"
+            style={{ color: colors.onSurface, marginBottom: 16 }}
+          >
+            Rest Duration
+          </Text>
+
+          <View style={styles.presetsRow}>
+            {REST_PRESETS.map((seconds) => (
+              <Chip
+                key={seconds}
+                selected={false}
+                onPress={() => onSelectPreset(seconds)}
+                accessibilityRole="button"
+                accessibilityLabel={`Start ${presetLabel(seconds)} rest timer`}
+              >
+                {presetLabel(seconds)}
+              </Chip>
+            ))}
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
+              Vibrate on complete
+            </Text>
+            <Switch
+              value={vibrateSetting}
+              onValueChange={onVibrateToggle}
+              trackColor={{ false: colors.surfaceVariant, true: colors.primary }}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
+              Sound on complete
+            </Text>
+            <Switch
+              value={soundSetting}
+              onValueChange={onSoundToggle}
+              trackColor={{ false: colors.surfaceVariant, true: colors.primary }}
+            />
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+export const SessionHeaderToolbar = React.memo(SessionHeaderToolbarInner);
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  timerButton: {
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  elapsedButton: {
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
+  },
+  toolboxButton: {
+    minWidth: 56,
+    minHeight: 56,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pickerContainer: {
+    borderRadius: 16,
+    padding: 24,
+    minWidth: 280,
+    maxWidth: 340,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  presetsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+});

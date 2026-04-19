@@ -1,5 +1,5 @@
 /* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,7 +16,6 @@ import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import { getAppSetting } from "../../lib/db";
-import { formatTime } from "../../lib/format";
 import { useLayout } from "../../lib/layout";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import SubstitutionSheet from "../../components/SubstitutionSheet";
@@ -33,6 +32,7 @@ import { SetTypeSheet } from "../../components/session/SetTypeSheet";
 import { SessionListHeader } from "../../components/session/SessionListHeader";
 import { SessionListFooter } from "../../components/session/SessionListFooter";
 import { SessionToolboxSheet } from "../../components/session/SessionToolboxSheet";
+import { SessionHeaderToolbar } from "../../components/session/SessionHeaderToolbar";
 
 export default function ActiveSession() {
   useEffect(() => {
@@ -99,6 +99,7 @@ export default function ActiveSession() {
   } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
+  const [restSettingsRequested, setRestSettingsRequested] = useState(false);
 
   const handleToolboxOpen = useCallback(() => {
     // Mutual exclusion: close exercise picker before opening toolbox
@@ -113,6 +114,14 @@ export default function ActiveSession() {
   const handleToolboxStartRest = useCallback((seconds: number) => {
     startRestWithDuration(seconds);
   }, [startRestWithDuration]);
+
+  const handleOpenRestSettings = useCallback(() => {
+    setRestSettingsRequested(true);
+  }, []);
+
+  const handleRestSettingsDismissed = useCallback(() => {
+    setRestSettingsRequested(false);
+  }, []);
 
   // Wrap add exercise to close toolbox (mutual exclusion)
   const handleAddExerciseWrapped = useCallback(() => {
@@ -200,38 +209,15 @@ export default function ActiveSession() {
         options={{
           title: session.name,
           headerRight: () => (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {rest > 0 && (
-                <Pressable
-                  onPress={dismissRest}
-                  accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds. Tap to skip.`}
-                  accessibilityLiveRegion="polite"
-                  style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
-                >
-                  <Text variant="body" style={{ color: colors.primary, fontWeight: "700", fontSize: 16 }}>
-                    {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
-                  </Text>
-                </Pressable>
-              )}
-              <Text
-                variant="body"
-                style={{
-                  color: rest > 0 ? colors.onSurfaceVariant : colors.primary,
-                  marginRight: 4,
-                  fontSize: rest > 0 ? 13 : 14,
-                }}
-              >
-                {formatTime(elapsed)}
-              </Text>
-              <Pressable
-                onPress={handleToolboxOpen}
-                accessibilityLabel="Open workout toolbox"
-                accessibilityRole="button"
-                style={{ minWidth: 56, minHeight: 56, alignItems: "center", justifyContent: "center" }}
-              >
-                <MaterialCommunityIcons name="wrench" size={22} color={colors.onSurfaceVariant} />
-              </Pressable>
-            </View>
+            <SessionHeaderToolbar
+              rest={rest}
+              elapsed={elapsed}
+              onStartRest={handleToolboxStartRest}
+              onDismissRest={dismissRest}
+              onOpenToolbox={handleToolboxOpen}
+              pickerRequested={restSettingsRequested}
+              onPickerDismissed={handleRestSettingsDismissed}
+            />
           ),
         }}
       />
@@ -301,7 +287,7 @@ export default function ActiveSession() {
       />
       <SessionToolboxSheet
         sheetRef={toolboxSheetRef}
-        onStartRest={handleToolboxStartRest}
+        onOpenRestSettings={handleOpenRestSettings}
         onDismiss={handleToolboxDismiss}
       />
     </>

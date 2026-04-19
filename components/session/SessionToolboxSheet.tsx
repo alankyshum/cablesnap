@@ -3,8 +3,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Chip } from "@/components/ui/chip";
 import { Card, CardContent } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -14,46 +12,25 @@ import { TimerContent } from "../../app/tools/timer";
 import { useThemeColors, type ThemeColors } from "@/hooks/useThemeColors";
 import { logError } from "../../lib/errors";
 
-const REST_PRESETS = [30, 60, 90, 120] as const;
-
 type Props = {
   sheetRef: React.RefObject<BottomSheet | null>;
-  onStartRest: (seconds: number) => void;
+  onOpenRestSettings: () => void;
   onDismiss: () => void;
 };
 
-export function SessionToolboxSheet({ sheetRef, onStartRest, onDismiss }: Props) {
+export function SessionToolboxSheet({ sheetRef, onOpenRestSettings, onDismiss }: Props) {
   const colors = useThemeColors();
   const snapPoints = useMemo(() => ["50%", "90%"], []);
-  const [selectedPreset, setSelectedPreset] = useState<number | null>(60);
-  const [customDuration, setCustomDuration] = useState("");
   const [plateCalcWeight, setPlateCalcWeight] = useState<string | undefined>(undefined);
-
-  const isCustom = selectedPreset === null;
-  const parsedCustom = parseInt(customDuration, 10);
-  const validCustom = !isNaN(parsedCustom) && parsedCustom >= 1;
-  const canStart = isCustom ? validCustom : selectedPreset !== null;
-
-  const handleSelectPreset = useCallback((seconds: number) => {
-    setSelectedPreset(seconds);
-    setCustomDuration("");
-  }, []);
-
-  const handleCustomFocus = useCallback(() => {
-    setSelectedPreset(null);
-  }, []);
-
-  const handleStartRest = useCallback(() => {
-    const duration = isCustom ? parsedCustom : selectedPreset;
-    if (duration && duration >= 1) {
-      onStartRest(duration);
-      sheetRef.current?.close();
-    }
-  }, [isCustom, parsedCustom, selectedPreset, onStartRest, sheetRef]);
 
   const handlePlateCalcFromRM = useCallback((weight: number) => {
     setPlateCalcWeight(String(weight));
   }, []);
+
+  const handleOpenRestSettings = useCallback(() => {
+    sheetRef.current?.close();
+    onOpenRestSettings();
+  }, [sheetRef, onOpenRestSettings]);
 
   return (
     <BottomSheet
@@ -73,45 +50,13 @@ export function SessionToolboxSheet({ sheetRef, onStartRest, onDismiss }: Props)
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Rest Timer Config */}
+        {/* Rest Settings — a11y fallback for long-press */}
         <ToolSection icon="timer-outline" title="Rest Timer" colors={colors}>
-          <View style={styles.presetsRow}>
-            {REST_PRESETS.map((seconds) => (
-              <Chip
-                key={seconds}
-                selected={selectedPreset === seconds}
-                onPress={() => handleSelectPreset(seconds)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: selectedPreset === seconds }}
-                accessibilityLabel={`${seconds} seconds rest`}
-              >
-                {`${seconds}s`}
-              </Chip>
-            ))}
-          </View>
-          <View style={styles.customRow}>
-            <View style={{ flex: 1 }}>
-              <Input
-                variant="outline"
-                keyboardType="numeric"
-                value={customDuration}
-                onChangeText={(text) => {
-                  setCustomDuration(text);
-                  setSelectedPreset(null);
-                }}
-                onFocus={handleCustomFocus}
-                placeholder="Custom (seconds)"
-                accessibilityLabel="Custom rest duration in seconds"
-              />
-            </View>
-          </View>
           <Button
-            variant="default"
-            onPress={handleStartRest}
-            disabled={!canStart}
-            style={styles.startButton}
-            accessibilityLabel="Start rest timer"
-            label="Start Rest Timer"
+            variant="ghost"
+            onPress={handleOpenRestSettings}
+            accessibilityLabel="Open rest timer settings"
+            label="Rest Settings"
           />
         </ToolSection>
 
@@ -201,21 +146,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-  },
-  presetsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  customRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  startButton: {
-    marginTop: 4,
   },
   errorContainer: {
     alignItems: "center",
