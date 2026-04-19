@@ -585,3 +585,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: expo-localization `firstWeekday` uses 1-based indexing where 1=Sunday, 2=Monday, ..., 7=Saturday. JavaScript's `Date.getDay()` uses 0-based indexing where 0=Sunday. To convert: `(firstWeekday - 1) % 7`. Failing to convert produces off-by-one week alignment errors in calendar grids. Also wrap `getCalendars()` in try/catch — it throws in test environments where expo-localization is not available.
 **Action**: When using `getCalendars()[0].firstWeekday`, always convert with `(firstWeekday - 1) % 7` before passing to JS date logic. Cache the result at module level since locale does not change at runtime. Wrap in try/catch with a fallback default (0 = Sunday).
 **Tags**: expo-localization, calendar, locale, firstWeekday, indexing, getCalendars, date
+
+### Swipe Gestures Need Relative Thresholds and Discoverability Hints
+**Source**: BLD-346 — Template header alignment + swipe-to-delete
+**Date**: 2026-04-19
+**Context**: The SwipeToDelete component used a fixed -160px dismiss threshold. On small screens the gesture was too hard; on large screens too easy. Additionally, users did not discover the swipe gesture because there was no visual cue.
+**Learning**: Fixed pixel thresholds in gesture handlers produce inconsistent UX across device sizes. Use `useWindowDimensions()` and express thresholds as a percentage of screen width (e.g., 40%). For hidden gestures (swipe-to-delete, pull-to-refresh alternatives), users need an onboarding affordance — a subtle hint animation on the first item using `withDelay` + `withSequence` + `withSpring` that briefly nudges the row and springs back.
+**Action**: When building swipe gestures: (1) use `useWindowDimensions().width` and percentage-based thresholds instead of hardcoded pixel values, (2) add a `showHint` prop that triggers a brief bounce animation on mount for the first item, using `withDelay(600, withSequence(withTiming(-40, {duration: 300}), withSpring(0)))`. Pass `showHint={index === 0}` to hint only on the first row.
+**Tags**: gesture, swipe-to-delete, responsive, useWindowDimensions, reanimated, discoverability, ux, hint-animation

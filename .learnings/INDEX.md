@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-18
-Total learnings: 144
+Last updated: 2026-04-19
+Total learnings: 145
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 71 learnings
+- [React Native + Expo](patterns/react-native.md) — 72 learnings
 - [Testing](patterns/testing.md) — 10 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-346 | Swipe Gestures Need Relative Thresholds and Discoverability Hints | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-341 | expo-localization firstWeekday Is 1-Indexed — Not JS Convention | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-339 | Avoid Hidden Re-Queries in Composed Data-Layer Functions | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-335 | New Database Tables Require Five-Point Backup/Restore Integration | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
