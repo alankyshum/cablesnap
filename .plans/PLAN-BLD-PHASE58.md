@@ -146,7 +146,17 @@ Add a "Add Warmups" button to the exercise group header in the active session vi
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED** — 2026-04-19
+
+**Regression Risk: LOW.** Feature is purely additive (new button, new utility, new DB function). No existing flows modified. Set renumbering in transaction mitigates data integrity risk. Volume stats already exclude warmup sets (`is_warmup = 0`).
+
+**Cognitive Load: STRONGLY POSITIVE.** Reduces 50+ taps to 1 tap. Compatible with existing mental model (warmup set type already exists). Zero new decisions for users. 3-second test: PASS.
+
+**Recommendations (non-blocking):**
+1. Use descriptive `accessibilityLabel` including exercise name on warmup button
+2. `solve()` in `lib/plates.ts` is plate decomposition, not rounding — engineer needs a `roundToPlates()` wrapper for plate-friendly weight rounding
+3. `ExerciseGroup` type lacks `is_bodyweight` field — needs threading from exercise-history or alternative check
+4. Consider lightweight undo (snackbar) for accidental taps — could be v1.1
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
