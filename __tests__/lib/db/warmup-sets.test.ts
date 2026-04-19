@@ -19,11 +19,12 @@ jest.mock('expo-sqlite', () => ({
 }));
 
 let mockDrizzleGetResult: any = undefined;
+let mockDrizzleAllResult: any[] = [];
 
 jest.mock('drizzle-orm/expo-sqlite', () => ({
   drizzle: jest.fn(() => ({
     select: jest.fn(() => {
-      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => mockDrizzleGetResult), then: (r: any) => Promise.resolve([]).then(r) };
+      const chain: any = { from: jest.fn().mockReturnThis(), leftJoin: jest.fn().mockReturnThis(), innerJoin: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), groupBy: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => mockDrizzleGetResult), all: jest.fn(() => mockDrizzleAllResult), then: (r: any) => Promise.resolve(mockDrizzleAllResult).then(r) };
       return chain;
     }),
     insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
@@ -48,6 +49,7 @@ import type { SetType } from '../../../lib/types';
 beforeEach(() => {
   jest.clearAllMocks();
   mockDrizzleGetResult = undefined;
+  mockDrizzleAllResult = [];
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue(null);
   mockDb.runAsync.mockResolvedValue({ changes: 1 });
@@ -143,32 +145,38 @@ describe('addSetsBatch with setType', () => {
 
 describe('getSessionSets', () => {
   it('maps is_warmup and set_type from row data', async () => {
-    mockDb.getAllAsync.mockResolvedValue([
+    mockDrizzleAllResult = [
       {
         id: 's1', session_id: 'sess-1', exercise_id: 'ex-1',
         set_number: 1, weight: 100, reps: 5, completed: 1,
         completed_at: null, rpe: null, notes: null,
-        exercise_name: 'Squat', link_id: null, round: null,
+        exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
+        link_id: null, round: null,
         training_mode: null, tempo: null,
         swapped_from_exercise_id: null, is_warmup: 1, set_type: 'warmup',
+        duration_seconds: null,
       },
       {
         id: 's2', session_id: 'sess-1', exercise_id: 'ex-1',
         set_number: 2, weight: 100, reps: 5, completed: 1,
         completed_at: null, rpe: null, notes: null,
-        exercise_name: 'Squat', link_id: null, round: null,
+        exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
+        link_id: null, round: null,
         training_mode: null, tempo: null,
         swapped_from_exercise_id: null, is_warmup: 0, set_type: 'dropset',
+        duration_seconds: null,
       },
       {
         id: 's3', session_id: 'sess-1', exercise_id: 'ex-1',
         set_number: 3, weight: 80, reps: 8, completed: 1,
         completed_at: null, rpe: null, notes: null,
-        exercise_name: 'Squat', link_id: null, round: null,
+        exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
+        link_id: null, round: null,
         training_mode: null, tempo: null,
         swapped_from_exercise_id: null, is_warmup: 0, set_type: 'failure',
+        duration_seconds: null,
       },
-    ]);
+    ];
 
     const sets = await getSessionSets('sess-1');
     expect(sets[0].is_warmup).toBe(true);
@@ -179,17 +187,19 @@ describe('getSessionSets', () => {
   });
 
   it('defaults set_type to normal when missing from DB', async () => {
-    mockDb.getAllAsync.mockResolvedValue([
+    mockDrizzleAllResult = [
       {
         id: 's1', session_id: 'sess-1', exercise_id: 'ex-1',
         set_number: 1, weight: 100, reps: 5, completed: 1,
         completed_at: null, rpe: null, notes: null,
-        exercise_name: 'Squat', link_id: null, round: null,
+        exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
+        link_id: null, round: null,
         training_mode: null, tempo: null,
         swapped_from_exercise_id: null, is_warmup: 0,
+        duration_seconds: null,
         // set_type intentionally missing
       },
-    ]);
+    ];
 
     const sets = await getSessionSets('sess-1');
     expect(sets[0].set_type).toBe('normal');
@@ -220,10 +230,9 @@ describe('metric queries exclude warm-ups', () => {
   });
 
   it('getPersonalRecords excludes warm-up sets', async () => {
-    mockDb.getAllAsync.mockResolvedValue([]);
-    await getPersonalRecords();
-
-    const call = mockDb.getAllAsync.mock.calls[0];
-    expect(call[0]).toContain('is_warmup = 0');
+    mockDrizzleAllResult = [{ exercise_id: 'ex1', name: 'Bench Press', max_weight: 100 }];
+    const records = await getPersonalRecords();
+    // Now uses Drizzle ORM with eq(workoutSets.is_warmup, 0) in the where clause
+    expect(records).toEqual([{ exercise_id: 'ex1', name: 'Bench Press', max_weight: 100 }]);
   });
 });

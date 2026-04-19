@@ -1,6 +1,6 @@
-import { asc, gte } from "drizzle-orm";
-import { query, queryOne, getDrizzle } from "./helpers";
-import { bodyWeight, bodyMeasurements } from "./schema";
+import { asc, gte, sql, isNotNull, and } from "drizzle-orm";
+import { getDrizzle } from "./helpers";
+import { bodyWeight, bodyMeasurements, workoutSessions, workoutSets, exercises, dailyLog, foodEntries } from "./schema";
 
 export type WorkoutCSVRow = {
   date: string;
@@ -51,60 +51,75 @@ export type BodyMeasurementsCSVRow = {
 };
 
 export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]> {
-  return query<WorkoutCSVRow>(
-    `SELECT
-       date(ws.started_at / 1000, 'unixepoch') AS date,
-       COALESCE(e.name, 'Deleted Exercise') AS exercise,
-       wset.set_number,
-       wset.weight,
-       wset.reps,
-       ws.duration_seconds,
-       ws.notes,
-       wset.rpe AS set_rpe,
-       wset.notes AS set_notes,
-       wset.link_id,
-       wset.training_mode,
-       wset.tempo
-     FROM workout_sessions ws
-     JOIN workout_sets wset ON wset.session_id = ws.id
-     LEFT JOIN exercises e ON e.id = wset.exercise_id
-     WHERE ws.completed_at IS NOT NULL
-       AND ws.started_at >= ?
-     ORDER BY ws.started_at ASC, exercise ASC, wset.set_number ASC`,
-    [since]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      date: sql<string>`date(${workoutSessions.started_at} / 1000, 'unixepoch')`,
+      exercise: sql<string>`COALESCE(${exercises.name}, 'Deleted Exercise')`,
+      set_number: workoutSets.set_number,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+      duration_seconds: workoutSessions.duration_seconds,
+      notes: workoutSessions.notes,
+      set_rpe: workoutSets.rpe,
+      set_notes: workoutSets.notes,
+      link_id: workoutSets.link_id,
+      training_mode: workoutSets.training_mode,
+      tempo: workoutSets.tempo,
+    })
+    .from(workoutSessions)
+    .innerJoin(workoutSets, sql`${workoutSets.session_id} = ${workoutSessions.id}`)
+    .leftJoin(exercises, sql`${exercises.id} = ${workoutSets.exercise_id}`)
+    .where(
+      and(
+        isNotNull(workoutSessions.completed_at),
+        gte(workoutSessions.started_at, since)
+      )
+    )
+    .orderBy(
+      asc(workoutSessions.started_at),
+      sql`exercise ASC`,
+      asc(workoutSets.set_number)
+    );
+
+  return rows as unknown as WorkoutCSVRow[];
 }
 
 export async function getNutritionCSVData(since: number): Promise<NutritionCSVRow[]> {
-  return query<NutritionCSVRow>(
-    `SELECT
-       dl.date,
-       dl.meal,
-       f.name AS food,
-       dl.servings,
-       ROUND(f.calories * dl.servings, 1) AS calories,
-       ROUND(f.protein * dl.servings, 1) AS protein,
-       ROUND(f.carbs * dl.servings, 1) AS carbs,
-       ROUND(f.fat * dl.servings, 1) AS fat
-     FROM daily_log dl
-     JOIN food_entries f ON f.id = dl.food_entry_id
-     WHERE dl.date >= date(? / 1000, 'unixepoch')
-     ORDER BY dl.date ASC, dl.meal ASC`,
-    [since]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      date: dailyLog.date,
+      meal: dailyLog.meal,
+      food: foodEntries.name,
+      servings: dailyLog.servings,
+      calories: sql<number>`ROUND(${foodEntries.calories} * ${dailyLog.servings}, 1)`,
+      protein: sql<number>`ROUND(${foodEntries.protein} * ${dailyLog.servings}, 1)`,
+      carbs: sql<number>`ROUND(${foodEntries.carbs} * ${dailyLog.servings}, 1)`,
+      fat: sql<number>`ROUND(${foodEntries.fat} * ${dailyLog.servings}, 1)`,
+    })
+    .from(dailyLog)
+    .innerJoin(foodEntries, sql`${foodEntries.id} = ${dailyLog.food_entry_id}`)
+    .where(gte(dailyLog.date, sql`date(${since} / 1000, 'unixepoch')`))
+    .orderBy(asc(dailyLog.date), asc(dailyLog.meal));
+
+  return rows as unknown as NutritionCSVRow[];
 }
 
 export async function getCSVCounts(since: number): Promise<{ sessions: number; entries: number }> {
-  const s = await queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM workout_sessions
-     WHERE completed_at IS NOT NULL AND started_at >= ?`,
-    [since]
-  );
-  const e = await queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM daily_log
-     WHERE date >= date(? / 1000, 'unixepoch')`,
-    [since]
-  );
+  const db = await getDrizzle();
+  const [s, e] = await Promise.all([
+    db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(workoutSessions)
+      .where(and(isNotNull(workoutSessions.completed_at), gte(workoutSessions.started_at, since)))
+      .then((r) => r[0]),
+    db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(dailyLog)
+      .where(gte(dailyLog.date, sql`date(${since} / 1000, 'unixepoch')`))
+      .then((r) => r[0]),
+  ]);
   return { sessions: s?.count ?? 0, entries: e?.count ?? 0 };
 }
 

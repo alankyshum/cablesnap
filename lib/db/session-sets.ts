@@ -1,46 +1,46 @@
-import { eq, sql } from "drizzle-orm";
+/* eslint-disable max-lines */
+import { eq, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, TrainingMode, SetType } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, query, queryOne, execute, withTransaction } from "./helpers";
-import { workoutSets } from "./schema";
-
-type SetRow = {
-  id: string;
-  session_id: string;
-  exercise_id: string;
-  set_number: number;
-  weight: number | null;
-  reps: number | null;
-  completed: number;
-  completed_at: number | null;
-  rpe: number | null;
-  notes: string;
-  link_id: string | null;
-  round: number | null;
-  training_mode: string | null;
-  tempo: string | null;
-  exercise_name: string | null;
-  exercise_deleted_at: number | null;
-  swapped_from_exercise_id: string | null;
-  swapped_from_name: string | null;
-  is_warmup: number;
-  set_type: string;
-  duration_seconds: number | null;
-};
+import { getDrizzle, withTransaction } from "./helpers";
+import { workoutSets, exercises, workoutSessions, templateExercises } from "./schema";
 
 export async function getSessionSets(
   sessionId: string
 ): Promise<(WorkoutSet & { exercise_name?: string; exercise_deleted?: boolean })[]> {
-  const rows = await query<SetRow>(
-    `SELECT ws.*, e.name AS exercise_name, e.deleted_at AS exercise_deleted_at,
-            sf.name AS swapped_from_name
-     FROM workout_sets ws
-     LEFT JOIN exercises e ON ws.exercise_id = e.id
-     LEFT JOIN exercises sf ON ws.swapped_from_exercise_id = sf.id
-     WHERE ws.session_id = ?
-     ORDER BY ws.exercise_id, ws.set_number ASC`,
-    [sessionId]
-  );
+  const swappedExercise = alias(exercises, "swapped_exercise");
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      id: workoutSets.id,
+      session_id: workoutSets.session_id,
+      exercise_id: workoutSets.exercise_id,
+      set_number: workoutSets.set_number,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+      completed: workoutSets.completed,
+      completed_at: workoutSets.completed_at,
+      rpe: workoutSets.rpe,
+      notes: workoutSets.notes,
+      link_id: workoutSets.link_id,
+      round: workoutSets.round,
+      training_mode: workoutSets.training_mode,
+      tempo: workoutSets.tempo,
+      swapped_from_exercise_id: workoutSets.swapped_from_exercise_id,
+      is_warmup: workoutSets.is_warmup,
+      set_type: workoutSets.set_type,
+      duration_seconds: workoutSets.duration_seconds,
+      exercise_name: exercises.name,
+      exercise_deleted_at: exercises.deleted_at,
+      swapped_from_name: swappedExercise.name,
+    })
+    .from(workoutSets)
+    .leftJoin(exercises, eq(workoutSets.exercise_id, exercises.id))
+    .leftJoin(swappedExercise, eq(workoutSets.swapped_from_exercise_id, swappedExercise.id))
+    .where(eq(workoutSets.session_id, sessionId))
+    .orderBy(asc(workoutSets.exercise_id), asc(workoutSets.set_number))
+    .all();
   return rows.map((r) => ({
     id: r.id,
     session_id: r.session_id,
@@ -82,26 +82,25 @@ export type SourceSessionSet = {
 export async function getSourceSessionSets(
   sessionId: string
 ): Promise<SourceSessionSet[]> {
-  const rows = await query<{
-    exercise_id: string;
-    set_number: number;
-    weight: number | null;
-    reps: number | null;
-    link_id: string | null;
-    training_mode: string | null;
-    tempo: string | null;
-    exercise_exists: string | null;
-    is_warmup: number;
-    set_type: string;
-  }>(
-    `SELECT ws.exercise_id, ws.set_number, ws.weight, ws.reps, ws.link_id,
-            ws.training_mode, ws.tempo, e.id AS exercise_exists, ws.is_warmup, ws.set_type
-     FROM workout_sets ws
-     LEFT JOIN exercises e ON ws.exercise_id = e.id
-     WHERE ws.session_id = ? AND ws.completed = 1
-     ORDER BY ws.set_number ASC`,
-    [sessionId]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      set_number: workoutSets.set_number,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+      link_id: workoutSets.link_id,
+      training_mode: workoutSets.training_mode,
+      tempo: workoutSets.tempo,
+      exercise_exists: exercises.id,
+      is_warmup: workoutSets.is_warmup,
+      set_type: workoutSets.set_type,
+    })
+    .from(workoutSets)
+    .leftJoin(exercises, eq(workoutSets.exercise_id, exercises.id))
+    .where(and(eq(workoutSets.session_id, sessionId), eq(workoutSets.completed, 1)))
+    .orderBy(asc(workoutSets.set_number))
+    .all();
   return rows.map((r) => ({
     exercise_id: r.exercise_id,
     set_number: r.set_number,
@@ -229,7 +228,7 @@ export async function addWarmupSets(
   tempo?: string | null
 ): Promise<WorkoutSet[]> {
   if (warmupSets.length === 0) return [];
-  const count = warmupSets.length;
+  const warmupCount = warmupSets.length;
 
   const results: WorkoutSet[] = warmupSets.map((ws, i) => ({
     id: uuid(),
@@ -256,7 +255,7 @@ export async function addWarmupSets(
     // Shift existing sets up by count
     await db.runAsync(
       "UPDATE workout_sets SET set_number = set_number + ? WHERE session_id = ? AND exercise_id = ?",
-      [count, sessionId, exerciseId]
+      [warmupCount, sessionId, exerciseId]
     );
 
     // Insert warmup sets
@@ -302,27 +301,20 @@ export async function updateSet(
   reps: number | null,
   durationSeconds?: number | null
 ): Promise<void> {
+  const db = await getDrizzle();
+  const values: Record<string, unknown> = { weight, reps };
   if (durationSeconds !== undefined) {
-    await execute(
-      "UPDATE workout_sets SET weight = ?, reps = ?, duration_seconds = ? WHERE id = ?",
-      [weight, reps, durationSeconds, id]
-    );
-  } else {
-    await execute(
-      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
-      [weight, reps, id]
-    );
+    values.duration_seconds = durationSeconds;
   }
+  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
 }
 
 export async function updateSetDuration(
   id: string,
   durationSeconds: number | null
 ): Promise<void> {
-  await execute(
-    "UPDATE workout_sets SET duration_seconds = ? WHERE id = ?",
-    [durationSeconds, id]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({ duration_seconds: durationSeconds }).where(eq(workoutSets.id, id));
 }
 
 export async function completeSet(id: string): Promise<void> {
@@ -346,8 +338,8 @@ export async function deleteSet(id: string): Promise<void> {
 
 export async function deleteSetsBatch(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const placeholders = ids.map(() => "?").join(",");
-  await execute(`DELETE FROM workout_sets WHERE id IN (${placeholders})`, ids);
+  const db = await getDrizzle();
+  await db.delete(workoutSets).where(inArray(workoutSets.id, ids));
 }
 
 export async function updateSetRPE(id: string, rpe: number | null): Promise<void> {
@@ -398,23 +390,27 @@ export async function getPreviousSets(
   exerciseId: string,
   currentSessionId: string
 ): Promise<{ set_number: number; weight: number | null; reps: number | null }[]> {
-  return query<{
-    set_number: number;
-    weight: number | null;
-    reps: number | null;
-  }>(
-    `SELECT ws.set_number, ws.weight, ws.reps
-     FROM workout_sets ws
-     WHERE ws.exercise_id = ? AND ws.completed = 1
-       AND ws.session_id = (
-         SELECT wss.id FROM workout_sessions wss
-         JOIN workout_sets ws2 ON ws2.session_id = wss.id
-         WHERE ws2.exercise_id = ? AND wss.completed_at IS NOT NULL AND wss.id != ?
-         ORDER BY wss.completed_at DESC LIMIT 1
-       )
-     ORDER BY ws.set_number ASC`,
-    [exerciseId, exerciseId, currentSessionId]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      set_number: workoutSets.set_number,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+    })
+    .from(workoutSets)
+    .where(and(
+      eq(workoutSets.exercise_id, exerciseId),
+      eq(workoutSets.completed, 1),
+      sql`${workoutSets.session_id} = (
+        SELECT ${workoutSessions.id} FROM ${workoutSessions}
+        JOIN ${workoutSets} ws2 ON ws2.session_id = ${workoutSessions.id}
+        WHERE ws2.exercise_id = ${exerciseId} AND ${workoutSessions.completed_at} IS NOT NULL AND ${workoutSessions.id} != ${currentSessionId}
+        ORDER BY ${workoutSessions.completed_at} DESC LIMIT 1
+      )`
+    ))
+    .orderBy(asc(workoutSets.set_number))
+    .all();
+  return rows;
 }
 
 export async function getPreviousSetsBatch(
@@ -423,19 +419,23 @@ export async function getPreviousSetsBatch(
 ): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]>> {
   if (exerciseIds.length === 0) return {};
   const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]> = {};
-  const eidPlaceholders = exerciseIds.map(() => "?").join(",");
+  const db = await getDrizzle();
   // Step 1: Find all completed sessions per exercise, ordered by most recent
-  const sessionRows = await query<{ exercise_id: string; session_id: string }>(
-    `SELECT ws2.exercise_id, wss.id AS session_id
-     FROM workout_sessions wss
-     JOIN workout_sets ws2 ON ws2.session_id = wss.id
-     WHERE ws2.exercise_id IN (${eidPlaceholders})
-       AND wss.completed_at IS NOT NULL
-       AND wss.id != ?
-     GROUP BY ws2.exercise_id, wss.id
-     ORDER BY ws2.exercise_id, wss.completed_at DESC`,
-    [...exerciseIds, currentSessionId]
-  );
+  const sessionRows = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      session_id: workoutSessions.id,
+    })
+    .from(workoutSessions)
+    .innerJoin(workoutSets, eq(workoutSets.session_id, workoutSessions.id))
+    .where(and(
+      inArray(workoutSets.exercise_id, exerciseIds),
+      isNotNull(workoutSessions.completed_at),
+      sql`${workoutSessions.id} != ${currentSessionId}`
+    ))
+    .groupBy(workoutSets.exercise_id, workoutSessions.id)
+    .orderBy(asc(workoutSets.exercise_id), desc(workoutSessions.completed_at))
+    .all();
   if (sessionRows.length === 0) return result;
   // Keep only the first (most recent) session per exercise
   const sessionMap: Record<string, string> = {};
@@ -446,16 +446,23 @@ export async function getPreviousSetsBatch(
   }
   const sessionIds = [...new Set(Object.values(sessionMap))];
   // Step 2: Fetch all completed sets from those sessions for the requested exercises
-  const sidPlaceholders = sessionIds.map(() => "?").join(",");
-  const rows = await query<{ exercise_id: string; session_id: string; set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }>(
-    `SELECT ws.exercise_id, ws.session_id, ws.set_number, ws.weight, ws.reps, ws.duration_seconds
-     FROM workout_sets ws
-     WHERE ws.session_id IN (${sidPlaceholders})
-       AND ws.exercise_id IN (${eidPlaceholders})
-       AND ws.completed = 1
-     ORDER BY ws.exercise_id, ws.set_number ASC`,
-    [...sessionIds, ...exerciseIds]
-  );
+  const rows = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      session_id: workoutSets.session_id,
+      set_number: workoutSets.set_number,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+      duration_seconds: workoutSets.duration_seconds,
+    })
+    .from(workoutSets)
+    .where(and(
+      inArray(workoutSets.session_id, sessionIds),
+      inArray(workoutSets.exercise_id, exerciseIds),
+      eq(workoutSets.completed, 1)
+    ))
+    .orderBy(asc(workoutSets.exercise_id), asc(workoutSets.set_number))
+    .all();
   // Filter rows to only include sets from the correct session per exercise
   for (const row of rows) {
     const correctSession = sessionMap[row.exercise_id];
@@ -481,11 +488,20 @@ export async function getSessionSetCounts(
   sessionIds: string[]
 ): Promise<Record<string, number>> {
   if (sessionIds.length === 0) return {};
-  const placeholders = sessionIds.map(() => "?").join(",");
-  const rows = await query<{ session_id: string; count: number }>(
-    `SELECT session_id, COUNT(*) as count FROM workout_sets WHERE session_id IN (${placeholders}) AND completed = 1 AND is_warmup = 0 GROUP BY session_id`,
-    sessionIds
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      session_id: workoutSets.session_id,
+      count: count(),
+    })
+    .from(workoutSets)
+    .where(and(
+      inArray(workoutSets.session_id, sessionIds),
+      eq(workoutSets.completed, 1),
+      eq(workoutSets.is_warmup, 0)
+    ))
+    .groupBy(workoutSets.session_id)
+    .all();
   const result: Record<string, number> = {};
   for (const r of rows) result[r.session_id] = r.count;
   return result;
@@ -494,24 +510,41 @@ export async function getSessionSetCounts(
 export async function getSessionAvgRPE(
   sessionId: string
 ): Promise<number | null> {
-  const row = await queryOne<{ val: number | null }>(
-    "SELECT AVG(rpe) AS val FROM workout_sets WHERE session_id = ? AND completed = 1 AND rpe IS NOT NULL AND is_warmup = 0",
-    [sessionId]
-  );
-  return row?.val ?? null;
+  const db = await getDrizzle();
+  const row = await db
+    .select({ val: avg(workoutSets.rpe) })
+    .from(workoutSets)
+    .where(and(
+      eq(workoutSets.session_id, sessionId),
+      eq(workoutSets.completed, 1),
+      isNotNull(workoutSets.rpe),
+      eq(workoutSets.is_warmup, 0)
+    ))
+    .get();
+  return row?.val != null ? Number(row.val) : null;
 }
 
 export async function getSessionAvgRPEs(
   sessionIds: string[]
 ): Promise<Record<string, number | null>> {
   if (sessionIds.length === 0) return {};
-  const placeholders = sessionIds.map(() => "?").join(",");
-  const rows = await query<{ session_id: string; val: number | null }>(
-    `SELECT session_id, AVG(rpe) AS val FROM workout_sets WHERE session_id IN (${placeholders}) AND completed = 1 AND rpe IS NOT NULL AND is_warmup = 0 GROUP BY session_id`,
-    sessionIds
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      session_id: workoutSets.session_id,
+      val: avg(workoutSets.rpe),
+    })
+    .from(workoutSets)
+    .where(and(
+      inArray(workoutSets.session_id, sessionIds),
+      eq(workoutSets.completed, 1),
+      isNotNull(workoutSets.rpe),
+      eq(workoutSets.is_warmup, 0)
+    ))
+    .groupBy(workoutSets.session_id)
+    .all();
   const result: Record<string, number | null> = {};
-  for (const r of rows) result[r.session_id] = r.val;
+  for (const r of rows) result[r.session_id] = r.val != null ? Number(r.val) : null;
   return result;
 }
 
@@ -519,13 +552,16 @@ export async function getRestSecondsForExercise(
   sessionId: string,
   exerciseId: string
 ): Promise<number> {
-  const row = await queryOne<{ rest_seconds: number }>(
-    `SELECT te.rest_seconds
-     FROM workout_sessions wss
-     JOIN template_exercises te ON te.template_id = wss.template_id AND te.exercise_id = ?
-     WHERE wss.id = ?`,
-    [exerciseId, sessionId]
-  );
+  const db = await getDrizzle();
+  const row = await db
+    .select({ rest_seconds: templateExercises.rest_seconds })
+    .from(workoutSessions)
+    .innerJoin(templateExercises, and(
+      eq(templateExercises.template_id, workoutSessions.template_id),
+      eq(templateExercises.exercise_id, exerciseId)
+    ))
+    .where(eq(workoutSessions.id, sessionId))
+    .get();
   return row?.rest_seconds ?? 90;
 }
 
@@ -533,12 +569,12 @@ export async function getRestSecondsForLink(
   sessionId: string,
   linkId: string
 ): Promise<number> {
-  const row = await queryOne<{ rest: number }>(
-    `SELECT MAX(te.rest_seconds) AS rest
-     FROM workout_sessions wss
-     JOIN template_exercises te ON te.template_id = wss.template_id
-     WHERE wss.id = ? AND te.link_id = ?`,
-    [sessionId, linkId]
-  );
-  return row?.rest ?? 90;
+  const db = await getDrizzle();
+  const row = await db
+    .select({ rest: max(templateExercises.rest_seconds) })
+    .from(workoutSessions)
+    .innerJoin(templateExercises, eq(templateExercises.template_id, workoutSessions.template_id))
+    .where(and(eq(workoutSessions.id, sessionId), eq(templateExercises.link_id, linkId)))
+    .get();
+  return row?.rest != null ? Number(row.rest) : 90;
 }

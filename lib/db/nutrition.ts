@@ -1,7 +1,7 @@
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import type { FoodEntry, DailyLog, MacroTargets, Meal } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, query, queryOne } from "./helpers";
+import { getDrizzle } from "./helpers";
 import { foodEntries, dailyLog, macroTargets } from "./schema";
 import type { FoodEntryRow } from "./schema";
 
@@ -13,23 +13,6 @@ function mapFood(row: FoodRow): FoodEntry {
     is_favorite: row.is_favorite === 1,
   };
 }
-
-type DailyLogRow = {
-  id: string;
-  food_entry_id: string;
-  date: string;
-  meal: string;
-  servings: number;
-  logged_at: number;
-  food_name: string;
-  food_calories: number;
-  food_protein: number;
-  food_carbs: number;
-  food_fat: number;
-  food_serving_size: string;
-  food_is_favorite: number;
-  food_created_at: number;
-};
 
 export async function addFoodEntry(
   name: string,
@@ -90,22 +73,34 @@ export async function addDailyLog(
 }
 
 export async function getDailyLogs(date: string): Promise<DailyLog[]> {
-  const rows = await query<DailyLogRow>(
-    `SELECT dl.*, f.name AS food_name, f.calories AS food_calories, f.protein AS food_protein,
-            f.carbs AS food_carbs, f.fat AS food_fat, f.serving_size AS food_serving_size,
-            f.is_favorite AS food_is_favorite, f.created_at AS food_created_at
-     FROM daily_log dl
-     JOIN food_entries f ON dl.food_entry_id = f.id
-     WHERE dl.date = ?
-     ORDER BY dl.logged_at ASC`,
-    [date]
-  );
+  const db = await getDrizzle();
+  const rows = await db.select({
+    id: dailyLog.id,
+    food_entry_id: dailyLog.food_entry_id,
+    date: dailyLog.date,
+    meal: dailyLog.meal,
+    servings: dailyLog.servings,
+    logged_at: dailyLog.logged_at,
+    food_name: foodEntries.name,
+    food_calories: foodEntries.calories,
+    food_protein: foodEntries.protein,
+    food_carbs: foodEntries.carbs,
+    food_fat: foodEntries.fat,
+    food_serving_size: foodEntries.serving_size,
+    food_is_favorite: foodEntries.is_favorite,
+    food_created_at: foodEntries.created_at,
+  })
+    .from(dailyLog)
+    .innerJoin(foodEntries, eq(dailyLog.food_entry_id, foodEntries.id))
+    .where(eq(dailyLog.date, date))
+    .orderBy(asc(dailyLog.logged_at));
+
   return rows.map((r) => ({
     id: r.id,
     food_entry_id: r.food_entry_id,
     date: r.date,
     meal: r.meal as Meal,
-    servings: r.servings,
+    servings: r.servings ?? 1,
     logged_at: r.logged_at,
     food: mapFood({
       id: r.food_entry_id,
@@ -176,21 +171,17 @@ export async function findDuplicateFoodEntry(
 export async function getDailySummary(
   date: string
 ): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
-  const row = await queryOne<{
-    calories: number | null;
-    protein: number | null;
-    carbs: number | null;
-    fat: number | null;
-  }>(
-    `SELECT SUM(f.calories * dl.servings) AS calories,
-            SUM(f.protein * dl.servings) AS protein,
-            SUM(f.carbs * dl.servings) AS carbs,
-            SUM(f.fat * dl.servings) AS fat
-     FROM daily_log dl
-     JOIN food_entries f ON dl.food_entry_id = f.id
-     WHERE dl.date = ?`,
-    [date]
-  );
+  const db = await getDrizzle();
+  const row = await db.select({
+    calories: sql<number>`SUM(${foodEntries.calories} * ${dailyLog.servings})`,
+    protein: sql<number>`SUM(${foodEntries.protein} * ${dailyLog.servings})`,
+    carbs: sql<number>`SUM(${foodEntries.carbs} * ${dailyLog.servings})`,
+    fat: sql<number>`SUM(${foodEntries.fat} * ${dailyLog.servings})`,
+  })
+    .from(dailyLog)
+    .innerJoin(foodEntries, eq(dailyLog.food_entry_id, foodEntries.id))
+    .where(eq(dailyLog.date, date))
+    .get();
   return {
     calories: row?.calories ?? 0,
     protein: row?.protein ?? 0,

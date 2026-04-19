@@ -4,7 +4,7 @@
 - **Framework:** Expo (React Native) with Expo Router
 - **Language:** TypeScript
 - **State:** TanStack React Query
-- **Database:** expo-sqlite
+- **Database:** expo-sqlite + Drizzle ORM (`drizzle-orm/expo-sqlite`)
 - **Styling:** React Native StyleSheet
 - **Testing:** Jest (unit), Playwright (e2e), Maestro (mobile e2e)
 
@@ -129,3 +129,55 @@ The test suite has a **budget of 1800 test cases**. Before adding tests, agents 
 4. Use shared helpers from `__tests__/helpers/` for router mocks and domain mock factories
 5. Prefer extending an existing test file over creating a new one for the same feature
 6. Avoid source-string tests (`fs.readFileSync` + regex) when a behavioral test already covers the same assertion
+
+## Database Layer — Drizzle ORM
+
+All database code lives in `lib/db/`. The schema is defined in `lib/db/schema.ts` (single source of truth).
+
+### Rules for new database code
+
+1. **Use Drizzle ORM for all new CRUD operations** — `getDrizzle()` from `lib/db/helpers.ts`
+2. **Never use raw SQL** (`query()`, `queryOne()`, `execute()`, `db.runAsync()`, `db.getAllAsync()`) for new code unless it falls into an approved exception (see below)
+3. **Schema changes** — add new tables/columns to `lib/db/schema.ts` AND `lib/db/tables.ts` (runtime DDL)
+4. **Transactions** — use `withTransactionAsync()` from helpers; Drizzle calls inside participate in the same transaction
+5. **Type safety** — use inferred types from schema (`typeof table.$inferSelect`) instead of manual row types
+
+### Approved raw SQL exceptions (only these patterns)
+
+| Pattern | Why raw SQL | Examples |
+|---------|-------------|---------|
+| Correlated subqueries in SELECT columns | Drizzle can't reference outer aliases in SELECT subqueries | `getSessionsByMonth`, `getDaySessionDetails` |
+| Dual derived-table JOINs | Would be entirely `sql``\` with zero type safety | `getSessionPRs`, `getE1RMTrends` |
+| Prepared statement loops | Performance-critical bulk operations | `addSetsBatch`, `updateSetsBatch` |
+| DDL / migrations | Drizzle doesn't manage runtime schema | `migrations.ts`, `tables.ts` |
+| Dynamic table names | Import/export across 20+ tables | `import-export.ts` |
+| Nested subquery re-ordering | `SELECT * FROM (SELECT ... LIMIT N) ORDER BY` | `getExercise1RMChartData` |
+
+### Common Drizzle patterns
+
+```typescript
+// Simple CRUD
+const db = getDrizzle();
+db.select().from(table).where(eq(table.id, id)).get();
+db.insert(table).values({ ... });
+db.update(table).set({ ... }).where(eq(table.id, id));
+db.delete(table).where(eq(table.id, id));
+
+// JOINs
+db.select().from(a).innerJoin(b, eq(a.id, b.a_id)).where(...);
+db.select().from(a).leftJoin(b, eq(a.id, b.a_id));
+
+// Aggregates
+db.select({ total: count() }).from(table).where(...);
+db.select({ maxW: max(table.weight) }).from(table).groupBy(table.exercise_id);
+
+// SQLite functions via sql``
+db.select({ month: sql`strftime('%Y-%m', ...)` }).from(table).groupBy(sql`1`);
+db.update(table).set({ retry_count: sql`retry_count + 1` });
+
+// Upserts
+db.insert(table).values({ ... }).onConflictDoUpdate({
+  target: table.date,
+  set: { weight: sql`excluded.weight` }
+});
+```

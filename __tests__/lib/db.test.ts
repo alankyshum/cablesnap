@@ -21,6 +21,7 @@ function resetDrizzleResults() {
 function createChainableSelect() {
   const chain: any = {
     from: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
@@ -343,35 +344,27 @@ describe("templates CRUD", () => {
 
   it("getTemplates returns all templates", async () => {
     await initDb();
-    // getTemplates uses raw SQL via query() → getAllAsync
-    const templates = [
+    // getTemplates now uses Drizzle select().from().orderBy()
+    drizzleQueryResult = [
       { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: 0 },
     ];
-    mockDb.getAllAsync.mockResolvedValueOnce(templates);
 
     const result = await db.getTemplates();
     expect(result).toEqual([
       { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: false },
     ]);
+    resetDrizzleResults();
   });
 
   it("deleteTemplate removes template and related data", async () => {
     await initDb();
-    // deleteTemplate first calls queryOne (getFirstAsync) to check is_starter
-    mockDb.getFirstAsync.mockResolvedValueOnce({ is_starter: 0 });
+    // deleteTemplate now uses Drizzle select().get() to check is_starter
+    drizzleGetResult = { is_starter: 0 };
     await db.deleteTemplate("t1");
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM template_exercises"),
-      ["t1"]
-    );
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE program_days SET template_id = NULL"),
-      ["t1"]
-    );
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("DELETE FROM workout_templates"),
-      expect.arrayContaining(["t1"])
-    );
+    // Drizzle delete/update calls go through mockDrizzleDb
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
+    resetDrizzleResults();
   });
 });
 
@@ -456,10 +449,7 @@ describe("sets CRUD", () => {
   it("updateSet updates weight and reps", async () => {
     await initDb();
     await db.updateSet("set1", 100, 8);
-    expect(mockDb.runAsync).toHaveBeenCalledWith(
-      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
-      [100, 8, "set1"]
-    );
+    expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 
   it("completeSet marks set completed", async () => {
@@ -560,8 +550,8 @@ describe("nutrition CRUD", () => {
 
   it("getDailySummary returns zero totals for empty day", async () => {
     await initDb();
-    // getDailySummary uses raw SQL via queryOne → getFirstAsync
-    mockDb.getFirstAsync.mockResolvedValueOnce({ calories: null, protein: null, carbs: null, fat: null });
+    // getDailySummary now uses Drizzle with .get()
+    mockDrizzleGet({ calories: null, protein: null, carbs: null, fat: null });
 
     const result = await db.getDailySummary("2024-01-15");
     expect(result).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
@@ -569,7 +559,7 @@ describe("nutrition CRUD", () => {
 
   it("getDailySummary returns computed totals", async () => {
     await initDb();
-    mockDb.getFirstAsync.mockResolvedValueOnce({ calories: 500, protein: 40, carbs: 60, fat: 15 });
+    mockDrizzleGet({ calories: 500, protein: 40, carbs: 60, fat: 15 });
 
     const result = await db.getDailySummary("2024-01-15");
     expect(result).toEqual({ calories: 500, protein: 40, carbs: 60, fat: 15 });

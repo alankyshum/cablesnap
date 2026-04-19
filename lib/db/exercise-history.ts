@@ -1,4 +1,6 @@
-import { query, queryOne } from "./helpers";
+import { eq, and, sql, desc, asc, isNotNull, inArray, max, sum, count } from "drizzle-orm";
+import { query, queryOne, getDrizzle } from "./helpers";
+import { workoutSets, workoutSessions } from "./schema";
 
 export type ExerciseSession = {
   session_id: string;
@@ -27,94 +29,124 @@ export async function getExerciseHistory(
   limit: number = 10,
   offset: number = 0
 ): Promise<ExerciseSession[]> {
-  return query<ExerciseSession>(
-    `SELECT wss.id AS session_id,
-            wss.name AS session_name,
-            wss.started_at,
-            MAX(ws.weight) AS max_weight,
-            MAX(ws.reps) AS max_reps,
-            SUM(ws.reps) AS total_reps,
-            COUNT(ws.id) AS set_count,
-            SUM(ws.weight * ws.reps) AS volume,
-            AVG(CASE WHEN ws.rpe IS NOT NULL THEN ws.rpe END) AS avg_rpe
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ?
-       AND ws.completed = 1
-       AND ws.is_warmup = 0
-       AND wss.completed_at IS NOT NULL
-     GROUP BY wss.id
-     ORDER BY wss.started_at DESC
-     LIMIT ? OFFSET ?`,
-    [exerciseId, limit, offset]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      session_id: workoutSessions.id,
+      session_name: workoutSessions.name,
+      started_at: workoutSessions.started_at,
+      max_weight: max(workoutSets.weight),
+      max_reps: max(workoutSets.reps),
+      total_reps: sum(workoutSets.reps),
+      set_count: count(workoutSets.id),
+      volume: sql<number>`SUM(${workoutSets.weight} * ${workoutSets.reps})`,
+      avg_rpe: sql<number | null>`AVG(CASE WHEN ${workoutSets.rpe} IS NOT NULL THEN ${workoutSets.rpe} END)`,
+    })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        eq(workoutSets.exercise_id, exerciseId),
+        eq(workoutSets.completed, 1),
+        eq(workoutSets.is_warmup, 0),
+        isNotNull(workoutSessions.completed_at)
+      )
+    )
+    .groupBy(workoutSessions.id)
+    .orderBy(desc(workoutSessions.started_at))
+    .limit(limit)
+    .offset(offset);
+
+  return rows.map((r) => ({
+    session_id: r.session_id,
+    session_name: r.session_name,
+    started_at: r.started_at,
+    max_weight: Number(r.max_weight ?? 0),
+    max_reps: Number(r.max_reps ?? 0),
+    total_reps: Number(r.total_reps ?? 0),
+    set_count: r.set_count,
+    volume: Number(r.volume ?? 0),
+    avg_rpe: r.avg_rpe != null ? Number(r.avg_rpe) : null,
+  }));
 }
 
 export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRecords> {
-  const weight = await queryOne<{ val: number | null }>(
-    `SELECT MAX(ws.weight) AS val
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.weight > 0 AND wss.completed_at IS NOT NULL`,
-    [exerciseId]
+  const db = await getDrizzle();
+
+  const baseWhere = and(
+    eq(workoutSets.exercise_id, exerciseId),
+    eq(workoutSets.completed, 1),
+    eq(workoutSets.is_warmup, 0),
+    isNotNull(workoutSessions.completed_at)
   );
 
-  const reps = await queryOne<{ val: number | null }>(
-    `SELECT MAX(ws.reps) AS val
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL`,
-    [exerciseId]
-  );
+  // Simple aggregates via Drizzle
+  const [weight, reps, countResult, dur] = await Promise.all([
+    db
+      .select({ val: max(workoutSets.weight) })
+      .from(workoutSets)
+      .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+      .where(and(baseWhere, sql`${workoutSets.weight} > 0`))
+      .then((r) => r[0]),
 
-  const vol = await queryOne<{ val: number | null }>(
-    `SELECT MAX(sv) AS val FROM (
-       SELECT SUM(ws.weight * ws.reps) AS sv
+    db
+      .select({ val: max(workoutSets.reps) })
+      .from(workoutSets)
+      .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+      .where(baseWhere)
+      .then((r) => r[0]),
+
+    db
+      .select({ val: sql<number>`COUNT(DISTINCT ${workoutSessions.id})` })
+      .from(workoutSets)
+      .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+      .where(baseWhere)
+      .then((r) => r[0]),
+
+    db
+      .select({ val: max(workoutSets.duration_seconds) })
+      .from(workoutSets)
+      .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+      .where(and(baseWhere, sql`${workoutSets.duration_seconds} > 0`))
+      .then((r) => r[0]),
+  ]);
+
+  // Computed aggregates via sql``
+  const [vol, rm, weighted] = await Promise.all([
+    queryOne<{ val: number | null }>(
+      `SELECT MAX(sv) AS val FROM (
+         SELECT SUM(ws.weight * ws.reps) AS sv
+         FROM workout_sets ws
+         JOIN workout_sessions wss ON ws.session_id = wss.id
+         WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL
+         GROUP BY wss.id
+       )`,
+      [exerciseId]
+    ),
+
+    queryOne<{ val: number | null }>(
+      `SELECT MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS val
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
-       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL
-       GROUP BY wss.id
-     )`,
-    [exerciseId]
-  );
+       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL`,
+      [exerciseId]
+    ),
 
-  const rm = await queryOne<{ val: number | null }>(
-    `SELECT MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS val
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL`,
-    [exerciseId]
-  );
-
-  const count = await queryOne<{ val: number }>(
-    `SELECT COUNT(DISTINCT wss.id) AS val
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL`,
-    [exerciseId]
-  );
-
-  const weighted = await queryOne<{ val: number }>(
-    `SELECT EXISTS(SELECT 1 FROM workout_sets WHERE exercise_id = ? AND completed = 1 AND weight > 0) AS val`,
-    [exerciseId]
-  );
-
-  const dur = await queryOne<{ val: number | null }>(
-    `SELECT MAX(ws.duration_seconds) AS val
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.duration_seconds > 0 AND wss.completed_at IS NOT NULL`,
-    [exerciseId]
-  );
+    db
+      .select({ val: sql<number>`EXISTS(SELECT 1 FROM workout_sets WHERE exercise_id = ${exerciseId} AND completed = 1 AND weight > 0)` })
+      .from(workoutSets)
+      .limit(1)
+      .then((r) => r[0]),
+  ]);
 
   return {
-    max_weight: weight?.val ?? null,
-    max_reps: reps?.val ?? null,
+    max_weight: weight?.val != null ? Number(weight.val) : null,
+    max_reps: reps?.val != null ? Number(reps.val) : null,
     max_volume: vol?.val ?? null,
     est_1rm: rm?.val ? Math.round(rm.val * 10) / 10 : null,
-    total_sessions: count?.val ?? 0,
+    total_sessions: countResult?.val ?? 0,
     is_bodyweight: !(weighted?.val),
-    max_duration: dur?.val ?? null,
+    max_duration: dur?.val != null ? Number(dur.val) : null,
   };
 }
 
@@ -122,6 +154,7 @@ export async function getExercise1RMChartData(
   exerciseId: string,
   limit: number = 20
 ): Promise<{ date: number; value: number }[]> {
+  // Nested subquery (inner SELECT + ORDER + LIMIT, outer re-order) — use raw sql
   return query<{ date: number; value: number }>(
     `SELECT * FROM (
        SELECT wss.started_at AS date,
@@ -276,21 +309,26 @@ export async function getRecentExerciseSetsBatch(
   started_at: number;
 }[]>> {
   if (exerciseIds.length === 0) return {};
+  const db = await getDrizzle();
   const result: Record<string, RecentSetRow[]> = {};
-  // For each exercise, find the N most recent completed sessions, then fetch sets
-  // We use a single query with a window-based approach
-  const eidPlaceholders = exerciseIds.map(() => "?").join(",");
-  // Step 1: Find the latest `limit` sessions per exercise
-  const sessionRows = await query<{ exercise_id: string; session_id: string }>(
-    `SELECT ws2.exercise_id, wss.id AS session_id
-     FROM workout_sessions wss
-     JOIN workout_sets ws2 ON ws2.session_id = wss.id
-     WHERE ws2.exercise_id IN (${eidPlaceholders})
-       AND wss.completed_at IS NOT NULL
-     GROUP BY ws2.exercise_id, wss.id
-     ORDER BY ws2.exercise_id, wss.started_at DESC`,
-    exerciseIds
-  );
+
+  // Step 1: Find the latest sessions per exercise
+  const sessionRows = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      session_id: workoutSessions.id,
+    })
+    .from(workoutSessions)
+    .innerJoin(workoutSets, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        inArray(workoutSets.exercise_id, exerciseIds),
+        isNotNull(workoutSessions.completed_at)
+      )
+    )
+    .groupBy(workoutSets.exercise_id, workoutSessions.id)
+    .orderBy(asc(workoutSets.exercise_id), desc(workoutSessions.started_at));
+
   // Keep only the top `limit` sessions per exercise
   const sessionsByExercise: Record<string, string[]> = {};
   for (const row of sessionRows) {
@@ -301,24 +339,39 @@ export async function getRecentExerciseSetsBatch(
   }
   const allSessionIds = [...new Set(Object.values(sessionsByExercise).flat())];
   if (allSessionIds.length === 0) return result;
+
   // Step 2: Fetch all sets from those sessions for the requested exercises
-  const sidPlaceholders = allSessionIds.map(() => "?").join(",");
-  const rows = await query<RecentSetRow>(
-    `SELECT ws.exercise_id, ws.session_id, ws.set_number, ws.weight, ws.reps, ws.rpe,
-            ws.completed, wss.started_at
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.session_id IN (${sidPlaceholders})
-       AND ws.exercise_id IN (${eidPlaceholders})
-     ORDER BY wss.started_at ASC, ws.set_number ASC`,
-    [...allSessionIds, ...exerciseIds]
-  );
+  const rows = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      session_id: workoutSets.session_id,
+      set_number: workoutSets.set_number,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+      rpe: workoutSets.rpe,
+      completed: workoutSets.completed,
+      started_at: workoutSessions.started_at,
+    })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        inArray(workoutSets.session_id, allSessionIds),
+        inArray(workoutSets.exercise_id, exerciseIds)
+      )
+    )
+    .orderBy(asc(workoutSessions.started_at), asc(workoutSets.set_number));
+
   // Filter rows to only include sets from the correct sessions per exercise
   for (const row of rows) {
     const validSessions = sessionsByExercise[row.exercise_id];
     if (!validSessions || !validSessions.includes(row.session_id)) continue;
     if (!result[row.exercise_id]) result[row.exercise_id] = [];
-    result[row.exercise_id].push(row);
+    result[row.exercise_id].push({
+      ...row,
+      completed: row.completed ?? 0,
+      rpe: row.rpe ?? null,
+    });
   }
   return result;
 }
@@ -326,19 +379,28 @@ export async function getRecentExerciseSetsBatch(
 export async function getBestSet(
   exerciseId: string,
 ): Promise<{ weight: number; reps: number } | null> {
-  return queryOne<{ weight: number; reps: number }>(
-    `SELECT ws.weight, ws.reps
-     FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ?
-       AND ws.completed = 1
-       AND ws.is_warmup = 0
-       AND ws.weight > 0
-       AND ws.reps > 0
-       AND ws.reps <= 12
-       AND wss.completed_at IS NOT NULL
-     ORDER BY ws.weight * (1.0 + ws.reps / 30.0) DESC
-     LIMIT 1`,
-    [exerciseId],
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+    })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        eq(workoutSets.exercise_id, exerciseId),
+        eq(workoutSets.completed, 1),
+        eq(workoutSets.is_warmup, 0),
+        sql`${workoutSets.weight} > 0`,
+        sql`${workoutSets.reps} > 0`,
+        sql`${workoutSets.reps} <= 12`,
+        isNotNull(workoutSessions.completed_at)
+      )
+    )
+    .orderBy(sql`${workoutSets.weight} * (1.0 + ${workoutSets.reps} / 30.0) DESC`)
+    .limit(1);
+
+  if (rows.length === 0) return null;
+  return { weight: rows[0].weight!, reps: rows[0].reps! };
 }

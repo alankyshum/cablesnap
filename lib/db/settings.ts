@@ -1,6 +1,6 @@
-import { eq, and, sql } from "drizzle-orm";
-import { getDrizzle, query, queryOne, getDatabase } from "./helpers";
-import { appSettings, interactionLog, workoutSessions } from "./schema";
+import { eq, and, sql, asc, isNull, isNotNull, gte, lt } from "drizzle-orm";
+import { getDrizzle, getDatabase } from "./helpers";
+import { appSettings, interactionLog, workoutSessions, programSchedule, workoutTemplates, programs } from "./schema";
 import { uuid } from "../uuid";
 
 // ---- App Settings ----
@@ -38,31 +38,39 @@ export type ScheduleEntry = {
 };
 
 export async function getSchedule(): Promise<ScheduleEntry[]> {
-  return query<ScheduleEntry>(
-    `SELECT ps.program_id AS id, ps.day_of_week, ps.template_id, 0 AS created_at,
-            wt.name AS template_name,
-            (SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ps.template_id) AS exercise_count
-     FROM program_schedule ps
-     JOIN workout_templates wt ON wt.id = ps.template_id
-     JOIN programs p ON p.id = ps.program_id AND p.is_active = 1 AND p.deleted_at IS NULL
-     ORDER BY ps.day_of_week ASC`
-  );
+  const db = await getDrizzle();
+  return db.select({
+    id: programSchedule.program_id,
+    day_of_week: programSchedule.day_of_week,
+    template_id: programSchedule.template_id,
+    created_at: sql<number>`0`,
+    template_name: workoutTemplates.name,
+    exercise_count: sql<number>`(SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ${programSchedule.template_id})`,
+  })
+    .from(programSchedule)
+    .innerJoin(workoutTemplates, eq(workoutTemplates.id, programSchedule.template_id))
+    .innerJoin(programs, and(eq(programs.id, programSchedule.program_id), eq(programs.is_active, 1), isNull(programs.deleted_at)))
+    .orderBy(asc(programSchedule.day_of_week)) as unknown as Promise<ScheduleEntry[]>;
 }
 
 export async function getTodaySchedule(): Promise<ScheduleEntry | null> {
   const now = new Date();
   const day = (now.getDay() + 6) % 7;
-  const row = await queryOne<ScheduleEntry>(
-    `SELECT ps.program_id AS id, ps.day_of_week, ps.template_id, 0 AS created_at,
-            wt.name AS template_name,
-            (SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ps.template_id) AS exercise_count
-     FROM program_schedule ps
-     JOIN workout_templates wt ON wt.id = ps.template_id
-     JOIN programs p ON p.id = ps.program_id AND p.is_active = 1 AND p.deleted_at IS NULL
-     WHERE ps.day_of_week = ?`,
-    [day]
-  );
-  return row ?? null;
+  const db = await getDrizzle();
+  const row = await db.select({
+    id: programSchedule.program_id,
+    day_of_week: programSchedule.day_of_week,
+    template_id: programSchedule.template_id,
+    created_at: sql<number>`0`,
+    template_name: workoutTemplates.name,
+    exercise_count: sql<number>`(SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ${programSchedule.template_id})`,
+  })
+    .from(programSchedule)
+    .innerJoin(workoutTemplates, eq(workoutTemplates.id, programSchedule.template_id))
+    .innerJoin(programs, and(eq(programs.id, programSchedule.program_id), eq(programs.is_active, 1), isNull(programs.deleted_at)))
+    .where(eq(programSchedule.day_of_week, day))
+    .get();
+  return (row as unknown as ScheduleEntry) ?? null;
 }
 
 export async function isTodayCompleted(): Promise<boolean> {
@@ -87,18 +95,22 @@ export async function getWeekAdherence(): Promise<{ day: number; scheduled: bool
   const offset = (monday.getDay() + 6) % 7;
   monday.setDate(monday.getDate() - offset);
   const monStart = monday.getTime();
+  const monEnd = monStart + 7 * 24 * 60 * 60 * 1000;
 
-  const schedule = await query<{ day_of_week: number }>(
-    `SELECT ps.day_of_week FROM program_schedule ps
-     JOIN programs p ON p.id = ps.program_id AND p.is_active = 1 AND p.deleted_at IS NULL`
-  );
+  const db = await getDrizzle();
+
+  const schedule = await db.select({ day_of_week: programSchedule.day_of_week })
+    .from(programSchedule)
+    .innerJoin(programs, and(eq(programs.id, programSchedule.program_id), eq(programs.is_active, 1), isNull(programs.deleted_at)));
   const scheduled = new Set(schedule.map((s) => s.day_of_week));
 
-  const sessions = await query<{ started_at: number }>(
-    `SELECT started_at FROM workout_sessions
-     WHERE completed_at IS NOT NULL AND started_at >= ? AND started_at < ?`,
-    [monStart, monStart + 7 * 24 * 60 * 60 * 1000]
-  );
+  const sessions = await db.select({ started_at: workoutSessions.started_at })
+    .from(workoutSessions)
+    .where(and(
+      isNotNull(workoutSessions.completed_at),
+      gte(workoutSessions.started_at, monStart),
+      lt(workoutSessions.started_at, monEnd),
+    ));
 
   const completed = new Set<number>();
   for (const s of sessions) {
@@ -121,17 +133,18 @@ export async function insertInteraction(
   detail: string | null
 ): Promise<void> {
   const database = await getDatabase();
+  const db = await getDrizzle();
   await database.withTransactionAsync(async () => {
     const id = uuid();
-    await database.runAsync(
-      `INSERT INTO interaction_log (id, action, screen, detail, timestamp)
-       VALUES (?, ?, ?, ?, ?)`,
-      [id, action, screen, detail, Date.now()]
-    );
-    await database.runAsync(
-      `DELETE FROM interaction_log WHERE id NOT IN (
-        SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 50
-      )`
+    await db.insert(interactionLog).values({
+      id,
+      action,
+      screen,
+      detail,
+      timestamp: Date.now(),
+    });
+    await db.delete(interactionLog).where(
+      sql`${interactionLog.id} NOT IN (SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 50)`
     );
   });
 }

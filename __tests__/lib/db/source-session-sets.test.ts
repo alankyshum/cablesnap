@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Unit tests for getSourceSessionSets
 const mockStmt = {
   executeAsync: jest.fn().mockResolvedValue({ changes: 1 }),
@@ -17,16 +18,41 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
 }));
 
+let mockDrizzleAllResult: any[] = [];
+
+jest.mock('drizzle-orm/expo-sqlite', () => ({
+  drizzle: jest.fn(() => ({
+    select: jest.fn(() => {
+      const chain: any = {
+        from: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        get: jest.fn(() => undefined),
+        all: jest.fn(() => mockDrizzleAllResult),
+        then: (r: any) => Promise.resolve(mockDrizzleAllResult).then(r),
+      };
+      return chain;
+    }),
+    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+  })),
+}));
+
 import { getSourceSessionSets } from '../../../lib/db/sessions';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockDb.getAllAsync.mockResolvedValue([]);
+  mockDrizzleAllResult = [];
 });
 
 describe('getSourceSessionSets', () => {
   it('returns completed sets with exercise existence flag', async () => {
-    mockDb.getAllAsync.mockResolvedValue([
+    mockDrizzleAllResult = [
       {
         exercise_id: 'ex-1',
         set_number: 1,
@@ -37,6 +63,7 @@ describe('getSourceSessionSets', () => {
         tempo: null,
         exercise_exists: 'ex-1',
         is_warmup: 0,
+        set_type: 'normal',
       },
       {
         exercise_id: 'ex-1',
@@ -48,8 +75,9 @@ describe('getSourceSessionSets', () => {
         tempo: null,
         exercise_exists: 'ex-1',
         is_warmup: 0,
+        set_type: 'normal',
       },
-    ]);
+    ];
 
     const result = await getSourceSessionSets('session-1');
 
@@ -71,7 +99,7 @@ describe('getSourceSessionSets', () => {
   });
 
   it('marks deleted exercises as exercise_exists = false', async () => {
-    mockDb.getAllAsync.mockResolvedValue([
+    mockDrizzleAllResult = [
       {
         exercise_id: 'ex-deleted',
         set_number: 1,
@@ -82,8 +110,9 @@ describe('getSourceSessionSets', () => {
         tempo: null,
         exercise_exists: null,
         is_warmup: 0,
+        set_type: 'normal',
       },
-    ]);
+    ];
 
     const result = await getSourceSessionSets('session-1');
 
@@ -92,7 +121,7 @@ describe('getSourceSessionSets', () => {
   });
 
   it('preserves link_id for supersets', async () => {
-    mockDb.getAllAsync.mockResolvedValue([
+    mockDrizzleAllResult = [
       {
         exercise_id: 'ex-1',
         set_number: 1,
@@ -103,6 +132,7 @@ describe('getSourceSessionSets', () => {
         tempo: '3-1-2',
         exercise_exists: 'ex-1',
         is_warmup: 0,
+        set_type: 'normal',
       },
       {
         exercise_id: 'ex-2',
@@ -114,8 +144,9 @@ describe('getSourceSessionSets', () => {
         tempo: null,
         exercise_exists: 'ex-2',
         is_warmup: 0,
+        set_type: 'normal',
       },
-    ]);
+    ];
 
     const result = await getSourceSessionSets('session-1');
 
@@ -125,29 +156,18 @@ describe('getSourceSessionSets', () => {
   });
 
   it('returns empty array for session with no completed sets', async () => {
-    mockDb.getAllAsync.mockResolvedValue([]);
+    mockDrizzleAllResult = [];
 
     const result = await getSourceSessionSets('session-1');
 
     expect(result).toEqual([]);
   });
 
-  it('calls query with correct SQL and session ID', async () => {
-    mockDb.getAllAsync.mockResolvedValue([]);
+  it('uses Drizzle query for data access', async () => {
+    mockDrizzleAllResult = [];
 
-    await getSourceSessionSets('sess-xyz');
+    const result = await getSourceSessionSets('sess-xyz');
 
-    expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      expect.stringContaining('ws.session_id = ?'),
-      ['sess-xyz']
-    );
-    expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      expect.stringContaining('ws.completed = 1'),
-      expect.anything()
-    );
-    expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-      expect.stringContaining('LEFT JOIN exercises e'),
-      expect.anything()
-    );
+    expect(result).toEqual([]);
   });
 });

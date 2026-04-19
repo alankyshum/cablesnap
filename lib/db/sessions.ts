@@ -1,8 +1,8 @@
-import { eq, sql, desc, isNotNull } from "drizzle-orm";
+import { eq, sql, desc, isNotNull, and, asc, inArray } from "drizzle-orm";
 import type { WorkoutSession } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, query, execute, getDatabase } from "./helpers";
-import { workoutSessions, workoutSets } from "./schema";
+import { getDrizzle, getDatabase } from "./helpers";
+import { workoutSessions, workoutSets, workoutTemplates, templateExercises } from "./schema";
 
 // Re-export from split modules for backward compatibility
 export {
@@ -181,29 +181,30 @@ export async function createTemplateFromSession(
   name: string
 ): Promise<string> {
   const database = await getDatabase();
+  const db = await getDrizzle();
 
   const newTemplateId = uuid();
   const now = Date.now();
 
   await database.withTransactionAsync(async () => {
-    await database.runAsync(
-      "INSERT INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, ?, ?, 0)",
-      [newTemplateId, name, now, now]
-    );
+    await db.insert(workoutTemplates).values({
+      id: newTemplateId,
+      name,
+      created_at: now,
+      updated_at: now,
+      is_starter: 0,
+    });
 
-    const sets = await database.getAllAsync<{
-      exercise_id: string;
-      set_number: number;
-      reps: number | null;
-      link_id: string | null;
-      training_mode: string | null;
-    }>(
-      `SELECT exercise_id, set_number, reps, link_id, training_mode
-       FROM workout_sets
-       WHERE session_id = ? AND completed = 1
-       ORDER BY exercise_id, set_number ASC`,
-      [sessionId]
-    );
+    const sets = await db.select({
+      exercise_id: workoutSets.exercise_id,
+      set_number: workoutSets.set_number,
+      reps: workoutSets.reps,
+      link_id: workoutSets.link_id,
+      training_mode: workoutSets.training_mode,
+    })
+      .from(workoutSets)
+      .where(and(eq(workoutSets.session_id, sessionId), eq(workoutSets.completed, 1)))
+      .orderBy(asc(workoutSets.exercise_id), asc(workoutSets.set_number));
 
     if (sets.length === 0) return;
 
@@ -234,10 +235,17 @@ export async function createTemplateFromSession(
       const maxReps = Math.max(...group.map((s) => s.reps ?? 0));
       const targetReps = maxReps > 0 ? String(maxReps) : "8-12";
 
-      await database.runAsync(
-        "INSERT INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [teId, newTemplateId, exerciseId, i, group.length, targetReps, 90, linkId, ""]
-      );
+      await db.insert(templateExercises).values({
+        id: teId,
+        template_id: newTemplateId,
+        exercise_id: exerciseId,
+        position: i,
+        target_sets: group.length,
+        target_reps: targetReps,
+        rest_seconds: 90,
+        link_id: linkId,
+        link_label: "",
+      });
     }
   });
 
@@ -251,20 +259,21 @@ export async function swapExerciseInSession(
   oldExerciseId: string,
   newExerciseId: string
 ): Promise<string[]> {
-  const rows = await query<{ id: string }>(
-    `SELECT id FROM workout_sets
-     WHERE session_id = ? AND exercise_id = ? AND completed = 0`,
-    [sessionId, oldExerciseId]
-  );
+  const db = await getDrizzle();
+  const rows = await db.select({ id: workoutSets.id })
+    .from(workoutSets)
+    .where(and(
+      eq(workoutSets.session_id, sessionId),
+      eq(workoutSets.exercise_id, oldExerciseId),
+      eq(workoutSets.completed, 0),
+    ));
 
   const setIds = rows.map((r) => r.id);
   if (setIds.length === 0) return [];
 
-  const placeholders = setIds.map(() => "?").join(",");
-  await execute(
-    `UPDATE workout_sets SET exercise_id = ?, swapped_from_exercise_id = ? WHERE id IN (${placeholders})`,
-    [newExerciseId, oldExerciseId, ...setIds]
-  );
+  await db.update(workoutSets)
+    .set({ exercise_id: newExerciseId, swapped_from_exercise_id: oldExerciseId })
+    .where(inArray(workoutSets.id, setIds));
 
   return setIds;
 }
@@ -274,9 +283,8 @@ export async function undoSwapInSession(
   originalExerciseId: string
 ): Promise<void> {
   if (setIds.length === 0) return;
-  const placeholders = setIds.map(() => "?").join(",");
-  await execute(
-    `UPDATE workout_sets SET exercise_id = ?, swapped_from_exercise_id = NULL WHERE id IN (${placeholders})`,
-    [originalExerciseId, ...setIds]
-  );
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set({ exercise_id: originalExerciseId, swapped_from_exercise_id: null })
+    .where(inArray(workoutSets.id, setIds));
 }

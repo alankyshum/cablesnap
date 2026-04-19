@@ -18,13 +18,32 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
 }));
 
+let mockDrizzleAllResult: any[] = [];
+const mockInsertValues = jest.fn().mockReturnThis();
+const mockInsert = jest.fn(() => {
+  const c: any = { values: mockInsertValues, then: (r: any) => Promise.resolve().then(r) };
+  mockInsertValues.mockReturnValue(c);
+  return c;
+});
+
 jest.mock('drizzle-orm/expo-sqlite', () => ({
   drizzle: jest.fn(() => ({
     select: jest.fn(() => {
-      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => undefined), then: (r: any) => Promise.resolve([]).then(r) };
+      const chain: any = {
+        from: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        get: jest.fn(() => undefined),
+        all: jest.fn(() => mockDrizzleAllResult),
+        then: (r: any) => Promise.resolve(mockDrizzleAllResult).then(r),
+      };
       return chain;
     }),
-    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    insert: mockInsert,
     update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
     delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
   })),
@@ -37,6 +56,7 @@ import {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockDrizzleAllResult = [];
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue(null);
   mockDb.runAsync.mockResolvedValue({ changes: 1 });
@@ -77,46 +97,45 @@ describe('updateSession', () => {
 
 describe('createTemplateFromSession', () => {
   it('creates template from session with exercises', async () => {
-    const sessionSets = [
+    mockDrizzleAllResult = [
       { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, training_mode: 'weight' },
       { exercise_id: 'ex-1', set_number: 2, reps: 10, link_id: null, training_mode: 'weight' },
       { exercise_id: 'ex-2', set_number: 1, reps: 12, link_id: null, training_mode: null },
     ];
-    mockDb.getAllAsync.mockResolvedValue(sessionSets);
 
     const result = await createTemplateFromSession('sess-1', 'My Template');
     expect(result).toBeTruthy();
     expect(typeof result).toBe('string');
 
-    // Should create template + 2 template_exercises
-    expect(mockDb.runAsync).toHaveBeenCalledTimes(3); // 1 template + 2 exercises
+    // Should create template + 2 template_exercises via drizzle insert
+    expect(mockInsert).toHaveBeenCalledTimes(3); // 1 template + 2 exercises
   });
 
   it('handles empty session (no completed sets)', async () => {
-    mockDb.getAllAsync.mockResolvedValue([]);
+    mockDrizzleAllResult = [];
 
     const result = await createTemplateFromSession('sess-1', 'Empty Template');
     expect(result).toBeTruthy();
     // Should only create template
-    expect(mockDb.runAsync).toHaveBeenCalledTimes(1);
+    expect(mockInsert).toHaveBeenCalledTimes(1);
   });
 
   it('preserves superset groupings via link_id remapping', async () => {
-    const sessionSets = [
+    mockDrizzleAllResult = [
       { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: 'link-old', training_mode: 'weight' },
       { exercise_id: 'ex-2', set_number: 1, reps: 10, link_id: 'link-old', training_mode: 'weight' },
     ];
-    mockDb.getAllAsync.mockResolvedValue(sessionSets);
 
     await createTemplateFromSession('sess-1', 'Superset Template');
 
     // Should create template + 2 template exercises
-    const insertCalls = mockDb.runAsync.mock.calls;
-    expect(insertCalls.length).toBe(3); // template + 2 exercises
+    expect(mockInsert).toHaveBeenCalledTimes(3); // template + 2 exercises
 
     // Both exercises should have same (new) link_id, different from 'link-old'
-    const ex1LinkId = insertCalls[1][1][7]; // link_id param in template_exercises insert
-    const ex2LinkId = insertCalls[2][1][7];
+    const insertCalls = mockInsertValues.mock.calls;
+    // insertCalls[0] = template, insertCalls[1] = ex1, insertCalls[2] = ex2
+    const ex1LinkId = insertCalls[1][0].link_id;
+    const ex2LinkId = insertCalls[2][0].link_id;
     expect(ex1LinkId).toBeTruthy();
     expect(ex2LinkId).toBeTruthy();
     expect(ex1LinkId).toBe(ex2LinkId);
@@ -124,33 +143,31 @@ describe('createTemplateFromSession', () => {
   });
 
   it('uses max reps as target_reps', async () => {
-    const sessionSets = [
+    mockDrizzleAllResult = [
       { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, training_mode: 'weight' },
       { exercise_id: 'ex-1', set_number: 2, reps: 12, link_id: null, training_mode: 'weight' },
       { exercise_id: 'ex-1', set_number: 3, reps: 10, link_id: null, training_mode: 'weight' },
     ];
-    mockDb.getAllAsync.mockResolvedValue(sessionSets);
 
     await createTemplateFromSession('sess-1', 'Rep Template');
 
-    const insertCalls = mockDb.runAsync.mock.calls;
-    // template_exercises insert is call index 1
-    const targetReps = insertCalls[1][1][5]; // target_reps param
+    const insertCalls = mockInsertValues.mock.calls;
+    // insertCalls[1] = template_exercise for ex-1
+    const targetReps = insertCalls[1][0].target_reps;
     expect(targetReps).toBe('12');
   });
 
   it('sets target_sets to count of completed sets per exercise', async () => {
-    const sessionSets = [
+    mockDrizzleAllResult = [
       { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, training_mode: 'weight' },
       { exercise_id: 'ex-1', set_number: 2, reps: 8, link_id: null, training_mode: 'weight' },
       { exercise_id: 'ex-1', set_number: 3, reps: 8, link_id: null, training_mode: 'weight' },
     ];
-    mockDb.getAllAsync.mockResolvedValue(sessionSets);
 
     await createTemplateFromSession('sess-1', 'Set Count Template');
 
-    const insertCalls = mockDb.runAsync.mock.calls;
-    const targetSets = insertCalls[1][1][4]; // target_sets param
+    const insertCalls = mockInsertValues.mock.calls;
+    const targetSets = insertCalls[1][0].target_sets;
     expect(targetSets).toBe(3);
   });
 });

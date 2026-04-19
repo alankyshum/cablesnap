@@ -1,7 +1,7 @@
-import { query } from "./helpers";
 import { getDrizzle } from "./helpers";
+import { sql, eq, and, gte, lte } from "drizzle-orm";
 import type { MacroTargets } from "../types";
-import { macroTargets } from "./schema";
+import { macroTargets, dailyLog, foodEntries } from "./schema";
 import { NUTRITION_ON_TARGET_TOLERANCE } from "./weekly-summary";
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -68,19 +68,26 @@ export async function getDailyNutritionTotals(
   startDate: string,
   endDate: string,
 ): Promise<DailyNutritionTotal[]> {
-  return query<DailyNutritionTotal>(
-    `SELECT dl.date,
-            SUM(f.calories * dl.servings) AS calories,
-            SUM(f.protein * dl.servings) AS protein,
-            SUM(f.carbs * dl.servings) AS carbs,
-            SUM(f.fat * dl.servings) AS fat
-     FROM daily_log dl
-     JOIN food_entries f ON dl.food_entry_id = f.id
-     WHERE dl.date BETWEEN ? AND ?
-     GROUP BY dl.date
-     ORDER BY dl.date ASC`,
-    [startDate, endDate],
-  );
+  const db = await getDrizzle();
+  return db
+    .select({
+      date: dailyLog.date,
+      calories: sql<number>`SUM(${foodEntries.calories} * ${dailyLog.servings})`.as("calories"),
+      protein: sql<number>`SUM(${foodEntries.protein} * ${dailyLog.servings})`.as("protein"),
+      carbs: sql<number>`SUM(${foodEntries.carbs} * ${dailyLog.servings})`.as("carbs"),
+      fat: sql<number>`SUM(${foodEntries.fat} * ${dailyLog.servings})`.as("fat"),
+    })
+    .from(dailyLog)
+    .innerJoin(foodEntries, eq(dailyLog.food_entry_id, foodEntries.id))
+    .where(
+      and(
+        gte(dailyLog.date, startDate),
+        lte(dailyLog.date, endDate),
+      )
+    )
+    .groupBy(dailyLog.date)
+    .orderBy(dailyLog.date)
+    .all();
 }
 
 /**

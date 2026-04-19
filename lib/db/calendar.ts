@@ -1,4 +1,6 @@
-import { query } from "./helpers";
+import { and, sql, isNotNull, gte, lt, eq } from "drizzle-orm";
+import { query, getDrizzle } from "./helpers";
+import { workoutSessions, workoutSets, exercises } from "./schema";
 
 // --- Types ---
 
@@ -26,19 +28,27 @@ export async function getMonthlyWorkoutDates(
   const start = new Date(year, month, 1).getTime();
   const end = new Date(year, month + 1, 1).getTime();
 
-  return query<WorkoutDay>(
-    `SELECT date(started_at / 1000, 'unixepoch', 'localtime') as workout_date,
-            COUNT(*) as session_count,
-            COALESCE(SUM(duration_seconds), 0) as total_duration
-     FROM workout_sessions
-     WHERE completed_at IS NOT NULL
-       AND started_at >= ? AND started_at < ?
-     GROUP BY workout_date`,
-    [start, end]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      workout_date: sql<string>`date(${workoutSessions.started_at} / 1000, 'unixepoch', 'localtime')`,
+      session_count: sql<number>`COUNT(*)`,
+      total_duration: sql<number>`COALESCE(SUM(${workoutSessions.duration_seconds}), 0)`,
+    })
+    .from(workoutSessions)
+    .where(
+      and(
+        isNotNull(workoutSessions.completed_at),
+        gte(workoutSessions.started_at, start),
+        lt(workoutSessions.started_at, end)
+      )
+    )
+    .groupBy(sql`workout_date`);
+
+  return rows as unknown as WorkoutDay[];
 }
 
-// --- Day detail: sessions for a specific date ---
+// --- Day detail: sessions for a specific date (KEEP RAW — correlated subqueries) ---
 
 export async function getDaySessionDetails(
   dateStr: string
@@ -58,16 +68,19 @@ export async function getDaySessionDetails(
 // --- Muscle groups for a specific date ---
 
 export async function getDayMuscleGroups(dateStr: string): Promise<string[]> {
-  const rows = await query<{ primary_muscles: string }>(
-    `SELECT e.primary_muscles
-     FROM workout_sets ws
-     JOIN workout_sessions s ON ws.session_id = s.id
-     JOIN exercises e ON ws.exercise_id = e.id
-     WHERE date(s.started_at / 1000, 'unixepoch', 'localtime') = ?
-       AND s.completed_at IS NOT NULL
-       AND ws.completed = 1`,
-    [dateStr]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({ primary_muscles: exercises.primary_muscles })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .innerJoin(exercises, eq(workoutSets.exercise_id, exercises.id))
+    .where(
+      and(
+        sql`date(${workoutSessions.started_at} / 1000, 'unixepoch', 'localtime') = ${dateStr}`,
+        isNotNull(workoutSessions.completed_at),
+        eq(workoutSets.completed, 1)
+      )
+    );
 
   const all: string[] = [];
   for (const row of rows) {
@@ -88,14 +101,19 @@ export async function getDayMuscleGroups(dateStr: string): Promise<string[]> {
 export async function getWorkoutDatesForStreak(): Promise<string[]> {
   const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;
 
-  const rows = await query<{ d: string }>(
-    `SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') as d
-     FROM workout_sessions
-     WHERE completed_at IS NOT NULL
-       AND started_at >= ?
-     ORDER BY d DESC`,
-    [cutoff]
-  );
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      d: sql<string>`DISTINCT date(${workoutSessions.started_at} / 1000, 'unixepoch', 'localtime')`,
+    })
+    .from(workoutSessions)
+    .where(
+      and(
+        isNotNull(workoutSessions.completed_at),
+        gte(workoutSessions.started_at, cutoff)
+      )
+    )
+    .orderBy(sql`d DESC`);
 
   return rows.map((r) => r.d);
 }

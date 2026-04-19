@@ -22,15 +22,30 @@ jest.mock("expo-sqlite", () => ({
 
 let mockDrizzleQueryResult: any = [];
 
+let mockDrizzleInsertCalls: any[] = [];
+let mockDrizzleDeleteCalls: any[] = [];
+
 jest.mock("drizzle-orm/expo-sqlite", () => ({
   drizzle: jest.fn(() => ({
     select: jest.fn(() => {
-      const chain: any = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => undefined), then: (r: any, rj: any) => Promise.resolve(mockDrizzleQueryResult).then(r, rj) };
+      const chain: any = { from: jest.fn().mockReturnThis(), innerJoin: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), offset: jest.fn().mockReturnThis(), get: jest.fn(() => undefined), then: (r: any, rj: any) => Promise.resolve(mockDrizzleQueryResult).then(r, rj) };
       return chain;
     }),
-    insert: jest.fn(() => { const c: any = { values: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    insert: jest.fn(() => {
+      const c: any = {
+        values: jest.fn((...args: any[]) => { mockDrizzleInsertCalls.push(args); return c; }),
+        then: (r: any) => Promise.resolve().then(r),
+      };
+      return c;
+    }),
     update: jest.fn(() => { const c: any = { set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
-    delete: jest.fn(() => { const c: any = { where: jest.fn().mockReturnThis(), then: (r: any) => Promise.resolve().then(r) }; return c; }),
+    delete: jest.fn(() => {
+      const c: any = {
+        where: jest.fn((...args: any[]) => { mockDrizzleDeleteCalls.push(args); return c; }),
+        then: (r: any) => Promise.resolve().then(r),
+      };
+      return c;
+    }),
   })),
 }));
 
@@ -49,6 +64,8 @@ beforeEach(() => {
   mockUuidCounter = 0;
   jest.clearAllMocks();
   mockDrizzleQueryResult = [];
+  mockDrizzleInsertCalls = [];
+  mockDrizzleDeleteCalls = [];
   mockDb.execAsync.mockResolvedValue(undefined);
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue({ count: 10 });
@@ -73,29 +90,24 @@ describe("insertInteraction", () => {
     await db.insertInteraction("navigate", "Home", null);
 
     expect(mockDb.withTransactionAsync).toHaveBeenCalledTimes(1);
-    expect(mockDb.runAsync).toHaveBeenCalledTimes(2);
-
-    // First call: INSERT
-    const insertCall = mockDb.runAsync.mock.calls[0];
-    expect(insertCall[0]).toContain("INSERT INTO interaction_log");
-    expect(insertCall[1][1]).toBe("navigate");
-    expect(insertCall[1][2]).toBe("Home");
-    expect(insertCall[1][3]).toBeNull();
-
-    // Second call: DELETE (FIFO prune)
-    const deleteCall = mockDb.runAsync.mock.calls[1];
-    expect(deleteCall[0]).toContain("DELETE FROM interaction_log");
-    expect(deleteCall[0]).toContain("LIMIT 50");
+    // INSERT via Drizzle
+    expect(mockDrizzleInsertCalls).toHaveLength(1);
+    const insertValues = mockDrizzleInsertCalls[0][0];
+    expect(insertValues.action).toBe("navigate");
+    expect(insertValues.screen).toBe("Home");
+    expect(insertValues.detail).toBeNull();
+    // DELETE prune via Drizzle
+    expect(mockDrizzleDeleteCalls).toHaveLength(1);
   });
 
   it("stores detail when provided", async () => {
     await initDb();
     await db.insertInteraction("tap", "Exercises", "Bench Press");
 
-    const insertCall = mockDb.runAsync.mock.calls[0];
-    expect(insertCall[1][1]).toBe("tap");
-    expect(insertCall[1][2]).toBe("Exercises");
-    expect(insertCall[1][3]).toBe("Bench Press");
+    const insertValues = mockDrizzleInsertCalls[0][0];
+    expect(insertValues.action).toBe("tap");
+    expect(insertValues.screen).toBe("Exercises");
+    expect(insertValues.detail).toBe("Bench Press");
   });
 });
 
