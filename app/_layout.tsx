@@ -25,7 +25,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
 import { useAppInit } from "../hooks/useAppInit";
-import { SCREEN_CONFIGS } from "./_screen-config";
+import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
 import { LayoutBanners } from "../components/LayoutBanners";
 

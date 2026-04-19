@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { styles } from "./_recommend-styles";
+import { styles } from "./recommend-styles";
 
 export function RecommendActions({
   primaryLabel,

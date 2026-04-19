@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
-import { styles } from "./_recommend-styles";
+import { styles } from "./recommend-styles";
 
 const BROWSE_TEMPLATES = STARTER_TEMPLATES.slice(0, 3);
 

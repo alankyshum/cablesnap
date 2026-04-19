@@ -1,8 +1,8 @@
 import { useLocalSearchParams } from "expo-router";
-import { useOnboardingFinish } from "./_use-onboarding-finish";
-import { AdvancedRecommend } from "./_recommend-advanced";
-import { BeginnerRecommend } from "./_recommend-beginner";
-import { ErrorBanner } from "./_recommend-error-banner";
+import { useOnboardingFinish } from "../../components/onboarding/use-onboarding-finish";
+import { AdvancedRecommend } from "../../components/onboarding/recommend-advanced";
+import { BeginnerRecommend } from "../../components/onboarding/recommend-beginner";
+import { ErrorBanner } from "../../components/onboarding/recommend-error-banner";
 
 type Level = "beginner" | "intermediate" | "advanced";
 

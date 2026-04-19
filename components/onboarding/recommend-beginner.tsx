@@ -3,10 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { styles } from "./_recommend-styles";
-import { RecommendActions } from "./_recommend-actions";
-import { MetaRow } from "./_recommend-meta-row";
-import { BEGINNER_REC, INTERMEDIATE_REC } from "./_recommend-data";
+import { styles } from "./recommend-styles";
+import { RecommendActions } from "./recommend-actions";
+import { MetaRow } from "./recommend-meta-row";
+import { BEGINNER_REC, INTERMEDIATE_REC } from "./recommend-data";
 
 export function BeginnerRecommend({
   level,

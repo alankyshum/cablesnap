@@ -16,8 +16,8 @@ describe("FTA Batch 6 — _layout.tsx decomposition", () => {
     expect(lineCount("app/_layout.tsx")).toBeLessThan(200);
   });
 
-  it("_screen-config.ts exists and exports SCREEN_CONFIGS", () => {
-    const src = read("app/_screen-config.ts");
+  it("screen-config.ts exists and exports SCREEN_CONFIGS", () => {
+    const src = read("constants/screen-config.ts");
     expect(src).toContain("export const SCREEN_CONFIGS");
   });
 
@@ -34,8 +34,8 @@ describe("FTA Batch 6 — _layout.tsx decomposition", () => {
     expect(read("app/_layout.tsx")).toContain("SCREEN_CONFIGS");
   });
 
-  it("_screen-config.ts has all original screens", () => {
-    const src = read("app/_screen-config.ts");
+  it("screen-config.ts has all original screens", () => {
+    const src = read("constants/screen-config.ts");
     const names = ["(tabs)", "onboarding", "exercise/[id]", "session/[id]", "tools/plates", "tools/timer"];
     for (const name of names) {
       expect(src).toContain(`"${name}"`);
