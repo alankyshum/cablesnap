@@ -3,7 +3,7 @@
 **Issue**: BLD-351
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: IN_REVIEW (v2 — addressing QD + TL feedback)
 
 ## Problem Statement
 
@@ -23,12 +23,25 @@ Every major competitor (RP Hypertrophy, JEFIT Pro, Juggernaut AI) offers some fo
 
 ### Overview
 
-Add a **Recovery Heatmap** card to the Workouts tab (home screen) that reuses the existing `react-native-body-highlighter` (`MuscleMap`) component with a recovery-based color scheme. Each muscle group is colored based on estimated recovery status derived from workout history:
+Add a **Recovery Heatmap** card to the Workouts tab (home screen) with a **new `RecoveryHeatmap` component** that wraps the `Body` component from `react-native-body-highlighter` directly (NOT reusing `MuscleMap`, which has an incompatible `primary/secondary` API). Each muscle group is colored based on estimated recovery status derived from workout history using **per-muscle-group recovery thresholds**:
 
-- 🟢 **Recovered** (72+ hours since last trained) — ready to train
-- 🟡 **Partial** (24–72 hours) — can train if needed, but not fully recovered
-- 🔴 **Fatigued** (0–24 hours) — recently trained, recovery needed
+- 🔵 **Recovered** (past muscle-specific threshold) — ready to train
+- 🟡 **Partial** (50%-100% of threshold) — can train if needed
+- 🔴 **Fatigued** (0-50% of threshold) — recently trained, recovery needed
 - ⚪ **No data** — never trained this muscle (neutral)
+
+#### Per-Muscle Recovery Thresholds (hours)
+| Muscle Group | Full Recovery (hours) | Source |
+|---|---|---|
+| Quads, Hamstrings, Glutes | 72 | Large muscle groups |
+| Back (Lats, Traps) | 72 | Large muscle groups |
+| Chest | 48 | Medium muscle groups |
+| Shoulders (Delts) | 48 | Medium muscle groups |
+| Biceps, Triceps, Forearms | 36 | Small muscle groups |
+| Calves, Abs | 36 | Small muscle groups |
+| Default (unmapped) | 48 | Conservative default |
+
+These are stored as a simple `RECOVERY_HOURS` lookup object — zero SQL complexity.
 
 ### UX Design
 
@@ -54,11 +67,17 @@ A new collapsible card on the Workouts tab, positioned between the streak/stats 
 - Below the body map, show a simple text summary: "Ready to train: [muscle list]"
 - No tap interaction on individual muscles (keep it simple for v1)
 
-#### Color Scheme
-Use the existing `muscle` theme colors as a base, but override for recovery context:
-- Dark mode: green (#4CAF50), yellow (#FFC107), red (#F44336)
-- Light mode: green (#388E3C), amber (#FF8F00), red (#D32F2F)
-- Intensity maps to the Body component's `intensity` prop (1 = green, 2 = yellow, 3 = red)
+#### Color Scheme (Colorblind-Safe)
+Use a **blue→yellow→red** palette that is distinguishable for users with red-green colorblindness (~8% of males):
+- Dark mode: blue (#42A5F5), yellow (#FFC107), red (#F44336)
+- Light mode: blue (#1E88E5), amber (#FF8F00), red (#D32F2F)
+- Intensity maps to the Body component's `intensity` prop (1 = blue/recovered, 2 = yellow/partial, 3 = red/fatigued)
+- The `Body` component's `colors` prop accepts custom arrays: `colors={['#42A5F5', '#FFC107', '#F44336']}`
+
+#### Accessibility
+- Collapse header: `accessibilityRole="button"`, `accessibilityState={{ expanded: isExpanded }}`, dynamic `accessibilityLabel="Muscle Recovery, ${isExpanded ? 'expanded' : 'collapsed'}"`, minimum 48dp touch target
+- Body map: decorative (no interactive elements), `accessibilityElementsHidden={true}` on the SVG
+- Text summary below the map provides the same info in text form for screen readers
 
 ### Technical Approach
 
@@ -70,45 +89,63 @@ export type MuscleRecoveryStatus = {
   lastTrainedAt: number | null;  // epoch ms
   hoursAgo: number | null;
   status: 'recovered' | 'partial' | 'fatigued' | 'no_data';
-  totalSetsLast48h: number;
 };
 
+// Per-muscle recovery thresholds (hours to full recovery)
+export const RECOVERY_HOURS: Record<string, number> = {
+  quads: 72, hamstrings: 72, glutes: 72,
+  lats: 72, traps: 72, 'lower-back': 72,
+  chest: 48, shoulders: 48, delts: 48,
+  biceps: 36, triceps: 36, forearms: 36,
+  calves: 36, abs: 36, obliques: 36,
+};
+const DEFAULT_RECOVERY_HOURS = 48;
+
 export async function getMuscleRecoveryStatus(): Promise<MuscleRecoveryStatus[]> {
-  // Query: For each muscle group, find the most recent session
-  // that included exercises targeting that muscle (primary OR secondary).
-  // Use workout_sets joined with exercises.primary_muscles and secondary_muscles.
-  // Calculate hours since last training.
-  // Return recovery status based on thresholds.
+  // Query: For each exercise in recent sessions (last 7 days),
+  // get the most recent completed_at for each PRIMARY muscle group.
+  // PRIMARY muscles only — secondary muscles excluded to reduce noise (TL recommendation).
+  // full_body exercises are SKIPPED — they would mark all muscles fatigued (QD/TL recommendation).
+  // Parse primary_muscles JSON in JS (not json_each() — no existing usage in codebase).
+  // Calculate recovery % using per-muscle RECOVERY_HOURS thresholds.
 }
 ```
 
-**SQL approach**: Join `workout_sets` → `workout_sessions` → `exercises` to find the most recent `completed_at` timestamp for each muscle group. Parse `primary_muscles` (JSON array) to map exercises to muscle groups. Use a single query with GROUP BY per muscle to avoid N+1.
+**SQL approach**: Single query joining `workout_sets` → `workout_sessions` → `exercises` for sessions in last 7 days. Fetch all rows, then parse `primary_muscles` (JSON-stringified array) in JS using `JSON.parse()`. Group by muscle in JS to find most recent `completed_at` per muscle. Apply per-muscle `RECOVERY_HOURS` thresholds.
 
-**Note**: `primary_muscles` is stored as a JSON-stringified array (see learnings). Use `json_each()` in SQLite to unnest, or parse in JS after a broader query.
+**Key decisions from review:**
+- Use **JS-side JSON parsing** (not `json_each()`) — matches existing codebase pattern, zero `json_each()` usage exists
+- **Primary muscles only** — secondary muscles make compound exercises too noisy
+- **Skip `full_body`** exercises — they'd mark entire heatmap red
+- **Remove `totalSetsLast48h`** — dead field since volume-weighting is out of scope
 
-#### New Hook: `hooks/useRecoveryStatus.ts`
+#### Integration into `loadHomeData()` (NO separate hook)
+
+Instead of a separate `useRecoveryStatus()` hook (which would cause an extra render cycle and visual pop-in), integrate the recovery query into the existing `loadHomeData()` batch function that already loads home screen data. Return recovery data alongside existing home data.
 
 ```typescript
-export function useRecoveryStatus() {
-  return useQuery({
-    queryKey: ['recovery-status'],
-    queryFn: getMuscleRecoveryStatus,
-    staleTime: 5 * 60 * 1000,  // 5 min cache — recovery changes slowly
-  });
+// In lib/db/home.ts (or wherever loadHomeData lives)
+export async function loadHomeData() {
+  // ... existing queries ...
+  const recoveryStatus = await getMuscleRecoveryStatus();
+  return { ...existingData, recoveryStatus };
 }
 ```
 
 #### New Component: `components/home/RecoveryHeatmap.tsx`
 
-- Uses `MuscleMap` with custom intensity values based on recovery status
-- The existing `MuscleMap` already supports `intensity` via `react-native-body-highlighter`
-- Wrap in a collapsible `Card` with a header
+- **New component wrapping `Body` directly** from `react-native-body-highlighter` — NOT reusing `MuscleMap` (incompatible `primary/secondary` API)
+- Share `SLUG_MAP` and `buildData` utilities by extracting them to a shared location (e.g., `lib/muscle-map-utils.ts`)
+- Uses `Body`'s `colors` prop for the blue/yellow/red colorblind-safe palette
+- Uses per-muscle `intensity` data based on recovery status
+- Wrap in a collapsible `Card` with accessible header (see Accessibility section)
 - Show text summary below the map
 
 #### Integration Point
 - Add `RecoveryHeatmap` to `app/(tabs)/index.tsx` inside the existing home screen layout
 - Position after `StatsRow`/`HomeBanners` and before template/program segments
 - Collapse state persisted via `getAppSetting`/`setAppSetting`
+- Recovery data comes from `loadHomeData()` — no additional query or hook needed
 
 ### Scope
 
@@ -122,7 +159,8 @@ export function useRecoveryStatus() {
 
 **Out of Scope:**
 - Volume-weighted recovery (all muscles treated equally regardless of sets/intensity)
-- Customizable recovery timeframes (fixed 24h/72h thresholds for v1)
+- Customizable recovery timeframes (per-muscle defaults used, but not user-configurable in v1)
+- Secondary muscle tracking (primary muscles only to reduce noise)
 - Recovery notifications/reminders
 - Integration with programs (showing recovery alongside scheduled workout)
 - Per-exercise recovery (only per-muscle-group)
@@ -130,9 +168,9 @@ export function useRecoveryStatus() {
 ### Acceptance Criteria
 
 - [ ] Given the user has completed workouts When they view the Workouts tab Then a "Muscle Recovery" card shows with a body heatmap colored by recovery status
-- [ ] Given a muscle was trained 0-24h ago Then it appears red (fatigued) on the heatmap
-- [ ] Given a muscle was trained 24-72h ago Then it appears yellow (partial recovery) on the heatmap
-- [ ] Given a muscle was trained 72+ hours ago Then it appears green (recovered) on the heatmap
+- [ ] Given a muscle was trained within 50% of its recovery threshold Then it appears red (fatigued) on the heatmap
+- [ ] Given a muscle was trained between 50-100% of its recovery threshold Then it appears yellow (partial) on the heatmap
+- [ ] Given a muscle was trained past its recovery threshold Then it appears blue (recovered) on the heatmap
 - [ ] Given a muscle has never been trained Then it appears neutral (no color) on the heatmap
 - [ ] Given the recovery card is visible When the user taps the header Then the card collapses and preference is saved
 - [ ] Given the user reopens the app When recovery card was previously collapsed Then it remains collapsed
@@ -149,8 +187,10 @@ export function useRecoveryStatus() {
 | Only one muscle group trained | That muscle colored, rest neutral |
 | Very old workouts only (>30 days) | All muscles show green (recovered) |
 | Multiple workouts same day | Use latest session for recovery calculation |
-| Exercises targeting multiple muscles | Each target muscle gets recovery status independently |
+| Exercises targeting multiple muscles | Each PRIMARY target muscle gets recovery status independently (secondary muscles ignored) |
 | Custom exercises with no muscle data | Excluded from recovery calculation |
+| full_body exercises | Skipped entirely — would mark all muscles fatigued |
+| Colorblind users | Blue/yellow/red palette distinguishable for red-green colorblindness |
 | Bodyweight exercises | Treated same as weighted exercises |
 | Dark mode | Use dark mode recovery colors |
 
@@ -158,10 +198,9 @@ export function useRecoveryStatus() {
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| SQLite json_each() not available | Low | High | Fall back to JS-side JSON parsing |
 | Performance with large history | Low | Med | Query only last 7 days of sessions |
-| MuscleMap component doesn't support custom intensity colors | Med | Med | Override via the intensity prop (1-3 scale already supported) |
-| Recovery thresholds too simplistic | Med | Low | Document as v1; future phase can add volume-weighting |
+| Body component color customization | Low | Low | `colors` prop confirmed to accept custom arrays |
+| Recovery thresholds too simplistic | Low | Low | Per-muscle thresholds address main concern; volume-weighting deferred to future phase |
 
 ## Review Feedback
 
@@ -204,4 +243,16 @@ Full review posted on BLD-351.
 **Approved aspects**: Query approach, hook pattern, staleTime, settings persistence, accordion collapsibility, color scheme, edge case handling, scope boundaries.
 
 ### CEO Decision
-_Pending reviews_
+**v2 revision addresses ALL critical and major items from both reviews:**
+- ✅ [C] Colorblind-safe palette → blue/yellow/red
+- ✅ [C] Per-muscle recovery thresholds → lookup table added
+- ✅ [C] full_body handling → skip entirely
+- ✅ [C] a11y attributes → specified in plan
+- ✅ [M] New RecoveryHeatmap component (not reusing MuscleMap)
+- ✅ [M] Removed totalSetsLast48h
+- ✅ [M] JS-side JSON parsing (not json_each)
+- ✅ [M] Integrated into loadHomeData() batch
+- ✅ [TL] Primary muscles only for v1
+- ✅ [TL] Extract SLUG_MAP to shared location
+
+Pending re-approval from QD and TL.
