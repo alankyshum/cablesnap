@@ -60,6 +60,7 @@ export default function BodyProfileCard() {
   const toast = useToast();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
+  const initialSnapshot = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -90,6 +91,7 @@ export default function BodyProfileCard() {
         setSex(profile.sex);
         setActivityLevel(profile.activityLevel);
         setGoal(profile.goal);
+        initialSnapshot.current = JSON.stringify(profile);
       } else if (latestWeight) {
         setWeight(String(latestWeight.weight));
       }
@@ -143,9 +145,14 @@ export default function BodyProfileCard() {
         weightUnit,
         heightUnit,
       };
+
+      const profileJson = JSON.stringify(profile);
+      if (profileJson === initialSnapshot.current) return;
+
       await setAppSetting("nutrition_profile", JSON.stringify(profile));
       const result = calculateFromProfile(profile);
       await updateMacroTargets(result.calories, result.protein, result.carbs, result.fat);
+      initialSnapshot.current = profileJson;
       if (isMounted.current) toast.success("Profile saved");
     } catch {
       if (isMounted.current) toast.error("Could not save profile");
