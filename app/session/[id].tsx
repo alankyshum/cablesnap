@@ -1,5 +1,5 @@
 /* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -31,6 +31,7 @@ import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDe
 import { SetTypeSheet } from "../../components/session/SetTypeSheet";
 import { SessionListHeader } from "../../components/session/SessionListHeader";
 import { SessionListFooter } from "../../components/session/SessionListFooter";
+import { SessionToolboxSheet } from "../../components/session/SessionToolboxSheet";
 
 export default function ActiveSession() {
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function ActiveSession() {
   } = useSessionData({ id, templateId, sourceSessionId });
 
   const {
-    rest, restFlashStyle, startRest, startRestWithDuration, dismissRest, restRef,
+    rest, startRest, startRestWithDuration, dismissRest, restRef,
   } = useRestTimer({ sessionId: id, colors });
 
   const {
@@ -97,6 +98,27 @@ export default function ActiveSession() {
   });
 
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
+  const toolboxSheetRef = useRef<BottomSheet>(null);
+
+  const handleToolboxOpen = useCallback(() => {
+    // Mutual exclusion: close exercise picker before opening toolbox
+    setPickerOpen(false);
+    toolboxSheetRef.current?.snapToIndex(0);
+  }, [setPickerOpen]);
+
+  const handleToolboxDismiss = useCallback(() => {
+    // no-op — sheet handles its own close
+  }, []);
+
+  const handleToolboxStartRest = useCallback((seconds: number) => {
+    startRestWithDuration(seconds);
+  }, [startRestWithDuration]);
+
+  // Wrap add exercise to close toolbox (mutual exclusion)
+  const handleAddExerciseWrapped = useCallback(() => {
+    toolboxSheetRef.current?.close();
+    handleAddExercise();
+  }, [handleAddExercise]);
 
   // Cleanup timers
   useEffect(() => {
@@ -126,10 +148,37 @@ export default function ActiveSession() {
         options={{
           title: session.name,
           headerRight: () => (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text variant="body" style={{ color: colors.primary, marginRight: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {rest > 0 && (
+                <Pressable
+                  onPress={dismissRest}
+                  accessibilityLabel={`Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds. Tap to skip.`}
+                  accessibilityLiveRegion="polite"
+                  style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+                >
+                  <Text variant="body" style={{ color: colors.primary, fontWeight: "700", fontSize: 16 }}>
+                    {String(Math.floor(rest / 60)).padStart(2, "0")}:{String(rest % 60).padStart(2, "0")}
+                  </Text>
+                </Pressable>
+              )}
+              <Text
+                variant="body"
+                style={{
+                  color: rest > 0 ? colors.onSurfaceVariant : colors.primary,
+                  marginRight: 4,
+                  fontSize: rest > 0 ? 13 : 14,
+                }}
+              >
                 {formatTime(elapsed)}
               </Text>
+              <Pressable
+                onPress={handleToolboxOpen}
+                accessibilityLabel="Open workout toolbox"
+                accessibilityRole="button"
+                style={{ minWidth: 56, minHeight: 56, alignItems: "center", justifyContent: "center" }}
+              >
+                <MaterialCommunityIcons name="wrench" size={22} color={colors.onSurfaceVariant} />
+              </Pressable>
             </View>
           ),
         }}
@@ -174,16 +223,13 @@ export default function ActiveSession() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <SessionListHeader
-            rest={rest}
-            restFlashStyle={restFlashStyle}
-            dismissRest={dismissRest}
             nextHint={nextHint}
             colors={colors}
           />
         }
         ListFooterComponent={
           <SessionListFooter
-            onAddExercise={handleAddExercise}
+            onAddExercise={handleAddExerciseWrapped}
             onFinish={finish}
             onCancel={cancel}
             colors={colors}
@@ -243,6 +289,11 @@ export default function ActiveSession() {
         allExercises={allExercises}
         onSelect={handleSwapSelect}
         onDismiss={() => setSwapSource(null)}
+      />
+      <SessionToolboxSheet
+        sheetRef={toolboxSheetRef}
+        onStartRest={handleToolboxStartRest}
+        onDismiss={handleToolboxDismiss}
       />
     </>
   );
