@@ -88,7 +88,7 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
     .map((s) => MUSCLE_LABELS[s.muscle]);
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }]}>
+    <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
       <Pressable
         onPress={toggleExpanded}
         accessibilityRole="button"
@@ -170,7 +170,7 @@ function RecoveryLegend({ isDark }: { isDark: boolean }) {
       {items.map((item) => (
         <View key={item.label} style={styles.legendItem}>
           <View style={[styles.dot, { backgroundColor: item.color }]} />
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: 11 }}>{item.label}</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{item.label}</Text>
         </View>
       ))}
     </View>
@@ -184,7 +184,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     padding: 16,
     marginBottom: 16,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
