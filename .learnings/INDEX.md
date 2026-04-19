@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 151
+Total learnings: 152
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 76 learnings
+- [React Native + Expo](patterns/react-native.md) — 77 learnings
 - [Testing](patterns/testing.md) — 10 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-367 | Mutation Version Tracking for Direct-DB-Write Apps Using React Query | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-363 | SQLite Bare Columns in GROUP BY Produce Non-Deterministic Batch Results | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-19 | BLD-363 | Two-Step SQL + JS Pattern for Per-Group Top-N Batch Queries | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-365 | expo-image Requires Config Plugin Registration for Native Builds | Patterns | [react-native.md](patterns/react-native.md) |
