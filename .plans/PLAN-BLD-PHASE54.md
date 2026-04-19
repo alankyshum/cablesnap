@@ -299,24 +299,9 @@ Only one timer runs at a time:
 
 ### Quality Director (UX Critique)
 
-**Verdict: NEEDS REVISION** (2026-04-19)
+**Rev 1 Verdict: NEEDS REVISION** (2026-04-19) — 3 Critical, 4 Major issues raised.
 
-**3 Critical issues (must fix before implementation):**
-
-1. **C-1: Timer accuracy** — setInterval stops when app is backgrounded on mobile. Must use absolute timestamps (Date.now() at start) and recalculate elapsed on foreground resume. Reference useTimerEngine.ts:187 AppState pattern. Without this, a user who backgrounds the app during a plank gets incorrect duration recorded.
-
-2. **C-2: Timer accessibility** — No a11y specified. Timer needs: accessibilityLiveRegion="polite" for periodic announcements (every 10-15s), accessibilityRole="timer", accessibilityLabel/accessibilityHint on start/stop controls, accessibilityLiveRegion="assertive" on countdown completion.
-
-3. **C-3: Ambiguous tap interaction** — Tapping duration field should NOT auto-start timer. Separate the timer start/stop into a dedicated button next to the duration input field. Duration field = manual entry. Play/stop button = timer control. Prevents accidental starts in gym conditions.
-
-**4 Major issues (should fix):**
-
-- **M-1**: Defer "Reps + Duration" mode to a future iteration — underspecified and adds UI complexity. Ship Weight × Duration first (covers 90%+ use cases).
-- **M-2**: Persist timer start timestamp to DB on timer start so it survives process kill.
-- **M-3**: Specify rest timer vs set timer interaction rules (only one timer active at a time).
-- **M-4**: Specify undo/correction UX for accidental stop (numeric input in seconds with MM:SS display).
-
-**Additional edge cases to address:** multiple active timers (one at a time?), navigation away confirmation, bodyweight PR comparison (NULL vs 0 weight), re-doing completed timed set, duration >= 0 validation.
+**Rev 2 Verdict: APPROVED** (2026-04-19) — All 3 Critical and 4 Major issues resolved in Rev 2. No remaining blockers. Implementation may proceed.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED (with minor concerns)
