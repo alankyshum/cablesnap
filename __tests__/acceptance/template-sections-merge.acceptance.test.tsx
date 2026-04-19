@@ -37,6 +37,14 @@ jest.mock('../../lib/starter-templates', () => ({
     { id: 'starter-1', name: 'Full Body Starter', difficulty: 'beginner', duration: '45 min', recommended: true, exercises: [{ name: 'Squat' }] },
   ],
 }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 
 const userTemplate: WorkoutTemplate = createWorkoutTemplate({ id: 'user-1', name: 'My Push Day' })
 const starterTemplate: WorkoutTemplate = createWorkoutTemplate({ id: 'starter-1', name: 'Full Body Starter', is_starter: true })
@@ -62,6 +70,7 @@ jest.mock('../../lib/db', () => ({
   getTodaySchedule: jest.fn().mockResolvedValue(null),
   isTodayCompleted: jest.fn().mockResolvedValue(false),
   getWeekAdherence: jest.fn().mockResolvedValue([]),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
   deleteTemplate: jest.fn().mockResolvedValue(undefined),
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   duplicateProgram: jest.fn().mockResolvedValue('dup-p1'),

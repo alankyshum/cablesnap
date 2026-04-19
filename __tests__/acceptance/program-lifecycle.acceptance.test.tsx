@@ -34,6 +34,14 @@ jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache'
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/starter-templates', () => ({ STARTER_TEMPLATES: [] }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 
 const mockGetTemplates = jest.fn().mockResolvedValue([])
 const mockGetActiveSession = jest.fn().mockResolvedValue(null)
@@ -67,6 +75,7 @@ jest.mock('../../lib/db', () => ({
   getTodaySchedule: (...args: unknown[]) => mockGetTodaySchedule(...args),
   isTodayCompleted: (...args: unknown[]) => mockIsTodayCompleted(...args),
   getWeekAdherence: (...args: unknown[]) => mockGetWeekAdherence(...args),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
   deleteTemplate: (...args: unknown[]) => mockDeleteTemplate(...args),
   duplicateTemplate: (...args: unknown[]) => mockDuplicateTemplate(...args),
   duplicateProgram: (...args: unknown[]) => mockDuplicateProgram(...args),

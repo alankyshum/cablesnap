@@ -71,7 +71,7 @@ jest.mock('react-native-reanimated', () => {
     withTiming: (v: unknown) => v,
     withSpring: (v: unknown) => v,
     withDelay: (_d: unknown, v: unknown) => v,
-    runOnJS: (fn: Function) => fn,
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
   }
 })
 jest.mock('expo-haptics', () => ({
@@ -151,6 +151,7 @@ jest.mock('../../lib/db', () => ({
   getTodaySchedule: (...args: unknown[]) => mockGetTodaySchedule(...args),
   isTodayCompleted: (...args: unknown[]) => mockIsTodayCompleted(...args),
   getWeekAdherence: (...args: unknown[]) => mockGetWeekAdherence(...args),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
 }))
 
 const mockGetPrograms = jest.fn().mockResolvedValue([program1])
@@ -174,9 +175,18 @@ jest.mock('../../lib/rpe', () => ({
 jest.mock('../../lib/starter-templates', () => ({
   STARTER_TEMPLATES: [],
 }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 
 import Dashboard from '../../app/(tabs)/index'
 
+// eslint-disable-next-line max-lines-per-function
 describe('Dashboard Acceptance', () => {
   beforeEach(() => {
     jest.clearAllMocks()

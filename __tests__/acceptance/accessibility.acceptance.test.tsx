@@ -77,6 +77,14 @@ jest.mock('../../components/MuscleVolumeSegment', () => 'MuscleVolumeSegment')
 jest.mock('../../components/WeeklySummary', () => 'WeeklySummary')
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/starter-templates', () => ({ STARTER_TEMPLATES: [] }))
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('react-native-body-highlighter', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View /> }
+})
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
 jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/confirm', () => ({ confirmAction: jest.fn() }))
@@ -205,6 +213,7 @@ jest.mock('../../lib/db', () => ({
   getTodaySchedule: jest.fn().mockResolvedValue(null),
   isTodayCompleted: jest.fn().mockResolvedValue(false),
   getWeekAdherence: jest.fn().mockResolvedValue([]),
+  getMuscleRecoveryStatus: jest.fn().mockResolvedValue([]),
   deleteTemplate: jest.fn().mockResolvedValue(undefined),
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   duplicateProgram: jest.fn().mockResolvedValue('dup-p1'),
