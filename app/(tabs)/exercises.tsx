@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -65,6 +65,12 @@ export default function Exercises() {
       return true;
     });
   }, [exercises, query, selected]);
+
+  useEffect(() => {
+    if (layout.atLeastMedium && !detail && filtered.length > 0) {
+      getExerciseById(filtered[0].id).then(setDetail);
+    }
+  }, [layout.atLeastMedium, detail, filtered]);
 
   const toggle = useCallback((f: FilterType) => {
     setSelected((prev) => {

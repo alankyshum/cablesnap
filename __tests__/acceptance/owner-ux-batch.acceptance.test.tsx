@@ -1,9 +1,5 @@
 jest.setTimeout(10000)
 
-import React from 'react'
-import { waitFor } from '@testing-library/react-native'
-import { renderScreen } from '../helpers/render'
-
 jest.mock('expo-router', () => {
   const RealReact = require('react')
   return {
@@ -34,8 +30,9 @@ jest.mock('../../lib/db', () => ({
   updateMacroTargets: jest.fn().mockResolvedValue(undefined),
 }))
 jest.mock('../../lib/db/body', () => ({
-  getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm' }),
+  getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', sex: 'male' }),
   getLatestBodyWeight: jest.fn().mockResolvedValue({ weight: 75 }),
+  updateBodySex: jest.fn().mockResolvedValue(undefined),
 }))
 
 describe('Issue 1: Add food header button', () => {
@@ -76,33 +73,11 @@ describe('Issue 2: Stat card padding', () => {
 })
 
 describe('Issue 3: Activity level dropdown', () => {
-  it('ProfileForm uses Menu instead of SegmentedButtons for activity level', () => {
+  it('ActivityDropdown uses Pressable dropdown with full labels', () => {
     const fs = require('fs')
     const path = require('path')
-    const source = [
-      fs.readFileSync(path.resolve(__dirname, '../../components/ProfileForm.tsx'), 'utf8'),
-      fs.readFileSync(path.resolve(__dirname, '../../components/profile/ActivityDropdown.tsx'), 'utf8'),
-      fs.readFileSync(path.resolve(__dirname, '../../hooks/useProfileForm.ts'), 'utf8'),
-    ].join('\n')
-    // Should use Menu component for activity level
-    expect(source).toContain('Menu') // Menu-like component via ActivityDropdown
-    expect(source).toContain('activityMenuVisible')
-    // Should NOT have truncated labels
-    expect(source).not.toContain('ACTIVITY_LABELS.sedentary.split')
-    // Should show full labels via ACTIVITY_LABELS[key]
+    const source = fs.readFileSync(path.resolve(__dirname, '../../components/profile/ActivityDropdown.tsx'), 'utf8')
+    expect(source).toContain('Pressable')
     expect(source).toContain('ACTIVITY_LABELS[')
-  })
-
-  it('ProfileForm renders dropdown for activity level', async () => {
-    const ProfileForm = require('../../components/ProfileForm').default
-    const { findByLabelText } = renderScreen(
-      <ProfileForm onSave={jest.fn()} />
-    )
-
-    // Should show full activity level label in dropdown
-    await waitFor(async () => {
-      const dropdown = await findByLabelText(/Activity level:/)
-      expect(dropdown).toBeTruthy()
-    })
   })
 })

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { SectionList, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -9,6 +9,7 @@ import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { FoodLogCard } from "../../components/nutrition/FoodLogCard";
 import { NutritionListHeader } from "../../components/nutrition/NutritionListHeader";
 import { MealSectionHeader } from "../../components/nutrition/MealSectionHeader";
+import { MacroTargetsSheet } from "../../components/nutrition/MacroTargetsSheet";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useNutritionData } from "@/hooks/useNutritionData";
 
@@ -22,6 +23,8 @@ export default function Nutrition() {
     templateSheet, setTemplateSheet,
     sections, prev, next, remove, load, handleSnack,
   } = useNutritionData();
+
+  const [targetsVisible, setTargetsVisible] = useState(false);
 
   const handleFoodLogged = useCallback(() => { load(); }, [load]);
 
@@ -38,7 +41,7 @@ export default function Nutrition() {
         )}
         renderItem={({ item }) => <FoodLogCard item={item} colors={colors} onRemove={remove} />}
         SectionSeparatorComponent={() => <View style={{ height: 16 }} />}
-        ListHeaderComponent={<NutritionListHeader date={date} summary={summary} targets={targets} colors={colors} onPrev={prev} onNext={next} />}
+        ListHeaderComponent={<NutritionListHeader date={date} summary={summary} targets={targets} colors={colors} onPrev={prev} onNext={next} onEditTargets={() => setTargetsVisible(true)} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
@@ -58,6 +61,7 @@ export default function Nutrition() {
         items={templateSheet.items}
         onSaved={load}
       />
+      <MacroTargetsSheet visible={targetsVisible} onClose={() => { setTargetsVisible(false); load(); }} />
     </View>
   );
 }

@@ -55,6 +55,7 @@ jest.mock('../../lib/db', () => ({
   getBodySettings: jest.fn().mockResolvedValue({
     weight_unit: 'kg',
     measurement_unit: 'cm',
+    sex: 'male',
     weight_goal: null,
     body_fat_goal: null,
   }),
@@ -64,10 +65,12 @@ jest.mock('../../lib/db/body', () => ({
   getBodySettings: jest.fn().mockResolvedValue({
     weight_unit: 'kg',
     measurement_unit: 'cm',
+    sex: 'male',
     weight_goal: null,
     body_fat_goal: null,
   }),
   getLatestBodyWeight: jest.fn().mockResolvedValue(null),
+  updateBodySex: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/nutrition-calc', () => ({

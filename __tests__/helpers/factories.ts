@@ -184,6 +184,7 @@ export function createBodySettings(overrides: Partial<BodySettings> = {}): BodyS
     id: id(),
     weight_unit: 'kg',
     measurement_unit: 'cm',
+    sex: 'male',
     weight_goal: null,
     body_fat_goal: null,
     updated_at: Date.now(),

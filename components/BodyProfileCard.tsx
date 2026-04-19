@@ -11,7 +11,7 @@ import { flowCardStyle } from "./ui/FlowContainer";
 import { ActivityDropdown } from "./profile/ActivityDropdown";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
-import { getBodySettings, getLatestBodyWeight } from "../lib/db/body";
+import { getBodySettings, getLatestBodyWeight, updateBodySex } from "../lib/db/body";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   GOAL_LABELS,
@@ -76,13 +76,13 @@ export default function BodyProfileCard() {
       const hu = bodySettings.measurement_unit;
       setWeightUnit(wu);
       setHeightUnit(hu);
+      setSex(bodySettings.sex);
 
       if (saved) {
         const profile: NutritionProfile = migrateProfile(JSON.parse(saved));
         setBirthYear(String(profile.birthYear));
         setWeight(String(profile.weight));
         setHeight(String(profile.height));
-        setSex(profile.sex);
         setActivityLevel(profile.activityLevel);
         setGoal(profile.goal);
         initialSnapshot.current = JSON.stringify(profile);
@@ -187,7 +187,7 @@ export default function BodyProfileCard() {
     let newAct = activityLevel;
     let newGoal = goal;
 
-    if (field === "sex") { newSex = value as Sex; setSex(newSex); }
+    if (field === "sex") { newSex = value as Sex; setSex(newSex); updateBodySex(newSex); }
     else if (field === "activityLevel") { newAct = value as ActivityLevel; setActivityLevel(newAct); }
     else if (field === "goal") { newGoal = value as Goal; setGoal(newGoal); }
 

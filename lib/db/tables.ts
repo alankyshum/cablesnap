@@ -10,7 +10,7 @@ const VALID_TABLES = new Set([
   "interaction_log", "progress_photos", "achievements_earned",
   "strava_connection", "strava_sync_log", "health_connect_sync_log",
   "meal_templates", "meal_template_items", "app_settings",
-  "weekly_schedule", "program_schedule",
+  "program_schedule",
 ]);
 
 function assertValidTable(table: string): void {
@@ -43,14 +43,20 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       equipment TEXT NOT NULL,
       instructions TEXT NOT NULL,
       difficulty TEXT NOT NULL,
-      is_custom INTEGER DEFAULT 0
+      is_custom INTEGER DEFAULT 0,
+      deleted_at INTEGER DEFAULT NULL,
+      mount_position TEXT DEFAULT NULL,
+      attachment TEXT DEFAULT 'handle',
+      training_modes TEXT DEFAULT '["weight"]',
+      is_voltra INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS workout_templates (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      is_starter INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS template_exercises (
@@ -60,7 +66,11 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       position INTEGER NOT NULL,
       target_sets INTEGER DEFAULT 3,
       target_reps TEXT DEFAULT '8-12',
-      rest_seconds INTEGER DEFAULT 90
+      rest_seconds INTEGER DEFAULT 90,
+      link_id TEXT DEFAULT NULL,
+      link_label TEXT DEFAULT '',
+      target_duration_seconds INTEGER,
+      training_mode TEXT DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_sessions (
@@ -70,7 +80,9 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       started_at INTEGER NOT NULL,
       completed_at INTEGER,
       duration_seconds INTEGER,
-      notes TEXT DEFAULT ''
+      notes TEXT DEFAULT '',
+      program_day_id TEXT DEFAULT NULL,
+      rating INTEGER DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_sets (
@@ -81,7 +93,16 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       weight REAL,
       reps INTEGER,
       completed INTEGER DEFAULT 0,
-      completed_at INTEGER
+      completed_at INTEGER,
+      rpe REAL DEFAULT NULL,
+      notes TEXT DEFAULT '',
+      link_id TEXT DEFAULT NULL,
+      round INTEGER DEFAULT NULL,
+      training_mode TEXT DEFAULT NULL,
+      tempo TEXT DEFAULT NULL,
+      swapped_from_exercise_id TEXT DEFAULT NULL,
+      set_type TEXT DEFAULT 'normal',
+      duration_seconds INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS food_entries (
@@ -156,6 +177,7 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       id TEXT PRIMARY KEY DEFAULT 'default',
       weight_unit TEXT NOT NULL DEFAULT 'kg',
       measurement_unit TEXT NOT NULL DEFAULT 'cm',
+      sex TEXT NOT NULL DEFAULT 'male',
       weight_goal REAL,
       body_fat_goal REAL,
       updated_at INTEGER NOT NULL
@@ -169,7 +191,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       current_day_id TEXT DEFAULT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      deleted_at INTEGER DEFAULT NULL
+      deleted_at INTEGER DEFAULT NULL,
+      is_starter INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS program_days (
@@ -294,17 +317,6 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
 export async function createScheduleTables(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(
     "CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)"
-  );
-
-  await database.execAsync(
-    `CREATE TABLE IF NOT EXISTS weekly_schedule (
-      id TEXT PRIMARY KEY,
-      day_of_week INTEGER NOT NULL,
-      template_id TEXT NOT NULL,
-      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      FOREIGN KEY (template_id) REFERENCES workout_templates(id),
-      UNIQUE(day_of_week)
-    )`
   );
 
   await database.execAsync(

@@ -66,6 +66,27 @@ async function addDurationColumns(database: SQLite.SQLiteDatabase): Promise<void
   await addColumnIfMissing(database, "template_exercises", "training_mode", "TEXT DEFAULT NULL");
 }
 
+async function migrateBodySex(database: SQLite.SQLiteDatabase): Promise<void> {
+  await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
+  // Copy sex from nutrition_profile to body_settings if it exists
+  const row = await database.getFirstAsync<{ value: string }>(
+    "SELECT value FROM app_settings WHERE key = 'nutrition_profile'"
+  );
+  if (row?.value) {
+    try {
+      const profile = JSON.parse(row.value);
+      if (profile.sex === "male" || profile.sex === "female") {
+        await database.runAsync(
+          "UPDATE body_settings SET sex = ? WHERE sex = 'male'",
+          [profile.sex]
+        );
+      }
+    } catch {
+      // Invalid JSON — keep default
+    }
+  }
+}
+
 export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await createCoreTables(database);
   await addColumnMigrations(database);
@@ -74,4 +95,5 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await createExtensionTables(database);
   await addPerformanceIndexes(database);
   await addDurationColumns(database);
+  await migrateBodySex(database);
 }

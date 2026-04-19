@@ -25,9 +25,10 @@ type Props = {
   colors: { primary: string; onSurface: string; onSurfaceVariant: string; onBackground: string; surface: string };
   onPrev: () => void;
   onNext: () => void;
+  onEditTargets: () => void;
 };
 
-export function NutritionListHeader({ date, summary, targets, colors, onPrev, onNext }: Props) {
+export function NutritionListHeader({ date, summary, targets, colors, onPrev, onNext, onEditTargets }: Props) {
   return (
     <>
       <View style={styles.header}>
@@ -46,7 +47,7 @@ export function NutritionListHeader({ date, summary, targets, colors, onPrev, on
             <MacroRow label="Protein" value={summary.protein} target={targets.protein} unit="g" colors={colors} />
             <MacroRow label="Carbs" value={summary.carbs} target={targets.carbs} unit="g" colors={colors} />
             <MacroRow label="Fat" value={summary.fat} target={targets.fat} unit="g" colors={colors} />
-            <Text variant="caption" style={{ color: colors.primary, marginTop: 8 }} onPress={() => router.push("/nutrition/targets")} accessibilityLabel="Edit macro targets" accessibilityRole="link">
+            <Text variant="caption" style={{ color: colors.primary, marginTop: 8 }} onPress={onEditTargets} accessibilityLabel="Edit macro targets" accessibilityRole="link">
               Edit Targets →
             </Text>
             <Text variant="caption" style={{ color: colors.primary, marginTop: 4 }} onPress={() => router.push("/nutrition/templates")} accessibilityLabel="View meal templates" accessibilityRole="link">

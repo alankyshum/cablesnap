@@ -11,69 +11,42 @@ jest.mock("@react-navigation/native", () => {
   };
 });
 
-// Mock getAppSetting directly
-const mockGetAppSetting = jest.fn<Promise<string | null>, [string]>();
-jest.mock("../../lib/db", () => ({
-  getAppSetting: (...args: [string]) => mockGetAppSetting(...args),
+// Mock getBodySettings directly
+const mockGetBodySettings = jest.fn();
+jest.mock("../../lib/db/body", () => ({
+  getBodySettings: (...args: unknown[]) => mockGetBodySettings(...args),
 }));
 
 import { renderHook, waitFor } from "@testing-library/react-native";
 import { useProfileGender } from "../../lib/useProfileGender";
 
 beforeEach(() => {
-  mockGetAppSetting.mockReset();
+  mockGetBodySettings.mockReset();
 });
 
 describe("useProfileGender", () => {
-  it("defaults to male when no profile is saved", async () => {
-    mockGetAppSetting.mockResolvedValue(null);
+  it("defaults to male when body settings has default sex", async () => {
+    mockGetBodySettings.mockResolvedValue({ id: "default", weight_unit: "kg", measurement_unit: "cm", sex: "male", weight_goal: null, body_fat_goal: null, updated_at: 0 });
     const { result } = renderHook(() => useProfileGender());
-    expect(result.current).toBe("male");
     await waitFor(() => {
-      expect(mockGetAppSetting).toHaveBeenCalledWith("nutrition_profile");
+      expect(mockGetBodySettings).toHaveBeenCalled();
     });
     expect(result.current).toBe("male");
   });
 
-  it("returns male when profile sex is male", async () => {
-    mockGetAppSetting.mockResolvedValue(JSON.stringify({ sex: "male", age: 30 }));
-    const { result } = renderHook(() => useProfileGender());
-    await waitFor(() => {
-      expect(result.current).toBe("male");
-    });
-  });
-
-  it("returns female when profile sex is female", async () => {
-    mockGetAppSetting.mockResolvedValue(JSON.stringify({ sex: "female", age: 25 }));
+  it("returns female when body settings sex is female", async () => {
+    mockGetBodySettings.mockResolvedValue({ id: "default", weight_unit: "kg", measurement_unit: "cm", sex: "female", weight_goal: null, body_fat_goal: null, updated_at: 0 });
     const { result } = renderHook(() => useProfileGender());
     await waitFor(() => {
       expect(result.current).toBe("female");
     });
   });
 
-  it("defaults to male when profile has invalid JSON", async () => {
-    mockGetAppSetting.mockResolvedValue("not-json");
-    const { result } = renderHook(() => useProfileGender());
-    await waitFor(() => {
-      expect(mockGetAppSetting).toHaveBeenCalled();
-    });
-    expect(result.current).toBe("male");
-  });
-
-  it("defaults to male when profile sex field is missing", async () => {
-    mockGetAppSetting.mockResolvedValue(JSON.stringify({ age: 30 }));
-    const { result } = renderHook(() => useProfileGender());
-    await waitFor(() => {
-      expect(mockGetAppSetting).toHaveBeenCalled();
-    });
-    expect(result.current).toBe("male");
-  });
-
   it("defaults to male when DB throws an error", async () => {
-    mockGetAppSetting.mockRejectedValue(new Error("DB error"));
+    mockGetBodySettings.mockRejectedValue(new Error("DB error"));
     const { result } = renderHook(() => useProfileGender());
     await waitFor(() => {
-      expect(mockGetAppSetting).toHaveBeenCalled();
+      expect(mockGetBodySettings).toHaveBeenCalled();
     });
     expect(result.current).toBe("male");
   });

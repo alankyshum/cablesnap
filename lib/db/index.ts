@@ -121,6 +121,7 @@ export {
 export {
   getBodySettings,
   updateBodySettings,
+  updateBodySex,
   upsertBodyWeight,
   getBodyWeightEntries,
   getBodyWeightCount,

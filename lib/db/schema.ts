@@ -184,6 +184,7 @@ export const bodySettings = sqliteTable("body_settings", {
   id: text("id").primaryKey().default("default"),
   weight_unit: text("weight_unit").notNull().default("kg"),
   measurement_unit: text("measurement_unit").notNull().default("cm"),
+  sex: text("sex").notNull().default("male"),
   weight_goal: real("weight_goal"),
   body_fat_goal: real("body_fat_goal"),
   updated_at: integer("updated_at").notNull(),

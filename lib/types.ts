@@ -370,6 +370,7 @@ export type BodySettings = {
   id: string;
   weight_unit: "kg" | "lb";
   measurement_unit: "cm" | "in";
+  sex: "male" | "female";
   weight_goal: number | null;
   body_fat_goal: number | null;
   updated_at: number;

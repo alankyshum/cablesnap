@@ -417,8 +417,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "body_settings": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO body_settings (id, weight_unit, measurement_unit, weight_goal, body_fat_goal, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        [row.id, row.weight_unit, row.measurement_unit, row.weight_goal, row.body_fat_goal, row.updated_at]
+        "INSERT OR IGNORE INTO body_settings (id, weight_unit, measurement_unit, sex, weight_goal, body_fat_goal, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.weight_unit, row.measurement_unit, row.sex ?? "male", row.weight_goal, row.body_fat_goal, row.updated_at]
       );
       return r.changes > 0;
     }
