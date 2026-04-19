@@ -2,27 +2,22 @@ import * as SQLite from "expo-sqlite";
 import { seedExercises } from "../seed";
 import {
   STARTER_TEMPLATES,
-  STARTER_PROGRAM,
+  STARTER_PROGRAMS,
   STARTER_VERSION,
 } from "../starter-templates";
 
+async function countSeeded(database: SQLite.SQLiteDatabase, isVoltra: boolean): Promise<number> {
+  const result = await database.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = ${isVoltra ? 1 : 0}`
+  );
+  return result?.count ?? 0;
+}
+
 export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   const exercises = seedExercises();
-  const voltraExercises = exercises.filter(e => e.is_voltra);
-  const communityExercises = exercises.filter(e => !e.is_voltra);
-
-  const voltraResult = await database.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 1"
-  );
-  const communityResult = await database.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM exercises WHERE is_custom = 0 AND deleted_at IS NULL AND is_voltra = 0"
-  );
-
-  const needVoltra = !voltraResult || voltraResult.count === 0;
-  const needCommunity = !communityResult || communityResult.count === 0;
   const toInsert = [
-    ...(needVoltra ? voltraExercises : []),
-    ...(needCommunity ? communityExercises : []),
+    ...(await countSeeded(database, true) === 0 ? exercises.filter(e => e.is_voltra) : []),
+    ...(await countSeeded(database, false) === 0 ? exercises.filter(e => !e.is_voltra) : []),
   ];
 
   if (toInsert.length > 0) {
@@ -56,6 +51,46 @@ export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   await seedStarters(database);
 }
 
+async function upsertTemplates(database: SQLite.SQLiteDatabase): Promise<void> {
+  for (const tpl of STARTER_TEMPLATES) {
+    await database.runAsync(
+      "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, 0, 0, 1)",
+      [tpl.id, tpl.name]
+    );
+    await database.runAsync(
+      "UPDATE workout_templates SET is_starter = 1, name = ? WHERE id = ? AND (is_starter IS NULL OR is_starter = 0 OR name IS NULL OR name = '')",
+      [tpl.name, tpl.id]
+    );
+    for (let i = 0; i < tpl.exercises.length; i++) {
+      const ex = tpl.exercises[i];
+      await database.runAsync(
+        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, training_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds, ex.training_mode ?? null]
+      );
+    }
+  }
+}
+
+async function upsertPrograms(database: SQLite.SQLiteDatabase): Promise<void> {
+  for (const prog of STARTER_PROGRAMS) {
+    await database.runAsync(
+      "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, is_starter) VALUES (?, ?, ?, 0, NULL, 0, 0, 1)",
+      [prog.id, prog.name, prog.description]
+    );
+    await database.runAsync(
+        "UPDATE programs SET is_starter = 1, name = ? WHERE id = ? AND (is_starter IS NULL OR is_starter = 0 OR name IS NULL OR name = '')",
+      [prog.name, prog.id]
+    );
+    for (let i = 0; i < prog.days.length; i++) {
+      const day = prog.days[i];
+      await database.runAsync(
+        "INSERT OR IGNORE INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
+        [day.id, prog.id, day.template_id, i, day.label]
+      );
+    }
+  }
+}
+
 async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
   const row = await database.getFirstAsync<{ value: string }>(
     "SELECT value FROM app_settings WHERE key = 'starter_version'"
@@ -72,67 +107,14 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
   // then UPDATE to fix corrupted columns on existing rows.
   // This covers: workout_templates, template_exercises, programs, program_days.
   // See BLD-174, BLD-187, BLD-255 for the history of this recurring regression.
-  for (const tpl of STARTER_TEMPLATES) {
-    await database.runAsync(
-      "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, 0, 0, 1)",
-      [tpl.id, tpl.name]
-    );
-    await database.runAsync(
-      "UPDATE workout_templates SET is_starter = 1, name = ? WHERE id = ? AND (is_starter IS NULL OR is_starter = 0 OR name IS NULL OR name = '')",
-      [tpl.name, tpl.id]
-    );
-    for (let i = 0; i < tpl.exercises.length; i++) {
-      const ex = tpl.exercises[i];
-      await database.runAsync(
-        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds]
-      );
-    }
-  }
-  await database.runAsync(
-    "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, is_starter) VALUES (?, ?, ?, 0, NULL, 0, 0, 1)",
-    [STARTER_PROGRAM.id, STARTER_PROGRAM.name, STARTER_PROGRAM.description]
-  );
-  await database.runAsync(
-      "UPDATE programs SET is_starter = 1, name = ? WHERE id = ? AND (is_starter IS NULL OR is_starter = 0 OR name IS NULL OR name = '')",
-    [STARTER_PROGRAM.name, STARTER_PROGRAM.id]
-  );
-  for (let i = 0; i < STARTER_PROGRAM.days.length; i++) {
-    const day = STARTER_PROGRAM.days[i];
-    await database.runAsync(
-      "INSERT OR IGNORE INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
-      [day.id, STARTER_PROGRAM.id, day.template_id, i, day.label]
-    );
-  }
+  await upsertTemplates(database);
+  await upsertPrograms(database);
 
   if (row && Number(row.value) >= STARTER_VERSION) return;
 
   await database.withTransactionAsync(async () => {
-    for (const tpl of STARTER_TEMPLATES) {
-      await database.runAsync(
-        "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, 0, 0, 1)",
-        [tpl.id, tpl.name]
-      );
-      for (let i = 0; i < tpl.exercises.length; i++) {
-        const ex = tpl.exercises[i];
-        await database.runAsync(
-          "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds]
-        );
-      }
-    }
-
-    await database.runAsync(
-      "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, is_starter) VALUES (?, ?, ?, 0, NULL, 0, 0, 1)",
-      [STARTER_PROGRAM.id, STARTER_PROGRAM.name, STARTER_PROGRAM.description]
-    );
-    for (let i = 0; i < STARTER_PROGRAM.days.length; i++) {
-      const day = STARTER_PROGRAM.days[i];
-      await database.runAsync(
-        "INSERT OR IGNORE INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
-        [day.id, STARTER_PROGRAM.id, day.template_id, i, day.label]
-      );
-    }
+    await upsertTemplates(database);
+    await upsertPrograms(database);
 
     await database.runAsync(
       "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('starter_version', ?)",

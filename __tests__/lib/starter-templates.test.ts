@@ -1,10 +1,10 @@
-import { STARTER_TEMPLATES, STARTER_PROGRAM, STARTER_VERSION } from "../../lib/starter-templates";
+import { STARTER_TEMPLATES, STARTER_PROGRAMS, STARTER_VERSION } from "../../lib/starter-templates";
 import { DIFFICULTY_LABELS } from "../../lib/types";
 import { seedExercises } from "../../lib/seed";
 
 describe("starter-templates data", () => {
-  it("has at least 6 starter templates", () => {
-    expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(6);
+  it("has at least 8 starter templates", () => {
+    expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(8);
   });
 
   it("has unique template IDs", () => {
@@ -30,10 +30,10 @@ describe("starter-templates data", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("all exercise_ids reference voltra exercises", () => {
+  it("all exercise_ids reference known exercises", () => {
     for (const tpl of STARTER_TEMPLATES) {
       for (const ex of tpl.exercises) {
-        expect(ex.exercise_id).toMatch(/^voltra-\d{3}$/);
+        expect(ex.exercise_id).toMatch(/^(voltra-\d{3}|mw-bw-\d{3}|mw-bb-\d{3})$/);
       }
     }
   });
@@ -67,7 +67,7 @@ describe("starter-templates data", () => {
     for (const tpl of STARTER_TEMPLATES) {
       for (const ex of tpl.exercises) {
         expect(ex.target_sets).toBeGreaterThanOrEqual(1);
-        expect(ex.target_reps).toMatch(/^\d+(-\d+)?$/);
+        expect(ex.target_reps).toMatch(/^\d+(-\d+)?(, \d+(-\d+)?)?$/);
         expect(ex.rest_seconds).toBeGreaterThan(0);
       }
     }
@@ -80,38 +80,53 @@ describe("starter-templates data", () => {
 });
 
 describe("starter program data", () => {
-  it("has a valid program", () => {
-    expect(STARTER_PROGRAM.id).toBe("starter-prog-1");
-    expect(STARTER_PROGRAM.name).toBeTruthy();
-    expect(STARTER_PROGRAM.description).toBeTruthy();
+  it("has at least 2 programs", () => {
+    expect(STARTER_PROGRAMS.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("has 3 days", () => {
-    expect(STARTER_PROGRAM.days).toHaveLength(3);
+  it("each program has valid fields", () => {
+    for (const prog of STARTER_PROGRAMS) {
+      expect(prog.id).toBeTruthy();
+      expect(prog.name).toBeTruthy();
+      expect(prog.description).toBeTruthy();
+      expect(prog.days.length).toBeGreaterThan(0);
+    }
   });
 
   it("each day references a valid starter template", () => {
     const tplIds = new Set(STARTER_TEMPLATES.map((t) => t.id));
-    for (const day of STARTER_PROGRAM.days) {
-      expect(tplIds.has(day.template_id)).toBe(true);
+    for (const prog of STARTER_PROGRAMS) {
+      for (const day of prog.days) {
+        expect(tplIds.has(day.template_id)).toBe(true);
+      }
     }
   });
 
-  it("days have unique IDs", () => {
-    const ids = STARTER_PROGRAM.days.map((d) => d.id);
+  it("days have unique IDs across all programs", () => {
+    const ids = STARTER_PROGRAMS.flatMap((p) => p.days.map((d) => d.id));
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("days have labels", () => {
-    for (const day of STARTER_PROGRAM.days) {
-      expect(day.label).toBeTruthy();
+    for (const prog of STARTER_PROGRAMS) {
+      for (const day of prog.days) {
+        expect(day.label).toBeTruthy();
+      }
     }
   });
 
   it("PPL program references Push, Pull, Legs templates", () => {
-    expect(STARTER_PROGRAM.days[0].template_id).toBe("starter-tpl-2");
-    expect(STARTER_PROGRAM.days[1].template_id).toBe("starter-tpl-3");
-    expect(STARTER_PROGRAM.days[2].template_id).toBe("starter-tpl-4");
+    const ppl = STARTER_PROGRAMS.find((p) => p.id === "starter-prog-1")!;
+    expect(ppl.days[0].template_id).toBe("starter-tpl-2");
+    expect(ppl.days[1].template_id).toBe("starter-tpl-3");
+    expect(ppl.days[2].template_id).toBe("starter-tpl-4");
+  });
+
+  it("Founder's Favourite program has 2 alternating days", () => {
+    const ff = STARTER_PROGRAMS.find((p) => p.id === "starter-prog-2")!;
+    expect(ff.days).toHaveLength(2);
+    expect(ff.days[0].template_id).toBe("starter-tpl-7a");
+    expect(ff.days[1].template_id).toBe("starter-tpl-7b");
   });
 });
 
@@ -146,11 +161,14 @@ describe("starter template exercise references (BLD-255 regression)", () => {
     }
   });
 
-  it("Founder's Favourite template has exercises and metadata", () => {
-    const founders = STARTER_TEMPLATES.find((t) => t.name === "Founder's Favourite");
-    expect(founders).toBeDefined();
-    expect(founders!.exercises.length).toBeGreaterThanOrEqual(5);
-    expect(founders!.difficulty).toBe("advanced");
-    expect(founders!.duration).toBeTruthy();
+  it("Founder's Favourite templates have exercises and metadata", () => {
+    const dayA = STARTER_TEMPLATES.find((t) => t.id === "starter-tpl-7a");
+    const dayB = STARTER_TEMPLATES.find((t) => t.id === "starter-tpl-7b");
+    expect(dayA).toBeDefined();
+    expect(dayB).toBeDefined();
+    expect(dayA!.exercises).toHaveLength(5);
+    expect(dayB!.exercises).toHaveLength(5);
+    expect(dayA!.difficulty).toBe("advanced");
+    expect(dayB!.difficulty).toBe("advanced");
   });
 });
