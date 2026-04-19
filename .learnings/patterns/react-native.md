@@ -681,3 +681,27 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: Implementing persistence write + clear without a corresponding read/restore on initialization is a common incomplete-persistence bug. It passes all happy-path tests (start → stop → cleared) but fails the crash-recovery scenario. The write path creates a false sense of durability. The missing piece is always the mount-time restoration: read persisted state, validate it (check staleness), and resume or discard.
 **Action**: When implementing persistence for transient state (timers, in-progress forms, unsaved drafts), always implement three operations together: (1) write on state change, (2) clear on completion, (3) read + restore on mount/init. Add a test that simulates process kill by verifying the hook initializes correctly from pre-seeded persisted data.
 **Tags**: persistence, crash-recovery, securestore, asyncstorage, timer, incomplete-implementation, testing, react-native
+
+### React Compiler: Ref Writes During Render Are Real Bugs
+**Source**: BLD-379 — Fix all 22 lint errors
+**Date**: 2026-04-19
+**Context**: Two components wrote to refs directly during render — `session/summary/[id].tsx` synced rating/notes by assigning `sessionRef.current` inline, and `useFormFields.ts` updated `validateRef.current` at the top level of the hook body. The React Compiler `react-hooks/refs` rule flagged both.
+**Learning**: Writing to a ref during render (outside useEffect/useCallback) is not just a lint style issue — it breaks React Compiler optimization and can cause bugs under concurrent rendering. The fix is to wrap the ref write in a `useEffect`. For the "sync ref to latest prop" pattern (e.g., `validateRef.current = options.validate`), use a bare `useEffect(() => { ref.current = value; })` with no dependency array.
+**Action**: Never assign to `ref.current` directly in a component or hook body. Always wrap ref writes in `useEffect`. When reviewing code with refs, check that ALL assignments to `.current` are inside `useEffect`, `useCallback`, or event handlers — never at render scope.
+**Tags**: react-compiler, refs, useeffect, render-purity, concurrent-rendering, lint, react-hooks
+
+### React Compiler: Hoist Impure Calls Out of Render Loops
+**Source**: BLD-379 — Fix all 22 lint errors
+**Date**: 2026-04-19
+**Context**: `CalendarGrid.tsx` called `Date.now()` inside the cell-mapping loop during render. The React Compiler `react-hooks/purity` rule flagged this as an impure function call during render — each render invocation could produce different results.
+**Learning**: `Date.now()`, `Math.random()`, and other non-deterministic calls during render violate React's purity contract. The React Compiler cannot safely memoize components that contain these calls. The fix is to capture the value once before the render logic (e.g., `const now = today.getTime()`) and reference the captured value in loops and conditionals.
+**Action**: Before any render-time loop or conditional that references time, random values, or other non-deterministic sources, capture the value in a `const` at the top of the component/function. Search for `Date.now()`, `new Date()`, and `Math.random()` at render scope during code review.
+**Tags**: react-compiler, purity, render, date-now, memoization, performance, lint, react-hooks
+
+### React Compiler: Extract Optional Chaining from useMemo Deps
+**Source**: BLD-379 — Fix all 22 lint errors
+**Date**: 2026-04-19
+**Context**: `session/summary/[id].tsx` had `useMemo(() => ..., [session?.started_at])` — the React Compiler's `react-hooks/preserve-manual-memoization` rule could not preserve this memoization because the dependency uses optional chaining.
+**Learning**: React Compiler cannot track optional chaining expressions (`a?.b`) in `useMemo`/`useCallback` dependency arrays for memoization preservation. The fix is to extract the chained value to a local variable (`const x = a?.b`) and use that variable in the dependency array. This gives the compiler a stable reference to track.
+**Action**: When useMemo or useCallback depends on an optionally-chained property, extract it to a `const` above the hook call and use the extracted variable in the deps array. Pattern: `const val = obj?.prop; useMemo(() => ..., [val])`.
+**Tags**: react-compiler, usememo, usecallback, optional-chaining, dependency-array, memoization, lint

@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 162
+Total learnings: 166
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 80 learnings
+- [React Native + Expo](patterns/react-native.md) — 83 learnings
 - [Testing](patterns/testing.md) — 11 learnings
 
 ### Pitfalls
@@ -26,7 +26,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 9 learnings
-- [PR Workflow](process/pr-workflow.md) — 2 learnings
+- [PR Workflow](process/pr-workflow.md) — 3 learnings
 
 ### Decisions
 - [Architecture](decisions/architecture.md) — 6 learnings
@@ -57,6 +57,10 @@ Before starting work on a task, search this index for relevant learnings:
 | 2026-04-19 | BLD-351 | full_body Exercises Break Per-Muscle-Group Analysis — Filter Them Out | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-19 | BLD-348 | Add Callback Props to Replace router.push When Embedding Screen Components in Sheets | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-348 | Bottom Sheet Mutual Exclusion — Close Before Open | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | React Compiler: Ref Writes During Render Are Real Bugs | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | React Compiler: Hoist Impure Calls Out of Render Loops | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | React Compiler: Extract Optional Chaining from useMemo Deps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-379 | Automated Reviewer Scans Entire Repo, Not PR Diff | Process | [pr-workflow.md](process/pr-workflow.md) |
 | 2026-04-19 | BLD-346 | Swipe Gestures Need Relative Thresholds and Discoverability Hints | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-341 | expo-localization firstWeekday Is 1-Indexed — Not JS Convention | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-339 | Avoid Hidden Re-Queries in Composed Data-Layer Functions | Patterns | [react-native.md](patterns/react-native.md) |
