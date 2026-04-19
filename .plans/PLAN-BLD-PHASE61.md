@@ -135,7 +135,20 @@ Test count is **1794/1800** — 6 slots remaining.
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED** — Reviewed 2026-04-19T23:42:00Z
+
+**Regression Risk: LOW** — Purely additive, display-only. No DB changes, no mutations. PlateHint is a leaf component. Removing it fully reverts the feature.
+
+**Cognitive Load: REDUCES COMPLEXITY** — Textbook cognitive load reducer. Eliminates 10-15 mental math calculations per workout. Zero new decisions for users. "Per side: 20 + 15 + 5 + 1.25" passes the 3-second tired-gym-goer test.
+
+**FACTUAL CORRECTION (confirmed by TL):** `ExerciseGroup` does NOT have `equipment` field. Must be added and threaded through `useSessionData` → `ExerciseGroupCard` → `SetRow` → `PlateHint`.
+
+**Minor recommendations (non-blocking):**
+1. Ensure caption font size ≥12px (SKILL A11Y-03)
+2. Wrap PlateHint in `React.memo()` explicitly
+3. `accessibilityLabel` should spell out "kilograms"/"pounds" (not abbreviations)
+
+**Security:** No concerns. **Accessibility:** Adequate. **Data integrity:** No risks. **SKILL alignment:** Clean.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — Reviewed 2026-04-19
