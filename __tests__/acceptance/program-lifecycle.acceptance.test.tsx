@@ -58,8 +58,11 @@ jest.mock('../../lib/db', () => ({
   getRecentPRs: (...args: unknown[]) => mockGetRecentPRs(...args),
   getRecentSessions: (...args: unknown[]) => mockGetRecentSessions(...args),
   getSessionAvgRPE: (...args: unknown[]) => mockGetSessionAvgRPE(...args),
+  getSessionAvgRPEs: jest.fn().mockResolvedValue({}),
   getSessionSetCount: (...args: unknown[]) => mockGetSessionSetCount(...args),
+  getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getTemplateExerciseCount: (...args: unknown[]) => mockGetTemplateExerciseCount(...args),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
   startSession: (...args: unknown[]) => mockStartSession(...args),
   getTodaySchedule: (...args: unknown[]) => mockGetTodaySchedule(...args),
   isTodayCompleted: (...args: unknown[]) => mockIsTodayCompleted(...args),
@@ -78,6 +81,7 @@ jest.mock('../../lib/programs', () => ({
   getNextWorkout: (...args: unknown[]) => mockGetNextWorkout(...args),
   getPrograms: (...args: unknown[]) => mockGetProgramsFromLib(...args),
   getProgramDayCount: (...args: unknown[]) => mockGetProgramDayCountFromLib(...args),
+  getProgramDayCounts: jest.fn().mockResolvedValue({}),
   softDeleteProgram: (...args: unknown[]) => mockSoftDeleteProgram(...args),
 }))
 

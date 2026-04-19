@@ -53,8 +53,11 @@ jest.mock('../../lib/db', () => ({
   getRecentPRs: jest.fn().mockResolvedValue([]),
   getRecentSessions: jest.fn().mockResolvedValue([]),
   getSessionAvgRPE: jest.fn().mockResolvedValue(null),
+  getSessionAvgRPEs: jest.fn().mockResolvedValue({}),
   getSessionSetCount: jest.fn().mockResolvedValue(0),
+  getSessionSetCounts: jest.fn().mockResolvedValue({}),
   getTemplateExerciseCount: jest.fn().mockResolvedValue(0),
+  getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
   startSession: jest.fn().mockResolvedValue({ id: 'qs-1', template_id: 't1', name: 'Test', started_at: Date.now(), sets: [] }),
   getTodaySchedule: jest.fn().mockResolvedValue(null),
   isTodayCompleted: jest.fn().mockResolvedValue(false),
@@ -68,6 +71,7 @@ jest.mock('../../lib/programs', () => ({
   getNextWorkout: jest.fn().mockResolvedValue(null),
   getPrograms: (...args: unknown[]) => mockGetPrograms(...args),
   getProgramDayCount: jest.fn().mockResolvedValue(3),
+  getProgramDayCounts: jest.fn().mockResolvedValue({}),
   softDeleteProgram: jest.fn().mockResolvedValue(undefined),
 }))
 
