@@ -27,6 +27,7 @@ export {
   updateTemplateExercise,
   getTemplateExerciseCount,
   getTemplateExerciseCounts,
+  getTemplatePrimaryMuscles,
   createExerciseLink,
   unlinkExerciseGroup,
   addToExerciseLink,

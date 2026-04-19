@@ -12,12 +12,13 @@ import {
   getAllCompletedSessionWeeks, getRecentPRs, getRecentSessions,
   getSessionAvgRPEs, getSessionSetCounts, getTemplateExerciseCounts,
   getTemplates, getTodaySchedule, getWeekAdherence, isTodayCompleted, startSession,
-  getMuscleRecoveryStatus,
+  getMuscleRecoveryStatus, getTemplatePrimaryMuscles,
 } from "../../lib/db";
 import type { Program, WorkoutTemplate } from "../../lib/types";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { computeStreak } from "../../lib/format";
 import { FlowCard, difficultyBadge, type MetaBadge } from "../../components/FlowCard";
+import { computeAllTemplateReadiness, hasWorkoutHistory, type TemplateReadiness } from "../../lib/recovery-readiness";
 import { useFocusRefetch, bumpQueryVersion } from "../../lib/query";
 import { useToast } from "../../components/ui/bna-toast";
 import { useLayout } from "../../lib/layout";
@@ -34,14 +35,17 @@ async function loadHomeData() {
     getTemplates(), getRecentSessions(5), getActiveSession(), getAllCompletedSessionWeeks(),
     getRecentPRs(5), getPrograms(), getNextWorkout(), getTodaySchedule(), isTodayCompleted(), getWeekAdherence(),
   ]);
-  const [counts, setCounts, avgRPEs, dayCounts] = await Promise.all([
+  const [counts, setCounts, avgRPEs, dayCounts, templateMuscles] = await Promise.all([
     getTemplateExerciseCounts(tpls.map((t) => t.id)),
     getSessionSetCounts(sess.map((s) => s.id)),
     getSessionAvgRPEs(sess.map((s) => s.id)),
     getProgramDayCounts(progs.map((p) => p.id)),
+    getTemplatePrimaryMuscles(tpls.map((t) => t.id)),
   ]);
   const recoveryStatus = await getMuscleRecoveryStatus();
-  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus };
+  const templateReadiness = computeAllTemplateReadiness(templateMuscles, recoveryStatus);
+  const showReadiness = hasWorkoutHistory(recoveryStatus);
+  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness };
 }
 
 // eslint-disable-next-line complexity
@@ -73,6 +77,8 @@ export default function Workouts() {
   const todayDone = data?.todayDone ?? false;
   const adherence = useMemo(() => data?.adherence ?? [], [data?.adherence]);
   const recoveryStatus = data?.recoveryStatus ?? [];
+  const templateReadiness = data?.templateReadiness ?? {};
+  const showReadiness = data?.showReadiness ?? false;
 
   const reload = useCallback(() => queryClient.invalidateQueries({ queryKey: ["home"] }), [queryClient]);
   const starterMeta = useCallback((id: string) => STARTER_TEMPLATES.find((s) => s.id === id), []);
@@ -140,7 +146,7 @@ export default function Workouts() {
       <SegmentedControl value={segment} onValueChange={(v) => setUserSegment(v)} buttons={[{ value: "templates", label: "Templates", accessibilityLabel: "Templates tab" }, { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" }]} style={styles.segmented} />
 
       {segment === "templates" ? (
-        <TemplatesList colors={colors} templates={allTemplates} counts={counts} starterMeta={starterMeta} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} />
+        <TemplatesList colors={colors} templates={allTemplates} counts={counts} starterMeta={starterMeta} templateReadiness={templateReadiness} showReadiness={showReadiness} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} />
       ) : (
         <ProgramsList colors={colors} programs={allPrograms} dayCounts={dayCounts} onPress={(id) => router.push(`/program/${id}`)} onDelete={confirmDeleteProgram} onOptions={showProgramOptions} />
       )}
@@ -152,9 +158,10 @@ export default function Workouts() {
 
 /* ── Inline sub-components ── */
 
-function TemplatesList({ colors, templates, counts, starterMeta, onStart, onDelete, onOptions, onEdit }: {
+function TemplatesList({ colors, templates, counts, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit }: {
   colors: ReturnType<typeof useThemeColors>; templates: WorkoutTemplate[]; counts: Record<string, number>;
   starterMeta: (id: string) => (typeof STARTER_TEMPLATES)[number] | undefined;
+  templateReadiness: Record<string, TemplateReadiness>; showReadiness: boolean;
   onStart: (t: WorkoutTemplate) => void; onDelete: (t: WorkoutTemplate) => void; onOptions: (t: WorkoutTemplate) => void; onEdit: (id: string) => void;
 }) {
   const router = useRouter();
@@ -179,12 +186,14 @@ function TemplatesList({ colors, templates, counts, starterMeta, onStart, onDele
           if (isStarter) metaBadges.push({ icon: "star-outline", label: "Starter" });
           const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
           if (meta?.recommended) badges.push({ label: "RECOMMENDED", type: "recommended" });
+          const readiness = !isStarter && showReadiness ? (templateReadiness[item.id]?.badge ?? null) : null;
+          const displayName = meta?.name || item.name;
           return (
-            <FlowCard key={item.id} name={meta?.name || item.name} onPress={() => onStart(item)} onLongPress={!isStarter ? () => onDelete(item) : undefined}
-              accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${meta?.name || item.name}, ${counts[item.id] ?? 0} exercises`}
-              accessibilityHint={isStarter ? "Double-tap to start workout" : undefined} badges={badges} meta={metaBadges}
+            <FlowCard key={item.id} name={displayName} onPress={() => onStart(item)} onLongPress={!isStarter ? () => onDelete(item) : undefined}
+              accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${displayName}, ${counts[item.id] ?? 0} exercises`}
+              accessibilityHint={isStarter ? "Double-tap to start workout" : undefined} badges={badges} readiness={readiness} meta={metaBadges}
               action={isStarter
-                ? <Pressable onPress={() => onOptions(item)} accessibilityLabel={`Options for ${meta?.name || item.name}`} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="dots-vertical" size={20} color={colors.onSurfaceVariant} /></Pressable>
+                ? <Pressable onPress={() => onOptions(item)} accessibilityLabel={`Options for ${displayName}`} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="dots-vertical" size={20} color={colors.onSurfaceVariant} /></Pressable>
                 : <Pressable onPress={() => onEdit(item.id)} accessibilityLabel={`Edit template ${item.name}`} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="pencil" size={20} color={colors.onSurfaceVariant} /></Pressable>
               } />
           );
