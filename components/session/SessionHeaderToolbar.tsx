@@ -6,7 +6,6 @@ import {
   Switch,
   View,
 } from "react-native";
-import type { ViewStyle } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
@@ -29,7 +28,6 @@ type Props = {
   onStartRest: (duration: number) => void;
   onDismissRest: () => void;
   onOpenToolbox: () => void;
-  restFlashStyle?: ViewStyle;
   pickerRequested?: boolean;
   onPickerDismissed?: () => void;
 };
@@ -152,7 +150,7 @@ function SessionHeaderToolbarInner({
             <Text
               variant="body"
               style={{
-                color: showRestDone ? colors.primary : colors.primary,
+                color: colors.primary,
                 fontWeight: "700",
                 fontSize: 16,
               }}
@@ -169,7 +167,7 @@ function SessionHeaderToolbarInner({
           onPress={handleElapsedTap}
           onLongPress={handleLongPress}
           delayLongPress={400}
-          disabled={false}
+          disabled={isRestActive}
           accessibilityLabel={
             isRestActive
               ? `Elapsed time: ${formatTime(elapsed)}`
@@ -248,7 +246,7 @@ function RestDurationPicker({
     >
       <Pressable style={styles.modalOverlay} onPress={onDismiss} accessibilityLabel="Dismiss rest settings" accessibilityRole="button">
         <Pressable
-          style={[styles.pickerContainer, { backgroundColor: colors.surface }]}
+          style={[styles.pickerContainer, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
           onPress={(e) => e.stopPropagation()}
           accessibilityRole="none"
         >
@@ -338,7 +336,6 @@ const styles = StyleSheet.create({
     minWidth: 280,
     maxWidth: 340,
     elevation: 8,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,

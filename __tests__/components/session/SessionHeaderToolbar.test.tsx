@@ -20,6 +20,7 @@ jest.mock("@/hooks/useThemeColors", () => ({
     onSurfaceVariant: "#49454f",
     surface: "#fffbfe",
     surfaceVariant: "#e7e0ec",
+    shadow: "#000000",
     background: "#fffbfe",
   }),
 }));
