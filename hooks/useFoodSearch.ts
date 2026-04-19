@@ -90,7 +90,7 @@ export function useFoodSearch(scanOnMount?: boolean) {
           }
         } else {
           setOnlineResults([]);
-          setOnlineError(result.error === "timeout" ? "Search timed out. Try again." : "Could not reach food database.");
+          setOnlineError(result.error === "timeout" ? "Search timed out. Try again." : "Could not reach food database. Check your connection.");
         }
       });
     }, 400);
@@ -157,6 +157,29 @@ export function useFoodSearch(scanOnMount?: boolean) {
     if (barcodeAbortRef.current) barcodeAbortRef.current.abort();
   }, []);
 
+  const retrySearch = useCallback(() => {
+    const trimmed = query.trim();
+    if (trimmed && trimmed.length >= 2) {
+      cacheRef.current.delete(trimmed.toLowerCase());
+      setOnlineError(null);
+      setOnlineLoading(true);
+      const controller = new AbortController();
+      if (abortRef.current) abortRef.current.abort();
+      abortRef.current = controller;
+      fetchWithTimeout(trimmed, controller.signal).then((result) => {
+        if (controller.signal.aborted) return;
+        setOnlineLoading(false);
+        if (result.ok) {
+          setOnlineResults(result.foods);
+          cacheRef.current.set(trimmed.toLowerCase(), result.foods);
+        } else {
+          setOnlineResults([]);
+          setOnlineError(result.error === "timeout" ? "Search timed out. Try again." : "Could not reach food database. Check your connection.");
+        }
+      });
+    }
+  }, [query]);
+
   return {
     query, setQuery,
     favorites, setFavorites,
@@ -165,5 +188,6 @@ export function useFoodSearch(scanOnMount?: boolean) {
     combinedResults,
     scannerVisible, barcodeLoading, barcodeError, scannedProductName,
     handleBarcodeScanned, openScanner, closeScanner,
+    retrySearch,
   };
 }

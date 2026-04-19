@@ -83,6 +83,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack, scanO
     localResults, onlineResults, onlineLoading, onlineError, combinedResults,
     scannerVisible, barcodeLoading, barcodeError, scannedProductName,
     handleBarcodeScanned, openScanner, closeScanner,
+    retrySearch,
   } = useFoodSearch(scanOnMount);
 
   const clearExpand = useCallback(() => setExpandedKey(null), []);
@@ -232,7 +233,10 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack, scanO
             <View style={{ marginVertical: 8 }} accessibilityLabel="Searching online..."><Spinner size="sm" /></View>
           )}
           {onlineError && (
-            <Text variant="caption" style={{ color: colors.error, marginBottom: 4 }}>{onlineError}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+              <Text variant="caption" style={{ color: colors.error, flex: 1 }}>{onlineError}</Text>
+              <Button variant="ghost" onPress={retrySearch} accessibilityLabel="Retry search">Retry</Button>
+            </View>
           )}
           {showEmptyMessage && (
             <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 8 }}>

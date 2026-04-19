@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { LayoutAnimation, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
+import { SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
-import { FAB } from "@/components/ui/fab";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/bna-toast";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import InlineFoodSearch from "../../components/InlineFoodSearch";
 import SaveAsTemplateSheet from "../../components/SaveAsTemplateSheet";
@@ -19,7 +19,6 @@ import {
 import type { DailyLog, MacroTargets, Meal } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 import { semantic } from "../../constants/theme";
-import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { todayKey, formatDateKey } from "../../lib/format";
 import SwipeToDelete from "../../components/SwipeToDelete";
@@ -39,7 +38,6 @@ function label(d: Date): string {
 
 export default function Nutrition() {
   const colors = useThemeColors();
-  const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
   const [date, setDate] = useState(new Date());
   const [logs, setLogs] = useState<DailyLog[]>([]);
@@ -47,12 +45,12 @@ export default function Nutrition() {
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const { info } = useToast();
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
-  const [showAddCard, setShowAddCard] = useState(false);
+  const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [templateSheet, setTemplateSheet] = useState<{ visible: boolean; meal: Meal; items: DailyLog[] }>({
     visible: false, meal: "breakfast", items: [],
   });
-  const { scan } = useLocalSearchParams<{ scan?: string }>();
-  const shouldScan = scan === "true";
+  const { add } = useLocalSearchParams<{ add?: string }>();
+  const shouldAdd = add === "true";
 
   const load = useCallback(async () => {
     const ds = formatDateKey(date.getTime());
@@ -69,15 +67,15 @@ export default function Nutrition() {
   useFocusEffect(
     useCallback(() => {
       load();
-      if (shouldScan) {
-        setShowAddCard(true);
-        router.setParams({ scan: undefined });
+      if (shouldAdd) {
+        setAddSheetVisible(true);
+        router.setParams({ add: undefined });
       }
-    }, [load, shouldScan])
+    }, [load, shouldAdd])
   );
 
-  const prev = () => { setDate((d) => new Date(d.getTime() - DAY_MS)); setShowAddCard(false); };
-  const next = () => { setDate((d) => new Date(d.getTime() + DAY_MS)); setShowAddCard(false); };
+  const prev = () => { setDate((d) => new Date(d.getTime() - DAY_MS)); };
+  const next = () => { setDate((d) => new Date(d.getTime() + DAY_MS)); };
 
   const remove = async (log: DailyLog) => {
     if (deleted.current) clearTimeout(deleted.current.timer);
@@ -170,11 +168,6 @@ export default function Nutrition() {
     />
   );
 
-  const toggleAddCard = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setShowAddCard((v) => !v);
-  }, []);
-
   const handleFoodLogged = useCallback(() => {
     load();
   }, [load]);
@@ -192,53 +185,22 @@ export default function Nutrition() {
     });
   }, [info, undo]);
 
-  if (layout.atLeastMedium) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
-        <View style={styles.wideRow}>
-          <View style={styles.wideLog}>{logContent}</View>
-          <View style={[styles.wideAdd, { borderLeftColor: colors.outlineVariant }]}>
-            <InlineFoodSearch
-              dateKey={formatDateKey(date.getTime())}
-              onFoodLogged={handleFoodLogged}
-              onSnack={handleSnack}
-              scanOnMount={shouldScan}
-            />
-          </View>
-        </View>
-        <SaveAsTemplateSheet
-          visible={templateSheet.visible}
-          onClose={() => setTemplateSheet((s) => ({ ...s, visible: false }))}
-          meal={templateSheet.meal}
-          items={templateSheet.items}
-          onSaved={load}
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {logContent}
 
-      {showAddCard && (
-        <View style={styles.inlineCardOverlay}>
-          <InlineFoodSearch
-            dateKey={formatDateKey(date.getTime())}
-            onFoodLogged={handleFoodLogged}
-            onSnack={handleSnack}
-            scanOnMount={shouldScan}
-          />
-        </View>
-      )}
-
-      <FAB
-        icon={showAddCard ? "close" : "plus"}
-        style={[styles.fab, { backgroundColor: colors.primary }]}
-        color={colors.onPrimary}
-        onPress={toggleAddCard}
-        accessibilityLabel={showAddCard ? "Close add food" : "Add food"}
-      />
+      <BottomSheet
+        isVisible={addSheetVisible}
+        onClose={() => setAddSheetVisible(false)}
+        snapPoints={[0.7, 0.9]}
+        title="Add Food"
+      >
+        <InlineFoodSearch
+          dateKey={formatDateKey(date.getTime())}
+          onFoodLogged={handleFoodLogged}
+          onSnack={handleSnack}
+        />
+      </BottomSheet>
       <SaveAsTemplateSheet
         visible={templateSheet.visible}
         onClose={() => setTemplateSheet((s) => ({ ...s, visible: false }))}
@@ -367,12 +329,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 16 },
   foodCard: { marginBottom: 6, borderRadius: 8 },
   foodRow: { flexDirection: "row", alignItems: "center" },
-  fab: { position: "absolute", right: 16, bottom: 16 },
-  inlineCardOverlay: { position: "absolute", left: 0, right: 0, bottom: 80, zIndex: 1 },
   macro: { marginBottom: 8 },
   macroHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   bar: { height: 6, borderRadius: radii.sm },
-  wideRow: { flex: 1, flexDirection: "row" },
-  wideLog: { flex: 6 },
-  wideAdd: { flex: 4, borderLeftWidth: StyleSheet.hairlineWidth },
 });

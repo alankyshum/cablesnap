@@ -38,28 +38,28 @@ jest.mock('../../lib/db/body', () => ({
   getLatestBodyWeight: jest.fn().mockResolvedValue({ weight: 75 }),
 }))
 
-describe('Issue 1: Barcode scanner header icon', () => {
-  it('nutrition tab _layout.tsx includes barcode-scan icon config', () => {
+describe('Issue 1: Add food header button', () => {
+  it('nutrition tab _layout.tsx includes plus icon for adding food', () => {
     const fs = require('fs')
     const path = require('path')
     const source = fs.readFileSync(
       path.resolve(__dirname, '../../app/(tabs)/_layout.tsx'),
       'utf8'
     )
-    expect(source).toContain('barcode-scan')
-    expect(source).toContain('/nutrition?scan=true')
-    expect(source).toContain('Scan food barcode')
+    expect(source).toContain('plus')
+    expect(source).toContain('add')
+    expect(source).toContain('Add food')
   })
 
-  it('nutrition tab reads scan param and passes scanOnMount to InlineFoodSearch', () => {
+  it('nutrition tab reads add param and opens bottom sheet', () => {
     const fs = require('fs')
     const path = require('path')
     const source = fs.readFileSync(
       path.resolve(__dirname, '../../app/(tabs)/nutrition.tsx'),
       'utf8'
     )
-    expect(source).toContain('scan')
-    expect(source).toContain('scanOnMount')
+    expect(source).toContain('add')
+    expect(source).toContain('BottomSheet')
   })
 })
 

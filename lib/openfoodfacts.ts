@@ -5,12 +5,12 @@
  */
 
 const BASE_URL =
-  "https://world.openfoodfacts.org/cgi/search.pl";
+  "https://world.openfoodfacts.org/api/v2/search";
 const BARCODE_BASE_URL =
   "https://world.openfoodfacts.org/api/v2/product";
 const USER_AGENT =
   "FitForge/0.6.0 (https://github.com/alankyshum/fitforge)";
-const TIMEOUT_MS = 5000;
+const TIMEOUT_MS = 10000;
 const PAGE_SIZE = 20;
 const FIELDS =
   "product_name,brands,nutriments,serving_size,serving_quantity";
@@ -184,9 +184,6 @@ export async function searchOnlineFoods(
 ): Promise<SearchResult> {
   const url = `${BASE_URL}?${new URLSearchParams({
     search_terms: query,
-    search_simple: "1",
-    action: "process",
-    json: "1",
     page_size: String(PAGE_SIZE),
     fields: FIELDS,
   })}`;
