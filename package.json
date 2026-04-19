@@ -1,6 +1,6 @@
 {
   "name": "fitforge",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
