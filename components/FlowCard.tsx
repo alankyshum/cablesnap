@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, View, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, View, type ViewStyle, type GestureResponderEvent } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Card } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -26,12 +26,22 @@ export function FlowCard({ name, onPress, onLongPress, accessibilityLabel, badge
   const colors = useThemeColors();
   const isDark = useColorScheme() === "dark";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
   const hasMenu = menuItems && menuItems.length > 0;
+
+  const handleLongPress = (e: GestureResponderEvent) => {
+    if (hasMenu) {
+      setMenuPos({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+      setMenuOpen(true);
+    } else if (onLongPress) {
+      onLongPress();
+    }
+  };
 
   return (
     <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }]) as ViewStyle}>
       <View style={styles.content}>
-        <Pressable onPress={menuOpen ? () => setMenuOpen(false) : onPress} onLongPress={hasMenu ? () => setMenuOpen(true) : onLongPress} style={styles.body} accessibilityLabel={accessibilityLabel} accessibilityHint={accessibilityHint} accessibilityRole="button">
+        <Pressable onPress={onPress} onLongPress={handleLongPress} style={styles.body} accessibilityLabel={accessibilityLabel} accessibilityHint={accessibilityHint} accessibilityRole="button">
           <View style={styles.chipRow}>
             <Text variant="body" style={{ color: colors.onSurface, flexShrink: 1, fontWeight: "600", fontSize: 14 }} numberOfLines={1}>{name}</Text>
             <BadgeRow badges={badges} readiness={readiness} isDark={isDark} colors={colors} />
@@ -40,7 +50,7 @@ export function FlowCard({ name, onPress, onLongPress, accessibilityLabel, badge
         </Pressable>
         {action ?? null}
       </View>
-      {menuOpen && menuItems && <FlowCardMenu items={menuItems} isDark={isDark} colors={colors} onClose={() => setMenuOpen(false)} />}
+      {menuOpen && menuItems && <FlowCardMenu items={menuItems} isDark={isDark} colors={colors} anchorY={menuPos.y} anchorX={menuPos.x} onClose={() => setMenuOpen(false)} />}
     </Card>
   );
 }
