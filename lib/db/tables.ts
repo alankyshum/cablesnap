@@ -1,11 +1,32 @@
 import * as SQLite from "expo-sqlite";
 
+// DDL allowlist — these are hardcoded table names used in migrations, not user input.
+// Defense-in-depth: validate before interpolation to prevent accidental SQL injection.
+const VALID_TABLES = new Set([
+  "exercises", "workout_templates", "template_exercises",
+  "workout_sessions", "workout_sets", "food_entries", "daily_log",
+  "macro_targets", "error_log", "body_weight", "body_measurements",
+  "body_settings", "programs", "program_days", "program_log",
+  "interaction_log", "progress_photos", "achievements_earned",
+  "strava_connection", "strava_sync_log", "health_connect_sync_log",
+  "meal_templates", "meal_template_items", "app_settings",
+  "weekly_schedule", "program_schedule",
+]);
+
+function assertValidTable(table: string): void {
+  if (!VALID_TABLES.has(table)) {
+    throw new Error(`Invalid table name: ${table}`);
+  }
+}
+
 export async function hasColumn(database: SQLite.SQLiteDatabase, table: string, column: string): Promise<boolean> {
+  assertValidTable(table);
   const cols = await database.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
   return cols.some((c) => c.name === column);
 }
 
 export async function addColumnIfMissing(database: SQLite.SQLiteDatabase, table: string, column: string, definition: string): Promise<void> {
+  assertValidTable(table);
   if (!(await hasColumn(database, table, column))) {
     await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }

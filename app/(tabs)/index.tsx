@@ -137,6 +137,7 @@ export default function Workouts() {
   const scheduled = useMemo(() => adherence.filter((a) => a.scheduled), [adherence]);
 
   return (
+    // bounded list — ScrollView is intentional: renders fixed sub-components (stats, banners, templates/programs), not unbounded .map()
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}>
       <StatsRow colors={colors} streak={streak} weekDone={weekDone} scheduled={scheduled} prCount={recentPRs.length} />
       {insight && !insightDismissed && (
