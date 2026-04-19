@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1,
     marginBottom: 8,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
     marginBottom: 2,
   },
   statValue: {
