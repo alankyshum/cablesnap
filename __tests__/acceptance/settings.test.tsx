@@ -435,6 +435,12 @@ describe('Settings Screen Acceptance', () => {
     })
   })
 
+  it('Error log button renders count as single text node (no View-wrapped text)', async () => {
+    const { findByText } = renderScreen(<Settings />)
+    const label = await findByText('Errors (2)')
+    expect(label).toBeTruthy()
+  })
+
   // ── Import from Strong Button ──────────────────────────────────
 
   it('Import from Strong button navigates to import screen', async () => {

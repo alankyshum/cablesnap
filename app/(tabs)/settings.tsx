@@ -250,7 +250,7 @@ function FeedbackCard({ colors, count, onBug, onFeature, onErrors }: {
         <View style={styles.buttonFlow}>
           <Button variant="default" icon={Bug} onPress={onBug} accessibilityLabel="Report a bug">Report Bug</Button>
           <Button variant="outline" icon={Lightbulb} onPress={onFeature} accessibilityLabel="Request a feature">Feature Request</Button>
-          <Button variant="outline" icon={List} onPress={onErrors} accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}>Errors ({count})</Button>
+          <Button variant="outline" icon={List} onPress={onErrors} accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}>{`Errors (${count})`}</Button>
         </View>
       </CardContent>
     </Card>
