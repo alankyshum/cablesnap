@@ -109,9 +109,8 @@ describe("Health Connect settings integration", () => {
     // dynamic import
     expect(source).not.toMatch(/^import.*from.*["'].*health-connect["']/m);
     expect(source).toContain('await import("../../lib/health-connect")');
-    // re-requests permission on denial via Alert
-    expect(source).toContain("Grant Permission");
-    expect(source).toContain("Alert.alert");
+    // shows toast on permission denial
+    expect(source).toContain("permission denied");
     // platform gating
     expect(source).toContain('Platform.OS === "android"');
     expect(source).toContain('hcSdkStatus !== "unavailable"');
