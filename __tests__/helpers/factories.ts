@@ -104,6 +104,7 @@ export function createTemplateExercise(overrides: Partial<TemplateExercise> = {}
     rest_seconds: 90,
     link_id: null,
     link_label: '',
+    target_duration_seconds: null,
     ...overrides,
   }
 }
@@ -141,6 +142,7 @@ export function createSet(overrides: Partial<WorkoutSet> = {}): WorkoutSet {
     swapped_from_exercise_id: null,
     is_warmup: false,
     set_type: 'normal',
+    duration_seconds: null,
     ...overrides,
   }
 }

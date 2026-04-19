@@ -143,8 +143,8 @@ const NUMERIC_NONNEG_FIELDS: Record<string, string[]> = {
   food_entries: ["calories", "protein", "carbs", "fat"],
   macro_targets: ["calories", "protein", "carbs", "fat"],
   body_weight: ["weight"],
-  workout_sets: ["weight", "reps", "set_number"],
-  template_exercises: ["position", "target_sets", "rest_seconds"],
+  workout_sets: ["weight", "reps", "set_number", "duration_seconds"],
+  template_exercises: ["position", "target_sets", "rest_seconds", "target_duration_seconds"],
   program_days: ["position"],
 };
 
@@ -451,8 +451,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "template_exercises": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.template_id, row.exercise_id, row.position, row.target_sets, row.target_reps, row.rest_seconds, row.link_id ?? null, row.link_label ?? ""]
+        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label, target_duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.exercise_id, row.position, row.target_sets, row.target_reps, row.rest_seconds, row.link_id ?? null, row.link_label ?? "", row.target_duration_seconds ?? null]
       );
       return r.changes > 0;
     }
@@ -473,8 +473,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     case "workout_sets": {
       const setType = row.set_type ?? (row.is_warmup ? "warmup" : "normal");
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0, setType]
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, training_mode, tempo, is_warmup, set_type, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.training_mode ?? null, row.tempo ?? null, row.is_warmup ?? 0, setType, row.duration_seconds ?? null]
       );
       return r.changes > 0;
     }

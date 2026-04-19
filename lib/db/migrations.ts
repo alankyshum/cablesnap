@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as SQLite from "expo-sqlite";
 
 let migSeq = 0;
@@ -541,6 +542,26 @@ async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<v
   );
 }
 
+async function addDurationColumns(database: SQLite.SQLiteDatabase): Promise<void> {
+  const setCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(workout_sets)"
+  );
+  if (!setCols.some((c) => c.name === "duration_seconds")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sets ADD COLUMN duration_seconds INTEGER"
+    );
+  }
+
+  const teCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(template_exercises)"
+  );
+  if (!teCols.some((c) => c.name === "target_duration_seconds")) {
+    await database.execAsync(
+      "ALTER TABLE template_exercises ADD COLUMN target_duration_seconds INTEGER"
+    );
+  }
+}
+
 export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await createCoreTables(database);
   await addColumnMigrations(database);
@@ -548,4 +569,5 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await createScheduleAndMigrate(database);
   await createExtensionTables(database);
   await addPerformanceIndexes(database);
+  await addDurationColumns(database);
 }

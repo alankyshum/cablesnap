@@ -133,3 +133,49 @@ export function suggest(
   const next = Math.round((lastWeight + step) * 100) / 100;
   return { type: "increase", weight: next, reps: null, reason: `All sets completed — increase by ${step}` };
 }
+
+// Duration-based progressive overload suggestion
+export type DurationHistorySet = {
+  session_id: string;
+  duration_seconds: number | null;
+  completed: number;
+  started_at: number;
+};
+
+export type DurationSuggestion = {
+  type: "increase" | "maintain";
+  duration: number;
+  reason: string;
+};
+
+export function suggestDuration(
+  sets: DurationHistorySet[],
+): DurationSuggestion | null {
+  const sessions = new Map<string, DurationHistorySet[]>();
+  for (const s of sets) {
+    const arr = sessions.get(s.session_id) ?? [];
+    arr.push(s);
+    sessions.set(s.session_id, arr);
+  }
+
+  const sorted = [...sessions.entries()]
+    .sort((a, b) => b[1][0].started_at - a[1][0].started_at);
+
+  if (sorted.length < 1) return null;
+
+  const [, last] = sorted[0];
+
+  const attempted = last.filter(
+    (s) => s.duration_seconds != null && s.duration_seconds > 0,
+  );
+  if (attempted.length === 0) return null;
+
+  const allCompleted = attempted.every((s) => s.completed === 1);
+  const maxDuration = Math.max(...attempted.map((s) => s.duration_seconds!));
+
+  if (!allCompleted) {
+    return { type: "maintain", duration: maxDuration, reason: "Not all sets completed — maintain duration" };
+  }
+
+  return { type: "increase", duration: maxDuration + 5, reason: "All sets completed — increase by 5s" };
+}

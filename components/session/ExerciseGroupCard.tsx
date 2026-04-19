@@ -26,7 +26,7 @@ export type GroupCardProps = {
   linkIds: string[];
   groups: ExerciseGroup[];
   palette: string[];
-  onUpdate: (setId: string, field: "weight" | "reps", val: string) => void;
+  onUpdate: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onCheck: (set: SetWithMeta) => void;
   onDelete: (setId: string) => void;
   onAddSet: (exerciseId: string) => void;
@@ -43,6 +43,13 @@ export type GroupCardProps = {
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
+  // Timer
+  timerActiveExerciseId?: string | null;
+  timerActiveSetIndex?: number | null;
+  timerIsRunning?: boolean;
+  timerDisplaySeconds?: number;
+  onTimerStart?: (setId: string) => void;
+  onTimerStop?: (setId: string) => void;
 };
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
@@ -52,6 +59,8 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onShowDetail, onSwap, onDeleteExercise,
+  timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
+  onTimerStart, onTimerStop,
 }: GroupCardProps) {
   const colors = useThemeColors();
   const layout = useLayout();
@@ -70,33 +79,44 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
 
   const firstSet = group.sets[0];
 
+  const isDurationMode = group.trackingMode === "duration";
+
   const setTable = (
     <>
       <View style={styles.headerRow}>
         <Text variant="caption" style={[styles.colSet, { color: colors.onSurfaceVariant }]}>SET</Text>
         <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>PREV</Text>
         <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{unit === "lb" ? "LB" : "KG"}</Text>
-        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>REPS</Text>
+        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{isDurationMode ? "DURATION" : "REPS"}</Text>
         <View style={styles.colTrailing} />
       </View>
-      {group.sets.map((set) => (
-        <SetRow
-          key={set.id}
-          set={set}
-          step={step}
-          unit={unit}
-          halfStep={halfStep}
-          onUpdate={onUpdate}
-          onCheck={onCheck}
-          onDelete={onDelete}
-          onRPE={onRPE}
-          onHalfStep={onHalfStep}
-          onHalfStepClear={onHalfStepClear}
-          onHalfStepOpen={onHalfStepOpen}
-          onCycleSetType={onCycleSetType}
-          onLongPressSetType={onLongPressSetType}
-        />
-      ))}
+      {group.sets.map((set, idx) => {
+        const isActiveSet = timerActiveExerciseId === group.exercise_id && timerActiveSetIndex === idx;
+        return (
+          <SetRow
+            key={set.id}
+            set={set}
+            step={step}
+            unit={unit}
+            halfStep={halfStep}
+            trackingMode={isDurationMode ? "duration" : "reps"}
+            onUpdate={onUpdate}
+            onCheck={onCheck}
+            onDelete={onDelete}
+            onRPE={onRPE}
+            onHalfStep={onHalfStep}
+            onHalfStepClear={onHalfStepClear}
+            onHalfStepOpen={onHalfStepOpen}
+            onCycleSetType={onCycleSetType}
+            onLongPressSetType={onLongPressSetType}
+            isTimerRunning={isActiveSet && (timerIsRunning ?? false)}
+            isTimerActive={isActiveSet}
+            timerDisplaySeconds={isActiveSet ? timerDisplaySeconds : undefined}
+            onTimerStart={onTimerStart}
+            onTimerStop={onTimerStop}
+          />
+        );
+      })}
       <Button
         variant="ghost"
         size="sm"

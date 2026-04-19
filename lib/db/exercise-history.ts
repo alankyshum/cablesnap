@@ -19,6 +19,7 @@ export type ExerciseRecords = {
   est_1rm: number | null;
   total_sessions: number;
   is_bodyweight: boolean;
+  max_duration: number | null;
 };
 
 export async function getExerciseHistory(
@@ -98,6 +99,14 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
     [exerciseId]
   );
 
+  const dur = await queryOne<{ val: number | null }>(
+    `SELECT MAX(ws.duration_seconds) AS val
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.duration_seconds > 0 AND wss.completed_at IS NOT NULL`,
+    [exerciseId]
+  );
+
   return {
     max_weight: weight?.val ?? null,
     max_reps: reps?.val ?? null,
@@ -105,6 +114,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
     est_1rm: rm?.val ? Math.round(rm.val * 10) / 10 : null,
     total_sessions: count?.val ?? 0,
     is_bodyweight: !(weighted?.val),
+    max_duration: dur?.val ?? null,
   };
 }
 
@@ -169,6 +179,30 @@ export async function getExerciseChartData(
          AND ws.completed = 1
          AND wss.completed_at IS NOT NULL
          AND ws.is_warmup = 0
+       GROUP BY wss.id
+       ORDER BY wss.started_at DESC
+       LIMIT ?
+     ) ORDER BY date ASC`,
+    [exerciseId, limit]
+  );
+}
+
+export async function getExerciseDurationChartData(
+  exerciseId: string,
+  limit: number = 20
+): Promise<{ date: number; value: number }[]> {
+  return query<{ date: number; value: number }>(
+    `SELECT * FROM (
+       SELECT wss.started_at AS date,
+              MAX(ws.duration_seconds) AS value
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.exercise_id = ?
+         AND ws.completed = 1
+         AND ws.duration_seconds IS NOT NULL
+         AND ws.duration_seconds > 0
+         AND ws.is_warmup = 0
+         AND wss.completed_at IS NOT NULL
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
        LIMIT ?

@@ -13,6 +13,7 @@ type TemplateExerciseRow = {
   rest_seconds: number;
   link_id: string | null;
   link_label: string;
+  target_duration_seconds: number | null;
   exercise_name: string | null;
   exercise_category: string | null;
   exercise_primary_muscles: string | null;
@@ -84,6 +85,7 @@ export async function getTemplateById(
     rest_seconds: r.rest_seconds,
     link_id: r.link_id ?? null,
     link_label: r.link_label ?? "",
+    target_duration_seconds: r.target_duration_seconds ?? null,
     exercise: r.exercise_name
       ? mapRow({
           id: r.exercise_id,
@@ -240,6 +242,7 @@ export async function addExerciseToTemplate(
     rest_seconds: restSeconds,
     link_id: null,
     link_label: "",
+    target_duration_seconds: null,
   };
 }
 

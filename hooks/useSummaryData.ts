@@ -7,6 +7,7 @@ import {
   getSessionComparison,
   getSessionPRs,
   getSessionRepPRs,
+  getSessionDurationPRs,
   getSessionSetCount,
   getSessionSets,
   getSessionWeightIncreases,
@@ -20,19 +21,21 @@ import type { WorkoutSession, WorkoutSet } from "../lib/types";
 
 type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
 type RepPR = { exercise_id: string; name: string; reps: number; previous_max: number };
+type DurationPR = { exercise_id: string; name: string; duration: number; previous_max: number };
 type Increase = { exercise_id: string; name: string; current: number; previous: number };
 type Comparison = {
   previous: { volume: number; duration: number; sets: number } | null;
   current: { volume: number; duration: number; sets: number };
 } | null;
 
-export type { PR, RepPR, Increase, Comparison };
+export type { PR, RepPR, DurationPR, Increase, Comparison };
 
 export function useSummaryData(id: string | undefined) {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [sets, setSets] = useState<(WorkoutSet & { exercise_name?: string })[]>([]);
   const [prs, setPrs] = useState<PR[]>([]);
   const [repPrs, setRepPrs] = useState<RepPR[]>([]);
+  const [durationPrs, setDurationPrs] = useState<DurationPR[]>([]);
   const [increases, setIncreases] = useState<Increase[]>([]);
   const [comparison, setComparison] = useState<Comparison>(null);
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
@@ -50,10 +53,11 @@ export function useSummaryData(id: string | undefined) {
       setSession(sess);
       setUnit(settings.weight_unit);
 
-      const [setsData, prData, repPrData, incData, compData, setCount] = await Promise.all([
+      const [setsData, prData, repPrData, durationPrData, incData, compData, setCount] = await Promise.all([
         getSessionSets(id),
         getSessionPRs(id),
         getSessionRepPRs(id),
+        getSessionDurationPRs(id),
         getSessionWeightIncreases(id),
         getSessionComparison(id),
         getSessionSetCount(id),
@@ -62,6 +66,7 @@ export function useSummaryData(id: string | undefined) {
       setPrs(prData);
       setCompletedSetCount(setCount);
       setRepPrs(repPrData);
+      setDurationPrs(durationPrData);
       setIncreases(incData.filter(
         (inc) => !prData.some((pr) => pr.exercise_id === inc.exercise_id)
       ));
@@ -132,7 +137,7 @@ export function useSummaryData(id: string | undefined) {
   return {
     session, setSession,
     sets, completed, grouped,
-    prs, repPrs, increases, comparison,
+    prs, repPrs, durationPrs, increases, comparison,
     unit, volume, setsBreakdown,
     newAchievements, completedSetCount,
   };
