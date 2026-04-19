@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-19
-Total learnings: 158
+Total learnings: 161
 
 ## How to Use This Knowledge Base
 
@@ -14,14 +14,14 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 78 learnings
+- [React Native + Expo](patterns/react-native.md) — 80 learnings
 - [Testing](patterns/testing.md) — 11 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 5 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 17 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 18 learnings
 - [Type Safety](pitfalls/type-safety.md) — 4 learnings
 
 ### Process
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-19 | BLD-376 | Absolute Timestamps for Mobile Timers — Not Cumulative setInterval | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-376 | Persistence Write Without Restore Path Is Incomplete Crash Recovery | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-19 | BLD-376 | Idempotent ALTER TABLE ADD COLUMN via PRAGMA table_info Guard | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-19 | BLD-369 | Mock-Based DB Tests Cannot Gate Query Refactoring | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-19 | BLD-369 | ORM Schema File Alongside Migration File Is a Dual Source of Truth | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-19 | BLD-370 | Schema-Only ORM Adoption — Types Before Queries | Decisions | [architecture.md](decisions/architecture.md) |

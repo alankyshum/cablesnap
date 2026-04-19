@@ -665,3 +665,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: `loadHomeData()` uses a two-stage `Promise.all` pattern: stage 1 fetches independent data, stage 2 uses IDs from stage 1 for dependent queries. New data-fetching calls with no dependencies on other results should go into stage 1, not be appended sequentially. A sequential `await` after `Promise.all` blocks on the new call's full round-trip, adding latency equal to its execution time. Inside `Promise.all`, it runs concurrently with existing queries for free.
 **Action**: When adding a new data source to `loadHomeData()` (or any multi-stage batch loader), check if it depends on results from earlier stages. If not, add it to the first `Promise.all` array. If it depends on stage 1 results, add it to the stage 2 array. Never add a standalone sequential `await` after the batch unless it genuinely depends on ALL previous results.
 **Tags**: performance, promise-all, async, data-loading, home-screen, latency, parallelism, loadHomeData
+
+### Absolute Timestamps for Mobile Timers — Not Cumulative setInterval
+**Source**: BLD-376 — Duration-Based (Timed) Sets
+**Date**: 2026-04-19
+**Context**: `useSetTimer` needed to track elapsed time for isometric exercises (planks, dead hangs). The timer must remain accurate when the app is backgrounded for minutes and resumed.
+**Learning**: `setInterval`-based counters drift and lose time entirely when the app is backgrounded (the JS thread is paused). Recording `startedAt = Date.now()` once on start and computing `elapsed = Math.round((Date.now() - startedAt) / 1000)` on each tick and on AppState "active" resume produces correct elapsed time regardless of backgrounding, throttling, or interval drift. The display interval (1s) is cosmetic; the source of truth is always the absolute timestamp difference.
+**Action**: For any timer feature in React Native, store `startedAt` in a ref, compute elapsed from `Date.now() - startedAt` on each display tick, and add an AppState "active" listener that recalculates the display immediately on foreground resume. Never accumulate seconds via `count++` inside `setInterval`.
+**Tags**: react-native, timer, absolute-timestamp, setinterval, appstate, backgrounding, isometric, useref
+
+### Persistence Write Without Restore Path Is Incomplete Crash Recovery
+**Source**: BLD-376 — Duration-Based (Timed) Sets
+**Date**: 2026-04-19
+**Context**: `useSetTimer` persists timer state (startedAt, exerciseId, setIndex) to SecureStore on start and clears it on stop. The automated reviewer flagged that there is no `getItemAsync` read path on mount — if the OS kills the app during timing, the persisted state is never restored.
+**Learning**: Implementing persistence write + clear without a corresponding read/restore on initialization is a common incomplete-persistence bug. It passes all happy-path tests (start → stop → cleared) but fails the crash-recovery scenario. The write path creates a false sense of durability. The missing piece is always the mount-time restoration: read persisted state, validate it (check staleness), and resume or discard.
+**Action**: When implementing persistence for transient state (timers, in-progress forms, unsaved drafts), always implement three operations together: (1) write on state change, (2) clear on completion, (3) read + restore on mount/init. Add a test that simulates process kill by verifying the hook initializes correctly from pre-seeded persisted data.
+**Tags**: persistence, crash-recovery, securestore, asyncstorage, timer, incomplete-implementation, testing, react-native

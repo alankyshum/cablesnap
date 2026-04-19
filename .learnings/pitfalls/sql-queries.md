@@ -138,3 +138,11 @@
 **Learning**: SQLite allows SELECT columns not in GROUP BY (bare columns), but their values are drawn from an arbitrary row in the group. Using `HAVING col = MAX(col)` with a bare column in SELECT does not guarantee the other selected columns come from the same row. This is a silent data-correctness bug — results look plausible but return wrong session data.
 **Action**: Never rely on SQLite bare columns in batch queries. Instead, GROUP BY ALL dimensions needed in the result (e.g., both `exercise_id` and `session_id`), ORDER BY the ranking column, and use JS-side limiting to pick the top-N per group. See `getPreviousSetsBatch` and `getRecentExerciseSetsBatch` in `lib/db/session-sets.ts` and `lib/db/exercise-history.ts` for the correct pattern.
 **Tags**: sqlite, group-by, bare-column, non-deterministic, batch-query, data-correctness, code-review
+
+### Idempotent ALTER TABLE ADD COLUMN via PRAGMA table_info Guard
+**Source**: BLD-376 — Duration-Based (Timed) Sets
+**Date**: 2026-04-19
+**Context**: Adding `duration_seconds` to `workout_sets` and `target_duration_seconds` to `template_exercises` required an ALTER TABLE migration. SQLite has no `ALTER TABLE ADD COLUMN IF NOT EXISTS` syntax — running ALTER TABLE twice with the same column name throws a "duplicate column" error and crashes the app.
+**Learning**: SQLite migrations that add columns must be idempotent since the migration function may run on every app launch. The pattern is: query `PRAGMA table_info(table_name)` to get current columns, check if the target column name exists in the result set, and only execute `ALTER TABLE ADD COLUMN` if it is absent. This costs one lightweight PRAGMA query per table per launch and prevents crashes on repeated execution.
+**Action**: For every `ALTER TABLE ADD COLUMN` in FitForge migrations, wrap it with a `PRAGMA table_info` guard: `const cols = await db.getAllAsync("PRAGMA table_info(T)"); if (!cols.some(c => c.name === "col")) { await db.execAsync("ALTER TABLE T ADD COLUMN col TYPE"); }`. Never run bare ALTER TABLE ADD COLUMN without this guard.
+**Tags**: sqlite, alter-table, migration, idempotent, pragma, table-info, schema-evolution
