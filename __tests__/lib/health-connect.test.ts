@@ -178,10 +178,10 @@ describe("Health Connect lib module, schema, and config", () => {
     expect(source).toContain("MAX_RETRIES = 3");
     expect(source).toContain('"No completed sets"');
     // DB schema and config
-    const migrationsSrc = fs.readFileSync("lib/db/migrations.ts", "utf8");
-    expect(migrationsSrc).toContain("health_connect_sync_log");
-    expect(migrationsSrc).toContain("health_connect_record_id");
-    expect(migrationsSrc).toContain("idx_hc_sync_log_status");
+    const tablesSrc = fs.readFileSync("lib/db/tables.ts", "utf8");
+    expect(tablesSrc).toContain("health_connect_sync_log");
+    expect(tablesSrc).toContain("health_connect_record_id");
+    expect(tablesSrc).toContain("idx_hc_sync_log_status");
     const configSrc = fs.readFileSync("app.config.ts", "utf8");
     expect(configSrc).toContain("expo-build-properties");
     expect(configSrc).toContain("minSdkVersion: 26");

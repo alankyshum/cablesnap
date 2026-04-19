@@ -1,8 +1,14 @@
+const mockStmt = {
+  executeAsync: jest.fn().mockResolvedValue(undefined),
+  finalizeAsync: jest.fn().mockResolvedValue(undefined),
+};
+
 const mockDb = {
   execAsync: jest.fn().mockResolvedValue(undefined),
   getAllAsync: jest.fn().mockResolvedValue([]),
   getFirstAsync: jest.fn().mockResolvedValue(null),
   runAsync: jest.fn().mockResolvedValue({ changes: 1 }),
+  prepareAsync: jest.fn().mockResolvedValue(mockStmt),
   withTransactionAsync: jest.fn(async (cb: () => Promise<void>) => cb()),
 };
 
