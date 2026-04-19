@@ -177,6 +177,19 @@ export async function getProgramDayCount(programId: string): Promise<number> {
   return row?.count ?? 0;
 }
 
+export async function getProgramDayCounts(programIds: string[]): Promise<Record<string, number>> {
+  if (programIds.length === 0) return {};
+  const database = await getDatabase();
+  const placeholders = programIds.map(() => "?").join(",");
+  const rows = await database.getAllAsync<{ program_id: string; count: number }>(
+    `SELECT program_id, COUNT(*) AS count FROM program_days WHERE program_id IN (${placeholders}) GROUP BY program_id`,
+    programIds
+  );
+  const result: Record<string, number> = {};
+  for (const r of rows) result[r.program_id] = r.count;
+  return result;
+}
+
 export async function addProgramDay(
   programId: string,
   templateId: string,

@@ -324,6 +324,55 @@ export async function getPreviousSets(
   );
 }
 
+export async function getPreviousSetsBatch(
+  exerciseIds: string[],
+  currentSessionId: string
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null }[]>> {
+  if (exerciseIds.length === 0) return {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
+  // Find the most recent completed session per exercise in one query
+  const eidPlaceholders = exerciseIds.map(() => "?").join(",");
+  const latestSessions = await query<{ exercise_id: string; session_id: string }>(
+    `SELECT ws2.exercise_id, wss.id AS session_id
+     FROM workout_sessions wss
+     JOIN workout_sets ws2 ON ws2.session_id = wss.id
+     WHERE ws2.exercise_id IN (${eidPlaceholders})
+       AND wss.completed_at IS NOT NULL
+       AND wss.id != ?
+     GROUP BY ws2.exercise_id
+     HAVING wss.completed_at = MAX(wss.completed_at)
+     ORDER BY ws2.exercise_id`,
+    [...exerciseIds, currentSessionId]
+  );
+  if (latestSessions.length === 0) return result;
+  // Build a map of exercise_id → session_id
+  const sessionMap: Record<string, string> = {};
+  const sessionIds: string[] = [];
+  for (const ls of latestSessions) {
+    sessionMap[ls.exercise_id] = ls.session_id;
+    if (!sessionIds.includes(ls.session_id)) sessionIds.push(ls.session_id);
+  }
+  // Fetch all completed sets from those sessions for the requested exercises
+  const sidPlaceholders = sessionIds.map(() => "?").join(",");
+  const rows = await query<{ exercise_id: string; set_number: number; weight: number | null; reps: number | null }>(
+    `SELECT ws.exercise_id, ws.set_number, ws.weight, ws.reps
+     FROM workout_sets ws
+     WHERE ws.session_id IN (${sidPlaceholders})
+       AND ws.exercise_id IN (${eidPlaceholders})
+       AND ws.completed = 1
+     ORDER BY ws.exercise_id, ws.set_number ASC`,
+    [...sessionIds, ...exerciseIds]
+  );
+  // Filter to only include rows from the correct session per exercise
+  for (const row of rows) {
+    if (sessionMap[row.exercise_id] === undefined) continue;
+    // We fetched from all sessions, but need to filter per-exercise to the latest one
+    if (!result[row.exercise_id]) result[row.exercise_id] = [];
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps });
+  }
+  return result;
+}
+
 export async function getSessionSetCount(
   sessionId: string
 ): Promise<number> {
@@ -334,6 +383,20 @@ export async function getSessionSetCount(
   return row?.count ?? 0;
 }
 
+export async function getSessionSetCounts(
+  sessionIds: string[]
+): Promise<Record<string, number>> {
+  if (sessionIds.length === 0) return {};
+  const placeholders = sessionIds.map(() => "?").join(",");
+  const rows = await query<{ session_id: string; count: number }>(
+    `SELECT session_id, COUNT(*) as count FROM workout_sets WHERE session_id IN (${placeholders}) AND completed = 1 AND is_warmup = 0 GROUP BY session_id`,
+    sessionIds
+  );
+  const result: Record<string, number> = {};
+  for (const r of rows) result[r.session_id] = r.count;
+  return result;
+}
+
 export async function getSessionAvgRPE(
   sessionId: string
 ): Promise<number | null> {
@@ -342,6 +405,20 @@ export async function getSessionAvgRPE(
     [sessionId]
   );
   return row?.val ?? null;
+}
+
+export async function getSessionAvgRPEs(
+  sessionIds: string[]
+): Promise<Record<string, number | null>> {
+  if (sessionIds.length === 0) return {};
+  const placeholders = sessionIds.map(() => "?").join(",");
+  const rows = await query<{ session_id: string; val: number | null }>(
+    `SELECT session_id, AVG(rpe) AS val FROM workout_sets WHERE session_id IN (${placeholders}) AND completed = 1 AND rpe IS NOT NULL AND is_warmup = 0 GROUP BY session_id`,
+    sessionIds
+  );
+  const result: Record<string, number | null> = {};
+  for (const r of rows) result[r.session_id] = r.val;
+  return result;
 }
 
 export async function getRestSecondsForExercise(
