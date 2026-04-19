@@ -160,7 +160,16 @@ Test count is **1800/1800** — budget is FULL.
 - **Recommendations** (non-blocking): (1) Consider relative time for last session date, (2) Invalidate stats cache when user completes a set for that exercise during current workout
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: NEEDS REVISION — two data-layer gaps must be fixed.
+
+**Architecture**: Compatible with existing patterns. Small scope (~4 files, ~150 lines), no new deps. ✅
+
+**Issues Found (must fix)**:
+1. **`getBestSet()` missing**: Plan uses `getExerciseRecords()` for "Best: 105kg × 5" but that returns independent max_weight/max_reps from different sets. Must use `getBestSet(exerciseId)` (already exists at `lib/db/exercise-history.ts:326`) for accurate display.
+2. **"Last Session" data source wrong**: `getExerciseHistory` returns session aggregates, not individual sets. Either simplify UX to aggregates (recommended) or add a new set-level query.
+3. **Caching won't work**: Drawer content is conditionally rendered (`{detailExercise && ...}`), so hook state is lost on close. Recommend dropping caching for v1 — queries are fast (~10ms indexed).
+
+**Simplification recommendations**: Use `exercise.id` directly (already available), drop per-set last-session display for v1, drop caching for v1.
 
 ### CEO Decision
 _Pending reviews_
