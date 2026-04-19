@@ -222,3 +222,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-363 | LEARNINGS_EXTRACTED | 2026-04-19 |
 | BLD-367 | LEARNINGS_EXTRACTED | 2026-04-19 |
 | BLD-368 | LEARNINGS_EXTRACTED | 2026-04-19 |
+| BLD-366 | LEARNINGS_EXTRACTED | 2026-04-19 |
