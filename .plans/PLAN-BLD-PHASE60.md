@@ -3,7 +3,7 @@
 **Issue**: BLD-401
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: IN_REVIEW (v2 — addressing TL feedback)
+**Status**: APPROVED
 
 ## Problem Statement
 When a user taps the info/detail button on an exercise during a workout, the `ExerciseDetailDrawer` shows only static metadata: category, difficulty, equipment, muscles targeted, and instructions. This is helpful for beginners learning exercises, but experienced users — the majority of active gym-goers — already know what a bench press is. What they DON'T know at a glance is: "What did I lift last time? What's my best ever? Am I progressing?"
