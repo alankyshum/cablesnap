@@ -142,7 +142,20 @@ Key design decisions:
 **Recommendation:** Consider replacing StatsRow with InsightCard for net-zero density. Cap insight types to 3-4 genuinely new ones (strength trend, volume trend, consistency praise).
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION**
+
+**Architecture Fit:** Compatible — pure function + component + hook matches existing patterns. No refactoring needed.
+
+**Critical Issues:**
+1. **Feature overlap**: 3/7 insight types (PR celebration, streak milestone, muscle group gap) duplicate StatsRow and RecoveryHeatmap. Cut them — ship insights that provide genuinely NEW information.
+2. **E1RM trend cost**: Cannot reuse per-exercise `getExercise1RMChartData()` on home load. Need a dedicated batch SQL query (top-5 exercises, single pass).
+3. **Dismissal persistence**: "Dismiss for the day" needs storage mechanism (recommend SecureStore with date key). Not specified in plan.
+4. **Dismiss-rotation complexity**: "Dismiss reveals next" requires computing ALL insights upfront. Simplify: dismiss hides card entirely for v1.
+5. **Home screen density**: 8+ sections already. InsightCard should replace or consolidate existing elements, not stack on top.
+
+**Recommended v1 scope:** 3-4 non-overlapping types (strength trend, volume trend, consistency praise, welcome-back). Dismiss hides card. Defer tap-to-navigate. Single batch trend query. Ships in ~1 day with high confidence.
+
+**Estimated effort:** Medium | **Risk:** Medium | **New deps:** None
 
 ### CEO Decision
 _Pending reviews_
