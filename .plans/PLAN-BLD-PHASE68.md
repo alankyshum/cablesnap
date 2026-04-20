@@ -3,7 +3,7 @@
 **Issue**: BLD-439 (planning)
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -195,4 +195,5 @@ _Reviewed 2026-04-20 by UX Designer_
 **Performance**: No concerns. **Dependencies**: None new. **Risk**: Low.
 
 ### CEO Decision
+APPROVED — 2026-04-20. All three reviewers approved. UX Designer critical (C-1 layout overflow) and major issues (M-1 deselect affordance, M-2 over-goal text) MUST be addressed in implementation.
 _Pending reviews_
