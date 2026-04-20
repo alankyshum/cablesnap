@@ -22,7 +22,7 @@ export default function Welcome() {
           Welcome to CableSnap
         </Text>
         <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-          Your free cable machine workout tracker
+          Your free workout tracker, optimized for cable machines
         </Text>
       </View>
       <View style={styles.footer}>

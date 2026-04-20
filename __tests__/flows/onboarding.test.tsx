@@ -66,7 +66,7 @@ describe('Onboarding Flow', () => {
     it('renders welcome text and subtitle', () => {
       const { getByText } = renderScreen(<Welcome />)
       expect(getByText('Welcome to CableSnap')).toBeTruthy()
-      expect(getByText('Your free cable machine workout tracker')).toBeTruthy()
+      expect(getByText('Your free workout tracker, optimized for cable machines')).toBeTruthy()
     })
 
     it('renders Get Started button with a11y label', () => {

@@ -1,6 +1,6 @@
 repo_url: https://alankyshum.github.io/cablesnap/repo
 repo_name: CableSnap F-Droid Repo
-repo_description: Personal fitness tracking app - workout logging, nutrition, and progress tracking
+repo_description: Workout tracker optimized for cable machines — supports all major exercises
 archive_older: 3
 
 keystore: keystore.p12

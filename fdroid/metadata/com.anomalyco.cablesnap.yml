@@ -7,15 +7,16 @@ SourceCode: https://github.com/alankyshum/cablesnap
 IssueTracker: https://github.com/alankyshum/cablesnap/issues
 
 AutoName: CableSnap
-Summary: Cable machine workout tracking, nutrition logging, and progress analytics
+Summary: Workout tracker optimized for cable machines — supports all major exercises
 Description: |
-  CableSnap is a local-first fitness app focused on cable machine workouts.
-  Track your cable exercises, nutrition, and body measurements. All data
+  CableSnap is a local-first fitness app optimized for cable machine workouts,
+  with full support for barbell, dumbbell, bodyweight, and machine exercises.
+  Track your workouts, nutrition, and body measurements. All data
   stays on your device.
 
   Features:
-  - Cable workout logging with sets, reps, weight, and RPE
-  - Exercise library with 100+ built-in cable exercises
+  - Workout logging with sets, reps, weight, and RPE
+  - Exercise library with 100+ built-in exercises (cable, barbell, dumbbell, bodyweight)
   - Workout templates and multi-day programs
   - Nutrition tracking with macro targets
   - Progress charts and 1RM tracking

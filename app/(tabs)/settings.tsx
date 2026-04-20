@@ -128,7 +128,7 @@ export default function Settings() {
             </Text>
             <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
               CableSnap v{Constants.expoConfig?.version ?? '0.0.0'}
-              {'\n'}Free & open-source cable machine workout tracker.
+              {'\n'}Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
             </Text>
             <Text
               variant="body"

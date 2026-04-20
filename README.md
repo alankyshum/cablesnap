@@ -1,6 +1,6 @@
 # CableSnap 🔗💪
 
-**Free, open-source cable machine workout tracker.** Built for the cable stack — track your cable exercises, log sets, and crush PRs. No subscriptions, no ads, no paywalls.
+**Free, open-source workout tracker — optimized for cable machines, supports all major exercises.** Track your workouts, log sets, and crush PRs. No subscriptions, no ads, no paywalls.
 
 [<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://alankyshum.github.io/cablesnap/repo)
 
@@ -9,8 +9,8 @@
 
 ## Features
 
-- 🏋️ **Cable Workout Tracking** — Log and track your cable machine workouts
-- 🔍 **Exercise Library** — Browse and search cable exercises
+- 🏋️ **Workout Tracking** — Log cable, barbell, dumbbell, bodyweight, and machine exercises
+- 🔍 **Exercise Library** — 100+ built-in exercises, optimized for cable machines
 - 🍎 **Nutrition Tracking** — Track macros and meals
 - 📊 **Progress Charts** — Visualize your fitness journey
 - 📱 **Responsive** — Works on phones and tablets
