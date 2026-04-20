@@ -16,8 +16,8 @@ export default function TabLayout() {
     function HeaderTitle() {
       return (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <MaterialCommunityIcons name={icon} size={22} color={colors.onSurface} />
-          <Text style={{ fontSize: fontSizes.base, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
+          <MaterialCommunityIcons name={icon} size={20} color={colors.onSurface} />
+          <Text style={{ fontSize: fontSizes.sm, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
         </View>
       );
     };

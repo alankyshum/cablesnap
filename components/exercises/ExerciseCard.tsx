@@ -35,7 +35,7 @@ export function ExerciseCard({ item, selected, onPress, colors, mc }: ExerciseCa
     >
       <View style={styles.cardInner}>
         <View style={styles.titleRow}>
-          <Text variant="subtitle" numberOfLines={1} style={[{ color: colors.onSurface }, styles.titleText]}>
+          <Text variant="subtitle" numberOfLines={1} style={[{ color: colors.onSurface, fontSize: fontSizes.base }, styles.titleText]}>
             {item.name}
           </Text>
           {item.is_custom && (

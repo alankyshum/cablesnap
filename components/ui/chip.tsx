@@ -52,6 +52,7 @@ export function Chip({
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
+          gap: 4,
           paddingHorizontal: compact ? 10 : 14,
           paddingVertical: compact ? 4 : 6,
           borderRadius: BORDER_RADIUS,

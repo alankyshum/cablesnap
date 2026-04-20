@@ -1,5 +1,5 @@
 import React from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -34,25 +34,27 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
           <Button variant="outline" onPress={() => router.push("/program/create")} style={styles.emptyBtn} accessibilityLabel="Create your first program" label="Create Program" />
         </View>
       ) : (
-        <FlatList data={programs} keyExtractor={(i) => i.id} scrollEnabled={false} contentContainerStyle={styles.flowList} renderItem={({ item }) => {
-          const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
-          if (item.is_active) badges.push({ label: "ACTIVE", type: "active" });
-          const metaBadges: MetaBadge[] = [item.is_starter ? difficultyBadge("intermediate") : { icon: "signal-cellular-2", label: "Custom" }, { icon: "calendar-blank-outline", label: `${dayCounts[item.id] ?? 0} days` }];
-          if (item.is_starter) metaBadges.push({ icon: "star-outline", label: "Starter" });
-          const menuItems: FlowCardMenuItem[] = item.is_starter
-            ? [{ label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) }]
-            : [
-                { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
-                { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
-              ];
-          return (
-            <FlowCard key={item.id} name={item.name} onPress={() => onPress(item.id)}
-              accessibilityLabel={`${item.is_starter ? "Starter program" : "Program"}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
-              accessibilityHint="Long press for options"
-              badges={badges} meta={metaBadges}
-              menuItems={menuItems} />
-          );
-        }} />
+        <View style={styles.flowList}>
+          {programs.map((item) => {
+            const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
+            if (item.is_active) badges.push({ label: "ACTIVE", type: "active" });
+            const metaBadges: MetaBadge[] = [item.is_starter ? difficultyBadge("intermediate") : { icon: "signal-cellular-2", label: "Custom" }, { icon: "calendar-blank-outline", label: `${dayCounts[item.id] ?? 0} days` }];
+            if (item.is_starter) metaBadges.push({ icon: "star-outline", label: "Starter" });
+            const menuItems: FlowCardMenuItem[] = item.is_starter
+              ? [{ label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) }]
+              : [
+                  { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
+                  { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
+                ];
+            return (
+              <FlowCard key={item.id} name={item.name} onPress={() => onPress(item.id)}
+                accessibilityLabel={`${item.is_starter ? "Starter program" : "Program"}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
+                accessibilityHint="Long press for options"
+                badges={badges} meta={metaBadges}
+                menuItems={menuItems} />
+            );
+          })}
+        </View>
       )}
     </View>
   );

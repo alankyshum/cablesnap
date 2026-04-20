@@ -1,4 +1,4 @@
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
@@ -32,16 +32,12 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
           <Text style={{ color: colors.onSurfaceVariant }}>No workouts yet. Start one above!</Text>
         </View>
       ) : (
-        <FlatList
-          data={sessions}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={false}
-          contentContainerStyle={styles.flowList}
-          renderItem={({ item, index }) => {
+        <View style={styles.flowList}>
+          {sessions.map((item, index) => {
             const rpe = avgRPEs[item.id];
             const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
             return (
-              <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
+              <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(300)}>
                 <Pressable
                   style={[styles.flowCard, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]}
                   onPress={() => router.push(`/session/detail/${item.id}`)}
@@ -62,8 +58,8 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
                 </Pressable>
               </Animated.View>
             );
-          }}
-        />
+          })}
+        </View>
       )}
     </View>
   );
