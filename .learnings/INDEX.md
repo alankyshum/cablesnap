@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 182
+Total learnings: 184
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 95 learnings
+- [React Native + Expo](patterns/react-native.md) — 97 learnings
 - [Testing](patterns/testing.md) — 12 learnings
 
 ### Pitfalls
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-413 | FlashList Renders Empty Inside Modal — Use FlatList for Modal Lists | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-20 | BLD-413 | Bottom Sheet Keyboard Avoidance Must Clamp to MAX_TRANSLATE_Y | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-411 | Lazy Auto-Assignment for New Ordering Columns with DEFAULT 0 | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-410 | Do Not Repurpose Intra-Entity Ordering Columns for Inter-Entity Position | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-410 | FlashList Requires extraData Counter to Re-Render on Array Reorder | Patterns | [react-native.md](patterns/react-native.md) |

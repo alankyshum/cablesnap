@@ -777,3 +777,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: FlashList optimizes rendering by key identity. When the data array is reordered but keys remain the same, FlashList may not detect the change and skip re-rendering. Passing an `extraData` prop set to an incrementing version counter forces FlashList to re-evaluate the entire list whenever items are reordered.
 **Action**: When implementing list reordering with FlashList or FlatList, maintain a `reorderVersion` counter in state. Increment it on every reorder operation and pass it as `extraData={reorderVersion}`. This ensures the list re-renders with the correct item positions after every move.
 **Tags**: flashlist, flatlist, reorder, extraData, re-render, key-stability, performance, react-native
+
+### FlashList Renders Empty Inside Modal — Use FlatList for Modal Lists
+**Source**: BLD-413 — Owner Bug Batch: 5 UI/UX bugs from real device testing
+**Date**: 2026-04-20
+**Context**: A template picker rendered inside a React Native Modal used FlashList. The picker appeared correctly (the modal opened) but displayed zero items despite the data array being populated.
+**Learning**: FlashList requires a parent container with a known height to perform its recycling layout calculations. Inside a Modal, the container height is often unknown at first render (it measures as 0), causing FlashList to compute zero visible items and render nothing. FlatList does not have this constraint because it uses standard VirtualizedList without pre-measurement.
+**Action**: Never use FlashList inside a Modal or dynamically-sized overlay. Use FlatList for lists rendered in modals, bottom sheets with dynamic height, or any container where the parent layout is not established before the list mounts. Reserve FlashList for full-screen or fixed-height list contexts.
+**Tags**: flashlist, flatlist, modal, empty-list, layout, height, react-native, picker
+
+### Bottom Sheet Keyboard Avoidance Must Clamp to MAX_TRANSLATE_Y
+**Source**: BLD-413 — Owner Bug Batch: 5 UI/UX bugs from real device testing
+**Date**: 2026-04-20
+**Context**: On the Add Food screen, the BottomSheet moved up when the keyboard opened by subtracting keyboardHeight from the current snap position. On devices with large keyboards (e.g., Samsung Z Fold6), this pushed the sheet content off-screen entirely — making it invisible.
+**Learning**: Naively translating a bottom sheet by `currentSnap - keyboardHeight` can produce a negative Y value that moves the sheet above the visible area. The translation must be clamped to `Math.max(currentSnap - keyboardHeight, MAX_TRANSLATE_Y)` to ensure the sheet never exceeds its maximum upward extent.
+**Action**: When implementing keyboard-aware bottom sheet positioning, always clamp the upward translation to the sheet's maximum allowed position (typically the top of the screen or a defined MAX_TRANSLATE_Y). Test on devices with both compact and large keyboards (tall screens with large keyboards are the most likely to trigger the overflow).
+**Tags**: bottom-sheet, keyboard, keyboardavoidingview, clamp, math-max, android, react-native, animation
