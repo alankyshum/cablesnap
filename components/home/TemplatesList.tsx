@@ -27,6 +27,37 @@ type Props = {
   onEdit: (id: string) => void;
 };
 
+function buildMetaBadges(
+  meta: (typeof STARTER_TEMPLATES)[number] | undefined,
+  counts: Record<string, number>,
+  durationEstimates: Record<string, number | null>,
+  itemId: string
+): MetaBadge[] {
+  if (meta) {
+    return [difficultyBadge(meta.difficulty), { icon: "clock-outline", label: meta.duration }, { icon: "dumbbell", label: `${meta.exercises.length} exercises` }];
+  }
+  const badges: MetaBadge[] = [];
+  const est = durationEstimates[itemId];
+  if (est != null) badges.push({ icon: "clock-outline", label: formatDurationEstimate(est) });
+  badges.push({ icon: "dumbbell", label: `${counts[itemId] ?? 0} exercises` });
+  return badges;
+}
+
+function buildMenuItems(
+  isStarter: boolean,
+  item: WorkoutTemplate,
+  onOptions: (t: WorkoutTemplate) => void,
+  onEdit: (id: string) => void,
+  onDelete: (t: WorkoutTemplate) => void
+): FlowCardMenuItem[] {
+  if (isStarter) return [{ label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) }];
+  return [
+    { label: "Edit", icon: "pencil", onPress: () => onEdit(item.id) },
+    { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
+    { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
+  ];
+}
+
 export function TemplatesList({ colors, templates, counts, durationEstimates, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit }: Props) {
   const router = useRouter();
   return (
@@ -46,25 +77,14 @@ export function TemplatesList({ colors, templates, counts, durationEstimates, st
         <View style={styles.flowList}>
           {templates.map((item) => {
             const meta = starterMeta(item.id);
-            const isStarter = !!meta || item.is_starter;
-            const metaBadges: MetaBadge[] = meta ? [difficultyBadge(meta.difficulty), { icon: "clock-outline", label: meta.duration }, { icon: "dumbbell", label: `${meta.exercises.length} exercises` }] : [];
-            if (!meta) {
-              const est = durationEstimates[item.id];
-              if (est != null) metaBadges.push({ icon: "clock-outline", label: formatDurationEstimate(est) });
-              metaBadges.push({ icon: "dumbbell", label: `${counts[item.id] ?? 0} exercises` });
-            }
+            const isStarter = !!meta || !!item.is_starter;
+            const metaBadges = buildMetaBadges(meta, counts, durationEstimates, item.id);
             if (isStarter) metaBadges.push({ icon: "star-outline", label: "Starter" });
             const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
             if (meta?.recommended) badges.push({ label: "RECOMMENDED", type: "recommended" });
             const readiness = !isStarter && showReadiness ? (templateReadiness[item.id]?.badge ?? null) : null;
             const displayName = meta?.name || item.name;
-            const menuItems: FlowCardMenuItem[] = isStarter
-              ? [{ label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) }]
-              : [
-                  { label: "Edit", icon: "pencil", onPress: () => onEdit(item.id) },
-                  { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
-                  { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
-                ];
+            const menuItems = buildMenuItems(isStarter, item, onOptions, onEdit, onDelete);
             const durationEst = !meta ? durationEstimates[item.id] : null;
             const spokenDuration = durationEst != null ? `, ${formatSpokenDuration(durationEst)}` : "";
             return (
