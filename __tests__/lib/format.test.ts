@@ -6,6 +6,7 @@ import {
   formatPreviousPerformance,
   formatPreviousPerformanceAccessibility,
   computePrefillSets,
+  isLikelyIsolation,
 } from "../../lib/format";
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -235,5 +236,64 @@ describe("computePrefillSets", () => {
     );
     // s1 completed → skip, s2 has weight → skip, s3 empty → fill from prev[2]
     expect(mixed).toEqual([{ setId: "s3", weight: 80, reps: 6, duration_seconds: null }]);
+
+    // Progression: compound kg — +2.5kg
+    const progCompound = computePrefillSets(
+      [
+        { id: "s1", weight: null, reps: null, completed: false, duration_seconds: null },
+        { id: "s2", weight: null, reps: null, completed: false, duration_seconds: null },
+      ],
+      [
+        { weight: 80, reps: 8, duration_seconds: null },
+        { weight: 80, reps: 8, duration_seconds: null },
+      ],
+      "reps",
+      { suggested: true, weightUnit: "kg", exerciseCategory: "chest" },
+    );
+    expect(progCompound).toEqual([
+      { setId: "s1", weight: 82.5, reps: 8, duration_seconds: null },
+      { setId: "s2", weight: 82.5, reps: 8, duration_seconds: null },
+    ]);
+
+    // Progression: isolation kg — +1.25kg
+    const progIsolation = computePrefillSets(
+      [{ id: "s1", weight: null, reps: null, completed: false, duration_seconds: null }],
+      [{ weight: 10, reps: 12, duration_seconds: null }],
+      "reps",
+      { suggested: true, weightUnit: "kg", exerciseCategory: "arms" },
+    );
+    expect(progIsolation[0].weight).toBe(11.25);
+
+    // No progression when suggested=false
+    const noProgression = computePrefillSets(
+      [{ id: "s1", weight: null, reps: null, completed: false, duration_seconds: null }],
+      [{ weight: 80, reps: 8, duration_seconds: null }],
+      "reps",
+      { suggested: false, weightUnit: "kg", exerciseCategory: "chest" },
+    );
+    expect(noProgression[0].weight).toBe(80);
+
+    // Progression: lbs increments — compound +5, isolation +2.5
+    const progLbsCompound = computePrefillSets(
+      [{ id: "s1", weight: null, reps: null, completed: false, duration_seconds: null }],
+      [{ weight: 135, reps: 5, duration_seconds: null }],
+      "reps",
+      { suggested: true, weightUnit: "lb", exerciseCategory: "chest" },
+    );
+    expect(progLbsCompound[0].weight).toBe(140);
+
+    const progLbsIso = computePrefillSets(
+      [{ id: "s1", weight: null, reps: null, completed: false, duration_seconds: null }],
+      [{ weight: 20, reps: 12, duration_seconds: null }],
+      "reps",
+      { suggested: true, weightUnit: "lb", exerciseCategory: "arms" },
+    );
+    expect(progLbsIso[0].weight).toBe(22.5);
+
+    // isLikelyIsolation checks
+    expect(isLikelyIsolation("arms")).toBe(true);
+    expect(isLikelyIsolation("abs_core")).toBe(true);
+    expect(isLikelyIsolation("chest")).toBe(false);
+    expect(isLikelyIsolation(null)).toBe(false);
   });
 });

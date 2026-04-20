@@ -185,9 +185,44 @@ export type PrefillResult = {
 };
 
 /**
+ * Heuristic to determine if an exercise category is likely an isolation movement.
+ * Isolation exercises use smaller weight increments (1.25kg/2.5lbs vs 2.5kg/5lbs).
+ */
+export function isLikelyIsolation(category: string | null): boolean {
+  const isolationCategories = ["arms", "abs_core"];
+  return isolationCategories.includes(category?.toLowerCase() ?? "");
+}
+
+export type ProgressionOptions = {
+  suggested: boolean;
+  weightUnit: "kg" | "lb";
+  exerciseCategory: string | null;
+};
+
+/**
+ * Apply weight progression increment to prefill results when criteria are met.
+ */
+function applyProgression(
+  results: PrefillResult[],
+  progression: ProgressionOptions | undefined,
+): void {
+  if (!progression?.suggested) return;
+  const isolation = isLikelyIsolation(progression.exerciseCategory);
+  const increment = progression.weightUnit === "kg"
+    ? (isolation ? 1.25 : 2.5)
+    : (isolation ? 2.5 : 5);
+  for (const r of results) {
+    if (r.weight != null) {
+      r.weight = r.weight + increment;
+    }
+  }
+}
+
+/**
  * Compute which current sets should be filled from previous session data.
  * Uses positional mapping on working (non-warmup) sets only.
  * Only fills sets that are not completed and have no user-entered values.
+ * When progression is suggested, applies a conservative weight increment.
  */
 export function computePrefillSets(
   currentSets: Array<{
@@ -200,6 +235,7 @@ export function computePrefillSets(
   }>,
   previousSets: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>,
   trackingMode: "reps" | "duration",
+  progression?: ProgressionOptions,
 ): PrefillResult[] {
   const results: PrefillResult[] = [];
 
@@ -236,6 +272,8 @@ export function computePrefillSets(
       duration_seconds: trackingMode === "duration" ? prev.duration_seconds : null,
     });
   }
+
+  applyProgression(results, progression);
 
   return results;
 }

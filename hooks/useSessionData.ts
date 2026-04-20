@@ -125,10 +125,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           trackingMode: parsed.includes("isometric" as TrainingMode) ? "duration" : "reps",
           equipment: ex?.equipment ?? "other",
           exercise_position: s.exercise_position ?? 0,
+          exerciseCategory: ex?.category ?? null,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
-        (p) => p.set_number === s.set_number
+        (p) => p.set_number === s.set_number && p.completed
       );
       const group = map.get(s.exercise_id)!;
       const isDuration = group.trackingMode === "duration";
@@ -154,7 +155,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     }
     const groupList = [...map.values()];
 
-    // Compute previous performance summary per exercise from prevCache
+    // Compute previous performance summary and progression flags per exercise from prevCache
     for (const group of groupList) {
       const prevSets = prevCache[group.exercise_id];
       if (!prevSets || prevSets.length === 0) continue;
@@ -163,19 +164,30 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       const workingSets = prevSets.filter((s) => s.set_type !== "warmup");
       if (workingSets.length === 0) continue;
 
+      // Compute progression criteria
+      const allWorkingSetsCompleted = workingSets.every((s) => s.completed);
+      const weights = workingSets.map((s) => s.weight).filter((w): w is number => w != null && w > 0);
+      const allSameWeight = weights.length === workingSets.length && new Set(weights).size === 1;
+      const maxRpeSafe = workingSets.every((s) => s.rpe == null || s.rpe < 9.5);
+      group.progressionSuggested = allWorkingSetsCompleted && allSameWeight && maxRpeSafe && !group.is_bodyweight;
+
+      // Only use completed sets for performance summary and prefill
+      const completedWorkingSets = workingSets.filter((s) => s.completed);
+      if (completedWorkingSets.length === 0) continue;
+
       const isDuration = group.trackingMode === "duration";
       const perf: PreviousPerformance = {
-        setCount: workingSets.length,
-        maxWeight: Math.max(0, ...workingSets.map((s) => s.weight ?? 0)),
-        maxReps: Math.max(0, ...workingSets.map((s) => s.reps ?? 0)),
+        setCount: completedWorkingSets.length,
+        maxWeight: Math.max(0, ...completedWorkingSets.map((s) => s.weight ?? 0)),
+        maxReps: Math.max(0, ...completedWorkingSets.map((s) => s.reps ?? 0)),
         isBodyweight: group.is_bodyweight,
         maxDuration: isDuration
-          ? Math.max(0, ...workingSets.map((s) => s.duration_seconds ?? 0))
+          ? Math.max(0, ...completedWorkingSets.map((s) => s.duration_seconds ?? 0))
           : null,
       };
       group.previousSummary = formatPreviousPerformance(perf, body.weight_unit);
       group.previousSummaryA11y = formatPreviousPerformanceAccessibility(perf, body.weight_unit);
-      group.previousSets = workingSets.map((s) => ({
+      group.previousSets = completedWorkingSets.map((s) => ({
         weight: s.weight,
         reps: s.reps,
         duration_seconds: s.duration_seconds ?? null,

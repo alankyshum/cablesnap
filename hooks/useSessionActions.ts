@@ -64,6 +64,7 @@ type Params = {
   showToast: (msg: string) => void;
   showError: (msg: string) => void;
   triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
+  unit?: "kg" | "lb";
 };
 
 export function useSessionActions({
@@ -79,6 +80,7 @@ export function useSessionActions({
   showToast,
   showError,
   triggerPR,
+  unit,
 }: Params) {
   const router = useRouter();
 
@@ -328,7 +330,10 @@ export function useSessionActions({
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (!group?.previousSets) return;
 
-    const toFill = computePrefillSets(group.sets, group.previousSets, group.trackingMode);
+    const progression = group.progressionSuggested && unit
+      ? { suggested: true, weightUnit: unit, exerciseCategory: group.exerciseCategory ?? null }
+      : undefined;
+    const toFill = computePrefillSets(group.sets, group.previousSets, group.trackingMode, progression);
     if (toFill.length === 0) {
       const workingSets = group.sets.filter((s) => s.set_type !== "warmup");
       const allCompleted = workingSets.every((s) => s.completed);
@@ -364,7 +369,7 @@ export function useSessionActions({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showToast(`Filled ${toFill.length} set${toFill.length !== 1 ? "s" : ""} from last session`);
     AccessibilityInfo.announceForAccessibility(`Filled ${toFill.length} sets from last session`);
-  }, [groups, setGroups, showToast, showError]);
+  }, [groups, setGroups, showToast, showError, unit]);
 
   const finish = () => {
     confirmAction(

@@ -23,9 +23,13 @@ describe("exercise header alignment (BLD-390)", () => {
     expect(src).toMatch(/flex:\s*1,\s*flexShrink:\s*1/);
   });
 
-  it("groupTitle has fontWeight 700 for visual emphasis", () => {
+  it("groupTitle has fontWeight 700 and progression arrow icon when suggested", () => {
     const block = src.match(/groupTitle:\s*\{[^}]*\}/);
     expect(block).not.toBeNull();
     expect(block![0]).toMatch(/fontWeight:\s*["']700["']/);
+    // Progression icon shows when progressionSuggested is true
+    expect(src).toMatch(/progressionSuggested/);
+    expect(src).toMatch(/arrow-up-bold/);
+    expect(src).toMatch(/Weight progression suggested/);
   });
 });
