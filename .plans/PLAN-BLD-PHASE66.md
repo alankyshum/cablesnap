@@ -218,7 +218,26 @@ CREATE INDEX idx_strength_goals_active ON strength_goals(achieved_at);
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-20)
+
+**Cognitive Load**: Good — low-friction, compatible mental model, one-goal-per-exercise constraint is smart.
+
+**Critical Issues (must fix):**
+1. **C-1**: Contradictory delete interactions — plan has BOTH ✕ button AND long-press. Pick ONE: use ✕ with confirmation dialog only, drop long-press.
+2. **C-2**: "Set Goal" button is buried below records/chart/strength badge (~70% scroll). Move Goal card ABOVE Records and Chart cards for discoverability. Revised order: chips → muscles → instructions → **Goal** → Strength Badge → Records → Chart → History.
+3. **C-3**: Progress bar must specify `accessibilityRole="progressbar"`, `accessibilityValue={{ min: 0, max: 100, now: pct }}`, and descriptive `accessibilityLabel`.
+
+**Major Issues (should fix):**
+- **M-1**: Inline form expansion in FlatList header causes scroll jumps. Use a bottom sheet instead, or add LayoutAnimation + scrollToOffset.
+- **M-2**: "Tap to edit" has no visual affordance. Add pencil icon or "Edit" link in card.
+
+**Minor Recommendations:**
+- Use MaterialCommunityIcons "bullseye-arrow" instead of 🎯 emoji (inconsistent cross-device rendering)
+- Verify `colors.tertiary` (gold) contrast in both themes for overachievement
+- Add error toast for failed goal save
+- Ensure hook doesn't flash "Set Goal" → card on initial load
+
+See full review on BLD-432 issue comments.
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20)
