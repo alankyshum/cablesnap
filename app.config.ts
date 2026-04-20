@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff", // eslint-disable-line no-restricted-syntax
+    backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
   },
   ios: {
     supportsTablet: true,
@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#FFFFFF", // eslint-disable-line no-restricted-syntax
+      backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
     versionCode: 5,
@@ -63,9 +63,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   ],
+  owner: "alankyshum",
   extra: {
     eas: {
-      projectId: "f15d9aef-342e-4a5d-9007-4f98eff3ba23",
+      projectId: "24dc5f10-9a21-4336-bac0-6334a5f6b82b",
     },
     stravaClientId: "227474",
   },
