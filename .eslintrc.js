@@ -28,8 +28,8 @@ module.exports = {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
     "@typescript-eslint/no-require-imports": "off",
-    "max-lines": ["warn", { max: 500, skipBlankLines: true, skipComments: true }],
-    "max-lines-per-function": ["warn", { max: 200, skipBlankLines: true, skipComments: true }],
+    "max-lines": ["warn", { max: 700, skipBlankLines: true, skipComments: true }],
+    "max-lines-per-function": ["warn", { max: 400, skipBlankLines: true, skipComments: true }],
     "complexity": ["warn", { max: 15 }],
     "no-restricted-syntax": [
       "warn",
