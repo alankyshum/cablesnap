@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#FCF5F2", // eslint-disable-line no-restricted-syntax
+      backgroundColor: "#FFFFFF", // eslint-disable-line no-restricted-syntax
     },
     package: "com.anomalyco.cablesnap",
     versionCode: 5,
