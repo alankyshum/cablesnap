@@ -3,7 +3,7 @@
 **Issue**: BLD-443
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 Phase 67 added estimated workout duration on template cards — users see "~45 min" before starting. But once the workout begins, they lose that context. The session header shows elapsed time (e.g., "23:41") but not how much longer the workout will take. Users in the gym frequently wonder "how much longer?" — they need to plan around class schedules, parking meters, gym partners, or simply knowing if they'll finish in time for dinner.
