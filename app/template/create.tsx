@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
+  FlatList,
   Pressable,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -191,7 +191,7 @@ export default function CreateTemplate() {
                 Exercises ({exercises.length})
               </Text>
             </View>
-            <FlashList
+            <FlatList
               data={exercises}
               renderItem={renderItem}
               keyExtractor={(item) => item.id}
