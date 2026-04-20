@@ -205,7 +205,23 @@ Additional notes from panel:
 - R-05: Confirmed — `colors.primary` is the right color choice (neutral, no shame connotation)
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-20)
+
+**Critical issue:** `getPreviousSetsBatch` filters to `completed=1` only — plan cannot detect "all sets completed" vs "some sets completed" without fetching non-completed sets. As written, this would over-suggest weight increases when users failed sets (user safety risk).
+
+**Major issues:**
+- Plan doesn't list all callers/mocks that need updating when `computePrefillSets` and `getPreviousSetsBatch` signatures change (6 acceptance test mocks, 1 callsite in useSessionActions)
+- Exercise category must be plumbed to `computePrefillSets` for isolation/compound increment — plan doesn't specify how
+- RPE >= 9.5 gate (safety-critical) has no planned test coverage
+
+**Minor:** Circuit breaker listed in edge cases but marked out of scope — inconsistent.
+
+**TODOs (must fix before approval):**
+1. [Critical] Specify data fetching strategy for detecting incomplete sets
+2. [Major] List all callers and test mocks needing updates
+3. [Major] Describe how exercise category reaches computePrefillSets
+4. [Major] Add RPE gate test coverage (combine with existing planned tests)
+5. [Minor] Resolve circuit breaker scope inconsistency
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
