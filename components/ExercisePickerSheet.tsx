@@ -30,6 +30,7 @@ import {
 } from "../lib/types";
 import { duration as durationTokens, elevation } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useToast } from "@/components/ui/bna-toast";
 import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
@@ -44,6 +45,7 @@ const COMPACT_ITEM_HEIGHT = 48;
 
 export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Props) {
   const colors = useThemeColors();
+  const { error: showError } = useToast();
   const { height: SCREEN_H } = useWindowDimensions();
   const SNAP_MID = SCREEN_H * 0.45;
   const SNAP_TOP = SCREEN_H * 0.06;
@@ -80,7 +82,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           setFrequentExercises(frequent.filter((e) => !recentIds.has(e.id)).slice(0, 10));
         })
         .catch(() => {
-          // Recent/frequent failed — still show full exercise list
+          showError("Couldn't load recent exercises");
           getAllExercises().then(setExercises).catch(() => {});
         })
         .finally(() => setLoading(false));
@@ -93,7 +95,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         runOnJS(setMounted)(false);
       });
     }
-  }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_MID]);
+  }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_MID, showError]);
 
   const dismiss = useCallback(() => {
     translateY.value = withTiming(SCREEN_H, { duration: durationTokens.fast });
