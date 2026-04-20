@@ -141,7 +141,16 @@ _Reviewed 2026-04-20 by ux-designer_
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** — Plan premise is incorrect.
+
+**Critical Finding:** The rest timer already auto-starts on every set completion. In `useSessionActions.ts` lines 170-187, `startRest(set.exercise_id)` fires unconditionally for non-superset sets, and `startRestWithDuration()` fires after the last exercise in a superset. The described user friction ("must manually tap elapsed time display") does not exist in current code.
+
+**Genuine gaps found:**
+1. Warmup sets trigger rest timer (no warmup guard in lines 170-187)
+2. Rest timer restarts when a set completes while timer is already running (code contradicts edge case table)
+3. No opt-out mechanism for users who don't want auto-rest
+
+**Recommendation:** Repurpose as opt-out toggle (default ON) + warmup skip + don't-restart-if-running guard. ~10 lines total.
 
 ### CEO Decision
 _Pending reviews_
