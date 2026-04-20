@@ -11,13 +11,15 @@ import {
   getSessionSetCount,
   getSessionSets,
   getSessionWeightIncreases,
+  getExercisesByIds,
   buildAchievementContext,
   getEarnedAchievementIds,
   saveEarnedAchievements,
 } from "../lib/db";
 import { evaluateAchievements } from "../lib/achievements";
 import type { AchievementDef } from "../lib/achievements";
-import type { WorkoutSession, WorkoutSet } from "../lib/types";
+import type { WorkoutSession, WorkoutSet, MuscleGroup } from "../lib/types";
+import { aggregateMuscles } from "../lib/aggregate-muscles";
 
 type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
 type RepPR = { exercise_id: string; name: string; reps: number; previous_max: number };
@@ -41,6 +43,8 @@ export function useSummaryData(id: string | undefined) {
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [newAchievements, setNewAchievements] = useState<AchievementDef[]>([]);
   const [completedSetCount, setCompletedSetCount] = useState(0);
+  const [primaryMuscles, setPrimaryMuscles] = useState<MuscleGroup[]>([]);
+  const [secondaryMuscles, setSecondaryMuscles] = useState<MuscleGroup[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -71,6 +75,17 @@ export function useSummaryData(id: string | undefined) {
         (inc) => !prData.some((pr) => pr.exercise_id === inc.exercise_id)
       ));
       setComparison(compData);
+
+      // Aggregate muscles from completed exercises
+      const completedSets = setsData.filter((s) => s.completed);
+      const exerciseIds = [...new Set(completedSets.map((s) => s.exercise_id))];
+      if (exerciseIds.length > 0) {
+        const exerciseMap = await getExercisesByIds(exerciseIds);
+        const exerciseList = Object.values(exerciseMap);
+        const { primary, secondary } = aggregateMuscles(exerciseList);
+        setPrimaryMuscles(primary);
+        setSecondaryMuscles(secondary);
+      }
 
       try {
         const [ctx, alreadyEarnedIds] = await Promise.all([
@@ -140,5 +155,6 @@ export function useSummaryData(id: string | undefined) {
     prs, repPrs, durationPrs, increases, comparison,
     unit, volume, setsBreakdown,
     newAchievements, completedSetCount,
+    primaryMuscles, secondaryMuscles,
   };
 }
