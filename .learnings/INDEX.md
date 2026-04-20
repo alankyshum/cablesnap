@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 203
+Total learnings: 205
 
 ## How to Use This Knowledge Base
 
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-457 | test.each Reduces Source-Level Budget Without Losing Runtime Coverage | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-20 | BLD-457 | Test Infrastructure Changes Are Self-Masking — Require External Coverage Verification | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-20 | BLD-456 | Widen Batch DB Query and Pre-Filter at Consumer for Feature Addition | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-456 | Validate Plan Heuristic Inputs Against Actual Codebase Data Model | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-20 | BLD-454 | Render-Prop Components Cannot Be String-Mocked in Jest | Patterns | [testing.md](patterns/testing.md) |
