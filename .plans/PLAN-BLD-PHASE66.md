@@ -221,7 +221,24 @@ CREATE INDEX idx_strength_goals_active ON strength_goals(achieved_at);
 _Pending review_
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: APPROVED** (2026-04-20)
+
+**Regression risk**: LOW — Feature is purely additive. Rollback path is clean (disable goal UI components).
+
+**Critical paths touched**: `usePRCelebration.ts` (must be null-guarded), `loadHomeData.ts` (must degrade gracefully), `lib/db/tables.ts` (safe with `IF NOT EXISTS`).
+
+**Data integrity concern**: The `current_best` denormalized cache introduces cache-coherence risk. Recommended: drop `current_best` column and compute on-the-fly via `SELECT MAX(weight) FROM workout_sets WHERE exercise_id = ?` cached in React Query. Eliminates stale data bugs entirely.
+
+**Required TODOs for implementation:**
+1. (Critical) Define explicit `current_best` refresh mechanism or drop the cache column
+2. (Major) Safety-net refresh on exercise detail screen mount
+3. (Major) Handle workout/set deletion invalidating `current_best`
+4. (Major) Clarify unit storage and conversion flow (kg internal, lb display)
+5. (Major) Enforce one-active-goal-per-exercise at DB level (partial unique index)
+
+**Test budget**: 11 tests needed, 97 remaining in budget. Fits.
+
+**Security**: No concerns — local SQLite only.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
