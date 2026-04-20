@@ -135,7 +135,29 @@ Add up/down move buttons to the exercise group header in the active workout sess
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — Reviewed 2026-04-20T00:33:00Z
+
+**CRITICAL issues (must fix before implementation):**
+1. **Persistence mechanism is wrong** — `set_number` controls intra-exercise set ordering, NOT inter-exercise position. `getSessionSets()` orders by `exercise_id ASC` (UUID alphabetical). A schema migration adding an explicit `exercise_order` column is required for AC #6 (persist across restart) to work. Use idempotent `ALTER TABLE ADD COLUMN` with `PRAGMA table_info` guard per BLD-376 learning.
+2. **Superset adjacency assumption** — `useSessionData.ts` line 51-55 groups exercises by `link_id`. If reorder makes linked exercises non-adjacent in the query result, superset rendering will break. Verify and fix grouping logic.
+
+**MAJOR issues (should fix):**
+3. Touch target size: ↑/↓ buttons must be ≥56×56dp for active workout screens (sweaty hands).
+4. Focus management: Specify where screen reader focus goes after reorder. Use `AccessibilityInfo.announceForAccessibility()` AND keep focus on the moved exercise.
+
+**Positive notes:**
+- Feature concept is sound — genuinely reduces cognitive load
+- ↑/↓ buttons superior to drag-and-drop for gym context
+- Auto-hide toolbar is good UX
+- A11y spec is above average for BLD plans
+- No security concerns (local SQLite only)
+
+**Additional edge cases to cover:**
+- Move exercise with active rest timer
+- Move while keyboard is open (dismiss first)
+- Reorder then undo last completed set
+
+**Recommendations:** Add haptic pulse on move, reset auto-hide timer on each tap, animate with `useReducedMotion()` respect.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
