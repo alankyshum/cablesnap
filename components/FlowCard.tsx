@@ -61,7 +61,7 @@ export function difficultyBadge(d: Difficulty): MetaBadge {
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: 8, ...flowCardStyle, flexGrow: 0, padding: 12 },
+  card: { marginBottom: 8, ...flowCardStyle, padding: 12 },
   content: { flexDirection: "row", alignItems: "center", gap: 8 },
   body: { flex: 1, gap: 6 },
   chipRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },

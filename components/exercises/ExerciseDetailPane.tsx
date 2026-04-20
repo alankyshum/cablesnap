@@ -136,11 +136,19 @@ export function ExerciseDetailPane({ detail, colors, profileGender }: ExerciseDe
                   <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                     Instructions
                   </Text>
-                  {steps.map((step, i) => (
-                    <Text key={i} variant="body" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
-                      {step}
-                    </Text>
-                  ))}
+                  {steps.map((step, i) => {
+                    const text = step.replace(/^\d+\.\s*/, "");
+                    return (
+                      <View key={i} style={styles.stepRow}>
+                        <Text variant="body" style={{ color: colors.onSurfaceVariant, lineHeight: 22, minWidth: 20 }}>
+                          {i + 1}.
+                        </Text>
+                        <Text variant="body" style={{ color: colors.onSurface, lineHeight: 22, flex: 1 }}>
+                          {text}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </>
               )}
             </>
@@ -190,5 +198,10 @@ const styles = StyleSheet.create({
   detailBadgeText: {
     fontSize: fontSizes.xs,
     lineHeight: 16,
+  },
+  stepRow: {
+    flexDirection: "row",
+    marginTop: 6,
+    gap: 4,
   },
 });

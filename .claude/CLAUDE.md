@@ -119,6 +119,21 @@ Available tools (require dev server running — see above):
 - **Test audit:** `./scripts/audit-tests.sh` (or `--detail` for mock overlap matrix)
 - **Build APK:** `npm run build:apk`
 
+## Expo Router — File Conventions
+
+Files inside `app/` are treated as routes by Expo Router. Non-route files (helpers, hooks, sub-components, styles, data) **must** be prefixed with `_` to exclude them from routing.
+
+- `app/_screen-config.ts` — config/data file (underscore prefix)
+- `app/onboarding/_recommend-styles.ts` — shared styles (underscore prefix)
+- `app/onboarding/_use-onboarding-finish.ts` — hook (underscore prefix)
+
+Alternatively, move non-route code out of `app/` entirely (into `components/`, `lib/`, `hooks/`, `constants/`).
+
+## React Native — Common Pitfalls
+
+1. **Never use `flexWrap: 'wrap'` on FlatList/VirtualizedList `contentContainerStyle`** — React Native does not support it and will emit a warning. If you need a wrapping layout with `scrollEnabled={false}`, use `<View style={{ flexWrap: 'wrap' }}>` + `.map()` instead of FlatList.
+2. **Function size limits** — ESLint enforces `max-lines-per-function: 200` and `complexity: 15`. Extract sub-components (e.g., `PreviewList`, `ResultList`) to keep screen components under these limits. This applies to both `app/` screens and test callbacks (`describe`/`it` blocks).
+
 ## Test Budget & Deduplication
 
 The test suite has a **budget of 1800 test cases**. Before adding tests, agents MUST:

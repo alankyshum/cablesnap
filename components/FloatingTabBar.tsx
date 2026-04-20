@@ -98,7 +98,8 @@ export default function FloatingTabBar({
         <BlurView
           intensity={80}
           tint={isDark ? "dark" : "light"}
-          style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "rgba(30,30,30,0.7)" : "rgba(255,255,255,0.75)" }]}
+          experimentalBlurMethod="dimezisBlurView"
+          style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "rgba(30,30,30,0.45)" : "rgba(255,255,255,0.5)" }]}
         />
       </View>
       {orderedTabs.map((name, visualIdx) => {

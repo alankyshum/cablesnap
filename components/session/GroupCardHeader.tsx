@@ -70,5 +70,5 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", alignItems: "center" },
   groupTitle: { fontWeight: "700" },
   iconBtn: { padding: 8 },
-  detailsBtn: { marginLeft: -12, marginRight: -8 },
+  detailsBtn: { marginLeft: -24, marginRight: -8 },
 });

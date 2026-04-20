@@ -39,6 +39,16 @@ export default function TabLayout() {
         options={{
           title: "Exercises",
           headerTitle: renderHeaderTitle("format-list-bulleted", "Exercises"),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push("/exercise/create")}
+              accessibilityLabel="Add custom exercise"
+              accessibilityRole="button"
+              style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            >
+              <MaterialCommunityIcons name="plus" size={28} color={colors.onSurface} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <Tabs.Screen

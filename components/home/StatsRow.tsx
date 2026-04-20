@@ -33,5 +33,5 @@ export default function StatsRow({ colors, streak, weekDone, scheduled, prCount 
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
-  stat: { alignItems: "center", gap: 2 },
+  stat: { flex: 1, alignItems: "center", gap: 2 },
 });
