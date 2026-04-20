@@ -127,22 +127,20 @@ Add a `MusclesWorkedCard` component to the session summary screen. The card rend
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-**Verdict: NEEDS REVISION**
+**Verdict: APPROVED** ✅ (re-reviewed after v2 revision)
 
 **Cognitive Load**: ✅ Zero additional cognitive load — view-only, no decisions, extends familiar MuscleMap visual vocabulary.
 
 **Interaction/Visual/Accessibility**: All good — view-only card, no touch targets needed, existing a11y patterns apply.
 
-**Critical Issue (Blocking)**:
-1. **Front-only view misses posterior muscles.** ~~Plan scopes to "front view only" but this undermines the core purpose. Users doing rows, lat pulldowns, rear delt flies would see a near-empty diagram.~~ **→ ADDRESSED (v2): Plan now uses front AND back views side-by-side.**
+**All issues resolved in v2:**
+1. ~~**Front-only view misses posterior muscles.**~~ → FIXED: Plan now uses front AND back views.
+2. ~~**Simplify text list.**~~ → FIXED: Changed to flat list format.
+3. ~~**Specify MuscleMap sizing.**~~ → FIXED: Container constrained to ~180-200dp.
 
-**Major Issues (Should Fix)**:
-2. **Simplify text list.** ~~"Primary: X · Secondary: Y" is redundant with the color-coded intensity on the diagram.~~ **→ ADDRESSED (v2): Changed to flat list ("Chest · Shoulders · Triceps").**
-3. **Specify MuscleMap sizing.** ~~Constrain to ~180-200dp height to prevent pushing SetsCard below the fold on small phones.~~ **→ ADDRESSED (v2): Container constrained to ~180-200dp.**
+**Implementation notes**: Use `surface` background (not `tertiaryContainer`). Use MuscleMap's built-in Legend for text. Test on 375pt viewport.
 
-**Nice to Have**: muscle count in header ("Muscles Worked (6 groups)"), future tap-to-navigate to progress tab.
-
-_Reviewed 2026-04-20 by UX Designer_
+_Reviewed 2026-04-20, approved 2026-04-20 by UX Designer_
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20T13:37Z)
