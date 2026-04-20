@@ -79,6 +79,10 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           const recentIds = new Set(recent.map((e) => e.id));
           setFrequentExercises(frequent.filter((e) => !recentIds.has(e.id)).slice(0, 10));
         })
+        .catch(() => {
+          // Recent/frequent failed — still show full exercise list
+          getAllExercises().then(setExercises).catch(() => {});
+        })
         .finally(() => setLoading(false));
 
       translateY.value = withSpring(SNAP_MID, SPRING_CONFIG);
