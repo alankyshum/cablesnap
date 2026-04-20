@@ -54,13 +54,6 @@ async function captureScreen(
 
 test.beforeAll(() => {
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
-
-  const existing = fs.readdirSync(SCREENSHOT_DIR);
-  for (const file of existing) {
-    if (file.endsWith(".png")) {
-      fs.unlinkSync(path.join(SCREENSHOT_DIR, file));
-    }
-  }
 });
 
 test.describe("Screenshot Capture -- All Screens", () => {
@@ -102,13 +95,11 @@ test.describe("Screenshot Capture -- Onboarding", () => {
 });
 
 test.describe("Screenshot Capture -- Store", () => {
-  test.skip(
-    (_fixtures, testInfo) =>
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(
       !testInfo.project.name.startsWith("store-"),
-    "Only runs on store-* projects",
-  );
-
-  test.beforeEach(async ({ page }) => {
+      "Only runs on store-* projects",
+    );
     await skipOnboarding(page);
   });
 

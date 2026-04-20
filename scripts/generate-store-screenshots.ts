@@ -1,10 +1,10 @@
 /**
  * Generate device-framed store screenshots from raw Playwright captures.
  *
- * Reads raw PNGs from .pixelslop/screenshots/ (produced by store-pixel4
+ * Reads raw PNGs from .pixelslop/screenshots/ (produced by store-pixel9
  * and store-fold7 Playwright projects), composites a programmatic device
  * frame around each using sharp, and writes them to:
- *   - fdroid/metadata/com.persoack.cablesnap/en-US/phoneScreenshots/ (Pixel 4)
+ *   - fdroid/metadata/com.persoack.cablesnap/en-US/phoneScreenshots/ (Pixel 9)
  *   - assets/store-screenshots/ (both devices)
  *
  * Usage: npx tsx scripts/generate-store-screenshots.ts
@@ -50,12 +50,12 @@ interface DeviceSpec {
 
 const DEVICES: DeviceSpec[] = [
   {
-    project: "store-pixel4",
-    label: "Pixel 4",
-    viewportW: 393,
-    viewportH: 844,
+    project: "store-pixel9",
+    label: "Pixel 9",
+    viewportW: 412,
+    viewportH: 924,
     outputW: 1080,
-    outputH: 2340,
+    outputH: 2424,
     bezel: 36,
     cornerRadius: 48,
     screenRadius: 28,
@@ -79,10 +79,18 @@ const DEVICES: DeviceSpec[] = [
 
 function buildFrameSvg(device: DeviceSpec): string {
   const { outputW, outputH, bezel, cornerRadius, screenRadius } = device;
-  const screenX = bezel;
-  const screenY = bezel;
-  const screenW = outputW - bezel * 2;
-  const screenH = outputH - bezel * 2;
+  const sx = bezel;
+  const sy = bezel;
+  const sw = outputW - bezel * 2;
+  const sh = outputH - bezel * 2;
+  const cr = cornerRadius;
+  const sr = screenRadius;
+
+  // Outer rounded rect (clockwise)
+  const outer = `M${cr},0 H${outputW - cr} Q${outputW},0 ${outputW},${cr} V${outputH - cr} Q${outputW},${outputH} ${outputW - cr},${outputH} H${cr} Q0,${outputH} 0,${outputH - cr} V${cr} Q0,0 ${cr},0 Z`;
+
+  // Inner rounded rect (same winding — even-odd creates hole)
+  const inner = `M${sx + sr},${sy} H${sx + sw - sr} Q${sx + sw},${sy} ${sx + sw},${sy + sr} V${sy + sh - sr} Q${sx + sw},${sy + sh} ${sx + sw - sr},${sy + sh} H${sx + sr} Q${sx},${sy + sh} ${sx},${sy + sh - sr} V${sy + sr} Q${sx},${sy} ${sx + sr},${sy} Z`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${outputW}" height="${outputH}">
   <defs>
@@ -90,14 +98,7 @@ function buildFrameSvg(device: DeviceSpec): string {
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/>
     </filter>
   </defs>
-  <!-- Outer bezel -->
-  <rect x="0" y="0" width="${outputW}" height="${outputH}"
-        rx="${cornerRadius}" ry="${cornerRadius}"
-        fill="#1a1a1a" filter="url(#shadow)"/>
-  <!-- Inner screen cutout (transparent) -->
-  <rect x="${screenX}" y="${screenY}" width="${screenW}" height="${screenH}"
-        rx="${screenRadius}" ry="${screenRadius}"
-        fill="transparent"/>
+  <path fill-rule="evenodd" d="${outer} ${inner}" fill="#1a1a1a" filter="url(#shadow)"/>
 </svg>`;
 }
 
@@ -225,7 +226,7 @@ async function main(): Promise<void> {
       console.log("done");
 
       // Copy Pixel 4 shots to F-Droid as 1.png-5.png
-      if (device.project === "store-pixel4") {
+      if (device.project === "store-pixel9") {
         const fdroidPath = path.join(FDROID_DIR, `${i + 1}.png`);
         fs.copyFileSync(assetPath, fdroidPath);
         console.log(`  → ${path.relative(process.cwd(), fdroidPath)}`);

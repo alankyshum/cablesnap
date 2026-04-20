@@ -31,8 +31,8 @@ export default defineConfig({
       use: { viewport: { width: 1280, height: 800 } },
     },
     {
-      name: "store-pixel4",
-      use: { viewport: { width: 393, height: 844 } },
+      name: "store-pixel9",
+      use: { viewport: { width: 412, height: 924 } },
     },
     {
       name: "store-fold7",
