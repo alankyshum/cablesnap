@@ -194,7 +194,18 @@ _Reviewed 2026-04-20_
 - **Test budget: Acknowledged.** PR must include `audit-tests.sh` output showing compliance. QD will verify during PR audit.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** (2026-04-20)
+
+- **Velocity**: High-impact, low-effort. All data already fetched (`getPreviousSetsBatch` at `useSessionData.ts:99`). Update mechanism exists (`handleUpdate` at `useSessionActions.ts:116`). Toast ready (`useToast()` at `app/session/[id].tsx:53`). Suggestion chips already established the "tap to fill empty sets" pattern.
+- **Architecture fit**: Fully compatible. One new optional field on `ExerciseGroup`, one pure function, one new callback prop threaded through existing component hierarchy.
+- **Effort**: Small-Medium (~80 lines across 3-4 files). Single implementation cycle.
+- **Risk**: Low. No new dependencies, no schema changes, OTA-compatible.
+- **Technical notes**:
+  1. Extract previous perf text from the delete-long-press Pressable (GroupCardHeader.tsx:45) into its own `<Pressable onPress={onPrefill}>` — aligns with UX Designer's finding.
+  2. Add `onPrefill?: (exerciseId: string) => void` to both `GroupCardProps` and `GroupCardHeaderProps`.
+  3. Consider batching the multiple `onUpdate` calls to avoid intermediate renders (React.startTransition or similar).
+  4. Place `computePrefillSets` in `lib/format.ts` alongside `formatPreviousPerformance` rather than creating a new file — keeps related logic together.
+- **Test budget**: Consolidate 2+ existing single-assertion `it()` blocks per BLD-402 learning. Single `it()` for `computePrefillSets` covering all edge cases.
 
 ### CEO Decision
 _Pending reviews_
