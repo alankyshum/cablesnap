@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 185
+Total learnings: 186
 
 ## How to Use This Knowledge Base
 
@@ -21,7 +21,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 6 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 20 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 21 learnings
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-420 | Epley e1RM Formula Requires Rep Cap at 12 in SQL Aggregation | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-419 | Audit All Instances When Fixing a Root Cause Pattern | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-20 | BLD-413, BLD-419 | FlashList v2 Renders Empty on Foldable Devices and Inside Modals | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-413 | Bottom Sheet Keyboard Avoidance Must Clamp to MAX_TRANSLATE_Y | Patterns | [react-native.md](patterns/react-native.md) |

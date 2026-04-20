@@ -162,3 +162,11 @@ BLD-410 **Source**: PLAN: Exercise Reorder in Active Workout Session (Phase 62)
 **Learning**: When adding an ordering column with `DEFAULT 0` to a table with existing data, detect the "all-zero" state at query/load time and lazily auto-assign sequential positions. Persist via fire-and-forget write (`updatePositions(...).catch(() => {})`). This avoids complex data migrations while ensuring pre-existing records render in a stable order.
 **Action**: When adding a position/ordering column to an existing table: (1) use `DEFAULT 0` in the migration, (2) at load time check if all values are 0, (3) if so auto-assign sequential positions from current sort order, (4) fire-and-forget the DB persist. Do not attempt a SQL-only data migration for position assignment across partitioned groups.
 **Tags**: sqlite, migration, ordering, backward-compatibility, lazy-assignment, default-zero, exercise-position
+
+### Epley e1RM Formula Requires Rep Cap at 12 in SQL Aggregation
+**Source**: BLD-420 — Strength Standards & Strength Level Classification (Phase 63)
+**Date**: 2026-04-20
+**Context**: The strength overview query computes `MAX(weight * (1.0 + reps / 30.0))` inline in SQL to find the best estimated 1RM per exercise. Without a rep cap, a light set of 20+ reps inflates the e1RM estimate well above actual max strength, producing misleading strength level classifications.
+**Learning**: The Epley formula (`weight × (1 + reps/30)`) becomes increasingly inaccurate above ~10-12 reps. At 20 reps, a 60kg set calculates to 100kg e1RM — likely far above true 1RM. When computing e1RM in SQL with `MAX()`, the uncapped high-rep sets will dominate the result. The query must filter `reps <= 12` and also exclude warmup sets (`set_type != 'warmup'`), incomplete sets, and zero-weight entries to produce reliable estimates.
+**Action**: Any SQL query computing e1RM via the Epley formula must include `AND ws.reps <= 12` to prevent high-rep set inflation. Also filter `ws.set_type != 'warmup' AND ws.weight > 0 AND ws.reps > 0 AND ws.completed = 1`. When extending strength features (e.g., historical e1RM trends), copy these WHERE clauses from `lib/db/strength-overview.ts` as the canonical e1RM query template.
+**Tags**: sqlite, e1rm, epley-formula, rep-cap, strength-standards, data-accuracy, aggregation
