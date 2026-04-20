@@ -35,10 +35,36 @@ import ExerciseRecordsCard from "@/components/exercise/ExerciseRecordsCard";
 import ExerciseChartCard from "@/components/exercise/ExerciseChartCard";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
+import { useStrengthGoal } from "@/hooks/useStrengthGoals";
+import { useBottomSheet } from "@/components/ui/bottom-sheet";
+import GoalProgressCard from "@/components/exercise/GoalProgressCard";
+import GoalSetForm from "@/components/exercise/GoalSetForm";
 import { fontSizes } from "@/constants/design-tokens";
 
 function formatDateLong(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(ts));
+}
+
+function GoalSection({ goalState, colors, bw, unit, onOpenSheet }: {
+  goalState: ReturnType<typeof useStrengthGoal>; colors: ReturnType<typeof useThemeColors>;
+  bw: boolean; unit: "kg" | "lb"; onOpenSheet: () => void;
+}) {
+  if (goalState.isLoading) return null;
+  if (goalState.goal) {
+    return (
+      <GoalProgressCard
+        colors={colors} goal={goalState.goal} currentBest={goalState.currentBest}
+        progressPct={goalState.progressPct} isBodyweight={bw} unit={unit}
+        onEdit={onOpenSheet}
+        onDelete={() => goalState.goal && goalState.deleteGoal(goalState.goal.id)}
+      />
+    );
+  }
+  return (
+    <Button variant="outline" onPress={onOpenSheet} label="Set Goal"
+      style={{ alignSelf: "flex-start", marginTop: 8, marginBottom: 8 }}
+      accessibilityLabel="Set a strength goal for this exercise" />
+  );
 }
 
 export default function ExerciseDetail() {
@@ -51,6 +77,8 @@ export default function ExerciseDetail() {
   const { toast: showToast } = useToast();
   const d = useExerciseDetail(id);
   const strengthLevel = useStrengthLevel(d.exercise?.name, d.records?.est_1rm ?? null, d.unit);
+  const goalSheet = useBottomSheet();
+  const goalState = useStrengthGoal(id, d.bw);
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
   const remove = useCallback(async () => {
@@ -113,6 +141,9 @@ export default function ExerciseDetail() {
             {steps.map((step, i) => <Text key={i} variant="body" style={[styles.step, { color: colors.onSurface }]}>{step}</Text>)}</View>)}
         </>
       )}
+
+      {/* Goal Progress Card — above Records/Chart for discoverability */}
+      <GoalSection goalState={goalState} colors={colors} bw={d.bw} unit={d.unit} onOpenSheet={goalSheet.open} />
 
       <FlowContainer gap={16}>
         <ExerciseRecordsCard colors={colors} records={d.records} recordsLoading={d.recordsLoading} recordsError={d.recordsError}
@@ -187,6 +218,18 @@ export default function ExerciseDetail() {
         keyExtractor={(item) => item.session_id} renderItem={renderItem} ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         onEndReached={d.loadMore} onEndReachedThreshold={0.3} />
+      {id && (
+        <GoalSetForm
+          isVisible={goalSheet.isVisible}
+          onClose={goalSheet.close}
+          exerciseId={id}
+          isBodyweight={d.bw}
+          unit={d.unit}
+          existingGoal={goalState.goal}
+          onCreate={goalState.createGoal}
+          onUpdate={goalState.updateGoal}
+        />
+      )}
     </>
   );
 }

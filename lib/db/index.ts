@@ -285,3 +285,16 @@ export type { MuscleRecoveryStatus, RecoveryStatus } from "./recovery";
 
 export { getStrengthOverview } from "./strength-overview";
 export type { StrengthOverviewRow } from "./strength-overview";
+
+export {
+  getActiveGoals,
+  getGoalForExercise,
+  createGoal,
+  updateGoal,
+  achieveGoal,
+  deleteGoal,
+  getCompletedGoals,
+  getCurrentBestWeight,
+  getCurrentBestReps,
+} from "./strength-goals";
+export type { StrengthGoalRow, CreateGoalInput, UpdateGoalInput } from "./strength-goals";

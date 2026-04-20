@@ -4,6 +4,7 @@ import {
   type InsightData,
   type E1RMTrendRow,
   type WeeklyVolumeRow,
+  type GoalInsightRow,
 } from "../../lib/insights";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -28,7 +29,55 @@ describe("generateInsight", () => {
     expect(generateInsight(makeData())).toBeNull();
   });
 
-  describe("strength trend (highest priority)", () => {
+  describe("goal progress (highest priority)", () => {
+    const goals: GoalInsightRow[] = [
+      { exercise_id: "e1", exercise_name: "Bench Press", progressPct: 85 },
+      { exercise_id: "e2", exercise_name: "Squat", progressPct: 60 },
+    ];
+
+    it("picks the goal with the highest progress", () => {
+      const result = generateInsight(makeData({ goalInsights: goals }));
+      expect(result).not.toBeNull();
+      expect(result!.type).toBe("goal_progress");
+      expect(result!.title).toContain("85%");
+      expect(result!.title).toContain("Bench Press");
+      expect(result!.icon).toBe("bullseye-arrow");
+      expect(result!.exerciseId).toBe("e1");
+    });
+
+    it("includes accessibility label", () => {
+      const result = generateInsight(makeData({ goalInsights: goals }));
+      expect(result!.accessibilityLabel).toContain("Training insight:");
+      expect(result!.accessibilityLabel).toContain("Tap to view details");
+    });
+
+    it("returns null when all goals have 0% progress", () => {
+      const zeroGoals: GoalInsightRow[] = [
+        { exercise_id: "e1", exercise_name: "Bench Press", progressPct: 0 },
+      ];
+      const result = generateInsight(makeData({ goalInsights: zeroGoals }));
+      // Should fall through to null (or other insight types)
+      expect(result === null || result.type !== "goal_progress").toBe(true);
+    });
+
+    it("returns null when goalInsights is empty", () => {
+      const result = generateInsight(makeData({ goalInsights: [] }));
+      expect(result).toBeNull();
+    });
+
+    it("takes priority over strength, volume, and consistency", () => {
+      const trends: E1RMTrendRow[] = [
+        { exercise_id: "e1", name: "Squat", current_e1rm: 200, previous_e1rm: 100 },
+      ];
+      const result = generateInsight(makeData({
+        goalInsights: goals,
+        e1rmTrends: trends,
+      }));
+      expect(result!.type).toBe("goal_progress");
+    });
+  });
+
+  describe("strength trend (second priority)", () => {
     const trends: E1RMTrendRow[] = [
       { exercise_id: "e1", name: "Bench Press", current_e1rm: 105, previous_e1rm: 100 },
       { exercise_id: "e2", name: "Squat", current_e1rm: 150, previous_e1rm: 140 },
