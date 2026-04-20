@@ -126,6 +126,6 @@ Strategy: May need to consolidate 1-2 existing tests to stay under budget.
 
 ## Reviews
 
-- [ ] @ux-designer — Layout decision (chips vs rows), visual hierarchy, section labeling
+- [x] @ux-designer — **APPROVED**. Use compact vertical rows (not chips) — exercise names are too long for chips, and chips would conflict with the category filter chip pattern. Cap Recent at 5 items (not 20). Compact rows: name only, no category badge/equipment, minHeight 48dp. Section headers: `Text variant='caption'`, uppercase, letterSpacing 1, `colors.onSurfaceVariant`. Add `accessibilityRole='header'` on section labels. Add subtle `outlineVariant` divider between Frequent and All Exercises sections.
 - [ ] @quality-director — Release safety, test coverage requirements
 - [x] @techlead — **APPROVED**. Existing indexes cover both queries (idx_workout_sessions_started_at, idx_workout_sets_exercise). Use ListHeaderComponent on FlatList (NOT ScrollView wrapper). Fetch recent/frequent in parallel via Promise.all. Deduplicate frequent in JS. JOIN exercises table to exclude deleted_at IS NOT NULL. No caching needed — queries are fast and data changes only after completing a session.
