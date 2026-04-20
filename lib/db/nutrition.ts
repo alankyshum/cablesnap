@@ -171,21 +171,26 @@ export async function findDuplicateFoodEntry(
 export async function getDailySummary(
   date: string
 ): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
-  const db = await getDrizzle();
-  const row = await db.select({
-    calories: sql<number>`SUM(${foodEntries.calories} * ${dailyLog.servings})`,
-    protein: sql<number>`SUM(${foodEntries.protein} * ${dailyLog.servings})`,
-    carbs: sql<number>`SUM(${foodEntries.carbs} * ${dailyLog.servings})`,
-    fat: sql<number>`SUM(${foodEntries.fat} * ${dailyLog.servings})`,
-  })
-    .from(dailyLog)
-    .innerJoin(foodEntries, eq(dailyLog.food_entry_id, foodEntries.id))
-    .where(eq(dailyLog.date, date))
-    .get();
-  return {
-    calories: row?.calories ?? 0,
-    protein: row?.protein ?? 0,
-    carbs: row?.carbs ?? 0,
-    fat: row?.fat ?? 0,
-  };
+  const zero = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  try {
+    const db = await getDrizzle();
+    const row = await db.select({
+      calories: sql<number>`SUM(${foodEntries.calories} * ${dailyLog.servings})`,
+      protein: sql<number>`SUM(${foodEntries.protein} * ${dailyLog.servings})`,
+      carbs: sql<number>`SUM(${foodEntries.carbs} * ${dailyLog.servings})`,
+      fat: sql<number>`SUM(${foodEntries.fat} * ${dailyLog.servings})`,
+    })
+      .from(dailyLog)
+      .innerJoin(foodEntries, eq(dailyLog.food_entry_id, foodEntries.id))
+      .where(eq(dailyLog.date, date))
+      .get();
+    return {
+      calories: row?.calories ?? 0,
+      protein: row?.protein ?? 0,
+      carbs: row?.carbs ?? 0,
+      fat: row?.fat ?? 0,
+    };
+  } catch {
+    return zero;
+  }
 }

@@ -10,10 +10,9 @@
 ## Screenshots
 
 <p align="center">
-  <img src="assets/store-screenshots/workouts-store-pixel9.png" alt="Workouts" width="180">
-  <img src="assets/store-screenshots/exercises-store-pixel9.png" alt="Exercises" width="180">
-  <img src="assets/store-screenshots/nutrition-store-pixel9.png" alt="Nutrition" width="180">
-  <img src="assets/store-screenshots/progress-store-pixel9.png" alt="Progress" width="180">
+  <img src="assets/store-screenshots/workouts-store-pixel9.png" alt="Workouts" width="200">
+  <img src="assets/store-screenshots/nutrition-store-pixel9.png" alt="Nutrition" width="200">
+  <img src="assets/store-screenshots/progress-store-pixel9.png" alt="Progress" width="200">
 </p>
 
 ## Features

@@ -17,6 +17,13 @@ export const TAB_SCREENS: Screen[] = [
   { name: "Settings", path: "/settings" },
 ];
 
+/** Subset of tabs that render well on web for store screenshots */
+export const STORE_SCREENS: Screen[] = [
+  { name: "Workouts", path: "/" },
+  { name: "Nutrition", path: "/nutrition" },
+  { name: "Progress", path: "/progress" },
+];
+
 export const TOOL_SCREENS: Screen[] = [
   { name: "Tools Hub", path: "/tools" },
   { name: "1RM Calculator", path: "/tools/rm" },

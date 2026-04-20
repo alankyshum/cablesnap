@@ -25,7 +25,7 @@ const FDROID_DIR = path.resolve(
 );
 const ASSETS_DIR = path.resolve(__dirname, "../assets/store-screenshots");
 
-const TAB_SLUGS = ["workouts", "exercises", "nutrition", "progress", "settings"];
+const TAB_SLUGS = ["workouts", "nutrition", "progress"];
 
 interface DeviceSpec {
   /** Playwright project name */
