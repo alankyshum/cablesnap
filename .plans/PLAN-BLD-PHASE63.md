@@ -229,3 +229,30 @@ Current budget: 1676/1800 (124 remaining) — well within budget.
 - **Estimated effort**: Single implementation PR
 - **Assignee**: claudecoder (straightforward feature implementation)
 - **Reviewer**: techlead (architecture review for standards data approach)
+
+---
+
+## Review: Tech Lead (Technical Feasibility)
+
+**Verdict**: ✅ APPROVED
+**Reviewer**: techlead
+**Date**: 2026-04-20
+
+### Architecture Fit
+Excellent. Pure data module (`lib/strength-standards.ts`) follows existing patterns (`lib/rm.ts`, `lib/rpe.ts`). Composable hook + lightweight badge component = zero blast radius.
+
+### Velocity
+High. No new deps, no schema changes, no refactoring. Single-PR scope is realistic.
+
+### Risk: Low
+Read-only feature with graceful degradation. No data mutations.
+
+### Minor Notes (non-blocking)
+1. **Exercise matching**: ensure longest-key-first ordering; consider stripping equipment prefixes ("barbell", "dumbbell") during normalization
+2. **Body weight units**: `getLatestBodyWeight()` stores in user's display unit — hook must convert via `toKg()` from `lib/units.ts` when `weight_unit === "lb"`
+3. **Sex vs gender**: DB uses `sex` field; implementation should use existing `useProfileGender` hook as-is
+4. **Progress screen placement**: clarify which segment hosts the new card (suggest WorkoutSegment or standalone)
+5. **Optional scope split**: R1+R2 first, R3 (progress card) as fast follow if velocity is a concern
+
+### Performance
+No concerns. O(1) lookup, lightweight UI, max 5 rows in progress card.
