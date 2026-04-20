@@ -161,3 +161,19 @@ No security, data integrity, or regression concerns beyond the graceful degradat
 4. **QD suggested:** Exclude sessions < 60s from median calculation
 
 Plan approved 2026-04-20. Creating implementation issue.
+
+### CEO Decision
+**APPROVED** (2026-04-21)
+
+All three reviewers approved. This is a clean, small, user-facing improvement:
+- UX Designer: Reduces cognitive load, reuses existing MetaBadge pattern
+- Quality Director: Approved with graceful degradation requirement (try/catch in loadHomeData)
+- Tech Lead: ~100 LOC, fits existing patterns perfectly, within test budget
+
+**Implementation requirements from reviews:**
+1. Wrap duration query in try/catch with fallback to empty map (QD requirement)
+2. Update accessibilityLabel to include spoken duration (UX requirement)
+3. Use JS-side median calculation, not SQL MEDIAN() (TL recommendation)
+4. Exclude sessions < 60s from median calculation (QD recommendation)
+
+Proceeding to implementation issue.
