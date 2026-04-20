@@ -304,19 +304,19 @@ describe('Accessibility Compliance Audit', () => {
       })
     })
 
-    it('FAB has accessible label for creating exercise', async () => {
+    it('exercises screen renders without FAB (FAB is in layout header)', async () => {
       const screen = renderScreen(<Exercises />)
       await waitFor(() => {
-        expect(screen.getByLabelText('Add custom exercise')).toBeTruthy()
+        expect(screen.getByLabelText(/Bench Press/)).toBeTruthy()
       })
     })
   })
 
   describe('nutrition.tsx', () => {
-    it('has accessible FAB for adding food', async () => {
+    it('nutrition screen renders day navigation (FAB is in layout header)', async () => {
       const screen = renderScreen(<Nutrition />)
       await waitFor(() => {
-        expect(screen.getByLabelText('Add food')).toBeTruthy()
+        expect(screen.getByLabelText('Previous day')).toBeTruthy()
       })
     })
 
@@ -333,7 +333,7 @@ describe('Accessibility Compliance Audit', () => {
     it('renders setting cards with accessible labels', async () => {
       const screen = renderScreen(<Settings />)
       await waitFor(() => {
-        expect(screen.getByText('Settings')).toBeTruthy()
+        expect(screen.getByText('About')).toBeTruthy()
       })
     })
 

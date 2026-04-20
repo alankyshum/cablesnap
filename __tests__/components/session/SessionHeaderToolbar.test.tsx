@@ -40,6 +40,12 @@ jest.mock("../../../lib/format", () => ({
     const s = seconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
   },
+  formatTimeRemaining: (est: number | null, elapsed: number) => {
+    if (est == null || est <= 0) return null;
+    const rem = est - elapsed;
+    if (rem <= 0) return null;
+    return `~${Math.ceil(rem / 60)} min left`;
+  },
 }));
 
 const defaultProps = {

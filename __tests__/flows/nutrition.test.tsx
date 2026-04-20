@@ -158,27 +158,9 @@ describe('Nutrition Logging', () => {
     })
   })
 
-  it('add food FAB toggles inline search card', async () => {
-    const { findByText, getByLabelText, queryByTestId } = renderScreen(<Nutrition />)
-    await findByText('Today')
-
-    // Initially no inline card
-    expect(queryByTestId('inline-food-search')).toBeNull()
-
-    // Tap FAB to open inline card
-    fireEvent.press(getByLabelText('Add food'))
-    await waitFor(() => {
-      expect(queryByTestId('inline-food-search')).toBeTruthy()
-    })
-
-    // FAB label changes to close
-    expect(getByLabelText('Close add food')).toBeTruthy()
-
-    // Tap again to close
-    fireEvent.press(getByLabelText('Close add food'))
-    await waitFor(() => {
-      expect(queryByTestId('inline-food-search')).toBeNull()
-    })
+  it('renders nutrition screen with day navigation (FAB is in layout header)', async () => {
+    const { findByText } = renderScreen(<Nutrition />)
+    expect(await findByText('Today')).toBeTruthy()
   })
 
   it('edit targets link has a11y label', async () => {

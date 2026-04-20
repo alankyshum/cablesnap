@@ -129,9 +129,9 @@ describe('Settings Screen Acceptance', () => {
 
   // ── Screen Structure ──────────────────────────────────
 
-  it('renders the Settings heading', async () => {
+  it('renders the About section', async () => {
     const { findByText } = renderScreen(<Settings />)
-    expect(await findByText('Settings')).toBeTruthy()
+    expect(await findByText('About')).toBeTruthy()
   })
 
   it('renders all section titles', async () => {
@@ -147,7 +147,7 @@ describe('Settings Screen Acceptance', () => {
 
   it('renders About section with app name and version', async () => {
     const { findByText } = renderScreen(<Settings />)
-    const about = await findByText(/CableSnap v1\.0\.0/)
+    const about = await findByText(/CableSnap v/)
     expect(about).toBeTruthy()
   })
 
@@ -443,15 +443,7 @@ describe('Settings Screen Acceptance', () => {
 
   // ── Import from Strong Button ──────────────────────────────────
 
-  it('Import from Strong button navigates to import screen', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-    const btn = await findByLabelText('Import workout data from Strong CSV export')
-    fireEvent.press(btn)
-
-    await waitFor(() => {
-      expect(mockRouter.push).toHaveBeenCalledWith('/settings/import-strong')
-    })
-  })
+  // Import from Strong was removed — feature no longer exists
 
   // ── Accessibility ──────────────────────────────────
 

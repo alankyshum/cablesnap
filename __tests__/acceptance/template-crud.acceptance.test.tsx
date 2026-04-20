@@ -141,9 +141,9 @@ describe('Template CRUD Acceptance', () => {
 
   describe('Create Template', () => {
     it('creates a new template when name is entered', async () => {
-      const { getByPlaceholderText, getByLabelText } = renderScreen(<CreateTemplate />)
+      const { getByLabelText } = renderScreen(<CreateTemplate />)
 
-      fireEvent.changeText(getByPlaceholderText('Template Name'), 'Push Day')
+      fireEvent.changeText(getByLabelText('Template Name'), 'Push Day')
       fireEvent.press(getByLabelText('Create template'))
 
       await waitFor(() => {
@@ -167,9 +167,9 @@ describe('Template CRUD Acceptance', () => {
     })
 
     it('shows exercises section after template is created', async () => {
-      const { getByPlaceholderText, getByLabelText, findByLabelText, findByText } = renderScreen(<CreateTemplate />)
+      const { getByLabelText, findByLabelText, findByText } = renderScreen(<CreateTemplate />)
 
-      fireEvent.changeText(getByPlaceholderText('Template Name'), 'Push Day')
+      fireEvent.changeText(getByLabelText('Template Name'), 'Push Day')
       fireEvent.press(getByLabelText('Create template'))
 
       expect(await findByLabelText('Add exercise to template')).toBeTruthy()
@@ -211,11 +211,11 @@ describe('Template CRUD Acceptance', () => {
     it('saves name changes and navigates back on Done', async () => {
       mockParams = { templateId: 'tpl-1' }
 
-      const { findByText, getByPlaceholderText, getByLabelText } = renderScreen(<CreateTemplate />)
+      const { findByText, getByLabelText } = renderScreen(<CreateTemplate />)
 
       await findByText('Bench Press')
 
-      fireEvent.changeText(getByPlaceholderText('Template Name'), 'Pull Day')
+      fireEvent.changeText(getByLabelText('Template Name'), 'Pull Day')
       fireEvent.press(getByLabelText('Done editing template'))
 
       await waitFor(() => {
