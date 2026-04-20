@@ -138,7 +138,24 @@ Add an "Auto-start rest timer" toggle in the rest timer settings (the modal that
 _Reviewed 2026-04-20 by ux-designer_
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: NEEDS REVISION** — Critical factual error in problem statement.
+
+**Key findings:**
+1. Rest timer already auto-starts on every set completion (`useSessionActions.ts` lines 170-187: `startRest()` for standalone, `startRestWithDuration()` for linked groups)
+2. Default OFF would regress existing behavior — users currently get auto-start, they'd lose it
+3. Warmup sets currently DO trigger rest timer (warmup guard on line 156 is PR detection only) — filtering warmups is a behavioral change, not "preserving current behavior"
+4. 3 of 9 acceptance criteria describe already-implemented behavior
+5. Test budget is tight (1744/1800) — should not waste on re-testing existing functionality
+
+**MUST FIX before approval:**
+- Correct problem statement (auto-start already exists)
+- Default must be ON if toggle is added (or provide migration)
+- Rewrite acceptance criteria for what's actually changing
+- Explicitly flag warmup filtering as a behavioral change
+
+**No security or data integrity concerns.**
+
+_Reviewed 2026-04-20 by quality-director_
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** — Plan premise is incorrect.
