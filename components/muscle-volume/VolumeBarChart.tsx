@@ -7,9 +7,8 @@ import type { MuscleGroup } from "../../lib/types";
 import { MUSCLE_LABELS } from "../../lib/types";
 import type { VolumeRow } from "../../hooks/useMuscleVolume";
 import type { ThemeColors } from "@/hooks/useThemeColors";
-
-const MEV = 10;
-const MRV = 20;
+import type { VolumeLandmarks } from "../../lib/volume-landmarks";
+import { getVolumeStatus, getVolumeStatusLabel } from "../../lib/volume-landmarks";
 
 type Props = {
   data: VolumeRow[];
@@ -17,41 +16,44 @@ type Props = {
   maxSets: number;
   onSelect: (muscle: MuscleGroup) => void;
   colors: ThemeColors;
+  landmarks: Record<MuscleGroup, VolumeLandmarks>;
 };
 
-export default function VolumeBarChart({ data, selected, maxSets, onSelect, colors }: Props) {
-  const mevPos = (MEV / maxSets) * 100;
-  const mrvPos = (MRV / maxSets) * 100;
+function getBarColor(
+  sets: number,
+  lm: VolumeLandmarks,
+  colors: ThemeColors,
+  active: boolean
+): string {
+  const status = getVolumeStatus(sets, lm);
+  const opacity = active ? "" : "99";
+  switch (status) {
+    case "below_mev":
+      return colors.surfaceVariant;
+    case "optimal":
+      return colors.primary + opacity;
+    case "above_mrv":
+      return colors.tertiary + opacity;
+  }
+}
 
+export default function VolumeBarChart({
+  data, selected, maxSets, onSelect, colors, landmarks,
+}: Props) {
   return (
     <CardContent>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
         Sets per Muscle Group
       </Text>
       <View style={styles.bars}>
-        {/* Landmark labels */}
-        <View style={styles.landmarks}>
-          {mevPos < 95 && (
-            <View style={[styles.landmark, { left: `${mevPos}%` }]}>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                MEV
-              </Text>
-              <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
-            </View>
-          )}
-          {mrvPos < 95 && (
-            <View style={[styles.landmark, { left: `${mrvPos}%` }]}>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                MRV
-              </Text>
-              <View style={[styles.dottedLine, { borderColor: colors.outlineVariant }]} />
-            </View>
-          )}
-        </View>
-
         {data.map((item) => {
           const pct = (item.sets / maxSets) * 100;
           const active = item.muscle === selected;
+          const lm = landmarks[item.muscle];
+          const status = getVolumeStatus(item.sets, lm);
+          const statusLabel = getVolumeStatusLabel(status);
+          const barColor = getBarColor(item.sets, lm, colors, active);
+
           return (
             <Pressable
               key={item.muscle}
@@ -61,7 +63,7 @@ export default function VolumeBarChart({ data, selected, maxSets, onSelect, colo
                 active && { backgroundColor: colors.primary + "18" },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={`${MUSCLE_LABELS[item.muscle]}: ${item.sets} sets`}
+              accessibilityLabel={`${MUSCLE_LABELS[item.muscle]}: ${item.sets} sets, ${statusLabel}`}
               accessibilityHint="Double tap to see weekly trend"
               accessibilityState={{ selected: active }}
             >
@@ -78,10 +80,11 @@ export default function VolumeBarChart({ data, selected, maxSets, onSelect, colo
                     styles.barFill,
                     {
                       width: `${pct}%`,
-                      backgroundColor: active
-                        ? colors.primary
-                        : colors.primary + "99",
+                      backgroundColor: barColor,
                       borderRadius: 4,
+                      borderStyle: status === "below_mev" ? "dashed" : "solid",
+                      borderWidth: status === "below_mev" ? 1.5 : 0,
+                      borderColor: status === "below_mev" ? colors.onSurfaceVariant : undefined,
                     },
                   ]}
                 />
@@ -95,6 +98,18 @@ export default function VolumeBarChart({ data, selected, maxSets, onSelect, colo
             </Pressable>
           );
         })}
+
+        {/* Show MEV/MRV text labels when a muscle is selected */}
+        {selected && landmarks[selected] && (
+          <View style={styles.landmarkTextRow}>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+              MEV: {landmarks[selected].mev}
+            </Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 12 }}>
+              MRV: {landmarks[selected].mrv}
+            </Text>
+          </View>
+        )}
       </View>
     </CardContent>
   );
@@ -103,26 +118,6 @@ export default function VolumeBarChart({ data, selected, maxSets, onSelect, colo
 const styles = StyleSheet.create({
   bars: {
     position: "relative",
-  },
-  landmarks: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 72,
-    right: 36,
-  },
-  landmark: {
-    position: "absolute",
-    top: -4,
-    bottom: 0,
-    alignItems: "center",
-    width: 1,
-  },
-  dottedLine: {
-    flex: 1,
-    width: 0,
-    borderLeftWidth: 1,
-    borderStyle: "dashed",
   },
   barRow: {
     flexDirection: "row",
@@ -144,5 +139,11 @@ const styles = StyleSheet.create({
   },
   barFill: {
     height: "100%",
+  },
+  landmarkTextRow: {
+    flexDirection: "row",
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingLeft: 76,
   },
 });

@@ -13,6 +13,11 @@ jest.mock('../../lib/db', () => ({
   getMuscleVolumeTrend: (...a: unknown[]) => mockGetMuscleVolumeTrend(...a),
 }))
 
+jest.mock('../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}))
+
 jest.mock('expo-router', () => {
   const RealReact = require('react')
   return {
@@ -100,10 +105,10 @@ describe('MuscleVolumeSegment — Rendering', () => {
   })
 
   it('shows weekly set counts for each muscle group', async () => {
-    const { findByLabelText } = renderScreen(<MuscleVolumeSegment />)
-    expect(await findByLabelText('Chest: 15 sets')).toBeTruthy()
-    expect(await findByLabelText('Back: 18 sets')).toBeTruthy()
-    expect(await findByLabelText('Shoulders: 12 sets')).toBeTruthy()
+    const { findAllByLabelText } = renderScreen(<MuscleVolumeSegment />)
+    expect((await findAllByLabelText(/Chest: 15 sets/)).length).toBeGreaterThan(0)
+    expect((await findAllByLabelText(/Back: 18 sets/)).length).toBeGreaterThan(0)
+    expect((await findAllByLabelText(/Shoulders: 12 sets/)).length).toBeGreaterThan(0)
   })
 
   it('shows exercise count in list row a11y labels', async () => {
@@ -112,9 +117,10 @@ describe('MuscleVolumeSegment — Rendering', () => {
     expect(await findByLabelText('Back: 18 sets from 4 exercises')).toBeTruthy()
   })
 
-  it('shows MEV landmark label', async () => {
+  it('shows MEV landmark value when muscle is selected', async () => {
     const { findByText } = renderScreen(<MuscleVolumeSegment />)
-    expect(await findByText('MEV')).toBeTruthy()
+    // First muscle (chest) is auto-selected, MEV label shows for selected muscle
+    expect(await findByText(/MEV: \d+/)).toBeTruthy()
   })
 })
 
@@ -151,7 +157,7 @@ describe('MuscleVolumeSegment — Week Navigation', () => {
 describe('MuscleVolumeSegment — Muscle Selection', () => {
   it('selecting a muscle group loads its trend', async () => {
     const { findByLabelText } = renderScreen(<MuscleVolumeSegment />)
-    const backRow = await findByLabelText('Back: 18 sets')
+    const backRow = await findByLabelText('Back: 18 sets from 4 exercises')
     fireEvent.press(backRow)
 
     await waitFor(() => {
@@ -167,7 +173,7 @@ describe('MuscleVolumeSegment — Muscle Selection', () => {
 
   it('changes trend title when different muscle is selected', async () => {
     const { findByLabelText, findByText } = renderScreen(<MuscleVolumeSegment />)
-    const backRow = await findByLabelText('Back: 18 sets')
+    const backRow = await findByLabelText('Back: 18 sets from 4 exercises')
     fireEvent.press(backRow)
 
     await waitFor(async () => {
