@@ -175,7 +175,22 @@ All data is already in the DB. No schema changes needed.
 **Recommendations**: (1) Use MCI vector icon not emoji for cross-platform consistency, (2) Define dismissal re-trigger as +2 score increase, (3) Consider bottom sheet vs inline expansion for detail view — defer to Tech Lead.
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict**: APPROVED — pending 3 major clarifications
+**Reviewed**: 2026-04-20T22:35Z
+
+**Regression risk**: LOW — no schema changes, pure functions, read-only queries, existing patterns.
+**Security**: No concerns — all local computation, no PII exposure.
+**Data integrity**: No concerns — read-only except `app_settings` dismissal state.
+
+**3 TODOs required before implementation:**
+1. **TODO-1**: Define minimum data sufficiency thresholds per signal (RPE/rating are nullable — sparse data causes false positives)
+2. **TODO-2**: Specify concrete dismissal override delta (e.g., score increases by ≥2 points)
+3. **TODO-3**: Specify dismissal persistence model (JSON in `app_settings` with timestamp + score-at-dismissal, read atomically with score in hook)
+
+**Recommendations (non-blocking):**
+- Reuse `Date.now()` epoch-ms window cutoffs from `lib/db/e1rm-trends.ts`
+- Use `test.each` for compact test matrix (budget: 1699/1800, plan needs 15-20)
+- Add ErrorBoundary around nudge card to prevent InsightCard regression
 
 ### Tech Lead (Technical Feasibility)
 
