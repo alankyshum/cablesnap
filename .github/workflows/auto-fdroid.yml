@@ -1,0 +1,31 @@
+name: Auto-trigger F-Droid update
+
+on:
+  release:
+    types: [edited]
+
+permissions:
+  actions: write
+
+jobs:
+  trigger-fdroid:
+    name: Trigger F-Droid update if APK uploaded
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for APK asset and trigger F-Droid
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "Release edited: $TAG"
+
+          # Check if fitforge.apk exists in release assets
+          APK_EXISTS=$(gh api repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets \
+            --jq '[.[] | select(.name == "fitforge.apk")] | length')
+
+          if [ "$APK_EXISTS" -gt 0 ]; then
+            echo "APK found in release $TAG, triggering F-Droid update..."
+            gh workflow run fdroid-release.yml -f tag="$TAG" --repo ${{ github.repository }}
+          else
+            echo "No fitforge.apk found in release $TAG, skipping."
+          fi

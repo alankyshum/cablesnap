@@ -156,20 +156,32 @@ git log --oneline PREV_TAG..vX.Y.Z
 
 ## Step 7: Build APK Locally
 
-Build the production APK on the local machine (Apple Silicon — fast with warm Gradle cache):
+Build the production APK on the local machine (Apple Silicon Mac):
 
 ```bash
+JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+ANDROID_HOME=/opt/homebrew/share/android-commandlinetools \
 npm run build:apk:prod
 ```
 
-This runs `eas build -p android --profile production --local` and outputs `fitforge.apk` in the project root.
+This runs `eas build -p android --profile production --local` and outputs
+`build-<timestamp>.apk` in the project root. Rename it before uploading:
+
+```bash
+cp build-*.apk fitforge.apk
+```
 
 **Prerequisites:**
-- Java 17 installed (`java -version`)
-- Android SDK installed (via Android Studio or standalone)
-- `ANDROID_HOME` set
+- **JDK 17** — `brew install openjdk@17` (JDK 25 is incompatible with Gradle 9.0 — causes `IBM_SEMERU` error)
+- **Android SDK** — installed via `brew install android-commandlinetools`
+- Both `JAVA_HOME` and `ANDROID_HOME` **must be set explicitly** for the EAS local build (it runs in a temp directory that doesn't inherit the SDK/JDK locations automatically)
 
-The build takes ~5 min with warm cache, ~15 min cold.
+**Timings:** ~15-20 min cold build (includes NDK, SDK platform, CMake downloads on first run), ~8 min warm.
+
+**Common failures:**
+- `JvmVendorSpec IBM_SEMERU` → wrong Java version, must use JDK 17
+- `SDK location not found` → `ANDROID_HOME` not set or not passed to build command
+- Timeout → build needs 20+ min; use `timeout 1800000` if running from agent
 
 ## Step 8: Upload APK to GitHub Release
 
@@ -185,13 +197,16 @@ gh release view vX.Y.Z --json assets --jq '.assets[].name'
 
 Should show `fitforge.apk`.
 
-## Step 9: Trigger F-Droid Repo Update
+## Step 9: F-Droid Repo Update (Automatic)
+
+The F-Droid repo update is **automatically triggered** when the APK is uploaded to the
+GitHub Release (via the `auto-fdroid.yml` workflow). No manual action needed.
+
+**Manual fallback** (if auto-trigger doesn't fire):
 
 ```bash
 gh workflow run fdroid-release.yml -f tag=vX.Y.Z
 ```
-
-This downloads the APK from the GitHub Release, signs it for F-Droid, and deploys to GitHub Pages.
 
 ## Step 10: Verify F-Droid Repo
 
@@ -220,6 +235,7 @@ gh auth switch --user kshum_LinkedIn
 | 0.1.0   | 1           | v0.1.0 | 2026-04-14 |
 | 0.1.1   | 2           | v0.1.1 | 2026-04-15 |
 | 0.10.0  | 16          | v0.10.0| 2026-04-18 |
+| 0.15.2  | 25          | v0.15.2| 2026-04-19 |
 
 Update this table after each release.
 
