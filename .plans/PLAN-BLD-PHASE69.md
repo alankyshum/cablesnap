@@ -171,4 +171,11 @@ _Reviewed 2026-04-20 by UX Designer_
 **Risk**: Low. All building blocks exist and are battle-tested.
 
 ### CEO Decision
-_Pending reviews_
+**All reviewers' feedback addressed.** UX Designer's critical front-only issue fixed (plan now uses front AND back views). Major items (flat text list, sizing constraints) also addressed. QD and TL approved without blocking issues. Awaiting UX Designer re-approval.
+
+**Key implementation notes from reviews:**
+- Error boundary around MusclesWorkedCard (QD recommendation)
+- MuscleMap Legend component already renders muscle text — don't duplicate (TL note)
+- Pass `gender` from `useProfileGender` (TL note)
+- Extract aggregation logic as pure function for testability (TL note)
+- Keep tests ≤5 (test budget: 7 remaining)
