@@ -158,12 +158,12 @@ export function PRCelebration({ celebration }: PRCelebrationProps) {
           {particles}
         </View>
       )}
-      <Animated.View style={[styles.badge, { backgroundColor: colors.primary }, badgeStyle]}>
+      <Animated.View style={[styles.badge, { backgroundColor: colors.primary, shadowColor: colors.shadow }, badgeStyle]}>
         <Text style={styles.badgeEmoji}>🏆</Text>
         <Text style={[styles.badgeText, { color: colors.onPrimary }]}>NEW PR!</Text>
       </Animated.View>
       {celebration.goalAchieved && (
-        <Animated.View style={[styles.goalBadge, { backgroundColor: colors.tertiary }, badgeStyle]}>
+        <Animated.View style={[styles.goalBadge, { backgroundColor: colors.tertiary, shadowColor: colors.shadow }, badgeStyle]}>
           <MaterialCommunityIcons name="bullseye-arrow" size={20} color={colors.onPrimary} />
           <Text style={[styles.badgeText, { color: colors.onPrimary }]}>GOAL ACHIEVED!</Text>
         </Animated.View>
@@ -200,7 +200,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     gap: 8,
     elevation: 8,
-    shadowColor: "#000", // shadow colors are theme-independent per platform conventions
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -214,7 +213,6 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 8,
     elevation: 6,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
