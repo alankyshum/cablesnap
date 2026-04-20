@@ -2,20 +2,22 @@ import { StyleSheet, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import type { WeeklyGoalProgress } from "./loadHomeData";
 
 type Props = {
   colors: ThemeColors;
   streak: number;
-  weekDone: number;
-  scheduled: { scheduled: boolean; completed: boolean }[];
+  progress: WeeklyGoalProgress;
   prCount: number;
 };
 
-export default function StatsRow({ colors, streak, weekDone, scheduled, prCount }: Props) {
-  const weekLabel = scheduled.length > 0 ? `${weekDone} of ${scheduled.length} workouts this week` : `${weekDone} workouts this week`;
+export default function StatsRow({ colors, streak, progress, prCount }: Props) {
+  const { completedCount, targetCount } = progress;
+  const weekDisplay = targetCount > 0 ? `${completedCount}/${targetCount}` : String(completedCount);
+  const weekLabel = targetCount > 0 ? `${completedCount} of ${targetCount} workouts this week` : `${completedCount} workouts this week`;
   const items = [
     { icon: "fire" as const, value: streak, label: "Streak", a11y: `${streak} week streak` },
-    { icon: "calendar-check" as const, value: `${weekDone}/${scheduled.length}`, label: "This Week", a11y: weekLabel },
+    { icon: "calendar-check" as const, value: weekDisplay, label: "This Week", a11y: weekLabel },
     { icon: "trophy" as const, value: prCount, label: "Recent PRs", a11y: `${prCount} recent personal records` },
   ];
   return (

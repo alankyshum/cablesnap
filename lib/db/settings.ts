@@ -21,6 +21,11 @@ export async function setAppSetting(key: string, value: string): Promise<void> {
     .onConflictDoUpdate({ target: appSettings.key, set: { value } });
 }
 
+export async function deleteAppSetting(key: string): Promise<void> {
+  const db = await getDrizzle();
+  await db.delete(appSettings).where(eq(appSettings.key, key));
+}
+
 export async function isOnboardingComplete(): Promise<boolean> {
   const val = await getAppSetting("onboarding_complete");
   return val === "1";
@@ -123,6 +128,27 @@ export async function getWeekAdherence(): Promise<{ day: number; scheduled: bool
     scheduled: scheduled.has(i),
     completed: completed.has(i),
   }));
+}
+
+/** Count completed workout sessions in the current ISO week (Mon-Sun). */
+export async function getWeeklyCompletedCount(): Promise<number> {
+  const now = new Date();
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const offset = (monday.getDay() + 6) % 7;
+  monday.setDate(monday.getDate() - offset);
+  const monStart = monday.getTime();
+  const monEnd = monStart + 7 * 24 * 60 * 60 * 1000;
+
+  const db = await getDrizzle();
+  const row = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(workoutSessions)
+    .where(and(
+      isNotNull(workoutSessions.completed_at),
+      gte(workoutSessions.started_at, monStart),
+      lt(workoutSessions.started_at, monEnd),
+    ))
+    .get();
+  return row?.count ?? 0;
 }
 
 // ---- Interaction Log ----

@@ -18,8 +18,11 @@ import { RecoveryHeatmap } from "../../components/home/RecoveryHeatmap";
 import { TemplatesList } from "../../components/home/TemplatesList";
 import { ProgramsList } from "../../components/home/ProgramsList";
 import { loadHomeData } from "../../components/home/loadHomeData";
+import type { WeeklyGoalProgress } from "../../components/home/loadHomeData";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useHomeActions } from "@/hooks/useHomeActions";
+
+const defaultProgress: WeeklyGoalProgress = { mode: "hidden", slots: [], completedCount: 0, targetCount: 0 };
 
 // eslint-disable-next-line complexity
 export default function Workouts() {
@@ -38,8 +41,7 @@ export default function Workouts() {
   const adherence = useMemo(() => data?.adherence ?? [], [data?.adherence]);
   const allTemplates = useMemo(() => [...templates.filter((t) => !t.is_starter), ...templates.filter((t) => t.is_starter)], [templates]);
   const allPrograms = useMemo(() => [...programs.filter((p) => !p.is_starter), ...programs.filter((p) => p.is_starter)], [programs]);
-  const weekDone = useMemo(() => adherence.filter((a) => a.completed).length, [adherence]);
-  const scheduled = useMemo(() => adherence.filter((a) => a.scheduled), [adherence]);
+  const progress = data?.weeklyGoalProgress ?? defaultProgress;
 
   const nextWorkout = data?.nextWorkout ?? null;
   const segment = userSegment ?? (nextWorkout ? "programs" : "templates");
@@ -62,12 +64,12 @@ export default function Workouts() {
   return (
     // bounded list — ScrollView is intentional: renders fixed sub-components (stats, banners, templates/programs), not unbounded .map()
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}>
-      <StatsRow colors={colors} streak={data?.streak ?? 0} weekDone={weekDone} scheduled={scheduled} prCount={(data?.recentPRs ?? []).length} />
+      <StatsRow colors={colors} streak={data?.streak ?? 0} progress={progress} prCount={(data?.recentPRs ?? []).length} />
       {insight && !insightDismissed && (
         <InsightCard colors={colors} insight={insight} onPress={() => { if ((insight.type === "strength" || insight.type === "goal_progress") && insight.exerciseId) router.push(`/exercise/${insight.exerciseId}`); }} onDismiss={() => setInsightDismissed(true)} />
       )}
       <HomeBanners colors={colors} active={data?.active ?? null} todaySchedule={todaySchedule} todayDone={data?.todayDone ?? false} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
-      <AdherenceBar colors={colors} adherence={adherence} />
+      <AdherenceBar colors={colors} progress={progress} />
       <RecoveryHeatmap recoveryStatus={data?.recoveryStatus ?? []} colors={colors} />
 
       <View style={styles.actionRow}>

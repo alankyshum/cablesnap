@@ -5,12 +5,23 @@ import {
   getTemplates, getTodaySchedule, getWeekAdherence, isTodayCompleted,
   getMuscleRecoveryStatus, getTemplatePrimaryMuscles, getWeeklyVolume, getE1RMTrends,
   getTotalSessionCount, getTemplateDurationEstimates,
+  getAppSetting, getWeeklyCompletedCount,
 } from "../../lib/db";
 import { computeStreak } from "../../lib/format";
 import { computeAllTemplateReadiness, hasWorkoutHistory } from "../../lib/recovery-readiness";
 import { generateInsight, type GoalInsightRow } from "../../lib/insights";
 import { getActiveGoals, getCurrentBestWeight, getCurrentBestReps } from "../../lib/db";
 import { getExerciseById } from "../../lib/db";
+
+export type WeeklyGoalProgress = {
+  mode: "schedule" | "frequency" | "hidden";
+  /** Dots for AdherenceBar to render (goalCount length in frequency mode, 7 in schedule) */
+  slots: { scheduled: boolean; completed: boolean }[];
+  /** Actual completed workout count this week (may exceed targetCount) */
+  completedCount: number;
+  /** Target count (scheduled days for schedule mode, goal number for frequency) */
+  targetCount: number;
+};
 
 export async function loadHomeData() {
   const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
@@ -45,7 +56,48 @@ export async function loadHomeData() {
   const goalInsights = await loadGoalInsights();
 
   const insight = generateInsight({ totalSessions, timestamps, e1rmTrends, weeklyVolume, goalInsights });
-  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, durationEstimates };
+
+  // Build weekly goal progress (frequency goal fallback)
+  const weeklyGoalProgress = await buildWeeklyGoalProgress(adh);
+
+  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, durationEstimates, weeklyGoalProgress };
+}
+
+async function buildWeeklyGoalProgress(
+  adh: { day: number; scheduled: boolean; completed: boolean }[],
+): Promise<WeeklyGoalProgress> {
+  const scheduledDays = adh.filter((a) => a.scheduled);
+
+  // Priority 1: Active program with schedule
+  if (scheduledDays.length > 0) {
+    const completedCount = adh.filter((a) => a.completed).length;
+    return {
+      mode: "schedule",
+      slots: adh,
+      completedCount,
+      targetCount: scheduledDays.length,
+    };
+  }
+
+  // Priority 2: Frequency goal (no program schedule)
+  try {
+    const raw = await getAppSetting("weekly_training_goal");
+    const goal = raw != null ? parseInt(raw, 10) : NaN;
+    if (!isNaN(goal) && goal >= 1 && goal <= 7) {
+      const completedCount = await getWeeklyCompletedCount();
+      const filledCount = Math.min(completedCount, goal);
+      const slots = Array.from({ length: goal }, (_, i) => ({
+        scheduled: true,
+        completed: i < filledCount,
+      }));
+      return { mode: "frequency", slots, completedCount, targetCount: goal };
+    }
+  } catch {
+    // Degrade gracefully — treat as no goal set
+  }
+
+  // Priority 3: No schedule, no goal — hidden
+  return { mode: "hidden", slots: [], completedCount: 0, targetCount: 0 };
 }
 
 async function loadGoalInsights(): Promise<GoalInsightRow[]> {

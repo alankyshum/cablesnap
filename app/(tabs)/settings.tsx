@@ -14,6 +14,7 @@ import BodyProfileCard from '../../components/BodyProfileCard';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import PreferencesCard from '../../components/settings/PreferencesCard';
+import FrequencyGoalPicker from '../../components/settings/FrequencyGoalPicker';
 import IntegrationsCard from '../../components/settings/IntegrationsCard';
 import CSVExportCard from '../../components/settings/CSVExportCard';
 import AppearanceCard from '../../components/settings/AppearanceCard';
@@ -25,12 +26,15 @@ import { useThemeColors } from '@/hooks/useThemeColors';
 import { fontSizes } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import { handleExport, handleImport } from './_settings-handlers';
+import { setAppSetting, deleteAppSetting } from '@/lib/db';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Settings() {
   const colors = useThemeColors();
   const router = useRouter();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
+  const queryClient = useQueryClient();
   const {
     toast,
     loading, setLoading,
@@ -50,9 +54,24 @@ export default function Settings() {
     hcEnabled, setHcEnabled,
     hcLoading, setHcLoading,
     hcSdkStatus,
+    weeklyGoal, setWeeklyGoal,
   } = useSettingsData();
 
   const deps = { toast, setLoading, setExportProgress, router };
+
+  const handleWeeklyGoalChange = async (goal: number | null) => {
+    setWeeklyGoal(goal);
+    try {
+      if (goal != null) {
+        await setAppSetting('weekly_training_goal', String(goal));
+      } else {
+        await deleteAppSetting('weekly_training_goal');
+      }
+      queryClient.invalidateQueries({ queryKey: ['home'] });
+    } catch {
+      toast.error('Failed to save training goal');
+    }
+  };
 
   return (
     <ScrollView
@@ -75,6 +94,11 @@ export default function Settings() {
         />
         <AppearanceCard colors={colors} />
         <BodyProfileCard />
+        <FrequencyGoalPicker
+          colors={colors}
+          value={weeklyGoal}
+          onChange={handleWeeklyGoalChange}
+        />
         <PreferencesCard
           colors={colors}
           toast={toast}
