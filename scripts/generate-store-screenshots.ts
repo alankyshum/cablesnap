@@ -4,7 +4,7 @@
  * Reads raw PNGs from .pixelslop/screenshots/ (produced by store-pixel4
  * and store-fold7 Playwright projects), composites a programmatic device
  * frame around each using sharp, and writes them to:
- *   - fdroid/metadata/com.anomalyco.fitforge/en-US/phoneScreenshots/ (Pixel 4)
+ *   - fdroid/metadata/com.persoack.cablesnap/en-US/phoneScreenshots/ (Pixel 4)
  *   - assets/store-screenshots/ (both devices)
  *
  * Usage: npx tsx scripts/generate-store-screenshots.ts
@@ -21,7 +21,7 @@ import * as path from "path";
 const SCREENSHOT_DIR = path.resolve(__dirname, "../.pixelslop/screenshots");
 const FDROID_DIR = path.resolve(
   __dirname,
-  "../fdroid/metadata/com.anomalyco.fitforge/en-US/phoneScreenshots",
+  "../fdroid/metadata/com.persoack.cablesnap/en-US/phoneScreenshots",
 );
 const ASSETS_DIR = path.resolve(__dirname, "../assets/store-screenshots");
 

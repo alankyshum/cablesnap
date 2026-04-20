@@ -71,7 +71,7 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         id: next_vcode
         run: |
-          CURRENT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.anomalyco.cablesnap.yml | awk '{print $2}')
+          CURRENT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.persoack.cablesnap.yml | awk '{print $2}')
           NEXT=$((CURRENT + 1))
           echo "version_code=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Next version code: $NEXT"
@@ -98,8 +98,8 @@ jobs:
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           VCODE="${{ steps.next_vcode.outputs.version_code }}"
-          sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.anomalyco.cablesnap.yml
-          sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.anomalyco.cablesnap.yml
+          sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
+          sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
 
       - name: Generate release notes
         if: steps.check_commits.outputs.has_new_commits == 'true'
@@ -132,7 +132,7 @@ jobs:
           VERSION="${{ steps.next_version.outputs.version }}"
           git config user.name "CableSnap Release Bot"
           git config user.email "release-bot@cablesnap.app"
-          git add package.json app.config.ts fdroid/metadata/com.anomalyco.cablesnap.yml
+          git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
           git commit -m "release: v$VERSION"
           git tag -a "v$VERSION" -m "v$VERSION (automated release)"
           git push origin main

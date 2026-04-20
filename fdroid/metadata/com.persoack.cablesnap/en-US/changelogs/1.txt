@@ -1,4 +1,4 @@
-Initial release of FitForge — free, open-source workout & macro tracker.
+Initial release of CableSnap — free, open-source workout & macro tracker.
 
 * Workout tracking with sets, reps, weight, and RPE
 * Exercise library with 100+ built-in exercises

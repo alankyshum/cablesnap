@@ -15,14 +15,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.anomalyco.cablesnap",
+    bundleIdentifier: "com.persoack.cablesnap",
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#FFFFFF", // eslint-disable-line no-restricted-syntax
     },
-    package: "com.anomalyco.cablesnap",
+    package: "com.persoack.cablesnap",
     versionCode: 5,
   },
   web: {

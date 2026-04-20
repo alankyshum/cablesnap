@@ -45,7 +45,7 @@ npm install
 
 ### Development Build (Recommended)
 
-FitForge uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
+CableSnap uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
 
 ```bash
 # Build the development client for iOS Simulator
@@ -109,6 +109,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see the [LICENSE](LICENSE) file for details.
 
-**"CableSnap"** is a trademark of Anomaly Co. Forks and redistributions must remove all CableSnap branding (name, logo, icon) unless granted written permission.
+**"CableSnap"** is a trademark of Persoack. Forks and redistributions must remove all CableSnap branding (name, logo, icon) unless granted written permission.
 
 For commercial licensing inquiries, contact the repository owner.

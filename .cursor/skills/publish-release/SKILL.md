@@ -62,7 +62,7 @@ version: "X.Y.Z",
 "version": "X.Y.Z",
 ```
 
-### File 3: `fdroid/metadata/com.anomalyco.cablesnap.yml`
+### File 3: `fdroid/metadata/com.persoack.cablesnap.yml`
 ```yaml
 CurrentVersion: X.Y.Z
 CurrentVersionCode: N
@@ -72,7 +72,7 @@ CurrentVersionCode: N
 To find the current value:
 
 ```bash
-grep 'CurrentVersionCode' fdroid/metadata/com.anomalyco.cablesnap.yml
+grep 'CurrentVersionCode' fdroid/metadata/com.persoack.cablesnap.yml
 ```
 
 Increment it by 1.
@@ -84,7 +84,7 @@ After bumping, verify consistency:
 ```bash
 grep '"version"' package.json
 grep 'version:' app.config.ts
-grep 'CurrentVersion' fdroid/metadata/com.anomalyco.cablesnap.yml
+grep 'CurrentVersion' fdroid/metadata/com.persoack.cablesnap.yml
 ```
 
 All three version strings must match. `CurrentVersionCode` must be previous + 1.
@@ -92,7 +92,7 @@ All three version strings must match. `CurrentVersionCode` must be previous + 1.
 ## Step 3: Commit the Version Bump
 
 ```bash
-git add app.config.ts package.json fdroid/metadata/com.anomalyco.cablesnap.yml
+git add app.config.ts package.json fdroid/metadata/com.persoack.cablesnap.yml
 git commit -m "release: vX.Y.Z"
 ```
 
@@ -163,12 +163,12 @@ npm run screenshots
 ```
 
 This captures all 5 tab screens at Pixel 4 and Fold 7 viewports, wraps them in device frames, and writes them to:
-- `fdroid/metadata/com.anomalyco.fitforge/en-US/phoneScreenshots/` (1-5.png for Pixel 4)
+- `fdroid/metadata/com.persoack.cablesnap/en-US/phoneScreenshots/` (1-5.png for Pixel 4)
 - `assets/store-screenshots/` (both devices, descriptive names)
 
 Commit the updated screenshots if they changed:
 ```bash
-git add fdroid/metadata/com.anomalyco.fitforge/en-US/phoneScreenshots/ assets/store-screenshots/
+git add fdroid/metadata/com.persoack.cablesnap/en-US/phoneScreenshots/ assets/store-screenshots/
 git diff --cached --stat && git commit -m "chore: update store screenshots for vX.Y.Z"
 ```
 
