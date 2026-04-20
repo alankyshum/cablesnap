@@ -138,7 +138,21 @@ In `lib/format.ts`:
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: APPROVED** — No blocking UX issues.
+
+**Cognitive Load**: This is a load *reduction*, not an addition. Eliminates 5-8 taps per session. Zero new decisions for the user. Mental model is compatible with existing card structure.
+
+**Visual Hierarchy**: Correct subordination — `fontSizes.xs` + `onSurfaceVariant` keeps it secondary to the exercise name. Position between name and Details row is the natural reading flow.
+
+**Design System**: Uses theme tokens (`colors.onSurfaceVariant`, `fontSizes.xs`). Extends `GroupCardHeader` via optional prop — clean, consistent.
+
+**Accessibility**: a11y label is well-specified. Use Unicode × (U+00D7) in visual text. Contrast meets AA at 12dp.
+
+**Recommendations (non-blocking)**:
+1. Sub-minute durations: show "45s" not "0:45"; use "1:30" for >= 1 min
+2. Decimal weights: "22.5kg" (1 decimal when non-zero), "80kg" (no ".0")
+3. Set `lineHeight: 16` on the text for adequate vertical spacing
+4. Use `numberOfLines={1}` with ellipsis to prevent wrapping on narrow screens
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** — 2026-04-20
