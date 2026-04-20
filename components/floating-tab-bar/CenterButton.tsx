@@ -1,7 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useThemeColors } from '@/hooks/useThemeColors';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const handleIcon = require('../../assets/tab-handle.png');
 
 const CENTER_BUTTON_SIZE = 70;
 const BAR_HEIGHT = 56;
@@ -38,10 +40,13 @@ export function CenterButton({
           },
         ]}
       >
-        <MaterialCommunityIcons
-          name="arm-flex"
-          size={28}
-          color={focused ? colors.onPrimary : color}
+        <Image
+          source={handleIcon}
+          style={{
+            width: 36,
+            height: 36,
+            tintColor: focused ? colors.onPrimary : color,
+          }}
         />
       </Pressable>
     </View>

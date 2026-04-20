@@ -1,8 +1,11 @@
 import React from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Image, Pressable, StyleSheet } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated from "react-native-reanimated";
 import { fontSizes } from "@/constants/design-tokens";
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const handleIcon = require("../../assets/tab-handle.png");
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -40,6 +43,7 @@ export function TabButton({
   const icon = TAB_ICONS[routeName] ?? "help-circle";
   const label = TAB_LABELS[routeName] ?? routeName;
   const color = focused ? activeColor : inactiveColor;
+  const isWorkouts = routeName === "index";
 
   return (
     <Pressable
@@ -49,7 +53,14 @@ export function TabButton({
       accessibilityState={{ selected: focused }}
       style={tabStyles.button}
     >
-      <MaterialCommunityIcons name={icon} size={24} color={color} />
+      {isWorkouts ? (
+        <Image
+          source={handleIcon}
+          style={{ width: 28, height: 28, tintColor: color }}
+        />
+      ) : (
+        <MaterialCommunityIcons name={icon} size={24} color={color} />
+      )}
       <Animated.Text
         numberOfLines={1}
         style={[tabStyles.label, { color }]}

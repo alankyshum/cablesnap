@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { TouchableOpacity } from "react-native";
 import FloatingTabBar from "../../components/FloatingTabBar";
@@ -7,6 +7,9 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const handleIcon = require("../../assets/tab-handle.png");
 
 export default function TabLayout() {
   const colors = useThemeColors();
@@ -72,7 +75,14 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Workouts",
-          headerTitle: renderHeaderTitle("arm-flex", "Workouts"),
+          headerTitle: function WorkoutsHeaderTitle() {
+            return (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Image source={handleIcon} style={{ width: 20, height: 20, tintColor: colors.onSurface }} />
+                <Text style={{ fontSize: fontSizes.sm, fontWeight: "600", color: colors.onSurface }}>Workouts</Text>
+              </View>
+            );
+          },
           headerRight: () => (
             <TouchableOpacity
               onPress={() => router.push("/tools")}
