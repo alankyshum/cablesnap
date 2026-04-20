@@ -20,6 +20,11 @@ import {
 import type { WorkoutSession, TrainingMode, Exercise } from "../lib/types";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 import { epley, suggest, type Suggestion } from "../lib/rm";
+import {
+  formatPreviousPerformance,
+  formatPreviousPerformanceAccessibility,
+  type PreviousPerformance,
+} from "../lib/format";
 import { uuid } from "../lib/uuid";
 import { getQueryVersion } from "../lib/query";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -148,6 +153,29 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       });
     }
     const groupList = [...map.values()];
+
+    // Compute previous performance summary per exercise from prevCache
+    for (const group of groupList) {
+      const prevSets = prevCache[group.exercise_id];
+      if (!prevSets || prevSets.length === 0) continue;
+
+      // Filter out warmup sets
+      const workingSets = prevSets.filter((s) => s.set_type !== "warmup");
+      if (workingSets.length === 0) continue;
+
+      const isDuration = group.trackingMode === "duration";
+      const perf: PreviousPerformance = {
+        setCount: workingSets.length,
+        maxWeight: Math.max(0, ...workingSets.map((s) => s.weight ?? 0)),
+        maxReps: Math.max(0, ...workingSets.map((s) => s.reps ?? 0)),
+        isBodyweight: group.is_bodyweight,
+        maxDuration: isDuration
+          ? Math.max(0, ...workingSets.map((s) => s.duration_seconds ?? 0))
+          : null,
+      };
+      group.previousSummary = formatPreviousPerformance(perf, body.weight_unit);
+      group.previousSummaryA11y = formatPreviousPerformanceAccessibility(perf, body.weight_unit);
+    }
 
     // Auto-assign positions for pre-migration sessions (all positions = 0)
     const allZero = groupList.every((g) => g.exercise_position === 0);

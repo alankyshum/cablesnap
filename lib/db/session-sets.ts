@@ -415,9 +415,9 @@ export async function getPreviousSets(
 export async function getPreviousSetsBatch(
   exerciseIds: string[],
   currentSessionId: string
-): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]>> {
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null }[]>> {
   if (exerciseIds.length === 0) return {};
-  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null }[]> = {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null }[]> = {};
   const db = await getDrizzle();
   // Step 1: Find all completed sessions per exercise, ordered by most recent
   const sessionRows = await db
@@ -453,6 +453,7 @@ export async function getPreviousSetsBatch(
       weight: workoutSets.weight,
       reps: workoutSets.reps,
       duration_seconds: workoutSets.duration_seconds,
+      set_type: workoutSets.set_type,
     })
     .from(workoutSets)
     .where(and(
@@ -467,7 +468,7 @@ export async function getPreviousSetsBatch(
     const correctSession = sessionMap[row.exercise_id];
     if (!correctSession || row.session_id !== correctSession) continue;
     if (!result[row.exercise_id]) result[row.exercise_id] = [];
-    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds });
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: row.set_type });
   }
   return result;
 }

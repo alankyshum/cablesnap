@@ -18,6 +18,8 @@ export type ExerciseGroup = {
   trackingMode: "reps" | "duration";
   equipment: Equipment;
   exercise_position: number;
+  previousSummary?: string | null;
+  previousSummaryA11y?: string | null;
 };
 
 export const RPE_CHIPS = [6, 7, 8, 9, 10] as const;

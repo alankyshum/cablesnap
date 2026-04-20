@@ -9,6 +9,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { ExerciseNotesPanel } from "./ExerciseNotesPanel";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
+import { fontSizes } from "@/constants/design-tokens";
 
 export type GroupCardHeaderProps = {
   group: ExerciseGroup;
@@ -16,6 +17,8 @@ export type GroupCardHeaderProps = {
   exerciseNotesOpen: boolean;
   exerciseNotesDraft: string | undefined;
   firstSet: SetWithMeta | undefined;
+  previousPerformance?: string | null;
+  previousPerformanceA11y?: string | null;
   onModeChange: (exerciseId: string, mode: TrainingMode) => void;
   onExerciseNotes: (exerciseId: string, text: string) => void;
   onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
@@ -30,7 +33,7 @@ export type GroupCardHeaderProps = {
   showMoveButtons?: boolean;
 };
 
-export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
+export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, previousPerformance, previousPerformanceA11y, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
   const colors = useThemeColors();
   const notesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
   const eid = group.exercise_id;
@@ -41,6 +44,15 @@ export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotes
         <View style={styles.headerRow1}>
           <Pressable onLongPress={() => onDeleteExercise(eid)} delayLongPress={500} style={{ flex: 1, flexShrink: 1 }} accessibilityLabel={`Remove ${group.name}`} accessibilityRole="button" accessibilityHint="Long press to remove exercise">
             <Text variant="title" style={[styles.groupTitle, { color: colors.primary }]}>{group.name}</Text>
+            {previousPerformance != null && (
+              <Text
+                numberOfLines={1}
+                style={[styles.previousPerf, { color: colors.onSurfaceVariant }]}
+                accessibilityLabel={previousPerformanceA11y ?? previousPerformance}
+              >
+                {previousPerformance}
+              </Text>
+            )}
           </Pressable>
           <View style={styles.headerActions}>
             {showMoveButtons && (
@@ -100,6 +112,7 @@ const styles = StyleSheet.create({
   headerRow2: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   headerActions: { flexDirection: "row", alignItems: "center" },
   groupTitle: { fontWeight: "700" },
+  previousPerf: { fontSize: fontSizes.xs, lineHeight: 16 },
   iconBtn: { padding: 8 },
   moveBtn: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   moveBtnDisabled: { opacity: 0.4 },
