@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 jest.mock('../../lib/db', () => ({
   getSessionById: jest.fn(),
   getSessionSets: jest.fn().mockResolvedValue([]),

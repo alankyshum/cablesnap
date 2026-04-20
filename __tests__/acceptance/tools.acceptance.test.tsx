@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 import React from 'react'
 import { fireEvent } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'

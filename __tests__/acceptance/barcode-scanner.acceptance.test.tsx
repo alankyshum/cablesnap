@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 /**
  * BLD-318: Barcode Scanner acceptance tests.
  * Tests barcode scanning flow (found, not found, incomplete, offline, timeout)

@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
 import { Keyboard } from 'react-native'
