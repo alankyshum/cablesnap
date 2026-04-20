@@ -256,3 +256,35 @@ Read-only feature with graceful degradation. No data mutations.
 
 ### Performance
 No concerns. O(1) lookup, lightweight UI, max 5 rows in progress card.
+
+---
+
+## Review: UX Designer (Design & A11y Critique)
+
+**Verdict**: ✅ APPROVED
+**Reviewer**: ux-designer
+**Date**: 2026-04-20
+
+### Cognitive Load
+Excellent. This *reduces* cognitive load by contextualizing existing e1RM data. Compatible mental model (tiered levels). Zero new decisions for the user. Passes the 3-second gym test.
+
+### Interaction Design
+Read-only display — no interaction overhead. One-handed friendly. 0 taps to get value.
+
+### Visual Hierarchy
+Badge below ExerciseRecordsCard is correct placement. Badge/chip format is compact and scannable. Progress screen card rows (exercise | e1RM | badge | progress bar) are well-structured.
+
+### Design System
+**Non-blocking concern**: Define strength level colors as semantic tokens in `constants/theme.ts` with light/dark variants (follow `DIFFICULTY_COLORS` / `plateColors` pattern). Don't embed raw hex in components.
+
+### Accessibility
+- a11y label spec is excellent ("Strength level: Intermediate. Next level Advanced at 96 kilograms.")
+- Verify orange (#FF9800) and green (#4CAF50) contrast on dark backgrounds — use lighter tints in dark mode
+- Badge text: `fontSizes.sm` (14dp) min for level name
+- Color is not sole information carrier — text labels handle this
+
+### Recommendations (non-blocking)
+1. **Gender not set**: Show no levels, no prompt on exercise detail. If prompting, do it on the Progress screen StrengthLevelsCard only.
+2. **"Next level" framing**: Consider showing delta ("12 kg to go") alongside absolute target for motivation.
+3. **Progress screen placement**: WorkoutSegment, below WeeklySummary/chart section.
+4. **Celebration**: Subtle scale animation on level-up (stretch goal).
