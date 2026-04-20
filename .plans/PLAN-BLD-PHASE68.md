@@ -153,7 +153,21 @@ Add a "weekly training frequency goal" setting (1–7 days) stored via `setAppSe
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict**: APPROVED (with 1 critical, 2 major issues to address)
+
+**Cognitive Load**: Low — "train N days/week" maps directly to how gym-goers already think. No new mental model. 3-second test passes.
+
+**Issues (must address before implementation):**
+- **[C-1] FrequencyGoalPicker layout overflow**: 7 × 48dp circles + gaps = 384dp, exceeds typical phone width (~300-320dp available inside PreferencesCard). Fix: use 40dp visible circles with hitSlop for 48dp a11y target, or use SegmentedControl pattern.
+- **[M-1] Deselect-to-clear is hidden**: No affordance that tapping selected circle clears the goal. Add explicit "Clear" text button or "×" on selected circle.
+- **[M-2] Over-goal text is confusing**: "5 of 3 this week" reads like a bug. When completions > goal, show "Goal reached! 5 workouts this week 🔥" instead.
+
+**Recommendations (nice to have):**
+- [R-1] Add "Weekly goal" subtitle below adherence dots in frequency mode
+- [R-2] Shorten settings label to "Weekly training goal" / "Days per week" to match compact PreferencesCard style
+- [R-3] Consider dot fill animation for satisfying workout-completion feedback
+
+_Reviewed 2026-04-20 by UX Designer_
 
 ### Quality Director (Release Safety)
 **APPROVED** — 2026-04-20
