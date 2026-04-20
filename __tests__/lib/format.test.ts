@@ -2,6 +2,7 @@ import {
   computeLongestStreak,
   withOpacity,
   mondayOf,
+  formatTimeRemaining,
 } from "../../lib/format";
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -61,19 +62,33 @@ describe("computeLongestStreak", () => {
 });
 
 describe("withOpacity", () => {
-  it("converts hex color with opacity", () => {
+  it("converts hex colors with various opacities", () => {
     expect(withOpacity("#FF0000", 0.5)).toBe("rgba(255, 0, 0, 0.5)");
-  });
-
-  it("handles full opacity", () => {
     expect(withOpacity("#00FF00", 1)).toBe("rgba(0, 255, 0, 1)");
-  });
-
-  it("handles zero opacity", () => {
     expect(withOpacity("#0000FF", 0)).toBe("rgba(0, 0, 255, 0)");
-  });
-
-  it("handles 70% opacity", () => {
     expect(withOpacity("#6750A4", 0.7)).toBe("rgba(103, 80, 164, 0.7)");
+  });
+});
+
+describe("formatTimeRemaining", () => {
+  it("returns correct remaining time text for various scenarios", () => {
+    // Normal case: 25 min remaining
+    expect(formatTimeRemaining(3000, 1500)).toBe("~25 min left");
+    // Ceil: 90 seconds remaining → ~2 min left
+    expect(formatTimeRemaining(3000, 2910)).toBe("~2 min left");
+    // Exactly 1 minute remaining
+    expect(formatTimeRemaining(3000, 2940)).toBe("~1 min left");
+    // Elapsed exceeds estimate → null
+    expect(formatTimeRemaining(3000, 3100)).toBeNull();
+    // Elapsed equals estimate → null
+    expect(formatTimeRemaining(3000, 3000)).toBeNull();
+    // Null estimate → null
+    expect(formatTimeRemaining(null, 500)).toBeNull();
+    // Zero estimate → null
+    expect(formatTimeRemaining(0, 0)).toBeNull();
+    // Negative estimate → null
+    expect(formatTimeRemaining(-100, 0)).toBeNull();
+    // Large remaining: 45 min left
+    expect(formatTimeRemaining(5400, 2700)).toBe("~45 min left");
   });
 });

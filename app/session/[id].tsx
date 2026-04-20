@@ -16,6 +16,7 @@ import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import { getAppSetting, addWarmupSets } from "../../lib/db";
+import { getTemplateDurationEstimates } from "../../lib/db/sessions";
 import { generateWarmupSets } from "../../lib/warmup";
 import * as Haptics from "expo-haptics";
 import { useLayout } from "../../lib/layout";
@@ -107,6 +108,17 @@ export default function ActiveSession() {
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
+  const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
+
+  // Fetch estimated duration from template history (Phase 70)
+  useEffect(() => {
+    if (!session?.template_id) return;
+    getTemplateDurationEstimates([session.template_id])
+      .then((estimates) => {
+        setEstimatedDuration(estimates[session.template_id!] ?? null);
+      })
+      .catch(() => {});
+  }, [session?.template_id]);
 
   const handleToolboxOpen = useCallback(() => {
     // Mutual exclusion: close exercise picker before opening toolbox
@@ -249,6 +261,7 @@ export default function ActiveSession() {
             <SessionHeaderToolbar
               rest={rest}
               elapsed={elapsed}
+              estimatedDuration={estimatedDuration}
               onStartRest={handleToolboxStartRest}
               onDismissRest={dismissRest}
               onOpenToolbox={handleToolboxOpen}
