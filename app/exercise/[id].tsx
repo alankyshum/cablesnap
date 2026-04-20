@@ -182,9 +182,10 @@ export default function ExerciseDetail() {
         </View>
       ) : undefined }} />
       <FlatList style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         data={d.historyLoading || d.historyError || d.history.length === 0 ? [] : d.history}
         keyExtractor={(item) => item.session_id} renderItem={renderItem} ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderFooter} ListFooterComponentStyle={{ paddingBottom: 100 }}
+        ListFooterComponent={renderFooter}
         onEndReached={d.loadMore} onEndReachedThreshold={0.3} />
     </>
   );
