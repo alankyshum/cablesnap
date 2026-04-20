@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 97 learnings
+- [React Native + Expo](patterns/react-native.md) — 100 learnings
 - [Testing](patterns/testing.md) — 13 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-418 | Fixed-Width Label Containers Truncate on Varying Screen Sizes | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-426 | FlatList Virtualization Breaks findByText in Tests — Mock VirtualizedList Defaults | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-20 | BLD-420 | Epley e1RM Formula Requires Rep Cap at 12 in SQL Aggregation | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-419 | Audit All Instances When Fixing a Root Cause Pattern | Process | [quality-pipeline.md](process/quality-pipeline.md) |
