@@ -170,7 +170,7 @@ export default function ExerciseDetail() {
       <FlashList style={{ flex: 1, backgroundColor: colors.background }}
         data={d.historyLoading || d.historyError || d.history.length === 0 ? [] : d.history}
         keyExtractor={(item) => item.session_id} renderItem={renderItem} ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderFooter} ListFooterComponentStyle={{ paddingBottom: 32 }}
+        ListFooterComponent={renderFooter} ListFooterComponentStyle={{ paddingBottom: 100 }}
         onEndReached={d.loadMore} onEndReachedThreshold={0.3} />
     </>
   );

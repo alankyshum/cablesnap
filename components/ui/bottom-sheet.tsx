@@ -190,8 +190,8 @@ export function BottomSheet({
       let destination: number;
 
       if (isKeyboardVisible) {
-        // Keyboard is open, move sheet up by keyboard height
-        destination = currentSnapHeight - keyboardHeight;
+        // Keyboard is open, move sheet up by keyboard height but don't push content off-screen
+        destination = Math.max(currentSnapHeight - keyboardHeight, MAX_TRANSLATE_Y);
       } else {
         // Keyboard is closed, return to original snap point
         destination = currentSnapHeight;

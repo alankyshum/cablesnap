@@ -1,5 +1,4 @@
-import { FlashList } from "@shopify/flash-list";
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -115,7 +114,7 @@ export function WeeklySchedule({
                 {picker !== null ? DAYS[picker] : ""} — Pick Template
               </Text>
 
-              <FlashList
+              <FlatList
                 data={
                   picker !== null && schedEntry(picker)
                     ? [{ id: "__remove__", name: "Remove (Rest Day)" } as WorkoutTemplate, ...templates]
@@ -200,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dayLabel: {
-    width: 36,
+    width: 44,
     fontWeight: "600",
   },
   dayInfo: {
