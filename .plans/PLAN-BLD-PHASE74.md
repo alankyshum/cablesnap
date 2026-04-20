@@ -90,19 +90,77 @@ WHERE increment =
 
 | File | Change |
 |------|--------|
-| `lib/format.ts` | Modify `computePrefillSets()` to accept `allPrevCompleted` flag, RPE-safe flag, and weight unit; apply increment |
-| `hooks/useSessionData.ts` | Pass completion status and RPE of previous sets to computePrefillSets |
-| `lib/db/session-sets.ts` | Extend `getPreviousSetsBatch` to also return `completed` status and `rpe` per set |
+| `lib/format.ts` | Modify `computePrefillSets()` to accept `allPrevCompleted` flag, RPE-safe flag, weight unit, and exercise category; apply increment |
+| `hooks/useSessionData.ts` | Pass completion status, RPE, and exercise category of previous sets to computePrefillSets |
+| `lib/db/session-sets.ts` | Extend `getPreviousSetsBatch` to return ALL sets (not just completed) with `completed` status and `rpe` per set |
 | `components/session/GroupCardHeader.tsx` | Show progression indicator (arrow icon) when weight was auto-increased |
 | `components/session/types.ts` | Add `progressionSuggested: boolean` to ExerciseGroup |
 
+#### Data Fetching Strategy (addresses QD critical finding)
+
+**Current behavior (BROKEN for progression):** `getPreviousSetsBatch` in `lib/db/session-sets.ts` line ~462 filters with `eq(workoutSets.completed, 1)` in Step 2, silently dropping non-completed sets. This means the caller cannot distinguish "all 3 sets completed" from "1 of 3 sets completed" — both return the same result shape.
+
+**Required change:** Remove the `eq(workoutSets.completed, 1)` filter from Step 2 of `getPreviousSetsBatch`. Instead, return ALL sets from the previous session with their `completed` (as boolean) and `rpe` (as number|null) fields included in the return type. The caller (`useSessionData`) then determines whether all working sets were completed.
+
+**Updated return type:**
+```typescript
+Record<string, {
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+  set_type: string | null;
+  completed: boolean;  // NEW
+  rpe: number | null;  // NEW
+}[]>
+```
+
+**Contract change impact:** Returning additional fields (`completed`, `rpe`) is additive — existing callers that destructure only `{ weight, reps, duration_seconds }` will continue to work. However, removing the `completed=1` filter means callers now receive non-completed sets too. The `computePrefillSets` function already filters on `current.completed` (skips completed current sets), and maps by index against `previousSets` — it must now filter `previousSets` to `completed` sets only before index-mapping, OR `useSessionData` must pre-filter.
+
+**Safest approach:** `useSessionData` pre-filters `previousSets` to `completed=true` before passing to `computePrefillSets` (preserving the existing contract), and separately uses the full unfiltered set to compute `allPrevCompleted`.
+
+#### Exercise Category Plumbing (addresses QD major finding)
+
+The `exercises` table already has a `category` text field (schema line 19). Categories include values like `"chest"`, `"shoulders"`, `"biceps"`, etc. There is no existing `is_compound` or `is_isolation` flag.
+
+**V1 approach:** Use a simple heuristic function:
+```typescript
+function isLikelyIsolation(category: string | null): boolean {
+  const isolationCategories = ['biceps', 'triceps', 'forearms', 'calves', 'abs'];
+  return isolationCategories.includes(category?.toLowerCase() ?? '');
+}
+```
+This covers the most common isolation muscle groups. Compound exercises (chest, back, shoulders, legs, glutes) get standard increments. The heuristic is conservative — false negatives (treating an isolation as compound) result in a slightly too-large suggestion the user can manually adjust, while false positives (treating a compound as isolation) would under-suggest.
+
+**Category flows through:** `useSessionData` already has access to exercise metadata via the group's exercise info. It passes `exerciseCategory` to `computePrefillSets` alongside the other new flags.
+
+#### Callers and Mocks Requiring Updates (addresses QD major finding)
+
+**`getPreviousSetsBatch` callers:**
+| Location | Impact |
+|----------|--------|
+| `hooks/useSessionData.ts` | Primary caller — must handle new fields and pre-filter for computePrefillSets |
+| `__tests__/acceptance/workout-session.acceptance.test.tsx` (3 refs) | Mock return values must add `completed: true, rpe: null` fields |
+| `__tests__/acceptance/session-ux.test.tsx` (2 refs) | Mock return values must add `completed: true, rpe: null` fields |
+| `__tests__/acceptance/supersets.test.tsx` (2 refs) | Mock return values must add `completed: true, rpe: null` fields |
+| `__tests__/acceptance/session-add-exercise.acceptance.test.tsx` (2 refs) | Mock return values must add `completed: true, rpe: null` fields |
+| `__tests__/acceptance/rpe-notes.test.tsx` (2 refs) | Mock return values must add `completed: true, rpe: null` fields |
+| `__tests__/acceptance/accessibility.acceptance.test.tsx` (1 ref) | Mock return values must add `completed: true, rpe: null` fields |
+
+**`computePrefillSets` callers:**
+| Location | Impact |
+|----------|--------|
+| `hooks/useSessionActions.ts` (line 331) | Must pass new params (allPrevCompleted, rpeSafe, weightUnit, category) |
+| `__tests__/lib/format.test.ts` (11 refs) | Must update function signature in tests; add new progression-specific tests |
+
 **Data flow:**
-1. `getPreviousSetsBatch` returns previous sets WITH `completed` status AND `rpe` value (currently only returns weight/reps/duration)
-2. `useSessionData` checks: all previous working sets completed? All same weight? Max RPE < 9.5 (or null)?
-3. If yes, sets `group.progressionSuggested = true`
-4. `computePrefillSets` applies increment when `progressionSuggested` is true
-5. `GroupCardHeader` shows arrow-up icon when `progressionSuggested` is true
-6. Previous performance text updated to mention the suggestion
+1. `getPreviousSetsBatch` returns ALL previous sets with `completed` and `rpe` fields (remove `completed=1` filter)
+2. `useSessionData` receives full set list, computes: `allWorkingSetsCompleted`, `allSameWeight`, `maxRpeSafe` (< 9.5 or null), gets `exerciseCategory`
+3. `useSessionData` pre-filters to `completed=true` sets before passing to `computePrefillSets` (preserving existing prefill contract)
+4. `useSessionData` sets `group.progressionSuggested = allWorkingSetsCompleted && allSameWeight && maxRpeSafe`
+5. `computePrefillSets` applies increment when `progressionSuggested` is true, using `weightUnit` and `isLikelyIsolation(category)`
+6. `GroupCardHeader` shows arrow-up icon when `progressionSuggested` is true
+7. Previous performance text updated to mention the suggestion
 
 **No new DB tables, no new dependencies, no new screens.**
 
@@ -155,7 +213,6 @@ WHERE increment =
 | Dropsets in previous session | Dropsets have varying weights -- no progression suggested |
 | RPE was 9.5 or 10 last session | No progression suggested -- user was at maximal effort |
 | RPE not logged (null) | Progression allowed -- treat as sub-maximal by default |
-| User rejected suggestion last session (manually lowered weight) | Circuit breaker: no suggestion this session for that exercise |
 | Exercise has no category | Treat as compound (standard increment) |
 
 ### Risk Assessment
@@ -169,11 +226,12 @@ WHERE increment =
 
 ### Test Budget
 
-Current: 1795/1800 (5 remaining). May add up to 3 new tests:
+Current: 1795/1800 (5 remaining). May add up to 4 new tests:
 
-1. `computePrefillSets` with progression: returns incremented weight when all prev sets completed
-2. `computePrefillSets` without progression: returns same weight when prev sets not all completed
-3. Component test: arrow icon renders when `progressionSuggested` is true
+1. `computePrefillSets` with progression: returns incremented weight when all prev sets completed (compound — +2.5kg)
+2. `computePrefillSets` with progression (isolation): returns half increment (+1.25kg) for isolation category
+3. `computePrefillSets` without progression: returns same weight when prev sets not all completed, AND when RPE >= 9.5 (safety-critical — tests the RPE gate)
+4. Component test: arrow icon renders when `progressionSuggested` is true
 
 ## Review Feedback
 
@@ -206,6 +264,15 @@ Additional notes from panel:
 
 ### Quality Director (Release Safety)
 **Verdict: NEEDS REVISION** (2026-04-20)
+**CEO Response (2026-04-20): ALL 5 TODOs addressed in plan revision:**
+
+1. ✅ **[Critical] Data fetching strategy** — Added "Data Fetching Strategy" subsection. `getPreviousSetsBatch` will remove `completed=1` filter, return ALL sets with `completed` and `rpe` fields. `useSessionData` pre-filters to completed sets for prefill contract, uses full set for progression detection.
+2. ✅ **[Major] Callers and mocks** — Added "Callers and Mocks Requiring Updates" subsection listing all 6 acceptance test files (12 mock refs) and 2 `computePrefillSets` callers with specific impact per file.
+3. ✅ **[Major] Exercise category plumbing** — Added "Exercise Category Plumbing" subsection. Uses `isLikelyIsolation(category)` heuristic against the existing `category` text field in exercises table.
+4. ✅ **[Major] RPE gate test** — Test #3 now explicitly covers RPE >= 9.5 gate (combined with "not all completed" test — both are "no progression" cases).
+5. ✅ **[Minor] Circuit breaker** — Removed from edge cases table. Out of scope for v1, no longer referenced.
+
+**Original findings (preserved for audit):**
 
 **Critical issue:** `getPreviousSetsBatch` filters to `completed=1` only — plan cannot detect "all sets completed" vs "some sets completed" without fetching non-completed sets. As written, this would over-suggest weight increases when users failed sets (user safety risk).
 
@@ -215,13 +282,6 @@ Additional notes from panel:
 - RPE >= 9.5 gate (safety-critical) has no planned test coverage
 
 **Minor:** Circuit breaker listed in edge cases but marked out of scope — inconsistent.
-
-**TODOs (must fix before approval):**
-1. [Critical] Specify data fetching strategy for detecting incomplete sets
-2. [Major] List all callers and test mocks needing updates
-3. [Major] Describe how exercise category reaches computePrefillSets
-4. [Major] Add RPE gate test coverage (combine with existing planned tests)
-5. [Minor] Resolve circuit breaker scope inconsistency
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — 2026-04-20
