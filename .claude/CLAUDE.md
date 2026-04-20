@@ -9,7 +9,7 @@ CableSnap is licensed under **AGPL-3.0-or-later**. All agents MUST comply:
 3. **Never modify or replace the LICENSE file.** The LICENSE file is immutable. Any PR that alters it must be rejected.
 4. **Never add code that removes or obscures the license notice.**
 5. **Run `scripts/check-license.sh`** before adding any new dependency. The pre-push hook enforces this automatically.
-6. **Trademark:** "CableSnap" name and branding belong to Anomaly Co. Do not add code that strips or replaces license/trademark notices.
+6. **Trademark:** "CableSnap" name and branding belong to Persoack. Do not add code that strips or replaces license/trademark notices.
 
 ## Tech Stack
 - **Framework:** Expo (React Native) with Expo Router

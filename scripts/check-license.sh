@@ -17,7 +17,7 @@ LICENSE_FILE="$REPO_ROOT/LICENSE"
 # The AGPL-3.0 license text should contain this exact fingerprint.
 # If someone swaps or guts the file, this check catches it.
 EXPECTED_FINGERPRINT="GNU AFFERO GENERAL PUBLIC LICENSE"
-EXPECTED_COPYRIGHT="Copyright (C) 2026 Anomaly Co."
+EXPECTED_COPYRIGHT="Copyright (C) 2026 Persoack."
 
 if [ ! -f "$LICENSE_FILE" ]; then
   echo "🚨 LICENSE file is missing!"
