@@ -170,7 +170,24 @@ In `lib/format.ts`:
 **No blocking issues found.**
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** (with simplification recommendations)
+
+**Key Simplification:** Skip the proposed `usePreviousPerformance` hook. `useSessionData` already calls `getPreviousSetsBatch(exerciseIds, id)` which loads all previous sets. Derive aggregate summary (`set_count`, `max_weight`, `max_reps`) directly from `prevCache` — zero new DB queries, one fewer file.
+
+**Recommended approach:**
+1. Compute aggregate from `prevCache` in `useSessionData`
+2. Add `previousSummary?: string` field to `ExerciseGroup`
+3. Thread through `ExerciseGroupCard` → `GroupCardHeader`
+4. Keep `formatPreviousPerformance` pure function in `lib/format.ts`
+
+**Technical concerns:**
+- Warmup set filtering: `getPreviousSetsBatch` does NOT filter `set_type != 'warmup'`. Verify and filter if needed.
+- Unit conversion: Use `toDisplay()` from `lib/units.ts` — don't display raw stored values.
+- Bodyweight: Use existing `is_bodyweight` on `ExerciseGroup`, not a new boolean.
+
+**Effort:** Small (with simplification). **Risk:** Low. **New deps:** None.
+
+_Reviewed 2026-04-20_
 
 ### CEO Decision
 _Pending reviews_
