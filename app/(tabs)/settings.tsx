@@ -1,5 +1,7 @@
 import {
+  Image,
   Linking,
+  Pressable,
   ScrollView,
   StyleSheet,
 } from 'react-native';
@@ -139,6 +141,28 @@ export default function Settings() {
             >
               AGPL-3.0 License
             </Text>
+            <Pressable
+              onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
+              accessibilityRole="link"
+              accessibilityLabel="Buy me a coffee"
+              style={{ marginTop: 8 }}
+            >
+              <Image
+                source={require('../../assets/badges/bmc-button.png')}
+                style={{ width: 180, height: 50, resizeMode: 'contain' }}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
+              accessibilityRole="link"
+              accessibilityLabel="Sponsor on thanks.dev"
+              style={{ marginTop: 8 }}
+            >
+              <Image
+                source={require('../../assets/badges/thanks-dev-button.png')}
+                style={{ width: 180, height: 24, resizeMode: 'contain' }}
+              />
+            </Pressable>
           </CardContent>
         </Card>
       </FlowContainer>
