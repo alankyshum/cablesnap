@@ -3,6 +3,8 @@ import {
   withOpacity,
   mondayOf,
   formatTimeRemaining,
+  formatPreviousPerformance,
+  formatPreviousPerformanceAccessibility,
 } from "../../lib/format";
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -90,5 +92,58 @@ describe("formatTimeRemaining", () => {
     expect(formatTimeRemaining(-100, 0)).toBeNull();
     // Large remaining: 45 min left
     expect(formatTimeRemaining(5400, 2700)).toBe("~45 min left");
+  });
+});
+
+describe("formatPreviousPerformance", () => {
+  it("formats weighted, bodyweight, duration, null, and edge cases correctly", () => {
+    // Weighted exercise in kg
+    expect(formatPreviousPerformance({ setCount: 3, maxWeight: 80, maxReps: 8, isBodyweight: false }, "kg"))
+      .toBe("Last: 3 sets \u00B7 80kg \u00D7 8");
+
+    // Weighted with decimal weight
+    expect(formatPreviousPerformance({ setCount: 4, maxWeight: 22.5, maxReps: 10, isBodyweight: false }, "kg"))
+      .toBe("Last: 4 sets \u00B7 22.5kg \u00D7 10");
+
+    // Weighted in lb
+    expect(formatPreviousPerformance({ setCount: 3, maxWeight: 60, maxReps: 8, isBodyweight: false }, "lb"))
+      .toBe("Last: 3 sets \u00B7 132.3lb \u00D7 8");
+
+    // Bodyweight exercise
+    expect(formatPreviousPerformance({ setCount: 3, maxWeight: 0, maxReps: 12, isBodyweight: true }, "kg"))
+      .toBe("Last: 3 sets \u00B7 12 reps");
+
+    // Duration exercise (>= 60s)
+    expect(formatPreviousPerformance({ setCount: 3, maxWeight: 0, maxReps: 0, isBodyweight: false, maxDuration: 90 }, "kg"))
+      .toBe("Last: 3 sets \u00B7 1:30");
+
+    // Duration exercise (sub-minute)
+    expect(formatPreviousPerformance({ setCount: 2, maxWeight: 0, maxReps: 0, isBodyweight: false, maxDuration: 45 }, "kg"))
+      .toBe("Last: 2 sets \u00B7 45s");
+
+    // Null input
+    expect(formatPreviousPerformance(null, "kg")).toBeNull();
+
+    // Zero sets
+    expect(formatPreviousPerformance({ setCount: 0, maxWeight: 80, maxReps: 8, isBodyweight: false }, "kg")).toBeNull();
+
+    // Single set (no plural)
+    expect(formatPreviousPerformance({ setCount: 1, maxWeight: 100, maxReps: 5, isBodyweight: false }, "kg"))
+      .toBe("Last: 1 set \u00B7 100kg \u00D7 5");
+
+    // Accessibility label — weighted
+    expect(formatPreviousPerformanceAccessibility({ setCount: 3, maxWeight: 80, maxReps: 8, isBodyweight: false }, "kg"))
+      .toBe("Last session: 3 sets, best 80 kilograms for 8 reps");
+
+    // Accessibility label — bodyweight
+    expect(formatPreviousPerformanceAccessibility({ setCount: 3, maxWeight: 0, maxReps: 12, isBodyweight: true }, "kg"))
+      .toBe("Last session: 3 sets, best 12 reps");
+
+    // Accessibility label — duration
+    expect(formatPreviousPerformanceAccessibility({ setCount: 2, maxWeight: 0, maxReps: 0, isBodyweight: false, maxDuration: 90 }, "kg"))
+      .toBe("Last session: 2 sets, best 1 minute 30 seconds");
+
+    // Accessibility — null
+    expect(formatPreviousPerformanceAccessibility(null, "kg")).toBeNull();
   });
 });

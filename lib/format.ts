@@ -1,3 +1,5 @@
+import { toDisplay } from "./units";
+
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 export function formatDuration(seconds: number | null | undefined): string {
@@ -101,6 +103,78 @@ export function formatTimeRemaining(
   const minutes = Math.ceil(remaining / 60);
   if (minutes <= 0) return null;
   return `~${minutes} min left`;
+}
+
+export type PreviousPerformance = {
+  setCount: number;
+  maxWeight: number;
+  maxReps: number;
+  isBodyweight: boolean;
+  maxDuration?: number | null;
+};
+
+export function formatPreviousPerformance(
+  perf: PreviousPerformance | null,
+  unit: "kg" | "lb"
+): string | null {
+  if (!perf || perf.setCount === 0) return null;
+
+  const { setCount, maxWeight, maxReps, isBodyweight, maxDuration } = perf;
+  const sets = `${setCount} set${setCount !== 1 ? "s" : ""}`;
+
+  // Duration-based exercise
+  if (maxDuration != null && maxDuration > 0) {
+    let durStr: string;
+    if (maxDuration < 60) {
+      durStr = `${maxDuration}s`;
+    } else {
+      const m = Math.floor(maxDuration / 60);
+      const s = maxDuration % 60;
+      durStr = `${m}:${s.toString().padStart(2, "0")}`;
+    }
+    return `Last: ${sets} \u00B7 ${durStr}`;
+  }
+
+  // Bodyweight exercise
+  if (isBodyweight || maxWeight === 0) {
+    return `Last: ${sets} \u00B7 ${maxReps} reps`;
+  }
+
+  // Weighted exercise — use toDisplay for unit conversion
+  const displayed = toDisplay(maxWeight, unit);
+  const unitLabel = unit === "lb" ? "lb" : "kg";
+  const weightStr = displayed % 1 !== 0
+    ? displayed.toFixed(1)
+    : String(displayed);
+
+  return `Last: ${sets} \u00B7 ${weightStr}${unitLabel} \u00D7 ${maxReps}`;
+}
+
+export function formatPreviousPerformanceAccessibility(
+  perf: PreviousPerformance | null,
+  unit: "kg" | "lb"
+): string | null {
+  if (!perf || perf.setCount === 0) return null;
+
+  const { setCount, maxWeight, maxReps, isBodyweight, maxDuration } = perf;
+  const sets = `${setCount} set${setCount !== 1 ? "s" : ""}`;
+
+  if (maxDuration != null && maxDuration > 0) {
+    const m = Math.floor(maxDuration / 60);
+    const s = maxDuration % 60;
+    const parts: string[] = [];
+    if (m > 0) parts.push(`${m} minute${m !== 1 ? "s" : ""}`);
+    if (s > 0) parts.push(`${s} second${s !== 1 ? "s" : ""}`);
+    return `Last session: ${sets}, best ${parts.join(" ")}`;
+  }
+
+  if (isBodyweight || maxWeight === 0) {
+    return `Last session: ${sets}, best ${maxReps} reps`;
+  }
+
+  const displayed = toDisplay(maxWeight, unit);
+  const unitLabel = unit === "lb" ? "pounds" : "kilograms";
+  return `Last session: ${sets}, best ${displayed} ${unitLabel} for ${maxReps} reps`;
 }
 
 export function hexToRgb(hex: string): string {
