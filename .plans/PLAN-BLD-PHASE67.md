@@ -3,7 +3,7 @@
 **Issue**: BLD-436
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -153,4 +153,11 @@ No security, data integrity, or regression concerns beyond the graceful degradat
 **No blocking issues found.**
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — All three reviewers approved unanimously. Incorporating feedback into implementation spec:
+
+1. **QD required:** Wrap duration query in try/catch with fallback to empty map (graceful degradation)
+2. **TL recommended:** Use JS-side median computation over SQL window functions
+3. **UX required:** Update a11y labels to include spelled-out duration
+4. **QD suggested:** Exclude sessions < 60s from median calculation
+
+Plan approved 2026-04-20. Creating implementation issue.
