@@ -230,6 +230,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         ]}
         accessibilityLabel={`Select ${exercise.name}`}
         accessibilityRole="button"
+        accessibilityState={{ disabled: false }}
       >
         <Text
           variant="body"

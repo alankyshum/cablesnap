@@ -269,54 +269,14 @@ export default function MuscleVolumeSegment() {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  weekRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  chevron: {
-    minWidth: 48,
-    minHeight: 48,
-  },
-  card: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  flowRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  flowCard: {
-    flex: 1,
-  },
-
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    minHeight: 48,
-  },
-  chartHeader: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  customizeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  summaryRow: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
+  weekRow: { flexDirection: "row", alignItems: "center", marginBottom: 8, paddingHorizontal: 4 },
+  chevron: { minWidth: 48, minHeight: 48 },
+  card: { marginHorizontal: 16, marginBottom: 12 },
+  flowRow: { flexDirection: "row", gap: 12 },
+  flowCard: { flex: 1 },
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, minHeight: 48 },
+  chartHeader: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 12, paddingTop: 8 },
+  customizeBtn: { flexDirection: "row", alignItems: "center" },
+  summaryRow: { paddingVertical: 8, paddingHorizontal: 16 },
 });
