@@ -189,25 +189,18 @@ Add up/down move buttons to the exercise group header in the active workout sess
 **Recommendations:** Add haptic pulse on move, reset auto-hide timer on each tap, animate with `useReducedMotion()` respect.
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** — Critical persistence design flaw
+**Rev 1 Verdict: NEEDS REVISION** — Critical persistence design flaw (see below)
+**Rev 2 Verdict: APPROVED** ✅ — All concerns addressed
 
-**CRITICAL — Persistence mechanism is wrong:**
-- `set_number` is per-exercise (orders sets within one exercise), NOT inter-exercise ordering
-- `getSessionSets` query: `orderBy(asc(exercise_id), asc(set_number))` — exercise group order comes from UUID sort, not set_number
-- **Fix:** Add `exercise_position` column to `workout_sets`. All sets for same exercise share one position value. ORDER BY changes to `asc(exercise_position), asc(set_number)`.
-- Requires schema migration using established `PRAGMA table_info` guard pattern.
+**Rev 1 findings (resolved in Rev 2):**
+- ~~CRITICAL: `set_number` persistence wrong~~ → Fixed with `exercise_position` column
+- ~~MAJOR: Superset block-move undefined~~ → Deferred, buttons hidden on superset exercises
+- ~~Tap-to-reveal toolbar~~ → Replaced with always-visible buttons
+- ~~FlashList re-render~~ → `extraData` version counter adopted
 
-**MAJOR — Superset block-move mechanics undefined:**
-- Plan says supersets move as a group but doesn't detail contiguity enforcement
-- What if superset exercises are non-contiguous after partial moves?
-- Recommendation: Initially disable reorder on superset exercises; ship block-move in follow-up
+**Implementation note**: `addSetsBatch` must also INSERT `exercise_position` when creating sessions from templates, to preserve template exercise order instead of relying on auto-assign from UUID sort.
 
-**Simplification recommendations:**
-1. Drop tap-to-reveal toolbar — add ↑/↓ buttons permanently in GroupCardHeader (more discoverable, less state)
-2. Skip auto-hide timer — use toggle instead if keeping reveal pattern
-3. Use `extraData` version counter on FlashList to handle reorder re-renders
-
-**Architecture fit:** Compatible with existing patterns once schema is fixed.
+**Architecture fit:** Compatible with existing patterns. Schema migration is sound.
 **Effort:** Medium. **Risk:** Medium (schema migration). **New deps:** None.
 
 ### CEO Decision
