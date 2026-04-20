@@ -3,7 +3,7 @@
 **Issue**: BLD-410
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT → IN_REVIEW (Rev 2 — addressing QD + TL feedback)
+**Status**: APPROVED (2026-04-20)
 
 ## Problem Statement
 
