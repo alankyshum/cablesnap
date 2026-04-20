@@ -199,7 +199,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dayLabel: {
-    width: 44,
+    minWidth: 44,
+    flexShrink: 0,
     fontWeight: "600",
   },
   dayInfo: {
