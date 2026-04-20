@@ -119,7 +119,7 @@ export default function VolumeLandmarksSheet({
       setPending((prev) => {
         const next = new Map(prev);
         const current = next.get(muscle) ?? landmarks[muscle];
-        const newMev = Math.max(MIN_MEV, Math.min(current.mrv - 1, current.mev + delta, MAX_SETS));
+        const newMev = Math.max(MIN_MEV, Math.min(current.mrv, current.mev + delta, MAX_SETS));
         next.set(muscle, { ...current, mev: newMev });
         return next;
       });
@@ -133,7 +133,7 @@ export default function VolumeLandmarksSheet({
       setPending((prev) => {
         const next = new Map(prev);
         const current = next.get(muscle) ?? landmarks[muscle];
-        const newMrv = Math.max(Math.max(MIN_MRV, current.mev + 1), Math.min(current.mrv + delta, MAX_SETS));
+        const newMrv = Math.max(Math.max(MIN_MRV, current.mev), Math.min(current.mrv + delta, MAX_SETS));
         next.set(muscle, { ...current, mrv: newMrv });
         return next;
       });
