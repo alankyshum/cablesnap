@@ -1,17 +1,19 @@
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View, FlatList } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react-native";
 import { MUSCLE_LABELS } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useMuscleVolume } from "@/hooks/useMuscleVolume";
 import type { VolumeRow } from "@/hooks/useMuscleVolume";
+import { getVolumeStatus } from "../lib/volume-landmarks";
 import VolumeBarChart from "./muscle-volume/VolumeBarChart";
 import VolumeTrendChart from "./muscle-volume/VolumeTrendChart";
+import VolumeLandmarksSheet from "./muscle-volume/VolumeLandmarksSheet";
 
 const MuscleRow = React.memo(function MuscleRow({
   item,
@@ -64,7 +66,36 @@ export default function MuscleVolumeSegment() {
   const {
     offset, setOffset, data, trend, selected, selectMuscle,
     loading, error, load, monday, maxSets, hasEnoughTrend, reduced, formatRange,
+    landmarks, saveLandmark, resetLandmark, resetAllLandmarks,
   } = useMuscleVolume();
+  const [sheetVisible, setSheetVisible] = useState(false);
+
+  const volumeSummary = useMemo(() => {
+    if (data.length === 0) return null;
+    let underMev = 0;
+    let overMrv = 0;
+    for (const row of data) {
+      const status = getVolumeStatus(row.sets, landmarks[row.muscle]);
+      if (status === "below_mev") underMev++;
+      if (status === "above_mrv") overMrv++;
+    }
+    if (underMev === 0 && overMrv === 0) return null;
+    const parts: string[] = [];
+    if (underMev > 0) parts.push(`${underMev} muscle${underMev > 1 ? "s" : ""} under MEV`);
+    if (overMrv > 0) parts.push(`${overMrv} muscle${overMrv > 1 ? "s" : ""} over MRV`);
+    return parts.join(" · ");
+  }, [data, landmarks]);
+
+  const handleSummaryPress = useCallback(() => {
+    // Find first muscle outside optimal and select it
+    for (const row of data) {
+      const status = getVolumeStatus(row.sets, landmarks[row.muscle]);
+      if (status !== "optimal") {
+        selectMuscle(row.muscle);
+        return;
+      }
+    }
+  }, [data, landmarks, selectMuscle]);
 
   const chartWidth = layout.atLeastMedium
     ? (layout.width - 96) / 2 - 32
@@ -149,13 +180,42 @@ export default function MuscleVolumeSegment() {
           {/* Volume Bars + Trend flow side by side on tablet */}
           <View style={layout.atLeastMedium ? styles.flowRow : undefined}>
           <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
+            <View style={styles.chartHeader}>
+              <View style={{ flex: 1 }} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => setSheetVisible(true)}
+                accessibilityLabel="Customize volume targets"
+                style={styles.customizeBtn}
+              >
+                <SlidersHorizontal size={16} color={colors.onSurfaceVariant} />
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}>
+                  Customize
+                </Text>
+              </Button>
+            </View>
             <VolumeBarChart
               data={data}
               selected={selected}
               maxSets={maxSets}
               onSelect={selectMuscle}
               colors={colors}
+              landmarks={landmarks}
             />
+            {volumeSummary && (
+              <Pressable
+                onPress={handleSummaryPress}
+                style={styles.summaryRow}
+                accessibilityRole="button"
+                accessibilityLabel={volumeSummary}
+                accessibilityHint="Tap to highlight relevant muscles"
+              >
+                <Text variant="caption" style={{ color: colors.tertiary, textAlign: "center" }}>
+                  {volumeSummary}
+                </Text>
+              </Pressable>
+            )}
           </Card>
 
           <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
@@ -196,6 +256,14 @@ export default function MuscleVolumeSegment() {
           </Card>
         </>
       )}
+      <VolumeLandmarksSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        landmarks={landmarks}
+        onSave={saveLandmark}
+        onReset={resetLandmark}
+        onResetAll={resetAllLandmarks}
+      />
     </View>
   );
 }
@@ -236,5 +304,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     minHeight: 48,
+  },
+  chartHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  customizeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  summaryRow: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
 });
