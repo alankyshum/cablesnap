@@ -27,7 +27,7 @@ type Props = {
   onEdit: (id: string) => void;
 };
 
-function buildMetaBadges(
+export function buildMetaBadges(
   meta: (typeof STARTER_TEMPLATES)[number] | undefined,
   counts: Record<string, number>,
   durationEstimates: Record<string, number | null>,
@@ -43,7 +43,7 @@ function buildMetaBadges(
   return badges;
 }
 
-function buildMenuItems(
+export function buildMenuItems(
   isStarter: boolean,
   item: WorkoutTemplate,
   onOptions: (t: WorkoutTemplate) => void,
