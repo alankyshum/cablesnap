@@ -1,99 +1,84 @@
-# Feature Plan: Auto-Start Rest Timer on Set Completion
+# Feature Plan: Estimated Workout Duration on Template Cards
 
-**Issue**: BLD-TBD (Phase 67)
+**Issue**: BLD-436
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
 
 ## Problem Statement
 
-When a gym-goer completes a set and taps the checkmark, they must then separately tap the elapsed time display in the session header to start the rest timer. This is an extra 1-2 taps per set, every single set, every workout. For a typical 20-set workout, that's 20-40 extra taps — significant friction when you're tired, sweaty, and holding your phone in one hand.
+When users look at their template cards on the home screen, user-created templates only show the exercise count (e.g., "5 exercises"). Starter templates show a hardcoded duration badge (e.g., "45 min") from metadata, but user-created templates have no duration information.
 
-The rest timer is one of the most useful features in the app, but its value is diminished because users have to remember to manually start it. Many users probably forget, leading to inconsistent rest periods and suboptimal training.
+Users often need to pick a workout that fits their available time — "I have 40 minutes before my next meeting, which template fits?" Currently they have no way to know without starting the workout or remembering from past experience.
+
+This data already exists in the app — every completed session records `duration_seconds`. We just need to surface it.
 
 ## User's Emotional Journey
 
-**WITHOUT this feature:** User finishes a hard set of squats. They tap the checkmark to log it. Then they think "oh, I should start my rest timer" and have to find and tap the elapsed time display. Sometimes they forget. Sometimes they fumble with sweaty fingers. The timer feels like a separate tool rather than an integrated part of the workflow.
+**Without this feature:** User stares at template cards, tries to remember how long each one takes. Picks one, runs out of time mid-workout, feels frustrated. Or picks a short one when they had more time, feels they wasted an opportunity.
 
-**AFTER this feature:** User finishes a set, taps the checkmark, and the rest timer automatically starts counting down. They feel the haptic buzz when rest is done. The app feels seamless — like it anticipates what they need. They never have to think about starting the timer. It just works.
+**After this feature:** User glances at template cards, sees "~45 min" on their Push Day template and "~30 min" on their Arms template. Picks the right one instantly. Feels confident and in control of their time.
 
 ## User Stories
 
-- As a gym-goer, I want the rest timer to auto-start when I complete a set so I don't have to manually start it every time.
-- As a user who prefers manual control, I want to be able to disable auto-rest so I can start the timer only when I choose.
-- As a user doing supersets, I want auto-rest to trigger only after completing the last exercise in the superset group, not after each individual set.
+- As a gym-goer with limited time, I want to see how long each template typically takes so I can pick the right workout for my schedule
+- As a returning user, I want the app to learn from my past sessions and show me useful estimates
 
 ## Proposed Solution
 
 ### Overview
 
-Add an "Auto-start rest timer" toggle in the rest timer settings (the modal that appears on long-press of the elapsed time display). When enabled, completing a set automatically starts the rest timer with the user's configured default duration. For superset groups, the timer only auto-starts after the last exercise in the linked group.
+Add an estimated duration badge to user-created template cards on the home screen. The estimate is calculated from the median duration of the user's last 5 completed sessions using that template. Display format: "~Xm" (e.g., "~45m").
 
 ### UX Design
 
-**Setting location:** The rest timer settings modal (accessed via long-press on the session elapsed time chip) already has toggles for vibration and sound. Add an "Auto-start" toggle in the same modal.
-
-**Behavior when enabled:**
-1. User taps the set checkmark → set completes → rest timer auto-starts with user's default duration
-2. A subtle haptic confirms the timer started (light impact, distinct from completion haptic)
-3. The elapsed time chip in the header transitions to show the countdown (existing behavior)
-4. User can still dismiss the timer early by tapping it (existing behavior)
-
-**Behavior with supersets:**
-- When exercises are linked (superset/circuit), auto-rest only triggers after the LAST exercise in the linked group is checked off for that set number
-- This prevents premature rest starts between superset exercises
-
-**Behavior when disabled:**
-- No change from current behavior — user manually taps to start rest
-
-**Default state:** OFF (opt-in) — users who've built a habit around the current flow shouldn't have their workflow disrupted. The setting persists via `app_settings` like other rest timer settings.
+- **Display**: Add a clock icon + "~Xm" badge to the template card's meta badges row, next to the existing exercise count badge
+- **Position**: Before the exercise count badge (time is more glanceable than exercise count)
+- **Format**: "~30m", "~45m", "~1h 15m" — always rounded to nearest 5 minutes for clean display
+- **Empty state**: If no completed sessions exist for a template, don't show any duration badge (same as current behavior — no false information)
+- **Minimum data**: Require at least 1 completed session to show an estimate
+- **Staleness**: No staleness indicator needed — the estimate updates automatically as users complete more sessions
 
 ### Technical Approach
 
-**Changes needed:**
+1. **New DB query** in `lib/db/sessions.ts`: `getTemplateDurationEstimates(templateIds: string[]): Promise<Record<string, number | null>>`
+   - For each template_id, get the median `duration_seconds` from the last 5 completed sessions (completed_at IS NOT NULL, duration_seconds IS NOT NULL)
+   - Return a map of template_id → estimated seconds (or null if no data)
+   - Batch query — one SQL call for all templates, not N+1
 
-1. **New app setting**: `rest_timer_auto_start` (boolean, default false)
-   - Store in the existing `app_settings` table via `getAppSetting`/`setAppSetting`
+2. **Format helper** in `lib/format.ts`: `formatDurationEstimate(seconds: number): string`
+   - Round to nearest 5 minutes
+   - Format as "~Xm" or "~Xh Ym" for sessions over 60 minutes
+   - Examples: 2700s → "~45m", 5400s → "~1h 30m", 1200s → "~20m"
 
-2. **SessionHeaderToolbar.tsx**: Add "Auto-start" toggle to the rest timer settings modal
-   - Render a new Switch row below the existing vibrate/sound toggles
-   - Load/save via `getAppSetting("rest_timer_auto_start")`
-
-3. **useSessionActions.ts → handleCheck**: After completing a set (non-warmup), check the auto-start setting and call `startRestWithDuration` if enabled
-   - Must accept `startRestWithDuration` as a dependency or via callback
-   - Must check: auto-start enabled AND rest timer not already running AND set is not a warmup AND (not in superset OR last in superset group)
-
-4. **app/session/[id].tsx**: Wire `startRestWithDuration` (from `useRestTimer`) into `useSessionActions` so it can auto-trigger
-
-**No new dependencies.** Uses existing `app_settings` storage, existing `useRestTimer` hook, existing `handleCheck` flow.
-
-**Performance considerations:** The auto-start setting is read once on mount (or on each check — cheap async read from SQLite). No ongoing polling or timers beyond the existing rest timer mechanism.
+3. **Wire into home screen**: Call `getTemplateDurationEstimates` in `loadHomeData.ts` alongside existing template data loading
+   - Pass duration estimates to `TemplatesList` component
+   - Add duration badge to non-starter template `metaBadges` array when estimate is available
 
 ### Scope
 
 **In Scope:**
-- Auto-start rest timer toggle in rest timer settings modal
-- Auto-start on set completion (non-warmup sets only)
-- Superset-aware: only trigger after last exercise in linked group
-- Persist setting via app_settings
-- Setting default: OFF
+- Duration estimate badge on template cards (home screen only)
+- Batch DB query for all templates
+- Format helper for human-readable duration
+- Unit tests for DB query and format helper
 
 **Out of Scope:**
-- Per-exercise rest durations (use template `rest_seconds` — future enhancement)
-- Auto-start on un-check (set uncomplete should NOT affect timer)
-- Auto-dismiss when starting next set (future enhancement)
-- Customizable auto-rest duration separate from default (use existing default)
+- Duration estimate on program day cards (future enhancement)
+- Duration estimate on template detail/edit screen
+- Duration tracking improvements (already tracked via session timer)
+- Historical duration trends or charts
+- Per-exercise time estimates
 
 ### Acceptance Criteria
 
-- [ ] Given auto-start is enabled AND the user completes a non-warmup set WHEN the set checkmark is tapped THEN the rest timer starts automatically with the user's default rest duration
-- [ ] Given auto-start is enabled AND the user completes a warmup set WHEN the checkmark is tapped THEN the rest timer does NOT auto-start
-- [ ] Given auto-start is enabled AND the rest timer is already running WHEN another set is completed THEN the running timer is NOT interrupted/restarted
-- [ ] Given auto-start is enabled AND exercises are in a superset group WHEN the user completes a set for a non-last exercise in the group THEN the rest timer does NOT auto-start
-- [ ] Given auto-start is enabled AND exercises are in a superset group WHEN the user completes a set for the last exercise in the group THEN the rest timer auto-starts
-- [ ] Given auto-start is disabled WHEN the user completes any set THEN no automatic timer starts (current behavior preserved)
-- [ ] Given the rest timer settings modal is open WHEN the user views the settings THEN an "Auto-start" toggle is visible below the vibrate/sound toggles
-- [ ] Given the auto-start setting is toggled WHEN the modal is closed and reopened THEN the setting persists
+- [ ] Given a user has completed 1+ sessions from a template WHEN they view the home screen THEN the template card shows "~Xm" with a clock icon
+- [ ] Given a user has never used a template WHEN they view the home screen THEN no duration badge appears (no misleading "~0m")
+- [ ] Given a user has completed sessions with varying durations WHEN they view the home screen THEN the estimate uses the median of the last 5 sessions (not mean, to reduce outlier impact)
+- [ ] Given a session lasted 47 minutes WHEN the estimate is displayed THEN it shows "~45m" (rounded to nearest 5 minutes)
+- [ ] Given a session lasted 75 minutes WHEN the estimate is displayed THEN it shows "~1h 15m"
+- [ ] Given starter templates WHEN they view the home screen THEN starter templates still show their hardcoded duration (no change to existing behavior)
+- [ ] The duration query is batched (1 SQL query for all templates, not N+1)
 - [ ] PR passes all existing tests with no regressions
 - [ ] No new lint warnings
 
@@ -101,86 +86,39 @@ Add an "Auto-start rest timer" toggle in the rest timer settings (the modal that
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| User unchecks (uncompletes) a set | Rest timer NOT started, no effect on running timer |
-| Rest timer already running when set completed | Timer continues, NOT restarted |
-| Auto-start enabled but timer was manually dismissed | Next set completion starts timer again |
-| Very fast set completion (two sets in rapid succession) | First auto-starts timer, second sees timer running and doesn't interrupt |
-| Set completed during PR celebration animation | Timer auto-starts after the check, PR celebration plays independently |
-| Duration mode exercise (timed sets) | Auto-rest still triggers after completing a timed set |
-| App backgrounded while timer running | Existing timer background behavior (timer continues via interval) |
+| Template with 0 completed sessions | No duration badge shown |
+| Template with 1 completed session | Show estimate based on that single session |
+| Very short session (<5 min, e.g., abandoned) | Still included in median calculation — median naturally handles outliers |
+| Very long session (3+ hours) | Show "~3h 0m" — no upper cap |
+| Template deleted then recreated | New template has new ID, no historical data, no badge |
+| Session with null duration_seconds | Excluded from calculation |
+| All sessions have null duration | No duration badge shown |
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Users confused by timer auto-starting | Low | Medium | Default OFF; clear toggle label; existing dismiss mechanism |
-| Interference with superset flow | Medium | Medium | Explicit superset check before auto-starting |
-| Race condition between PR check and timer start | Low | Low | Timer start is independent of PR detection; both fire in parallel |
-| Test budget overflow | Medium | High | Limit to ~5-8 tests focused on the critical paths |
+| N+1 query on home screen | Low | High | Batch query — single SQL for all templates |
+| Stale estimates confuse users | Low | Low | Median of last 5 sessions updates naturally |
+| Visual clutter on template cards | Low | Medium | Only show when data exists; same badge style as existing |
+
+## Test Plan
+
+- Unit test for `formatDurationEstimate`: edge cases (0, 1 min, 59 min, 60 min, 90 min, 180 min, rounding)
+- Unit test for `getTemplateDurationEstimates`: empty result, single session, multiple sessions (verify median), null duration excluded
+- Estimated 8-12 new test cases
 
 ## Review Feedback
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-**Verdict: NEEDS REVISION** — Plan's problem statement is factually incorrect.
-
-**Critical finding:** The rest timer already auto-starts on every set completion (`useSessionActions.ts` lines 170-187). `startRest()` is called for non-linked sets and `startRestWithDuration()` for superset last-exercise. The manual tap in `SessionHeaderToolbar` is a secondary entry point, not the primary one.
-
-**Regression risk:** Implementing as written with default OFF would break the existing auto-start behavior for all users.
-
-**Warmup bug found:** Current code does NOT skip warmup sets for rest timer auto-start (no guard on line 186). This is a genuine bug worth fixing independently.
-
-**Recommendations:**
-1. Verify the problem statement against current codebase
-2. Fix the warmup rest timer bug (small standalone PR)
-3. If a toggle IS desired, default must be ON to preserve current behavior
-
-_Reviewed 2026-04-20 by ux-designer_
+_Pending review_
 
 ### Quality Director (Release Safety)
+_Pending review_
 
-#### Round 1 — NEEDS REVISION
-**Verdict: NEEDS REVISION** — Critical factual error in problem statement.
-
-**Key findings:**
-1. Rest timer already auto-starts on every set completion (`useSessionActions.ts` lines 170-187: `startRest()` for standalone, `startRestWithDuration()` for linked groups)
-2. Default OFF would regress existing behavior — users currently get auto-start, they'd lose it
-3. Warmup sets currently DO trigger rest timer (warmup guard on line 156 is PR detection only) — filtering warmups is a behavioral change, not "preserving current behavior"
-4. 3 of 9 acceptance criteria describe already-implemented behavior
-5. Test budget is tight (1744/1800) — should not waste on re-testing existing functionality
-
-**MUST FIX before approval:**
-- Correct problem statement (auto-start already exists)
-- Default must be ON if toggle is added (or provide migration)
-- Rewrite acceptance criteria for what's actually changing
-- Explicitly flag warmup filtering as a behavioral change
-
-**No security or data integrity concerns.**
-
-_Reviewed 2026-04-20 by quality-director_
-
-#### Round 2 — APPROVED
-**Verdict: APPROVED** — All Round 1 concerns addressed.
-
-All 5 findings resolved: problem statement corrected, default ON, acceptance criteria rewritten (3 NEW + 3 EXISTING), warmup filtering flagged as behavioral change, test scope limited to new behaviors only.
-
-**Regression risk: Low.** Changes are additive guards wrapping existing `startRest()` calls. `handleCheck` is the core set completion flow but changes are guard conditions BEFORE existing calls, not modifications to the calls themselves.
-
-**Security/data integrity: No concerns.** No schema changes, no migrations. `rest_timer_auto_start` uses existing `getAppSetting/setAppSetting` pattern.
-
-**Test coverage: Adequate.** ~5 tests for 3 new behaviors fits within budget (56 remaining).
-
-_Reviewed 2026-04-20 by quality-director_
-
-#### Tech Lead (Technical Feasibility)
-**Verdict: APPROVED** ✅
-
-Plan is technically sound. All three changes fit existing patterns. Implementation notes:
-- Pass `rest` (number) into `useSessionActions` for don't-restart guard (`rest > 0`)
-- Cache opt-out setting in a ref to avoid async DB read per set completion
-- Guard order: warmup check → auto-start check → running check → startRest
-- BLD-435 already covers warmup skip separately
-- ~15 lines total, no new dependencies, no refactoring needed
+### Tech Lead (Technical Feasibility)
+_Pending review_
 
 ### CEO Decision
 _Pending reviews_
