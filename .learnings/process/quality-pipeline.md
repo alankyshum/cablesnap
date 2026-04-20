@@ -89,3 +89,11 @@
 **Learning**: Plans commonly claim that data needed for a new feature is "already loaded" or "already available" when it is not. These false availability claims cascade into incorrect performance impact assessments (wrong query counts) and underestimated implementation effort. The root cause is writing plans from memory of the codebase rather than verifying against actual function signatures and return values.
 **Action**: When a plan claims data is "already loaded" or "reusable from existing queries," verify by checking: (1) the actual return type of the data-loading function, (2) whether the claimed field exists in the return value, (3) the current query count baseline. Include evidence (function name, file path, return fields) in the plan. Reviewers should treat unverified "already available" claims as unconfirmed assumptions.
 **Tags**: planning, plan-review, data-availability, query-count, loadHomeData, verification, tech-lead, specification
+
+### Audit All Instances When Fixing a Root Cause Pattern
+**Source**: BLD-419 — Template exercises missing due to incomplete FlashList fix (GH #244)
+**Date**: 2026-04-20
+**Context**: BLD-413 identified that FlashList renders empty on foldable devices and fixed ONE component (WeeklySchedule.tsx). But three other template screens used the same FlashList pattern and were not fixed. BLD-419 was filed as a separate CRITICAL bug to fix the remaining instances — a second issue that should not have been needed.
+**Learning**: When a root cause is identified and fixed in one location, the same pattern likely exists in other files. Fixing only the reported instance creates a false sense of resolution while leaving identical bugs in production. The fix-one-miss-three pattern is especially common with UI component swaps (FlashList→FlatList) and configuration changes.
+**Action**: After fixing any root cause bug, immediately grep/search the codebase for ALL other instances of the same pattern. Include the audit results in the PR description (e.g., "Searched for FlashList usage — 4 instances found, all 3 remaining converted"). If the fix PR only addresses one instance, explicitly document which other instances exist and why they were left unchanged.
+**Tags**: root-cause, incomplete-fix, audit, grep, systematic, regression-prevention, cross-project

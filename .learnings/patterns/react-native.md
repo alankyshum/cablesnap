@@ -778,13 +778,13 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Action**: When implementing list reordering with FlashList or FlatList, maintain a `reorderVersion` counter in state. Increment it on every reorder operation and pass it as `extraData={reorderVersion}`. This ensures the list re-renders with the correct item positions after every move.
 **Tags**: flashlist, flatlist, reorder, extraData, re-render, key-stability, performance, react-native
 
-### FlashList Renders Empty Inside Modal — Use FlatList for Modal Lists
-**Source**: BLD-413 — Owner Bug Batch: 5 UI/UX bugs from real device testing
+### FlashList v2 Renders Empty on Foldable Devices and Inside Modals — Use FlatList for Small Lists
+**Source**: BLD-413, BLD-419 — Template exercises missing on Samsung Z Fold6 (GH #244)
 **Date**: 2026-04-20
-**Context**: A template picker rendered inside a React Native Modal used FlashList. The picker appeared correctly (the modal opened) but displayed zero items despite the data array being populated.
-**Learning**: FlashList requires a parent container with a known height to perform its recycling layout calculations. Inside a Modal, the container height is often unknown at first render (it measures as 0), causing FlashList to compute zero visible items and render nothing. FlatList does not have this constraint because it uses standard VirtualizedList without pre-measurement.
-**Action**: Never use FlashList inside a Modal or dynamically-sized overlay. Use FlatList for lists rendered in modals, bottom sheets with dynamic height, or any container where the parent layout is not established before the list mounts. Reserve FlashList for full-screen or fixed-height list contexts.
-**Tags**: flashlist, flatlist, modal, empty-list, layout, height, react-native, picker
+**Context**: Template screens using FlashList rendered empty on Samsung Z Fold6. BLD-413 initially fixed this in one modal component, but BLD-419 revealed three more affected screens on non-modal contexts. The data was intact in the database — FlashList's auto-measurement produced zero-height renders.
+**Learning**: FlashList v2's auto-measurement can fail in two scenarios: (1) inside Modals/sheets where parent height is unknown at first render, and (2) on foldable devices where screen dimensions change dynamically. Both cause FlashList to compute zero visible items. This is NOT limited to modal contexts — regular screens on foldable devices are affected too.
+**Action**: Use FlatList instead of FlashList for any list with fewer than ~20 items. FlashList's virtualization benefits only matter for large lists (100+ items). For template lists, exercise lists, picker lists, and similar small collections, FlatList is both more reliable and has negligible performance difference. Reserve FlashList only for genuinely large, scrollable datasets on fixed-layout screens.
+**Tags**: flashlist, flatlist, foldable, samsung-z-fold, modal, empty-list, layout, auto-measure, react-native
 
 ### Bottom Sheet Keyboard Avoidance Must Clamp to MAX_TRANSLATE_Y
 **Source**: BLD-413 — Owner Bug Batch: 5 UI/UX bugs from real device testing
