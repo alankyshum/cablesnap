@@ -80,8 +80,8 @@ describe("Home screen stats row", () => {
   });
 
   it("handles weekly count with and without schedule", () => {
-    expect(statsRowSrc).toContain("weekDone}/${scheduled.length}");
-    expect(statsRowSrc).toContain("${weekDone}");
+    expect(statsRowSrc).toContain("completedCount");
+    expect(statsRowSrc).toContain("targetCount");
   });
 });
 

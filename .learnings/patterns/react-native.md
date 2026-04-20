@@ -833,3 +833,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: When adding a non-critical data source to an existing `Promise.all` batch (like `loadHomeData`), a single failing promise rejects the entire batch. Wrap non-critical promises individually with `.catch(() => defaultValue)` so the batch completes even if the optional query fails. Pattern: `Promise.all([critical1(), critical2(), optional().catch(() => ({}))])`. This preserves the parallelism benefit of `Promise.all` while isolating optional data failures.
 **Action**: Before adding a new promise to an existing `Promise.all`, classify it as critical (screen cannot render without it) or non-critical (enhancement data). Wrap non-critical promises with `.catch(() => sensibleDefault)`. Document the classification in a code comment.
 **Tags**: promise-all, error-handling, graceful-degradation, resilience, data-loading, loadHomeData, home-screen
+
+### Horizontal Touch Target Arrays Overflow on Narrow Screens — Use hitSlop
+**Source**: BLD-439 — PLAN: Weekly Training Frequency Goal (Phase 68)
+**Date**: 2026-04-20
+**Context**: A FrequencyGoalPicker with 7 tappable circles at 48dp each (accessibility minimum) plus gaps totals ~384dp — exceeding typical phone content width of 300-320dp inside card padding. UX Designer review caught this layout overflow before implementation.
+**Learning**: Horizontal arrays of accessible touch targets (≥48dp each) overflow phone screens faster than expected. Seven 48dp targets plus 8dp gaps = 384dp, but available content width inside a card with 16dp padding on a 360dp-wide phone is only ~328dp. The fix is visual/touch separation: render smaller visual targets (e.g., 36-40dp circles) and use React Native's `hitSlop` prop to expand the invisible touch area to 48dp without increasing layout size.
+**Action**: When designing a horizontal row of tappable elements, calculate total width as `(count  visual_size) + ((count - 1) × gap)` and verify it fits within `screen_width - (2 × container_padding)`. If it overflows, reduce visual size and add `hitSlop={{ top: N, bottom: N, left: N, right: N }}` to maintain 48dp accessible touch targets. For 7+ elements, consider a SegmentedControl or scrollable row instead.
+**Tags**: accessibility, touch-target, hitslop, layout-overflow, horizontal-picker, react-native, mobile-width, a11y

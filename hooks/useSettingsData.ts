@@ -34,6 +34,7 @@ export function useSettingsData() {
   const [hcSdkStatus, setHcSdkStatus] = useState<
     'available' | 'needs_install' | 'needs_update' | 'unavailable'
   >('unavailable');
+  const [weeklyGoal, setWeeklyGoal] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,6 +64,18 @@ export function useSettingsData() {
         })
         .catch(() => {
           setRestNotifications(true);
+        });
+      getAppSetting('weekly_training_goal')
+        .then((val) => {
+          if (val != null) {
+            const n = parseInt(val, 10);
+            setWeeklyGoal(n >= 1 && n <= 7 ? n : null);
+          } else {
+            setWeeklyGoal(null);
+          }
+        })
+        .catch(() => {
+          setWeeklyGoal(null);
         });
       Promise.all([
         getAppSetting('reminders_enabled'),
@@ -136,5 +149,6 @@ export function useSettingsData() {
     hcEnabled, setHcEnabled,
     hcLoading, setHcLoading,
     hcSdkStatus,
+    weeklyGoal, setWeeklyGoal,
   };
 }

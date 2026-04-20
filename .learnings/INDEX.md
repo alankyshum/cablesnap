@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 193
+Total learnings: 195
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 104 learnings
+- [React Native + Expo](patterns/react-native.md) — 105 learnings
 - [Testing](patterns/testing.md) — 13 learnings
 
 ### Pitfalls
@@ -29,7 +29,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 7 learnings
+- [Architecture](decisions/architecture.md) — 8 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings

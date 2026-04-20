@@ -154,11 +154,13 @@ export type {
 export {
   getAppSetting,
   setAppSetting,
+  deleteAppSetting,
   isOnboardingComplete,
   getSchedule,
   getTodaySchedule,
   isTodayCompleted,
   getWeekAdherence,
+  getWeeklyCompletedCount,
   insertInteraction,
   getInteractions,
   clearInteractions,
