@@ -152,7 +152,22 @@ const DEFAULT_LANDMARKS: Record<MuscleGroup, VolumeLandmarks> = {
 _Pending review_
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: APPROVED** (2026-04-20)
+
+**Regression risks identified:**
+1. `maxSets` calculation in `useMuscleVolume.ts` must change from flat `MRV=20` floor to `max(allMrvValues)` — bars will overflow if this is missed.
+2. `VolumeBarChart.tsx` landmark lines change from global vertical dashed lines to per-row indicators — significant visual refactor.
+3. `MuscleVolumeSegment.tsx` changes are additive (new button + sheet) — low regression risk.
+
+**Required additions to acceptance criteria:**
+- [ ] `JSON.parse()` of `app_settings.volume_landmarks_custom` MUST be wrapped in try/catch with fallback to defaults (crash prevention).
+- [ ] `maxSets` must use the maximum MRV across all displayed muscles, not a flat 20.
+
+**Test budget:** ~97 remaining (1703/1800). Estimate 8-12 new tests needed — keep parameterized, don't test each muscle group individually. All 15 existing muscle volume tests must pass.
+
+**Data integrity:** Partial override pattern is sound. Import/export will work automatically via existing `app_settings` export. No schema migration needed.
+
+**Security:** No concerns. No PII, no external APIs, no credentials.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
