@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  FlatList,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { SearchBar } from "@/components/ui/searchbar";
 import { Text } from "@/components/ui/text";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -97,7 +97,7 @@ export default function PickTemplate() {
           style={[styles.search, { backgroundColor: colors.surface }]}
           accessibilityLabel="Search templates"
         />
-        <FlashList
+        <FlatList
           data={filtered}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
