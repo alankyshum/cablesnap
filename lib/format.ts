@@ -177,6 +177,69 @@ export function formatPreviousPerformanceAccessibility(
   return `Last session: ${sets}, best ${displayed} ${unitLabel} for ${maxReps} reps`;
 }
 
+export type PrefillResult = {
+  setId: string;
+  weight: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+};
+
+/**
+ * Compute which current sets should be filled from previous session data.
+ * Uses positional mapping on working (non-warmup) sets only.
+ * Only fills sets that are not completed and have no user-entered values.
+ */
+export function computePrefillSets(
+  currentSets: Array<{
+    id: string;
+    weight: number | null;
+    reps: number | null;
+    completed: boolean;
+    duration_seconds: number | null;
+    set_type?: string;
+  }>,
+  previousSets: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>,
+  trackingMode: "reps" | "duration",
+): PrefillResult[] {
+  const results: PrefillResult[] = [];
+
+  // Filter current sets to working sets (non-warmup) while preserving order
+  const workingCurrent = currentSets.filter((s) => s.set_type !== "warmup");
+
+  for (let i = 0; i < workingCurrent.length && i < previousSets.length; i++) {
+    const current = workingCurrent[i];
+    const prev = previousSets[i];
+
+    // Skip completed sets
+    if (current.completed) continue;
+
+    // Check emptiness based on tracking mode
+    const isEmpty =
+      trackingMode === "duration"
+        ? current.weight == null && current.duration_seconds == null
+        : current.weight == null && current.reps == null;
+
+    if (!isEmpty) continue;
+
+    // Skip if previous set has no usable data
+    const prevHasData =
+      trackingMode === "duration"
+        ? prev.duration_seconds != null
+        : prev.reps != null;
+
+    if (!prevHasData && prev.weight == null) continue;
+
+    results.push({
+      setId: current.id,
+      weight: prev.weight,
+      reps: trackingMode === "duration" ? null : prev.reps,
+      duration_seconds: trackingMode === "duration" ? prev.duration_seconds : null,
+    });
+  }
+
+  return results;
+}
+
 export function hexToRgb(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);

@@ -5,6 +5,7 @@ import {
   formatTimeRemaining,
   formatPreviousPerformance,
   formatPreviousPerformanceAccessibility,
+  computePrefillSets,
 } from "../../lib/format";
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -16,50 +17,31 @@ function makeWeekTimestamps(weekOffsets: number[]): number[] {
 }
 
 describe("computeLongestStreak", () => {
-  it("returns 0 for empty array", () => {
+  it("handles all streak scenarios correctly", () => {
+    // Empty
     expect(computeLongestStreak([])).toBe(0);
-  });
 
-  it("returns 1 for a single workout", () => {
-    const ts = [Date.now()];
-    expect(computeLongestStreak(ts)).toBe(1);
-  });
+    // Single workout
+    expect(computeLongestStreak([Date.now()])).toBe(1);
 
-  it("returns correct streak for consecutive weeks", () => {
-    // 4 consecutive weeks: current, -1, -2, -3
-    const ts = makeWeekTimestamps([0, -1, -2, -3]);
-    expect(computeLongestStreak(ts)).toBe(4);
-  });
+    // 4 consecutive weeks
+    expect(computeLongestStreak(makeWeekTimestamps([0, -1, -2, -3]))).toBe(4);
 
-  it("finds longest streak with gaps", () => {
-    // Weeks: -10,-9,-8 (3), gap, -5,-4 (2), gap, 0 (1)
-    const ts = makeWeekTimestamps([-10, -9, -8, -5, -4, 0]);
-    expect(computeLongestStreak(ts)).toBe(3);
-  });
+    // Longest streak with gaps: -10,-9,-8 (3), gap, -5,-4 (2), gap, 0 (1)
+    expect(computeLongestStreak(makeWeekTimestamps([-10, -9, -8, -5, -4, 0]))).toBe(3);
 
-  it("handles multiple workouts in the same week", () => {
+    // Multiple workouts same week
     const monday = mondayOf(new Date());
-    // Two workouts in the same week, one the next week
-    const ts = [monday + 1000, monday + 86400000, monday + ONE_WEEK + 1000];
-    expect(computeLongestStreak(ts)).toBe(2);
-  });
+    expect(computeLongestStreak([monday + 1000, monday + 86400000, monday + ONE_WEEK + 1000])).toBe(2);
 
-  it("handles non-contiguous single weeks", () => {
-    // Every other week: -6, -4, -2, 0
-    const ts = makeWeekTimestamps([-6, -4, -2, 0]);
-    expect(computeLongestStreak(ts)).toBe(1);
-  });
+    // Non-contiguous single weeks
+    expect(computeLongestStreak(makeWeekTimestamps([-6, -4, -2, 0]))).toBe(1);
 
-  it("handles a long contiguous streak", () => {
-    const offsets = Array.from({ length: 16 }, (_, i) => -i);
-    const ts = makeWeekTimestamps(offsets);
-    expect(computeLongestStreak(ts)).toBe(16);
-  });
+    // Long contiguous streak
+    expect(computeLongestStreak(makeWeekTimestamps(Array.from({ length: 16 }, (_, i) => -i)))).toBe(16);
 
-  it("identifies longest streak at the end", () => {
-    // Two separate streaks: -8 (1) and -4,-3,-2,-1,0 (5)
-    const ts = makeWeekTimestamps([-8, -4, -3, -2, -1, 0]);
-    expect(computeLongestStreak(ts)).toBe(5);
+    // Longest at end
+    expect(computeLongestStreak(makeWeekTimestamps([-8, -4, -3, -2, -1, 0]))).toBe(5);
   });
 });
 
@@ -145,5 +127,113 @@ describe("formatPreviousPerformance", () => {
 
     // Accessibility — null
     expect(formatPreviousPerformanceAccessibility(null, "kg")).toBeNull();
+  });
+});
+
+describe("computePrefillSets", () => {
+  it("handles all prefill scenarios: normal, completed, filled, warmup, bodyweight, duration, extra sets", () => {
+    // Normal: fills empty uncompleted sets positionally
+    const result = computePrefillSets(
+      [
+        { id: "s1", weight: null, reps: null, completed: false, duration_seconds: null },
+        { id: "s2", weight: null, reps: null, completed: false, duration_seconds: null },
+      ],
+      [
+        { weight: 80, reps: 8, duration_seconds: null },
+        { weight: 80, reps: 7, duration_seconds: null },
+      ],
+      "reps",
+    );
+    expect(result).toEqual([
+      { setId: "s1", weight: 80, reps: 8, duration_seconds: null },
+      { setId: "s2", weight: 80, reps: 7, duration_seconds: null },
+    ]);
+
+    // Completed sets are skipped
+    const completed = computePrefillSets(
+      [{ id: "s1", weight: 80, reps: 8, completed: true, duration_seconds: null }],
+      [{ weight: 80, reps: 8, duration_seconds: null }],
+      "reps",
+    );
+    expect(completed).toEqual([]);
+
+    // Sets with values are skipped (not empty)
+    const filled = computePrefillSets(
+      [{ id: "s1", weight: 90, reps: 10, completed: false, duration_seconds: null }],
+      [{ weight: 80, reps: 8, duration_seconds: null }],
+      "reps",
+    );
+    expect(filled).toEqual([]);
+
+    // Warmup sets skipped, working sets still match positionally
+    const withWarmup = computePrefillSets(
+      [
+        { id: "w1", weight: null, reps: null, completed: false, duration_seconds: null, set_type: "warmup" },
+        { id: "s1", weight: null, reps: null, completed: false, duration_seconds: null },
+        { id: "s2", weight: null, reps: null, completed: false, duration_seconds: null },
+      ],
+      [
+        { weight: 80, reps: 8, duration_seconds: null },
+        { weight: 80, reps: 7, duration_seconds: null },
+      ],
+      "reps",
+    );
+    expect(withWarmup).toHaveLength(2);
+    expect(withWarmup[0].setId).toBe("s1");
+    expect(withWarmup[1].setId).toBe("s2");
+
+    // Bodyweight: weight stays null
+    const bw = computePrefillSets(
+      [{ id: "s1", weight: null, reps: null, completed: false, duration_seconds: null }],
+      [{ weight: null, reps: 12, duration_seconds: null }],
+      "reps",
+    );
+    expect(bw).toEqual([{ setId: "s1", weight: null, reps: 12, duration_seconds: null }]);
+
+    // Duration exercise
+    const dur = computePrefillSets(
+      [{ id: "s1", weight: null, reps: null, completed: false, duration_seconds: null }],
+      [{ weight: null, reps: null, duration_seconds: 90 }],
+      "duration",
+    );
+    expect(dur).toEqual([{ setId: "s1", weight: null, reps: null, duration_seconds: 90 }]);
+
+    // Duration set already filled
+    const durFilled = computePrefillSets(
+      [{ id: "s1", weight: null, reps: null, completed: false, duration_seconds: 60 }],
+      [{ weight: null, reps: null, duration_seconds: 90 }],
+      "duration",
+    );
+    expect(durFilled).toEqual([]);
+
+    // More current sets than previous: extras stay empty
+    const extra = computePrefillSets(
+      [
+        { id: "s1", weight: null, reps: null, completed: false, duration_seconds: null },
+        { id: "s2", weight: null, reps: null, completed: false, duration_seconds: null },
+        { id: "s3", weight: null, reps: null, completed: false, duration_seconds: null },
+      ],
+      [{ weight: 80, reps: 8, duration_seconds: null }],
+      "reps",
+    );
+    expect(extra).toHaveLength(1);
+    expect(extra[0].setId).toBe("s1");
+
+    // Mixed: completed + filled + empty across positions
+    const mixed = computePrefillSets(
+      [
+        { id: "s1", weight: 80, reps: 8, completed: true, duration_seconds: null },
+        { id: "s2", weight: 90, reps: null, completed: false, duration_seconds: null },
+        { id: "s3", weight: null, reps: null, completed: false, duration_seconds: null },
+      ],
+      [
+        { weight: 80, reps: 8, duration_seconds: null },
+        { weight: 80, reps: 7, duration_seconds: null },
+        { weight: 80, reps: 6, duration_seconds: null },
+      ],
+      "reps",
+    );
+    // s1 completed → skip, s2 has weight → skip, s3 empty → fill from prev[2]
+    expect(mixed).toEqual([{ setId: "s3", weight: 80, reps: 6, duration_seconds: null }]);
   });
 });

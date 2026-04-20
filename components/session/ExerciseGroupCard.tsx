@@ -47,6 +47,7 @@ export type GroupCardProps = {
   onDeleteExercise: (exerciseId: string) => void;
   onMoveUp?: (exerciseId: string) => void;
   onMoveDown?: (exerciseId: string) => void;
+  onPrefill?: (exerciseId: string) => void;
   // Timer
   timerActiveExerciseId?: string | null;
   timerActiveSetIndex?: number | null;
@@ -64,6 +65,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
+  onPrefill,
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
 }: GroupCardProps) {
@@ -210,6 +212,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onDeleteExercise={onDeleteExercise}
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
+          onPrefill={onPrefill}
           isFirst={isFirstReorderable}
           isLast={isLastReorderable}
           showMoveButtons={showMoveButtons}
