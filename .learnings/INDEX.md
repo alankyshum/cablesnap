@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 186
+Total learnings: 187
 
 ## How to Use This Knowledge Base
 
@@ -15,7 +15,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Patterns
 - [React Native + Expo](patterns/react-native.md) — 97 learnings
-- [Testing](patterns/testing.md) — 12 learnings
+- [Testing](patterns/testing.md) — 13 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-426 | FlatList Virtualization Breaks findByText in Tests — Mock VirtualizedList Defaults | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-20 | BLD-420 | Epley e1RM Formula Requires Rep Cap at 12 in SQL Aggregation | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-419 | Audit All Instances When Fixing a Root Cause Pattern | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-20 | BLD-413, BLD-419 | FlashList v2 Renders Empty on Foldable Devices and Inside Modals | Patterns | [react-native.md](patterns/react-native.md) |

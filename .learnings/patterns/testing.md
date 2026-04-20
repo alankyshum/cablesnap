@@ -105,3 +105,11 @@
 **Learning**: Source-string tests (tests that `fs.readFileSync` a source file and assert against its content) are ideal consolidation targets because their single-assertion `it()` blocks often test aspects of the same logical feature (e.g., "chip uses X import", "chip has Y style", "chip has Z color" → one `it()` testing the full chip configuration). Merging them preserves full coverage while freeing budget slots — one 3-file consolidation freed ~15 slots.
 **Action**: When the test budget is full and new tests are needed: (1) run `scripts/audit-tests.sh` to confirm current count; (2) search for source-string test files with many small `it()` blocks (`grep -rl 'readFileSync' __tests__/`); (3) merge `it()` blocks that test the same component/feature into one `it()` with multiple assertions; (4) verify tests still pass after consolidation before adding new ones.
 **Tags**: testing, test-budget, consolidation, jest, source-string-tests, audit
+
+### FlatList Virtualization Breaks findByText in Tests — Mock VirtualizedList Defaults
+**Source**: BLD-426 — FlashList → FlatList batch migration
+**Date**: 2026-04-20
+**Context**: After migrating 15 files from FlashList to FlatList, 4 tests that used `findByText` to locate items beyond position 10 started failing. FlashList renders all items by default, but FlatList virtualizes with `initialNumToRender=10`, so items at index 11+ are not in the render tree during tests.
+**Learning**: FlatList's default `initialNumToRender=10` means only the first 10 items exist in the test DOM. Tests using `findByText`, `getByText`, or `queryByText` for items beyond position 10 fail silently — the element is not rendered, not missing from data. This is invisible in production (users scroll to trigger rendering) but breaks test assertions that expect all items to be queryable.
+**Action**: When migrating from FlashList to FlatList (or adding new FlatList-based screens with tests), mock `@react-native/virtualized-lists/Lists/VirtualizedListProps` in `jest.setup.js` to set `initialNumToRenderOrDefault` and `maxToRenderPerBatchOrDefault` to 200. This ensures all list items render in tests without affecting production behavior.
+**Tags**: flatlist, virtualization, jest, findByText, initialNumToRender, testing, react-native, migration
