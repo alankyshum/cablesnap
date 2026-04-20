@@ -1,0 +1,150 @@
+# Feature Plan: Inline Previous Performance on Exercise Cards
+
+**Issue**: BLD-445 (planning)
+**Author**: CEO
+**Date**: 2026-04-20
+**Status**: DRAFT
+
+## Problem Statement
+
+During a workout, the #1 question gym-goers ask themselves before each exercise is: **"What did I do last time?"** CableSnap already answers this — but it requires tapping "Details" to open the ExerciseDrawerStats drawer. That's an extra tap per exercise, multiplied across 5-8 exercises per session, for every single workout.
+
+The data exists. The infrastructure exists (`getExerciseHistory` in `lib/db/exercise-history.ts`). But it's hidden behind a tap. Surfacing it inline — directly on the exercise card — eliminates that friction entirely.
+
+## User's Emotional Journey
+
+**Without this feature:**
+- User starts bench press → pauses → "What weight did I use last time?" → taps Details → reads stats → closes drawer → enters weight
+- This happens for EVERY exercise. 5-8 extra taps per workout, each one breaking flow.
+- The user feels uncertain: "Am I progressing? Am I using the right weight?"
+
+**After this feature:**
+- User starts bench press → immediately sees "Last: 3 sets · 80kg × 8" below the exercise name
+- Instantly knows what to match or beat
+- Feels confident and in control — no guessing, no extra taps
+
+## User Stories
+
+- As a gym-goer, I want to see what I did last time for each exercise at a glance so that I can decide my working weight without tapping into details.
+- As a user tracking progressive overload, I want instant context on my previous performance so that I can ensure I'm progressing each session.
+
+## Proposed Solution
+
+### Overview
+
+Add a single line of text below each exercise name in the workout session view, showing a compact summary of the last completed session for that exercise. Format: `Last: 3 sets · 80kg × 8` (or `Last: 3 sets · 8 reps` for bodyweight exercises).
+
+### UX Design
+
+- **Position**: Below exercise name in `GroupCardHeader`, above the "Details" button row
+- **Format**: `Last: {set_count} sets · {max_weight}{unit} × {max_reps}` for weighted exercises
+  - Bodyweight: `Last: {set_count} sets · {max_reps} reps`
+  - Duration-based: `Last: {set_count} sets · {formatted_duration}`
+- **Styling**: `fontSizes.xs`, `colors.onSurfaceVariant`, no bold — subtle, not competing with primary content
+- **Empty state**: No text shown (no "No previous data" — that adds clutter)
+- **Loading**: No spinner — the text appears when data loads, or not at all
+- **Accessibility**: `accessibilityLabel` like "Last session: 3 sets, best 80 kilograms for 8 reps"
+
+### Technical Approach
+
+#### 1. New hook: `usePreviousPerformance`
+
+Create `hooks/usePreviousPerformance.ts`:
+- Input: array of exercise IDs (all exercises in the current session)
+- Output: `Record<string, PreviousPerformance | null>`
+- Uses existing `getExerciseHistory(exerciseId, 1, 0)` to fetch the last completed session
+- Batches fetches with `Promise.all` for efficiency
+- Caches results for the session duration (no refetching on re-render)
+
+```typescript
+type PreviousPerformance = {
+  setCount: number;
+  maxWeight: number;
+  maxReps: number;
+  isBodyweight: boolean;
+  maxDuration?: number | null;
+};
+```
+
+#### 2. New pure function: `formatPreviousPerformance`
+
+In `lib/format.ts`:
+- Input: `PreviousPerformance | null`, `unit: "kg" | "lb"`
+- Output: `string | null`
+- Returns formatted string like "Last: 3 sets · 80kg × 8" or null if no data
+
+#### 3. Modified `GroupCardHeader`
+
+- Accept optional `previousPerformance?: string | null` prop
+- Render below exercise name when non-null
+- Minimal visual footprint
+
+#### 4. Modified `ExerciseGroupCard` and `app/session/[id].tsx`
+
+- Thread `previousPerformance` data from hook through to GroupCardHeader
+
+### Scope
+
+**In Scope:**
+- Compact "Last: X sets · Ykg × Z" text on exercise cards during workout
+- Fetching last session data for all exercises in the workout (batch)
+- Formatting for weighted, bodyweight, and duration-based exercises
+- Accessibility labels
+- 1 test for `formatPreviousPerformance` (multiple assertions in one `it()` block)
+- Test consolidation: net ≤0 new tests (consolidate 2+ existing tests)
+
+**Out of Scope:**
+- Showing individual set breakdowns (just aggregate summary)
+- Tapping the text for navigation or expanded view
+- Showing performance from more than 1 previous session
+- Comparison indicators (arrows, colors, percentages)
+- Loading spinners or skeleton states
+
+### Acceptance Criteria
+
+- [ ] Given a weighted exercise with ≥1 completed session → "Last: N sets · Wkg × R" appears below exercise name
+- [ ] Given a bodyweight exercise with ≥1 completed session → "Last: N sets · R reps" appears below exercise name
+- [ ] Given a duration-based exercise with ≥1 completed session → "Last: N sets · M:SS" appears below exercise name
+- [ ] Given an exercise never done before → no previous performance text shown
+- [ ] Text uses `onSurfaceVariant` color, `fontSizes.xs`
+- [ ] accessibilityLabel describes the previous performance clearly
+- [ ] No regressions on existing session UI behavior
+- [ ] No new lint warnings or TS errors
+- [ ] PR passes all tests
+- [ ] Test budget: ≤1799 after changes (must consolidate to get from 1801 → ≤1799)
+
+### Edge Cases
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Exercise never performed | No text shown (empty state) |
+| Only warmup sets completed last time | No text shown (warmups are filtered out) |
+| Very heavy weight (e.g., 300kg) | Shows correctly: "Last: 5 sets · 300kg × 5" |
+| Bodyweight exercise | Shows "Last: 3 sets · 12 reps" (no weight) |
+| Duration exercise | Shows "Last: 3 sets · 1:30" |
+| User switches unit system | Displays in current user unit preference |
+| Multiple exercises in session | Each shows its own previous performance |
+| App backgrounded and resumed | Data persists (cached in hook state) |
+
+### Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|-----------|
+| Extra DB queries slow session load | Low | Medium | Batch fetches with Promise.all; data is small |
+| Visual clutter on exercise cards | Low | Medium | Subtle styling (xs font, variant color); empty state = no text |
+| Test budget exceeded | Medium | High | Must consolidate 3 tests (1801 → 1798 + 1 new = 1799) |
+
+## Review Feedback
+<!-- This section is filled in by reviewers -->
+
+### UX Designer (Design & A11y Critique)
+_Pending review_
+
+### Quality Director (Release Safety)
+_Pending review_
+
+### Tech Lead (Technical Feasibility)
+_Pending review_
+
+### CEO Decision
+_Pending reviews_
