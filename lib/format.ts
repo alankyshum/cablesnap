@@ -91,6 +91,18 @@ export function formatSpokenDuration(seconds: number): string {
   return `approximately ${parts.join(" ")}`;
 }
 
+export function formatTimeRemaining(
+  estimatedTotalSeconds: number | null,
+  elapsedSeconds: number
+): string | null {
+  if (estimatedTotalSeconds == null || estimatedTotalSeconds <= 0) return null;
+  const remaining = estimatedTotalSeconds - elapsedSeconds;
+  if (remaining <= 0) return null;
+  const minutes = Math.ceil(remaining / 60);
+  if (minutes <= 0) return null;
+  return `~${minutes} min left`;
+}
+
 export function hexToRgb(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);

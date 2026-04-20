@@ -10,7 +10,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { formatTime } from "../../lib/format";
+import { formatTime, formatTimeRemaining } from "../../lib/format";
 import { getAppSetting, setAppSetting } from "../../lib/db";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -26,6 +26,7 @@ function presetLabel(seconds: number): string {
 type Props = {
   rest: number;
   elapsed: number;
+  estimatedDuration?: number | null;
   onStartRest: (duration: number) => void;
   onDismissRest: () => void;
   onOpenToolbox: () => void;
@@ -36,6 +37,7 @@ type Props = {
 function SessionHeaderToolbarInner({
   rest,
   elapsed,
+  estimatedDuration,
   onStartRest,
   onDismissRest,
   onOpenToolbox,
@@ -163,16 +165,21 @@ function SessionHeaderToolbarInner({
           </Pressable>
         )}
 
-        {/* Elapsed time */}
+        {/* Elapsed time + remaining estimate */}
         <Pressable
           onPress={handleElapsedTap}
           onLongPress={handleLongPress}
           delayLongPress={400}
           disabled={isRestActive}
           accessibilityLabel={
-            isRestActive
-              ? `Elapsed time: ${formatTime(elapsed)}`
-              : `Elapsed time: ${formatTime(elapsed)}. Tap to start rest timer. Long press for rest settings.`
+            (() => {
+              const remainingText = formatTimeRemaining(estimatedDuration ?? null, elapsed);
+              const base = `Elapsed time: ${formatTime(elapsed)}`;
+              if (isRestActive) return base;
+              const suffix = ". Tap to start rest timer. Long press for rest settings.";
+              if (remainingText) return `${base}, approximately ${Math.ceil(((estimatedDuration ?? 0) - elapsed) / 60)} minutes remaining${suffix}`;
+              return `${base}${suffix}`;
+            })()
           }
           accessibilityRole="button"
           style={styles.elapsedButton}
@@ -186,6 +193,21 @@ function SessionHeaderToolbarInner({
           >
             {formatTime(elapsed)}
           </Text>
+          {(() => {
+            const remainingText = formatTimeRemaining(estimatedDuration ?? null, elapsed);
+            if (!remainingText) return null;
+            return (
+              <Text
+                variant="body"
+                style={{
+                  color: colors.onSurfaceVariant,
+                  fontSize: fontSizes.xs,
+                }}
+              >
+                {remainingText}
+              </Text>
+            );
+          })()}
         </Pressable>
 
         {/* Wrench / toolbox button */}
