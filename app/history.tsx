@@ -1,5 +1,4 @@
-import { StyleSheet, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { StyleSheet, View, FlatList } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
 import { Icon } from "@/components/ui/icon";
@@ -25,7 +24,7 @@ function HistoryScreen() {
   const cellSize = Math.max(MIN_TOUCH_TARGET, Math.floor(layout.width / 7) - 4);
 
   return (
-    <FlashList
+    <FlatList
       data={h.filtered}
       keyExtractor={(item) => item.id}
       renderItem={renderSession}

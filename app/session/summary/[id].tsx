@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Pressable, Share, StyleSheet, TextInput, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { Pressable, Share, StyleSheet, TextInput, View, FlatList } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -97,7 +96,7 @@ export default function Summary() {
   return (
     <>
       <Stack.Screen options={{ title: "Workout Complete!" }} />
-      <FlashList
+      <FlatList
         data={listData}
         keyExtractor={(s) => s.key}
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}

@@ -1,5 +1,4 @@
-import { StyleSheet, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { StyleSheet, View, FlatList } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -21,7 +20,7 @@ export function AdvancedRecommend({
   const colors = useThemeColors();
 
   return (
-    <FlashList
+    <FlatList
       data={BROWSE_TEMPLATES}
       keyExtractor={(tpl) => tpl.id}
       style={{ flex: 1, backgroundColor: colors.background }}

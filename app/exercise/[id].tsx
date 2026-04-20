@@ -2,13 +2,13 @@ import { useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Pressable,
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
@@ -181,7 +181,7 @@ export default function ExerciseDetail() {
           <TouchableOpacity onPress={remove} accessibilityLabel="Delete exercise" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="delete" size={22} color={colors.onSurface} /></TouchableOpacity>
         </View>
       ) : undefined }} />
-      <FlashList style={{ flex: 1, backgroundColor: colors.background }}
+      <FlatList style={{ flex: 1, backgroundColor: colors.background }}
         data={d.historyLoading || d.historyError || d.history.length === 0 ? [] : d.history}
         keyExtractor={(item) => item.session_id} renderItem={renderItem} ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter} ListFooterComponentStyle={{ paddingBottom: 100 }}

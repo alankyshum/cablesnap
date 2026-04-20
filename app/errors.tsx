@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { Pressable, StyleSheet, View, FlatList } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { getRecentErrors, clearErrorLog } from "../lib/errors";
@@ -83,7 +82,7 @@ export default function Errors() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FlashList
+      <FlatList
         data={errors}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding }}

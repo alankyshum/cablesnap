@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -185,7 +185,7 @@ export default function CreateProgram() {
                 Workout Days ({days.length})
               </Text>
             </View>
-            <FlashList
+            <FlatList
               data={days}
               renderItem={renderItem}
               keyExtractor={(item) => item.id}

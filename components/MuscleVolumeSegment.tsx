@@ -1,6 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { Pressable, StyleSheet, View, FlatList } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -178,7 +177,7 @@ export default function MuscleVolumeSegment() {
               <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
                 Muscle Group Details
               </Text>
-              <FlashList
+              <FlatList
                 data={data}
                 keyExtractor={(item) => item.muscle}
                 scrollEnabled={false}
