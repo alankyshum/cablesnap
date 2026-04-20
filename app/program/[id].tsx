@@ -1,7 +1,6 @@
 /* eslint-disable max-lines-per-function, complexity */
 import { useCallback } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
@@ -10,7 +9,6 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
-import type { ProgramDay } from "../../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useProgramDetail, dayName } from "@/hooks/useProgramDetail";
 import { WeeklySchedule } from "@/components/program/WeeklySchedule";
@@ -52,7 +50,7 @@ export default function ProgramDetail() {
   return (
     <>
       <Stack.Screen options={{ title: program.name }} />
-      <FlashList
+      <FlatList
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         data={days}
@@ -152,7 +150,7 @@ export default function ProgramDetail() {
             </View>
           </>
         }
-        renderItem={({ item, index }: { item: ProgramDay; index: number }) => (
+        renderItem={({ item, index }) => (
           <Card
             style={StyleSheet.flatten([
               styles.card,
