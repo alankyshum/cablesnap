@@ -191,7 +191,18 @@ Additional notes from panel:
 - Recommended: use neutral brand colors for arrow (not red/green) to avoid "shame" when no progression
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: APPROVED** — No blocking UX issues.
+
+**Cognitive Load**: Excellent. Eliminates "should I go up?" decision fatigue. Zero additional taps. Compatible with existing prefill mental model.
+
+**Strong Recommendation (UX-01)**: Update visible `previousSummary` text when progression is active to hint at the new weight (e.g., `Last: 3x10 @ 80kg · Try 82.5`). The mismatch between "80kg" in the label and 82.5kg in prefilled sets may confuse users. Not blocking — arrow icon + a11y text provide adequate communication — but strongly recommended.
+
+**Minor Recommendations**:
+- R-01: Use 14px for arrow-up icon (matches existing arrow-collapse-down size)
+- R-02: Consider showing delta text ("+2.5") near previous performance
+- R-03: Second tap on prefill could toggle between progressed/non-progressed weights (V2)
+- R-04: Increase previousPerfBtn minHeight from 36 to 48dp (pre-existing, fix if touching component)
+- R-05: Confirmed — `colors.primary` is the right color choice (neutral, no shame connotation)
 
 ### Quality Director (Release Safety)
 _Pending review_
