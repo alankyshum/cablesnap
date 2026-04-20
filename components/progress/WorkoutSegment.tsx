@@ -20,6 +20,7 @@ import WeeklySummary from "../../components/WeeklySummary";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { WorkoutChartCard, PRCard, SessionsCard } from "./WorkoutCards";
 import CalendarView from "./CalendarView";
+import StrengthLevelsCard from "./StrengthLevelsCard";
 import { fontSizes } from "@/constants/design-tokens";
 
 let cachedWeekStart: number | null = null;
@@ -214,6 +215,7 @@ export default function WorkoutSegment() {
               <PRCard prs={prs} style={wideCard} />
               <SessionsCard sessions={sessions} style={wideCard} />
             </View>
+            <StrengthLevelsCard />
           </>
         ) : (
           <>
@@ -224,6 +226,7 @@ export default function WorkoutSegment() {
             {volCard}
             <PRCard prs={prs} />
             <SessionsCard sessions={sessions} />
+            <StrengthLevelsCard />
           </>
         )
       }
