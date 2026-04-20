@@ -113,3 +113,27 @@
 **Learning**: FlatList's default `initialNumToRender=10` means only the first 10 items exist in the test DOM. Tests using `findByText`, `getByText`, or `queryByText` for items beyond position 10 fail silently — the element is not rendered, not missing from data. This is invisible in production (users scroll to trigger rendering) but breaks test assertions that expect all items to be queryable.
 **Action**: When migrating from FlashList to FlatList (or adding new FlatList-based screens with tests), mock `@react-native/virtualized-lists/Lists/VirtualizedListProps` in `jest.setup.js` to set `initialNumToRenderOrDefault` and `maxToRenderPerBatchOrDefault` to 200. This ensures all list items render in tests without affecting production behavior.
 **Tags**: flatlist, virtualization, jest, findByText, initialNumToRender, testing, react-native, migration
+
+### Render-Prop Components Cannot Be String-Mocked in Jest
+**Source**: BLD-454 — FIX: 64 pre-existing test failures on main
+**Date**: 2026-04-20
+**Context**: Tests mocked victory-native's CartesianChart as a string (`jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart' }))`). After a production code change that relied on CartesianChart's render-prop children pattern (`children` is a function), tests crashed because string mocks cannot be invoked as components with function children.
+**Learning**: When a third-party component uses the render-prop pattern (passing `children` as a function that returns React elements), mocking it as a bare string (`'ComponentName'`) fails at render time. The mock must be a real React component that can accept and ignore props, including function children. Use `React.createElement` in the mock factory.
+**Action**: When mocking components that use render props or function-as-children, use `(props) => React.createElement('MockName', props)` instead of a string. Check the library's API docs or source to identify render-prop components before writing mocks. Common offenders: chart libraries (victory-native, recharts), animation wrappers, context providers with render functions.
+**Tags**: jest, mocking, render-props, victory-native, cartesian-chart, react-native, testing, children-as-function
+
+### Sub-Module Imports Bypass Barrel Export Mocks
+**Source**: BLD-454 — FIX: 64 pre-existing test failures on main
+**Date**: 2026-04-20
+**Context**: Tests mocked `jest.mock('../../lib/db', () => ({ ... }))` (the barrel export), but production components imported directly from sub-modules like `import { getBodySettings } from '@/lib/db/body'`. The barrel mock did not intercept sub-module imports, causing `TypeError: X is not a function` in 12+ tests across body-progress and weekly-summary suites.
+**Learning**: Jest's `jest.mock('path')` intercepts imports matching that EXACT module path. A barrel export at `lib/db/index.ts` that re-exports from `lib/db/body` does NOT cause `jest.mock('lib/db')` to also mock `lib/db/body`. If production code imports from the sub-module directly, the sub-module is resolved as a separate module and the barrel mock is never consulted. Each import path is an independent mock target.
+**Action**: When a module has both barrel exports (`lib/db`) and sub-module exports (`lib/db/body`, `lib/db/calendar`), mock EACH import path that production code uses. After refactoring to add sub-module imports, grep for `jest.mock.*lib/db` to find tests that need additional sub-module mocks. Prefer a shared mock factory in `jest.setup.js` or `__mocks__/` directory to avoid per-test mock divergence.
+**Tags**: jest, mocking, barrel-exports, sub-modules, import-paths, module-resolution, testing, typescript
+
+### UI Elements Moved to Navigation Layout Are Invisible to Component Tests
+**Source**: BLD-454 — FIX: 64 pre-existing test failures on main
+**Date**: 2026-04-20
+**Context**: FABs (Floating Action Buttons) for exercises and nutrition screens were moved from individual screen components to `_layout.tsx` `headerRight`. Eight tests across exercise, nutrition, and accessibility suites failed because they expected FABs inside the rendered component tree, but the FABs now lived in the navigation container.
+**Learning**: When UI elements are moved from a screen component to the navigation layout (`_layout.tsx` headerRight/headerLeft), component-level render tests (`renderScreen(<Component />)`) cannot see them — the layout wrapper is not part of the component's render tree in tests. This is a structural refactoring that silently breaks tests without changing any behavior.
+**Action**: After moving UI elements (FABs, header buttons, toolbars) from screen components to `_layout.tsx`, immediately grep for tests that assert on those elements (`getByLabelText('Add food')`, `getByLabelText('Add custom exercise')`, etc.) and update them. Either remove the assertions, change them to verify the screen renders correctly without the moved element, or create separate layout-level tests that render the layout wrapper.
+**Tags**: expo-router, layout, navigation, testing, jest, component-tests, refactoring, fab, headerright

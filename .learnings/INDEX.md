@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 198
+Total learnings: 201
 
 ## How to Use This Knowledge Base
 
@@ -15,7 +15,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Patterns
 - [React Native + Expo](patterns/react-native.md) — 107 learnings
-- [Testing](patterns/testing.md) — 13 learnings
+- [Testing](patterns/testing.md) — 16 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-454 | Render-Prop Components Cannot Be String-Mocked in Jest | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-20 | BLD-454 | Sub-Module Imports Bypass Barrel Export Mocks | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-20 | BLD-454 | UI Elements Moved to Navigation Layout Are Invisible to Component Tests | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-20 | BLD-453 | Remove getItemLayout When Adding ListHeaderComponent to FlatList | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-447 | Nested Pressable Components Create Gesture Conflicts on Native — Extract as Siblings | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-447 | Bodyweight Exercises Must Use weight=null Not weight=0 | Patterns | [react-native.md](patterns/react-native.md) |
