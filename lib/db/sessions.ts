@@ -32,6 +32,7 @@ export {
   getRestSecondsForExercise,
   getRestSecondsForLink,
   getSourceSessionSets,
+  updateExercisePositions,
 } from "./session-sets";
 export type { SourceSessionSet } from "./session-sets";
 

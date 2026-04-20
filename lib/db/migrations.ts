@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { createCoreTables, createExtensionTables } from "./tables";
+import { createCoreTables, createExtensionTables, addColumnIfMissing } from "./tables";
 import { createScheduleAndIndexes } from "./table-migrations";
 
 async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -19,4 +19,6 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await createScheduleAndIndexes(database);
   await createExtensionTables(database);
   await addPerformanceIndexes(database);
+  // Phase 62: exercise reorder support
+  await addColumnIfMissing(database, "workout_sets", "exercise_position", "INTEGER DEFAULT 0");
 }

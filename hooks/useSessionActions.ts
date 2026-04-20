@@ -18,6 +18,7 @@ import {
   getSessionSets,
   updateSetDuration,
   checkSetPR,
+  updateExercisePositions,
 } from "../lib/db";
 import { bumpQueryVersion } from "../lib/query";
 import {
@@ -171,7 +172,7 @@ export function useSessionActions({
     const num = (group?.sets.length ?? 0) + 1;
     const fallback = group?.is_voltra && group.training_modes.length > 1 ? group.training_modes[0] : null;
     const mode = modes[exerciseId] ?? fallback;
-    const newSet = await addSet(id!, exerciseId, num, null, null, mode, null);
+    const newSet = await addSet(id!, exerciseId, num, null, null, mode, null, undefined, undefined, group?.exercise_position ?? 0);
     setGroups((prev) =>
       prev.map((g) =>
         g.exercise_id === exerciseId
@@ -245,6 +246,52 @@ export function useSessionActions({
   const toggleExerciseNotes = useCallback((exerciseId: string) => {
     setExerciseNotesOpen((prev) => ({ ...prev, [exerciseId]: !prev[exerciseId] }));
   }, []);
+
+  const handleMoveExercise = useCallback(async (exerciseId: string, direction: "up" | "down") => {
+    if (!id) return;
+    // Find non-superset groups for reorder (supersets excluded)
+    const reorderableGroups = groups.filter((g) => !g.link_id);
+    const idx = reorderableGroups.findIndex((g) => g.exercise_id === exerciseId);
+    if (idx < 0) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= reorderableGroups.length) return;
+
+    const a = reorderableGroups[idx];
+    const b = reorderableGroups[swapIdx];
+
+    // Swap positions in state
+    const newPosA = b.exercise_position;
+    const newPosB = a.exercise_position;
+
+    setGroups((prev) => {
+      const updated = prev.map((g) => {
+        if (g.exercise_id === a.exercise_id) return { ...g, exercise_position: newPosA };
+        if (g.exercise_id === b.exercise_id) return { ...g, exercise_position: newPosB };
+        return g;
+      });
+      return updated.sort((x, y) => x.exercise_position - y.exercise_position);
+    });
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    AccessibilityInfo.announceForAccessibility(
+      `${a.name} moved to position ${direction === "up" ? idx : idx + 2}`
+    );
+
+    // Persist position swap
+    await updateExercisePositions(id, [
+      { exerciseId: a.exercise_id, position: newPosA },
+      { exerciseId: b.exercise_id, position: newPosB },
+    ]);
+  }, [id, groups]);
+
+  const handleMoveUp = useCallback((exerciseId: string) => {
+    handleMoveExercise(exerciseId, "up");
+  }, [handleMoveExercise]);
+
+  const handleMoveDown = useCallback((exerciseId: string) => {
+    handleMoveExercise(exerciseId, "down");
+  }, [handleMoveExercise]);
 
   const finish = () => {
     confirmAction(
@@ -342,6 +389,8 @@ export function useSessionActions({
     handleExerciseNotes,
     handleExerciseNotesDraftChange,
     toggleExerciseNotes,
+    handleMoveUp,
+    handleMoveDown,
     finish,
     cancel,
   };
