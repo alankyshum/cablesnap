@@ -31,27 +31,33 @@ Replace the hardcoded MEV=10/MRV=20 with evidence-based per-muscle defaults and 
 
 **Muscle Volume Bar Chart (enhanced):**
 - Each bar is color-coded based on volume zone:
-  - Below MEV: `outline` color (muted) — under-stimulating
-  - MEV to MRV (optimal zone): `primary` color — productive training
-  - Above MRV: `error`/warning color — potential overreaching
-- MEV and MRV landmark lines are now per-muscle (positioned differently for each bar)
-- Tapping a muscle row still shows the weekly trend chart (existing behavior preserved)
+  - Below MEV: `surfaceVariant` color with dashed/striped fill pattern — clearly visible but visually "weaker"
+  - MEV to MRV (optimal zone): `primary` color, solid fill — productive training
+  - Above MRV: amber/warning color (NOT `error` red — overreaching is sometimes intentional) — potential overreaching
+- **No per-muscle landmark lines** — color-coding alone communicates zone status (removes visual clutter per UX review C-2). MEV/MRV numbers shown on tap in the row detail area
+- Tapping a muscle row still shows the weekly trend chart (existing behavior preserved) plus MEV/MRV values as text labels
+- Non-color indicators satisfy WCAG 1.4.1: dashed fill pattern for below-MEV bars differentiates from solid optimal bars for color-blind users
 
-**Customize Targets (new):**
+**Customize Targets (new — two-level navigation per UX review C-1):**
 - A small "Customize" button/icon at the top of the volume chart
-- Opens a bottom sheet with a list of muscle groups
-- Each muscle shows: MEV input field | MRV input field | Reset to default button
-- Changes are saved immediately (optimistic update)
+- Opens a bottom sheet with a **tappable list** of muscle groups, each row showing: "`Chest: MEV 10 / MRV 22 ›`"
+- Tapping a muscle row **expands inline** to show that muscle's MEV and MRV numeric steppers + Reset button (max 3 interactive elements per screen state)
+- Only one muscle can be expanded at a time (accordion pattern)
+- "Reset All to Defaults" button at the top of the sheet
+- Changes saved when the sheet closes (debounced, not on every tap)
 - All inputs are numeric steppers (integer sets, min 0, max 50)
 - One-hand friendly: large touch targets, numeric keyboard only
+- Small caption below defaults: "Based on RP hypertrophy guidelines"
 
 **Status Summary (new, lightweight):**
 - Below the bar chart, a one-line summary: "3 muscles under MEV · 1 muscle over MRV" 
-- Tapping the summary scrolls/highlights the relevant muscles
+- Tapping the summary **highlights** the relevant muscles (background pulse/flash) and auto-selects the first one to show its trend (no scrolling — avoids nested scroll conflicts per UX review M-4)
 
 **Accessibility:**
 - Each bar's a11y label includes: "[Muscle]: [N] sets, [below MEV / in optimal range / above MRV]"
+- Non-color zone indicators (dashed vs solid bar fill) for color vision deficiency (WCAG 1.4.1)
 - Customize sheet: all inputs labeled, numeric keyboard
+- Touch targets: minimum 48dp maintained
 
 ### Technical Approach
 
@@ -94,18 +100,18 @@ const DEFAULT_LANDMARKS: Record<MuscleGroup, VolumeLandmarks> = {
 
 **4. UI Changes:**
 - `VolumeBarChart.tsx`: Replace hardcoded MEV/MRV with per-row landmarks from hook
-- `VolumeBarChart.tsx`: Color-code each bar based on its zone
+- `VolumeBarChart.tsx`: Color-code each bar based on its zone (dashed fill for below-MEV, solid primary for optimal, amber for above-MRV)
+- `VolumeBarChart.tsx`: Remove global MEV/MRV vertical dashed lines (color-coding replaces them)
 - `MuscleVolumeSegment.tsx`: Add "Customize" button, render `VolumeLandmarksSheet`
-- New `VolumeLandmarksSheet.tsx`: Bottom sheet with per-muscle target editing
+- New `VolumeLandmarksSheet.tsx`: Bottom sheet with two-level muscle group list (accordion expand for individual editing)
 
 ### Scope
 
 **In Scope:**
 - Evidence-based default volume landmarks per muscle group
-- Color-coded bars (under/optimal/over zones)
-- Per-muscle MEV/MRV landmark lines on chart
-- User customization of landmarks via bottom sheet
-- Volume status summary line
+- Color-coded bars with non-color indicators (under/optimal/over zones)
+- User customization of landmarks via two-level bottom sheet
+- Volume status summary line with highlight interaction
 - Persistence of custom landmarks in app_settings
 
 **Out of Scope:**
@@ -184,7 +190,20 @@ const DEFAULT_LANDMARKS: Record<MuscleGroup, VolumeLandmarks> = {
 **Security:** No concerns. No PII, no external APIs, no credentials.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** (2026-04-20)
+
+**Architecture fit**: Excellent. All proposed patterns (app_settings KV, bottom sheet, hook extension) already exist. No new dependencies. Additive changes only — no refactoring required.
+
+**Velocity assessment**: Well-scoped for a single PR cycle. ~6-8 files, ~300-400 lines. Low risk.
+
+**Technical concerns (all minor):**
+1. Per-bar landmark rendering is architecturally different from current global overlay lines — needs per-row marker dots/ticks instead of spanning lines. (Aligns with UX C-2.)
+2. `back` vs `lats` have identical defaults (MEV:10, MRV:25) — sports science should confirm if these should differ.
+3. `maxSets` scaling must change from `Math.max(...sets, MRV=20)` to `Math.max(...sets, ...allMrvValues)`. (Aligns with QD concern #1.)
+
+**Simplification**: Cut the status summary line from v1 — color-coded bars already communicate volume status. Ship as fast follow if users request it.
+
+**Performance**: No concerns. Static lookup table, single SQLite read on mount, negligible per-row color comparison.
 
 ### CEO Decision
 _Pending reviews_
