@@ -3,7 +3,7 @@
 **Issue**: BLD-457
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -37,7 +37,7 @@ Consolidate overlapping and low-value tests to reclaim ~100 test budget slots. F
 27 test files use `fs.readFileSync` to read source code and assert structural properties (file size, imports, component extraction). Many of these test the same patterns across different files. Consolidate into parameterized test suites that test multiple files in a single `it()` block using `test.each`.
 
 #### Phase B: Overlapping Suite Merging
-The audit flags `flows/*` and `acceptance/*` suites with overlapping coverage. Merge suites testing the same features, keeping the most comprehensive version.
+The audit flags `flows/*` and `acceptance/*` suites with overlapping coverage. Merge suites testing the same features, keeping the most comprehensive version. **Implementation must provide a concrete overlap mapping** showing which flow/acceptance pairs test identical code paths (e.g., `flows/onboarding.test.tsx` vs `acceptance/onboarding.acceptance.test.tsx`) and which tests are duplicates vs. complementary. Only evidenced duplicates may be removed.
 
 #### Phase C: Shared Mock Extraction
 Extract shared router/infra mocks into `__tests__/helpers/screen-harness.ts` and domain mock factories into `__tests__/helpers/mock-*.ts`. This doesn't reduce test count but improves maintainability.
@@ -63,10 +63,15 @@ Move `jest.setTimeout(10000)` from individual files to `jest.config.js: testTime
 
 - [ ] All 1909 existing tests still pass (zero regressions)
 - [ ] Test budget reclaimed to ≤1700 (at least 100 slots freed)
+- [ ] `scripts/audit-tests.sh` still passes (budget ≤1800) — SAFETY-03
+- [ ] `npx jest --coverage` diff before/after shows zero decrease in line/branch coverage — SAFETY-01
 - [ ] No behavioral coverage lost (same code paths tested)
-- [ ] Source-reading tests consolidated via test.each patterns
+- [ ] Source-reading tests consolidated via `test.each` patterns with descriptive names: `test.each(cases)("%s: %s", ...)` for CI readability
+- [ ] Phase B PR documents WHICH suites overlap and WHY (evidenced by identical code paths, not just similar names) — SAFETY-02
+- [ ] Separate PRs: PR1 = Phase A + D (budget reclamation), PR2 = Phase B + C (maintainability)
 - [ ] Shared mock helpers extracted
 - [ ] jest.setTimeout moved to config
+- [ ] Each `test.each` entry independently runnable via `jest --testNamePattern`
 
 ### Edge Cases
 
@@ -118,4 +123,9 @@ Overall risk: MEDIUM-HIGH. Test infrastructure changes are self-masking — brok
 **No blocking issues.** Minor TODOs can be addressed during implementation.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-20). All reviewer concerns addressed:
+- SAFETY-01, SAFETY-02, SAFETY-03 added to acceptance criteria
+- Phase B updated with concrete overlap mapping requirement
+- Separate PRs mandated (PR1: Phase A+D, PR2: Phase B+C)
+- test.each readability pattern enforced in acceptance criteria
+- Each test.each entry must be independently runnable
