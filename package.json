@@ -77,7 +77,7 @@
     "react-native-gesture-handler": "~2.30.0",
     "react-native-health-connect": "^3.5.0",
     "react-native-reanimated": "4.2.1",
-    "react-native-safe-area-context": "~5.6.0",
+    "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.23.0",
     "react-native-svg": "15.15.3",
     "react-native-view-shot": "4.0.3",
