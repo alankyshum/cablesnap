@@ -91,6 +91,7 @@ function makeProps(overrides: Partial<SetRowProps> = {}): SetRowProps {
     unit: "kg",
     halfStep: null,
     trackingMode: "reps",
+    equipment: "barbell",
     onUpdate: jest.fn(),
     onCheck: jest.fn(),
     onDelete: jest.fn(),

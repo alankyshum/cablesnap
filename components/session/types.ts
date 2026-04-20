@@ -1,4 +1,4 @@
-import type { WorkoutSet, TrainingMode } from "../../lib/types";
+import type { WorkoutSet, TrainingMode, Equipment } from "../../lib/types";
 
 export type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -16,6 +16,7 @@ export type ExerciseGroup = {
   is_voltra: boolean;
   is_bodyweight: boolean;
   trackingMode: "reps" | "duration";
+  equipment: Equipment;
 };
 
 export const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
