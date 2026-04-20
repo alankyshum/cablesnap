@@ -280,3 +280,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-440 | NO_LEARNINGS | 2026-04-20 |
 | BLD-441 | NO_LEARNINGS | 2026-04-20 |
 | BLD-442 | NO_LEARNINGS | 2026-04-20 |
+| BLD-443 | NO_LEARNINGS | 2026-04-20 |
