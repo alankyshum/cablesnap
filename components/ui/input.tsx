@@ -178,8 +178,6 @@ export const Input = forwardRef<TextInput, InputProps>(
                     {label && (
                       <Text
                         variant='caption'
-                        numberOfLines={1}
-                        ellipsizeMode='tail'
                         style={[
                           {
                             color: error ? danger : muted,
@@ -222,10 +220,10 @@ export const Input = forwardRef<TextInput, InputProps>(
                 gap: 8,
               }}
             >
-              {/* Left section - Icon + Label (fixed width to simulate grid column) */}
+              {/* Left section - Icon + Label */}
               <View
                 style={{
-                  width: label ? 120 : 'auto',
+                  flexShrink: 0,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 8,
@@ -238,8 +236,6 @@ export const Input = forwardRef<TextInput, InputProps>(
                 {label && (
                   <Text
                     variant='caption'
-                    numberOfLines={1}
-                    ellipsizeMode='tail'
                     style={[
                       {
                         color: error ? danger : muted,
@@ -488,8 +484,6 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
                     {label && (
                       <Text
                         variant='caption'
-                        numberOfLines={1}
-                        ellipsizeMode='tail'
                         style={[
                           {
                             color: error ? danger : muted,
@@ -546,7 +540,7 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
               {/* Icon & Label */}
               <View
                 style={{
-                  width: label ? 120 : 'auto',
+                  flexShrink: 0,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 8,
@@ -559,8 +553,6 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
                 {label && (
                   <Text
                     variant='caption'
-                    numberOfLines={1}
-                    ellipsizeMode='tail'
                     style={[
                       {
                         color: error ? danger : muted,
