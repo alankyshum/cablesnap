@@ -160,7 +160,19 @@ All data is already in the DB. No schema changes needed.
 ## Review Feedback
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: APPROVED** (2026-04-20)
+
+**Cognitive Load**: Feature reduces cognitive load — transforms scattered data into actionable insight. Compatible mental model, passes 3-second test, minimal decision overhead. Progressive disclosure (card → expand) is the right pattern.
+
+**Interaction Design**: Good — 2-tap flow (tap to read, tap to dismiss), one-handed usable, matches existing InsightCard gesture patterns.
+
+**Visual Hierarchy**: Home screen already has 8+ sections. **Required fix (DESIGN-01)**: DeloadNudgeCard MUST replace InsightCard when active, not stack alongside it. Overreaching > insight priority.
+
+**Design System**: Should mirror InsightCard structure exactly (borderRadius 12, paddingVertical 12, paddingLeft 14, gap 10, minHeight 56). Use `fontSizes` design tokens, `colors.surface`/`colors.primary` theme tokens.
+
+**Accessibility**: Dismiss button needs minWidth/minHeight 48. Each expanded signal line needs own accessibilityLabel. Dismiss button: `accessibilityLabel="Dismiss deload suggestion"` + `accessibilityHint="Hides this suggestion for 7 days"`.
+
+**Recommendations**: (1) Use MCI vector icon not emoji for cross-platform consistency, (2) Define dismissal re-trigger as +2 score increase, (3) Consider bottom sheet vs inline expansion for detail view — defer to Tech Lead.
 
 ### Quality Director (Release Safety)
 _Pending review_
