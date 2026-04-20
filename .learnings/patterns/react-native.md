@@ -841,3 +841,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: Horizontal arrays of accessible touch targets (≥48dp each) overflow phone screens faster than expected. Seven 48dp targets plus 8dp gaps = 384dp, but available content width inside a card with 16dp padding on a 360dp-wide phone is only ~328dp. The fix is visual/touch separation: render smaller visual targets (e.g., 36-40dp circles) and use React Native's `hitSlop` prop to expand the invisible touch area to 48dp without increasing layout size.
 **Action**: When designing a horizontal row of tappable elements, calculate total width as `(count  visual_size) + ((count - 1) × gap)` and verify it fits within `screen_width - (2 × container_padding)`. If it overflows, reduce visual size and add `hitSlop={{ top: N, bottom: N, left: N, right: N }}` to maintain 48dp accessible touch targets. For 7+ elements, consider a SegmentedControl or scrollable row instead.
 **Tags**: accessibility, touch-target, hitslop, layout-overflow, horizontal-picker, react-native, mobile-width, a11y
+
+### Nested Pressable Components Create Gesture Conflicts on Native — Extract as Siblings
+**Source**: BLD-447 — Tap-to-Prefill Sets from Previous Session (Phase 72 plan)
+**Date**: 2026-04-20
+**Context**: Phase 72 needed to make existing text tappable (onPress) inside a card header that already had a Pressable with onLongPress for delete. The initial design nested the new Pressable inside the existing one.
+**Learning**: Nesting a `<Pressable onPress>` inside a `<Pressable onLongPress>` on React Native creates gesture handler conflicts — the inner press can intercept touches and prevent the outer long-press from firing reliably. This is a different issue from the web HTML button-nesting problem (BLD-181). On native, the gesture system tries to disambiguate press vs long-press on overlapping responders, producing inconsistent behavior across iOS and Android.
+**Action**: When adding a tappable element inside a container that already has a press/long-press gesture, extract the new tappable element as a SIBLING of the existing Pressable, not a child. Structure the layout so both interactive elements are peers within a shared parent View. This avoids gesture disambiguation entirely.
+**Tags**: react-native, pressable, gesture-conflict, nested, long-press, sibling, touch, ux
+
+### Bodyweight Exercises Must Use weight=null Not weight=0 to Avoid Displaying "0kg"
+**Source**: BLD-447 — Tap-to-Prefill Sets from Previous Session (Phase 72 plan)
+**Date**: 2026-04-20
+**Context**: The prefill feature copies previous session set data into current sets. For bodyweight exercises, the previous session stores weight as null (no external weight). If the prefill logic defaults null to 0, the UI displays "0kg" next to bodyweight exercises.
+**Learning**: CableSnap uses `null` to mean "no weight applies" (bodyweight exercises) and `0` to mean "zero kilograms of external weight." Any feature that copies, prefills, or initializes exercise set data must preserve this distinction. Setting weight to 0 for bodyweight exercises causes the UI to display "0kg," which is semantically wrong and confusing.
+**Action**: When writing code that sets or copies weight values for exercise sets, always preserve `null` for bodyweight exercises. Never coalesce `null` to `0` with `?? 0` or `|| 0` in weight fields. If a default is needed, use `null` as the default and let the UI handle display logic. Check `is_bodyweight` or whether the source weight is null before assigning.
+**Tags**: cablesnap, bodyweight, weight, null, zero, data-integrity, exercise, prefill, domain-model
