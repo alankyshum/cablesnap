@@ -259,3 +259,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-406 | NO_LEARNINGS | 2026-04-19 |
 | BLD-409 | NO_LEARNINGS | 2026-04-20 |
 | BLD-410 | LEARNINGS_EXTRACTED | 2026-04-20 |
+| BLD-411 | LEARNINGS_EXTRACTED | 2026-04-20 |
