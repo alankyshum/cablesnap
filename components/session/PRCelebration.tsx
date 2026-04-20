@@ -12,6 +12,7 @@ import Animated, {
   cancelAnimation,
   Easing,
 } from "react-native-reanimated";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { PRCelebrationState } from "@/hooks/usePRCelebration";
 import { fontSizes } from "@/constants/design-tokens";
@@ -161,6 +162,12 @@ export function PRCelebration({ celebration }: PRCelebrationProps) {
         <Text style={styles.badgeEmoji}>🏆</Text>
         <Text style={[styles.badgeText, { color: colors.onPrimary }]}>NEW PR!</Text>
       </Animated.View>
+      {celebration.goalAchieved && (
+        <Animated.View style={[styles.goalBadge, { backgroundColor: colors.tertiary }, badgeStyle]}>
+          <MaterialCommunityIcons name="bullseye-arrow" size={20} color={colors.onPrimary} />
+          <Text style={[styles.badgeText, { color: colors.onPrimary }]}>GOAL ACHIEVED!</Text>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -197,6 +204,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  goalBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    marginTop: 8,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
   },
   badgeEmoji: {
     fontSize: fontSizes.xxl,

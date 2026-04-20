@@ -3,12 +3,12 @@
  * Each generator returns Insight | null. The prioritizer picks the top one.
  */
 
-export type InsightType = "strength" | "volume" | "consistency" | "returning";
+export type InsightType = "strength" | "volume" | "consistency" | "returning" | "goal_progress";
 
 export type Insight = {
   type: InsightType;
   title: string;
-  icon: "trending-up" | "bar-chart" | "star" | "heart";
+  icon: "trending-up" | "bar-chart" | "star" | "heart" | "bullseye-arrow";
   /** exercise ID for strength trend navigation */
   exerciseId?: string;
   accessibilityLabel: string;
@@ -26,11 +26,18 @@ export type WeeklyVolumeRow = {
   volume: number;
 };
 
+export type GoalInsightRow = {
+  exercise_id: string;
+  exercise_name: string;
+  progressPct: number;
+};
+
 export type InsightData = {
   totalSessions: number;
   timestamps: number[];
   e1rmTrends: E1RMTrendRow[];
   weeklyVolume: WeeklyVolumeRow[];
+  goalInsights?: GoalInsightRow[];
 };
 
 /**
@@ -42,12 +49,36 @@ export function generateInsight(data: InsightData): Insight | null {
   if (data.totalSessions < 5) return null;
 
   return (
+    generateGoalInsight(data.goalInsights) ??
     generateStrengthInsight(data.e1rmTrends) ??
     generateVolumeInsight(data.weeklyVolume) ??
     generateConsistencyInsight(data.timestamps) ??
     generateReturningInsight(data.timestamps) ??
     null
   );
+}
+
+function generateGoalInsight(goals?: GoalInsightRow[]): Insight | null {
+  if (!goals || goals.length === 0) return null;
+
+  // Pick the goal with the highest progress
+  let best: GoalInsightRow | null = null;
+  for (const g of goals) {
+    if (g.progressPct > 0 && (!best || g.progressPct > best.progressPct)) {
+      best = g;
+    }
+  }
+
+  if (!best || best.progressPct <= 0) return null;
+
+  const title = `You're ${best.progressPct}% of the way to your ${best.exercise_name} goal!`;
+  return {
+    type: "goal_progress",
+    title,
+    icon: "bullseye-arrow",
+    exerciseId: best.exercise_id,
+    accessibilityLabel: `Training insight: ${title}. Tap to view details.`,
+  };
 }
 
 function generateStrengthInsight(trends: E1RMTrendRow[]): Insight | null {
