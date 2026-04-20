@@ -318,6 +318,22 @@ export const healthConnectSyncLog = sqliteTable("health_connect_sync_log", {
   index("idx_hc_sync_log_status").on(table.status),
 ]);
 
+// ─── Strength Goals ─────────────────────────────────────────────────────────
+
+export const strengthGoals = sqliteTable("strength_goals", {
+  id: text("id").primaryKey(),
+  exercise_id: text("exercise_id").notNull(),
+  target_weight: real("target_weight"),
+  target_reps: integer("target_reps"),
+  deadline: text("deadline"),
+  achieved_at: text("achieved_at"),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_strength_goals_exercise").on(table.exercise_id),
+  index("idx_strength_goals_active").on(table.achieved_at),
+]);
+
 // ─── Inferred Select Types ─────────────────────────────────────────────────
 // Use these instead of manually-defined Row types.
 
@@ -346,3 +362,4 @@ export type AchievementEarnedRow = typeof achievementsEarned.$inferSelect;
 export type StravaConnectionRow = typeof stravaConnection.$inferSelect;
 export type StravaSyncLogRow = typeof stravaSyncLog.$inferSelect;
 export type HealthConnectSyncLogRow = typeof healthConnectSyncLog.$inferSelect;
+export type StrengthGoalRow = typeof strengthGoals.$inferSelect;

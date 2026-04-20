@@ -10,7 +10,7 @@ const VALID_TABLES = new Set([
   "interaction_log", "progress_photos", "achievements_earned",
   "strava_connection", "strava_sync_log", "health_connect_sync_log",
   "meal_templates", "meal_template_items", "app_settings",
-  "program_schedule",
+  "program_schedule", "strength_goals",
 ]);
 
 function assertValidTable(table: string): void {
@@ -277,6 +277,22 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       UNIQUE(session_id)
     );
     CREATE INDEX IF NOT EXISTS idx_hc_sync_log_status ON health_connect_sync_log(status);
+
+    CREATE TABLE IF NOT EXISTS strength_goals (
+      id TEXT PRIMARY KEY,
+      exercise_id TEXT NOT NULL,
+      target_weight REAL,
+      target_reps INTEGER,
+      deadline TEXT,
+      achieved_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (exercise_id) REFERENCES exercises(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_strength_goals_exercise ON strength_goals(exercise_id);
+    CREATE INDEX IF NOT EXISTS idx_strength_goals_active ON strength_goals(achieved_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_strength_goals_one_active
+      ON strength_goals(exercise_id) WHERE achieved_at IS NULL;
 
     CREATE TABLE IF NOT EXISTS meal_templates (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, meal TEXT NOT NULL,
