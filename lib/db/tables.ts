@@ -102,7 +102,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       tempo TEXT DEFAULT NULL,
       swapped_from_exercise_id TEXT DEFAULT NULL,
       set_type TEXT DEFAULT 'normal',
-      duration_seconds INTEGER
+      duration_seconds INTEGER,
+      exercise_position INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS food_entries (

@@ -100,6 +100,7 @@ export {
   swapExerciseInSession,
   undoSwapInSession,
   getSourceSessionSets,
+  updateExercisePositions,
 } from "./sessions";
 export type { ExerciseSession, ExerciseRecords, SourceSessionSet } from "./sessions";
 export type { E1RMTrendRow } from "./sessions";

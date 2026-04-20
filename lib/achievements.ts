@@ -325,6 +325,44 @@ export function evaluateAchievements(
   return newlyEarned;
 }
 
+// --- User Level System ---
+
+export type UserLevel = {
+  level: number;
+  name: string;
+  icon: string;
+  minAchievements: number;
+};
+
+export const USER_LEVELS: UserLevel[] = [
+  { level: 1, name: "Beginner", icon: "🌱", minAchievements: 0 },
+  { level: 2, name: "Regular", icon: "🏃", minAchievements: 3 },
+  { level: 3, name: "Committed", icon: "💪", minAchievements: 6 },
+  { level: 4, name: "Athlete", icon: "🔥", minAchievements: 10 },
+  { level: 5, name: "Elite", icon: "⚡", minAchievements: 14 },
+  { level: 6, name: "Legend", icon: "👑", minAchievements: 18 },
+];
+
+export function getUserLevel(earnedCount: number): {
+  current: UserLevel;
+  next: UserLevel | null;
+  progress: number;
+} {
+  let currentIdx = 0;
+  for (let i = USER_LEVELS.length - 1; i >= 0; i--) {
+    if (earnedCount >= USER_LEVELS[i].minAchievements) {
+      currentIdx = i;
+      break;
+    }
+  }
+  const current = USER_LEVELS[currentIdx];
+  const next = currentIdx < USER_LEVELS.length - 1 ? USER_LEVELS[currentIdx + 1] : null;
+  const progress = next
+    ? (earnedCount - current.minAchievements) / (next.minAchievements - current.minAchievements)
+    : 1;
+  return { current, next, progress };
+}
+
 /**
  * Get progress for all achievements (for the grid screen).
  */

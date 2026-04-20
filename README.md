@@ -7,6 +7,14 @@
 > **Custom F-Droid repo** — open the link above on your Android device to add the repo, or add it manually in F-Droid:\
 > `https://alankyshum.github.io/cablesnap/repo`
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/store-screenshots/workouts-store-pixel9.png" alt="Workouts" width="200">
+  <img src="assets/store-screenshots/nutrition-store-pixel9.png" alt="Nutrition" width="200">
+  <img src="assets/store-screenshots/progress-store-pixel9.png" alt="Progress" width="200">
+</p>
+
 ## Features
 
 - 🏋️ **Workout Tracking** — Log and track your workouts
@@ -109,7 +117,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 If you find CableSnap useful, consider supporting development:
 
-<a href="https://buymeacoffee.com/alankyshum"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=alankyshum&button_colour=FF6038&font_colour=ffffff&font_family=Inter&outline_colour=ffffff&coffee_colour=FFDD00" height="40"></a>
+<a href="https://buymeacoffee.com/alankyshum"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FF6038?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white" height="40"></a>
 
 <a href="https://thanks.dev/u/gh/alankyshum"><img src="https://img.shields.io/badge/thanks.dev-Support%20OSS-brightgreen?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDIxLjM1bC0xLjQ1LTEuMzJDNS40IDE1LjM2IDIgMTIuMjggMiA4LjUgMiA1LjQyIDQuNDIgMyA3LjUgM2MxLjc0IDAgMy40MS44MSA0LjUgMi4wOUMxMy4wOSAzLjgxIDE0Ljc2IDMgMTYuNSAzIDE5LjU4IDMgMjIgNS40MiAyMiA4LjVjMCAzLjc4LTMuNCA2Ljg2LTguNTUgMTEuNTRMMTIgMjEuMzV6IiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==&style=for-the-badge" height="40"></a>
 

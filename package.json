@@ -1,6 +1,6 @@
 {
   "name": "cablesnap",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "license": "AGPL-3.0-or-later",
   "main": "expo-router/entry",
   "scripts": {
@@ -23,7 +23,7 @@
     "build:apk:cloud": "eas build -p android --profile preview",
     "install:apk": "adb install -r $(ls -t *.apk | head -1)",
     "fta": "fta-cli app lib components hooks --json",
-    "screenshots:raw": "playwright test e2e/screenshot-capture.spec.ts --project=store-pixel4 --project=store-fold7",
+    "screenshots:raw": "playwright test e2e/screenshot-capture.spec.ts --project=store-pixel9 --project=store-fold7",
     "screenshots:frame": "tsx scripts/generate-store-screenshots.ts",
     "screenshots": "npm run screenshots:raw && npm run screenshots:frame",
     "prepare": "husky"

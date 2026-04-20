@@ -224,6 +224,7 @@ export type WorkoutSet = {
   swapped_from_exercise_id: string | null;
   set_type: SetType;
   duration_seconds: number | null;
+  exercise_position: number;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {

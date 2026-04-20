@@ -17,6 +17,7 @@ export type ExerciseGroup = {
   is_bodyweight: boolean;
   trackingMode: "reps" | "duration";
   equipment: Equipment;
+  exercise_position: number;
 };
 
 export const RPE_CHIPS = [6, 7, 8, 9, 10] as const;

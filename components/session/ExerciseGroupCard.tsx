@@ -45,6 +45,8 @@ export type GroupCardProps = {
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
+  onMoveUp?: (exerciseId: string) => void;
+  onMoveDown?: (exerciseId: string) => void;
   // Timer
   timerActiveExerciseId?: string | null;
   timerActiveSetIndex?: number | null;
@@ -61,6 +63,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onShowDetail, onSwap, onDeleteExercise,
+  onMoveUp, onMoveDown,
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
 }: GroupCardProps) {
@@ -78,6 +81,13 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
 
   const suggestion = suggestions[group.exercise_id];
+
+  // Reorder: only for non-superset exercises, ≥2 reorderable groups
+  const reorderableGroups = groups.filter((g) => !g.link_id);
+  const reorderIdx = group.link_id ? -1 : reorderableGroups.findIndex((g) => g.exercise_id === group.exercise_id);
+  const showMoveButtons = !group.link_id && reorderableGroups.length >= 2;
+  const isFirstReorderable = reorderIdx === 0;
+  const isLastReorderable = reorderIdx === reorderableGroups.length - 1;
 
   const hasExistingWarmups = group.sets.some((s) => s.set_type === "warmup");
   const hasWorkingWeight = suggestion != null && suggestion.weight > 0;
@@ -196,6 +206,11 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onShowDetail={onShowDetail}
           onSwap={onSwap}
           onDeleteExercise={onDeleteExercise}
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+          isFirst={isFirstReorderable}
+          isLast={isLastReorderable}
+          showMoveButtons={showMoveButtons}
         />
         {layout.atLeastMedium ? (
           <View style={styles.groupWideRow}>
@@ -271,16 +286,6 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
   },
-  divider: {
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  linkGroupHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    marginBottom: 4,
-    borderRadius: 4,
-  },
+  divider: { marginTop: 8, marginBottom: 12 },
+  linkGroupHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 6, marginBottom: 4, borderRadius: 4 },
 });

@@ -144,7 +144,7 @@ export async function insertInteraction(
       timestamp: Date.now(),
     });
     await db.delete(interactionLog).where(
-      sql`${interactionLog.id} NOT IN (SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 50)`
+      sql`${interactionLog.id} NOT IN (SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 5)`
     );
   });
 }
@@ -156,7 +156,7 @@ export async function getInteractions(): Promise<
   return db.select()
     .from(interactionLog)
     .orderBy(sql`${interactionLog.timestamp} DESC`)
-    .limit(50);
+    .limit(5);
 }
 
 export async function clearInteractions(): Promise<void> {

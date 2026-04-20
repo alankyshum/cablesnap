@@ -32,6 +32,7 @@ jest.mock('../../lib/db', () => ({
   getTemplateExerciseCount: jest.fn().mockResolvedValue(0),
   getTemplateExerciseCounts: jest.fn().mockResolvedValue({}),
   addExerciseToTemplate: jest.fn().mockResolvedValue(undefined),
+  updateExercisePositions: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

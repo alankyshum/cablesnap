@@ -1,6 +1,5 @@
 import { useCallback } from "react";
-import { StyleSheet, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -91,7 +90,7 @@ export default function EditTemplate() {
           </View>
         )}
 
-        <FlashList
+        <FlatList
           data={exercises}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}

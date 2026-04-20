@@ -6,7 +6,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Stack } from "expo-router";
-import { ACHIEVEMENTS } from "../../lib/achievements";
+import { ACHIEVEMENTS, getUserLevel } from "../../lib/achievements";
 import type { AchievementCategory } from "../../lib/achievements";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useAchievements } from "@/hooks/useAchievements";
@@ -83,15 +83,49 @@ export default function AchievementsScreen() {
         contentContainerStyle={styles.content}
         renderItem={({ item }) => {
           if (item.key === "header") {
+            const { current, next, progress } = getUserLevel(earnedCount);
+            const achievementsFromCurrent = earnedCount - current.minAchievements;
+            const achievementsNeeded = next ? next.minAchievements - current.minAchievements : 0;
             return (
               <View style={styles.header}>
-                <Text variant="heading" style={{ color: colors.onBackground }}>
-                  🏆
-                </Text>
+                <Card style={{ width: "100%", backgroundColor: colors.surface }}>
+                  <CardContent style={{ alignItems: "center", gap: 8 }}>
+                    <Text variant="heading" style={{ color: colors.onSurface, fontSize: 36 }}>
+                      {current.icon}
+                    </Text>
+                    <Text
+                      variant="title"
+                      style={{ color: colors.onSurface, fontWeight: "700" }}
+                    >
+                      {current.icon} {current.name}
+                    </Text>
+                    <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
+                      Level {current.level}
+                    </Text>
+                    {next ? (
+                      <>
+                        <View style={[styles.progressTrack, { backgroundColor: colors.surfaceVariant }]}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              { backgroundColor: colors.primary, width: `${Math.round(progress * 100)}%` },
+                            ]}
+                          />
+                        </View>
+                        <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+                          {achievementsFromCurrent} / {achievementsNeeded} more achievements to reach {next.icon} {next.name}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text variant="body" style={{ color: colors.primary, fontWeight: "600" }}>
+                        Max level reached!
+                      </Text>
+                    )}
+                  </CardContent>
+                </Card>
                 <Text
-                  variant="title"
-                  style={{ color: colors.onBackground, fontWeight: "700", marginTop: 4 }}
-                  accessibilityRole="header"
+                  variant="body"
+                  style={{ color: colors.onSurfaceVariant, marginTop: 12 }}
                 >
                   {earnedCount} / {ACHIEVEMENTS.length} Achievements Earned
                 </Text>
@@ -165,5 +199,15 @@ const styles = StyleSheet.create({
   gridItem: {
     width: "31%",
     minWidth: 100,
+  },
+  progressTrack: {
+    width: "100%",
+    height: 8,
+    borderRadius: 4,
+    overflow: "hidden" as const,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 4,
   },
 });

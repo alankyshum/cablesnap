@@ -154,3 +154,11 @@ BLD-410 **Source**: PLAN: Exercise Reorder in Active Workout Session (Phase 62)
 **Learning**: Ordering columns serve a specific granularity. `set_number` orders sets within an exercise; exercise position orders exercises within a session. These are different dimensions. Repurposing an existing ordering column for a different granularity silently corrupts the original ordering semantics and breaks every query that depends on the original meaning.
 **Action**: When adding position tracking to a higher-level entity, always add a dedicated column (e.g., `exercise_position`) rather than repurposing a child-entity ordering column (e.g., `set_number`). Before designing the schema change, explicitly state what the existing column means and confirm the new requirement operates at a different level.
 **Tags**: sqlite, schema-design, ordering, column-semantics, set-number, exercise-position, granularity
+
+### Lazy Auto-Assignment for New Ordering Columns with DEFAULT 0
+**Source**: BLD-411 — Implement Exercise Reorder in Active Workout Session (Phase 62)
+**Date**: 2026-04-20
+**Context**: Adding `exercise_position INTEGER DEFAULT 0` to an existing table meant all pre-existing rows had position 0. A data migration to assign sequential positions per-session would require complex SQL (ROW_NUMBER per partition). Instead, the load path detects "all positions = 0" and auto-assigns at runtime.
+**Learning**: When adding an ordering column with `DEFAULT 0` to a table with existing data, detect the "all-zero" state at query/load time and lazily auto-assign sequential positions. Persist via fire-and-forget write (`updatePositions(...).catch(() => {})`). This avoids complex data migrations while ensuring pre-existing records render in a stable order.
+**Action**: When adding a position/ordering column to an existing table: (1) use `DEFAULT 0` in the migration, (2) at load time check if all values are 0, (3) if so auto-assign sequential positions from current sort order, (4) fire-and-forget the DB persist. Do not attempt a SQL-only data migration for position assignment across partitioned groups.
+**Tags**: sqlite, migration, ordering, backward-compatibility, lazy-assignment, default-zero, exercise-position

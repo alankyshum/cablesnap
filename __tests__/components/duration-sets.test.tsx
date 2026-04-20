@@ -80,6 +80,7 @@ function makeSet(overrides: Partial<SetWithMeta> = {}): SetWithMeta {
     swapped_from_exercise_id: null,
     set_type: "normal",
     duration_seconds: null,
+    exercise_position: 0,
     ...overrides,
   };
 }

@@ -777,3 +777,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: FlashList optimizes rendering by key identity. When the data array is reordered but keys remain the same, FlashList may not detect the change and skip re-rendering. Passing an `extraData` prop set to an incrementing version counter forces FlashList to re-evaluate the entire list whenever items are reordered.
 **Action**: When implementing list reordering with FlashList or FlatList, maintain a `reorderVersion` counter in state. Increment it on every reorder operation and pass it as `extraData={reorderVersion}`. This ensures the list re-renders with the correct item positions after every move.
 **Tags**: flashlist, flatlist, reorder, extraData, re-render, key-stability, performance, react-native
+
+### FlashList v2 Renders Empty on Foldable Devices and Inside Modals — Use FlatList for Small Lists
+**Source**: BLD-413, BLD-419 — Template exercises missing on Samsung Z Fold6 (GH #244)
+**Date**: 2026-04-20
+**Context**: Template screens using FlashList rendered empty on Samsung Z Fold6. BLD-413 initially fixed this in one modal component, but BLD-419 revealed three more affected screens on non-modal contexts. The data was intact in the database — FlashList's auto-measurement produced zero-height renders.
+**Learning**: FlashList v2's auto-measurement can fail in two scenarios: (1) inside Modals/sheets where parent height is unknown at first render, and (2) on foldable devices where screen dimensions change dynamically. Both cause FlashList to compute zero visible items. This is NOT limited to modal contexts — regular screens on foldable devices are affected too.
+**Action**: Use FlatList instead of FlashList for any list with fewer than ~20 items. FlashList's virtualization benefits only matter for large lists (100+ items). For template lists, exercise lists, picker lists, and similar small collections, FlatList is both more reliable and has negligible performance difference. Reserve FlashList only for genuinely large, scrollable datasets on fixed-layout screens.
+**Tags**: flashlist, flatlist, foldable, samsung-z-fold, modal, empty-list, layout, auto-measure, react-native
+
+### Bottom Sheet Keyboard Avoidance Must Clamp to MAX_TRANSLATE_Y
+**Source**: BLD-413 — Owner Bug Batch: 5 UI/UX bugs from real device testing
+**Date**: 2026-04-20
+**Context**: On the Add Food screen, the BottomSheet moved up when the keyboard opened by subtracting keyboardHeight from the current snap position. On devices with large keyboards (e.g., Samsung Z Fold6), this pushed the sheet content off-screen entirely — making it invisible.
+**Learning**: Naively translating a bottom sheet by `currentSnap - keyboardHeight` can produce a negative Y value that moves the sheet above the visible area. The translation must be clamped to `Math.max(currentSnap - keyboardHeight, MAX_TRANSLATE_Y)` to ensure the sheet never exceeds its maximum upward extent.
+**Action**: When implementing keyboard-aware bottom sheet positioning, always clamp the upward translation to the sheet's maximum allowed position (typically the top of the screen or a defined MAX_TRANSLATE_Y). Test on devices with both compact and large keyboards (tall screens with large keyboards are the most likely to trigger the overflow).
+**Tags**: bottom-sheet, keyboard, keyboardavoidingview, clamp, math-max, android, react-native, animation

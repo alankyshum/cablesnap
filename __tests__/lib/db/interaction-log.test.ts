@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Structural tests for BLD-292: interaction log limit expanded to 50.
+ * Structural tests for interaction log limit (reduced to 5 per GH #236).
  */
 
 const src = fs.readFileSync(
@@ -10,14 +10,13 @@ const src = fs.readFileSync(
   "utf-8"
 );
 
-describe("interaction log limits (BLD-292)", () => {
-  it("insertInteraction prunes to 50 entries", () => {
-    expect(src).toMatch(/ORDER BY timestamp DESC LIMIT 50/);
+describe("interaction log limits", () => {
+  it("insertInteraction prunes to 5 entries", () => {
+    expect(src).toMatch(/ORDER BY timestamp DESC LIMIT 5/);
   });
 
-  it("getInteractions returns up to 50 entries", () => {
-    // With Drizzle migration, getInteractions uses .limit(50) instead of raw SQL
-    expect(src).toMatch(/\.limit\(50\)/);
+  it("getInteractions returns up to 5 entries", () => {
+    expect(src).toMatch(/\.limit\(5\)/);
   });
 
   it("does NOT use time-based pruning", () => {

@@ -15,8 +15,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
-import { getAppSetting } from "../../lib/db";
-import { addWarmupSets } from "../../lib/db";
+import { getAppSetting, addWarmupSets } from "../../lib/db";
 import { generateWarmupSets } from "../../lib/warmup";
 import * as Haptics from "expo-haptics";
 import { useLayout } from "../../lib/layout";
@@ -95,7 +94,8 @@ export default function ActiveSession() {
     elapsed, exerciseNotesOpen, exerciseNotesDraft, halfStep, nextHint, hintTimer,
     handleUpdate, handleCheck, handleAddSet, handleModeChange, handleRPE,
     handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleDelete,
-    handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, finish, cancel,
+    handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
+    handleMoveUp, handleMoveDown, finish, cancel,
   } = useSessionActions({
     id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError, triggerPR,
   });
@@ -164,7 +164,8 @@ export default function ActiveSession() {
         warmupSets,
         group?.link_id,
         group?.sets[0]?.training_mode,
-        group?.sets[0]?.tempo
+        group?.sets[0]?.tempo,
+        group?.exercise_position ?? 0
       );
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await load();
@@ -204,6 +205,8 @@ export default function ActiveSession() {
       onShowDetail={handleShowDetail}
       onSwap={handleSwapOpen}
       onDeleteExercise={handleDeleteExercise}
+      onMoveUp={handleMoveUp}
+      onMoveDown={handleMoveDown}
       timerActiveExerciseId={timerExerciseId}
       timerActiveSetIndex={timerSetIndex}
       timerIsRunning={timerIsRunning}
@@ -211,7 +214,7 @@ export default function ActiveSession() {
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
     />
-  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
@@ -261,6 +264,7 @@ export default function ActiveSession() {
         data={groups}
         renderItem={renderExerciseGroup}
         keyExtractor={(item) => item.exercise_id}
+        extraData={groups}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={listHeader}
@@ -330,19 +334,7 @@ export default function ActiveSession() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  detailHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
+  container: { flex: 1 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  detailHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
 });

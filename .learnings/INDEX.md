@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 181
+Total learnings: 185
 
 ## How to Use This Knowledge Base
 
@@ -14,18 +14,18 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 95 learnings
+- [React Native + Expo](patterns/react-native.md) — 97 learnings
 - [Testing](patterns/testing.md) — 12 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 6 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 19 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 20 learnings
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 11 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 12 learnings
 - [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
@@ -38,6 +38,10 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-419 | Audit All Instances When Fixing a Root Cause Pattern | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-20 | BLD-413, BLD-419 | FlashList v2 Renders Empty on Foldable Devices and Inside Modals | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-20 | BLD-413 | Bottom Sheet Keyboard Avoidance Must Clamp to MAX_TRANSLATE_Y | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-20 | BLD-411 | Lazy Auto-Assignment for New Ordering Columns with DEFAULT 0 | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-410 | Do Not Repurpose Intra-Entity Ordering Columns for Inter-Entity Position | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-410 | FlashList Requires extraData Counter to Re-Render on Array Reorder | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-403 | Proactive Sweep Task to Silence Recurring Automated Reviewer Findings | Process | [pr-workflow.md](process/pr-workflow.md) |

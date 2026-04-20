@@ -2,8 +2,9 @@ import { View, StyleSheet } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { HandleIcon } from "@/components/floating-tab-bar/HandleIcon";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { spacing } from "@/constants/design-tokens";
 
 export default function Welcome() {
   const colors = useThemeColors();
@@ -12,16 +13,14 @@ export default function Welcome() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <MaterialCommunityIcons
-          name="dumbbell"
+        <HandleIcon
           size={80}
           color={colors.primary}
-          style={styles.icon}
         />
-        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
+        <Text variant="heading" style={[styles.title, { color: colors.onBackground, paddingTop: spacing.lg }]}>
           Welcome to CableSnap
         </Text>
-        <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+        <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant, paddingTop: spacing.md }]}>
           Your free workout tracker, optimized for cable machines
         </Text>
       </View>

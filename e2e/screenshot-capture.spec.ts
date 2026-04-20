@@ -19,7 +19,7 @@ import * as path from "path";
 import {
   ALL_SCREENS,
   ONBOARDING_SCREENS,
-  TAB_SCREENS,
+  STORE_SCREENS,
   type Screen,
   slugify,
 } from "./screen-registry";
@@ -31,11 +31,22 @@ function getDateStamp(): string {
   return d.toISOString().slice(0, 10).replace(/-/g, "");
 }
 
+async function dismissErrorOverlay(page: Page): Promise<void> {
+  try {
+    const closeBtn = page.locator('[aria-label="Close"], button:has-text("×"), button:has-text("Dismiss")');
+    if (await closeBtn.first().isVisible({ timeout: 500 })) {
+      await closeBtn.first().click();
+      await page.waitForTimeout(300);
+    }
+  } catch { /* no overlay */ }
+}
+
 async function captureScreen(
   page: Page,
   screen: Screen,
   viewport: string,
   dateStamp: string,
+  fullPage = true,
 ) {
   const slug = slugify(screen.name);
   const filename = `${slug}-${viewport}-${dateStamp}.png`;
@@ -43,8 +54,9 @@ async function captureScreen(
 
   try {
     await navigateTo(page, screen.path);
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: filepath, fullPage: true });
+    await page.waitForTimeout(2000);
+    await dismissErrorOverlay(page);
+    await page.screenshot({ path: filepath, fullPage });
   } catch (err) {
     console.warn(
       `Screenshot skipped for ${screen.name} at ${viewport}: ${err instanceof Error ? err.message : err}`,
@@ -54,13 +66,6 @@ async function captureScreen(
 
 test.beforeAll(() => {
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
-
-  const existing = fs.readdirSync(SCREENSHOT_DIR);
-  for (const file of existing) {
-    if (file.endsWith(".png")) {
-      fs.unlinkSync(path.join(SCREENSHOT_DIR, file));
-    }
-  }
 });
 
 test.describe("Screenshot Capture -- All Screens", () => {
@@ -102,21 +107,19 @@ test.describe("Screenshot Capture -- Onboarding", () => {
 });
 
 test.describe("Screenshot Capture -- Store", () => {
-  test.skip(
-    (_fixtures, testInfo) =>
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(
       !testInfo.project.name.startsWith("store-"),
-    "Only runs on store-* projects",
-  );
-
-  test.beforeEach(async ({ page }) => {
+      "Only runs on store-* projects",
+    );
     await skipOnboarding(page);
   });
 
-  for (const screen of TAB_SCREENS) {
+  for (const screen of STORE_SCREENS) {
     test(`store capture ${screen.name}`, async ({ page }, testInfo) => {
       const viewport = testInfo.project.name;
       const dateStamp = getDateStamp();
-      await captureScreen(page, screen, viewport, dateStamp);
+      await captureScreen(page, screen, viewport, dateStamp, false);
     });
   }
 });

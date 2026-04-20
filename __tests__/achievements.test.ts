@@ -2,6 +2,7 @@ import {
   evaluateAchievements,
   getAllAchievementProgress,
   ACHIEVEMENTS,
+  getUserLevel,
 } from "../lib/achievements";
 import type { AchievementContext } from "../lib/achievements";
 
@@ -309,5 +310,49 @@ describe("Edge cases", () => {
     const body = progress.find((p) => p.achievement.id === "body_journal");
     expect(nutri?.progress).toBe(0);
     expect(body?.progress).toBe(0);
+  });
+});
+
+describe("getUserLevel", () => {
+  it("0 achievements → Beginner, next=Regular, progress=0", () => {
+    const result = getUserLevel(0);
+    expect(result.current.name).toBe("Beginner");
+    expect(result.next?.name).toBe("Regular");
+    expect(result.progress).toBe(0);
+  });
+
+  it("3 achievements → Regular, next=Committed, progress=0", () => {
+    const result = getUserLevel(3);
+    expect(result.current.name).toBe("Regular");
+    expect(result.next?.name).toBe("Committed");
+    expect(result.progress).toBe(0);
+  });
+
+  it("4 achievements → Regular, next=Committed, progress=1/3", () => {
+    const result = getUserLevel(4);
+    expect(result.current.name).toBe("Regular");
+    expect(result.next?.name).toBe("Committed");
+    expect(result.progress).toBeCloseTo(1 / 3);
+  });
+
+  it("6 achievements → Committed, next=Athlete, progress=0", () => {
+    const result = getUserLevel(6);
+    expect(result.current.name).toBe("Committed");
+    expect(result.next?.name).toBe("Athlete");
+    expect(result.progress).toBe(0);
+  });
+
+  it("18 achievements → Legend, next=null, progress=1", () => {
+    const result = getUserLevel(18);
+    expect(result.current.name).toBe("Legend");
+    expect(result.next).toBeNull();
+    expect(result.progress).toBe(1);
+  });
+
+  it("17 achievements → Elite, next=Legend, progress=3/4", () => {
+    const result = getUserLevel(17);
+    expect(result.current.name).toBe("Elite");
+    expect(result.next?.name).toBe("Legend");
+    expect(result.progress).toBeCloseTo(3 / 4);
   });
 });
