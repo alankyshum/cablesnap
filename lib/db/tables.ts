@@ -13,6 +13,14 @@ const VALID_TABLES = new Set([
   "program_schedule", "strength_goals",
 ]);
 
+const IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function assertValidIdentifier(value: string, label: string): void {
+  if (!IDENTIFIER_RE.test(value)) {
+    throw new Error(`Invalid ${label}: ${value}`);
+  }
+}
+
 function assertValidTable(table: string): void {
   if (!VALID_TABLES.has(table)) {
     throw new Error(`Invalid table name: ${table}`);
@@ -21,12 +29,14 @@ function assertValidTable(table: string): void {
 
 export async function hasColumn(database: SQLite.SQLiteDatabase, table: string, column: string): Promise<boolean> {
   assertValidTable(table);
+  assertValidIdentifier(column, "column");
   const cols = await database.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
   return cols.some((c) => c.name === column);
 }
 
 export async function addColumnIfMissing(database: SQLite.SQLiteDatabase, table: string, column: string, definition: string): Promise<void> {
   assertValidTable(table);
+  assertValidIdentifier(column, "column");
   if (!(await hasColumn(database, table, column))) {
     await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }

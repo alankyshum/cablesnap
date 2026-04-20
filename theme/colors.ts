@@ -49,6 +49,7 @@ const lightColors = {
 
   // Shadows & overlays
   shadow: "#000000",
+  toastBg: "#1C1C1E",
   onToast: "#FFFFFF",
 
   // iOS system colors
@@ -111,6 +112,7 @@ const darkColors = {
 
   // Shadows & overlays
   shadow: "#000000",
+  toastBg: "#1C1C1E",
   onToast: "#FFFFFF",
 
   // iOS system colors (dark-adapted)

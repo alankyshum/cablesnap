@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { FlowCardMenuItem } from "./FlowCard";
 import type { useThemeColors } from "@/hooks/useThemeColors";
+import { Colors } from "@/theme/colors";
 import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
     elevation: 8,
-    shadowColor: "#000",
+    shadowColor: Colors.light.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
