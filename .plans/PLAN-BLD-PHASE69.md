@@ -35,11 +35,11 @@ Add a `MusclesWorkedCard` component to the session summary screen. The card rend
 
 - **Position**: After the ComparisonCard (or after PRsCard/WeightIncreasesCard if no comparison), before the SetsCard
 - **Layout**: A Card containing:
-  - Title: "Muscles Worked"
-  - MuscleMap body visualization (front view, using existing component)
-  - Below the map: a compact text list of muscle groups grouped by intensity (e.g., "Primary: Chest, Shoulders · Secondary: Triceps, Core")
+  - Title: "Muscles Worked" (with icon: `arm-flex` or `human-handsup`, size 20, color `colors.primary`)
+  - MuscleMap body visualization — **front AND back views side-by-side** (the component already supports this). Container constrained to ~180-200dp height with responsive scaling.
+  - Below the map: a compact flat text list of muscle groups (e.g., "Chest · Shoulders · Triceps · Core") — no primary/secondary split since the visual intensity already communicates that distinction
 - **Interactions**: View-only — no taps needed. The card is informational.
-- **Accessibility**: accessibilityLabel listing all muscle groups worked (e.g., "Muscles worked: primary chest, shoulders. Secondary triceps, core.")
+- **Accessibility**: accessibilityLabel listing all muscle groups worked (e.g., "Muscles worked: chest, shoulders, triceps, core"). MuscleMap SVG has `accessibilityRole="image"` (already set in existing usage).
 - **Empty state**: If no exercises have muscle data (unlikely but possible with custom exercises), don't show the card
 - **Dark/light mode**: MuscleMap already handles theming via gender-based body SVG
 
@@ -86,18 +86,19 @@ Add a `MusclesWorkedCard` component to the session summary screen. The card rend
 **Out of Scope:**
 - Muscle volume/set count per muscle (exists in progress tab already)
 - Tappable muscles (no navigation from summary)
-- Rear body view (front view only — matches existing MuscleMap usage)
+- Tapping individual muscles for detail (view-only)
 - Comparison of muscles worked vs last session
 - Integration with recovery heatmap (separate feature)
 
 ### Acceptance Criteria
 
 - [ ] Given a completed workout with exercises → MusclesWorkedCard appears in summary
-- [ ] Given exercises with primary_muscles [chest, shoulders] and secondary [triceps] → map highlights chest/shoulders at high intensity and triceps at lower intensity
+- [ ] Given exercises with primary_muscles [chest, shoulders] and secondary [triceps] → front AND back body views highlight chest/shoulders at high intensity and triceps at lower intensity
 - [ ] Given all exercises have no muscle data → MusclesWorkedCard is NOT shown
 - [ ] Card has accessibilityLabel listing all worked muscle groups
+- [ ] MuscleMap renders both front and back views, constrained to ~180-200dp height
 - [ ] MuscleMap renders correctly in both dark and light mode
-- [ ] Text list below map shows "Primary: X, Y · Secondary: Z" format
+- [ ] Text list below map shows flat muscle group list: "Chest · Shoulders · Triceps" format
 - [ ] Card appears after PRs/comparison cards, before the SetsCard
 - [ ] No regressions on existing summary behavior
 - [ ] ~5 tests covering: render, muscle aggregation, empty state, a11y
@@ -133,11 +134,11 @@ Add a `MusclesWorkedCard` component to the session summary screen. The card rend
 **Interaction/Visual/Accessibility**: All good — view-only card, no touch targets needed, existing a11y patterns apply.
 
 **Critical Issue (Blocking)**:
-1. **Front-only view misses posterior muscles.** Plan scopes to "front view only" but this undermines the core purpose. Users doing rows, lat pulldowns, rear delt flies would see a near-empty diagram. The MuscleMap component already renders front AND back views side-by-side — use both. No extra complexity since the component handles it.
+1. **Front-only view misses posterior muscles.** ~~Plan scopes to "front view only" but this undermines the core purpose. Users doing rows, lat pulldowns, rear delt flies would see a near-empty diagram.~~ **→ ADDRESSED (v2): Plan now uses front AND back views side-by-side.**
 
 **Major Issues (Should Fix)**:
-2. **Simplify text list.** "Primary: X · Secondary: Y" is redundant with the color-coded intensity on the diagram. A flat list ("Chest · Shoulders · Triceps") is more scannable.
-3. **Specify MuscleMap sizing.** Constrain to ~180-200dp height to prevent pushing SetsCard below the fold on small phones (375pt viewport).
+2. **Simplify text list.** ~~"Primary: X · Secondary: Y" is redundant with the color-coded intensity on the diagram.~~ **→ ADDRESSED (v2): Changed to flat list ("Chest · Shoulders · Triceps").**
+3. **Specify MuscleMap sizing.** ~~Constrain to ~180-200dp height to prevent pushing SetsCard below the fold on small phones.~~ **→ ADDRESSED (v2): Container constrained to ~180-200dp.**
 
 **Nice to Have**: muscle count in header ("Muscles Worked (6 groups)"), future tap-to-navigate to progress tab.
 
@@ -154,7 +155,20 @@ _Reviewed 2026-04-20 by UX Designer_
 - **Recommendation**: Wrap MusclesWorkedCard in error boundary for defensive safety.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** ✅
+
+**Architecture Fit**: Fully compatible — follows existing summary card pattern. No refactoring needed.
+
+**Data Flow**: completed sets → extract unique exercise_ids → `getExercisesByIds()` → aggregate primary/secondary muscles → pass to MuscleMap. Add the query to the existing `Promise.all` in `useSummaryData` for parallel execution.
+
+**Technical Notes**:
+1. MuscleMap already renders both front AND back views (not "front view only" as stated in plan) — this is better for showing back muscles (lats, traps, hamstrings, glutes). No code change needed.
+2. The Legend component inside MuscleMap already renders "Primary: X · Secondary: Y" text — MusclesWorkedCard should NOT duplicate this.
+3. MusclesWorkedCard should receive `gender` from `useProfileGender` for correct body model.
+4. Extract muscle aggregation logic (primary wins over secondary) as a pure function for testability.
+
+**Complexity**: Small (~200-300 LOC). No new dependencies. ~5 tests appropriate.
+**Risk**: Low. All building blocks exist and are battle-tested.
 
 ### CEO Decision
 _Pending reviews_
