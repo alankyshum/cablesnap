@@ -3,12 +3,19 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getMuscleVolumeForWeek, getMuscleVolumeTrend } from "../lib/db";
+import { getAppSetting, setAppSetting } from "../lib/db/settings";
 import type { MuscleGroup } from "../lib/types";
+import type { VolumeLandmarks } from "../lib/volume-landmarks";
+import {
+  DEFAULT_LANDMARKS,
+  VOLUME_LANDMARKS_SETTING_KEY,
+  mergeWithDefaults,
+  parseCustomLandmarks,
+} from "../lib/volume-landmarks";
 
 export type VolumeRow = { muscle: MuscleGroup; sets: number; exercises: number };
 export type TrendRow = { week: string; sets: number };
 
-const MRV = 20;
 const TREND_WEEKS = 8;
 
 function mondayOfWeek(offset: number): Date {
@@ -38,13 +45,25 @@ export function useMuscleVolume() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reduced, setReduced] = useState(false);
+  const [landmarks, setLandmarks] = useState<Record<MuscleGroup, VolumeLandmarks>>(
+    { ...DEFAULT_LANDMARKS }
+  );
 
   const monday = useMemo(() => mondayOfWeek(offset), [offset]);
+
+  const loadLandmarks = useCallback(async () => {
+    const raw = await getAppSetting(VOLUME_LANDMARKS_SETTING_KEY);
+    const custom = parseCustomLandmarks(raw);
+    const merged = mergeWithDefaults(custom);
+    setLandmarks(merged);
+    return merged;
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      await loadLandmarks();
       const rows = await getMuscleVolumeForWeek(monday.getTime());
       setData(rows);
       if (rows.length > 0) {
@@ -66,7 +85,7 @@ export function useMuscleVolume() {
     } finally {
       setLoading(false);
     }
-  }, [monday]);
+  }, [monday, loadLandmarks]);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,15 +105,46 @@ export function useMuscleVolume() {
     }
   }, []);
 
-  const maxSets = useMemo(
-    () => Math.max(...data.map((d) => d.sets), MRV),
-    [data]
-  );
+  const maxSets = useMemo(() => {
+    const allMrvValues = Object.values(landmarks).map((l) => l.mrv);
+    return Math.max(...data.map((d) => d.sets), ...allMrvValues);
+  }, [data, landmarks]);
 
   const hasEnoughTrend = useMemo(
     () => trend.filter((t) => t.sets > 0).length >= 2,
     [trend]
   );
+
+  const saveLandmark = useCallback(
+    async (muscle: MuscleGroup, value: VolumeLandmarks) => {
+      const raw = await getAppSetting(VOLUME_LANDMARKS_SETTING_KEY);
+      const custom = parseCustomLandmarks(raw) ?? {};
+      custom[muscle] = value;
+      await setAppSetting(VOLUME_LANDMARKS_SETTING_KEY, JSON.stringify(custom));
+      setLandmarks((prev) => ({ ...prev, [muscle]: value }));
+    },
+    []
+  );
+
+  const resetLandmark = useCallback(
+    async (muscle: MuscleGroup) => {
+      const raw = await getAppSetting(VOLUME_LANDMARKS_SETTING_KEY);
+      const custom = parseCustomLandmarks(raw) ?? {};
+      delete custom[muscle];
+      if (Object.keys(custom).length === 0) {
+        await setAppSetting(VOLUME_LANDMARKS_SETTING_KEY, "{}");
+      } else {
+        await setAppSetting(VOLUME_LANDMARKS_SETTING_KEY, JSON.stringify(custom));
+      }
+      setLandmarks((prev) => ({ ...prev, [muscle]: DEFAULT_LANDMARKS[muscle] }));
+    },
+    []
+  );
+
+  const resetAllLandmarks = useCallback(async () => {
+    await setAppSetting(VOLUME_LANDMARKS_SETTING_KEY, "{}");
+    setLandmarks({ ...DEFAULT_LANDMARKS });
+  }, []);
 
   return {
     offset,
@@ -111,5 +161,9 @@ export function useMuscleVolume() {
     hasEnoughTrend,
     reduced,
     formatRange,
+    landmarks,
+    saveLandmark,
+    resetLandmark,
+    resetAllLandmarks,
   };
 }
