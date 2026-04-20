@@ -3,7 +3,7 @@
 **Issue**: BLD-445 (planning)
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -47,14 +47,21 @@ Add a single line of text below each exercise name in the workout session view, 
 
 ### Technical Approach
 
-#### 1. New hook: `usePreviousPerformance`
+#### 1. Derive from existing `prevCache` (TL-approved simplification)
 
-Create `hooks/usePreviousPerformance.ts`:
-- Input: array of exercise IDs (all exercises in the current session)
-- Output: `Record<string, PreviousPerformance | null>`
-- Uses existing `getExerciseHistory(exerciseId, 1, 0)` to fetch the last completed session
-- Batches fetches with `Promise.all` for efficiency
-- Caches results for the session duration (no refetching on re-render)
+**No new hook or DB queries needed.** `useSessionData` already calls `getPreviousSetsBatch(exerciseIds, id)` which loads all previous sets for every exercise. Compute the aggregate summary directly from `prevCache`:
+
+- In `useSessionData`, derive `previousSummary` per exercise group from `prevCache` data
+- Filter out warmup sets (`set_type !== 'warmup'`) when computing aggregates
+- Attach as `previousSummary?: string` field on each `ExerciseGroup`
+
+#### 2. New pure function: `formatPreviousPerformance`
+
+In `lib/format.ts`:
+- Input: `PreviousPerformance | null`, `unit: "kg" | "lb"`
+- Output: `string | null`
+- Returns formatted string like "Last: 3 sets · 80kg × 8" or null if no data
+- Uses `toDisplay()` from `lib/units.ts` for weight conversion
 
 ```typescript
 type PreviousPerformance = {
@@ -66,22 +73,15 @@ type PreviousPerformance = {
 };
 ```
 
-#### 2. New pure function: `formatPreviousPerformance`
-
-In `lib/format.ts`:
-- Input: `PreviousPerformance | null`, `unit: "kg" | "lb"`
-- Output: `string | null`
-- Returns formatted string like "Last: 3 sets · 80kg × 8" or null if no data
-
 #### 3. Modified `GroupCardHeader`
 
 - Accept optional `previousPerformance?: string | null` prop
 - Render below exercise name when non-null
 - Minimal visual footprint
 
-#### 4. Modified `ExerciseGroupCard` and `app/session/[id].tsx`
+#### 4. Modified `ExerciseGroupCard`
 
-- Thread `previousPerformance` data from hook through to GroupCardHeader
+- Thread `previousSummary` from exercise group data through to GroupCardHeader
 
 ### Scope
 
@@ -130,7 +130,7 @@ In `lib/format.ts`:
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Extra DB queries slow session load | Low | Medium | Batch fetches with Promise.all; data is small |
+| Extra DB queries slow session load | N/A | N/A | TL simplification: derive from existing prevCache, zero new queries |
 | Visual clutter on exercise cards | Low | Medium | Subtle styling (xs font, variant color); empty state = no text |
 | Test budget exceeded | Medium | High | Must consolidate 3 tests (1801 → 1798 + 1 new = 1799) |
 
@@ -190,4 +190,4 @@ In `lib/format.ts`:
 _Reviewed 2026-04-20_
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-20). All three reviewers approved. TL's simplification adopted — derive from prevCache, no new hook or DB queries. Proceeding to implementation.
