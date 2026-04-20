@@ -3,7 +3,7 @@
 **Issue**: BLD-459
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -215,4 +215,23 @@ All data is already in the DB. No schema changes needed.
 **Complexity**: Medium effort, low risk. Ready for single implementation cycle.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — 2026-04-20. All three reviewers approved. Incorporating feedback:
+
+**Accepted (mandatory for implementation):**
+- DESIGN-01 (UX): DeloadNudgeCard replaces InsightCard when active, not stacks
+- UX a11y: 48dp touch targets, accessibilityLabel/Hint on dismiss, per-signal a11y labels
+- UX: Use MCI vector icon, not emoji
+- UX: Mirror InsightCard design tokens (borderRadius 12, paddingVertical 12, etc.)
+- TL-1: Integrate into `loadHomeData.ts` (no custom hook) — compute score in batch Promise.all
+- TL-perf: New `getWeeklyE1RMTrends()` query function (don't repurpose existing)
+- QD-TODO-1: Define min data thresholds: e1RM needs ≥3 weeks data, RPE needs ≥3 sessions with RPE, ratings need ≥4 sessions
+- QD-TODO-3: Dismissal stored as JSON in `app_settings`: `{dismissedAt: epoch-ms, scoreAtDismissal: number}`
+
+**Accepted (V1 scope changes per TL nice-to-haves):**
+- TL-3: V1 ships with 3 signals only (e1RM + RPE + session ratings). Volume and missed sessions deferred to V2.
+- TL-4 + QD-TODO-2: V1 dismissal = 7 days flat, no score-change override. Simplifies implementation, reduces false-trigger risk.
+
+**Deferred:**
+- UX bottom sheet for expanded view — V1 uses inline expansion (simpler). Reassess in V2.
+- Volume and missed-session signals (V2)
+- Score-change override of dismissal (V2)
