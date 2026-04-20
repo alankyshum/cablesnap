@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 188
+Total learnings: 190
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 101 learnings
+- [React Native + Expo](patterns/react-native.md) — 102 learnings
 - [Testing](patterns/testing.md) — 13 learnings
 
 ### Pitfalls
@@ -29,7 +29,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 6 learnings
+- [Architecture](decisions/architecture.md) — 7 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-432 | Use Bottom Sheets for User Input in FlatList Headers to Avoid Scroll Jumps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-20 | BLD-432 | Prefer React Query Computation Over Denormalized SQLite Cache Columns | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-20 | BLD-431 | Partial<Record> Override Pattern for Per-Entity Customizable Defaults | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-418 | Fixed-Width Label Containers Truncate on Varying Screen Sizes | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-426 | FlatList Virtualization Breaks findByText in Tests — Mock VirtualizedList Defaults | Patterns | [testing.md](patterns/testing.md) |
