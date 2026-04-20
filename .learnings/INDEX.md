@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 181
+Total learnings: 182
 
 ## How to Use This Knowledge Base
 
@@ -21,7 +21,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 6 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 19 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 20 learnings
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-411 | Lazy Auto-Assignment for New Ordering Columns with DEFAULT 0 | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-410 | Do Not Repurpose Intra-Entity Ordering Columns for Inter-Entity Position | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-410 | FlashList Requires extraData Counter to Re-Render on Array Reorder | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-403 | Proactive Sweep Task to Silence Recurring Automated Reviewer Findings | Process | [pr-workflow.md](process/pr-workflow.md) |
