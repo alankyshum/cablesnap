@@ -30,6 +30,7 @@ export async function getSessionSets(
       swapped_from_exercise_id: workoutSets.swapped_from_exercise_id,
       set_type: workoutSets.set_type,
       duration_seconds: workoutSets.duration_seconds,
+      exercise_position: workoutSets.exercise_position,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -38,7 +39,7 @@ export async function getSessionSets(
     .leftJoin(exercises, eq(workoutSets.exercise_id, exercises.id))
     .leftJoin(swappedExercise, eq(workoutSets.swapped_from_exercise_id, swappedExercise.id))
     .where(eq(workoutSets.session_id, sessionId))
-    .orderBy(asc(workoutSets.exercise_id), asc(workoutSets.set_number))
+    .orderBy(asc(workoutSets.exercise_position), asc(workoutSets.exercise_id), asc(workoutSets.set_number))
     .all();
   return rows.map((r) => ({
     id: r.id,
@@ -58,6 +59,7 @@ export async function getSessionSets(
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
     set_type: (r.set_type as SetType) ?? "normal",
     duration_seconds: r.duration_seconds ?? null,
+    exercise_position: r.exercise_position ?? 0,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -119,7 +121,8 @@ export async function addSet(
   trainingMode?: TrainingMode | null,
   tempo?: string | null,
   _isWarmup?: boolean,
-  setType?: SetType
+  setType?: SetType,
+  exercisePosition?: number
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
@@ -134,6 +137,7 @@ export async function addSet(
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     set_type: resolvedType,
+    exercise_position: exercisePosition ?? 0,
   });
   return {
     id,
@@ -153,6 +157,7 @@ export async function addSet(
     swapped_from_exercise_id: null,
     set_type: resolvedType,
     duration_seconds: null,
+    exercise_position: exercisePosition ?? 0,
   };
 }
 
@@ -167,6 +172,7 @@ export async function addSetsBatch(
     tempo?: string | null;
     isWarmup?: boolean;
     setType?: SetType;
+    exercisePosition?: number;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
@@ -189,18 +195,19 @@ export async function addSetsBatch(
       swapped_from_exercise_id: null,
       set_type: resolvedType,
       duration_seconds: null,
+      exercise_position: s.exercisePosition ?? 0,
     };
   });
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.link_id, r.round, r.training_mode, r.tempo, r.set_type,
+          r.link_id, r.round, r.training_mode, r.tempo, r.set_type, r.exercise_position,
         ]);
       }
     } finally {
@@ -216,10 +223,12 @@ export async function addWarmupSets(
   warmupSets: { weight: number; reps: number }[],
   linkId?: string | null,
   trainingMode?: TrainingMode | null,
-  tempo?: string | null
+  tempo?: string | null,
+  exercisePosition?: number
 ): Promise<WorkoutSet[]> {
   if (warmupSets.length === 0) return [];
   const warmupCount = warmupSets.length;
+  const pos = exercisePosition ?? 0;
 
   const results: WorkoutSet[] = warmupSets.map((ws, i) => ({
     id: uuid(),
@@ -239,6 +248,7 @@ export async function addWarmupSets(
     swapped_from_exercise_id: null,
     set_type: "warmup" as SetType,
     duration_seconds: null,
+    exercise_position: pos,
   }));
 
   await withTransaction(async (db) => {
@@ -250,13 +260,13 @@ export async function addWarmupSets(
 
     // Insert warmup sets
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, training_mode, tempo, set_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, training_mode, tempo, set_type, exercise_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.weight, r.reps, r.link_id, r.round, r.training_mode, r.tempo, "warmup",
+          r.weight, r.reps, r.link_id, r.round, r.training_mode, r.tempo, "warmup", r.exercise_position,
         ]);
       }
     } finally {
@@ -566,4 +576,23 @@ export async function getRestSecondsForLink(
     .where(and(eq(workoutSessions.id, sessionId), eq(templateExercises.link_id, linkId)))
     .get();
   return row?.rest != null ? Number(row.rest) : 90;
+}
+
+export async function updateExercisePositions(
+  sessionId: string,
+  positions: { exerciseId: string; position: number }[]
+): Promise<void> {
+  if (positions.length === 0) return;
+  await withTransaction(async (db) => {
+    const stmt = await db.prepareAsync(
+      "UPDATE workout_sets SET exercise_position = ? WHERE session_id = ? AND exercise_id = ?"
+    );
+    try {
+      for (const p of positions) {
+        await stmt.executeAsync([p.position, sessionId, p.exerciseId]);
+      }
+    } finally {
+      await stmt.finalizeAsync();
+    }
+  });
 }
