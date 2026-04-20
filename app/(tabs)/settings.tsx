@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { AccessibilityInfo, Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { AccessibilityInfo, Alert, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer"
 import BodyProfileCard from "../../components/BodyProfileCard";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import Constants from "expo-constants";
 import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -186,7 +187,8 @@ export default function Settings() {
         <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>About</Text>
-            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>FitForge v1.0.0{"\n"}Free & open-source workout tracker.</Text>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>FitForge v{Constants.expoConfig?.version ?? "0.0.0"}{"\n"}Free & open-source workout tracker.</Text>
+            <Text variant="body" style={{ color: colors.primary, marginTop: 4 }} onPress={() => Linking.openURL("https://github.com/alankyshum/fitforge/blob/main/LICENSE")}>MIT License</Text>
           </CardContent>
         </Card>
       </FlowContainer>
