@@ -141,7 +141,19 @@ In `lib/format.ts`:
 _Pending review_
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: APPROVED** — 2026-04-20
+
+**Regression risk: LOW.** Feature is additive and read-only. Modifies core session UI components (`GroupCardHeader`, `ExerciseGroupCard`, `app/session/[id].tsx`) but only adds an optional prop — no behavioral changes to existing controls. Warmup filtering verified in `getExerciseHistory` source. Rollback is trivial (remove optional prop).
+
+**Security: No concerns.** Read-only Drizzle ORM queries, no user inputs, no external APIs.
+
+**Data integrity: No concerns.** No writes, no schema changes.
+
+**Test budget: CRITICAL constraint.** At 1799/1800 — consolidation plan is adequate but must be verified at PR review.
+
+**Implementation note:** `ExerciseSession` type from `getExerciseHistory` lacks `is_bodyweight` and `max_duration` fields. Recommend inferring `is_bodyweight` from `max_weight === 0` to avoid extra DB queries.
+
+**No blocking issues found.**
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
