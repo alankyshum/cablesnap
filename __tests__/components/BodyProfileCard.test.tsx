@@ -95,6 +95,9 @@ jest.mock('../../lib/nutrition-calc', () => ({
     carbs: 275,
     fat: 73,
   }),
+  calculateBMR: jest.fn().mockReturnValue(1700),
+  convertToMetric: jest.fn().mockReturnValue({ weight_kg: 75, height_cm: 175 }),
+  calculateDeviationPercent: jest.fn().mockReturnValue(0),
   migrateProfile: (p: unknown) => p,
 }))
 

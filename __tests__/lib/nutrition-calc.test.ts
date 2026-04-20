@@ -4,6 +4,7 @@ import {
   calculateMacros,
   calculateFromProfile,
   convertToMetric,
+  calculateDeviationPercent,
   migrateProfile,
   type NutritionProfile,
 } from "../../lib/nutrition-calc";
@@ -182,6 +183,55 @@ describe("nutrition-calc", () => {
       // calories = round(2633.06) = 2633
       expect(result.calories).toBe(2633);
       expect(result.protein).toBe(165); // 75 * 2.2
+    });
+    it("uses rmr_override when provided", () => {
+      const profile: NutritionProfile = { ...baseProfile, rmr_override: 1750 };
+      const result = calculateFromProfile(profile);
+      // TDEE = 1750 * 1.55 = 2712.5, calories = round(2712.5) = 2713
+      expect(result.calories).toBe(2713);
+    });
+
+    it("ignores rmr_override when null", () => {
+      const profile: NutritionProfile = { ...baseProfile, rmr_override: null };
+      const result = calculateFromProfile(profile);
+      const baseline = calculateFromProfile(baseProfile);
+      expect(result.calories).toBe(baseline.calories);
+    });
+
+    it("ignores rmr_override when 0", () => {
+      const profile: NutritionProfile = { ...baseProfile, rmr_override: 0 };
+      const result = calculateFromProfile(profile);
+      const baseline = calculateFromProfile(baseProfile);
+      expect(result.calories).toBe(baseline.calories);
+    });
+
+    it("applies calorie floor with low rmr_override", () => {
+      const profile: NutritionProfile = {
+        ...baseProfile,
+        rmr_override: 500,
+        activityLevel: "sedentary",
+        goal: "cut",
+      };
+      const result = calculateFromProfile(profile);
+      // TDEE = 500 * 1.2 = 600, 600 - 500 = 100 → floor 1200
+      expect(result.calories).toBe(1200);
+      expect(result.belowFloor).toBe(true);
+    });
+  });
+
+  describe("calculateDeviationPercent", () => {
+    it("calculates percentage deviation accurately", () => {
+      // 2000 vs 1700 → |300/1700| * 100 = 17.65%
+      expect(calculateDeviationPercent(2000, 1700)).toBeCloseTo(17.65, 1);
+    });
+
+    it("returns 0 when estimatedBMR is 0", () => {
+      expect(calculateDeviationPercent(1750, 0)).toBe(0);
+    });
+
+    it("returns absolute deviation for values below estimate", () => {
+      // 1400 vs 1700 → |300/1700| * 100 = 17.65%
+      expect(calculateDeviationPercent(1400, 1700)).toBeCloseTo(17.65, 1);
     });
   });
 

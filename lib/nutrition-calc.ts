@@ -30,6 +30,7 @@ export interface NutritionProfile {
   goal: Goal;
   weightUnit: "kg" | "lb";
   heightUnit: "cm" | "in";
+  rmr_override?: number | null;
 }
 
 const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
@@ -95,6 +96,14 @@ export function calculateMacros(
 }
 
 /**
+ * Calculate absolute percentage deviation between a user-provided RMR and the formula estimate.
+ */
+export function calculateDeviationPercent(inputRMR: number, estimatedBMR: number): number {
+  if (estimatedBMR === 0) return 0;
+  return Math.abs(((inputRMR - estimatedBMR) / estimatedBMR) * 100);
+}
+
+/**
  * Parse a raw profile object into a typed NutritionProfile.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- handles raw JSON input
@@ -111,7 +120,8 @@ export function calculateFromProfile(profile: NutritionProfile): MacroTargets & 
   );
 
   const age = new Date().getFullYear() - profile.birthYear;
-  const bmr = calculateBMR(weight_kg, height_cm, age, profile.sex);
+  const useOverride = profile.rmr_override != null && profile.rmr_override > 0;
+  const bmr = useOverride ? profile.rmr_override! : calculateBMR(weight_kg, height_cm, age, profile.sex);
   const tdee = calculateTDEE(bmr, profile.activityLevel);
   const rawCalories = tdee + GOAL_ADJUSTMENTS[profile.goal];
   const belowFloor = rawCalories < CALORIE_FLOOR;

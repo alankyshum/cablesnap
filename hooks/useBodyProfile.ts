@@ -5,6 +5,9 @@ import { getBodySettings, getLatestBodyWeight, updateBodySex } from "../lib/db/b
 import { useToast } from "@/components/ui/bna-toast";
 import {
   calculateFromProfile,
+  calculateBMR,
+  convertToMetric,
+  calculateDeviationPercent,
   migrateProfile,
   type ActivityLevel,
   type Goal,
@@ -41,6 +44,7 @@ export function useBodyProfile() {
   const [heightUnit, setHeightUnit] = useState<"cm" | "in">("cm");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activityMenuVisible, setActivityMenuVisible] = useState(false);
+  const [rmrOverride, setRmrOverride] = useState("");
   const toast = useToast();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
@@ -73,6 +77,9 @@ export function useBodyProfile() {
         setHeight(String(profile.height));
         setActivityLevel(profile.activityLevel);
         setGoal(profile.goal);
+        if (profile.rmr_override != null && profile.rmr_override > 0) {
+          setRmrOverride(String(profile.rmr_override));
+        }
         initialSnapshot.current = JSON.stringify(profile);
       } else if (latestWeight) {
         setWeight(String(latestWeight.weight));
@@ -92,12 +99,14 @@ export function useBodyProfile() {
   async function saveProfile(
     birthYearVal: string, weightVal: string, heightVal: string,
     sexVal: Sex, actVal: ActivityLevel, goalVal: Goal,
+    rmrVal?: string,
   ) {
     if (validateField("birthYear", birthYearVal) || validateField("weight", weightVal) || validateField("height", heightVal)) {
       return;
     }
 
     try {
+      const rmrNum = rmrVal ? parseFloat(rmrVal) : null;
       const profile: NutritionProfile = {
         birthYear: parseInt(birthYearVal, 10),
         weight: parseFloat(weightVal),
@@ -107,6 +116,7 @@ export function useBodyProfile() {
         goal: goalVal,
         weightUnit,
         heightUnit,
+        ...(rmrNum != null && rmrNum > 0 ? { rmr_override: rmrNum } : {}),
       };
 
       const profileJson = JSON.stringify(profile);
@@ -125,10 +135,11 @@ export function useBodyProfile() {
   function debouncedSave(
     birthYearVal: string, weightVal: string, heightVal: string,
     sexVal: Sex, actVal: ActivityLevel, goalVal: Goal,
+    rmrVal?: string,
   ) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveProfile(birthYearVal, weightVal, heightVal, sexVal, actVal, goalVal);
+      saveProfile(birthYearVal, weightVal, heightVal, sexVal, actVal, goalVal, rmrVal);
     }, 300);
   }
 
@@ -139,7 +150,7 @@ export function useBodyProfile() {
       if (err) next[field] = err; else delete next[field];
       return next;
     });
-    if (!err) saveProfile(birthYear, weight, height, sex, activityLevel, goal);
+    if (!err) saveProfile(birthYear, weight, height, sex, activityLevel, goal, rmrOverride);
   }
 
   function handleSegmentChange(field: "sex" | "activityLevel" | "goal", value: string) {
@@ -151,8 +162,35 @@ export function useBodyProfile() {
     else if (field === "activityLevel") { newAct = value as ActivityLevel; setActivityLevel(newAct); }
     else if (field === "goal") { newGoal = value as Goal; setGoal(newGoal); }
 
-    debouncedSave(birthYear, weight, height, newSex, newAct, newGoal);
+    debouncedSave(birthYear, weight, height, newSex, newAct, newGoal, rmrOverride);
   }
+
+  function handleRmrChange(value: string) {
+    setRmrOverride(value);
+    debouncedSave(birthYear, weight, height, sex, activityLevel, goal, value);
+  }
+
+  function clearRmrOverride() {
+    setRmrOverride("");
+    debouncedSave(birthYear, weight, height, sex, activityLevel, goal, "");
+  }
+
+  // Compute deviation info for the UI
+  const rmrDeviationInfo = (() => {
+    const rmrNum = parseFloat(rmrOverride);
+    if (!rmrOverride || isNaN(rmrNum) || rmrNum <= 0) return null;
+
+    const weightNum = parseFloat(weight);
+    const heightNum = parseFloat(height);
+    const birthYearNum = parseInt(birthYear, 10);
+    if (!weight || isNaN(weightNum) || !height || isNaN(heightNum) || !birthYear || isNaN(birthYearNum)) return null;
+
+    const { weight_kg, height_cm } = convertToMetric(weightNum, weightUnit, heightNum, heightUnit);
+    const age = new Date().getFullYear() - birthYearNum;
+    const estimatedBMR = calculateBMR(weight_kg, height_cm, age, sex);
+    const deviation = calculateDeviationPercent(rmrNum, estimatedBMR);
+    return deviation > 20 ? { deviation: Math.round(deviation), estimated: Math.round(estimatedBMR) } : null;
+  })();
 
   return {
     cardState, loadProfile,
@@ -160,5 +198,6 @@ export function useBodyProfile() {
     sex, activityLevel, goal, weightUnit, heightUnit,
     errors, activityMenuVisible, setActivityMenuVisible,
     handleFieldBlur, handleSegmentChange,
+    rmrOverride, handleRmrChange, clearRmrOverride, rmrDeviationInfo,
   };
 }
