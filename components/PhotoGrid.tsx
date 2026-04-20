@@ -12,6 +12,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ProgressPhoto } from "../lib/db/photos";
 import { radii, scrim } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   photos: ProgressPhoto[];
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dateText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "600",
   },
   poseIcon: {
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeText: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     fontWeight: "bold",
   },
   checkbox: {

@@ -17,7 +17,7 @@ describe("FTA Batch 6 — _layout.tsx decomposition", () => {
   });
 
   it("screen-config.ts exists and exports SCREEN_CONFIGS", () => {
-    const src = read("app/screen-config.ts");
+    const src = read("constants/screen-config.ts");
     expect(src).toContain("export const SCREEN_CONFIGS");
   });
 
@@ -35,7 +35,7 @@ describe("FTA Batch 6 — _layout.tsx decomposition", () => {
   });
 
   it("screen-config.ts has all original screens", () => {
-    const src = read("app/screen-config.ts");
+    const src = read("constants/screen-config.ts");
     const names = ["(tabs)", "onboarding", "exercise/[id]", "session/[id]", "tools/plates", "tools/timer"];
     for (const name of names) {
       expect(src).toContain(`"${name}"`);
@@ -73,26 +73,9 @@ describe("FTA Batch 6 — FloatingTabBar decomposition", () => {
   });
 });
 
-describe("FTA Batch 6 — ProfileForm decomposition", () => {
-  it("ProfileForm.tsx is under 220 lines", () => {
-    expect(lineCount("components/ProfileForm.tsx")).toBeLessThan(220);
-  });
-
-  it("useProfileForm.ts exists and exports useProfileForm", () => {
-    const src = read("hooks/useProfileForm.ts");
-    expect(src).toContain("export function useProfileForm");
-  });
-
+describe("FTA Batch 6 — ActivityDropdown exists", () => {
   it("ActivityDropdown.tsx exists", () => {
     expect(fs.existsSync(path.join(root, "components/profile/ActivityDropdown.tsx"))).toBe(true);
-  });
-
-  it("ProfileForm imports useProfileForm", () => {
-    expect(read("components/ProfileForm.tsx")).toContain("useProfileForm");
-  });
-
-  it("ProfileForm imports ActivityDropdown", () => {
-    expect(read("components/ProfileForm.tsx")).toContain("ActivityDropdown");
   });
 });
 

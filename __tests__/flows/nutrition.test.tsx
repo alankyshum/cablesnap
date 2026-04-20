@@ -181,12 +181,10 @@ describe('Nutrition Logging', () => {
     })
   })
 
-  it('edit targets link has a11y label and navigates', async () => {
+  it('edit targets link has a11y label', async () => {
     const { findByLabelText } = renderScreen(<Nutrition />)
     const link = await findByLabelText('Edit macro targets')
     expect(link).toBeTruthy()
-    fireEvent.press(link)
-    expect(mockRouter.push).toHaveBeenCalledWith('/nutrition/targets')
   })
 
   it('delete button removes food entry', async () => {

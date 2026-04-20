@@ -66,7 +66,10 @@ export async function requestHealthConnectPermission(): Promise<boolean> {
   if (Platform.OS !== "android") return false;
   try {
     await ensureInitialized();
-    const { requestPermission } = await getHCModule();
+    const { requestPermission, revokeAllPermissions } = await getHCModule();
+    // Revoke first — Android won't re-show the HC permission dialog after a
+    // prior denial unless all permissions are revoked first.
+    await revokeAllPermissions();
     const granted = await requestPermission([
       { accessType: "write", recordType: "ExerciseSession" },
     ]);
@@ -95,6 +98,13 @@ export async function checkHealthConnectPermissionStatus(): Promise<boolean> {
 
 export function openHealthConnectPlayStore(): void {
   Linking.openURL(HC_PLAY_STORE_URL).catch(() => {});
+}
+
+// ---- Settings ----
+
+export async function openHealthConnectSettings(): Promise<void> {
+  const mod = await getHCModule();
+  mod.openHealthConnectSettings();
 }
 
 // ---- Record Building ----

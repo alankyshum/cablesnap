@@ -10,6 +10,7 @@ import {
 } from 'expo-image';
 import { forwardRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
+import { fontSizes } from "@/constants/design-tokens";
 
 export interface ImageProps extends Omit<ExpoImageProps, 'style'> {
   variant?: 'rounded' | 'circle' | 'default';
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: fontSizes.xs,
   },
 });
 

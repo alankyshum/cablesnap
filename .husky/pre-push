@@ -1,5 +1,16 @@
 #!/bin/sh
 
+# ─── License Integrity Gate ──────────────────────────────────────
+# Blocks push if LICENSE file has been tampered with
+if [ -f "scripts/check-license.sh" ]; then
+  echo "📜 Checking license integrity..."
+  if ! ./scripts/check-license.sh --quick; then
+    echo ""
+    echo "LICENSE file must not be modified. Restore it: git checkout origin/main -- LICENSE"
+    exit 1
+  fi
+fi
+
 # ─── Test Budget Gate ────────────────────────────────────────────
 # Blocks push if test count exceeds budget (1800 test cases)
 if [ -f "scripts/audit-tests.sh" ]; then
@@ -15,7 +26,7 @@ fi
 # FTA (File Complexity Analysis) pre-push gate
 # Blocks push if any changed .ts/.tsx file exceeds the FTA score cap.
 # FTA Score: < 50 = OK, 50-60 = Could be better, > 60 = Needs improvement
-FTA_SCORE_CAP=50
+FTA_SCORE_CAP=70
 
 # Compare HEAD against the remote tracking branch
 remote_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main")

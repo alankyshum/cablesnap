@@ -21,6 +21,7 @@ import {
 import CalendarGrid from "./CalendarGrid";
 import CalendarDayDetail from "./CalendarDayDetail";
 import CalendarStreaks from "./CalendarStreaks";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   weekStartDay: number;
@@ -269,11 +270,11 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   navArrow: {
-    fontSize: 20,
+    fontSize: fontSizes.xl,
     fontWeight: "700",
   },
   monthTitle: {
-    fontSize: 18,
+    fontSize: fontSizes.lg,
     fontWeight: "700",
     marginHorizontal: 12,
   },

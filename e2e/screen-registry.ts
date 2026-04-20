@@ -30,7 +30,6 @@ export const STANDALONE_SCREENS: Screen[] = [
   { name: "Error Log", path: "/errors" },
   { name: "Body Measurements", path: "/body/measurements" },
   { name: "Body Goals", path: "/body/goals" },
-  { name: "Macro Targets", path: "/nutrition/targets" },
   { name: "New Exercise", path: "/exercise/create" },
   { name: "New Template", path: "/template/create" },
   { name: "New Program", path: "/program/create" },

@@ -11,6 +11,7 @@ import type { MuscleRecoveryStatus } from "../../lib/db/recovery";
 import { getAppSetting, setAppSetting } from "../../lib/db/settings";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "expo-router";
+import { fontSizes } from "@/constants/design-tokens";
 
 const COLLAPSE_KEY = "recovery_heatmap_collapsed";
 
@@ -170,7 +171,7 @@ function RecoveryLegend({ isDark }: { isDark: boolean }) {
       {items.map((item) => (
         <View key={item.label} style={styles.legendItem}>
           <View style={[styles.dot, { backgroundColor: item.color }]} />
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{item.label}</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{item.label}</Text>
         </View>
       ))}
     </View>

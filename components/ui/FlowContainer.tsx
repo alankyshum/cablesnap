@@ -33,7 +33,6 @@ export const FLOW_CARD_MAX = 420;
 
 export const flowCardStyle: ViewStyle = {
   minWidth: FLOW_CARD_MIN,
-  maxWidth: FLOW_CARD_MAX,
   flexGrow: 1,
   flexShrink: 1,
   flexBasis: FLOW_CARD_MIN,

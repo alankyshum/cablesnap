@@ -8,7 +8,9 @@ import { rpeColor, rpeText } from "../../lib/rpe";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { RPE_CHIPS, RPE_LABELS, type SetWithMeta } from "./types";
-import { SET_TYPE_LABELS } from "../../lib/types";
+import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
+import { fontSizes } from "@/constants/design-tokens";
+import { PlateHint } from "./PlateHint";
 
 export function formatDurationDisplay(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "0:00";
@@ -29,6 +31,7 @@ export type SetRowProps = {
   unit: "kg" | "lb";
   halfStep: { setId: string; base: number } | null;
   trackingMode: "reps" | "duration";
+  equipment: Equipment;
   onUpdate: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onCheck: (set: SetWithMeta) => void;
   onDelete: (setId: string) => void;
@@ -47,7 +50,7 @@ export type SetRowProps = {
 };
 
 export const SetRow = memo(function SetRow({
-  set, step, unit, halfStep, trackingMode,
+  set, step, unit, halfStep, trackingMode, equipment,
   onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onCycleSetType, onLongPressSetType,
   isTimerRunning, isTimerActive, timerDisplaySeconds,
@@ -96,7 +99,7 @@ export const SetRow = memo(function SetRow({
           >
             {chipLabel ? (
               <View style={[styles.warmupChip, { backgroundColor: chipStyle!.bg }]}>
-                <Text style={{ color: chipStyle!.fg, fontSize: 13, fontWeight: "700" }}>{chipLabel}</Text>
+                <Text style={{ color: chipStyle!.fg, fontSize: fontSizes.sm, fontWeight: "700" }}>{chipLabel}</Text>
               </View>
             ) : (
               <View style={styles.setNumberContainer}>
@@ -206,6 +209,8 @@ export const SetRow = memo(function SetRow({
           </Pressable>
         </View>
 
+      <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
+
       {set.completed && (
         <View style={styles.rpeRow} accessibilityLabel="Rate of perceived exertion" accessibilityRole="radiogroup">
           {RPE_CHIPS.map((val) => {
@@ -235,7 +240,7 @@ export const SetRow = memo(function SetRow({
 
       {halfStep && halfStep.setId === set.id && (
         <View style={[styles.halfStepRow, { backgroundColor: colors.surfaceVariant }]}>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginRight: 8, fontSize: 12 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginRight: 8, fontSize: fontSizes.xs }}>
             Half-step:
           </Text>
           {halfStep.base > 6 && (
@@ -273,7 +278,7 @@ export const SetRow = memo(function SetRow({
       {set.completed && set.rpe != null && !Number.isInteger(set.rpe) && (
         <View style={styles.rpeBadgeRow}>
           <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
-            <Text style={{ color: rpeText(set.rpe), fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: rpeText(set.rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>
               RPE {set.rpe}
             </Text>
           </View>
@@ -303,7 +308,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   prBadge: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     lineHeight: 16,
   },
   colPrev: {
@@ -355,7 +360,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   rpeChipText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "600",
   },
   halfStepRow: {
@@ -404,7 +409,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   timerDisplay: {
-    fontSize: 20,
+    fontSize: fontSizes.xl,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
     flex: 1,

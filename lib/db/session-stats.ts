@@ -73,7 +73,7 @@ export async function checkSetPR(
         eq(workoutSets.completed, 1),
         isNotNull(workoutSets.weight),
         gt(workoutSets.weight, 0),
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSessions.completed_at),
         ne(workoutSets.session_id, currentSessionId)
       )
@@ -125,7 +125,7 @@ export async function getWeeklyVolume(
     .where(
       and(
         eq(workoutSets.completed, 1),
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSessions.completed_at),
         gte(workoutSessions.started_at, cutoff)
       )
@@ -160,7 +160,7 @@ export async function getPersonalRecords(): Promise<
         eq(workoutSets.completed, 1),
         isNotNull(workoutSets.weight),
         gt(workoutSets.weight, 0),
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSessions.completed_at)
       )
     )
@@ -205,7 +205,7 @@ export async function getMaxWeightByExercise(
         eq(workoutSets.completed, 1),
         isNotNull(workoutSets.weight),
         gt(workoutSets.weight, 0),
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSessions.completed_at)
       )
     )
@@ -232,7 +232,7 @@ export async function getSessionPRs(
          AND ws.completed = 1
          AND ws.weight IS NOT NULL
          AND ws.weight > 0
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
        GROUP BY ws.exercise_id
      ) cur
      JOIN (
@@ -243,7 +243,7 @@ export async function getSessionPRs(
          AND ws.completed = 1
          AND ws.weight IS NOT NULL
          AND ws.weight > 0
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND wss.completed_at IS NOT NULL
        GROUP BY ws.exercise_id
      ) hist ON cur.exercise_id = hist.exercise_id
@@ -269,7 +269,7 @@ export async function getRecentPRs(
      WHERE ws.completed = 1
        AND ws.weight IS NOT NULL
        AND ws.weight > 0
-       AND ws.is_warmup = 0
+       AND ws.set_type != 'warmup'
        AND wss.completed_at IS NOT NULL
        AND ws.weight > (SELECT MAX(ws2.weight)
           FROM workout_sets ws2
@@ -279,7 +279,7 @@ export async function getRecentPRs(
             AND ws2.completed = 1
             AND ws2.weight IS NOT NULL
             AND ws2.weight > 0
-            AND ws2.is_warmup = 0
+            AND ws2.set_type != 'warmup'
             AND wss2.completed_at IS NOT NULL
             AND wss2.started_at < wss.started_at
          )
@@ -305,7 +305,7 @@ export async function getSessionRepPRs(
        FROM workout_sets ws
        WHERE ws.session_id = ?
          AND ws.completed = 1
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND ws.reps IS NOT NULL
          AND ws.reps > 0
          AND (ws.weight IS NULL OR ws.weight = 0)
@@ -317,7 +317,7 @@ export async function getSessionRepPRs(
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.session_id != ?
          AND ws.completed = 1
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND ws.reps IS NOT NULL
          AND ws.reps > 0
          AND (ws.weight IS NULL OR ws.weight = 0)
@@ -369,7 +369,7 @@ export async function getSessionComparison(
         and(
           eq(workoutSets.session_id, sid),
           eq(workoutSets.completed, 1),
-          eq(workoutSets.is_warmup, 0)
+          ne(workoutSets.set_type, 'warmup')
         )
       );
     const row = rows[0];
@@ -408,7 +408,7 @@ export async function getSessionWeightIncreases(
       and(
         eq(workoutSets.session_id, sessionId),
         eq(workoutSets.completed, 1),
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSets.weight),
         gt(workoutSets.weight, 0)
       )
@@ -434,7 +434,7 @@ export async function getSessionWeightIncreases(
          AND wss.id != ?
          AND wss.completed_at IS NOT NULL
          AND ws.completed = 1
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND ws.weight > 0
          AND wss.started_at = (
            SELECT MAX(wss2.started_at)
@@ -515,7 +515,7 @@ export async function getMuscleVolumeForWeek(
         gte(workoutSessions.completed_at, weekStart),
         lt(workoutSessions.completed_at, end),
         eq(workoutSets.completed, 1),
-        eq(workoutSets.is_warmup, 0)
+        ne(workoutSets.set_type, 'warmup')
       )
     )
     .groupBy(workoutSets.exercise_id);
@@ -581,7 +581,7 @@ export async function getMuscleVolumeTrend(
         gte(workoutSessions.completed_at, oldest.getTime()),
         lt(workoutSessions.completed_at, end.getTime()),
         eq(workoutSets.completed, 1),
-        eq(workoutSets.is_warmup, 0)
+        ne(workoutSets.set_type, 'warmup')
       )
     )
     .groupBy(workoutSets.exercise_id, workoutSessions.id);
@@ -619,7 +619,7 @@ export async function getSessionDurationPRs(
          AND ws.completed = 1
          AND ws.duration_seconds IS NOT NULL
          AND ws.duration_seconds > 0
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
        GROUP BY ws.exercise_id
      ) cur
      JOIN (
@@ -630,7 +630,7 @@ export async function getSessionDurationPRs(
          AND ws.completed = 1
          AND ws.duration_seconds IS NOT NULL
          AND ws.duration_seconds > 0
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND wss.completed_at IS NOT NULL
        GROUP BY ws.exercise_id
      ) hist ON cur.exercise_id = hist.exercise_id

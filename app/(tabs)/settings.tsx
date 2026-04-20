@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { AccessibilityInfo, Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { AccessibilityInfo, Alert, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer"
 import BodyProfileCard from "../../components/BodyProfileCard";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import Constants from "expo-constants";
 import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -35,6 +36,8 @@ import { getPermissionStatus } from "../../lib/notifications";
 import PreferencesCard from "../../components/settings/PreferencesCard";
 import IntegrationsCard from "../../components/settings/IntegrationsCard";
 import CSVExportCard from "../../components/settings/CSVExportCard";
+import AppearanceCard from "../../components/settings/AppearanceCard";
+import ReminderSection from "../../components/settings/ReminderSection";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 function dateStamp(): string {
@@ -172,8 +175,11 @@ export default function Settings() {
       <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 24 }}>Settings</Text>
       <FlowContainer gap={16}>
         <UnitsCard colors={colors} toast={toast} weightUnit={weightUnit} setWeightUnit={setWeightUnit} measureUnit={measureUnit} setMeasureUnit={setMeasureUnit} weightGoal={weightGoal} fatGoal={fatGoal} />
+        <AppearanceCard colors={colors} />
         <BodyProfileCard />
-        <PreferencesCard colors={colors} toast={toast} reminders={reminders} setReminders={setReminders} reminderTime={reminderTime} setReminderTime={setReminderTime} permDenied={permDenied} setPermDenied={setPermDenied} scheduleCount={scheduleCount} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} restNotifications={restNotifications} setRestNotifications={setRestNotifications} />
+        <PreferencesCard colors={colors} toast={toast} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled}>
+          <ReminderSection colors={colors} toast={toast} reminders={reminders} setReminders={setReminders} reminderTime={reminderTime} setReminderTime={setReminderTime} permDenied={permDenied} setPermDenied={setPermDenied} scheduleCount={scheduleCount} restNotifications={restNotifications} setRestNotifications={setRestNotifications} />
+        </PreferencesCard>
         <IntegrationsCard colors={colors} toast={toast} stravaAthlete={stravaAthlete} setStravaAthlete={setStravaAthlete} stravaLoading={stravaLoading} setStravaLoading={setStravaLoading} hcEnabled={hcEnabled} setHcEnabled={setHcEnabled} hcLoading={hcLoading} setHcLoading={setHcLoading} hcSdkStatus={hcSdkStatus} />
         <DataManagementCard colors={colors} loading={loading} exportProgress={exportProgress} onExport={handleExport} onImport={handleImport} onImportStrong={() => router.push("/settings/import-strong")} />
         <CSVExportCard colors={colors} />
@@ -181,7 +187,8 @@ export default function Settings() {
         <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>About</Text>
-            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>FitForge v1.0.0{"\n"}Free & open-source workout tracker.</Text>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>FitForge v{Constants.expoConfig?.version ?? "0.0.0"}{"\n"}Free & open-source workout tracker.</Text>
+            <Text variant="body" style={{ color: colors.primary, marginTop: 4 }} onPress={() => Linking.openURL("https://github.com/alankyshum/fitforge/blob/main/LICENSE")}>MIT License</Text>
           </CardContent>
         </Card>
       </FlowContainer>

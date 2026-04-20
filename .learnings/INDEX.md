@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-19
-Total learnings: 179
+Last updated: 2026-04-20
+Total learnings: 181
 
 ## How to Use This Knowledge Base
 
@@ -14,14 +14,14 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 94 learnings
+- [React Native + Expo](patterns/react-native.md) — 95 learnings
 - [Testing](patterns/testing.md) — 12 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 6 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 18 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 19 learnings
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-410 | Do Not Repurpose Intra-Entity Ordering Columns for Inter-Entity Position | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-20 | BLD-410 | FlashList Requires extraData Counter to Re-Render on Array Reorder | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-19 | BLD-403 | Proactive Sweep Task to Silence Recurring Automated Reviewer Findings | Process | [pr-workflow.md](process/pr-workflow.md) |
 | 2026-04-19 | BLD-402 | Consolidate Single-Assertion it() Blocks to Free Test Budget Slots | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-19 | BLD-402 | Track fetchedId in useReducer to Prevent Stale Data on Rapid Prop Changes | Patterns | [react-native.md](patterns/react-native.md) |

@@ -4,6 +4,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { TouchableOpacity } from "react-native";
 import FloatingTabBar from "../../components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -15,8 +16,8 @@ export default function TabLayout() {
     function HeaderTitle() {
       return (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <MaterialCommunityIcons name={icon} size={22} color={colors.onSurface} />
-          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
+          <MaterialCommunityIcons name={icon} size={20} color={colors.onSurface} />
+          <Text style={{ fontSize: fontSizes.sm, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
         </View>
       );
     };
@@ -38,6 +39,16 @@ export default function TabLayout() {
         options={{
           title: "Exercises",
           headerTitle: renderHeaderTitle("format-list-bulleted", "Exercises"),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push("/exercise/create")}
+              accessibilityLabel="Add custom exercise"
+              accessibilityRole="button"
+              style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            >
+              <MaterialCommunityIcons name="plus" size={28} color={colors.onSurface} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <Tabs.Screen

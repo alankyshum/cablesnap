@@ -13,9 +13,10 @@ export async function getBodySettings(): Promise<BodySettings> {
     id: "default",
     weight_unit: "kg",
     measurement_unit: "cm",
+    sex: "male",
     updated_at: now,
   });
-  return { id: "default", weight_unit: "kg", measurement_unit: "cm", weight_goal: null, body_fat_goal: null, updated_at: now };
+  return { id: "default", weight_unit: "kg", measurement_unit: "cm", sex: "male", weight_goal: null, body_fat_goal: null, updated_at: now };
 }
 
 export async function updateBodySettings(
@@ -34,6 +35,14 @@ export async function updateBodySettings(
       body_fat_goal: fatGoal,
       updated_at: Date.now(),
     })
+    .where(eq(bodySettings.id, settings.id));
+}
+
+export async function updateBodySex(sex: "male" | "female"): Promise<void> {
+  const settings = await getBodySettings();
+  const db = await getDrizzle();
+  await db.update(bodySettings)
+    .set({ sex, updated_at: Date.now() })
     .where(eq(bodySettings.id, settings.id));
 }
 

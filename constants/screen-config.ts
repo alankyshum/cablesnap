@@ -21,8 +21,6 @@ export const SCREEN_CONFIGS: ScreenConfig[] = [
   { name: "program/pick-template", options: { headerShown: true, title: "Pick Template", presentation: "modal", animation: "slide_from_bottom" } },
   { name: "session/[id]", options: { headerShown: true, title: "Workout" } },
   { name: "session/detail/[id]", options: { headerShown: true, title: "Workout Summary" } },
-  { name: "nutrition/targets", options: { headerShown: true, title: "Macro Targets", presentation: "modal", animation: "slide_from_bottom" } },
-  { name: "nutrition/profile", options: { headerShown: true, title: "Nutrition Profile", presentation: "modal", animation: "slide_from_bottom" } },
   { name: "errors", options: { headerShown: true, title: "Error Log" } },
   { name: "feedback", options: { headerShown: true, title: "Feedback & Reports" } },
   { name: "body", options: { headerShown: false } },

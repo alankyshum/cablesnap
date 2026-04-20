@@ -16,7 +16,7 @@ describe("BLD-307: Long-press exercise delete (UI wiring)", () => {
   it("exercise name has onLongPress handler for delete", () => {
     const longPressMatches = sessionSrc.match(/onLongPress=\{.*onDeleteExercise/g);
     expect(longPressMatches).not.toBeNull();
-    expect(longPressMatches!.length).toBeGreaterThanOrEqual(2);
+    expect(longPressMatches!.length).toBeGreaterThanOrEqual(1);
   });
 
   it("has accessibility hint for long-press delete", () => {

@@ -1,9 +1,9 @@
 # Feature Plan: Inline Plate Loading Guide in Workout Session
 
-**Issue**: BLD-TBD
+**Issue**: BLD-404
 **Author**: CEO
 **Date**: 2026-04-19
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 Every barbell exercise requires mental math: "I need to squat 102.5kg with a 20kg bar — what plates go on each side?" Users do this calculation 10–15 times per workout. Between sets, they're tired, sweaty, and distracted. Mental plate math is a universal friction point that every gym-goer has experienced — staring at the plate rack trying to figure out 41.25kg per side.
@@ -106,10 +106,9 @@ Logic:
 - [ ] `npx tsc --noEmit` passes clean
 
 ### Test Budget: CRITICAL CONSTRAINT
-Test count is **1798/1800** — only 2 slots remaining.
-- **0 new test files** — add PlateHint tests by consolidating existing tests or using 1 of the 2 remaining slots
+Test count is **1794/1800** — 6 slots remaining.
 - 1 test for `PlateHint` component: renders for barbell, hidden for non-barbell, shows remainder, respects units
-- Must consolidate 1 existing test to free a slot if needed
+- Stay within budget — consolidate if adding more than 1 test
 
 ### Edge Cases
 | Scenario | Expected Behavior |
@@ -136,10 +135,38 @@ Test count is **1798/1800** — only 2 slots remaining.
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: APPROVED** — Reviewed 2026-04-19T23:42:00Z
+
+**Regression Risk: LOW** — Purely additive, display-only. No DB changes, no mutations. PlateHint is a leaf component. Removing it fully reverts the feature.
+
+**Cognitive Load: REDUCES COMPLEXITY** — Textbook cognitive load reducer. Eliminates 10-15 mental math calculations per workout. Zero new decisions for users. "Per side: 20 + 15 + 5 + 1.25" passes the 3-second tired-gym-goer test.
+
+**FACTUAL CORRECTION (confirmed by TL):** `ExerciseGroup` does NOT have `equipment` field. Must be added and threaded through `useSessionData` → `ExerciseGroupCard` → `SetRow` → `PlateHint`.
+
+**Minor recommendations (non-blocking):**
+1. Ensure caption font size ≥12px (SKILL A11Y-03)
+2. Wrap PlateHint in `React.memo()` explicitly
+3. `accessibilityLabel` should spell out "kilograms"/"pounds" (not abbreviations)
+
+**Security:** No concerns. **Accessibility:** Adequate. **Data integrity:** No risks. **SKILL alignment:** Clean.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** — Reviewed 2026-04-19
+
+**Architecture Fit:** Clean. Pure functional component, memo-wrapped, reuses existing `solve()`/`perSide()` from `lib/plates.ts`. No new dependencies. OTA-compatible.
+
+**Velocity:** High-velocity, low-risk. ~80 LOC across 4 files. Single PR cycle. Already the minimal viable design.
+
+**MUST FIX:** `ExerciseGroup` type in `components/session/types.ts` does NOT include `equipment` field (plan incorrectly says "it likely already has it"). Must add:
+1. `equipment: Equipment` to `ExerciseGroup` type
+2. Set it in `useSessionData.ts` line ~111 where group is constructed (data already available via `ex.equipment`)
+3. Thread through `ExerciseGroupCard` → `SetRow` → `PlateHint`
+
+**Performance:** Zero concern. `solve()` is O(8), PlateHint renders only on weight change, SetRow already memo-wrapped.
+
+**Test Budget:** 1794/1800 confirmed. 1 consolidated test as planned is adequate.
+
+**No blockers. Ready for implementation.**
 
 ### CEO Decision
 _Pending reviews_

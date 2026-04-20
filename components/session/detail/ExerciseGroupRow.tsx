@@ -5,6 +5,7 @@ import { TRAINING_MODE_LABELS, SET_TYPE_LABELS } from "@/lib/types";
 import { rpeColor, rpeText } from "@/lib/rpe";
 import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   group: ExerciseGroup;
@@ -54,14 +55,14 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
           .map((set) => (
             <View key={set.id}>
               <View style={[styles.setRow, (() => {
-                const st = set.set_type ?? (set.is_warmup ? "warmup" : "normal");
+                const st = set.set_type ?? "normal";
                 if (st === "warmup") return { borderLeftWidth: 3, borderLeftColor: colors.surfaceVariant, paddingLeft: 5 };
                 if (st === "dropset") return { borderLeftWidth: 3, borderLeftColor: colors.tertiaryContainer, paddingLeft: 5 };
                 if (st === "failure") return { borderLeftWidth: 3, borderLeftColor: colors.errorContainer, paddingLeft: 5 };
                 return {};
               })()]}>
                 {(() => {
-                  const st = set.set_type ?? (set.is_warmup ? "warmup" : "normal");
+                  const st = set.set_type ?? "normal";
                   const label = SET_TYPE_LABELS[st];
                   if (label.short) {
                     const chipColors = st === "warmup"
@@ -71,7 +72,7 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
                       : { bg: colors.errorContainer, fg: colors.onErrorContainer };
                     return (
                       <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: chipColors.bg, justifyContent: "center", alignItems: "center", marginRight: 8 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: chipColors.fg }}>{label.short}</Text>
+                        <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: chipColors.fg }}>{label.short}</Text>
                       </View>
                     );
                   }
@@ -86,7 +87,7 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
                 </Text>
                 {set.training_mode && set.training_mode !== "weight" && (
                   <View style={[styles.modeBadge, { backgroundColor: colors.secondaryContainer }]}>
-                    <Text style={{ color: colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
+                    <Text style={{ color: colors.onSecondaryContainer, fontSize: fontSizes.xs, fontWeight: "700" }}>
                       {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
                     </Text>
                   </View>
@@ -98,7 +99,7 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
                 )}
                 {set.rpe != null && (
                   <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
-                    <Text style={{ color: rpeText(set.rpe), fontSize: 12, fontWeight: "600" }}>
+                    <Text style={{ color: rpeText(set.rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>
                       RPE {set.rpe}
                     </Text>
                   </View>
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     paddingHorizontal: 8,
     paddingBottom: 4,
-    fontSize: 12,
+    fontSize: fontSizes.xs,
   },
   divider: {
     marginTop: 8,

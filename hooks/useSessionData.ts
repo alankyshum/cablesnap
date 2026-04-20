@@ -117,6 +117,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           is_voltra: ex?.is_voltra ?? false,
           is_bodyweight: ex ? ex.equipment === "bodyweight" : false,
           trackingMode: parsed.includes("isometric" as TrainingMode) ? "duration" : "reps",
+          equipment: ex?.equipment ?? "other",
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
@@ -242,7 +243,6 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
               round: newLinkId ? s.set_number : null,
               trainingMode: (s.training_mode as TrainingMode) ?? null,
               tempo: s.tempo ?? null,
-              isWarmup: s.is_warmup,
               setType: s.set_type,
             });
           }

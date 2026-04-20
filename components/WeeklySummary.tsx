@@ -13,6 +13,7 @@ import Animated from "react-native-reanimated";
 import { useWeeklySummary, formatWeekRange } from "@/hooks/useWeeklySummary";
 import { SummaryDetailSections } from "@/components/weekly-summary/SummaryDetailSections";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 // ─── Component ─────────────────────────────────────────────────────
 
@@ -83,7 +84,7 @@ export default function WeeklySummary() {
     >
       <CardContent>
         <View style={styles.headerRow}>
-          <Text style={{ fontSize: 20, marginRight: 8 }}>📊</Text>
+          <Text style={{ fontSize: fontSizes.xl, marginRight: 8 }}>📊</Text>
           <Text
             variant="subtitle"
             style={{ color: colors.onSurface, flex: 1 }}

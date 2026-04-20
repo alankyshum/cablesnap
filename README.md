@@ -107,4 +107,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see the [LICENSE](LICENSE) file for details.
+
+**"FitForge"** is a trademark of Anomaly Co. Forks and redistributions must remove all FitForge branding (name, logo, icon) unless granted written permission.
+
+For commercial licensing inquiries, contact the repository owner.

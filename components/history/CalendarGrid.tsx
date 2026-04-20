@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { GestureDetector, type GestureType } from "react-native-gesture-handler";
@@ -6,7 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { formatDateKey, DAYS, withOpacity } from "@/lib/format";
 import { weekday, daysInMonth, monthLabel } from "@/hooks/useHistoryData";
-import { spacing, radii } from "@/constants/design-tokens";
+import { spacing, radii, fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { ScheduleEntry } from "@/lib/db/settings";
 import type { AnimatedStyle } from "react-native-reanimated";
@@ -75,7 +76,7 @@ export default function CalendarGrid({
           borderWidth: isToday ? 2 : 0, borderColor: isToday ? colors.primary : "transparent",
           backgroundColor: cellBg,
         }]}>
-        <Text variant="caption" style={{ color: isSel ? colors.onPrimary : colors.onBackground, fontSize: 14 * scale }}>{day}</Text>
+        <Text variant="caption" style={{ color: isSel ? colors.onPrimary : colors.onBackground, fontSize: fontSizes.sm * scale }}>{day}</Text>
         {count > 0 && (
           <View style={styles.dots}>
             {count >= 3 ? (
@@ -118,7 +119,7 @@ export default function CalendarGrid({
       <View style={styles.grid}>
         {DAYS.map((d) => (
           <View key={d} style={[styles.cell, { width: cellSize, height: 28 }]}>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: 12 * scale }}>{d}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs * scale }}>{d}</Text>
           </View>
         ))}
       </View>
@@ -138,5 +139,5 @@ const styles = StyleSheet.create({
   dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
   dot: { width: 5, height: 5, borderRadius: radii.sm },
   countBadge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
-  countBadgeText: { fontSize: 12, fontWeight: "700", textAlign: "center" },
+  countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700", textAlign: "center" },
 });

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -9,7 +9,6 @@ import { FlashList } from "@shopify/flash-list";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
 import { SearchBar } from "@/components/ui/searchbar";
-import { FAB } from "@/components/ui/fab";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -26,7 +25,6 @@ import { useLayout } from "../../lib/layout";
 import { useFocusRefetch } from "../../lib/query";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { useProfileGender } from "../../lib/useProfileGender";
-import { radii } from "../../constants/design-tokens";
 import { ExerciseCard } from "../../components/exercises/ExerciseCard";
 import { ExerciseDetailPane } from "../../components/exercises/ExerciseDetailPane";
 
@@ -65,6 +63,12 @@ export default function Exercises() {
       return true;
     });
   }, [exercises, query, selected]);
+
+  useEffect(() => {
+    if (layout.atLeastMedium && !detail && filtered.length > 0) {
+      getExerciseById(filtered[0].id).then(setDetail);
+    }
+  }, [layout.atLeastMedium, detail, filtered]);
 
   const toggle = useCallback((f: FilterType) => {
     setSelected((prev) => {
@@ -173,13 +177,6 @@ export default function Exercises() {
         ListEmptyComponent={empty}
         contentContainerStyle={{ paddingBottom: tabBarHeight }}
       />
-      <FAB
-        icon="plus"
-        onPress={() => router.push("/exercise/create")}
-        style={[styles.fab, { backgroundColor: colors.primary }]}
-        color={colors.onPrimary}
-        accessibilityLabel="Add custom exercise"
-      />
     </View>
   );
 
@@ -224,16 +221,6 @@ const styles = StyleSheet.create({
   },
   emptyList: {
     flexGrow: 1,
-  },
-  fab: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
-    width: 56,
-    height: 56,
-    borderRadius: radii.pill,
-    justifyContent: "center",
-    alignItems: "center",
   },
 
 });

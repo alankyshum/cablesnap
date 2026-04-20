@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import RatingWidget from "@/components/RatingWidget";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   rating: number | null;
@@ -105,6 +106,6 @@ const styles = StyleSheet.create({
     padding: 12,
     minHeight: 80,
     textAlignVertical: "top",
-    fontSize: 14,
+    fontSize: fontSizes.sm,
   },
 });

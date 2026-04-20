@@ -116,8 +116,8 @@ export default function IntegrationsCard({
                               toast.success("Health Connect enabled");
                             } else {
                               setHcEnabled(false);
-                              toast.error("Health Connect permission required");
-                              AccessibilityInfo.announceForAccessibility("Health Connect permission required");
+                              toast.error("Health Connect permission denied");
+                              AccessibilityInfo.announceForAccessibility("Health Connect permission denied");
                             }
                           } catch { setHcEnabled(false); toast.error("Failed to enable Health Connect"); }
                           finally { setHcLoading(false); }

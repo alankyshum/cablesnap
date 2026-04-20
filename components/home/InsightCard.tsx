@@ -3,6 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { Insight } from "@/lib/insights";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   colors: ThemeColors;
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     lineHeight: 20,
   },
   dismiss: {

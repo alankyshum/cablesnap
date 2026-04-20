@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
@@ -28,6 +29,7 @@ import {
 } from "../lib/types";
 import { duration as durationTokens, elevation } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   visible: boolean;
@@ -342,7 +344,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   chipText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "500",
   },
   empty: {

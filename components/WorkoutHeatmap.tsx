@@ -5,6 +5,7 @@ import { useLayout } from "../lib/layout";
 import { withOpacity } from "../lib/format";
 import { radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type HeatmapProps = {
   data: Map<string, number>;
@@ -111,7 +112,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
     if (count === 0) return null;
     if (count >= 3) {
       return (
-        <Text style={[styles.cellText, { fontSize: Math.max(12, size * 0.5), color: colors.onPrimary }]}>
+        <Text style={[styles.cellText, { fontSize: Math.max(fontSizes.xs, size * 0.5), color: colors.onPrimary }]}>
           3+
         </Text>
       );
@@ -136,7 +137,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
         <View key={rowIdx} style={styles.row}>
           <Text
             variant="caption"
-            style={[styles.dayLabel, { width: labelWidth, fontSize: 12, color: colors.onSurfaceVariant }]}
+            style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant }]}
           >
             {DAY_LABELS[rowIdx]}
           </Text>
@@ -175,7 +176,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
 
       {/* Color Legend */}
       <View style={styles.legend}>
-        <Text variant="caption" style={{ fontSize: 12, color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant }}>
           Less
         </Text>
         {[0, 1, 2, 3].map((level) => (
@@ -192,7 +193,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
             {renderDots(level, 16)}
           </View>
         ))}
-        <Text variant="caption" style={{ fontSize: 12, color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant }}>
           More
         </Text>
       </View>
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dayLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     textAlign: "center",
   },
   cell: {

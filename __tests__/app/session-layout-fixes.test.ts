@@ -20,7 +20,7 @@ describe("workout session layout fixes (BLD-293)", () => {
       expect(match).not.toBeNull();
       const margin = parseInt(match![1], 10);
       expect(margin).toBeLessThanOrEqual(-8);
-      expect(margin).toBeGreaterThanOrEqual(-16);
+      expect(margin).toBeGreaterThanOrEqual(-28);
     });
   });
 

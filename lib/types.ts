@@ -222,7 +222,6 @@ export type WorkoutSet = {
   training_mode: TrainingMode | null;
   tempo: string | null;
   swapped_from_exercise_id: string | null;
-  is_warmup: boolean;
   set_type: SetType;
   duration_seconds: number | null;
 };
@@ -370,6 +369,7 @@ export type BodySettings = {
   id: string;
   weight_unit: "kg" | "lb";
   measurement_unit: "cm" | "in";
+  sex: "male" | "female";
   weight_goal: number | null;
   body_fat_goal: number | null;
   updated_at: number;

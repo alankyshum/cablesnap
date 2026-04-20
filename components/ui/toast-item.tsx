@@ -8,6 +8,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import type { ToastData, ToastVariant } from './toast-types';
 import { useToastGesture } from '@/hooks/useToastGesture';
+import { fontSizes } from "@/constants/design-tokens";
 
 interface ToastProps extends ToastData { onDismiss: (id: string) => void; index: number; }
 
@@ -29,10 +30,10 @@ export function Toast({ id, title, description, variant = 'default', onDismiss, 
         <View style={styles.island}>
           {IconComponent && <View style={{ marginRight: 10 }}><IconComponent size={16} color={variantColor} /></View>}
           <View style={{ flex: 1, minWidth: 0 }}>
-            {title && <Text variant='subtitle' style={{ color: Colors.light.onToast, fontSize: 14, fontWeight: '600', marginBottom: description ? 2 : 0 }} numberOfLines={1} ellipsizeMode='tail'>{title}</Text>}
-            {description && <Text variant='caption' style={{ color: MUTED, fontSize: 13 }} numberOfLines={2} ellipsizeMode='tail'>{description}</Text>}
+            {title && <Text variant='subtitle' style={{ color: Colors.light.onToast, fontSize: fontSizes.sm, fontWeight: '600', marginBottom: description ? 2 : 0 }} numberOfLines={1} ellipsizeMode='tail'>{title}</Text>}
+            {description && <Text variant='caption' style={{ color: MUTED, fontSize: fontSizes.sm }} numberOfLines={2} ellipsizeMode='tail'>{description}</Text>}
           </View>
-          {action && <TouchableOpacity onPress={action.onPress} style={[styles.actionBtn, { backgroundColor: variantColor }]}><Text variant='caption' style={{ color: Colors.light.onToast, fontSize: 12, fontWeight: '600' }}>{action.label}</Text></TouchableOpacity>}
+          {action && <TouchableOpacity onPress={action.onPress} style={[styles.actionBtn, { backgroundColor: variantColor }]}><Text variant='caption' style={{ color: Colors.light.onToast, fontSize: fontSizes.xs, fontWeight: '600' }}>{action.label}</Text></TouchableOpacity>}
           <TouchableOpacity onPress={dismiss} style={styles.dismissBtn}><X size={14} color={MUTED} /></TouchableOpacity>
         </View>
       </Animated.View>

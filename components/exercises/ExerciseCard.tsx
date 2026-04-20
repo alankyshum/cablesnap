@@ -8,6 +8,7 @@ import {
 } from "../../lib/types";
 import { semantic, DIFFICULTY_COLORS } from "../../constants/theme";
 import { radii } from "../../constants/design-tokens";
+import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseCardProps {
   item: Exercise;
@@ -34,7 +35,7 @@ export function ExerciseCard({ item, selected, onPress, colors, mc }: ExerciseCa
     >
       <View style={styles.cardInner}>
         <View style={styles.titleRow}>
-          <Text variant="subtitle" numberOfLines={1} style={[{ color: colors.onSurface }, styles.titleText]}>
+          <Text variant="subtitle" numberOfLines={1} style={[{ color: colors.onSurface, fontSize: fontSizes.base }, styles.titleText]}>
             {item.name}
           </Text>
           {item.is_custom && (
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   customBadgeText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     fontWeight: "600",
   },
   muscleRow: {
@@ -120,6 +121,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   muscleLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
   },
 });

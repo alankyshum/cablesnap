@@ -10,6 +10,7 @@ import type { WeeklySummaryData } from "@/lib/db";
 import { formatDuration } from "@/lib/format";
 import { toDisplay } from "@/lib/units";
 import { formatNumber } from "@/hooks/useWeeklySummary";
+import { fontSizes } from "@/constants/design-tokens";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ export function SummaryDetailSections({
                 : "";
             return (
               <View key={pr.exerciseId} style={styles.prRow}>
-                <Text style={{ fontSize: 16, marginRight: 8 }}>🏆</Text>
+                <Text style={{ fontSize: fontSizes.base, marginRight: 8 }}>🏆</Text>
                 <Text
                   variant="body"
                   style={{ color: colors.onSurface, flex: 1 }}

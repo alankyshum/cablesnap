@@ -10,6 +10,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { BadgeRow, MetaRow } from "./FlowCardBadges";
 import { FlowCardMenu } from "./FlowCardMenu";
+import { fontSizes } from "@/constants/design-tokens";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 export type MetaBadge = { icon: IconName; label: string; difficulty?: Difficulty };
@@ -43,7 +44,7 @@ export function FlowCard({ name, onPress, onLongPress, accessibilityLabel, badge
       <View style={styles.content}>
         <Pressable onPress={onPress} onLongPress={handleLongPress} style={styles.body} accessibilityLabel={accessibilityLabel} accessibilityHint={accessibilityHint} accessibilityRole="button">
           <View style={styles.chipRow}>
-            <Text variant="body" style={{ color: colors.onSurface, flexShrink: 1, fontWeight: "600", fontSize: 14 }} numberOfLines={1}>{name}</Text>
+            <Text variant="body" style={{ color: colors.onSurface, flexShrink: 1, fontWeight: "600", fontSize: fontSizes.sm }} numberOfLines={1}>{name}</Text>
             <BadgeRow badges={badges} readiness={readiness} isDark={isDark} colors={colors} />
           </View>
           <View style={styles.metaRow}><MetaRow meta={meta} colors={colors} /></View>
@@ -60,7 +61,7 @@ export function difficultyBadge(d: Difficulty): MetaBadge {
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: 8, ...flowCardStyle, flexGrow: 0, padding: 12 },
+  card: { marginBottom: 8, ...flowCardStyle, padding: 12 },
   content: { flexDirection: "row", alignItems: "center", gap: 8 },
   body: { flex: 1, gap: 6 },
   chipRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },

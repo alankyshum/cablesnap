@@ -6,6 +6,7 @@ import { DIFFICULTY_COLORS, READINESS_COLORS } from "./ui/flow-card-colors";
 import type { ReadinessBadge } from "../lib/recovery-readiness";
 import type { MetaBadge } from "./FlowCard";
 import type { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 export function BadgeRow({ badges, readiness, isDark, colors }: {
   badges?: { label: string; type: "active" | "starter" | "recommended" }[];
@@ -19,8 +20,8 @@ export function BadgeRow({ badges, readiness, isDark, colors }: {
         const bg = b.type === "active" || b.type === "recommended" ? colors.primaryContainer : colors.surfaceVariant;
         const fg = b.type === "active" || b.type === "recommended" ? colors.onPrimaryContainer : colors.onSurfaceVariant;
         return (
-          <View key={b.label} style={styles.badge} accessibilityLabel={b.label}>
-            <Text variant="caption" style={[styles.badgeText, { backgroundColor: bg, color: fg }]}>{b.label}</Text>
+          <View key={b.label} style={[styles.badge, { backgroundColor: bg }]} accessibilityLabel={b.label}>
+            <Text variant="caption" style={[styles.badgeText, { color: fg }]}>{b.label}</Text>
           </View>
         );
       })}
@@ -55,7 +56,7 @@ export function MetaRow({ meta, colors }: { meta: MetaBadge[]; colors: ReturnTyp
 }
 
 const styles = StyleSheet.create({
-  badge: { height: 24, paddingHorizontal: 8, borderRadius: 8, justifyContent: "center" },
-  badgeText: { fontSize: 12, lineHeight: 16 },
+  badge: { height: 24, paddingHorizontal: 10, borderRadius: 8, justifyContent: "center" },
+  badgeText: { fontSize: fontSizes.xs, lineHeight: 16 },
   metaBadge: { flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: 8 },
 });

@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import { useEffect, useState } from "react";
 import { Alert, FlatList, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -10,6 +11,7 @@ import { createCustomExercise } from "@/lib/db/exercises";
 import { getDatabase } from "@/lib/db/helpers";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { MatchState, ImportResult } from "./types";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   parsed: ParseResult;
@@ -137,8 +139,8 @@ export default function StepConfirmImport({ parsed, matches, sourceUnit, targetU
       {duplicates.length > 0 && (<Card style={{ ...styles.card, backgroundColor: colors.errorContainer }}><CardContent>
         <Text variant="subtitle" style={{ color: colors.onErrorContainer, marginBottom: 4 }}>Potential Duplicates</Text>
         <Text style={{ color: colors.onErrorContainer }}>{duplicates.length} session{duplicates.length !== 1 ? "s" : ""} already exist with the same date and name. They will be skipped (INSERT OR IGNORE).</Text>
-        <FlatList data={duplicates.slice(0, 5)} scrollEnabled={false} keyExtractor={(_, i) => `dup-${i}`} renderItem={({ item: d }) => (<Text style={{ color: colors.onErrorContainer, fontSize: 12, marginTop: 2 }}>• {d}</Text>)} />
-        {duplicates.length > 5 && <Text style={{ color: colors.onErrorContainer, fontSize: 12, marginTop: 2 }}>...and {duplicates.length - 5} more</Text>}
+        <FlatList data={duplicates.slice(0, 5)} scrollEnabled={false} keyExtractor={(_, i) => `dup-${i}`} renderItem={({ item: d }) => (<Text style={{ color: colors.onErrorContainer, fontSize: fontSizes.xs, marginTop: 2 }}>• {d}</Text>)} />
+        {duplicates.length > 5 && <Text style={{ color: colors.onErrorContainer, fontSize: fontSizes.xs, marginTop: 2 }}>...and {duplicates.length - 5} more</Text>}
       </CardContent></Card>)}
 
       {importing && (<View style={{ marginVertical: 16 }}>

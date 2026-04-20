@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   exerciseId: string;
@@ -25,7 +26,7 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
         style={styles.input}
         accessibilityLabel="Exercise notes"
       />
-      <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", fontSize: 12 }}>
+      <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", fontSize: fontSizes.xs }}>
         {value.length}/200
       </Text>
     </View>
@@ -34,5 +35,5 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4 },
-  input: { fontSize: 14, minHeight: 48 },
+  input: { fontSize: fontSizes.sm, minHeight: 48 },
 });

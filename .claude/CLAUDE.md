@@ -1,5 +1,16 @@
 # FitForge — Project Instructions
 
+## License — AGPL-3.0 (MANDATORY)
+
+FitForge is licensed under **AGPL-3.0-or-later**. All agents MUST comply:
+
+1. **Never add dependencies with AGPL-incompatible licenses.** Blocklisted licenses: proprietary, SSPL, Commons Clause, any "non-commercial only" license, CC-BY-NC, BSL (before conversion date). Check with `npm info <pkg> license` before adding.
+2. **Allowed licenses:** MIT, BSD-2-Clause, BSD-3-Clause, ISC, Apache-2.0, 0BSD, Unlicense, CC0-1.0, WTFPL, LGPL-2.1, LGPL-3.0, GPL-2.0, GPL-3.0, AGPL-3.0, MPL-2.0.
+3. **Never modify or replace the LICENSE file.** The LICENSE file is immutable. Any PR that alters it must be rejected.
+4. **Never add code that removes or obscures the license notice.**
+5. **Run `scripts/check-license.sh`** before adding any new dependency. The pre-push hook enforces this automatically.
+6. **Trademark:** "FitForge" name and branding belong to Anomaly Co. Do not add code that strips or replaces license/trademark notices.
+
 ## Tech Stack
 - **Framework:** Expo (React Native) with Expo Router
 - **Language:** TypeScript
@@ -118,6 +129,21 @@ Available tools (require dev server running — see above):
 - **Test (e2e):** `npm run test:e2e`
 - **Test audit:** `./scripts/audit-tests.sh` (or `--detail` for mock overlap matrix)
 - **Build APK:** `npm run build:apk`
+
+## Expo Router — File Conventions
+
+Files inside `app/` are treated as routes by Expo Router. Non-route files (helpers, hooks, sub-components, styles, data) **must** be prefixed with `_` to exclude them from routing.
+
+- `app/_screen-config.ts` — config/data file (underscore prefix)
+- `app/onboarding/_recommend-styles.ts` — shared styles (underscore prefix)
+- `app/onboarding/_use-onboarding-finish.ts` — hook (underscore prefix)
+
+Alternatively, move non-route code out of `app/` entirely (into `components/`, `lib/`, `hooks/`, `constants/`).
+
+## React Native — Common Pitfalls
+
+1. **Never use `flexWrap: 'wrap'` on FlatList/VirtualizedList `contentContainerStyle`** — React Native does not support it and will emit a warning. If you need a wrapping layout with `scrollEnabled={false}`, use `<View style={{ flexWrap: 'wrap' }}>` + `.map()` instead of FlatList.
+2. **Function size limits** — ESLint enforces `max-lines-per-function: 200` and `complexity: 15`. Extract sub-components (e.g., `PreviewList`, `ResultList`) to keep screen components under these limits. This applies to both `app/` screens and test callbacks (`describe`/`it` blocks).
 
 ## Test Budget & Deduplication
 

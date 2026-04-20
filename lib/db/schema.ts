@@ -86,7 +86,6 @@ export const workoutSets = sqliteTable("workout_sets", {
   training_mode: text("training_mode"),
   tempo: text("tempo"),
   swapped_from_exercise_id: text("swapped_from_exercise_id"),
-  is_warmup: integer("is_warmup").default(0),
   set_type: text("set_type").default("normal"),
   duration_seconds: integer("duration_seconds"),
 }, (table) => [
@@ -184,6 +183,7 @@ export const bodySettings = sqliteTable("body_settings", {
   id: text("id").primaryKey().default("default"),
   weight_unit: text("weight_unit").notNull().default("kg"),
   measurement_unit: text("measurement_unit").notNull().default("cm"),
+  sex: text("sex").notNull().default("male"),
   weight_goal: real("weight_goal"),
   body_fat_goal: real("body_fat_goal"),
   updated_at: integer("updated_at").notNull(),
@@ -227,13 +227,6 @@ export const appSettings = sqliteTable("app_settings", {
 });
 
 // ─── Schedule Tables ────────────────────────────────────────────────────────
-
-export const weeklySchedule = sqliteTable("weekly_schedule", {
-  id: text("id").primaryKey(),
-  day_of_week: integer("day_of_week").notNull(),
-  template_id: text("template_id").notNull(),
-  created_at: integer("created_at").notNull(),
-});
 
 export const programSchedule = sqliteTable("program_schedule", {
   program_id: text("program_id").notNull(),
@@ -344,7 +337,6 @@ export type ProgramRow = typeof programs.$inferSelect;
 export type ProgramDayRow = typeof programDays.$inferSelect;
 export type ProgramLogRow = typeof programLog.$inferSelect;
 export type AppSettingRow = typeof appSettings.$inferSelect;
-export type WeeklyScheduleRow = typeof weeklySchedule.$inferSelect;
 export type ProgramScheduleRow = typeof programSchedule.$inferSelect;
 export type ErrorLogRow = typeof errorLog.$inferSelect;
 export type InteractionLogRow = typeof interactionLog.$inferSelect;

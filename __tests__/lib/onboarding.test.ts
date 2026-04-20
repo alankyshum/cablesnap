@@ -67,6 +67,14 @@ beforeEach(() => {
   mockDb.getAllAsync.mockResolvedValue([]);
   mockDb.getFirstAsync.mockResolvedValue({ count: 10 });
   mockDb.runAsync.mockResolvedValue({ changes: 1 });
+
+  // Clear globalThis singleton so each test starts fresh
+  const g = globalThis as any;
+  delete g.__fitforge_db;
+  delete g.__fitforge_drizzle;
+  delete g.__fitforge_init;
+  delete g.__fitforge_memfb;
+
   jest.resetModules();
   jest.doMock("expo-sqlite", () => ({
     openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),

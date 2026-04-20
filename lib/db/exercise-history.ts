@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, asc, isNotNull, inArray, max, sum, count } from "drizzle-orm";
+import { eq, ne, and, sql, desc, asc, isNotNull, inArray, max, sum, count } from "drizzle-orm";
 import { query, queryOne, getDrizzle } from "./helpers";
 import { workoutSets, workoutSessions } from "./schema";
 
@@ -48,7 +48,7 @@ export async function getExerciseHistory(
       and(
         eq(workoutSets.exercise_id, exerciseId),
         eq(workoutSets.completed, 1),
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSessions.completed_at)
       )
     )
@@ -76,7 +76,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
   const baseWhere = and(
     eq(workoutSets.exercise_id, exerciseId),
     eq(workoutSets.completed, 1),
-    eq(workoutSets.is_warmup, 0),
+    ne(workoutSets.set_type, 'warmup'),
     isNotNull(workoutSessions.completed_at)
   );
 
@@ -118,7 +118,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
          SELECT SUM(ws.weight * ws.reps) AS sv
          FROM workout_sets ws
          JOIN workout_sessions wss ON ws.session_id = wss.id
-         WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND wss.completed_at IS NOT NULL
+         WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND wss.completed_at IS NOT NULL
          GROUP BY wss.id
        )`,
       [exerciseId]
@@ -128,7 +128,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
       `SELECT MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS val
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
-       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.is_warmup = 0 AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL`,
+       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL`,
       [exerciseId]
     ),
 
@@ -167,7 +167,7 @@ export async function getExercise1RMChartData(
          AND ws.weight > 0
          AND ws.reps IS NOT NULL
          AND ws.reps > 0
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND wss.completed_at IS NOT NULL
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
@@ -191,7 +191,7 @@ export async function getExerciseChartData(
          AND ws.completed = 1
          AND ws.weight IS NOT NULL
          AND ws.weight > 0
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND wss.completed_at IS NOT NULL
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
@@ -211,7 +211,7 @@ export async function getExerciseChartData(
        WHERE ws.exercise_id = ?
          AND ws.completed = 1
          AND wss.completed_at IS NOT NULL
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
        LIMIT ?
@@ -234,7 +234,7 @@ export async function getExerciseDurationChartData(
          AND ws.completed = 1
          AND ws.duration_seconds IS NOT NULL
          AND ws.duration_seconds > 0
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND wss.completed_at IS NOT NULL
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
@@ -391,7 +391,7 @@ export async function getBestSet(
       and(
         eq(workoutSets.exercise_id, exerciseId),
         eq(workoutSets.completed, 1),
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         sql`${workoutSets.weight} > 0`,
         sql`${workoutSets.reps} > 0`,
         sql`${workoutSets.reps} <= 12`,

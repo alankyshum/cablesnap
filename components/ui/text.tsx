@@ -1,4 +1,5 @@
 import { useColor } from '@/hooks/useColor';
+import { fontSizes } from '@/constants/design-tokens';
 import { FONT_SIZE } from '@/theme/globals';
 import React, { forwardRef } from 'react';
 import {
@@ -39,19 +40,19 @@ export const Text = forwardRef<RNText, TextProps>(
         case 'heading':
           return {
             ...baseStyle,
-            fontSize: 28,
+            fontSize: fontSizes.heading,
             fontWeight: '800',
           };
         case 'title':
           return {
             ...baseStyle,
-            fontSize: 24,
+            fontSize: fontSizes.xxl,
             fontWeight: '700',
           };
         case 'subtitle':
           return {
             ...baseStyle,
-            fontSize: 18,
+            fontSize: fontSizes.lg,
             fontWeight: '600',
           };
         case 'caption':
@@ -78,7 +79,7 @@ export const Text = forwardRef<RNText, TextProps>(
     };
 
     return (
-      <RNText ref={ref} style={[getTextStyle(), style]} {...props}>
+      <RNText ref={ref} maxFontSizeMultiplier={1.5} style={[getTextStyle(), style]} {...props}>
         {children}
       </RNText>
     );

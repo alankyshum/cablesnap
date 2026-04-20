@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import { spacing } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { ShareCardExercise, ShareCardPR } from "../ShareCard";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   exercises: ShareCardExercise[];
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   prTitle: {
-    fontSize: 18,
+    fontSize: fontSizes.lg,
     fontWeight: "700",
   },
   prRow: {
@@ -127,20 +128,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   prName: {
-    fontSize: 16,
+    fontSize: fontSizes.base,
     fontWeight: "500",
     flex: 1,
     marginRight: spacing.sm,
   },
   prValue: {
-    fontSize: 16,
+    fontSize: fontSizes.base,
     fontWeight: "700",
   },
   exerciseSection: {
     marginBottom: spacing.lg,
   },
   exerciseSectionTitle: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -153,17 +154,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs + 2,
   },
   exerciseName: {
-    fontSize: 16,
+    fontSize: fontSizes.base,
     fontWeight: "500",
     flex: 1,
     marginRight: spacing.sm,
   },
   exerciseDetail: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     fontWeight: "500",
   },
   moreText: {
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     fontStyle: "italic",
     marginTop: spacing.xs,
   },

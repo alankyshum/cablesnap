@@ -1,5 +1,5 @@
 import { getDrizzle } from "./helpers";
-import { sql, eq, and, gte, lt, isNotNull, isNull } from "drizzle-orm";
+import { sql, eq, ne, and, gte, lt, isNotNull, isNull } from "drizzle-orm";
 import { mondayOf, movingAvg } from "../format";
 import {
   workoutSessions,
@@ -123,7 +123,7 @@ export async function getWeeklyWorkouts(
         .where(
           and(
             eq(workoutSets.completed, 1),
-            eq(workoutSets.is_warmup, 0),
+            ne(workoutSets.set_type, 'warmup'),
             isNotNull(workoutSessions.completed_at),
             gte(workoutSessions.started_at, start),
             lt(workoutSessions.started_at, end),
@@ -152,7 +152,7 @@ export async function getWeeklyWorkouts(
         .where(
           and(
             eq(workoutSets.completed, 1),
-            eq(workoutSets.is_warmup, 0),
+            ne(workoutSets.set_type, 'warmup'),
             isNotNull(workoutSessions.completed_at),
             gte(workoutSessions.started_at, prevStart),
             lt(workoutSessions.started_at, start),
@@ -226,7 +226,7 @@ export async function getWeeklyPRs(weekStartMs: number): Promise<WeeklyPR[]> {
         eq(workoutSets.completed, 1),
         isNotNull(workoutSets.weight),
         sql`${workoutSets.weight} > 0`,
-        eq(workoutSets.is_warmup, 0),
+        ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSessions.completed_at),
         gte(workoutSessions.started_at, start),
         lt(workoutSessions.started_at, end),
@@ -251,7 +251,7 @@ export async function getWeeklyPRs(weekStartMs: number): Promise<WeeklyPR[]> {
           eq(workoutSets.completed, 1),
           isNotNull(workoutSets.weight),
           sql`${workoutSets.weight} > 0`,
-          eq(workoutSets.is_warmup, 0),
+          ne(workoutSets.set_type, 'warmup'),
           isNotNull(workoutSessions.completed_at),
           eq(workoutSets.exercise_id, wm.exercise_id),
           lt(workoutSessions.started_at, start),

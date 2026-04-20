@@ -4,6 +4,7 @@ import { useColor } from "@/hooks/useColor";
 import { BORDER_RADIUS } from "@/theme/globals";
 import React from "react";
 import { Pressable, ViewStyle, type Role } from "react-native";
+import { fontSizes } from "@/constants/design-tokens";
 
 interface ChipProps {
   children: React.ReactNode;
@@ -51,6 +52,7 @@ export function Chip({
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
+          gap: 4,
           paddingHorizontal: compact ? 10 : 14,
           paddingVertical: compact ? 4 : 6,
           borderRadius: BORDER_RADIUS,
@@ -63,7 +65,7 @@ export function Chip({
       {typeof children === "string" || typeof children === "number" ? (
         <Text
           style={{
-            fontSize: 14,
+            fontSize: fontSizes.sm,
             fontWeight: selected ? "600" : "400",
             color: selected ? primaryFg : textColor,
           }}

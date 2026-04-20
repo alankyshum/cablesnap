@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { FlowCardMenuItem } from "./FlowCard";
 import type { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   items: FlowCardMenuItem[];
@@ -42,7 +43,7 @@ export function FlowCardMenu({ items, isDark, colors, anchorY, anchorX, onClose 
               accessibilityRole="menuitem"
             >
               <MaterialCommunityIcons name={item.icon} size={18} color={item.destructive ? colors.error : colors.onSurface} />
-              <Text variant="body" style={{ color: item.destructive ? colors.error : colors.onSurface, fontSize: 14 }}>{item.label}</Text>
+              <Text variant="body" style={{ color: item.destructive ? colors.error : colors.onSurface, fontSize: fontSizes.sm }}>{item.label}</Text>
             </Pressable>
           ))}
         </View>

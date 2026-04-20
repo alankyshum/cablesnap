@@ -32,7 +32,7 @@ export async function getE1RMTrends(): Promise<E1RMTrendRow[]> {
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND ws.weight > 0
          AND ws.reps > 0
          AND ws.reps <= 12
@@ -47,7 +47,7 @@ export async function getE1RMTrends(): Promise<E1RMTrendRow[]> {
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
-         AND ws.is_warmup = 0
+         AND ws.set_type != 'warmup'
          AND ws.weight > 0
          AND ws.reps > 0
          AND ws.reps <= 12

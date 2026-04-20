@@ -38,9 +38,7 @@ describe("FloatingTabBar component (BLD-212)", () => {
   });
 
   it("has accessible labels, touch targets, and font sizing", () => {
-    const fontSizeMatch = floatingTabBarSrc.match(/label:[\s\S]*?fontSize:\s*(\d+)/);
-    expect(fontSizeMatch).not.toBeNull();
-    expect(Number(fontSizeMatch![1])).toBeGreaterThanOrEqual(12);
+    expect(floatingTabBarSrc).toMatch(/label:[\s\S]*?fontSize:\s*fontSizes\.xs/);
     const lineHeightMatch = floatingTabBarSrc.match(/label:[\s\S]*?lineHeight:\s*(\d+)/);
     expect(lineHeightMatch).not.toBeNull();
     expect(Number(lineHeightMatch![1])).toBeGreaterThanOrEqual(16);

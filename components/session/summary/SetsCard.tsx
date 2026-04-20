@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { TRAINING_MODE_LABELS } from "@/lib/types";
 import type { WorkoutSet } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type SetGroup = {
   name: string;
@@ -44,7 +45,7 @@ export default function SetsCard({ grouped, colors }: Props) {
                 </Text>
                 {set.training_mode && set.training_mode !== "weight" && (
                   <View style={[styles.modeBadge, { backgroundColor: colors.secondaryContainer }]}>
-                    <Text style={{ color: colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
+                    <Text style={{ color: colors.onSecondaryContainer, fontSize: fontSizes.xs, fontWeight: "700" }}>
                       {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
                     </Text>
                   </View>

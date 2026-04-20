@@ -7,25 +7,27 @@ import "react-native-reanimated";
   USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS: true,
 };
 
-import { useColorScheme, AppState, View, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Redirect, Stack, usePathname, useRouter } from "expo-router";
+import { Redirect, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { BNAThemeProvider } from "../theme/theme-provider";
-import { ToastProvider, useToast } from "../components/ui/bna-toast";
+import { ToastProvider } from "../components/ui/bna-toast";
 import { Colors } from "../theme/colors";
+import { ThemePreferenceProvider } from "../lib/theme-preference";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
-import { getDatabase, getAppSetting, setAppSetting } from "../lib/db";
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
-import { setupHandler, handleResponse, getPermissionStatus, addNotificationResponseReceivedListener } from "../lib/notifications";
+import { setupHandler } from "../lib/notifications";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
 import { useAppInit } from "../hooks/useAppInit";
-import { SCREEN_CONFIGS } from "./screen-config";
+import { SCREEN_CONFIGS } from "../constants/screen-config";
+import { LayoutToastBridge } from "../components/LayoutToastBridge";
+import { LayoutBanners } from "../components/LayoutBanners";
 
 SplashScreen.preventAutoHideAsync();
 setupHandler();
@@ -47,11 +49,6 @@ export default function RootLayout() {
     }
   }, [pathname, ready]);
 
-  const headerStyle = {
-    backgroundColor: themeColors.card,
-  };
-  const headerTintColor = themeColors.foreground;
-
   const completeOnboarding = useCallback(() => setOnboarded(true), [setOnboarded]);
   const onboardingCtx = useMemo(
     () => ({ completeOnboarding }),
@@ -60,47 +57,25 @@ export default function RootLayout() {
 
   if (!ready) return null;
 
+  const headerStyle = { backgroundColor: themeColors.card };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
     <ErrorBoundary>
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
+      <ThemePreferenceProvider>
       <BNAThemeProvider>
         <ToastProvider>
           <LayoutToastBridge />
           {!onboarded && !pathname.startsWith("/onboarding") && (
             <Redirect href="/onboarding/welcome" />
           )}
-          {banner && (
-          <View style={{ backgroundColor: themeColors.warningBanner, padding: 16 }}>
-            <Text style={{ color: themeColors.foreground }}>
-              ⚠️ Web storage unavailable — using in-memory database. Your data will not persist across page reloads.
-            </Text>
-            <Text
-              style={{ color: themeColors.primary, marginTop: 8, fontWeight: "600" }}
-              onPress={() => setBanner(false)}
-            >
-              Dismiss
-            </Text>
-          </View>
-          )}
-          {!!error && (
-          <View style={{ backgroundColor: themeColors.errorBanner, padding: 16 }}>
-            <Text style={{ color: themeColors.foreground }}>
-              ❌ Database error: {error}. Try reloading the app.
-            </Text>
-            <Text
-              style={{ color: themeColors.primary, marginTop: 8, fontWeight: "600" }}
-              onPress={() => { setError(null); getDatabase().catch((e) => setError(e?.message ?? "Retry failed")); }}
-            >
-              Retry
-            </Text>
-          </View>
-          )}
+          <LayoutBanners banner={banner} setBanner={setBanner} error={error} setError={setError} themeColors={themeColors} />
           <Stack
             screenOptions={{
               headerShown: false,
-              animation: "fade_from_bottom",
+              animation: "none",
             }}
           >
             {SCREEN_CONFIGS.map(({ name, options }) => (
@@ -109,7 +84,7 @@ export default function RootLayout() {
                 name={name}
                 options={{
                   ...options,
-                  ...(options.headerShown ? { headerStyle, headerTintColor } : {}),
+                  ...(options.headerShown ? { headerStyle, headerTintColor: themeColors.foreground } : {}),
                 }}
               />
             ))}
@@ -117,6 +92,7 @@ export default function RootLayout() {
           <StatusBar style="auto" />
         </ToastProvider>
       </BNAThemeProvider>
+      </ThemePreferenceProvider>
       </OnboardingContext.Provider>
       </QueryProvider>
     </ErrorBoundary>
@@ -124,45 +100,3 @@ export default function RootLayout() {
   );
 }
 
-/** Bridges notification/permission events to BNA toast (must be inside ToastProvider) */
-function LayoutToastBridge() {
-  const { info, warning } = useToast();
-  const router = useRouter();
-
-  useEffect(() => {
-    const sub = addNotificationResponseReceivedListener((response) => {
-      handleResponse(
-        response,
-        (path, params) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Expo Router dynamic route type
-          if (params) router.push({ pathname: path as any, params });
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          else router.push(path as any);
-        },
-        (msg: string) => info(msg)
-      );
-    });
-    return () => sub?.remove();
-  }, [router, info]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", async (state) => {
-      if (state !== "active") return;
-      try {
-        const status = await getPermissionStatus();
-        if (status !== "granted") {
-          const enabled = await getAppSetting("reminders_enabled");
-          if (enabled === "true") {
-            await setAppSetting("reminders_enabled", "false");
-            warning("Notification permission was revoked. Reminders disabled.");
-          }
-        }
-      } catch {
-        // Permission check failed — non-critical background operation
-      }
-    });
-    return () => sub.remove();
-  }, [warning]);
-
-  return null;
-}

@@ -95,17 +95,11 @@ export function calculateMacros(
 }
 
 /**
- * Migrate a legacy profile that used `age` to the new `birthYear` format.
+ * Parse a raw profile object into a typed NutritionProfile.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- handles legacy profile shape
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- handles raw JSON input
 export function migrateProfile(raw: any): NutritionProfile {
-  const { age: legacyAge, ...rest } = raw;
-  if (rest.birthYear !== undefined && rest.birthYear !== null) {
-    return rest as NutritionProfile;
-  }
-  const currentYear = new Date().getFullYear();
-  const birthYear = currentYear - (Number(legacyAge) || 0);
-  return { ...rest, birthYear } as NutritionProfile;
+  return raw as NutritionProfile;
 }
 
 export function calculateFromProfile(profile: NutritionProfile): MacroTargets & { belowFloor: boolean } {

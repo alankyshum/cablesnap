@@ -5,6 +5,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { spacing, radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheet | null>;
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   title: {
-    fontSize: 18,
+    fontSize: fontSizes.lg,
     fontWeight: "700",
     marginBottom: spacing.xs,
   },
@@ -149,11 +150,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionLabel: {
-    fontSize: 16,
+    fontSize: fontSizes.base,
     fontWeight: "600",
   },
   optionDesc: {
-    fontSize: 13,
+    fontSize: fontSizes.sm,
     marginTop: 2,
   },
 });

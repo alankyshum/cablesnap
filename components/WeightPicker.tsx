@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
   value: number | null;
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepText: {
-    fontSize: 16,
+    fontSize: fontSizes.base,
     fontWeight: "700",
     lineHeight: 20,
   },
@@ -138,16 +139,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   valueText: {
-    fontSize: 16,
+    fontSize: fontSizes.base,
     fontWeight: "700",
   },
   unitText: {
-    fontSize: 12,
+    fontSize: fontSizes.xs,
   },
   input: {
     width: 56,
     height: 32,
-    fontSize: 14,
+    fontSize: fontSizes.sm,
     textAlign: "center",
     paddingHorizontal: 2,
   },

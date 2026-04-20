@@ -62,7 +62,6 @@ describe('getSourceSessionSets', () => {
         training_mode: 'weight',
         tempo: null,
         exercise_exists: 'ex-1',
-        is_warmup: 0,
         set_type: 'normal',
       },
       {
@@ -74,7 +73,6 @@ describe('getSourceSessionSets', () => {
         training_mode: 'weight',
         tempo: null,
         exercise_exists: 'ex-1',
-        is_warmup: 0,
         set_type: 'normal',
       },
     ];
@@ -91,7 +89,6 @@ describe('getSourceSessionSets', () => {
       training_mode: 'weight',
       tempo: null,
       exercise_exists: true,
-      is_warmup: false,
       set_type: 'normal',
     });
     expect(result[1].weight).toBe(85);
@@ -109,7 +106,6 @@ describe('getSourceSessionSets', () => {
         training_mode: null,
         tempo: null,
         exercise_exists: null,
-        is_warmup: 0,
         set_type: 'normal',
       },
     ];
@@ -131,7 +127,6 @@ describe('getSourceSessionSets', () => {
         training_mode: null,
         tempo: '3-1-2',
         exercise_exists: 'ex-1',
-        is_warmup: 0,
         set_type: 'normal',
       },
       {
@@ -143,7 +138,6 @@ describe('getSourceSessionSets', () => {
         training_mode: null,
         tempo: null,
         exercise_exists: 'ex-2',
-        is_warmup: 0,
         set_type: 'normal',
       },
     ];

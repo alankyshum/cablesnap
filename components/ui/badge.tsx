@@ -4,6 +4,7 @@ import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { CORNERS } from '@/theme/globals';
 import { TextStyle, ViewStyle } from 'react-native';
+import { fontSizes } from "@/constants/design-tokens";
 
 type BadgeVariant =
   | 'default'
@@ -64,7 +65,7 @@ export function Badge({
 
   const getTextStyle = (): TextStyle => {
     const baseTextStyle: TextStyle = {
-      fontSize: 14,
+      fontSize: fontSizes.sm,
       fontWeight: '500',
       textAlign: 'center',
     };

@@ -8,6 +8,7 @@ import { Colors } from "../theme/colors";
 import { logError, generateReport, generateGitHubURL, getRecentErrors } from "../lib/errors";
 import { recent as recentInteractions } from "../lib/interactions";
 import { Share2, ExternalLink, RotateCcw, ChevronDown, ChevronUp } from "lucide-react-native";
+import { fontSizes } from "@/constants/design-tokens";
 
 type Props = { children: React.ReactNode };
 type State = { error: Error | null; expanded: boolean };
@@ -167,6 +168,6 @@ const styles = StyleSheet.create({
   },
   mono: {
     fontFamily: "monospace",
-    fontSize: 12,
+    fontSize: fontSizes.xs,
   },
 });

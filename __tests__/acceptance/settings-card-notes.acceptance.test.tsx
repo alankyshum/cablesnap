@@ -31,6 +31,7 @@ describe("Session notes/delete button touch targets (BLD-258, GitHub #126)", () 
   const sessionSource = [
     fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"), "utf-8"),
     fs.readFileSync(path.resolve(__dirname, "../../components/session/GroupCardHeader.tsx"), "utf-8"),
+    fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseNotesPanel.tsx"), "utf-8"),
     fs.readFileSync(path.resolve(__dirname, "../../components/session/SetRow.tsx"), "utf-8"),
   ].join("\n");
 
@@ -54,15 +55,15 @@ describe("Session notes/delete button touch targets (BLD-258, GitHub #126)", () 
   });
 
   it("notes input has minimum font size of 14", () => {
-    const notesMatch = sessionSource.match(/notesInput:\s*\{[^}]*fontSize:\s*(\d+)/);
+    const notesMatch = sessionSource.match(/input:\s*\{[^}]*fontSize:\s*fontSizes\.(\w+)/);
     expect(notesMatch).not.toBeNull();
-    expect(Number(notesMatch![1])).toBeGreaterThanOrEqual(14);
+    expect(notesMatch![1]).toBe("sm"); // fontSizes.sm = 14
   });
 
   it("notes container has adequate padding", () => {
-    expect(sessionSource).toContain("notesContainer");
+    expect(sessionSource).toContain("container:");
     const containerMatch = sessionSource.match(
-      /notesContainer:\s*\{[^}]*paddingHorizontal:\s*(\d+)/
+      /container:\s*\{[^}]*paddingHorizontal:\s*(\d+)/
     );
     expect(containerMatch).not.toBeNull();
     expect(Number(containerMatch![1])).toBeGreaterThanOrEqual(8);

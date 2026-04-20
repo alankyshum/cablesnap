@@ -13,6 +13,7 @@ import { SuggestionChip } from "./SuggestionChip";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
 import type { Suggestion } from "../../lib/rm";
+import { fontSizes } from "@/constants/design-tokens";
 
 export type GroupCardProps = {
   group: ExerciseGroup;
@@ -105,6 +106,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
             unit={unit}
             halfStep={halfStep}
             trackingMode={isDurationMode ? "duration" : "reps"}
+            equipment={group.equipment}
             onUpdate={onUpdate}
             onCheck={onCheck}
             onDelete={onDelete}
@@ -253,7 +255,7 @@ const styles = StyleSheet.create({
   colLabel: {
     flex: 1,
     textAlign: "center",
-    fontSize: 12,
+    fontSize: fontSizes.xs,
     marginHorizontal: 12,
   },
   colTrailing: {

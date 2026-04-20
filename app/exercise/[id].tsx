@@ -33,6 +33,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useExerciseDetail, MAX_ITEMS } from "@/hooks/useExerciseDetail";
 import ExerciseRecordsCard from "@/components/exercise/ExerciseRecordsCard";
 import ExerciseChartCard from "@/components/exercise/ExerciseChartCard";
+import { fontSizes } from "@/constants/design-tokens";
 
 function formatDateLong(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(ts));
@@ -80,16 +81,16 @@ export default function ExerciseDetail() {
       </View>
 
       {exercise.mount_position && (
-        <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>Mount Position</Text>
+        <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>Mount Position</Text>
           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={`Mount position: ${MOUNT_POSITION_LABELS[exercise.mount_position]} on rack`}>{MOUNT_POSITION_LABELS[exercise.mount_position]}</Text></View>
       )}
       {exercise.attachment && (
-        <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>Attachment</Text>
+        <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>Attachment</Text>
           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={`Attachment: ${ATTACHMENT_LABELS[exercise.attachment]}`}>{ATTACHMENT_LABELS[exercise.attachment]}</Text></View>
       )}
       {exercise.training_modes && exercise.training_modes.length > 0 && (
         <View style={styles.section} accessibilityLabel={`Compatible training modes: ${exercise.training_modes.join(", ")}`}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>Training Modes</Text>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>Training Modes</Text>
           <View style={styles.chipRow}>{exercise.training_modes.map((m) => <Chip key={m} compact style={StyleSheet.flatten([styles.muscleChip, { backgroundColor: colors.secondaryContainer }])}>{m.replace(/_/g, " ")}</Chip>)}</View>
         </View>
       )}
@@ -144,7 +145,7 @@ export default function ExerciseDetail() {
           <Text variant="title" style={{ color: colors.primary }}>{d.bw ? `${item.max_reps} reps` : `${toDisplay(item.max_weight, d.unit)} ${d.unit}`}</Text>
           {item.avg_rpe != null && (
             <View style={[styles.rpeBadge, { backgroundColor: rpeColor(item.avg_rpe) }]}>
-              <Text style={{ color: rpeText(item.avg_rpe), fontSize: 12, fontWeight: "600" }}>RPE {Math.round(item.avg_rpe * 10) / 10}</Text>
+              <Text style={{ color: rpeText(item.avg_rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>RPE {Math.round(item.avg_rpe * 10) / 10}</Text>
             </View>
           )}
         </View>

@@ -4,6 +4,8 @@ module.exports = {
   requestPermission: jest.fn().mockResolvedValue([{ recordType: "ExerciseSession", accessType: "write" }]),
   getGrantedPermissions: jest.fn().mockResolvedValue([{ recordType: "ExerciseSession", accessType: "write" }]),
   insertRecords: jest.fn().mockResolvedValue(["mock-record-id-1"]),
+  openHealthConnectSettings: jest.fn(),
+  revokeAllPermissions: jest.fn().mockResolvedValue(undefined),
   SdkAvailabilityStatus: {
     SDK_AVAILABLE: 1,
     SDK_UNAVAILABLE: 2,
