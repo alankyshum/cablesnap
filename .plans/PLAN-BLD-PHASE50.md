@@ -19,7 +19,7 @@ Add a **Meal Template** system: save a group of food items (with servings) as a 
 
 ### New Tables
 
-No REFERENCES or ON DELETE CASCADE — FitForge does NOT enable PRAGMA foreign_keys globally, so FK constraints are silently ignored. All referential integrity is enforced via manual transaction-based deletion (matching the pattern in `lib/db/templates.ts:deleteTemplate()`).
+No REFERENCES or ON DELETE CASCADE — CableSnap does NOT enable PRAGMA foreign_keys globally, so FK constraints are silently ignored. All referential integrity is enforced via manual transaction-based deletion (matching the pattern in `lib/db/templates.ts:deleteTemplate()`).
 
 ```sql
 CREATE TABLE IF NOT EXISTS meal_templates (

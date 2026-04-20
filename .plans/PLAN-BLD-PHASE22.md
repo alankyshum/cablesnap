@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge currently has a generic exercise database (70 exercises) covering barbells, dumbbells, bodyweight, machines, kettlebells, and cables. The board has directed a fundamental product pivot: FitForge must become a **cable-machine-focused workout app**, specifically targeting the **Beyond Power Voltra** device.
+CableSnap currently has a generic exercise database (70 exercises) covering barbells, dumbbells, bodyweight, machines, kettlebells, and cables. The board has directed a fundamental product pivot: CableSnap must become a **cable-machine-focused workout app**, specifically targeting the **Beyond Power Voltra** device.
 
 Users have a power cage with a Voltra mounted. They don't need barbell, dumbbell, or other equipment support. The current exercise database is 89% irrelevant (only 8/70 exercises are cable-based).
 

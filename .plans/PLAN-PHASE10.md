@@ -1,15 +1,15 @@
 # PLAN: Workout Programs / Training Plans (Phase 10)
 
-**BLD-XX** | Priority: High | Project: FitForge
+**BLD-XX** | Priority: High | Project: CableSnap
 **Status**: DRAFT
 
 ---
 
 ## Problem Statement
 
-FitForge currently supports individual workout templates — users can create a workout (e.g., "Chest Day"), add exercises, and start a session. However, there's no way to organize multiple workouts into a structured **training program** (e.g., Push/Pull/Legs, Upper/Lower, 5/3/1).
+CableSnap currently supports individual workout templates — users can create a workout (e.g., "Chest Day"), add exercises, and start a session. However, there's no way to organize multiple workouts into a structured **training program** (e.g., Push/Pull/Legs, Upper/Lower, 5/3/1).
 
-This forces users to manually remember which workout to do next and which day they're on in their split. Most commercial gym apps (Strong, JEFIT, Hevy) offer this feature behind a paywall. Making it free in FitForge is a strong differentiator.
+This forces users to manually remember which workout to do next and which day they're on in their split. Most commercial gym apps (Strong, JEFIT, Hevy) offer this feature behind a paywall. Making it free in CableSnap is a strong differentiator.
 
 ## Proposed Solution
 

@@ -122,10 +122,10 @@ beforeEach(() => {
 
   // Clear globalThis singleton so each test starts fresh
   const g = globalThis as any;
-  delete g.__fitforge_db;
-  delete g.__fitforge_drizzle;
-  delete g.__fitforge_init;
-  delete g.__fitforge_memfb;
+  delete g.__cablesnap_db;
+  delete g.__cablesnap_drizzle;
+  delete g.__cablesnap_init;
+  delete g.__cablesnap_memfb;
 
   // Reset the cached db module to clear singleton
   jest.resetModules();
@@ -181,7 +181,7 @@ describe("getDatabase web fallback", () => {
 
     expect(result).toBe(mockDb);
     expect(failOnce).toHaveBeenCalledTimes(2);
-    expect(failOnce).toHaveBeenNthCalledWith(1, "fitforge.db");
+    expect(failOnce).toHaveBeenNthCalledWith(1, "cablesnap.db");
     expect(failOnce).toHaveBeenNthCalledWith(2, ":memory:");
     expect(dbMod.isMemoryFallback()).toBe(true);
   });

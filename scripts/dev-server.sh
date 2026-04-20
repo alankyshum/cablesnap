@@ -1,5 +1,5 @@
 #!/bin/bash
-# FitForge dev server with auto-restart on dependency changes + hourly restart
+# CableSnap dev server with auto-restart on dependency changes + hourly restart
 #
 # Features:
 #   - Watches package.json & package-lock.json for changes (polls every 5s)
@@ -83,7 +83,7 @@ cd "$PROJECT_DIR" || exit 1
 
 echo ""
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${CYAN}  FitForge Dev Server${NC}"
+echo -e "${CYAN}  CableSnap Dev Server${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 info "Port:           $PORT"
 info "Restart:        every $((RESTART_INTERVAL / 60)) min or on dep change"

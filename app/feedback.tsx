@@ -149,9 +149,9 @@ export default function FeedbackScreen() {
         errors: diag ? errors : [], interactions: diag ? interactions : [],
         console_logs: diag ? consoleLogs : [],
       }, null, 2);
-      const report = new File(Paths.cache, "fitforge-report.txt");
+      const report = new File(Paths.cache, "cablesnap-report.txt");
       await report.write(text);
-      const artifact = new File(Paths.cache, "fitforge-report.json");
+      const artifact = new File(Paths.cache, "cablesnap-report.json");
       await artifact.write(json);
       await Sharing.shareAsync(report.uri, { mimeType: "text/plain", dialogTitle: "Share Report" });
       startCooldown();

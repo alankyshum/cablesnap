@@ -7,14 +7,14 @@
 
 ## Problem Statement
 
-FitForge's active workout session screen lacks several quality-of-life features that users rely on during real gym workouts:
+CableSnap's active workout session screen lacks several quality-of-life features that users rely on during real gym workouts:
 
 1. **Screen dims during rest periods** — users must tap the screen to see the timer, disrupting their flow
 2. **Weight must be typed manually every set** — even when repeating the same weight as last session, users re-enter it from scratch
 3. **No quick weight adjustment** — changing weight by 2.5kg requires clearing the field and retyping
 4. **Rest timer completion is subtle** — a single haptic pulse can be missed in a noisy gym with the phone in a pocket
 
-These are basic usability gaps that make FitForge less practical than commercial alternatives (Strong, Hevy, JEFIT) for actual gym use.
+These are basic usability gaps that make CableSnap less practical than commercial alternatives (Strong, Hevy, JEFIT) for actual gym use.
 
 ## User Stories
 

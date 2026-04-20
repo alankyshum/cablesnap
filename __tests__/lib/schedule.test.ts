@@ -77,10 +77,10 @@ beforeEach(() => {
 
   // Clear globalThis singleton so each test starts fresh
   const g = globalThis as any;
-  delete g.__fitforge_db;
-  delete g.__fitforge_drizzle;
-  delete g.__fitforge_init;
-  delete g.__fitforge_memfb;
+  delete g.__cablesnap_db;
+  delete g.__cablesnap_drizzle;
+  delete g.__cablesnap_init;
+  delete g.__cablesnap_memfb;
 
   jest.resetModules();
   jest.doMock("expo-sqlite", () => ({

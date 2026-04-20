@@ -1,5 +1,5 @@
 /**
- * Drizzle ORM schema definitions for all FitForge tables.
+ * Drizzle ORM schema definitions for all CableSnap tables.
  *
  * This file is the single source of truth for TypeScript types derived from
  * the database schema. Table definitions here must match the runtime schema

@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge tracks every set users perform, but there's NO way to view the history for a specific exercise. The exercise detail page (`app/exercise/[id].tsx`) shows only static info — name, muscles, equipment, instructions. Users cannot see:
+CableSnap tracks every set users perform, but there's NO way to view the history for a specific exercise. The exercise detail page (`app/exercise/[id].tsx`) shows only static info — name, muscles, equipment, instructions. Users cannot see:
 
 - When they last performed the exercise
 - How their weight/reps have progressed over time

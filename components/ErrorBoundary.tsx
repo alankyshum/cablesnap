@@ -36,7 +36,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   handleShare = async () => {
     try {
       const report = await generateReport();
-      const file = new File(Paths.cache, "fitforge-crash-report.json");
+      const file = new File(Paths.cache, "cablesnap-crash-report.json");
       await file.write(report);
       await Sharing.shareAsync(file.uri, {
         mimeType: "application/json",

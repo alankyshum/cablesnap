@@ -7,13 +7,13 @@
 
 ## Problem Statement
 
-FitForge tracks workout history and shows personal records, but offers ZERO guidance on what weight to use for the next workout. Users must mentally calculate:
+CableSnap tracks workout history and shows personal records, but offers ZERO guidance on what weight to use for the next workout. Users must mentally calculate:
 - "What did I lift last time?"
 - "Should I increase weight or reps?"
 - "What's my estimated one-rep max?"
 - "What weight should I use for a target of 8 reps?"
 
-Every serious lifter uses progressive overload — systematically increasing stimulus over time — as their primary training principle. But FitForge only shows raw history. It doesn't translate that data into actionable recommendations.
+Every serious lifter uses progressive overload — systematically increasing stimulus over time — as their primary training principle. But CableSnap only shows raw history. It doesn't translate that data into actionable recommendations.
 
 The existing `est_1rm` field in `ExerciseRecords` calculates a basic Epley estimate but is only shown as a number in the exercise detail screen. It's not used for suggestions anywhere.
 

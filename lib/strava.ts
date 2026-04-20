@@ -34,7 +34,7 @@ function getClientId(): string {
 }
 
 const redirectUri = AuthSession.makeRedirectUri({
-  scheme: "fitforge",
+  scheme: "cablesnap",
   path: "strava-callback",
 });
 
@@ -298,7 +298,7 @@ async function uploadActivity(
       start_date_local: startDate,
       elapsed_time: elapsedTime,
       description,
-      external_id: `fitforge-${sessionId}`,
+      external_id: `cablesnap-${sessionId}`,
     }),
   });
 

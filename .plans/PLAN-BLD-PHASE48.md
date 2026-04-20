@@ -6,7 +6,7 @@
 **Status**: APPROVED
 
 ## Problem Statement
-Many fitness enthusiasts use Strava as their central activity hub. Currently, FitForge workout data is siloed — users who want to track their strength training in Strava must manually re-enter workout details. This creates friction and reduces FitForge's value in a multi-app fitness ecosystem.
+Many fitness enthusiasts use Strava as their central activity hub. Currently, CableSnap workout data is siloed — users who want to track their strength training in Strava must manually re-enter workout details. This creates friction and reduces CableSnap's value in a multi-app fitness ecosystem.
 
 The owner has filed three related requests:
 - GitHub #164: Auto-upload finished workouts to Strava
@@ -14,7 +14,7 @@ The owner has filed three related requests:
 - GitHub #166: Wear OS companion (separate phase — out of scope here)
 
 ## User Stories
-- As a gym-goer who uses Strava, I want my FitForge workouts to appear in Strava automatically so I don't have to manually log them twice
+- As a gym-goer who uses Strava, I want my CableSnap workouts to appear in Strava automatically so I don't have to manually log them twice
 - As a user, I want to connect/disconnect my Strava account from Settings so I control when syncing is active
 
 ## Proposed Solution
@@ -55,7 +55,7 @@ Add Strava OAuth2 PKCE integration with automatic workout upload. When a user co
 - **OAuth2 flow**: Authorization Code Grant with **PKCE** (no client_secret needed)
   - `client_id`: stored in `app.config.ts` under `extra.stravaClientId` (public, non-secret)
   - No `client_secret` in the app — PKCE eliminates the need
-  - Redirect URI: `fitforge://strava-callback` (deep link via `expo-linking`)
+  - Redirect URI: `cablesnap://strava-callback` (deep link via `expo-linking`)
   - Scopes: `activity:write` (create activities)
 - **Token storage**: `expo-secure-store` exclusively
   - Key `strava_access_token` — access token string
@@ -69,7 +69,7 @@ Add Strava OAuth2 PKCE integration with automatic workout upload. When a user co
   - `start_date_local`: session.started_at (ISO 8601)
   - `elapsed_time`: session duration in seconds
   - `description`: exercise summary respecting user's **weight unit preference** (kg or lbs from settings)
-  - `external_id`: `fitforge-{session_id}` — **prevents duplicate uploads** if retried
+  - `external_id`: `cablesnap-{session_id}` — **prevents duplicate uploads** if retried
 - **Token refresh**: Strava tokens expire every 6 hours — auto-refresh before API calls using refresh token via `POST /oauth/token`
 
 #### Data Model Changes
@@ -119,8 +119,8 @@ Add Strava OAuth2 PKCE integration with automatic workout upload. When a user co
 **Out of Scope:**
 - Web platform support (expo-secure-store/expo-auth-session don't support web)
 - Wear OS integration (separate phase — GitHub #166)
-- Importing Strava activities INTO FitForge
-- Syncing cardio data (FitForge is strength-focused)
+- Importing Strava activities INTO CableSnap
+- Syncing cardio data (CableSnap is strength-focused)
 - Sync history UI (phase 1 — no visible sync status on workout list)
 - Auto-sync toggle (connect = on, disconnect = off)
 - Bidirectional sync
@@ -131,7 +131,7 @@ Add Strava OAuth2 PKCE integration with automatic workout upload. When a user co
 - [ ] Given a user on Settings (web) Then the Integrations section is NOT visible
 - [ ] Given a user completes Strava OAuth Then their athlete name appears in Settings with a "Disconnect" button
 - [ ] Given a connected user who completes a workout Then the workout is uploaded to Strava as a WeightTraining activity with correct duration and exercise summary
-- [ ] Given a Strava activity is created Then it uses `external_id: "fitforge-{session_id}"` to prevent duplicates
+- [ ] Given a Strava activity is created Then it uses `external_id: "cablesnap-{session_id}"` to prevent duplicates
 - [ ] Given the workout description includes weights Then weights use the user's configured unit (kg or lbs)
 - [ ] Given a user taps "Disconnect" Then SecureStore tokens are deleted, strava_connection row is deleted, and no future workouts sync
 - [ ] Given the Strava API is unavailable When a workout completes Then a non-blocking error toast shows, workout is saved locally, and a `failed` entry is created in strava_sync_log
@@ -209,7 +209,7 @@ All 8 critical issues from R1 resolved:
 11. ✅ Error boundary around Strava components
 12. ✅ strava_connection uses singleton pattern (id=1, CHECK constraint)
 
-Plan is technically sound, UX-coherent, and aligned with FitForge Review SKILL standards. Ready for implementation.
+Plan is technically sound, UX-coherent, and aligned with CableSnap Review SKILL standards. Ready for implementation.
 
 ### Tech Lead (Technical Feasibility) — R1
 **Verdict: NEEDS REVISION** (2026-04-17)

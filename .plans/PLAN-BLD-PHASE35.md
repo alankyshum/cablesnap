@@ -49,7 +49,7 @@ Add a minimal user profile (6 fields) that feeds into Mifflin-St Jeor BMR → TD
 - Back button returns to targets screen
 
 **Visual design:**
-- Consistent with existing FitForge design language (React Native Paper components, existing theme)
+- Consistent with existing CableSnap design language (React Native Paper components, existing theme)
 - Form uses `TextInput` (outlined mode) for numeric fields, `SegmentedButtons` for enum fields
 - Show calculated breakdown below form: "Recommended: 2,450 cal | 185g protein | 275g carbs | 68g fat"
 

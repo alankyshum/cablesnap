@@ -9,7 +9,7 @@
 
 When loading a barbell, lifters must mentally calculate which plates to put on each side. For example, a target of 102.5kg requires: (102.5 - 20) / 2 = 41.25kg per side → 20 + 15 + 5 + 1.25. This mental math is error-prone — especially when fatigued mid-workout, switching between metric and imperial, or using unfamiliar plate inventory at a new gym.
 
-Every serious gym app (Strong, Hevy, JEFIT) includes a plate calculator. FitForge currently has no such utility. Users must do the math on paper or in their head, which slows down workouts and risks loading errors.
+Every serious gym app (Strong, Hevy, JEFIT) includes a plate calculator. CableSnap currently has no such utility. Users must do the math on paper or in their head, which slows down workouts and risks loading errors.
 
 ## User Stories
 

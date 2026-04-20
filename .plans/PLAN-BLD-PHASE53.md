@@ -7,11 +7,11 @@
 
 ## Problem Statement
 
-Users open FitForge and face the question: "What should I train today?" The app has templates and programs, but users doing flexible training (no fixed program, or choosing between templates) lack guidance on which muscles are recovered and ready for work.
+Users open CableSnap and face the question: "What should I train today?" The app has templates and programs, but users doing flexible training (no fixed program, or choosing between templates) lack guidance on which muscles are recovered and ready for work.
 
 Currently, the Muscles segment in Progress shows *volume per muscle group over a period* — useful for retrospective analysis but not actionable for today's training decision. There's no real-time recovery indicator.
 
-Every major competitor (RP Hypertrophy, JEFIT Pro, Juggernaut AI) offers some form of muscle recovery/readiness indicator. FitForge should too — and it can build on the existing `MuscleMap` component and workout history data.
+Every major competitor (RP Hypertrophy, JEFIT Pro, Juggernaut AI) offers some form of muscle recovery/readiness indicator. CableSnap should too — and it can build on the existing `MuscleMap` component and workout history data.
 
 ## User Stories
 

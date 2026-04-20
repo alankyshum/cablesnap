@@ -36,17 +36,17 @@ describe("handleShare — shares text report as primary (BLD-72)", () => {
     expect(handler.length).toBeGreaterThan(0);
   });
 
-  it("creates fitforge-report.txt", () => {
-    expect(handler).toContain('"fitforge-report.txt"');
+  it("creates cablesnap-report.txt", () => {
+    expect(handler).toContain('"cablesnap-report.txt"');
   });
 
-  it("creates fitforge-report.json as secondary artifact", () => {
-    expect(handler).toContain('"fitforge-report.json"');
+  it("creates cablesnap-report.json as secondary artifact", () => {
+    expect(handler).toContain('"cablesnap-report.json"');
   });
 
   it("creates text file before JSON file", () => {
-    const txt = handler.indexOf('"fitforge-report.txt"');
-    const json = handler.indexOf('"fitforge-report.json"');
+    const txt = handler.indexOf('"cablesnap-report.txt"');
+    const json = handler.indexOf('"cablesnap-report.json"');
     expect(txt).toBeLessThan(json);
   });
 

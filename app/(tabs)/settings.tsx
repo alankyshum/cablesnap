@@ -134,7 +134,7 @@ export default function Settings() {
               variant="body"
               style={{ color: colors.primary, marginTop: 4 }}
               onPress={() =>
-                Linking.openURL('https://github.com/alankyshum/fitforge/blob/main/LICENSE')
+                Linking.openURL('https://github.com/alankyshum/cablesnap/blob/main/LICENSE')
               }
             >
               AGPL-3.0 License

@@ -3,7 +3,7 @@
 ## Learnings
 
 ### Metro Bundler Requires Explicit WASM Extension for expo-sqlite Web
-**Source**: BLD-14 — Pipeline halt: FitForge build broken
+**Source**: BLD-14 — Pipeline halt: CableSnap build broken
 **Date**: 2026-04-12
 **Context**: After fixing TypeScript and peer dependency errors, `expo export --platform web` still failed. expo-sqlite's web implementation depends on `wa-sqlite.wasm`, but Metro's default `assetExts` list does not include `.wasm`.
 **Learning**: Metro bundler only resolves file extensions in its `assetExts` list. WASM files are not included by default. When a dependency requires `.wasm` assets (like expo-sqlite for web), Metro fails with "Unable to resolve module ./wa-sqlite/wa-sqlite.wasm". The fix is a `metro.config.js` that extends the default Expo Metro config and adds `wasm` to `resolver.assetExts`.
@@ -106,11 +106,11 @@
 **Action**: When planning diagnostic or debugging features, do not attempt to capture native platform logs in Expo managed workflow. Instead, maximize JS-accessible data: expand console log buffers, add structured event logging to DB, and include device metadata via expo-device and expo-constants. Document the native log limitation for stakeholders early in planning.
 **Tags**: expo, managed-workflow, logcat, native-logs, diagnostics, platform-limitation, debugging, feedback
 
-### FitForge DB Migrations Live in lib/db/migrations.ts
+### CableSnap DB Migrations Live in lib/db/migrations.ts
 **Source**: BLD-298 — PLAN: Strava Integration (Phase 48); updated by BLD-322 — FTA complexity audit
 **Date**: 2026-04-18
 **Type**: UPDATE — Supersedes prior version pointing to helpers.ts
 **Context**: BLD-322 split the oversized `lib/db/helpers.ts` into focused modules. Migrations (CREATE TABLE, ALTER TABLE) now live in `lib/db/migrations.ts`. Seed data lives in `lib/db/seed.ts`. `helpers.ts` retains only DB connection setup and query utilities.
-**Learning**: FitForge DB schema migrations (all CREATE TABLE and ALTER TABLE statements) are defined in `lib/db/migrations.ts`. Seed data and starter template logic is in `lib/db/seed.ts`. Plans and implementations referencing `lib/db/helpers.ts` or `lib/db/schema.ts` for DDL are targeting the wrong files.
-**Action**: When adding new tables or modifying schema in FitForge, add CREATE TABLE / ALTER TABLE statements to `lib/db/migrations.ts`. For seed data, use `lib/db/seed.ts`. Reference `lib/db/helpers.ts` only for connection management and query utilities (`query`, `queryOne`, `getDb`).
-**Tags**: fitforge, database, schema, migration, file-location, plan-accuracy, module-decomposition
+**Learning**: CableSnap DB schema migrations (all CREATE TABLE and ALTER TABLE statements) are defined in `lib/db/migrations.ts`. Seed data and starter template logic is in `lib/db/seed.ts`. Plans and implementations referencing `lib/db/helpers.ts` or `lib/db/schema.ts` for DDL are targeting the wrong files.
+**Action**: When adding new tables or modifying schema in CableSnap, add CREATE TABLE / ALTER TABLE statements to `lib/db/migrations.ts`. For seed data, use `lib/db/seed.ts`. Reference `lib/db/helpers.ts` only for connection management and query utilities (`query`, `queryOne`, `getDb`).
+**Tags**: cablesnap, database, schema, migration, file-location, plan-accuracy, module-decomposition

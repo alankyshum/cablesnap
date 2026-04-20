@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-Gym-goers constantly need to calculate which plates to load on a barbell. After using the 1RM calculator to find their target percentage, users have to mentally figure out the plate combination — a tedious, error-prone process, especially mid-workout. Every serious fitness app includes a plate calculator. FitForge currently has a 1RM calculator (`app/tools/rm.tsx`) but no way to translate those numbers into actual plates on a bar. This gap forces users out of the app and into mental math or a competing tool.
+Gym-goers constantly need to calculate which plates to load on a barbell. After using the 1RM calculator to find their target percentage, users have to mentally figure out the plate combination — a tedious, error-prone process, especially mid-workout. Every serious fitness app includes a plate calculator. CableSnap currently has a 1RM calculator (`app/tools/rm.tsx`) but no way to translate those numbers into actual plates on a bar. This gap forces users out of the app and into mental math or a competing tool.
 
 ## User Stories
 

@@ -16,7 +16,7 @@ The data model already supports `training_modes` on exercises (e.g., `eccentric_
 - No training mode stored in `workout_sets` — all sets are implicitly "weight" mode
 - No training mode shown in session history or summaries
 
-This is the gap between "Volta exercises exist" and "the app actually helps you train with eccentric overload." Closing it makes FitForge the **only** workout app with native Volta eccentric training support.
+This is the gap between "Volta exercises exist" and "the app actually helps you train with eccentric overload." Closing it makes CableSnap the **only** workout app with native Volta eccentric training support.
 
 ## User Stories
 

@@ -8,7 +8,7 @@
 ## Problem Statement
 Users can see total weekly volume and personal records, but have no way to analyze training balance across muscle groups. They cannot tell if they are neglecting back work, over-training chest, or under-training legs. This is one of the most common training mistakes, especially for intermediate lifters.
 
-FitForge already stores `primary_muscles` and `secondary_muscles` on every exercise — this data is unused for analysis. Surfacing muscle group volume gives users actionable insight to improve their training programs.
+CableSnap already stores `primary_muscles` and `secondary_muscles` on every exercise — this data is unused for analysis. Surfacing muscle group volume gives users actionable insight to improve their training programs.
 
 ## User Stories
 - As a lifter, I want to see how many sets per muscle group I did this week so I can identify undertrained areas

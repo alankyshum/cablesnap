@@ -19,13 +19,13 @@ jobs:
           TAG="${{ github.event.release.tag_name }}"
           echo "Release edited: $TAG"
 
-          # Check if fitforge.apk exists in release assets
+          # Check if cablesnap.apk exists in release assets
           APK_EXISTS=$(gh api repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets \
-            --jq '[.[] | select(.name == "fitforge.apk")] | length')
+            --jq '[.[] | select(.name == "cablesnap.apk")] | length')
 
           if [ "$APK_EXISTS" -gt 0 ]; then
             echo "APK found in release $TAG, triggering F-Droid update..."
             gh workflow run fdroid-release.yml -f tag="$TAG" --repo ${{ github.repository }}
           else
-            echo "No fitforge.apk found in release $TAG, skipping."
+            echo "No cablesnap.apk found in release $TAG, skipping."
           fi

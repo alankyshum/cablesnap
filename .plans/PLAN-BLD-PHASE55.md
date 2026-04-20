@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge shows a muscle recovery heatmap (Phase 53) that tells users which muscles are recovered, partial, or fatigued. However, users must **mentally cross-reference** this data with their workout templates to decide what to train today. This creates unnecessary cognitive load — the user opens the app, checks the heatmap, scrolls through templates, reads each one's exercises, remembers which muscles they target, and picks the best match.
+CableSnap shows a muscle recovery heatmap (Phase 53) that tells users which muscles are recovered, partial, or fatigued. However, users must **mentally cross-reference** this data with their workout templates to decide what to train today. This creates unnecessary cognitive load — the user opens the app, checks the heatmap, scrolls through templates, reads each one's exercises, remembers which muscles they target, and picks the best match.
 
 For someone standing in the gym deciding "what do I do today?", this process takes too long. The app has all the data to answer this question instantly.
 
@@ -17,7 +17,7 @@ For someone standing in the gym deciding "what do I do today?", this process tak
 
 **Without this feature:** "I'm at the gym. Let me check the heatmap... ok, chest is recovered, legs are partial... now let me find which template hits chest... is it Push Day or Upper Body? Let me look at the exercises..." → Frustration, cognitive load, wasted time in the gym.
 
-**After this feature:** "I open FitForge and it says Push Day is READY — all target muscles recovered. I tap it and start." → Confidence, speed, feeling like the app is a smart training partner.
+**After this feature:** "I open CableSnap and it says Push Day is READY — all target muscles recovered. I tap it and start." → Confidence, speed, feeling like the app is a smart training partner.
 
 ## User Stories
 

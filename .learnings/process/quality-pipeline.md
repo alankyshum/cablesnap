@@ -11,9 +11,9 @@
 **Tags**: quality, verification, pr-review, typescript, build-pipeline, ci, merge-gates
 
 ### Embed Accessibility in Every Feature Spec — Not as a Separate Remediation Phase
-**Source**: BLD-21 — QUALITY: FitForge has ZERO accessibility
+**Source**: BLD-21 — QUALITY: CableSnap has ZERO accessibility
 **Date**: 2026-04-13
-**Context**: FitForge was built across 5 feature phases (BLD-8 through BLD-13). None included accessibility requirements. A board audit found ZERO accessibilityLabel attributes across 55+ interactive elements on all 12 screens. BLD-21 was a critical-priority remediation requiring 2 PRs to touch every screen in the app.
+**Context**: CableSnap was built across 5 feature phases (BLD-8 through BLD-13). None included accessibility requirements. A board audit found ZERO accessibilityLabel attributes across 55+ interactive elements on all 12 screens. BLD-21 was a critical-priority remediation requiring 2 PRs to touch every screen in the app.
 **Learning**: When accessibility is deferred to "later," it accumulates into a massive batch remediation. Retroactive a11y work must touch every screen simultaneously, making review harder and regressions more likely. Embedding a11y criteria in each phase (5-10 elements per phase) makes the work incremental, reviewable, and catches omissions in context.
 **Action**: Include these as standard acceptance criteria in every feature issue: (1) every onPress element has accessibilityLabel and accessibilityRole, (2) stateful elements have accessibilityState, (3) no fontSize below 12, (4) no hardcoded hex colors. Do not create separate accessibility issues — embed a11y into the definition of done for each feature.
 **Tags**: accessibility, a11y, acceptance-criteria, quality, process, incremental, remediation, cross-project
@@ -70,7 +70,7 @@
 **Source**: BLD-326 — CRITICAL: Fix broken main — tests reference deleted app/nutrition/add.tsx
 **Date**: 2026-04-18
 **Context**: A refactoring PR deleted `app/nutrition/add.tsx` but left 5 test files, 2 layout references, and 1 route declaration still importing it. The pre-commit hook (eslint via lint-staged) and pre-push hook (test audit + FTA complexity) both passed because neither runs `tsc --noEmit`. The broken imports only surface as TypeScript errors, not lint or test audit failures. Main was broken until an emergency fix issue cleaned up the orphaned references.
-**Learning**: The FitForge git hooks have a blind spot: `tsc --noEmit` is not part of any automated pre-push or pre-commit gate. ESLint does not flag missing import targets the way tsc does. File deletions are the highest-risk gap — the deleted file's dependents (test files in `__tests__/`, route declarations in `_layout.tsx`, layout buttons, audit configs) continue to pass lint but fail compilation. This is the second time broken imports reached main (see BLD-10/12/14).
+**Learning**: The CableSnap git hooks have a blind spot: `tsc --noEmit` is not part of any automated pre-push or pre-commit gate. ESLint does not flag missing import targets the way tsc does. File deletions are the highest-risk gap — the deleted file's dependents (test files in `__tests__/`, route declarations in `_layout.tsx`, layout buttons, audit configs) continue to pass lint but fail compilation. This is the second time broken imports reached main (see BLD-10/12/14).
 **Action**: When a PR deletes or renames any source file, run `grep -r "deleted-filename" __tests__/ app/ components/` to find all dependents before merging. Until `tsc --noEmit` is added to the pre-push hook, this manual grep step is the only defense against orphaned import breakage reaching main.
 **Tags**: pre-push-hook, tsc, file-deletion, orphaned-imports, broken-main, quality-gate, ci-gap, process
 

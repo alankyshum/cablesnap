@@ -34,7 +34,7 @@ A lightweight, 3-step onboarding flow that appears exactly once on first launch.
 **Flow**: Welcome → Setup → Recommendation → Main App
 
 #### Step 1: Welcome (splash-like)
-- FitForge logo + "Welcome to FitForge"
+- CableSnap logo + "Welcome to CableSnap"
 - Subtitle: "Your free workout & macro tracker"
 - Single "Get Started" button
 - No skip — this screen is minimal friction

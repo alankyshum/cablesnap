@@ -13,7 +13,7 @@ MAX_TESTS=1800          # hard ceiling — fail if exceeded
 WARN_TESTS=1600         # warning threshold
 # ─────────────────────────────────────────────────────────────────
 
-echo "=== FitForge Test Audit ==="
+echo "=== CableSnap Test Audit ==="
 echo ""
 
 # 1. Count total test cases

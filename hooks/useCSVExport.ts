@@ -27,10 +27,10 @@ type CSVConfig = {
 };
 
 const CSV_CONFIGS: Record<string, CSVConfig> = {
-  workouts: { fetcher: getWorkoutCSVData as (s: number) => Promise<unknown[]>, formatter: workoutCSV as (r: unknown[]) => string, prefix: "fitforge-workouts", dialogTitle: "Export Workouts CSV" },
-  nutrition: { fetcher: getNutritionCSVData as (s: number) => Promise<unknown[]>, formatter: nutritionCSV as (r: unknown[]) => string, prefix: "fitforge-nutrition", dialogTitle: "Export Nutrition CSV" },
-  bodyWeight: { fetcher: getBodyWeightCSVData as (s: number) => Promise<unknown[]>, formatter: bodyWeightCSV as (r: unknown[]) => string, prefix: "fitforge-body-weight", dialogTitle: "Export Body Weight CSV" },
-  bodyMeasurements: { fetcher: getBodyMeasurementsCSVData as (s: number) => Promise<unknown[]>, formatter: bodyMeasurementsCSV as (r: unknown[]) => string, prefix: "fitforge-body-measurements", dialogTitle: "Export Body Measurements CSV" },
+  workouts: { fetcher: getWorkoutCSVData as (s: number) => Promise<unknown[]>, formatter: workoutCSV as (r: unknown[]) => string, prefix: "cablesnap-workouts", dialogTitle: "Export Workouts CSV" },
+  nutrition: { fetcher: getNutritionCSVData as (s: number) => Promise<unknown[]>, formatter: nutritionCSV as (r: unknown[]) => string, prefix: "cablesnap-nutrition", dialogTitle: "Export Nutrition CSV" },
+  bodyWeight: { fetcher: getBodyWeightCSVData as (s: number) => Promise<unknown[]>, formatter: bodyWeightCSV as (r: unknown[]) => string, prefix: "cablesnap-body-weight", dialogTitle: "Export Body Weight CSV" },
+  bodyMeasurements: { fetcher: getBodyMeasurementsCSVData as (s: number) => Promise<unknown[]>, formatter: bodyMeasurementsCSV as (r: unknown[]) => string, prefix: "cablesnap-body-measurements", dialogTitle: "Export Body Measurements CSV" },
 };
 
 export { sinceForRange };

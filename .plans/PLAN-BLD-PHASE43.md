@@ -8,7 +8,7 @@
 
 ## Problem Statement
 
-FitForge has comprehensive 1RM calculation, plate calculator, percentage tables, and tools. Three small but useful enhancements are missing:
+CableSnap has comprehensive 1RM calculation, plate calculator, percentage tables, and tools. Three small but useful enhancements are missing:
 
 1. **1RM Trend Chart** — The exercise detail chart shows max weight over time (`MAX(ws.weight)` per session). It does NOT show estimated 1RM over time. Users training with varying rep schemes can't see true strength progression.
 

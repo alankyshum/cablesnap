@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-Every gym-goer needs to warm up before lifting heavy. Currently in FitForge, users manually add warmup sets one by one, scroll to the right weight on each, change the set type to "warmup," and repeat 3-4 times. That's ~12 interactions per exercise just for warmup. Across 4-5 exercises in a workout, that's 50+ taps before the real work begins. Most users skip warmup logging entirely — which means their volume tracking is incomplete.
+Every gym-goer needs to warm up before lifting heavy. Currently in CableSnap, users manually add warmup sets one by one, scroll to the right weight on each, change the set type to "warmup," and repeat 3-4 times. That's ~12 interactions per exercise just for warmup. Across 4-5 exercises in a workout, that's 50+ taps before the real work begins. Most users skip warmup logging entirely — which means their volume tracking is incomplete.
 
 **Why now?** Phase 57 just delivered the rest timer in the header, making the mid-workout experience seamless. The biggest remaining friction point is workout *start* — the warmup phase. The app already has all the data needed: previous working weights, plate calculator with bar weights, and warmup set type support. This is pure UX integration.
 

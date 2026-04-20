@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge tracks workout data well (sets, reps, weight, RPE, per-set notes) but lacks two features gym-goers use daily:
+CableSnap tracks workout data well (sets, reps, weight, RPE, per-set notes) but lacks two features gym-goers use daily:
 
 1. **No session rating** — After completing a workout, users have no way to capture how it felt (energy, difficulty, satisfaction). This subjective signal is valuable for tracking overtraining, deload timing, and motivation trends. The session `notes` field exists in the DB but is only set on completion and not prominently surfaced in the UI.
 

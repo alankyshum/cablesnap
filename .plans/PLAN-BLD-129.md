@@ -21,7 +21,7 @@ Addressed all Critical and Major issues from Quality Director and Tech Lead revi
 
 ## Problem Statement
 
-FitForge has comprehensive workout tracking, nutrition, and progress features — but lacks a gamification layer to celebrate user milestones and drive continued engagement. Users who hit personal records, maintain streaks, or reach volume milestones get no formal recognition beyond data points. Research shows gamification elements (badges, achievements, milestones) significantly increase user retention in fitness apps.
+CableSnap has comprehensive workout tracking, nutrition, and progress features — but lacks a gamification layer to celebrate user milestones and drive continued engagement. Users who hit personal records, maintain streaks, or reach volume milestones get no formal recognition beyond data points. Research shows gamification elements (badges, achievements, milestones) significantly increase user retention in fitness apps.
 
 The app already tracks all the underlying data (PRs via `getRecentPRs`/`getSessionPRs`, streaks via `getAllCompletedSessionWeeks`, volume via `getWeeklyVolume`, workout counts via session history). The missing piece is a system that transforms these data points into meaningful achievements.
 

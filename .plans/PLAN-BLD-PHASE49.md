@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge workout data is siloed on-device. Users with fitness watches (Wear OS, Samsung Galaxy Watch, Fitbit) and health dashboards (Google Fit, Samsung Health) cannot see their strength training data alongside cardio, sleep, and other metrics.
+CableSnap workout data is siloed on-device. Users with fitness watches (Wear OS, Samsung Galaxy Watch, Fitbit) and health dashboards (Google Fit, Samsung Health) cannot see their strength training data alongside cardio, sleep, and other metrics.
 
 The Wear OS feasibility study (BLD-300) concluded that a native Wear OS companion app is prohibitively expensive (8–15 weeks). However, it explicitly recommended **Health Connect integration** as a lower-cost alternative (1–2 weeks) that delivers broad device support. Since many fitness watches already display Health Connect data, syncing workouts to Health Connect gives users wrist-level visibility without building a dedicated watch app.
 
@@ -15,7 +15,7 @@ This also complements the Strava integration (Phase 48) — Strava captures soci
 
 ## User Stories
 
-- As a gym-goer with a Wear OS or Galaxy Watch, I want my FitForge workouts to appear in my watch's fitness summary so I can see all my activity in one place
+- As a gym-goer with a Wear OS or Galaxy Watch, I want my CableSnap workouts to appear in my watch's fitness summary so I can see all my activity in one place
 - As a user of Google Fit or Samsung Health, I want my strength training sessions to appear alongside cardio and sleep data for a complete health picture
 - As a user, I want to enable/disable Health Connect sync from Settings so I control what data is shared
 
@@ -25,7 +25,7 @@ This also complements the Strava integration (Phase 48) — Strava captures soci
 
 Add Android Health Connect write integration to push completed workout sessions as `ExerciseSession` records with `ExerciseSegment` entries per exercise. Follow the same sync pattern established by Strava (Phase 48): sync on session completion, retry queue for failures, platform-gated to Android only.
 
-**Key constraint**: This is **write-only** — FitForge pushes data TO Health Connect. We do NOT read FROM Health Connect (no step counting, no heart rate import). This keeps scope tight and permissions minimal.
+**Key constraint**: This is **write-only** — CableSnap pushes data TO Health Connect. We do NOT read FROM Health Connect (no step counting, no heart rate import). This keeps scope tight and permissions minimal.
 
 ### UX Design
 
@@ -116,9 +116,9 @@ Only `WRITE_EXERCISE` is needed — we are not reading any health data. Note: `e
 
 #### Data Model — Health Connect Mapping
 
-FitForge workout session → Health Connect `ExerciseSession`:
+CableSnap workout session → Health Connect `ExerciseSession`:
 
-| FitForge Field | Health Connect Field | Notes |
+| CableSnap Field | Health Connect Field | Notes |
 |----------------|---------------------|-------|
 | `session.started_at` | `startTime` | ISO 8601 |
 | `session.completed_at` | `endTime` | ISO 8601 |
@@ -128,9 +128,9 @@ FitForge workout session → Health Connect `ExerciseSession`:
 | Set data (weight × reps) | `segment.repetitions` | Aggregate completed sets |
 
 Exercise type mapping strategy:
-- All FitForge exercises map to `ExerciseType.WEIGHTLIFTING` as the primary type
+- All CableSnap exercises map to `ExerciseType.WEIGHTLIFTING` as the primary type
 - The exercise name is preserved in `title` metadata for display in Health Connect viewers
-- This avoids complex mapping logic and is accurate (FitForge is a strength training app)
+- This avoids complex mapping logic and is accurate (CableSnap is a strength training app)
 
 #### DB Schema — `health_connect_sync_log`
 
@@ -196,7 +196,7 @@ export async function syncToHealthConnect(sessionId: string): Promise<boolean> {
     // Build ExerciseSession record with clientRecordId for deduplication (addresses TL Major 3)
     const record = buildExerciseSessionRecord(session, completedSets);
     record.metadata = {
-      clientRecordId: `fitforge-${sessionId}`,
+      clientRecordId: `cablesnap-${sessionId}`,
     };
 
     const result = await insertRecords([record]);
@@ -311,7 +311,7 @@ Files that will be MODIFIED (not created):
 - [ ] Given a user on iOS or web, When they view Settings, Then no Health Connect UI is visible
 - [ ] Given a sync failure (e.g. Health Connect unavailable at completion time), When the user next opens the app, Then the failed sync is retried automatically (up to 3 times)
 - [ ] Given a user with Health Connect enabled, When they view a workout in Google Fit or Samsung Health, Then the workout title, duration, and exercise type are displayed correctly
-- [ ] Given a user who revokes Health Connect permission in Android Settings, When they open FitForge Settings, Then the toggle is reverted to OFF and a snackbar shows "Health Connect permission was revoked"
+- [ ] Given a user who revokes Health Connect permission in Android Settings, When they open CableSnap Settings, Then the toggle is reverted to OFF and a snackbar shows "Health Connect permission was revoked"
 - [ ] Given a user who toggles Health Connect OFF while pending syncs exist, When the toggle turns off, Then pending/failed entries are marked permanently_failed
 - [ ] Given a retry of a previously synced session, When the record is re-inserted, Then no duplicate is created (clientRecordId deduplication)
 - [ ] Given a user on Android completes a workout with both Strava and HC enabled, When sync completes, Then only Strava shows a toast — HC syncs silently
@@ -333,12 +333,12 @@ Files that will be MODIFIED (not created):
 | Workout with 0 completed sets | Skip sync, mark permanently_failed with reason "No completed sets" |
 | Very long workout (3+ hours) | Syncs normally — Health Connect accepts any valid time range |
 | Network offline (Health Connect is local API) | Should work — Health Connect is on-device, no network needed |
-| Health Connect data cleared by user | FitForge sync log shows "synced" but data gone from HC — no action needed (user's choice) |
+| Health Connect data cleared by user | CableSnap sync log shows "synced" but data gone from HC — no action needed (user's choice) |
 | Strava AND Health Connect both enabled | Both sync independently, neither blocks the other |
 | App killed during sync | Sync log entry stays "pending", retried on next launch |
 | Multiple rapid workout completions | Each gets its own sync log entry, processed sequentially |
 | User toggles HC OFF with pending syncs | Pending/failed entries marked `permanently_failed` with reason "User disabled Health Connect" |
-| Retry creates duplicate record | Prevented by `clientRecordId: "fitforge-{sessionId}"` — Health Connect deduplicates by client record ID |
+| Retry creates duplicate record | Prevented by `clientRecordId: "cablesnap-{sessionId}"` — Health Connect deduplicates by client record ID |
 
 ### Risk Assessment
 
@@ -348,7 +348,7 @@ Files that will be MODIFIED (not created):
 | Health Connect API changes | Low | Low | Google provides stable API versioning |
 | Permission model changes in future Android | Low | Low | Expo config plugin handles manifest changes |
 | User confusion between Strava and Health Connect sync | Medium | Low | Clear descriptions under each toggle |
-| `expo-health-connect` plugin requires prebuild | Low | Medium | FitForge already uses `expo-dev-client` (prebuild workflow) |
+| `expo-health-connect` plugin requires prebuild | Low | Medium | CableSnap already uses `expo-dev-client` (prebuild workflow) |
 | Google Play Health Connect declaration form delays release | Medium | Medium | Submit form early — 5–7 day approval + 5–7 day whitelist propagation. Can release without HC; add HC in follow-up release after approval (addresses TL Minor 6) |
 
 ## Review Feedback
@@ -358,7 +358,7 @@ Files that will be MODIFIED (not created):
 
 **R1 Verdict: NEEDS REVISION** (2026-04-17) — 4 Critical, 4 Major issues raised.
 
-**R2 Verdict: APPROVED** (2026-04-17) — All 8 issues resolved. Plan meets FitForge quality standards. Permission revocation detection, dynamic imports, API level branching, silent sync, a11y, and toggle-off cleanup all addressed.
+**R2 Verdict: APPROVED** (2026-04-17) — All 8 issues resolved. Plan meets CableSnap quality standards. Permission revocation detection, dynamic imports, API level branching, silent sync, a11y, and toggle-off cleanup all addressed.
 
 ### Tech Lead (Technical Feasibility)
 **R1 Verdict**: NEEDS REVISION — 2 Critical, 2 Major, 2 Minor issues
@@ -370,7 +370,7 @@ Files that will be MODIFIED (not created):
 **R1 Issues (all resolved in R2)**:
 1. ~~Missing `expo-build-properties`~~ → Added with minSdkVersion:26, compileSdkVersion:34, targetSdkVersion:34 ✅
 2. ~~Missing `initialize()` call~~ → `ensureInitialized()` guard added before all API calls ✅
-3. ~~Missing `clientRecordId` dedup~~ → `clientRecordId: "fitforge-{sessionId}"` in record metadata ✅
+3. ~~Missing `clientRecordId` dedup~~ → `clientRecordId: "cablesnap-{sessionId}"` in record metadata ✅
 4. ~~Missing `health_connect_record_id` in schema~~ → Column added to sync log ✅
 5. ~~Permission string format~~ → Changed to `WRITE_EXERCISE` (no prefix) ✅
 6. ~~Google Play declaration form~~ → Added to Risk Assessment ✅
@@ -394,7 +394,7 @@ Files that will be MODIFIED (not created):
 | QD a11y | Touch targets, roles, announcements | Added ≥48dp, accessibilityRole/Label, AccessibilityInfo.announceForAccessibility() |
 | TL C1 | Missing expo-build-properties | Added with minSdkVersion:26, compileSdkVersion:34, targetSdkVersion:34 |
 | TL C2 | Missing initialize() call | Added `ensureInitialized()` guard before all API calls |
-| TL M3 | Missing clientRecordId | Added `clientRecordId: "fitforge-{sessionId}"` in record metadata |
+| TL M3 | Missing clientRecordId | Added `clientRecordId: "cablesnap-{sessionId}"` in record metadata |
 | TL M4 | Missing health_connect_record_id | Added column to sync log schema |
 | TL m5 | Permission string format | Changed to `WRITE_EXERCISE` (no Android namespace prefix) |
 | TL m6 | Google Play declaration form | Added to Risk Assessment with mitigation strategy |

@@ -53,7 +53,7 @@
 ### Semantic Color Constants for Domain-Specific Theming
 **Source**: BLD-21 — Accessibility: a11y attrs, font sizes, theme colors
 **Date**: 2026-04-13
-**Context**: FitForge needed colors for domain concepts (macro nutrients, exercise difficulty levels) that don't map to Material Design 3's built-in color tokens. Hardcoding hex values was flagged as an accessibility failure during a board audit.
+**Context**: CableSnap needed colors for domain concepts (macro nutrients, exercise difficulty levels) that don't map to Material Design 3's built-in color tokens. Hardcoding hex values was flagged as an accessibility failure during a board audit.
 **Learning**: Material Design 3 theme tokens (primary, secondary, surface, etc.) don't cover domain-specific color needs. Creating a `semantic` color export in the theme file maps domain concepts to colors (e.g., `protein → blue`, `difficulty.beginner → green`) while keeping them centrally managed and dark-mode aware. This prevents scattered hardcoded hex values without forcing domain concepts into inappropriate MD3 roles.
 **Action**: When a feature needs colors for domain concepts not covered by MD3 tokens, add them to the `semantic` section of `constants/theme.ts`. Never use hardcoded hex in component StyleSheet. Reference semantic constants for domain colors and `useTheme()` for standard UI colors.
 **Tags**: theming, material-design-3, semantic-colors, accessibility, dark-mode, react-native-paper, hardcoded-colors
@@ -149,7 +149,7 @@
 ### Seed Data Pivot via Soft-Delete + Idempotent Re-Seed
 **Source**: BLD-30 — Strategic Pivot: Cable Machine + Voltra Exercise Database (Phase 22)
 **Date**: 2026-04-14
-**Context**: FitForge pivoted from a generic exercise library (70 exercises) to a cable-machine-focused database (54 Voltra exercises). Old exercises were referenced by existing user sessions and templates, so hard-deleting them would break historical data.
+**Context**: CableSnap pivoted from a generic exercise library (70 exercises) to a cable-machine-focused database (54 Voltra exercises). Old exercises were referenced by existing user sessions and templates, so hard-deleting them would break historical data.
 **Learning**: When replacing seed/reference data entirely, soft-delete old records (UPDATE SET deleted_at = ? WHERE is_custom = 0) rather than hard-deleting. This preserves foreign-key references in user data (sessions, templates). Use an idempotent check (SELECT COUNT WHERE is_new = 1 AND deleted_at IS NULL) to prevent double-execution on app restart. Show orphaned (soft-deleted) entities with a visual marker in the UI (e.g., "(removed)" suffix in italic/gray) and offer a Replace action.
 **Action**: When a product pivot requires replacing seed data: (1) add a deleted_at column if not present, (2) soft-delete old seed rows only (is_custom = 0 guard), (3) insert new seed data with INSERT OR IGNORE, (4) gate the entire migration with an idempotent count check, (5) update all UI lists to handle soft-deleted references gracefully.
 **Tags**: sqlite, data-migration, soft-delete, seed-data, idempotent, product-pivot, reference-data
@@ -157,7 +157,7 @@
 ### Version-Based Seed Data Evolution with app_settings Table
 **Source**: BLD-32 — Starter Workout Templates & Program (Phase 23)
 **Date**: 2026-04-14
-**Context**: FitForge needed to ship 6 starter workout templates and 1 program as pre-loaded content. The seed data must be idempotent (safe on re-open) and evolvable (v2 can add/modify starters without re-seeding unchanged data).
+**Context**: CableSnap needed to ship 6 starter workout templates and 1 program as pre-loaded content. The seed data must be idempotent (safe on re-open) and evolvable (v2 can add/modify starters without re-seeding unchanged data).
 **Learning**: Store a `starter_version` integer in an `app_settings` key-value table. On each `initDatabase()`, compare the stored version against the code constant `STARTER_VERSION`. If stored >= current, skip entirely. If lower (or absent), run the full seed inside a transaction using `INSERT OR IGNORE` for each row. After success, upsert the version key. This is strictly better than a COUNT-based idempotent check (BLD-30 pattern) when seed data will evolve across releases — bumping the version constant triggers a re-seed that only inserts missing rows.
 **Action**: For preset/seed data expected to grow over app versions: (1) create an `app_settings (key TEXT PRIMARY KEY, value TEXT)` table, (2) define a `SEED_VERSION` constant in code, (3) gate the entire seed block with a version comparison, (4) use `INSERT OR IGNORE` for all rows, (5) upsert the version key after the transaction commits. Reserve the BLD-30 COUNT-based check for one-time migrations that won't evolve.
 **Tags**: sqlite, seed-data, versioning, idempotent, app-settings, migration, starter-content
@@ -173,7 +173,7 @@
 ### Splash Screen Gate + Redirect for Conditional First-Launch Flow
 **Source**: BLD-35 — Implement: Onboarding & Quick Start Flow (Phase 24)
 **Date**: 2026-04-14
-**Context**: FitForge needed to show a 3-step onboarding flow on first launch only. The root layout must decide between onboarding vs. main app before rendering, without flashing the wrong UI.
+**Context**: CableSnap needed to show a 3-step onboarding flow on first launch only. The root layout must decide between onboarding vs. main app before rendering, without flashing the wrong UI.
 **Learning**: In Expo Router, gate conditional navigation behind the splash screen: call `SplashScreen.preventAutoHideAsync()` at module scope, resolve the async check (e.g., `isOnboardingComplete()`) inside `useEffect`, then set state and call `SplashScreen.hideAsync()`. Render `<Redirect href="/onboarding/welcome" />` inside the normal `<Stack>` tree — do NOT conditionally swap navigators. Use `router.replace()` between onboarding steps to prevent back navigation. Wrap the onboarding stack in an `ErrorBoundary` with a "Skip to App" fallback that marks onboarding complete.
 **Action**: For any conditional first-launch flow (onboarding, auth gate, migration): (1) `preventAutoHideAsync()` at module level, (2) async check in root layout `useEffect`, (3) `hideAsync()` only after state resolves, (4) use `<Redirect>` component for redirection — not conditional navigator rendering, (5) `router.replace()` for all internal transitions, (6) wrap in ErrorBoundary with skip-to-app fallback.
 **Tags**: expo-router, splash-screen, onboarding, redirect, conditional-navigation, first-launch, error-boundary
@@ -261,7 +261,7 @@
 ### Separate Additive Seed Data into Dedicated Module Files
 **Source**: BLD-99 — Scrape & seed cable + bodyweight exercises from MuscleWiki
 **Date**: 2026-04-15
-**Context**: FitForge needed to expand its exercise library from 54 Voltra-specific exercises to include 65 community-sourced cable and bodyweight exercises from an external source.
+**Context**: CableSnap needed to expand its exercise library from 54 Voltra-specific exercises to include 65 community-sourced cable and bodyweight exercises from an external source.
 **Learning**: When adding bulk seed data from a new source, create a dedicated module file (e.g., `seed-community.ts`) that exports the new data, then import it into the main seed file. This keeps the original seed data untouched, makes data provenance clear (Voltra vs community), and prevents merge conflicts when multiple sources contribute data.
 **Action**: When expanding seed/reference data from a new source, create a new file named `seed-<source>.ts`, export the array, and merge it into the main seed array via import. Never inline new-source data into an existing seed file.
 **Tags**: seed-data, data-management, file-organization, module-separation, exercise-library
@@ -301,7 +301,7 @@
 ### Deterministic Multi-Pass Name Matching for Data Import
 **Source**: BLD-120 — Import Workout Data from Strong CSV
 **Date**: 2026-04-15
-**Context**: Importing workout data from Strong required mapping exercise names between two apps with different naming conventions (Strong uses "Exercise (Equipment)" format, FitForge uses "Equipment Exercise"). Fuzzy matching (Levenshtein) was rejected due to unpredictable results and testing difficulty.
+**Context**: Importing workout data from Strong required mapping exercise names between two apps with different naming conventions (Strong uses "Exercise (Equipment)" format, CableSnap uses "Equipment Exercise"). Fuzzy matching (Levenshtein) was rejected due to unpredictable results and testing difficulty.
 **Learning**: A deterministic multi-pass matching strategy produces predictable, fully testable results for cross-app data import. The effective pass order is: (1) exact case-insensitive match, (2) normalize + extract parentheticals and rearrange (e.g., "Bench Press (Barbell)" → try "Barbell Bench Press"), (3) substring containment (either direction), (4) hardcoded alias lookup table for common abbreviations. Each pass has a clear confidence level (exact/possible/none) enabling grouped UX.
 **Action**: When building data import from another app, implement matching as ordered passes with decreasing confidence rather than a single fuzzy algorithm. Classify results by confidence level and present grouped in the UI (auto-mapped / needs confirmation / will create new). This pattern scales to new import sources by adding source-specific normalization passes without changing the core architecture.
 **Tags**: import, data-migration, name-matching, deterministic, csv, exercise, cross-app, architecture
@@ -325,7 +325,7 @@
 ### Cascading Multi-Pass Entity Matching for Data Import
 **Source**: BLD-120 — Import Workout Data from Strong CSV
 **Date**: 2026-04-15
-**Context**: Importing workouts from Strong required matching exercise names like "Bench Press (Barbell)" to FitForge's "Barbell Bench Press." Simple exact matching misses most entries. Fuzzy search (e.g., Levenshtein) produces unpredictable false matches.
+**Context**: Importing workouts from Strong required matching exercise names like "Bench Press (Barbell)" to CableSnap's "Barbell Bench Press." Simple exact matching misses most entries. Fuzzy search (e.g., Levenshtein) produces unpredictable false matches.
 **Learning**: A deterministic 4-pass cascade provides reliable entity matching with clear confidence levels: (1) exact case-insensitive match, (2) normalize + strip parentheticals (e.g., "Bench Press (Barbell)" → "bench press"), (3) substring containment, (4) alias table lookup. Each pass returns a confidence level (exact/high/medium/low) so the UI can flag uncertain matches for user review. Deterministic passes avoid the ambiguity of distance-based fuzzy matching.
 **Action**: For any data import feature that maps external entity names to internal entities, implement a cascading matcher with decreasing confidence. Start with exact match, then progressively relax (normalize, substring, alias table). Return confidence levels so the import UI can highlight uncertain matches. Maintain an alias table for common abbreviations (e.g., "BB" → "Barbell", "DB" → "Dumbbell").
 **Tags**: data-import, entity-matching, csv, strong, exercise, fuzzy-matching, cascading-matcher, import-wizard
@@ -333,7 +333,7 @@
 ### Retroactive Feature Evaluation with Silent-Earn UX
 **Source**: BLD-137 — Achievement & Milestone System
 **Date**: 2026-04-15
-**Context**: FitForge shipped an achievement system to users who already had workout history. Naively evaluating achievements on first launch would trigger dozens of "Achievement Unlocked!" notifications at once — a terrible UX.
+**Context**: CableSnap shipped an achievement system to users who already had workout history. Naively evaluating achievements on first launch would trigger dozens of "Achievement Unlocked!" notifications at once — a terrible UX.
 **Learning**: When launching a feature that retroactively analyzes historical data (achievements, streaks, milestones, badges), the first evaluation must distinguish between "earned now" and "already earned." Evaluate silently on first open, mark all qualifying items as already-earned, and show a single summary banner ("We found N achievements from your history") instead of individual unlock notifications.
 **Action**: For any feature that evaluates historical user data on first launch: (1) run the evaluation silently without triggering per-item animations/haptics/notifications, (2) persist results with the current timestamp, (3) show a single aggregated banner ("We found N items"), (4) only trigger individual unlock UX for items earned in future sessions.
 **Tags**: retroactive, achievements, gamification, ux, first-launch, migration, silent-evaluation, banner
@@ -365,8 +365,8 @@
 ### Use useLayout().horizontalPadding for All Screen-Level Horizontal Padding
 **Source**: BLD-185 — Programme detail page padding & consistent container audit (GitHub #95)
 **Date**: 2026-04-16
-**Context**: An audit of all FitForge routes revealed 13 screens using hardcoded `padding: 16` instead of the responsive `useLayout()` hook. This caused inconsistent padding on medium/expanded window classes and made the programme detail page look misaligned.
-**Learning**: FitForge's `lib/layout.ts` exports a `useLayout()` hook that returns `horizontalPadding` — a responsive value (16px compact, 24px medium, 32px expanded) based on Material 3 window size classes. All screen-level containers must use this value instead of hardcoded padding. When migrating, split `padding: N` into `paddingVertical: N` (keep static) plus `paddingHorizontal: layout.horizontalPadding` (responsive). Apply via `contentContainerStyle` on ScrollView/FlashList, or directly on the outer View's style.
+**Context**: An audit of all CableSnap routes revealed 13 screens using hardcoded `padding: 16` instead of the responsive `useLayout()` hook. This caused inconsistent padding on medium/expanded window classes and made the programme detail page look misaligned.
+**Learning**: CableSnap's `lib/layout.ts` exports a `useLayout()` hook that returns `horizontalPadding` — a responsive value (16px compact, 24px medium, 32px expanded) based on Material 3 window size classes. All screen-level containers must use this value instead of hardcoded padding. When migrating, split `padding: N` into `paddingVertical: N` (keep static) plus `paddingHorizontal: layout.horizontalPadding` (responsive). Apply via `contentContainerStyle` on ScrollView/FlashList, or directly on the outer View's style.
 **Action**: When creating or editing any screen component: (1) import `useLayout` from `lib/layout`, (2) call `const layout = useLayout()` in the component body, (3) apply `paddingHorizontal: layout.horizontalPadding` to the outermost scrollable container's `contentContainerStyle` or the root View's style. Never hardcode horizontal padding values on screen-level containers.
 **Tags**: react-native, layout, padding, responsive, useLayout, material-design, window-class, consistency
 
@@ -383,7 +383,7 @@
 **Date**: 2026-04-16
 **Context**: The exercise detail drawer used React Native's `<Modal>` with `maxHeight: 60%`, making it a fixed-height overlay that could not be dragged to expand or scroll. Users expected a pull-up sheet that fills the screen.
 **Learning**: React Native's `<Modal>` component has no built-in gesture support — it is a fixed overlay. For drawers that need drag-to-expand, snap points, and scrollable content, `@gorhom/bottom-sheet` provides `<BottomSheet>` with configurable snap points (e.g., `["40%", "90%"]`), `<BottomSheetFlatList>` for virtualized scrolling inside the sheet, and `<BottomSheetBackdrop>` for tap-to-dismiss. Control visibility via `ref.current?.snapToIndex(0)` (open) and `ref.current?.close()` (close) with `index={-1}` as the hidden state.
-**Action**: When implementing a detail panel, exercise drawer, or any expandable overlay, use `@gorhom/bottom-sheet` (already in FitForge deps) instead of `<Modal>`. Define snap points with `useMemo`, use `BottomSheetFlatList` instead of `FlatList` for scrollable content, and add a Jest mock at `__mocks__/@gorhom/bottom-sheet.js`.
+**Action**: When implementing a detail panel, exercise drawer, or any expandable overlay, use `@gorhom/bottom-sheet` (already in CableSnap deps) instead of `<Modal>`. Define snap points with `useMemo`, use `BottomSheetFlatList` instead of `FlatList` for scrollable content, and add a Jest mock at `__mocks__/@gorhom/bottom-sheet.js`.
 **Tags**: react-native, bottom-sheet, modal, gorhom, gesture, snap-points, drawer, expandable, ui-pattern
 
 ### Session Mutations Must Preserve Completed Records as Immutable
@@ -421,7 +421,7 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 ### Extensible Session Population via URL Params
 **Source**: BLD-265 — Repeat Workout from History (Phase 44)
 **Date**: 2026-04-17
-**Context**: FitForge's active session screen (`app/session/[id].tsx`) needed to support populating a new session from a completed session's data, in addition to the existing template-based population.
+**Context**: CableSnap's active session screen (`app/session/[id].tsx`) needed to support populating a new session from a completed session's data, in addition to the existing template-based population.
 **Learning**: Session population from different data sources follows a URL-param-driven branching pattern in the `useEffect` initialization block: `templateId` loads from a template, `sourceSessionId` loads from a prior session. Each branch reads its source data, maps it to the standard `addSetsBatch` / `updateSetsBatch` calls, and handles source-specific concerns (e.g., deleted exercises for session sources, template structure for template sources). The branches are `else if` peers in the same effect.
 **Action**: When adding a new session data source (e.g., from a program schedule, AI-generated workout, shared link): (1) add a new URL param to `useLocalSearchParams`, (2) add an `else if` branch parallel to the existing `templateId` and `sourceSessionId` branches in the initialization `useEffect`, (3) fetch source data with a dedicated query function, (4) map to `addSetsBatch` format with fresh IDs and remapped link_ids, (5) handle source-specific edge cases (missing entities, format differences) before calling the shared batch APIs.
 **Tags**: session-population, url-params, extensible-architecture, expo-router, workout-session, data-sources
@@ -479,7 +479,7 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Date**: 2026-04-17
 **Context**: Tech Lead review of the Health Connect integration plan caught two Critical issues where the plan omitted mandatory SDK setup steps. Without these, the integration compiles but crashes at runtime.
 **Learning**: `react-native-health-connect` requires four specific setup steps: (1) `expo-health-connect` config plugin in `app.config.ts` for AndroidManifest permissions and Health Connect activity declaration, (2) `expo-build-properties` config plugin with `minSdkVersion: 26` (Health Connect SDK minimum), (3) an `initialize()` call before ANY Health Connect API use — without it, all subsequent calls throw, (4) `clientRecordId` metadata on every inserted record for deduplication — without it, retries create duplicate records. Permission strings use bare names (e.g., `WRITE_EXERCISE`) without the `android.permission.health.` prefix.
-**Action**: When integrating Health Connect: add all three Expo config plugins first (`expo-health-connect`, `expo-build-properties`, the health-connect npm package), create an `ensureInitialized()` guard that wraps `initialize()` with a singleton flag and call it before every API operation, and always include `clientRecordId: "fitforge-{entityId}"` in record metadata for idempotent writes.
+**Action**: When integrating Health Connect: add all three Expo config plugins first (`expo-health-connect`, `expo-build-properties`, the health-connect npm package), create an `ensureInitialized()` guard that wraps `initialize()` with a singleton flag and call it before every API operation, and always include `clientRecordId: "cablesnap-{entityId}"` in record metadata for idempotent writes.
 **Tags**: health-connect, expo, android, sdk-setup, config-plugin, initialization, deduplication, react-native
 
 ### Android SDK Feature Availability Is a Four-State Machine — UX Must Branch on All States
@@ -629,7 +629,7 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 ### FlashList v2 Auto-Measures Items — estimatedItemSize Prop Removed
 **Source**: BLD-365 — expo-image + FlashList estimatedItemSize (BLD-359/360)
 **Date**: 2026-04-19
-**Context**: Issue spec required adding `estimatedItemSize` to all FlashList instances. The implementing agent discovered this prop was removed in FlashList v2 (which FitForge uses at v2.0.2), making half the issue spec non-applicable.
+**Context**: Issue spec required adding `estimatedItemSize` to all FlashList instances. The implementing agent discovered this prop was removed in FlashList v2 (which CableSnap uses at v2.0.2), making half the issue spec non-applicable.
 **Learning**: @shopify/flash-list v2.x removed the `estimatedItemSize` prop entirely — items are auto-measured. The prop does not exist in the v2 TypeScript definitions. Issue specs or migration guides referencing `estimatedItemSize` are outdated if targeting FlashList v2+.
 **Action**: Do not add `estimatedItemSize` to FlashList components — it will cause a TypeScript error on v2+. When reviewing issue specs that reference FlashList props, verify against the installed version's type definitions before implementing.
 **Tags**: flashlist, shopify, performance, breaking-change, v2, auto-measure
@@ -645,7 +645,7 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 ### Mutation Version Tracking for Direct-DB-Write Apps Using React Query
 **Source**: BLD-367 — Implement smart query invalidation (BLD-358)
 **Date**: 2026-04-19
-**Context**: FitForge performs DB writes via direct SQLite calls, bypassing React Query mutations. The workaround was blanket `invalidateQueries()` on every tab focus, causing unnecessary DB round-trips and UI flickers even when no data had changed.
+**Context**: CableSnap performs DB writes via direct SQLite calls, bypassing React Query mutations. The workaround was blanket `invalidateQueries()` on every tab focus, causing unnecessary DB round-trips and UI flickers even when no data had changed.
 **Learning**: A module-level `Map<string, number>` version counter bridges imperative DB writes and React Query's cache. Mutation sites call `bumpQueryVersion(key)` after writes; `useFocusRefetch` compares last-seen versions (stored in a `useRef`) against current versions and only invalidates when they differ. First focus always invalidates for backward compatibility. This eliminates O(tab-switches) refetches while preserving data freshness after actual mutations.
 **Action**: When an app performs DB writes outside React Query's `useMutation`, create a version-counter map keyed by query-key prefix. Call the bump function at every DB write site that affects cached data. In focus handlers, compare versions before calling `invalidateQueries`. Use `useRef` (not `useState`) for last-seen versions to avoid re-render loops. Always allow first-focus to invalidate unconditionally.
 **Tags**: react-query, cache-invalidation, performance, useFocusEffect, sqlite, mutation-tracking, version-counter

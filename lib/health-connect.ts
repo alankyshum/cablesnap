@@ -153,7 +153,7 @@ function buildExerciseSessionRecord(
     title: session.name || "Strength Training",
     segments,
     metadata: {
-      clientRecordId: `fitforge-${sessionId}`,
+      clientRecordId: `cablesnap-${sessionId}`,
     },
   };
 }

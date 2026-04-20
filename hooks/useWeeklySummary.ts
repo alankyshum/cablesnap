@@ -164,7 +164,7 @@ export function useWeeklySummary() {
     const { workouts, prs, nutrition, body, streak } = data;
     const range = formatWeekRange(weekStartMs);
     const lines: string[] = [
-      `📊 FitForge Weekly Summary`,
+      `📊 CableSnap Weekly Summary`,
       `Week of ${range}`,
       "",
     ];
@@ -210,7 +210,7 @@ export function useWeeklySummary() {
       lines.push(`🔥 Streak: ${streak} weeks`);
     }
 
-    lines.push("", "Tracked with FitForge");
+    lines.push("", "Tracked with CableSnap");
     return lines.join("\n");
   };
 

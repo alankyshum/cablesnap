@@ -9,7 +9,7 @@
 
 ## Problem Statement
 
-FitForge currently treats every exercise in a workout as independent — each exercise has its own rest timer and is performed in strict sequence. Real-world intermediate and advanced trainees frequently use **supersets** (alternating between 2 exercises with no rest in between) and **circuits** (rotating through 3+ exercises before resting). Without this, users must manually track which exercises are paired and mentally skip the rest timer, creating friction and inaccurate rest data.
+CableSnap currently treats every exercise in a workout as independent — each exercise has its own rest timer and is performed in strict sequence. Real-world intermediate and advanced trainees frequently use **supersets** (alternating between 2 exercises with no rest in between) and **circuits** (rotating through 3+ exercises before resting). Without this, users must manually track which exercises are paired and mentally skip the rest timer, creating friction and inaccurate rest data.
 
 ## Proposed Solution
 
@@ -143,7 +143,7 @@ ALTER TABLE workout_sets ADD COLUMN round INTEGER DEFAULT NULL;
 
 ## Accessibility Requirements
 
-**Every new UI element must meet the FitForge accessibility standard established in BLD-21.**
+**Every new UI element must meet the CableSnap accessibility standard established in BLD-21.**
 
 ### Selection Mode (Template Editor)
 - `accessibilityState={{ selected: true/false }}` on each selectable exercise item
@@ -352,7 +352,7 @@ All new DB functions use parameterized queries (`runAsync(sql, [params])`) — n
 - M6: Group header -> "Add exercise" flow (simpler, no manual member identification)
 
 #### Rev 1 — APPROVED (2026-04-13T13:24:00Z)
-All 3 Critical and 6 Major issues from Rev 0 verified as resolved. Plan meets FitForge quality standards. Full SKILL alignment confirmed. Ready for implementation.
+All 3 Critical and 6 Major issues from Rev 0 verified as resolved. Plan meets CableSnap quality standards. Full SKILL alignment confirmed. Ready for implementation.
 
 ### Tech Lead (Technical Feasibility)
 

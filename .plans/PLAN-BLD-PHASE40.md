@@ -32,7 +32,7 @@ Enhance the existing "Share" button on the session summary screen to offer two o
 
 **Share Card Layout (portrait, 1080px wide, content-driven height):**
 ```
-       FitForge              |  <- App branding (small, top)
+       CableSnap              |  <- App branding (small, top)
                              |
      +-------------------+   |
      |   PUSH DAY        |   |  <- Session name (large, max 2 lines)
@@ -53,7 +53,7 @@ Enhance the existing "Share" button on the session summary screen to offer two o
     - Incline DB   3x12     |
     - Cable Fly    3x15     |
                              |
-          fitforge.app       |  <- Footer branding
+          cablesnap.app       |  <- Footer branding
 ```
 
 **Card height is content-driven:** Fixed width of 1080px. Height adapts based on which sections are present (PRs, rating, exercise count). Short sessions produce compact cards; full sessions produce taller ones. No fixed 9:16 aspect ratio — no empty whitespace.

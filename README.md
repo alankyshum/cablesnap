@@ -2,10 +2,10 @@
 
 **Free, open-source cable machine workout tracker.** Built for the cable stack — track your cable exercises, log sets, and crush PRs. No subscriptions, no ads, no paywalls.
 
-[<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://alankyshum.github.io/fitforge/repo)
+[<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://alankyshum.github.io/cablesnap/repo)
 
 > **Custom F-Droid repo** — open the link above on your Android device to add the repo, or add it manually in F-Droid:\
-> `https://alankyshum.github.io/fitforge/repo`
+> `https://alankyshum.github.io/cablesnap/repo`
 
 ## Features
 
@@ -38,8 +38,8 @@
 ### Install
 
 ```bash
-git clone https://github.com/alankyshum/fitforge.git
-cd fitforge
+git clone https://github.com/alankyshum/cablesnap.git
+cd cablesnap
 npm install
 ```
 
@@ -76,7 +76,7 @@ npm run web
 ## Project Structure
 
 ```
-fitforge/
+cablesnap/
 ├── app/                     # Expo Router pages
 │   ├── (tabs)/              # Tab navigation
 │   │   ├── _layout.tsx      # Tab navigator config

@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-The FitForge database layer consists of ~6,000 lines of raw SQL across 24 modules in `lib/db/`. All queries use string-interpolated SQL with manually defined TypeScript row types (e.g., `ExerciseRow`, `WorkoutSession`). This pattern has caused several documented issues:
+The CableSnap database layer consists of ~6,000 lines of raw SQL across 24 modules in `lib/db/`. All queries use string-interpolated SQL with manually defined TypeScript row types (e.g., `ExerciseRow`, `WorkoutSession`). This pattern has caused several documented issues:
 
 1. **Schema drift risk**: Manual row types can diverge from the actual SQLite schema in `migrations.ts`. There is no compile-time check that column names in SQL strings match the schema.
 2. **Documented pitfalls**: The knowledge base contains 17 SQL query pitfalls, including the "bare column in GROUP BY" bug (BLD-363) that produced non-deterministic batch results.
@@ -76,7 +76,7 @@ N/A — this is a developer-facing refactoring with zero user-visible changes.
 - Schema changes (adding/removing columns or tables)
 - Behavioral changes (no query logic changes — pure refactor)
 - Relation/join type definitions (Drizzle relations are optional sugar)
-- Foreign key enforcement changes (FitForge intentionally does NOT enable `PRAGMA foreign_keys`)
+- Foreign key enforcement changes (CableSnap intentionally does NOT enable `PRAGMA foreign_keys`)
 
 ### Acceptance Criteria
 

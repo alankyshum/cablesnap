@@ -9,7 +9,7 @@
 
 Currently, users must manually enter **6 fields** (name, calories, protein, carbs, fat, serving size) every time they log a meal. The `app/nutrition/add.tsx` screen has two tabs: "New Food" (manual entry) and "Favorites" (quick-log previously saved favorites).
 
-This friction makes nutrition tracking impractical for most users. Competing apps like MyFitnessPal and Macro solve this with searchable food databases. FitForge needs a local, offline-first food database to stay competitive.
+This friction makes nutrition tracking impractical for most users. Competing apps like MyFitnessPal and Macro solve this with searchable food databases. CableSnap needs a local, offline-first food database to stay competitive.
 
 ## Proposed Solution
 

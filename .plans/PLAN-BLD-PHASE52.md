@@ -15,7 +15,7 @@ Users have no visual overview of their training history. The app shows workout l
 - Understand weekly/monthly training frequency
 - See what muscle groups they trained on each day
 
-Every major fitness app (Strong, JEFIT, Hevy) includes a calendar view. FitForge should too.
+Every major fitness app (Strong, JEFIT, Hevy) includes a calendar view. CableSnap should too.
 
 ## Proposed Solution
 

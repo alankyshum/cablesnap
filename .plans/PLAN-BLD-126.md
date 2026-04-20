@@ -7,13 +7,13 @@
 
 ## Problem Statement
 
-FitForge tracks workouts, nutrition, and body measurements locally, but users expect their fitness data to sync with their device's health platform (Apple Health on iOS, Google Health Connect on Android). Without this integration, FitForge exists in isolation:
+CableSnap tracks workouts, nutrition, and body measurements locally, but users expect their fitness data to sync with their device's health platform (Apple Health on iOS, Google Health Connect on Android). Without this integration, CableSnap exists in isolation:
 
 - Users can't see their workout calories burned in Apple Health's activity ring
-- Body weight entries are duplicated — users re-enter in FitForge AND their health app
-- FitForge can't leverage step data or resting heart rate from wearables
+- Body weight entries are duplicated — users re-enter in CableSnap AND their health app
+- CableSnap can't leverage step data or resting heart rate from wearables
 
-**Why now?** FitForge has matured through 35+ feature phases with comprehensive workout, nutrition, and body tracking. Health platform integration is the natural next step and the #1 differentiator between a "toy app" and a "real fitness app." Apps with HealthKit integration see 30-40% higher user retention.
+**Why now?** CableSnap has matured through 35+ feature phases with comprehensive workout, nutrition, and body tracking. Health platform integration is the natural next step and the #1 differentiator between a "toy app" and a "real fitness app." Apps with HealthKit integration see 30-40% higher user retention.
 
 **Data supporting this:** Every major fitness app (Strong, MyFitnessPal, Fitbod, JEFIT) integrates with Apple Health / Google Fit. Users switching from these apps expect this feature.
 
@@ -33,10 +33,10 @@ Addressed all Critical and Major issues from Quality Director and Tech Lead revi
 ## User Stories
 
 - As a user, I want my completed workouts to appear in Apple Health / Health Connect so all my fitness data is in one place
-- As a user, I want my body weight entries in FitForge to sync to Apple Health so I don't have to enter them twice
-- As a user, I want to control exactly what data FitForge shares with my health platform
+- As a user, I want my body weight entries in CableSnap to sync to Apple Health so I don't have to enter them twice
+- As a user, I want to control exactly what data CableSnap shares with my health platform
 - As a user, I want a simple on/off toggle for sync health not a complicated setup wizard 
-- As a user, I want to see my daily step count on the FitForge dashboard so I have a complete fitness picture
+- As a user, I want to see my daily step count on the CableSnap dashboard so I have a complete fitness picture
 
 ## Proposed Solution
 
@@ -150,7 +150,7 @@ interface SyncResult {
   CREATE TABLE health_sync_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entity_type TEXT NOT NULL,       -- 'workout' | 'body_weight'
-    entity_id TEXT NOT NULL,         -- FitForge session ID or weight entry ID
+    entity_id TEXT NOT NULL,         -- CableSnap session ID or weight entry ID
     external_id TEXT,                -- HealthKit sample UUID
     platform TEXT NOT NULL,          -- 'apple_health' | 'health_connect'
     synced_at TEXT NOT NULL,
@@ -158,7 +158,7 @@ interface SyncResult {
   );
   ```
 - Before writing to HealthKit, check if `entity_id` already exists in `health_sync_log`
-- On iOS: pass FitForge entity ID as `HKMetadataKeyExternalUUID` to prevent duplicate entries even if the sync log is lost
+- On iOS: pass CableSnap entity ID as `HKMetadataKeyExternalUUID` to prevent duplicate entries even if the sync log is lost
 - On write success: insert into `health_sync_log` with the returned external ID
 
 **Data Model Changes:**
@@ -174,8 +174,8 @@ iOS (via `@kingstinct/react-native-healthkit` config plugin):
 ```typescript
 plugins: [
   ["@kingstinct/react-native-healthkit", {
-    NSHealthShareUsageDescription: "FitForge reads your step count and resting heart rate to display on your dashboard.",
-    NSHealthUpdateUsageDescription: "FitForge writes your completed workouts and body weight entries to Apple Health.",
+    NSHealthShareUsageDescription: "CableSnap reads your step count and resting heart rate to display on your dashboard.",
+    NSHealthUpdateUsageDescription: "CableSnap writes your completed workouts and body weight entries to Apple Health.",
     healthShareTypes: ["HKQuantityTypeIdentifierStepCount", "HKQuantityTypeIdentifierRestingHeartRate"],
     healthUpdateTypes: ["HKWorkoutType", "HKQuantityTypeIdentifierBodyMass"],
   }],

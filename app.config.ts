@@ -3,7 +3,7 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "CableSnap",
-  slug: "fitforge",
+  slug: "cablesnap",
   version: "0.15.2",
   orientation: "default",
   icon: "./assets/icon.png",
@@ -15,20 +15,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.anomalyco.fitforge",
+    bundleIdentifier: "com.anomalyco.cablesnap",
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#FCF5F2", // eslint-disable-line no-restricted-syntax
     },
-    package: "com.anomalyco.fitforge",
+    package: "com.anomalyco.cablesnap",
     versionCode: 5,
   },
   web: {
     favicon: "./assets/favicon.png",
   },
-  scheme: "fitforge",
+  scheme: "cablesnap",
   plugins: [
     "expo-router",
     "expo-dev-client",
@@ -40,7 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-camera",
       {
         cameraPermission:
-          "FitForge needs camera access to scan food barcodes for quick nutrition logging.",
+          "CableSnap needs camera access to scan food barcodes for quick nutrition logging.",
       },
     ],
     "expo-web-browser",

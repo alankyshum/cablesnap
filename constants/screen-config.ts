@@ -27,7 +27,6 @@ export const SCREEN_CONFIGS: ScreenConfig[] = [
   { name: "progress", options: { headerShown: false } },
   { name: "history", options: { headerShown: true, title: "Workout History" } },
   { name: "session/summary/[id]", options: { headerShown: true, title: "Summary" } },
-  { name: "settings/import-strong", options: { headerShown: true, title: "Import from Strong" } },
   { name: "settings/import-backup", options: { headerShown: true, title: "Import Backup" } },
   { name: "tools/index", options: { headerShown: true, title: "Workout Tools" } },
   { name: "tools/plates", options: { headerShown: true, title: "Plate Calculator" } },

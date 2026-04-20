@@ -1,4 +1,4 @@
-# FitForge Knowledge Base
+# CableSnap Knowledge Base
 
 Last updated: 2026-04-20
 Total learnings: 181
@@ -84,7 +84,7 @@ Before starting work on a task, search this index for relevant learnings:
 | 2026-04-18 | BLD-334 | Snapshot Composite Entity Before Cascade Delete for Undo Restoration | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-332 | Extract Heavy Constant Data into Companion Data Files | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-322 | Barrel Re-Export for Non-Breaking Module Splits | Patterns | [react-native.md](patterns/react-native.md) |
-| 2026-04-18 | BLD-322 | FitForge DB Migrations Live in lib/db/migrations.ts (UPDATE) | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-18 | BLD-322 | CableSnap DB Migrations Live in lib/db/migrations.ts (UPDATE) | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-18 | BLD-318 | Decompose Large Components via Domain-Specific Hook Extraction | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-318 | Route Elimination via Query Params for Mode-Switching UI | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-318 | Use queueMicrotask for Deferred State Updates Inside useEffect | Patterns | [react-native.md](patterns/react-native.md) |
@@ -99,7 +99,7 @@ Before starting work on a task, search this index for relevant learnings:
 | 2026-04-17 | BLD-301 | Android SDK Feature Availability Is a Four-State Machine — UX Must Branch on All States | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-300 | Expo/React Native Cannot Target Wear OS — Wearable Features Require Separate Native Codebase | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-299 | Dynamic import() for Native-Only Module Isolation in Cross-Platform Apps | Patterns | [react-native.md](patterns/react-native.md) |
-| 2026-04-17 | BLD-298 | FitForge DB Migrations Live in lib/db/helpers.ts, Not a Separate Schema File | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-17 | BLD-298 | CableSnap DB Migrations Live in lib/db/helpers.ts, Not a Separate Schema File | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-17 | BLD-298 | expo-secure-store and expo-auth-session Are Native-Only — Platform-Gate OAuth Features | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-17 | BLD-298 | Persistent SQLite Queue for Fire-and-Forget External API Sync | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-295 | FlashList renderItem Must Return Single View Root — Not Fragment | Patterns | [react-native.md](patterns/react-native.md) |
@@ -224,4 +224,4 @@ Before starting work on a task, search this index for relevant learnings:
 | 2026-04-12 | BLD-13 | Wrap Bulk SQLite Inserts in withTransactionAsync | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-12 | BLD-13 | Never Execute Side Effects Inside setState Updaters | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-93 | expo-notifications Requires Explicit expo-modules-core | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
-| 2026-04-14 | BLD-93 | qa-fitforge CODE-02 False Positive with sub.remove() | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
+| 2026-04-14 | BLD-93 | qa-cablesnap CODE-02 False Positive with sub.remove() | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |

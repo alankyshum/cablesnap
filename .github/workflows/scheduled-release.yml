@@ -71,7 +71,7 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         id: next_vcode
         run: |
-          CURRENT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.anomalyco.fitforge.yml | awk '{print $2}')
+          CURRENT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.anomalyco.cablesnap.yml | awk '{print $2}')
           NEXT=$((CURRENT + 1))
           echo "version_code=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Next version code: $NEXT"
@@ -98,8 +98,8 @@ jobs:
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           VCODE="${{ steps.next_vcode.outputs.version_code }}"
-          sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.anomalyco.fitforge.yml
-          sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.anomalyco.fitforge.yml
+          sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.anomalyco.cablesnap.yml
+          sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.anomalyco.cablesnap.yml
 
       - name: Generate release notes
         if: steps.check_commits.outputs.has_new_commits == 'true'
@@ -121,7 +121,7 @@ jobs:
             echo ""
             echo "Add the F-Droid repo URL to your F-Droid client:"
             echo '```'
-            echo "https://alankyshum.github.io/fitforge/repo"
+            echo "https://alankyshum.github.io/cablesnap/repo"
             echo '```'
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
@@ -130,9 +130,9 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
-          git config user.name "FitForge Release Bot"
-          git config user.email "release-bot@fitforge.app"
-          git add package.json app.config.ts fdroid/metadata/com.anomalyco.fitforge.yml
+          git config user.name "CableSnap Release Bot"
+          git config user.email "release-bot@cablesnap.app"
+          git add package.json app.config.ts fdroid/metadata/com.anomalyco.cablesnap.yml
           git commit -m "release: v$VERSION"
           git tag -a "v$VERSION" -m "v$VERSION (automated release)"
           git push origin main
@@ -150,5 +150,5 @@ jobs:
           echo ""
           echo "APK build required: run locally with JDK 17:"
           echo "  JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=/opt/homebrew/share/android-commandlinetools npm run build:apk:prod"
-          echo "then upload with: gh release upload v$VERSION fitforge.apk --clobber"
+          echo "then upload with: gh release upload v$VERSION cablesnap.apk --clobber"
           echo "F-Droid repo will update automatically after APK upload."

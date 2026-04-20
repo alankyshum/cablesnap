@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge tracks workouts, nutrition, body measurements, and achievements — but users have no periodic summary that ties this data together into a digestible, motivating overview. Users must manually check each tab (Progress, Nutrition, Body) to understand how their week went.
+CableSnap tracks workouts, nutrition, body measurements, and achievements — but users have no periodic summary that ties this data together into a digestible, motivating overview. Users must manually check each tab (Progress, Nutrition, Body) to understand how their week went.
 
 Fitness apps with weekly summaries see significantly higher user retention because they:
 1. Provide a structured reflection point ("How was my week?")
@@ -15,7 +15,7 @@ Fitness apps with weekly summaries see significantly higher user retention becau
 3. Create a habit loop — users open the app even on rest days to check their summary
 4. Celebrate consistency, which is the #1 predictor of fitness success
 
-**Why now?** FitForge has comprehensive data collection across workouts (sessions, sets, volume, PRs), nutrition (macros, calorie targets), and body (weight, measurements). All the raw data exists — what's missing is the synthesis layer that makes this data actionable.
+**Why now?** CableSnap has comprehensive data collection across workouts (sessions, sets, volume, PRs), nutrition (macros, calorie targets), and body (weight, measurements). All the raw data exists — what's missing is the synthesis layer that makes this data actionable.
 
 ## User Stories
 
@@ -172,7 +172,7 @@ Volume is `Sum(weight × reps)` which equals 0 for bodyweight exercises (weight 
 When the user taps "Share Summary", the following formatted text is shared:
 
 ```
-📊 FitForge Weekly Summary
+📊 CableSnap Weekly Summary
 Week of Apr 14 – Apr 20
 
 💪 Workouts: 4 completed (3h 45m total)
@@ -182,10 +182,10 @@ Week of Apr 14 – Apr 20
 ⚖️ Weight: 82.0 → 81.7 kg (−0.3)
 🔥 Streak: 12 weeks
 
-Tracked with FitForge
+Tracked with CableSnap
 ```
 
-Sections with no data are omitted from the share text. The "Tracked with FitForge" attribution line is always included.
+Sections with no data are omitted from the share text. The "Tracked with CableSnap" attribution line is always included.
 
 ### Acceptance Criteria
 - [ ] Given the user has logged workouts this week, When they open the Progress tab, Then they see a weekly summary card showing workout count, total volume, and duration

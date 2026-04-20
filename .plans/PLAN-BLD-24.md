@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge only shows the 5 most recent workout sessions on the Workouts tab. Users have no way to:
+CableSnap only shows the 5 most recent workout sessions on the Workouts tab. Users have no way to:
 - View their full workout history
 - See which days they trained (calendar heatmap)
 - Search or filter past workouts by name, date, or template

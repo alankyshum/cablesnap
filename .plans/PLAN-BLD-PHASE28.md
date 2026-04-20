@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge has 218 unit tests but **zero render-level integration tests** for user flows. The board goal explicitly requests: "build a more robust infra for automated end to end user-behavior like test. Mimic real world user flow asserting all common user interactions on complex steps are working."
+CableSnap has 218 unit tests but **zero render-level integration tests** for user flows. The board goal explicitly requests: "build a more robust infra for automated end to end user-behavior like test. Mimic real world user flow asserting all common user interactions on complex steps are working."
 
 Current test coverage:
 - **15 lib/ unit tests**: test DB functions with mocked expo-sqlite (good data layer coverage)
@@ -150,7 +150,7 @@ Every integration test file must mock these modules:
 
 1. Create `__tests__/flows/spike.test.tsx`
 2. Render `app/onboarding/welcome.tsx` (73 lines, minimal deps: useRouter, useTheme, MaterialCommunityIcons)
-3. Assert: `getByText('Welcome to FitForge')` is visible
+3. Assert: `getByText('Welcome to CableSnap')` is visible
 4. Assert: `getByRole('button', { name: /get started/i })` exists (a11y check)
 5. Assert: pressing the button calls `router.push('/onboarding/setup')`
 
@@ -163,7 +163,7 @@ If the spike fails, stop and debug the harness before proceeding. If it passes, 
 **Why first**: Simplest screens (73 + 215 lines), minimal DB deps, no FlatList, no useFocusEffect.
 
 **Tests**:
-- Welcome screen renders "Welcome to FitForge" text and dumbbell icon
+- Welcome screen renders "Welcome to CableSnap" text and dumbbell icon
 - "Get Started" button is accessible (`getByRole('button')`) and navigates to setup
 - Setup screen shows unit system toggle (metric/imperial)
 - Selecting unit system and tapping "Continue" navigates to recommend
@@ -238,7 +238,7 @@ If the spike fails, stop and debug the harness before proceeding. If it passes, 
 
 - [ ] Given a fresh checkout, When `npm test` runs, Then all existing 218+ tests still pass (zero regressions)
 - [ ] Given the test harness, When rendering any screen, Then it wraps in PaperProvider with correct theme
-- [ ] Given the onboarding test, When welcome renders, Then "Welcome to FitForge" is visible AND "Get Started" button is accessible via getByRole
+- [ ] Given the onboarding test, When welcome renders, Then "Welcome to CableSnap" is visible AND "Get Started" button is accessible via getByRole
 - [ ] Given the exercise test, When user types "bench" in search, Then only matching exercises appear
 - [ ] Given the exercise test, When getAllExercises throws, Then ErrorBoundary renders error message
 - [ ] Given the nutrition test, When daily entries exist, Then macro totals are displayed with correct values

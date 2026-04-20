@@ -7,9 +7,9 @@
 
 ## Problem Statement
 
-FitForge's nutrition module has 3 input methods: manual entry, favorites, and a built-in database of 150 common foods. While this covers basics, users tracking macros encounter many foods not in the local database — branded products, regional foods, restaurant items, packaged snacks. They must manually look up and enter every macro value, which is tedious and error-prone.
+CableSnap's nutrition module has 3 input methods: manual entry, favorites, and a built-in database of 150 common foods. While this covers basics, users tracking macros encounter many foods not in the local database — branded products, regional foods, restaurant items, packaged snacks. They must manually look up and enter every macro value, which is tedious and error-prone.
 
-Commercial apps (MyFitnessPal, Cronometer) solve this with massive food databases. FitForge can achieve similar capability by integrating with **Open Food Facts** — a free, open-source food database with 3M+ products. No API key required, no cost, fully aligned with FitForge's open-source values.
+Commercial apps (MyFitnessPal, Cronometer) solve this with massive food databases. CableSnap can achieve similar capability by integrating with **Open Food Facts** — a free, open-source food database with 3M+ products. No API key required, no cost, fully aligned with CableSnap's open-source values.
 
 ## User Stories
 
@@ -74,9 +74,9 @@ GET https://world.openfoodfacts.org/cgi/search.pl?search_terms={query}&search_si
 
 - No API key required
 - Rate limit: ~100 requests/minute (reasonable for user-initiated searches)
-- Set `User-Agent: FitForge/0.5.0 (https://github.com/alankyshum/fitforge)` per API guidelines
+- Set `User-Agent: CableSnap/0.5.0 (https://github.com/alankyshum/cablesnap)` per API guidelines
 
-**Data mapping (Open Food Facts → FitForge):**
+**Data mapping (Open Food Facts → CableSnap):**
 ```typescript
 type OFFProduct = {
   product_name: string;

@@ -156,7 +156,7 @@ describe("Health Connect lib module, schema, and config", () => {
     expect(source).toContain('import("react-native-health-connect")');
     // Deduplication
     expect(source).toContain("clientRecordId");
-    expect(source).toContain("fitforge-");
+    expect(source).toContain("cablesnap-");
     // Initialization
     expect(source).toContain("ensureInitialized");
     expect(source).toContain("await initialize()");

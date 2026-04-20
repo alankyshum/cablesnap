@@ -1,5 +1,5 @@
 /**
- * Open Food Facts API client for FitForge.
+ * Open Food Facts API client for CableSnap.
  * Queries the free, open-source food database (3M+ products).
  * No API key required.
  */
@@ -11,7 +11,7 @@ export type { ParsedFood } from "./openfoodfacts-parse";
 const BASE = "https://world.openfoodfacts.net";
 const SEARCH_URL = `${BASE}/cgi/search.pl`;
 const BARCODE_URL = `${BASE}/api/v2/product`;
-const UA = "FitForge/0.6.0 (https://github.com/alankyshum/fitforge)";
+const UA = "CableSnap/0.6.0 (https://github.com/alankyshum/cablesnap)";
 const TIMEOUT = 10000;
 const FIELDS = "product_name,brands,nutriments,serving_size,serving_quantity";
 

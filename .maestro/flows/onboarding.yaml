@@ -1,10 +1,10 @@
-appId: com.anomalyco.fitforge
+appId: com.anomalyco.cablesnap
 ---
 - launchApp:
     clearState: true
 
 # Welcome screen
-- assertVisible: "Welcome to FitForge"
+- assertVisible: "Welcome to CableSnap"
 - assertVisible: "Your free workout & macro tracker"
 - tapOn: "Get Started"
 

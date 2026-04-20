@@ -1,4 +1,4 @@
-// FitForge "Electric Coral Energy" palette mapped to BNA UI semantic tokens.
+// CableSnap "Electric Coral Energy" palette mapped to BNA UI semantic tokens.
 // Domain-specific colors (plates, muscles, semantic macros) remain in constants/theme.ts.
 
 const lightColors = {

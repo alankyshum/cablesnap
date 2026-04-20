@@ -55,7 +55,7 @@ export async function handleExport({ toast, setLoading, setExportProgress }: Dep
                 return;
               }
               const json = JSON.stringify(data, null, 2);
-              const file = new File(Paths.cache, `fitforge-backup-${dateStamp()}.json`);
+              const file = new File(Paths.cache, `cablesnap-backup-${dateStamp()}.json`);
               await file.write(json);
               await Sharing.shareAsync(file.uri, {
                 mimeType: 'application/json',

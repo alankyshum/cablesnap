@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge's Tools section currently has 1RM Calculator and Plate Calculator. Users doing HIIT, Tabata, EMOM, or AMRAP workouts have no timer support — they must use a separate app or watch. This is especially relevant for Volta 1 training where timed eccentric sets (e.g., 4-second lowering) benefit from precise interval timing. Competitive apps like Strong, JEFIT, and Hevy offer built-in interval timers. Board goal: "Leverage more graphics to stand out."
+CableSnap's Tools section currently has 1RM Calculator and Plate Calculator. Users doing HIIT, Tabata, EMOM, or AMRAP workouts have no timer support — they must use a separate app or watch. This is especially relevant for Volta 1 training where timed eccentric sets (e.g., 4-second lowering) benefit from precise interval timing. Competitive apps like Strong, JEFIT, and Hevy offer built-in interval timers. Board goal: "Leverage more graphics to stand out."
 
 Interval timers are the most visually engaging tool in any fitness app — big countdown displays, color transitions, haptic feedback. Adding them directly serves the "stand out visually" directive.
 
@@ -100,7 +100,7 @@ Add a new tool screen at `app/tools/timer.tsx` accessible from the Tools section
 - All stepper controls have `accessibilityLabel`, `accessibilityHint`, AND `accessibilityValue` with `{min, max, now, text}` properties
 - Timer display has a separate accessibility element (not the visual countdown text) that announces at 10, 5, 3, 2, 1 seconds remaining via `accessibilityLiveRegion="polite"` — avoids per-second announcements
 - Start/Pause button changes `accessibilityLabel` dynamically ("Start timer" / "Pause timer")
-- All active workout controls (Start/Pause, Reset, +1 Round) have minimum **56x56dp** touch targets per FitForge Review SKILL
+- All active workout controls (Start/Pause, Reset, +1 Round) have minimum **56x56dp** touch targets per CableSnap Review SKILL
 
 ### Technical Approach
 

@@ -7,9 +7,9 @@
 
 ## Problem Statement
 
-FitForge's history screen (`app/history.tsx`) shows a basic monthly calendar with dot indicators and a session list. The progress tab shows weekly bar charts. Neither provides a **motivational, at-a-glance view of long-term workout consistency** — the #1 predictor of fitness results.
+CableSnap's history screen (`app/history.tsx`) shows a basic monthly calendar with dot indicators and a session list. The progress tab shows weekly bar charts. Neither provides a **motivational, at-a-glance view of long-term workout consistency** — the #1 predictor of fitness results.
 
-Users who track workouts want to SEE their consistency pattern over months. GitHub's contribution heatmap proves this pattern: a color-coded grid creates positive reinforcement loops. Currently, FitForge's streak counter (shown on the Workouts tab) is a single number with no visual context.
+Users who track workouts want to SEE their consistency pattern over months. GitHub's contribution heatmap proves this pattern: a color-coded grid creates positive reinforcement loops. Currently, CableSnap's streak counter (shown on the Workouts tab) is a single number with no visual context.
 
 ## User Stories
 
@@ -104,7 +104,7 @@ components/WorkoutHeatmap.tsx
 - 7 rows × N columns, each cell is a rounded square
 - Cell size calculated from screen width: `Math.floor((width - dayLabelWidth - padding) / weeks)`
 - Visual cell size: 14–24px (rounded square with colored fill)
-- **Each cell wrapped in a `Pressable` with `hitSlop` to ensure 48dp minimum touch target** (per FitForge SKILL a11y requirement). Visual size stays compact; interactive area expands invisibly.
+- **Each cell wrapped in a `Pressable` with `hitSlop` to ensure 48dp minimum touch target** (per CableSnap SKILL a11y requirement). Visual size stays compact; interactive area expands invisibly.
 - Gap between cells: 2px
 
 **Color scale (with secondary visual indicator for colorblind accessibility):**
@@ -298,7 +298,7 @@ Good concept — GitHub-style heatmap is proven for motivation. Additive approac
 
 ### Accessibility — 3 Critical Issues
 
-**[C] A11Y-TT-01: Heatmap cell touch targets too small.** Plan specifies cells at 14–24px. FitForge SKILL requires minimum 48×48dp on ALL interactive elements. Users with motor impairments cannot tap these reliably.
+**[C] A11Y-TT-01: Heatmap cell touch targets too small.** Plan specifies cells at 14–24px. CableSnap SKILL requires minimum 48×48dp on ALL interactive elements. Users with motor impairments cannot tap these reliably.
 
 **Required fix**: Either (a) increase cell size to ≥48dp and reduce weeks displayed, (b) remove tap-to-navigate from individual cells, or (c) add invisible expanded hit areas (48dp Pressable wrapping smaller visual cells).
 
@@ -333,4 +333,4 @@ Good concept — GitHub-style heatmap is proven for motivation. Additive approac
 ### Decision
 ~~**NEEDS REVISION** — Three Critical accessibility violations must be addressed. Fix the items above and re-submit.~~
 
-**APPROVED (Rev 2)** — All 3 Critical and 2 Major issues addressed in revision. Plan now meets FitForge SKILL a11y and UX standards. Ready for implementation.
+**APPROVED (Rev 2)** — All 3 Critical and 2 Major issues addressed in revision. Plan now meets CableSnap SKILL a11y and UX standards. Ready for implementation.

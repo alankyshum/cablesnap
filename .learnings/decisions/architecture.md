@@ -3,7 +3,7 @@
 ### Product Pivots Cascade Through Data Models
 **Source**: BLD-27 — Strategic Pivot to Cable Machine Focus + Beyond Power Voltra
 **Date**: 2026-04-15
-**Context**: FitForge pivoted from general barbell focus to cable-machine-specific (Voltra device) training. The pivot required restructuring the entire exercise data model to support 7 training modes (eccentric overload, chains, isokinetic), mount positions, and attachment types — not just adding new exercises.
+**Context**: CableSnap pivoted from general barbell focus to cable-machine-specific (Voltra device) training. The pivot required restructuring the entire exercise data model to support 7 training modes (eccentric overload, chains, isokinetic), mount positions, and attachment types — not just adding new exercises.
 **Learning**: A product strategy pivot does not just change feature priorities — it cascades through the data model. New device capabilities (training modes, equipment metadata) must be reflected in database schema and seed data before any feature work begins. Building features on an un-restructured data model leads to rework.
 **Action**: When executing a product pivot, first audit the existing data model against the new domain requirements. Restructure schema and seed data to reflect the new domain BEFORE starting feature implementation. Document the new domain entities and their relationships as the first deliverable of the pivot.
 **Tags**: architecture, product-pivot, data-model, domain-modeling, schema-design, cross-project
@@ -43,7 +43,7 @@ BLD-298 **Source**: PLAN: Strava Integration (Phase 48)
 ### Schema-Only ORM Adoption — Types Before Queries
 **Source**: BLD-370 — Define Drizzle schema and replace manual Row types (schema-only, no query changes)
 **Date**: 2026-04-19
-**Context**: FitForge had 10+ manually-defined Row types (ExerciseRow, FoodRow, etc.) that could drift from the actual SQLite schema in migrations.ts. A full Drizzle ORM query migration was rejected as too risky pre-launch given 321 SQL statements across 18 modules and mock-based tests that can't gate query refactoring safely.
+**Context**: CableSnap had 10+ manually-defined Row types (ExerciseRow, FoodRow, etc.) that could drift from the actual SQLite schema in migrations.ts. A full Drizzle ORM query migration was rejected as too risky pre-launch given 321 SQL statements across 18 modules and mock-based tests that can't gate query refactoring safely.
 **Learning**: ORM adoption can be split into a zero-risk "types only" phase: (1) install the ORM package, (2) define all tables in a schema file using the ORM's table DSL, (3) export inferred types via `$inferSelect`, (4) replace manual Row types with these inferred types, (5) change ZERO queries. This gives compile-time schema drift detection (types auto-derived from schema definitions) with zero runtime risk. Query migration can be deferred indefinitely — the schema file already provides value as the single type source of truth.
 **Action**: When migrating a raw-SQL codebase to an ORM, start with a schema-only phase: define tables, export inferred types, replace manual types, change no queries. Gate query migration on having real integration tests (not mocks) that can validate query semantics. This decouples type safety from query refactoring risk.
 **Tags**: drizzle, orm, migration, schema, type-safety, incremental-adoption, architecture, risk-management

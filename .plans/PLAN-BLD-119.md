@@ -10,17 +10,17 @@
 
 ## Problem Statement
 
-Users cannot migrate their workout history from Strong (the most popular workout tracker) to FitForge. This is the **#1 barrier to user acquisition** — users won't switch apps if they lose years of training data. Strong's CSV export is the de facto interchange format for workout data.
+Users cannot migrate their workout history from Strong (the most popular workout tracker) to CableSnap. This is the **#1 barrier to user acquisition** — users won't switch apps if they lose years of training data. Strong's CSV export is the de facto interchange format for workout data.
 
 ## Proposed Solution
 
 Add a "Import from Strong" option in Settings that:
 1. Opens a file picker for CSV files
 2. Parses Strong's CSV format
-3. Auto-maps exercise names to FitForge's exercise library (fuzzy matching)
+3. Auto-maps exercise names to CableSnap's exercise library (fuzzy matching)
 4. Creates new exercises for unmatched names
 5. Groups rows into workout sessions
-6. Imports all sessions and sets into FitForge's database
+6. Imports all sessions and sets into CableSnap's database
 7. Shows a summary of what was imported (with conflict resolution)
 
 ## Strong CSV Format
@@ -33,7 +33,7 @@ Date,Workout Name,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Wor
 Key characteristics:
 - One row per set
 - Sets are grouped by `Date` + `Workout Name` → one workout session
-- Exercise names are free-text (may not match FitForge's library exactly)
+- Exercise names are free-text (may not match CableSnap's library exactly)
 - Weight unit depends on user's Strong settings (kg or lbs) — we must ask or detect
 - `Distance` and `Seconds` are used for cardio exercises
 - `RPE` column may or may not be present (added in newer Strong versions)
@@ -78,8 +78,8 @@ CSV File → parse → ParsedStrongRow[]
   - Section 1: "Exact Matches (N)" — auto-mapped, collapsed by default
   - Section 2: "Possible Matches (N)" — expanded, require user confirmation
   - Section 3: "New Exercises (N)" — will be created, user can tap to search library instead
-- For each: show matched FitForge exercise OR "New exercise will be created"
-- User can tap to change mapping (search FitForge library)
+- For each: show matched CableSnap exercise OR "New exercise will be created"
+- User can tap to change mapping (search CableSnap library)
 - Match indicators with text labels (not color-only):
   - ✅ "Exact match" (auto-mapped)
   - 🟡 "Possible match — tap to confirm" (needs user confirmation)
@@ -119,8 +119,8 @@ CSV File → parse → ParsedStrongRow[]
 ## Acceptance Criteria
 
 - [ ] Given a user taps "Import from Strong" in Settings, When they select a valid Strong CSV, Then the app parses it and shows the review screen
-- [ ] Given the CSV contains exercises that exactly match FitForge names, When reviewing, Then those exercises show ✅ "Exact match" (auto-mapped)
-- [ ] Given the CSV contains exercises with normalized matches (e.g., "Bench Press (Barbell)" vs "Barbell Bench Press"), When reviewing, Then the 4-pass matcher suggests the correct FitForge exercise with 🟡 "Possible match" indicator
+- [ ] Given the CSV contains exercises that exactly match CableSnap names, When reviewing, Then those exercises show ✅ "Exact match" (auto-mapped)
+- [ ] Given the CSV contains exercises with normalized matches (e.g., "Bench Press (Barbell)" vs "Barbell Bench Press"), When reviewing, Then the 4-pass matcher suggests the correct CableSnap exercise with 🟡 "Possible match" indicator
 - [ ] Given the CSV contains unknown exercises, When reviewing, Then they show 🔴 "No match — will create" and will be created as custom exercises on import
 - [ ] Given the user confirms import, When import runs, Then all weight-based sessions and sets are created in the database with `completed = true` and `completed_at` set to the session date
 - [ ] Given import completes, Then a summary shows: sessions imported, exercises created, sets imported, timed/cardio sets skipped, date range
@@ -129,7 +129,7 @@ CSV File → parse → ParsedStrongRow[]
 - [ ] Given a CSV with >5000 rows, When importing, Then a progress indicator is shown and import completes without ANR
 - [ ] Given the CSV contains RPE values, When imported, Then RPE is mapped to `WorkoutSet.rpe`
 - [ ] Given the CSV contains Notes, When imported, Then Notes are mapped to `WorkoutSet.notes`
-- [ ] Given the user selects "lbs" but FitForge stores in kg, When importing, Then weights are converted at parse time (weight_kg = weight_lbs × 0.453592)
+- [ ] Given the user selects "lbs" but CableSnap stores in kg, When importing, Then weights are converted at parse time (weight_kg = weight_lbs × 0.453592)
 - [ ] All match indicators include text labels (not color/emoji only) for accessibility
 - [ ] All interactive elements have `accessibilityLabel` and `accessibilityRole`
 - [ ] Exercise mapping list uses `FlatList` with sections grouped by match confidence
@@ -143,13 +143,13 @@ CSV File → parse → ParsedStrongRow[]
 ### Exercise Matching Algorithm
 Deterministic, multi-pass matching (NO Levenshtein/fuzzy — per Tech Lead review):
 
-**Pass 1: Exact match** — case-insensitive exact string comparison against FitForge exercise library.
+**Pass 1: Exact match** — case-insensitive exact string comparison against CableSnap exercise library.
 
 **Pass 2: Normalize + strip parentheticals** — Remove parenthetical equipment tags (e.g., "(Barbell)", "(Dumbbell)"), normalize whitespace and case, then match.
 - "Bench Press (Barbell)" → normalize → "bench press" → match "Barbell Bench Press" (normalized: "barbell bench press")
 - Also try: "{equipment} {name}" ↔ "{name} ({equipment})" pattern swap
 
-**Pass 3: Substring containment** — If the Strong exercise name contains a FitForge exercise name (or vice versa), suggest as a match requiring user confirmation.
+**Pass 3: Substring containment** — If the Strong exercise name contains a CableSnap exercise name (or vice versa), suggest as a match requiring user confirmation.
 
 **Pass 4: Alias lookup table** — Hardcoded table of common aliases:
 ```
@@ -177,10 +177,10 @@ Reuse the existing `importData` pattern in `lib/db/import-export.ts` for batch i
 ### Unit Conversion
 Convert at parse time (not display time):
 - User selects their Strong unit (kg or lbs) during Step 1
-- All weights are converted to FitForge's stored unit at parse time
-- If FitForge stores in kg and user selects lbs: `weight_kg = weight_lbs * 0.453592`
-- If FitForge stores in lbs and user selects kg: `weight_lbs = weight_kg * 2.20462`
-- Check FitForge's `body_settings` for the user's preferred unit to determine target
+- All weights are converted to CableSnap's stored unit at parse time
+- If CableSnap stores in kg and user selects lbs: `weight_kg = weight_lbs * 0.453592`
+- If CableSnap stores in lbs and user selects kg: `weight_lbs = weight_kg * 2.20462`
+- Check CableSnap's `body_settings` for the user's preferred unit to determine target
 
 ### Duplicate Detection
 Use exact matching only (no fuzzy):
@@ -196,20 +196,20 @@ Use exact matching only (no fuzzy):
 - `expo-file-system` — file reading (already a dependency)
 
 ### Duration Handling
-**SKIPPED for MVP.** Strong stores timed set durations as `Seconds` column. FitForge's `duration_seconds` lives on `workout_sessions` (session-level), NOT on `workout_sets` (set-level). Mapping set-level duration to session-level duration is semantically incorrect. A future phase could add `duration_seconds` to `workout_sets` via a schema migration, then import timed sets.
+**SKIPPED for MVP.** Strong stores timed set durations as `Seconds` column. CableSnap's `duration_seconds` lives on `workout_sessions` (session-level), NOT on `workout_sets` (set-level). Mapping set-level duration to session-level duration is semantically incorrect. A future phase could add `duration_seconds` to `workout_sets` via a schema migration, then import timed sets.
 
 ### WorkoutSet.training_mode
 For all imported sets, use `training_mode = null` (standard weight sets). The valid TrainingMode values (`weight`, `eccentric_overload`, `band`, `damper`, `isokinetic`, `isometric`, `custom_curves`, `rowing`) are equipment-specific modes that don't apply to generic imported data.
 
 **Timed/cardio sets from Strong (Seconds > 0, Reps = 0) are SKIPPED for MVP** — importing them would require either a schema migration (adding `duration_seconds` to `workout_sets`) or a mapping to existing fields that doesn't semantically fit. These sets are counted in the import summary as "skipped" with an explanation.
 
-### Field Mapping — Strong CSV → FitForge WorkoutSet
+### Field Mapping — Strong CSV → CableSnap WorkoutSet
 
-| Strong Column | FitForge Field | Mapping |
+| Strong Column | CableSnap Field | Mapping |
 |---------------|---------------|---------|
-| Weight | `weight` | Convert to FitForge unit at parse time. 0 or empty → `null` (bodyweight) |
+| Weight | `weight` | Convert to CableSnap unit at parse time. 0 or empty → `null` (bodyweight) |
 | Reps | `reps` | Direct map. Must be non-negative. |
-| RPE | `rpe` | Direct map (Strong uses 1-10 scale, same as FitForge). Null if empty/missing. |
+| RPE | `rpe` | Direct map (Strong uses 1-10 scale, same as CableSnap). Null if empty/missing. |
 | Notes | `notes` | Direct map per-set notes. Empty string if missing. |
 | Set Order | `set_number` | Direct map. |
 | Date | `completed_at` | Use session date as epoch timestamp. |
@@ -219,9 +219,9 @@ For all imported sets, use `training_mode = null` (standard weight sets). The va
 | — | `round` | `null` |
 | — | `tempo` | `null` |
 
-### Strong CSV → FitForge WorkoutSession
+### Strong CSV → CableSnap WorkoutSession
 
-| Strong Column | FitForge Field | Mapping |
+| Strong Column | CableSnap Field | Mapping |
 |---------------|---------------|---------|
 | Date | `started_at` | Parse ISO date string → epoch ms. Strong uses "YYYY-MM-DD HH:MM:SS" format. |
 | Date | `completed_at` | Same as `started_at` (exact duration unknown from CSV). |

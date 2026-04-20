@@ -57,9 +57,9 @@ Build an in-app feedback system with three report types (bug, feature request, c
 - **Confirmation**: After submission, show Snackbar "Report opened in browser" or "Report shared"
 
 #### GitHub Issue Auto-Creation
-Since FitForge is a client-only app (no backend), use `expo-linking` to open a pre-filled GitHub issue URL:
+Since CableSnap is a client-only app (no backend), use `expo-linking` to open a pre-filled GitHub issue URL:
 ```
-https://github.com/alankyshum/fitforge/issues/new?title=...&body=...&labels=bug|enhancement
+https://github.com/alankyshum/cablesnap/issues/new?title=...&body=...&labels=bug|enhancement
 ```
 
 The issue body will be auto-filled with:
@@ -262,7 +262,7 @@ Keep it lightweight — a single function call with 3-4 args, fire-and-forget (n
 3. **ERRBOUND-01** ✅ Fixed: ErrorBoundary now uses `Linking.openURL()` directly. No React navigation during crash. "Share Crash Report" remains primary, "Report on GitHub" added as secondary.
 
 #### Major Issues — ALL ADDRESSED in Rev 2
-4. **A11Y-SPEC-01** ⚠️ Review section claims a11y table was added, but no dedicated per-element accessibilityLabel/accessibilityRole table exists in the plan body. Will be enforced during implementation review via FitForge Review SKILL.
+4. **A11Y-SPEC-01** ⚠️ Review section claims a11y table was added, but no dedicated per-element accessibilityLabel/accessibilityRole table exists in the plan body. Will be enforced during implementation review via CableSnap Review SKILL.
 5. **OFFLINE-01** ✅ Added: Connectivity check via `@react-native-community/netinfo` before opening GitHub URL. Offline → dialog suggests Share fallback.
 6. **DEBOUNCE-01** ✅ Added: 5-second cooldown after submission, button disabled with countdown.
 7. **TRUNCATE-01** ✅ Added: Explicit truncation priority: error stacks → interactions → description (user content preserved last).

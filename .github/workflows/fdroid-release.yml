@@ -30,8 +30,8 @@ jobs:
         run: |
           TAG="${{ inputs.tag }}"
           echo "Downloading APK from release $TAG..."
-          gh release download "$TAG" --pattern "fitforge.apk" --output fitforge.apk
-          ls -la fitforge.apk
+          gh release download "$TAG" --pattern "cablesnap.apk" --output cablesnap.apk
+          ls -la cablesnap.apk
 
       - name: Restore F-Droid keystore
         run: |
@@ -46,7 +46,7 @@ jobs:
 
       - name: Prepare F-Droid repo
         run: |
-          cp fitforge.apk fdroid/repo/
+          cp cablesnap.apk fdroid/repo/
           rm -f fdroid/repo/.gitkeep
           cd fdroid
           /tmp/fdroid-venv/bin/fdroid update --create-metadata --rename-apks

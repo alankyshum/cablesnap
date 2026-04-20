@@ -7,8 +7,8 @@
 
 ## Problem Statement
 
-FitForge's README promises "Data Portable — Full import/export (coming soon)" but the only import available is Strong CSV (workout history from another app). Users cannot:
-- Back up their FitForge data
+CableSnap's README promises "Data Portable — Full import/export (coming soon)" but the only import available is Strong CSV (workout history from another app). Users cannot:
+- Back up their CableSnap data
 - Restore data on a new device
 - Transfer data between devices without a cloud account
 
@@ -26,8 +26,8 @@ The export uses `version: 2` format. The settings screen already has JSON export
 
 ## User Stories
 
-- As a user, I want to export ALL my FitForge data to a file so I have a backup
-- As a user, I want to import a FitForge backup file on a new device so I don't lose my history
+- As a user, I want to export ALL my CableSnap data to a file so I have a backup
+- As a user, I want to import a CableSnap backup file on a new device so I don't lose my history
 - As a user, I want to see what data will be imported before confirming so I don't accidentally overwrite my current data
 - As a user, I want the export to include everything — workouts, nutrition, body stats, programs, templates, settings
 - As a user, I want to share the export file via any method (email, cloud drive, AirDrop) so I'm not locked to one transfer method
@@ -44,19 +44,19 @@ Extend the existing `lib/db/import-export.ts` to cover all user data tables (add
 
 Add a new "Data Management" section in Settings (below "Feedback & Reports"):
 - **"Export All Data"** button (primary) — generates JSON, shares via system share sheet
-- **"Import FitForge Backup"** button (outlined) — opens document picker for `.json` files
+- **"Import CableSnap Backup"** button (outlined) — opens document picker for `.json` files
 - **"Import from Strong"** link (existing, relocated into this section — keep also in original location with a note pointing to new location for one release cycle)
 
 #### Export Flow
 1. User taps "Export All Data"
 2. **Confirmation modal**: "Your backup will be approximately X MB. This may take a moment. Continue?" (estimate based on row counts)
 3. Progress indicator during export: "Exporting data... (3/7 tables)"
-4. System share sheet opens with file: `fitforge-backup-YYYY-MM-DD.json`
+4. System share sheet opens with file: `cablesnap-backup-YYYY-MM-DD.json`
 5. User chooses destination (Files, AirDrop, email, cloud drive)
 6. Success snackbar: "Data exported successfully"
 
 #### Import Flow
-1. User taps "Import FitForge Backup"
+1. User taps "Import CableSnap Backup"
 2. Document picker opens (filtered to `.json` files)
 3. **Preview screen** (`app/settings/import-backup.tsx`) shows:
    - Export date and app version from the backup
@@ -67,9 +67,9 @@ Add a new "Data Management" section in Settings (below "Feedback & Reports"):
 6. Navigate back to Settings
 
 #### Error States
-- Corrupt/invalid JSON → Alert: "This file doesn't appear to be a valid FitForge backup."
-- Wrong file format / missing required fields → Alert: "Please select a valid FitForge backup file (.json)"
-- Version mismatch (future backup loaded on old app) → Alert: "This backup was created with a newer version of FitForge. Please update the app first."
+- Corrupt/invalid JSON → Alert: "This file doesn't appear to be a valid CableSnap backup."
+- Wrong file format / missing required fields → Alert: "Please select a valid CableSnap backup file (.json)"
+- Version mismatch (future backup loaded on old app) → Alert: "This backup was created with a newer version of CableSnap. Please update the app first."
 - Empty backup → Alert: "This backup file contains no data."
 - File too large (> 50MB) → Alert: "This backup file is too large to process safely."
 
@@ -230,12 +230,12 @@ Tables MUST be imported in this order to satisfy foreign key constraints:
 
 ### Acceptance Criteria
 
-- [ ] Settings shows "Data Management" section with "Export All Data" and "Import FitForge Backup" buttons
+- [ ] Settings shows "Data Management" section with "Export All Data" and "Import CableSnap Backup" buttons
 - [ ] Export confirmation modal shows estimated file size before proceeding
 - [ ] Export progress indicator shows table-level progress
 - [ ] Export produces valid JSON with version 3 and all 18 user data tables
 - [ ] Export file opens in system share sheet via expo-sharing
-- [ ] Export filename: `fitforge-backup-YYYY-MM-DD.json`
+- [ ] Export filename: `cablesnap-backup-YYYY-MM-DD.json`
 - [ ] Import opens document picker filtered to .json files
 - [ ] Import rejects files > 50MB with clear error
 - [ ] Import preview screen shows record counts per table before confirmation
@@ -262,12 +262,12 @@ Tables MUST be imported in this order to satisfy foreign key constraints:
 |----------|-------------------|
 | Empty database (no data) | Export produces valid JSON with empty arrays. Shows "No data to export" info before share sheet. |
 | Large database (1000+ sessions) | Progress indicator, no UI freeze. Export < 5MB typical. |
-| Backup from newer app version (v4+) | Alert: "This backup was created with a newer version of FitForge. Please update the app first." |
+| Backup from newer app version (v4+) | Alert: "This backup was created with a newer version of CableSnap. Please update the app first." |
 | v2 backup (missing new tables) | Import succeeds. Missing tables treated as empty arrays. Summary notes "7 tables not present in backup." |
 | Duplicate IDs on import | `INSERT OR IGNORE` — silently skip, count in summary as "skipped" |
 | Import interrupted (app killed) | Transaction rollback — no partial data |
-| Corrupt JSON file | Alert: "This file doesn't appear to be a valid FitForge backup." |
-| Non-FitForge JSON file | Validation rejects — missing version/data fields |
+| Corrupt JSON file | Alert: "This file doesn't appear to be a valid CableSnap backup." |
+| Non-CableSnap JSON file | Validation rejects — missing version/data fields |
 | Negative calorie/weight values in backup | Reject entire file: "Backup contains invalid data (negative values)." |
 | File > 50MB | Reject before parsing: "This backup file is too large to process safely." |
 | Orphaned sets (session_id not in backup) | `INSERT OR IGNORE` will attempt insert. If FK constraint fails, the single transaction rolls back. Upfront validation should warn. |

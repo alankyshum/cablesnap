@@ -19,7 +19,7 @@
 
 ## Problem Statement
 
-FitForge has body weight and body measurements tracking, but users cannot visually track their physique transformation over time. Visual progress is the **#1 motivator** for fitness consistency — seeing side-by-side before/after photos drives engagement far more than numbers alone.
+CableSnap has body weight and body measurements tracking, but users cannot visually track their physique transformation over time. Visual progress is the **#1 motivator** for fitness consistency — seeing side-by-side before/after photos drives engagement far more than numbers alone.
 
 Every serious fitness app (Strong, JEFIT, Fitbod) includes progress photo tracking. Without it, users must rely on their phone's camera roll, losing the connection between photos and their training data.
 

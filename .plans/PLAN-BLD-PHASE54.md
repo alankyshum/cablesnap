@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge currently tracks every set as weight × reps. However, many common exercises use **time** as the performance metric instead of (or in addition to) reps:
+CableSnap currently tracks every set as weight × reps. However, many common exercises use **time** as the performance metric instead of (or in addition to) reps:
 
 - **Isometric holds**: Planks, wall sits, dead hangs, L-sits
 - **Loaded carries**: Farmer's carries, yoke walks, overhead carries
@@ -16,7 +16,7 @@ FitForge currently tracks every set as weight × reps. However, many common exer
 
 The app already has an "Isometric" training mode but no per-set `duration` field — users cannot actually record how long they held a plank or carried weight. This forces users to either skip tracking these exercises or abuse the `reps` field (e.g., entering "60" reps to mean 60 seconds), which corrupts analytics and PR tracking.
 
-**Why now?** FitForge is launched on F-Droid and core workout tracking is solid. Duration sets fill a clear data model gap that affects a wide range of exercise types. It's a fundamental tracking capability, not a nice-to-have.
+**Why now?** CableSnap is launched on F-Droid and core workout tracking is solid. Duration sets fill a clear data model gap that affects a wide range of exercise types. It's a fundamental tracking capability, not a nice-to-have.
 
 ## User Stories
 

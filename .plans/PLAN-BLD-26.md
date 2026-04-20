@@ -9,7 +9,7 @@
 
 Users track workouts but receive zero feedback on whether they're progressing. There is no "you just beat your personal record!" moment. The app calculates personal records (max weight per exercise) on the Progress tab, but this data is never surfaced during the actual workout or upon completion. Users must manually compare today's sets against historical data — a tedious process that kills motivation.
 
-Fitness apps that celebrate progress (PR alerts, post-workout summaries) have significantly higher retention. FitForge currently functions as a data entry tool, not a motivational training partner.
+Fitness apps that celebrate progress (PR alerts, post-workout summaries) have significantly higher retention. CableSnap currently functions as a data entry tool, not a motivational training partner.
 
 ## User Stories
 
@@ -42,7 +42,7 @@ Three interconnected enhancements:
 - A small Chip component with text "PR" and a trophy icon, rendered to the right of the set row
 - Use `theme.colors.tertiaryContainer` background (gold/amber tone) — same semantic approach as the "Custom" badge in exercises
 - `accessibilityLabel="New personal record"` on the chip
-- Font size >= 12px (per FitForge quality standard)
+- Font size >= 12px (per CableSnap quality standard)
 
 **Data flow**:
 - On session load: fetch historical max weight per exercise_id using a new DB function `getMaxWeightByExercise(exerciseIds, excludeSessionId)`

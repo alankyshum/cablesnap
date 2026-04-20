@@ -1,15 +1,15 @@
 ---
 name: publish-release
 description: >-
-  Publish a new FitForge release with consistent version numbers across
+  Publish a new CableSnap release with consistent version numbers across
   package.json, app.config.ts, F-Droid metadata, GitHub tag, GitHub Release,
   and F-Droid repo. Use when asked to publish, release, bump version, or
   ship a new version of the app.
 ---
 
-# Publish a New FitForge Release
+# Publish a New CableSnap Release
 
-Deterministic, repeatable steps to publish a new version of FitForge.
+Deterministic, repeatable steps to publish a new version of CableSnap.
 Every version bump touches exactly 3 files + 1 tag + 1 GitHub Release,
 then GitHub Actions builds the APK and deploys to the F-Droid repo.
 
@@ -62,7 +62,7 @@ version: "X.Y.Z",
 "version": "X.Y.Z",
 ```
 
-### File 3: `fdroid/metadata/com.anomalyco.fitforge.yml`
+### File 3: `fdroid/metadata/com.anomalyco.cablesnap.yml`
 ```yaml
 CurrentVersion: X.Y.Z
 CurrentVersionCode: N
@@ -72,7 +72,7 @@ CurrentVersionCode: N
 To find the current value:
 
 ```bash
-grep 'CurrentVersionCode' fdroid/metadata/com.anomalyco.fitforge.yml
+grep 'CurrentVersionCode' fdroid/metadata/com.anomalyco.cablesnap.yml
 ```
 
 Increment it by 1.
@@ -84,7 +84,7 @@ After bumping, verify consistency:
 ```bash
 grep '"version"' package.json
 grep 'version:' app.config.ts
-grep 'CurrentVersion' fdroid/metadata/com.anomalyco.fitforge.yml
+grep 'CurrentVersion' fdroid/metadata/com.anomalyco.cablesnap.yml
 ```
 
 All three version strings must match. `CurrentVersionCode` must be previous + 1.
@@ -92,7 +92,7 @@ All three version strings must match. `CurrentVersionCode` must be previous + 1.
 ## Step 3: Commit the Version Bump
 
 ```bash
-git add app.config.ts package.json fdroid/metadata/com.anomalyco.fitforge.yml
+git add app.config.ts package.json fdroid/metadata/com.anomalyco.cablesnap.yml
 git commit -m "release: vX.Y.Z"
 ```
 
@@ -138,7 +138,7 @@ gh release create vX.Y.Z \
 
 Add the F-Droid repo URL to your F-Droid client:
 \`\`\`
-https://alankyshum.github.io/fitforge/repo
+https://alankyshum.github.io/cablesnap/repo
 \`\`\`
 NOTES
 )"
@@ -168,7 +168,7 @@ This runs `eas build -p android --profile production --local` and outputs
 `build-<timestamp>.apk` in the project root. Rename it before uploading:
 
 ```bash
-cp build-*.apk fitforge.apk
+cp build-*.apk cablesnap.apk
 ```
 
 **Prerequisites:**
@@ -186,7 +186,7 @@ cp build-*.apk fitforge.apk
 ## Step 8: Upload APK to GitHub Release
 
 ```bash
-gh release upload vX.Y.Z fitforge.apk --clobber
+gh release upload vX.Y.Z cablesnap.apk --clobber
 ```
 
 Verify the asset was attached:
@@ -195,7 +195,7 @@ Verify the asset was attached:
 gh release view vX.Y.Z --json assets --jq '.assets[].name'
 ```
 
-Should show `fitforge.apk`.
+Should show `cablesnap.apk`.
 
 ## Step 9: F-Droid Repo Update (Automatic)
 
@@ -214,11 +214,11 @@ After the workflow completes (~5 min), verify the Pages deployment:
 
 ```bash
 gh run list --workflow=fdroid-release.yml --limit 1
-gh api repos/alankyshum/fitforge/pages/builds --jq '.[0].status'
+gh api repos/alankyshum/cablesnap/pages/builds --jq '.[0].status'
 ```
 
 The F-Droid repo will be live at:
-`https://alankyshum.github.io/fitforge/repo`
+`https://alankyshum.github.io/cablesnap/repo`
 
 ## Post-Publish
 
@@ -260,8 +260,8 @@ the config is dynamic (TypeScript). The project ID is:
 
 ### F-Droid client not showing update
 - Pull-to-refresh in F-Droid
-- Check repo URL is exactly: `https://alankyshum.github.io/fitforge/repo`
-- Verify Pages is deployed: `gh api repos/alankyshum/fitforge/pages`
+- Check repo URL is exactly: `https://alankyshum.github.io/cablesnap/repo`
+- Verify Pages is deployed: `gh api repos/alankyshum/cablesnap/pages`
 
 ### Need to re-publish same version
 Delete the release and tag, fix the issue, then redo steps 4-7:

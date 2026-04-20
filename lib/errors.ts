@@ -210,7 +210,7 @@ const MAX_URL = 8000;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- consoleLogs param kept for API consistency with generateGitHubURL
 export function truncateBody(body: string, errors: ErrorEntry[], interactions: Interaction[], desc: string, type: ReportType, includeDiag: boolean, consoleLogs?: ConsoleLogEntry[]): string {
   const check = (b: string) =>
-    `https://github.com/alankyshum/fitforge/issues/new?title=x&body=${encodeURIComponent(b)}`.length;
+    `https://github.com/alankyshum/cablesnap/issues/new?title=x&body=${encodeURIComponent(b)}`.length;
 
   if (check(body) <= MAX_URL) return body;
 
@@ -314,7 +314,7 @@ export function generateGitHubURL(opts: {
   const final = truncateBody(body, opts.errors, opts.interactions, opts.description, opts.type, opts.includeDiag, opts.consoleLogs);
   const encoded = encodeURIComponent(final);
   const title = encodeURIComponent(opts.title.slice(0, 150));
-  return `https://github.com/alankyshum/fitforge/issues/new?title=${title}&body=${encoded}&labels=${labels}`;
+  return `https://github.com/alankyshum/cablesnap/issues/new?title=${title}&body=${encoded}&labels=${labels}`;
 }
 
 export function generateShareText(opts: {
@@ -328,7 +328,7 @@ export function generateShareText(opts: {
 }): string {
   const version = Constants.expoConfig?.version ?? "unknown";
   const lines: string[] = [];
-  lines.push(`FitForge ${opts.type === "bug" ? "Bug Report" : opts.type === "feature" ? "Feature Request" : "Crash Report"}`);
+  lines.push(`CableSnap ${opts.type === "bug" ? "Bug Report" : opts.type === "feature" ? "Feature Request" : "Crash Report"}`);
   lines.push(`Title: ${opts.title}`);
   lines.push(`Date: ${new Date().toISOString()}`);
   lines.push(`App Version: ${version}`);

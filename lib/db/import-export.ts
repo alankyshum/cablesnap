@@ -163,26 +163,26 @@ export function validateBackupFileSize(sizeBytes: number): ValidationError | nul
 // eslint-disable-next-line complexity -- pre-existing; split would break backup format contract
 export function validateBackupData(data: unknown): ValidationError | null {
   if (typeof data !== "object" || data === null) {
-    return { type: "corrupt_json", message: "This file doesn't appear to be a valid FitForge backup." };
+    return { type: "corrupt_json", message: "This file doesn't appear to be a valid CableSnap backup." };
   }
 
   const obj = data as Record<string, unknown>;
 
   // Check version
   if (obj.version === undefined || obj.version === null) {
-    return { type: "missing_version", message: "This file doesn't appear to be a valid FitForge backup." };
+    return { type: "missing_version", message: "This file doesn't appear to be a valid CableSnap backup." };
   }
 
   const version = Number(obj.version);
   if (version >= 7) {
-    return { type: "future_version", message: "This backup was created with a newer version of FitForge. Please update the app first." };
+    return { type: "future_version", message: "This backup was created with a newer version of CableSnap. Please update the app first." };
   }
 
   // v2 backups have data at top level, v3 under data key
   const tableData = version <= 2 ? obj : (obj.data as Record<string, unknown> | undefined);
 
   if (version >= 3 && (!tableData || typeof tableData !== "object")) {
-    return { type: "missing_data", message: "This file doesn't appear to be a valid FitForge backup." };
+    return { type: "missing_data", message: "This file doesn't appear to be a valid CableSnap backup." };
   }
 
   // Validate arrays and numeric fields (check types before checking emptiness)

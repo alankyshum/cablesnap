@@ -3,9 +3,9 @@
 ## Learnings
 
 ### legacy-peer-deps Masks Missing Peer Dependencies
-**Source**: BLD-12, BLD-14 — Fix FitForge broken build / Pipeline halt
+**Source**: BLD-12, BLD-14 — Fix CableSnap broken build / Pipeline halt
 **Date**: 2026-04-12
-**Context**: FitForge used `.npmrc` with `legacy-peer-deps=true` to bypass peer dependency conflicts between react@19.1.0 and expo-router's transitive react-dom requirement. This silently skipped all peer dependency validation.
+**Context**: CableSnap used `.npmrc` with `legacy-peer-deps=true` to bypass peer dependency conflicts between react@19.1.0 and expo-router's transitive react-dom requirement. This silently skipped all peer dependency validation.
 **Learning**: `legacy-peer-deps=true` allows `npm install` to succeed but hides genuinely missing dependencies. `react-native-reanimated@4.x` requires `react-native-worklets` as a peer dep, but the missing-peer warning was suppressed. Metro crashed at runtime trying to resolve the missing module. The install succeeded; the app did not.
 **Action**: When using `legacy-peer-deps`, manually audit peer dependencies of every direct dependency. Run `npm ls --all` after install to check for unmet peers. Pin matching versions of react, react-dom, and react-native-web to prevent version drift.
 **Tags**: npm, peer-dependencies, legacy-peer-deps, react-native-reanimated, react-native-worklets, expo, metro
@@ -38,19 +38,19 @@
 ### Use Tilde Ranges for Expo SDK Packages — Caret Allows Incompatible Majors
 **Source**: BLD-129 — Align Expo dependency versions to SDK-compatible ranges
 **Date**: 2026-04-15
-**Context**: FitForge used caret `^` version ranges (e.g., `^55.0.13`) for Expo packages like expo-document-picker, expo-file-system, expo-haptics, expo-sharing, expo-sqlite, jest-expo, and react-native-svg. `npx expo start` warned about 8 packages not matching expected SDK versions. The caret range resolved to major versions far beyond what the SDK was tested with.
+**Context**: CableSnap used caret `^` version ranges (e.g., `^55.0.13`) for Expo packages like expo-document-picker, expo-file-system, expo-haptics, expo-sharing, expo-sqlite, jest-expo, and react-native-svg. `npx expo start` warned about 8 packages not matching expected SDK versions. The caret range resolved to major versions far beyond what the SDK was tested with.
 **Learning**: Expo SDK expects specific version ranges for its companion packages. Caret `^` ranges allow npm to resolve to newer major versions that may be API-incompatible or untested with the current SDK. Expo's own `npx expo install` uses tilde `~` ranges (patch-only updates) for a reason — SDK packages are versioned in lockstep. Additionally, `expo-sqlite` must be registered as a plugin in `app.config.ts` for its native module to initialize correctly.
 **Action**: Always use `npx expo install <package>` instead of `npm install <package>` for Expo-ecosystem packages. Run `npx expo install --fix` periodically to realign versions. Never manually widen Expo package ranges from `~` to `^`. When adding expo-sqlite, include it in the `plugins` array in `app.config.ts`.
 **Tags**: expo, dependency-versions, tilde-range, caret-range, expo-install, sdk-compatibility, expo-sqlite, app-config
 
-### qa-fitforge CODE-02 False Positive with sub.remove()
+### qa-cablesnap CODE-02 False Positive with sub.remove()
 
 **Source**: BLD-93 — Workout Reminders & Push Notifications (Phase 34)
 **Date**: 2026-04-14
-**Context**: `qa-fitforge.sh` CODE-02 check greps for literal `removeEventListener` to verify listener cleanup. React Native's modern subscription API (`AppState.addEventListener`) returns a subscription object cleaned up via `sub.remove()`, which the grep doesn't detect.
+**Context**: `qa-cablesnap.sh` CODE-02 check greps for literal `removeEventListener` to verify listener cleanup. React Native's modern subscription API (`AppState.addEventListener`) returns a subscription object cleaned up via `sub.remove()`, which the grep doesn't detect.
 **Learning**: The deterministic check uses string matching, not AST analysis. Modern RN cleanup patterns like `sub.remove()` are functionally correct but invisible to the grep. Adding a comment mentioning `removeEventListener` satisfies the check while documenting the equivalent pattern.
-**Action**: When using subscription-based listeners, add a comment containing `removeEventListener` near the cleanup return to satisfy qa-fitforge.sh CODE-02.
-**Tags**: qa-fitforge, CODE-02, listener-cleanup, AppState, removeEventListener, false-positive
+**Action**: When using subscription-based listeners, add a comment containing `removeEventListener` near the cleanup return to satisfy qa-cablesnap.sh CODE-02.
+**Tags**: qa-cablesnap, CODE-02, listener-cleanup, AppState, removeEventListener, false-positive
 
 ### Expo SDK Major Upgrades Require Config and Mock Fixups Beyond Version Bumps
 **Source**: BLD-149 — Upgrade Expo SDK 54 → 55

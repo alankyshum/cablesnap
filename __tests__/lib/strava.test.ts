@@ -95,7 +95,7 @@ describe("Strava Integration — API Client", () => {
     expect(stravaClientSrc).toContain("usePKCE: true");
     expect(stravaClientSrc).toContain("code_verifier");
     // Activity format
-    expect(stravaClientSrc).toMatch(/external_id.*fitforge-/);
+    expect(stravaClientSrc).toMatch(/external_id.*cablesnap-/);
     expect(stravaClientSrc).toContain('"WeightTraining"');
     expect(stravaClientSrc).toContain("weightUnit");
     expect(stravaClientSrc).toContain("getBodySettings");
@@ -107,7 +107,7 @@ describe("Strava Integration — API Client", () => {
     expect(stravaClientSrc).toContain("401");
     expect(stravaClientSrc).toContain("await disconnect()");
     expect(stravaClientSrc).toContain("No completed sets to sync");
-    expect(stravaClientSrc).toContain('scheme: "fitforge"');
+    expect(stravaClientSrc).toContain('scheme: "cablesnap"');
     expect(stravaClientSrc).toContain('"strava-callback"');
   });
 
@@ -301,7 +301,7 @@ describe("Strava Integration — Behavioral", () => {
     // Verify activity payload
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.type).toBe("WeightTraining");
-    expect(body.external_id).toBe("fitforge-s1");
+    expect(body.external_id).toBe("cablesnap-s1");
   });
 
   it("syncSessionToStrava skips when not connected", async () => {

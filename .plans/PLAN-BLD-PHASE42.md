@@ -203,7 +203,7 @@ const showBarcodeButton = Platform.OS !== "web";
 **Recommendations (nice to have):**
 - Extract OnlineTab to `components/OnlineTab.tsx` (add.tsx is 829 lines)
 - Call `Keyboard.dismiss()` on "Scan Barcode" press
-- Update User-Agent from `FitForge/0.5.0` to current version
+- Update User-Agent from `CableSnap/0.5.0` to current version
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED**

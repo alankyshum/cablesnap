@@ -6,22 +6,22 @@ import { migrate } from "./migrations";
 import { seed } from "./seed";
 import * as schema from "./schema";
 
-const DB_NAME = "fitforge.db";
+const DB_NAME = "cablesnap.db";
 
 // Store singleton on globalThis so hot-reload doesn't orphan connections
 const g = globalThis as unknown as {
-  __fitforge_db?: SQLite.SQLiteDatabase;
-  __fitforge_drizzle?: ExpoSQLiteDatabase<typeof schema>;
-  __fitforge_init?: Promise<SQLite.SQLiteDatabase>;
-  __fitforge_memfb?: boolean;
+  __cablesnap_db?: SQLite.SQLiteDatabase;
+  __cablesnap_drizzle?: ExpoSQLiteDatabase<typeof schema>;
+  __cablesnap_init?: Promise<SQLite.SQLiteDatabase>;
+  __cablesnap_memfb?: boolean;
 };
 
-function getDb() { return g.__fitforge_db ?? null; }
-function setDb(v: SQLite.SQLiteDatabase | null) { g.__fitforge_db = v ?? undefined; }
-function getDrizzleDb() { return g.__fitforge_drizzle ?? null; }
-function setDrizzleDb(v: ExpoSQLiteDatabase<typeof schema> | null) { g.__fitforge_drizzle = v ?? undefined; }
-function getInit() { return g.__fitforge_init ?? null; }
-function setInit(v: Promise<SQLite.SQLiteDatabase> | null) { g.__fitforge_init = v ?? undefined; }
+function getDb() { return g.__cablesnap_db ?? null; }
+function setDb(v: SQLite.SQLiteDatabase | null) { g.__cablesnap_db = v ?? undefined; }
+function getDrizzleDb() { return g.__cablesnap_drizzle ?? null; }
+function setDrizzleDb(v: ExpoSQLiteDatabase<typeof schema> | null) { g.__cablesnap_drizzle = v ?? undefined; }
+function getInit() { return g.__cablesnap_init ?? null; }
+function setInit(v: Promise<SQLite.SQLiteDatabase> | null) { g.__cablesnap_init = v ?? undefined; }
 
 let memoryFallback = false;
 

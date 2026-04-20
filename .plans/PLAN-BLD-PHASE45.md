@@ -39,7 +39,7 @@ Each set row displays a small toggle chip between the set number and the weight 
 - **Working set (default)**: set number shows normally, no chip visible (clean default state)
 - **Warm-up set**: a small "W" chip (circular, 28dp diameter, `theme.colors.surfaceVariant` background, `theme.colors.onSurfaceVariant` text) appears to the right of the set number
 - Tap the **set number area** (expanded to 56×56dp touch target via `hitSlop` to accommodate sweaty/gloved hands) to toggle warm-up status
-- The entire touch target area must be >=56×56dp on workout screens per FitForge SKILL requirement
+- The entire touch target area must be >=56×56dp on workout screens per CableSnap SKILL requirement
 - When toggled to warm-up: row gets a subtle left border accent (3dp, `theme.colors.surfaceVariant`)
 - Set number text color changes to `theme.colors.onSurfaceVariant` (dimmed via theme token, NOT hardcoded opacity)
 - All warm-up visual styling MUST use theme tokens (`theme.colors.surfaceVariant`, `theme.colors.onSurfaceVariant`, etc.) — no hardcoded opacity or color values

@@ -1,11 +1,11 @@
 # PLAN: Body Weight & Measurements Tracking (Phase 7)
 
-**BLD-23** | Priority: High | Project: FitForge
+**BLD-23** | Priority: High | Project: CableSnap
 **Status**: ~~DRAFT~~ → ~~REVISION 1~~ → **APPROVED** (2026-04-13)
 
 ## Problem Statement
 
-FitForge tracks workouts and nutrition but has no way to track body metrics — weight, body fat %, and body measurements (waist, chest, arms, etc.). This is a critical gap: users who train and track macros need to see whether those inputs are producing the desired body composition changes. Every major fitness app (MyFitnessPal, Strong, Fitbod) includes this feature.
+CableSnap tracks workouts and nutrition but has no way to track body metrics — weight, body fat %, and body measurements (waist, chest, arms, etc.). This is a critical gap: users who train and track macros need to see whether those inputs are producing the desired body composition changes. Every major fitness app (MyFitnessPal, Strong, Fitbod) includes this feature.
 
 Without measurements tracking, users cannot:
 - See if their training program is working (weight trending up/down)

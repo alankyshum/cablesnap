@@ -1,4 +1,4 @@
-# FitForge — User Flow Test Report
+# CableSnap — User Flow Test Report
 
 **Date:** 2026-04-14
 **Method:** Code-level analysis of all screens, DB layer, navigation, and state management.

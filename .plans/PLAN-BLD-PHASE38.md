@@ -9,7 +9,7 @@
 
 When a gym machine is occupied or unavailable, users need to quickly find an equivalent exercise targeting the same muscles. Currently, the only option is to browse the full exercise library and mentally filter by muscle group, equipment, and difficulty — this is high cognitive overhead during an active workout when focus should be on training, not searching.
 
-This directly serves FitForge's core goals:
+This directly serves CableSnap's core goals:
 - **Zero friction set logging** — swap should be 2 taps, not a 30-second browse
 - **Minimal cognitive overload** — the app does the thinking, not the user
 

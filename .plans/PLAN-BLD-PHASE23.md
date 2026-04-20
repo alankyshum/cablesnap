@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-After the Phase 22 Voltra pivot, FitForge has 54 cable-machine exercises but **zero starter templates**. New users land on an empty Workouts tab with no guidance. They must manually browse 54 exercises, understand which ones pair well, and build templates from scratch — a high-friction onboarding that will cause drop-off.
+After the Phase 22 Voltra pivot, CableSnap has 54 cable-machine exercises but **zero starter templates**. New users land on an empty Workouts tab with no guidance. They must manually browse 54 exercises, understand which ones pair well, and build templates from scratch — a high-friction onboarding that will cause drop-off.
 
 Starter templates solve this by giving users curated, ready-to-use workouts from day one. A starter program (multi-day split) further reduces friction by letting users just tap "Start Next Workout" without any setup.
 

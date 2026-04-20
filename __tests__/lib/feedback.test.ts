@@ -144,7 +144,7 @@ describe("generateGitHubURL", () => {
       interactions: [],
       includeDiag: true,
     });
-    expect(url).toContain("github.com/alankyshum/fitforge/issues/new");
+    expect(url).toContain("github.com/alankyshum/cablesnap/issues/new");
     expect(url).toContain("title=Test%20Bug");
     expect(url).toContain("labels=bug");
   });
@@ -213,7 +213,7 @@ describe("truncateBody", () => {
     const result = truncateBody(body, errors, interactions, long, "bug", true);
     expect(result).toContain("[truncated");
     // Verify the resulting URL would be under the limit
-    const url = `https://github.com/alankyshum/fitforge/issues/new?title=x&body=${encodeURIComponent(result)}`;
+    const url = `https://github.com/alankyshum/cablesnap/issues/new?title=x&body=${encodeURIComponent(result)}`;
     expect(url.length).toBeLessThanOrEqual(8000);
   });
 });
@@ -314,7 +314,7 @@ describe("device info (BLD-292)", () => {
     });
     const result = truncateBody(body, errors, interactions, long, "bug", true);
     expect(result).toContain("[truncated");
-    const url = `https://github.com/alankyshum/fitforge/issues/new?title=x&body=${encodeURIComponent(result)}`;
+    const url = `https://github.com/alankyshum/cablesnap/issues/new?title=x&body=${encodeURIComponent(result)}`;
     expect(url.length).toBeLessThanOrEqual(8000);
   });
 });

@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-FitForge detects personal records (PRs) but only shows them in the **post-workout summary** — after the session is already over. During the workout, when the user actually completes a set that beats their all-time best, nothing happens. No celebration, no feedback, no acknowledgment.
+CableSnap detects personal records (PRs) but only shows them in the **post-workout summary** — after the session is already over. During the workout, when the user actually completes a set that beats their all-time best, nothing happens. No celebration, no feedback, no acknowledgment.
 
 This is a missed "peak moment." In behavioral psychology, immediate positive reinforcement is far more powerful than delayed feedback. The user just lifted more than they ever have before, and the app treats it like any other set.
 

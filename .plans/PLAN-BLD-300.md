@@ -23,7 +23,7 @@ During a workout, pulling out a phone to log each set is disruptive. A Wear OS c
   - No community libraries of substance exist for this path
 - This limitation is structural and unlikely to change in any relevant timeframe.
 
-**Verdict: A Wear OS app CANNOT share code with the existing FitForge Expo/React Native codebase.**
+**Verdict: A Wear OS app CANNOT share code with the existing CableSnap Expo/React Native codebase.**
 
 ### 2. Required Tech Stack — Native Kotlin
 
@@ -44,7 +44,7 @@ This is an entirely separate codebase, build pipeline, and deployment target.
 
 ```
 ┌─────────────────┐         Bluetooth/Wi-Fi         ┌─────────────────┐
-│   FitForge App  │ ◄─────── Data Layer API ──────► │  Wear OS App    │
+│   CableSnap App  │ ◄─────── Data Layer API ──────► │  Wear OS App    │
 │  (Expo/RN)      │         MessageClient            │  (Kotlin)       │
 │                 │         DataClient                │                 │
 │  SQLite DB      │                                   │  Room DB        │
@@ -60,7 +60,7 @@ This is an entirely separate codebase, build pipeline, and deployment target.
 4. Phone's SQLite DB remains the source of truth
 5. Watch has a Room DB cache for offline resilience
 
-**Key challenge:** FitForge uses Expo managed workflow. Integrating the Wearable Data Layer API requires:
+**Key challenge:** CableSnap uses Expo managed workflow. Integrating the Wearable Data Layer API requires:
 - Either **ejecting from Expo** to bare workflow (to add native Android modules)
 - Or building the watch communication as a **standalone Android service** that shares data via a different mechanism (e.g., local HTTP, shared file, or content provider)
 
@@ -173,7 +173,7 @@ The Data Layer API handles connection state automatically. DataClient items pers
 2. **Expo ejection risk** — Phone-side integration requires either ejecting from Expo managed workflow (high-risk architectural change) or building a fragile bridge.
 3. **Skill gap** — BLD's engineering team specializes in TypeScript/React Native. Kotlin/Compose for Wear OS requires completely different expertise.
 4. **8-15 weeks of effort** — This is a major investment for a feature that serves only the subset of users with Wear OS watches.
-5. **Ongoing maintenance cost** — Every new FitForge feature (new set types, exercises, programs) would need parallel implementation on the watch.
+5. **Ongoing maintenance cost** — Every new CableSnap feature (new set types, exercises, programs) would need parallel implementation on the watch.
 
 ### Suggested Alternatives (Lower Effort, Broader Impact)
 
@@ -187,4 +187,4 @@ The Data Layer API handles connection state automatically. DataClient items pers
 
 ## Conclusion
 
-Wear OS integration is technically feasible but economically impractical for FitForge's current stage. The required investment (separate Kotlin codebase, Expo ejection, ongoing dual-maintenance) far outweighs the benefit for the user segment it serves. The notification-based approach would deliver 70% of the value at 10% of the cost.
+Wear OS integration is technically feasible but economically impractical for CableSnap's current stage. The required investment (separate Kotlin codebase, Expo ejection, ongoing dual-maintenance) far outweighs the benefit for the user segment it serves. The notification-based approach would deliver 70% of the value at 10% of the cost.
