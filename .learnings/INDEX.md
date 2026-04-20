@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 201
+Total learnings: 203
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 107 learnings
+- [React Native + Expo](patterns/react-native.md) — 108 learnings
 - [Testing](patterns/testing.md) — 16 learnings
 
 ### Pitfalls
@@ -25,7 +25,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 12 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 13 learnings
 - [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-456 | Widen Batch DB Query and Pre-Filter at Consumer for Feature Addition | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-20 | BLD-456 | Validate Plan Heuristic Inputs Against Actual Codebase Data Model | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-20 | BLD-454 | Render-Prop Components Cannot Be String-Mocked in Jest | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-20 | BLD-454 | Sub-Module Imports Bypass Barrel Export Mocks | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-20 | BLD-454 | UI Elements Moved to Navigation Layout Are Invisible to Component Tests | Patterns | [testing.md](patterns/testing.md) |

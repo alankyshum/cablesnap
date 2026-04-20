@@ -97,3 +97,11 @@
 **Learning**: When a root cause is identified and fixed in one location, the same pattern likely exists in other files. Fixing only the reported instance creates a false sense of resolution while leaving identical bugs in production. The fix-one-miss-three pattern is especially common with UI component swaps (FlashList→FlatList) and configuration changes.
 **Action**: After fixing any root cause bug, immediately grep/search the codebase for ALL other instances of the same pattern. Include the audit results in the PR description (e.g., "Searched for FlashList usage — 4 instances found, all 3 remaining converted"). If the fix PR only addresses one instance, explicitly document which other instances exist and why they were left unchanged.
 **Tags**: root-cause, incomplete-fix, audit, grep, systematic, regression-prevention, cross-project
+
+### Validate Plan Heuristic Inputs Against Actual Codebase Data Model
+**Source**: BLD-456 — Smart Weight Progression Suggestions (Phase 74)
+**Date**: 2026-04-20
+**Context**: The approved plan specified isolation exercise detection using fine-grained muscle-group categories (`biceps`, `triceps`, `forearms`, `calves`, `abs`). The actual codebase uses coarser categories (`arms`, `abs_core`). The implementer correctly adapted, but the plan's heuristic was based on assumed — not verified — enum values.
+**Learning**: When a plan specifies logic that depends on domain data values (category names, enum values, status codes), those values must be verified against the actual codebase's data model during plan review. Plans written from domain knowledge rather than code inspection frequently assume granularity or naming conventions that differ from the implementation.
+**Action**: During plan review, when you see category-based or enum-based heuristics (e.g., "if category is X, then Y"), grep the codebase for the actual values used in that field. Verify the plan's assumed values match. Flag mismatches before implementation begins — they indicate the plan author did not inspect the code.
+**Tags**: plan-review, data-model, enum-values, heuristics, category, verification, cross-project
