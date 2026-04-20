@@ -147,10 +147,7 @@ jobs:
           gh release create "v$VERSION" \
             --title "v$VERSION" \
             --notes "${{ steps.release_notes.outputs.notes }}"
-
-      - name: Trigger F-Droid build
-        if: steps.check_commits.outputs.has_new_commits == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          gh workflow run fdroid-release.yml --ref "v${{ steps.next_version.outputs.version }}"
+          echo ""
+          echo "APK build required: run 'npm run build:apk:prod' locally,"
+          echo "then upload with: gh release upload v$VERSION fitforge.apk"
+          echo "then trigger F-Droid: gh workflow run fdroid-release.yml -f tag=v$VERSION"

@@ -154,31 +154,51 @@ To generate the change list, compare with the previous tag:
 git log --oneline PREV_TAG..vX.Y.Z
 ```
 
-## Step 7: Verify GitHub Actions
+## Step 7: Build APK Locally
+
+Build the production APK on the local machine (Apple Silicon — fast with warm Gradle cache):
 
 ```bash
-gh run list --limit 3
+npm run build:apk:prod
 ```
 
-The "Build APK & Update F-Droid Repo" workflow should be `in_progress` or `completed`.
+This runs `eas build -p android --profile production --local` and outputs `fitforge.apk` in the project root.
 
-If the workflow fails:
+**Prerequisites:**
+- Java 17 installed (`java -version`)
+- Android SDK installed (via Android Studio or standalone)
+- `ANDROID_HOME` set
+
+The build takes ~5 min with warm cache, ~15 min cold.
+
+## Step 8: Upload APK to GitHub Release
 
 ```bash
-gh run view <RUN_ID> --log-failed
+gh release upload vX.Y.Z fitforge.apk --clobber
 ```
 
-Common failure causes:
-- `EXPO_TOKEN` secret expired -> regenerate at expo.dev
-- `FDROID_KEYSTORE` or `FDROID_KEYSTORE_PASS` missing -> check repo secrets
-- Java 17 not available on runner -> ensure `actions/setup-java@v4` is in workflow
-- Local build OOM -> runner may need more memory; check build logs
-
-## Step 8: Verify F-Droid Repo
-
-After the workflow completes (~15 min), verify the Pages deployment:
+Verify the asset was attached:
 
 ```bash
+gh release view vX.Y.Z --json assets --jq '.assets[].name'
+```
+
+Should show `fitforge.apk`.
+
+## Step 9: Trigger F-Droid Repo Update
+
+```bash
+gh workflow run fdroid-release.yml -f tag=vX.Y.Z
+```
+
+This downloads the APK from the GitHub Release, signs it for F-Droid, and deploys to GitHub Pages.
+
+## Step 10: Verify F-Droid Repo
+
+After the workflow completes (~5 min), verify the Pages deployment:
+
+```bash
+gh run list --workflow=fdroid-release.yml --limit 1
 gh api repos/alankyshum/fitforge/pages/builds --jq '.[0].status'
 ```
 
