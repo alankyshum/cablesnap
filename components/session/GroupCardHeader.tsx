@@ -28,12 +28,13 @@ export type GroupCardHeaderProps = {
   onDeleteExercise: (exerciseId: string) => void;
   onMoveUp?: (exerciseId: string) => void;
   onMoveDown?: (exerciseId: string) => void;
+  onPrefill?: (exerciseId: string) => void;
   isFirst?: boolean;
   isLast?: boolean;
   showMoveButtons?: boolean;
 };
 
-export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, previousPerformance, previousPerformanceA11y, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
+export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, previousPerformance, previousPerformanceA11y, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, onPrefill, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
   const colors = useThemeColors();
   const notesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
   const eid = group.exercise_id;
@@ -42,18 +43,29 @@ export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotes
     <>
       <View style={styles.headerWrap}>
         <View style={styles.headerRow1}>
-          <Pressable onLongPress={() => onDeleteExercise(eid)} delayLongPress={500} style={{ flex: 1, flexShrink: 1 }} accessibilityLabel={`Remove ${group.name}`} accessibilityRole="button" accessibilityHint="Long press to remove exercise">
-            <Text variant="title" style={[styles.groupTitle, { color: colors.primary }]}>{group.name}</Text>
+          <View style={{ flex: 1, flexShrink: 1 }}>
+            <Pressable onLongPress={() => onDeleteExercise(eid)} delayLongPress={500} accessibilityLabel={`Remove ${group.name}`} accessibilityRole="button" accessibilityHint="Long press to remove exercise">
+              <Text variant="title" style={[styles.groupTitle, { color: colors.primary }]}>{group.name}</Text>
+            </Pressable>
             {previousPerformance != null && (
-              <Text
-                numberOfLines={1}
-                style={[styles.previousPerf, { color: colors.onSurfaceVariant }]}
+              <Pressable
+                onPress={() => onPrefill?.(eid)}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                style={({ pressed }) => [styles.previousPerfBtn, pressed && styles.previousPerfPressed]}
+                accessibilityRole="button"
                 accessibilityLabel={previousPerformanceA11y ?? previousPerformance}
+                accessibilityHint="Tap to fill sets from last session"
               >
-                {previousPerformance}
-              </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.previousPerf, { color: colors.primary }]}
+                >
+                  {previousPerformance}
+                </Text>
+                <MaterialCommunityIcons name="arrow-collapse-down" size={14} color={colors.primary} />
+              </Pressable>
             )}
-          </Pressable>
+          </View>
           <View style={styles.headerActions}>
             {showMoveButtons && (
               <>
@@ -113,6 +125,8 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", alignItems: "center" },
   groupTitle: { fontWeight: "700" },
   previousPerf: { fontSize: fontSizes.xs, lineHeight: 16 },
+  previousPerfBtn: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 36 },
+  previousPerfPressed: { opacity: 0.7 },
   iconBtn: { padding: 8 },
   moveBtn: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   moveBtnDisabled: { opacity: 0.4 },

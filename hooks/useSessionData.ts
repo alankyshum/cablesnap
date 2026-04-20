@@ -175,6 +175,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       };
       group.previousSummary = formatPreviousPerformance(perf, body.weight_unit);
       group.previousSummaryA11y = formatPreviousPerformanceAccessibility(perf, body.weight_unit);
+      group.previousSets = workingSets.map((s) => ({
+        weight: s.weight,
+        reps: s.reps,
+        duration_seconds: s.duration_seconds ?? null,
+      }));
     }
 
     // Auto-assign positions for pre-migration sessions (all positions = 0)

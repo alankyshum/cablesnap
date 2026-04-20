@@ -96,7 +96,7 @@ export default function ActiveSession() {
     handleUpdate, handleCheck, handleAddSet, handleModeChange, handleRPE,
     handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleDelete,
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
-    handleMoveUp, handleMoveDown, finish, cancel,
+    handleMoveUp, handleMoveDown, handlePrefillFromPrevious, finish, cancel,
   } = useSessionActions({
     id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError, triggerPR,
   });
@@ -219,6 +219,7 @@ export default function ActiveSession() {
       onDeleteExercise={handleDeleteExercise}
       onMoveUp={handleMoveUp}
       onMoveDown={handleMoveDown}
+      onPrefill={handlePrefillFromPrevious}
       timerActiveExerciseId={timerExerciseId}
       timerActiveSetIndex={timerSetIndex}
       timerIsRunning={timerIsRunning}
@@ -226,7 +227,7 @@ export default function ActiveSession() {
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
     />
-  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />

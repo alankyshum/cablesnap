@@ -30,7 +30,7 @@ import {
   advanceProgram,
 } from "../lib/programs";
 import type { TrainingMode } from "../lib/types";
-import { formatTime } from "../lib/format";
+import { formatTime, computePrefillSets } from "../lib/format";
 import { confirmAction } from "../lib/confirm";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 
@@ -324,6 +324,48 @@ export function useSessionActions({
     handleMoveExercise(exerciseId, "down");
   }, [handleMoveExercise]);
 
+  const handlePrefillFromPrevious = useCallback(async (exerciseId: string) => {
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (!group?.previousSets) return;
+
+    const toFill = computePrefillSets(group.sets, group.previousSets, group.trackingMode);
+    if (toFill.length === 0) {
+      const workingSets = group.sets.filter((s) => s.set_type !== "warmup");
+      const allCompleted = workingSets.every((s) => s.completed);
+      showToast(allCompleted ? "All sets already completed" : "Sets already have values");
+      return;
+    }
+
+    // Update local state in one batch
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.exercise_id !== exerciseId) return g;
+        return {
+          ...g,
+          sets: g.sets.map((s) => {
+            const fill = toFill.find((f) => f.setId === s.id);
+            if (!fill) return s;
+            return { ...s, weight: fill.weight, reps: fill.reps, duration_seconds: fill.duration_seconds };
+          }),
+        };
+      })
+    );
+
+    // Persist to DB
+    try {
+      for (const fill of toFill) {
+        await updateSet(fill.setId, fill.weight, fill.reps, fill.duration_seconds);
+      }
+    } catch {
+      showError("Failed to save prefilled values");
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    showToast(`Filled ${toFill.length} set${toFill.length !== 1 ? "s" : ""} from last session`);
+    AccessibilityInfo.announceForAccessibility(`Filled ${toFill.length} sets from last session`);
+  }, [groups, setGroups, showToast, showError]);
+
   const finish = () => {
     confirmAction(
       "Complete Workout?",
@@ -422,6 +464,7 @@ export function useSessionActions({
     toggleExerciseNotes,
     handleMoveUp,
     handleMoveDown,
+    handlePrefillFromPrevious,
     finish,
     cancel,
   };

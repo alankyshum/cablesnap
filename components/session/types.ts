@@ -20,6 +20,7 @@ export type ExerciseGroup = {
   exercise_position: number;
   previousSummary?: string | null;
   previousSummaryA11y?: string | null;
+  previousSets?: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>;
 };
 
 export const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
