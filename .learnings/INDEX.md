@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 197
+Total learnings: 198
 
 ## How to Use This Knowledge Base
 
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-453 | Remove getItemLayout When Adding ListHeaderComponent to FlatList | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-447 | Nested Pressable Components Create Gesture Conflicts on Native — Extract as Siblings | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-447 | Bodyweight Exercises Must Use weight=null Not weight=0 | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-436 | SQLite Has No Native MEDIAN() — Use Two-Step SQL+JS Pattern | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
