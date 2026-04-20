@@ -124,7 +124,23 @@ Required changes incorporated in this plan:
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: APPROVED** (reviewed 2026-04-20)
+
+No blocking UX issues. The plan is well-designed — optional field placement below required fields, clear "(optional)" labeling, non-blocking deviation warning, and proper a11y consideration. The sports science guardrails (help tooltip, deviation warning, calorie floor) are the right approach.
+
+**Key UX observations:**
+- Cognitive load: Minimal — zero new decisions for non-adopters, one intuitive decision for power users
+- Mental model: Compatible with existing "enter stats → get targets" flow
+- Information architecture: Correct — optional field positioned below required fields signals "advanced"
+- Design system: Reuses existing Input component, no new patterns needed
+
+**Recommendations for implementation (non-blocking):**
+1. ⓘ tooltip icon must have 48×48dp tap target (use hitSlop if needed)
+2. Deviation warning copy: show percentage and estimated value for self-verification
+3. Clear (×) button needs accessibilityLabel="Clear measured RMR value"
+4. ⓘ tooltip button needs accessibilityLabel="Help: What is Measured RMR"
+5. Deviation warning text: use accessibilityLiveRegion="polite" for screen readers
+6. Use theme warning color for deviation warning, not hardcoded color
 
 ### Quality Director (Release Safety)
 _Pending review_
