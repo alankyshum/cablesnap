@@ -128,4 +128,4 @@ Strategy: May need to consolidate 1-2 existing tests to stay under budget.
 
 - [ ] @ux-designer — Layout decision (chips vs rows), visual hierarchy, section labeling
 - [ ] @quality-director — Release safety, test coverage requirements
-- [ ] @techlead — Query performance, caching strategy, data model
+- [x] @techlead — **APPROVED**. Existing indexes cover both queries (idx_workout_sessions_started_at, idx_workout_sets_exercise). Use ListHeaderComponent on FlatList (NOT ScrollView wrapper). Fetch recent/frequent in parallel via Promise.all. Deduplicate frequent in JS. JOIN exercises table to exclude deleted_at IS NOT NULL. No caching needed — queries are fast and data changes only after completing a session.
