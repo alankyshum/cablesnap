@@ -98,6 +98,20 @@ describe('volume-landmarks — getVolumeStatusLabel', () => {
   })
 })
 
+describe('volume-landmarks — stepper constraints', () => {
+  it('allows MEV = MRV (narrow zone)', () => {
+    const lm: VolumeLandmarks = { mev: 12, mrv: 12 }
+    expect(getVolumeStatus(12, lm)).toBe('optimal')
+    expect(getVolumeStatus(11, lm)).toBe('below_mev')
+    expect(getVolumeStatus(13, lm)).toBe('above_mrv')
+  })
+
+  it('getVolumeStatus handles MEV=0 correctly', () => {
+    const lm: VolumeLandmarks = { mev: 0, mrv: 10 }
+    expect(getVolumeStatus(0, lm)).toBe('optimal')
+  })
+})
+
 describe('volume-landmarks — maxSets dynamic calculation', () => {
   it('maxSets uses max MRV, not flat 20', () => {
     const merged = mergeWithDefaults(null)

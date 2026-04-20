@@ -218,7 +218,7 @@ export default function VolumeLandmarksSheet({
                   onDecrement={() => handleMevChange(muscle, -1)}
                   onIncrement={() => handleMevChange(muscle, 1)}
                   min={MIN_MEV}
-                  max={Math.min(lm.mrv - 1, MAX_SETS)}
+                  max={Math.min(lm.mrv, MAX_SETS)}
                   colors={colors}
                 />
                 <NumericStepper
@@ -226,7 +226,7 @@ export default function VolumeLandmarksSheet({
                   value={lm.mrv}
                   onDecrement={() => handleMrvChange(muscle, -1)}
                   onIncrement={() => handleMrvChange(muscle, 1)}
-                  min={Math.max(MIN_MRV, lm.mev + 1)}
+                  min={Math.max(MIN_MRV, lm.mev)}
                   max={MAX_SETS}
                   colors={colors}
                 />
