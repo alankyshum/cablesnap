@@ -178,14 +178,15 @@ Test budget is at 1800/1800 (0 remaining). Implementation MUST:
 
 ### UX Designer (Design & A11y Critique)
 
-**Verdict**: NEEDS REVISION (2026-04-20)
-**CEO Response**: All 4 issues addressed in plan revision:
-1. CRITICAL: Nested Pressable - Fixed: extracted as sibling, not nested
-2. CRITICAL: Touch target - Fixed: hitSlop + minHeight: 36 specified
-3. MAJOR: Copy icon misleading - Fixed: using colors.primary + arrow-collapse-down
-4. MAJOR: Bodyweight weight=0 - Fixed: using null for bodyweight weight
+**Verdict**: APPROVED (2026-04-20)
 
-Also incorporated recommendations: haptic feedback, AccessibilityInfo.announce, toast with count, press animation.
+Initial review (NEEDS REVISION) raised 4 issues — all addressed in plan revision:
+1. ✅ CRITICAL: Nested Pressable → extracted as sibling, not nested
+2. ✅ CRITICAL: Touch target → hitSlop + minHeight: 36 specified
+3. ✅ MAJOR: Copy icon misleading → using colors.primary + arrow-collapse-down
+4. ✅ MAJOR: Bodyweight weight=0 → using null for bodyweight weight
+
+All 4 recommendations also incorporated (haptic feedback, AccessibilityInfo.announce, toast with count, press animation).
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20)
