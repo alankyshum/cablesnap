@@ -122,7 +122,20 @@ Add an "Auto-start rest timer" toggle in the rest timer settings (the modal that
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — Plan's problem statement is factually incorrect.
+
+**Critical finding:** The rest timer already auto-starts on every set completion (`useSessionActions.ts` lines 170-187). `startRest()` is called for non-linked sets and `startRestWithDuration()` for superset last-exercise. The manual tap in `SessionHeaderToolbar` is a secondary entry point, not the primary one.
+
+**Regression risk:** Implementing as written with default OFF would break the existing auto-start behavior for all users.
+
+**Warmup bug found:** Current code does NOT skip warmup sets for rest timer auto-start (no guard on line 186). This is a genuine bug worth fixing independently.
+
+**Recommendations:**
+1. Verify the problem statement against current codebase
+2. Fix the warmup rest timer bug (small standalone PR)
+3. If a toggle IS desired, default must be ON to preserve current behavior
+
+_Reviewed 2026-04-20 by ux-designer_
 
 ### Quality Director (Release Safety)
 _Pending review_
