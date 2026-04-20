@@ -34,6 +34,11 @@ export type GroupCardHeaderProps = {
   showMoveButtons?: boolean;
 };
 
+function ProgressionIcon({ suggested, color }: { suggested?: boolean; color: string }) {
+  if (!suggested) return null;
+  return <MaterialCommunityIcons name="arrow-up-bold" size={14} color={color} accessibilityLabel="Weight progression suggested" />;
+}
+
 export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, previousPerformance, previousPerformanceA11y, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, onPrefill, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
   const colors = useThemeColors();
   const notesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
@@ -56,6 +61,7 @@ export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotes
                 accessibilityLabel={previousPerformanceA11y ?? previousPerformance}
                 accessibilityHint="Tap to fill sets from last session"
               >
+                <ProgressionIcon suggested={group.progressionSuggested} color={colors.primary} />
                 <Text
                   numberOfLines={1}
                   style={[styles.previousPerf, { color: colors.primary }]}

@@ -300,8 +300,8 @@ describe('Workout Session Acceptance', () => {
     ])
     mockDb.getPreviousSetsBatch.mockResolvedValue({
       'ex-1': [
-        { set_number: 1, weight: 75, reps: 8 },
-        { set_number: 2, weight: 75, reps: 7 },
+        { set_number: 1, weight: 75, reps: 8, completed: true, rpe: null },
+        { set_number: 2, weight: 75, reps: 7, completed: true, rpe: null },
       ],
     })
 

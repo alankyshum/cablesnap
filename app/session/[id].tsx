@@ -91,7 +91,7 @@ export default function ActiveSession() {
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
     handleMoveUp, handleMoveDown, handlePrefillFromPrevious, finish, cancel,
   } = useSessionActions({
-    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError, triggerPR,
+    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError, triggerPR, unit,
   });
 
   const {
