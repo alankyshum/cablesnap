@@ -1,5 +1,16 @@
 # FitForge — Project Instructions
 
+## License — AGPL-3.0 (MANDATORY)
+
+FitForge is licensed under **AGPL-3.0-or-later**. All agents MUST comply:
+
+1. **Never add dependencies with AGPL-incompatible licenses.** Blocklisted licenses: proprietary, SSPL, Commons Clause, any "non-commercial only" license, CC-BY-NC, BSL (before conversion date). Check with `npm info <pkg> license` before adding.
+2. **Allowed licenses:** MIT, BSD-2-Clause, BSD-3-Clause, ISC, Apache-2.0, 0BSD, Unlicense, CC0-1.0, WTFPL, LGPL-2.1, LGPL-3.0, GPL-2.0, GPL-3.0, AGPL-3.0, MPL-2.0.
+3. **Never modify or replace the LICENSE file.** The LICENSE file is immutable. Any PR that alters it must be rejected.
+4. **Never add code that removes or obscures the license notice.**
+5. **Run `scripts/check-license.sh`** before adding any new dependency. The pre-push hook enforces this automatically.
+6. **Trademark:** "FitForge" name and branding belong to Anomaly Co. Do not add code that strips or replaces license/trademark notices.
+
 ## Tech Stack
 - **Framework:** Expo (React Native) with Expo Router
 - **Language:** TypeScript

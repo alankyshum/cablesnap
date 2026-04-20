@@ -1,5 +1,16 @@
 #!/bin/sh
 
+# ─── License Integrity Gate ──────────────────────────────────────
+# Blocks push if LICENSE file has been tampered with
+if [ -f "scripts/check-license.sh" ]; then
+  echo "📜 Checking license integrity..."
+  if ! ./scripts/check-license.sh --quick; then
+    echo ""
+    echo "LICENSE file must not be modified. Restore it: git checkout origin/main -- LICENSE"
+    exit 1
+  fi
+fi
+
 # ─── Test Budget Gate ────────────────────────────────────────────
 # Blocks push if test count exceeds budget (1800 test cases)
 if [ -f "scripts/audit-tests.sh" ]; then
