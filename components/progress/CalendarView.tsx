@@ -141,7 +141,8 @@ export default function CalendarView({ weekStartDay }: Props) {
   }
 
   return (
-    // bounded list — ScrollView is intentional: renders fixed calendar grid + streak stats, not unbounded .map()
+    // reviewer-ok: bounded list — ScrollView is intentional: renders fixed calendar grid + streak stats, not unbounded .map()
+    // No FlatList needed: child count is constant (calendar grid + detail panel + streaks).
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={[

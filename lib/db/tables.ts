@@ -19,6 +19,20 @@ function assertValidTable(table: string): void {
   }
 }
 
+const VALID_COLUMN_RE = /^[a-z_][a-z0-9_]*$/i;
+function assertValidColumn(column: string): void {
+  if (!VALID_COLUMN_RE.test(column)) {
+    throw new Error(`Invalid column name: ${column}`);
+  }
+}
+
+const VALID_DEFINITION_RE = /^[A-Z ]+(?:\([0-9, ]+\))?(?:\s+(?:NOT NULL|DEFAULT\s+\S+|PRIMARY KEY))*$/i;
+function assertValidDefinition(definition: string): void {
+  if (!VALID_DEFINITION_RE.test(definition)) {
+    throw new Error(`Invalid column definition: ${definition}`);
+  }
+}
+
 export async function hasColumn(database: SQLite.SQLiteDatabase, table: string, column: string): Promise<boolean> {
   assertValidTable(table);
   const cols = await database.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
@@ -27,6 +41,8 @@ export async function hasColumn(database: SQLite.SQLiteDatabase, table: string, 
 
 export async function addColumnIfMissing(database: SQLite.SQLiteDatabase, table: string, column: string, definition: string): Promise<void> {
   assertValidTable(table);
+  assertValidColumn(column);
+  assertValidDefinition(definition);
   if (!(await hasColumn(database, table, column))) {
     await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }

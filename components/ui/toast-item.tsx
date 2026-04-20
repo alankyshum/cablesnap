@@ -43,7 +43,7 @@ export function Toast({ id, title, description, variant = 'default', onDismiss, 
 
 const styles = StyleSheet.create({
   container: { position: 'absolute', left: 32, right: 32, shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
-  island: { borderRadius: 14, backgroundColor: '#1C1C1E', paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  island: { borderRadius: 14, backgroundColor: Colors.light.toastBackground, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   actionBtn: { marginLeft: 12, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   dismissBtn: { marginLeft: 8, padding: 4, borderRadius: 8 },
 });
