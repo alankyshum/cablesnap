@@ -274,3 +274,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-431 | LEARNINGS_EXTRACTED | 2026-04-20 |
 | BLD-432 | LEARNINGS_EXTRACTED | 2026-04-20 |
 | BLD-433 | LEARNINGS_EXTRACTED | 2026-04-20 |
+| BLD-436 | LEARNINGS_EXTRACTED | 2026-04-20 |

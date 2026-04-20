@@ -170,3 +170,11 @@ BLD-410 **Source**: PLAN: Exercise Reorder in Active Workout Session (Phase 62)
 **Learning**: The Epley formula (`weight × (1 + reps/30)`) becomes increasingly inaccurate above ~10-12 reps. At 20 reps, a 60kg set calculates to 100kg e1RM — likely far above true 1RM. When computing e1RM in SQL with `MAX()`, the uncapped high-rep sets will dominate the result. The query must filter `reps <= 12` and also exclude warmup sets (`set_type != 'warmup'`), incomplete sets, and zero-weight entries to produce reliable estimates.
 **Action**: Any SQL query computing e1RM via the Epley formula must include `AND ws.reps <= 12` to prevent high-rep set inflation. Also filter `ws.set_type != 'warmup' AND ws.weight > 0 AND ws.reps > 0 AND ws.completed = 1`. When extending strength features (e.g., historical e1RM trends), copy these WHERE clauses from `lib/db/strength-overview.ts` as the canonical e1RM query template.
 **Tags**: sqlite, e1rm, epley-formula, rep-cap, strength-standards, data-accuracy, aggregation
+
+### SQLite Has No Native MEDIAN() — Use Two-Step SQL+JS Pattern
+**Source**: BLD-436 — PLAN: Phase 67 — Estimated Workout Duration on Template Cards
+**Date**: 2026-04-20
+**Context**: When planning a feature that requires median calculation (workout duration estimates from last 5 sessions per template), tech lead review identified that SQLite lacks a native `MEDIAN()` aggregate function. Using window functions to simulate median in SQL is complex and hard to test.
+**Learning**: SQLite does not support `MEDIAN()` as a built-in aggregate. The recommended approach is a two-step pattern: (1) fetch the raw rows in SQL with appropriate filtering and ordering (e.g., last N per group), (2) compute the median in JavaScript. This is simpler, more testable, and avoids complex SQL window function workarounds. This complements the existing "Two-Step SQL + JS Pattern for Per-Group Top-N Batch Queries" learning.
+**Action**: When a feature requires median, percentile, or other statistical aggregates in SQLite, do not attempt SQL-only solutions. Fetch the relevant rows with a simple query and compute the statistic in JS. Write unit tests for the JS computation separately from the SQL query.
+**Tags**: sqlite, median, aggregate, statistics, two-step-pattern, javascript, query-design

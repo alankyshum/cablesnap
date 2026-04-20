@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 191
+Total learnings: 193
 
 ## How to Use This Knowledge Base
 
@@ -14,14 +14,14 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 103 learnings
+- [React Native + Expo](patterns/react-native.md) — 104 learnings
 - [Testing](patterns/testing.md) — 13 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
 - [Build Configuration](pitfalls/build-config.md) — 14 learnings
 - [Theming](pitfalls/theming.md) — 6 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 21 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 22 learnings
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-436 | SQLite Has No Native MEDIAN() — Use Two-Step SQL+JS Pattern | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-20 | BLD-436 | Wrap Non-Critical Promise.all Members with Individual .catch() Fallbacks | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-433 | Wire State Transition Triggers — CRUD + UI Is Not a Complete Feature | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-432 | Use Bottom Sheets for User Input in FlatList Headers to Avoid Scroll Jumps | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-432 | Prefer React Query Computation Over Denormalized SQLite Cache Columns | Decisions | [architecture.md](decisions/architecture.md) |
