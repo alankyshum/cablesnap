@@ -21,6 +21,7 @@ import { Chip } from "@/components/ui/chip";
 import { SearchBar } from "@/components/ui/searchbar";
 import { X } from "lucide-react-native";
 import { getAllExercises } from "../lib/db";
+import { getRecentExercises, getFrequentExercises } from "../lib/db/exercise-history";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -29,6 +30,7 @@ import {
 } from "../lib/types";
 import { duration as durationTokens, elevation } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useToast } from "@/components/ui/bna-toast";
 import { fontSizes } from "@/constants/design-tokens";
 
 type Props = {
@@ -39,15 +41,19 @@ type Props = {
 
 const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.8 };
 const ITEM_HEIGHT = 64;
+const COMPACT_ITEM_HEIGHT = 48;
 
 export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Props) {
   const colors = useThemeColors();
+  const { error: showError } = useToast();
   const { height: SCREEN_H } = useWindowDimensions();
   const SNAP_MID = SCREEN_H * 0.45;
   const SNAP_TOP = SCREEN_H * 0.06;
   const DISMISS_THRESHOLD = SCREEN_H * 0.75;
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [recentExercises, setRecentExercises] = useState<Exercise[]>([]);
+  const [frequentExercises, setFrequentExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<Category>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -63,8 +69,22 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
       setQuery("");
       setSelected(new Set());
       setLoading(true);
-      getAllExercises()
-        .then(setExercises)
+      Promise.all([
+        getAllExercises(),
+        getRecentExercises(7, 5),
+        getFrequentExercises(10),
+      ])
+        .then(([all, recent, frequent]) => {
+          setExercises(all);
+          setRecentExercises(recent);
+          // Deduplicate: remove exercises already in recent
+          const recentIds = new Set(recent.map((e) => e.id));
+          setFrequentExercises(frequent.filter((e) => !recentIds.has(e.id)).slice(0, 10));
+        })
+        .catch(() => {
+          showError("Couldn't load recent exercises");
+          getAllExercises().then(setExercises).catch(() => {});
+        })
         .finally(() => setLoading(false));
 
       translateY.value = withSpring(SNAP_MID, SPRING_CONFIG);
@@ -75,7 +95,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         runOnJS(setMounted)(false);
       });
     }
-  }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_MID]);
+  }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_MID, showError]);
 
   const dismiss = useCallback(() => {
     translateY.value = withTiming(SCREEN_H, { duration: durationTokens.fast });
@@ -126,6 +146,20 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
       return true;
     });
   }, [exercises, query, selected]);
+
+  const showQuickAdd = !query;
+
+  const filteredRecent = useMemo(() => {
+    if (!showQuickAdd) return [];
+    if (selected.size === 0) return recentExercises;
+    return recentExercises.filter((ex) => selected.has(ex.category));
+  }, [showQuickAdd, recentExercises, selected]);
+
+  const filteredFrequent = useMemo(() => {
+    if (!showQuickAdd) return [];
+    if (selected.size === 0) return frequentExercises;
+    return frequentExercises.filter((ex) => selected.has(ex.category));
+  }, [showQuickAdd, frequentExercises, selected]);
 
   const toggle = useCallback((cat: Category) => {
     setSelected((prev) => {
@@ -186,6 +220,72 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
     ),
     [colors, handlePick],
   );
+
+  const renderCompactItem = useCallback(
+    (exercise: Exercise) => (
+      <Pressable
+        key={exercise.id}
+        onPress={() => handlePick(exercise)}
+        style={({ pressed }) => [
+          styles.compactItem,
+          {
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.outlineVariant,
+          },
+          pressed && { opacity: 0.7 },
+        ]}
+        accessibilityLabel={`Select ${exercise.name}`}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: false }}
+      >
+        <Text
+          variant="body"
+          numberOfLines={1}
+          style={{ color: colors.onSurface }}
+        >
+          {exercise.name}
+        </Text>
+      </Pressable>
+    ),
+    [colors, handlePick],
+  );
+
+  const listHeader = useMemo(() => {
+    if (!showQuickAdd) return null;
+    const hasRecent = filteredRecent.length > 0;
+    const hasFrequent = filteredFrequent.length > 0;
+    if (!hasRecent && !hasFrequent) return null;
+
+    return (
+      <View>
+        {hasRecent && (
+          <>
+            <Text
+              variant="caption"
+              style={[styles.sectionHeader, { color: colors.onSurfaceVariant }]}
+              accessibilityRole="header"
+            >
+              RECENT
+            </Text>
+            {filteredRecent.map(renderCompactItem)}
+          </>
+        )}
+        {hasFrequent && (
+          <>
+            <Text
+              variant="caption"
+              style={[styles.sectionHeader, { color: colors.onSurfaceVariant }]}
+              accessibilityRole="header"
+            >
+              FREQUENTLY USED
+            </Text>
+            {filteredFrequent.map(renderCompactItem)}
+          </>
+        )}
+        <View style={[styles.quickAddDivider, { backgroundColor: colors.outlineVariant }]} />
+      </View>
+    );
+  }, [showQuickAdd, filteredRecent, filteredFrequent, colors, renderCompactItem]);
 
   if (!mounted) return null;
 
@@ -257,12 +357,8 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           data={filtered}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          getItemLayout={(_data, index) => ({
-            length: ITEM_HEIGHT,
-            offset: ITEM_HEIGHT * index,
-            index,
-          })}
           style={styles.list}
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             loading ? null : (
               <View style={styles.empty}>
@@ -350,5 +446,23 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: "center",
     paddingTop: 48,
+  },
+  sectionHeader: {
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  compactItem: {
+    paddingHorizontal: 16,
+    minHeight: COMPACT_ITEM_HEIGHT,
+    justifyContent: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  quickAddDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginTop: 8,
+    marginBottom: 4,
   },
 });

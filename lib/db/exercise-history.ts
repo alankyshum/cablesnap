@@ -1,6 +1,8 @@
-import { eq, ne, and, sql, desc, asc, isNotNull, inArray, max, sum, count } from "drizzle-orm";
+import { eq, ne, and, sql, desc, asc, isNotNull, isNull, inArray, max, sum, count } from "drizzle-orm";
 import { query, queryOne, getDrizzle } from "./helpers";
-import { workoutSets, workoutSessions } from "./schema";
+import { workoutSets, workoutSessions, exercises } from "./schema";
+import { mapRow } from "./exercises";
+import type { Exercise } from "../types";
 
 export type ExerciseSession = {
   session_id: string;
@@ -403,4 +405,90 @@ export async function getBestSet(
 
   if (rows.length === 0) return null;
   return { weight: rows[0].weight!, reps: rows[0].reps! };
+}
+
+/**
+ * Recent exercises: distinct exercises used in the last `days` days,
+ * ordered by most-recent session, limited to `limit` results.
+ */
+export async function getRecentExercises(
+  days: number = 7,
+  limit: number = 5,
+): Promise<Exercise[]> {
+  const db = await getDrizzle();
+  const cutoff = Date.now() - days * 86_400_000;
+  const rows = await db
+    .select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      primary_muscles: exercises.primary_muscles,
+      secondary_muscles: exercises.secondary_muscles,
+      equipment: exercises.equipment,
+      instructions: exercises.instructions,
+      difficulty: exercises.difficulty,
+      is_custom: exercises.is_custom,
+      deleted_at: exercises.deleted_at,
+      mount_position: exercises.mount_position,
+      attachment: exercises.attachment,
+      training_modes: exercises.training_modes,
+      is_voltra: exercises.is_voltra,
+    })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .innerJoin(exercises, eq(workoutSets.exercise_id, exercises.id))
+    .where(
+      and(
+        sql`${workoutSessions.started_at} > ${cutoff}`,
+        eq(workoutSets.completed, 1),
+        isNull(exercises.deleted_at),
+      )
+    )
+    .groupBy(exercises.id)
+    .orderBy(desc(max(workoutSessions.started_at)))
+    .limit(limit);
+
+  return (rows as unknown[]).map((r) => mapRow(r as Parameters<typeof mapRow>[0]));
+}
+
+/**
+ * Frequent exercises: top exercises by number of distinct sessions,
+ * over-fetches by `recentLimit` to allow JS deduplication with recent results.
+ */
+export async function getFrequentExercises(
+  limit: number = 10,
+  recentLimit: number = 5,
+): Promise<Exercise[]> {
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      primary_muscles: exercises.primary_muscles,
+      secondary_muscles: exercises.secondary_muscles,
+      equipment: exercises.equipment,
+      instructions: exercises.instructions,
+      difficulty: exercises.difficulty,
+      is_custom: exercises.is_custom,
+      deleted_at: exercises.deleted_at,
+      mount_position: exercises.mount_position,
+      attachment: exercises.attachment,
+      training_modes: exercises.training_modes,
+      is_voltra: exercises.is_voltra,
+    })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .innerJoin(exercises, eq(workoutSets.exercise_id, exercises.id))
+    .where(
+      and(
+        eq(workoutSets.completed, 1),
+        isNull(exercises.deleted_at),
+      )
+    )
+    .groupBy(exercises.id)
+    .orderBy(desc(sql`COUNT(DISTINCT ${workoutSessions.id})`))
+    .limit(limit + recentLimit);
+
+  return (rows as unknown[]).map((r) => mapRow(r as Parameters<typeof mapRow>[0]));
 }
