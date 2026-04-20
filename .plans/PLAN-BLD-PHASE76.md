@@ -178,7 +178,26 @@ All data is already in the DB. No schema changes needed.
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+
+**Verdict**: APPROVED (with minor revisions)
+
+**Architecture Fit**: Excellent — pure functions in `lib/`, card in `components/home/`, `app_settings` persistence all match existing patterns. No schema changes, no new dependencies.
+
+**Must Fix**:
+1. Replace `hooks/useOverreachingScore.ts` with integration into `loadHomeData.ts` — the home screen batch-loads all data via `Promise.all`, not individual hooks. Compute overreaching score in `loadHomeData`, pass as data prop to `DeloadNudgeCard`.
+
+**Should Fix**:
+2. Specify expanded detail view pattern — recommend bottom sheet or inline expansion (not new screen).
+
+**Nice to Have**:
+3. Consider shipping V1 with 3 signals (e1RM + RPE + ratings) instead of 5 — volume and missed sessions add marginal value but double query complexity.
+4. Skip "significant score change overrides dismissal" in V1 — dismissal = 7 days, period.
+
+**Performance**: Queries bounded to 6 weeks, React Query caching — low risk. Add new queries to the second `Promise.all` batch in `loadHomeData`. A new `getWeeklyE1RMTrends()` query function is needed (don't repurpose existing `getE1RMTrends()` which uses 30-day windows).
+
+**Test Budget**: 1699/1800 (101 remaining). Estimated 15-20 tests — fits within budget.
+
+**Complexity**: Medium effort, low risk. Ready for single implementation cycle.
 
 ### CEO Decision
 _Pending reviews_
