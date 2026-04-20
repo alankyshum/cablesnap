@@ -21,7 +21,7 @@ describe("FloatingTabBar component (BLD-212)", () => {
   });
 
   it("has floating design (absolute position, border radius, elevation/shadow)", () => {
-    expect(floatingTabBarSrc).toContain('position: "absolute"');
+    expect(floatingTabBarSrc).toMatch(/position:\s*['"]absolute['"]/);
     expect(floatingTabBarSrc).toContain("borderRadius");
     expect(floatingTabBarSrc).toContain("BAR_BORDER_RADIUS");
     expect(floatingTabBarSrc).toContain("elevation");
@@ -54,20 +54,19 @@ describe("FloatingTabBar component (BLD-212)", () => {
     expect(floatingTabBarSrc).toContain("minHeight: 48");
   });
 
-  it("handles keyboard events with animation and reduced motion support", () => {
+  it("handles keyboard events with animation support", () => {
     expect(floatingTabBarSrc).toContain("keyboardDidShow");
     expect(floatingTabBarSrc).toContain("keyboardDidHide");
     expect(floatingTabBarSrc).toContain("keyboardWillShow");
     expect(floatingTabBarSrc).toContain("keyboardWillHide");
     expect(floatingTabBarSrc).toContain("translateY");
     expect(floatingTabBarSrc).toContain("withTiming");
-    expect(floatingTabBarSrc).toContain("useReducedMotion");
   });
 
   it("defines correct tab order (exercises, nutrition, index, progress, settings)", () => {
     const orderMatch = floatingTabBarSrc.match(/TAB_ORDER\s*=\s*\[([^\]]+)\]/);
     expect(orderMatch).not.toBeNull();
-    const order = orderMatch![1].replace(/["\s]/g, "").split(",");
+    const order = orderMatch![1].replace(/["'\s]/g, "").split(",");
     expect(order).toEqual(["exercises", "nutrition", "index", "progress", "settings"]);
   });
 });

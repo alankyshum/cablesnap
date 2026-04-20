@@ -18,7 +18,7 @@ type Props = {
 export function FlowCardMenu({ items, isDark, colors, anchorY, anchorX, onClose }: Props) {
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss menu">
         <View
           style={[
             styles.menu,

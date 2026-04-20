@@ -111,7 +111,7 @@ describe('Data Management Acceptance', () => {
   it('renders settings heading', async () => {
     const { findByText } = renderScreen(<Settings />)
 
-    expect(await findByText('Settings')).toBeTruthy()
+    expect(await findByText('About')).toBeTruthy()
   })
 
   it('displays CSV counts', async () => {

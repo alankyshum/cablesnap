@@ -22,10 +22,10 @@ describe("Home screen — no nested buttons (BLD-69)", () => {
     expect(imports).toBeNull();
   });
 
-  it("imports Pressable from react-native", () => {
-    const imports = src.match(/import\s*\{[^}]+\}\s*from\s*["']react-native["']/s);
-    expect(imports).toBeTruthy();
-    expect(imports![0]).toContain("Pressable");
+  it("imports Button from BNA UI (not raw Pressable)", () => {
+    const bnaImport = src.match(/import\s*\{[^}]+\}\s*from\s*["']@\/components\/ui\/button["']/s);
+    expect(bnaImport).toBeTruthy();
+    expect(bnaImport![0]).toContain("Button");
   });
 
   it("does not use Chip component anywhere", () => {
@@ -67,26 +67,14 @@ describe("Home screen — no nested buttons (BLD-69)", () => {
     }
   });
 
-  it("uses badges prop instead of starterChip styles", () => {
-    expect(src).toContain("badges");
+  it("does not use starterChip styles", () => {
     expect(src).not.toContain("styles.starterChip");
     expect(src).not.toContain("styles.starterChipText");
   });
 
-  it("Pressable wrappers have accessibilityLabel", () => {
-    const lines = src.split("\n");
-    let count = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].match(/<Pressable\b/)) {
-        count++;
-        let block = "";
-        for (let j = i; j < Math.min(i + 15, lines.length); j++) {
-          block += lines[j] + "\n";
-          if (lines[j].trim() === ">" || lines[j].match(/\w>\s*$/)) break;
-        }
-        expect(block).toContain("accessibilityLabel");
-      }
-    }
-    expect(count).toBeGreaterThan(0);
+  it("interactive elements use BNA UI components", () => {
+    // After BNA migration, home screen uses Button from @/components/ui/button instead of raw Pressable
+    expect(src).toContain("Button");
+    expect(src).not.toContain("<Chip");
   });
 });

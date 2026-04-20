@@ -109,9 +109,9 @@ describe('Template → Add Exercise Flow', () => {
     mockCreateTemplate.mockResolvedValue(emptyTemplate)
     mockGetTemplateById.mockResolvedValue(emptyTemplate)
 
-    const { getByPlaceholderText, getByLabelText, findByLabelText, findByText, getByTestId } = renderScreen(<CreateTemplate />)
+    const { getByLabelText, findByLabelText, findByText, getByTestId } = renderScreen(<CreateTemplate />)
 
-    fireEvent.changeText(getByPlaceholderText('Template Name'), 'Push Day')
+    fireEvent.changeText(getByLabelText('Template Name'), 'Push Day')
     fireEvent.press(getByLabelText('Create template'))
 
     await waitFor(() => {

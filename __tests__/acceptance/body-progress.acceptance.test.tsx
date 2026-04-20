@@ -30,7 +30,15 @@ jest.mock('../../lib/errors', () => ({ logError: jest.fn() }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn() }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
-jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
+jest.mock('victory-native', () => {
+  const React = require('react')
+  return {
+    CartesianChart: (props: Record<string, unknown>) =>
+      React.createElement('CartesianChart', props),
+    Line: 'Line',
+    Bar: 'Bar',
+  }
+})
 jest.mock('../../components/MuscleVolumeSegment', () => 'MuscleVolumeSegment')
 jest.mock('../../components/WeeklySummary', () => 'WeeklySummary')
 
@@ -53,6 +61,30 @@ jest.mock('../../lib/db', () => ({
   upsertBodyWeight: jest.fn().mockResolvedValue(undefined),
   deleteBodyWeight: jest.fn().mockResolvedValue(undefined),
   updateBodySettings: jest.fn().mockResolvedValue(undefined),
+}))
+
+jest.mock('../../lib/db/body', () => ({
+  getBodySettings: jest.fn().mockResolvedValue({
+    weight_unit: 'kg',
+    measurement_unit: 'cm',
+    weight_goal: 70,
+    body_fat_goal: 15,
+  }),
+  getLatestBodyWeight: jest.fn().mockResolvedValue({ id: 'bw1', weight: 75, date: '2024-01-15' }),
+  updateBodySettings: jest.fn().mockResolvedValue(undefined),
+  upsertBodyWeight: jest.fn().mockResolvedValue(undefined),
+  deleteBodyWeight: jest.fn().mockResolvedValue(undefined),
+  getBodyWeightEntries: jest.fn().mockResolvedValue([]),
+  getBodyWeightCount: jest.fn().mockResolvedValue(0),
+  getBodyWeightChartData: jest.fn().mockResolvedValue([]),
+  getPreviousBodyWeight: jest.fn().mockResolvedValue(null),
+  getLatestMeasurements: jest.fn().mockResolvedValue(null),
+}))
+
+jest.mock('../../lib/db/calendar', () => ({
+  getCalendarMonthData: jest.fn().mockResolvedValue([]),
+  getCalendarDaySessions: jest.fn().mockResolvedValue([]),
+  getCalendarDayNutrition: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))

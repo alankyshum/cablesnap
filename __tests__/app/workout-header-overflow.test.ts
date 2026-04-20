@@ -31,10 +31,16 @@ describe("Workout session exercise header two-row layout (BLD-203, updated BLD-3
     expect(sessionSrc).toContain("TrainingModeSelector");
   });
 
-  it("exercise name is never truncated (no numberOfLines)", () => {
-    // The exercise name Text should not have numberOfLines
+  it("exercise name Text does not use numberOfLines", () => {
     expect(sessionSrc).toContain("styles.groupTitle");
-    expect(sessionSrc).not.toContain("numberOfLines");
+    // Check that the groupTitle Text element specifically does not use numberOfLines
+    // (other elements like previousPerf may use it legitimately)
+    const groupTitleIdx = sessionSrc.indexOf("styles.groupTitle");
+    expect(groupTitleIdx).toBeGreaterThan(-1);
+    // Find the <Text ... styles.groupTitle> tag — it should not have numberOfLines
+    const before = sessionSrc.lastIndexOf("<Text", groupTitleIdx);
+    const tag = sessionSrc.slice(before, groupTitleIdx + 30);
+    expect(tag).not.toContain("numberOfLines");
   });
 
   it("header contains exercise name and Details button", () => {

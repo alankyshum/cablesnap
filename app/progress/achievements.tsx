@@ -171,43 +171,13 @@ export default function AchievementsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  retroBanner: {
-    marginTop: 12,
-    width: "100%",
-  },
-  section: {
-    marginBottom: 24,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  gridItem: {
-    width: "31%",
-    minWidth: 100,
-  },
-  progressTrack: {
-    width: "100%",
-    height: 8,
-    borderRadius: 4,
-    overflow: "hidden" as const,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  content: { padding: 16, paddingBottom: 48 },
+  header: { alignItems: "center", marginBottom: 24 },
+  retroBanner: { marginTop: 12, width: "100%" },
+  section: { marginBottom: 24 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  gridItem: { width: "31%", minWidth: 100 },
+  progressTrack: { width: "100%", height: 8, borderRadius: 4, overflow: "hidden" as const },
+  progressFill: { height: "100%", borderRadius: 4 },
 });

@@ -26,6 +26,19 @@ jest.mock('expo-router', () => {
   }
 })
 
+jest.mock('@react-navigation/native', () => {
+  const RealReact = require('react')
+  return {
+    useFocusEffect: (cb: () => (() => void) | void) => {
+      RealReact.useEffect(() => {
+        const cleanup = cb()
+        return typeof cleanup === 'function' ? cleanup : undefined
+      }, [])
+    },
+    NavigationContainer: ({ children }: { children: React.ReactNode }) => children,
+  }
+})
+
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
 jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, atLeastMedium: false, width: 375, scale: 1.0 }) }))
 jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest.fn().mockResolvedValue('{}'), getRecentErrors: jest.fn().mockResolvedValue([]), generateGitHubURL: jest.fn().mockReturnValue('https://github.com') }))
@@ -33,7 +46,14 @@ jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().m
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('../../lib/useProfileGender', () => ({ useProfileGender: () => 'neutral' }))
-jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
+jest.mock('victory-native', () => {
+  const RealReact = require('react')
+  return {
+    CartesianChart: (props: Record<string, unknown>) => RealReact.createElement('CartesianChart', props),
+    Line: () => null,
+    Bar: () => null,
+  }
+})
 
 jest.mock('../../lib/db', () => ({
   getExerciseById: jest.fn(),

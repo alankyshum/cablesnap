@@ -105,6 +105,23 @@ const mockSummaryData = {
   streak: 12,
 }
 
+jest.mock('../../lib/db/body', () => ({
+  getBodySettings: jest.fn().mockResolvedValue({ unit: 'kg', height_cm: 175 }),
+  getLatestBodyWeight: jest.fn().mockResolvedValue(null),
+  getPreviousBodyWeight: jest.fn().mockResolvedValue(null),
+  getBodyWeightEntries: jest.fn().mockResolvedValue([]),
+  getBodyWeightCount: jest.fn().mockResolvedValue(0),
+  getBodyWeightChartData: jest.fn().mockResolvedValue([]),
+  getLatestMeasurements: jest.fn().mockResolvedValue(null),
+  upsertBodyWeight: jest.fn().mockResolvedValue(undefined),
+  deleteBodyWeight: jest.fn().mockResolvedValue(undefined),
+  updateBodySettings: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('../../lib/db/calendar', () => ({
+  getCalendarDays: jest.fn().mockResolvedValue([]),
+  getCalendarDayDetail: jest.fn().mockResolvedValue(null),
+  getActiveProgram: jest.fn().mockResolvedValue(null),
+}))
 jest.mock('../../lib/db', () => ({
   getWeeklySessionCounts: jest.fn().mockResolvedValue([{ week: '1/15', count: 3 }]),
   getWeeklyVolume: jest.fn().mockResolvedValue([{ week: '1/15', volume: 5000 }]),

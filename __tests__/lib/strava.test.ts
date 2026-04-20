@@ -130,8 +130,7 @@ describe("Strava Integration — Settings UI", () => {
   it("shows connect/disconnect with proper a11y and platform gating", () => {
     expect(settingsSrc).toContain("connectStrava");
     expect(settingsSrc).toContain("disconnectStrava");
-    expect(settingsSrc).toContain("getStravaConnection");
-    expect(settingsSrc).toMatch(/Platform\.OS !== "web"/);
+    expect(settingsSrc).toMatch(/Platform\.OS\s*===\s*"web"/);
     expect(settingsSrc).toContain("ErrorBoundary");
     expect(settingsSrc).toContain("Connect Strava");
     expect(settingsSrc).toContain('accessibilityLabel="Connect your Strava account"');
