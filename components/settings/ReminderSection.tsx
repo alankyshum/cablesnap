@@ -30,7 +30,7 @@ export default function ReminderSection({
   return (
     <>
       <View style={styles.row}>
-        <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>Workout Reminders</Text>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Workout Reminders</Text>
         <Switch
           value={reminders}
           onValueChange={async (val) => {
@@ -63,7 +63,7 @@ export default function ReminderSection({
             {`You'll be reminded at ${reminderTime} on days with scheduled workouts`}
           </Text>
           <View style={styles.row}>
-            <Text variant="body" style={{ color: colors.onSurface, marginRight: 12 }}>Time</Text>
+            <Text variant="body" style={{ color: colors.onSurface, marginRight: 12, fontSize: fontSizes.sm }}>Time</Text>
             <TextInput
               value={reminderTime}
               onChangeText={setReminderTime}
@@ -94,13 +94,13 @@ export default function ReminderSection({
       {permDenied && !reminders && (
         <View style={{ marginTop: 8 }}>
           <Text variant="caption" style={{ color: colors.error, marginBottom: 8 }}>Notification permission is denied. Enable it in your device settings to use reminders.</Text>
-          <Button variant="outline" onPress={() => Linking.openSettings()} style={{ alignSelf: "flex-start" }} accessibilityLabel="Open device notification settings">Open Settings</Button>
+          <Button variant="outline" size="sm" onPress={() => Linking.openSettings()} style={{ alignSelf: "flex-start" }} accessibilityLabel="Open device notification settings">Open Settings</Button>
         </View>
       )}
 
       <View style={[styles.row, { marginTop: 16 }]}>
         <View style={{ flex: 1 }}>
-          <Text variant="body" style={{ color: colors.onSurface }}>Rest Timer Notifications</Text>
+          <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Rest Timer Notifications</Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Get notified when rest is done while using other apps</Text>
         </View>
         <Switch
@@ -130,5 +130,5 @@ export default function ReminderSection({
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  timeInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: fontSizes.base, textAlign: "center", width: 80 },
+  timeInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: fontSizes.sm, textAlign: "center", width: 80 },
 });

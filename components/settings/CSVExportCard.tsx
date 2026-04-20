@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Apple, FileOutput, Scale, User } from "lucide-react-native";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
+import { fontSizes } from "@/constants/design-tokens";
 import { getCSVCounts } from "@/lib/db";
 import { sinceForRange, useCSVExport } from "@/hooks/useCSVExport";
 import type { ThemeColors } from "@/hooks/useThemeColors";
@@ -33,7 +34,7 @@ export default function CSVExportCard({ colors }: Props) {
   return (
     <Card style={StyleSheet.flatten([styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }])}>
       <CardContent>
-        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>CSV Export</Text>
+        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>CSV Export</Text>
         <SegmentedControl value={range} onValueChange={setRange} buttons={RANGE_BUTTONS} style={styles.segment} />
         <Text
           variant="caption"
@@ -43,10 +44,10 @@ export default function CSVExportCard({ colors }: Props) {
           {counts.sessions} session{counts.sessions !== 1 ? "s" : ""}, {counts.entries} entr{counts.entries !== 1 ? "ies" : "y"}
         </Text>
         <View style={styles.buttonFlow}>
-          <Button variant="outline" icon={FileOutput} onPress={() => exportCSV("workouts", range)} loading={loading} disabled={loading} accessibilityLabel="Export workouts as CSV">Workouts</Button>
-          <Button variant="outline" icon={Apple} onPress={() => exportCSV("nutrition", range)} loading={loading} disabled={loading} accessibilityLabel="Export nutrition as CSV">Nutrition</Button>
-          <Button variant="outline" icon={Scale} onPress={() => exportCSV("bodyWeight", range)} loading={loading} disabled={loading} accessibilityLabel="Export body weight as CSV">Body Weight</Button>
-          <Button variant="outline" icon={User} onPress={() => exportCSV("bodyMeasurements", range)} loading={loading} disabled={loading} accessibilityLabel="Export body measurements as CSV">Measurements</Button>
+          <Button variant="outline" size="sm" icon={FileOutput} onPress={() => exportCSV("workouts", range)} loading={loading} disabled={loading} accessibilityLabel="Export workouts as CSV">Workouts</Button>
+          <Button variant="outline" size="sm" icon={Apple} onPress={() => exportCSV("nutrition", range)} loading={loading} disabled={loading} accessibilityLabel="Export nutrition as CSV">Nutrition</Button>
+          <Button variant="outline" size="sm" icon={Scale} onPress={() => exportCSV("bodyWeight", range)} loading={loading} disabled={loading} accessibilityLabel="Export body weight as CSV">Body Weight</Button>
+          <Button variant="outline" size="sm" icon={User} onPress={() => exportCSV("bodyMeasurements", range)} loading={loading} disabled={loading} accessibilityLabel="Export body measurements as CSV">Measurements</Button>
         </View>
       </CardContent>
     </Card>
@@ -54,7 +55,7 @@ export default function CSVExportCard({ colors }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined },
+  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
   wideCard: { minWidth: 340, flexBasis: 340 },
   segment: { marginBottom: 4 },
   buttonFlow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

@@ -2,6 +2,7 @@ import { StyleSheet, Switch, View } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
+import { fontSizes } from "@/constants/design-tokens";
 import { setAppSetting } from "@/lib/db";
 import { setEnabled as setAudioEnabled } from "@/lib/audio";
 import type { ThemeColors } from "@/hooks/useThemeColors";
@@ -23,12 +24,12 @@ export default function PreferencesCard({
   return (
     <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
-        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>Preferences</Text>
+        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Preferences</Text>
 
         {children}
 
         <View style={[styles.row, { marginTop: 16 }]}>
-          <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>Timer Sound</Text>
+          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Timer Sound</Text>
           <Switch
             value={soundEnabled}
             onValueChange={async (val) => {
@@ -49,6 +50,6 @@ export default function PreferencesCard({
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined },
+  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
 });

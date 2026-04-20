@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Activity, HeartPulse } from "lucide-react-native";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
+import { fontSizes } from "@/constants/design-tokens";
 import { setAppSetting } from "@/lib/db";
 import { connectStrava, disconnect as disconnectStrava } from "@/lib/strava";
 import type { ThemeColors } from "@/hooks/useThemeColors";
@@ -37,17 +38,18 @@ export default function IntegrationsCard({
     <ErrorBoundary>
       <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
         <CardContent>
-          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>Integrations</Text>
+          <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Integrations</Text>
 
           {stravaAthlete ? (
             <View>
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <Text variant="body" style={{ color: colors.onSurface }}>Strava</Text>
+                  <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Strava</Text>
                   <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Connected as {stravaAthlete}</Text>
                 </View>
                 <Button
                   variant="outline"
+                  size="sm"
                   onPress={async () => {
                     setStravaLoading(true);
                     try { await disconnectStrava(); setStravaAthlete(null); toast.success("Strava disconnected"); }
@@ -68,6 +70,7 @@ export default function IntegrationsCard({
             <View>
               <Button
                 variant="default"
+                size="sm"
                 icon={Activity}
                 onPress={async () => {
                   setStravaLoading(true);
@@ -96,7 +99,7 @@ export default function IntegrationsCard({
                 <View>
                   <View style={styles.row}>
                     <View style={{ flex: 1 }}>
-                      <Text variant="body" style={{ color: colors.onSurface }}>Health Connect</Text>
+                      <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Health Connect</Text>
                       <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{hcEnabled ? "Enabled" : "Disabled"}</Text>
                     </View>
                     <Switch
@@ -140,11 +143,12 @@ export default function IntegrationsCard({
                 <View>
                   <View style={styles.row}>
                     <View style={{ flex: 1 }}>
-                      <Text variant="body" style={{ color: colors.onSurface }}>Health Connect</Text>
+                      <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Health Connect</Text>
                       <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{hcSdkStatus === "needs_update" ? "Update required" : "Not installed"}</Text>
                     </View>
                     <Button
                       variant="outline"
+                      size="sm"
                       icon={HeartPulse}
                       style={{ minHeight: 48 }}
                       onPress={() => { import("../../lib/health-connect").then(({ openHealthConnectPlayStore }) => openHealthConnectPlayStore()); }}
@@ -166,6 +170,6 @@ export default function IntegrationsCard({
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined },
+  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
 });

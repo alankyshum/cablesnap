@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { flowCardStyle } from "./ui/FlowContainer";
+import { fontSizes } from "@/constants/design-tokens";
 import { BodyProfileForm } from "./BodyProfileForm";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useBodyProfile } from "@/hooks/useBodyProfile";
@@ -41,7 +42,7 @@ export default function BodyProfileCard() {
   return (
     <Card style={cardStyle}>
       <CardContent>
-        <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>Body Profile</Text>
+        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Body Profile</Text>
         <BodyProfileForm colors={colors} {...profile} />
       </CardContent>
     </Card>
@@ -49,6 +50,6 @@ export default function BodyProfileCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { ...flowCardStyle, maxWidth: undefined },
+  card: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
   loadingContainer: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
 });
