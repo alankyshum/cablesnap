@@ -149,7 +149,21 @@ const DEFAULT_LANDMARKS: Record<MuscleGroup, VolumeLandmarks> = {
 ## Review Feedback
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-20)
+
+**Cognitive load**: Feature reduces cognitive load overall — color-coded bars replace mental number-comparison. Mental model is compatible. Good.
+
+**Critical issues (must fix before approval):**
+1. **C-1: Customize sheet has 28 inputs** — 14 muscles × 2 fields is overwhelming in a bottom sheet. Use two-level navigation (muscle list → expand/drill into individual muscle) or collapsible region groups.
+2. **C-2: Per-muscle landmark lines create visual noise** — vertical dashed lines can't work per-muscle. Remove them entirely (color-coding communicates zone) or show ticks only on selected muscle's row.
+
+**Major issues (should fix):**
+- M-1: Color-coding alone violates WCAG 1.4.1 — add non-color differentiator (icon/pattern) for color-blind users
+- M-2: `colors.error` for above-MRV is emotionally wrong — use amber/tertiary, not red. Overreaching is intentional in some programs
+- M-3: `outline` color for below-MEV bars too invisible — use `surfaceVariant` or primary@30% opacity
+- M-4: Summary tap "scrolls to muscles" but FlatList has scrollEnabled=false — use highlight/flash instead
+
+**Recommendations:** Add "Reset All" button, show evidence source caption, save-on-close instead of immediate, handle MEV=MRV edge case.
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20)
