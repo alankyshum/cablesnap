@@ -282,3 +282,6 @@ export type {
 
 export { getMuscleRecoveryStatus, RECOVERY_HOURS } from "./recovery";
 export type { MuscleRecoveryStatus, RecoveryStatus } from "./recovery";
+
+export { getStrengthOverview } from "./strength-overview";
+export type { StrengthOverviewRow } from "./strength-overview";

@@ -120,6 +120,25 @@ export function difficultyText(level: string): string {
 // Fixed colors for the camera viewfinder — must contrast against a live
 // camera feed, not the app theme.
 
+// ─── Strength Level Colors ──────────────────────────────────────────
+
+export const STRENGTH_LEVEL_COLORS = {
+  light: {
+    beginner:     { bg: "#E0E0E0", text: "#424242" },
+    novice:       { bg: "#BBDEFB", text: "#0D47A1" },
+    intermediate: { bg: "#C8E6C9", text: "#1B5E20" },
+    advanced:     { bg: "#FFE0B2", text: "#E65100" },
+    elite:        { bg: "#F8BBD0", text: "#880E4F" },
+  } as Record<string, { bg: string; text: string }>,
+  dark: {
+    beginner:     { bg: "#616161", text: "#E0E0E0" },
+    novice:       { bg: "#1565C0", text: "#E3F2FD" },
+    intermediate: { bg: "#2E7D32", text: "#E8F5E9" },
+    advanced:     { bg: "#E65100", text: "#FFF3E0" },
+    elite:        { bg: "#AD1457", text: "#FCE4EC" },
+  } as Record<string, { bg: string; text: string }>,
+};
+
 export const CAMERA_OVERLAY = {
   background: "#000000",
   text: "#ffffff",

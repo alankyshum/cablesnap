@@ -33,6 +33,8 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useExerciseDetail, MAX_ITEMS } from "@/hooks/useExerciseDetail";
 import ExerciseRecordsCard from "@/components/exercise/ExerciseRecordsCard";
 import ExerciseChartCard from "@/components/exercise/ExerciseChartCard";
+import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
+import { useStrengthLevel } from "@/hooks/useStrengthLevel";
 import { fontSizes } from "@/constants/design-tokens";
 
 function formatDateLong(ts: number): string {
@@ -48,6 +50,7 @@ export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { toast: showToast } = useToast();
   const d = useExerciseDetail(id);
+  const strengthLevel = useStrengthLevel(d.exercise?.name, d.records?.est_1rm ?? null, d.unit);
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
   const remove = useCallback(async () => {
@@ -120,6 +123,17 @@ export default function ExerciseDetail() {
           chartLoading={d.chartLoading} chartError={d.chartError} exerciseId={id} exerciseName={exercise.name} loadChart={d.loadChart}
           style={layout.atLeastMedium ? { ...flowCardStyle, maxWidth: 560 } : undefined} />
       </FlowContainer>
+
+      {strengthLevel && (
+        <StrengthLevelBadge
+          colors={colors}
+          level={strengthLevel.level}
+          nextLevel={strengthLevel.nextLevel}
+          nextThresholdKg={strengthLevel.nextThresholdKg}
+          unit={d.unit}
+          style={{ marginTop: 8 }}
+        />
+      )}
 
       <Text variant="title" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 8 }}>Session History</Text>
       {d.historyLoading ? <ActivityIndicator style={styles.loader} /> : d.historyError ? (
