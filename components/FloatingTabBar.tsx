@@ -1,22 +1,11 @@
-import React, { useEffect, useState } from "react";
-import {
-  Keyboard,
-  Platform,
-  StyleSheet,
-  View,
-  useColorScheme,
-} from "react-native";
-import { BlurView } from "expo-blur";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { CenterButton } from "./floating-tab-bar/CenterButton";
-import { TabButton } from "./floating-tab-bar/TabButton";
+import React, { useEffect, useState } from 'react';
+import { Keyboard, Platform, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useThemeColors } from '@/hooks/useThemeColors';
+import { CenterButton } from './floating-tab-bar/CenterButton';
+import { TabButton } from './floating-tab-bar/TabButton';
 
 const BAR_HEIGHT = 56;
 const BAR_MARGIN_BOTTOM = 24;
@@ -37,23 +26,17 @@ export function useFloatingTabBarHeight(): number {
 }
 
 // Desired visual order: exercises, nutrition, index (center), progress, settings
-const TAB_ORDER = ["exercises", "nutrition", "index", "progress", "settings"];
+const TAB_ORDER = ['exercises', 'nutrition', 'index', 'progress', 'settings'];
 
-export default function FloatingTabBar({
-  state,
-  navigation,
-}: BottomTabBarProps) {
+export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const colors = useThemeColors();
-  const isDark = useColorScheme() === "dark";
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const translateY = useSharedValue(0);
 
   useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, () => {
       setKeyboardVisible(true);
@@ -75,12 +58,10 @@ export default function FloatingTabBar({
   }));
 
   // Build route map for quick lookup
-  const routeMap = new Map(
-    state.routes.map((route, idx) => [route.name, { route, index: idx }])
-  );
+  const routeMap = new Map(state.routes.map((route, idx) => [route.name, { route, index: idx }]));
 
   const orderedTabs = TAB_ORDER.filter((name) => routeMap.has(name));
-  const centerIndex = orderedTabs.indexOf("index");
+  const centerIndex = orderedTabs.indexOf('index');
 
   return (
     <Animated.View
@@ -92,23 +73,16 @@ export default function FloatingTabBar({
         },
         animatedContainerStyle,
       ]}
-      pointerEvents={keyboardVisible ? "none" : "auto"}
+      pointerEvents={keyboardVisible ? 'none' : 'auto'}
     >
-      <View style={styles.blurClip}>
-        <BlurView
-          intensity={80}
-          tint={isDark ? "dark" : "light"}
-          experimentalBlurMethod="dimezisBlurView"
-          style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "rgba(30,30,30,0.45)" : "rgba(255,255,255,0.5)" }]}
-        />
-      </View>
+      <View style={[styles.opaqueBackground, { backgroundColor: colors.surface }]} />
       {orderedTabs.map((name, visualIdx) => {
         const entry = routeMap.get(name)!;
         const focused = state.index === entry.index;
 
         const handlePress = () => {
           const event = navigation.emit({
-            type: "tabPress",
+            type: 'tabPress',
             target: entry.route.key,
             canPreventDefault: true,
           });
@@ -147,23 +121,22 @@ export default function FloatingTabBar({
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
+    position: 'absolute',
     left: BAR_HORIZONTAL_MARGIN,
     right: BAR_HORIZONTAL_MARGIN,
     height: BAR_HEIGHT,
     borderRadius: BAR_BORDER_RADIUS,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    elevation: 8,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
   },
-  blurClip: {
+  opaqueBackground: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: BAR_BORDER_RADIUS,
-    overflow: "hidden",
   },
 });
