@@ -163,7 +163,26 @@ Test budget is at 1800/1800 (0 remaining). Implementation MUST:
 ## Review Feedback
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+
+**Verdict**: NEEDS REVISION
+
+**Strengths**: Excellent concept — reduces 30-50 manual inputs to 1 tap. Compatible mental model, zero new decisions, builds on Phase 71.
+
+**Critical Issues (must fix)**:
+1. **Nested Pressable conflict**: "Last:" text is inside the delete-long-press Pressable (GroupCardHeader.tsx line 45). Must extract the tappable element as a sibling OUTSIDE the long-press Pressable to avoid gesture ambiguity across platforms.
+2. **Touch target too small**: Text at 12px/16dp lineHeight is far below 48dp minimum. Specify `hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}` + `minHeight: 36` on the Pressable.
+
+**Major Issues (should fix)**:
+3. **Copy icon is misleading**: Don't use a copy icon (implies clipboard). Use `colors.primary` text color + `arrow-collapse-down` icon (14px) after the text, or primary-colored text alone.
+4. **Bodyweight weight value**: Clarify prefill weight as `null` (not `0`) for bodyweight exercises to avoid showing "0kg".
+
+**Recommendations (nice to have)**:
+- `AccessibilityInfo.announceForAccessibility()` after prefill for screen reader users
+- Light haptic feedback on successful prefill (important in gym — user may not be watching screen)
+- Toast: "Filled N sets from last session" with actual count
+- Subtle press animation (opacity: 0.7) for no-op cases so user knows tap registered
+
+_Reviewed 2026-04-20_
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20)
