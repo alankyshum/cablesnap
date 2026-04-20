@@ -138,7 +138,24 @@ export function formatTimeRemaining(estimatedTotalSeconds: number | null, elapse
 No blocking issues found.
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: APPROVED** — Reviewed 2026-04-20
+
+**Regression Risk**: Low. Display-only, additive feature — no writes, no mutations, no schema changes. SessionHeaderToolbar has a single consumer (`app/session/[id].tsx`). Adding an optional prop is backwards-compatible.
+
+**Security**: No concerns. Pure local computation on existing data.
+
+**Data Integrity**: No concerns. Read-only access via existing `getTemplateDurationEstimates`.
+
+**Edge Cases**: Well covered. App background/foreground scenario handled implicitly by `Math.ceil` approach (remaining goes ≤0 → hidden).
+
+**Test Coverage**: 1 test for `formatTimeRemaining` pure function is adequate. **Hard requirement: test budget is at 1801/1800 — implementation MUST consolidate ≥2 existing tests. Net change ≤0. PR will be REVERTED if budget increases.**
+
+**Recommendations (non-blocking)**:
+1. Place `formatTimeRemaining` in `lib/format.ts` alongside `formatTime`.
+2. Cache `getTemplateDurationEstimates` result in `useRef`/`useState` on session load.
+3. Consider merging new test assertions into existing `formatTime` test block.
+
+No blocking issues found.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
