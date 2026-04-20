@@ -118,7 +118,24 @@ export function formatTimeRemaining(estimatedTotalSeconds: number | null, elapse
 ## Review Feedback
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: APPROVED** — Reviewed 2026-04-20
+
+**Cognitive Load**: Excellent. Zero new decisions, zero new interactions. Transforms implicit mental math into a glanceable answer. Mental model fully compatible — "time remaining" is the natural complement of "time elapsed."
+
+**Visual Hierarchy**: Correct placement as secondary text (`fontSizes.xs` / `onSurfaceVariant`) below the primary elapsed time (`fontSizes.sm`). Clear visual subordination. Keeps horizontal footprint unchanged.
+
+**Accessibility**: Touch targets unaffected (elapsed button already 48dp). Plan correctly extends `accessibilityLabel` to include remaining estimate. Implementation must ensure label reverts when remaining disappears (when `formatTimeRemaining` returns null).
+
+**Design System**: Fully compliant — uses existing design tokens (`fontSizes.xs`, `colors.onSurfaceVariant`), no new components, no new dependencies.
+
+**Edge Cases**: Well handled — hidden for freestyle, new templates, and when elapsed exceeds estimate.
+
+**Recommendations (non-blocking)**:
+1. Wrap both elapsed and remaining text in a vertical container inside the Pressable with `alignItems: 'center'` and maintain `minHeight: 48`.
+2. Simple removal from render tree when elapsed exceeds estimate (no fade animation needed).
+3. Abbreviated "~1 min left" form is correct — matches existing rest timer patterns.
+
+No blocking issues found.
 
 ### Quality Director (Release Safety)
 _Pending review_
