@@ -23,9 +23,14 @@ export type GroupCardHeaderProps = {
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
+  onMoveUp?: (exerciseId: string) => void;
+  onMoveDown?: (exerciseId: string) => void;
+  isFirst?: boolean;
+  isLast?: boolean;
+  showMoveButtons?: boolean;
 };
 
-export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise }: GroupCardHeaderProps) {
+export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
   const colors = useThemeColors();
   const notesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
   const eid = group.exercise_id;
@@ -38,6 +43,32 @@ export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotes
             <Text variant="title" style={[styles.groupTitle, { color: colors.primary }]}>{group.name}</Text>
           </Pressable>
           <View style={styles.headerActions}>
+            {showMoveButtons && (
+              <>
+                <Pressable
+                  onPress={() => onMoveUp?.(eid)}
+                  disabled={isFirst}
+                  accessibilityLabel={`Move ${group.name} up`}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: isFirst }}
+                  hitSlop={4}
+                  style={[styles.moveBtn, isFirst && styles.moveBtnDisabled]}
+                >
+                  <MaterialCommunityIcons name="chevron-up" size={28} color={isFirst ? colors.outlineVariant : colors.onSurfaceVariant} />
+                </Pressable>
+                <Pressable
+                  onPress={() => onMoveDown?.(eid)}
+                  disabled={isLast}
+                  accessibilityLabel={`Move ${group.name} down`}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: isLast }}
+                  hitSlop={4}
+                  style={[styles.moveBtn, isLast && styles.moveBtnDisabled]}
+                >
+                  <MaterialCommunityIcons name="chevron-down" size={28} color={isLast ? colors.outlineVariant : colors.onSurfaceVariant} />
+                </Pressable>
+              </>
+            )}
             <Pressable onPress={() => onSwap(eid)} accessibilityLabel={`Swap ${group.name}`} hitSlop={8} style={styles.iconBtn}>
               <MaterialCommunityIcons name="swap-horizontal" size={24} color={colors.onSurfaceVariant} />
             </Pressable>
@@ -70,5 +101,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", alignItems: "center" },
   groupTitle: { fontWeight: "700" },
   iconBtn: { padding: 8 },
+  moveBtn: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
+  moveBtnDisabled: { opacity: 0.4 },
   detailsBtn: { marginLeft: -24, marginRight: -8 },
 });

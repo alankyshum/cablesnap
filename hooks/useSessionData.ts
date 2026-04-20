@@ -15,6 +15,7 @@ import {
   getPreviousSetsBatch,
   getExercisesByIds,
   updateSetsBatch,
+  updateExercisePositions,
 } from "../lib/db";
 import type { WorkoutSession, TrainingMode, Exercise } from "../lib/types";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
@@ -118,6 +119,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           is_bodyweight: ex ? ex.equipment === "bodyweight" : false,
           trackingMode: parsed.includes("isometric" as TrainingMode) ? "duration" : "reps",
           equipment: ex?.equipment ?? "other",
+          exercise_position: s.exercise_position ?? 0,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
@@ -145,7 +147,21 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
         previous: prevDisplay,
       });
     }
-    setGroups([...map.values()]);
+    const groupList = [...map.values()];
+
+    // Auto-assign positions for pre-migration sessions (all positions = 0)
+    const allZero = groupList.every((g) => g.exercise_position === 0);
+    if (allZero && groupList.length > 1) {
+      const positionUpdates: { exerciseId: string; position: number }[] = [];
+      groupList.forEach((g, i) => {
+        g.exercise_position = i + 1;
+        positionUpdates.push({ exerciseId: g.exercise_id, position: i + 1 });
+      });
+      // Fire-and-forget: persist auto-assigned positions
+      updateExercisePositions(id, positionUpdates).catch(() => {});
+    }
+
+    setGroups(groupList);
 
     const entries: [string, Suggestion | null][] = exerciseIds.map((eid) => {
       try {
@@ -188,6 +204,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
                 setNumber: i,
                 linkId: te.link_id ?? null,
                 round: te.link_id ? i : null,
+                exercisePosition: te.position,
               });
             }
           }

@@ -43,6 +43,7 @@ jest.mock('../../lib/db', () => ({
   getAllExercises: jest.fn().mockResolvedValue([]),
   swapExerciseInSession: jest.fn().mockResolvedValue([]),
   undoSwapInSession: jest.fn().mockResolvedValue(undefined),
+  updateExercisePositions: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({
@@ -326,7 +327,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(addBtn)
 
     await waitFor(() => {
-      expect(mockDb.addSet).toHaveBeenCalledWith('sess-add', 'ex-1', 4, null, null, null, null)
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-add', 'ex-1', 4, null, null, null, null, undefined, undefined, 0)
     })
   })
 

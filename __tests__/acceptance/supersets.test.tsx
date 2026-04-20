@@ -44,6 +44,7 @@ jest.mock('../../lib/db', () => ({
   getAllExercises: jest.fn().mockResolvedValue([]),
   swapExerciseInSession: jest.fn().mockResolvedValue([]),
   undoSwapInSession: jest.fn().mockResolvedValue(undefined),
+  updateExercisePositions: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({
