@@ -115,7 +115,18 @@ Add an estimated duration badge to user-created template cards on the home scree
 _Pending review_
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: APPROVED** (2026-04-20T12:03Z)
+
+**Required (must fix before implementation):**
+- Wrap the new duration query in `loadHomeData` with try/catch + graceful fallback to empty map. The home screen MUST still render if this query fails.
+
+**Recommendations (nice to have):**
+- Exclude sessions < 60s from median to avoid misleading estimates from abandoned sessions
+- Consider memoizing duration estimates (only change after session completion)
+- Test `loadHomeData` resilience when duration query returns empty
+- Test rounding boundaries (2.5 min → 5, 7.5 min → 10)
+
+No security, data integrity, or regression concerns beyond the graceful degradation requirement above.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
