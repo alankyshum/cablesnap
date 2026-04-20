@@ -279,3 +279,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-438 | NO_LEARNINGS | 2026-04-20 |
 | BLD-440 | NO_LEARNINGS | 2026-04-20 |
 | BLD-441 | NO_LEARNINGS | 2026-04-20 |
+| BLD-442 | NO_LEARNINGS | 2026-04-20 |
