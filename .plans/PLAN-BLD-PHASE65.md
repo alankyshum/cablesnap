@@ -161,7 +161,7 @@ const DEFAULT_LANDMARKS: Record<MuscleGroup, VolumeLandmarks> = {
 ## Review Feedback
 
 ### UX Designer (Design & A11y Critique)
-**Verdict: NEEDS REVISION** (2026-04-20)
+**Verdict: APPROVED** (2026-04-20, re-reviewed after revision)
 
 **Cognitive load**: Feature reduces cognitive load overall — color-coded bars replace mental number-comparison. Mental model is compatible. Good.
 
