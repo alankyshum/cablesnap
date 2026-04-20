@@ -1,7 +1,7 @@
 import { eq, sql, desc, isNotNull, and, asc, inArray } from "drizzle-orm";
 import type { WorkoutSession } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, getDatabase } from "./helpers";
+import { getDrizzle, getDatabase, query } from "./helpers";
 import { workoutSessions, workoutSets, workoutTemplates, templateExercises } from "./schema";
 
 // Re-export from split modules for backward compatibility
@@ -72,6 +72,53 @@ export {
   getBestSet,
 } from "./exercise-history";
 export type { ExerciseSession, ExerciseRecords } from "./exercise-history";
+
+// ---- Duration Estimates ----
+
+export async function getTemplateDurationEstimates(
+  templateIds: string[]
+): Promise<Record<string, number | null>> {
+  if (templateIds.length === 0) return {};
+  const placeholders = templateIds.map(() => "?").join(", ");
+  const rows = await query<{ template_id: string; duration_seconds: number; rn: number }>(
+    `SELECT template_id, duration_seconds, rn FROM (
+      SELECT template_id, duration_seconds,
+        ROW_NUMBER() OVER (PARTITION BY template_id ORDER BY completed_at DESC) AS rn
+      FROM workout_sessions
+      WHERE template_id IN (${placeholders})
+        AND completed_at IS NOT NULL
+        AND duration_seconds IS NOT NULL
+        AND duration_seconds >= 60
+    ) WHERE rn <= 5`,
+    templateIds
+  );
+
+  const grouped: Record<string, number[]> = {};
+  for (const row of rows) {
+    if (!grouped[row.template_id]) grouped[row.template_id] = [];
+    grouped[row.template_id].push(row.duration_seconds);
+  }
+
+  const result: Record<string, number | null> = {};
+  for (const id of templateIds) {
+    const durations = grouped[id];
+    if (!durations || durations.length === 0) {
+      result[id] = null;
+    } else {
+      result[id] = median(durations);
+    }
+  }
+  return result;
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+  return sorted[mid];
+}
 
 // ---- Sessions ----
 

@@ -82,7 +82,7 @@ export default function Workouts() {
       <SegmentedControl value={segment} onValueChange={(v) => setUserSegment(v)} buttons={[{ value: "templates", label: "Templates", accessibilityLabel: "Templates tab" }, { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" }]} style={styles.segmented} />
 
       {segment === "templates" ? (
-        <TemplatesList colors={colors} templates={allTemplates} counts={data?.counts ?? {}} starterMeta={starterMeta} templateReadiness={data?.templateReadiness ?? {}} showReadiness={data?.showReadiness ?? false} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} />
+        <TemplatesList colors={colors} templates={allTemplates} counts={data?.counts ?? {}} durationEstimates={data?.durationEstimates ?? {}} starterMeta={starterMeta} templateReadiness={data?.templateReadiness ?? {}} showReadiness={data?.showReadiness ?? false} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} />
       ) : (
         <ProgramsList colors={colors} programs={allPrograms} dayCounts={data?.dayCounts ?? {}} onPress={(id) => router.push(`/program/${id}`)} onDelete={confirmDeleteProgram} onOptions={showProgramOptions} />
       )}

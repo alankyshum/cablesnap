@@ -4,7 +4,7 @@ import {
   getSessionAvgRPEs, getSessionSetCounts, getTemplateExerciseCounts,
   getTemplates, getTodaySchedule, getWeekAdherence, isTodayCompleted,
   getMuscleRecoveryStatus, getTemplatePrimaryMuscles, getWeeklyVolume, getE1RMTrends,
-  getTotalSessionCount,
+  getTotalSessionCount, getTemplateDurationEstimates,
 } from "../../lib/db";
 import { computeStreak } from "../../lib/format";
 import { computeAllTemplateReadiness, hasWorkoutHistory } from "../../lib/recovery-readiness";
@@ -27,6 +27,16 @@ export async function loadHomeData() {
     getE1RMTrends(),
     getTotalSessionCount(),
   ]);
+
+  // Load duration estimates (degrade gracefully — home screen must not crash)
+  let durationEstimates: Record<string, number | null> = {};
+  try {
+    const nonStarterIds = tpls.filter((t) => !t.is_starter).map((t) => t.id);
+    durationEstimates = await getTemplateDurationEstimates(nonStarterIds);
+  } catch {
+    // Fallback to empty map — no duration badges shown
+  }
+
   const recoveryStatus = await getMuscleRecoveryStatus();
   const templateReadiness = computeAllTemplateReadiness(templateMuscles, recoveryStatus);
   const showReadiness = hasWorkoutHistory(recoveryStatus);
@@ -35,7 +45,7 @@ export async function loadHomeData() {
   const goalInsights = await loadGoalInsights();
 
   const insight = generateInsight({ totalSessions, timestamps, e1rmTrends, weeklyVolume, goalInsights });
-  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight };
+  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, durationEstimates };
 }
 
 async function loadGoalInsights(): Promise<GoalInsightRow[]> {

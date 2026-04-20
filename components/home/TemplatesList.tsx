@@ -11,10 +11,13 @@ import type { TemplateReadiness } from "../../lib/recovery-readiness";
 import type { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 
+import { formatDurationEstimate, formatSpokenDuration } from "../../lib/format";
+
 type Props = {
   colors: ReturnType<typeof useThemeColors>;
   templates: WorkoutTemplate[];
   counts: Record<string, number>;
+  durationEstimates: Record<string, number | null>;
   starterMeta: (id: string) => (typeof STARTER_TEMPLATES)[number] | undefined;
   templateReadiness: Record<string, TemplateReadiness>;
   showReadiness: boolean;
@@ -24,7 +27,7 @@ type Props = {
   onEdit: (id: string) => void;
 };
 
-export function TemplatesList({ colors, templates, counts, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit }: Props) {
+export function TemplatesList({ colors, templates, counts, durationEstimates, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit }: Props) {
   const router = useRouter();
   return (
     <View style={styles.section}>
@@ -44,7 +47,12 @@ export function TemplatesList({ colors, templates, counts, starterMeta, template
           {templates.map((item) => {
             const meta = starterMeta(item.id);
             const isStarter = !!meta || item.is_starter;
-            const metaBadges: MetaBadge[] = meta ? [difficultyBadge(meta.difficulty), { icon: "clock-outline", label: meta.duration }, { icon: "dumbbell", label: `${meta.exercises.length} exercises` }] : [{ icon: "dumbbell", label: `${counts[item.id] ?? 0} exercises` }];
+            const metaBadges: MetaBadge[] = meta ? [difficultyBadge(meta.difficulty), { icon: "clock-outline", label: meta.duration }, { icon: "dumbbell", label: `${meta.exercises.length} exercises` }] : [];
+            if (!meta) {
+              const est = durationEstimates[item.id];
+              if (est != null) metaBadges.push({ icon: "clock-outline", label: formatDurationEstimate(est) });
+              metaBadges.push({ icon: "dumbbell", label: `${counts[item.id] ?? 0} exercises` });
+            }
             if (isStarter) metaBadges.push({ icon: "star-outline", label: "Starter" });
             const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
             if (meta?.recommended) badges.push({ label: "RECOMMENDED", type: "recommended" });
@@ -57,9 +65,11 @@ export function TemplatesList({ colors, templates, counts, starterMeta, template
                   { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
                   { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
                 ];
+            const durationEst = !meta ? durationEstimates[item.id] : null;
+            const spokenDuration = durationEst != null ? `, ${formatSpokenDuration(durationEst)}` : "";
             return (
               <FlowCard key={item.id} name={displayName} onPress={() => onStart(item)}
-                accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${displayName}, ${counts[item.id] ?? 0} exercises`}
+                accessibilityLabel={`${isStarter ? "Starter template" : "Start workout from template"}: ${displayName}${spokenDuration}, ${counts[item.id] ?? 0} exercises`}
                 accessibilityHint="Long press for options" badges={badges} readiness={readiness} meta={metaBadges}
                 menuItems={menuItems} />
             );

@@ -68,6 +68,29 @@ export function movingAvg(
   });
 }
 
+export function formatDurationEstimate(seconds: number): string {
+  const totalMinutes = seconds / 60;
+  const rounded = Math.max(5, Math.round(totalMinutes / 5) * 5);
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  if (h > 0 && m === 0) return `~${h}h`;
+  if (h > 0) return `~${h}h ${m}m`;
+  return `~${m}m`;
+}
+
+export function formatSpokenDuration(seconds: number): string {
+  const totalMinutes = seconds / 60;
+  const rounded = Math.max(5, Math.round(totalMinutes / 5) * 5);
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  const parts: string[] = [];
+  if (h === 1) parts.push("1 hour");
+  else if (h > 1) parts.push(`${h} hours`);
+  if (m > 0) parts.push(`${m} minutes`);
+  if (parts.length === 0) parts.push("5 minutes");
+  return `approximately ${parts.join(" ")}`;
+}
+
 export function hexToRgb(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
