@@ -769,3 +769,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: When a hook fetches async data keyed by a prop (like `exerciseId`), store the `fetchedId` alongside the data in the reducer state. On render, compare `fetchedId` against the current prop — if they don't match, return empty/loading state instead of stale data. Combined with `let cancelled = false` in the effect cleanup (to prevent dispatching results from superseded fetches), this eliminates both stale renders and wasted state updates.
 **Action**: For any custom hook that fetches data based on a prop ID: (1) use `useReducer` with a `fetchedId` field in state; (2) set `fetchedId` only on the `success` action; (3) return null/loading when `state.fetchedId !== currentPropId`; (4) use a `cancelled` closure boolean in the useEffect cleanup to prevent dispatches after the effect is superseded.
 **Tags**: react-native, hooks, useReducer, async-state, stale-data, race-condition, drawer, exercise
+
+### FlashList Requires extraData Counter to Re-Render on Array Reorder
+**Source**: BLD-410 — PLAN: Exercise Reorder in Active Workout Session (Phase 62)
+**Date**: 2026-04-20
+**Context**: When reordering exercises in a FlashList, the item keys (exercise_id) don't change — only their positions do. FlashList (and FlatList) use key identity to determine what changed, so a reorder with stable keys may not trigger a re-render.
+**Learning**: FlashList optimizes rendering by key identity. When the data array is reordered but keys remain the same, FlashList may not detect the change and skip re-rendering. Passing an `extraData` prop set to an incrementing version counter forces FlashList to re-evaluate the entire list whenever items are reordered.
+**Action**: When implementing list reordering with FlashList or FlatList, maintain a `reorderVersion` counter in state. Increment it on every reorder operation and pass it as `extraData={reorderVersion}`. This ensures the list re-renders with the correct item positions after every move.
+**Tags**: flashlist, flatlist, reorder, extraData, re-render, key-stability, performance, react-native

@@ -146,3 +146,11 @@
 **Learning**: SQLite migrations that add columns must be idempotent since the migration function may run on every app launch. The pattern is: query `PRAGMA table_info(table_name)` to get current columns, check if the target column name exists in the result set, and only execute `ALTER TABLE ADD COLUMN` if it is absent. This costs one lightweight PRAGMA query per table per launch and prevents crashes on repeated execution.
 **Action**: For every `ALTER TABLE ADD COLUMN` in FitForge migrations, wrap it with a `PRAGMA table_info` guard: `const cols = await db.getAllAsync("PRAGMA table_info(T)"); if (!cols.some(c => c.name === "col")) { await db.execAsync("ALTER TABLE T ADD COLUMN col TYPE"); }`. Never run bare ALTER TABLE ADD COLUMN without this guard.
 **Tags**: sqlite, alter-table, migration, idempotent, pragma, table-info, schema-evolution
+
+### Do Not Repurpose Intra-Entity Ordering Columns for Inter-Entity Position
+BLD-410 **Source**: PLAN: Exercise Reorder in Active Workout Session (Phase 62) 
+**Date**: 2026-04-20
+**Context**: The initial plan for exercise reordering in active sessions proposed updating `set_number` values to persist exercise order changes. Tech Lead caught that `set_number` is intra-exercise set ordering (set 1, 2, 3 within one exercise), not inter-exercise position ordering. Repurposing it would corrupt set display order.
+**Learning**: Ordering columns serve a specific granularity. `set_number` orders sets within an exercise; exercise position orders exercises within a session. These are different dimensions. Repurposing an existing ordering column for a different granularity silently corrupts the original ordering semantics and breaks every query that depends on the original meaning.
+**Action**: When adding position tracking to a higher-level entity, always add a dedicated column (e.g., `exercise_position`) rather than repurposing a child-entity ordering column (e.g., `set_number`). Before designing the schema change, explicitly state what the existing column means and confirm the new requirement operates at a different level.
+**Tags**: sqlite, schema-design, ordering, column-semantics, set-number, exercise-position, granularity
