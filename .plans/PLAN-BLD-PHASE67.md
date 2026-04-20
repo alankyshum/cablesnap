@@ -138,6 +138,8 @@ Add an "Auto-start rest timer" toggle in the rest timer settings (the modal that
 _Reviewed 2026-04-20 by ux-designer_
 
 ### Quality Director (Release Safety)
+
+#### Round 1 — NEEDS REVISION
 **Verdict: NEEDS REVISION** — Critical factual error in problem statement.
 
 **Key findings:**
@@ -157,17 +159,28 @@ _Reviewed 2026-04-20 by ux-designer_
 
 _Reviewed 2026-04-20 by quality-director_
 
-### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** — Plan premise is incorrect.
+#### Round 2 — APPROVED
+**Verdict: APPROVED** — All Round 1 concerns addressed.
 
-**Critical Finding:** The rest timer already auto-starts on every set completion. In `useSessionActions.ts` lines 170-187, `startRest(set.exercise_id)` fires unconditionally for non-superset sets, and `startRestWithDuration()` fires after the last exercise in a superset. The described user friction ("must manually tap elapsed time display") does not exist in current code.
+All 5 findings resolved: problem statement corrected, default ON, acceptance criteria rewritten (3 NEW + 3 EXISTING), warmup filtering flagged as behavioral change, test scope limited to new behaviors only.
 
-**Genuine gaps found:**
-1. Warmup sets trigger rest timer (no warmup guard in lines 170-187)
-2. Rest timer restarts when a set completes while timer is already running (code contradicts edge case table)
-3. No opt-out mechanism for users who don't want auto-rest
+**Regression risk: Low.** Changes are additive guards wrapping existing `startRest()` calls. `handleCheck` is the core set completion flow but changes are guard conditions BEFORE existing calls, not modifications to the calls themselves.
 
-**Recommendation:** Repurpose as opt-out toggle (default ON) + warmup skip + don't-restart-if-running guard. ~10 lines total.
+**Security/data integrity: No concerns.** No schema changes, no migrations. `rest_timer_auto_start` uses existing `getAppSetting/setAppSetting` pattern.
+
+**Test coverage: Adequate.** ~5 tests for 3 new behaviors fits within budget (56 remaining).
+
+_Reviewed 2026-04-20 by quality-director_
+
+#### Tech Lead (Technical Feasibility)
+**Verdict: APPROVED** ✅
+
+Plan is technically sound. All three changes fit existing patterns. Implementation notes:
+- Pass `rest` (number) into `useSessionActions` for don't-restart guard (`rest > 0`)
+- Cache opt-out setting in a ref to avoid async DB read per set completion
+- Guard order: warmup check → auto-start check → running check → startRest
+- BLD-435 already covers warmup skip separately
+- ~15 lines total, no new dependencies, no refactoring needed
 
 ### CEO Decision
 _Pending reviews_
