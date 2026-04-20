@@ -96,6 +96,9 @@ export {
   getSessionCountsByDay,
   getTotalSessionCount,
   getE1RMTrends,
+  getWeeklyE1RMTrends,
+  getRecentSessionRPEs,
+  getRecentSessionRatings,
   updateSession,
   createTemplateFromSession,
   swapExerciseInSession,
@@ -104,7 +107,7 @@ export {
   updateExercisePositions,
 } from "./sessions";
 export type { ExerciseSession, ExerciseRecords, SourceSessionSet } from "./sessions";
-export type { E1RMTrendRow } from "./sessions";
+export type { E1RMTrendRow, WeeklyE1RMRow, SessionRPERow, SessionRatingRow } from "./sessions";
 
 export {
   addFoodEntry,

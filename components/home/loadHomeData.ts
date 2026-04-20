@@ -6,10 +6,17 @@ import {
   getMuscleRecoveryStatus, getTemplatePrimaryMuscles, getWeeklyVolume, getE1RMTrends,
   getTotalSessionCount, getTemplateDurationEstimates,
   getAppSetting, getWeeklyCompletedCount,
+  getWeeklyE1RMTrends, getRecentSessionRPEs, getRecentSessionRatings,
 } from "../../lib/db";
 import { computeStreak } from "../../lib/format";
 import { computeAllTemplateReadiness, hasWorkoutHistory } from "../../lib/recovery-readiness";
 import { generateInsight, type GoalInsightRow } from "../../lib/insights";
+import {
+  computeOverreachingScore,
+  parseDismissalState,
+  isDismissed,
+  type OverreachingResult,
+} from "../../lib/overreaching";
 import { getActiveGoals, getCurrentBestWeight, getCurrentBestReps } from "../../lib/db";
 import { getExerciseById } from "../../lib/db";
 
@@ -57,10 +64,29 @@ export async function loadHomeData() {
 
   const insight = generateInsight({ totalSessions, timestamps, e1rmTrends, weeklyVolume, goalInsights });
 
+  // Compute overreaching score (degrade gracefully — must not break home screen)
+  let overreachingResult: OverreachingResult | null = null;
+  try {
+    const now = Date.now();
+    const [weeklyE1RMData, sessionRPEData, sessionRatingData, deloadDismissalRaw] = await Promise.all([
+      getWeeklyE1RMTrends(),
+      getRecentSessionRPEs(),
+      getRecentSessionRatings(),
+      getAppSetting("deload_nudge_dismissal"),
+    ]);
+    const result = computeOverreachingScore(weeklyE1RMData, sessionRPEData, sessionRatingData, now);
+    const dismissalState = parseDismissalState(deloadDismissalRaw);
+    if (result.shouldNudge && !isDismissed(dismissalState, now)) {
+      overreachingResult = result;
+    }
+  } catch {
+    // Overreaching detection failed — degrade to no nudge
+  }
+
   // Build weekly goal progress (frequency goal fallback)
   const weeklyGoalProgress = await buildWeeklyGoalProgress(adh);
 
-  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, durationEstimates, weeklyGoalProgress };
+  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, overreachingResult, durationEstimates, weeklyGoalProgress };
 }
 
 export async function buildWeeklyGoalProgress(

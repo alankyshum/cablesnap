@@ -154,6 +154,10 @@ jest.mock('../../lib/db', () => ({
   getWeeklyVolume: jest.fn().mockResolvedValue([]),
   getE1RMTrends: jest.fn().mockResolvedValue([]),
   getTotalSessionCount: jest.fn().mockResolvedValue(0),
+  getWeeklyE1RMTrends: jest.fn().mockResolvedValue([]),
+  getRecentSessionRPEs: jest.fn().mockResolvedValue([]),
+  getRecentSessionRatings: jest.fn().mockResolvedValue([]),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
 }))
 
 const mockGetPrograms = jest.fn().mockResolvedValue([program1])
