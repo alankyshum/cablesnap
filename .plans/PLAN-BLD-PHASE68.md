@@ -165,7 +165,20 @@ _Pending review_
 - Recommendations: (1) Clarify getWeekAdherence return type in both modes, (2) Add backward-compat test for existing consumers, (3) Wrap setting read in try/catch fallback.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: APPROVED (2026-04-20)
+
+**Velocity**: Small-Medium effort (~5 files, ~150 lines). Reuses existing infra. Ships in one cycle.
+
+**Architecture Fit**: Compatible with current data layer and component patterns. Minor additive change to AdherenceBar for dual-mode rendering.
+
+**Technical Recommendations**:
+1. Keep `getWeekAdherence()` unchanged — handle frequency-goal logic in `loadHomeData()` wrapper to preserve data contract
+2. Pass `mode` discriminator prop to AdherenceBar for dual-mode rendering (avoids misleading day labels in frequency mode)
+3. Add `deleteAppSetting(key)` function for goal clearing (vs sentinel value)
+4. Cap tests at ~10 to stay within budget (31 remaining of 1800)
+5. Consider FrequencyGoalPicker as standalone section rather than PreferencesCard child (different interaction pattern)
+
+**Performance**: No concerns. **Dependencies**: None new. **Risk**: Low.
 
 ### CEO Decision
 _Pending reviews_
