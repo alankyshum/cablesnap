@@ -23,6 +23,9 @@
     "build:apk:cloud": "eas build -p android --profile preview",
     "install:apk": "adb install -r $(ls -t *.apk | head -1)",
     "fta": "fta-cli app lib components hooks --json",
+    "screenshots:raw": "playwright test e2e/screenshot-capture.spec.ts --project=store-pixel4 --project=store-fold7",
+    "screenshots:frame": "tsx scripts/generate-store-screenshots.ts",
+    "screenshots": "npm run screenshots:raw && npm run screenshots:frame",
     "prepare": "husky"
   },
   "dependencies": {
@@ -90,6 +93,7 @@
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.10",
+    "@types/sharp": "^0.31.1",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
     "drizzle-kit": "^0.31.10",
@@ -103,6 +107,7 @@
     "jest-expo": "~55.0.16",
     "lint-staged": "^16.4.0",
     "react-test-renderer": "19.2.0",
+    "sharp": "^0.34.5",
     "ts-jest": "^29.4.9",
     "typescript": "^5.9.2",
     "wait-on": "^9.0.5"

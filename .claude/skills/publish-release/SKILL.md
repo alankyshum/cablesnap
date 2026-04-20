@@ -154,6 +154,24 @@ To generate the change list, compare with the previous tag:
 git log --oneline PREV_TAG..vX.Y.Z
 ```
 
+## Step 6.5: Update Store Screenshots
+
+Generate fresh screenshots for F-Droid and README:
+
+```bash
+npm run screenshots
+```
+
+This captures all 5 tab screens at Pixel 4 and Fold 7 viewports, wraps them in device frames, and writes them to:
+- `fdroid/metadata/com.anomalyco.fitforge/en-US/phoneScreenshots/` (1-5.png for Pixel 4)
+- `assets/store-screenshots/` (both devices, descriptive names)
+
+Commit the updated screenshots if they changed:
+```bash
+git add fdroid/metadata/com.anomalyco.fitforge/en-US/phoneScreenshots/ assets/store-screenshots/
+git diff --cached --stat && git commit -m "chore: update store screenshots for vX.Y.Z"
+```
+
 ## Step 7: Build APK Locally
 
 Build the production APK on the local machine (Apple Silicon Mac):

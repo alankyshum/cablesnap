@@ -30,6 +30,14 @@ export default defineConfig({
       name: "desktop",
       use: { viewport: { width: 1280, height: 800 } },
     },
+    {
+      name: "store-pixel4",
+      use: { viewport: { width: 393, height: 844 } },
+    },
+    {
+      name: "store-fold7",
+      use: { viewport: { width: 712, height: 853 } },
+    },
   ],
 
   webServer: {

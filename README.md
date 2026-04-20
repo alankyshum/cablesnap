@@ -1,6 +1,6 @@
-# CableSnap 🔗💪
+# CableSnap 💪
 
-**Free, open-source workout tracker — optimized for cable machines, supports all major exercises.** Track your workouts, log sets, and crush PRs. No subscriptions, no ads, no paywalls.
+**Free, open-source workout & macro tracker.** A lightweight, responsive alternative to commercial fitness apps — no subscriptions, no ads, no paywalls.
 
 [<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://alankyshum.github.io/cablesnap/repo)
 
@@ -9,8 +9,8 @@
 
 ## Features
 
-- 🏋️ **Workout Tracking** — Log cable, barbell, dumbbell, bodyweight, and machine exercises
-- 🔍 **Exercise Library** — 100+ built-in exercises, optimized for cable machines
+- 🏋️ **Workout Tracking** — Log and track your workouts
+- 🔍 **Exercise Library** — Browse and search exercises
 - 🍎 **Nutrition Tracking** — Track macros and meals
 - 📊 **Progress Charts** — Visualize your fitness journey
 - 📱 **Responsive** — Works on phones and tablets
@@ -45,7 +45,7 @@ npm install
 
 ### Development Build (Recommended)
 
-CableSnap uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
+FitForge uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
 
 ```bash
 # Build the development client for iOS Simulator

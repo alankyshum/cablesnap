@@ -19,6 +19,7 @@ import * as path from "path";
 import {
   ALL_SCREENS,
   ONBOARDING_SCREENS,
+  TAB_SCREENS,
   type Screen,
   slugify,
 } from "./screen-registry";
@@ -96,6 +97,26 @@ test.describe("Screenshot Capture -- Onboarding", () => {
           `Screenshot skipped for ${screen.name} at ${viewport}: ${err instanceof Error ? err.message : err}`,
         );
       }
+    });
+  }
+});
+
+test.describe("Screenshot Capture -- Store", () => {
+  test.skip(
+    (_fixtures, testInfo) =>
+      !testInfo.project.name.startsWith("store-"),
+    "Only runs on store-* projects",
+  );
+
+  test.beforeEach(async ({ page }) => {
+    await skipOnboarding(page);
+  });
+
+  for (const screen of TAB_SCREENS) {
+    test(`store capture ${screen.name}`, async ({ page }, testInfo) => {
+      const viewport = testInfo.project.name;
+      const dateStamp = getDateStamp();
+      await captureScreen(page, screen, viewport, dateStamp);
     });
   }
 });
