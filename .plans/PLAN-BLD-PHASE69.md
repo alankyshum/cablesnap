@@ -126,7 +126,22 @@ Add a `MusclesWorkedCard` component to the session summary screen. The card rend
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: NEEDS REVISION**
+
+**Cognitive Load**: ✅ Zero additional cognitive load — view-only, no decisions, extends familiar MuscleMap visual vocabulary.
+
+**Interaction/Visual/Accessibility**: All good — view-only card, no touch targets needed, existing a11y patterns apply.
+
+**Critical Issue (Blocking)**:
+1. **Front-only view misses posterior muscles.** Plan scopes to "front view only" but this undermines the core purpose. Users doing rows, lat pulldowns, rear delt flies would see a near-empty diagram. The MuscleMap component already renders front AND back views side-by-side — use both. No extra complexity since the component handles it.
+
+**Major Issues (Should Fix)**:
+2. **Simplify text list.** "Primary: X · Secondary: Y" is redundant with the color-coded intensity on the diagram. A flat list ("Chest · Shoulders · Triceps") is more scannable.
+3. **Specify MuscleMap sizing.** Constrain to ~180-200dp height to prevent pushing SetsCard below the fold on small phones (375pt viewport).
+
+**Nice to Have**: muscle count in header ("Muscles Worked (6 groups)"), future tap-to-navigate to progress tab.
+
+_Reviewed 2026-04-20 by UX Designer_
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20T13:37Z)
