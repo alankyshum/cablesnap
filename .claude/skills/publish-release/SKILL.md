@@ -171,7 +171,8 @@ gh run view <RUN_ID> --log-failed
 Common failure causes:
 - `EXPO_TOKEN` secret expired -> regenerate at expo.dev
 - `FDROID_KEYSTORE` or `FDROID_KEYSTORE_PASS` missing -> check repo secrets
-- EAS build failure -> check build logs for dependency/compilation errors
+- Java 17 not available on runner -> ensure `actions/setup-java@v4` is in workflow
+- Local build OOM -> runner may need more memory; check build logs
 
 ## Step 8: Verify F-Droid Repo
 
