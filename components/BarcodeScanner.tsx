@@ -87,7 +87,7 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
             variant="body"
             style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 24, paddingHorizontal: 32 }}
           >
-            FitForge needs camera access to scan food barcodes. Please enable camera access in your device settings.
+            CableSnap needs camera access to scan food barcodes. Please enable camera access in your device settings.
           </Text>
           <Button
             variant="default"

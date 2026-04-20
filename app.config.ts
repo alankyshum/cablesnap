@@ -2,7 +2,7 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "FitForge",
+  name: "CableSnap",
   slug: "fitforge",
   version: "0.15.2",
   orientation: "default",
@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#FF643F", // eslint-disable-line no-restricted-syntax
+      backgroundColor: "#FCF5F2", // eslint-disable-line no-restricted-syntax
     },
     package: "com.anomalyco.fitforge",
     versionCode: 5,

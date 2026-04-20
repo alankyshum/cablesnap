@@ -1,6 +1,6 @@
-# FitForge 💪
+# CableSnap 🔗💪
 
-**Free, open-source workout & macro tracker.** A lightweight, responsive alternative to commercial fitness apps — no subscriptions, no ads, no paywalls.
+**Free, open-source cable machine workout tracker.** Built for the cable stack — track your cable exercises, log sets, and crush PRs. No subscriptions, no ads, no paywalls.
 
 [<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://alankyshum.github.io/fitforge/repo)
 
@@ -9,8 +9,8 @@
 
 ## Features
 
-- 🏋️ **Workout Tracking** — Log and track your workouts
-- 🔍 **Exercise Library** — Browse and search exercises
+- 🏋️ **Cable Workout Tracking** — Log and track your cable machine workouts
+- 🔍 **Exercise Library** — Browse and search cable exercises
 - 🍎 **Nutrition Tracking** — Track macros and meals
 - 📊 **Progress Charts** — Visualize your fitness journey
 - 📱 **Responsive** — Works on phones and tablets
@@ -45,7 +45,7 @@ npm install
 
 ### Development Build (Recommended)
 
-FitForge uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
+CableSnap uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
 
 ```bash
 # Build the development client for iOS Simulator
@@ -109,6 +109,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see the [LICENSE](LICENSE) file for details.
 
-**"FitForge"** is a trademark of Anomaly Co. Forks and redistributions must remove all FitForge branding (name, logo, icon) unless granted written permission.
+**"CableSnap"** is a trademark of Anomaly Co. Forks and redistributions must remove all CableSnap branding (name, logo, icon) unless granted written permission.
 
 For commercial licensing inquiries, contact the repository owner.

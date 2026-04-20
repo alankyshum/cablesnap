@@ -147,7 +147,7 @@ describe('Settings Screen Acceptance', () => {
 
   it('renders About section with app name and version', async () => {
     const { findByText } = renderScreen(<Settings />)
-    const about = await findByText(/FitForge v1\.0\.0/)
+    const about = await findByText(/CableSnap v1\.0\.0/)
     expect(about).toBeTruthy()
   })
 

@@ -61,7 +61,7 @@ describe('Onboarding Acceptance', () => {
   describe('Full beginner flow', () => {
     it('Welcome -> Setup -> Recommend -> saves settings and navigates', async () => {
       const welcome = renderScreen(<Welcome />)
-      fireEvent.press(welcome.getByLabelText('Get started with FitForge'))
+      fireEvent.press(welcome.getByLabelText('Get started with CableSnap'))
       expect(mockRouter.replace).toHaveBeenCalledWith('/onboarding/setup')
 
       welcome.unmount()

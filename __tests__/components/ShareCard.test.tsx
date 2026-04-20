@@ -35,10 +35,10 @@ describe('ShareCard', () => {
     expect(getByText('April 17, 2026')).toBeTruthy();
   });
 
-  it('renders FitForge branding', () => {
+  it('renders CableSnap branding', () => {
     const { getByText } = renderCard();
-    expect(getByText('FitForge')).toBeTruthy();
-    expect(getByText('fitforge.app')).toBeTruthy();
+    expect(getByText('CableSnap')).toBeTruthy();
+    expect(getByText('cablesnap.app')).toBeTruthy();
   });
 
   it('renders stats row with duration, sets, and volume', () => {
@@ -107,7 +107,7 @@ describe('ShareCard', () => {
 
   it('renders with dark theme', () => {
     const { getByText } = renderCard();
-    expect(getByText('FitForge')).toBeTruthy();
+    expect(getByText('CableSnap')).toBeTruthy();
   });
 
   it('renders compact card with minimal data', () => {

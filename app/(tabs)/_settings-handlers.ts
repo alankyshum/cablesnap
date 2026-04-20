@@ -59,7 +59,7 @@ export async function handleExport({ toast, setLoading, setExportProgress }: Dep
               await file.write(json);
               await Sharing.shareAsync(file.uri, {
                 mimeType: 'application/json',
-                dialogTitle: 'Export FitForge Data',
+                dialogTitle: 'Export CableSnap Data',
               });
               toast.success('Data exported successfully');
             } catch {
@@ -102,7 +102,7 @@ export async function handleImport({ toast, setLoading, router }: Deps) {
     try {
       data = JSON.parse(raw);
     } catch {
-      Alert.alert('Invalid File', "This file doesn't appear to be a valid FitForge backup.");
+      Alert.alert('Invalid File', "This file doesn't appear to be a valid CableSnap backup.");
       setLoading(false);
       return;
     }

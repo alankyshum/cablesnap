@@ -127,8 +127,8 @@ export default function Settings() {
               About
             </Text>
             <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-              FitForge v{Constants.expoConfig?.version ?? '0.0.0'}
-              {'\n'}Free & open-source workout tracker.
+              CableSnap v{Constants.expoConfig?.version ?? '0.0.0'}
+              {'\n'}Free & open-source cable machine workout tracker.
             </Text>
             <Text
               variant="body"

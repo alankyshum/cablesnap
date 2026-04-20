@@ -6,15 +6,16 @@ AuthorWebSite: https://github.com/alankyshum
 SourceCode: https://github.com/alankyshum/fitforge
 IssueTracker: https://github.com/alankyshum/fitforge/issues
 
-AutoName: FitForge
-Summary: Workout tracking, nutrition logging, and progress analytics
+AutoName: CableSnap
+Summary: Cable machine workout tracking, nutrition logging, and progress analytics
 Description: |
-  FitForge is a local-first fitness app for tracking workouts,
-  nutrition, and body measurements. All data stays on your device.
+  CableSnap is a local-first fitness app focused on cable machine workouts.
+  Track your cable exercises, nutrition, and body measurements. All data
+  stays on your device.
 
   Features:
-  - Workout logging with sets, reps, weight, and RPE
-  - Exercise library with 100+ built-in exercises
+  - Cable workout logging with sets, reps, weight, and RPE
+  - Exercise library with 100+ built-in cable exercises
   - Workout templates and multi-day programs
   - Nutrition tracking with macro targets
   - Progress charts and 1RM tracking

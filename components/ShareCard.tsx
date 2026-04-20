@@ -79,7 +79,7 @@ export default function ShareCard(props: ShareCardProps) {
         <Text
           style={[cardStyles.brandText, { color: colors.primary }]}
         >
-          FitForge
+          CableSnap
         </Text>
       </View>
 
@@ -125,7 +125,7 @@ export default function ShareCard(props: ShareCardProps) {
         <Text
           style={[cardStyles.footerText, { color: colors.onSurfaceVariant }]}
         >
-          fitforge.app
+          cablesnap.app
         </Text>
       </View>
     </View>

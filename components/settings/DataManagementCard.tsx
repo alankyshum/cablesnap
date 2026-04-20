@@ -60,7 +60,7 @@ export default function DataManagementCard({
             accessibilityLabel="Import data"
             accessibilityRole="button"
           >
-            Import FitForge Backup
+            Import CableSnap Backup
           </Button>
         </View>
         {exportProgress && (
@@ -77,7 +77,7 @@ export default function DataManagementCard({
           variant="caption"
           style={{ color: colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}
         >
-          Export your complete FitForge data as a JSON backup file, or restore from a previous
+          Export your complete CableSnap data as a JSON backup file, or restore from a previous
           backup. Duplicates are skipped.
         </Text>
       </CardContent>

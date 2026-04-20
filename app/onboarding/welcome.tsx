@@ -19,10 +19,10 @@ export default function Welcome() {
           style={styles.icon}
         />
         <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
-          Welcome to FitForge
+          Welcome to CableSnap
         </Text>
         <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-          Your free workout & macro tracker
+          Your free cable machine workout tracker
         </Text>
       </View>
       <View style={styles.footer}>
@@ -30,7 +30,7 @@ export default function Welcome() {
           variant="default"
           onPress={() => router.replace("/onboarding/setup")}
           style={styles.btn}
-          accessibilityLabel="Get started with FitForge"
+          accessibilityLabel="Get started with CableSnap"
           label="Get Started"
         />
       </View>

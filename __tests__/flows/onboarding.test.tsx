@@ -65,25 +65,25 @@ describe('Onboarding Flow', () => {
   describe('Welcome screen', () => {
     it('renders welcome text and subtitle', () => {
       const { getByText } = renderScreen(<Welcome />)
-      expect(getByText('Welcome to FitForge')).toBeTruthy()
-      expect(getByText('Your free workout & macro tracker')).toBeTruthy()
+      expect(getByText('Welcome to CableSnap')).toBeTruthy()
+      expect(getByText('Your free cable machine workout tracker')).toBeTruthy()
     })
 
     it('renders Get Started button with a11y label', () => {
       const { getByLabelText } = renderScreen(<Welcome />)
-      expect(getByLabelText('Get started with FitForge')).toBeTruthy()
+      expect(getByLabelText('Get started with CableSnap')).toBeTruthy()
     })
 
     it('pressing Get Started navigates to setup', () => {
       const { getByLabelText } = renderScreen(<Welcome />)
-      fireEvent.press(getByLabelText('Get started with FitForge'))
+      fireEvent.press(getByLabelText('Get started with CableSnap'))
       expect(mockRouter.replace).toHaveBeenCalledWith('/onboarding/setup')
     })
 
     it('renders without any DB dependency', () => {
       // Welcome screen uses no DB functions — renders purely from props/theme
       const { getByText } = renderScreen(<Welcome />)
-      expect(getByText('Welcome to FitForge')).toBeTruthy()
+      expect(getByText('Welcome to CableSnap')).toBeTruthy()
     })
   })
 

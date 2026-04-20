@@ -36,7 +36,7 @@ export function setupNativeMocks() {
 
   jest.mock('expo-constants', () => ({
     default: {
-      expoConfig: { name: 'FitForge', version: '1.0.0' },
+      expoConfig: { name: 'CableSnap', version: '1.0.0' },
       executionEnvironment: 'storeClient',
     },
   }))
@@ -82,7 +82,7 @@ export function mockExpoRouter(router: ReturnType<typeof createMockRouter>, para
       useEffect(() => {
         const cleanup = cb()
         if (typeof cleanup === 'function') return cleanup
-      }, [])
+      }, [cb])
     },
     Link: 'Link',
     Stack: { Screen: 'Screen' },
