@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 /**
  * BLD-57 / BLD-318: Built-in Food Database acceptance tests.
  * Tests search, macro display, serving multipliers, favorites toggle,

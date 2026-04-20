@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 import React from 'react'
 import { render, act, fireEvent, waitFor } from '@testing-library/react-native'
 import { ToastProvider, useToast, ToastVariant } from '../../components/ui/bna-toast'

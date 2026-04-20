@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 /**
  * BLD-248 / BLD-318: Online Food Search acceptance tests.
  * Tests online search flow, dedup+favorite, and error states

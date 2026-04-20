@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 /**
  * Cross-screen accessibility compliance audit.
  * Verifies all interactive elements have accessible labels,

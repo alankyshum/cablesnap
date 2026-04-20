@@ -1,5 +1,3 @@
-jest.setTimeout(10000)
-
 jest.mock('expo-router', () => {
   const RealReact = require('react')
   return {
