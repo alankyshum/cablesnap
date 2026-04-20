@@ -168,3 +168,84 @@ describe("StatsRow with WeeklyGoalProgress", () => {
     expect(getByLabelText("2 workouts this week")).toBeTruthy();
   });
 });
+
+// --- buildWeeklyGoalProgress unit tests ---
+
+jest.mock("../../lib/db", () => ({
+  getAppSetting: jest.fn(),
+  getWeeklyCompletedCount: jest.fn(),
+}));
+
+import { buildWeeklyGoalProgress } from "../../components/home/loadHomeData";
+import { getAppSetting, getWeeklyCompletedCount } from "../../lib/db";
+
+const mockGetAppSetting = getAppSetting as jest.MockedFunction<typeof getAppSetting>;
+const mockGetWeeklyCompletedCount = getWeeklyCompletedCount as jest.MockedFunction<typeof getWeeklyCompletedCount>;
+
+describe("buildWeeklyGoalProgress priority rules", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const noSchedule = Array.from({ length: 7 }, (_, i) => ({ day: i, scheduled: false, completed: false }));
+
+  it("Priority 1: program schedule takes precedence over frequency goal", async () => {
+    const adh = noSchedule.map((d, i) => ({ ...d, scheduled: i < 3, completed: i === 0 }));
+    mockGetAppSetting.mockResolvedValue("5"); // goal set but should be ignored
+    const result = await buildWeeklyGoalProgress(adh);
+    expect(result.mode).toBe("schedule");
+    expect(result.targetCount).toBe(3);
+    expect(result.completedCount).toBe(1);
+    expect(mockGetAppSetting).not.toHaveBeenCalled();
+  });
+
+  it("Priority 2: frequency goal when no schedule", async () => {
+    mockGetAppSetting.mockResolvedValue("4");
+    mockGetWeeklyCompletedCount.mockResolvedValue(2);
+    const result = await buildWeeklyGoalProgress(noSchedule);
+    expect(result.mode).toBe("frequency");
+    expect(result.targetCount).toBe(4);
+    expect(result.completedCount).toBe(2);
+    expect(result.slots).toHaveLength(4);
+    expect(result.slots.filter((s) => s.completed)).toHaveLength(2);
+  });
+
+  it("Priority 3: hidden when no schedule and no goal", async () => {
+    mockGetAppSetting.mockResolvedValue(null);
+    const result = await buildWeeklyGoalProgress(noSchedule);
+    expect(result.mode).toBe("hidden");
+    expect(result.slots).toHaveLength(0);
+  });
+
+  it("handles invalid goal value gracefully", async () => {
+    mockGetAppSetting.mockResolvedValue("abc");
+    const result = await buildWeeklyGoalProgress(noSchedule);
+    expect(result.mode).toBe("hidden");
+  });
+
+  it("handles out-of-range goal (0, 8) as hidden", async () => {
+    mockGetAppSetting.mockResolvedValue("0");
+    let result = await buildWeeklyGoalProgress(noSchedule);
+    expect(result.mode).toBe("hidden");
+
+    mockGetAppSetting.mockResolvedValue("8");
+    result = await buildWeeklyGoalProgress(noSchedule);
+    expect(result.mode).toBe("hidden");
+  });
+
+  it("over-goal: completedCount exceeds target but slots capped", async () => {
+    mockGetAppSetting.mockResolvedValue("3");
+    mockGetWeeklyCompletedCount.mockResolvedValue(5);
+    const result = await buildWeeklyGoalProgress(noSchedule);
+    expect(result.mode).toBe("frequency");
+    expect(result.completedCount).toBe(5);
+    expect(result.targetCount).toBe(3);
+    expect(result.slots.filter((s) => s.completed)).toHaveLength(3); // capped at goal
+  });
+
+  it("degrades gracefully when getAppSetting throws", async () => {
+    mockGetAppSetting.mockRejectedValue(new Error("DB error"));
+    const result = await buildWeeklyGoalProgress(noSchedule);
+    expect(result.mode).toBe("hidden");
+  });
+});

@@ -32,7 +32,7 @@ export default function AdherenceBar({ colors, progress }: Props) {
           data={slots}
           horizontal
           scrollEnabled={false}
-          keyExtractor={(_, i) => String(i)}
+          keyExtractor={(_, i) => `slot-${i}-${slots.length}`}
           renderItem={({ item: a, index: i }) => (
             <View
               style={[

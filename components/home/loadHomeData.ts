@@ -63,7 +63,7 @@ export async function loadHomeData() {
   return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, durationEstimates, weeklyGoalProgress };
 }
 
-async function buildWeeklyGoalProgress(
+export async function buildWeeklyGoalProgress(
   adh: { day: number; scheduled: boolean; completed: boolean }[],
 ): Promise<WeeklyGoalProgress> {
   const scheduledDays = adh.filter((a) => a.scheduled);
