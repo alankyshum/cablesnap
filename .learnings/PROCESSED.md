@@ -294,3 +294,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-456 | LEARNINGS_EXTRACTED | 2026-04-20 |
 | BLD-457 | LEARNINGS_EXTRACTED | 2026-04-20 |
 | BLD-458 | NO_LEARNINGS | 2026-04-20 |
+| BLD-459 | LEARNINGS_EXTRACTED | 2026-04-20 |
