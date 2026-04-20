@@ -873,3 +873,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: When a new feature needs broader data from an existing batch query, widen the query at the DB layer (remove restrictive filters, add new fields) and push filtering to each consumer. This lets multiple consumers derive different views from the same data source — one consumer pre-filters to completed sets for prefill, another uses the full set to compute progression flags — without duplicating queries or breaking existing contracts.
 **Action**: When a new feature needs data that an existing query discards (e.g., filtered rows, missing columns), widen the DB function's return type and remove the restrictive filter. Add the filter at each existing call site to preserve behavior. Document why the query returns the wider dataset. Do NOT create a second near-duplicate query.
 **Tags**: data-pipeline, batch-query, backward-compatibility, query-widening, pre-filter, feature-addition
+
+### ErrorBoundary Around Replacement UI Components to Prevent Stable Feature Regression
+**Source**: BLD-460 — Overreaching Detection & Deload Nudge (Phase 76)
+**Date**: 2026-04-20
+**Context**: The DeloadNudgeCard conditionally replaces InsightCard on the home screen when active. If the new card throws during render, it would crash the home screen and also hide the previously working InsightCard.
+**Learning**: When a new UI component conditionally REPLACES (not supplements) a stable existing component, wrap the entire conditional block in an ErrorBoundary. This ensures that if the new component crashes, the error is caught and the screen remains functional. The existing component's availability depends on the new component's correctness — an ErrorBoundary decouples this risk.
+**Action**: When adding a component that replaces an existing one via conditional rendering (`showNew ? <NewCard /> : <ExistingCard />`), wrap both branches in a single ErrorBoundary. This prevents new feature crashes from hiding the fallback component.
+**Tags**: errorboundary, defensive-programming, ui-replacement, conditional-rendering, regression-prevention, home-screen
+
+### Multi-Signal Analytics Feature Architecture — Pure Module + loadHomeData Integration
+**Source**: BLD-460 — Overreaching Detection & Deload Nudge (Phase 76)
+**Date**: 2026-04-20
+**Context**: Implementing overreaching detection required combining 3 data signals (e1RM trends, RPE trends, session ratings) into a composite score, then conditionally rendering a nudge card on the home screen that replaces the InsightCard.
+**Learning**: CableSnap's analytics feature architecture follows a four-layer pipeline: (1) dedicated DB query functions per signal, (2) a pure computation module (`lib/<feature>.ts`) with zero side effects that accepts pre-fetched data, (3) integration into `loadHomeData.ts` as a separate try/catch block within the second `Promise.all` batch, (4) conditional UI rendering with ErrorBoundary wrapping. The pure module pattern (matching `lib/insights.ts` and `lib/achievements.ts`) enables exhaustive unit testing without DB mocks.
+**Action**: When building a new analytics feature for the home screen, create `lib/<feature>.ts` with pure functions, add dedicated DB queries (do not repurpose existing ones), integrate into loadHomeData with its own try/catch, and wrap the UI component in ErrorBoundary. Use the overreaching implementation as the reference architecture.
+**Tags**: architecture, analytics, pure-functions, loadhomedata, errorboundary, multi-signal, home-screen, feature-pattern

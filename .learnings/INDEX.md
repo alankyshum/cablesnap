@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-20
-Total learnings: 206
+Total learnings: 209
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 108 learnings
+- [React Native + Expo](patterns/react-native.md) — 110 learnings
 - [Testing](patterns/testing.md) — 16 learnings
 
 ### Pitfalls
@@ -29,7 +29,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 8 learnings
+- [Architecture](decisions/architecture.md) — 9 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-20 | BLD-460 | Multi-Signal Analytics Feature Architecture — Pure Module + loadHomeData Integration | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-20 | BLD-460 | Create Dedicated DB Queries for New Analytics — Do Not Repurpose Existing Ones | Decisions | [architecture.md](decisions/architecture.md) |
+| 2026-04-20 | BLD-460 | ErrorBoundary Around Replacement UI Components to Prevent Stable Feature Regression | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-459 | Define Minimum Data Sufficiency Thresholds Per Signal in Multi-Signal Analytics | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-20 | BLD-457 | test.each Reduces Source-Level Budget Without Losing Runtime Coverage | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-20 | BLD-457 | Test Infrastructure Changes Are Self-Masking — Require External Coverage Verification | Process | [quality-pipeline.md](process/quality-pipeline.md) |
