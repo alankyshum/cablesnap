@@ -3,7 +3,7 @@
 **Issue**: BLD-TBD (Phase 65)
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: IN_REVIEW (revised per UX Designer + QD feedback)
 
 ## Problem Statement
 
@@ -123,13 +123,16 @@ const DEFAULT_LANDMARKS: Record<MuscleGroup, VolumeLandmarks> = {
 
 ### Acceptance Criteria
 
-- [ ] Given the user opens Progress > Muscles, When they view the bar chart, Then each muscle bar is color-coded: muted below MEV, primary in MEV-MRV range, warning/error above MRV
-- [ ] Given the user views the chart, When muscle-specific landmarks differ (e.g., back MRV=25 vs calves MRV=16), Then the MEV/MRV dotted lines are positioned correctly per bar (not flat across all bars)
-- [ ] Given the user taps "Customize", When the landmarks sheet opens, Then each muscle group shows current MEV and MRV values with numeric inputs
+- [ ] Given the user opens Progress > Muscles, When they view the bar chart, Then each muscle bar is color-coded: surfaceVariant+dashed below MEV, solid primary in MEV-MRV range, amber/warning above MRV
+- [ ] Given the user views the chart, Then no global MEV/MRV vertical lines are shown (color-coding communicates zones); MEV/MRV values are visible as text when a muscle row is tapped
+- [ ] Given the user taps "Customize", When the landmarks sheet opens, Then muscle groups are shown as a tappable list with current MEV/MRV values displayed per row
+- [ ] Given the user taps a muscle in the customize sheet, When the row expands (accordion), Then MEV and MRV numeric steppers and a Reset button are shown (max 3 interactive elements)
 - [ ] Given the user changes a muscle's MEV to 12, When they close the sheet, Then the chart immediately reflects the new landmark and persists across app restarts
 - [ ] Given the user taps "Reset" on a customized muscle, Then it reverts to the evidence-based default
 - [ ] Given a muscle has 0 sets this week, When viewing the chart, Then the bar is absent or minimal and the status shows "below MEV"
 - [ ] Given accessibility is enabled, When focusing on a muscle bar, Then VoiceOver reads "[Muscle]: [N] sets, [volume status]"
+- [ ] Given the app_settings contains malformed JSON for volume_landmarks_custom, When the volume screen loads, Then it falls back to defaults without crashing (try/catch around JSON.parse)
+- [ ] Given the chart calculates maxSets for the x-axis, Then it uses the maximum MRV across all displayed muscles (not a flat 20)
 - [ ] PR passes all existing tests with no regressions
 - [ ] No new lint warnings or TypeScript errors
 
@@ -140,9 +143,12 @@ const DEFAULT_LANDMARKS: Record<MuscleGroup, VolumeLandmarks> = {
 | User has no workout data for the week | Chart shows empty state, no landmarks needed |
 | User sets MEV > MRV (invalid) | Prevent: MEV input capped at MRV-1, MRV input floored at MEV+1 |
 | User sets MEV=0, MRV=0 | Allow MEV=0 (some muscles don't need direct work). MRV minimum is 1 |
+| User sets MEV = MRV | Allow it — show hint "Your optimal zone is very narrow" |
 | "full_body" muscle group | Use generic defaults (10/20), note that full_body is an aggregate category |
-| 50+ sets for a muscle (extreme) | Bar extends beyond MRV line, colored as warning, no visual break |
+| 50+ sets for a muscle (extreme) | Bar extends beyond chart, colored as amber/warning, no visual break |
 | User has customized landmarks then app updates defaults | User customizations preserved, only non-customized muscles get new defaults |
+| Malformed JSON in app_settings | JSON.parse wrapped in try/catch, falls back to all defaults without crash |
+| MuscleGroup enum changes in future | Partial<Record> pattern: unknown stored keys silently ignored, new groups get defaults |
 
 ### Risk Assessment
 
