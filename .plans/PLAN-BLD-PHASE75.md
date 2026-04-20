@@ -90,7 +90,18 @@ Move `jest.setTimeout(10000)` from individual files to `jest.config.js: testTime
 _N/A — no user-facing changes_
 
 ### Quality Director (Release Safety)
-_Pending review_
+**Verdict: APPROVED with mandatory safety gates** (2026-04-20)
+
+Overall risk: MEDIUM-HIGH. Test infrastructure changes are self-masking — broken tests can't catch their own breakage.
+
+**Mandatory gates (must add to acceptance criteria before implementation):**
+- SAFETY-01 (Critical): `npx jest --coverage` diff before/after must show zero decrease in line/branch coverage
+- SAFETY-02 (Critical): Phase B suite merging must document WHICH suites overlap and WHY, evidenced by identical code paths
+- SAFETY-03 (Major): `scripts/audit-tests.sh` must still pass (budget ≤1800)
+
+**Recommendations:**
+- Separate PRs for Phase A vs Phase B (isolate the risky suite merging)
+- Each test.each entry should be independently runnable via `jest --testNamePattern`
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
