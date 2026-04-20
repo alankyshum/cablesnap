@@ -64,7 +64,7 @@ export default function Workouts() {
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}>
       <StatsRow colors={colors} streak={data?.streak ?? 0} weekDone={weekDone} scheduled={scheduled} prCount={(data?.recentPRs ?? []).length} />
       {insight && !insightDismissed && (
-        <InsightCard colors={colors} insight={insight} onPress={() => { if (insight.type === "strength" && insight.exerciseId) router.push(`/exercise/${insight.exerciseId}`); }} onDismiss={() => setInsightDismissed(true)} />
+        <InsightCard colors={colors} insight={insight} onPress={() => { if ((insight.type === "strength" || insight.type === "goal_progress") && insight.exerciseId) router.push(`/exercise/${insight.exerciseId}`); }} onDismiss={() => setInsightDismissed(true)} />
       )}
       <HomeBanners colors={colors} active={data?.active ?? null} todaySchedule={todaySchedule} todayDone={data?.todayDone ?? false} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
       <AdherenceBar colors={colors} adherence={adherence} />

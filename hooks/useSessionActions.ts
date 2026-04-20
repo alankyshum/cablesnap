@@ -19,6 +19,9 @@ import {
   updateSetDuration,
   checkSetPR,
   updateExercisePositions,
+  getGoalForExercise,
+  achieveGoal,
+  getCurrentBestWeight,
 } from "../lib/db";
 import { bumpQueryVersion } from "../lib/query";
 import {
@@ -30,6 +33,23 @@ import type { TrainingMode } from "../lib/types";
 import { formatTime } from "../lib/format";
 import { confirmAction } from "../lib/confirm";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
+
+/** Check if completing a set achieves a strength goal. Non-throwing. */
+async function checkGoalAchievement(exerciseId: string): Promise<boolean> {
+  try {
+    const goal = await getGoalForExercise(exerciseId);
+    if (goal?.target_weight != null) {
+      const best = await getCurrentBestWeight(exerciseId);
+      if (best != null && best >= goal.target_weight) {
+        await achieveGoal(goal.id);
+        return true;
+      }
+    }
+  } catch {
+    // Goal check must never block PR celebration
+  }
+  return false;
+}
 
 type Params = {
   id: string | undefined;
@@ -43,7 +63,7 @@ type Params = {
   session: { started_at: number; name: string } | null;
   showToast: (msg: string) => void;
   showError: (msg: string) => void;
-  triggerPR?: (exerciseName: string) => void;
+  triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
 };
 
 export function useSessionActions({
@@ -138,7 +158,8 @@ export function useSessionActions({
           const isPR = await checkSetPR(set.exercise_id, set.weight, id);
           if (isPR) {
             const group = groups.find((g) => g.exercise_id === set.exercise_id);
-            triggerPR(group?.name ?? "exercise");
+            const goalAchieved = await checkGoalAchievement(set.exercise_id);
+            triggerPR(group?.name ?? "exercise", goalAchieved);
             updateGroupSet(set.id, { is_pr: true });
           }
         } catch {

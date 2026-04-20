@@ -139,6 +139,16 @@ describe("createGoal", () => {
 
     expect(r1.id).not.toBe(r2.id);
   });
+
+  it("throws when an active goal already exists for the exercise", async () => {
+    await createGoal({ exerciseId: "ex-1", targetWeight: 100 });
+
+    // Simulate that getGoalForExercise now finds the first goal
+    mockDrizzleGetResult = { id: "mock-id", exercise_id: "ex-1", target_weight: 100, achieved_at: null };
+
+    await expect(createGoal({ exerciseId: "ex-1", targetWeight: 120 }))
+      .rejects.toThrow("An active goal already exists for this exercise");
+  });
 });
 
 describe("getGoalForExercise", () => {

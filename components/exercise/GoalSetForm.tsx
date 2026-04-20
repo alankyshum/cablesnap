@@ -88,7 +88,8 @@ export default function GoalSetForm({
     const opts: { label: string; value: string | null }[] = [{ label: "No deadline", value: null }];
     const now = new Date();
     for (let i = 1; i <= 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      // Last day of the target month (day 0 of next month = last day of current month)
+      const d = new Date(now.getFullYear(), now.getMonth() + i + 1, 0);
       const label = d.toLocaleDateString(undefined, { year: "numeric", month: "short" });
       opts.push({ label, value: d.toISOString().slice(0, 10) });
     }

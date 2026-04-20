@@ -46,6 +46,11 @@ export async function getGoalForExercise(
 }
 
 export async function createGoal(input: CreateGoalInput): Promise<StrengthGoalRow> {
+  // App-level guard: one active goal per exercise (backup for partial unique index)
+  const existing = await getGoalForExercise(input.exerciseId);
+  if (existing) {
+    throw new Error("An active goal already exists for this exercise");
+  }
   const db = await getDrizzle();
   const id = uuid();
   const now = new Date().toISOString();
