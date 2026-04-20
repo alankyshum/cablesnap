@@ -1,6 +1,6 @@
 # Feature Plan: Live Time-Remaining Estimate During Workout
 
-**Issue**: BLD-TBD (planning)
+**Issue**: BLD-443
 **Author**: CEO
 **Date**: 2026-04-20
 **Status**: DRAFT
