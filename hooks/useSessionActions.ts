@@ -143,50 +143,59 @@ export function useSessionActions({
     }
   }, [updateGroupSet]);
 
+  /** Handle superset next-hint or rest timer for linked exercises. */
+  const handleLinkedRest = useCallback(async (set: SetWithMeta) => {
+    const linked = groups.filter((g) => g.link_id === set.link_id);
+    const idx = linked.findIndex((g) => g.exercise_id === set.exercise_id);
+    const next = idx >= 0 && idx < linked.length - 1 ? linked[idx + 1] : null;
+
+    if (next) {
+      setNextHint(`Next: ${next.name}`);
+      AccessibilityInfo.announceForAccessibility(`Next: ${next.name}`);
+      if (hintTimer.current) clearTimeout(hintTimer.current);
+      hintTimer.current = setTimeout(() => setNextHint(null), 1500);
+    } else {
+      setNextHint(null);
+      const secs = await getRestSecondsForLink(id!, set.link_id!);
+      startRestWithDuration(secs);
+    }
+  }, [groups, id, startRestWithDuration]);
+
   const handleCheck = useCallback(async (set: SetWithMeta) => {
     if (set.completed) {
       updateGroupSet(set.id, { completed: false, completed_at: null });
       await uncompleteSet(set.id);
-    } else {
-      const now = Date.now();
-      updateGroupSet(set.id, { completed: true, completed_at: now });
-      await completeSet(set.id);
+      return;
+    }
 
-      // Live PR detection (non-blocking — errors never prevent set completion)
-      if (set.set_type !== 'warmup' && set.weight && set.weight > 0 && id && triggerPR) {
-        try {
-          const isPR = await checkSetPR(set.exercise_id, set.weight, id);
-          if (isPR) {
-            const group = groups.find((g) => g.exercise_id === set.exercise_id);
-            const goalAchieved = await checkGoalAchievement(set.exercise_id);
-            triggerPR(group?.name ?? "exercise", goalAchieved);
-            updateGroupSet(set.id, { is_pr: true });
-          }
-        } catch {
-          // PR detection must never block set completion
+    const now = Date.now();
+    updateGroupSet(set.id, { completed: true, completed_at: now });
+    await completeSet(set.id);
+
+    // Live PR detection (non-blocking — errors never prevent set completion)
+    if (set.set_type !== 'warmup' && set.weight && set.weight > 0 && id && triggerPR) {
+      try {
+        const isPR = await checkSetPR(set.exercise_id, set.weight, id);
+        if (isPR) {
+          const group = groups.find((g) => g.exercise_id === set.exercise_id);
+          const goalAchieved = await checkGoalAchievement(set.exercise_id);
+          triggerPR(group?.name ?? "exercise", goalAchieved);
+          updateGroupSet(set.id, { is_pr: true });
         }
-      }
-
-      if (set.link_id) {
-        const linked = groups.filter((g) => g.link_id === set.link_id);
-        const idx = linked.findIndex((g) => g.exercise_id === set.exercise_id);
-        const next = idx >= 0 && idx < linked.length - 1 ? linked[idx + 1] : null;
-
-        if (next) {
-          setNextHint(`Next: ${next.name}`);
-          AccessibilityInfo.announceForAccessibility(`Next: ${next.name}`);
-          if (hintTimer.current) clearTimeout(hintTimer.current);
-          hintTimer.current = setTimeout(() => setNextHint(null), 1500);
-        } else {
-          setNextHint(null);
-          const secs = await getRestSecondsForLink(id!, set.link_id);
-          startRestWithDuration(secs);
-        }
-      } else {
-        startRest(set.exercise_id);
+      } catch {
+        // PR detection must never block set completion
       }
     }
-  }, [updateGroupSet, groups, id, startRest, startRestWithDuration, triggerPR]);
+
+    // Warmup sets skip rest timer — users don't need rest between warmup sets
+    if (set.set_type === 'warmup') return;
+
+    if (set.link_id) {
+      await handleLinkedRest(set);
+    } else {
+      startRest(set.exercise_id);
+    }
+  }, [updateGroupSet, groups, id, startRest, startRestWithDuration, triggerPR, handleLinkedRest]);
 
   const handleAddSet = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
