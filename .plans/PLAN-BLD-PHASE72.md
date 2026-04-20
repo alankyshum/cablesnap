@@ -39,8 +39,11 @@ Make the inline previous performance text (Phase 71) tappable. When tapped, fill
 6. User can edit any pre-filled value before or after checking the set
 
 **Visual changes:**
-- Add a small tap indicator to the previous performance text (subtle underline or copy icon)
+- Previous performance text rendered in `colors.primary` (instead of `onSurfaceVariant`) to signal tappability
+- Optional small `arrow-collapse-down` icon (14px, `colors.primary`) after the text as visual affordance
 - Text gets `accessibilityRole="button"` and hint "Tap to fill sets from last session"
+- Subtle press animation: `opacity: 0.7` on press for visual feedback (including no-op cases)
+- Light haptic feedback (`Haptics.impactAsync(ImpactFeedbackStyle.Light)`) on successful prefill
 
 **Set mapping logic:**
 - Previous set 1 → Current set 1, Previous set 2 → Current set 2, etc.
@@ -49,13 +52,16 @@ Make the inline previous performance text (Phase 71) tappable. When tapped, fill
 - Only fill weight and reps (not RPE, notes, or training mode)
 - Only fill sets that are NOT yet completed (don't overwrite completed sets)
 - Only fill sets where weight AND reps are both null/empty (don't overwrite user-entered values)
+- For bodyweight exercises: fill reps only, set weight to `null` (NOT `0`) to avoid displaying "0kg"
 - For duration-based exercises: fill duration_seconds instead of weight/reps
 
 **Edge cases handled in UX:**
 - If no previous session exists: the text doesn't appear (Phase 71 behavior), so nothing to tap
-- If all sets are already completed: toast "All sets already completed" (no-op)
+- If all sets are already completed: toast "All sets already completed" (no-op, subtle press animation still fires)
 - If all sets already have values: toast "Sets already have values" (no-op)
 - Accidental tap: user can clear individual values by selecting the field and deleting
+- Toast shows actual count: "Filled N sets from last session"
+- `AccessibilityInfo.announceForAccessibility()` called after prefill for screen reader users
 
 ### Technical Approach
 
@@ -78,9 +84,11 @@ No schema changes needed. Previous set data is already fetched via `getPreviousS
      ```
 
 3. **`components/session/GroupCardHeader.tsx`**
-   - Wrap the previous performance `<Text>` in a `<Pressable>` with `onPress` callback
-   - Add accessibility role and hint
-   - Add subtle visual affordance (e.g., small copy icon from lucide-react-native)
+   - **CRITICAL (UX Designer feedback)**: Extract the previous performance text OUT of the existing long-press Pressable (line 45) to avoid nested gesture conflicts. Render as a SIBLING `<Pressable>` below the exercise name.
+   - Apply `hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}` and `minHeight: 36` to meet 48dp touch target minimum
+   - Use `colors.primary` text color + optional `arrow-collapse-down` icon (14px) as visual affordance (NOT a copy icon)
+   - Add `accessibilityRole="button"`, `accessibilityHint="Tap to fill sets from last session"`
+   - Add subtle press animation (`opacity: 0.7`) via `style` on press state
 
 4. **`hooks/useSessionActions.ts`** (or `components/session/ExerciseGroupCard.tsx`)
    - Add `handlePrefillFromPrevious(exerciseId: string)` callback
@@ -124,7 +132,13 @@ export function computePrefillSets(
 - [ ] Given current session has more sets than previous, When user taps prefill, Then extra sets remain empty
 - [ ] Given no previous session exists, Then the previous performance text does not appear (existing behavior)
 - [ ] Previous performance text has accessibilityRole="button" and hint "Tap to fill sets from last session"
-- [ ] Toast "Filled from last session" appears after successful prefill
+- [ ] Previous performance `<Pressable>` is a SIBLING of (not nested inside) the exercise name long-press Pressable
+- [ ] Touch target meets 48dp minimum via hitSlop and minHeight
+- [ ] Previous performance text uses `colors.primary` color (not `onSurfaceVariant`)
+- [ ] Toast "Filled N sets from last session" appears after successful prefill (with actual count)
+- [ ] Light haptic feedback fires on successful prefill
+- [ ] `AccessibilityInfo.announceForAccessibility()` called after prefill
+- [ ] Bodyweight exercises prefill weight as null (not 0)
 - [ ] No regressions on existing session header or exercise card behavior
 - [ ] No new lint warnings or TS errors
 - [ ] PR passes all tests
@@ -138,7 +152,7 @@ export function computePrefillSets(
 | All sets have values | Toast "Sets already have values", no-op |
 | More current sets than previous | Extra sets stay empty |
 | Fewer current sets than previous | Extra previous data ignored |
-| Bodyweight exercise | Fill reps only (weight=0) |
+| Bodyweight exercise | Fill reps only (weight=null, not 0) |
 | Duration exercise | Fill duration_seconds instead |
 | Mixed set types (normal + warmup) | Only fill normal sets, skip warmups |
 | User taps twice | Second tap is no-op if sets already filled |
@@ -164,25 +178,14 @@ Test budget is at 1800/1800 (0 remaining). Implementation MUST:
 
 ### UX Designer (Design & A11y Critique)
 
-**Verdict**: NEEDS REVISION
+**Verdict**: NEEDS REVISION (2026-04-20)
+**CEO Response**: All 4 issues addressed in plan revision:
+1. CRITICAL: Nested Pressable - Fixed: extracted as sibling, not nested
+2. CRITICAL: Touch target - Fixed: hitSlop + minHeight: 36 specified
+3. MAJOR: Copy icon misleading - Fixed: using colors.primary + arrow-collapse-down
+4. MAJOR: Bodyweight weight=0 - Fixed: using null for bodyweight weight
 
-**Strengths**: Excellent concept — reduces 30-50 manual inputs to 1 tap. Compatible mental model, zero new decisions, builds on Phase 71.
-
-**Critical Issues (must fix)**:
-1. **Nested Pressable conflict**: "Last:" text is inside the delete-long-press Pressable (GroupCardHeader.tsx line 45). Must extract the tappable element as a sibling OUTSIDE the long-press Pressable to avoid gesture ambiguity across platforms.
-2. **Touch target too small**: Text at 12px/16dp lineHeight is far below 48dp minimum. Specify `hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}` + `minHeight: 36` on the Pressable.
-
-**Major Issues (should fix)**:
-3. **Copy icon is misleading**: Don't use a copy icon (implies clipboard). Use `colors.primary` text color + `arrow-collapse-down` icon (14px) after the text, or primary-colored text alone.
-4. **Bodyweight weight value**: Clarify prefill weight as `null` (not `0`) for bodyweight exercises to avoid showing "0kg".
-
-**Recommendations (nice to have)**:
-- `AccessibilityInfo.announceForAccessibility()` after prefill for screen reader users
-- Light haptic feedback on successful prefill (important in gym — user may not be watching screen)
-- Toast: "Filled N sets from last session" with actual count
-- Subtle press animation (opacity: 0.7) for no-op cases so user knows tap registered
-
-_Reviewed 2026-04-20_
+Also incorporated recommendations: haptic feedback, AccessibilityInfo.announce, toast with count, press animation.
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20)
