@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Linking, StyleSheet, Switch, View } from "react-native";
+import { Alert, Linking, StyleSheet, Switch, View, FlatList } from "react-native";
 import { useLayout } from "../lib/layout";
-import { FlashList } from "@shopify/flash-list";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -191,7 +190,7 @@ export default function FeedbackScreen() {
 
   return (
     <>
-      <FlashList
+      <FlatList
         data={ITEMS}
         keyExtractor={(item) => item}
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}

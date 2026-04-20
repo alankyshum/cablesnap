@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import {
+  FlatList,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { FAB } from "@/components/ui/fab";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -196,7 +196,7 @@ export default function BodySegment() {
 
   return (
     <View style={{ flex: 1 }}>
-      <FlashList
+      <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
         renderItem={renderEntry}

@@ -1,13 +1,13 @@
 /* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { Text } from "@/components/ui/text";
 import { useToast } from "@/components/ui/bna-toast";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -260,7 +260,7 @@ export default function ActiveSession() {
       />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
       <PRCelebration celebration={celebration} />
-      <FlashList
+      <FlatList
         data={groups}
         renderItem={renderExerciseGroup}
         keyExtractor={(item) => item.exercise_id}

@@ -5,7 +5,6 @@ import {
   View,
   useColorScheme,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
 import { SearchBar } from "@/components/ui/searchbar";
@@ -169,7 +168,7 @@ export default function Exercises() {
           }}
         />
       </View>
-      <FlashList
+      <FlatList
         data={filtered}
         renderItem={renderItem}
         keyExtractor={keyExtractor}

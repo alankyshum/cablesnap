@@ -1,6 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { StyleSheet, View, FlatList } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -61,7 +60,7 @@ export function SearchResultsArea({ onlineLoading, onlineError, showEmptyMessage
         </Text>
       )}
       {hasResults && (
-        <FlashList
+        <FlatList
           data={combinedResults}
           renderItem={renderItemWithSeparator}
           keyExtractor={keyExtractor}

@@ -1,5 +1,4 @@
-import { Pressable, StyleSheet, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { Pressable, StyleSheet, View, FlatList } from "react-native";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Text } from "@/components/ui/text";
@@ -109,7 +108,7 @@ export default function Setup() {
   );
 
   return (
-    <FlashList
+    <FlatList
       data={LEVELS}
       keyExtractor={(item) => item.value}
       style={{ flex: 1, backgroundColor: colors.background }}

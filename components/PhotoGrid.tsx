@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import {
+  FlatList,
   Pressable,
   StyleSheet,
   View,
@@ -7,7 +8,6 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { Text } from "@/components/ui/text";
-import { FlashList } from "@shopify/flash-list";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ProgressPhoto } from "../lib/db/photos";
 import { radii, scrim } from "../constants/design-tokens";
@@ -103,7 +103,7 @@ export default function PhotoGrid({
   );
 
   return (
-    <FlashList
+    <FlatList
       data={photos}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}

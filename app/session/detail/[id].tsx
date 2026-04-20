@@ -1,5 +1,4 @@
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { StyleSheet, TouchableOpacity, View, FlatList } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -56,7 +55,7 @@ export default function SessionDetail() {
             : undefined,
         }}
       />
-      <FlashList
+      <FlatList
         data={groups}
         keyExtractor={(group) => group.exercise_id}
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
