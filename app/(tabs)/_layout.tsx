@@ -1,15 +1,13 @@
 import { Tabs, useRouter } from "expo-router";
-import { Image, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { TouchableOpacity } from "react-native";
 import FloatingTabBar from "../../components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { HandleIcon } from "@/components/floating-tab-bar/HandleIcon";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const handleIcon = require("../../assets/tab-handle.png");
 
 export default function TabLayout() {
   const colors = useThemeColors();
@@ -29,7 +27,7 @@ export default function TabLayout() {
     <Tabs
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
-        animation: "fade",
+        animation: "none",
         headerStyle: {
           backgroundColor: colors.surface,
         },
@@ -78,7 +76,7 @@ export default function TabLayout() {
           headerTitle: function WorkoutsHeaderTitle() {
             return (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Image source={handleIcon} style={{ width: 20, height: 20, tintColor: colors.onSurface }} />
+                <HandleIcon size={20} color={colors.onSurface} />
                 <Text style={{ fontSize: fontSizes.sm, fontWeight: "600", color: colors.onSurface }}>Workouts</Text>
               </View>
             );

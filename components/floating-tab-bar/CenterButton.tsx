@@ -1,9 +1,7 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useThemeColors } from '@/hooks/useThemeColors';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const handleIcon = require('../../assets/tab-handle.png');
+import { HandleIcon } from './HandleIcon';
 
 const CENTER_BUTTON_SIZE = 70;
 const BAR_HEIGHT = 56;
@@ -40,13 +38,9 @@ export function CenterButton({
           },
         ]}
       >
-        <Image
-          source={handleIcon}
-          style={{
-            width: 36,
-            height: 36,
-            tintColor: focused ? colors.onPrimary : color,
-          }}
+        <HandleIcon
+          size={36}
+          color={focused ? colors.onPrimary : color}
         />
       </Pressable>
     </View>

@@ -1,11 +1,9 @@
 import React from "react";
-import { Image, Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated from "react-native-reanimated";
 import { fontSizes } from "@/constants/design-tokens";
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const handleIcon = require("../../assets/tab-handle.png");
+import { HandleIcon } from "./HandleIcon";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -54,10 +52,7 @@ export function TabButton({
       style={tabStyles.button}
     >
       {isWorkouts ? (
-        <Image
-          source={handleIcon}
-          style={{ width: 28, height: 28, tintColor: color }}
-        />
+        <HandleIcon size={28} color={color} />
       ) : (
         <MaterialCommunityIcons name={icon} size={24} color={color} />
       )}
