@@ -236,26 +236,17 @@ CREATE UNIQUE INDEX idx_strength_goals_one_active
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-**Verdict: NEEDS REVISION** (2026-04-20)
+**Verdict: APPROVED** (2026-04-20, Rev 2)
 
-**Cognitive Load**: Good — low-friction, compatible mental model, one-goal-per-exercise constraint is smart.
+All findings from initial review (NEEDS REVISION) have been addressed in Rev 2:
+- ✅ C-1: Long-press removed, ✕ with confirmation is sole delete mechanism
+- ✅ C-2: Goal card moved above Records/Chart for discoverability
+- ✅ C-3: Full a11y spec added (accessibilityRole, accessibilityValue, accessibilityLabel)
+- ✅ M-1: Bottom sheet replaces inline form (no scroll jumps)
+- ✅ M-2: Pencil icon edit affordance added
+- ✅ All minor recommendations incorporated
 
-**Critical Issues (must fix):**
-1. **C-1**: Contradictory delete interactions — plan has BOTH ✕ button AND long-press. Pick ONE: use ✕ with confirmation dialog only, drop long-press.
-2. **C-2**: "Set Goal" button is buried below records/chart/strength badge (~70% scroll). Move Goal card ABOVE Records and Chart cards for discoverability. Revised order: chips → muscles → instructions → **Goal** → Strength Badge → Records → Chart → History.
-3. **C-3**: Progress bar must specify `accessibilityRole="progressbar"`, `accessibilityValue={{ min: 0, max: 100, now: pct }}`, and descriptive `accessibilityLabel`.
-
-**Major Issues (should fix):**
-- **M-1**: Inline form expansion in FlatList header causes scroll jumps. Use a bottom sheet instead, or add LayoutAnimation + scrollToOffset.
-- **M-2**: "Tap to edit" has no visual affordance. Add pencil icon or "Edit" link in card.
-
-**Minor Recommendations:**
-- Use MaterialCommunityIcons "bullseye-arrow" instead of 🎯 emoji (inconsistent cross-device rendering)
-- Verify `colors.tertiary` (gold) contrast in both themes for overachievement
-- Add error toast for failed goal save
-- Ensure hook doesn't flash "Set Goal" → card on initial load
-
-See full review on BLD-432 issue comments.
+**Implementation notes**: Touch targets ≥ 48dp on ✕/pencil icons; progress bar height 8-12dp with `radii.pill`; loading state renders nothing (not "Set Goal" button); empty state subtitle "Set a target to track your progress".
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20)
