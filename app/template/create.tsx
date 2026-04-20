@@ -177,10 +177,11 @@ export default function CreateTemplate() {
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <Input
-          placeholder="Template Name"
+          label="Name"
+          placeholder="e.g. Upper Body, Push Day"
           value={name}
           onChangeText={setName}
-          style={styles.input}
+          containerStyle={styles.input}
           accessibilityLabel="Template Name"
         />
         {template && (
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   section: {
     marginBottom: 8,

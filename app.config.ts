@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#ffffff", // eslint-disable-line no-restricted-syntax
+      backgroundColor: "#FF643F", // eslint-disable-line no-restricted-syntax
     },
     package: "com.anomalyco.fitforge",
     versionCode: 5,

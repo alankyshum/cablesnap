@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+android/
+ios/
+playwright-report/
+test-results/
+*.apk
+*.aab
+fdroid/
