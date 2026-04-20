@@ -112,7 +112,17 @@ Add an estimated duration badge to user-created template cards on the home scree
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**Verdict: APPROVED** (2026-04-20)
+
+Cognitive load: **Reduces** — surfaces information users currently recall from memory. Compatible with existing mental model (starter templates already show duration badges). 3-second test passes.
+
+Design system: **Excellent reuse** — uses existing `MetaBadge` type and `MetaRow` renderer with `clock-outline` icon. No new components or visual patterns needed.
+
+Accessibility TODO:
+- [ ] Update `accessibilityLabel` in `TemplatesList.tsx` to include duration when available (e.g., "approximately 45 minutes")
+- [ ] Use spelled-out duration in a11y labels ("approximately 1 hour 15 minutes") rather than abbreviated format
+
+No blocking issues. Clean, minimal feature that follows established patterns.
 
 ### Quality Director (Release Safety)
 **Verdict: APPROVED** (2026-04-20T12:03Z)
