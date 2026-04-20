@@ -3,7 +3,7 @@
 **Issue**: BLD-410
 **Author**: CEO
 **Date**: 2026-04-20
-**Status**: DRAFT
+**Status**: DRAFT → IN_REVIEW (Rev 2 — addressing QD + TL feedback)
 
 ## Problem Statement
 
@@ -36,77 +36,101 @@ Add up/down move buttons to the exercise group header in the active workout sess
 
 ### UX Design
 
-**Interaction**: Tap the exercise name area in the group header to reveal a compact move toolbar (↑ ↓ buttons). This keeps the default UI clean while making reorder discoverable.
+**Interaction**: Always-visible ↑/↓ buttons in the GroupCardHeader, right-aligned. No tap-to-reveal — permanently visible is more discoverable for tired gym users and requires less state management. (Rev 2: accepted TL recommendation to drop toolbar reveal pattern.)
 
-**Alternative considered**: Long-press drag-and-drop. Rejected because:
-- Difficult one-handed with sweaty fingers
-- Requires significant motor precision
-- Harder to implement accessibly
-- FlashList drag support adds complexity
+**Alternative considered and rejected**:
+- Long-press drag-and-drop: difficult one-handed with sweaty fingers, poor a11y
+- Tap-to-reveal toolbar: less discoverable, more state complexity (TL feedback)
 
-**Chosen approach**: Simple ↑/↓ buttons that appear on tap.
+**Chosen approach**: Compact ↑/↓ buttons always visible in group header.
 
 **Flow**:
-1. User taps the exercise group header (the exercise name area)
-2. A compact toolbar slides in with ↑ (move up) and ↓ (move down) buttons
-3. Tapping ↑ or ↓ instantly reorders the exercise
-4. Toolbar auto-hides after 3 seconds of inactivity, or user taps elsewhere
-5. First exercise disables ↑, last exercise disables ↓
+1. User sees ↑/↓ buttons on each exercise group header (always visible)
+2. Tapping ↑ or ↓ instantly reorders the exercise with haptic feedback
+3. First exercise disables ↑, last exercise disables ↓
+4. Superset exercises: ↑/↓ buttons are hidden (superset reorder deferred — see Out of Scope)
+
+**Touch targets**: ↑/↓ buttons are ≥56×56dp (gym context: sweaty hands). (Rev 2: QD requirement.)
 
 **Accessibility**:
 - Move buttons have clear labels: "Move [exercise name] up" / "Move [exercise name] down"
-- After move, announce: "[exercise name] moved to position [N]"
+- After move, use `AccessibilityInfo.announceForAccessibility("[exercise name] moved to position [N]")` AND keep screen reader focus on the moved exercise card
 - Disabled buttons are marked `accessibilityState={{ disabled: true }}`
+- Respect `useReducedMotion()` for animations
+
+**Haptic feedback**: Trigger a light haptic pulse on each successful move (React Native `Haptics.impactAsync(ImpactFeedbackStyle.Light)`).
 
 ### Technical Approach
 
-**State management**: Exercise groups are stored in the `groups` state array in `useSessionData`. Reordering means swapping array positions — no database writes needed during the move (groups is a derived client-side array).
+**State management**: Exercise groups are stored in the `groups` state array in `useSessionData`. Reordering means swapping array positions — instant UI update.
 
-**Persistence**: The visual order is derived from the `set_number` ordering in the database. After reorder, update `set_number` values to reflect the new order. Use `updateSetsBatch` for a single batched write.
+**Persistence** (Rev 2 — critical fix per QD + TL):
+- ~~Original: Update `set_number` values~~ WRONG — `set_number` is intra-exercise set ordering
+- **Fix**: Add `exercise_position INTEGER` column to `workout_sets` table via schema migration
+- All sets for the same exercise share one `exercise_position` value
+- Change `getSessionSets` ORDER BY from `asc(exercise_id), asc(set_number)` to `asc(exercise_position), asc(set_number)`
+- Schema migration uses established `PRAGMA table_info` guard pattern (per BLD-376 learning):
+  ```sql
+  -- Only add if column doesn't exist
+  PRAGMA table_info(workout_sets);
+  -- If exercise_position not found:
+  ALTER TABLE workout_sets ADD COLUMN exercise_position INTEGER DEFAULT 0;
+  ```
+- Default value 0 means pre-existing sets render in original order (upgrade-safe)
+- On session load, if all positions are 0, auto-assign positions based on current UUID sort order
 
 **Implementation**:
-1. Add `onMoveUp(exerciseId)` and `onMoveDown(exerciseId)` callbacks to `useSessionActions`
-2. These callbacks reorder the `groups` array in state (instant UI update)
-3. Then batch-update `set_number` values in the database to persist the new order
+1. Add schema migration for `exercise_position` column in `lib/db/schema.ts` (or migration file)
+2. Add `onMoveUp(exerciseId)` and `onMoveDown(exerciseId)` callbacks to `useSessionActions`
+3. These callbacks: (a) swap `exercise_position` values in state (instant UI), (b) batch-update `exercise_position` in DB
 4. Pass callbacks through `ExerciseGroupCard` → `GroupCardHeader`
-5. Add a `reorderMode` state (which exercise is showing the toolbar) managed at session level
+5. Add `extraData` version counter on FlashList to trigger re-renders on reorder (TL recommendation)
+6. Use transaction for the batch position update to prevent conflicts
 
 **Files to modify**:
 | File | Change |
 |------|--------|
+| `lib/db/schema.ts` (or migration) | Add `exercise_position` column migration with PRAGMA guard |
+| `lib/db/session-sets.ts` | Update `getSessionSets` ORDER BY; add `updateExercisePositions` batch function; add position auto-assignment for sessions with all-zero positions |
 | `hooks/useSessionActions.ts` | Add `handleMoveUp`, `handleMoveDown` callbacks |
-| `components/session/GroupCardHeader.tsx` | Add move toolbar UI (↑/↓ buttons on tap) |
-| `components/session/ExerciseGroupCard.tsx` | Pass move callbacks and reorder state |
-| `app/session/[id].tsx` | Wire new callbacks through to group cards |
-| `lib/db/session-sets.ts` | Add `reorderExerciseSets(sessionId, exerciseIds[])` function |
+| `components/session/GroupCardHeader.tsx` | Add always-visible ↑/↓ buttons (≥56×56dp), haptic feedback |
+| `components/session/ExerciseGroupCard.tsx` | Pass move callbacks, hide buttons for superset exercises |
+| `app/session/[id].tsx` | Wire new callbacks, add `extraData` counter to FlashList |
 
 **No new files needed** — this integrates into existing components.
 
 ### Scope
 
 **In Scope**:
-- Move exercise up/down in active session via ↑/↓ buttons
+- Move exercise up/down in active session via always-visible ↑/↓ buttons
 - All logged sets travel with the exercise
-- Persisted to database (survives app restart)
-- Works with supersets (linked exercises move as a group)
-- Accessibility labels and announcements
+- Persisted via `exercise_position` column (survives app restart)
+- Schema migration with PRAGMA guard for `exercise_position`
+- Auto-assign positions for pre-existing sessions (upgrade-safe)
+- Accessibility labels, announcements, and focus management
+- Haptic feedback on move
+- ≥56×56dp touch targets
 
 **Out of Scope**:
 - Drag-and-drop reordering (complex, poor gym UX)
 - Reorder individual sets within an exercise (already have this via set_number)
-- Reorder across superset boundaries (move entire superset group instead)
+- **Superset reorder** — exercises with `link_id` (supersets) will NOT show reorder buttons in this phase. Superset block-move ships in a follow-up. (Rev 2: TL recommendation — contiguity enforcement is complex, defer to avoid scope creep.)
 - Undo reorder (user can just move back)
+- Reorder in template editor (already exists)
 
 ### Acceptance Criteria
 
-- [ ] Given an active session with 3+ exercises, when user taps exercise header, then ↑/↓ move buttons appear
-- [ ] Given user taps ↑ on exercise 2, then it moves to position 1 and all its sets come with it
-- [ ] Given user taps ↓ on exercise 1, then it moves to position 2 and all its sets come with it
+- [ ] Given an active session with 3+ non-superset exercises, ↑/↓ buttons are always visible on each exercise header
+- [ ] Given user taps ↑ on exercise 2, then it moves to position 1 and all its sets come with it, with haptic feedback
+- [ ] Given user taps ↓ on exercise 1, then it moves to position 2 and all its sets come with it, with haptic feedback
 - [ ] Given exercise is first, ↑ button is disabled; given exercise is last, ↓ button is disabled
-- [ ] Given a superset (linked exercises), the entire superset group moves together
-- [ ] Given user reorders then backgrounds the app, when they return the order is preserved
-- [ ] Given screen reader active, move buttons have descriptive labels and position is announced after move
+- [ ] Given a superset (linked exercises), ↑/↓ buttons are NOT shown (deferred to follow-up)
+- [ ] Given user reorders then backgrounds the app, when they return the order is preserved (via `exercise_position` column)
+- [ ] Given an existing session from before this update (all `exercise_position` = 0), exercises render in their original order
+- [ ] Given screen reader active, move buttons have descriptive labels, position is announced via `AccessibilityInfo.announceForAccessibility`, and focus stays on moved exercise
+- [ ] ↑/↓ buttons are ≥56×56dp touch targets
 - [ ] Existing session functionality unaffected (set logging, rest timer, PR detection, plate hints, etc.)
+- [ ] Schema migration is idempotent (safe to run multiple times)
 - [ ] `npx tsc --noEmit` passes
 - [ ] `npx eslint . --ext .ts,.tsx --quiet` → 0 errors
 - [ ] `npx jest` → all existing tests pass
@@ -117,20 +141,25 @@ Add up/down move buttons to the exercise group header in the active workout sess
 |----------|-------------------|
 | Single exercise session | No move buttons shown (nothing to reorder) |
 | Two exercises | ↑ on first disabled, ↓ on first works, vice versa for second |
-| Superset group | Entire linked group moves as one unit |
+| Superset group | ↑/↓ buttons hidden on superset exercises (deferred) |
 | Move during rest timer | Timer continues unaffected |
 | Move then complete set | Set logs to the correct (moved) exercise |
 | Move then add new set | New set added to correct exercise at new position |
-| Completed exercises | Can still be reordered (user may want to reorganize for next workout reference) |
-| Rapid sequential moves | Each move processes in order, no race conditions |
+| Completed exercises | Can still be reordered |
+| Rapid sequential moves | Each move processes in order, no race conditions (transactional writes) |
+| Move with active rest timer | Rest timer continues counting, unaffected by position change |
+| Move while keyboard is open | Dismiss keyboard first, then perform move |
+| Reorder then undo last completed set | Undo targets correct exercise regardless of position change |
+| Pre-migration session (all positions = 0) | Auto-assign positions from current UUID sort, preserving original order |
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| `set_number` update conflicts with other writes | Low | Medium | Use transaction for batch update |
-| FlashList key stability during reorder | Medium | Low | Use exercise_id as key (stable across position changes) |
-| Move toolbar blocking header content | Low | Low | Compact design, auto-hide after 3s |
+| Schema migration fails on some devices | Low | High | Idempotent migration with PRAGMA guard; DEFAULT 0 for upgrade safety |
+| `exercise_position` update conflicts with other writes | Low | Medium | Use transaction for batch update |
+| FlashList key stability during reorder | Medium | Low | Use exercise_id as key (stable); `extraData` counter for re-renders |
+| Pre-existing sessions with all positions = 0 | Certain | Low | Auto-assign positions on load based on current UUID sort order |
 
 ## Review Feedback
 
@@ -182,4 +211,16 @@ Add up/down move buttons to the exercise group header in the active workout sess
 **Effort:** Medium. **Risk:** Medium (schema migration). **New deps:** None.
 
 ### CEO Decision
-_Pending reviews_
+**Rev 2 addresses all feedback** — 2026-04-20
+
+Changes made:
+1. ✅ **CRITICAL (QD + TL): Schema fix** — Replaced `set_number` approach with `exercise_position` column + idempotent migration with PRAGMA guard. Auto-assign for pre-existing sessions.
+2. ✅ **MAJOR (TL): Superset deferred** — Reorder buttons hidden on superset exercises. Block-move ships in follow-up phase.
+3. ✅ **TL: Always-visible buttons** — Dropped tap-to-reveal toolbar. ↑/↓ buttons permanently visible in header (more discoverable, less state).
+4. ✅ **QD: Touch targets** — ≥56×56dp specified.
+5. ✅ **QD: Focus management** — `AccessibilityInfo.announceForAccessibility()` + keep focus on moved card.
+6. ✅ **QD: Additional edge cases** — Added rest timer, keyboard dismiss, undo set scenarios.
+7. ✅ **QD: Haptic feedback** — Added haptic pulse on successful move.
+8. ✅ **TL: FlashList extraData** — Added version counter recommendation.
+
+Awaiting re-review from QD and TL.
