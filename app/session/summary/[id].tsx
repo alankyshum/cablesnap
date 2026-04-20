@@ -17,6 +17,7 @@ import PRsCard from "../../../components/session/summary/PRsCard";
 import WeightIncreasesCard from "../../../components/session/summary/WeightIncreasesCard";
 import ComparisonCard from "../../../components/session/summary/ComparisonCard";
 import SetsCard from "../../../components/session/summary/SetsCard";
+import MusclesWorkedCard from "../../../components/session/summary/MusclesWorkedCard";
 import SummaryFooter from "../../../components/session/summary/SummaryFooter";
 import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -29,7 +30,7 @@ export default function Summary() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const data = useSummaryData(id);
-  const { session, completed, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount } = data;
+  const { session, completed, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount, primaryMuscles, secondaryMuscles } = data;
   const actions = useSummaryActions(id);
 
   // Sync rating/notes when session loads
@@ -90,6 +91,7 @@ export default function Summary() {
     ...(allPrs.length > 0 ? [{ key: "prs" }] : []),
     ...(increases.length > 0 ? [{ key: "increases" }] : []),
     ...(comparison?.previous ? [{ key: "comparison" }] : []),
+    ...((primaryMuscles.length > 0 || secondaryMuscles.length > 0) ? [{ key: "muscles" }] : []),
     ...(grouped.length > 0 ? [{ key: "sets" }] : []),
   ] as { key: string }[];
 
@@ -125,6 +127,7 @@ export default function Summary() {
           if (item.key === "prs") return <PRsCard prs={prs} repPrs={repPrs} unit={unit} colors={colors} />;
           if (item.key === "increases") return <WeightIncreasesCard increases={increases} unit={unit} colors={colors} />;
           if (item.key === "comparison" && comparison?.previous) return <ComparisonCard comparison={comparison} colors={colors} />;
+          if (item.key === "muscles") return <MusclesWorkedCard primaryMuscles={primaryMuscles} secondaryMuscles={secondaryMuscles} colors={colors} />;
           if (item.key === "sets") return <SetsCard grouped={grouped} colors={colors} />;
           return null;
         }}
