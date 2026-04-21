@@ -7,8 +7,9 @@ import {
   getTotalSessionCount, getTemplateDurationEstimates,
   getAppSetting, getWeeklyCompletedCount,
   getWeeklyE1RMTrends, getRecentSessionRPEs, getRecentSessionRatings,
+  getWeeklyWorkouts, getBodySettings,
 } from "../../lib/db";
-import { computeStreak } from "../../lib/format";
+import { computeStreak, mondayOf } from "../../lib/format";
 import { computeAllTemplateReadiness, hasWorkoutHistory } from "../../lib/recovery-readiness";
 import { generateInsight, type GoalInsightRow } from "../../lib/insights";
 import {
@@ -31,9 +32,10 @@ export type WeeklyGoalProgress = {
 };
 
 export async function loadHomeData() {
-  const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
+  const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh, weeklyWorkouts, bodySettings] = await Promise.all([
     getTemplates(), getRecentSessions(5), getActiveSession(), getAllCompletedSessionWeeks(),
     getRecentPRs(5), getPrograms(), getNextWorkout(), getTodaySchedule(), isTodayCompleted(), getWeekAdherence(),
+    getWeeklyWorkouts(mondayOf(new Date())), getBodySettings(),
   ]);
   const [counts, setCounts, avgRPEs, dayCounts, templateMuscles, weeklyVolume, e1rmTrends, totalSessions] = await Promise.all([
     getTemplateExerciseCounts(tpls.map((t) => t.id)),
@@ -86,7 +88,7 @@ export async function loadHomeData() {
   // Build weekly goal progress (frequency goal fallback)
   const weeklyGoalProgress = await buildWeeklyGoalProgress(adh);
 
-  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, overreachingResult, durationEstimates, weeklyGoalProgress };
+  return { templates: tpls, sessions: sess, active: act, streak: computeStreak(timestamps), recentPRs: prData, programs: progs, nextWorkout: nw, todaySchedule: sched, todayDone: done, adherence: adh, counts, setCounts, avgRPEs, dayCounts, recoveryStatus, templateReadiness, showReadiness, insight, overreachingResult, durationEstimates, weeklyGoalProgress, weeklyWorkouts, unitSystem: (bodySettings?.weight_unit ?? "kg") as "kg" | "lb" };
 }
 
 export async function buildWeeklyGoalProgress(
