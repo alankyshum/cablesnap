@@ -186,3 +186,19 @@ BLD-410 **Source**: PLAN: Exercise Reorder in Active Workout Session (Phase 62)
 **Learning**: SQL DDL helpers that use string interpolation for identifiers (table names, column names, column definitions) must validate ALL interpolated values, not just the most obvious one. A regex-based allowlist (`/^[a-zA-Z_][a-zA-Z0-9_ (),'.\[\]"]*$/`) is sufficient for column names and simple definitions. This defense-in-depth approach prevents SQL injection through identifier manipulation, even when the values originate from trusted internal code — future refactors may widen the call surface.
 **Action**: When writing or modifying SQL DDL helpers that interpolate identifiers, add an `assertSafeSQL(value, label)` guard on every interpolated parameter. Use a strict character allowlist regex. Apply this to column names, definitions, index names, and any other non-parameterizable SQL fragments. Do not assume "only trusted code calls this" — validate anyway.
 **Tags**: sqlite, sql-injection, identifier-validation, DDL, security, defense-in-depth, migration-helpers
+
+### Split Independent Seed Operations into Separate Transactions
+**Source**: BLD-467 — FIX: Workout template not showing exercises
+**Date**: 2026-04-21
+**Context**: `seedStarters()` wrapped template upserts, program upserts, and settings writes in a single `withTransactionAsync`. A failure in program seeding rolled back template repairs, leaving exercises invisible on the next launch.
+**Learning**: When a single transaction contains multiple logically independent operations (templates, programs, settings), a failure in any one operation rolls back ALL of them — including operations that would have succeeded. This blast radius means a bug in program seeding prevents template repair, compounding the user-visible failure.
+**Action**: Wrap each logically independent seed/repair operation in its own transaction. Use the test: "if operation A fails, should operation B's results be discarded?" If the answer is no, they belong in separate transactions. For CableSnap's `seedStarters()`: templates, programs, and version-tracking each get their own `withTransactionAsync`.
+**Tags**: sqlite, transactions, seed, blast-radius, atomicity, data-integrity
+
+### Backfill FK Dependencies Before Seeding Child Rows
+**Source**: BLD-467 — FIX: Workout template not showing exercises
+**Date**: 2026-04-21
+**Context**: Starter template_exercises reference exercise IDs from the exercises table. Upgrading users who installed before new community exercises were added had missing rows in the exercises table. `INSERT OR IGNORE INTO template_exercises` succeeded (creating the junction row), but the LEFT JOIN to exercises returned NULL for names, rendering a blank exercise list.
+**Learning**: When child/junction rows reference a parent table via foreign key, `INSERT OR IGNORE` on the child table can succeed even when the referenced parent row doesn't exist (SQLite doesn't enforce FK constraints by default). The child row exists but is functionally broken — queries joining to the parent return NULLs for all parent columns, causing blank or missing UI.
+**Action**: Before seeding any child/junction table, run a backfill pass on the parent table to ensure all referenced IDs exist: collect needed IDs from the seed data, then `INSERT OR IGNORE` each into the parent table. This is especially critical for upgrading users whose local DB may lag behind the seed data's assumptions about which parent rows exist.
+**Tags**: sqlite, foreign-key, backfill, seed, upgrading-users, data-integrity, LEFT-JOIN
