@@ -157,6 +157,7 @@ jobs:
           VERSION="${{ steps.next_version.outputs.version }}"
           gh release create "v$VERSION" \
             --title "v$VERSION" \
+            --draft \
             --notes "${{ steps.release_notes.outputs.notes }}"
           echo "released=true" >> "$GITHUB_OUTPUT"
 
@@ -204,4 +205,5 @@ jobs:
         run: |
           VERSION="${{ needs.check-and-release.outputs.version }}"
           gh release upload "v$VERSION" cablesnap.apk --clobber
+          gh release edit "v$VERSION" --draft=false
           echo "APK uploaded to v$VERSION — F-Droid update will trigger automatically."
