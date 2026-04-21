@@ -137,7 +137,7 @@ jobs:
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Commit, tag, and push
+      - name: Commit and push
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
@@ -145,10 +145,9 @@ jobs:
           git config user.email "release-bot@cablesnap.app"
           git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
           git commit -m "release: v$VERSION"
-          git tag -a "v$VERSION" -m "v$VERSION (automated release)"
-          git push origin main "v$VERSION"
+          git push origin main
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (creates tag via API)
         if: steps.check_commits.outputs.has_new_commits == 'true'
         id: create_release
         env:
@@ -158,6 +157,7 @@ jobs:
           gh release create "v$VERSION" \
             --title "v$VERSION" \
             --draft \
+            --target main \
             --notes "${{ steps.release_notes.outputs.notes }}"
           echo "released=true" >> "$GITHUB_OUTPUT"
 
