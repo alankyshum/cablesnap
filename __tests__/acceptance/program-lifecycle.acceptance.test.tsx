@@ -84,6 +84,16 @@ jest.mock('../../lib/db', () => ({
   deleteTemplate: (...args: unknown[]) => mockDeleteTemplate(...args),
   duplicateTemplate: (...args: unknown[]) => mockDuplicateTemplate(...args),
   duplicateProgram: (...args: unknown[]) => mockDuplicateProgram(...args),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+  getTemplateDurationEstimates: jest.fn().mockResolvedValue({}),
+  getWeeklyCompletedCount: jest.fn().mockResolvedValue(0),
+  getActiveGoals: jest.fn().mockResolvedValue([]),
+  getCurrentBestWeight: jest.fn().mockResolvedValue(null),
+  getCurrentBestReps: jest.fn().mockResolvedValue(null),
+  getExerciseById: jest.fn().mockResolvedValue(null),
+  getWeeklyWorkouts: jest.fn().mockResolvedValue({ totalVolume: 0, previousWeekVolume: null, totalDurationSeconds: 0, sessionCount: 0 }),
+  getBodySettings: jest.fn().mockResolvedValue(null),
+  getAppSetting: jest.fn().mockResolvedValue(null),
 }))
 
 const mockGetNextWorkout = jest.fn().mockResolvedValue(null)
