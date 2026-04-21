@@ -20,6 +20,7 @@ import ErrorBoundary from "../../components/ErrorBoundary";
 import { RecoveryHeatmap } from "../../components/home/RecoveryHeatmap";
 import { TemplatesList } from "../../components/home/TemplatesList";
 import { ProgramsList } from "../../components/home/ProgramsList";
+import WeeklySummaryCard from "../../components/home/WeeklySummaryCard";
 import { loadHomeData } from "../../components/home/loadHomeData";
 import type { WeeklyGoalProgress } from "../../components/home/loadHomeData";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -97,6 +98,14 @@ export default function Workouts() {
       </ErrorBoundary>
       <HomeBanners colors={colors} active={data?.active ?? null} todaySchedule={todaySchedule} todayDone={data?.todayDone ?? false} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
       <AdherenceBar colors={colors} progress={progress} />
+      <WeeklySummaryCard
+        colors={colors}
+        totalVolume={data?.weeklyWorkouts?.totalVolume ?? 0}
+        previousWeekVolume={data?.weeklyWorkouts?.previousWeekVolume ?? null}
+        totalDurationSeconds={data?.weeklyWorkouts?.totalDurationSeconds ?? 0}
+        sessionCount={data?.weeklyWorkouts?.sessionCount ?? 0}
+        unitSystem={data?.unitSystem ?? "kg"}
+      />
       <RecoveryHeatmap recoveryStatus={data?.recoveryStatus ?? []} colors={colors} />
 
       <View style={styles.actionRow}>
