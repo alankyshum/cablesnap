@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
           token: ${{ secrets.GH_PAT }}
 
       - name: Get latest tag
@@ -65,7 +66,14 @@ jobs:
             MAJOR=$(echo "$VERSION" | cut -d. -f1)
             MINOR=$(echo "$VERSION" | cut -d. -f2)
             PATCH=$(echo "$VERSION" | cut -d. -f3)
-            NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+            PATCH=$((PATCH + 1))
+            NEXT="$MAJOR.$MINOR.$PATCH"
+            # Skip past any tags that already exist (e.g. created manually)
+            while git tag -l "v$NEXT" | grep -q .; do
+              echo "Tag v$NEXT already exists, incrementing..."
+              PATCH=$((PATCH + 1))
+              NEXT="$MAJOR.$MINOR.$PATCH"
+            done
           fi
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Next version: $NEXT"
@@ -138,8 +146,7 @@ jobs:
           git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
           git commit -m "release: v$VERSION"
           git tag -a "v$VERSION" -m "v$VERSION (automated release)"
-          git push origin main
-          git push origin "v$VERSION"
+          git push origin main "v$VERSION"
 
       - name: Create GitHub Release
         if: steps.check_commits.outputs.has_new_commits == 'true'
