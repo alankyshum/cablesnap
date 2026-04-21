@@ -40,6 +40,7 @@ export function SessionListFooter({ onAddExercise, onFinish, onCancel, colors }:
         style={styles.cancelBtn}
         accessibilityLabel="Cancel workout"
         label="Cancel Workout"
+        testID="cancel-workout-btn"
       />
     </>
   );

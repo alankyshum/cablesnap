@@ -168,8 +168,17 @@ export async function completeSession(
 
 export async function cancelSession(id: string): Promise<void> {
   const db = await getDrizzle();
+  // Delete the requested session
   await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
   await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
+  // Clean up any other orphan sessions (completed_at IS NULL)
+  const orphans = await db.select({ id: workoutSessions.id })
+    .from(workoutSessions)
+    .where(sql`${workoutSessions.completed_at} IS NULL`);
+  for (const o of orphans) {
+    await db.delete(workoutSets).where(eq(workoutSets.session_id, o.id));
+    await db.delete(workoutSessions).where(eq(workoutSessions.id, o.id));
+  }
 }
 
 export async function getRecentSessions(

@@ -39,6 +39,9 @@ jest.mock("../../lib/db", () => ({
 
 jest.mock("../../lib/query", () => ({
   bumpQueryVersion: jest.fn(),
+  queryClient: {
+    removeQueries: jest.fn(),
+  },
 }));
 
 jest.mock("../../lib/programs", () => ({

@@ -23,7 +23,7 @@ import {
   achieveGoal,
   getCurrentBestWeight,
 } from "../lib/db";
-import { bumpQueryVersion } from "../lib/query";
+import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
   getSessionProgramDayId,
   getProgramDayById,
@@ -378,6 +378,7 @@ export function useSessionActions({
       async () => {
         await completeSession(id!);
         bumpQueryVersion("home");
+        queryClient.removeQueries({ queryKey: ["home"] });
 
         // Strava sync (non-blocking — never prevents workout completion)
         try {
@@ -453,6 +454,7 @@ export function useSessionActions({
       async () => {
         await cancelSession(id!);
         bumpQueryVersion("home");
+        queryClient.removeQueries({ queryKey: ["home"] });
         router.back();
       },
       true
