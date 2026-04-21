@@ -195,6 +195,7 @@ jobs:
         run: eas build -p android --profile production --local --output cablesnap.apk --non-interactive
         env:
           EAS_NO_VCS: '1'
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Upload APK to release
         env:
