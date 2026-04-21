@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Share } from "react-native";
+import { View } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 
 import { getMonthlyReport, getBodySettings } from "@/lib/db";
 import type { MonthlyReportData } from "@/lib/db";
 import type { BodySettings } from "@/lib/types";
-import { formatDuration } from "@/lib/format";
-import { toDisplay } from "@/lib/units";
 
 // ─── Constants ─────────────────────────────────────────────────────
 
@@ -133,64 +134,27 @@ export function useMonthlyReport() {
     setMonthOffset(next);
   };
 
-  // ─── Share ─────────────────────────────────────────────────────
+  // ─── Share (image capture pipeline) ────────────────────────────
 
-  const buildShareText = (): string => {
-    if (!data) return "";
-    const { workouts, prs, trainingDays, longestStreak, body, nutrition } = data;
-    const label = formatMonthLabel(targetDate.year, targetDate.monthIndex);
-    const lines: string[] = [
-      `📊 CableSnap Monthly Report`,
-      label,
-      "",
-    ];
+  const shareCardRef = useRef<View>(null);
+  const [imageLoading, setImageLoading] = useState(false);
 
-    if (workouts.sessionCount > 0) {
-      lines.push(
-        `💪 Workouts: ${workouts.sessionCount} sessions (${formatDuration(workouts.totalDurationSeconds)} total)`
-      );
-      const volStr = `${formatVolume(toDisplay(workouts.totalVolume, unit))} ${unit}`;
-      const volChange = volumeChangePercent(workouts.totalVolume, workouts.previousMonthVolume);
-      lines.push(
-        `📈 Volume: ${volStr}${volChange ? ` (${volChange} vs last month)` : ""}`
-      );
-    }
-
-    if (trainingDays > 0) {
-      lines.push(`📅 ${trainingDays} training days · ${longestStreak} day best streak`);
-    }
-
-    if (prs.length > 0) {
-      const prParts = prs.slice(0, 3).map((pr) => {
-        const w = toDisplay(pr.weight, unit);
-        return `${pr.exerciseName} ${w}${unit}`;
-      });
-      lines.push(`🏆 PRs: ${prParts.join(", ")}`);
-    }
-
-    if (nutrition) {
-      lines.push(`🥗 Nutrition: ${nutrition.daysOnTarget}/${nutrition.daysTracked} days on target`);
-    }
-
-    if (body && body.startWeight !== null && body.endWeight !== null) {
-      const start = toDisplay(body.startWeight, unit);
-      const end = toDisplay(body.endWeight, unit);
-      const delta = Math.round((end - start) * 10) / 10;
-      const sign = delta >= 0 ? "+" : "";
-      lines.push(`⚖️ Weight: ${start} → ${end} ${unit} (${sign}${delta})`);
-    }
-
-    lines.push("", "Tracked with CableSnap");
-    return lines.join("\n");
-  };
-
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
+    if (!shareCardRef.current) return;
+    let uri: string | null = null;
     try {
-      await Share.share({ message: buildShareText() });
+      setImageLoading(true);
+      uri = await captureRef(shareCardRef, { format: "png", quality: 1.0 });
+      await Sharing.shareAsync(uri, { mimeType: "image/png" });
     } catch {
       // Share cancelled or failed — ignore
+    } finally {
+      setImageLoading(false);
+      if (uri) {
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      }
     }
-  };
+  }, []);
 
   const volChange = data
     ? volumeChangePercent(data.workouts.totalVolume, data.workouts.previousMonthVolume)
@@ -212,6 +176,8 @@ export function useMonthlyReport() {
     canGoForward,
     navigateMonth,
     handleShare,
+    shareCardRef,
+    imageLoading,
     volChange,
     sessionDelta,
   };

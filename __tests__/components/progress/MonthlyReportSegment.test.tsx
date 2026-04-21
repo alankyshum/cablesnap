@@ -154,7 +154,7 @@ describe('Monthly Report Segment', () => {
     const utils = renderScreen(<Progress />)
     fireEvent.press(utils.getByText('Monthly'))
     await waitFor(() => {
-      expect(utils.getByText('16')).toBeTruthy()
+      expect(utils.getAllByText('16').length).toBeGreaterThan(0)
     })
     expect(utils.getByText('Bench Press')).toBeTruthy()
   })
@@ -186,7 +186,7 @@ describe('Monthly Report Segment', () => {
     const utils = renderScreen(<Progress />)
     fireEvent.press(utils.getByText('Monthly'))
     await waitFor(() => {
-      expect(utils.getByText('16')).toBeTruthy()
+      expect(utils.getAllByText('16').length).toBeGreaterThan(0)
     })
     expect(utils.queryByText('PRs This Month')).toBeNull()
   })
@@ -195,7 +195,7 @@ describe('Monthly Report Segment', () => {
     const utils = renderScreen(<Progress />)
     fireEvent.press(utils.getByText('Monthly'))
     await waitFor(() => {
-      expect(utils.getByText('16')).toBeTruthy()
+      expect(utils.getAllByText('16').length).toBeGreaterThan(0)
     })
     const prevBtn = utils.getByLabelText('Previous month')
     fireEvent.press(prevBtn)

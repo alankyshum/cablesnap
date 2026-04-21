@@ -7,7 +7,9 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing, fontSizes } from "@/constants/design-tokens";
-import { useMonthlyReport, formatMonthLabel } from "@/hooks/useMonthlyReport";
+import { useMonthlyReport, formatMonthLabel, formatVolume } from "@/hooks/useMonthlyReport";
+import { toDisplay } from "@/lib/units";
+import MonthlyShareCard from "@/components/share/MonthlyShareCard";
 import {
   HeroStatsCard,
   ConsistencyCard,
@@ -32,6 +34,8 @@ export default function MonthlyReportSegment() {
     canGoForward,
     navigateMonth,
     handleShare,
+    shareCardRef,
+    imageLoading,
     volChange,
     sessionDelta,
   } = useMonthlyReport();
@@ -137,19 +141,38 @@ export default function MonthlyReportSegment() {
           {/* Share button */}
           <Button
             onPress={handleShare}
+            disabled={imageLoading}
             accessibilityLabel="Share monthly report"
           >
             <View style={styles.shareRow}>
               <MaterialCommunityIcons
                 name="share-variant"
                 size={18}
-                color={colors.onPrimary ?? "#fff"}
+                color={colors.onPrimary}
               />
-              <Text style={[styles.shareText, { color: colors.onPrimary ?? "#fff" }]}>
-                Share Report
+              <Text style={[styles.shareText, { color: colors.onPrimary }]}>
+                {imageLoading ? "Generating…" : "Share Report"}
               </Text>
             </View>
           </Button>
+        </View>
+      )}
+
+      {/* Offscreen share card for image capture */}
+      {data && !isEmpty && (
+        <View
+          ref={shareCardRef}
+          collapsable={false}
+          style={styles.offscreen}
+        >
+          <MonthlyShareCard
+            monthLabel={monthLabel}
+            sessionCount={data.workouts.sessionCount}
+            volume={formatVolume(toDisplay(data.workouts.totalVolume, unit))}
+            unit={unit}
+            prCount={data.prs.length}
+            longestStreak={data.longestStreak}
+          />
         </View>
       )}
     </ScrollView>
@@ -205,5 +228,11 @@ const styles = StyleSheet.create({
   shareText: {
     fontSize: fontSizes.base,
     fontWeight: "600",
+  },
+  offscreen: {
+    position: "absolute",
+    left: -9999,
+    top: -9999,
+    opacity: 0,
   },
 });
