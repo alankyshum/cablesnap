@@ -1,239 +1,244 @@
-# Feature Plan: Weekly Training Summary Card
+# Feature Plan: Weekly Training Summary Card (Compact Home Screen Version)
 
 **Issue**: BLD-470
 **Author**: CEO
 **Date**: 2026-04-21
-**Status**: DRAFT
+**Status**: DRAFT → REVISED (addressing TL, UX Designer, QD feedback)
 
 ## Problem Statement
 
-Users open CableSnap daily — before, during, and after workouts. The home screen shows their next scheduled workout and various insights, but there's **no at-a-glance summary of their training week**. The AdherenceBar shows dots for workout days, but doesn't communicate volume, PRs, or how the week compares to last week.
+Users open CableSnap daily — before, during, and after workouts. The home screen shows streak, weekly workout count, and recent PRs in StatsRow, plus workout dots in AdherenceBar. But two key metrics are **missing from the home screen**: total training volume (with week-over-week comparison) and total training duration. These are the metrics that answer "am I training harder than last week?"
 
-Users who train 4-5x/week want instant feedback: "Am I on track this week? How does this week compare to last?" Currently they have to dig into the Progress tab's monthly report to find aggregated data — and that's monthly, not weekly.
+Currently, users must navigate to the Progress tab to see volume trends. For the busy gym-goer, glanceable volume delta on the home screen provides instant motivational feedback.
 
-**User emotion today**: "I open the app and see my next workout, but I have no idea if I'm on pace for my weekly goals or if I'm training harder than last week."
+**User emotion today**: "I can see I did 3 workouts, but I have no idea if my training load is going up or down."
 
-**User emotion after**: "Every time I open CableSnap, I instantly see my week — 3 of 5 workouts done, volume up 8% from last week, 2 PRs hit. I feel motivated to keep going."
+**User emotion after**: "I see volume is up 8% this week — nice, I'm progressing."
+
+## Changes from V1 Draft (Addressing Review Feedback)
+
+### TL Feedback — Reuse Existing Infrastructure ✅
+- **NO new `lib/db/weekly-summary.ts`** — reuse existing `getWeeklyWorkouts()` which already returns `totalVolume`, `previousWeekVolume`, and `totalDurationSeconds`
+- **NO new `hooks/useWeeklySummary.ts`** — add data fetching to existing `loadHomeData()` following the `["home"]` React Query pattern
+- **NO new React Query key** — data flows through the existing `["home"]` query, invalidated by `useFocusRefetch(["home"])`
+
+### UX Designer Feedback — Eliminate Information Duplication ✅ (Option B)
+- Card shows **ONLY volume delta + duration** — the genuinely new information
+- Sessions count, goal fraction, and PR count are **NOT duplicated** (already in StatsRow + AdherenceBar)
+- Card becomes: `"12,450 kg ↑8%  ·  3h 45m this week"`
+- **Smaller card footprint** — mitigates scroll depth concern
+
+### QD Feedback — Data Correctness ✅
+- **`set_type` (not `is_warmup`)**: Existing `getWeeklyWorkouts()` already uses `ne(workoutSets.set_type, 'warmup')` — correct
+- **PR detection**: Existing `getWeeklyPRs()` uses max-weight comparison (not a non-existent `is_pr` column) — correct
+- **Duration**: Existing `getWeeklyWorkouts()` returns `totalDurationSeconds` from `SUM(duration_seconds)` — correct (not julianday)
+- **Volume formatting**: Use `toDisplay()` from `lib/units.ts` (existing unit conversion) + `toLocaleString()` for number formatting
+- **Frequency goal**: Not needed in card (already in StatsRow) — removed from scope
+- **`completed_at IS NOT NULL` filter**: Existing query already filters with `isNotNull(workoutSessions.completed_at)` — correct
+- **Timezone week boundaries**: Existing `mondayOf()` from `lib/format.ts` handles local timezone — reuse it
 
 ## Proposed Solution
 
-A **"This Week" summary card** on the home screen that shows key training metrics for the current week at a glance, with week-over-week comparison.
+### Overview
+A compact, read-only card on the home screen showing **volume (with week-over-week delta) and training duration** — the two metrics not currently visible on the home screen. All data reuses existing query functions.
 
-### V1 Scope
+### Scope — 3 Files Changed
 
-#### 1. New Data Layer: `lib/db/weekly-summary.ts`
+#### 1. `components/home/loadHomeData.ts` — Add weekly workout data to home batch
 
-Pure query functions that aggregate data for the current calendar week (Monday–Sunday):
-
-| Metric | Source | Query Pattern |
-|--------|--------|---------------|
-| Sessions completed | `workout_sessions` (completed_at in week range) | COUNT |
-| Sessions goal | `app_settings` frequency goal | Direct read |
-| Total volume (kg/lbs) | `workout_sets` joined to sessions | SUM(weight × reps) for completed, non-warmup sets |
-| Volume delta vs last week | Same query for previous week | Percentage change |
-| PRs hit this week | `workout_sets.is_pr = 1` in week range | COUNT |
-| Total duration | `workout_sessions` | SUM(completed_at - started_at) |
+Add `getWeeklyWorkouts(mondayOf(Date.now()))` to the existing `Promise.all` in `loadHomeData()`. The return type gains `weeklyWorkouts: WeeklyWorkoutSummary`.
 
 ```typescript
-export interface WeeklySummary {
-  sessionsCompleted: number;
-  sessionsGoal: number | null;  // null if no goal set
+// Add to imports
+import { getWeeklyWorkouts } from "../../lib/db";
+import type { WeeklyWorkoutSummary } from "../../lib/db";
+import { mondayOf } from "../../lib/format";
+
+// Add to the first Promise.all batch:
+getWeeklyWorkouts(mondayOf(Date.now()))
+
+// Add to return object:
+weeklyWorkouts
+```
+
+#### 2. `components/home/WeeklySummaryCard.tsx` — New compact card (ONLY new file)
+
+Compact card showing volume + delta + duration. Receives data as props (no hooks, no queries).
+
+**Layout:**
+```
+
+  This Week                           │
+  12,450 kg  ↑8%  ·  3h 45m          │
+
+```
+
+**Empty state** (no workouts this week):
+```
+
+  This Week                           │
+  No training data yet                │
+
+```
+
+**Design tokens:**
+- Card: `borderRadius: 12`, `paddingVertical: 12`, `paddingHorizontal: 16`, `marginBottom: 12`, `backgroundColor: colors.surface`
+- Title "This Week": `variant="caption"`, `fontWeight: "600"`, `color: colors.onSurfaceVariant`
+- Volume: `fontSizes.sm`, `fontWeight: "700"`, `color: colors.onBackground`
+- Delta: `fontSizes.xs`, green (`colors.success`) for positive, red (`colors.error`) for negative
+- Duration: `fontSizes.sm`, `color: colors.onSurfaceVariant`
+- Delta indicator: Arrow character (↑/↓) + percentage text — satisfies WCAG 1.4.1 (not color-only)
+
+**Accessibility:**
+- `accessibilityRole="summary"` on card container
+- `accessibilityLabel`: "This week: 12,450 kilograms total volume, up 8 percent from last week, 3 hours 45 minutes total training time"
+- Empty state: `accessibilityLabel`: "This week: no training data yet"
+- No emoji in empty state — plain text only
+
+**Props interface:**
+```typescript
+type Props = {
+  colors: ThemeColors;
   totalVolume: number;
-  volumeDeltaPercent: number | null;  // null if no previous week data
-  prsHit: number;
-  totalDurationMinutes: number;
-}
-
-export async function getWeeklySummary(weekStartDate: string): Promise<WeeklySummary>;
+  previousWeekVolume: number | null;
+  totalDurationSeconds: number;
+  sessionCount: number; // used for empty state check only
+  unitSystem: 'metric' | 'imperial';
+};
 ```
 
-**Key design**: Single function, single query batch. No N+1. Returns all metrics in one call.
+#### 3. `app/(tabs)/index.tsx` — Integration
 
-#### 2. New Hook: `hooks/useWeeklySummary.ts`
-
-React Query hook wrapping `getWeeklySummary()`:
-
-```typescript
-export function useWeeklySummary(): { data: WeeklySummary | null; isLoading: boolean };
-```
-
-- Invalidated by `"home"` query version bump (same as other home data)
-- Stale time: 5 minutes (home screen is opened frequently)
-
-#### 3. New Component: `components/home/WeeklySummaryCard.tsx`
-
-Compact card showing this week's training snapshot:
-
-```
-┌──────────────────────────────────────┐
-│  This Week                           │
-│                                      │
-│  3/5 workouts  ·  12,450 kg  ↑8%    │
-│  2 PRs  ·  3h 45m                    │
-└──────────────────────────────────────┘
-```
-
-| Element | Display |
-|---------|---------|
-| **Title** | "This Week" |
-| **Sessions** | "3/5 workouts" (or "3 workouts" if no goal set) |
-| **Volume** | "12,450 kg" with ↑/↓ delta vs last week (green/red) |
-| **PRs** | "2 PRs" (or hidden if 0) |
-| **Duration** | "3h 45m" total training time |
-
-**Empty state**: If no workouts this week, show "No workouts yet this week — let's go! 💪"
-
-**Design decisions**:
-- Single compact card — maximum 2 lines of content
-- Uses existing Card/CardContent UI primitives
-- Volume delta uses ↑/↓ arrows with green/red color (from theme tokens)
-- No tap action in V1 (future: tap → detailed weekly breakdown)
-- Respects unit preference (kg/lbs) from app settings
-
-#### 4. Integration: `app/(tabs)/index.tsx`
-
-Place the WeeklySummaryCard on the home screen, positioned **above** the templates list but **below** the active session banner and frequency adherence bar. This slot puts it in the user's natural scan path without displacing critical workout-start UI.
+Add `WeeklySummaryCard` below AdherenceBar and above the QuickStart/template section. Pass data from `loadHomeData()` result.
 
 ### Data Flow
 
 ```
 Home screen mounts
-        ↓
-useWeeklySummary() → React Query
-        ↓
-getWeeklySummary(currentWeekStart)
-  ├─ Query sessions this week → count, duration
-  ├─ Query sets this week → volume, PRs
-  ├─ Query sessions last week → previous volume
-  └─ Read frequency goal setting
-        ↓
-WeeklySummaryCard renders metrics
+  ↓
+loadHomeData() → existing Promise.all + getWeeklyWorkouts(mondayOf(Date.now()))
+  ↓
+React Query ["home"] caches result (existing stale/refetch behavior)
+  ↓
+WeeklySummaryCard receives weeklyWorkouts as props
+  ↓
+Renders volume + delta + duration (pure presentational component)
 ```
 
 ### Edge Cases
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| No workouts this week | "No workouts yet this week — let's go! 💪" |
+| No workouts this week | Card shows "No training data yet" (no emoji) |
 | No workouts last week | Volume shows absolute value, no delta arrow |
-| No frequency goal set | Sessions shows "3 workouts" without "/5" denominator |
-| Monday (start of week) | Shows fresh card with zero or one workout |
-| Mid-workout (session active) | Card shows stats WITHOUT current incomplete session |
-| User changes units mid-week | Volume recalculates on next render (uses formatWeight) |
+| Volume unchanged from last week | No delta shown (delta = 0%) |
 | Very large volume (100,000+ kg) | Format with K suffix: "102K kg" |
-| Zero volume (bodyweight-only workout) | Shows "0 kg" — still counts sessions and duration |
+| Zero volume (bodyweight-only workouts) | Shows "0 kg" — card still shows duration |
+| Monday (fresh week) | Shows card with zero or minimal data |
+| Mid-workout (active session) | Card shows stats WITHOUT current incomplete session (existing filter: `completed_at IS NOT NULL`) |
+| Duration with NULL completed_at | Filtered out by existing `isNotNull(completed_at)` in query |
+| User in imperial units | Volume shows lbs via `toDisplay()` unit conversion |
 
 ### Acceptance Criteria
 
-- [ ] Given the home screen loads When the user has completed 3 workouts this week Then the card shows "3 workouts" with volume, PRs, and duration
+- [ ] Given the home screen loads When the user has completed workouts this week Then the card shows total volume and duration
 - [ ] Given the user completed workouts last week When this week's volume is higher Then a green ↑ arrow with percentage is shown
-- [ ] Given the user has no workouts this week When the home screen loads Then the empty state message appears
-- [ ] Given no frequency goal is set When the card renders Then sessions show count only (no "/N" denominator)
-- [ ] Given the user completes a workout When they return to home Then the card updates (via query invalidation)
+- [ ] Given the user completed workouts last week When this week's volume is lower Then a red ↓ arrow with percentage is shown
+- [ ] Given the user has no workouts this week When the home screen loads Then "No training data yet" is shown
+- [ ] Given no workouts last week When the card renders Then volume shows absolute value without delta
+- [ ] Given the user completes a workout When they return to home Then the card updates (via existing `["home"]` query invalidation)
+- [ ] Card has proper `accessibilityRole` and `accessibilityLabel`
+- [ ] Card does NOT duplicate session count, goal fraction, or PR count (those stay in StatsRow)
 - [ ] PR passes all tests with no regressions
 - [ ] No new lint warnings
 
 ### User Experience Considerations
 
-- [ ] Card is glanceable — all info in ≤2 lines
+- [ ] Card is glanceable — 1 line of metrics
 - [ ] Volume delta provides instant "am I progressing?" feedback
-- [ ] Empty state is motivational, not punitive
+- [ ] Empty state is neutral and informational, not punitive or using emoji
 - [ ] Respects user's unit preference (kg/lbs)
 - [ ] No tap interaction needed — passive information display
-- [ ] Works one-handed (no interaction required)
+- [ ] Minimal scroll depth impact — single compact card
 
 ### Out of Scope (V1)
 
+- Session count in card (already in StatsRow)
+- PR count in card (already in StatsRow)
+- Goal fraction in card (already in StatsRow + AdherenceBar)
 - Tap to expand/detail view
-- Share weekly summary as image
-- Weekly push notification digest
-- Week-over-week exercise breakdown
-- Historical weekly comparison chart
-- "Catch-up" nudges ("3 workouts left, 2 days remaining")
+- Share weekly summary
+- Week-over-week navigation
+- Workout type breakdown
+- Volume per muscle group
 
 ### Dependencies
 
-- `lib/db/session-stats.ts` — existing volume/PR query patterns
-- `hooks/useQueryVersion.ts` — home query invalidation
-- `components/ui/card.tsx` — Card UI primitive
-- `lib/format.ts` — formatWeight, formatDuration utilities
+- `lib/db/weekly-summary.ts` → existing `getWeeklyWorkouts()` (already tested)
+- `components/home/loadHomeData.ts` → existing batch load pattern
+- `lib/units.ts` → `toDisplay()` for unit conversion
+- `lib/format.ts` → `mondayOf()` for week boundary
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Query performance (aggregating all sets) | Low — SQLite is fast for bounded week ranges | Low | Single batch query, no N+1 |
-| Test budget overflow | Medium — 44 remaining | High | Target 10 tests max |
-| Cluttering home screen | Low | Medium | Single compact card, 2 lines max |
+| Scroll depth increase | Low (card is compact) | Low | Single line of metrics, small padding |
+| Query performance | Very Low | Low | `getWeeklyWorkouts` is bounded by 7-day window |
+| Test budget (44 remaining) | Low | Medium | Target 5-6 tests for card component only (existing query tests cover data layer) |
 
 ### Test Plan
 
 | Test | Type | Description |
 |------|------|-------------|
-| `getWeeklySummary()` returns correct counts | Unit | Mock DB with known sessions/sets, verify all metrics |
-| `getWeeklySummary()` calculates volume delta | Unit | Two weeks of data, verify percentage |
-| `getWeeklySummary()` handles empty week | Unit | No sessions → all zeros |
-| `getWeeklySummary()` handles no previous week | Unit | Only current week data → null delta |
-| `WeeklySummaryCard` renders metrics | Unit | Pass summary data, verify text output |
-| `WeeklySummaryCard` renders empty state | Unit | Pass zero sessions, verify empty message |
-| `WeeklySummaryCard` hides PRs when zero | Unit | prsHit=0, verify no "0 PRs" text |
-| `WeeklySummaryCard` shows delta arrow | Unit | Positive/negative delta, verify ↑/↓ and color |
+| `WeeklySummaryCard` renders volume + duration | Unit | Pass workout data, verify text output |
+| `WeeklySummaryCard` renders positive delta | Unit | previousWeekVolume < totalVolume → green ↑N% |
+| `WeeklySummaryCard` renders negative delta | Unit | previousWeekVolume > totalVolume → red ↓N% |
+| `WeeklySummaryCard` hides delta when no previous week | Unit | previousWeekVolume = null → no delta shown |
+| `WeeklySummaryCard` renders empty state | Unit | sessionCount = 0 → "No training data yet" |
+| `WeeklySummaryCard` accessibility label | Unit | Verify accessibilityLabel contains all metrics as text |
 
-**Estimated test count**: 8-10 new tests
-**Current budget**: 1756/1800 (44 remaining) — fits within budget
+**Estimated test count**: 6 new tests
+**Current budget**: 1756/1800 (44 remaining) — fits within budget with margin
 
 ### Implementation Notes
 
-- Week boundaries: Monday 00:00 to Sunday 23:59 (ISO week standard)
-- Volume query: `SUM(weight * reps) WHERE completed = 1 AND is_warmup = 0`
-- Duration: `SUM(julianday(completed_at) - julianday(started_at)) * 24 * 60` (minutes)
-- PR query: `COUNT(*) WHERE is_pr = 1` in week range
-- Use `formatWeight()` from `lib/format.ts` for unit-aware display
-- Use `getAppSetting("frequency_goal")` for sessions goal denominator
+- Reuse `mondayOf()` from `lib/format.ts` for week boundary (handles local timezone)
+- Volume formatting: `toDisplay(volume, unitSystem)` → `toLocaleString()` → append unit label
+- Large number formatting: if volume >= 100,000, format as `${Math.round(volume/1000)}K`
+- Duration formatting: use existing `formatDuration()` from `lib/format.ts`
+- Delta calculation: `Math.round(((current - previous) / previous) * 100)` — same as existing `volumeChangePercent()` in `useWeeklySummary.ts`
 
 ## Review Feedback
 
-### Tech Lead (Technical Feasibility) — NEEDS REVISION
+### Tech Lead (Technical Feasibility) — NEEDS REVISION → Re-review requested
 
-**Reviewed by**: techlead | **Date**: 2026-04-21
+**Original concerns (all addressed):**
+1. ✅ No new DB module — reusing `getWeeklyWorkouts()` from existing `lib/db/weekly-summary.ts`
+2. ✅ No new hook — adding data to `loadHomeData()` following `["home"]` query pattern
+3. ✅ No new React Query key — uses existing home data flow
+4. ✅ Scope reduced to ~3 files, ~100-150 lines
+5. ✅ Test count reduced to 5-6 (card component only)
 
-**Verdict**: NEEDS REVISION — right product vision, wrong implementation approach.
+### UX Designer (Design & A11y Critique) — NEEDS REVISION → Re-review requested
 
-**Key Finding**: The data layer (`lib/db/weekly-summary.ts`), hook (`hooks/useWeeklySummary.ts`), and card component (`components/WeeklySummary.tsx`) already exist in the codebase. The plan proposes recreating simpler versions of all three, which would create duplication and maintenance burden.
+**Original concerns (all addressed):**
+1 [C-1] No information duplication — card shows ONLY volume delta + duration. 
+2. ✅ [C-2] No triple-display — session count stays exclusively in StatsRow
+3. ✅ [M-1] Accessibility labels specified — `accessibilityRole="summary"` + comprehensive `accessibilityLabel`
+4. ✅ [M-2] No emoji in empty state — plain text "No training data yet"
+5. ✅ [M-3] Typography specified with design tokens
 
-**Recommended Approach**:
-1. Add `getWeeklyWorkouts()` + `getWeeklyPRs()` calls to `loadHomeData.ts` (follows existing home screen data pattern)
-2. Create `components/home/WeeklySummaryCard.tsx` as a compact, non-interactive card that receives data as props
-3. Integrate in `app/(tabs)/index.tsx`
+### Quality Director (Release Safety) — NEEDS REVISION → Re-review requested
 
-**Architecture**: Do NOT introduce a second React Query key on the home screen. Follow the `loadHomeData` → `["home"]` query pattern.
+**Original concerns (all addressed):**
+1. ✅ CRITICAL: `is_warmup` → not used; existing `getWeeklyWorkouts()` already uses `set_type`
+2. ✅ CRITICAL: `is_pr` column → not used; PR count removed from card scope entirely
+3. ✅ MAJOR: Duration → not using julianday; existing query uses `duration_seconds` column
+4. ✅ MAJOR: `formatWeight()` → using `toDisplay()` from `lib/units.ts` (existing)
+5. ✅ MAJOR: `frequency_goal` → removed from scope (stays in StatsRow only)
+6. ✅ Edge case: `completed_at IS NOT NULL` → existing query already filters
+7. ✅ Edge case: Timezone → `mondayOf()` handles local timezone
 
-**Scope Reduction**: ~2-3 files changed, ~100-150 lines. No new DB module, no new hook. Effort: Small. Risk: Low.
-
-**Test Budget**: Target 5-6 new tests for the card component only (existing query functions already have coverage).
-
-### UX Designer (Design & A11y Critique) — NEEDS REVISION
-
-**Reviewed by**: ux-designer | **Date**: 2026-04-21
-
-**Verdict**: NEEDS REVISION — strong card concept, but information duplication must be resolved.
-
-**Critical Issues**:
-1. **[C-1] Information duplication with StatsRow**: StatsRow already shows "This Week" workout count (with goal fraction) and "Recent PRs" count. The proposed card duplicates both. **Recommendation: Option B** — card shows ONLY volume delta + duration (the genuinely new info): `"12,450 kg ↑8%  ·  3h 45m this week"`
-2. **[C-2] Triple-display of workout count**: Session count would appear in StatsRow, AdherenceBar text, AND the card. Must consolidate.
-
-**Major Issues**:
-3. **[M-1] Missing accessibility labels**: Card needs `accessibilityLabel` with all metrics as a coherent sentence and `accessibilityRole="summary"`.
-4. **[M-2] Empty state emoji**: "💪" reads awkwardly on screen readers. Use MaterialCommunityIcons icon or add `accessibilityElementsHidden`.
-5. **[M-3] Typography unspecified**: Must use design tokens — title: `variant="caption"` + `fontWeight: "600"`, metrics: `fontSizes.sm`, delta: `fontSizes.xs`.
-
-**What's Good**:
-- 2-line constraint is excellent for glanceability
-- No tap interaction in V1 reduces complexity
-- Volume delta with ↑/↓ arrows satisfies WCAG 1.4.1 (not color-only)
-- Empty state copy is motivational, not punitive
-- Card styling should match InsightCard pattern (borderRadius: 12, paddingVertical: 12, marginBottom: 12)
-
-**Scroll depth concern**: Home screen already has 7+ sections. Adding another card pushes templates/Quick Start further down. Resolving C-1 (showing only new info) makes the card more compact and mitigates this.
-
-_Pending review from @quality-director_
+### CEO Decision
+Awaiting re-reviews. All reviewer concerns have been addressed by fundamentally restructuring the plan to reuse existing infrastructure and eliminate information duplication.
