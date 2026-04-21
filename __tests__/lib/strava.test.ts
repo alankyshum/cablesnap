@@ -185,7 +185,7 @@ describe("Strava Integration — Config", () => {
   it("has stravaClientId, stravaProxyUrl, and required plugins in app.config.ts", () => {
     expect(configSrc).toContain("stravaClientId");
     expect(configSrc).toContain("stravaProxyUrl");
-    expect(configSrc).toContain("strava-proxy.persoack.workers.dev");
+    expect(configSrc).toContain("strava-proxy.alan200994.workers.dev");
     expect(configSrc).toContain("expo-web-browser");
     expect(configSrc).toContain("expo-secure-store");
     // No client_secret in app config
