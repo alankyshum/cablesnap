@@ -1,4 +1,5 @@
-import { Linking, StyleSheet, Switch, TextInput, View } from "react-native";
+import React, { useState } from "react";
+import { Linking, Pressable, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { setAppSetting } from "@/lib/db";
@@ -27,6 +28,7 @@ export default function ReminderSection({
   permDenied, setPermDenied, scheduleCount,
   restNotifications, setRestNotifications,
 }: Props) {
+  const [restTooltipVisible, setRestTooltipVisible] = useState(false);
   return (
     <>
       <View style={styles.row}>
@@ -99,10 +101,17 @@ export default function ReminderSection({
       )}
 
       <View style={[styles.row, { marginTop: 16 }]}>
-        <View style={{ flex: 1 }}>
-          <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Rest Timer Notifications</Text>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Get notified when rest is done while using other apps</Text>
-        </View>
+        <Pressable
+          onPress={() => setRestTooltipVisible(!restTooltipVisible)}
+          accessibilityRole="button"
+          accessibilityLabel="Rest Timer Notifications. Tap for more info"
+          style={{ flex: 1 }}
+        >
+          <View style={styles.labelWithIcon}>
+            <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Rest Timer Notifications</Text>
+            <Text variant="caption" style={{ color: colors.primary, fontSize: fontSizes.xs, marginLeft: 4 }}>ⓘ</Text>
+          </View>
+        </Pressable>
         <Switch
           value={restNotifications}
           onValueChange={async (val) => {
@@ -124,11 +133,18 @@ export default function ReminderSection({
           accessibilityHint="Enable or disable push notifications when rest timer completes while app is in background"
         />
       </View>
+      {restTooltipVisible && (
+        <Text variant="caption" style={[styles.tooltipText, { color: colors.onSurfaceVariant, backgroundColor: colors.surfaceVariant }]}>
+          Get notified when rest is done while using other apps.
+        </Text>
+      )}
     </>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  labelWithIcon: { flexDirection: "row", alignItems: "center" },
+  tooltipText: { fontSize: fontSizes.xs, padding: 10, borderRadius: 6, marginBottom: 8, lineHeight: 18 },
   timeInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: fontSizes.sm, textAlign: "center", width: 80 },
 });
