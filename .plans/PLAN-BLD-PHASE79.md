@@ -193,4 +193,23 @@ WeeklySummaryCard renders metrics
 
 ## Review Feedback
 
-_Pending reviews from @ux-designer, @quality-director, @techlead_
+### Tech Lead (Technical Feasibility) — NEEDS REVISION
+
+**Reviewed by**: techlead | **Date**: 2026-04-21
+
+**Verdict**: NEEDS REVISION — right product vision, wrong implementation approach.
+
+**Key Finding**: The data layer (`lib/db/weekly-summary.ts`), hook (`hooks/useWeeklySummary.ts`), and card component (`components/WeeklySummary.tsx`) already exist in the codebase. The plan proposes recreating simpler versions of all three, which would create duplication and maintenance burden.
+
+**Recommended Approach**:
+1. Add `getWeeklyWorkouts()` + `getWeeklyPRs()` calls to `loadHomeData.ts` (follows existing home screen data pattern)
+2. Create `components/home/WeeklySummaryCard.tsx` as a compact, non-interactive card that receives data as props
+3. Integrate in `app/(tabs)/index.tsx`
+
+**Architecture**: Do NOT introduce a second React Query key on the home screen. Follow the `loadHomeData` → `["home"]` query pattern.
+
+**Scope Reduction**: ~2-3 files changed, ~100-150 lines. No new DB module, no new hook. Effort: Small. Risk: Low.
+
+**Test Budget**: Target 5-6 new tests for the card component only (existing query functions already have coverage).
+
+_Pending reviews from @ux-designer, @quality-director_
