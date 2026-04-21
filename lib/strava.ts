@@ -19,7 +19,6 @@ import {
 
 // Strava API constants
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/mobile/authorize";
-const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 
 // SecureStore keys
@@ -31,6 +30,12 @@ const MAX_RETRIES = 3;
 
 function getClientId(): string {
   return Constants.expoConfig?.extra?.stravaClientId ?? "";
+}
+
+function getProxyUrl(): string {
+  const url = Constants.expoConfig?.extra?.stravaProxyUrl;
+  if (!url) throw new Error("Strava proxy URL not configured");
+  return url as string;
 }
 
 const redirectUri = AuthSession.makeRedirectUri({
@@ -96,23 +101,25 @@ async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
 
-  const clientId = getClientId();
-  if (!clientId) return null;
+  let proxyUrl: string;
+  try {
+    proxyUrl = getProxyUrl();
+  } catch {
+    return null;
+  }
 
   try {
-    const response = await fetch(STRAVA_TOKEN_URL, {
+    const response = await fetch(`${proxyUrl}/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        client_id: clientId,
-        grant_type: "refresh_token",
         refresh_token: refreshToken,
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        // Refresh token revoked — disconnect
+      if (response.status === 401 || response.status === 400) {
+        // Token revoked or invalid — disconnect
         await disconnect();
         return null;
       }
@@ -153,6 +160,8 @@ export async function connectStrava(): Promise<{
     throw new Error("Strava client ID not configured");
   }
 
+  const proxyUrl = getProxyUrl();
+
   const authRequest = new AuthSession.AuthRequest({
     clientId,
     scopes: ["activity:write"],
@@ -169,14 +178,12 @@ export async function connectStrava(): Promise<{
     return null;
   }
 
-  // Exchange authorization code for tokens
-  const tokenResponse = await fetch(STRAVA_TOKEN_URL, {
+  // Exchange authorization code for tokens via proxy
+  const tokenResponse = await fetch(`${proxyUrl}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      client_id: clientId,
       code: result.params.code,
-      grant_type: "authorization_code",
       code_verifier: authRequest.codeVerifier,
     }),
   });

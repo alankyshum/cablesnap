@@ -69,5 +69,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       projectId: "24dc5f10-9a21-4336-bac0-6334a5f6b82b",
     },
     stravaClientId: "227474",
+    stravaProxyUrl: "https://strava-proxy.persoack.workers.dev",
   },
 });
