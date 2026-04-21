@@ -80,7 +80,9 @@ import {
   deleteGoal,
   getCompletedGoals,
   getCurrentBestWeight,
+  getCurrentBestWeightsByExercise,
   getCurrentBestReps,
+  getCurrentBestRepsByExercise,
 } from "../../../lib/db/strength-goals";
 
 beforeEach(() => {
@@ -293,5 +295,54 @@ describe("getCurrentBestReps", () => {
 
     const result = await getCurrentBestReps("ex-no-data");
     expect(result).toBeNull();
+  });
+});
+
+describe("getCurrentBestWeightsByExercise", () => {
+  it("returns empty record for empty input", async () => {
+    const result = await getCurrentBestWeightsByExercise([]);
+    expect(result).toEqual({});
+    expect(mockDb.getAllAsync).not.toHaveBeenCalled();
+  });
+
+  it("returns best weights keyed by exercise ID", async () => {
+    mockDb.getAllAsync.mockResolvedValue([
+      { exercise_id: "ex-1", best: 100 },
+      { exercise_id: "ex-3", best: 60 },
+    ]);
+
+    const result = await getCurrentBestWeightsByExercise(["ex-1", "ex-2", "ex-3"]);
+    expect(result).toEqual({ "ex-1": 100, "ex-2": null, "ex-3": 60 });
+  });
+
+  it("returns null for exercises with no completed sets", async () => {
+    mockDb.getAllAsync.mockResolvedValue([]);
+
+    const result = await getCurrentBestWeightsByExercise(["ex-empty"]);
+    expect(result).toEqual({ "ex-empty": null });
+  });
+});
+
+describe("getCurrentBestRepsByExercise", () => {
+  it("returns empty record for empty input", async () => {
+    const result = await getCurrentBestRepsByExercise([]);
+    expect(result).toEqual({});
+    expect(mockDb.getAllAsync).not.toHaveBeenCalled();
+  });
+
+  it("returns best reps keyed by exercise ID", async () => {
+    mockDb.getAllAsync.mockResolvedValue([
+      { exercise_id: "ex-pullups", best: 15 },
+    ]);
+
+    const result = await getCurrentBestRepsByExercise(["ex-pullups", "ex-pushups"]);
+    expect(result).toEqual({ "ex-pullups": 15, "ex-pushups": null });
+  });
+
+  it("returns null for exercises with no completed sets", async () => {
+    mockDb.getAllAsync.mockResolvedValue([]);
+
+    const result = await getCurrentBestRepsByExercise(["ex-none"]);
+    expect(result).toEqual({ "ex-none": null });
   });
 });

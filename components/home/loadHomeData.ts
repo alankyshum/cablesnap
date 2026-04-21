@@ -9,6 +9,7 @@ import {
   getWeeklyE1RMTrends, getRecentSessionRPEs, getRecentSessionRatings,
   getWeeklyWorkouts, getBodySettings,
 } from "../../lib/db";
+import { getExercisesByIds, getActiveGoals, getCurrentBestWeightsByExercise, getCurrentBestRepsByExercise } from "../../lib/db";
 import { computeStreak, mondayOf } from "../../lib/format";
 import { computeAllTemplateReadiness, hasWorkoutHistory } from "../../lib/recovery-readiness";
 import { generateInsight, type GoalInsightRow } from "../../lib/insights";
@@ -18,8 +19,6 @@ import {
   isDismissed,
   type OverreachingResult,
 } from "../../lib/overreaching";
-import { getActiveGoals, getCurrentBestWeight, getCurrentBestReps } from "../../lib/db";
-import { getExerciseById } from "../../lib/db";
 
 export type WeeklyGoalProgress = {
   mode: "schedule" | "frequency" | "hidden";
@@ -128,18 +127,33 @@ export async function buildWeeklyGoalProgress(
   return { mode: "hidden", slots: [], completedCount: 0, targetCount: 0 };
 }
 
+function isBodyweightGoal(goal: { target_reps: number | null; target_weight: number | null }): boolean {
+  return goal.target_reps != null && goal.target_weight == null;
+}
+
 async function loadGoalInsights(): Promise<GoalInsightRow[]> {
   try {
     const activeGoals = await getActiveGoals();
+    const goals = activeGoals.slice(0, 3);
+    if (goals.length === 0) return [];
+
+    const exerciseIds = [...new Set(goals.map((g) => g.exercise_id))];
+    const weightGoalIds = goals.filter((g) => !isBodyweightGoal(g)).map((g) => g.exercise_id);
+    const repGoalIds = goals.filter((g) => isBodyweightGoal(g)).map((g) => g.exercise_id);
+
+    const [exercisesMap, bestWeights, bestReps] = await Promise.all([
+      getExercisesByIds(exerciseIds),
+      weightGoalIds.length > 0 ? getCurrentBestWeightsByExercise(weightGoalIds) : ({} as Record<string, number | null>),
+      repGoalIds.length > 0 ? getCurrentBestRepsByExercise(repGoalIds) : ({} as Record<string, number | null>),
+    ]);
+
     const results: GoalInsightRow[] = [];
-    for (const goal of activeGoals.slice(0, 3)) {
-      const exercise = await getExerciseById(goal.exercise_id);
+    for (const goal of goals) {
+      const exercise = exercisesMap[goal.exercise_id];
       if (!exercise) continue;
-      const isBodyweight = goal.target_reps != null && goal.target_weight == null;
-      const best = isBodyweight
-        ? await getCurrentBestReps(goal.exercise_id)
-        : await getCurrentBestWeight(goal.exercise_id);
-      const target = isBodyweight ? (goal.target_reps ?? 0) : (goal.target_weight ?? 0);
+      const bw = isBodyweightGoal(goal);
+      const best = bw ? (bestReps[goal.exercise_id] ?? null) : (bestWeights[goal.exercise_id] ?? null);
+      const target = bw ? (goal.target_reps ?? 0) : (goal.target_weight ?? 0);
       const pct = target > 0 && best != null ? Math.round((best / target) * 100) : 0;
       results.push({ exercise_id: goal.exercise_id, exercise_name: exercise.name, progressPct: pct });
     }
