@@ -38,6 +38,52 @@ type Props = {
 
 type SegButton = { value: string; label: string; accessibilityLabel: string };
 
+function FieldLabel({
+  text,
+  color,
+  tooltip,
+  tooltipVisible,
+  onToggleTooltip,
+}: {
+  text: string;
+  color: string;
+  tooltip?: string;
+  tooltipVisible?: boolean;
+  onToggleTooltip?: () => void;
+}) {
+  const themeColors = useThemeColors();
+  if (tooltip && onToggleTooltip) {
+    return (
+      <>
+        <Pressable
+          onPress={onToggleTooltip}
+          accessibilityRole="button"
+          accessibilityLabel={`${text}. Tap for more info`}
+          style={styles.fieldLabelTappable}
+        >
+          <Text variant="caption" style={[styles.fieldLabel, { color, fontWeight: "600", marginTop: 0, marginBottom: 0 }]}>
+            {text}
+          </Text>
+          <Text variant="caption" style={{ color: themeColors.primary, fontSize: fontSizes.xs, marginLeft: 4 }}>ⓘ</Text>
+        </Pressable>
+        {tooltipVisible && (
+          <Text
+            variant="caption"
+            style={[styles.tooltipText, { color: themeColors.onSurfaceVariant, backgroundColor: themeColors.surfaceVariant }]}
+          >
+            {tooltip}
+          </Text>
+        )}
+      </>
+    );
+  }
+  return (
+    <Text variant="caption" style={[styles.fieldLabel, { color, fontWeight: "600" }]}>
+      {text}
+    </Text>
+  );
+}
+
 export function BodyProfileForm(props: Props) {
   const { colors, handleFieldBlur, handleSegmentChange } = props;
   const themeColors = useThemeColors();
@@ -89,29 +135,13 @@ export function BodyProfileForm(props: Props) {
 
       {/* RMR Override — optional advanced field */}
       <View style={styles.rmrContainer}>
-        <View style={styles.rmrLabelRow}>
-          <Text variant="caption" style={[styles.fieldLabel, { color: colors.onSurface, fontWeight: "600", marginBottom: 0 }]}>
-            Measured RMR (optional)
-          </Text>
-          <Pressable
-            onPress={() => setTooltipVisible(!tooltipVisible)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityLabel="Help: What is Measured RMR"
-            accessibilityRole="button"
-            style={styles.tooltipButton}
-          >
-            <Text variant="caption" style={{ color: themeColors.primary, fontSize: fontSizes.sm }}>ⓘ</Text>
-          </Pressable>
-        </View>
-
-        {tooltipVisible && (
-          <Text
-            variant="caption"
-            style={[styles.tooltipText, { color: themeColors.onSurfaceVariant, backgroundColor: themeColors.surfaceVariant }]}
-          >
-            Enter your Resting Metabolic Rate from a clinical metabolic test (indirect calorimetry). Do not use smart scale or fitness tracker estimates — they&apos;re often less accurate than our built-in formula. Leave blank to use automatic calculation.
-          </Text>
-        )}
+        <FieldLabel
+          text="Measured RMR (optional)"
+          color={colors.onSurface}
+          tooltip="Enter your Resting Metabolic Rate from a clinical metabolic test (indirect calorimetry). Do not use smart scale or fitness tracker estimates — they're often less accurate than our built-in formula. Leave blank to use automatic calculation."
+          tooltipVisible={tooltipVisible}
+          onToggleTooltip={() => setTooltipVisible(!tooltipVisible)}
+        />
 
         <View style={styles.rmrInputRow}>
           <Input
@@ -156,9 +186,8 @@ const styles = StyleSheet.create({
   input: { marginBottom: 4 },
   fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: fontSizes.sm },
   segmented: { marginBottom: 8 },
-  rmrContainer: { marginTop: 16 },
-  rmrLabelRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  tooltipButton: { marginLeft: 6, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" },
+  rmrContainer: { marginTop: 8 },
+  fieldLabelTappable: { flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 8 },
   tooltipText: { fontSize: fontSizes.xs, padding: 10, borderRadius: 6, marginBottom: 8, lineHeight: 18 },
   rmrInputRow: { flexDirection: "row", alignItems: "center" },
   rmrInput: { flex: 1, marginBottom: 0 },
