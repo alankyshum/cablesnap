@@ -92,7 +92,7 @@ export const Button = forwardRef<View, ButtonProps>(
       // Size variants
       switch (size) {
         case 'sm':
-          Object.assign(baseStyle, { height: 44, paddingHorizontal: 24 });
+          Object.assign(baseStyle, { height: 38, paddingHorizontal: 16 });
           break;
         case 'lg':
           Object.assign(baseStyle, { height: 54, paddingHorizontal: 36 });
@@ -139,7 +139,7 @@ export const Button = forwardRef<View, ButtonProps>(
 
     const getButtonTextStyle = (): TextStyle => {
       const baseTextStyle: TextStyle = {
-        fontSize: FONT_SIZE,
+        fontSize: size === 'sm' ? 14 : FONT_SIZE,
         fontWeight: '500',
       };
 
@@ -299,7 +299,7 @@ export const Button = forwardRef<View, ButtonProps>(
         : flexValue !== null
         ? {
             flex: flexValue,
-            maxHeight: size === 'sm' ? 44 : size === 'lg' ? 54 : HEIGHT,
+            maxHeight: size === 'sm' ? 38 : size === 'lg' ? 54 : HEIGHT,
           }
         : {};
     };
