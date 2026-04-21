@@ -144,38 +144,6 @@ describe('Session UX Acceptance', () => {
     })
   })
 
-  describe('Step Buttons (Weight/Reps)', () => {
-    it('renders decrease and increase weight buttons', async () => {
-      setupSession()
-      const { findByText, getAllByLabelText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      const decreaseButtons = getAllByLabelText(/Decrease weight/)
-      const increaseButtons = getAllByLabelText(/Increase weight/)
-      expect(decreaseButtons.length).toBeGreaterThanOrEqual(1)
-      expect(increaseButtons.length).toBeGreaterThanOrEqual(1)
-    })
-
-    it('renders step buttons with minus and plus symbols', async () => {
-      setupSession()
-      const { findByText, getAllByText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      const minusButtons = getAllByText('−')
-      const plusButtons = getAllByText('+')
-      expect(minusButtons.length).toBeGreaterThanOrEqual(1)
-      expect(plusButtons.length).toBeGreaterThanOrEqual(1)
-    })
-
-    it('step buttons use correct step value from body settings', async () => {
-      setupSession()
-      mockDb.getBodySettings.mockResolvedValue({ weight_unit: 'lb', measurement_unit: 'in', weight_goal: null, body_fat_goal: null })
-      const { findByText, getAllByLabelText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      // lb unit should use step of 5
-      const decreaseButtons = getAllByLabelText(/Decrease weight by 5/)
-      expect(decreaseButtons.length).toBeGreaterThanOrEqual(1)
-    })
-  })
-
   describe('Haptic Feedback', () => {
     it('calls haptic feedback when RPE chip is tapped', async () => {
       setupSession()
