@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-21
-Total learnings: 210
+Total learnings: 211
 
 ## How to Use This Knowledge Base
 
@@ -19,7 +19,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
-- [Build Configuration](pitfalls/build-config.md) — 14 learnings
+- [Build Configuration](pitfalls/build-config.md) — 15 learnings
 - [Theming](pitfalls/theming.md) — 6 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 23 learnings
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-21 | BLD-466 | Expo Router Route Params Cannot Transport Large Data Payloads | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-21 | BLD-465 | Validate All Interpolated SQL Identifiers — Not Just Table Names | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-20 | BLD-460 | Multi-Signal Analytics Feature Architecture — Pure Module + loadHomeData Integration | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-20 | BLD-460 | Create Dedicated DB Queries for New Analytics — Do Not Repurpose Existing Ones | Decisions | [architecture.md](decisions/architecture.md) |

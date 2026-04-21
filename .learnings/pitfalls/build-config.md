@@ -114,3 +114,11 @@
 **Learning**: CableSnap DB schema migrations (all CREATE TABLE and ALTER TABLE statements) are defined in `lib/db/migrations.ts`. Seed data and starter template logic is in `lib/db/seed.ts`. Plans and implementations referencing `lib/db/helpers.ts` or `lib/db/schema.ts` for DDL are targeting the wrong files.
 **Action**: When adding new tables or modifying schema in CableSnap, add CREATE TABLE / ALTER TABLE statements to `lib/db/migrations.ts`. For seed data, use `lib/db/seed.ts`. Reference `lib/db/helpers.ts` only for connection management and query utilities (`query`, `queryOne`, `getDb`).
 **Tags**: cablesnap, database, schema, migration, file-location, plan-accuracy, module-decomposition
+
+### Expo Router Route Params Cannot Transport Large Data Payloads
+**Source**: BLD-466 — PLAN: Phase 78 — Auto-Backup After Workout
+**Date**: 2026-04-21
+**Context**: The auto-backup plan proposed reusing the existing `import-backup.tsx` screen to restore from backup files (50-200KB JSON). Tech lead review discovered the screen accepts `backupJson` — the full JSON string — as a URL route parameter, which would fail for large payloads.
+**Learning**: Expo Router route params are serialized into URL strings. Passing large data (tens to hundreds of KB) as a route param will fail or cause performance issues — URLs have practical length limits and the data must survive serialization. The existing `import-backup.tsx` screen was built for small manual imports but its `backupJson` param pattern does not scale to auto-backup file sizes.
+**Action**: When navigating to a screen that needs access to large data, pass a `filePath` param instead of the data itself. The receiving screen reads and parses the file on mount. This is backwards-compatible — check for `filePath` first, fall back to inline `backupJson` for legacy callers. Apply this principle to any inter-screen data transfer exceeding a few KB.
+**Tags**: expo-router, route-params, navigation, large-data, file-path, url-limits, import-backup, scalability
