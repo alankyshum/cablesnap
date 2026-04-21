@@ -20,6 +20,7 @@ import CSVExportCard from '../../components/settings/CSVExportCard';
 import AppearanceCard from '../../components/settings/AppearanceCard';
 import UnitsCard from '../../components/settings/UnitsCard';
 import DataManagementCard from '../../components/settings/DataManagementCard';
+import AutoBackupSection from '../../components/settings/AutoBackupSection';
 import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import { useThemeColors } from '@/hooks/useThemeColors';
@@ -132,6 +133,7 @@ export default function Settings() {
           setHcLoading={setHcLoading}
           hcSdkStatus={hcSdkStatus}
         />
+        <AutoBackupSection colors={colors} toast={toast} />
         <DataManagementCard
           colors={colors}
           loading={loading}
