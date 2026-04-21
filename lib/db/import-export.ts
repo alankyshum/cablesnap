@@ -13,7 +13,7 @@ import type {
   MealTemplate,
   MealTemplateItem,
 } from "../types";
-import { getDatabase } from "./helpers";
+import { getDatabase, withTransaction } from "./helpers";
 
 // --------------- Backup Format Types ---------------
 
@@ -305,14 +305,13 @@ export async function importData(
   data: Record<string, unknown>,
   onProgress?: (progress: ImportProgress) => void
 ): Promise<ImportResult> {
-  const database = await getDatabase();
   const version = Number(data.version ?? 0);
   const tableData = version <= 2 ? data : (data.data as Record<string, unknown> | undefined) ?? {};
   let totalInserted = 0;
   let totalSkipped = 0;
   const perTable: Record<string, { inserted: number; skipped: number }> = {};
 
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     // Ensure foreign keys are enforced
     await database.execAsync("PRAGMA foreign_keys = ON");
 

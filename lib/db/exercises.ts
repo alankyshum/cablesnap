@@ -1,7 +1,7 @@
 import { eq, and, isNull, inArray } from "drizzle-orm";
 import type { Exercise } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, query, getDatabase } from "./helpers";
+import { getDrizzle, query, withTransaction } from "./helpers";
 import { exercises, templateExercises } from "./schema";
 import type { ExerciseRow } from "./schema";
 
@@ -96,8 +96,7 @@ export async function updateCustomExercise(
 }
 
 export async function softDeleteCustomExercise(id: string): Promise<void> {
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     const db = await getDrizzle();
     await db.delete(templateExercises).where(eq(templateExercises.exercise_id, id));
     await db.update(exercises)

@@ -1,5 +1,5 @@
 import { eq, and, sql, asc, isNull, isNotNull, gte, lt } from "drizzle-orm";
-import { getDrizzle, getDatabase } from "./helpers";
+import { getDrizzle } from "./helpers";
 import { appSettings, interactionLog, workoutSessions, programSchedule, workoutTemplates, programs } from "./schema";
 import { uuid } from "../uuid";
 
@@ -158,21 +158,18 @@ export async function insertInteraction(
   screen: string,
   detail: string | null
 ): Promise<void> {
-  const database = await getDatabase();
   const db = await getDrizzle();
-  await database.withTransactionAsync(async () => {
-    const id = uuid();
-    await db.insert(interactionLog).values({
-      id,
-      action,
-      screen,
-      detail,
-      timestamp: Date.now(),
-    });
-    await db.delete(interactionLog).where(
-      sql`${interactionLog.id} NOT IN (SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 5)`
-    );
+  const id = uuid();
+  await db.insert(interactionLog).values({
+    id,
+    action,
+    screen,
+    detail,
+    timestamp: Date.now(),
   });
+  await db.delete(interactionLog).where(
+    sql`${interactionLog.id} NOT IN (SELECT id FROM interaction_log ORDER BY timestamp DESC LIMIT 5)`
+  );
 }
 
 export async function getInteractions(): Promise<

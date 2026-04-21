@@ -85,11 +85,11 @@ beforeEach(() => {
 });
 
 describe("insertInteraction", () => {
-  it("inserts and prunes in a transaction", async () => {
+  it("inserts and prunes without wrapping in a transaction", async () => {
     await initDb();
     await db.insertInteraction("navigate", "Home", null);
 
-    expect(mockDb.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(mockDb.withTransactionAsync).not.toHaveBeenCalled();
     // INSERT via Drizzle
     expect(mockDrizzleInsertCalls).toHaveLength(1);
     const insertValues = mockDrizzleInsertCalls[0][0];

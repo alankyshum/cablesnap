@@ -1,7 +1,7 @@
 import type { Program, ProgramDay } from "./types";
 import type { ScheduleEntry } from "./db/settings";
 import { uuid } from "./uuid";
-import { getDatabase } from "./db/helpers";
+import { getDatabase, withTransaction } from "./db/helpers";
 
 // --------------- Programs ---------------
 
@@ -106,8 +106,7 @@ export async function getActiveProgram(): Promise<Program | null> {
 }
 
 export async function activateProgram(id: string): Promise<void> {
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     await database.runAsync(
       "UPDATE programs SET is_active = 0, updated_at = ? WHERE is_active = 1",
       [Date.now()]
@@ -216,7 +215,7 @@ export async function removeProgramDay(id: string): Promise<void> {
     [id]
   );
   if (!row) return;
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     await database.runAsync("DELETE FROM program_days WHERE id = ?", [id]);
     const prog = await database.getFirstAsync<{ current_day_id: string | null }>(
       "SELECT current_day_id FROM programs WHERE id = ?",
@@ -253,15 +252,14 @@ export async function reorderProgramDays(
   programId: string,
   orderedIds: string[]
 ): Promise<void> {
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (db) => {
     for (let i = 0; i < orderedIds.length; i++) {
-      await database.runAsync(
+      await db.runAsync(
         "UPDATE program_days SET position = ? WHERE id = ? AND program_id = ?",
         [i, orderedIds[i], programId]
       );
     }
-    await database.runAsync(
+    await db.runAsync(
       "UPDATE programs SET updated_at = ? WHERE id = ?",
       [Date.now(), programId]
     );
@@ -285,7 +283,7 @@ export async function advanceProgram(
   }
 
   let wrapped = false;
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     await database.runAsync(
       "INSERT INTO program_log (id, program_id, day_id, session_id, completed_at) VALUES (?, ?, ?, ?, ?)",
       [uuid(), programId, dayId, sessionId, now]

@@ -2,7 +2,7 @@
 import { eq, sql, and, inArray, asc, desc, isNull, count } from "drizzle-orm";
 import type { WorkoutTemplate, TemplateExercise, MuscleGroup } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, getDatabase } from "./helpers";
+import { getDrizzle, withTransaction } from "./helpers";
 import {
   workoutTemplates,
   templateExercises,
@@ -121,8 +121,7 @@ export async function deleteTemplate(id: string): Promise<void> {
     .get();
   if (tpl?.is_starter === 1) return;
 
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     await db.delete(programSchedule).where(eq(programSchedule.template_id, id));
     await db.delete(templateExercises).where(eq(templateExercises.template_id, id));
     await db
@@ -143,9 +142,8 @@ export async function duplicateTemplate(id: string): Promise<string> {
   const now = Date.now();
   const name = `${tpl.name} (Copy)`;
   const db = await getDrizzle();
-  const database = await getDatabase();
 
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     await db.insert(workoutTemplates).values({
       id: newId,
       name,
@@ -181,7 +179,6 @@ export async function duplicateTemplate(id: string): Promise<string> {
 
 export async function duplicateProgram(id: string): Promise<string> {
   const db = await getDrizzle();
-  const database = await getDatabase();
 
   const prog = await db
     .select({
@@ -224,7 +221,7 @@ export async function duplicateProgram(id: string): Promise<string> {
     }
   }
 
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     await db.insert(programs).values({
       id: newId,
       name,
@@ -296,8 +293,7 @@ export async function removeExerciseFromTemplate(id: string): Promise<void> {
     .get();
   if (!row) return;
 
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     await db.delete(templateExercises).where(eq(templateExercises.id, id));
     if (row.link_id) {
       const remaining = await db
@@ -335,8 +331,7 @@ export async function reorderTemplateExercises(
   orderedIds: string[]
 ): Promise<void> {
   const db = await getDrizzle();
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     for (let i = 0; i < orderedIds.length; i++) {
       await db
         .update(templateExercises)
@@ -363,8 +358,7 @@ export async function updateTemplateExercise(
   restSeconds: number
 ): Promise<void> {
   const db = await getDrizzle();
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     await db
       .update(templateExercises)
       .set({ target_sets: targetSets, target_reps: targetReps, rest_seconds: restSeconds })
@@ -412,9 +406,8 @@ export async function createExerciseLink(
   exerciseIds: string[]
 ): Promise<string> {
   const db = await getDrizzle();
-  const database = await getDatabase();
   const linkId = uuid();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     for (const eid of exerciseIds) {
       await db
         .update(templateExercises)
@@ -436,8 +429,7 @@ export async function createExerciseLink(
 
 export async function unlinkExerciseGroup(linkId: string): Promise<void> {
   const db = await getDrizzle();
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     const te = await db
       .select({ template_id: templateExercises.template_id })
       .from(templateExercises)
@@ -462,8 +454,7 @@ export async function addToExerciseLink(
   exerciseIds: string[]
 ): Promise<void> {
   const db = await getDrizzle();
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     for (const eid of exerciseIds) {
       await db
         .update(templateExercises)
@@ -478,8 +469,7 @@ export async function unlinkSingleExercise(
   linkId: string
 ): Promise<void> {
   const db = await getDrizzle();
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     const te = await db
       .select({ template_id: templateExercises.template_id })
       .from(templateExercises)

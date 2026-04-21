@@ -1,7 +1,7 @@
 import { eq, sql, desc, isNotNull, and, asc, inArray } from "drizzle-orm";
 import type { WorkoutSession } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, getDatabase, query } from "./helpers";
+import { getDrizzle, query, withTransaction } from "./helpers";
 import { workoutSessions, workoutSets, workoutTemplates, templateExercises } from "./schema";
 
 // Re-export from split modules for backward compatibility
@@ -228,13 +228,12 @@ export async function createTemplateFromSession(
   sessionId: string,
   name: string
 ): Promise<string> {
-  const database = await getDatabase();
   const db = await getDrizzle();
 
   const newTemplateId = uuid();
   const now = Date.now();
 
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async () => {
     await db.insert(workoutTemplates).values({
       id: newTemplateId,
       name,

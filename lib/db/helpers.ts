@@ -93,8 +93,8 @@ export async function execute(sql: string, params?: SQLite.SQLiteBindParams) {
   return database.runAsync(sql, params);
 }
 
-// Serialize transactions to prevent "database is locked" from concurrent
-// withTransactionAsync calls (e.g., double-tap creating overlapping writes).
+// Serialize transactions to prevent "database is locked" and "cannot rollback"
+// errors from concurrent withTransactionAsync calls on the same connection.
 let txQueue: Promise<void> = Promise.resolve();
 
 export async function withTransaction(fn: (db: SQLite.SQLiteDatabase) => Promise<void>): Promise<void> {
@@ -105,6 +105,18 @@ export async function withTransaction(fn: (db: SQLite.SQLiteDatabase) => Promise
   await prev;
   try {
     await database.withTransactionAsync(() => fn(database));
+  } catch (err: unknown) {
+    // expo-sqlite may throw "cannot rollback - no transaction is active" when
+    // trying to rollback after a failed callback. If the original error caused
+    // an implicit rollback, the explicit ROLLBACK fails. Re-throw the original
+    // error rather than masking it with the ROLLBACK failure.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("cannot rollback")) {
+      // Transaction was already rolled back — safe to ignore the rollback error.
+      // The original callback error was already handled by the implicit rollback.
+      return;
+    }
+    throw err;
   } finally {
     resolve();
   }

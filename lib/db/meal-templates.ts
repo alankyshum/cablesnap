@@ -1,6 +1,6 @@
 import type { Meal, MealTemplate, MealTemplateItem } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, getDatabase, getDrizzle } from "./helpers";
+import { query, queryOne, getDatabase, getDrizzle, withTransaction } from "./helpers";
 import { mealTemplates, foodEntries } from "./schema";
 import { desc, eq } from "drizzle-orm";
 import type { MealTemplateRow as SchemaMealTemplateRow } from "./schema";
@@ -60,14 +60,13 @@ export type CreateMealTemplateInput = {
 export async function createMealTemplate(
   input: CreateMealTemplateInput
 ): Promise<MealTemplate> {
-  const database = await getDatabase();
   const templateId = uuid();
   const now = Date.now();
 
   // Compute cached macros from food_entries
   const macros = await computeMacros(input.items);
 
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     await database.runAsync(
       `INSERT INTO meal_templates (id, name, meal, cached_calories, cached_protein, cached_carbs, cached_fat, last_used_at, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
@@ -139,11 +138,10 @@ export async function updateMealTemplate(
   id: string,
   input: UpdateMealTemplateInput
 ): Promise<void> {
-  const database = await getDatabase();
   const now = Date.now();
   const macros = await computeMacros(input.items);
 
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     await database.runAsync(
       `UPDATE meal_templates SET name = ?, meal = ?,
        cached_calories = ?, cached_protein = ?, cached_carbs = ?, cached_fat = ?,
@@ -167,8 +165,7 @@ export async function updateMealTemplate(
 }
 
 export async function deleteMealTemplate(id: string): Promise<void> {
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     await database.runAsync(
       "DELETE FROM meal_template_items WHERE template_id = ?",
       [id]
@@ -215,7 +212,7 @@ export async function logFromTemplate(
   const logIds: string[] = [];
   const now = Date.now();
 
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     for (const item of items) {
       // Skip missing food entries (LEFT JOIN null check)
       if (item.food_id == null) continue;
@@ -240,8 +237,7 @@ export async function logFromTemplate(
 }
 
 export async function undoLogFromTemplate(logIds: string[]): Promise<void> {
-  const database = await getDatabase();
-  await database.withTransactionAsync(async () => {
+  await withTransaction(async (database) => {
     for (const id of logIds) {
       await database.runAsync("DELETE FROM daily_log WHERE id = ?", [id]);
     }
