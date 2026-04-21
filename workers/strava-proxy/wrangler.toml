@@ -1,0 +1,7 @@
+name = "strava-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# STRAVA_CLIENT_ID is set via: npx wrangler secret put STRAVA_CLIENT_ID
+# STRAVA_CLIENT_SECRET is set via: npx wrangler secret put STRAVA_CLIENT_SECRET
+# Never commit secrets to this file.

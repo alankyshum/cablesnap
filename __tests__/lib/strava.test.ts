@@ -43,6 +43,11 @@ const configSrc = fs.readFileSync(
   "utf-8"
 );
 
+const workerSrc = fs.readFileSync(
+  path.resolve(__dirname, "../../workers/strava-proxy/src/index.ts"),
+  "utf-8"
+);
+
 describe("Strava Integration — DB Schema (Phase 48)", () => {
   it("creates strava tables with correct structure", () => {
     expect(helpersSrc).toContain("CREATE TABLE IF NOT EXISTS strava_connection");
@@ -101,10 +106,22 @@ describe("Strava Integration — API Client", () => {
     expect(stravaClientSrc).toContain("getBodySettings");
   });
 
-  it("handles token refresh, 401 disconnect, and redirect URI", () => {
+  it("uses proxy for token exchange and refresh instead of direct Strava calls", () => {
+    expect(stravaClientSrc).toContain("getProxyUrl");
+    expect(stravaClientSrc).toContain("stravaProxyUrl");
+    expect(stravaClientSrc).toMatch(/\$\{proxyUrl\}\/token/);
+    expect(stravaClientSrc).toMatch(/\$\{proxyUrl\}\/refresh/);
+    // No direct Strava token URL
+    expect(stravaClientSrc).not.toContain("strava.com/oauth/token");
+    // client_id and grant_type not sent in token exchange/refresh body
+    expect(stravaClientSrc).not.toMatch(/body:.*client_id.*grant_type/s);
+  });
+
+  it("handles token refresh, disconnect on 401/400, and redirect URI", () => {
     expect(stravaClientSrc).toContain("refreshAccessToken");
     expect(stravaClientSrc).toContain("getValidAccessToken");
     expect(stravaClientSrc).toContain("401");
+    expect(stravaClientSrc).toContain("400");
     expect(stravaClientSrc).toContain("await disconnect()");
     expect(stravaClientSrc).toContain("No completed sets to sync");
     expect(stravaClientSrc).toContain('scheme: "cablesnap"');
@@ -165,10 +182,53 @@ describe("Strava Integration — Session & Startup", () => {
 });
 
 describe("Strava Integration — Config", () => {
-  it("has stravaClientId and required plugins in app.config.ts", () => {
+  it("has stravaClientId, stravaProxyUrl, and required plugins in app.config.ts", () => {
     expect(configSrc).toContain("stravaClientId");
+    expect(configSrc).toContain("stravaProxyUrl");
+    expect(configSrc).toContain("strava-proxy.alan200994.workers.dev");
     expect(configSrc).toContain("expo-web-browser");
     expect(configSrc).toContain("expo-secure-store");
+    // No client_secret in app config
+    expect(configSrc).not.toContain("client_secret");
+    expect(configSrc).not.toContain("stravaClientSecret");
+  });
+});
+
+describe("Strava Integration — Worker Proxy", () => {
+  it("has /token and /refresh endpoints with input validation", () => {
+    expect(workerSrc).toContain('"/token"');
+    expect(workerSrc).toContain('"/refresh"');
+    expect(workerSrc).toContain("missing required field: code");
+    expect(workerSrc).toContain("missing required field: refresh_token");
+  });
+
+  it("sends form-encoded requests to Strava (not JSON)", () => {
+    expect(workerSrc).toContain("URLSearchParams");
+    expect(workerSrc).toContain("application/x-www-form-urlencoded");
+  });
+
+  it("adds client_id and client_secret from env bindings", () => {
+    expect(workerSrc).toContain("env.STRAVA_CLIENT_ID");
+    expect(workerSrc).toContain("env.STRAVA_CLIENT_SECRET");
+    // No hardcoded secrets
+    expect(workerSrc).not.toMatch(/client_secret:\s*"/);
+  });
+
+  it("returns 404 for unknown routes and 405 for non-POST methods", () => {
+    expect(workerSrc).toContain("not found");
+    expect(workerSrc).toContain("404");
+    expect(workerSrc).toContain("method not allowed");
+    expect(workerSrc).toContain("405");
+  });
+
+  it("handles CORS preflight with OPTIONS", () => {
+    expect(workerSrc).toContain("OPTIONS");
+    expect(workerSrc).toContain("Access-Control-Allow-Origin");
+    expect(workerSrc).toContain("204");
+  });
+
+  it("proxies Strava response status codes", () => {
+    expect(workerSrc).toContain("stravaRes.status");
   });
 });
 
@@ -178,7 +238,7 @@ describe("Strava Integration — Config", () => {
 jest.mock("expo-constants", () => ({
   __esModule: true,
   default: {
-    expoConfig: { extra: { stravaClientId: "test-client-id" } },
+    expoConfig: { extra: { stravaClientId: "test-client-id", stravaProxyUrl: "https://test-proxy.example.com" } },
   },
 }));
 jest.mock("../../lib/db", () => ({
@@ -216,7 +276,7 @@ describe("Strava Integration — Behavioral", () => {
     global.fetch = originalFetch;
   });
 
-  it("connectStrava exchanges auth code for tokens and saves connection", async () => {
+  it("connectStrava exchanges auth code for tokens via proxy and saves connection", async () => {
     AuthSession.AuthRequest.mockImplementation(() => ({
       promptAsync: jest.fn().mockResolvedValue({
         type: "success",
@@ -240,10 +300,14 @@ describe("Strava Integration — Behavioral", () => {
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_access_token", "at-1");
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_refresh_token", "rt-1");
     expect(db.saveStravaConnection).toHaveBeenCalledWith(42, "Jane Doe");
-    // Verify PKCE code_verifier is sent in token exchange
+    // Verify proxy URL is used
+    expect(mockFetch.mock.calls[0][0]).toBe("https://test-proxy.example.com/token");
+    // Verify body sends code + code_verifier but NOT client_id or grant_type
     const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(fetchBody.code).toBe("auth-code-123");
     expect(fetchBody.code_verifier).toBe("test-verifier");
-    expect(fetchBody.grant_type).toBe("authorization_code");
+    expect(fetchBody).not.toHaveProperty("client_id");
+    expect(fetchBody).not.toHaveProperty("grant_type");
   });
 
   it("connectStrava returns null when user cancels OAuth", async () => {
