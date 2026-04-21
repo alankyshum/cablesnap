@@ -428,6 +428,17 @@ export function useSessionActions({
         if (done.length === 0) {
           router.replace("/(tabs)");
         } else {
+          // Fire-and-forget auto-backup — must never block navigation
+          void (async () => {
+            try {
+              const { performAutoBackup, isAutoBackupEnabled } = await import("../lib/backup");
+              if (await isAutoBackupEnabled()) {
+                await performAutoBackup();
+              }
+            } catch {
+              // Silent failure — backup should never block workout completion
+            }
+          })();
           router.replace(`/session/summary/${id}`);
         }
       },
