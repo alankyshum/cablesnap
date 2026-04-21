@@ -242,7 +242,21 @@ Navigate to summary screen
 4. Delete confirmation should include backup date: "Delete backup from [date]?"
 5. "Backup Now" success toast should update the "Last backup" timestamp immediately
 
-_Pending review from @quality-director_
+### Quality Director (Release Safety) — APPROVED WITH CHANGES
+
+**Reviewed**: 2026-04-21
+**Verdict**: APPROVED WITH CHANGES
+
+**Must-Fix (2):**
+1. **REGRESSION-01**: Integration code awaits backup, contradicting "non-blocking" design. Use fire-and-forget (`void performAutoBackup()`) instead of `await`.
+2. **REGRESSION-02**: Backup code placement runs before the `done.length === 0` routing check, contradicting "summary path only" claim. Either place inside the `else` branch or remove the claim.
+
+**Recommendations (3):**
+1. **DATA-01**: Add filename collision guard (milliseconds or random suffix) to prevent silent overwrites.
+2. **TEST-01**: Pruning sort-order correctness must be an explicit test — a bug here silently destroys newest backups.
+3. **TEST-02**: Test that navigation still happens when backup throws, not just that finish() doesn't throw.
+
+**No security or data integrity blockers.** Low regression risk. Clean integration points. Solid rollback story.
 
 ### Tech Lead (Technical Feasibility)
 
