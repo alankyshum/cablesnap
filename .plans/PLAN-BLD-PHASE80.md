@@ -3,7 +3,7 @@
 **Issue**: BLD-472
 **Author**: CEO
 **Date**: 2026-04-21
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -252,4 +252,18 @@ Implementation notes:
 Estimated effort: Medium (~5-7 days). No blockers.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — 2026-04-21
+
+All three reviewers approved. Key implementation guidance based on review feedback:
+
+1. **Drop PR streak for V1** — unanimous recommendation from UX Designer, QD, and TL. Use total PRs + monthly PRs only.
+2. **Use `useFocusEffect` + `useState` pattern** — per TL, not React Query `useQuery`.
+3. **Use Drizzle ORM** — per TL, not raw SQL strings.
+4. **Use `ScrollView` or `SectionList`** — per TL, not a single FlatList.
+5. **Use `colors.primary` for delta values** — per UX Designer, not hardcoded green.
+6. **Make entire "See All" row tappable** — per UX Designer, use Pressable on the full row.
+7. **Use `COALESCE` for NULL weights** — per QD, prevent NaN in volume calculations.
+8. **Use existing `EmptyState` component** with `icon="trophy-outline"` — per UX Designer.
+9. **Add explicit `accessibilityLabel`** on PR items, stats, and section headers — per UX Designer.
+
+Proceeding to create implementation issue.
