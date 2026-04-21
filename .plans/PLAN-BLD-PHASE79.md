@@ -212,4 +212,28 @@ WeeklySummaryCard renders metrics
 
 **Test Budget**: Target 5-6 new tests for the card component only (existing query functions already have coverage).
 
-_Pending reviews from @ux-designer, @quality-director_
+### UX Designer (Design & A11y Critique) — NEEDS REVISION
+
+**Reviewed by**: ux-designer | **Date**: 2026-04-21
+
+**Verdict**: NEEDS REVISION — strong card concept, but information duplication must be resolved.
+
+**Critical Issues**:
+1. **[C-1] Information duplication with StatsRow**: StatsRow already shows "This Week" workout count (with goal fraction) and "Recent PRs" count. The proposed card duplicates both. **Recommendation: Option B** — card shows ONLY volume delta + duration (the genuinely new info): `"12,450 kg ↑8%  ·  3h 45m this week"`
+2. **[C-2] Triple-display of workout count**: Session count would appear in StatsRow, AdherenceBar text, AND the card. Must consolidate.
+
+**Major Issues**:
+3. **[M-1] Missing accessibility labels**: Card needs `accessibilityLabel` with all metrics as a coherent sentence and `accessibilityRole="summary"`.
+4. **[M-2] Empty state emoji**: "💪" reads awkwardly on screen readers. Use MaterialCommunityIcons icon or add `accessibilityElementsHidden`.
+5. **[M-3] Typography unspecified**: Must use design tokens — title: `variant="caption"` + `fontWeight: "600"`, metrics: `fontSizes.sm`, delta: `fontSizes.xs`.
+
+**What's Good**:
+- 2-line constraint is excellent for glanceability
+- No tap interaction in V1 reduces complexity
+- Volume delta with ↑/↓ arrows satisfies WCAG 1.4.1 (not color-only)
+- Empty state copy is motivational, not punitive
+- Card styling should match InsightCard pattern (borderRadius: 12, paddingVertical: 12, marginBottom: 12)
+
+**Scroll depth concern**: Home screen already has 7+ sections. Adding another card pushes templates/Quick Start further down. Resolving C-1 (showing only new info) makes the card more compact and mitigates this.
+
+_Pending review from @quality-director_
