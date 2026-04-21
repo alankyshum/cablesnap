@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, View } from "react-native";
 import { useRouter } from "expo-router";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,9 @@ import { fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
 
-const RETENTION_OPTIONS = [3, 5, 10, 20] as const;
-const CIRCLE_SIZE = 40;
-const HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };
+const MIN_RETENTION = 1;
+const MAX_RETENTION = 50;
+const STEP_BUTTON_SIZE = 32;
 
 type Props = {
   colors: ThemeColors;
@@ -82,11 +83,14 @@ export default function AutoBackupSection({ colors, toast }: Props) {
     }
   }, [toast]);
 
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+
   const handleRetentionChange = useCallback(async (value: number) => {
-    setRetention(value);
+    const clamped = Math.min(MAX_RETENTION, Math.max(MIN_RETENTION, value));
+    setRetention(clamped);
     try {
       const { setBackupRetention } = await import("../../lib/backup");
-      await setBackupRetention(value);
+      await setBackupRetention(clamped);
     } catch {
       toast.error("Failed to update retention");
     }
@@ -123,14 +127,19 @@ export default function AutoBackupSection({ colors, toast }: Props) {
         </Text>
 
         <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
-              Auto-Backup
-            </Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              Automatically saves your data after each workout
-            </Text>
-          </View>
+          <Pressable
+            onPress={() => setTooltipVisible(!tooltipVisible)}
+            accessibilityRole="button"
+            accessibilityLabel="Auto-Backup. Tap for more info"
+            style={{ flex: 1 }}
+          >
+            <View style={styles.labelWithIcon}>
+              <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
+                Auto-Backup
+              </Text>
+              <Text variant="caption" style={{ color: colors.primary, fontSize: fontSizes.xs, marginLeft: 4 }}>ⓘ</Text>
+            </View>
+          </Pressable>
           <Switch
             value={enabled}
             onValueChange={handleToggle}
@@ -138,6 +147,15 @@ export default function AutoBackupSection({ colors, toast }: Props) {
             accessibilityLabel="Toggle auto-backup after workouts"
           />
         </View>
+
+        {tooltipVisible && (
+          <Text
+            variant="caption"
+            style={[styles.tooltipText, { color: colors.onSurfaceVariant, backgroundColor: colors.surfaceVariant }]}
+          >
+            Automatically saves your data after each workout.
+          </Text>
+        )}
 
         <Text
           variant="caption"
@@ -148,50 +166,35 @@ export default function AutoBackupSection({ colors, toast }: Props) {
         </Text>
 
         {enabled && (
-          <>
-            <Text
-              variant="caption"
-              style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}
-            >
-              Keep last N backups
+          <View style={styles.retentionRow} accessibilityLabel={`Keep last ${retention} backups`}>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+              Keep last
             </Text>
-            <View
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Backup retention count"
-              style={styles.circleRow}
+            <Pressable
+              onPress={() => retention > MIN_RETENTION && handleRetentionChange(retention - 1)}
+              disabled={retention <= MIN_RETENTION}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease backup retention"
+              style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention > MIN_RETENTION ? 1 : 0.35 }]}
             >
-              {RETENTION_OPTIONS.map((opt) => {
-                const selected = retention === opt;
-                return (
-                  <Pressable
-                    key={opt}
-                    onPress={() => handleRetentionChange(opt)}
-                    hitSlop={HIT_SLOP}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
-                    accessibilityLabel={`Keep ${opt} backups`}
-                    style={[
-                      styles.circle,
-                      selected
-                        ? { backgroundColor: colors.primary }
-                        : { backgroundColor: "transparent", borderWidth: 2, borderColor: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    <Text
-                      variant="body"
-                      style={{
-                        color: selected ? colors.onPrimary : colors.onSurface,
-                        fontWeight: "700",
-                        fontSize: fontSizes.sm,
-                      }}
-                    >
-                      {opt}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
+              <MaterialCommunityIcons name="minus" size={16} color={colors.onSurface} />
+            </Pressable>
+            <Text variant="body" style={[styles.retentionValue, { color: colors.onSurface }]}>
+              {retention}
+            </Text>
+            <Pressable
+              onPress={() => retention < MAX_RETENTION && handleRetentionChange(retention + 1)}
+              disabled={retention >= MAX_RETENTION}
+              accessibilityRole="button"
+              accessibilityLabel="Increase backup retention"
+              style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention < MAX_RETENTION ? 1 : 0.35 }]}
+            >
+              <MaterialCommunityIcons name="plus" size={16} color={colors.onSurface} />
+            </Pressable>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+              backups
+            </Text>
+          </View>
         )}
 
         <View style={styles.buttonRow}>
@@ -225,13 +228,16 @@ const styles = StyleSheet.create({
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
   wideCard: { minWidth: 340, flexBasis: 340 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  circleRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  circle: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
+  labelWithIcon: { flexDirection: "row", alignItems: "center" },
+  tooltipText: { fontSize: fontSizes.xs, padding: 10, borderRadius: 6, marginBottom: 8, lineHeight: 18 },
+  retentionRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  stepButton: {
+    width: STEP_BUTTON_SIZE,
+    height: STEP_BUTTON_SIZE,
+    borderRadius: STEP_BUTTON_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
   },
+  retentionValue: { fontWeight: "700", fontSize: fontSizes.md, minWidth: 24, textAlign: "center" },
   buttonRow: { flexDirection: "row", gap: 8, marginTop: 4 },
 });
