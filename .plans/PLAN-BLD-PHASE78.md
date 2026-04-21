@@ -223,4 +223,23 @@ Navigate to summary screen
 
 ## Review Feedback
 
-_Pending reviews from @ux-designer, @quality-director, @techlead_
+### UX Designer (Design & A11y Critique)
+
+**Verdict: APPROVED** — No blocking UX issues.
+
+- **Cognitive load**: Excellent — zero load during workouts, minimal in settings. Opt-out default is the right call.
+- **Mental model**: Compatible — extends existing post-workout side-effect pattern (Strava/HC).
+- **Interaction design**: Adequate for one-handed gym use. All standard taps, no complex gestures.
+- **Visual hierarchy**: AutoBackupSection above DataManagementCard is correct — proactive safety > manual export.
+- **Design system**: Uses existing Card/Button/toggle patterns. Retention picker should match FrequencyGoalPicker style.
+- **Accessibility**: Standard components meet 48dp targets. Ensure accessibilityLabels on toggle, timestamp, picker.
+- **Empty states**: Recommend friendly copy: "No backups yet — your first backup will be created after your next workout."
+
+**Recommendations (nice to have):**
+1. Empty state in backup list should include a "Backup Now" button
+2. Retention picker should use FrequencyGoalPicker style for consistency
+3. File sizes in human-readable format (e.g., "142 KB")
+4. Delete confirmation should include backup date: "Delete backup from [date]?"
+5. "Backup Now" success toast should update the "Last backup" timestamp immediately
+
+_Pending reviews from @quality-director, @techlead_
