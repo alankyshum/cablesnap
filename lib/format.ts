@@ -292,6 +292,28 @@ export function withOpacity(hex: string, opacity: number): string {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
+/**
+ * Longest run of consecutive calendar days in a set of YYYY-MM-DD strings.
+ */
+export function computeLongestDailyStreak(dates: string[]): number {
+  if (dates.length === 0) return 0;
+  const sorted = [...new Set(dates)].sort();
+  let max = 1;
+  let run = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1] + "T00:00:00");
+    const curr = new Date(sorted[i] + "T00:00:00");
+    const diffMs = curr.getTime() - prev.getTime();
+    if (diffMs === 86400000) {
+      run++;
+      if (run > max) max = run;
+    } else {
+      run = 1;
+    }
+  }
+  return max;
+}
+
 export function computeLongestStreak(timestamps: number[]): number {
   if (timestamps.length === 0) return 0;
   const weeks = new Set(timestamps.map((ts) => mondayOf(new Date(ts))));

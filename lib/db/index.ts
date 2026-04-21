@@ -224,6 +224,17 @@ export type {
   WeeklyBodySummary,
 } from "./weekly-summary";
 
+export { getMonthlyReport } from "./monthly-report";
+export type {
+  MonthlyReportData,
+  MonthlyWorkoutSummary,
+  MonthlyPR,
+  MonthlyMuscleVolume,
+  MonthlyMostImproved,
+  MonthlyBodySummary,
+  MonthlyNutritionSummary,
+} from "./monthly-report";
+
 export {
   buildAchievementContext,
   getEarnedAchievements,
