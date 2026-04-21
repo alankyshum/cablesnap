@@ -42,30 +42,45 @@ import type { WeeklyGoalProgress } from "../../components/home/loadHomeData";
 jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => "Icon");
 
 describe("FrequencyGoalPicker", () => {
-  it("renders 7 circles", () => {
-    const { getAllByRole } = render(
+  it("shows 'Set a goal' button when no value", () => {
+    const { getByLabelText } = render(
       <FrequencyGoalPicker colors={mockColors as never} value={null} onChange={() => {}} />,
     );
-    const radios = getAllByRole("radio");
-    expect(radios).toHaveLength(7);
+    expect(getByLabelText("Set weekly training goal")).toBeTruthy();
   });
 
-  it("highlights selected circle", () => {
-    const { getAllByRole } = render(
+  it("shows stepper with current value when set", () => {
+    const { getByText } = render(
       <FrequencyGoalPicker colors={mockColors as never} value={4} onChange={() => {}} />,
     );
-    const radios = getAllByRole("radio");
-    const fourth = radios[3];
-    expect(fourth.props.accessibilityState).toEqual({ checked: true });
+    expect(getByText("4 days / week")).toBeTruthy();
   });
 
-  it("calls onChange when circle tapped", () => {
+  it("calls onChange with 3 when Set a goal tapped", () => {
     const onChange = jest.fn();
     const { getByLabelText } = render(
       <FrequencyGoalPicker colors={mockColors as never} value={null} onChange={onChange} />,
     );
-    fireEvent.press(getByLabelText("3 days per week"));
+    fireEvent.press(getByLabelText("Set weekly training goal"));
     expect(onChange).toHaveBeenCalledWith(3);
+  });
+
+  it("increments value when + tapped", () => {
+    const onChange = jest.fn();
+    const { getByLabelText } = render(
+      <FrequencyGoalPicker colors={mockColors as never} value={3} onChange={onChange} />,
+    );
+    fireEvent.press(getByLabelText("Increase training days"));
+    expect(onChange).toHaveBeenCalledWith(4);
+  });
+
+  it("decrements value when - tapped", () => {
+    const onChange = jest.fn();
+    const { getByLabelText } = render(
+      <FrequencyGoalPicker colors={mockColors as never} value={3} onChange={onChange} />,
+    );
+    fireEvent.press(getByLabelText("Decrease training days"));
+    expect(onChange).toHaveBeenCalledWith(2);
   });
 
   it("shows Clear button when value selected", () => {
@@ -89,6 +104,13 @@ describe("FrequencyGoalPicker", () => {
       <FrequencyGoalPicker colors={mockColors as never} value={null} onChange={() => {}} />,
     );
     expect(queryByLabelText("Clear weekly training goal")).toBeNull();
+  });
+
+  it("shows singular 'day' when value is 1", () => {
+    const { getByText } = render(
+      <FrequencyGoalPicker colors={mockColors as never} value={1} onChange={() => {}} />,
+    );
+    expect(getByText("1 day / week")).toBeTruthy();
   });
 });
 

@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
@@ -11,11 +12,14 @@ type Props = {
   onChange: (goal: number | null) => void;
 };
 
-const DAYS = [1, 2, 3, 4, 5, 6, 7];
-const CIRCLE_SIZE = 40;
-const HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };
+const MIN_DAYS = 1;
+const MAX_DAYS = 7;
+const BUTTON_SIZE = 36;
 
 export default function FrequencyGoalPicker({ colors, value, onChange }: Props) {
+  const canDecrement = value != null && value > MIN_DAYS;
+  const canIncrement = value != null && value < MAX_DAYS;
+
   return (
     <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
@@ -23,51 +27,55 @@ export default function FrequencyGoalPicker({ colors, value, onChange }: Props) 
           Weekly Training Goal
         </Text>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
-          How many days per week do you want to train?
+          Shown on the home screen to track workouts completed vs. your target each week.
         </Text>
-        <View accessibilityRole="radiogroup" accessibilityLabel="Weekly training goal" style={styles.circleRow}>
-          {DAYS.map((day) => {
-            const selected = value === day;
-            return (
-              <Pressable
-                key={day}
-                onPress={() => onChange(day)}
-                hitSlop={HIT_SLOP}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                accessibilityLabel={`${day} day${day > 1 ? "s" : ""} per week`}
-                style={[
-                  styles.circle,
-                  selected
-                    ? { backgroundColor: colors.primary }
-                    : { backgroundColor: "transparent", borderWidth: 2, borderColor: colors.onSurfaceVariant },
-                ]}
-              >
-                <Text
-                  variant="body"
-                  style={{
-                    color: selected ? colors.onPrimary : colors.onSurface,
-                    fontWeight: "700",
-                    fontSize: fontSizes.sm,
-                  }}
-                >
-                  {day}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {value != null && (
+        {value == null ? (
           <Pressable
-            onPress={() => onChange(null)}
+            onPress={() => onChange(3)}
             accessibilityRole="button"
-            accessibilityLabel="Clear weekly training goal"
-            style={styles.clearButton}
+            accessibilityLabel="Set weekly training goal"
+            style={[styles.setButton, { borderColor: colors.primary }]}
           >
-            <Text variant="caption" style={{ color: colors.primary }}>
-              Clear
+            <Text variant="body" style={{ color: colors.primary, fontWeight: "600", fontSize: fontSizes.sm }}>
+              Set a goal
             </Text>
           </Pressable>
+        ) : (
+          <View style={styles.stepperRow}>
+            <View style={styles.stepper} accessibilityLabel={`Weekly training goal: ${value} days`}>
+              <Pressable
+                onPress={() => canDecrement && onChange(value - 1)}
+                disabled={!canDecrement}
+                accessibilityRole="button"
+                accessibilityLabel="Decrease training days"
+                style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: canDecrement ? 1 : 0.35 }]}
+              >
+                <MaterialCommunityIcons name="minus" size={20} color={colors.onSurface} />
+              </Pressable>
+              <Text variant="body" style={[styles.stepValue, { color: colors.onSurface }]}>
+                {value} {value === 1 ? "day" : "days"} / week
+              </Text>
+              <Pressable
+                onPress={() => canIncrement && onChange(value + 1)}
+                disabled={!canIncrement}
+                accessibilityRole="button"
+                accessibilityLabel="Increase training days"
+                style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: canIncrement ? 1 : 0.35 }]}
+              >
+                <MaterialCommunityIcons name="plus" size={20} color={colors.onSurface} />
+              </Pressable>
+            </View>
+            <Pressable
+              onPress={() => onChange(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Clear weekly training goal"
+              style={styles.clearButton}
+            >
+              <Text variant="caption" style={{ color: colors.primary }}>
+                Clear
+              </Text>
+            </Pressable>
+          </View>
         )}
       </CardContent>
     </Card>
@@ -76,13 +84,16 @@ export default function FrequencyGoalPicker({ colors, value, onChange }: Props) 
 
 const styles = StyleSheet.create({
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
-  circleRow: { flexDirection: "row", justifyContent: "space-between", gap: 4 },
-  circle: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
+  stepperRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  stepper: { flexDirection: "row", alignItems: "center", gap: 12 },
+  stepButton: {
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: BUTTON_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
   },
-  clearButton: { marginTop: 8, alignSelf: "flex-end" },
+  stepValue: { fontWeight: "700", fontSize: fontSizes.md, minWidth: 100, textAlign: "center" },
+  setButton: { borderWidth: 1, borderRadius: 8, paddingVertical: 8, alignItems: "center" },
+  clearButton: { paddingVertical: 4, paddingHorizontal: 8 },
 });
