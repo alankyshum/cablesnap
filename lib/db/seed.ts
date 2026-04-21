@@ -94,6 +94,19 @@ async function backfillStarterExercises(
 }
 
 async function upsertTemplates(database: SQLite.SQLiteDatabase): Promise<void> {
+  const canonicalIds = STARTER_TEMPLATES.flatMap((tpl) => tpl.exercises.map((e) => e.id));
+  const starterTplIds = STARTER_TEMPLATES.map((t) => t.id);
+
+  // Remove stale template exercises that no longer exist in the canonical list
+  if (canonicalIds.length > 0) {
+    const placeholders = starterTplIds.map(() => "?").join(", ");
+    const keepPlaceholders = canonicalIds.map(() => "?").join(", ");
+    await database.runAsync(
+      `DELETE FROM template_exercises WHERE template_id IN (${placeholders}) AND id NOT IN (${keepPlaceholders})`,
+      [...starterTplIds, ...canonicalIds]
+    );
+  }
+
   for (const tpl of STARTER_TEMPLATES) {
     await database.runAsync(
       "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, 0, 0, 1)",

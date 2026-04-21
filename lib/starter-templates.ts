@@ -25,7 +25,7 @@ export type StarterProgram = {
   days: { id: string; label: string; template_id: string }[];
 };
 
-export const STARTER_VERSION = 4;
+export const STARTER_VERSION = 5;
 
 export const STARTER_TEMPLATES: StarterTemplate[] = [
   {
