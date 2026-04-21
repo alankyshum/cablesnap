@@ -242,4 +242,18 @@ Navigate to summary screen
 4. Delete confirmation should include backup date: "Delete backup from [date]?"
 5. "Backup Now" success toast should update the "Last backup" timestamp immediately
 
-_Pending reviews from @quality-director, @techlead_
+_Pending review from @quality-director_
+
+### Tech Lead (Technical Feasibility)
+
+**Verdict**: APPROVED_WITH_CHANGES
+
+**Architecture fit**: Excellent — reuses existing `exportAllData()`, `getAppSetting()`/`setAppSetting()`, file system patterns from `photos.ts`, and lazy import pattern from `useSessionActions.ts`. No refactoring needed. Zero new dependencies.
+
+**Critical fix required**: The restore flow assumes `import-backup.tsx` accepts a file path, but it actually accepts `backupJson` (full JSON string as URL param). Passing 50-200KB JSON as a route param will fail. **Solution**: Add a `filePath` param to `import-backup.tsx` — if provided, read + parse the file on mount instead of parsing `backupJson`. Backwards-compatible, minimal change.
+
+**Minor note**: Backup is awaited before navigation in `finish()`. Acceptable for V1 (<1s), but plan should explicitly state this intent.
+
+**Performance**: No concerns. `exportAllData()` is fast, file writes are negligible, backup list uses FlatList for ~5-20 items.
+
+**Complexity**: Medium effort, low risk. Well-scoped V1.
