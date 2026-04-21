@@ -169,7 +169,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: v${{ needs.check-and-release.outputs.version }}
+          ref: main
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
