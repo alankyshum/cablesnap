@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 
-jest.mock('../../hooks/useThemeColors', () => ({
+jest.mock('@/hooks/useThemeColors', () => ({
   useThemeColors: () => ({
     primary: '#6200ee',
     onSurface: '#000',
@@ -13,29 +13,29 @@ jest.mock('../../hooks/useThemeColors', () => ({
   }),
 }))
 
-jest.mock('../../lib/format', () => ({
+jest.mock('@/lib/format', () => ({
   formatDateShort: () => 'Jan 15',
 }))
 
-jest.mock('../../lib/units', () => ({
+jest.mock('@/lib/units', () => ({
   toDisplay: (v: number) => v,
   toKg: (v: number) => v,
   KG_TO_LB: 2.20462,
   LB_TO_KG: 0.453592,
 }))
 
-jest.mock('../../components/ui/card', () => {
+jest.mock('@/components/ui/card', () => {
   const { View } = require('react-native')
   return { Card: ({ children, style }: { children: React.ReactNode; style?: object }) => <View style={style}>{children}</View> }
 })
 
-jest.mock('../../components/ui/separator', () => {
+jest.mock('@/components/ui/separator', () => {
   const { View } = require('react-native')
   return { Separator: ({ style }: { style?: object }) => <View style={style} /> }
 })
 
-import { PRSummaryCard } from '../../components/progress/PRSummaryCard'
-import type { RecentPR, PRStats } from '../../lib/db/pr-dashboard'
+import { PRSummaryCard } from '@/components/progress/PRSummaryCard'
+import type { RecentPR, PRStats } from '@/lib/db/pr-dashboard'
 
 describe('PRSummaryCard', () => {
   const mockOnSeeAll = jest.fn()

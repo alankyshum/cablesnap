@@ -17,7 +17,7 @@ jest.mock('expo-router', () => {
   }
 })
 
-jest.mock('../../hooks/useThemeColors', () => ({
+jest.mock('@/hooks/useThemeColors', () => ({
   useThemeColors: () => ({
     primary: '#6200ee',
     onSurface: '#000',
@@ -29,35 +29,35 @@ jest.mock('../../hooks/useThemeColors', () => ({
   }),
 }))
 
-jest.mock('../../lib/format', () => ({
+jest.mock('@/lib/format', () => ({
   formatDateShort: () => 'Jan 15',
 }))
 
-jest.mock('../../lib/units', () => ({
+jest.mock('@/lib/units', () => ({
   toDisplay: (v: number) => v,
   toKg: (v: number) => v,
   KG_TO_LB: 2.20462,
   LB_TO_KG: 0.453592,
 }))
 
-jest.mock('../../components/ui/card', () => {
+jest.mock('@/components/ui/card', () => {
   const { View } = require('react-native')
   return { Card: ({ children, style }: { children: React.ReactNode; style?: object }) => <View style={style}>{children}</View> }
 })
 
-jest.mock('../../components/ui/separator', () => {
+jest.mock('@/components/ui/separator', () => {
   const { View } = require('react-native')
   return { Separator: ({ style }: { style?: object }) => <View style={style} /> }
 })
 
-jest.mock('../../components/ui/button', () => {
+jest.mock('@/components/ui/button', () => {
   const { Text: RNText, Pressable } = require('react-native')
   return { Button: ({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) => <Pressable onPress={onPress}><RNText>{children}</RNText></Pressable> }
 })
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
 
-jest.mock('../../lib/db/pr-dashboard', () => ({
+jest.mock('@/lib/db/pr-dashboard', () => ({
   getPRStats: jest.fn().mockResolvedValue({ totalPRs: 5, prsThisMonth: 2 }),
   getRecentPRsWithDelta: jest.fn().mockResolvedValue([
     { exercise_id: 'ex1', name: 'Bench Press', category: 'Push', weight: 100, reps: null, previous_best: 95, date: Date.now(), is_weighted: true },
@@ -69,11 +69,11 @@ jest.mock('../../lib/db/pr-dashboard', () => ({
   ]),
 }))
 
-jest.mock('../../lib/db', () => ({
+jest.mock('@/lib/db', () => ({
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm' }),
 }))
 
-import RecordsPage from '../../app/progress/records'
+import RecordsPage from '../../../app/progress/records'
 
 describe('Records Page', () => {
   beforeEach(() => {
@@ -89,10 +89,10 @@ describe('Records Page', () => {
   })
 
   test('renders recent PRs section with exercise names', async () => {
-    const { findByText } = render(<RecordsPage />)
+    const { findByText, findAllByText } = render(<RecordsPage />)
     expect(await findByText('Recent PRs')).toBeTruthy()
-    expect(await findByText('Bench Press')).toBeTruthy()
-    expect(await findByText('Pull-ups')).toBeTruthy()
+    expect((await findAllByText('Bench Press')).length).toBeGreaterThanOrEqual(1)
+    expect((await findAllByText('Pull-ups')).length).toBeGreaterThanOrEqual(1)
   })
 
   test('renders all-time bests section with categories', async () => {
@@ -103,7 +103,7 @@ describe('Records Page', () => {
   })
 
   test('renders empty state when no data', async () => {
-    const prDashboard = require('../../lib/db/pr-dashboard')
+    const prDashboard = require('@/lib/db/pr-dashboard')
     prDashboard.getPRStats.mockResolvedValue({ totalPRs: 0, prsThisMonth: 0 })
     prDashboard.getRecentPRsWithDelta.mockResolvedValue([])
     prDashboard.getAllTimeBests.mockResolvedValue([])
