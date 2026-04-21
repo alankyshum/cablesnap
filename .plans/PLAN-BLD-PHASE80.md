@@ -209,7 +209,24 @@ Budget-conscious: ~6 source-level tests
 <!-- This section is filled in by reviewers -->
 
 ### UX Designer (Design & A11y Critique)
-_Pending review_
+**APPROVED** — 2026-04-21
+
+- Cognitive load: LOW — replaces existing PRCard with richer version, no new concepts for users
+- Mental model: Compatible — progressive disclosure (summary card → full dashboard) is standard
+- 3-second test: PASS — tired gym-goer can glance at 3 recent PRs immediately
+- One-handed usability: Good — vertical scroll only, large touch targets, no horizontal swiping
+- Tap count: Excellent — 1 tap to see recent PRs, 2 taps for full dashboard
+- Design system: Consistent — uses Card, EmptyState, theme colors, design tokens
+- Accessibility: Adequate with recommendations (see below)
+- Empty states: Good — uses existing EmptyState component pattern
+
+**Recommendations (non-blocking):**
+1. Drop PR streak for V1 (aligns with Tech Lead) — gamification pressure can feel punitive
+2. Use colors.primary for delta values instead of green — brand-tied celebration, better dark mode contrast
+3. Make entire "See All" row tappable (Pressable), not just the text link — easier mid-workout
+4. Specify explicit accessibilityLabel on each PR item, header stat, and section header
+5. Use existing EmptyState component (icon="trophy-outline") for no-data state
+6. Ensure unit display respects user preference (existing PRCard hardcodes "kg")
 
 ### Quality Director (Release Safety)
 **APPROVED** — 2026-04-21
