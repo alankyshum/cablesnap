@@ -32,16 +32,18 @@ Pure query functions that aggregate data for a given calendar month (1st to last
 | PRs hit this month | `workout_sets.is_pr = 1` in month range | COUNT + list top 3 |
 | Training days | Distinct dates from completed sessions | COUNT(DISTINCT date) |
 | Most-improved exercise | `getE1RMTrends()` scoped to month | Largest positive delta |
-| Muscle distribution | `aggregate-muscles.ts` pattern on month's sessions | Per-muscle set count |
+| Muscle distribution | `getMuscleVolumeForWeek()` from `lib/db/session-stats.ts` adapted to month range | Per-muscle completed non-warmup set count |
 | Body weight delta | `body_weight` first vs last entry in month | Simple delta |
 | Nutrition adherence | `daily_log` days on macro targets | Days on target / days tracked |
-| Longest streak in month | Computed from session dates | Pure function (reuse `computeStreak` pattern) |
+| Longest streak in month | Computed from session dates | New `computeLongestDailyStreak(dates: string[]): number` utility in `lib/format.ts` (existing `computeStreak` is weekly, not daily) |
 
 **Key design decision**: Follow the established pattern from `lib/db/weekly-summary.ts` — one async function `getMonthlyReport(year, month)` that returns a typed `MonthlyReportData` object. Keep queries efficient by using indexed columns (`completed_at`, `date`).
 
 #### New Component: `components/progress/MonthlyReportSegment.tsx`
 
 A new segment in the Progress tab segmented control: `["Workouts", "Body", "Muscles", "Nutrition", "Monthly"]`.
+
+**5-segment UX note** (per TL concern + UX Designer guidance): Test at 320dp width for label truncation. If cramped, abbreviate to "Mo." or make the control scrollable. UX Designer has approved the 5-segment approach with this testing caveat.
 
 Layout (vertical scroll):
 
@@ -141,20 +143,20 @@ app/(tabs)/progress.tsx           ← Add "Monthly" segment
 
 ### Test Strategy
 
-Target: ≤20 new test declarations (budget: ~1714/1800 → ~1734/1800)
+Target: ≤15 new test declarations (budget: ~1777/1800 → ~1792/1800, per TL's latest count)
 
 | Test File | Tests | What's Covered |
 |-----------|-------|----------------|
-| `__tests__/lib/db/monthly-report.test.ts` | ~10 | Data aggregation queries, edge cases (empty month, single session, PR counting, body weight delta, nutrition adherence) |
-| `__tests__/components/progress/MonthlyReportSegment.test.tsx` | ~6 | Rendering with data, empty state, month navigation, section visibility |
-| `__tests__/components/share/MonthlyShareCard.test.tsx` | ~4 | Card renders with data, stat formatting, accessibility labels |
+| `__tests__/lib/db/monthly-report.test.ts` | ~8 | Data aggregation queries, edge cases (empty month, single session, PR counting, body weight delta, nutrition adherence) |
+| `__tests__/components/progress/MonthlyReportSegment.test.tsx` | ~4 | Rendering with data, empty state, month navigation, section visibility |
+| `__tests__/components/share/MonthlyShareCard.test.tsx` | ~3 | Card renders with data, stat formatting, accessibility labels |
 
 ### Dependencies
 
 - `lib/db/weekly-summary.ts` — reuse query patterns (month range instead of week range)
 - `components/WeeklySummary.tsx` — reuse month navigation pattern (◀/▶)
 - `components/ShareCard.tsx` + `components/ShareSheet.tsx` — reuse share infrastructure
-- `lib/aggregate-muscles.ts` — muscle volume calculation
+- `lib/db/session-stats.ts` — `getMuscleVolumeForWeek()` adapted to `getMuscleVolumeForMonth()` for per-muscle set counts
 - `lib/format.ts` — number formatting utilities
 
 ### Risk Assessment
