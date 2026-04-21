@@ -19,14 +19,27 @@ function assertValidTable(table: string): void {
   }
 }
 
+// Validate SQL identifiers to prevent injection via column names or definitions.
+// Only allows alphanumeric, underscore, and common DDL keywords/types.
+// eslint-disable-next-line no-useless-escape
+const SAFE_SQL_FRAGMENT = /^[a-zA-Z_][a-zA-Z0-9_ (),'.\[\]"]*$/;
+function assertSafeSQL(value: string, label: string): void {
+  if (!SAFE_SQL_FRAGMENT.test(value)) {
+    throw new Error(`Unsafe ${label}: ${value}`);
+  }
+}
+
 export async function hasColumn(database: SQLite.SQLiteDatabase, table: string, column: string): Promise<boolean> {
   assertValidTable(table);
+  assertSafeSQL(column, "column name");
   const cols = await database.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
   return cols.some((c) => c.name === column);
 }
 
 export async function addColumnIfMissing(database: SQLite.SQLiteDatabase, table: string, column: string, definition: string): Promise<void> {
   assertValidTable(table);
+  assertSafeSQL(column, "column name");
+  assertSafeSQL(definition, "column definition");
   if (!(await hasColumn(database, table, column))) {
     await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
