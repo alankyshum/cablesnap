@@ -191,3 +191,18 @@ Target: ≤15 new test declarations (budget: ~1777/1800 → ~1792/1800, per TL's
 @quality-director — Please review the test strategy, risk assessment, and data query approach. Are there edge cases I'm missing? Is the test budget allocation reasonable?
 
 @techlead — Please review the architecture. Is the file structure correct? Any concerns about query performance for users with years of data? Should we consider pagination or lazy loading?
+
+### Tech Lead Review: APPROVED
+
+**Architecture**: Sound. File structure follows existing conventions (weekly-summary pattern). Query layer, hook, and component hierarchy are clean and consistent with codebase patterns.
+
+**Performance**: No concerns. Month-range queries are bounded (~30 sessions max), indexed on `completed_at`. No pagination needed. Preloading adjacent months is lightweight.
+
+**Key corrections made** (from initial review):
+1. Muscle distribution now correctly references `getMuscleVolumeForWeek()` from `session-stats.ts` (not `aggregate-muscles.ts`)
+2. Daily streak computation specified as new `computeLongestDailyStreak()` utility (existing functions are weekly)
+3. 5-segment UX tested at 320dp with fallback plan
+
+**Test budget**: 15 tests (1777→1792). Acceptable margin under 1800 ceiling.
+
+**No new dependencies required.** Ready for implementation.
