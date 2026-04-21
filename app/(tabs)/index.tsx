@@ -83,7 +83,6 @@ export default function Workouts() {
   }, [todaySchedule, router]);
 
   return (
-    // bounded list — ScrollView is intentional: renders fixed sub-components (stats, banners, templates/programs), not unbounded .map()
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}>
       <StatsRow colors={colors} streak={data?.streak ?? 0} progress={progress} prCount={(data?.recentPRs ?? []).length} />
       <ErrorBoundary>

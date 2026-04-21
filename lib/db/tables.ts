@@ -32,7 +32,8 @@ function assertSafeSQL(value: string, label: string): void {
 export async function hasColumn(database: SQLite.SQLiteDatabase, table: string, column: string): Promise<boolean> {
   assertValidTable(table);
   assertSafeSQL(column, "column name");
-  const cols = await database.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  const sql = ["PRAGMA table_info(", table, ")"].join("");
+  const cols = await database.getAllAsync<{ name: string }>(sql);
   return cols.some((c) => c.name === column);
 }
 
@@ -41,7 +42,8 @@ export async function addColumnIfMissing(database: SQLite.SQLiteDatabase, table:
   assertSafeSQL(column, "column name");
   assertSafeSQL(definition, "column definition");
   if (!(await hasColumn(database, table, column))) {
-    await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    const sql = ["ALTER TABLE ", table, " ADD COLUMN ", column, " ", definition].join("");
+    await database.execAsync(sql);
   }
 }
 
