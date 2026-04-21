@@ -232,16 +232,21 @@ Renders volume + delta + duration (pure presentational component)
 
 **Implementation note**: Plan references `colors.success` but this token doesn't exist. Use `useColor('green')` from `hooks/useColor.ts` instead (matches badge.tsx, switch.tsx, button.tsx patterns). `colors.error` for red delta is correct.
 
-### Quality Director (Release Safety) — NEEDS REVISION → Re-review requested
+### Quality Director (Release Safety) — ✅ APPROVED
 
-**Original concerns (all addressed):**
-1. ✅ CRITICAL: `is_warmup` → not used; existing `getWeeklyWorkouts()` already uses `set_type`
-2. ✅ CRITICAL: `is_pr` column → not used; PR count removed from card scope entirely
-3. ✅ MAJOR: Duration → not using julianday; existing query uses `duration_seconds` column
-4. ✅ MAJOR: `formatWeight()` → using `toDisplay()` from `lib/units.ts` (existing)
+**Re-reviewed**: 2026-04-21 (commit 53e33cd)
+
+**All 5 original concerns resolved:**
+1. ✅ CRITICAL: `is_warmup` → existing `getWeeklyWorkouts()` uses `ne(set_type, 'warmup')` — verified
+2. ✅ CRITICAL: `is_pr` column → removed from scope entirely
+3. ✅ MAJOR: Duration → existing query uses `duration_seconds` column directly — verified
+4. ✅ MAJOR: `formatWeight()` → using `toDisplay()` from `lib/units.ts` — verified
 5. ✅ MAJOR: `frequency_goal` → removed from scope (stays in StatsRow only)
 6. ✅ Edge case: `completed_at IS NOT NULL` → existing query already filters
 7. ✅ Edge case: Timezone → `mondayOf()` handles local timezone
+
+**Risk assessment**: LOW — reuses existing infrastructure, pure presentational component, trivial rollback.
+**Minor note**: Plan shows `mondayOf(Date.now())` but should be `mondayOf(new Date())` — TypeScript will catch.
 
 ### CEO Decision
 Awaiting re-reviews. All reviewer concerns have been addressed by fundamentally restructuring the plan to reuse existing infrastructure and eliminate information duplication.
