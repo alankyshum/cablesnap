@@ -11,14 +11,20 @@ import { useFocusEffect, useRouter } from "expo-router";
 import {
   getWeeklySessionCounts,
   getWeeklyVolume,
-  getPersonalRecords,
   getCompletedSessionsWithSetCount,
+  getBodySettings,
 } from "../../lib/db";
+import {
+  getRecentPRsWithDelta,
+  getPRStats,
+} from "../../lib/db/pr-dashboard";
+import type { RecentPR, PRStats } from "../../lib/db/pr-dashboard";
 import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import WeeklySummary from "../../components/WeeklySummary";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { WorkoutChartCard, PRCard, SessionsCard } from "./WorkoutCards";
+import { WorkoutChartCard, SessionsCard } from "./WorkoutCards";
+import { PRSummaryCard } from "./PRSummaryCard";
 import CalendarView from "./CalendarView";
 import StrengthLevelsCard from "./StrengthLevelsCard";
 import ActiveGoalsCard from "./ActiveGoalsCard";
@@ -44,11 +50,6 @@ function getWeekStartDay(): number {
   return 0;
 }
 
-type PR = {
-  exercise_id: string;
-  name: string;
-  max_weight: number;
-};
 type SessionRow = {
   id: string;
   name: string;
@@ -68,22 +69,28 @@ export default function WorkoutSegment() {
 
   const [freq, setFreq] = useState<{ week: string; count: number }[]>([]);
   const [vol, setVol] = useState<{ week: string; volume: number }[]>([]);
-  const [prs, setPrs] = useState<PR[]>([]);
+  const [recentPRs, setRecentPRs] = useState<RecentPR[]>([]);
+  const [prStats, setPRStats] = useState<PRStats>({ totalPRs: 0, prsThisMonth: 0 });
+  const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [sessions, setSessions] = useState<SessionRow[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [f, v, p, s] = await Promise.all([
+        const [f, v, rp, ps, s, settings] = await Promise.all([
           getWeeklySessionCounts(),
           getWeeklyVolume(),
-          getPersonalRecords(),
+          getRecentPRsWithDelta(3),
+          getPRStats(),
           getCompletedSessionsWithSetCount(),
+          getBodySettings(),
         ]);
         setFreq(f);
         setVol(v);
-        setPrs(p);
+        setRecentPRs(rp);
+        setPRStats(ps);
         setSessions(s);
+        setWeightUnit(settings.weight_unit as "kg" | "lb");
       })();
     }, []),
   );
@@ -213,7 +220,13 @@ export default function WorkoutSegment() {
               {volCard}
             </View>
             <View style={styles.grid}>
-              <PRCard prs={prs} style={wideCard} />
+              <PRSummaryCard
+                recentPRs={recentPRs}
+                stats={prStats}
+                weightUnit={weightUnit}
+                onSeeAll={() => router.push("/progress/records")}
+                style={wideCard}
+              />
               <SessionsCard sessions={sessions} style={wideCard} />
             </View>
             <ActiveGoalsCard />
@@ -226,7 +239,12 @@ export default function WorkoutSegment() {
             {achievementsCard}
             {freqCard}
             {volCard}
-            <PRCard prs={prs} />
+            <PRSummaryCard
+              recentPRs={recentPRs}
+              stats={prStats}
+              weightUnit={weightUnit}
+              onSeeAll={() => router.push("/progress/records")}
+            />
             <SessionsCard sessions={sessions} />
             <ActiveGoalsCard />
             <StrengthLevelsCard />
