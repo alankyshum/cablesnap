@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import { seedExercises } from "../seed";
+import type { Exercise } from "../types";
 import {
   STARTER_TEMPLATES,
   STARTER_PROGRAMS,
@@ -50,7 +51,46 @@ export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
     });
   }
 
+  // Backfill exercises referenced by starter templates that upgrading users
+  // may be missing (e.g., community exercises added after initial install).
+  await backfillStarterExercises(database, exercises);
+
   await seedStarters(database);
+}
+
+async function backfillStarterExercises(
+  database: SQLite.SQLiteDatabase,
+  allExercises: Exercise[]
+): Promise<void> {
+  const neededIds = new Set<string>();
+  for (const tpl of STARTER_TEMPLATES) {
+    for (const ex of tpl.exercises) {
+      neededIds.add(ex.exercise_id);
+    }
+  }
+
+  const exerciseMap = new Map<string, Exercise>();
+  for (const ex of allExercises) {
+    if (neededIds.has(ex.id)) exerciseMap.set(ex.id, ex);
+  }
+
+  for (const id of neededIds) {
+    const ex = exerciseMap.get(id);
+    if (!ex) continue;
+    await database.runAsync(
+      `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, mount_position, attachment, training_modes, is_voltra)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        ex.id, ex.name, ex.category,
+        JSON.stringify(ex.primary_muscles), JSON.stringify(ex.secondary_muscles),
+        ex.equipment, ex.instructions, ex.difficulty,
+        ex.is_custom ? 1 : 0,
+        ex.mount_position ?? null, ex.attachment ?? "handle",
+        JSON.stringify(ex.training_modes ?? ["weight"]),
+        ex.is_voltra ? 1 : 0,
+      ]
+    );
+  }
 }
 
 async function upsertTemplates(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -65,9 +105,15 @@ async function upsertTemplates(database: SQLite.SQLiteDatabase): Promise<void> {
     );
     for (let i = 0; i < tpl.exercises.length; i++) {
       const ex = tpl.exercises[i];
+      // INSERT if missing, then UPDATE to repair canonical columns.
+      // INSERT OR IGNORE alone cannot fix corrupted rows (BLD-467).
       await database.runAsync(
         "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, training_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds, ex.training_mode ?? null]
+      );
+      await database.runAsync(
+        "UPDATE template_exercises SET template_id = ?, exercise_id = ?, position = ?, target_sets = ?, target_reps = ?, rest_seconds = ?, training_mode = ? WHERE id = ?",
+        [tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds, ex.training_mode ?? null, ex.id]
       );
     }
   }
@@ -98,27 +144,26 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
     "SELECT value FROM app_settings WHERE key = 'starter_version'"
   );
 
+  if (row) {
+    await database.runAsync(
+      "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('onboarding_complete', '1')"
+    );
+  }
+
+  // Repair templates and programs in separate transactions so that a failure
+  // in one doesn't roll back the other (BLD-467).
   await database.withTransactionAsync(async () => {
-    if (row) {
-      await database.runAsync(
-        "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('onboarding_complete', '1')"
-      );
-    }
-
-    // Always repair ALL canonical starter data — handles cases where import,
-    // migration, deletion, or prior incomplete seeding left starters corrupted.
-    // Each repair uses INSERT OR IGNORE (idempotent) to re-create deleted rows,
-    // then UPDATE to fix corrupted columns on existing rows.
-    // This covers: workout_templates, template_exercises, programs, program_days.
-    // See BLD-174, BLD-187, BLD-255 for the history of this recurring regression.
     await upsertTemplates(database);
-    await upsertPrograms(database);
-
-    if (!row || Number(row.value) < STARTER_VERSION) {
-      await database.runAsync(
-        "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('starter_version', ?)",
-        [String(STARTER_VERSION)]
-      );
-    }
   });
+
+  await database.withTransactionAsync(async () => {
+    await upsertPrograms(database);
+  });
+
+  if (!row || Number(row.value) < STARTER_VERSION) {
+    await database.runAsync(
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('starter_version', ?)",
+      [String(STARTER_VERSION)]
+    );
+  }
 }
