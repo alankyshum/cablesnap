@@ -220,14 +220,17 @@ Renders volume + delta + duration (pure presentational component)
 4. ✅ Scope reduced to ~3 files, ~100-150 lines
 5. ✅ Test count reduced to 5-6 (card component only)
 
-### UX Designer (Design & A11y Critique) — NEEDS REVISION → Re-review requested
+### UX Designer (Design & A11y Critique) — APPROVED ✅
 
-**Original concerns (all addressed):**
-1 [C-1] No information duplication — card shows ONLY volume delta + duration. 
+**Re-reviewed**: 2026-04-21 | All 5 original concerns addressed.
+
+1. ✅ [C-1] No information duplication — card shows ONLY volume delta + duration
 2. ✅ [C-2] No triple-display — session count stays exclusively in StatsRow
 3. ✅ [M-1] Accessibility labels specified — `accessibilityRole="summary"` + comprehensive `accessibilityLabel`
 4. ✅ [M-2] No emoji in empty state — plain text "No training data yet"
 5. ✅ [M-3] Typography specified with design tokens
+
+**Implementation note**: Plan references `colors.success` but this token doesn't exist. Use `useColor('green')` from `hooks/useColor.ts` instead (matches badge.tsx, switch.tsx, button.tsx patterns). `colors.error` for red delta is correct.
 
 ### Quality Director (Release Safety) — NEEDS REVISION → Re-review requested
 
