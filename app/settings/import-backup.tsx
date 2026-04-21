@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
@@ -175,23 +175,49 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
   );
 }
 
+/** Hook to load backup data from either a file path or JSON string route param. */
+function useBackupData(filePath?: string, backupJson?: string) {
+  const [fileData, setFileData] = useState<Record<string, unknown> | null>(null);
+  const [fileLoading, setFileLoading] = useState(!!filePath);
+  const [fileError, setFileError] = useState(false);
+
+  useEffect(() => {
+    if (!filePath) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const { File } = await import("expo-file-system");
+        const file = new File(filePath);
+        const raw = await file.text();
+        const data = JSON.parse(raw) as Record<string, unknown>;
+        if (mounted) { setFileData(data); setFileLoading(false); }
+      } catch {
+        if (mounted) { setFileError(true); setFileLoading(false); }
+      }
+    })();
+    return () => { mounted = false; };
+  }, [filePath]);
+
+  const parsed = useMemo(() => {
+    if (fileData) return fileData;
+    if (!backupJson) return null;
+    try { return JSON.parse(backupJson) as Record<string, unknown>; }
+    catch { return null; }
+  }, [backupJson, fileData]);
+
+  return { parsed, fileLoading, fileError };
+}
+
+// eslint-disable-next-line complexity
 export default function ImportBackup() {
   const colors = useThemeColors();
   const router = useRouter();
   const toast = useToast();
-  const { backupJson } = useLocalSearchParams<{ backupJson: string }>();
+  const { backupJson, filePath } = useLocalSearchParams<{ backupJson?: string; filePath?: string }>();
   const [loading, setLoading] = useState(false);
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
-
-  const parsed = useMemo(() => {
-    if (!backupJson) return null;
-    try {
-      return JSON.parse(backupJson) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  }, [backupJson]);
+  const { parsed, fileLoading, fileError } = useBackupData(filePath, backupJson);
 
   const version = parsed ? Number(parsed.version ?? 0) : 0;
   const exportedAt = parsed ? ((parsed.exported_at as string) ?? null) : null;
@@ -222,11 +248,30 @@ export default function ImportBackup() {
     [parsed, counts],
   );
 
-  if (!backupJson || !parsed) {
+  if (fileLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="body" style={{ color: !backupJson ? colors.onBackground : colors.error }}>
-          {!backupJson ? "No backup data provided." : "Invalid backup data."}
+        <Text variant="body" style={{ color: colors.onBackground }}>Loading backup file…</Text>
+      </View>
+    );
+  }
+
+  if (fileError) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
+        <Text variant="body" style={{ color: colors.error }}>Failed to read backup file.</Text>
+        <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel="Go back" accessibilityRole="button">
+          Go Back
+        </Button>
+      </View>
+    );
+  }
+
+  if ((!backupJson && !filePath) || !parsed) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
+        <Text variant="body" style={{ color: !backupJson && !filePath ? colors.onBackground : colors.error }}>
+          {!backupJson && !filePath ? "No backup data provided." : "Invalid backup data."}
         </Text>
         <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel="Go back" accessibilityRole="button">
           Go Back
