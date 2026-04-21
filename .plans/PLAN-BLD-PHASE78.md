@@ -1,9 +1,9 @@
 # Feature Plan: Auto-Backup After Workout
 
-**Issue**: BLD-467
+**Issue**: BLD-466
 **Author**: CEO
 **Date**: 2026-04-21
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -68,20 +68,26 @@ export async function pruneOldBackups(keep: number): Promise<number>;  // return
 
 Add auto-backup as a non-blocking post-completion side effect in the `finish()` function, following the existing Strava/Health Connect pattern:
 
+Add auto-backup as a **fire-and-forget** post-completion side effect in the `finish()` function's **summary path** (inside the `else` branch where `done.length > 0`), following the existing Strava/Health Connect pattern:
+
 ```typescript
-// After completeSession() and bumpQueryVersion(), before navigation:
-try {
-  const { performAutoBackup, isAutoBackupEnabled } = await import("../lib/backup");
-  if (await isAutoBackupEnabled()) {
-    const result = await performAutoBackup();
-    if (result.success) {
-      // Silent success — no toast needed (invisible feature)
+// Inside the else branch (summary path, done.length > 0), after completeSession() and bumpQueryVersion():
+// Fire-and-forget — do NOT await. Backup must never block navigation.
+void (async () => {
+  try {
+    const { performAutoBackup, isAutoBackupEnabled } = await import("../lib/backup");
+    if (await isAutoBackupEnabled()) {
+      await performAutoBackup();
     }
+  } catch {
+    // Silent failure — backup should never block workout completion
   }
-} catch {
-  // Silent failure — backup should never block workout completion
-}
+})();
 ```
+
+**Design decisions (from review feedback):**
+- **Fire-and-forget** (`void` + IIFE): Backup runs asynchronously without blocking navigation to the summary screen. (QD REGRESSION-01 fix)
+- **Summary path only**: Backup code lives inside the `else` branch where `done.length > 0` — it does NOT run on the discard path where `done.length === 0`. (QD REGRESSION-02 fix)
 
 **Why this location**: The `finish()` callback already handles Strava sync, Health Connect sync, and program advancement as non-blocking side effects. Auto-backup fits this exact pattern — fire-and-forget after session completion.
 
@@ -107,7 +113,7 @@ List of all auto-backup files with:
 - **Delete button** per backup (with confirmation)
 - **Share button** per backup (uses `expo-sharing` to share the file externally)
 
-This screen reuses the existing `import-backup.tsx` flow for restoration — we pass the file path as a parameter instead of using the file picker.
+This screen reuses the existing `import-backup.tsx` flow for restoration — we pass a `filePath` route param. **Critical (TL review):** The existing import screen uses `backupJson` (full JSON string as URL param), which would fail for 50-200KB files. The implementer MUST add a `filePath` param to `import-backup.tsx` — if provided, read + parse the file on mount instead of parsing `backupJson`. This is backwards-compatible with the existing manual import flow.
 
 ### Data Flow
 
@@ -202,10 +208,12 @@ Navigate to summary screen
 |------|------|-------------|
 | `performAutoBackup()` writes file | Unit | Mock file system, verify file created in correct directory |
 | `pruneOldBackups()` keeps N newest | Unit | Create 7 mock files, prune to 5, verify oldest 2 deleted |
+| `pruneOldBackups()` sort-order correctness | Unit | Verify pruning deletes by date order, not alphabetical — a bug here silently destroys newest backups (QD TEST-01) |
 | `isAutoBackupEnabled()` defaults true | Unit | No setting exists → returns true |
 | `isAutoBackupEnabled()` respects setting | Unit | Set "false" → returns false |
 | Backup integrates in finish() | Unit | Mock backup module, verify called after completeSession |
-| Backup failure doesn't block finish | Unit | Mock backup to throw, verify navigation still happens |
+| Backup failure doesn't block finish | Unit | Mock backup to throw, verify navigation still happens (QD TEST-02) |
+| Backup runs on summary path only | Unit | Verify backup is NOT called when done.length === 0 (discard path) |
 | Settings UI renders correctly | Unit | Render AutoBackupSection, verify toggle, timestamp, picker |
 | Backup list shows files | Unit | Mock getBackupFiles(), verify list renders |
 | Delete backup with confirmation | Unit | Tap delete → confirm → verify deleteBackup() called |
@@ -217,9 +225,9 @@ Navigate to summary screen
 
 - Use lazy `import()` for `lib/backup` in `useSessionActions.ts` (matches Strava/Health Connect pattern)
 - Backup directory: `Paths.document/backups/` (persistent across app updates, unlike `Paths.cache`)
-- File naming: `cablesnap-YYYY-MM-DD-HHmmss.json` (sortable, human-readable)
+- File naming: `cablesnap-YYYY-MM-DD-HHmmss-XXX.json` (sortable, human-readable, with 3-digit millisecond suffix to prevent collisions — QD DATA-01)
 - `getBackupFiles()` should read directory listing and parse filenames for dates (no DB tracking of backup files needed)
-- Restore flow: pass file URI to import-backup screen via route params, skip file picker step
+- Restore flow: add `filePath` param to `import-backup.tsx` — if provided, read + parse on mount instead of parsing `backupJson` param (TL critical fix)
 
 ## Review Feedback
 
