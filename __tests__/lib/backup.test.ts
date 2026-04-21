@@ -86,9 +86,11 @@ function clearMockFiles() {
 // ---- Tests ----
 
 describe("lib/backup", () => {
-  let backup: typeof import("../../lib/backup");
+  // Use require to avoid dynamic import issues in Jest
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const backup = require("../../lib/backup");
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
     clearMockFiles();
     mockDirExists.mockReturnValue(true);
@@ -101,9 +103,6 @@ describe("lib/backup", () => {
       data: {},
       counts: {},
     });
-
-    // Re-import to get fresh module
-    backup = await import("../../lib/backup");
   });
 
   describe("isAutoBackupEnabled", () => {
@@ -177,7 +176,7 @@ describe("lib/backup", () => {
 
       // Verify the OLDEST two are deleted, not the newest
       const remaining = await backup.getBackupFiles();
-      const remainingNames = remaining.map((f) => f.filename);
+      const remainingNames = remaining.map((f: { filename: string }) => f.filename);
       expect(remainingNames).not.toContain("cablesnap-2026-04-15-100000-000.json");
       expect(remainingNames).not.toContain("cablesnap-2026-04-16-100000-000.json");
       expect(remainingNames).toContain("cablesnap-2026-04-21-100000-000.json");
