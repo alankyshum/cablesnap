@@ -119,11 +119,11 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     difficulty: "advanced",
     duration: "~45 min",
     exercises: [
+      { id: "starter-te-7a-chest-press", exercise_id: "voltra-035", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
       { id: "starter-te-7a-triceps-pushdown", exercise_id: "voltra-017", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
-      { id: "starter-te-7a-chest-press", exercise_id: "voltra-033", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
-      { id: "starter-te-7a-face-pulls", exercise_id: "voltra-046", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
-      { id: "starter-te-7a-push-up", exercise_id: "mw-bw-001", target_sets: 5, target_reps: "6, 10", rest_seconds: 30 },
-      { id: "starter-te-7a-seated-row", exercise_id: "voltra-021", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7a-bent-over-row", exercise_id: "mw-bb-001", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30 },
+      { id: "starter-te-7a-overhead-press", exercise_id: "voltra-055", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7a-decline-fly", exercise_id: "voltra-036", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
     ],
   },
   {
@@ -132,11 +132,11 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     difficulty: "advanced",
     duration: "~45 min",
     exercises: [
-      { id: "starter-te-7b-goblet-squat", exercise_id: "voltra-039", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7b-push-up", exercise_id: "mw-bw-001", target_sets: 5, target_reps: "6, 10", rest_seconds: 30 },
       { id: "starter-te-7b-supinated-row", exercise_id: "voltra-027", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
-      { id: "starter-te-7b-overhead-press", exercise_id: "voltra-055", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
       { id: "starter-te-7b-kneeling-crunch", exercise_id: "voltra-056", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
-      { id: "starter-te-7b-decline-fly", exercise_id: "voltra-036", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7b-goblet-squat", exercise_id: "voltra-039", target_sets: 5, target_reps: "6, 6-8", rest_seconds: 30, training_mode: "eccentric_overload" },
+      { id: "starter-te-7b-face-pulls", exercise_id: "voltra-046", target_sets: 5, target_reps: "6, 10-12", rest_seconds: 30, training_mode: "eccentric_overload" },
     ],
   },
 ];
