@@ -105,6 +105,7 @@ export async function getCompletedGoals(): Promise<StrengthGoalRow[]> {
 }
 
 type CurrentBestRow = { best: number | null };
+type BestByExerciseRow = { exercise_id: string; best: number | null };
 
 /** Compute current best weight for an exercise from completed workout sets. */
 export async function getCurrentBestWeight(exerciseId: string): Promise<number | null> {
@@ -115,6 +116,20 @@ export async function getCurrentBestWeight(exerciseId: string): Promise<number |
   return rows[0]?.best ?? null;
 }
 
+/** Batch: best weight per exercise from completed workout sets. */
+export async function getCurrentBestWeightsByExercise(exerciseIds: string[]): Promise<Record<string, number | null>> {
+  if (exerciseIds.length === 0) return {};
+  const placeholders = exerciseIds.map(() => "?").join(", ");
+  const rows = await query<BestByExerciseRow>(
+    `SELECT exercise_id, MAX(weight) as best FROM workout_sets WHERE exercise_id IN (${placeholders}) AND completed = 1 AND weight IS NOT NULL GROUP BY exercise_id`,
+    exerciseIds,
+  );
+  const result: Record<string, number | null> = {};
+  for (const id of exerciseIds) result[id] = null;
+  for (const row of rows) result[row.exercise_id] = row.best;
+  return result;
+}
+
 /** Compute current best reps for a bodyweight exercise from completed workout sets. */
 export async function getCurrentBestReps(exerciseId: string): Promise<number | null> {
   const rows = await query<CurrentBestRow>(
@@ -122,4 +137,18 @@ export async function getCurrentBestReps(exerciseId: string): Promise<number | n
     [exerciseId],
   );
   return rows[0]?.best ?? null;
+}
+
+/** Batch: best reps per exercise from completed workout sets. */
+export async function getCurrentBestRepsByExercise(exerciseIds: string[]): Promise<Record<string, number | null>> {
+  if (exerciseIds.length === 0) return {};
+  const placeholders = exerciseIds.map(() => "?").join(", ");
+  const rows = await query<BestByExerciseRow>(
+    `SELECT exercise_id, MAX(reps) as best FROM workout_sets WHERE exercise_id IN (${placeholders}) AND completed = 1 AND reps IS NOT NULL GROUP BY exercise_id`,
+    exerciseIds,
+  );
+  const result: Record<string, number | null> = {};
+  for (const id of exerciseIds) result[id] = null;
+  for (const row of rows) result[row.exercise_id] = row.best;
+  return result;
 }

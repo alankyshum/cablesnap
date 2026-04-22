@@ -312,7 +312,9 @@ export {
   deleteGoal,
   getCompletedGoals,
   getCurrentBestWeight,
+  getCurrentBestWeightsByExercise,
   getCurrentBestReps,
+  getCurrentBestRepsByExercise,
 } from "./strength-goals";
 export type { StrengthGoalRow, CreateGoalInput, UpdateGoalInput } from "./strength-goals";
 
