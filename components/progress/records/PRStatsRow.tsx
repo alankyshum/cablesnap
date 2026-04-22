@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Card } from "@/components/ui/card";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { typography } from "@/constants/design-tokens";
 import type { PRStats } from "@/lib/db/pr-dashboard";
 
 type Props = {
@@ -47,8 +48,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   statValue: {
-    fontSize: 28,
-    fontWeight: "700",
+    ...typography.statValue,
+    fontVariant: ["tabular-nums"],
     marginTop: 4,
   },
 });
