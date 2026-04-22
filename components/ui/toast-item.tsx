@@ -14,8 +14,16 @@ interface ToastProps extends ToastData { onDismiss: (id: string) => void; index:
 
 const TOAST_HEIGHT = 52;
 const TOAST_MARGIN = 8;
-const MUTED = '#8E8E93';
-const VARIANT_COLORS: Record<ToastVariant, string> = { success: '#30D158', error: '#FF453A', warning: '#FF9F0A', info: '#007AFF', default: MUTED };
+// Toast island always renders on a dark surface (Colors.dark.card), so semantic
+// colors are sourced from the dark palette to guarantee legibility.
+const MUTED = Colors.dark.textMuted;
+const VARIANT_COLORS: Record<ToastVariant, string> = {
+  success: Colors.dark.green,
+  error: Colors.dark.red,
+  warning: Colors.dark.orange,
+  info: Colors.dark.blue,
+  default: MUTED,
+};
 const VARIANT_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = { success: Check, error: X, warning: AlertCircle, info: Info };
 
 export function Toast({ id, title, description, variant = 'default', onDismiss, index, action }: ToastProps) {
