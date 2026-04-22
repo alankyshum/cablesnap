@@ -284,23 +284,31 @@ jobs:
           # Dump certs for inspection and fingerprint extraction.
           "$APKSIGNER" verify --print-certs cablesnap.apk | tee apksigner.log
 
-          # Reject multi-signer APKs — we only ever sign with one key. A second
-          # signer block would indicate either a build-tools regression or
-          # tampering.
-          if grep -qE "^Signer #2 " apksigner.log; then
-            echo "::error::APK reports more than one signer — refusing to publish."
+          # Extract every SHA-256 certificate digest from apksigner output.
+          # Format varies by build-tools version:
+          #   build-tools <= 33: "Signer #1 certificate SHA-256 digest: AA:BB:..."
+          #   build-tools >= 34: "V2 Signer: certificate SHA-256 digest: aabb..." (per APK signing scheme)
+          # A single signing key can appear multiple times (once per signing
+          # scheme V1/V2/V3/V4), and all of those entries should share the
+          # same fingerprint. We grep all of them, normalise, and then insist
+          # they are non-empty and unanimous — any divergence means either a
+          # multi-signer APK or a build-tools/format regression.
+          ACTUAL_LIST=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' apksigner.log \
+              | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
+              | tr -d ':[:blank:]' \
+              | tr '[:lower:]' '[:upper:]')
+          if [ -z "$ACTUAL_LIST" ]; then
+            echo "::error::Could not parse any SHA-256 certificate digest from apksigner output."
             exit 1
           fi
-
-          # Parse the Signer #1 SHA-256 digest with a strict regex. Tolerates
-          # extra whitespace around the hex value.
-          ACTUAL=$(sed -nE 's/^Signer #1 certificate SHA-256 digest:[[:space:]]+([0-9a-fA-F:]+)[[:space:]]*$/\1/p' apksigner.log | head -1)
-          if [ -z "$ACTUAL" ]; then
-            echo "::error::Could not parse Signer #1 SHA-256 from apksigner output."
+          UNIQUE_COUNT=$(echo "$ACTUAL_LIST" | sort -u | wc -l)
+          if [ "$UNIQUE_COUNT" -ne 1 ]; then
+            echo "::error::APK reports more than one distinct signer fingerprint — refusing to publish."
+            echo "::error::Distinct SHA-256 values seen:"
+            echo "$ACTUAL_LIST" | sort -u | sed 's/^/  /'
             exit 1
           fi
-
-          ACTUAL_NORM=$(echo "$ACTUAL" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+          ACTUAL_NORM=$(echo "$ACTUAL_LIST" | head -1)
           EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
 
           # Guardrail: both values must be exactly 64 hex chars (SHA-256).
@@ -309,7 +317,7 @@ jobs:
             exit 1
           fi
           if ! echo "$ACTUAL_NORM" | grep -qE '^[0-9A-F]{64}$'; then
-            echo "::error::Parsed Signer #1 fingerprint is not a valid 64-char hex SHA-256."
+            echo "::error::Parsed signer fingerprint is not a valid 64-char hex SHA-256."
             exit 1
           fi
 
