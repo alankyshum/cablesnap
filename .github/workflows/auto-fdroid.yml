@@ -2,7 +2,7 @@ name: Auto-trigger F-Droid update
 
 on:
   release:
-    types: [edited]
+    types: [published]
 
 permissions:
   actions: write

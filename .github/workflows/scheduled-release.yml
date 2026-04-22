@@ -9,12 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  check-and-release:
-    name: Check for new commits & release
+  release:
+    name: Check, build & release
     runs-on: ubuntu-latest
-    outputs:
-      released: ${{ steps.create_release.outputs.released }}
-      version: ${{ steps.next_version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -147,61 +144,53 @@ jobs:
           git commit -m "release: v$VERSION"
           git push origin main
 
-      - name: Create GitHub Release (creates tag via API)
-        if: steps.check_commits.outputs.has_new_commits == 'true'
-        id: create_release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.next_version.outputs.version }}"
-          gh release create "v$VERSION" \
-            --title "v$VERSION" \
-            --target main \
-            --notes "${{ steps.release_notes.outputs.notes }}"
-          echo "released=true" >> "$GITHUB_OUTPUT"
-
-  build-apk:
-    name: Build APK & upload to release
-    needs: check-and-release
-    if: needs.check-and-release.outputs.released == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
+      # --- Build APK BEFORE creating release (immutable releases block later uploads) ---
 
       - name: Set up JDK 17
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Android SDK
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         uses: android-actions/setup-android@v3
 
       - name: Set up Node.js
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         run: npm ci
 
       - name: Generate native project
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         run: npx expo prebuild --clean --platform android
 
       - name: Build APK
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         run: |
           cd android
           ./gradlew assembleRelease
           cd ..
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
+          echo "APK built: $(ls -lh cablesnap.apk)"
 
-      - name: Upload APK to release
+      # --- Create release WITH APK attached atomically ---
+
+      - name: Create GitHub Release with APK
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          VERSION="${{ needs.check-and-release.outputs.version }}"
-          gh release upload "v$VERSION" cablesnap.apk --clobber
-          echo "APK uploaded to v$VERSION — F-Droid update will trigger automatically."
+          VERSION="${{ steps.next_version.outputs.version }}"
+          gh release create "v$VERSION" cablesnap.apk \
+            --title "v$VERSION" \
+            --target main \
+            --notes "${{ steps.release_notes.outputs.notes }}"
+          echo "Released v$VERSION with APK attached."
