@@ -58,32 +58,16 @@ describe("timer", () => {
     })
   })
 
-  describe("duration", () => {
-    it("returns work duration for tabata", () => {
-      expect(duration("tabata", { work: 20, rest: 10, rounds: 8 })).toBe(20)
-    })
-
-    it("returns 60 for emom (per minute)", () => {
-      expect(duration("emom", { minutes: 10 })).toBe(60)
-    })
-
-    it("returns total seconds for amrap", () => {
-      expect(duration("amrap", { minutes: 15 })).toBe(900)
-    })
+  it("duration returns per-mode phase length", () => {
+    expect(duration("tabata", { work: 20, rest: 10, rounds: 8 })).toBe(20)
+    expect(duration("emom", { minutes: 10 })).toBe(60)
+    expect(duration("amrap", { minutes: 15 })).toBe(900)
   })
 
-  describe("totalDuration", () => {
-    it("computes tabata total", () => {
-      expect(totalDuration("tabata", { work: 20, rest: 10, rounds: 8 })).toBe(240)
-    })
-
-    it("computes emom total", () => {
-      expect(totalDuration("emom", { minutes: 10 })).toBe(600)
-    })
-
-    it("computes amrap total", () => {
-      expect(totalDuration("amrap", { minutes: 5 })).toBe(300)
-    })
+  it("totalDuration computes total seconds per mode", () => {
+    expect(totalDuration("tabata", { work: 20, rest: 10, rounds: 8 })).toBe(240)
+    expect(totalDuration("emom", { minutes: 10 })).toBe(600)
+    expect(totalDuration("amrap", { minutes: 5 })).toBe(300)
   })
 
   describe("start", () => {
@@ -122,34 +106,22 @@ describe("timer", () => {
     })
   })
 
-  describe("pause", () => {
-    it("pauses a running timer", () => {
-      const s = pause(start(init("tabata"), 1000), 5000)
-      expect(s.status).toBe("paused")
-      expect(s.pausedAt).toBe(5000)
-      expect(s.elapsed).toBe(4000)
-    })
-
-    it("does nothing if not running", () => {
-      const s = pause(init("tabata"), 1000)
-      expect(s.status).toBe("idle")
-    })
+  it("pause transitions running → paused and no-ops otherwise", () => {
+    const s = pause(start(init("tabata"), 1000), 5000)
+    expect(s.status).toBe("paused")
+    expect(s.pausedAt).toBe(5000)
+    expect(s.elapsed).toBe(4000)
+    expect(pause(init("tabata"), 1000).status).toBe("idle")
   })
 
-  describe("resume", () => {
-    it("resumes a paused timer", () => {
-      const running = start(init("tabata"), 1000)
-      const paused = pause(running, 5000)
-      const resumed = resume(paused, 8000)
-      expect(resumed.status).toBe("running")
-      expect(resumed.startedAt).toBe(8000)
-      expect(resumed.pausedAt).toBeNull()
-    })
-
-    it("does nothing if not paused", () => {
-      const s = resume(init("tabata"), 1000)
-      expect(s.status).toBe("idle")
-    })
+  it("resume transitions paused → running and no-ops otherwise", () => {
+    const running = start(init("tabata"), 1000)
+    const paused = pause(running, 5000)
+    const resumed = resume(paused, 8000)
+    expect(resumed.status).toBe("running")
+    expect(resumed.startedAt).toBe(8000)
+    expect(resumed.pausedAt).toBeNull()
+    expect(resume(init("tabata"), 1000).status).toBe("idle")
   })
 
   describe("reset", () => {
@@ -162,23 +134,12 @@ describe("timer", () => {
     })
   })
 
-  describe("addRound", () => {
-    it("increments amrap rounds when running", () => {
-      const s = addRound(start(init("amrap"), 1000))
-      expect(s.amrapRounds).toBe(1)
-      const s2 = addRound(s)
-      expect(s2.amrapRounds).toBe(2)
-    })
-
-    it("does nothing for tabata", () => {
-      const s = addRound(start(init("tabata"), 1000))
-      expect(s.amrapRounds).toBe(0)
-    })
-
-    it("does nothing if not running", () => {
-      const s = addRound(init("amrap"))
-      expect(s.amrapRounds).toBe(0)
-    })
+  it("addRound only increments amrap rounds while running", () => {
+    const s = addRound(start(init("amrap"), 1000))
+    expect(s.amrapRounds).toBe(1)
+    expect(addRound(s).amrapRounds).toBe(2)
+    expect(addRound(start(init("tabata"), 1000)).amrapRounds).toBe(0)
+    expect(addRound(init("amrap")).amrapRounds).toBe(0)
   })
 
   describe("tick — tabata", () => {
@@ -281,19 +242,14 @@ describe("timer", () => {
     })
   })
 
-  describe("tick — paused/idle", () => {
-    it("returns unchanged for idle", () => {
-      const s = init("tabata")
-      const result = tick(s, 1000)
-      expect(result.state).toBe(s)
-      expect(result.transition).toBe("none")
-    })
+  it("tick is a no-op for idle or paused states", () => {
+    const idle = init("tabata")
+    const idleResult = tick(idle, 1000)
+    expect(idleResult.state).toBe(idle)
+    expect(idleResult.transition).toBe("none")
 
-    it("returns unchanged for paused", () => {
-      const s = pause(start(init("tabata"), 1000), 5000)
-      const result = tick(s, 10000)
-      expect(result.transition).toBe("none")
-    })
+    const paused = pause(start(init("tabata"), 1000), 5000)
+    expect(tick(paused, 10000).transition).toBe("none")
   })
 
   describe("tick — pause/resume preserves elapsed", () => {
@@ -322,50 +278,23 @@ describe("timer", () => {
     })
   })
 
-  describe("roundLabel", () => {
-    it("shows round/total for tabata", () => {
-      const s = { ...start(init("tabata"), 1000), round: 3 }
-      expect(roundLabel(s)).toBe("3 / 8")
-    })
-
-    it("shows minute for emom", () => {
-      const s = { ...start(init("emom"), 1000), round: 5 }
-      expect(roundLabel(s)).toBe("Minute 5 / 10")
-    })
-
-    it("shows amrap rounds", () => {
-      const s = { ...start(init("amrap"), 1000), amrapRounds: 7 }
-      expect(roundLabel(s)).toBe("7 rounds")
-    })
+  it("roundLabel formats per mode", () => {
+    expect(roundLabel({ ...start(init("tabata"), 1000), round: 3 })).toBe("3 / 8")
+    expect(roundLabel({ ...start(init("emom"), 1000), round: 5 })).toBe("Minute 5 / 10")
+    expect(roundLabel({ ...start(init("amrap"), 1000), amrapRounds: 7 })).toBe("7 rounds")
   })
 
-  describe("phaseLabel", () => {
-    it("returns WORK for work", () => {
-      expect(phaseLabel({ ...init("tabata"), phase: "work" })).toBe("WORK")
-    })
-
-    it("returns REST for rest", () => {
-      expect(phaseLabel({ ...init("tabata"), phase: "rest" })).toBe("REST")
-    })
-
-    it("returns DONE for completed", () => {
-      expect(phaseLabel({ ...init("tabata"), phase: "completed" })).toBe("DONE")
-    })
-
-    it("returns empty for idle", () => {
-      expect(phaseLabel(init("tabata"))).toBe("")
-    })
+  it("phaseLabel maps phase to display label", () => {
+    expect(phaseLabel({ ...init("tabata"), phase: "work" })).toBe("WORK")
+    expect(phaseLabel({ ...init("tabata"), phase: "rest" })).toBe("REST")
+    expect(phaseLabel({ ...init("tabata"), phase: "completed" })).toBe("DONE")
+    expect(phaseLabel(init("tabata"))).toBe("")
   })
 
-  describe("pauseDuration", () => {
-    it("computes pause duration in seconds", () => {
-      const s = { ...init("tabata"), status: "paused" as const, pausedAt: 1000 }
-      expect(pauseDuration(s, 6000)).toBe(5)
-    })
-
-    it("returns 0 if not paused", () => {
-      expect(pauseDuration(init("tabata"), 1000)).toBe(0)
-    })
+  it("pauseDuration computes seconds since pausedAt or 0 when not paused", () => {
+    const paused = { ...init("tabata"), status: "paused" as const, pausedAt: 1000 }
+    expect(pauseDuration(paused, 6000)).toBe(5)
+    expect(pauseDuration(init("tabata"), 1000)).toBe(0)
   })
 
   describe("clamp", () => {
@@ -376,21 +305,11 @@ describe("timer", () => {
     })
   })
 
-  describe("progress", () => {
-    it("returns 0 when remaining equals total", () => {
-      const s = init("tabata")
-      expect(progress(s)).toBe(0)
-    })
-
-    it("returns 0.5 at halfway", () => {
-      const s = { ...init("tabata"), remaining: 10, total: 20 }
-      expect(progress(s)).toBe(0.5)
-    })
-
-    it("returns 0 when total is 0", () => {
-      const s = { ...init("tabata"), remaining: 0, total: 0 }
-      expect(progress(s)).toBe(0)
-    })
+  it("progress returns fraction elapsed with zero-total fallback", () => {
+    const base = init("tabata")
+    expect(progress(base)).toBe(0)
+    expect(progress({ ...base, remaining: 10, total: 20 })).toBe(0.5)
+    expect(progress({ ...base, remaining: 0, total: 0 })).toBe(0)
   })
 
   describe("edge cases", () => {
