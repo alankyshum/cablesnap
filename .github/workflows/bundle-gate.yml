@@ -1,0 +1,66 @@
+name: Bundle Gate
+
+# Production-hygiene gate: verifies the `__TEST_SCENARIO__` literal from the
+# dev-only scenario seed hook never leaks into the exported web bundle.
+#
+# Guards the `if (__DEV__)` dead-code-elimination contract established in
+# BLD-494 (see scripts/verify-scenario-hook-not-in-bundle.sh).
+#
+# Refs: BLD-494, BLD-495.
+
+on:
+  pull_request:
+    paths:
+      - 'lib/db/**'
+      - 'hooks/**'
+      - 'e2e/**'
+      - 'scripts/verify-scenario-hook-not-in-bundle.sh'
+      - '.github/workflows/bundle-gate.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.config.ts'
+      - 'metro.config.js'
+      - 'babel.config.js'
+  push:
+    branches:
+      - main
+    paths:
+      - 'lib/db/**'
+      - 'hooks/**'
+      - 'e2e/**'
+      - 'scripts/verify-scenario-hook-not-in-bundle.sh'
+      - '.github/workflows/bundle-gate.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.config.ts'
+      - 'metro.config.js'
+      - 'babel.config.js'
+
+# Cancel in-progress runs on new commits to the same PR to save CI minutes.
+concurrency:
+  group: bundle-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  bundle-gate:
+    name: Verify scenario hook not in production bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run bundle gate
+        run: bash scripts/verify-scenario-hook-not-in-bundle.sh
