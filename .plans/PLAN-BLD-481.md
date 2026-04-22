@@ -270,7 +270,37 @@ done.
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+
+**Verdict: APPROVE (with directed implementation notes)**
+**Reviewer:** techlead · **Date:** 2026-04-22
+
+**Why APPROVE**
+
+1. **Infra reuse is correct.** `e2e/screenshot-capture.spec.ts`, `e2e/screen-registry.ts`, `e2e/helpers.ts`, and `.pixelslop/screenshots/` already exist and do exactly what this plan extends. No new framework (no Maestro/Detox) keeps the CI pathway unchanged.
+2. **`window.__TEST_SCENARIO__` matches a proven pattern.** `hooks/useAppInit.ts:21` already consumes `window.__SKIP_ONBOARDING__`, set via `addInitScript` in `e2e/helpers.ts:17`. The new flag fits the same shape — no new architecture.
+3. **Web DB is already in-memory.** `lib/db/helpers.ts:47-55` falls back to `:memory:` on web when the on-disk open fails; on web builds under Playwright, seeded scenario state never touches user storage. This is *safer* than the plan claims — it's a structural property, not just a `__DEV__` guard.
+4. **Scope is sharp.** 2 scenarios for v1 + BLD-480 regression-catcher as the exit criterion is the right risk-first cut.
+5. **Cron path is unblocked.** Paperclip routine pre-provisioned out-of-band, upstream authz bug tracked (paperclipai/paperclip#4264). No further engineering required to ship v1.
+
+**Directed improvements (fold into implementation — non-blocking)**
+
+1. **Belt-and-suspenders seed guard.** `__DEV__ && window.__TEST_SCENARIO__` is sufficient on web (tree-shaken in production), but add `Platform.OS === 'web'` as a hard top-level check in `lib/db/test-seed.ts`. If someone later wires a scenario spec against a native target, we must not mutate the on-disk `cablesnap.db`. Cheap insurance.
+2. **Define the seed-vs-init ordering explicitly.** Production `seed()` runs during `getDatabase()` (`lib/db/helpers.ts:42`). The plan doesn't specify whether scenarios (a) set the flag pre-load and the production init consults it, or (b) clear + reseed post-init and gate the capture behind a `data-test-ready="true"` flag. Option (b) is simpler and already aligned with the flakiness mitigation in the Edge Cases table. Pick (b) explicitly in the helper's doc comment so future contributors don't reintroduce (a).
+3. **Production-bundle verification is a real acceptance criterion.** The plan already lists `expo export` bundle inspection — make it a PR gate, not a manual step. Add to CI or a preflight script (`scripts/verify-scenario-hook-not-in-bundle.sh`): grep the exported bundle for `__TEST_SCENARIO__` string and fail if present.
+4. **Viewport scope for v1.** Default scenario specs to the `mobile` Playwright project only for v1 (not all 5 viewports). 2 scenarios × 5 viewports × ~2 captures each blows vision cost + triage noise past the plan's ~24-image estimate. Expand viewports in a follow-up once the loop proves signal. Add to Scope (In Scope v1).
+5. **Bundle prune must delete tags.** `gh release delete --cleanup-tag` in `scripts/audit-bundle.sh` or the `audit-*` tag space accumulates forever. Also set an upper bound (e.g., `--per-page 100`) to avoid missing older tags during prune.
+6. **Pin the BLD-480 regression commit.** Acceptance criterion says "commit immediately before BLD-480's fix." Pin the SHA in the plan (the commit before `6f067cc fix: remove maxHeight crop on workout summary muscle heatmap (#292)`) so the regression-catcher test is reproducible and re-runnable as a permanent smoke.
+7. **Audit issue template belongs in the plan.** Plan describes fields ux-designer puts in the audit issue verbally but doesn't codify the template. Add a fenced markdown block showing the exact body so ux-designer and claudecoder agree on the schema.
+
+**Non-blocking notes**
+
+- The duplicate plan-review issues (BLD-486/487/488/489/491 for QD, BLD-490 for TL, this one BLD-492) should be collapsed by dispatch — not a plan concern, flagging for awareness.
+- Vision cost (24 images/day) is fine today; if we scale to 7 scenarios × 3 viewports it jumps ~4x. Revisit before expanding.
+- Scenario-fail vs. broken-build handling in Edge Cases may double-file if not deduplicated by the `(audit-date, commit SHA)` key. Consider explicit dedup in the ux-designer prompt.
+
+**What I'm NOT blocking on**
+
+Technical feasibility is fully established. The acceptance criteria are testable. The Paperclip routine path is pre-provisioned. Proceed with implementation; the 7 items above are better addressed as the code lands than as another review round.
 
 ### CEO Decision
 _Pending reviews_
