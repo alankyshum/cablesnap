@@ -411,3 +411,123 @@ describe("Strava Integration — Behavioral", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
+
+describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
+  const strava = require("../../lib/strava");
+
+  describe("getStravaUserMessage", () => {
+    it("maps auth_expired and auth_revoked to 'Connection expired' message", () => {
+      expect(strava.getStravaUserMessage(new strava.StravaError("auth_expired", "Token exchange failed: 401", 401)))
+        .toBe("Connection expired. Please try again.");
+      expect(strava.getStravaUserMessage(new strava.StravaError("auth_revoked", "revoked")))
+        .toBe("Connection expired. Please try again.");
+    });
+
+    it("maps network errors to 'Check your internet' message", () => {
+      expect(strava.getStravaUserMessage(new strava.StravaError("network", "Network request failed")))
+        .toBe("Check your internet and try again.");
+      // Raw TypeError from fetch is also treated as network
+      const fetchErr = new TypeError("Network request failed");
+      expect(strava.getStravaUserMessage(fetchErr)).toBe("Check your internet and try again.");
+    });
+
+    it("maps rate_limit to a 'too many requests' message", () => {
+      expect(strava.getStravaUserMessage(new strava.StravaError("rate_limit", "429", 429)))
+        .toMatch(/too many requests/i);
+    });
+
+    it("maps server errors to a polite 'try again soon' message", () => {
+      expect(strava.getStravaUserMessage(new strava.StravaError("server", "500", 500)))
+        .toMatch(/strava is having trouble/i);
+    });
+
+    it("maps config errors to a contact-support message", () => {
+      expect(strava.getStravaUserMessage(new strava.StravaError("config", "Strava proxy URL not configured")))
+        .toMatch(/isn't set up correctly.*contact support/i);
+    });
+
+    it("falls back to generic message for unknown errors (no raw API text leaks)", () => {
+      expect(strava.getStravaUserMessage(new Error("Token exchange failed: 500")))
+        .toBe("Something went wrong connecting to Strava.");
+      expect(strava.getStravaUserMessage("some random thing"))
+        .toBe("Something went wrong connecting to Strava.");
+      expect(strava.getStravaUserMessage(new strava.StravaError("unknown", "??")))
+        .toBe("Something went wrong connecting to Strava.");
+    });
+  });
+
+  describe("connectStrava throws typed StravaError", () => {
+    const AuthSession = require("expo-auth-session");
+    const mockFetch = jest.fn();
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      global.fetch = mockFetch;
+      AuthSession.AuthRequest.mockImplementation(() => ({
+        promptAsync: jest.fn().mockResolvedValue({
+          type: "success",
+          params: { code: "auth-code-xyz" },
+        }),
+      }));
+    });
+
+    afterAll(() => {
+      global.fetch = originalFetch;
+    });
+
+    it("throws StravaError(auth_expired) on 401 from token exchange", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+      await expect(strava.connectStrava()).rejects.toMatchObject({
+        name: "StravaError",
+        code: "auth_expired",
+        status: 401,
+      });
+    });
+
+    it("throws StravaError(server) on 5xx from token exchange", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 503 });
+      await expect(strava.connectStrava()).rejects.toMatchObject({
+        name: "StravaError",
+        code: "server",
+        status: 503,
+      });
+    });
+
+    it("throws StravaError(network) when fetch rejects with a network error", async () => {
+      mockFetch.mockRejectedValueOnce(new TypeError("Network request failed"));
+      await expect(strava.connectStrava()).rejects.toMatchObject({
+        name: "StravaError",
+        code: "network",
+      });
+    });
+
+    it("thrown errors map to user-friendly toast copy (no raw status leakage)", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+      try {
+        await strava.connectStrava();
+        throw new Error("expected throw");
+      } catch (err) {
+        const msg = strava.getStravaUserMessage(err);
+        expect(msg).toBe("Connection expired. Please try again.");
+        expect(msg).not.toMatch(/401|token exchange/i);
+      }
+    });
+  });
+});
+
+describe("Strava Integration — IntegrationsCard wiring (BLD-505)", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const integrationsSrc = fs.readFileSync(
+    path.resolve(__dirname, "../../components/settings/IntegrationsCard.tsx"),
+    "utf-8"
+  );
+
+  it("uses getStravaUserMessage for the connect error path", () => {
+    expect(integrationsSrc).toContain("getStravaUserMessage");
+    expect(integrationsSrc).toContain("toast.error(getStravaUserMessage(err))");
+    // Old raw-message path must be gone
+    expect(integrationsSrc).not.toMatch(/toast\.error\(err instanceof Error \? err\.message/);
+  });
+});
