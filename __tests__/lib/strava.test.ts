@@ -90,15 +90,15 @@ describe("Strava Integration — DB Operations", () => {
 });
 
 describe("Strava Integration — API Client", () => {
-  it("uses PKCE OAuth with SecureStore tokens and correct activity format", () => {
+  it("uses OAuth Authorization Code flow with SecureStore tokens and correct activity format", () => {
     // Token storage
     expect(stravaClientSrc).toContain("SecureStore.setItemAsync");
     expect(stravaClientSrc).toContain("SecureStore.getItemAsync");
     expect(stravaClientSrc).toContain("SecureStore.deleteItemAsync");
     expect(stravaClientSrc).not.toMatch(/execute.*token/i);
-    // PKCE
-    expect(stravaClientSrc).toContain("usePKCE: true");
-    expect(stravaClientSrc).toContain("code_verifier");
+    // Strava does NOT support PKCE — flag must not be set, and no code_verifier in request body
+    expect(stravaClientSrc).not.toContain("usePKCE: true");
+    expect(stravaClientSrc).not.toContain("code_verifier");
     // Activity format
     expect(stravaClientSrc).toMatch(/external_id.*cablesnap-/);
     expect(stravaClientSrc).toContain('"WeightTraining"');
@@ -302,10 +302,11 @@ describe("Strava Integration — Behavioral", () => {
     expect(db.saveStravaConnection).toHaveBeenCalledWith(42, "Jane Doe");
     // Verify proxy URL is used
     expect(mockFetch.mock.calls[0][0]).toBe("https://test-proxy.example.com/token");
-    // Verify body sends code + code_verifier but NOT client_id or grant_type
+    // Verify body sends code but NOT code_verifier (Strava does not support PKCE),
+    // and NOT client_id or grant_type (added by the proxy)
     const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(fetchBody.code).toBe("auth-code-123");
-    expect(fetchBody.code_verifier).toBe("test-verifier");
+    expect(fetchBody).not.toHaveProperty("code_verifier");
     expect(fetchBody).not.toHaveProperty("client_id");
     expect(fetchBody).not.toHaveProperty("grant_type");
   });

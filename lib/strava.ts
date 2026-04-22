@@ -147,7 +147,9 @@ async function getValidAccessToken(): Promise<string | null> {
   return await refreshAccessToken();
 }
 
-// ---- OAuth2 PKCE Flow ----
+// ---- OAuth2 Authorization Code Flow ----
+// Note: Strava does not support PKCE. Tokens are exchanged via the
+// Cloudflare Worker proxy which holds the client_secret server-side.
 
 export async function connectStrava(): Promise<{
   athleteId: number;
@@ -166,7 +168,6 @@ export async function connectStrava(): Promise<{
     clientId,
     scopes: ["activity:write"],
     redirectUri,
-    usePKCE: true,
     responseType: AuthSession.ResponseType.Code,
   });
 
@@ -184,7 +185,6 @@ export async function connectStrava(): Promise<{
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       code: result.params.code,
-      code_verifier: authRequest.codeVerifier,
     }),
   });
 
