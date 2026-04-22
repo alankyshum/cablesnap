@@ -1,11 +1,13 @@
-import { ActivityIndicator, Modal, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Modal, StyleSheet, TextInput, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import ShareCard from "@/components/ShareCard";
 import type { ShareCardExercise, ShareCardPR } from "@/components/ShareCard";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { RefObject } from "react";
-import { fontSizes } from "@/constants/design-tokens";
+import { fontSizes, scrim } from "@/constants/design-tokens";
+
+const PREVIEW_MAX_HEIGHT = Dimensions.get("window").height * 0.85;
 
 type Props = {
   colors: ThemeColors;
@@ -141,14 +143,14 @@ export default function SummaryFooter({
 const styles = StyleSheet.create({
   actions: { marginTop: 16, gap: 12 },
   actionBtn: { borderRadius: 8 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 },
+  modalOverlay: { flex: 1, backgroundColor: scrim.light, justifyContent: "center", alignItems: "center", padding: 24 },
   modalContent: { width: "100%", maxWidth: 400, borderRadius: 16, padding: 24 },
   modalInput: { borderWidth: 1, borderRadius: 8, padding: 12, fontSize: fontSizes.base, marginBottom: 16 },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },
-  previewOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 16 },
-  previewContainer: { width: "100%", maxWidth: 400, maxHeight: "85%", borderRadius: 16, overflow: "hidden" },
+  previewOverlay: { flex: 1, backgroundColor: scrim.heavy, justifyContent: "center", alignItems: "center", padding: 16 },
+  previewContainer: { width: "100%", maxWidth: 400, maxHeight: PREVIEW_MAX_HEIGHT, borderRadius: 16, overflow: "hidden" },
   previewScrollContent: { alignItems: "center", padding: 8 },
-  shareCardWrapper: { alignSelf: "center", transform: [{ scale: 0.3 }], transformOrigin: "top center" },
-  previewActions: { flexDirection: "row", justifyContent: "center", gap: 12, paddingVertical: 16, paddingHorizontal: 24, backgroundColor: "rgba(0,0,0,0.5)" },
+  shareCardWrapper: { alignSelf: "center", transform: [{ scale: 0.3 }] },
+  previewActions: { flexDirection: "row", justifyContent: "center", gap: 12, paddingVertical: 16, paddingHorizontal: 24, backgroundColor: scrim.light },
   previewBtn: { flex: 1, borderRadius: 8 },
 });
