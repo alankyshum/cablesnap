@@ -40,6 +40,12 @@ yarn-error.*
 /ios
 /android
 
+# Android release signing (never commit these; CI provides them from secrets)
+android/app/release.keystore
+android/keystore.properties
+release.keystore
+keystore.properties
+
 # Playwright
 /test-results/
 /playwright-report/

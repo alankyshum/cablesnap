@@ -13,6 +13,45 @@ Deterministic, repeatable steps to publish a new version of CableSnap.
 Every version bump touches exactly 3 files + 1 tag + 1 GitHub Release,
 then GitHub Actions builds the APK and deploys to the F-Droid repo.
 
+## Release Signing (Automated in CI, BLD-484 / BLD-485)
+
+Since BLD-485, release APKs are signed by the `scheduled-release.yml` CI
+pipeline with a **persistent production keystore**. The four required GitHub
+Actions secrets are:
+
+- `ANDROID_KEYSTORE_BASE64` — base64 of the release PKCS12 keystore
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+The expected cert SHA-256 is committed to `fdroid/release-cert.sha256`. CI
+runs `apksigner verify --print-certs` after every build and fails the
+release if the fingerprint drifts. Never edit that file without rotating
+the signing key deliberately.
+
+**Local builds do not sign as release-quality.** `./gradlew assembleRelease`
+on a dev machine will silently fall back to the debug keystore (see
+`plugins/with-release-signing.js`). Only CI produces shippable APKs.
+
+### One-time reinstall warning
+
+The FIRST release after BLD-485 merged required users to uninstall and
+reinstall the app once (Android refuses in-place updates when the signing
+certificate changes). Every release after that updates cleanly in-place.
+The banner lives at `fdroid/FIRST_SIGNED_RELEASE_NOTICE.md`; delete it after
+the first signed release has shipped to stop prepending the warning to
+future release notes.
+
+### Rotating the signing key
+
+Do **not** rotate casually. Android ties app identity to the signing cert,
+so rotating forces every user to uninstall/reinstall again (losing data) or
+forces a new `applicationId`. If you truly must rotate: generate a new
+PKCS12 keystore (RSA 2048, SHA256, ≥ 25-year validity), update all four
+secrets, update `fdroid/release-cert.sha256`, recreate
+`fdroid/FIRST_SIGNED_RELEASE_NOTICE.md`, and consider bumping the major
+version so the break is explicit.
+
 ## Pre-Flight Checks
 
 Before publishing, verify:

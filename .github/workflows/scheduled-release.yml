@@ -19,6 +19,24 @@ jobs:
           fetch-tags: true
           token: ${{ secrets.GH_PAT }}
 
+      - name: Verify release signing secrets are configured
+        run: |
+          MISSING=""
+          [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && MISSING="$MISSING ANDROID_KEYSTORE_BASE64"
+          [ -z "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ] && MISSING="$MISSING ANDROID_KEYSTORE_PASSWORD"
+          [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ] && MISSING="$MISSING ANDROID_KEY_ALIAS"
+          [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ] && MISSING="$MISSING ANDROID_KEY_PASSWORD"
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing required release-signing secrets:$MISSING"
+            echo "::error::Configure GitHub Actions secrets before releasing (see BLD-485 / fdroid/release-cert.sha256)."
+            exit 1
+          fi
+          if [ ! -f fdroid/release-cert.sha256 ]; then
+            echo "::error::Expected cert fingerprint file fdroid/release-cert.sha256 is missing."
+            exit 1
+          fi
+          echo "All release-signing secrets present."
+
       - name: Get latest tag
         id: latest_tag
         run: |
@@ -115,8 +133,20 @@ jobs:
         run: |
           TAG="${{ steps.latest_tag.outputs.tag }}"
           VERSION="${{ steps.next_version.outputs.version }}"
+          # SIGNING_UNINSTALL_NOTICE is prepended to the release notes for the
+          # first release after BLD-485 (persistent signing keystore) lands.
+          # Delete the file after the first signed release has shipped to stop
+          # emitting this banner.
+          NOTICE=""
+          if [ -f fdroid/FIRST_SIGNED_RELEASE_NOTICE.md ]; then
+            NOTICE=$(cat fdroid/FIRST_SIGNED_RELEASE_NOTICE.md)
+          fi
           {
             echo 'notes<<NOTES_EOF'
+            if [ -n "$NOTICE" ]; then
+              echo "$NOTICE"
+              echo ""
+            fi
             echo "## What's New"
             echo ""
             if [ -z "$TAG" ]; then
@@ -172,6 +202,28 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: npx expo prebuild --clean --platform android
 
+      - name: Decode release keystore and write keystore.properties
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          if [ ! -s android/app/release.keystore ]; then
+            echo "::error::Decoded release.keystore is empty — check ANDROID_KEYSTORE_BASE64 secret."
+            exit 1
+          fi
+          cat > android/keystore.properties <<PROPS
+          storeFile=release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          PROPS
+          echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
+
       - name: Build APK
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: |
@@ -180,6 +232,35 @@ jobs:
           cd ..
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
           echo "APK built: $(ls -lh cablesnap.apk)"
+
+      - name: Verify APK signature matches committed fingerprint
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/*/ 2>/dev/null | sort -V | tail -1)
+          if [ -z "$BUILD_TOOLS_DIR" ]; then
+            echo "::error::No Android build-tools found under $ANDROID_HOME/build-tools."
+            exit 1
+          fi
+          APKSIGNER="${BUILD_TOOLS_DIR}apksigner"
+          echo "Using apksigner: $APKSIGNER"
+          "$APKSIGNER" verify --print-certs cablesnap.apk | tee apksigner.log
+          ACTUAL=$(grep -E "Signer #1 certificate SHA-256 digest:" apksigner.log | awk -F': ' '{print $2}' | tr -d '[:space:]')
+          if [ -z "$ACTUAL" ]; then
+            echo "::error::Could not parse signer SHA-256 from apksigner output."
+            exit 1
+          fi
+          # Normalize both to uppercase, no colons, no whitespace.
+          ACTUAL_NORM=$(echo "$ACTUAL" | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':' | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
+          echo "Expected SHA-256: $EXPECTED_NORM"
+          echo "Actual   SHA-256: $ACTUAL_NORM"
+          if [ "$ACTUAL_NORM" != "$EXPECTED_NORM" ]; then
+            echo "::error::APK cert fingerprint does not match fdroid/release-cert.sha256."
+            echo "::error::Either the wrong keystore secret was injected, or the signing key was rotated (requires a deliberate fingerprint update)."
+            exit 1
+          fi
+          echo "Cert fingerprint verified: $ACTUAL_NORM"
 
       # --- Create release WITH APK attached atomically ---
 
