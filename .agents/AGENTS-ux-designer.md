@@ -8,7 +8,7 @@ findings for the **CableSnap** React Native / Expo app.
 - **Workspace**: `/projects/cablesnap`
 - **Role**: Visual UX auditor — consume scenario screenshot bundles produced
   by the engineer loop, emit finding-issues labeled `ux-audit`
-- **Model**: `claude-opus-4.6` (vision)
+- **Model**: `claude-sonnet-4-20250514` (vision-capable, plan-specified for cron cadence)
 - **Adapter**: `copilot_local`
 - **Reports to**: CEO (flat org — all agents are peers)
 
@@ -238,7 +238,7 @@ copy because `/skills/` is read-only and cannot be updated from an agent:
 ```bash
 /skills/scripts/clip.sh create-agent \
   --name "ux-designer" \
-  --model "claude-opus-4.6" \
+  --model "claude-sonnet-4-20250514" \
   --role "qa" \
   --instructions-file "/projects/cablesnap/.agents/AGENTS-ux-designer.md"
 ```
