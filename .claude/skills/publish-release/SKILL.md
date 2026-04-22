@@ -100,61 +100,17 @@ If the pre-commit hook fails due to pre-existing lint errors in OTHER files,
 use `--no-verify`. Never use `--no-verify` to skip lint errors in the files
 being committed.
 
-## Step 4: Create an Annotated Tag
-
-```bash
-git tag -a vX.Y.Z -m "vX.Y.Z: Brief description of changes"
-```
-
-The tag MUST:
-- Start with `v` (triggers the GitHub Actions workflow)
-- Match the version in all 3 files exactly
-- Be annotated (`-a`), not lightweight
-
-## Step 5: Push Commit and Tag
+## Step 4: Push Commit
 
 ```bash
 git push origin main
-git push origin vX.Y.Z
 ```
 
-## Step 6: Create GitHub Release
+**Do NOT create tags via `git tag` + `git push`.** Repository rules block tag
+creation via git push. Tags are created automatically by `gh release create`
+in Step 7 via the GitHub API (which bypasses the restriction).
 
-Use `gh release create` with structured release notes:
-
-```bash
-gh release create vX.Y.Z \
-  --title "vX.Y.Z" \
-  --notes "$(cat <<'NOTES'
-## What's New
-
-### Category 1
-- Change description
-
-### Category 2
-- Change description
-
-## Install
-
-Add the F-Droid repo URL to your F-Droid client:
-\`\`\`
-https://alankyshum.github.io/cablesnap/repo
-\`\`\`
-NOTES
-)"
-```
-
-Release notes MUST include:
-- Grouped changes by category (Features, Fixes, Performance, etc.)
-- F-Droid install instructions at the bottom
-
-To generate the change list, compare with the previous tag:
-
-```bash
-git log --oneline PREV_TAG..vX.Y.Z
-```
-
-## Step 6.5: Update Store Screenshots
+## Step 5: Update Store Screenshots
 
 Generate fresh screenshots for F-Droid and README:
 
@@ -170,11 +126,14 @@ Commit the updated screenshots if they changed:
 ```bash
 git add fdroid/metadata/com.persoack.cablesnap/en-US/phoneScreenshots/ assets/store-screenshots/
 git diff --cached --stat && git commit -m "chore: update store screenshots for vX.Y.Z"
+git push origin main
 ```
 
-## Step 7: Build APK Locally
+## Step 6: Build APK Locally
 
-Build the production APK on the local machine (Apple Silicon Mac):
+Build the production APK on the local machine (Apple Silicon Mac) **before**
+creating the GitHub release. GitHub releases are **immutable** — you cannot
+upload assets to a release after creation.
 
 ```bash
 JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
@@ -201,11 +160,38 @@ cp build-*.apk cablesnap.apk
 - `SDK location not found` → `ANDROID_HOME` not set or not passed to build command
 - Timeout → build needs 20+ min; use `timeout 1800000` if running from agent
 
-## Step 8: Upload APK to GitHub Release
+## Step 7: Create GitHub Release WITH APK
+
+**CRITICAL:** The APK must be attached in the same `gh release create` command.
+GitHub releases are immutable — `gh release upload` after creation returns
+`HTTP 422: Cannot upload assets to an immutable release`.
 
 ```bash
-gh release upload vX.Y.Z cablesnap.apk --clobber
+gh release create vX.Y.Z cablesnap.apk \
+  --title "vX.Y.Z" \
+  --target main \
+  --repo alankyshum/cablesnap \
+  --notes "$(cat <<'NOTES'
+## What's New
+
+### Category 1
+- Change description
+
+### Category 2
+- Change description
+
+## Install
+
+Add the F-Droid repo URL to your F-Droid client:
+\`\`\`
+https://alankyshum.github.io/cablesnap/repo
+\`\`\`
+NOTES
+)"
 ```
+
+This creates the tag via the GitHub API (bypassing repo tag-creation rules)
+and attaches the APK atomically.
 
 Verify the asset was attached:
 
@@ -215,10 +201,21 @@ gh release view vX.Y.Z --json assets --jq '.assets[].name'
 
 Should show `cablesnap.apk`.
 
-## Step 9: F-Droid Repo Update (Automatic)
+Release notes MUST include:
+- Grouped changes by category (Features, Fixes, Performance, etc.)
+- F-Droid install instructions at the bottom
 
-The F-Droid repo update is **automatically triggered** when the APK is uploaded to the
-GitHub Release (via the `auto-fdroid.yml` workflow). No manual action needed.
+To generate the change list, compare with the previous tag:
+
+```bash
+git log --oneline PREV_TAG..vX.Y.Z
+```
+
+## Step 8: F-Droid Repo Update (Automatic)
+
+The F-Droid repo update is **automatically triggered** when the release is
+published with an APK asset (via the `auto-fdroid.yml` workflow, which
+triggers on `release: [published]`). No manual action needed.
 
 **Manual fallback** (if auto-trigger doesn't fire):
 
@@ -226,7 +223,7 @@ GitHub Release (via the `auto-fdroid.yml` workflow). No manual action needed.
 gh workflow run fdroid-release.yml -f tag=vX.Y.Z
 ```
 
-## Step 10: Verify F-Droid Repo
+## Step 9: Verify F-Droid Repo
 
 After the workflow completes (~5 min), verify the Pages deployment:
 
@@ -254,21 +251,32 @@ gh auth switch --user kshum_LinkedIn
 | 0.1.1   | 2           | v0.1.1 | 2026-04-15 |
 | 0.10.0  | 16          | v0.10.0| 2026-04-18 |
 | 0.15.2  | 25          | v0.15.2| 2026-04-19 |
+| 0.23.1  | 5           | v0.23.1| 2026-04-21 |
+| 0.26.1  | 51          | v0.26.1| 2026-04-22 |
 
 Update this table after each release.
 
 ## Troubleshooting
 
 ### "Tag already exists"
+The tag was likely created by a previous `gh release create`. Delete both:
 ```bash
-git tag -d vX.Y.Z            # delete local
-git push origin :refs/tags/vX.Y.Z  # delete remote
+gh release delete vX.Y.Z --yes --cleanup-tag
 ```
-Then recreate the tag.
+Then recreate with Step 7.
 
-### GitHub Actions not triggering
-Verify the tag was pushed: `git ls-remote --tags origin | grep vX.Y.Z`
-Verify the workflow trigger: the `on: push: tags: - 'v*'` pattern must match.
+### GitHub releases are immutable
+You **cannot** upload assets to a release after creation. If you forgot to
+attach the APK, delete and recreate:
+```bash
+gh release delete vX.Y.Z --yes --cleanup-tag
+# Rebuild APK if needed, then redo Step 7
+```
+
+### Tag push blocked by repo rules
+Do NOT use `git tag` + `git push origin vX.Y.Z`. Repository rules block tag
+creation via git push. Use `gh release create` which creates tags via the
+GitHub API (bypasses the restriction).
 
 ### EAS project not configured
 The EAS project ID must exist in `app.config.ts` under `extra.eas.projectId`.
@@ -282,10 +290,8 @@ the config is dynamic (TypeScript). The project ID is:
 - Verify Pages is deployed: `gh api repos/alankyshum/cablesnap/pages`
 
 ### Need to re-publish same version
-Delete the release and tag, fix the issue, then redo steps 4-7:
+Delete the release (which also cleans up the tag), fix the issue, then redo from Step 6:
 ```bash
-gh release delete vX.Y.Z --yes
-git tag -d vX.Y.Z
-git push origin :refs/tags/vX.Y.Z
-# Fix issue, commit, then redo from Step 4
+gh release delete vX.Y.Z --yes --cleanup-tag
+# Fix issue, rebuild APK, then redo from Step 6
 ```
