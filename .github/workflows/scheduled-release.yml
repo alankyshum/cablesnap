@@ -213,6 +213,23 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: npx expo prebuild --clean --platform android
 
+      - name: Boost Gradle JVM heap
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          # expo prebuild --clean regenerates android/gradle.properties with
+          # org.gradle.jvmargs=-Xmx2048m, which is borderline for
+          # assembleRelease: :app:mergeReleaseNativeDebugMetadata routinely
+          # OOMs on the ubuntu-latest runner. Bump to 6g so the build can
+          # finish and the apksigner fingerprint step can run.
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+          grep '^org.gradle.jvmargs=' "$PROPS"
+
       - name: Decode release keystore and write keystore.properties
         if: steps.check_commits.outputs.has_new_commits == 'true'
         env:
