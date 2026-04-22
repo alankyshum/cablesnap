@@ -76,17 +76,23 @@ describe('volume-landmarks — parseCustomLandmarks', () => {
 describe('volume-landmarks — getVolumeStatus', () => {
   const lm: VolumeLandmarks = { mev: 10, mrv: 20 }
 
-  it.each([
-    [0, 'below_mev'],
-    [5, 'below_mev'],
-    [9, 'below_mev'],
-    [10, 'optimal'],
-    [15, 'optimal'],
-    [20, 'optimal'],
-    [21, 'above_mrv'],
-    [50, 'above_mrv'],
-  ] as const)('classifies %d sets as %s', (sets, expected) => {
-    expect(getVolumeStatus(sets, lm)).toBe(expected)
+  it('classifies set counts against MEV/MRV boundaries', () => {
+    const cases: readonly [number, string][] = [
+      [0, 'below_mev'],
+      [5, 'below_mev'],
+      [9, 'below_mev'],
+      [10, 'optimal'],
+      [15, 'optimal'],
+      [20, 'optimal'],
+      [21, 'above_mrv'],
+      [50, 'above_mrv'],
+    ] as const
+    for (const [sets, expected] of cases) {
+      const actual = getVolumeStatus(sets, lm)
+      if (actual !== expected) {
+        throw new Error(`Expected ${sets} sets → ${expected}, got ${actual}`)
+      }
+    }
   })
 })
 

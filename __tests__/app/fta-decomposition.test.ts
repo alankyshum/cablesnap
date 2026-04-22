@@ -138,12 +138,15 @@ describe("FTA decomposition structural tests", () => {
     ["app/tools/plates.tsx", "export function PlateCalculatorContent", "exports PlateCalculatorContent"],
   ];
 
-  test.each(containsCases)(
-    '%s: contains "%s" — %s',
-    (file, expected) => {
-      expect(read(file)).toContain(expected);
+  it("all decomposed files contain expected import/export markers", () => {
+    for (const [file, expected, label] of containsCases) {
+      try {
+        expect(read(file)).toContain(expected);
+      } catch {
+        throw new Error(`Expected ${file} to contain "${expected}" (${label})`);
+      }
     }
-  );
+  });
 
   // ── File exists assertions ─────────────────────────────────────
   const existsCases: [string, string][] = [
@@ -187,8 +190,12 @@ describe("FTA decomposition structural tests", () => {
     ["components/profile/ActivityDropdown.tsx", "profile ActivityDropdown"],
   ];
 
-  test.each(existsCases)("%s exists — %s", (file) => {
-    expect(fs.existsSync(resolve(file))).toBe(true);
+  it("all decomposed files exist on disk", () => {
+    for (const [file, label] of existsCases) {
+      if (!fs.existsSync(resolve(file))) {
+        throw new Error(`Expected ${file} to exist (${label})`);
+      }
+    }
   });
 
   // ── Line limit assertions ──────────────────────────────────────
@@ -223,10 +230,12 @@ describe("FTA decomposition structural tests", () => {
     ["app/tools/plates.tsx", 270, "plates main file"],
   ];
 
-  test.each(lineLimitCases)(
-    "%s is under %d lines — %s",
-    (file, maxLines) => {
-      expect(read(file).split("\n").length).toBeLessThan(maxLines);
+  it("all decomposed files respect their line-count limits", () => {
+    for (const [file, maxLines, label] of lineLimitCases) {
+      const actual = read(file).split("\n").length;
+      if (actual >= maxLines) {
+        throw new Error(`Expected ${file} to be under ${maxLines} lines but got ${actual} (${label})`);
+      }
     }
-  );
+  });
 });
