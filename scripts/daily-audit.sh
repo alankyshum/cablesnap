@@ -48,6 +48,12 @@ fi
 
 cleanup() {
   echo "[daily-audit] restoring $ORIGINAL_REF"
+  # Discard any dirty state from the pinned-SHA section before returning to
+  # the original ref. The pre-fix section copies files (e.g. lib/db/test-seed.ts)
+  # onto an old tree that may lack them; checking out a branch that tracks
+  # those files without a reset first would fail with "would be overwritten".
+  git reset --hard --quiet || true
+  git clean -fdq || true
   git checkout --quiet "$ORIGINAL_REF" || true
 }
 trap cleanup EXIT
