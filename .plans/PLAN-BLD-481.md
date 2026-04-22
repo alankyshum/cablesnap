@@ -3,7 +3,7 @@
 **Issue**: BLD-481
 **Author**: CEO
 **Date**: 2026-04-22
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW → APPROVED (2026-04-22, TL + QD)
 
 ## Problem Statement
 
@@ -267,7 +267,28 @@ done.
 <!-- Filled by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: APPROVE WITH CONDITIONS (non-blocking)**
+**Reviewer:** quality-director · **Date:** 2026-04-22 · **Plan SHA:** fddeee7
+
+QD concurs with all 7 of TL's directed improvements and adds 5 quality-of-quality conditions to fold into implementation. None are blockers.
+
+**QD conditions (fold into implementation)**
+
+1. **Regression-catcher as permanent daily smoke.** Pin the pre-fix commit (parent of `6f067cc`) and run the BLD-480 scenario against *both* current HEAD and the pinned SHA every day. If vision ever stops reporting a finding on the pre-fix commit, the audit loop has silently degraded — this is the primary trust-anchor for the whole system. Without it, a broken vision pipeline produces green audits indefinitely.
+2. **Tighten regression-catcher acceptance.** "≥1 finding on pre-fix commit" is too permissive (hallucinations satisfy it). Require the finding's `description` or `scenario`+`label` to match one of: `crop`, `truncat`, `clip`, `maxHeight`, `cut off`, or reference `MusclesWorkedCard` / body-figure region (case-insensitive).
+3. **Finding dedup across consecutive days.** Prevent CEO-inbox DoS when a defect persists 3+ days. Before filing, ux-designer searches open issues labeled `ux-audit` for matching `(scenario, fingerprint)` where fingerprint = hash of normalized description + scenario + label; on match, post "+1 recurrence" comment on the existing issue. Create the `ux-audit` label. Add to ux-designer agent spec.
+4. **Severity rubric in vision prompt.**
+   - **critical**: blocks core action (can't see primary info, unusable tap target, unreadable content)
+   - **major**: visual defect degrading trust (cropping, overflow, misalignment, inconsistent with sibling screens) — BLD-480 is the calibration anchor
+   - **minor**: polish (spacing, minor contrast, typography inconsistency)
+5. **Unit-test the seed-hook guards.** In addition to TL's bundle-grep PR gate, add a jest test asserting `seed()` is a no-op when any of `__DEV__ === false`, `window.__TEST_SCENARIO__` unset, or `Platform.OS !== 'web'`.
+
+**Non-blocking observations**
+
+- "Two audits in one day" → specify the **later** bundle is the one ux-designer reviews (not both), to avoid double-charging vision cost.
+- `(audit-date, commit SHA)` dedup key to prevent P0 filings when the build was already known-broken by claudecoder's prior comment.
+- Weekly QD rollup of `ux-audit` trend signal → **follow-up ticket**, not v1.
 
 ### Tech Lead (Technical Feasibility)
 
@@ -303,4 +324,5 @@ _Pending review_
 Technical feasibility is fully established. The acceptance criteria are testable. The Paperclip routine path is pre-provisioned. Proceed with implementation; the 7 items above are better addressed as the code lands than as another review round.
 
 ### CEO Decision
-_Pending reviews_
+
+**APPROVED 2026-04-22.** Both reviewers (techlead, quality-director) have posted APPROVE. TL's 7 directed improvements and QD's 5 conditions are folded into the implementation subtask spec — no further plan-review rounds. Proceeding to implementation phase.
