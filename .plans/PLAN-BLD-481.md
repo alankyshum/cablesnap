@@ -142,25 +142,30 @@ role. New responsibilities:
 > `[{screenshot, severity: "critical"|"major"|"minor", description,
 > suggested_fix}]`. Return `[]` if clean.
 
-#### 4. Daily cron — GitHub Actions (primary path)
+#### 4. Daily cron — Paperclip routine (primary path, pre-provisioned)
 
-**Decision updated 2026-04-22** after board flagged an authorization constraint:
-Paperclip's routine API hardcodes `assigneeAgentId === req.actor.agentId`, so
-agents can only create routines assigned to themselves. CEO therefore cannot
-create a routine that wakes `ux-designer`. Options:
+**Decision updated 2026-04-22 14:32** after board pre-provisioned the routine
+out-of-band (routine ID `ab23d3ed-e434-4357-ab62-7ccf41159989`, paused + trigger
+disabled until plan approval + primitives land). Background: Paperclip's
+routines API hardcodes `assigneeAgentId === req.actor.agentId`, so the CEO
+itself cannot create cross-agent routines. Upstream fix tracked as
+[paperclipai/paperclip#4264](https://github.com/paperclipai/paperclip/issues/4264).
 
-1. **GitHub Actions cron (primary).** A scheduled workflow posts a wake comment
-   (`@ux-designer Daily visual UX audit — YYYY-MM-DD`) on a dedicated tracking
-   issue. No Paperclip-side changes, no board intervention needed. Fully owned
-   by this repo.
-2. **Paperclip routine (secondary, requires board).** Board user creates the
-   routine out-of-band after engineering primitives land. Use only if we want
-   the cron configurable from the Paperclip UI. Not required for v1.
+Current state of the cron path:
 
-V1 ships option 1. Option 2 tracked as a separate issue (see "Follow-ups").
+1. **Paperclip routine (primary, pre-provisioned).** Board user created the
+   routine; will flip `status: active` + `trigger.enabled: true` after (a) this
+   plan is APPROVED, (b) engineering primitives ship, (c) `ux-designer` agent
+   instructions file is wired up. Schedule: `0 9 * * *` America/Los_Angeles.
+   Concurrency `skip_if_active`, catch-up `skip_missed`.
+2. **GitHub Actions cron (fallback).** Retained only as backup if the routine
+   is ever deleted or upstream regresses. Not built for v1 — routine is primary.
 
-Wake time: 09:00 UTC daily. First run is a manual workflow_dispatch trigger
-during implementation to prove the loop before enabling the schedule.
+V1 ships option 1 (routine activation). Option 2 remains available but
+unimplemented.
+
+No further action required from CEO on cron provisioning. Activation is a
+board action timed to plan approval.
 
 #### 5. BLD-480 regression-catcher verification
 
@@ -213,8 +218,9 @@ done.
       stale OpenCode content removed.
 - [ ] ux-designer agent successfully runs one end-to-end audit that files ≥1
       finding issue (proved by running it against the pre-BLD-480-fix commit).
-- [ ] Daily cron trigger is live (GitHub Actions scheduled workflow) and has
-      fired at least once.
+- [ ] Board activates the pre-provisioned Paperclip routine
+      (`ab23d3ed-e434-4357-ab62-7ccf41159989`) once primitives land and the
+      `ux-designer` agent is wired up; first scheduled run fires at 09:00 PT.
 - [ ] No new production code paths are added (scenario seed helper must be
       dev-only/test-only).
 
@@ -238,21 +244,19 @@ done.
 | Web viewport screenshots miss native-only bugs | Med | Med | Accepted for v1. React Native Web renders the same component tree; most layout bugs (including BLD-480) reproduce on web. Native audit is a follow-up. |
 | DB seed helper ends up in production bundle | Low | High | `__DEV__` guard + tree-shaking + runtime flag; validated via `expo export` bundle inspection in the acceptance criteria. |
 | Vision model hallucinates findings | Med | Low | CEO triages — false positives cost one `cancelled` issue per occurrence. Tune prompt iteratively. |
-| Paperclip lacks native cron (or CEO can't create routines) | **High, confirmed** | Low | Primary path is GH Actions scheduled workflow. Paperclip routine is a later enhancement that requires board user to create (hardcoded `assigneeAgentId === actorAgentId` check in routines API). |
+| Paperclip lacks native cron (or CEO can't create routines) | **Resolved 2026-04-22** | — | Board pre-provisioned the routine (`ab23d3ed-e434-4357-ab62-7ccf41159989`, paused); will activate post-plan-approval. Upstream fix to routine authz tracked as paperclipai/paperclip#4264. GH Actions retained only as disaster-recovery fallback. |
 | Bundle storage growth | Low | Low | Prune to last 14 pre-releases in `audit-bundle.sh`. |
 | ux-designer vision cost per run | Low | Low | Opus vision at ~12 screenshots/day × 2 viewports = 24 images ≈ acceptable. Bounded. |
 | False sense of security (web-only audit) | Med | Med | Document the limitation in the agent's standard finding template: "web viewport audit — native not covered". |
 
 ## Follow-ups (out of scope for v1 implementation)
 
-- **Upstream Paperclip feature request** — loosen routine authorization so a
-  CEO/manager agent with `routines:assign` (or equivalent) can create routines
-  for direct reports in its chain of command. Current
-  `assigneeAgentId === actorAgentId` check blocks legitimate manager→report
-  delegation. Board to file upstream.
-- **Migrate daily cron to Paperclip routine** once the upstream change lands OR
-  if the board creates the routine manually. Removes GH Actions dependency and
-  adds Paperclip UI visibility.
+- **Upstream Paperclip fix** — loosen routine authorization so CEO/manager
+  agents with `routines:assign` (or equivalent) can create routines for direct
+  reports in their chain of command. Current `assigneeAgentId === actorAgentId`
+  check blocks legitimate manager→report delegation. Tracked upstream as
+  [paperclipai/paperclip#4264](https://github.com/paperclipai/paperclip/issues/4264).
+  Once fixed, future routines won't require board pre-provisioning.
 - **Remaining 5 scenarios** — onboarding, active workout, empty history,
   settings, Strava connection flow. Each as a separate ticket after v1 proves.
 - **Native-viewport audit** — Detox or Maestro integration for iOS/Android-only
