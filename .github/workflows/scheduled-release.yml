@@ -222,6 +222,7 @@ jobs:
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
           PROPS
+          chmod 600 android/keystore.properties android/app/release.keystore
           echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
 
       - name: Build APK
@@ -244,15 +245,46 @@ jobs:
           fi
           APKSIGNER="${BUILD_TOOLS_DIR}apksigner"
           echo "Using apksigner: $APKSIGNER"
-          "$APKSIGNER" verify --print-certs cablesnap.apk | tee apksigner.log
-          ACTUAL=$(grep -E "Signer #1 certificate SHA-256 digest:" apksigner.log | awk -F': ' '{print $2}' | tr -d '[:space:]')
-          if [ -z "$ACTUAL" ]; then
-            echo "::error::Could not parse signer SHA-256 from apksigner output."
+
+          # Strict signature validity check first — fail fast on bad signing,
+          # before we even look at the fingerprint.
+          if ! "$APKSIGNER" verify cablesnap.apk; then
+            echo "::error::apksigner verify reports the APK signature is INVALID."
             exit 1
           fi
-          # Normalize both to uppercase, no colons, no whitespace.
-          ACTUAL_NORM=$(echo "$ACTUAL" | tr -d ':' | tr '[:lower:]' '[:upper:]')
-          EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':' | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
+
+          # Dump certs for inspection and fingerprint extraction.
+          "$APKSIGNER" verify --print-certs cablesnap.apk | tee apksigner.log
+
+          # Reject multi-signer APKs — we only ever sign with one key. A second
+          # signer block would indicate either a build-tools regression or
+          # tampering.
+          if grep -qE "^Signer #2 " apksigner.log; then
+            echo "::error::APK reports more than one signer — refusing to publish."
+            exit 1
+          fi
+
+          # Parse the Signer #1 SHA-256 digest with a strict regex. Tolerates
+          # extra whitespace around the hex value.
+          ACTUAL=$(sed -nE 's/^Signer #1 certificate SHA-256 digest:[[:space:]]+([0-9a-fA-F:]+)[[:space:]]*$/\1/p' apksigner.log | head -1)
+          if [ -z "$ACTUAL" ]; then
+            echo "::error::Could not parse Signer #1 SHA-256 from apksigner output."
+            exit 1
+          fi
+
+          ACTUAL_NORM=$(echo "$ACTUAL" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+          EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+
+          # Guardrail: both values must be exactly 64 hex chars (SHA-256).
+          if ! echo "$EXPECTED_NORM" | grep -qE '^[0-9A-F]{64}$'; then
+            echo "::error::Expected fingerprint in fdroid/release-cert.sha256 is not a valid 64-char hex SHA-256."
+            exit 1
+          fi
+          if ! echo "$ACTUAL_NORM" | grep -qE '^[0-9A-F]{64}$'; then
+            echo "::error::Parsed Signer #1 fingerprint is not a valid 64-char hex SHA-256."
+            exit 1
+          fi
+
           echo "Expected SHA-256: $EXPECTED_NORM"
           echo "Actual   SHA-256: $ACTUAL_NORM"
           if [ "$ACTUAL_NORM" != "$EXPECTED_NORM" ]; then
