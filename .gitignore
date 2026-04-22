@@ -60,3 +60,4 @@ fdroid/keystore.p12
 .pixelslop/screenshots/*.png
 .pixelslop/manifest.json
 node_modules.bak/
+.playwright-profile/

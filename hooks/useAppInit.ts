@@ -22,6 +22,19 @@ export function useAppInit() {
         const complete = skipOnboarding || (await isOnboardingComplete());
         setOnboarded(complete);
 
+        // Visual-UX-audit scenario seed (dev + web + __TEST_SCENARIO__ only).
+        // Wrapped in `if (__DEV__)` so Metro strips the dynamic import and the
+        // `__TEST_SCENARIO__` string from production bundles — enforced by
+        // `scripts/verify-scenario-hook-not-in-bundle.sh`.
+        if (__DEV__) {
+          try {
+            const { seedScenario } = await import("../lib/db/test-seed");
+            await seedScenario();
+          } catch (err) {
+            console.warn("[test-seed] scenario seed failed:", err);
+          }
+        }
+
         // Strava retry reconciliation on startup (non-blocking)
         if (Platform.OS !== "web") {
           import("../lib/strava")
