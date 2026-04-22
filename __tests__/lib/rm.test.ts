@@ -2,99 +2,51 @@ import { epley, brzycki, lombardi, average, percentageTable, suggest, suggestDur
 import type { HistorySet, DurationHistorySet } from "../../lib/rm";
 
 describe("1RM formulas", () => {
-  describe("epley", () => {
-    it("returns weight at 1 rep", () => {
-      expect(epley(100, 1)).toBe(100);
-    });
-
-    it("calculates correctly for multiple reps", () => {
-      expect(epley(100, 10)).toBeCloseTo(133.33, 1);
-    });
-
-    it("handles zero weight", () => {
-      expect(epley(0, 5)).toBe(0);
-    });
-
-    it("handles high reps", () => {
-      expect(epley(100, 30)).toBe(200);
-    });
+  it("epley handles base, multi-rep, zero weight, and high reps", () => {
+    expect(epley(100, 1)).toBe(100);
+    expect(epley(100, 10)).toBeCloseTo(133.33, 1);
+    expect(epley(0, 5)).toBe(0);
+    expect(epley(100, 30)).toBe(200);
   });
 
-  describe("brzycki", () => {
-    it("returns weight at 1 rep", () => {
-      expect(brzycki(100, 1)).toBe(100);
-    });
-
-    it("calculates correctly for 10 reps", () => {
-      expect(brzycki(100, 10)).toBeCloseTo(133.33, 1);
-    });
-
-    it("returns weight when reps >= 37 (formula breaks)", () => {
-      expect(brzycki(100, 37)).toBe(100);
-      expect(brzycki(100, 40)).toBe(100);
-    });
-
-    it("handles zero weight", () => {
-      expect(brzycki(0, 5)).toBe(0);
-    });
+  it("brzycki handles base, multi-rep, high-rep breakdown, and zero weight", () => {
+    expect(brzycki(100, 1)).toBe(100);
+    expect(brzycki(100, 10)).toBeCloseTo(133.33, 1);
+    expect(brzycki(100, 37)).toBe(100);
+    expect(brzycki(100, 40)).toBe(100);
+    expect(brzycki(0, 5)).toBe(0);
   });
 
-  describe("lombardi", () => {
-    it("returns weight at 1 rep", () => {
-      expect(lombardi(100, 1)).toBe(100);
-    });
-
-    it("calculates using power function", () => {
-      expect(lombardi(100, 10)).toBeCloseTo(125.89, 1);
-    });
-
-    it("handles zero weight", () => {
-      expect(lombardi(0, 5)).toBe(0);
-    });
+  it("lombardi handles base, power function, and zero weight", () => {
+    expect(lombardi(100, 1)).toBe(100);
+    expect(lombardi(100, 10)).toBeCloseTo(125.89, 1);
+    expect(lombardi(0, 5)).toBe(0);
   });
 
-  describe("average", () => {
-    it("averages all three formulas", () => {
-      const e = epley(100, 10);
-      const b = brzycki(100, 10);
-      const l = lombardi(100, 10);
-      expect(average(100, 10)).toBeCloseTo((e + b + l) / 3, 1);
-    });
-
-    it("all formulas agree at 1 rep", () => {
-      expect(average(100, 1)).toBe(100);
-    });
+  it("average combines all three formulas and agrees at 1 rep", () => {
+    const e = epley(100, 10);
+    const b = brzycki(100, 10);
+    const l = lombardi(100, 10);
+    expect(average(100, 10)).toBeCloseTo((e + b + l) / 3, 1);
+    expect(average(100, 1)).toBe(100);
   });
 
-  describe("percentageTable", () => {
-    it("returns 10 tiers", () => {
-      const table = percentageTable(100);
-      expect(table).toHaveLength(10);
-    });
+  it("percentageTable returns expected tiers, percentages, rounding and zero handling", () => {
+    const t100 = percentageTable(100);
+    expect(t100).toHaveLength(10);
+    expect(t100.find((t) => t.pct === 50)!.weight).toBe(50);
+    expect(t100.find((t) => t.pct === 80)!.weight).toBe(80);
 
-    it("first tier is 100%", () => {
-      const table = percentageTable(200);
-      expect(table[0].pct).toBe(100);
-      expect(table[0].weight).toBe(200);
-      expect(table[0].reps).toBe("1");
-    });
+    const t200 = percentageTable(200);
+    expect(t200[0].pct).toBe(100);
+    expect(t200[0].weight).toBe(200);
+    expect(t200[0].reps).toBe("1");
 
-    it("weights are correctly computed percentages", () => {
-      const table = percentageTable(100);
-      expect(table.find((t) => t.pct === 50)!.weight).toBe(50);
-      expect(table.find((t) => t.pct === 80)!.weight).toBe(80);
-    });
+    const t133 = percentageTable(133);
+    expect(t133.find((t) => t.pct === 85)!.weight).toBe(113.1);
 
-    it("rounds weights to 1 decimal", () => {
-      const table = percentageTable(133);
-      const at85 = table.find((t) => t.pct === 85)!;
-      expect(at85.weight).toBe(113.1);
-    });
-
-    it("handles zero ORM", () => {
-      const table = percentageTable(0);
-      expect(table.every((t) => t.weight === 0)).toBe(true);
-    });
+    const t0 = percentageTable(0);
+    expect(t0.every((t) => t.weight === 0)).toBe(true);
   });
 });
 
