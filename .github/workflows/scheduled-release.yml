@@ -164,8 +164,13 @@ jobs:
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # Dry-run mode: when dispatched from a non-main ref (e.g. a PR branch),
+      # skip the "Commit and push" and "Create GitHub Release" steps. All other
+      # steps — including keystore decode, assembleRelease, and apksigner
+      # fingerprint verification — still run, so the signing path can be
+      # exercised and independently verified before merge.
       - name: Commit and push
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref == 'refs/heads/main'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           git config user.name "CableSnap Release Bot"
@@ -173,6 +178,12 @@ jobs:
           git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
           git commit -m "release: v$VERSION"
           git push origin main
+
+      - name: Dry-run notice (non-main ref)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::notice::Dry-run mode — ref is ${{ github.ref }}, not refs/heads/main."
+          echo "::notice::Skipping 'Commit and push' and 'Create GitHub Release'; signed APK will be uploaded as a workflow artifact for review."
 
       # --- Build APK BEFORE creating release (immutable releases block later uploads) ---
 
@@ -296,8 +307,19 @@ jobs:
 
       # --- Create release WITH APK attached atomically ---
 
+      - name: Upload dry-run signed APK + apksigner log (non-main ref)
+        if: always() && steps.check_commits.outputs.has_new_commits == 'true' && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-run-signed-apk
+          path: |
+            cablesnap.apk
+            apksigner.log
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Create GitHub Release with APK
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
