@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Pressable, Share, StyleSheet, TextInput, View, FlatList } from "react-native";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { BackHandler, Pressable, Share, StyleSheet, TextInput, View, FlatList } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../../lib/layout";
 import { toDisplay } from "../../../lib/units";
 import { formatTime } from "../../../lib/format";
@@ -28,6 +28,19 @@ export default function Summary() {
   const layout = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+
+  // Intercept Android hardware back so post-workout summary always routes through
+  // the same "Done" flow (tabs root) rather than going back into the live session
+  // screen, which could confuse users or lose context (BLD-509).
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+        router.replace("/(tabs)");
+        return true;
+      });
+      return () => sub.remove();
+    }, [router])
+  );
 
   const data = useSummaryData(id);
   const { session, completed, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount, primaryMuscles, secondaryMuscles } = data;
