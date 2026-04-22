@@ -315,3 +315,10 @@ export {
   getCurrentBestReps,
 } from "./strength-goals";
 export type { StrengthGoalRow, CreateGoalInput, UpdateGoalInput } from "./strength-goals";
+
+export {
+  getPRStats,
+  getRecentPRsWithDelta,
+  getAllTimeBests,
+} from "./pr-dashboard";
+export type { PRStats, RecentPR, AllTimeBest } from "./pr-dashboard";

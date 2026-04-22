@@ -61,6 +61,14 @@ jest.mock('../../lib/db', () => ({
   updateBodySettings: jest.fn().mockResolvedValue(undefined),
 }))
 
+jest.mock('../../lib/db/pr-dashboard', () => ({
+  getPRStats: jest.fn().mockResolvedValue({ totalPRs: 1, prsThisMonth: 0 }),
+  getRecentPRsWithDelta: jest.fn().mockResolvedValue([
+    { exercise_id: 'ex1', name: 'Bench Press', category: 'Push', weight: 100, reps: null, previous_best: 95, date: Date.now(), is_weighted: true },
+  ]),
+  getAllTimeBests: jest.fn().mockResolvedValue([]),
+}))
+
 jest.mock('../../lib/db/body', () => ({
   getBodySettings: jest.fn().mockResolvedValue({
     weight_unit: 'kg',
@@ -90,6 +98,7 @@ jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: num
 import Progress from '../../app/(tabs)/progress'
 
 const mockDb = require('../../lib/db') as Record<string, jest.Mock>
+const mockPRDashboard = require('../../lib/db/pr-dashboard') as Record<string, jest.Mock>
 
 async function switchToBody(utils: ReturnType<typeof renderScreen>) {
   const bodyBtn = await utils.findByLabelText('Body metrics')
@@ -114,6 +123,10 @@ describe('Body Progress Acceptance', () => {
     mockDb.getWeeklySessionCounts.mockResolvedValue([{ week: '2024-W02', count: 3 }])
     mockDb.getWeeklyVolume.mockResolvedValue([{ week: '2024-W02', volume: 5000 }])
     mockDb.getCompletedSessionsWithSetCount.mockResolvedValue([])
+    mockPRDashboard.getRecentPRsWithDelta.mockResolvedValue([
+      { exercise_id: 'ex1', name: 'Bench Press', category: 'Push', weight: 100, reps: null, previous_best: 95, date: Date.now(), is_weighted: true },
+    ])
+    mockPRDashboard.getPRStats.mockResolvedValue({ totalPRs: 1, prsThisMonth: 0 })
   })
 
   it('renders personal records on workouts segment', async () => {

@@ -56,6 +56,12 @@ jest.mock('../../lib/db', () => ({
   updateBodySettings: jest.fn().mockResolvedValue(undefined),
 }))
 
+jest.mock('../../lib/db/pr-dashboard', () => ({
+  getPRStats: jest.fn().mockResolvedValue({ totalPRs: 0, prsThisMonth: 0 }),
+  getRecentPRsWithDelta: jest.fn().mockResolvedValue([]),
+  getAllTimeBests: jest.fn().mockResolvedValue([]),
+}))
+
 jest.mock('../../lib/units', () => ({
   toDisplay: (v: number) => v,
   toKg: (v: number) => v,
