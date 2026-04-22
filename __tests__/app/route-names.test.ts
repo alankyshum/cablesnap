@@ -24,7 +24,11 @@ describe("Stack.Screen route names", () => {
     expect(uniqueNames.length).toBeGreaterThan(0);
   });
 
-  it.each(uniqueNames)("route '%s' should map to an existing file", (name) => {
-    expect(exists(name)).toBe(true);
+  it("every route name maps to an existing file", () => {
+    for (const name of uniqueNames) {
+      if (!exists(name)) {
+        throw new Error(`Route '${name}' does not map to an existing file under app/`);
+      }
+    }
   });
 });

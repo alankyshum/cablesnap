@@ -27,45 +27,55 @@ describe('PR Dashboard Data Layer', () => {
 
   // ── getPRStats ──────────────────────────────────────────────────
 
-  test.each([
-    [
-      'no data returns zeros',
-      [{ total: 0, this_month: 0 }], // weight PRs
-      [{ total: 0, this_month: 0 }], // rep PRs
-      { totalPRs: 0, prsThisMonth: 0 },
-    ],
-    [
-      'weight PRs only',
-      [{ total: 5, this_month: 2 }],
-      [{ total: 0, this_month: 0 }],
-      { totalPRs: 5, prsThisMonth: 2 },
-    ],
-    [
-      'rep PRs only (bodyweight exercises)',
-      [{ total: 0, this_month: 0 }],
-      [{ total: 3, this_month: 1 }],
-      { totalPRs: 3, prsThisMonth: 1 },
-    ],
-    [
-      'combined weight + rep PRs',
-      [{ total: 5, this_month: 2 }],
-      [{ total: 3, this_month: 1 }],
-      { totalPRs: 8, prsThisMonth: 3 },
-    ],
-    [
-      'null this_month treated as zero',
-      [{ total: 2, this_month: null }],
-      [{ total: 1, this_month: null }],
-      { totalPRs: 3, prsThisMonth: 0 },
-    ],
-  ])('getPRStats: %s', async (_name, weightResult, repResult, expected) => {
-    helpers.query
-      .mockResolvedValueOnce(weightResult)
-      .mockResolvedValueOnce(repResult)
+  test('getPRStats aggregates weight + rep PRs', async () => {
+    const cases: [string, unknown[], unknown[], { totalPRs: number; prsThisMonth: number }][] = [
+      [
+        'no data returns zeros',
+        [{ total: 0, this_month: 0 }],
+        [{ total: 0, this_month: 0 }],
+        { totalPRs: 0, prsThisMonth: 0 },
+      ],
+      [
+        'weight PRs only',
+        [{ total: 5, this_month: 2 }],
+        [{ total: 0, this_month: 0 }],
+        { totalPRs: 5, prsThisMonth: 2 },
+      ],
+      [
+        'rep PRs only (bodyweight exercises)',
+        [{ total: 0, this_month: 0 }],
+        [{ total: 3, this_month: 1 }],
+        { totalPRs: 3, prsThisMonth: 1 },
+      ],
+      [
+        'combined weight + rep PRs',
+        [{ total: 5, this_month: 2 }],
+        [{ total: 3, this_month: 1 }],
+        { totalPRs: 8, prsThisMonth: 3 },
+      ],
+      [
+        'null this_month treated as zero',
+        [{ total: 2, this_month: null }],
+        [{ total: 1, this_month: null }],
+        { totalPRs: 3, prsThisMonth: 0 },
+      ],
+    ]
 
-    const result = await getPRStats()
-    expect(result).toEqual(expected)
-    expect(helpers.query).toHaveBeenCalledTimes(2)
+    for (const [name, weightResult, repResult, expected] of cases) {
+      jest.clearAllMocks()
+      helpers.query.mockResolvedValue([])
+      helpers.query
+        .mockResolvedValueOnce(weightResult)
+        .mockResolvedValueOnce(repResult)
+
+      const result = await getPRStats()
+      try {
+        expect(result).toEqual(expected)
+        expect(helpers.query).toHaveBeenCalledTimes(2)
+      } catch (err) {
+        throw new Error(`Case "${name}" failed: ${(err as Error).message}`)
+      }
+    }
   })
 
   // ── getRecentPRsWithDelta ───────────────────────────────────────

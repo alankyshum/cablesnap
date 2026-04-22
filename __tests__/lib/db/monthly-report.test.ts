@@ -62,21 +62,32 @@ describe('Monthly Report Data Layer', () => {
     mockDrizzle.all.mockResolvedValue([])
   })
 
-  test.each([
-    ['empty month returns zero session count', { count: 0, total_duration: 0 }, 0],
-    ['month with sessions returns correct count', { count: 5, total_duration: 9000 }, 5],
-  ])('%s', async (_name, sessionResult, expectedCount) => {
-    mockDrizzle.get
-      .mockResolvedValueOnce(sessionResult) // sessions
-      .mockResolvedValueOnce({ volume: 0 }) // volume
-      .mockResolvedValueOnce({ count: 0 }) // prev sessions
-      .mockResolvedValueOnce({ volume: 0 }) // prev volume
-      .mockResolvedValueOnce(null) // macro targets (nutrition)
+  test('monthly session count reflects DB result', async () => {
+    const cases: [string, { count: number; total_duration: number }, number][] = [
+      ['empty month returns zero session count', { count: 0, total_duration: 0 }, 0],
+      ['month with sessions returns correct count', { count: 5, total_duration: 9000 }, 5],
+    ]
+    for (const [name, sessionResult, expectedCount] of cases) {
+      jest.clearAllMocks()
+      helpers.getDrizzle.mockResolvedValue(mockDrizzle)
+      helpers.query.mockResolvedValue([])
+      mockDrizzle.all.mockResolvedValue([])
+      mockDrizzle.get
+        .mockResolvedValueOnce(sessionResult) // sessions
+        .mockResolvedValueOnce({ volume: 0 }) // volume
+        .mockResolvedValueOnce({ count: 0 }) // prev sessions
+        .mockResolvedValueOnce({ volume: 0 }) // prev volume
+        .mockResolvedValueOnce(null) // macro targets (nutrition)
 
-    const result = await getMonthlyReport(2026, 3) // April 2026
-    expect(result.workouts.sessionCount).toBe(expectedCount)
-    expect(result.prs).toEqual([])
-    expect(result.nutrition).toBeNull()
+      const result = await getMonthlyReport(2026, 3) // April 2026
+      try {
+        expect(result.workouts.sessionCount).toBe(expectedCount)
+        expect(result.prs).toEqual([])
+        expect(result.nutrition).toBeNull()
+      } catch (err) {
+        throw new Error(`Case "${name}" failed: ${(err as Error).message}`)
+      }
+    }
   })
 
   it('computes volume and previous month delta', async () => {

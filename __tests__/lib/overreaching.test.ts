@@ -103,15 +103,21 @@ describe("computeE1RMSignal", () => {
     expect(computeE1RMSignal(rows, NOW).fired).toBe(false);
   });
 
-  test.each([
-    ["stable performance", 100, 100, false],
-    ["improving performance", 100, 110, false],
-    ["small decline (3%)", 100, 97, false],
-    ["threshold decline (5%)", 100, 95, true],
-    ["large decline (15%)", 100, 85, true],
-  ])("%s (prior=%d, recent=%d) → fired=%s", (_desc, prior, recent, expected) => {
-    const rows = makeE1RMRows({ priorAvg: prior, recentAvg: recent, weeks: 4 });
-    expect(computeE1RMSignal(rows, NOW).fired).toBe(expected);
+  it("e1RM signal fires only when decline meets the 5% threshold", () => {
+    const cases: [string, number, number, boolean][] = [
+      ["stable performance", 100, 100, false],
+      ["improving performance", 100, 110, false],
+      ["small decline (3%)", 100, 97, false],
+      ["threshold decline (5%)", 100, 95, true],
+      ["large decline (15%)", 100, 85, true],
+    ];
+    for (const [desc, prior, recent, expected] of cases) {
+      const rows = makeE1RMRows({ priorAvg: prior, recentAvg: recent, weeks: 4 });
+      const actual = computeE1RMSignal(rows, NOW).fired;
+      if (actual !== expected) {
+        throw new Error(`${desc}: expected fired=${expected}, got ${actual} (prior=${prior}, recent=${recent})`);
+      }
+    }
   });
 
   it("reports exercise name in detail when declining", () => {
@@ -135,14 +141,20 @@ describe("computeRPESignal", () => {
     expect(computeRPESignal(rows, true, NOW).fired).toBe(false);
   });
 
-  test.each([
-    ["stable RPE", 7, 7, false],
-    ["small increase (0.3)", 7, 7.3, false],
-    ["threshold increase (0.5)", 7, 7.5, true],
-    ["large increase (1.5)", 7, 8.5, true],
-  ])("%s (prior=%d, recent=%d) → fired=%s", (_desc, prior, recent, expected) => {
-    const rows = makeRPERows({ priorAvg: prior, recentAvg: recent });
-    expect(computeRPESignal(rows, true, NOW).fired).toBe(expected);
+  it("RPE signal fires only when increase meets the 0.5 threshold", () => {
+    const cases: [string, number, number, boolean][] = [
+      ["stable RPE", 7, 7, false],
+      ["small increase (0.3)", 7, 7.3, false],
+      ["threshold increase (0.5)", 7, 7.5, true],
+      ["large increase (1.5)", 7, 8.5, true],
+    ];
+    for (const [desc, prior, recent, expected] of cases) {
+      const rows = makeRPERows({ priorAvg: prior, recentAvg: recent });
+      const actual = computeRPESignal(rows, true, NOW).fired;
+      if (actual !== expected) {
+        throw new Error(`${desc}: expected fired=${expected}, got ${actual} (prior=${prior}, recent=${recent})`);
+      }
+    }
   });
 });
 
@@ -154,15 +166,21 @@ describe("computeRatingSignal", () => {
     expect(computeRatingSignal(rows, NOW).fired).toBe(false);
   });
 
-  test.each([
-    ["stable ratings", 4, 4, false],
-    ["improving ratings", 3, 4, false],
-    ["small decline (0.3)", 4, 3.7, false],
-    ["threshold decline (0.5)", 4, 3.5, true],
-    ["large decline (2.0)", 5, 3, true],
-  ])("%s (first=%d, second=%d) → fired=%s", (_desc, first, second, expected) => {
-    const rows = makeRatingRows({ firstHalfAvg: first, secondHalfAvg: second, count: 6 });
-    expect(computeRatingSignal(rows, NOW).fired).toBe(expected);
+  it("rating signal fires only when decline meets the 0.5 threshold", () => {
+    const cases: [string, number, number, boolean][] = [
+      ["stable ratings", 4, 4, false],
+      ["improving ratings", 3, 4, false],
+      ["small decline (0.3)", 4, 3.7, false],
+      ["threshold decline (0.5)", 4, 3.5, true],
+      ["large decline (2.0)", 5, 3, true],
+    ];
+    for (const [desc, first, second, expected] of cases) {
+      const rows = makeRatingRows({ firstHalfAvg: first, secondHalfAvg: second, count: 6 });
+      const actual = computeRatingSignal(rows, NOW).fired;
+      if (actual !== expected) {
+        throw new Error(`${desc}: expected fired=${expected}, got ${actual} (first=${first}, second=${second})`);
+      }
+    }
   });
 
   it("ignores sessions outside 6-week window", () => {
@@ -217,13 +235,19 @@ describe("isDismissed", () => {
     expect(isDismissed(null, NOW)).toBe(false);
   });
 
-  test.each([
-    ["within 7 days", NOW - 3 * DAY, true],
-    ["exactly at 7 days", NOW - 7 * DAY, false],
-    ["after 7 days", NOW - 8 * DAY, false],
-  ])("%s → %s", (_desc, dismissedAt, expected) => {
-    const state: DismissalState = { dismissedAt, scoreAtDismissal: 5 };
-    expect(isDismissed(state, NOW)).toBe(expected);
+  it("7-day dismissal window boundary behaviour", () => {
+    const cases: [string, number, boolean][] = [
+      ["within 7 days", NOW - 3 * DAY, true],
+      ["exactly at 7 days", NOW - 7 * DAY, false],
+      ["after 7 days", NOW - 8 * DAY, false],
+    ];
+    for (const [desc, dismissedAt, expected] of cases) {
+      const state: DismissalState = { dismissedAt, scoreAtDismissal: 5 };
+      const actual = isDismissed(state, NOW);
+      if (actual !== expected) {
+        throw new Error(`${desc}: expected ${expected}, got ${actual}`);
+      }
+    }
   });
 });
 
