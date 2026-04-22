@@ -46,9 +46,18 @@ future release notes.
 
 Do **not** rotate casually. Android ties app identity to the signing cert,
 so rotating forces every user to uninstall/reinstall again (losing data) or
-forces a new `applicationId`. If you truly must rotate: generate a new
-PKCS12 keystore (RSA 2048, SHA256, ≥ 25-year validity), update all four
-secrets, update `fdroid/release-cert.sha256`, recreate
+forces a new `applicationId`.
+
+> **Rotation is a breaking change.** `fdroid/release-cert.sha256` **MUST**
+> be updated in the **same PR** that rotates the `ANDROID_KEYSTORE_*`
+> GitHub Actions secrets — otherwise the next CI release will fail the
+> `apksigner verify` fingerprint gate and no APK will ship. You must also
+> either bump the Android `package` name (new F-Droid app entry) or accept
+> another full uninstall/reinstall wave for every existing user.
+
+If you truly must rotate: generate a new PKCS12 keystore (RSA 2048, SHA256,
+≥ 25-year validity), update all four secrets, update
+`fdroid/release-cert.sha256` **in the same PR**, recreate
 `fdroid/FIRST_SIGNED_RELEASE_NOTICE.md`, and consider bumping the major
 version so the break is explicit.
 
