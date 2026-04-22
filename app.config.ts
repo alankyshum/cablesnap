@@ -62,6 +62,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         permissions: ["WRITE_EXERCISE"],
       },
     ],
+    "./plugins/with-release-signing",
   ],
   owner: "alankyshum",
   extra: {

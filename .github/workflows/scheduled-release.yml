@@ -19,6 +19,24 @@ jobs:
           fetch-tags: true
           token: ${{ secrets.GH_PAT }}
 
+      - name: Verify release signing secrets are configured
+        run: |
+          MISSING=""
+          [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && MISSING="$MISSING ANDROID_KEYSTORE_BASE64"
+          [ -z "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ] && MISSING="$MISSING ANDROID_KEYSTORE_PASSWORD"
+          [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ] && MISSING="$MISSING ANDROID_KEY_ALIAS"
+          [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ] && MISSING="$MISSING ANDROID_KEY_PASSWORD"
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing required release-signing secrets:$MISSING"
+            echo "::error::Configure GitHub Actions secrets before releasing (see BLD-485 / fdroid/release-cert.sha256)."
+            exit 1
+          fi
+          if [ ! -f fdroid/release-cert.sha256 ]; then
+            echo "::error::Expected cert fingerprint file fdroid/release-cert.sha256 is missing."
+            exit 1
+          fi
+          echo "All release-signing secrets present."
+
       - name: Get latest tag
         id: latest_tag
         run: |
@@ -115,8 +133,20 @@ jobs:
         run: |
           TAG="${{ steps.latest_tag.outputs.tag }}"
           VERSION="${{ steps.next_version.outputs.version }}"
+          # SIGNING_UNINSTALL_NOTICE is prepended to the release notes for the
+          # first release after BLD-485 (persistent signing keystore) lands.
+          # Delete the file after the first signed release has shipped to stop
+          # emitting this banner.
+          NOTICE=""
+          if [ -f fdroid/FIRST_SIGNED_RELEASE_NOTICE.md ]; then
+            NOTICE=$(cat fdroid/FIRST_SIGNED_RELEASE_NOTICE.md)
+          fi
           {
             echo 'notes<<NOTES_EOF'
+            if [ -n "$NOTICE" ]; then
+              echo "$NOTICE"
+              echo ""
+            fi
             echo "## What's New"
             echo ""
             if [ -z "$TAG" ]; then
@@ -134,8 +164,13 @@ jobs:
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # Dry-run mode: when dispatched from a non-main ref (e.g. a PR branch),
+      # skip the "Commit and push" and "Create GitHub Release" steps. All other
+      # steps — including keystore decode, assembleRelease, and apksigner
+      # fingerprint verification — still run, so the signing path can be
+      # exercised and independently verified before merge.
       - name: Commit and push
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref == 'refs/heads/main'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           git config user.name "CableSnap Release Bot"
@@ -143,6 +178,12 @@ jobs:
           git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
           git commit -m "release: v$VERSION"
           git push origin main
+
+      - name: Dry-run notice (non-main ref)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::notice::Dry-run mode — ref is ${{ github.ref }}, not refs/heads/main."
+          echo "::notice::Skipping 'Commit and push' and 'Create GitHub Release'; signed APK will be uploaded as a workflow artifact for review."
 
       # --- Build APK BEFORE creating release (immutable releases block later uploads) ---
 
@@ -172,6 +213,46 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: npx expo prebuild --clean --platform android
 
+      - name: Boost Gradle JVM heap
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          # expo prebuild --clean regenerates android/gradle.properties with
+          # org.gradle.jvmargs=-Xmx2048m, which is borderline for
+          # assembleRelease: :app:mergeReleaseNativeDebugMetadata routinely
+          # OOMs on the ubuntu-latest runner. Bump to 6g so the build can
+          # finish and the apksigner fingerprint step can run.
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+          grep '^org.gradle.jvmargs=' "$PROPS"
+
+      - name: Decode release keystore and write keystore.properties
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          if [ ! -s android/app/release.keystore ]; then
+            echo "::error::Decoded release.keystore is empty — check ANDROID_KEYSTORE_BASE64 secret."
+            exit 1
+          fi
+          cat > android/keystore.properties <<PROPS
+          storeFile=release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          PROPS
+          chmod 600 android/keystore.properties android/app/release.keystore
+          echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
+
       - name: Build APK
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: |
@@ -181,10 +262,89 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
           echo "APK built: $(ls -lh cablesnap.apk)"
 
+      - name: Verify APK signature matches committed fingerprint
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/*/ 2>/dev/null | sort -V | tail -1)
+          if [ -z "$BUILD_TOOLS_DIR" ]; then
+            echo "::error::No Android build-tools found under $ANDROID_HOME/build-tools."
+            exit 1
+          fi
+          APKSIGNER="${BUILD_TOOLS_DIR}apksigner"
+          echo "Using apksigner: $APKSIGNER"
+
+          # Strict signature validity check first — fail fast on bad signing,
+          # before we even look at the fingerprint.
+          if ! "$APKSIGNER" verify cablesnap.apk; then
+            echo "::error::apksigner verify reports the APK signature is INVALID."
+            exit 1
+          fi
+
+          # Dump certs for inspection and fingerprint extraction.
+          "$APKSIGNER" verify --print-certs cablesnap.apk | tee apksigner.log
+
+          # Extract every SHA-256 certificate digest from apksigner output.
+          # Format varies by build-tools version:
+          #   build-tools <= 33: "Signer #1 certificate SHA-256 digest: AA:BB:..."
+          #   build-tools >= 34: "V2 Signer: certificate SHA-256 digest: aabb..." (per APK signing scheme)
+          # A single signing key can appear multiple times (once per signing
+          # scheme V1/V2/V3/V4), and all of those entries should share the
+          # same fingerprint. We grep all of them, normalise, and then insist
+          # they are non-empty and unanimous — any divergence means either a
+          # multi-signer APK or a build-tools/format regression.
+          ACTUAL_LIST=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' apksigner.log \
+              | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
+              | tr -d ':[:blank:]' \
+              | tr '[:lower:]' '[:upper:]')
+          if [ -z "$ACTUAL_LIST" ]; then
+            echo "::error::Could not parse any SHA-256 certificate digest from apksigner output."
+            exit 1
+          fi
+          UNIQUE_COUNT=$(echo "$ACTUAL_LIST" | sort -u | wc -l)
+          if [ "$UNIQUE_COUNT" -ne 1 ]; then
+            echo "::error::APK reports more than one distinct signer fingerprint — refusing to publish."
+            echo "::error::Distinct SHA-256 values seen:"
+            echo "$ACTUAL_LIST" | sort -u | sed 's/^/  /'
+            exit 1
+          fi
+          ACTUAL_NORM=$(echo "$ACTUAL_LIST" | head -1)
+          EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+
+          # Guardrail: both values must be exactly 64 hex chars (SHA-256).
+          if ! echo "$EXPECTED_NORM" | grep -qE '^[0-9A-F]{64}$'; then
+            echo "::error::Expected fingerprint in fdroid/release-cert.sha256 is not a valid 64-char hex SHA-256."
+            exit 1
+          fi
+          if ! echo "$ACTUAL_NORM" | grep -qE '^[0-9A-F]{64}$'; then
+            echo "::error::Parsed signer fingerprint is not a valid 64-char hex SHA-256."
+            exit 1
+          fi
+
+          echo "Expected SHA-256: $EXPECTED_NORM"
+          echo "Actual   SHA-256: $ACTUAL_NORM"
+          if [ "$ACTUAL_NORM" != "$EXPECTED_NORM" ]; then
+            echo "::error::APK cert fingerprint does not match fdroid/release-cert.sha256."
+            echo "::error::Either the wrong keystore secret was injected, or the signing key was rotated (requires a deliberate fingerprint update)."
+            exit 1
+          fi
+          echo "Cert fingerprint verified: $ACTUAL_NORM"
+
       # --- Create release WITH APK attached atomically ---
 
+      - name: Upload dry-run signed APK + apksigner log (non-main ref)
+        if: always() && steps.check_commits.outputs.has_new_commits == 'true' && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-run-signed-apk
+          path: |
+            cablesnap.apk
+            apksigner.log
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Create GitHub Release with APK
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
