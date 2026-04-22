@@ -39,7 +39,7 @@ function MusclesWorkedCardInner({ primaryMuscles, secondaryMuscles, colors }: Pr
             Muscles Worked
           </Text>
         </View>
-        <View style={styles.mapContainer}>
+        <View style={styles.mapContainer} testID="muscles-worked-map-container">
           <MuscleMap
             primary={primaryMuscles}
             secondary={secondaryMuscles}
@@ -62,5 +62,5 @@ export default function MusclesWorkedCard(props: Props) {
 const styles = StyleSheet.create({
   section: { marginBottom: 16 },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  mapContainer: { maxHeight: 200 },
+  mapContainer: { alignItems: "center" },
 });
