@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import {
   getPRStats,
@@ -15,6 +15,7 @@ export type PRDashboardData = {
   weightUnit: "kg" | "lb";
   loading: boolean;
   error: string | null;
+  reload: () => void;
 };
 
 export function usePRDashboard(): PRDashboardData {
@@ -24,39 +25,45 @@ export function usePRDashboard(): PRDashboardData {
   const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [s, r, a, settings] = await Promise.all([
+        getPRStats(),
+        getRecentPRsWithDelta(20),
+        getAllTimeBests(),
+        getBodySettings(),
+      ]);
+      if (cancelledRef.current) return;
+      setStats(s);
+      setRecentPRs(r);
+      setAllTimeBests(a);
+      setWeightUnit(settings.weight_unit as "kg" | "lb");
+    } catch (e) {
+      if (cancelledRef.current) return;
+      setError(e instanceof Error ? e.message : "Failed to load PR data");
+    } finally {
+      if (!cancelledRef.current) setLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      let cancelled = false;
-
-      (async () => {
-        try {
-          setLoading(true);
-          setError(null);
-          const [s, r, a, settings] = await Promise.all([
-            getPRStats(),
-            getRecentPRsWithDelta(20),
-            getAllTimeBests(),
-            getBodySettings(),
-          ]);
-          if (cancelled) return;
-          setStats(s);
-          setRecentPRs(r);
-          setAllTimeBests(a);
-          setWeightUnit(settings.weight_unit as "kg" | "lb");
-        } catch (e) {
-          if (cancelled) return;
-          setError(e instanceof Error ? e.message : "Failed to load PR data");
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      })();
-
+      cancelledRef.current = false;
+      void load();
       return () => {
-        cancelled = true;
+        cancelledRef.current = true;
       };
-    }, [])
+    }, [load])
   );
 
-  return { stats, recentPRs, allTimeBests, weightUnit, loading, error };
+  const reload = useCallback(() => {
+    cancelledRef.current = false;
+    void load();
+  }, [load]);
+
+  return { stats, recentPRs, allTimeBests, weightUnit, loading, error, reload };
 }
