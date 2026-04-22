@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  stepValue: { fontWeight: "700", fontSize: fontSizes.md, minWidth: 100, textAlign: "center" },
+  stepValue: { fontWeight: "700", fontSize: fontSizes.base, minWidth: 100, textAlign: "center" },
   setButton: { borderWidth: 1, borderRadius: 8, paddingVertical: 8, alignItems: "center" },
   clearButton: { paddingVertical: 4, paddingHorizontal: 8 },
 });

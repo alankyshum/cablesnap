@@ -238,6 +238,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  retentionValue: { fontWeight: "700", fontSize: fontSizes.md, minWidth: 24, textAlign: "center" },
+  retentionValue: { fontWeight: "700", fontSize: fontSizes.base, minWidth: 24, textAlign: "center" },
   buttonRow: { flexDirection: "row", gap: 8, marginTop: 4 },
 });
