@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
-# Test Audit Script — detects duplicate/overlapping tests
+# Test Audit Script — detects duplicate/overlapping tests and guards runtime
 # Run: ./scripts/audit-tests.sh
-# Exit code 1 if test count exceeds budget (configurable below)
+# Exit code 1 if test count or wall-time exceeds budget (configurable below).
+#
+# Flags / env:
+#   --detail                 show extended mock-overlap matrix
+#   --skip-runtime           skip the npm test runtime check (fast audit)
+#   RUNTIME_BUDGET_SECONDS   override runtime ceiling (default: 150)
+#   MAX_TESTS                override count ceiling (default: 1800)
+#   SKIP_RUNTIME=1           same as --skip-runtime
 
 set -euo pipefail
 
@@ -9,9 +16,21 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR="$PROJECT_ROOT/__tests__"
 
 # ─── Configuration ───────────────────────────────────────────────
-MAX_TESTS=1800          # hard ceiling — fail if exceeded
-WARN_TESTS=1600         # warning threshold
+MAX_TESTS="${MAX_TESTS:-1800}"                          # hard ceiling — fail if exceeded
+WARN_TESTS="${WARN_TESTS:-1600}"                        # warning threshold
+RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`
+RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold
 # ─────────────────────────────────────────────────────────────────
+
+# Parse flags
+SKIP_RUNTIME="${SKIP_RUNTIME:-0}"
+DETAIL=0
+for arg in "$@"; do
+  case "$arg" in
+    --skip-runtime) SKIP_RUNTIME=1 ;;
+    --detail)       DETAIL=1 ;;
+  esac
+done
 
 echo "=== CableSnap Test Audit ==="
 echo ""
@@ -88,7 +107,7 @@ grep -rc "beforeEach" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
 echo ""
 
 # 7. Detail mode: show which files share mocked modules
-if [[ "${1:-}" == "--detail" ]]; then
+if [[ "$DETAIL" -eq 1 ]]; then
   echo "=== Mock overlap matrix ==="
   echo "(files that mock the same modules — candidates for shared setup)"
   echo ""
@@ -129,8 +148,52 @@ echo "  4. Replace source-string tests with behavioral assertions where possible
 echo "  5. Move jest.setTimeout(10000) to jest.config.js: testTimeout: 10000"
 echo ""
 
-if [ "$OVER_BUDGET" -eq 1 ]; then
+# 9. Runtime budget check — time `npm test` wall-clock and compare to ceiling
+OVER_RUNTIME=0
+RUNTIME_SECONDS=""
+if [ "$SKIP_RUNTIME" -eq 1 ]; then
+  echo "=== Runtime budget (skipped) ==="
+  echo "  ⏭  Skipped (--skip-runtime or SKIP_RUNTIME=1)"
+  echo ""
+else
+  echo "=== Runtime budget ==="
+  echo "  Budget: warn=${RUNTIME_WARN_SECONDS}s, max=${RUNTIME_BUDGET_SECONDS}s"
+  echo "  Running: npm test --silent (this may take a couple of minutes)…"
+  RUNTIME_LOG="$(mktemp)"
+  START_EPOCH=$(date +%s)
+  set +e
+  ( cd "$PROJECT_ROOT" && npm test --silent -- --silent ) >"$RUNTIME_LOG" 2>&1
+  TEST_EXIT=$?
+  set -e
+  END_EPOCH=$(date +%s)
+  RUNTIME_SECONDS=$((END_EPOCH - START_EPOCH))
+
+  if [ "$TEST_EXIT" -ne 0 ]; then
+    echo "  ❌ npm test FAILED (exit $TEST_EXIT) — last 40 lines:"
+    tail -n 40 "$RUNTIME_LOG" | sed 's/^/    /'
+    rm -f "$RUNTIME_LOG"
+    echo ""
+    echo "❌ Test audit FAILED — npm test did not pass"
+    exit 1
+  fi
+  rm -f "$RUNTIME_LOG"
+
+  echo "  Wall-time: ${RUNTIME_SECONDS}s"
+  if [ "$RUNTIME_SECONDS" -gt "$RUNTIME_BUDGET_SECONDS" ]; then
+    echo "  ❌ OVER RUNTIME BUDGET by $((RUNTIME_SECONDS - RUNTIME_BUDGET_SECONDS))s"
+    OVER_RUNTIME=1
+  elif [ "$RUNTIME_SECONDS" -gt "$RUNTIME_WARN_SECONDS" ]; then
+    echo "  ⚠️  Approaching runtime budget ($((RUNTIME_BUDGET_SECONDS - RUNTIME_SECONDS))s remaining)"
+  else
+    echo "  ✅ Within runtime budget ($((RUNTIME_BUDGET_SECONDS - RUNTIME_SECONDS))s remaining)"
+  fi
+  echo ""
+fi
+
+if [ "$OVER_BUDGET" -eq 1 ] || [ "$OVER_RUNTIME" -eq 1 ]; then
   echo "❌ Test audit FAILED — consolidate before pushing"
+  [ "$OVER_BUDGET" -eq 1 ]  && echo "   • count ceiling breached ($TOTAL > $MAX_TESTS)"
+  [ "$OVER_RUNTIME" -eq 1 ] && echo "   • runtime ceiling breached (${RUNTIME_SECONDS}s > ${RUNTIME_BUDGET_SECONDS}s)"
   exit 1
 else
   echo "✅ Test audit passed"
