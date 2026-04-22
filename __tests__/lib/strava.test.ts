@@ -314,7 +314,6 @@ describe("Strava Integration — Behavioral", () => {
   it("connectStrava returns null when user cancels OAuth", async () => {
     AuthSession.AuthRequest.mockImplementation(() => ({
       promptAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
-      codeVerifier: "v",
     }));
     const result = await strava.connectStrava();
     expect(result).toBeNull();
