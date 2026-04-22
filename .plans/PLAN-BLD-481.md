@@ -142,14 +142,25 @@ role. New responsibilities:
 > `[{screenshot, severity: "critical"|"major"|"minor", description,
 > suggested_fix}]`. Return `[]` if clean.
 
-#### 4. Paperclip daily cron
+#### 4. Daily cron — GitHub Actions (primary path)
 
-Create a scheduled wake for `ux-designer` via Paperclip's scheduled-task
-mechanism (if it exists — CEO will verify during implementation; fallback is a
-GitHub Actions cron that posts a wake comment on a dedicated tracking issue).
+**Decision updated 2026-04-22** after board flagged an authorization constraint:
+Paperclip's routine API hardcodes `assigneeAgentId === req.actor.agentId`, so
+agents can only create routines assigned to themselves. CEO therefore cannot
+create a routine that wakes `ux-designer`. Options:
 
-Wake time: 09:00 UTC daily. First run is a manual trigger during
-implementation to prove the loop.
+1. **GitHub Actions cron (primary).** A scheduled workflow posts a wake comment
+   (`@ux-designer Daily visual UX audit — YYYY-MM-DD`) on a dedicated tracking
+   issue. No Paperclip-side changes, no board intervention needed. Fully owned
+   by this repo.
+2. **Paperclip routine (secondary, requires board).** Board user creates the
+   routine out-of-band after engineering primitives land. Use only if we want
+   the cron configurable from the Paperclip UI. Not required for v1.
+
+V1 ships option 1. Option 2 tracked as a separate issue (see "Follow-ups").
+
+Wake time: 09:00 UTC daily. First run is a manual workflow_dispatch trigger
+during implementation to prove the loop before enabling the schedule.
 
 #### 5. BLD-480 regression-catcher verification
 
@@ -202,7 +213,7 @@ done.
       stale OpenCode content removed.
 - [ ] ux-designer agent successfully runs one end-to-end audit that files ≥1
       finding issue (proved by running it against the pre-BLD-480-fix commit).
-- [ ] Daily cron trigger is live (Paperclip schedule or GH Actions) and has
+- [ ] Daily cron trigger is live (GitHub Actions scheduled workflow) and has
       fired at least once.
 - [ ] No new production code paths are added (scenario seed helper must be
       dev-only/test-only).
@@ -227,10 +238,25 @@ done.
 | Web viewport screenshots miss native-only bugs | Med | Med | Accepted for v1. React Native Web renders the same component tree; most layout bugs (including BLD-480) reproduce on web. Native audit is a follow-up. |
 | DB seed helper ends up in production bundle | Low | High | `__DEV__` guard + tree-shaking + runtime flag; validated via `expo export` bundle inspection in the acceptance criteria. |
 | Vision model hallucinates findings | Med | Low | CEO triages — false positives cost one `cancelled` issue per occurrence. Tune prompt iteratively. |
-| Paperclip lacks native cron | Med | Low | GH Actions fallback is well-understood. Decide during implementation. |
+| Paperclip lacks native cron (or CEO can't create routines) | **High, confirmed** | Low | Primary path is GH Actions scheduled workflow. Paperclip routine is a later enhancement that requires board user to create (hardcoded `assigneeAgentId === actorAgentId` check in routines API). |
 | Bundle storage growth | Low | Low | Prune to last 14 pre-releases in `audit-bundle.sh`. |
 | ux-designer vision cost per run | Low | Low | Opus vision at ~12 screenshots/day × 2 viewports = 24 images ≈ acceptable. Bounded. |
 | False sense of security (web-only audit) | Med | Med | Document the limitation in the agent's standard finding template: "web viewport audit — native not covered". |
+
+## Follow-ups (out of scope for v1 implementation)
+
+- **Upstream Paperclip feature request** — loosen routine authorization so a
+  CEO/manager agent with `routines:assign` (or equivalent) can create routines
+  for direct reports in its chain of command. Current
+  `assigneeAgentId === actorAgentId` check blocks legitimate manager→report
+  delegation. Board to file upstream.
+- **Migrate daily cron to Paperclip routine** once the upstream change lands OR
+  if the board creates the routine manually. Removes GH Actions dependency and
+  adds Paperclip UI visibility.
+- **Remaining 5 scenarios** — onboarding, active workout, empty history,
+  settings, Strava connection flow. Each as a separate ticket after v1 proves.
+- **Native-viewport audit** — Detox or Maestro integration for iOS/Android-only
+  layout bugs. Defer until web audit proves valuable.
 
 ## Review Feedback
 
