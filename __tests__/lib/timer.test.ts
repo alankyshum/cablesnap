@@ -20,42 +20,34 @@ import {
 } from "../../lib/timer"
 
 describe("timer", () => {
-  describe("init", () => {
-    it("creates idle tabata state with defaults", () => {
-      const s = init("tabata")
-      expect(s.mode).toBe("tabata")
-      expect(s.status).toBe("idle")
-      expect(s.phase).toBe("idle")
-      expect(s.round).toBe(0)
-      expect(s.remaining).toBe(20)
-      expect((s.config as TabataConfig).work).toBe(20)
-      expect((s.config as TabataConfig).rest).toBe(10)
-      expect((s.config as TabataConfig).rounds).toBe(8)
-    })
+  it("init creates idle state per mode and accepts custom config", () => {
+    const tab = init("tabata")
+    expect(tab.mode).toBe("tabata")
+    expect(tab.status).toBe("idle")
+    expect(tab.phase).toBe("idle")
+    expect(tab.round).toBe(0)
+    expect(tab.remaining).toBe(20)
+    expect((tab.config as TabataConfig).work).toBe(20)
+    expect((tab.config as TabataConfig).rest).toBe(10)
+    expect((tab.config as TabataConfig).rounds).toBe(8)
 
-    it("creates idle emom state with defaults", () => {
-      const s = init("emom")
-      expect(s.mode).toBe("emom")
-      expect(s.status).toBe("idle")
-      expect((s.config as EmomConfig).minutes).toBe(10)
-      expect(s.remaining).toBe(60)
-    })
+    const em = init("emom")
+    expect(em.mode).toBe("emom")
+    expect(em.status).toBe("idle")
+    expect((em.config as EmomConfig).minutes).toBe(10)
+    expect(em.remaining).toBe(60)
 
-    it("creates idle amrap state with defaults", () => {
-      const s = init("amrap")
-      expect(s.mode).toBe("amrap")
-      expect(s.status).toBe("idle")
-      expect((s.config as AmrapConfig).minutes).toBe(10)
-      expect(s.remaining).toBe(600)
-    })
+    const am = init("amrap")
+    expect(am.mode).toBe("amrap")
+    expect(am.status).toBe("idle")
+    expect((am.config as AmrapConfig).minutes).toBe(10)
+    expect(am.remaining).toBe(600)
 
-    it("accepts custom config", () => {
-      const s = init("tabata", { work: 30, rest: 15, rounds: 5 })
-      expect((s.config as TabataConfig).work).toBe(30)
-      expect((s.config as TabataConfig).rest).toBe(15)
-      expect((s.config as TabataConfig).rounds).toBe(5)
-      expect(s.remaining).toBe(30)
-    })
+    const custom = init("tabata", { work: 30, rest: 15, rounds: 5 })
+    expect((custom.config as TabataConfig).work).toBe(30)
+    expect((custom.config as TabataConfig).rest).toBe(15)
+    expect((custom.config as TabataConfig).rounds).toBe(5)
+    expect(custom.remaining).toBe(30)
   })
 
   it("duration returns per-mode phase length", () => {
@@ -312,45 +304,32 @@ describe("timer", () => {
     expect(progress({ ...base, remaining: 0, total: 0 })).toBe(0)
   })
 
-  describe("edge cases", () => {
-    it("handles single round tabata", () => {
-      const cfg = { work: 10, rest: 5, rounds: 1 }
-      const s = start(init("tabata", cfg), 0)
-      const r1 = tick(s, 10000)
-      expect(r1.state.phase).toBe("rest")
-      const r2 = tick(r1.state, 15000)
-      expect(r2.state.status).toBe("completed")
-    })
+  it("handles edge cases: single round tabata, 1-minute emom, rapid ticks, long amrap, mode switch", () => {
+    // single-round tabata completes after work+rest
+    const r1 = tick(start(init("tabata", { work: 10, rest: 5, rounds: 1 }), 0), 10000)
+    expect(r1.state.phase).toBe("rest")
+    expect(tick(r1.state, 15000).state.status).toBe("completed")
 
-    it("handles 1 minute emom", () => {
-      const cfg = { minutes: 1 }
-      const s = start(init("emom", cfg), 0)
-      const r = tick(s, 59000)
-      expect(r.state.remaining).toBe(1)
-      expect(r.state.status).toBe("running")
-    })
+    // 1-minute emom still running at 59s
+    const emom = tick(start(init("emom", { minutes: 1 }), 0), 59000)
+    expect(emom.state.remaining).toBe(1)
+    expect(emom.state.status).toBe("running")
 
-    it("handles rapid tick calls", () => {
-      const s = start(init("tabata"), 0)
-      const r1 = tick(s, 100)
-      const r2 = tick(r1.state, 200)
-      expect(r2.state.status).toBe("running")
-      expect(r2.state.remaining).toBe(20)
-    })
+    // rapid ticks don't advance past a second
+    const rapid1 = tick(start(init("tabata"), 0), 100)
+    const rapid2 = tick(rapid1.state, 200)
+    expect(rapid2.state.status).toBe("running")
+    expect(rapid2.state.remaining).toBe(20)
 
-    it("handles very long amrap (60 min)", () => {
-      const cfg = { minutes: 60 }
-      const s = start(init("amrap", cfg), 0)
-      expect(s.remaining).toBe(3600)
-      const r = tick(s, 1800000) // 30 min
-      expect(r.state.remaining).toBe(1800)
-    })
+    // very long amrap (60 min) ticked half-way
+    const long = start(init("amrap", { minutes: 60 }), 0)
+    expect(long.remaining).toBe(3600)
+    expect(tick(long, 1800000).state.remaining).toBe(1800)
 
-    it("mode switching resets state", () => {
-      start(init("tabata"), 1000)
-      const s2 = init("emom")
-      expect(s2.status).toBe("idle")
-      expect(s2.mode).toBe("emom")
-    })
+    // mode switching resets state
+    start(init("tabata"), 1000)
+    const switched = init("emom")
+    expect(switched.status).toBe("idle")
+    expect(switched.mode).toBe("emom")
   })
 })
