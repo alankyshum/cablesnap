@@ -112,4 +112,41 @@ describe('Records Page', () => {
     expect(await findByText('No Records Yet')).toBeTruthy()
     expect(await findByText('Complete your first workout to start tracking personal records!')).toBeTruthy()
   })
+
+  test('renders friendly error state with retry button when data fetch fails', async () => {
+    const prDashboard = require('@/lib/db/pr-dashboard')
+    prDashboard.getPRStats.mockRejectedValueOnce(new Error('database disk image is malformed'))
+
+    const { findByText, findByTestId } = render(<RecordsPage />)
+
+    expect(await findByText("Couldn't load your records")).toBeTruthy()
+    expect(await findByText(/Something went wrong/i)).toBeTruthy()
+    expect(await findByText('database disk image is malformed')).toBeTruthy()
+    expect(await findByText('Retry')).toBeTruthy()
+    const container = await findByTestId('pr-dashboard-error')
+    expect(container.props.accessibilityLiveRegion).toBe('polite')
+    expect(container.props.accessibilityRole).toBe('alert')
+  })
+
+  test('Retry button re-invokes data load and recovers from error', async () => {
+    const prDashboard = require('@/lib/db/pr-dashboard')
+    prDashboard.getPRStats
+      .mockRejectedValueOnce(new Error('transient failure'))
+      .mockResolvedValue({ totalPRs: 7, prsThisMonth: 3 })
+    prDashboard.getRecentPRsWithDelta.mockResolvedValue([])
+    prDashboard.getAllTimeBests.mockResolvedValue([])
+
+    const { findByText, queryByText } = render(<RecordsPage />)
+
+    const retryBtn = await findByText('Retry')
+    expect(retryBtn).toBeTruthy()
+
+    const { fireEvent } = require('@testing-library/react-native')
+    fireEvent.press(retryBtn)
+
+    expect(await findByText('7')).toBeTruthy()
+    expect(await findByText('3')).toBeTruthy()
+    expect(queryByText("Couldn't load your records")).toBeNull()
+    expect(prDashboard.getPRStats).toHaveBeenCalledTimes(2)
+  })
 })
