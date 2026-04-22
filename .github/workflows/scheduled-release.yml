@@ -151,7 +151,7 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         id: create_release
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           gh release create "v$VERSION" \
