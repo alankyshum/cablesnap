@@ -17,6 +17,75 @@ import {
   getBodySettings,
 } from "./db";
 
+// ---- Error classification ----
+
+export type StravaErrorCode =
+  | "auth_expired"
+  | "auth_revoked"
+  | "network"
+  | "rate_limit"
+  | "server"
+  | "config"
+  | "unknown";
+
+export class StravaError extends Error {
+  public readonly code: StravaErrorCode;
+  public readonly status?: number;
+  constructor(code: StravaErrorCode, message: string, status?: number) {
+    super(message);
+    this.name = "StravaError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+function classifyHttpStatus(status: number): StravaErrorCode {
+  if (status === 401 || status === 403) return "auth_expired";
+  if (status === 429) return "rate_limit";
+  if (status >= 500) return "server";
+  return "unknown";
+}
+
+function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  // React Native fetch surfaces TypeError with "Network request failed"
+  // Node/browsers use TypeError with "Failed to fetch".
+  const msg = err.message || "";
+  return (
+    err.name === "TypeError" ||
+    /network request failed|failed to fetch|networkerror|timeout|timed out/i.test(msg)
+  );
+}
+
+/**
+ * Maps any thrown value from Strava flows into a user-friendly message.
+ * Leaves technical details (status, raw message) for logs only.
+ */
+export function getStravaUserMessage(err: unknown): string {
+  if (err instanceof StravaError) {
+    switch (err.code) {
+      case "auth_expired":
+      case "auth_revoked":
+        return "Connection expired. Please try again.";
+      case "network":
+        return "Check your internet and try again.";
+      case "rate_limit":
+        return "Too many requests. Please wait a moment and try again.";
+      case "server":
+        return "Strava is having trouble right now. Please try again soon.";
+      case "config":
+        return "Strava isn't set up correctly. Please contact support.";
+      case "unknown":
+      default:
+        return "Something went wrong connecting to Strava.";
+    }
+  }
+  if (isNetworkError(err)) {
+    return "Check your internet and try again.";
+  }
+  return "Something went wrong connecting to Strava.";
+}
+
 // Strava API constants
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/mobile/authorize";
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
@@ -159,10 +228,18 @@ export async function connectStrava(): Promise<{
 
   const clientId = getClientId();
   if (!clientId) {
-    throw new Error("Strava client ID not configured");
+    throw new StravaError("config", "Strava client ID not configured");
   }
 
-  const proxyUrl = getProxyUrl();
+  let proxyUrl: string;
+  try {
+    proxyUrl = getProxyUrl();
+  } catch (err) {
+    throw new StravaError(
+      "config",
+      err instanceof Error ? err.message : "Strava proxy URL not configured"
+    );
+  }
 
   const authRequest = new AuthSession.AuthRequest({
     clientId,
@@ -180,16 +257,34 @@ export async function connectStrava(): Promise<{
   }
 
   // Exchange authorization code for tokens via proxy
-  const tokenResponse = await fetch(`${proxyUrl}/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      code: result.params.code,
-    }),
-  });
+  let tokenResponse: Response;
+  try {
+    tokenResponse = await fetch(`${proxyUrl}/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: result.params.code,
+      }),
+    });
+  } catch (err) {
+    if (isNetworkError(err)) {
+      throw new StravaError(
+        "network",
+        err instanceof Error ? err.message : "Network request failed"
+      );
+    }
+    throw new StravaError(
+      "unknown",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
 
   if (!tokenResponse.ok) {
-    throw new Error(`Token exchange failed: ${tokenResponse.status}`);
+    throw new StravaError(
+      classifyHttpStatus(tokenResponse.status),
+      `Token exchange failed: ${tokenResponse.status}`,
+      tokenResponse.status
+    );
   }
 
   const data = await tokenResponse.json();
