@@ -133,20 +133,8 @@ jobs:
         run: |
           TAG="${{ steps.latest_tag.outputs.tag }}"
           VERSION="${{ steps.next_version.outputs.version }}"
-          # SIGNING_UNINSTALL_NOTICE is prepended to the release notes for the
-          # first release after BLD-485 (persistent signing keystore) lands.
-          # Delete the file after the first signed release has shipped to stop
-          # emitting this banner.
-          NOTICE=""
-          if [ -f fdroid/FIRST_SIGNED_RELEASE_NOTICE.md ]; then
-            NOTICE=$(cat fdroid/FIRST_SIGNED_RELEASE_NOTICE.md)
-          fi
           {
             echo 'notes<<NOTES_EOF'
-            if [ -n "$NOTICE" ]; then
-              echo "$NOTICE"
-              echo ""
-            fi
             echo "## What's New"
             echo ""
             if [ -z "$TAG" ]; then
