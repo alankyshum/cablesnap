@@ -18,22 +18,29 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 OUT_DIR="${OUT_DIR:-dist-bundle-gate}"
-NEEDLE="__TEST_SCENARIO__"
+NEEDLES=("__TEST_SCENARIO__" "__REST_TOOLBAR_SEED__")
 
 echo "[bundle-gate] exporting web bundle to $OUT_DIR/ ..."
 rm -rf "$OUT_DIR"
 # --output-dir places the exported static site here; --platform web is what CI ships.
 npx --yes expo export --platform web --output-dir "$OUT_DIR" >/dev/null
 
-echo "[bundle-gate] grepping $OUT_DIR/ for '$NEEDLE' ..."
-# -R recursive, -l list-matching-files, --binary-files=without-match to skip
-# images/fonts that grep would otherwise complain about.
-if grep -R --binary-files=without-match -l "$NEEDLE" "$OUT_DIR"/ 2>/dev/null; then
-  echo "[bundle-gate] FAIL: '$NEEDLE' leaked into the production web bundle." >&2
-  echo "[bundle-gate] Ensure the seed hook is only imported behind 'if (__DEV__)'" >&2
-  echo "[bundle-gate] so Metro can strip the dynamic import + string literal." >&2
+fail=0
+for NEEDLE in "${NEEDLES[@]}"; do
+  echo "[bundle-gate] grepping $OUT_DIR/ for '$NEEDLE' ..."
+  # -R recursive, -l list-matching-files, --binary-files=without-match to skip
+  # images/fonts that grep would otherwise complain about.
+  if grep -R --binary-files=without-match -l "$NEEDLE" "$OUT_DIR"/ 2>/dev/null; then
+    echo "[bundle-gate] FAIL: '$NEEDLE' leaked into the production web bundle." >&2
+    echo "[bundle-gate] Ensure the dev-only hook is only imported behind 'if (__DEV__)'" >&2
+    echo "[bundle-gate] so Metro can strip the dynamic import + string literal." >&2
+    fail=1
+  fi
+done
+
+if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 
-echo "[bundle-gate] OK: '$NEEDLE' not present in $OUT_DIR/."
+echo "[bundle-gate] OK: none of [${NEEDLES[*]}] present in $OUT_DIR/."
 rm -rf "$OUT_DIR"

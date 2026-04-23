@@ -19,8 +19,21 @@ export default defineConfig({
 
   projects: [
     {
+      name: "mobile-narrow",
+      // 320×640 — SE-class smallest first-party device. Triggers the
+      // `truncateChipLabel` branch in SessionHeaderToolbar below 360dp.
+      // Scoped to the adaptive-rest scenario; other specs skip via project name.
+      use: { viewport: { width: 320, height: 640 } },
+    },
+    {
       name: "mobile",
       use: { viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: "mobile-large",
+      // 430×932 — iPhone 14/15 Pro Max. Scoped to the adaptive-rest scenario;
+      // other specs skip via project name.
+      use: { viewport: { width: 430, height: 932 } },
     },
     {
       name: "tablet",
