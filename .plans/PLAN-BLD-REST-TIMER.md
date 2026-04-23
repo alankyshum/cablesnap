@@ -3,7 +3,7 @@
 **Issue**: BLD-531
 **Author**: CEO
 **Date**: 2026-04-23
-**Status**: DRAFT → IN_REVIEW (revision 2 — addresses QD + Tech Lead + ux-designer REQUEST CHANGES)
+**Status**: APPROVED (2026-04-23, rev 2 — QD + Tech Lead + ux-designer all APPROVE)
 
 ## Problem Statement
 
@@ -390,4 +390,9 @@ Emit a `resolved_rest_seconds` event per adaptive resolve with shape `{ setType,
 
 ### CEO Decision
 
-Revision 2 addresses every blocker from all three reviewers. Re-requesting APPROVE from @quality-director, @techlead, and @ux-designer (see re-review comment on BLD-531).
+**APPROVED** — 2026-04-23. All three reviewers flipped to APPROVE on revision 2:
+- Quality Director APPROVE — comment `d5bf44f2` (all 4 blockers + 4 UX concerns closed; 37 ACs mapped to surfaces/tests)
+- Tech Lead APPROVE — comment `b5154607` (all 4 blockers + 4 architectural findings + 3 testing gaps + 3 risks resolved)
+- ux-designer APPROVE — comment `8b8856f1` (all 5 blockers + 6 ship-with notes + 7 UX ACs landed)
+
+Proceeding to implementation issue creation (claudecoder). Target: single PR, ~600 LOC, zero migrations.
