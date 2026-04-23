@@ -13,18 +13,14 @@ name: E2E Update Snapshots
 # regeneration happens here.
 
 on:
-  # workflow_dispatch requires the file to exist on the default branch, which
-  # defeats the purpose for a one-shot baseline regeneration on a feature
-  # branch. A push trigger scoped to branches named `bld-*-e2e-*` works
-  # immediately once the workflow is pushed.
-  push:
-    branches:
-      - "bld-*-e2e-*"
-    paths:
-      - ".github/workflows/e2e-update-snapshots.yml"
-      - "e2e/**.ts"
-      - "package.json"
-      - "package-lock.json"
+  # `workflow_dispatch` only. The earlier `push:` trigger (scoped to
+  # `bld-*-e2e-*` branches) was a bootstrap workaround so this file could be
+  # exercised on a feature branch before it existed on `main`. Now that the
+  # workflow is on `main`, `workflow_dispatch` works against any branch via
+  # the Actions UI or `gh workflow run`, and the push trigger is a footgun
+  # (any future branch matching the pattern that edits an e2e spec would
+  # silently overwrite all baselines and auto-push the diff). Removed in
+  # BLD-527.
   workflow_dispatch:
     inputs:
       spec:
