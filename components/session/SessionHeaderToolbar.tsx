@@ -202,7 +202,7 @@ function SessionHeaderToolbarInner({
             announces the full adaptive reason, so the chip is a redundant-but-
             reachable affordance for pointer/keyboard users. */}
         {renderChip && (
-          <View style={styles.chipWrap}>
+          <View style={styles.chipWrap} testID="adaptive-chip">
             <Chip
               selected={false}
               onPress={handleRestLongPress}
