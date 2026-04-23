@@ -2,6 +2,7 @@
 import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, TrainingMode, SetType } from "../types";
+import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction } from "./helpers";
 import { workoutSets, exercises, workoutSessions, templateExercises } from "./schema";
@@ -564,6 +565,46 @@ export async function getRestSecondsForExercise(
     .where(eq(workoutSessions.id, sessionId))
     .get();
   return row?.rest_seconds ?? 90;
+}
+
+export type RestContext = {
+  baseRestSeconds: number;
+  category: ExerciseCategory;
+  setType: SetType;
+  rpe: number | null;
+};
+
+/**
+ * Fetch the inputs the Intelligent Rest Timer resolver needs for a given set.
+ * getRestSecondsForExercise is left UNCHANGED as the legacy path.
+ */
+export async function getRestContext(
+  sessionId: string,
+  exerciseId: string,
+  set: { set_type: SetType; rpe: number | null },
+): Promise<RestContext> {
+  const db = await getDrizzle();
+  const row = await db
+    .select({
+      rest_seconds: templateExercises.rest_seconds,
+      equipment: exercises.equipment,
+    })
+    .from(workoutSessions)
+    .innerJoin(exercises, eq(exercises.id, exerciseId))
+    .leftJoin(templateExercises, and(
+      eq(templateExercises.template_id, workoutSessions.template_id),
+      eq(templateExercises.exercise_id, exerciseId),
+    ))
+    .where(eq(workoutSessions.id, sessionId))
+    .get();
+  const baseRestSeconds = row?.rest_seconds ?? 90;
+  const equipment = row?.equipment ?? "";
+  return {
+    baseRestSeconds,
+    category: categorize(equipment),
+    setType: set.set_type,
+    rpe: set.rpe,
+  };
 }
 
 export async function getRestSecondsForLink(
