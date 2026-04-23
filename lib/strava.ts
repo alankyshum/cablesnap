@@ -102,6 +102,10 @@ export interface StravaSupportAction {
  * Only errors the user cannot self-resolve (currently `config`) surface
  * a "Get help" link that opens {@link STRAVA_SUPPORT_URL}. For all other
  * error codes, returns undefined so the toast shows no CTA.
+ *
+ * TODO(BLD-513): generalize if a second integration needs this — extract
+ * a `makeSupportAction(url, label)` factory into `lib/support.ts` and
+ * keep this function as the Strava-specific caller.
  */
 export function getStravaSupportAction(
   err: unknown,
