@@ -256,6 +256,7 @@ export default function ActiveSession() {
               rest={rest}
               elapsed={elapsed}
               estimatedDuration={estimatedDuration}
+              breakdown={breakdown}
               onStartRest={handleToolboxStartRest}
               onDismissRest={dismissRest}
               onOpenToolbox={handleToolboxOpen}

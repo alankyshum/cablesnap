@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, View } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
-import { setAppSetting } from "@/lib/db";
+import { getAppSetting, setAppSetting } from "@/lib/db";
 import { setEnabled as setAudioEnabled } from "@/lib/audio";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
@@ -23,6 +23,45 @@ export default function PreferencesCard({
   children,
 }: Props) {
   const [soundTooltipVisible, setSoundTooltipVisible] = useState(false);
+
+  // Intelligent Rest Timer (BLD-531) settings — default-on via `setting !== "false"`.
+  const [adaptiveRest, setAdaptiveRest] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [restAfterWarmup, setRestAfterWarmup] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      getAppSetting("rest_adaptive_enabled"),
+      getAppSetting("rest_show_breakdown"),
+      getAppSetting("rest_after_warmup_enabled"),
+    ]).then(([adaptive, show, warmup]) => {
+      if (cancelled) return;
+      setAdaptiveRest(adaptive !== "false");
+      setShowBreakdown(show !== "false");
+      setRestAfterWarmup(warmup === "true");
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const updateAdaptive = async (val: boolean) => {
+    setAdaptiveRest(val);
+    try { await setAppSetting("rest_adaptive_enabled", val ? "true" : "false"); }
+    catch { toast.error("Failed to save adaptive rest setting"); }
+  };
+
+  const updateShowBreakdown = async (val: boolean) => {
+    setShowBreakdown(val);
+    try { await setAppSetting("rest_show_breakdown", val ? "true" : "false"); }
+    catch { toast.error("Failed to save chip setting"); }
+  };
+
+  const updateRestAfterWarmup = async (val: boolean) => {
+    setRestAfterWarmup(val);
+    try { await setAppSetting("rest_after_warmup_enabled", val ? "true" : "false"); }
+    catch { toast.error("Failed to save warmup rest setting"); }
+  };
+
   return (
     <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
@@ -60,6 +99,45 @@ export default function PreferencesCard({
             Audio cues for interval timers and rest countdowns.
           </Text>
         )}
+
+        {/* Intelligent Rest Timer (BLD-531) */}
+        <View style={styles.row}>
+          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+            Adaptive rest timer
+          </Text>
+          <Switch
+            value={adaptiveRest}
+            onValueChange={updateAdaptive}
+            accessibilityLabel="Adaptive rest timer"
+            accessibilityRole="switch"
+            accessibilityHint="Adjust rest duration automatically by set type, RPE, and equipment"
+          />
+        </View>
+        <View style={styles.row}>
+          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+            Show adaptive reason chip
+          </Text>
+          <Switch
+            value={showBreakdown}
+            onValueChange={updateShowBreakdown}
+            accessibilityLabel="Show adaptive reason chip"
+            accessibilityRole="switch"
+            accessibilityHint="Show why the timer picked this rest duration"
+            disabled={!adaptiveRest}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+            Rest after warmup sets
+          </Text>
+          <Switch
+            value={restAfterWarmup}
+            onValueChange={updateRestAfterWarmup}
+            accessibilityLabel="Rest after warmup sets"
+            accessibilityRole="switch"
+            accessibilityHint="Start a short rest timer after warmup sets"
+          />
+        </View>
       </CardContent>
     </Card>
   );
