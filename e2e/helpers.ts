@@ -1,6 +1,5 @@
 import { type Page, type TestInfo, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-
 // react-native-web may render icon fonts as role="img" divs without alt text.
 // These are upstream library issues we can't fix in app code.
 const KNOWN_LIBRARY_RULES = ["role-img-alt", "nested-interactive"];
@@ -29,6 +28,44 @@ export async function navigateTo(page: Page, path: string) {
   if (path === "/" || path === "") return;
   await page.goto(path);
   await page.waitForTimeout(800);
+}
+
+/**
+ * Minimal shape of an exercise row used by the exercises fixture escape hatch.
+ * We deliberately keep this as a loose type rather than importing
+ * `lib/types.ts` — Playwright specs run in a browser context via
+ * `addInitScript` where the app module graph isn't available.
+ */
+export type E2EExerciseFixture = {
+  id: string;
+  name: string;
+  category: string;
+  primary_muscles: string[];
+  secondary_muscles: string[];
+  equipment: string;
+  instructions: string;
+  difficulty: string;
+  is_custom: boolean;
+};
+
+/**
+ * Inject a deterministic exercises fixture that `lib/db/exercises.ts` will
+ * honor in place of the real SQLite query (BLD-526). The app-side check is
+ * guarded by `navigator.webdriver === true`, which Playwright sets
+ * automatically — a console-injected flag in a real user's browser will not
+ * swap their data.
+ *
+ * Call once per page context, BEFORE the first `goto()` (addInitScript only
+ * applies to subsequent navigations).
+ */
+export async function enableExerciseFixture(
+  page: Page,
+  fixture: E2EExerciseFixture[]
+) {
+  await page.addInitScript((rows) => {
+    (window as unknown as Record<string, unknown>).__E2E_EXERCISE_FIXTURE__ =
+      rows;
+  }, fixture);
 }
 
 /**
