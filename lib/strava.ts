@@ -235,6 +235,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
     const data = await response.json();
     await saveTokens(data.access_token, data.refresh_token, data.expires_at);
+    stravaLog("info", "strava refresh succeeded", { flow: "strava_refresh", step: "success" });
     return data.access_token;
   } catch (err) {
     console.error("Strava token refresh failed:", err);
@@ -268,6 +269,39 @@ function captureStravaError(
 
 function stravaBreakcrumb(message: string, data?: Record<string, unknown>): void {
   Sentry.addBreadcrumb({ category: "strava", message, data });
+}
+
+/**
+ * Emit a structured Sentry log for a Strava lifecycle checkpoint.
+ *
+ * Unlike `stravaBreakcrumb` (which only attaches to exception events),
+ * these calls go to the Sentry logs (`ourlogs`) dataset so we have
+ * verifiable happy-path signal. Init config sets `enableLogs: true`
+ * (see `app/_layout.tsx`).
+ *
+ * Never pass secrets (tokens, client_secret, raw auth codes, Authorization
+ * headers). Scalars only (IDs, status codes, resultType).
+ *
+ * Uses optional chaining so older @sentry/react-native SDKs that do not
+ * export `logger` do not throw at runtime.
+ */
+function stravaLog(
+  level: "info" | "warn" | "error",
+  message: string,
+  attrs?: Record<string, unknown>,
+): void {
+  try {
+    const logger = (Sentry as unknown as {
+      logger?: {
+        info?: (msg: string, attrs?: Record<string, unknown>) => void;
+        warn?: (msg: string, attrs?: Record<string, unknown>) => void;
+        error?: (msg: string, attrs?: Record<string, unknown>) => void;
+      };
+    }).logger;
+    logger?.[level]?.(message, attrs);
+  } catch {
+    // Logging must never break the app flow.
+  }
 }
 
 // ---- Token Exchange ----
@@ -304,7 +338,9 @@ async function exchangeCodeForTokens(
     throw err;
   }
 
-  return tokenResponse.json() as Promise<Record<string, unknown>>;
+  const tokens = (await tokenResponse.json()) as Record<string, unknown>;
+  stravaLog("info", "strava token exchange succeeded", { flow: "strava_connect", step: "token_exchange_ok" });
+  return tokens;
 }
 
 // ---- OAuth2 Authorization Code Flow ----
@@ -337,6 +373,7 @@ export async function connectStrava(): Promise<{
   }
 
   stravaBreakcrumb("connectStrava started", { clientId, redirectUri, proxyUrl });
+  stravaLog("info", "strava connect started", { flow: "strava_connect", step: "start" });
 
   const authRequest = new AuthSession.AuthRequest({
     clientId,
@@ -349,9 +386,21 @@ export async function connectStrava(): Promise<{
     authorizationEndpoint: STRAVA_AUTH_URL,
   });
 
-  stravaBreakcrumb("auth prompt completed", { resultType: result.type, hasCode: !!(result.type === "success" && result.params?.code) });
+  const hasCode = !!(result.type === "success" && result.params?.code);
+  stravaBreakcrumb("auth prompt completed", { resultType: result.type, hasCode });
+  stravaLog("info", "strava auth prompt completed", {
+    flow: "strava_connect",
+    step: "auth_prompt",
+    resultType: result.type,
+    hasCode,
+  });
 
   if (result.type !== "success" || !result.params.code) {
+    stravaLog("info", "strava connect user cancelled", {
+      flow: "strava_connect",
+      step: "user_cancelled",
+      resultType: result.type,
+    });
     return null;
   }
 
@@ -371,11 +420,17 @@ export async function connectStrava(): Promise<{
   await saveStravaConnection(athleteId, athleteName);
 
   stravaBreakcrumb("connectStrava succeeded", { athleteId });
+  stravaLog("info", "strava connect succeeded", {
+    flow: "strava_connect",
+    step: "success",
+    athleteId,
+  });
 
   return { athleteId, athleteName };
 }
 
 export async function disconnect(): Promise<void> {
+  stravaLog("info", "strava disconnect started", { flow: "strava_disconnect", step: "start" });
   // Attempt to revoke on Strava (best-effort)
   try {
     const token = await getAccessToken();
@@ -391,6 +446,7 @@ export async function disconnect(): Promise<void> {
 
   await clearTokens();
   await deleteStravaConnection();
+  stravaLog("info", "strava disconnect succeeded", { flow: "strava_disconnect", step: "success" });
 }
 
 export async function isStravaConnected(): Promise<boolean> {
@@ -501,6 +557,7 @@ async function uploadActivity(
 // ---- Sync Orchestration ----
 
 export async function syncSessionToStrava(sessionId: string): Promise<boolean> {
+  stravaLog("info", "strava upload started", { flow: "strava_upload", step: "start", sessionId });
   const connected = await isStravaConnected();
   if (!connected) return false;
 
@@ -514,6 +571,12 @@ export async function syncSessionToStrava(sessionId: string): Promise<boolean> {
   try {
     const activityId = await uploadActivity(sessionId);
     await markSyncSuccess(sessionId, activityId);
+    stravaLog("info", "strava upload succeeded", {
+      flow: "strava_upload",
+      step: "success",
+      sessionId,
+      activityId,
+    });
     return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
