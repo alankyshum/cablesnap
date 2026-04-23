@@ -106,21 +106,35 @@ Follow semver: `MAJOR.MINOR.PATCH`
 
 Ask the user what kind of release this is if unclear.
 
-## Step 2: Bump Version in All 3 Files
+## Step 2: Bump Version in All 3 Files (4 Locations)
 
 All three files MUST have the exact same version string.
+The `android.versionCode` in `app.config.ts` MUST equal `CurrentVersionCode` in the F-Droid metadata.
 
-### File 1: `app.config.ts`
+### File 1: `app.config.ts` — version string
 ```
 version: "X.Y.Z",
 ```
 
-### File 2: `package.json`
+### File 2: `app.config.ts` — android.versionCode
+```
+android: {
+  ...
+  versionCode: N,
+}
+```
+
+**CRITICAL:** `versionCode` is how Android determines whether an APK is newer
+than the installed version. If this is not bumped, F-Droid will show "Installed"
+but the user will still have the old app. This value MUST equal
+`CurrentVersionCode` below.
+
+### File 3: `package.json`
 ```
 "version": "X.Y.Z",
 ```
 
-### File 3: `fdroid/metadata/com.persoack.cablesnap.yml`
+### File 4: `fdroid/metadata/com.persoack.cablesnap.yml`
 ```yaml
 CurrentVersion: X.Y.Z
 CurrentVersionCode: N
@@ -133,7 +147,7 @@ To find the current value:
 grep 'CurrentVersionCode' fdroid/metadata/com.persoack.cablesnap.yml
 ```
 
-Increment it by 1.
+Increment it by 1. Then set `android.versionCode` in `app.config.ts` to the same value.
 
 ### Validation
 
@@ -142,10 +156,12 @@ After bumping, verify consistency:
 ```bash
 grep '"version"' package.json
 grep 'version:' app.config.ts
+grep 'versionCode' app.config.ts
 grep 'CurrentVersion' fdroid/metadata/com.persoack.cablesnap.yml
 ```
 
 All three version strings must match. `CurrentVersionCode` must be previous + 1.
+`android.versionCode` MUST equal `CurrentVersionCode`.
 
 ## Step 3: Commit the Version Bump
 
