@@ -14,6 +14,7 @@ import {
   type NutritionProfile,
   type Sex,
 } from "../lib/nutrition-calc";
+import { convertWeight, convertHeight } from "../lib/units";
 
 type CardState = "loading" | "error" | "ready";
 
@@ -32,7 +33,10 @@ function validateField(field: string, value: string): string | null {
   return null;
 }
 
-export function useBodyProfile() {
+export function useBodyProfile(
+  externalWeightUnit?: "kg" | "lb",
+  externalHeightUnit?: "cm" | "in",
+) {
   const [cardState, setCardState] = useState<CardState>("loading");
   const [birthYear, setBirthYear] = useState("");
   const [weight, setWeight] = useState("");
@@ -49,6 +53,17 @@ export function useBodyProfile() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
   const initialSnapshot = useRef<string | null>(null);
+  // Refs hold the latest external unit overrides so loadProfile can read them
+  // at call-time without becoming unit-dependent. Keeping loadProfile's
+  // useCallback deps stable prevents useFocusEffect from re-firing on every
+  // unit toggle and clobbering the user's in-progress edits with the
+  // persisted profile values (regression caught in BLD-515 review).
+  const externalWeightUnitRef = useRef(externalWeightUnit);
+  const externalHeightUnitRef = useRef(externalHeightUnit);
+  useEffect(() => {
+    externalWeightUnitRef.current = externalWeightUnit;
+    externalHeightUnitRef.current = externalHeightUnit;
+  });
 
   useEffect(() => {
     return () => {
@@ -56,6 +71,35 @@ export function useBodyProfile() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, []);
+
+  // React to external unit changes (e.g. user toggles unit in settings UnitsCard
+  // on the same screen) — convert the currently-displayed value to the new unit
+  // so the label and numeric value stay in sync. Uses the "adjusting state during
+  // render" pattern (https://react.dev/reference/react/useState#storing-information-from-previous-renders)
+  // to avoid effect-triggered cascading renders.
+  const [prevExternalWeightUnit, setPrevExternalWeightUnit] = useState(externalWeightUnit);
+  if (externalWeightUnit && externalWeightUnit !== prevExternalWeightUnit) {
+    setPrevExternalWeightUnit(externalWeightUnit);
+    if (externalWeightUnit !== weightUnit) {
+      const n = parseFloat(weight);
+      if (weight && !isNaN(n) && n > 0) {
+        setWeight(String(convertWeight(n, weightUnit, externalWeightUnit)));
+      }
+      setWeightUnit(externalWeightUnit);
+    }
+  }
+
+  const [prevExternalHeightUnit, setPrevExternalHeightUnit] = useState(externalHeightUnit);
+  if (externalHeightUnit && externalHeightUnit !== prevExternalHeightUnit) {
+    setPrevExternalHeightUnit(externalHeightUnit);
+    if (externalHeightUnit !== heightUnit) {
+      const n = parseFloat(height);
+      if (height && !isNaN(n) && n > 0) {
+        setHeight(String(convertHeight(n, heightUnit, externalHeightUnit)));
+      }
+      setHeightUnit(externalHeightUnit);
+    }
+  }
 
   const loadProfile = useCallback(async () => {
     setCardState("loading");
@@ -66,23 +110,42 @@ export function useBodyProfile() {
         getLatestBodyWeight(),
       ]);
 
-      setWeightUnit(bodySettings.weight_unit);
-      setHeightUnit(bodySettings.measurement_unit);
+      const activeWeightUnit = externalWeightUnitRef.current ?? bodySettings.weight_unit;
+      const activeHeightUnit = externalHeightUnitRef.current ?? bodySettings.measurement_unit;
+      setWeightUnit(activeWeightUnit);
+      setHeightUnit(activeHeightUnit);
       setSex(bodySettings.sex);
 
       if (saved) {
         const profile: NutritionProfile = migrateProfile(JSON.parse(saved));
         setBirthYear(String(profile.birthYear));
-        setWeight(String(profile.weight));
-        setHeight(String(profile.height));
+        const displayWeight = convertWeight(
+          profile.weight,
+          profile.weightUnit,
+          activeWeightUnit,
+        );
+        const displayHeight = convertHeight(
+          profile.height,
+          profile.heightUnit,
+          activeHeightUnit,
+        );
+        setWeight(String(displayWeight));
+        setHeight(String(displayHeight));
         setActivityLevel(profile.activityLevel);
         setGoal(profile.goal);
         if (profile.rmr_override != null && profile.rmr_override > 0) {
           setRmrOverride(String(profile.rmr_override));
         }
-        initialSnapshot.current = JSON.stringify(profile);
+        initialSnapshot.current = JSON.stringify({
+          ...profile,
+          weight: displayWeight,
+          height: displayHeight,
+          weightUnit: activeWeightUnit,
+          heightUnit: activeHeightUnit,
+        });
       } else if (latestWeight) {
-        setWeight(String(latestWeight.weight));
+        const display = convertWeight(latestWeight.weight, "kg", activeWeightUnit);
+        setWeight(String(display));
       }
       setCardState("ready");
     } catch {

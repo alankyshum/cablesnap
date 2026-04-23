@@ -94,7 +94,7 @@ export default function Settings() {
           fatGoal={fatGoal}
         />
         <AppearanceCard colors={colors} />
-        <BodyProfileCard />
+        <BodyProfileCard weightUnit={weightUnit} heightUnit={measureUnit} />
         <FrequencyGoalPicker
           colors={colors}
           value={weeklyGoal}

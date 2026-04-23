@@ -1,4 +1,4 @@
-import { KG_TO_LB, LB_TO_KG, toDisplay, toKg } from "../../lib/units";
+import { KG_TO_LB, LB_TO_KG, toDisplay, toKg, convertWeight, convertHeight } from "../../lib/units";
 
 describe("units", () => {
   describe("constants", () => {
@@ -72,6 +72,37 @@ describe("units", () => {
     it("handles very large values", () => {
       const kg = toKg(1000, "lb");
       expect(kg).toBeCloseTo(453.6, 0);
+    });
+  });
+
+  describe("convertWeight", () => {
+    it("returns rounded same value when from == to", () => {
+      expect(convertWeight(70, "kg", "kg")).toBe(70);
+      expect(convertWeight(70.156, "kg", "kg")).toBe(70.2);
+    });
+    it("converts kg → lb rounded to 1 decimal", () => {
+      expect(convertWeight(70, "kg", "lb")).toBe(154.3);
+      expect(convertWeight(100, "kg", "lb")).toBe(220.5);
+    });
+    it("converts lb → kg rounded to 1 decimal", () => {
+      expect(convertWeight(154.3, "lb", "kg")).toBeCloseTo(70, 1);
+    });
+    it("is approximately round-trippable", () => {
+      const lb = convertWeight(72, "kg", "lb");
+      const back = convertWeight(lb, "lb", "kg");
+      expect(back).toBeCloseTo(72, 1);
+    });
+  });
+
+  describe("convertHeight", () => {
+    it("returns rounded same value when from == to", () => {
+      expect(convertHeight(175, "cm", "cm")).toBe(175);
+    });
+    it("converts cm → in rounded to 1 decimal", () => {
+      expect(convertHeight(175, "cm", "in")).toBe(68.9);
+    });
+    it("converts in → cm rounded to 1 decimal", () => {
+      expect(convertHeight(68.9, "in", "cm")).toBeCloseTo(175, 0);
     });
   });
 });
