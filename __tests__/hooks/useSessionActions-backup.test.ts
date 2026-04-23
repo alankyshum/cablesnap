@@ -92,6 +92,7 @@ function createParams(overrides: Partial<Parameters<typeof useSessionActions>[0]
     updateGroupSet: jest.fn(),
     startRest: jest.fn(),
     startRestWithDuration: jest.fn(),
+    startRestWithBreakdown: jest.fn(),
     session: { started_at: Date.now() - 30000, name: "Test" },
     showToast: jest.fn(),
     showError: jest.fn(),

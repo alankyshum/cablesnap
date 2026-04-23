@@ -29,6 +29,8 @@ jest.mock("../../lib/db", () => ({
   updateSetTrainingMode: jest.fn().mockResolvedValue(undefined),
   getSessionSets: jest.fn().mockResolvedValue([]),
   getRestSecondsForLink: jest.fn().mockResolvedValue(90),
+  getRestContext: jest.fn().mockResolvedValue({ baseRestSeconds: 90, category: "standard", setType: "normal", rpe: null }),
+  getAppSetting: jest.fn().mockResolvedValue("false"),
   updateSetDuration: jest.fn().mockResolvedValue(undefined),
   checkSetPR: jest.fn().mockResolvedValue(false),
   updateExercisePositions: jest.fn().mockResolvedValue(undefined),
@@ -124,6 +126,7 @@ describe("useSessionActions – warmup rest timer guard", () => {
         updateGroupSet,
         startRest,
         startRestWithDuration,
+        startRestWithBreakdown: jest.fn(),
         session: { started_at: Date.now(), name: "Test" },
         showToast,
         showError,
@@ -140,7 +143,11 @@ describe("useSessionActions – warmup rest timer guard", () => {
       await result.current.handleCheck(normalSet);
     });
 
-    expect(startRest).toHaveBeenCalledWith("ex-1");
+    expect(startRest).toHaveBeenCalledWith(expect.objectContaining({
+      exerciseId: "ex-1",
+      sessionId: "session-1",
+      setType: "normal",
+    }));
   });
 
   it("does NOT auto-start rest timer when a warmup set is completed", async () => {

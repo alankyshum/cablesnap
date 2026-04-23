@@ -10,6 +10,8 @@ import {
   completeSession,
   completeSet,
   getRestSecondsForLink,
+  getRestContext,
+  getAppSetting,
   uncompleteSet,
   updateSet,
   updateSetRPE,
@@ -23,6 +25,7 @@ import {
   achieveGoal,
   getCurrentBestWeight,
 } from "../lib/db";
+import { resolveRestSeconds, defaultBreakdown, type RestBreakdown } from "../lib/rest";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
   getSessionProgramDayId,
@@ -51,6 +54,8 @@ async function checkGoalAchievement(exerciseId: string): Promise<boolean> {
   return false;
 }
 
+import type { SetContext } from "./useRestTimer";
+
 type Params = {
   id: string | undefined;
   groups: ExerciseGroup[];
@@ -58,8 +63,9 @@ type Params = {
   modes: Record<string, TrainingMode>;
   setModes: React.Dispatch<React.SetStateAction<Record<string, TrainingMode>>>;
   updateGroupSet: (setId: string, updates: Partial<SetWithMeta>) => void;
-  startRest: (exerciseId: string) => void;
+  startRest: (ctx: string | SetContext) => void;
   startRestWithDuration: (secs: number) => void;
+  startRestWithBreakdown: (breakdown: RestBreakdown) => void;
   session: { started_at: number; name: string } | null;
   showToast: (msg: string) => void;
   showError: (msg: string) => void;
@@ -76,6 +82,7 @@ export function useSessionActions({
   updateGroupSet,
   startRest,
   startRestWithDuration,
+  startRestWithBreakdown,
   session,
   showToast,
   showError,
@@ -158,10 +165,26 @@ export function useSessionActions({
       hintTimer.current = setTimeout(() => setNextHint(null), 1500);
     } else {
       setNextHint(null);
+      // Adaptive superset rest: resolve using the last-completed set's context
+      // on the final exercise of the superset (per plan §5).
+      const adaptiveSetting = await getAppSetting("rest_adaptive_enabled");
+      if (adaptiveSetting !== "false" && id) {
+        try {
+          const ctx = await getRestContext(id, set.exercise_id, {
+            set_type: set.set_type,
+            rpe: set.rpe,
+          });
+          const breakdown = resolveRestSeconds(ctx);
+          startRestWithBreakdown(breakdown);
+          return;
+        } catch {
+          // Fall through to legacy path on any error.
+        }
+      }
       const secs = await getRestSecondsForLink(id!, set.link_id!);
       startRestWithDuration(secs);
     }
-  }, [groups, id, startRestWithDuration]);
+  }, [groups, id, startRestWithDuration, startRestWithBreakdown]);
 
   const handleCheck = useCallback(async (set: SetWithMeta) => {
     if (set.completed) {
@@ -189,13 +212,21 @@ export function useSessionActions({
       }
     }
 
-    // Warmup sets skip rest timer — users don't need rest between warmup sets
-    if (set.set_type === 'warmup') return;
+    // Warmup sets: default behavior preserved (no timer). Opt-in via setting.
+    if (set.set_type === 'warmup') {
+      const warmupRest = await getAppSetting("rest_after_warmup_enabled");
+      if (warmupRest !== "true") return;
+    }
 
     if (set.link_id) {
       await handleLinkedRest(set);
     } else {
-      startRest(set.exercise_id);
+      startRest({
+        exerciseId: set.exercise_id,
+        sessionId: id!,
+        setType: set.set_type,
+        rpe: set.rpe,
+      });
     }
   }, [updateGroupSet, groups, id, startRest, startRestWithDuration, triggerPR, handleLinkedRest]);
 
