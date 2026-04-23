@@ -114,8 +114,11 @@ export function getStravaSupportAction(
     return {
       label: "Get help",
       onPress: () => {
-        void Linking.openURL(STRAVA_SUPPORT_URL).catch(() => {
-          // Swallow: user is already seeing an error toast, no need to cascade.
+        void Linking.openURL(STRAVA_SUPPORT_URL).catch((linkErr) => {
+          // Do not cascade a second error toast, but log so repeated
+          // URL-launch failures are diagnosable in production (e.g. when
+          // no browser is registered to handle https:// on the device).
+          console.warn("Strava support URL launch failed:", linkErr);
         });
       },
     };

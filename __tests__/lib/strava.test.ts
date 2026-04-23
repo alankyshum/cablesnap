@@ -493,17 +493,23 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
       openSpy.mockRestore();
     });
 
-    it("swallows Linking.openURL rejection to avoid cascading errors", async () => {
+    it("swallows Linking.openURL rejection but logs it for diagnostics", async () => {
       const openSpy = jest
         .spyOn(Linking, "openURL")
         .mockRejectedValue(new Error("no handler"));
+      const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
       const action = strava.getStravaSupportAction(
         new strava.StravaError("config", "x"),
       );
       expect(() => action.onPress()).not.toThrow();
       // Flush the rejected promise microtask without surfacing unhandled rejection
       await new Promise((r) => setImmediate(r));
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Strava support URL launch failed:",
+        expect.any(Error),
+      );
       openSpy.mockRestore();
+      warnSpy.mockRestore();
     });
   });
 
