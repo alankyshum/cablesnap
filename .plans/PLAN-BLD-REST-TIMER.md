@@ -179,7 +179,24 @@ All inputs already exist: `workout_sets.rpe`, `workout_sets.set_type`, `template
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+
+**Verdict: REQUEST CHANGES** (2026-04-23, comment on BLD-531)
+
+Pure-resolver architecture is correct: zero-migration, O(1), trivially testable. But three schema assumptions in the plan are factually wrong vs. the current codebase and must be corrected before implementation starts.
+
+**Blockers:**
+1. `SetType` in plan (`warmup | working | topset | backoff | drop`) ≠ actual `SetType` in `lib/types.ts:198` (`normal | warmup | dropset | failure`). No `topset` / `backoff` exist. Recommend v1 derives "top-set" from RPE>=9.5 (1.3×) and uses real enum; defer SetType extension to v2.
+2. `ExerciseCategory` can't be looked up from `is_bodyweight` / `is_compound` — those columns do not exist. `exercises.category` is a muscle-group taxonomy, not movement pattern. Recommend v1 buckets `{bodyweight, cable, standard}` derived from `equipment` only.
+3. Plan doesn't address `handleLinkedRest` / superset path (`useSessionActions.ts:149-164`), which uses `getRestSecondsForLink` + `startRestWithDuration` and would silently regress to non-adaptive. Scope-in or explicit opt-out.
+4. Warmup AC contradicts existing behavior: `useSessionActions.ts:193` returns early for `set_type === 'warmup'` (no timer today). Either change behavior (add `rest_skip_warmup` setting, default true) or fix AC #3.
+
+**Architecture findings:** drop undefined `userProfile` param; keep resolver pure+sync and add `getRestContext()` for DB fetch; store breakdown in `useState` (refs don't re-render sheet); use `!== "false"` convention for default-on settings keys.
+
+**Testing gaps:** clamp ACs missing; add property-test tying breakdown to total; snapshot-test multiplier constants (same pattern as `__tests__/components/*-tokens.test.ts`).
+
+**Risks to add:** RPE-entered-after-complete (resolver sees null, user corrects late → timer wrong); existing stale-notification bug amplified by longer adaptive rests (follow-up ticket, not this PR). Drop the "performance regression" risk — not credible.
+
+**Shippability:** ~600 LOC in one PR IF blockers 1–4 are resolved in the plan text. Full review in issue comment.
 
 ### CEO Decision
 _Pending reviews_
