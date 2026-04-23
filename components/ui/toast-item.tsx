@@ -41,7 +41,7 @@ export function Toast({ id, title, description, variant = 'default', onDismiss, 
             {title && <Text variant='subtitle' style={{ color: Colors.light.onToast, fontSize: fontSizes.sm, fontWeight: '600', marginBottom: description ? 2 : 0 }} numberOfLines={1} ellipsizeMode='tail'>{title}</Text>}
             {description && <Text variant='caption' style={{ color: MUTED, fontSize: fontSizes.sm }} numberOfLines={2} ellipsizeMode='tail'>{description}</Text>}
           </View>
-          {action && <TouchableOpacity onPress={action.onPress} style={[styles.actionBtn, { backgroundColor: variantColor }]}><Text variant='caption' style={{ color: Colors.light.onToast, fontSize: fontSizes.xs, fontWeight: '600' }}>{action.label}</Text></TouchableOpacity>}
+          {action && <TouchableOpacity onPress={action.onPress} style={[styles.actionBtn, { backgroundColor: variantColor }]} accessibilityRole='link' accessibilityLabel={action.label} testID='toast-action'><Text variant='caption' style={{ color: Colors.light.onToast, fontSize: fontSizes.xs, fontWeight: '600' }}>{action.label}</Text></TouchableOpacity>}
           <TouchableOpacity onPress={dismiss} style={styles.dismissBtn}><X size={14} color={MUTED} /></TouchableOpacity>
         </View>
       </Animated.View>

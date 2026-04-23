@@ -180,6 +180,25 @@ describe('ToastProvider + useToast', () => {
     expect(onAction).toHaveBeenCalledTimes(1)
   })
 
+  it('exposes the toast action CTA as an accessible link (BLD-513)', () => {
+    const onAction = jest.fn()
+    const { getByTestId } = renderWithToast(
+      <ToastTrigger title="Config error" actionLabel="Get help" onAction={onAction} />
+    )
+    fireEvent.press(getByTestId('show-toast'))
+    const cta = getByTestId('toast-action')
+    expect(cta.props.accessibilityRole).toBe('link')
+    expect(cta.props.accessibilityLabel).toBe('Get help')
+  })
+
+  it('does not render an action CTA when no action is provided (no regression)', () => {
+    const { getByTestId, queryByTestId } = renderWithToast(
+      <ToastTrigger title="Plain toast" />
+    )
+    fireEvent.press(getByTestId('show-toast'))
+    expect(queryByTestId('toast-action')).toBeNull()
+  })
+
   it('success() accepts string description shorthand', () => {
     function ShorthandTrigger() {
       const toast = useToast()
