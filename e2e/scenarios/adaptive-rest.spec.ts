@@ -6,7 +6,7 @@
  * the toolbar in isolation (see `app/__test__/rest-toolbar.tsx`) with state
  * seeded via `window.__REST_TOOLBAR_SEED__`.
  *
- * 6 states × 3 projects (mobile-narrow / mobile / mobile-large) = 18 baselines.
+ * 7 states × 3 projects (mobile-narrow / mobile / mobile-large) = 21 baselines.
  *
  * The session screen below the header has live timestamps and per-set badges
  * that would flake baselines, so capture is clipped to the toolbar root
@@ -129,6 +129,24 @@ const STATES: StateCase[] = [
     },
   },
   {
+    // S7: setType=failure branch in pickReason (lib/rest.ts:108). Single-token
+    // chip, "Failure". Covers the only setType-derived reasonShort not hit by
+    // S1–S6. Added per @techlead `23427a5d` + @ux-designer `d561df6d`
+    // (2026-04-23T20:05Z).
+    name: "adaptive-chip-failure",
+    seed: {
+      rest: 90,
+      breakdown: {
+        totalSeconds: 90,
+        baseSeconds: 90,
+        factors: [{ label: "Failure", multiplier: 1.3, deltaSeconds: 0 }],
+        isDefault: false,
+        reasonShort: "Failure",
+        reasonAccessible: "Failure set",
+      },
+    },
+  },
+  {
     // S6: 3-token reasonShort forces the truncateChipLabel path. On 320dp
     // viewport the label truncates to "Heavy · RPE 9"; on 390/430dp the full
     // string renders. This is the only state that exercises the truncation
@@ -191,6 +209,26 @@ test.describe("@scenario adaptive-rest", () => {
 
       const toolbar = page.locator('[data-testid="session-header-toolbar"]');
       await expect(toolbar).toBeVisible({ timeout: 5_000 });
+
+      // Async-resolve guard: the toolbar's useEffect reads `rest_show_breakdown`
+      // via `getAppSetting` (components/session/SessionHeaderToolbar.tsx:125-131).
+      // It starts with `showBreakdownChip=true`, flips to the persisted value
+      // on microtask resolve. Harness flips `data-test-ready` synchronously
+      // with first mount (app/__test__/rest-toolbar.tsx:89-93), so for the
+      // "chip MUST NOT render" states (S4 isDefault=true, S5 setting=false)
+      // we must wait for the chip to NOT be present before screenshotting.
+      // This gates on the `adaptive-chip` testID on the chip-wrap View.
+      // For positive-chip states, waiting on toHaveCount>=1 serves symmetrically
+      // and prevents first-paint capture in states where the chip would briefly
+      // flash before the persisted setting negates it.
+      const expectChip =
+        name !== "adaptive-chip-hidden-default" && name !== "adaptive-chip-hidden-by-setting";
+      const chip = page.locator('[data-testid="adaptive-chip"]');
+      if (expectChip) {
+        await expect(chip).toHaveCount(1, { timeout: 5_000 });
+      } else {
+        await expect(chip).toHaveCount(0, { timeout: 5_000 });
+      }
 
       // Capture clipped to the toolbar only; mask ticking text.
       await expect(toolbar).toHaveScreenshot(`${name}.png`, {
