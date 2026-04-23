@@ -95,6 +95,25 @@ function rpeLabelAccessible(bucket: RpeBucket, rpe: number | null): string {
   return "";
 }
 
+type ReasonLabel = { short: string; accessible: string };
+
+function pickReason(
+  setType: SetType,
+  bucket: RpeBucket,
+  category: ExerciseCategory,
+  rpe: number | null,
+): ReasonLabel {
+  if (setType === "dropset") return { short: "Drop-set", accessible: "Drop-set" };
+  if (setType === "warmup") return { short: "Warmup", accessible: "Warmup set" };
+  if (setType === "failure") return { short: "Failure", accessible: "Failure set" };
+  if (bucket !== "midOrNull") {
+    return { short: rpeLabelShort(bucket, rpe), accessible: rpeLabelAccessible(bucket, rpe) };
+  }
+  if (category === "cable") return { short: "Cable", accessible: "Cable exercise" };
+  if (category === "bodyweight") return { short: "Bodyweight", accessible: "Bodyweight exercise" };
+  return { short: "", accessible: "" };
+}
+
 export function resolveRestSeconds(inputs: RestInputs): RestBreakdown {
   const baseSeconds =
     inputs.baseRestSeconds > 0 ? inputs.baseRestSeconds : FALLBACK_BASE_SECONDS;
@@ -124,69 +143,39 @@ export function resolveRestSeconds(inputs: RestInputs): RestBreakdown {
   };
 
   if (setTypeMult !== 1.0) {
-    pushFactor(
+    const label =
       inputs.setType === "warmup"
         ? "Warmup"
         : inputs.setType === "dropset"
           ? "Drop-set"
-          : "Failure",
-      setTypeMult,
-    );
+          : "Failure";
+    pushFactor(label, setTypeMult);
   }
   if (rpeMult !== 1.0) {
     pushFactor(rpeLabelShort(bucket, inputs.rpe), rpeMult);
   }
   if (catMult !== 1.0) {
-    pushFactor(
+    const label =
       inputs.category === "cable"
         ? "Cable"
         : inputs.category === "bodyweight"
           ? "Bodyweight"
-          : "Standard",
-      catMult,
-    );
+          : "Standard";
+    pushFactor(label, catMult);
   }
 
-  const isDefault = factors.every((f) => f.multiplier === 1.0) && factors.length === 0;
-
-  // reasonShort priority: setType ≠ normal → RPE ≠ mid → category ≠ standard
-  let reasonShort = "";
-  let reasonAccessible = "";
-  if (!isDefault) {
-    if (inputs.setType === "dropset") {
-      reasonShort = "Drop-set";
-      reasonAccessible = "Drop-set";
-    } else if (inputs.setType === "warmup") {
-      reasonShort = "Warmup";
-      reasonAccessible = "Warmup set";
-    } else if (inputs.setType === "failure") {
-      reasonShort = "Failure";
-      reasonAccessible = "Failure set";
-    } else if (bucket === "veryHigh") {
-      reasonShort = rpeLabelShort(bucket, inputs.rpe);
-      reasonAccessible = rpeLabelAccessible(bucket, inputs.rpe);
-    } else if (bucket === "high") {
-      reasonShort = rpeLabelShort(bucket, inputs.rpe);
-      reasonAccessible = rpeLabelAccessible(bucket, inputs.rpe);
-    } else if (bucket === "low") {
-      reasonShort = rpeLabelShort(bucket, inputs.rpe);
-      reasonAccessible = rpeLabelAccessible(bucket, inputs.rpe);
-    } else if (inputs.category === "cable") {
-      reasonShort = "Cable";
-      reasonAccessible = "Cable exercise";
-    } else if (inputs.category === "bodyweight") {
-      reasonShort = "Bodyweight";
-      reasonAccessible = "Bodyweight exercise";
-    }
-  }
+  const isDefault = factors.length === 0;
+  const reason = isDefault
+    ? { short: "", accessible: "" }
+    : pickReason(inputs.setType, bucket, inputs.category, inputs.rpe);
 
   return {
     totalSeconds,
     baseSeconds,
     factors,
     isDefault,
-    reasonShort,
-    reasonAccessible,
+    reasonShort: reason.short,
+    reasonAccessible: reason.accessible,
   };
 }
 

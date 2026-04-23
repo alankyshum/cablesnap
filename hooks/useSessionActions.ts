@@ -25,7 +25,7 @@ import {
   achieveGoal,
   getCurrentBestWeight,
 } from "../lib/db";
-import { resolveRestSeconds, defaultBreakdown, type RestBreakdown } from "../lib/rest";
+import { resolveRestSeconds, type RestBreakdown } from "../lib/rest";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
   getSessionProgramDayId,

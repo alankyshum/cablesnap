@@ -179,23 +179,11 @@ function SessionHeaderToolbarInner({
   // - below 360dp viewport, truncate to 2 tokens max (split on · then take 2)
   const hasAdaptiveBreakdown = !!breakdown && !breakdown.isDefault && !!breakdown.reasonShort;
   const renderChip = isRestActive && hasAdaptiveBreakdown && showBreakdownChip;
-  let chipLabel = breakdown?.reasonShort ?? "";
-  if (renderChip && viewportWidth < 360) {
-    const tokens = chipLabel.split(/\s*·\s*/);
-    if (tokens.length > 2) {
-      chipLabel = tokens.slice(0, 2).join(" · ");
-    }
-  }
+  const chipLabel = renderChip
+    ? truncateChipLabel(breakdown?.reasonShort ?? "", viewportWidth)
+    : "";
 
-  const activeA11yLabel = (() => {
-    if (showRestDone) return "Rest complete. Tap to dismiss.";
-    const base = `Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds. Tap to dismiss.`;
-    if (hasAdaptiveBreakdown && breakdown?.reasonAccessible) {
-      // Insert reason before "Tap to dismiss." and append long-press hint.
-      return `Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds. ${breakdown.reasonAccessible}. Tap to dismiss. Long-press for breakdown.`;
-    }
-    return base;
-  })();
+  const activeA11yLabel = buildActiveA11yLabel(rest, showRestDone, hasAdaptiveBreakdown, breakdown);
 
   return (
     <>
@@ -408,6 +396,29 @@ function RestDurationPicker({
 }
 
 export const SessionHeaderToolbar = React.memo(SessionHeaderToolbarInner);
+
+function truncateChipLabel(label: string, viewportWidth: number): string {
+  if (viewportWidth >= 360) return label;
+  const tokens = label.split(/\s*·\s*/);
+  if (tokens.length <= 2) return label;
+  return tokens.slice(0, 2).join(" · ");
+}
+
+function buildActiveA11yLabel(
+  rest: number,
+  showRestDone: boolean,
+  hasAdaptiveBreakdown: boolean,
+  breakdown: RestBreakdown | undefined,
+): string {
+  if (showRestDone) return "Rest complete. Tap to dismiss.";
+  const min = Math.floor(rest / 60);
+  const sec = rest % 60;
+  const base = `Rest timer: ${min} minutes ${sec} seconds. Tap to dismiss.`;
+  if (hasAdaptiveBreakdown && breakdown?.reasonAccessible) {
+    return `Rest timer: ${min} minutes ${sec} seconds. ${breakdown.reasonAccessible}. Tap to dismiss. Long-press for breakdown.`;
+  }
+  return base;
+}
 
 const styles = StyleSheet.create({
   container: {
