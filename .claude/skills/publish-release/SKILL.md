@@ -33,14 +33,15 @@ file without rotating the signing key deliberately.
 on a dev machine will silently fall back to the debug keystore (see
 `plugins/with-release-signing.js`). Only CI produces shippable APKs.
 
-### One-time reinstall warning
+### One-time reinstall warning (historical)
 
-The FIRST release after BLD-485 merged required users to uninstall and
-reinstall the app once (Android refuses in-place updates when the signing
-certificate changes). Every release after that updates cleanly in-place.
-The banner lives at `fdroid/FIRST_SIGNED_RELEASE_NOTICE.md`; delete it after
-the first signed release has shipped to stop prepending the warning to
-future release notes.
+The first release after BLD-485 merged (v0.26.3) required users to uninstall
+and reinstall once because the signing certificate changed from the ephemeral
+debug keystore to the persistent production keystore. Every release after
+that updates cleanly in-place. The one-time banner file
+(`fdroid/FIRST_SIGNED_RELEASE_NOTICE.md`) was removed in BLD-514 after the
+transition completed. If you ever rotate the signing key again you will need
+to recreate a similar banner — see the rotation section below.
 
 ### Rotating the signing key
 
@@ -64,8 +65,9 @@ If you truly must rotate:
 3. In the **same PR**: update `fdroid/release-cert.sha256` to the new
    fingerprint (the fingerprint gate in `scheduled-release.yml` is the
    single source of truth — drift = failed release).
-4. Recreate `fdroid/FIRST_SIGNED_RELEASE_NOTICE.md` warning users of the one-
-   time uninstall.
+4. Recreate a one-time uninstall warning banner (similar to the historical
+   `fdroid/FIRST_SIGNED_RELEASE_NOTICE.md` removed in BLD-514) and wire it
+   into `.github/workflows/scheduled-release.yml` release notes.
 5. Consider bumping the major version or the Android `package` name so the
    break is explicit.
 
