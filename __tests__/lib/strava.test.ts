@@ -254,6 +254,16 @@ jest.mock("../../lib/db", () => ({
   getSessionSets: jest.fn(),
   getBodySettings: jest.fn(),
 }));
+jest.mock("@sentry/react-native", () => ({
+  __esModule: true,
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+  addBreadcrumb: jest.fn(),
+  captureException: jest.fn(),
+}));
 
 const AuthSession = require("expo-auth-session");
 const SecureStore = require("expo-secure-store");
@@ -409,6 +419,154 @@ describe("Strava Integration — Behavioral", () => {
     // retry_count >= MAX_RETRIES (3) → permanently failed without attempting upload
     expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-old");
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
+  const mockFetch = jest.fn();
+  const originalFetch = global.fetch;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Sentry = require("@sentry/react-native");
+
+  const SECRET_ACCESS_TOKEN = "at-super-secret-123";
+  const SECRET_REFRESH_TOKEN = "rt-super-secret-456";
+  const SECRET_AUTH_CODE = "auth-code-xyz-secret";
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = mockFetch;
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
+
+  function scanLoggerCallsForSecrets(): void {
+    const loggerMocks = [Sentry.logger.info, Sentry.logger.warn, Sentry.logger.error];
+    for (const m of loggerMocks) {
+      for (const call of m.mock.calls) {
+        const serialized = JSON.stringify(call);
+        expect(serialized).not.toContain(SECRET_ACCESS_TOKEN);
+        expect(serialized).not.toContain(SECRET_REFRESH_TOKEN);
+        expect(serialized).not.toContain(SECRET_AUTH_CODE);
+      }
+    }
+  }
+
+  it("connectStrava emits lifecycle logs and never leaks tokens or auth codes", async () => {
+    AuthSession.AuthRequest.mockImplementation(() => ({
+      promptAsync: jest.fn().mockResolvedValue({
+        type: "success",
+        params: { code: SECRET_AUTH_CODE },
+      }),
+    }));
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: SECRET_ACCESS_TOKEN,
+        refresh_token: SECRET_REFRESH_TOKEN,
+        expires_at: 9999999999,
+        athlete: { id: 42, firstname: "Jane", lastname: "Doe" },
+      }),
+    });
+
+    await strava.connectStrava();
+
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_connect", step: "start" }),
+    );
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_connect", step: "auth_prompt", resultType: "success", hasCode: true }),
+    );
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_connect", step: "token_exchange_ok" }),
+    );
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_connect", step: "success", athleteId: 42 }),
+    );
+
+    scanLoggerCallsForSecrets();
+  });
+
+  it("connectStrava logs user_cancelled when OAuth is cancelled (no tokens in logs)", async () => {
+    AuthSession.AuthRequest.mockImplementation(() => ({
+      promptAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
+    }));
+
+    const result = await strava.connectStrava();
+
+    expect(result).toBeNull();
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_connect", step: "user_cancelled", resultType: "cancel" }),
+    );
+    scanLoggerCallsForSecrets();
+  });
+
+  it("disconnect emits start + success lifecycle logs", async () => {
+    SecureStore.getItemAsync.mockResolvedValueOnce(SECRET_ACCESS_TOKEN);
+    mockFetch.mockResolvedValueOnce({ ok: true });
+
+    await strava.disconnect();
+
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_disconnect", step: "start" }),
+    );
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_disconnect", step: "success" }),
+    );
+    scanLoggerCallsForSecrets();
+  });
+
+  it("syncSessionToStrava emits start + success lifecycle logs with sessionId and activityId", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s1", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return SECRET_ACCESS_TOKEN;
+      return null;
+    });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: 98765 }) });
+
+    await strava.syncSessionToStrava("s1");
+
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_upload", step: "start", sessionId: "s1" }),
+    );
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ flow: "strava_upload", step: "success", sessionId: "s1", activityId: "98765" }),
+    );
+    scanLoggerCallsForSecrets();
+  });
+
+  it("does not throw when Sentry.logger is undefined (older SDK compatibility)", async () => {
+    const original = Sentry.logger;
+    // Simulate older SDK without logger export
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (Sentry as any).logger = undefined;
+    try {
+      AuthSession.AuthRequest.mockImplementation(() => ({
+        promptAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
+      }));
+      await expect(strava.connectStrava()).resolves.toBeNull();
+    } finally {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (Sentry as any).logger = original;
+    }
   });
 });
 
