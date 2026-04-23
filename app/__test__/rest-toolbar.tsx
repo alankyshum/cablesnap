@@ -72,7 +72,17 @@ export default function RestToolbarHarness() {
         if (kv.rest_adaptive_enabled !== undefined) {
           writes.push(setAppSetting("rest_adaptive_enabled", kv.rest_adaptive_enabled));
         }
-        await Promise.all(writes);
+        try {
+          await Promise.all(writes);
+        } catch (err) {
+          // Never swallow failure silently — expose via data attr so Playwright
+          // surfaces it in error-context, then still flip testReady so the gate
+          // releases and the spec can record the rendered state.
+          if (typeof document !== "undefined" && document.body) {
+            document.body.dataset.testSeedError =
+              err instanceof Error ? err.message : String(err);
+          }
+        }
         if (cancelled) return;
         setSeed(s);
         if (typeof document !== "undefined" && document.body) {
