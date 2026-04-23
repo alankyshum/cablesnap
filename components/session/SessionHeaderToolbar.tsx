@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import BottomSheet from "@gorhom/bottom-sheet";
+import { router } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -118,13 +119,16 @@ function SessionHeaderToolbarInner({
   }, [onDismissRest]);
 
   // Load rest_show_breakdown setting (default on via !== "false").
+  // Loaded once on mount — users toggle this in Settings before a session, so
+  // re-reading per tick of `rest` is a waste (SQLite hit every second). If the
+  // user flips the toggle mid-session, it will take effect on the next session.
   useEffect(() => {
     let cancelled = false;
     getAppSetting("rest_show_breakdown").then((v) => {
       if (!cancelled) setShowBreakdownChip(v !== "false");
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [rest]);
+  }, []);
 
   const handleLongPress = useCallback(async () => {
     // Load current settings before opening picker
@@ -171,6 +175,11 @@ function SessionHeaderToolbarInner({
     setPickerVisible(false);
   }, []);
 
+  const handleEditAdaptiveRules = useCallback(() => {
+    breakdownSheetRef.current?.close();
+    router.push("/(tabs)/settings");
+  }, []);
+
   const isRestActive = rest > 0;
 
   // Adaptive chip rules (plan §UX):
@@ -188,9 +197,12 @@ function SessionHeaderToolbarInner({
   return (
     <>
       <View style={styles.container}>
-        {/* Inline adaptive chip — left of the timer pill */}
+        {/* Inline adaptive chip — left of the timer pill. Chip is a discoverable
+            shortcut to the breakdown sheet; the timer pill's a11y label already
+            announces the full adaptive reason, so the chip is a redundant-but-
+            reachable affordance for pointer/keyboard users. */}
         {renderChip && (
-          <View style={styles.chipWrap} accessibilityElementsHidden importantForAccessibility="no">
+          <View style={styles.chipWrap}>
             <Chip
               selected={false}
               onPress={handleRestLongPress}
@@ -307,6 +319,7 @@ function SessionHeaderToolbarInner({
           onAddTime={handleBreakdownAdjust}
           onCutShort={handleBreakdownCut}
           onDismiss={handleBreakdownDismiss}
+          onEditRules={handleEditAdaptiveRules}
         />
       ) : null}
     </>

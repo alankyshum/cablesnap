@@ -63,9 +63,11 @@ export function RestBreakdownSheet({
   }, []);
 
   useEffect(() => {
-    // Reset explainer visibility each mount so dismiss+reopen re-evaluates the flag.
+    // Reset the "already persisted" guard when the breakdown object identity
+    // changes (i.e., a new rest timer starts) so the explainer can show again
+    // on a subsequent mount if the setting was cleared externally.
     explainerPersistedRef.current = false;
-  }, []);
+  }, [breakdown]);
 
   const maxBar = Math.max(
     breakdown.baseSeconds,
