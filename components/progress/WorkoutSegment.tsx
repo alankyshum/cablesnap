@@ -28,6 +28,7 @@ import { PRSummaryCard } from "./PRSummaryCard";
 import CalendarView from "./CalendarView";
 import StrengthLevelsCard from "./StrengthLevelsCard";
 import ActiveGoalsCard from "./ActiveGoalsCard";
+import WorkoutEmptyState from "./WorkoutEmptyState";
 import { fontSizes } from "@/constants/design-tokens";
 
 let cachedWeekStart: number | null = null;
@@ -133,15 +134,7 @@ export default function WorkoutSegment() {
           <WeeklySummary />
         </View>
         <View style={[styles.center, { flex: 1 }]}>
-          <Text
-            style={{
-              color: colors.onSurfaceVariant,
-              textAlign: "center",
-              padding: 32,
-            }}
-          >
-            Complete your first workout to see progress
-          </Text>
+          <WorkoutEmptyState />
         </View>
       </View>
     );
