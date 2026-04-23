@@ -196,7 +196,7 @@ function SessionHeaderToolbarInner({
 
   return (
     <>
-      <View style={styles.container}>
+      <View style={styles.container} testID="session-header-toolbar">
         {/* Inline adaptive chip — left of the timer pill. Chip is a discoverable
             shortcut to the breakdown sheet; the timer pill's a11y label already
             announces the full adaptive reason, so the chip is a redundant-but-
@@ -226,6 +226,7 @@ function SessionHeaderToolbarInner({
           >
             <Text
               variant="body"
+              testID="rest-countdown-text"
               style={{
                 color: colors.primary,
                 fontWeight: "700",
@@ -260,6 +261,7 @@ function SessionHeaderToolbarInner({
         >
           <Text
             variant="body"
+            testID="elapsed-time"
             style={{
               color: isRestActive ? colors.onSurfaceVariant : colors.primary,
               fontSize: fontSizes.sm,
@@ -273,6 +275,7 @@ function SessionHeaderToolbarInner({
             return (
               <Text
                 variant="body"
+                testID="elapsed-remaining"
                 style={{
                   color: colors.onSurfaceVariant,
                   fontSize: fontSizes.xs,
