@@ -40,8 +40,19 @@ export function Toast({ id, title, description, variant = 'default', onDismiss, 
           <View style={{ flex: 1, minWidth: 0 }}>
             {title && <Text variant='subtitle' style={{ color: Colors.light.onToast, fontSize: fontSizes.sm, fontWeight: '600', marginBottom: description ? 2 : 0 }} numberOfLines={1} ellipsizeMode='tail'>{title}</Text>}
             {description && <Text variant='caption' style={{ color: MUTED, fontSize: fontSizes.sm }} numberOfLines={2} ellipsizeMode='tail'>{description}</Text>}
+            {action && (
+              <TouchableOpacity
+                onPress={action.onPress}
+                style={styles.actionLink}
+                accessibilityRole='link'
+                accessibilityLabel={action.label}
+                testID='toast-action'
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text variant='caption' style={styles.actionLinkText}>{action.label}</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          {action && <TouchableOpacity onPress={action.onPress} style={[styles.actionBtn, { backgroundColor: variantColor }]}><Text variant='caption' style={{ color: Colors.light.onToast, fontSize: fontSizes.xs, fontWeight: '600' }}>{action.label}</Text></TouchableOpacity>}
           <TouchableOpacity onPress={dismiss} style={styles.dismissBtn}><X size={14} color={MUTED} /></TouchableOpacity>
         </View>
       </Animated.View>
@@ -52,6 +63,10 @@ export function Toast({ id, title, description, variant = 'default', onDismiss, 
 const styles = StyleSheet.create({
   container: { position: 'absolute', left: 32, right: 32, shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
   island: { borderRadius: 14, backgroundColor: Colors.dark.card, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
-  actionBtn: { marginLeft: 12, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  // BLD-513: Support CTA renders as a subdued underlined link below the
+  // description (per design brief: colors.primary, fontSizes.xs, 4px above).
+  // Intentionally no backgroundColor/padding/borderRadius — it's a link, not a pill.
+  actionLink: { marginTop: 4, alignSelf: 'flex-start' },
+  actionLinkText: { color: Colors.dark.primary, fontSize: fontSizes.xs, fontWeight: '600', textDecorationLine: 'underline' },
   dismissBtn: { marginLeft: 8, padding: 4, borderRadius: 8 },
 });

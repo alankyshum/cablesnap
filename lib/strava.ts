@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
@@ -84,6 +84,46 @@ export function getStravaUserMessage(err: unknown): string {
     return "Check your internet and try again.";
   }
   return "Something went wrong connecting to Strava.";
+}
+
+// Public URL users can open when Strava errors are unactionable in-app
+// (e.g. misconfigured build). Points to the project issue tracker so users
+// can file a bug or read known issues.
+export const STRAVA_SUPPORT_URL =
+  "https://github.com/alankyshum/cablesnap/issues";
+
+export interface StravaSupportAction {
+  label: string;
+  onPress: () => void;
+}
+
+/**
+ * Returns an optional support CTA to pair with a Strava error toast.
+ * Only errors the user cannot self-resolve (currently `config`) surface
+ * a "Get help" link that opens {@link STRAVA_SUPPORT_URL}. For all other
+ * error codes, returns undefined so the toast shows no CTA.
+ *
+ * TODO(BLD-513): generalize if a second integration needs this — extract
+ * a `makeSupportAction(url, label)` factory into `lib/support.ts` and
+ * keep this function as the Strava-specific caller.
+ */
+export function getStravaSupportAction(
+  err: unknown,
+): StravaSupportAction | undefined {
+  if (err instanceof StravaError && err.code === "config") {
+    return {
+      label: "Get help",
+      onPress: () => {
+        void Linking.openURL(STRAVA_SUPPORT_URL).catch((linkErr) => {
+          // Do not cascade a second error toast, but log so repeated
+          // URL-launch failures are diagnosable in production (e.g. when
+          // no browser is registered to handle https:// on the device).
+          console.warn("Strava support URL launch failed:", linkErr);
+        });
+      },
+    };
+  }
+  return undefined;
 }
 
 // Strava API constants

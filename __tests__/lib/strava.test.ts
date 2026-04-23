@@ -456,6 +456,63 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
     });
   });
 
+  describe("getStravaSupportAction (BLD-513)", () => {
+    const { Linking } = require("react-native");
+
+    it("returns a 'Get help' action for config errors", () => {
+      const action = strava.getStravaSupportAction(
+        new strava.StravaError("config", "Strava proxy URL not configured"),
+      );
+      expect(action).toBeDefined();
+      expect(action.label).toBe("Get help");
+      expect(typeof action.onPress).toBe("function");
+    });
+
+    it("returns undefined for non-config errors (no CTA on self-recoverable errors)", () => {
+      expect(strava.getStravaSupportAction(new strava.StravaError("network", "x"))).toBeUndefined();
+      expect(strava.getStravaSupportAction(new strava.StravaError("auth_expired", "x"))).toBeUndefined();
+      expect(strava.getStravaSupportAction(new strava.StravaError("rate_limit", "x"))).toBeUndefined();
+      expect(strava.getStravaSupportAction(new strava.StravaError("server", "x"))).toBeUndefined();
+      expect(strava.getStravaSupportAction(new strava.StravaError("unknown", "x"))).toBeUndefined();
+      expect(strava.getStravaSupportAction(new Error("plain"))).toBeUndefined();
+      expect(strava.getStravaSupportAction("string error")).toBeUndefined();
+    });
+
+    it("onPress opens the support URL via Linking", () => {
+      const openSpy = jest
+        .spyOn(Linking, "openURL")
+        .mockResolvedValue(undefined as unknown as true);
+      const action = strava.getStravaSupportAction(
+        new strava.StravaError("config", "x"),
+      );
+      action.onPress();
+      expect(openSpy).toHaveBeenCalledWith(strava.STRAVA_SUPPORT_URL);
+      expect(strava.STRAVA_SUPPORT_URL).toMatch(
+        /^https:\/\/github\.com\/alankyshum\/cablesnap\/issues/,
+      );
+      openSpy.mockRestore();
+    });
+
+    it("swallows Linking.openURL rejection but logs it for diagnostics", async () => {
+      const openSpy = jest
+        .spyOn(Linking, "openURL")
+        .mockRejectedValue(new Error("no handler"));
+      const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      const action = strava.getStravaSupportAction(
+        new strava.StravaError("config", "x"),
+      );
+      expect(() => action.onPress()).not.toThrow();
+      // Flush the rejected promise microtask without surfacing unhandled rejection
+      await new Promise((r) => setImmediate(r));
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Strava support URL launch failed:",
+        expect.any(Error),
+      );
+      openSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+  });
+
   describe("connectStrava throws typed StravaError", () => {
     const AuthSession = require("expo-auth-session");
     const mockFetch = jest.fn();
@@ -526,8 +583,15 @@ describe("Strava Integration — IntegrationsCard wiring (BLD-505)", () => {
 
   it("uses getStravaUserMessage for the connect error path", () => {
     expect(integrationsSrc).toContain("getStravaUserMessage");
-    expect(integrationsSrc).toContain("toast.error(getStravaUserMessage(err))");
+    expect(integrationsSrc).toContain("toast.error(getStravaUserMessage(err)");
     // Old raw-message path must be gone
     expect(integrationsSrc).not.toMatch(/toast\.error\(err instanceof Error \? err\.message/);
+  });
+
+  it("pairs the error toast with a support action CTA (BLD-513)", () => {
+    expect(integrationsSrc).toContain("getStravaSupportAction");
+    expect(integrationsSrc).toMatch(
+      /toast\.error\(getStravaUserMessage\(err\),\s*\{\s*action:\s*getStravaSupportAction\(err\)\s*\}\)/,
+    );
   });
 });

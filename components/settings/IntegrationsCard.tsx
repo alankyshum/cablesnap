@@ -9,7 +9,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import { setAppSetting } from "@/lib/db";
-import { connectStrava, disconnect as disconnectStrava, getStravaUserMessage } from "@/lib/strava";
+import { connectStrava, disconnect as disconnectStrava, getStravaSupportAction, getStravaUserMessage } from "@/lib/strava";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
 
@@ -81,7 +81,7 @@ export default function IntegrationsCard({
                     if (__DEV__) {
                       console.warn("Strava connect failed:", err);
                     }
-                    toast.error(getStravaUserMessage(err));
+                    toast.error(getStravaUserMessage(err), { action: getStravaSupportAction(err) });
                   } finally { setStravaLoading(false); }
                 }}
                 loading={stravaLoading}

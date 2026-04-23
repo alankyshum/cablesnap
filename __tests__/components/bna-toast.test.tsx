@@ -180,6 +180,58 @@ describe('ToastProvider + useToast', () => {
     expect(onAction).toHaveBeenCalledTimes(1)
   })
 
+  it('exposes the toast action CTA as an accessible link (BLD-513)', () => {
+    const onAction = jest.fn()
+    const { getByTestId } = renderWithToast(
+      <ToastTrigger title="Config error" actionLabel="Get help" onAction={onAction} />
+    )
+    fireEvent.press(getByTestId('show-toast'))
+    const cta = getByTestId('toast-action')
+    expect(cta.props.accessibilityRole).toBe('link')
+    expect(cta.props.accessibilityLabel).toBe('Get help')
+  })
+
+  it('renders the CTA as a subdued link below the message, not an inline pill (BLD-513)', () => {
+    const { StyleSheet } = require('react-native')
+    const { Colors } = require('../../theme/colors')
+    const onAction = jest.fn()
+    const { getByTestId, getByText } = renderWithToast(
+      <ToastTrigger
+        title="Config error"
+        description="Strava isn't set up correctly."
+        actionLabel="Get help"
+        onAction={onAction}
+      />
+    )
+    fireEvent.press(getByTestId('show-toast'))
+    const cta = getByTestId('toast-action')
+    const ctaStyle = StyleSheet.flatten(cta.props.style)
+    // Link-shape contract: no pill backdrop, 4px gap above, left-aligned.
+    expect(ctaStyle).not.toHaveProperty('backgroundColor')
+    expect(ctaStyle).not.toHaveProperty('borderRadius')
+    expect(ctaStyle).not.toHaveProperty('paddingHorizontal')
+    expect(ctaStyle).not.toHaveProperty('paddingVertical')
+    expect(ctaStyle.marginTop).toBe(4)
+    expect(ctaStyle.alignSelf).toBe('flex-start')
+
+    // Label text uses primary color + xs + underlined per design brief.
+    const { fontSizes } = require('../../constants/design-tokens')
+    const labelNode = getByText('Get help')
+    const labelStyle = StyleSheet.flatten(labelNode.props.style)
+    expect(labelStyle.color).toBe(Colors.dark.primary)
+    expect(labelStyle.fontSize).toBe(fontSizes.xs)
+    expect(labelStyle.textDecorationLine).toBe('underline')
+    expect(labelStyle.fontWeight).toBe('600')
+  })
+
+  it('does not render an action CTA when no action is provided (no regression)', () => {
+    const { getByTestId, queryByTestId } = renderWithToast(
+      <ToastTrigger title="Plain toast" />
+    )
+    fireEvent.press(getByTestId('show-toast'))
+    expect(queryByTestId('toast-action')).toBeNull()
+  })
+
   it('success() accepts string description shorthand', () => {
     function ShorthandTrigger() {
       const toast = useToast()
