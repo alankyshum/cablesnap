@@ -9,18 +9,11 @@ name: Bundle Gate
 # Refs: BLD-494, BLD-495.
 
 on:
-  pull_request:
-    paths:
-      - 'lib/db/**'
-      - 'hooks/**'
-      - 'e2e/**'
-      - 'scripts/verify-scenario-hook-not-in-bundle.sh'
-      - '.github/workflows/bundle-gate.yml'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'app.config.ts'
-      - 'metro.config.js'
-      - 'babel.config.js'
+  # Runs on every PR. The underlying script (~2 min) passes trivially when none
+  # of the guarded paths have changed, so leaving it unfiltered is cheaper than
+  # the operational cost of PRs being stuck in BLOCKED mergeStateStatus because
+  # a required check never reported (BLD-525).
+  pull_request: {}
   push:
     branches:
       - main
