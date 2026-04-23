@@ -13,6 +13,18 @@ name: E2E Update Snapshots
 # regeneration happens here.
 
 on:
+  # workflow_dispatch requires the file to exist on the default branch, which
+  # defeats the purpose for a one-shot baseline regeneration on a feature
+  # branch. A push trigger scoped to branches named `bld-*-e2e-*` works
+  # immediately once the workflow is pushed.
+  push:
+    branches:
+      - "bld-*-e2e-*"
+    paths:
+      - ".github/workflows/e2e-update-snapshots.yml"
+      - "e2e/**.ts"
+      - "package.json"
+      - "package-lock.json"
   workflow_dispatch:
     inputs:
       spec:
@@ -23,6 +35,10 @@ on:
         description: "Space-separated --project flags (e.g. 'mobile desktop')."
         required: false
         default: "mobile desktop"
+
+env:
+  E2E_SPEC: ${{ github.event.inputs.spec || 'e2e/exercises.spec.ts' }}
+  E2E_PROJECTS: ${{ github.event.inputs.projects || 'mobile desktop' }}
 
 concurrency:
   group: e2e-update-snapshots-${{ github.ref }}
@@ -58,14 +74,14 @@ jobs:
         id: projects
         run: |
           args=""
-          for p in ${{ github.event.inputs.projects }}; do
+          for p in $E2E_PROJECTS; do
             args="$args --project=$p"
           done
           echo "args=$args" >> "$GITHUB_OUTPUT"
 
       - name: Run Playwright with --update-snapshots
         run: |
-          npx playwright test ${{ github.event.inputs.spec }} ${{ steps.projects.outputs.args }} --update-snapshots
+          npx playwright test $E2E_SPEC ${{ steps.projects.outputs.args }} --update-snapshots
         env:
           CI: "true"
 
