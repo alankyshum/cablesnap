@@ -154,18 +154,17 @@ const STATES: StateCase[] = [
 ];
 
 test.describe("@scenario adaptive-rest", () => {
-  // Adaptive chip is a touch-only concern — only run on the three mobile
-  // projects declared in playwright.config.ts.
-  test.beforeAll((_args, testInfo) => {
-    const allowed = new Set(["mobile-narrow", "mobile", "mobile-large"]);
-    test.skip(
-      !allowed.has(testInfo.project.name),
-      "adaptive-rest: mobile viewports only (320 / 390 / 430)",
-    );
-  });
-
   for (const { name, seed } of STATES) {
-    test(name, async ({ page }) => {
+    test(name, async ({ page }, testInfo) => {
+      // Adaptive chip is a touch-only concern — only run on the three mobile
+      // projects declared in playwright.config.ts. Gating inside the test
+      // body avoids Playwright/eslint friction with hook-level fixture args.
+      const allowed = new Set(["mobile-narrow", "mobile", "mobile-large"]);
+      test.skip(
+        !allowed.has(testInfo.project.name),
+        "adaptive-rest: mobile viewports only (320 / 390 / 430)",
+      );
+
       // Reduce motion so reanimated flash animation is inert on capture.
       await page.emulateMedia({ reducedMotion: "reduce" });
 
