@@ -156,7 +156,7 @@ const STATES: StateCase[] = [
 test.describe("@scenario adaptive-rest", () => {
   // Adaptive chip is a touch-only concern — only run on the three mobile
   // projects declared in playwright.config.ts.
-  test.beforeEach((_args, testInfo) => {
+  test.beforeAll((_args, testInfo) => {
     const allowed = new Set(["mobile-narrow", "mobile", "mobile-large"]);
     test.skip(
       !allowed.has(testInfo.project.name),
