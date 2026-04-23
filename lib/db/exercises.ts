@@ -26,7 +26,35 @@ function mapRow(row: ExerciseRow): Exercise {
 
 export { mapRow, type ExerciseRow };
 
+// ---- E2E deterministic fixture (BLD-526) ----
+//
+// The static `expo export -p web` bundle used for Playwright visual regression
+// boots wa-sqlite asynchronously; on slow CI runners the initial exercises
+// query is still loading when the screenshot fires, so baselines captured the
+// empty-list state (parent BLD-517). To make the list screen deterministic,
+// allow Playwright to inject a pre-shaped fixture array onto `window` via
+// `addInitScript`. The check is double-hardened: the flag is only honored
+// when `navigator.webdriver === true`, so a console-injected flag in a real
+// user's browser can never swap their data.
+function readE2EFixture(): Exercise[] | null {
+  if (typeof window === "undefined") return null;
+  const nav =
+    typeof navigator !== "undefined"
+      ? (navigator as Navigator & { webdriver?: boolean })
+      : null;
+  if (!nav?.webdriver) return null;
+  const flag = (window as unknown as { __E2E_EXERCISE_FIXTURE__?: unknown })
+    .__E2E_EXERCISE_FIXTURE__;
+  if (!Array.isArray(flag)) return null;
+  return flag as Exercise[];
+}
+
 export async function getAllExercises(): Promise<Exercise[]> {
+  const fixture = readE2EFixture();
+  if (fixture) {
+    // Honor prod ordering (by name, asc) so snapshots mirror real render.
+    return [...fixture].sort((a, b) => a.name.localeCompare(b.name));
+  }
   const db = await getDrizzle();
   const rows = await db.select()
     .from(exercises)
@@ -36,6 +64,10 @@ export async function getAllExercises(): Promise<Exercise[]> {
 }
 
 export async function getExerciseById(id: string): Promise<Exercise | null> {
+  const fixture = readE2EFixture();
+  if (fixture) {
+    return fixture.find((e) => e.id === id) ?? null;
+  }
   const db = await getDrizzle();
   const row = await db.select()
     .from(exercises)
