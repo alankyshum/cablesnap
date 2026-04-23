@@ -70,6 +70,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Export web bundle (static, avoids Metro cold-start in CI)
+        run: npx expo export -p web
+
       - name: Build --project args
         id: projects
         run: |
@@ -84,6 +87,7 @@ jobs:
           npx playwright test $E2E_SPEC ${{ steps.projects.outputs.args }} --update-snapshots
         env:
           CI: "true"
+          E2E_USE_STATIC: "1"
 
       - name: Upload playwright report (on failure)
         if: failure()
