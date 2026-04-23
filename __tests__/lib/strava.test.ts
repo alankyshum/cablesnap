@@ -534,7 +534,7 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
     });
 
     it("throws StravaError(auth_expired) on 401 from token exchange", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "" });
       await expect(strava.connectStrava()).rejects.toMatchObject({
         name: "StravaError",
         code: "auth_expired",
@@ -543,7 +543,7 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
     });
 
     it("throws StravaError(server) on 5xx from token exchange", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 503 });
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 503, text: async () => "" });
       await expect(strava.connectStrava()).rejects.toMatchObject({
         name: "StravaError",
         code: "server",
@@ -560,7 +560,7 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
     });
 
     it("thrown errors map to user-friendly toast copy (no raw status leakage)", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "" });
       try {
         await strava.connectStrava();
         throw new Error("expected throw");

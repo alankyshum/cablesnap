@@ -1,7 +1,9 @@
-const { getDefaultConfig } = require("expo/metro-config");
 const http = require("http");
+const {
+  getSentryExpoConfig
+} = require("@sentry/react-native/metro");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 config.resolver.assetExts.push("wasm");
 
 // Inject COOP/COEP headers into every HTTP response so expo-sqlite

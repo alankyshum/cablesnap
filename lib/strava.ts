@@ -3,6 +3,7 @@ import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
+import * as Sentry from "@sentry/react-native";
 import {
   getStravaConnection,
   saveStravaConnection,
@@ -227,11 +228,8 @@ async function refreshAccessToken(): Promise<string | null> {
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 400) {
-        // Token revoked or invalid — disconnect
-        await disconnect();
-        return null;
-      }
+      // Token revoked or invalid — disconnect
+      if (response.status === 401 || response.status === 400) await disconnect();
       throw new Error(`Token refresh failed: ${response.status}`);
     }
 
@@ -240,6 +238,7 @@ async function refreshAccessToken(): Promise<string | null> {
     return data.access_token;
   } catch (err) {
     console.error("Strava token refresh failed:", err);
+    captureStravaError(err, "strava_refresh", "token_refresh", { proxyUrl });
     return null;
   }
 }
@@ -256,6 +255,58 @@ async function getValidAccessToken(): Promise<string | null> {
   return await refreshAccessToken();
 }
 
+// ---- Sentry helpers ----
+
+function captureStravaError(
+  err: unknown,
+  flow: string,
+  step: string,
+  extra?: Record<string, unknown>,
+): void {
+  Sentry.captureException(err, { tags: { flow, step }, extra });
+}
+
+function stravaBreakcrumb(message: string, data?: Record<string, unknown>): void {
+  Sentry.addBreadcrumb({ category: "strava", message, data });
+}
+
+// ---- Token Exchange ----
+
+async function exchangeCodeForTokens(
+  code: string,
+  proxyUrl: string,
+  clientId: string,
+): Promise<Record<string, unknown>> {
+  stravaBreakcrumb("token exchange starting", { proxyUrl });
+  let tokenResponse: Response;
+  try {
+    tokenResponse = await fetch(`${proxyUrl}/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+  } catch (err) {
+    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri, proxyUrl, clientId });
+    if (isNetworkError(err)) {
+      throw new StravaError("network", err instanceof Error ? err.message : "Network request failed");
+    }
+    throw new StravaError("unknown", err instanceof Error ? err.message : String(err));
+  }
+
+  if (!tokenResponse.ok) {
+    const body = await tokenResponse.text().catch(() => "");
+    const err = new StravaError(
+      classifyHttpStatus(tokenResponse.status),
+      `Token exchange failed: ${tokenResponse.status}`,
+      tokenResponse.status,
+    );
+    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri, proxyUrl, clientId, status: tokenResponse.status, responseBody: body });
+    throw err;
+  }
+
+  return tokenResponse.json() as Promise<Record<string, unknown>>;
+}
+
 // ---- OAuth2 Authorization Code Flow ----
 // Note: Strava does not support PKCE. Tokens are exchanged via the
 // Cloudflare Worker proxy which holds the client_secret server-side.
@@ -268,18 +319,24 @@ export async function connectStrava(): Promise<{
 
   const clientId = getClientId();
   if (!clientId) {
-    throw new StravaError("config", "Strava client ID not configured");
+    const err = new StravaError("config", "Strava client ID not configured");
+    captureStravaError(err, "strava_connect", "config_check");
+    throw err;
   }
 
   let proxyUrl: string;
   try {
     proxyUrl = getProxyUrl();
   } catch (err) {
-    throw new StravaError(
+    const wrapped = new StravaError(
       "config",
       err instanceof Error ? err.message : "Strava proxy URL not configured"
     );
+    captureStravaError(wrapped, "strava_connect", "config_check");
+    throw wrapped;
   }
+
+  stravaBreakcrumb("connectStrava started", { clientId, redirectUri, proxyUrl });
 
   const authRequest = new AuthSession.AuthRequest({
     clientId,
@@ -292,50 +349,28 @@ export async function connectStrava(): Promise<{
     authorizationEndpoint: STRAVA_AUTH_URL,
   });
 
+  stravaBreakcrumb("auth prompt completed", { resultType: result.type, hasCode: !!(result.type === "success" && result.params?.code) });
+
   if (result.type !== "success" || !result.params.code) {
     return null;
   }
 
   // Exchange authorization code for tokens via proxy
-  let tokenResponse: Response;
-  try {
-    tokenResponse = await fetch(`${proxyUrl}/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code: result.params.code,
-      }),
-    });
-  } catch (err) {
-    if (isNetworkError(err)) {
-      throw new StravaError(
-        "network",
-        err instanceof Error ? err.message : "Network request failed"
-      );
-    }
-    throw new StravaError(
-      "unknown",
-      err instanceof Error ? err.message : String(err)
-    );
-  }
+  const data = await exchangeCodeForTokens(result.params.code, proxyUrl, clientId);
 
-  if (!tokenResponse.ok) {
-    throw new StravaError(
-      classifyHttpStatus(tokenResponse.status),
-      `Token exchange failed: ${tokenResponse.status}`,
-      tokenResponse.status
-    );
-  }
+  await saveTokens(
+    data.access_token as string,
+    data.refresh_token as string,
+    data.expires_at as number,
+  );
 
-  const data = await tokenResponse.json();
-
-  await saveTokens(data.access_token, data.refresh_token, data.expires_at);
-
-  const athleteId = data.athlete?.id ?? 0;
+  const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
   const athleteName =
-    [data.athlete?.firstname, data.athlete?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
+    [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
 
   await saveStravaConnection(athleteId, athleteName);
+
+  stravaBreakcrumb("connectStrava succeeded", { athleteId });
 
   return { athleteId, athleteName };
 }
@@ -366,6 +401,13 @@ export async function isStravaConnected(): Promise<boolean> {
 
 // ---- Activity Upload ----
 
+function formatSetDesc(s: { weight: number | null; reps: number | null }, weightUnit: string): string {
+  if (s.weight && s.reps) return `${s.weight}${weightUnit} × ${s.reps}`;
+  if (s.reps) return `${s.reps} reps`;
+  if (s.weight) return `${s.weight}${weightUnit}`;
+  return "1 set";
+}
+
 function buildActivityDescription(
   sets: Array<{
     exercise_name?: string | null;
@@ -389,12 +431,7 @@ function buildActivityDescription(
 
   const lines: string[] = [];
   for (const [name, exerciseSets] of byExercise) {
-    const setDescs = exerciseSets.map((s) => {
-      if (s.weight && s.reps) return `${s.weight}${weightUnit} × ${s.reps}`;
-      if (s.reps) return `${s.reps} reps`;
-      if (s.weight) return `${s.weight}${weightUnit}`;
-      return "1 set";
-    });
+    const setDescs = exerciseSets.map((s) => formatSetDesc(s, weightUnit));
     lines.push(`${name}: ${setDescs.join(", ")}`);
   }
 
@@ -445,14 +482,16 @@ async function uploadActivity(
   });
 
   if (response.status === 401) {
-    // Token revoked on Strava
+    captureStravaError(new Error("Strava access revoked"), "strava_upload", "api_call", { sessionId });
     await disconnect();
     throw new Error("Strava access revoked. Please reconnect.");
   }
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new Error(`Strava API error ${response.status}: ${body}`);
+    const err = new Error(`Strava API error ${response.status}: ${body}`);
+    captureStravaError(err, "strava_upload", "api_call", { sessionId, status: response.status, responseBody: body });
+    throw err;
   }
 
   const activity = await response.json();
