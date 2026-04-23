@@ -47,6 +47,20 @@ const lightColors = {
   warningBanner: "#FFF8E1",
   errorBanner: "#FEE2E2",
 
+  // Subtle severity tokens (inline chips/badges — NOT full-width banners)
+  successSubtle: "#D1FAE5",
+  successSubtleForeground: "#065F46",
+  warningSubtle: "#FEF3C7",
+  warningSubtleForeground: "#92400E",
+  dangerSubtle: "#FEE2E2",
+  dangerSubtleForeground: "#991B1B",
+
+  // Recovery heatmap palette (low=recovered, mid=partial, high=fatigued)
+  heatmapLow: "#1E88E5",
+  heatmapMid: "#FF8F00",
+  heatmapHigh: "#D32F2F",
+  heatmapBorder: "#9E9E9E",
+
   // Shadows & overlays
   shadow: "#000000",
   onToast: "#FFFFFF",
@@ -108,6 +122,20 @@ const darkColors = {
   // Banner backgrounds
   warningBanner: "#332200",
   errorBanner: "#3B1111",
+
+  // Subtle severity tokens (inline chips/badges — NOT full-width banners)
+  successSubtle: "#064E3B",
+  successSubtleForeground: "#A7F3D0",
+  warningSubtle: "#5C3D00",
+  warningSubtleForeground: "#FDE68A",
+  dangerSubtle: "#7F1D1D",
+  dangerSubtleForeground: "#FECACA",
+
+  // Recovery heatmap palette (low=recovered, mid=partial, high=fatigued)
+  heatmapLow: "#42A5F5",
+  heatmapMid: "#FFC107",
+  heatmapHigh: "#F44336",
+  heatmapBorder: "#616161",
 
   // Shadows & overlays
   shadow: "#000000",
