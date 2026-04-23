@@ -1,0 +1,111 @@
+name: E2E Update Snapshots
+
+# Manually-triggered workflow to regenerate Playwright visual-regression
+# baselines. Runs on a Linux runner (where the current baselines were first
+# generated), updates the snapshots, and commits them back to the branch
+# that dispatched the run.
+#
+# Context: BLD-517 — exercises-list baselines were captured against the
+# onboarding screen because the original `skipOnboarding()` helper failed
+# silently. The helper has since been rewritten to set
+# `window.__SKIP_ONBOARDING__ = true`, but chromium cannot be run in the
+# agent container (no sudo to install system libs), so baseline
+# regeneration happens here.
+
+on:
+  # workflow_dispatch requires the file to exist on the default branch, which
+  # defeats the purpose for a one-shot baseline regeneration on a feature
+  # branch. A push trigger scoped to branches named `bld-*-e2e-*` works
+  # immediately once the workflow is pushed.
+  push:
+    branches:
+      - "bld-*-e2e-*"
+    paths:
+      - ".github/workflows/e2e-update-snapshots.yml"
+      - "e2e/**.ts"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: "Optional playwright test path (e.g. e2e/exercises.spec.ts). Empty = all."
+        required: false
+        default: "e2e/exercises.spec.ts"
+      projects:
+        description: "Space-separated --project flags (e.g. 'mobile desktop')."
+        required: false
+        default: "mobile desktop"
+
+env:
+  E2E_SPEC: ${{ github.event.inputs.spec || 'e2e/exercises.spec.ts' }}
+  E2E_PROJECTS: ${{ github.event.inputs.projects || 'mobile desktop' }}
+
+concurrency:
+  group: e2e-update-snapshots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  update-snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Export web bundle (static, avoids Metro cold-start in CI)
+        run: npx expo export -p web
+
+      - name: Build --project args
+        id: projects
+        run: |
+          args=""
+          for p in $E2E_PROJECTS; do
+            args="$args --project=$p"
+          done
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
+      - name: Run Playwright with --update-snapshots
+        run: |
+          npx playwright test $E2E_SPEC ${{ steps.projects.outputs.args }} --update-snapshots
+        env:
+          CI: "true"
+          E2E_USE_STATIC: "1"
+
+      - name: Upload playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+      - name: Commit updated snapshots
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e/__screenshots__
+          if git diff --cached --quiet; then
+            echo "No snapshot changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(e2e): regenerate playwright baselines via workflow"
+          git push origin HEAD:${{ github.ref_name }}

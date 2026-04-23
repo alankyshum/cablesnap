@@ -65,6 +65,7 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
 
   return (
     <Animated.View
+      accessibilityRole="tablist"
       style={[
         styles.container,
         {

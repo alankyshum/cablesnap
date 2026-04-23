@@ -10,7 +10,7 @@
 #   - Run locally before pushing changes that touch lib/db/, hooks/, or e2e/.
 #   - CI gate on PRs touching the same paths (see .github/workflows/).
 #
-# Refs: BLD-494, TL#3.
+# Refs: BLD-494, BLD-517, TL#3.
 
 set -euo pipefail
 

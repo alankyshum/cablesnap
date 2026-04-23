@@ -41,9 +41,15 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "npx expo start --web --port 8081",
+    // In CI (and anywhere E2E_USE_STATIC=1 is set) serve a pre-built static
+    // bundle via `npx serve -s dist` instead of the Metro dev server. The
+    // dev server's cold-start bundling time on a fresh CI runner exceeds
+    // Playwright's per-test timeout and leaves the page blank (see BLD-517).
+    command: process.env.E2E_USE_STATIC
+      ? "npx --yes serve -s dist -l 8081"
+      : "npx expo start --web --port 8081",
     url: "http://localhost:8081",
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });
