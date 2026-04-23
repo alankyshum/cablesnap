@@ -2,7 +2,10 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { DIFFICULTY_COLORS, READINESS_COLORS } from "./ui/flow-card-colors";
+import {
+  useDifficultyBadgeColors,
+  useReadinessBadgeColors,
+} from "./ui/flow-card-colors";
 import type { ReadinessBadge } from "../lib/recovery-readiness";
 import type { MetaBadge } from "./FlowCard";
 import type { useThemeColors } from "@/hooks/useThemeColors";
@@ -14,6 +17,8 @@ export function BadgeRow({ badges, readiness, isDark, colors }: {
   isDark: boolean;
   colors: ReturnType<typeof useThemeColors>;
 }) {
+  const readinessColors = useReadinessBadgeColors();
+  void isDark;
   return (
     <>
       {badges?.map((b) => {
@@ -26,12 +31,10 @@ export function BadgeRow({ badges, readiness, isDark, colors }: {
         );
       })}
       {readiness && readiness !== "NO_DATA" && (() => {
-        const rc = READINESS_COLORS[readiness];
-        const bg = isDark ? rc.darkBg : rc.lightBg;
-        const fg = isDark ? rc.darkFg : rc.lightFg;
+        const rc = readinessColors[readiness];
         return (
-          <View style={[styles.badge, { backgroundColor: bg }]} accessibilityLabel={`Recovery status: ${readiness.toLowerCase()}`}>
-            <Text variant="caption" style={[styles.badgeText, { color: fg }]}>{readiness}</Text>
+          <View style={[styles.badge, { backgroundColor: rc.bg }]} accessibilityLabel={`Recovery status: ${readiness.toLowerCase()}`}>
+            <Text variant="caption" style={[styles.badgeText, { color: rc.fg }]}>{readiness}</Text>
           </View>
         );
       })()}
@@ -40,10 +43,11 @@ export function BadgeRow({ badges, readiness, isDark, colors }: {
 }
 
 export function MetaRow({ meta, colors }: { meta: MetaBadge[]; colors: ReturnType<typeof useThemeColors> }) {
+  const difficultyColors = useDifficultyBadgeColors();
   return (
     <>
       {meta.map((m, i) => {
-        const dc = m.difficulty ? DIFFICULTY_COLORS[m.difficulty] : null;
+        const dc = m.difficulty ? difficultyColors[m.difficulty] : null;
         return (
           <View key={i} style={[styles.metaBadge, { backgroundColor: dc?.bg ?? colors.surfaceVariant }]}>
             <MaterialCommunityIcons name={m.icon} size={14} color={dc?.fg ?? colors.onSurfaceVariant} />

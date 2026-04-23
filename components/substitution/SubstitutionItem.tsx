@@ -6,17 +6,32 @@ import { EQUIPMENT_LABELS, DIFFICULTY_LABELS, MUSCLE_LABELS } from "../../lib/ty
 import type { SubstitutionScore } from "../../lib/exercise-substitutions";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { Colors } from "@/theme/colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
-export function matchColor(score: number): string {
-  if (score >= 80) return "#2e7d32";
-  if (score >= 60) return "#f57f17";
-  return "#c62828";
+type ColorMode = "light" | "dark";
+
+function pickScorePalette(mode: ColorMode | null | undefined) {
+  const c = Colors[mode === "dark" ? "dark" : "light"];
+  return {
+    high: { bg: c.successSubtle, fg: c.successSubtleForeground },
+    mid: { bg: c.warningSubtle, fg: c.warningSubtleForeground },
+    low: { bg: c.dangerSubtle, fg: c.dangerSubtleForeground },
+  };
 }
 
-export function matchBgColor(score: number): string {
-  if (score >= 80) return "#e8f5e9";
-  if (score >= 60) return "#fff8e1";
-  return "#ffebee";
+function scoreBucket(score: number): "high" | "mid" | "low" {
+  if (score >= 80) return "high";
+  if (score >= 60) return "mid";
+  return "low";
+}
+
+export function matchColor(score: number, mode?: ColorMode | null): string {
+  return pickScorePalette(mode)[scoreBucket(score)].fg;
+}
+
+export function matchBgColor(score: number, mode?: ColorMode | null): string {
+  return pickScorePalette(mode)[scoreBucket(score)].bg;
 }
 
 export function SubstitutionItem({
@@ -27,7 +42,11 @@ export function SubstitutionItem({
   onPress: (exercise: Exercise) => void;
 }) {
   const colors = useThemeColors();
+  const scheme = useColorScheme();
+  const mode: ColorMode = scheme === "dark" ? "dark" : "light";
   const ex = item.exercise;
+  const palette = pickScorePalette(mode);
+  const bucket = palette[scoreBucket(item.score)];
 
   return (
     <Pressable
@@ -47,10 +66,10 @@ export function SubstitutionItem({
         <View
           style={[
             styles.matchBadge,
-            { backgroundColor: matchBgColor(item.score) },
+            { backgroundColor: bucket.bg },
           ]}
         >
-          <Text variant="caption" style={[styles.matchText, { color: matchColor(item.score) }]}>
+          <Text variant="caption" style={[styles.matchText, { color: bucket.fg }]}>
             {item.score}%
           </Text>
         </View>

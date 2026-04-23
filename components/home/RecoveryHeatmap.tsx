@@ -2,7 +2,6 @@ import React, { useState, useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import Body, { type ExtendedBodyPart } from "react-native-body-highlighter";
-import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { radii } from "../../constants/design-tokens";
 import { SLUG_MAP } from "../../lib/muscle-map-utils";
@@ -14,11 +13,6 @@ import { useFocusEffect } from "expo-router";
 import { fontSizes } from "@/constants/design-tokens";
 
 const COLLAPSE_KEY = "recovery_heatmap_collapsed";
-
-const RECOVERY_COLORS = {
-  dark: ["#42A5F5", "#FFC107", "#F44336"],
-  light: ["#1E88E5", "#FF8F00", "#D32F2F"],
-} as const;
 
 function statusToIntensity(status: MuscleRecoveryStatus["status"]): number {
   if (status === "recovered") return 1;
@@ -53,7 +47,6 @@ type Props = {
 };
 
 function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
-  const isDark = useColorScheme() === "dark";
   const [isExpanded, setIsExpanded] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
@@ -77,7 +70,8 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
   if (!loaded) return null;
 
   const hasData = recoveryStatus.some((s) => s.status !== "no_data");
-  const bodyColors = isDark ? [...RECOVERY_COLORS.dark] : [...RECOVERY_COLORS.light];
+  const palette = [colors.heatmapLow, colors.heatmapMid, colors.heatmapHigh];
+  const bodyColors = [...palette];
   const data = buildRecoveryData(recoveryStatus);
   const scale = 0.55;
 
@@ -123,7 +117,7 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
                   side="front"
                   scale={scale}
                   colors={bodyColors}
-                  border={isDark ? "#616161" : "#9E9E9E"}
+                  border={colors.heatmapBorder}
                 />
                 <Body
                   data={data}
@@ -131,10 +125,10 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
                   side="back"
                   scale={scale}
                   colors={bodyColors}
-                  border={isDark ? "#616161" : "#9E9E9E"}
+                  border={colors.heatmapBorder}
                 />
               </View>
-              <RecoveryLegend isDark={isDark} />
+              <RecoveryLegend palette={palette} />
               <View style={styles.summary}>
                 {readyMuscles.length > 0 && (
                   <Text variant="caption" style={{ color: colors.onSurface }}>
@@ -157,9 +151,8 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
   );
 }
 
-function RecoveryLegend({ isDark }: { isDark: boolean }) {
+function RecoveryLegend({ palette }: { palette: readonly string[] }) {
   const colors = useThemeColors();
-  const palette = isDark ? RECOVERY_COLORS.dark : RECOVERY_COLORS.light;
   const items = [
     { color: palette[0], label: "Recovered" },
     { color: palette[1], label: "Partial" },

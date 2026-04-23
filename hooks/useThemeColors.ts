@@ -73,6 +73,12 @@ export function useThemeColors() {
     backdrop: "rgba(0,0,0,0.5)",
     notification: t.red,
     card: t.card,
+
+    // Recovery heatmap palette (see theme/colors.ts)
+    heatmapLow: t.heatmapLow,
+    heatmapMid: t.heatmapMid,
+    heatmapHigh: t.heatmapHigh,
+    heatmapBorder: t.heatmapBorder,
   };
 }
 
