@@ -107,5 +107,5 @@ jobs:
             echo "No snapshot changes to commit."
             exit 0
           fi
-          git commit -m "chore(e2e): regenerate playwright baselines via workflow [skip ci]"
+          git commit -m "chore(e2e): regenerate playwright baselines via workflow"
           git push origin HEAD:${{ github.ref_name }}
