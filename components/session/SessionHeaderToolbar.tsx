@@ -4,15 +4,20 @@ import {
   Pressable,
   StyleSheet,
   Switch,
+  useWindowDimensions,
   View,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import BottomSheet from "@gorhom/bottom-sheet";
+import { router } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatTime, formatTimeRemaining } from "../../lib/format";
 import { getAppSetting, setAppSetting } from "../../lib/db";
 import { fontSizes } from "@/constants/design-tokens";
+import type { RestBreakdown } from "../../lib/rest";
+import { RestBreakdownSheet } from "./RestBreakdownSheet";
 
 const REST_PRESETS = [30, 60, 90, 120] as const;
 const DEFAULT_REST_SECONDS = 90;
@@ -27,6 +32,7 @@ type Props = {
   rest: number;
   elapsed: number;
   estimatedDuration?: number | null;
+  breakdown?: RestBreakdown;
   onStartRest: (duration: number) => void;
   onDismissRest: () => void;
   onOpenToolbox: () => void;
@@ -38,6 +44,7 @@ function SessionHeaderToolbarInner({
   rest,
   elapsed,
   estimatedDuration,
+  breakdown,
   onStartRest,
   onDismissRest,
   onOpenToolbox,
@@ -45,10 +52,13 @@ function SessionHeaderToolbarInner({
   onPickerDismissed,
 }: Props) {
   const colors = useThemeColors();
+  const { width: viewportWidth } = useWindowDimensions();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [showRestDone, setShowRestDone] = useState(false);
+  const [showBreakdownChip, setShowBreakdownChip] = useState(true);
   const prevRestRef = useRef(0);
   const restDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const breakdownSheetRef = useRef<BottomSheet>(null);
 
   // Settings state for the picker modal
   const [vibrateSetting, setVibrateSetting] = useState(true);
@@ -87,6 +97,38 @@ function SessionHeaderToolbarInner({
       restDoneTimerRef.current = null;
     }
   }, [onDismissRest]);
+
+  const handleRestLongPress = useCallback(() => {
+    breakdownSheetRef.current?.snapToIndex(0);
+  }, []);
+
+  const handleBreakdownDismiss = useCallback(() => {
+    // no-op
+  }, []);
+
+  const handleBreakdownAdjust = useCallback((delta: number) => {
+    if (delta === 0) return;
+    const next = Math.min(600, Math.max(0, rest + delta));
+    if (next === 0) onDismissRest();
+    else onStartRest(next);
+  }, [rest, onStartRest, onDismissRest]);
+
+  const handleBreakdownCut = useCallback(() => {
+    breakdownSheetRef.current?.close();
+    onDismissRest();
+  }, [onDismissRest]);
+
+  // Load rest_show_breakdown setting (default on via !== "false").
+  // Loaded once on mount — users toggle this in Settings before a session, so
+  // re-reading per tick of `rest` is a waste (SQLite hit every second). If the
+  // user flips the toggle mid-session, it will take effect on the next session.
+  useEffect(() => {
+    let cancelled = false;
+    getAppSetting("rest_show_breakdown").then((v) => {
+      if (!cancelled) setShowBreakdownChip(v !== "false");
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLongPress = useCallback(async () => {
     // Load current settings before opening picker
@@ -133,25 +175,58 @@ function SessionHeaderToolbarInner({
     setPickerVisible(false);
   }, []);
 
+  const handleEditAdaptiveRules = useCallback(() => {
+    breakdownSheetRef.current?.close();
+    router.push("/(tabs)/settings");
+  }, []);
+
   const isRestActive = rest > 0;
+
+  // Adaptive chip rules (plan §UX):
+  // - suppressed when breakdown.isDefault === true
+  // - suppressed when user turned off rest_show_breakdown
+  // - below 360dp viewport, truncate to 2 tokens max (split on · then take 2)
+  const hasAdaptiveBreakdown = !!breakdown && !breakdown.isDefault && !!breakdown.reasonShort;
+  const renderChip = isRestActive && hasAdaptiveBreakdown && showBreakdownChip;
+  const chipLabel = renderChip
+    ? truncateChipLabel(breakdown?.reasonShort ?? "", viewportWidth)
+    : "";
+
+  const activeA11yLabel = buildActiveA11yLabel(rest, showRestDone, hasAdaptiveBreakdown, breakdown);
 
   return (
     <>
-      <View style={styles.container}>
+      <View style={styles.container} testID="session-header-toolbar">
+        {/* Inline adaptive chip — left of the timer pill. Chip is a discoverable
+            shortcut to the breakdown sheet; the timer pill's a11y label already
+            announces the full adaptive reason, so the chip is a redundant-but-
+            reachable affordance for pointer/keyboard users. */}
+        {renderChip && (
+          <View style={styles.chipWrap}>
+            <Chip
+              selected={false}
+              onPress={handleRestLongPress}
+              compact
+              accessibilityLabel={`Adaptive rest reason: ${chipLabel}. Tap to see breakdown.`}
+              accessibilityRole="button"
+            >
+              {chipLabel}
+            </Chip>
+          </View>
+        )}
         {/* Rest countdown or "REST DONE ✓" */}
         {(isRestActive || showRestDone) && (
           <Pressable
             onPress={handleRestTap}
-            accessibilityLabel={
-              showRestDone
-                ? "Rest complete. Tap to dismiss."
-                : `Rest timer: ${Math.floor(rest / 60)} minutes ${rest % 60} seconds. Tap to dismiss.`
-            }
+            onLongPress={hasAdaptiveBreakdown ? handleRestLongPress : undefined}
+            delayLongPress={400}
+            accessibilityLabel={activeA11yLabel}
             accessibilityLiveRegion="polite"
             style={styles.timerButton}
           >
             <Text
               variant="body"
+              testID="rest-countdown-text"
               style={{
                 color: colors.primary,
                 fontWeight: "700",
@@ -186,6 +261,7 @@ function SessionHeaderToolbarInner({
         >
           <Text
             variant="body"
+            testID="elapsed-time"
             style={{
               color: isRestActive ? colors.onSurfaceVariant : colors.primary,
               fontSize: fontSizes.sm,
@@ -199,6 +275,7 @@ function SessionHeaderToolbarInner({
             return (
               <Text
                 variant="body"
+                testID="elapsed-remaining"
                 style={{
                   color: colors.onSurfaceVariant,
                   fontSize: fontSizes.xs,
@@ -235,6 +312,19 @@ function SessionHeaderToolbarInner({
         onSoundToggle={handleSoundToggle}
         onDismiss={handlePickerDismiss}
       />
+
+      {/* Adaptive rest breakdown sheet */}
+      {breakdown ? (
+        <RestBreakdownSheet
+          sheetRef={breakdownSheetRef}
+          breakdown={breakdown}
+          remainingSeconds={rest}
+          onAddTime={handleBreakdownAdjust}
+          onCutShort={handleBreakdownCut}
+          onDismiss={handleBreakdownDismiss}
+          onEditRules={handleEditAdaptiveRules}
+        />
+      ) : null}
     </>
   );
 }
@@ -323,11 +413,37 @@ function RestDurationPicker({
 
 export const SessionHeaderToolbar = React.memo(SessionHeaderToolbarInner);
 
+function truncateChipLabel(label: string, viewportWidth: number): string {
+  if (viewportWidth >= 360) return label;
+  const tokens = label.split(/\s*·\s*/);
+  if (tokens.length <= 2) return label;
+  return tokens.slice(0, 2).join(" · ");
+}
+
+function buildActiveA11yLabel(
+  rest: number,
+  showRestDone: boolean,
+  hasAdaptiveBreakdown: boolean,
+  breakdown: RestBreakdown | undefined,
+): string {
+  if (showRestDone) return "Rest complete. Tap to dismiss.";
+  const min = Math.floor(rest / 60);
+  const sec = rest % 60;
+  const base = `Rest timer: ${min} minutes ${sec} seconds. Tap to dismiss.`;
+  if (hasAdaptiveBreakdown && breakdown?.reasonAccessible) {
+    return `Rest timer: ${min} minutes ${sec} seconds. ${breakdown.reasonAccessible}. Tap to dismiss. Long-press for breakdown.`;
+  }
+  return base;
+}
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  chipWrap: {
+    marginRight: 2,
   },
   timerButton: {
     minWidth: 48,

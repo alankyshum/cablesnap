@@ -68,6 +68,7 @@ export {
   getSessionAvgRPEs,
   getRestSecondsForExercise,
   getRestSecondsForLink,
+  getRestContext,
   getSessionsByMonth,
   searchSessions,
   getAllCompletedSessionWeeks,
@@ -106,6 +107,8 @@ export {
   getSourceSessionSets,
   updateExercisePositions,
 } from "./sessions";
+export type { RestContext } from "./sessions";
+export type { ExerciseCategory, RestInputs, RestFactor, RestBreakdown } from "../rest";
 export type { ExerciseSession, ExerciseRecords, SourceSessionSet } from "./sessions";
 export type { E1RMTrendRow, WeeklyE1RMRow, SessionRPERow, SessionRatingRow } from "./sessions";
 

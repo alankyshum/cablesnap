@@ -8,9 +8,26 @@ import {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { play as playAudio } from "../lib/audio";
-import { getRestSecondsForExercise, getAppSetting } from "../lib/db";
+import {
+  getRestSecondsForExercise,
+  getAppSetting,
+  getRestContext,
+} from "../lib/db";
+import type { SetType } from "../lib/types";
+import {
+  resolveRestSeconds,
+  defaultBreakdown,
+  type RestBreakdown,
+} from "../lib/rest";
 import { isAvailable, scheduleRestComplete, cancelRestComplete } from "../lib/notifications";
 import { duration as durationTokens } from "../constants/design-tokens";
+
+export type SetContext = {
+  exerciseId: string;
+  sessionId: string;
+  setType: SetType;
+  rpe: number | null;
+};
 
 type UseRestTimerOptions = {
   sessionId: string | undefined;
@@ -19,6 +36,9 @@ type UseRestTimerOptions = {
 
 export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   const [rest, setRest] = useState(0);
+  // Breakdown lives in useState (per plan) so the breakdown sheet re-renders when
+  // a new timer starts. Ref-based storage caused stale reads (TL blocker #7).
+  const [breakdown, setBreakdown] = useState<RestBreakdown>(() => defaultBreakdown(0));
   const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endAtRef = useRef<number | null>(null);
   const notificationIdRef = useRef<string | null>(null);
@@ -53,44 +73,82 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     }
   }, [sessionId]);
 
-  const startRest = useCallback(async (exerciseId: string) => {
-    if (restRef.current) clearInterval(restRef.current);
-    cancelNotification();
-    const secs = await getRestSecondsForExercise(sessionId!, exerciseId);
-    const endAt = Date.now() + secs * 1000;
-    endAtRef.current = endAt;
-    setRest(secs);
-    scheduleNotification(secs);
-    restRef.current = setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((endAtRef.current! - Date.now()) / 1000));
-      setRest(remaining);
-      if (remaining <= 0) {
-        if (restRef.current) clearInterval(restRef.current);
-        restRef.current = null;
-        endAtRef.current = null;
-        cancelNotification();
+  const runTimer = useCallback(
+    (secs: number, nextBreakdown: RestBreakdown) => {
+      if (restRef.current) clearInterval(restRef.current);
+      cancelNotification();
+      const endAt = Date.now() + secs * 1000;
+      endAtRef.current = endAt;
+      setRest(secs);
+      setBreakdown(nextBreakdown);
+      scheduleNotification(secs);
+      restRef.current = setInterval(() => {
+        const remaining = Math.max(
+          0,
+          Math.ceil((endAtRef.current! - Date.now()) / 1000),
+        );
+        setRest(remaining);
+        if (remaining <= 0) {
+          if (restRef.current) clearInterval(restRef.current);
+          restRef.current = null;
+          endAtRef.current = null;
+          cancelNotification();
+        }
+      }, 1000);
+    },
+    [cancelNotification, scheduleNotification],
+  );
+
+  /**
+   * Primary entry from useSessionActions.handleCheck.
+   *
+   * Back-compat: accepts either a bare `exerciseId` string (legacy callers,
+   * e.g. useExerciseManagement) OR a full SetContext object. When `ctx` is a
+   * string OR adaptive rest is disabled, we fall through to the legacy
+   * `getRestSecondsForExercise` path and render a synthetic isDefault breakdown.
+   */
+  const startRest = useCallback(
+    async (ctx: string | SetContext) => {
+      const exerciseId = typeof ctx === "string" ? ctx : ctx.exerciseId;
+      if (!sessionId) return;
+      const adaptiveSetting = await getAppSetting("rest_adaptive_enabled");
+      const adaptiveOn = adaptiveSetting !== "false";
+
+      if (typeof ctx === "object" && adaptiveOn) {
+        try {
+          const inputs = await getRestContext(sessionId, ctx.exerciseId, {
+            set_type: ctx.setType,
+            rpe: ctx.rpe,
+          });
+          const br = resolveRestSeconds(inputs);
+          runTimer(br.totalSeconds, br);
+          return;
+        } catch {
+          // Fall through to legacy on error.
+        }
       }
-    }, 1000);
-  }, [sessionId, cancelNotification, scheduleNotification]);
+
+      const secs = await getRestSecondsForExercise(sessionId, exerciseId);
+      runTimer(secs, defaultBreakdown(secs));
+    },
+    [sessionId, runTimer],
+  );
 
   const startRestWithDuration = useCallback((secs: number) => {
-    if (restRef.current) clearInterval(restRef.current);
-    cancelNotification();
-    const endAt = Date.now() + secs * 1000;
-    endAtRef.current = endAt;
-    setRest(secs);
-    scheduleNotification(secs);
-    restRef.current = setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((endAtRef.current! - Date.now()) / 1000));
-      setRest(remaining);
-      if (remaining <= 0) {
-        if (restRef.current) clearInterval(restRef.current);
-        restRef.current = null;
-        endAtRef.current = null;
-        cancelNotification();
-      }
-    }, 1000);
-  }, [cancelNotification, scheduleNotification]);
+    runTimer(secs, defaultBreakdown(secs));
+  }, [runTimer]);
+
+  /**
+   * Adaptive variant for callers (e.g. handleLinkedRest) that have already
+   * resolved an adaptive breakdown and want to start the timer without
+   * re-resolving.
+   */
+  const startRestWithBreakdown = useCallback(
+    (br: RestBreakdown) => {
+      runTimer(br.totalSeconds, br);
+    },
+    [runTimer],
+  );
 
   const dismissRest = useCallback(() => {
     if (restRef.current) clearInterval(restRef.current);
@@ -98,6 +156,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     endAtRef.current = null;
     cancelNotification();
     setRest(0);
+    setBreakdown(defaultBreakdown(0));
   }, [cancelNotification]);
 
   // AppState listener: recalculate remaining time on foreground resume
@@ -174,9 +233,11 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
 
   return {
     rest,
+    breakdown,
     restFlashStyle,
     startRest,
     startRestWithDuration,
+    startRestWithBreakdown,
     dismissRest,
     restRef,
   };

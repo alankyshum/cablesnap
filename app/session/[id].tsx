@@ -61,7 +61,7 @@ export default function ActiveSession() {
   } = useSessionData({ id, templateId, sourceSessionId });
 
   const {
-    rest, startRest, startRestWithDuration, dismissRest, restRef,
+    rest, breakdown, startRest, startRestWithDuration, startRestWithBreakdown, dismissRest, restRef,
   } = useRestTimer({ sessionId: id, colors });
 
   const {
@@ -91,7 +91,7 @@ export default function ActiveSession() {
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
     handleMoveUp, handleMoveDown, handlePrefillFromPrevious, finish, cancel,
   } = useSessionActions({
-    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, session, showToast, showError, triggerPR, unit,
+    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, session, showToast, showError, triggerPR, unit,
   });
 
   const {
@@ -256,6 +256,7 @@ export default function ActiveSession() {
               rest={rest}
               elapsed={elapsed}
               estimatedDuration={estimatedDuration}
+              breakdown={breakdown}
               onStartRest={handleToolboxStartRest}
               onDismissRest={dismissRest}
               onOpenToolbox={handleToolboxOpen}

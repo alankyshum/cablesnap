@@ -31,10 +31,12 @@ export {
   getSessionAvgRPEs,
   getRestSecondsForExercise,
   getRestSecondsForLink,
+  getRestContext,
   getSourceSessionSets,
   updateExercisePositions,
 } from "./session-sets";
 export type { SourceSessionSet } from "./session-sets";
+export type { RestContext } from "./session-sets";
 
 export {
   getSessionsByMonth,
