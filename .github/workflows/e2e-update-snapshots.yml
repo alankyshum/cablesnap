@@ -31,10 +31,15 @@ on:
         description: "Space-separated --project flags (e.g. 'mobile desktop')."
         required: false
         default: "mobile desktop"
+      dev_export:
+        description: "Export the web bundle in dev mode (__DEV__=true). Required for scenario specs that gate hooks with `if (__DEV__)`."
+        required: false
+        default: "false"
 
 env:
   E2E_SPEC: ${{ github.event.inputs.spec || 'e2e/exercises.spec.ts' }}
   E2E_PROJECTS: ${{ github.event.inputs.projects || 'mobile desktop' }}
+  E2E_DEV_EXPORT: ${{ github.event.inputs.dev_export || 'false' }}
 
 concurrency:
   group: e2e-update-snapshots-${{ github.ref }}
@@ -67,7 +72,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Export web bundle (static, avoids Metro cold-start in CI)
-        run: npx expo export -p web
+        run: |
+          if [ "$E2E_DEV_EXPORT" = "true" ]; then
+            echo "Exporting web bundle in DEV mode (__DEV__=true) for scenario specs"
+            npx expo export -p web --dev --no-minify
+          else
+            npx expo export -p web
+          fi
 
       - name: Build --project args
         id: projects
