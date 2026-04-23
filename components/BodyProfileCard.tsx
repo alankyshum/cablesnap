@@ -10,9 +10,14 @@ import { BodyProfileForm } from "./BodyProfileForm";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useBodyProfile } from "@/hooks/useBodyProfile";
 
-export default function BodyProfileCard() {
+type BodyProfileCardProps = {
+  weightUnit?: "kg" | "lb";
+  heightUnit?: "cm" | "in";
+};
+
+export default function BodyProfileCard({ weightUnit, heightUnit }: BodyProfileCardProps = {}) {
   const colors = useThemeColors();
-  const profile = useBodyProfile();
+  const profile = useBodyProfile(weightUnit, heightUnit);
   const cardStyle = StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }]);
 
   if (profile.cardState === "loading") {
