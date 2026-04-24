@@ -12,9 +12,10 @@ export interface ExerciseDetailPaneProps {
   detail: Exercise | null;
   colors: ThemeColors;
   profileGender: "male" | "female" | undefined;
+  bottomInset?: number;
 }
 
-export function ExerciseDetailPane({ detail, colors, profileGender }: ExerciseDetailPaneProps) {
+export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset }: ExerciseDetailPaneProps) {
   const steps = detail?.instructions
     .split("\n")
     .map((s) => s.trim())
@@ -26,7 +27,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender }: ExerciseDe
         <FlatList
           data={[]}
           renderItem={null}
-          contentContainerStyle={styles.detailContent}
+          contentContainerStyle={[styles.detailContent, { paddingBottom: (bottomInset ?? 0) + 32 }]}
           ListHeaderComponent={
             <>
               <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 12 }}>
@@ -172,7 +173,6 @@ const styles = StyleSheet.create({
   },
   detailContent: {
     padding: 24,
-    paddingBottom: 32,
   },
   detailEmpty: {
     flex: 1,
