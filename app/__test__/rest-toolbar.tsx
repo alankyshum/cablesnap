@@ -2,11 +2,17 @@
  * Dev-only visual-regression harness for SessionHeaderToolbar's adaptive chip.
  *
  * Renders SessionHeaderToolbar with `rest`, `breakdown`, and viewport values
- * seeded from `window.__REST_TOOLBAR_SEED__`. Also writes app_settings entries
- * (`rest_show_breakdown`, `rest_after_warmup_enabled`, `rest_adaptive_enabled`)
- * BEFORE mounting the toolbar so its `useEffect` that reads
- * `rest_show_breakdown` observes the seeded value on first paint (see
- * `components/session/SessionHeaderToolbar.tsx:125-131`).
+ * seeded from `window.__REST_TOOLBAR_SEED__`.
+ *
+ * Chip visibility (`rest_show_breakdown`) is passed DIRECTLY to the toolbar
+ * via the `showBreakdownChip` prop — we no longer round-trip through the
+ * app_settings DB. This eliminates the first-paint race where the toolbar
+ * would render with `showBreakdownChip=true` while its on-mount async
+ * `getAppSetting("rest_show_breakdown")` was still inflight (BLD-537).
+ *
+ * `rest_after_warmup_enabled` / `rest_adaptive_enabled` are still written to
+ * the DB: those are consumed by `lib/rest.ts` resolveRestSeconds (pre-mount,
+ * pure function on the seed's `breakdown` object), not by an on-mount effect.
  *
  * Guards (all three must hold — any false => harness renders `null`):
  *   1. `__DEV__ === true`                                    (not a prod build)
@@ -19,7 +25,7 @@
  * string does not appear in the prod web bundle. Verified by
  * `scripts/verify-scenario-hook-not-in-bundle.sh`.
  *
- * Refs: BLD-535.
+ * Refs: BLD-535, BLD-537.
  */
 import { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
@@ -57,13 +63,11 @@ export default function RestToolbarHarness() {
 
       let cancelled = false;
       (async () => {
-        // Prime app_settings BEFORE rendering the toolbar — its on-mount
-        // effect reads `rest_show_breakdown` exactly once and never again.
+        // Prime DB settings that other code paths read pre-mount. Chip
+        // visibility is handled via prop (see return block below) — no DB
+        // round-trip needed for that (BLD-537).
         const kv = s.settings ?? {};
         const writes: Array<Promise<unknown>> = [];
-        if (kv.rest_show_breakdown !== undefined) {
-          writes.push(setAppSetting("rest_show_breakdown", kv.rest_show_breakdown));
-        }
         if (kv.rest_after_warmup_enabled !== undefined) {
           writes.push(
             setAppSetting("rest_after_warmup_enabled", kv.rest_after_warmup_enabled),
@@ -100,6 +104,12 @@ export default function RestToolbarHarness() {
   if (Platform.OS !== "web") return null;
   if (!seed) return null;
 
+  // Resolve chip visibility synchronously from the seed. Default: true (chip
+  // shown) — matches the production default when `rest_show_breakdown` is
+  // unset. Only the literal string "false" hides the chip, matching
+  // `SessionHeaderToolbar`'s `v !== "false"` convention.
+  const showBreakdownChip = seed.settings?.rest_show_breakdown !== "false";
+
   return (
     <View>
       <SessionHeaderToolbar
@@ -107,6 +117,7 @@ export default function RestToolbarHarness() {
         elapsed={seed.elapsed ?? 0}
         estimatedDuration={seed.estimatedDuration ?? null}
         breakdown={seed.breakdown}
+        showBreakdownChip={showBreakdownChip}
         onStartRest={() => {}}
         onDismissRest={() => {}}
         onOpenToolbox={() => {}}

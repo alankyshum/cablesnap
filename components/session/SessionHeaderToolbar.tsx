@@ -38,6 +38,17 @@ type Props = {
   onOpenToolbox: () => void;
   pickerRequested?: boolean;
   onPickerDismissed?: () => void;
+  /**
+   * Whether the adaptive breakdown chip should render. When provided, the
+   * component uses this value directly and skips the on-mount DB read of
+   * `rest_show_breakdown`. When omitted (prod default today), the internal
+   * async read behavior is preserved for backward compatibility.
+   *
+   * Supplied by the visual-regression harness (app/__test__/rest-toolbar.tsx)
+   * so first-paint DOM deterministically reflects the seeded setting without
+   * a getAppSetting/setAppSetting race (BLD-537).
+   */
+  showBreakdownChip?: boolean;
 };
 
 function SessionHeaderToolbarInner({
@@ -50,12 +61,18 @@ function SessionHeaderToolbarInner({
   onOpenToolbox,
   pickerRequested,
   onPickerDismissed,
+  showBreakdownChip: showBreakdownChipProp,
 }: Props) {
   const colors = useThemeColors();
   const { width: viewportWidth } = useWindowDimensions();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [showRestDone, setShowRestDone] = useState(false);
-  const [showBreakdownChip, setShowBreakdownChip] = useState(true);
+  // When the prop is supplied (harness / future lifted-state consumer), use it
+  // as the source of truth. Otherwise, fall back to the internal DB-read state
+  // initialized to `true` (matches pre-BLD-537 behavior).
+  const [showBreakdownChipState, setShowBreakdownChip] = useState(true);
+  const showBreakdownChip =
+    showBreakdownChipProp !== undefined ? showBreakdownChipProp : showBreakdownChipState;
   const prevRestRef = useRef(0);
   const restDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const breakdownSheetRef = useRef<BottomSheet>(null);
@@ -122,13 +139,18 @@ function SessionHeaderToolbarInner({
   // Loaded once on mount — users toggle this in Settings before a session, so
   // re-reading per tick of `rest` is a waste (SQLite hit every second). If the
   // user flips the toggle mid-session, it will take effect on the next session.
+  //
+  // Skipped when the `showBreakdownChip` prop is provided (harness / lifted-
+  // state consumer owns the source of truth) — avoids a redundant DB read and
+  // the first-paint async state race (BLD-537).
   useEffect(() => {
+    if (showBreakdownChipProp !== undefined) return;
     let cancelled = false;
     getAppSetting("rest_show_breakdown").then((v) => {
       if (!cancelled) setShowBreakdownChip(v !== "false");
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [showBreakdownChipProp]);
 
   const handleLongPress = useCallback(async () => {
     // Load current settings before opening picker
