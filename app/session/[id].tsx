@@ -7,7 +7,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
-import { setEnabled as setAudioEnabled } from "../../lib/audio";
+import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "../../lib/audio";
 import { getAppSetting, addWarmupSets } from "../../lib/db";
 import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
 import { getTemplateDurationEstimates } from "../../lib/db/sessions";
@@ -47,14 +47,16 @@ export default function ActiveSession() {
   }>();
   const { info: showToast, error: showError } = useToast();
 
-  // Load timer sound setting
+  // Load timer sound setting + preload audio players so the first
+  // set-complete tap is not the audio load trigger (BLD-559 TL-T3).
   useEffect(() => {
     getAppSetting("timer_sound_enabled").then((val) => {
-      setAudioEnabled(val !== "false");
+      setAudioCategoryEnabled("timer", val !== "false");
     }).catch(() => {
-      setAudioEnabled(true);
+      setAudioCategoryEnabled("timer", true);
       showError("Could not load sound setting");
     });
+    void preloadAudio();
   }, []);
 
   const {

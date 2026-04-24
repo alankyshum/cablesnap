@@ -36,6 +36,7 @@ jest.mock('../../../lib/audio', () => ({
   play: jest.fn(),
   unload: jest.fn(),
   setEnabled: jest.fn(),
+  preload: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('expo-haptics', () => ({

@@ -7,7 +7,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake"
 import {
   play as playAudio,
   unload as unloadAudio,
-  setEnabled as setAudioEnabled,
+  setEnabled as setAudioCategoryEnabled,
 } from "../lib/audio"
 import {
   init,
@@ -105,9 +105,9 @@ export function useTimerEngine() {
   useFocusEffect(
     useCallback(() => {
       getAppSetting("timer_sound_enabled").then((val) => {
-        setAudioEnabled(val !== "false")
+        setAudioCategoryEnabled("timer", val !== "false")
       }).catch(() => {
-        setAudioEnabled(true)
+        setAudioCategoryEnabled("timer", true)
         toast.error("Could not load sound setting")
       })
       return () => { unloadAudio() }

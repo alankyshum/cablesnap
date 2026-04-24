@@ -8,6 +8,9 @@ export type TimerCue =
   | "minute"
   | "warning"
   | "complete"
+  | "set_complete"
+
+export type AudioCategory = "timer" | "feedback"
 
 const SOURCES: Record<TimerCue, AudioSource> = {
   work_start: require("../assets/sounds/beep_high.wav"),
@@ -16,11 +19,38 @@ const SOURCES: Record<TimerCue, AudioSource> = {
   minute: require("../assets/sounds/beep_high.wav"),
   warning: require("../assets/sounds/warning.wav"),
   complete: require("../assets/sounds/complete.wav"),
+  set_complete: require("../assets/sounds/set-complete.wav"),
+}
+
+/**
+ * Category mapping (BLD-559): separate user-facing toggles for the
+ * rest-timer audio (existing) and the set-completion confirmation audio
+ * (new). The "timer" category is controlled by the legacy `Timer Sound`
+ * switch; "feedback" is controlled by the new `Sound on set complete`
+ * switch.
+ *
+ * Every cue in SOURCES MUST have an entry here — enforced by a Jest
+ * completeness test.
+ */
+export const CUE_CATEGORY: Record<TimerCue, AudioCategory> = {
+  work_start: "timer",
+  rest_start: "timer",
+  tick: "timer",
+  minute: "timer",
+  warning: "timer",
+  complete: "timer",
+  set_complete: "feedback",
 }
 
 let players: Map<TimerCue, AudioPlayer> | null = null
-let enabled = true
 let loading = false
+
+// Category-scoped enable flags. Defaults match legacy behavior for
+// "timer" (on) and plan default for "feedback" (off).
+const enabledByCategory: Record<AudioCategory, boolean> = {
+  timer: true,
+  feedback: false,
+}
 
 async function load(): Promise<Map<TimerCue, AudioPlayer>> {
   if (players) return players
@@ -43,8 +73,17 @@ async function load(): Promise<Map<TimerCue, AudioPlayer>> {
   }
 }
 
+/**
+ * Eagerly preload all audio players so the first tap is never the load
+ * trigger. Safe to call multiple times — subsequent calls are no-ops.
+ */
+export async function preload(): Promise<void> {
+  await load()
+}
+
 export async function play(cue: TimerCue): Promise<void> {
-  if (!enabled) return
+  const category = CUE_CATEGORY[cue]
+  if (!enabledByCategory[category]) return
   try {
     const map = await load()
     const player = map.get(cue)
@@ -69,10 +108,12 @@ export async function unload(): Promise<void> {
   }
 }
 
-export function setEnabled(val: boolean): void {
-  enabled = val
+/** Toggle a specific audio category. */
+export function setEnabled(category: AudioCategory, val: boolean): void {
+  enabledByCategory[category] = val
 }
 
-export function isEnabled(): boolean {
-  return enabled
+/** Inspect a specific audio category. */
+export function isEnabled(category: AudioCategory): boolean {
+  return enabledByCategory[category]
 }

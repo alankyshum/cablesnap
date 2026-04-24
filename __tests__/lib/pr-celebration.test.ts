@@ -133,7 +133,11 @@ describe("usePRCelebration", () => {
     expect(result.current.celebration.visible).toBe(true);
     expect(result.current.celebration.exerciseName).toBe("Bench Press");
     expect(result.current.celebration.showConfetti).toBe(true);
-    expect(mockHaptic).toHaveBeenCalledWith("medium");
+    // BLD-559 R2: triggerPR MUST NOT fire a haptic — the set-complete
+    // confirmation hook is the sole haptic site. Explicit zero-call
+    // assertion locks the ownership-inversion regression.
+    expect(mockHaptic).not.toHaveBeenCalled();
+    expect(mockNotificationHaptic).not.toHaveBeenCalled();
     expect(mockAnnounce).toHaveBeenCalledWith("New personal record for Bench Press");
 
     // Auto-dismiss after 2s

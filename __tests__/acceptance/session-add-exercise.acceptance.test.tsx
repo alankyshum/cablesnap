@@ -85,7 +85,7 @@ jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache'
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), notificationAsync: jest.fn(), ImpactFeedbackStyle: { Light: 'light', Heavy: 'heavy' }, NotificationFeedbackType: { Success: 'success', Warning: 'warning' } }))
 jest.mock('expo-keep-awake', () => ({ activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined) }))
-jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn() }))
+jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn(), preload: jest.fn() }))
 jest.mock('../../lib/confirm', () => ({ confirmAction: jest.fn() }))
 
 import React from 'react'
