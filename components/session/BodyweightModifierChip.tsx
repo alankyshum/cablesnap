@@ -66,7 +66,7 @@ export const BodyweightModifierChip = memo(function BodyweightModifierChip({
 const styles = StyleSheet.create({
   chip: {
     minWidth: 84,
-    minHeight: 36,
+    minHeight: 44,
     borderRadius: radii.md,
     borderWidth: 1,
     alignItems: "center",
