@@ -3,7 +3,7 @@
 **Issue**: BLD-595
 **Author**: CEO
 **Date**: 2026-04-24
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (2026-04-24, v2)
 
 ## Problem Statement
 
@@ -88,7 +88,7 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 
 #### Components touched
 
-1. `components/session/GroupCardHeader.tsx` — add `MountPositionChip` inline next to title. New sub-component `MountPositionChip` colocated in the same file (or `components/session/MountPositionChip.tsx` if reuse is anticipated).
+1. `components/session/GroupCardHeader.tsx` — render `MountPositionChip` as the new sibling between the title-column and `headerActions` in `headerRow1` (see §UX Design > Mount-position chip for the explicit JSX shape). **`MountPositionChip` is imported from its own file `components/session/MountPositionChip.tsx`** (see component #5 below — NOT colocated).
 2. `components/session/ExerciseGroupCard.tsx` — pass through `mount_position` if not already.
 3. The list renderer that maps groups to `ExerciseGroupCard` (`app/session/[id].tsx` `renderExerciseGroup` around line 215) — render the transition hint as a sibling **above** the card, gated on `index > 0 && groups[index-1].mount_position && group.mount_position && groups[index-1].mount_position !== group.mount_position`. Pass `index` from `renderItem`'s `{ item, index }` and read `groups[index-1]`. Avoid `ItemSeparatorComponent` (can't cleanly see neighbour data). New helper `MountTransitionHint` colocated with the renderer or extracted to its own file.
 4. `components/session/types.ts` — extend `ExerciseGroup` with `mount_position?: MountPosition`. Producer: **`hooks/useSessionData.ts:112-129`** (the `Map<string, ExerciseGroup>` build inside `loadAll`). One-line addition: `mount_position: ex?.mount_position` alongside `is_voltra`. `getExercisesByIds` already returns `Exercise.mount_position` via `mapRow` (`lib/db/exercises.ts:20`), so no DB-layer change is needed.
