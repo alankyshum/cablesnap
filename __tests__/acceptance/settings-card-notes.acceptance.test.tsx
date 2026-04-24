@@ -46,12 +46,13 @@ describe("Session notes/delete button touch targets (BLD-258, GitHub #126)", () 
   });
 
   it("circleCheck is consistent size with action buttons", () => {
-    // Both circleCheck and actionBtn should be 36px
+    // Both circleCheck and actionBtn should match in size (44dp post-BLD-558 for glove use).
     const circleCheckMatch = sessionSource.match(/circleCheck:\s*\{[^}]*width:\s*(\d+)/);
     const actionBtnMatch = sessionSource.match(/actionBtn:\s*\{[^}]*width:\s*(\d+)/);
     expect(circleCheckMatch).not.toBeNull();
     expect(actionBtnMatch).not.toBeNull();
     expect(circleCheckMatch![1]).toBe(actionBtnMatch![1]);
+    expect(Number(actionBtnMatch![1])).toBeGreaterThanOrEqual(44);
   });
 
   it("notes input has minimum font size of 14", () => {
