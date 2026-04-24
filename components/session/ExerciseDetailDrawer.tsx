@@ -9,6 +9,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { ExerciseDrawerStats } from "./ExerciseDrawerStats";
+import { ExerciseTutorialLink } from "../exercises/ExerciseTutorialLink";
 import type { Exercise } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -134,6 +135,10 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
                 </View>
                 <View style={styles.detailColRight}>
                   {instructions}
+                  <ExerciseTutorialLink
+                    exerciseName={exercise.name}
+                    testID="exercise-tutorial-link-drawer-wide"
+                  />
                 </View>
               </View>
               <MuscleMap
@@ -147,6 +152,10 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
             <>
               {musclesAndMeta}
               {instructions}
+              <ExerciseTutorialLink
+                exerciseName={exercise.name}
+                testID="exercise-tutorial-link-drawer"
+              />
             </>
           )}
         </>

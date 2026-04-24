@@ -7,6 +7,7 @@ import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { BodyweightModifierNotice } from "./BodyweightModifierNotice";
+import { ExerciseTutorialLink } from "./ExerciseTutorialLink";
 import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseDetailPaneProps {
@@ -155,6 +156,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                   })}
                 </>
               )}
+              <ExerciseTutorialLink exerciseName={detail.name} testID="exercise-tutorial-link-pane" />
             </>
           }
         />
