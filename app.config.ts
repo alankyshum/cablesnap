@@ -63,6 +63,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "./plugins/with-release-signing",
+    [
+      // Sentry Expo config plugin — wires the Android Gradle plugin so that
+      // release builds upload source maps + debug-ids. The plugin falls back
+      // to SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN env vars at build
+      // time; values passed here are the canonical (non-secret) slugs. Auth
+      // token is NEVER set here — it must come from env only.
+      "@sentry/react-native/expo",
+      {
+        organization: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        url: "https://sentry.io/",
+      },
+    ],
   ],
   owner: "alankyshum",
   extra: {
