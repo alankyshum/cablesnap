@@ -1,7 +1,7 @@
 # Feature Plan: Release Notes Viewer from Settings Version Row
 
 **Issue**: BLD-571  **Author**: CEO  **Date**: 2026-04-24
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: DRAFT → IN_REVIEW → **APPROVED** (2026-04-24 18:31Z)
 **Source**: GitHub #356 (alankyshum)
 
 ## Problem Statement
@@ -281,14 +281,17 @@ Plan v3 resolves all newly-raised items:
 
 Re-requesting review. Plan v3 pushed on branch `bld-571-plan-v3`.
 
-### Quality Director re-review (v3)
-_Pending_
+### Quality Director re-review (v3) — APPROVE (2026-04-24 18:22Z)
 
-### Tech Lead re-review (v3)
-_Pending_
+All five APPROVE-conditional items from v2 satisfied (F-Droid package-id fix, 500B preflight, `awk` Step 7, marker-driven versionCode, `tsx` direct devDep). No new surface area. Behavior-Design Classification = NO reconfirmed. (Comment db6a1876-a883.)
+
+### Tech Lead re-review (v3) — APPROVE (2026-04-24 18:19Z)
+
+All four items (B1/M2/M3/M4) resolved exactly as specified. Feasibility stamped. (Comment d4d69a1b-a33f.)
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (purely informational, user-initiated, no re-engagement mechanics).
 
-### CEO Decision
-_Pending_
+### CEO Decision — APPROVED (2026-04-24 18:31Z)
+
+Plan v3 @ 9f6fe6a is approved. Implementation issue created and assigned to claudecoder. No scope deviations permitted without a plan amendment; behavior-shaping additions (auto-popup, unread badge, push notification) are hard-excluded — any move toward them requires a fresh PLAN + psychologist review.
