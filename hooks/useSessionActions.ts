@@ -20,11 +20,16 @@ import {
   getSessionSets,
   updateSetDuration,
   checkSetPR,
+  checkSetBodyweightModifierPR,
   updateExercisePositions,
   getGoalForExercise,
   achieveGoal,
   getCurrentBestWeight,
 } from "../lib/db";
+import {
+  getLastBodyweightModifier,
+  updateSetBodyweightModifier,
+} from "../lib/db/session-sets";
 import { resolveRestSeconds, type RestBreakdown } from "../lib/rest";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
@@ -99,6 +104,10 @@ export function useSessionActions({
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // BLD-541: per-session rate-limiter for weighted-BW PR celebrations.
+  // Populated with exercise_id on first PR hit; further sets in the same
+  // session for the same exercise don't re-trigger the celebration.
+  const bwPRExerciseSet = useRef<Set<string>>(new Set());
 
   // Timer
   useEffect(() => {
@@ -212,6 +221,34 @@ export function useSessionActions({
       }
     }
 
+    // BLD-541: weighted-bodyweight PR detection on set completion. Gated on a
+    // non-null modifier (pure-bodyweight sets don't celebrate). Rate-limited
+    // once-per-exercise-per-session via bwPRExerciseSet to avoid repeat
+    // celebrations on equal-or-better later sets within the same session.
+    if (
+      set.set_type !== 'warmup' &&
+      set.bodyweight_modifier_kg != null &&
+      id &&
+      triggerPR &&
+      !bwPRExerciseSet.current.has(set.exercise_id)
+    ) {
+      try {
+        const isBwPR = await checkSetBodyweightModifierPR(
+          set.exercise_id,
+          set.bodyweight_modifier_kg,
+          id
+        );
+        if (isBwPR) {
+          bwPRExerciseSet.current.add(set.exercise_id);
+          const group = groups.find((g) => g.exercise_id === set.exercise_id);
+          triggerPR(group?.name ?? "exercise", false);
+          updateGroupSet(set.id, { is_pr: true });
+        }
+      } catch {
+        // PR detection must never block set completion
+      }
+    }
+
     // Warmup sets: default behavior preserved (no timer). Opt-in via setting.
     if (set.set_type === 'warmup') {
       const warmupRest = await getAppSetting("rest_after_warmup_enabled");
@@ -236,10 +273,32 @@ export function useSessionActions({
     const fallback = group?.is_voltra && group.training_modes.length > 1 ? group.training_modes[0] : null;
     const mode = modes[exerciseId] ?? fallback;
     const newSet = await addSet(id!, exerciseId, num, null, null, mode, null, undefined, undefined, group?.exercise_position ?? 0);
+
+    // BLD-541: smart-default the bodyweight modifier from the last session's
+    // most-recent completed set. Only runs for bodyweight groups. Persisted
+    // via the same updateSetBodyweightModifier entry point as the sheet, so
+    // the equipment-invariant and normalize() apply uniformly.
+    let defaultModifier: number | null = null;
+    if (group?.is_bodyweight) {
+      try {
+        defaultModifier = await getLastBodyweightModifier(exerciseId);
+        if (defaultModifier != null) {
+          await updateSetBodyweightModifier(newSet.id, defaultModifier);
+        }
+      } catch {
+        defaultModifier = null;
+      }
+    }
+
+    const setWithModifier: SetWithMeta = {
+      ...newSet,
+      bodyweight_modifier_kg: defaultModifier,
+      previous: "-",
+    };
     setGroups((prev) =>
       prev.map((g) =>
         g.exercise_id === exerciseId
-          ? { ...g, sets: [...g.sets, { ...newSet, previous: "-" }] }
+          ? { ...g, sets: [...g.sets, setWithModifier] }
           : g
       )
     );

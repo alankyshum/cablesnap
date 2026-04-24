@@ -9,6 +9,7 @@ import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import { getAppSetting, addWarmupSets } from "../../lib/db";
+import { queryClient } from "../../lib/query";
 import { getTemplateDurationEstimates } from "../../lib/db/sessions";
 import { generateWarmupSets } from "../../lib/warmup";
 import * as Haptics from "expo-haptics";
@@ -119,11 +120,25 @@ export default function ActiveSession() {
     try {
       await updateSetBodyweightModifier(setId, null);
       updateGroupSet(setId, { bodyweight_modifier_kg: null });
+      // BLD-541 AC-26: invalidate the smart-default cache so the next new
+      // set for this exercise re-reads the latest modifier.
+      let exerciseIdForInvalidate: string | null = null;
+      for (const g of groups) {
+        if (g.sets.some((s) => s.id === setId)) {
+          exerciseIdForInvalidate = g.exercise_id;
+          break;
+        }
+      }
+      if (exerciseIdForInvalidate) {
+        queryClient.invalidateQueries({
+          queryKey: ["bw-modifier-default", exerciseIdForInvalidate],
+        });
+      }
       Haptics.selectionAsync().catch(() => {});
     } catch (err) {
       showError((err as Error).message);
     }
-  }, [updateGroupSet, showError]);
+  }, [updateGroupSet, showError, groups]);
 
   const handleSaveBodyweightModifier = useCallback(async (modifierKg: number | null) => {
     const setId = bwModifierSetId;
@@ -135,11 +150,24 @@ export default function ActiveSession() {
     try {
       await updateSetBodyweightModifier(setId, normalized);
       updateGroupSet(setId, { bodyweight_modifier_kg: normalized });
+      // BLD-541 AC-26: same invalidation path as the clear handler.
+      let exerciseIdForInvalidate: string | null = null;
+      for (const g of groups) {
+        if (g.sets.some((s) => s.id === setId)) {
+          exerciseIdForInvalidate = g.exercise_id;
+          break;
+        }
+      }
+      if (exerciseIdForInvalidate) {
+        queryClient.invalidateQueries({
+          queryKey: ["bw-modifier-default", exerciseIdForInvalidate],
+        });
+      }
       bwModifierSheetRef.current?.close();
     } catch (err) {
       showError((err as Error).message);
     }
-  }, [bwModifierSetId, updateGroupSet, showError]);
+  }, [bwModifierSetId, updateGroupSet, showError, groups]);
 
   const bwModifierInitial = useMemo(() => {
     if (!bwModifierSetId) return null;
