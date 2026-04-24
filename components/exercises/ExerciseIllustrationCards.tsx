@@ -54,7 +54,7 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
         </View>
       );
     }
-    return <View onLayout={onLayout} />;
+    return null;
   }
 
   const sideBySide = containerWidth >= SIDE_BY_SIDE_MIN_WIDTH;
@@ -70,7 +70,7 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
       >
         <Pressable
           onPress={() => setZoom("start")}
-          accessibilityRole="image"
+          accessibilityRole="button"
           accessibilityLabel={resolved.startAlt}
           accessibilityHint="Tap to view full-screen"
           style={[cardStyle, sideBySide ? styles.halfWidth : styles.fullWidth]}
@@ -87,7 +87,7 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
         </Pressable>
         <Pressable
           onPress={() => setZoom("end")}
-          accessibilityRole="image"
+          accessibilityRole="button"
           accessibilityLabel={resolved.endAlt}
           accessibilityHint="Tap to view full-screen"
           style={[cardStyle, sideBySide ? styles.halfWidth : styles.fullWidth]}

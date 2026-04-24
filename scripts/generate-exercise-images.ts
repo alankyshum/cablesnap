@@ -181,10 +181,21 @@ async function describePose(prompt: string, position: "start" | "end", ex: Exerc
     }),
   });
   if (!res.ok) {
-    return `${ex.name} ${position} position.`;
+    // Hard-fail: never persist stub alt-text. Accessibility labels must be
+    // substantive AI output or the generator must fail the run so the
+    // manifest entry is not written.
+    throw new Error(
+      `alt-text generation failed for ${ex.id} (${position}): HTTP ${res.status} ${res.statusText}`
+    );
   }
   const body = (await res.json()) as { choices: Array<{ message: { content: string } }> };
-  return body.choices?.[0]?.message?.content?.trim() || `${ex.name} ${position} position.`;
+  const content = body.choices?.[0]?.message?.content?.trim();
+  if (!content) {
+    throw new Error(
+      `alt-text generation returned empty content for ${ex.id} (${position}); aborting run so manifest is not polluted with stub text.`
+    );
+  }
+  return content;
 }
 
 function encodeWebp(pngPath: string, webpPath: string): void {
@@ -239,7 +250,11 @@ function writeManifest(entries: Map<string, { startAlt: string; endAlt: string }
     lines.push(`  },`);
   }
   lines.push("};", "");
-  fs.writeFileSync(MANIFEST_PATH, lines.join("\n"));
+  // Atomic write: tmp + rename so a mid-batch failure leaves the prior
+  // manifest intact (QD R2 recommendation).
+  const tmp = `${MANIFEST_PATH}.tmp`;
+  fs.writeFileSync(tmp, lines.join("\n"));
+  fs.renameSync(tmp, MANIFEST_PATH);
   console.log(`[gen] wrote ${MANIFEST_PATH} with ${sorted.length} entries`);
 }
 
@@ -268,6 +283,22 @@ async function main(): Promise<void> {
   if (!cli.dryRun && !apiKey) {
     console.error("[gen] OPENAI_API_KEY is required (pass --dry-run to preview prompts without hitting the API).");
     process.exit(1);
+  }
+
+  // Preflight external binaries so we fail fast rather than deep in the loop.
+  if (!cli.dryRun) {
+    try {
+      execFileSync("cwebp", ["-version"], { stdio: "ignore" });
+    } catch {
+      console.error("[gen] 'cwebp' not found on PATH. Install libwebp (e.g., `brew install webp`).");
+      process.exit(1);
+    }
+    try {
+      execFileSync("identify", ["-version"], { stdio: "ignore" });
+    } catch {
+      console.error("[gen] 'identify' (ImageMagick) not found on PATH. Install ImageMagick (e.g., `brew install imagemagick`).");
+      process.exit(1);
+    }
   }
 
   const all = seedExercises();
