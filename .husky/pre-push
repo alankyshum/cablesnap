@@ -11,6 +11,16 @@ if [ -f "scripts/check-license.sh" ]; then
   fi
 fi
 
+# ─── Exercise Illustration Bundle Gate (BLD-561) ────────────────
+if [ -f "scripts/verify-exercise-illustrations-size.sh" ]; then
+  echo "🖼️  Verifying exercise illustration bundle size..."
+  if ! ./scripts/verify-exercise-illustrations-size.sh; then
+    echo ""
+    echo "Exercise illustration assets exceeded the hard-fail bundle budget."
+    exit 1
+  fi
+fi
+
 # ─── Test Budget Gate ────────────────────────────────────────────
 # Blocks push if test count exceeds budget (1800 test cases)
 if [ -f "scripts/audit-tests.sh" ]; then

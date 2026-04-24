@@ -96,6 +96,8 @@ export async function getTemplateById(
           attachment: null,
           training_modes: null,
           is_voltra: null,
+          start_image_uri: null,
+          end_image_uri: null,
         })
       : undefined,
   }));

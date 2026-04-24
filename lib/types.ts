@@ -70,6 +70,11 @@ export type Exercise = {
   attachment?: Attachment;
   training_modes?: TrainingMode[];
   is_voltra?: boolean;
+  // BLD-561: Exercise illustrations — user-supplied image URIs for custom exercises.
+  // Seeded Voltra exercises get their images from assets/exercise-illustrations/manifest.generated.ts,
+  // not these columns. Both-or-neither: resolver returns null unless both are present.
+  start_image_uri?: string;
+  end_image_uri?: string;
 };
 
 export const CATEGORIES: Category[] = [

@@ -21,7 +21,9 @@ on:
       - 'lib/db/**'
       - 'hooks/**'
       - 'e2e/**'
+      - 'assets/exercise-illustrations/**'
       - 'scripts/verify-scenario-hook-not-in-bundle.sh'
+      - 'scripts/verify-exercise-illustrations-size.sh'
       - '.github/workflows/bundle-gate.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -57,3 +59,6 @@ jobs:
 
       - name: Run bundle gate
         run: bash scripts/verify-scenario-hook-not-in-bundle.sh
+
+      - name: Verify exercise illustration bundle size (BLD-561)
+        run: bash scripts/verify-exercise-illustrations-size.sh

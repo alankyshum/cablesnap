@@ -9,6 +9,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { ExerciseDrawerStats } from "./ExerciseDrawerStats";
+import { ExerciseIllustrationCards } from "@/components/exercises/ExerciseIllustrationCards";
 import type { Exercise } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -100,6 +101,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
 
   const instructions = steps.length > 0 ? (
     <View style={styles.detailSection}>
+      <ExerciseIllustrationCards exercise={exercise} />
       <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
         Instructions
       </Text>
@@ -109,7 +111,9 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
         </Text>
       ))}
     </View>
-  ) : null;
+  ) : (
+    <ExerciseIllustrationCards exercise={exercise} />
+  );
 
   const mapWidth = layout.atLeastMedium
     ? Math.min(screenWidth - 64, 600)

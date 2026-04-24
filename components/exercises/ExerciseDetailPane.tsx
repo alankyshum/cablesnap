@@ -7,6 +7,7 @@ import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { BodyweightModifierNotice } from "./BodyweightModifierNotice";
+import { ExerciseIllustrationCards } from "@/components/exercises/ExerciseIllustrationCards";
 import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseDetailPaneProps {
@@ -140,6 +141,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                   <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
                     Instructions
                   </Text>
+                  <ExerciseIllustrationCards exercise={detail} />
                   {steps.map((step, i) => {
                     const text = step.replace(/^\d+\.\s*/, "");
                     return (

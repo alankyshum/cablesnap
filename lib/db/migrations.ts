@@ -29,6 +29,10 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "exercises", "attachment", "TEXT DEFAULT 'handle'");
   await addColumnIfMissing(database, "exercises", "training_modes", `TEXT DEFAULT '["weight"]'`);
   await addColumnIfMissing(database, "exercises", "is_voltra", "INTEGER DEFAULT 0");
+  // BLD-561: Exercise illustrations — URI columns for custom-exercise images.
+  // Seeded Voltra exercises use the bundled manifest instead of these columns.
+  await addColumnIfMissing(database, "exercises", "start_image_uri", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "exercises", "end_image_uri", "TEXT DEFAULT NULL");
 
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");

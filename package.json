@@ -26,6 +26,7 @@
     "screenshots:raw": "playwright test e2e/screenshot-capture.spec.ts --project=store-pixel9 --project=store-fold7",
     "screenshots:frame": "tsx scripts/generate-store-screenshots.ts",
     "screenshots": "npm run screenshots:raw && npm run screenshots:frame",
+    "generate:exercise-images": "tsx scripts/generate-exercise-images.ts",
     "prepare": "husky"
   },
   "dependencies": {

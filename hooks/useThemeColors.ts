@@ -32,6 +32,8 @@ export function useThemeColors() {
     // Surface / Background
     surface: t.card,
     surfaceVariant: t.muted,
+    // BLD-561: neutral tinted card for illustrations (aliased to surfaceVariant).
+    surfaceAlt: t.muted,
     onSurface: t.foreground,
     onSurfaceVariant: t.mutedForeground,
     background: t.background,
