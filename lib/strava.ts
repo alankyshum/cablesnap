@@ -78,13 +78,13 @@ export function getStravaUserMessage(err: unknown): string {
         return "Strava isn't set up correctly. Please contact support.";
       case "unknown":
       default:
-        return "Something went wrong connecting to Strava.";
+        return "Something went wrong connecting to Strava. Please try again.";
     }
   }
   if (isNetworkError(err)) {
     return "Check your internet and try again.";
   }
-  return "Something went wrong connecting to Strava.";
+  return "Something went wrong connecting to Strava. Please try again.";
 }
 
 // Public URL users can open when Strava errors are unactionable in-app
@@ -100,9 +100,13 @@ export interface StravaSupportAction {
 
 /**
  * Returns an optional support CTA to pair with a Strava error toast.
- * Only errors the user cannot self-resolve (currently `config`) surface
- * a "Get help" link that opens {@link STRAVA_SUPPORT_URL}. For all other
- * error codes, returns undefined so the toast shows no CTA.
+ * Errors the user cannot self-resolve surface a "Get help" link that opens
+ * {@link STRAVA_SUPPORT_URL}:
+ * - `config`: misconfigured build (client_id / proxy URL missing)
+ * - `unknown`: we have no actionable hint — give the user a way to report it
+ *
+ * For self-recoverable errors (network, rate_limit, server, auth_*) we omit
+ * the CTA — retrying resolves them.
  *
  * TODO(BLD-513): generalize if a second integration needs this — extract
  * a `makeSupportAction(url, label)` factory into `lib/support.ts` and
@@ -111,7 +115,9 @@ export interface StravaSupportAction {
 export function getStravaSupportAction(
   err: unknown,
 ): StravaSupportAction | undefined {
-  if (err instanceof StravaError && err.code === "config") {
+  const isConfig = err instanceof StravaError && err.code === "config";
+  const isUnknown = err instanceof StravaError && err.code === "unknown";
+  if (isConfig || isUnknown) {
     return {
       label: "Get help",
       onPress: () => {
@@ -396,6 +402,23 @@ export async function connectStrava(): Promise<{
   });
 
   if (result.type !== "success" || !result.params.code) {
+    // "error" surfaces issues like Android deep-link routing failures or
+    // a malformed authorization response. Without this branch, the caller
+    // silently received null and no toast was shown — the user saw nothing
+    // or only the spinner stop. (BLD-547 / GH #333)
+    if (result.type === "error") {
+      const promptErr = (result as { error?: Error | null }).error;
+      const message = promptErr?.message || "Strava authorization failed";
+      const wrapped = new StravaError("unknown", message);
+      stravaLog("warn", "strava auth prompt errored", {
+        flow: "strava_connect",
+        step: "auth_prompt_error",
+        resultType: result.type,
+        errorMessage: message,
+      });
+      captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
+      throw wrapped;
+    }
     stravaLog("info", "strava connect user cancelled", {
       flow: "strava_connect",
       step: "user_cancelled",
