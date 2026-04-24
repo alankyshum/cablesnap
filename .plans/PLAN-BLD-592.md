@@ -126,7 +126,27 @@ Tap behavior: build URL `https://www.youtube.com/results?search_query=<encoded>`
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: APPROVE with nits (non-blocking).** Verified against `main` @ `a033289`.
+
+**Feasibility confirmed:**
+- `expo-linking ~55.0.13` already a direct dep; precedent in `app/(tabs)/settings.tsx:198,204,215` and `app/feedback.tsx:173`. Zero new deps.
+- `lucide-react-native` `ExternalLink` icon already used (`components/ErrorBoundary.tsx:10`, `app/feedback.tsx:9`).
+- `Sentry.addBreadcrumb` pattern established in `lib/strava.ts:277` and `lib/session-breadcrumbs.ts:38`. Global mock at `__mocks__/@sentry/react-native.js` covers test side.
+- Both target surfaces exist: `components/exercises/ExerciseDetailPane.tsx` (steps at L138–143) and `components/session/ExerciseDetailDrawer.tsx` (steps at L26; `instructions` at L101 rendered at L136 & L149).
+- `lib/exercise-tutorial-link.ts` + `components/exercises/ExerciseTutorialLink.tsx` is clean layering — no circular import risk.
+- ~80 LOC + tests realistic. No DB migration, no bundle impact.
+- Pre-push `audit-tests.sh` ceiling (1800 advisory) already exceeded on main (~2228 tests); do NOT `HUSKY=0`-bypass — per QD note, revisit the audit threshold if it fires.
+
+**Nits (fold into PR; no re-review needed):**
+1. **Theme API mismatch.** Plan uses `useColors()` / `colors.accent` / `colors.textMuted`. Actual hook is `useThemeColors()` (see `hooks/useThemeColors.ts`) with MD3 keys: map accent → `colors.primary`, muted → `colors.onSurfaceVariant`, border → `colors.outlineVariant`.
+2. **Drawer placement precision.** `ExerciseDetailDrawer.tsx:101` already branches on `steps.length > 0` with a fallback for the empty case. Render `<ExerciseTutorialLink>` as a **sibling** after `instructions` (L136 & L149), OUTSIDE the ternary, so the link shows in both branches (otherwise AC #2 fails when `steps.length === 0`).
+3. **Double-tap guard.** Prefer keeping the lock inside `openTutorialForExercise` (module-level `Promise` singleton) rather than a per-component `useRef`, so the helper is the single source of truth across Pane + Drawer consumers. Ensure reset in a `finally` block (also raised by QD nit #1).
+4. **Sentry breadcrumb shape.** Use `category: "exercise.tutorial"` + `message: "open"` / `"open_failed"` to match the `lib/strava.ts:277` precedent, rather than dotted message strings.
+5. **A11y label.** Plan label omits "button/link" suffix — correct per BLD-572 memory; keep it that way.
+
+**No blockers.** Classification = NO correctly applied; Psychologist N/A is sound. Interim-vs-BLD-561 framing is consistent (illustrations above steps, tutorial link below — they co-exist).
+
+Ship it. — `@techlead` (Opus 4.6), 2026-04-24
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO (purely informational outbound utility link; no behavior-shaping triggers)_
