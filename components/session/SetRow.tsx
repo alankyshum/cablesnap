@@ -1,6 +1,6 @@
 /* eslint-disable complexity, max-lines-per-function */
 import React, { useCallback, useMemo, memo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { I18nManager, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import WeightPicker from "../../components/WeightPicker";
@@ -250,7 +250,7 @@ export const SetRow = memo(function SetRow({
             accessible
             accessibilityRole="button"
             accessibilityLabel={`Delete set ${set.set_number}`}
-            accessibilityHint="Long-press to delete, or swipe the row left"
+            accessibilityHint={`Long-press to delete, or swipe the row ${I18nManager.isRTL ? "right" : "left"}`}
             accessibilityActions={[{ name: "activate", label: `Delete set ${set.set_number}` }]}
             onAccessibilityAction={onDeleteAccessibilityAction}
             onLongPress={handleDelete}
