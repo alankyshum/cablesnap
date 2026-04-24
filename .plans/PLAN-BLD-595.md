@@ -53,7 +53,7 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 - Location: inline at the end of the title line in `GroupCardHeader` (same row as the exercise title; floats right of the title with `flexShrink: 1` on the title).
 - Content: a stylised cable-mount icon (`MaterialCommunityIcons` name `arrow-collapse-up` for high, `arrow-expand-vertical` for mid, `arrow-collapse-down` for low, `dots-horizontal` for floor) plus the localised label from `MOUNT_POSITION_LABELS` (e.g., "Low", "Mid", "High", "Floor").
 - Visual: rounded pill, `colors.surfaceVariant` background, `colors.onSurfaceVariant` text, 11pt label. Same height as the existing `previousPerf` row text (~18dp) — must not push the card taller.
-- Accessibility: `accessibilityRole="text"` (not interactive in v1), `accessibilityLabel="Cable mount: <Label>"`. Hidden completely from the a11y tree when value is undefined.
+- Accessibility: `accessibilityLabel="Cable mount: <Label>"` on a non-interactive node. Do **not** set `accessibilityRole="text"` (iOS-only; emits a warning on Android). Hidden completely from the a11y tree when value is undefined.
 - Empty state: chip is **not rendered** when `group.mount_position` is `null`/`undefined`. Free-weight and bodyweight cards are unchanged.
 
 #### Cable-switch transition hint
@@ -61,7 +61,7 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 - Location: rendered as a header element on the second card (i.e., inside the `FlatList`/`ScrollView` rendering the groups, immediately above the `ExerciseGroupCard` View — NOT inside the card).
 - Content: a single line with a small horizontal-arrow icon (`MaterialCommunityIcons` `swap-horizontal-bold`) and text "Switch cable: <prev label> → <next label>".
 - Visual: full-width, transparent background, 12pt `colors.onSurfaceVariant` text, 8dp vertical padding. No border, no card. Subtle by design — not a banner.
-- Accessibility: `accessibilityRole="text"`, label "Cable switch from <prev> to <next>". Reads naturally in screen-reader order before the next exercise heading.
+- Accessibility: `accessibilityLabel="Cable switch from <prev> to <next>"` on a non-interactive node. Do **not** set `accessibilityRole="text"` (iOS-only; warns on Android). Reads naturally in screen-reader order before the next exercise heading.
 - Suppression rules:
   - Hidden when either neighbour has no `mount_position`.
   - Hidden when both share the same value.
@@ -89,13 +89,15 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 
 1. `components/session/GroupCardHeader.tsx` — add `MountPositionChip` inline next to title. New sub-component `MountPositionChip` colocated in the same file (or `components/session/MountPositionChip.tsx` if reuse is anticipated).
 2. `components/session/ExerciseGroupCard.tsx` — pass through `mount_position` if not already.
-3. The list renderer that maps groups to `ExerciseGroupCard` (likely `app/session/[id].tsx` or a sub-component) — render the transition hint between consecutive groups. Implementation: a small helper `MountTransitionHint` component placed inside the map. Use the same memoization discipline as other session components (per BLD-560 learning).
-4. `components/session/types.ts` — extend `ExerciseGroup` with `mount_position?: MountPosition` if not present; update producers (probably `groupSetsByExercise` or similar in `lib/`).
+3. The list renderer that maps groups to `ExerciseGroupCard` (`app/session/[id].tsx` `renderExerciseGroup` around line 215) — render the transition hint as a sibling **above** the card, gated on `index > 0 && groups[index-1].mount_position && group.mount_position && groups[index-1].mount_position !== group.mount_position`. Pass `index` from `renderItem`'s `{ item, index }` and read `groups[index-1]`. Avoid `ItemSeparatorComponent` (can't cleanly see neighbour data). New helper `MountTransitionHint` colocated with the renderer or extracted to its own file.
+4. `components/session/types.ts` — extend `ExerciseGroup` with `mount_position?: MountPosition`. Producer: **`hooks/useSessionData.ts:112-129`** (the `Map<string, ExerciseGroup>` build inside `loadAll`). One-line addition: `mount_position: ex?.mount_position` alongside `is_voltra`. `getExercisesByIds` already returns `Exercise.mount_position` via `mapRow` (`lib/db/exercises.ts:20`), so no DB-layer change is needed.
+5. **Extract** `MountPositionChip` to its own file `components/session/MountPositionChip.tsx` (not colocated). Reuse expected for template editor + detail drawer "next exercise" preview; cheaper to extract now than later from a 200-line `GroupCardHeader`.
 
 #### Performance
 
 - The chip is a pure presentational sub-component, render cost is sub-millisecond.
-- `MountTransitionHint` should be memoised with `React.memo` on `(prev, next)` to avoid re-renders when unrelated set state changes (per learning: GroupCardHeader memo regression detection in dev counter).
+- `MountTransitionHint` **must accept only primitive props** — `prevMount: MountPosition` and `nextMount: MountPosition` (strings), NOT group objects. Default `React.memo` shallow-compare is then sufficient and the BLD-560 dev render-counter pattern catches regressions.
+- The chip itself is a leaf consuming a single string prop — no extra memo needed beyond the existing `React.memo(GroupCardHeaderInner)`.
 - No new queries, no new hooks, no new effects.
 
 #### Dependencies
@@ -157,10 +159,10 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Chip collides with `TrainingModeSelector` on small screens | Medium | Low | Place chip on title row (above selector); verify on 320dp; allow chip to wrap below title at extremes. |
-| `ExerciseGroup` type missing `mount_position` requires a wider data-flow change | Low | Low | Already verified mount lives on Exercise; propagating it through one helper is a 1-line change. Implementation issue must confirm. |
-| Transition-hint causes `FlatList` `getItemLayout` mismatch | Low | Medium | Per learning BLD-453, remove `getItemLayout` if the existing list uses it AND we are now adding variable-height headers. Implementation issue must check. |
-| Memoisation regression caused by passing mount strings through new prop | Low | Low | New prop is a primitive string — no reference instability. Dev render counter (BLD-560 pattern) is already in place to catch surprises in QA. |
+| Chip collides with `TrainingModeSelector` on small screens | Low | Low | Selector lives on `headerRow2` (only when `is_voltra && training_modes.length > 1`); chip lives on `headerRow1`. No overlap. Verify on Pixel 4a (393dp). |
+| Chip clips behind right-side icon cluster on 320dp screens | Medium | Low | Add `flexWrap: "wrap"` to `headerRow1` (or set the chip wrapper `flexShrink: 0` and let the title row wrap) so the chip drops to a sub-line instead of clipping. Verify on 320dp. |
+| `ExerciseGroup` type missing `mount_position` requires producer change | Low (verified) | Low | Producer is `hooks/useSessionData.ts:112-129`. One-line addition: `mount_position: ex?.mount_position`. Confirmed in TL review. |
+| Memoisation regression caused by passing mount strings through new prop | Low | Low | New prop is a primitive string — no reference instability. `MountTransitionHint` accepts only primitives. Dev render counter (BLD-560 pattern) already in place to catch surprises in QA. |
 
 ## Review Feedback
 
@@ -168,7 +170,26 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: ✅ APPROVE WITH CLARIFICATIONS** (2026-04-24, full review in BLD-595 comments).
+
+Verified against codebase:
+- `Exercise.mount_position` exists (`lib/types.ts:69`); `mapRow` already returns it (`lib/db/exercises.ts:20`); `MOUNT_POSITION_LABELS` exists (`lib/types.ts:93`).
+- `ExerciseGroup` is missing `mount_position` (`components/session/types.ts:10-26`) — confirmed.
+- **Producer correction:** real producer is `hooks/useSessionData.ts:112-129` (Map build inside `loadAll`), NOT `groupSetsByExercise` (no such function). One-line addition: `mount_position: ex?.mount_position`.
+- `getItemLayout` risk (BLD-453) is **N/A** — `app/session/[id].tsx:306` FlatList does not set `getItemLayout`. Remove from risk table.
+- `TrainingModeSelector` collision is a non-issue — selector lives on `headerRow2`, chip on `headerRow1`.
+
+Required edits before implementation ticket:
+1. Update §Technical Approach component #4 to cite **`hooks/useSessionData.ts:112-129`**.
+2. Drop `getItemLayout` row from Risk Assessment.
+3. `MountTransitionHint` must accept primitive props only (`prevMount: MountPosition`, `nextMount: MountPosition` strings) for stable `React.memo`.
+4. Drop `accessibilityRole="text"` (iOS-only — Android warning). `accessibilityLabel` alone is sufficient.
+5. Extract `MountPositionChip` to its own file `components/session/MountPositionChip.tsx` (reuse is near-certain in template editor + detail drawer next-exercise preview).
+6. Render hint inside `renderExerciseGroup` (`app/session/[id].tsx:215`) using `{ item, index }` and `groups[index-1]`. Gate: `index > 0 && prev.mount_position && curr.mount_position && prev.mount_position !== curr.mount_position`. Avoid `ItemSeparatorComponent`.
+7. Add `flexWrap: "wrap"` (or chip `flexShrink: 0` + parent wrap) on `headerRow1` so chip drops to sub-line on 320dp instead of clipping behind icons.
+
+With those edits the plan is implementation-ready. CEO can proceed without re-review.
 
 ### Psychologist (Behavior-Design)
 N/A — Behavior-Design Classification = NO. This is an informational chip and a descriptive transition cue. No reward, streak, notification, social, or motivational copy. Will re-classify if any reviewer disagrees.
