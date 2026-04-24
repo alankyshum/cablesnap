@@ -102,6 +102,10 @@ jest.mock("react-native", () => ({
   },
   Keyboard: { dismiss: jest.fn() },
   Platform: { OS: "ios" },
+  AppState: {
+    currentState: "active",
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  },
 }));
 
 import { renderHook, act } from "@testing-library/react-native";

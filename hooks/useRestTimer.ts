@@ -73,30 +73,51 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     }
   }, [sessionId]);
 
+  // BLD-553: extracted tick so we can pause/restart the 1Hz interval on
+  // AppState background/foreground transitions (battery drain mitigation).
+  const startRestInterval = useCallback(() => {
+    if (restRef.current) return;
+    restRef.current = setInterval(() => {
+      if (endAtRef.current == null) {
+        if (restRef.current) clearInterval(restRef.current);
+        restRef.current = null;
+        return;
+      }
+      const remaining = Math.max(
+        0,
+        Math.ceil((endAtRef.current - Date.now()) / 1000),
+      );
+      setRest(remaining);
+      if (remaining <= 0) {
+        if (restRef.current) clearInterval(restRef.current);
+        restRef.current = null;
+        endAtRef.current = null;
+        cancelNotification();
+      }
+    }, 1000);
+  }, [cancelNotification]);
+
+  const stopRestInterval = useCallback(() => {
+    if (restRef.current) {
+      clearInterval(restRef.current);
+      restRef.current = null;
+    }
+  }, []);
+
   const runTimer = useCallback(
     (secs: number, nextBreakdown: RestBreakdown) => {
-      if (restRef.current) clearInterval(restRef.current);
+      stopRestInterval();
       cancelNotification();
       const endAt = Date.now() + secs * 1000;
       endAtRef.current = endAt;
       setRest(secs);
       setBreakdown(nextBreakdown);
       scheduleNotification(secs);
-      restRef.current = setInterval(() => {
-        const remaining = Math.max(
-          0,
-          Math.ceil((endAtRef.current! - Date.now()) / 1000),
-        );
-        setRest(remaining);
-        if (remaining <= 0) {
-          if (restRef.current) clearInterval(restRef.current);
-          restRef.current = null;
-          endAtRef.current = null;
-          cancelNotification();
-        }
-      }, 1000);
+      // Start unconditionally; AppState change listener will stop the interval
+      // immediately if the app is actually backgrounded.
+      startRestInterval();
     },
-    [cancelNotification, scheduleNotification],
+    [cancelNotification, scheduleNotification, startRestInterval, stopRestInterval],
   );
 
   /**
@@ -159,23 +180,44 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     setBreakdown(defaultBreakdown(0));
   }, [cancelNotification]);
 
-  // AppState listener: recalculate remaining time on foreground resume
+  // BLD-553 battery fix: AppState listener pauses the 1Hz interval when
+  // backgrounded (native notification still fires) and restarts it on
+  // foreground with a recomputed remaining from absolute endAt.
   useEffect(() => {
     const handleAppState = (nextState: AppStateStatus) => {
-      if (nextState === "active" && endAtRef.current) {
-        const remaining = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
-        setRest(remaining);
-        if (remaining <= 0) {
-          if (restRef.current) clearInterval(restRef.current);
-          restRef.current = null;
-          endAtRef.current = null;
-          cancelNotification();
+      if (nextState === "active") {
+        if (endAtRef.current) {
+          const remaining = Math.max(
+            0,
+            Math.ceil((endAtRef.current - Date.now()) / 1000),
+          );
+          setRest(remaining);
+          if (remaining <= 0) {
+            stopRestInterval();
+            endAtRef.current = null;
+            cancelNotification();
+          } else {
+            startRestInterval();
+          }
         }
+      } else {
+        // Pause ticking while backgrounded to save battery/CPU.
+        stopRestInterval();
       }
     };
     const sub = AppState.addEventListener("change", handleAppState);
     return () => sub.remove();
-  }, [cancelNotification]);
+  }, [cancelNotification, startRestInterval, stopRestInterval]);
+
+  // BLD-553: ensure haptic setTimeouts are cleared on unmount and stop the
+  // interval in case the hook unmounts mid-rest.
+  useEffect(() => {
+    return () => {
+      restHapticTimers.current.forEach((t) => clearTimeout(t));
+      restHapticTimers.current = [];
+      stopRestInterval();
+    };
+  }, [stopRestInterval]);
 
   // Haptic + audio feedback on rest timer completion and countdown
   useEffect(() => {
