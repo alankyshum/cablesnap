@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Keyboard, Platform } from "react-native";
+import { AccessibilityInfo, AppState, Keyboard, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import {
@@ -100,16 +100,38 @@ export function useSessionActions({
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Timer
+  // Session-elapsed clock.
+  // BLD-553 battery fix: pause setInterval when app is backgrounded. On some
+  // RN runtimes setInterval continues to schedule wake-ups with the screen
+  // off, and if it doesn't, React still triggers a render-burst as Date.now()
+  // jumps on resume. We recompute elapsed from session.started_at on resume,
+  // so there's no drift.
   useEffect(() => {
     if (!session) return;
     const update = () => {
       setElapsed(Math.floor((Date.now() - session.started_at) / 1000));
     };
-    update();
-    timer.current = setInterval(update, 1000);
+    const start = () => {
+      if (timer.current) return;
+      update();
+      timer.current = setInterval(update, 1000);
+    };
+    const stop = () => {
+      if (timer.current) {
+        clearInterval(timer.current);
+        timer.current = null;
+      }
+    };
+    // Start unconditionally; the AppState change listener will stop the
+    // interval immediately if the app is actually backgrounded.
+    start();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") start();
+      else stop();
+    });
     return () => {
-      if (timer.current) clearInterval(timer.current);
+      stop();
+      sub.remove();
     };
   }, [session]);
 

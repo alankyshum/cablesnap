@@ -245,6 +245,40 @@ describe("useRestTimer", () => {
     expect(result.current.rest).toBe(0);
   });
 
+  it("BLD-553: pauses 1Hz interval when backgrounded (no re-renders while backgrounded)", () => {
+    const { result } = renderHook(() => useRestTimer(defaultOptions));
+
+    act(() => {
+      result.current.startRestWithDuration(60);
+    });
+    expect(result.current.rest).toBe(60);
+
+    // Go to background
+    act(() => {
+      for (const listener of appStateListeners) listener("background");
+    });
+
+    // Advance wall-clock timers by 10s while backgrounded
+    // (jest.advanceTimersByTime also advances Date.now in modern fake timers)
+    act(() => { jest.advanceTimersByTime(10000); });
+
+    // rest state must NOT have been updated while backgrounded
+    // (proves the 1Hz interval is paused, saving battery)
+    expect(result.current.rest).toBe(60);
+
+    // Resume foreground
+    act(() => {
+      for (const listener of appStateListeners) listener("active");
+    });
+
+    // rest catches up via endAt recompute (60s budget - 10s elapsed = 50)
+    expect(result.current.rest).toBe(50);
+
+    // 1Hz interval must have been restarted
+    act(() => { jest.advanceTimersByTime(1000); });
+    expect(result.current.rest).toBe(49);
+  });
+
   it("does not schedule notification when notifications unavailable", async () => {
     mockIsAvailable.mockReturnValue(false);
     const { result } = renderHook(() => useRestTimer(defaultOptions));
