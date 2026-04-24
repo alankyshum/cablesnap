@@ -89,6 +89,7 @@ export const workoutSets = sqliteTable("workout_sets", {
   set_type: text("set_type").default("normal"),
   duration_seconds: integer("duration_seconds"),
   exercise_position: integer("exercise_position").default(0),
+  bodyweight_modifier_kg: real("bodyweight_modifier_kg"),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),

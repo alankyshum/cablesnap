@@ -56,6 +56,7 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "workout_sets", "swapped_from_exercise_id", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "duration_seconds", "INTEGER");
   await addColumnIfMissing(database, "workout_sets", "exercise_position", "INTEGER DEFAULT 0");
+  await addColumnIfMissing(database, "workout_sets", "bodyweight_modifier_kg", "REAL DEFAULT NULL");
 
   // workout_sets.set_type migration (replaces deprecated is_warmup column)
   if (!(await hasColumn(database, "workout_sets", "set_type"))) {
