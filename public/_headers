@@ -1,0 +1,8 @@
+# BLD-565: expo-sqlite on web needs SharedArrayBuffer, which requires the
+# page to be cross-origin isolated.  Meta tags alone are insufficient —
+# COOP must arrive as an HTTP header.  These rules apply when the `dist/`
+# bundle is served by Netlify, Cloudflare Pages, or any host that honours
+# the `_headers` syntax.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp

@@ -3,14 +3,34 @@ import { Platform } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { getDatabase, isMemoryFallback, isOnboardingComplete } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
+import { detectWebSharedMemorySupport, WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
+
+// BLD-565: On web, drizzle-orm/expo-sqlite calls prepareSync/executeSync
+// which internally uses `new SharedArrayBuffer(…)`.  Without a
+// cross-origin-isolated host (real COOP + COEP response headers), SAB
+// is undefined and the first query throws
+// `ReferenceError: SharedArrayBuffer is not defined`.  We detect this
+// up-front and skip DB init so the user sees a readable banner instead
+// of a blank screen + uncaught ReferenceError in Sentry.
+function webNeedsUnsupportedFallback(): boolean {
+  if (Platform.OS !== "web") return false;
+  return !detectWebSharedMemorySupport().supported;
+}
 
 export function useAppInit() {
   const [banner, setBanner] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(() =>
+    webNeedsUnsupportedFallback() ? WEB_UNSUPPORTED_MESSAGE : null
+  );
+  const [ready, setReady] = useState<boolean>(() => webNeedsUnsupportedFallback());
   const [onboarded, setOnboarded] = useState(true);
 
   useEffect(() => {
+    if (webNeedsUnsupportedFallback()) {
+      SplashScreen.hideAsync();
+      return;
+    }
+
     getDatabase()
       .then(async () => {
         if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
