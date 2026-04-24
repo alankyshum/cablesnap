@@ -9,7 +9,6 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { ExerciseNotesPanel } from "./ExerciseNotesPanel";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
-import { fontSizes } from "@/constants/design-tokens";
 
 export type GroupCardHeaderProps = {
   group: ExerciseGroup;
@@ -59,16 +58,12 @@ export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotes
                 style={({ pressed }) => [styles.previousPerfBtn, pressed && styles.previousPerfPressed]}
                 accessibilityRole="button"
                 accessibilityLabel={previousPerformanceA11y ?? previousPerformance}
-                accessibilityHint="Tap to fill sets from last session"
+                accessibilityHint="Tap to refill from previous"
               >
                 <ProgressionIcon suggested={group.progressionSuggested} color={colors.primary} />
-                <Text
-                  numberOfLines={1}
-                  style={[styles.previousPerf, { color: colors.primary }]}
-                >
+                <Text style={[styles.previousPerf, { color: colors.primary }]}>
                   {previousPerformance}
                 </Text>
-                <MaterialCommunityIcons name="arrow-collapse-down" size={14} color={colors.primary} />
               </Pressable>
             )}
           </View>
@@ -130,8 +125,8 @@ const styles = StyleSheet.create({
   headerRow2: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   headerActions: { flexDirection: "row", alignItems: "center" },
   groupTitle: { fontWeight: "700" },
-  previousPerf: { fontSize: fontSizes.xs, lineHeight: 16 },
-  previousPerfBtn: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 36 },
+  previousPerf: { fontSize: 11, lineHeight: 14, flexShrink: 1 },
+  previousPerfBtn: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 36, flexWrap: "wrap" },
   previousPerfPressed: { opacity: 0.7 },
   iconBtn: { padding: 8 },
   moveBtn: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
