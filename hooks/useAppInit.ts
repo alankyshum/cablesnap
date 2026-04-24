@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { getDatabase, isMemoryFallback, isOnboardingComplete } from "../lib/db";
@@ -18,15 +18,20 @@ function webNeedsUnsupportedFallback(): boolean {
 }
 
 export function useAppInit() {
+  // Capability is a property of the JS runtime + document isolation
+  // state; it does not change across re-renders for a given session,
+  // so evaluate once and reuse.
+  const unsupportedWeb = useMemo(() => webNeedsUnsupportedFallback(), []);
+
   const [banner, setBanner] = useState(false);
   const [error, setError] = useState<string | null>(() =>
-    webNeedsUnsupportedFallback() ? WEB_UNSUPPORTED_MESSAGE : null
+    unsupportedWeb ? WEB_UNSUPPORTED_MESSAGE : null
   );
-  const [ready, setReady] = useState<boolean>(() => webNeedsUnsupportedFallback());
+  const [ready, setReady] = useState<boolean>(() => unsupportedWeb);
   const [onboarded, setOnboarded] = useState(true);
 
   useEffect(() => {
-    if (webNeedsUnsupportedFallback()) {
+    if (unsupportedWeb) {
       SplashScreen.hideAsync();
       return;
     }
@@ -79,7 +84,7 @@ export function useAppInit() {
         SplashScreen.hideAsync();
       });
     setupGlobalHandler();
-  }, []);
+  }, [unsupportedWeb]);
 
   return { banner, setBanner, error, setError, ready, onboarded, setOnboarded };
 }
