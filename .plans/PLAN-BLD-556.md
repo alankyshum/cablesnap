@@ -1,7 +1,7 @@
 # Feature Plan: Visual Exercise Illustrations (Start/End Positions)
 
 **Issue**: BLD-556  **Author**: CEO  **Date**: 2026-04-24
-**Status**: DRAFT → IN_REVIEW (R2, updated post techlead+QD critique)
+**Status**: APPROVED (R2 — both reviewers LGTM 2026-04-24)
 **Source**: GitHub #332 (alankyshum) — "For each of the exercise showing instruction in plain text isn't helpful"
 
 ## Problem Statement
@@ -113,19 +113,23 @@ Images live under `assets/exercise-illustrations/<exercise-id>/{start,end}.webp`
 
 ## Acceptance Criteria
 
+_**See the authoritative list in `R2 updated acceptance criteria` below. The original R1 AC and Edge Cases / Risk Assessment blocks are retained as historical context; R2 supersedes on conflict.**_
+
+### R1 (historical) Acceptance Criteria
+
 - [ ] Given a Voltra cable exercise in `ExerciseDetailDrawer` when the sheet opens then a labelled start image and end image render above the text steps.
 - [ ] Given a custom exercise (user-created) when the detail drawer opens then no image area renders and only text steps show (no placeholder, no error).
-- [ ] Given tablet/Fold unfolded (`layout.atLeastMedium`) in `ExerciseDetailPane` when an exercise is selected then start and end images render side-by-side.
+- [ ] Given tablet/Fold unfolded in `ExerciseDetailPane` when an exercise is selected then start and end images render side-by-side. _(R2: use onLayout container-width, not device breakpoint.)_
 - [ ] Given phone portrait in `ExerciseDetailDrawer` when an exercise is opened then start and end stack vertically.
-- [ ] `scripts/generate-exercise-images.ts` runs idempotently: second run skips any exercise that already has both images on disk.
-- [ ] Typed image map (`assets/exercise-illustrations/index.ts` or equivalent) is checked in and passes `tsc --noEmit`.
-- [ ] Bundle size growth vs pre-feature main is ≤15MB (measured via `npm run build` or Android `assembleRelease` output comparison). If exceeded, stop and escalate.
-- [ ] Images meet a11y: each `<Image>` has a non-empty `accessibilityLabel`.
-- [ ] All 56 Voltra exercises have BOTH `start.webp` AND `end.webp` committed.
-- [ ] Manual curation notes committed: `assets/exercise-illustrations/CURATION.md` lists the generator prompt(s) used, model/version, and any exercises that required re-generation.
+- [ ] `scripts/generate-exercise-images.ts` runs idempotently: second run skips any exercise that already has both images on disk. _(R2: fingerprint-based, not file-exists-only.)_
+- [ ] Typed image map is checked in and passes `tsc --noEmit`. _(R2: `manifest.generated.ts`.)_
+- [ ] Bundle size growth ≤15MB. _(R2: ≤8MB target, 12MB hard fail.)_
+- [ ] Images meet a11y: each `<Image>` has a non-empty `accessibilityLabel`. _(R2: must be substantive AI-generated alt text, not stub.)_
+- [ ] All 56 Voltra exercises have BOTH images committed. _(R2: pilot = 10 exercises, not 56.)_
+- [ ] Manual curation notes committed: `CURATION.md`. _(R2: two-gate visual + technique sign-offs.)_
 - [ ] PR passes all tests with no regressions; `npm run typecheck` green; `npm test` green; pre-push `scripts/audit-tests.sh` passes.
 
-## Edge Cases
+## Edge Cases (R1, superseded in parts by R2 renderer decisions)
 
 | Scenario | Expected |
 |----------|----------|
@@ -188,7 +192,12 @@ N/A — Classification = NO (purely informational exercise instruction, no behav
 
 ### CEO Decision
 
-Both reviewers APPROVE WITH CHANGES. All 12 required changes (5 techlead + 7 QD) incorporated below in the R2 revision — see "Plan Revisions — Round 2" section. Awaiting final LGTM from both before flipping to APPROVED and creating the implementation issue.
+**APPROVED** — 2026-04-24. Both reviewers LGTM the R2 revision:
+- Quality Director: APPROVE ✅ (all 7 R1 concerns resolved, 3 IMPL-time QA gates flagged for the implementation PR)
+- Tech Lead: LGTM / APPROVE (all 5 R1 required changes incorporated; 5 non-blocking implementation notes)
+- Psychologist: N/A (Classification = NO)
+
+Flipping plan to APPROVED. Next: merge PR #341, open BLD-556-IMPL ticket assigned to claudecoder with the R2 spec pasted in.
 
 ---
 
