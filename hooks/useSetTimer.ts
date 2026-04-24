@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as SecureStore from "expo-secure-store";
 import { play as playAudio } from "../lib/audio";
+import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
 
 export type UseSetTimerOptions = {
   sessionId?: string;
@@ -98,6 +99,7 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     setActiveSetIndex(setIndex);
 
     persistTimerState(sessionId, { startedAt: now, exerciseId, setIndex, targetDuration: target });
+    sessionBreadcrumb("timer.set.start", { exerciseId, setIndex, target: target ?? null });
 
     // BLD-577: only spin up the 1Hz interval if the app is actually
     // foregrounded. If the hook starts while backgrounded (rare but
@@ -114,6 +116,7 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     const duration = startedAtRef.current
       ? Math.round((Date.now() - startedAtRef.current) / 1000)
       : 0;
+    sessionBreadcrumb("timer.set.stop", { duration });
 
     if (activeExerciseId != null && activeSetIndex != null) {
       clearPersistedTimerState(sessionId, activeExerciseId, activeSetIndex);
@@ -135,6 +138,7 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
   const dismiss = useCallback(() => {
     clearTimer();
     isTickingRef.current = false;
+    sessionBreadcrumb("timer.set.dismiss");
 
     if (activeExerciseId != null && activeSetIndex != null) {
       clearPersistedTimerState(sessionId, activeExerciseId, activeSetIndex);

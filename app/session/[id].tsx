@@ -9,6 +9,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "../../lib/audio";
 import { getAppSetting, addWarmupSets } from "../../lib/db";
+import { sessionBreadcrumb } from "../../lib/session-breadcrumbs";
 import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
 import { getTemplateDurationEstimates } from "../../lib/db/sessions";
 import { generateWarmupSets } from "../../lib/warmup";
@@ -43,12 +44,16 @@ export default function ActiveSession() {
   // expo-keep-awake.
   useEffect(() => {
     let released = false;
+    sessionBreadcrumb("session.open");
+    sessionBreadcrumb("session.keepawake.acquire");
     activateKeepAwakeAsync()
       .catch(() => { released = true; });
     return () => {
       if (released) return;
       try {
         deactivateKeepAwake();
+        sessionBreadcrumb("session.keepawake.release");
+        sessionBreadcrumb("session.close");
       } catch {
         // Keep-awake native module unavailable — nothing to release.
       }

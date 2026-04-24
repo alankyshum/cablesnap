@@ -41,6 +41,7 @@ import type { TrainingMode } from "../lib/types";
 import { formatTime, computePrefillSets } from "../lib/format";
 import { confirmAction } from "../lib/confirm";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
+import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
 
 /** Check if completing a set achieves a strength goal. Non-throwing. */
 async function checkGoalAchievement(exerciseId: string): Promise<boolean> {
@@ -139,8 +140,18 @@ export function useSessionActions({
     };
     start();
     const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") start();
-      else stop();
+      if (next === "active") {
+        sessionBreadcrumb("session.appstate.active");
+        start();
+      } else if (next === "background") {
+        sessionBreadcrumb("session.appstate.background");
+        stop();
+      } else if (next === "inactive") {
+        sessionBreadcrumb("session.appstate.inactive");
+        stop();
+      } else {
+        stop();
+      }
     });
     return () => {
       stop();
