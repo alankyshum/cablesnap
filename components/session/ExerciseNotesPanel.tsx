@@ -17,13 +17,16 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
   return (
     <View style={styles.container}>
       <Input
+        type="textarea"
+        rows={3}
         placeholder="Add exercise notes..."
+        placeholderTextColor={colors.onSurfaceVariant}
         value={value}
         onChangeText={(v) => onDraftChange(exerciseId, v)}
         onBlur={() => onSave(exerciseId, value)}
         maxLength={200}
-        multiline
-        style={styles.input}
+        textAlignVertical="top"
+        inputStyle={{ ...styles.input, color: colors.onSurface }}
         accessibilityLabel="Exercise notes"
       />
       <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", fontSize: fontSizes.xs }}>
@@ -35,5 +38,5 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4 },
-  input: { fontSize: fontSizes.sm, minHeight: 48 },
+  input: { fontSize: fontSizes.base, minHeight: 96 },
 });
