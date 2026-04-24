@@ -199,7 +199,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
         <GroupCardHeader
           group={group}
-          modes={modes}
+          currentMode={modes[group.exercise_id]}
           exerciseNotesOpen={exerciseNotesOpen}
           exerciseNotesDraft={exerciseNotesDraft}
           firstSet={firstSet}

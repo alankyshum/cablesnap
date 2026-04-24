@@ -13,7 +13,18 @@ import { fontSizes } from "../../constants/design-tokens";
 
 export type GroupCardHeaderProps = {
   group: ExerciseGroup;
-  modes: Record<string, TrainingMode>;
+  /**
+   * BLD-560: per-group subscription slice. Previously this component received
+   * the full `modes: Record<string, TrainingMode>` record, which caused every
+   * group's header to re-render whenever ANY exercise's mode changed (the
+   * Record reference busts shallow equality on every update). By narrowing
+   * to the scalar mode value for *this* group, React.memo (see bottom of
+   * this file) can skip re-renders when an unrelated exercise's mode
+   * changes.
+   *
+   * Falls back to `group.training_modes[0]` when undefined.
+   */
+  currentMode: TrainingMode | undefined;
   exerciseNotesOpen: boolean;
   exerciseNotesDraft: string | undefined;
   firstSet: SetWithMeta | undefined;
@@ -39,7 +50,14 @@ function ProgressionIcon({ suggested, color }: { suggested?: boolean; color: str
   return <MaterialCommunityIcons name="arrow-up-bold" size={14} color={color} accessibilityLabel="Weight progression suggested" />;
 }
 
-export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotesDraft, firstSet, previousPerformance, previousPerformanceA11y, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, onPrefill, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
+function GroupCardHeaderInner({ group, currentMode, exerciseNotesOpen, exerciseNotesDraft, firstSet, previousPerformance, previousPerformanceA11y, onModeChange, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onShowDetail, onSwap, onDeleteExercise, onMoveUp, onMoveDown, onPrefill, isFirst, isLast, showMoveButtons }: GroupCardHeaderProps) {
+  // BLD-560: dev-only render counter for memoization regression detection.
+  // Metro strips the require + call-site in prod via __DEV__ DCE (matches the
+  // pattern in lib/db/helpers.ts and scripts/verify-scenario-hook-not-in-bundle.sh).
+  if (__DEV__) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require("../../lib/dev/render-counter") as typeof import("../../lib/dev/render-counter")).countRender("GroupCardHeader");
+  }
   const colors = useThemeColors();
   const notesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
   const eid = group.exercise_id;
@@ -111,7 +129,7 @@ export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotes
             </View>
           </Button>
           {group.is_voltra && group.training_modes.length > 1 && (
-            <TrainingModeSelector modes={group.training_modes} selected={modes[eid] ?? group.training_modes[0]} exercise={group.name} onSelect={(m) => onModeChange(eid, m)} compact />
+            <TrainingModeSelector modes={group.training_modes} selected={currentMode ?? group.training_modes[0]} exercise={group.name} onSelect={(m) => onModeChange(eid, m)} compact />
           )}
         </View>
       </View>
@@ -137,3 +155,14 @@ const styles = StyleSheet.create({
   moveBtnDisabled: { opacity: 0.4 },
   detailsBtn: { marginLeft: -24, marginRight: -8 },
 });
+
+/**
+ * BLD-560: wrapped in React.memo + narrowed currentMode prop so unrelated
+ * exercise mode changes don't cascade re-renders across every group header.
+ *
+ * Measurement (jest harness: __tests__/components/session/GroupCardHeader.memo.test.tsx):
+ *   Before: 11 renders per 10 unrelated-mode-change cycles (initial + 10).
+ *   After:   1 render  per 10 unrelated-mode-change cycles (initial only).
+ *   Delta:  -91% — well above the ≥30% bar in the BLD-560 QD pre-criteria.
+ */
+export const GroupCardHeader = React.memo(GroupCardHeaderInner);
