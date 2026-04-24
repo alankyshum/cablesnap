@@ -3,6 +3,7 @@ import {
   categorize,
   defaultBreakdown,
   resolveRestSeconds,
+  truncateChipLabel,
   type ExerciseCategory,
   type RestInputs,
 } from "../../lib/rest";
@@ -207,5 +208,44 @@ describe("defaultBreakdown", () => {
 
   it("clamps to MAX", () => {
     expect(defaultBreakdown(9999).totalSeconds).toBe(360);
+  });
+});
+
+describe("truncateChipLabel (BLD-552: adaptive chip overflow indicator)", () => {
+  const NARROW = 320;
+  const WIDE = 360;
+
+  it("passes through at viewportWidth >= 360 regardless of token count", () => {
+    expect(truncateChipLabel("Heavy · RPE 9 · Cable", WIDE)).toBe("Heavy · RPE 9 · Cable");
+    expect(truncateChipLabel("A · B · C · D", 500)).toBe("A · B · C · D");
+  });
+
+  it("passes through at <360dp when tokens.length <= 2 (no suffix)", () => {
+    expect(truncateChipLabel("Heavy · RPE 9", NARROW)).toBe("Heavy · RPE 9");
+    expect(truncateChipLabel("Cable", NARROW)).toBe("Cable");
+  });
+
+  it("appends +1 at <360dp for 3 tokens", () => {
+    expect(truncateChipLabel("Heavy · RPE 9 · Cable", NARROW)).toBe("Heavy · RPE 9 +1");
+  });
+
+  it("appends +N (N = dropped count) at <360dp for 4+ tokens", () => {
+    expect(truncateChipLabel("A · B · C · D", NARROW)).toBe("A · B +2");
+    expect(truncateChipLabel("A · B · C · D · E", NARROW)).toBe("A · B +3");
+  });
+
+  it("handles empty string without crashing or suffixing", () => {
+    expect(truncateChipLabel("", NARROW)).toBe("");
+    expect(truncateChipLabel("", WIDE)).toBe("");
+  });
+
+  it("tolerates whitespace variations around the separator", () => {
+    expect(truncateChipLabel("A·B·C", NARROW)).toBe("A · B +1");
+    expect(truncateChipLabel("A  ·  B  ·  C", NARROW)).toBe("A · B +1");
+  });
+
+  it("treats the 360dp boundary as >= (inclusive) for full-label render", () => {
+    expect(truncateChipLabel("Heavy · RPE 9 · Cable", 360)).toBe("Heavy · RPE 9 · Cable");
+    expect(truncateChipLabel("Heavy · RPE 9 · Cable", 359)).toBe("Heavy · RPE 9 +1");
   });
 });

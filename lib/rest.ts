@@ -179,6 +179,26 @@ export function resolveRestSeconds(inputs: RestInputs): RestBreakdown {
   };
 }
 
+/**
+ * Truncate an adaptive-rest chip label for narrow viewports (<360dp).
+ *
+ * When the full `reasonShort` has 3+ tokens (split on `·`) and the viewport is
+ * narrow, we slice to the first 2 tokens and append a `+N` counter so the user
+ * can see that additional factors were dropped. Without the counter, a 3-factor
+ * chip would render byte-identically to a 2-factor chip (BLD-552).
+ *
+ * A11y note: the full label should still be passed to screen readers via
+ * `reasonAccessible` — this helper is presentation-only.
+ */
+export function truncateChipLabel(label: string, viewportWidth: number): string {
+  if (viewportWidth >= 360) return label;
+  if (label.length === 0) return label;
+  const tokens = label.split(/\s*·\s*/);
+  if (tokens.length <= 2) return label;
+  const dropped = tokens.length - 2;
+  return `${tokens.slice(0, 2).join(" · ")} +${dropped}`;
+}
+
 /** Synthetic breakdown for the legacy / manual-override path. Keeps UI code branch-free. */
 export function defaultBreakdown(totalSeconds: number): RestBreakdown {
   const clamped = clamp(

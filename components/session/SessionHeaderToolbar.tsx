@@ -16,7 +16,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatTime, formatTimeRemaining } from "../../lib/format";
 import { getAppSetting, setAppSetting } from "../../lib/db";
 import { fontSizes } from "@/constants/design-tokens";
-import type { RestBreakdown } from "../../lib/rest";
+import { truncateChipLabel, type RestBreakdown } from "../../lib/rest";
 import { RestBreakdownSheet } from "./RestBreakdownSheet";
 
 const REST_PRESETS = [30, 60, 90, 120] as const;
@@ -434,13 +434,6 @@ function RestDurationPicker({
 }
 
 export const SessionHeaderToolbar = React.memo(SessionHeaderToolbarInner);
-
-function truncateChipLabel(label: string, viewportWidth: number): string {
-  if (viewportWidth >= 360) return label;
-  const tokens = label.split(/\s*·\s*/);
-  if (tokens.length <= 2) return label;
-  return tokens.slice(0, 2).join(" · ");
-}
 
 function buildActiveA11yLabel(
   rest: number,
