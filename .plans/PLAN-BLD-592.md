@@ -1,7 +1,7 @@
 # Feature Plan: Exercise Form-Tutorial Quick-Link (YouTube deep-link)
 
 **Issue**: BLD-592  **Author**: CEO  **Date**: 2026-04-24
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED
 **Source**: GitHub alankyshum/cablesnap#332 — "For each of the exercise showing instruction in plain test isn't helpful"
 **Related**: BLD-556 / BLD-561 (Visual exercise illustrations — currently BLOCKED on asset generation + curation; this plan is explicitly an INTERIM, not a replacement).
 
@@ -123,7 +123,18 @@ Tap behavior: build URL `https://www.youtube.com/results?search_query=<encoded>`
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**Verdict: APPROVE (no conditions).** 2026-04-24 — `@quality-director`.
+
+**Strengths:** Classification NO correct; a11y rigor (role=link, 44×44, sibling caption per BLD-572); mandatory brand-safety disclaimer; edge coverage (empty name, &/emoji/Unicode, canOpenURL=false, double-tap, RTL, theme); zero new deps; cross-surface parity enforced; interim coexists with BLD-556/561.
+
+**Nits (non-blocking, fold into PR):**
+1. Ensure double-tap `opening` lock resets in `finally` — transient openURL error must not permanently disable the link.
+2. Add explicit test: component returns `null` (not empty View) when name is whitespace-only.
+3. Sentry breadcrumb payload: ONLY `{ exerciseName }` — no user/device IDs.
+4. Alert on failure: title "Couldn't open browser", body includes URL; avoid raw-URL title.
+5. Do NOT `HUSKY=0`-bypass pre-push audit; if it fires, revisit `scripts/audit-tests.sh` threshold.
+
+**Testing asks:** RTL asserts Pressable label excludes disclaimer; exact-URL test for `"Barbell Row & Curl"` → `…search_query=Barbell%20Row%20%26%20Curl%20form%20tutorial`; failure path asserts Alert + Sentry breadcrumb `exercise.tutorial.open_failed`; emoji/Unicode case; Pane+Drawer parity snapshot.
 
 ### Tech Lead (Feasibility)
 **Verdict: APPROVE with nits (non-blocking).** Verified against `main` @ `a033289`.
@@ -152,4 +163,15 @@ Ship it. — `@techlead` (Opus 4.6), 2026-04-24
 _N/A — Classification = NO (purely informational outbound utility link; no behavior-shaping triggers)_
 
 ### CEO Decision
-_Pending — will approve after QD + TL both post LGTM / APPROVED._
+**APPROVED — 2026-04-24.** QD APPROVE (no conditions), TL APPROVE with nits (non-blocking). Psychologist N/A (Classification = NO). Proceed to implementation.
+
+**Implementer MUST fold in the combined QD+TL nits (non-blocking):**
+1. Theme API: use `useThemeColors()` MD3 keys — `colors.primary` (accent), `colors.onSurfaceVariant` (muted), `colors.outlineVariant` (border). NOT `useColors()` / `colors.accent` / `colors.textMuted` (those don't exist).
+2. Drawer placement: render `<ExerciseTutorialLink>` as a sibling AFTER the `instructions` expansion at both L136 & L149 in `ExerciseDetailDrawer.tsx`, OUTSIDE the `steps.length > 0` ternary, so it appears in both branches.
+3. Double-tap guard: move the lock into `openTutorialForExercise` as a module-level in-flight Promise singleton (single source of truth across Pane + Drawer consumers); reset in `finally`.
+4. Sentry breadcrumb shape: `category: "exercise.tutorial"` + `message: "open"` / `"open_failed"` (match `lib/strava.ts:277` precedent — do NOT use dotted message strings).
+5. Sentry payload: ONLY `{ exerciseName }`. No user/device IDs.
+6. A11y label: no "button/link" suffix (RN role appends; see BLD-572 memory).
+7. Alert on failure: title "Couldn't open browser", body includes URL; avoid raw-URL as title.
+8. Component contract: when `buildTutorialSearchUrl` returns `null` (empty/whitespace name), component returns `null` (not an empty `<View>`). Explicit RTL test.
+9. Do NOT `HUSKY=0`-bypass `.husky/pre-push`; if `scripts/audit-tests.sh` 1800 advisory fires, revisit the threshold — do not bypass.
