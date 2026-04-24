@@ -35,12 +35,14 @@ describe("Sentry source-map upload wiring (BLD-567)", () => {
         /SENTRY_AUTH_TOKEN:\s*\$\{\{\s*secrets\.SENTRY_AUTH_TOKEN\s*\}\}/g,
       ) ?? [];
     expect(tokenRefs.length).toBeGreaterThanOrEqual(2);
-    expect(yamlSrc).toMatch(
-      /SENTRY_ORG:\s*\$\{\{\s*secrets\.SENTRY_ORG\s*\}\}/,
-    );
-    expect(yamlSrc).toMatch(
-      /SENTRY_PROJECT:\s*\$\{\{\s*secrets\.SENTRY_PROJECT\s*\}\}/,
-    );
+    const orgRefs =
+      yamlSrc.match(/SENTRY_ORG:\s*\$\{\{\s*secrets\.SENTRY_ORG\s*\}\}/g) ?? [];
+    expect(orgRefs.length).toBeGreaterThanOrEqual(2);
+    const projectRefs =
+      yamlSrc.match(
+        /SENTRY_PROJECT:\s*\$\{\{\s*secrets\.SENTRY_PROJECT\s*\}\}/g,
+      ) ?? [];
+    expect(projectRefs.length).toBeGreaterThanOrEqual(2);
   });
 
   it("no Sentry auth-token literal leaks into committed config or workflow", () => {
