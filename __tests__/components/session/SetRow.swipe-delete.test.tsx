@@ -1,5 +1,5 @@
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { render, fireEvent } from "@testing-library/react-native";
 import { SetRow } from "../../../components/session/SetRow";
 import type { SetWithMeta } from "../../../components/session/types";
 
@@ -105,29 +105,36 @@ function renderRow(props: Partial<React.ComponentProps<typeof SetRow>> = {}) {
 }
 
 describe("SetRow — BLD-543 delete affordance & hit targets", () => {
-  it("renders the faded inline delete icon as non-interactive (no press handler)", () => {
+  it("faded delete icon is an accessible button with a11y label + hint, and no onPress", () => {
     const { UNSAFE_getByProps, onDelete } = renderRow();
     const hint = UNSAFE_getByProps({ testID: "set-set-1-delete-hint" });
-    // No onPress handler ⇒ not interactive
+    expect(hint.props.accessible).toBe(true);
+    expect(hint.props.accessibilityRole).toBe("button");
+    expect(hint.props.accessibilityLabel).toBe("Delete set 1");
+    expect(typeof hint.props.accessibilityHint).toBe("string");
+    // Sighted single-tap must NOT delete — no onPress handler at all.
     expect(hint.props.onPress).toBeUndefined();
-    // Hidden from screen readers since the row-level accessibilityAction is the a11y path
-    expect(hint.props.accessibilityElementsHidden).toBe(true);
     expect(onDelete).not.toHaveBeenCalled();
   });
 
-  it("invokes onDelete via screen-reader accessibilityAction 'delete'", () => {
-    const { getByTestId, onDelete } = renderRow();
-    const row = getByTestId("set-set-1-row");
-    // Simulate a screen-reader dispatching the 'delete' action
-    row.props.onAccessibilityAction({ nativeEvent: { actionName: "delete" } });
+  it("long-press on the faded icon fires onDelete (delayLongPress=600)", () => {
+    const { UNSAFE_getByProps, onDelete } = renderRow();
+    const hint = UNSAFE_getByProps({ testID: "set-set-1-delete-hint" });
+    expect(hint.props.delayLongPress).toBe(600);
+    fireEvent(hint, "longPress");
     expect(onDelete).toHaveBeenCalledWith("set-1");
-    // Non-matching action must NOT fire delete
-    row.props.onAccessibilityAction({ nativeEvent: { actionName: "other" } });
-    expect(onDelete).toHaveBeenCalledTimes(1);
-    // accessibilityActions prop is declared for a11y
-    expect(row.props.accessibilityActions).toEqual([
-      { name: "delete", label: "Delete set 1" },
+  });
+
+  it("screen-reader 'activate' action fires onDelete; other actions are no-ops", () => {
+    const { UNSAFE_getByProps, onDelete } = renderRow();
+    const hint = UNSAFE_getByProps({ testID: "set-set-1-delete-hint" });
+    expect(hint.props.accessibilityActions).toEqual([
+      { name: "activate", label: "Delete set 1" },
     ]);
+    hint.props.onAccessibilityAction({ nativeEvent: { actionName: "activate" } });
+    expect(onDelete).toHaveBeenCalledWith("set-1");
+    hint.props.onAccessibilityAction({ nativeEvent: { actionName: "noop" } });
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
   it("completion checkbox uses enlarged hit target (hitSlop ≥ 16, min 44×44)", () => {

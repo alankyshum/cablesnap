@@ -54,8 +54,14 @@ interface SwipeToDeleteProps {
 const REVEAL_THRESHOLD = -80;
 
 function triggerMediumHaptic() {
-  // Best-effort; ignore errors on platforms without haptic support (web).
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  // Web / platforms without haptic support will reject; log in dev only so
+  // regressions surface during development without producing user-visible
+  // errors in production.
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch((err) => {
+    if (__DEV__) {
+      console.warn("[SwipeToDelete] haptic impact failed:", err);
+    }
+  });
 }
 
 export default function SwipeToDelete({

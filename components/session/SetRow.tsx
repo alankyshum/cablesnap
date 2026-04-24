@@ -89,16 +89,17 @@ export const SetRow = memo(function SetRow({
   const typeLabel = set.set_type === "normal" ? "working set" : `${set.set_type} set`;
 
   const handleDelete = useCallback(() => onDelete(set.id), [onDelete, set.id]);
-  const onAccessibilityAction = useCallback((e: { nativeEvent: { actionName: string } }) => {
-    if (e.nativeEvent.actionName === "delete") handleDelete();
-  }, [handleDelete]);
+  // Screen-reader fallback: TalkBack / VoiceOver dispatch the built-in
+  // "activate" action when the user double-taps a focused, accessible element.
+  const onDeleteAccessibilityAction = useCallback(
+    (e: { nativeEvent: { actionName: string } }) => {
+      if (e.nativeEvent.actionName === "activate") handleDelete();
+    },
+    [handleDelete],
+  );
 
   return (
-    <View
-      accessibilityActions={[{ name: "delete", label: `Delete set ${set.set_number}` }]}
-      onAccessibilityAction={onAccessibilityAction}
-      testID={`set-${set.id}-row`}
-    >
+    <View testID={`set-${set.id}-row`}>
       <SwipeToDelete
         onDelete={handleDelete}
         widthBasis="container"
@@ -237,10 +238,24 @@ export const SetRow = memo(function SetRow({
               <MaterialCommunityIcons name="check" size={18} color={colors.onPrimary} />
             )}
           </Pressable>
-          <View
+          <Pressable
+            // Sighted: swipe is the primary delete path; single-tap is a
+            // no-op (no onPress) so sweaty/gloved fingers cannot misfire.
+            // Long-press (≥600ms) remains as a deliberate secondary path.
+            // a11y: accessible + role=button makes this a VoiceOver / TalkBack
+            // focus stop; the built-in "activate" action (fired on VO/TB
+            // double-tap) invokes onDelete directly so screen-reader users
+            // have a discoverable delete without needing to perform the
+            // swipe gesture.
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`Delete set ${set.set_number}`}
+            accessibilityHint="Long-press to delete, or swipe the row left"
+            accessibilityActions={[{ name: "activate", label: `Delete set ${set.set_number}` }]}
+            onAccessibilityAction={onDeleteAccessibilityAction}
+            onLongPress={handleDelete}
+            delayLongPress={600}
             style={styles.actionBtn}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
             testID={`set-${set.id}-delete-hint`}
           >
             <MaterialCommunityIcons
@@ -249,7 +264,7 @@ export const SetRow = memo(function SetRow({
               color={colors.error}
               style={{ opacity: 0.35 }}
             />
-          </View>
+          </Pressable>
         </View>
       </SwipeToDelete>
 
