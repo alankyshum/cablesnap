@@ -151,9 +151,11 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
 
     // BLD-541: weighted-BW bests. Single aggregate; filters on completed sets
     // with non-null modifier (so unsigned zero / null bodyweight rows excluded).
+    // Sign-axis semantics: for `best_assisted` (negative values), "best" means
+    // "closest to zero" = least assistance = MAX of negatives (NOT MIN).
     queryOne<{ best_added: number | null; best_assisted: number | null }>(
       `SELECT MAX(CASE WHEN ws.bodyweight_modifier_kg > 0 THEN ws.bodyweight_modifier_kg END) AS best_added,
-              MIN(CASE WHEN ws.bodyweight_modifier_kg < 0 THEN ws.bodyweight_modifier_kg END) AS best_assisted
+              MAX(CASE WHEN ws.bodyweight_modifier_kg < 0 THEN ws.bodyweight_modifier_kg END) AS best_assisted
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup'

@@ -1,4 +1,4 @@
-/* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
+/* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps, complexity */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Keyboard, Platform } from "react-native";
 import { useRouter } from "expo-router";
@@ -206,6 +206,16 @@ export function useSessionActions({
     updateGroupSet(set.id, { completed: true, completed_at: now });
     await completeSet(set.id);
 
+    // BLD-541: invalidate the smart-default cache so the next add-set for
+    // this bodyweight exercise reads the just-completed modifier as its
+    // starting point (the getLastBodyweightModifier query filters on
+    // completed_at, so a newly-completed set changes the result).
+    if (set.bodyweight_modifier_kg != null) {
+      queryClient.invalidateQueries({
+        queryKey: ['bw-modifier-default', set.exercise_id],
+      });
+    }
+
     // Live PR detection (non-blocking — errors never prevent set completion)
     if (set.set_type !== 'warmup' && set.weight && set.weight > 0 && id && triggerPR) {
       try {
@@ -281,9 +291,22 @@ export function useSessionActions({
     let defaultModifier: number | null = null;
     if (group?.is_bodyweight) {
       try {
-        defaultModifier = await getLastBodyweightModifier(exerciseId);
+        // BLD-541: route smart-default through React Query so the
+        // ['bw-modifier-default', exerciseId] key has a real consumer.
+        // Sibling add-sets within staleTime reuse cache; explicit invalidation
+        // from the sheet + set-complete paths refreshes when semantics change.
+        defaultModifier = await queryClient.fetchQuery({
+          queryKey: ['bw-modifier-default', exerciseId],
+          queryFn: () => getLastBodyweightModifier(exerciseId),
+        });
         if (defaultModifier != null) {
           await updateSetBodyweightModifier(newSet.id, defaultModifier);
+          // Invalidate so the next add-set re-reads through the smart-default
+          // query if a newer set (with possibly different modifier) has since
+          // been persisted.
+          queryClient.invalidateQueries({
+            queryKey: ['bw-modifier-default', exerciseId],
+          });
         }
       } catch {
         defaultModifier = null;
