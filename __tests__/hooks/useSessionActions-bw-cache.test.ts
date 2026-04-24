@@ -18,28 +18,44 @@ describe("useSessionActions — bw-modifier-default cache contract (BLD-541)", (
     "utf8",
   );
 
-  it.each([
+  type Case =
+    | { name: string; shouldMatch: RegExp }
+    | { name: string; shouldNotMatch: RegExp }
+    | { name: string; maxCount: number; pattern: RegExp };
+
+  it.each<Case>([
     {
       name: "handleAddSet fetches via queryClient.fetchQuery with the locked key",
-      needle: /queryClient\.fetchQuery\(\s*\{\s*queryKey:\s*\['bw-modifier-default', exerciseId\]/,
+      shouldMatch: /queryClient\.fetchQuery\(\s*\{\s*queryKey:\s*\['bw-modifier-default', exerciseId\]/,
     },
     {
       name: "handleAddSet invalidates ['bw-modifier-default', exerciseId] after persist",
-      needle: /queryClient\.invalidateQueries\(\{\s*queryKey:\s*\['bw-modifier-default', exerciseId\]/,
+      shouldMatch: /queryClient\.invalidateQueries\(\{\s*queryKey:\s*\['bw-modifier-default', exerciseId\]/,
     },
     {
       name: "handleCheck invalidates ['bw-modifier-default', set.exercise_id] on set-complete",
-      needle: /queryClient\.invalidateQueries\(\{\s*queryKey:\s*\['bw-modifier-default', set\.exercise_id\]/,
+      shouldMatch: /queryClient\.invalidateQueries\(\{\s*queryKey:\s*\['bw-modifier-default', set\.exercise_id\]/,
     },
-  ])("$name", ({ needle }) => {
-    expect(src).toMatch(needle);
-  });
-
-  it("handleAddSet does NOT call getLastBodyweightModifier directly (must go through fetchQuery)", () => {
-    // Direct call bypasses cache and makes invalidation meaningless.
-    // The only direct call should live inside the fetchQuery queryFn closure.
-    const directCalls = src.match(/getLastBodyweightModifier\s*\(/g) ?? [];
-    // One call inside queryFn closure is allowed; anything above that leaks.
-    expect(directCalls.length).toBeLessThanOrEqual(1);
+    {
+      name: "handleCheck invalidation is gated on is_bodyweight (NOT on modifier nullability)",
+      // Reviewer R2 blocker: guarding on `set.bodyweight_modifier_kg != null`
+      // leaves stale non-null defaults in cache when a BW-only (null
+      // modifier) set completes. Must gate on whether the EXERCISE is
+      // bodyweight, so BW-only completions also refresh the cache.
+      shouldMatch: /group\?\.is_bodyweight\)\s*\{\s*queryClient\.invalidateQueries\(\{\s*queryKey:\s*\['bw-modifier-default'/,
+    },
+    {
+      name: "forbids the legacy `if (set.bodyweight_modifier_kg != null)` invalidation shape",
+      shouldNotMatch: /if \(set\.bodyweight_modifier_kg != null\)\s*\{\s*queryClient\.invalidateQueries\(\{\s*queryKey:\s*\['bw-modifier-default'/,
+    },
+    {
+      name: "handleAddSet does NOT call getLastBodyweightModifier directly (only via fetchQuery queryFn)",
+      pattern: /getLastBodyweightModifier\s*\(/g,
+      maxCount: 1,
+    },
+  ])("$name", (c) => {
+    if ("shouldMatch" in c) expect(src).toMatch(c.shouldMatch);
+    else if ("shouldNotMatch" in c) expect(src).not.toMatch(c.shouldNotMatch);
+    else expect((src.match(c.pattern) ?? []).length).toBeLessThanOrEqual(c.maxCount);
   });
 });

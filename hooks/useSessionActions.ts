@@ -196,9 +196,19 @@ export function useSessionActions({
   }, [groups, id, startRestWithDuration, startRestWithBreakdown]);
 
   const handleCheck = useCallback(async (set: SetWithMeta) => {
+    const group = groups.find((g) => g.exercise_id === set.exercise_id);
+
     if (set.completed) {
       updateGroupSet(set.id, { completed: false, completed_at: null });
       await uncompleteSet(set.id);
+      // BLD-541 R2: uncompleting a set changes which set is "latest
+      // completed" for this exercise, so the smart-default cache for
+      // bodyweight exercises must refresh too.
+      if (group?.is_bodyweight) {
+        queryClient.invalidateQueries({
+          queryKey: ['bw-modifier-default', set.exercise_id],
+        });
+      }
       return;
     }
 
@@ -206,11 +216,14 @@ export function useSessionActions({
     updateGroupSet(set.id, { completed: true, completed_at: now });
     await completeSet(set.id);
 
-    // BLD-541: invalidate the smart-default cache so the next add-set for
-    // this bodyweight exercise reads the just-completed modifier as its
-    // starting point (the getLastBodyweightModifier query filters on
-    // completed_at, so a newly-completed set changes the result).
-    if (set.bodyweight_modifier_kg != null) {
+    // BLD-541 R2: invalidate the smart-default cache so the next add-set
+    // for this bodyweight exercise reflects the just-completed modifier
+    // (including null for a BW-only set) as its starting point.
+    // Gated on the EXERCISE being bodyweight — NOT on modifier
+    // nullability: completing a null-modifier BW-only set still changes
+    // the "latest completed" reading and must invalidate stale non-null
+    // defaults that may have been cached within staleTime.
+    if (group?.is_bodyweight) {
       queryClient.invalidateQueries({
         queryKey: ['bw-modifier-default', set.exercise_id],
       });
