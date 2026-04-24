@@ -604,13 +604,13 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
         .toMatch(/isn't set up correctly.*contact support/i);
     });
 
-    it("falls back to generic message for unknown errors (no raw API text leaks)", () => {
+    it("falls back to generic retry message for unknown errors (no raw API text leaks)", () => {
       expect(strava.getStravaUserMessage(new Error("Token exchange failed: 500")))
-        .toBe("Something went wrong connecting to Strava.");
+        .toBe("Something went wrong connecting to Strava. Please try again.");
       expect(strava.getStravaUserMessage("some random thing"))
-        .toBe("Something went wrong connecting to Strava.");
+        .toBe("Something went wrong connecting to Strava. Please try again.");
       expect(strava.getStravaUserMessage(new strava.StravaError("unknown", "??")))
-        .toBe("Something went wrong connecting to Strava.");
+        .toBe("Something went wrong connecting to Strava. Please try again.");
     });
   });
 
@@ -626,12 +626,20 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
       expect(typeof action.onPress).toBe("function");
     });
 
+    it("returns a 'Get help' action for unknown errors (BLD-547)", () => {
+      const action = strava.getStravaSupportAction(
+        new strava.StravaError("unknown", "auth prompt errored"),
+      );
+      expect(action).toBeDefined();
+      expect(action.label).toBe("Get help");
+      expect(typeof action.onPress).toBe("function");
+    });
+
     it("returns undefined for non-config errors (no CTA on self-recoverable errors)", () => {
       expect(strava.getStravaSupportAction(new strava.StravaError("network", "x"))).toBeUndefined();
       expect(strava.getStravaSupportAction(new strava.StravaError("auth_expired", "x"))).toBeUndefined();
       expect(strava.getStravaSupportAction(new strava.StravaError("rate_limit", "x"))).toBeUndefined();
       expect(strava.getStravaSupportAction(new strava.StravaError("server", "x"))).toBeUndefined();
-      expect(strava.getStravaSupportAction(new strava.StravaError("unknown", "x"))).toBeUndefined();
       expect(strava.getStravaSupportAction(new Error("plain"))).toBeUndefined();
       expect(strava.getStravaSupportAction("string error")).toBeUndefined();
     });
@@ -727,6 +735,32 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
         expect(msg).toBe("Connection expired. Please try again.");
         expect(msg).not.toMatch(/401|token exchange/i);
       }
+    });
+
+    it("throws StravaError(unknown) when AuthSession prompt returns type='error' (BLD-547)", async () => {
+      AuthSession.AuthRequest.mockImplementation(() => ({
+        promptAsync: jest.fn().mockResolvedValue({
+          type: "error",
+          params: {},
+          error: new Error("deep link routing failed"),
+        }),
+      }));
+      await expect(strava.connectStrava()).rejects.toMatchObject({
+        name: "StravaError",
+        code: "unknown",
+      });
+    });
+
+    it("still returns null (no throw) when user dismisses or cancels the prompt", async () => {
+      AuthSession.AuthRequest.mockImplementation(() => ({
+        promptAsync: jest.fn().mockResolvedValue({ type: "cancel", params: {} }),
+      }));
+      await expect(strava.connectStrava()).resolves.toBeNull();
+
+      AuthSession.AuthRequest.mockImplementation(() => ({
+        promptAsync: jest.fn().mockResolvedValue({ type: "dismiss", params: {} }),
+      }));
+      await expect(strava.connectStrava()).resolves.toBeNull();
     });
   });
 });
