@@ -51,6 +51,13 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     }
   }, []);
 
+  // BLD-577 battery fix: explicit "is the stopwatch conceptually running"
+  // flag (separate from `isRunning` state) so the AppState listener can
+  // decide whether to RESTART the 1Hz interval on foreground. We can't use
+  // the React `isRunning` state directly because the listener reads via a
+  // stale closure; a ref survives closure boundaries and updates atomically.
+  const isTickingRef = useRef(false);
+
   const updateDisplay = useCallback(() => {
     if (startedAtRef.current === null) return;
     const now = Date.now();
@@ -82,6 +89,7 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     startedAtRef.current = now;
     targetRef.current = target;
     completedRef.current = false;
+    isTickingRef.current = true;
 
     setIsRunning(true);
     setElapsed(0);
@@ -91,11 +99,18 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
 
     persistTimerState(sessionId, { startedAt: now, exerciseId, setIndex, targetDuration: target });
 
-    intervalRef.current = setInterval(updateDisplay, 1000);
+    // BLD-577: only spin up the 1Hz interval if the app is actually
+    // foregrounded. If the hook starts while backgrounded (rare but
+    // possible, e.g. haptic-triggered autostart), the AppState listener
+    // will start ticking on the next "active" transition.
+    if (AppState.currentState === "active") {
+      intervalRef.current = setInterval(updateDisplay, 1000);
+    }
   }, [clearTimer, updateDisplay, sessionId]);
 
   const stop = useCallback((): number => {
     clearTimer();
+    isTickingRef.current = false;
     const duration = startedAtRef.current
       ? Math.round((Date.now() - startedAtRef.current) / 1000)
       : 0;
@@ -119,6 +134,7 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
 
   const dismiss = useCallback(() => {
     clearTimer();
+    isTickingRef.current = false;
 
     if (activeExerciseId != null && activeSetIndex != null) {
       clearPersistedTimerState(sessionId, activeExerciseId, activeSetIndex);
@@ -134,11 +150,25 @@ export function useSetTimer(options: UseSetTimerOptions = {}) {
     setActiveSetIndex(null);
   }, [clearTimer, sessionId, activeExerciseId, activeSetIndex]);
 
-  // AppState listener — recalculate elapsed on foreground resume (absolute timestamp)
+  // BLD-577 battery fix: pause the 1Hz interval while backgrounded and
+  // restart it on foreground. Elapsed is recomputed from the absolute
+  // startedAtRef so no drift accumulates. Mirrors the BLD-553 pattern
+  // already in useSessionActions / useRestTimer.
   useEffect(() => {
     const handler = (state: AppStateStatus) => {
-      if (state === "active" && startedAtRef.current) {
+      if (state === "active") {
+        if (!isTickingRef.current) return;
+        // Recompute immediately and re-arm the interval.
         updateDisplay();
+        if (!intervalRef.current) {
+          intervalRef.current = setInterval(updateDisplay, 1000);
+        }
+      } else {
+        // background / inactive — stop ticking until we come back.
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       }
     };
     const sub = AppState.addEventListener("change", handler);
