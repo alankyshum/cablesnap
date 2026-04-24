@@ -357,7 +357,8 @@ export function useSessionActions({
     handleMoveExercise(exerciseId, "down");
   }, [handleMoveExercise]);
 
-  const handlePrefillFromPrevious = useCallback(async (exerciseId: string) => {
+  const prefillFromPrevious = useCallback(async (exerciseId: string, opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false;
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (!group?.previousSets) return;
 
@@ -366,9 +367,11 @@ export function useSessionActions({
       : undefined;
     const toFill = computePrefillSets(group.sets, group.previousSets, group.trackingMode, progression);
     if (toFill.length === 0) {
-      const workingSets = group.sets.filter((s) => s.set_type !== "warmup");
-      const allCompleted = workingSets.every((s) => s.completed);
-      showToast(allCompleted ? "All sets already completed" : "Sets already have values");
+      if (!silent) {
+        const workingSets = group.sets.filter((s) => s.set_type !== "warmup");
+        const allCompleted = workingSets.every((s) => s.completed);
+        showToast(allCompleted ? "All sets already completed" : "Sets already have values");
+      }
       return;
     }
 
@@ -393,14 +396,57 @@ export function useSessionActions({
         await updateSet(fill.setId, fill.weight, fill.reps, fill.duration_seconds);
       }
     } catch {
-      showError("Failed to save prefilled values");
+      if (!silent) showError("Failed to save prefilled values");
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    showToast(`Filled ${toFill.length} set${toFill.length !== 1 ? "s" : ""} from last session`);
-    AccessibilityInfo.announceForAccessibility(`Filled ${toFill.length} sets from last session`);
+    if (!silent) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      showToast(`Filled ${toFill.length} set${toFill.length !== 1 ? "s" : ""} from last session`);
+    }
+    AccessibilityInfo.announceForAccessibility(`Prefilled ${toFill.length} sets from last session`);
   }, [groups, setGroups, showToast, showError, unit]);
+
+  const handlePrefillFromPrevious = useCallback((exerciseId: string) => {
+    return prefillFromPrevious(exerciseId);
+  }, [prefillFromPrevious]);
+
+  // Auto-prefill once per session open. Fires after groups + previousSets are loaded.
+  // Skips any group where the user has already touched working sets (completed OR has values).
+  const autoPrefillFiredForSessionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    if (groups.length === 0) return;
+    if (autoPrefillFiredForSessionRef.current === id) return;
+    autoPrefillFiredForSessionRef.current = id;
+
+    // Snapshot of candidate exercise ids to auto-prefill. We evaluate synchronously
+    // against the current `groups` state so later async DB work doesn't depend on
+    // stale refs, and so we never re-trigger.
+    const candidates = groups
+      .filter((g) => {
+        if (!g.previousSets || g.previousSets.length === 0) return false;
+        const workingSets = g.sets.filter((s) => s.set_type !== "warmup");
+        if (workingSets.length === 0) return false;
+        // Skip if any working set was already touched by the user.
+        const anyTouched = workingSets.some((s) =>
+          s.completed || s.weight != null || s.reps != null || s.duration_seconds != null,
+        );
+        return !anyTouched;
+      })
+      .map((g) => g.exercise_id);
+
+    if (candidates.length === 0) return;
+
+    void (async () => {
+      for (const eid of candidates) {
+        await prefillFromPrevious(eid, { silent: true });
+      }
+    })();
+    // We intentionally omit `groups` and `prefillFromPrevious` from deps —
+    // this is a once-per-session effect guarded by the ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, groups.length > 0]);
 
   const finish = () => {
     confirmAction(
