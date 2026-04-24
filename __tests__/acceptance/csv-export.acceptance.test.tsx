@@ -32,7 +32,7 @@ jest.mock('../../lib/errors', () => ({
   clearErrorLog: jest.fn().mockResolvedValue(undefined),
 }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn() }))
-jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn() }))
+jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn(), preload: jest.fn() }))
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),

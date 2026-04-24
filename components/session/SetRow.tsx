@@ -13,6 +13,7 @@ import { RPE_CHIPS, RPE_LABELS, type SetWithMeta } from "./types";
 import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
+import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
 
 export function formatDurationDisplay(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "0:00";
@@ -68,6 +69,18 @@ export const SetRow = memo(function SetRow({
   isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
 }: SetRowProps) {
   const colors = useThemeColors();
+  // BLD-559: synchronous confirmation feedback owned exclusively here.
+  // usePRCelebration MUST NOT fire haptic/audio. Any change here requires
+  // psychologist re-review per PLAN-BLD-559.
+  const { fire: fireSetCompletionFeedback } = useSetCompletionFeedback();
+
+  const handleCheckPress = useCallback(() => {
+    // Fire feedback synchronously ONLY on false → true transition.
+    if (!set.completed) {
+      fireSetCompletionFeedback();
+    }
+    onCheck(set);
+  }, [set, onCheck, fireSetCompletionFeedback]);
 
   const onWeightChange = useCallback((v: number) => onUpdate(set.id, "weight", String(v)), [set.id, onUpdate]);
   const onRepsChange = useCallback((v: number) => onUpdate(set.id, "reps", String(v)), [set.id, onUpdate]);
@@ -223,7 +236,7 @@ export const SetRow = memo(function SetRow({
             </View>
           )}
           <Pressable
-            onPress={() => onCheck(set)}
+            onPress={handleCheckPress}
             hitSlop={16}
             style={[
               styles.circleCheck,

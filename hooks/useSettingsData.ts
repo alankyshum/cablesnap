@@ -9,7 +9,7 @@ import {
   getStravaConnection,
 } from '@/lib/db';
 import { getErrorCount } from '@/lib/errors';
-import { setEnabled as setAudioEnabled } from '@/lib/audio';
+import { setEnabled as setAudioCategoryEnabled } from '@/lib/audio';
 import { getPermissionStatus } from '@/lib/notifications';
 
 export function useSettingsData() {
@@ -51,11 +51,11 @@ export function useSettingsData() {
         .then((val) => {
           const on = val !== 'false';
           setSoundEnabled(on);
-          setAudioEnabled(on);
+          setAudioCategoryEnabled('timer', on);
         })
         .catch(() => {
           setSoundEnabled(true);
-          setAudioEnabled(true);
+          setAudioCategoryEnabled('timer', true);
           toast.error('Could not load sound setting');
         });
       getAppSetting('rest_notification_enabled')

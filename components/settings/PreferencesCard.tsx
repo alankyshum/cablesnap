@@ -5,7 +5,11 @@ import { Text } from "@/components/ui/text";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import { getAppSetting, setAppSetting } from "@/lib/db";
-import { setEnabled as setAudioEnabled } from "@/lib/audio";
+import { setEnabled as setAudioCategoryEnabled } from "@/lib/audio";
+import {
+  setSetCompletionHaptic,
+  setSetCompletionAudio,
+} from "@/hooks/useSetCompletionFeedback";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
 
@@ -29,17 +33,26 @@ export default function PreferencesCard({
   const [showBreakdown, setShowBreakdown] = useState(true);
   const [restAfterWarmup, setRestAfterWarmup] = useState(false);
 
+  // BLD-559: set-completion confirmation feedback — haptic default ON,
+  // audio default OFF.
+  const [setCompleteHaptic, setSetCompleteHapticState] = useState(true);
+  const [setCompleteAudio, setSetCompleteAudioState] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       getAppSetting("rest_adaptive_enabled"),
       getAppSetting("rest_show_breakdown"),
       getAppSetting("rest_after_warmup_enabled"),
-    ]).then(([adaptive, show, warmup]) => {
+      getAppSetting("feedback.setComplete.haptic"),
+      getAppSetting("feedback.setComplete.audio"),
+    ]).then(([adaptive, show, warmup, scHaptic, scAudio]) => {
       if (cancelled) return;
       setAdaptiveRest(adaptive !== "false");
       setShowBreakdown(show !== "false");
       setRestAfterWarmup(warmup === "true");
+      setSetCompleteHapticState(scHaptic !== "false");
+      setSetCompleteAudioState(scAudio === "true");
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -60,6 +73,18 @@ export default function PreferencesCard({
     setRestAfterWarmup(val);
     try { await setAppSetting("rest_after_warmup_enabled", val ? "true" : "false"); }
     catch { toast.error("Failed to save warmup rest setting"); }
+  };
+
+  const updateSetCompleteHaptic = async (val: boolean) => {
+    setSetCompleteHapticState(val);
+    try { await setSetCompletionHaptic(val); }
+    catch { toast.error("Failed to save set-complete haptic setting"); }
+  };
+
+  const updateSetCompleteAudio = async (val: boolean) => {
+    setSetCompleteAudioState(val);
+    try { await setSetCompletionAudio(val); }
+    catch { toast.error("Failed to save set-complete sound setting"); }
   };
 
   return (
@@ -85,7 +110,7 @@ export default function PreferencesCard({
             value={soundEnabled}
             onValueChange={async (val) => {
               setSoundEnabled(val);
-              setAudioEnabled(val);
+              setAudioCategoryEnabled("timer", val);
               try { await setAppSetting("timer_sound_enabled", val ? "true" : "false"); }
               catch { toast.error("Failed to save timer sound setting"); }
             }}
@@ -136,6 +161,32 @@ export default function PreferencesCard({
             accessibilityLabel="Rest after warmup sets"
             accessibilityRole="switch"
             accessibilityHint="Start a short rest timer after warmup sets"
+          />
+        </View>
+
+        {/* BLD-559: Set-completion confirmation feedback */}
+        <View style={styles.row}>
+          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+            Haptic on set complete
+          </Text>
+          <Switch
+            value={setCompleteHaptic}
+            onValueChange={updateSetCompleteHaptic}
+            accessibilityLabel="Haptic on set complete"
+            accessibilityRole="switch"
+            accessibilityHint="Vibrate briefly when you tap to complete a set"
+          />
+        </View>
+        <View style={styles.row}>
+          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+            Sound on set complete
+          </Text>
+          <Switch
+            value={setCompleteAudio}
+            onValueChange={updateSetCompleteAudio}
+            accessibilityLabel="Sound on set complete"
+            accessibilityRole="switch"
+            accessibilityHint="Play a short confirmation tone when you tap to complete a set"
           />
         </View>
       </CardContent>

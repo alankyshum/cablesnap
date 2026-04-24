@@ -252,6 +252,7 @@ jest.mock('../../lib/audio', () => ({
   loadSounds: jest.fn().mockResolvedValue(new Map()),
   play: jest.fn(),
   setEnabled: jest.fn(),
+  preload: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/notifications', () => ({

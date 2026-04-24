@@ -100,7 +100,7 @@ jest.mock('expo-keep-awake', () => ({
   activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined),
   deactivateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined),
 }))
-jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn() }))
+jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn(), preload: jest.fn() }))
 jest.mock('victory-native', () => ({
   CartesianChart: 'CartesianChart',
   Line: 'Line',

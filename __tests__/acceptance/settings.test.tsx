@@ -38,7 +38,7 @@ jest.mock('../../lib/errors', () => ({
   generateGitHubURL: jest.fn().mockReturnValue('https://github.com'),
 }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn() }))
-jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn() }))
+jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn(), preload: jest.fn() }))
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -231,7 +231,7 @@ describe('Settings Screen Acceptance', () => {
     fireEvent(toggle, 'valueChange', false)
 
     await waitFor(() => {
-      expect(mockSetAudioEnabled).toHaveBeenCalledWith(false)
+      expect(mockSetAudioEnabled).toHaveBeenCalledWith('timer', false)
     })
     await waitFor(() => {
       expect(mockSetAppSetting).toHaveBeenCalledWith('timer_sound_enabled', 'false')
@@ -247,7 +247,7 @@ describe('Settings Screen Acceptance', () => {
     fireEvent(toggle, 'valueChange', true)
 
     await waitFor(() => {
-      expect(mockSetAudioEnabled).toHaveBeenCalledWith(true)
+      expect(mockSetAudioEnabled).toHaveBeenCalledWith('timer', true)
     })
     await waitFor(() => {
       expect(mockSetAppSetting).toHaveBeenCalledWith('timer_sound_enabled', 'true')
