@@ -115,4 +115,4 @@ jobs:
             exit 0
           fi
           git commit -m "chore(e2e): regenerate playwright baselines via workflow"
-          git push origin HEAD:${{ github.ref_name }}
+          git push --no-verify origin HEAD:${{ github.ref_name }}
