@@ -224,4 +224,44 @@ describe("useSessionActions — auto-prefill (BLD-542)", () => {
     const haptics = jest.requireMock("expo-haptics");
     expect(haptics.impactAsync).toHaveBeenCalled();
   });
+
+  it("rollback + warn when silent auto-prefill persistence fails (BLD-542 QD/reviewer blocker)", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    mockUpdateSet.mockRejectedValueOnce(new Error("DB locked"));
+
+    const params = makeParams([makeGroup()]);
+    params.setGroups = jest.fn();
+
+    renderHook(() => useSessionActions(params));
+    await act(async () => { await flush(); });
+
+    // Silent contract intact: no toast, no showError, no haptic
+    expect(params.showToast).not.toHaveBeenCalled();
+    expect(params.showError).not.toHaveBeenCalled();
+    const haptics = jest.requireMock("expo-haptics");
+    expect(haptics.impactAsync).not.toHaveBeenCalled();
+
+    // No a11y announce on failure (we never reached success path)
+    expect(mockAnnounce).not.toHaveBeenCalled();
+
+    // Diagnostic breadcrumb surfaced
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[prefillFromPrevious] persist failed"),
+      expect.any(Error),
+    );
+
+    // setGroups called twice: optimistic apply + rollback
+    const setGroupsMock = params.setGroups as jest.Mock;
+    expect(setGroupsMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    // Apply both updaters sequentially to an initial state; final state equals initial (rollback).
+    const initial = [makeGroup()];
+    let state: any = initial;
+    for (const [updater] of setGroupsMock.mock.calls) {
+      state = updater(state);
+    }
+    expect(state[0].sets.every((s: any) => s.weight == null && s.reps == null && s.duration_seconds == null)).toBe(true);
+
+    warnSpy.mockRestore();
+  });
 });

@@ -375,6 +375,14 @@ export function useSessionActions({
       return;
     }
 
+    // Snapshot pre-fill set values for this exercise so we can roll back on DB failure.
+    const preFillSnapshot = group.sets.map((s) => ({
+      id: s.id,
+      weight: s.weight,
+      reps: s.reps,
+      duration_seconds: s.duration_seconds,
+    }));
+
     // Update local state in one batch
     setGroups((prev) =>
       prev.map((g) => {
@@ -395,7 +403,24 @@ export function useSessionActions({
       for (const fill of toFill) {
         await updateSet(fill.setId, fill.weight, fill.reps, fill.duration_seconds);
       }
-    } catch {
+    } catch (err) {
+      // Rollback optimistic UI update so UI ↔ DB stays in sync when persistence fails.
+      setGroups((prev) =>
+        prev.map((g) => {
+          if (g.exercise_id !== exerciseId) return g;
+          return {
+            ...g,
+            sets: g.sets.map((s) => {
+              const snap = preFillSnapshot.find((p) => p.id === s.id);
+              if (!snap) return s;
+              return { ...s, weight: snap.weight, reps: snap.reps, duration_seconds: snap.duration_seconds };
+            }),
+          };
+        })
+      );
+      // Always leave a diagnostic breadcrumb, even on the silent auto-prefill path.
+      // eslint-disable-next-line no-console
+      console.warn(`[prefillFromPrevious] persist failed (exercise=${exerciseId}, silent=${silent}):`, err);
       if (!silent) showError("Failed to save prefilled values");
       return;
     }
