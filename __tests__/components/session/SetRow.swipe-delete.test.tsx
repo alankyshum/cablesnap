@@ -137,15 +137,22 @@ describe("SetRow — BLD-543 delete affordance & hit targets", () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
-  it("completion checkbox uses enlarged hit target (hitSlop ≥ 16, min 44×44)", () => {
+  it("completion checkbox uses enlarged hit target (BLD-579: visible ≥ 48, effective ≥ 60×60)", () => {
     const { getByLabelText } = renderRow();
     const check = getByLabelText("Mark set 1 complete");
-    expect(check.props.hitSlop).toBe(16);
-    // Circle check style must include a flat 44×44 tappable area
+    // Asymmetric hitSlop: right=0 keeps the enlarged hit box from overlapping
+    // the adjacent delete Pressable. See BLD-579 / GH #334.
+    const slop = check.props.hitSlop;
+    expect(typeof slop).toBe("object");
+    expect(slop.right ?? 0).toBe(0);
     const styles = Array.isArray(check.props.style) ? check.props.style : [check.props.style];
     const merged = Object.assign({}, ...styles.filter(Boolean));
-    expect(merged.width).toBeGreaterThanOrEqual(44);
-    expect(merged.height).toBeGreaterThanOrEqual(44);
+    expect(merged.width).toBeGreaterThanOrEqual(48);
+    expect(merged.height).toBeGreaterThanOrEqual(48);
+    const effectiveH = merged.width + (slop.left ?? 0) + (slop.right ?? 0);
+    const effectiveV = merged.height + (slop.top ?? 0) + (slop.bottom ?? 0);
+    expect(effectiveH).toBeGreaterThanOrEqual(60);
+    expect(effectiveV).toBeGreaterThanOrEqual(60);
   });
 
   it("RPE chips meet 44pt minimum tap target when shown", () => {
