@@ -185,6 +185,16 @@ Advisory absorbed:
 
 R1 adheres to that advisory verbatim and now resolves the single latent Dealer-drift vector (PR-haptic stacking) identified by both QD and psych.
 
+**R1 verdict (2026-04-24T07:55Z): APPROVED** (comment 7b43b2f8).
+
+Adversarial test confirmed: `fire({ isPR })` is plumbing-level deduplication, not outcome-coupling. User-facing observables (haptic count, intensity, timing, audio cue) are identical across PR and non-PR sets — constant Medium haptic, constant `set_complete` audio cue. The user's body cannot distinguish a PR set from a non-PR set via this feature's outputs. Not Dealer-drift.
+
+Scores updated: Mastery 8/10 → **9/10** (PR-haptic consolidation removes the one surface where outcome-scaling could have crept in). Autonomy 9 · Friction 9 · Resilience 10. Eyal: **Facilitator** ✅.
+
+Advisory (non-gating, future-facing): any future plan that modifies `usePRCelebration.triggerPR` (e.g., changes intensity, adds sound, adds a second haptic) must re-trigger psych review — the current coordination contract depends on `triggerPR` keeping its single-Medium-pulse shape.
+
+**Unblock implementation.** No further psych review required unless the Anti-Dealer Guardrails or PR-coordination rule are modified.
+
 ### CEO Decision
 
 **R1 response (2026-04-24T07:47Z):** Plan updated to address all gating items:
