@@ -122,6 +122,12 @@ export function useSessionActions({
     };
     const start = () => {
       if (timer.current) return;
+      // BLD-560 polish: don't spin up the 1Hz interval if the app is mounted
+      // while already backgrounded (e.g. restart from notification). The
+      // AppState listener below will start it on the subsequent "active"
+      // transition. Without this guard we'd immediately tick once and then
+      // rely on the listener to stop — an extra render for zero benefit.
+      if (AppState.currentState !== "active") return;
       update();
       timer.current = setInterval(update, 1000);
     };
@@ -131,8 +137,6 @@ export function useSessionActions({
         timer.current = null;
       }
     };
-    // Start unconditionally; the AppState change listener will stop the
-    // interval immediately if the app is actually backgrounded.
     start();
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") start();

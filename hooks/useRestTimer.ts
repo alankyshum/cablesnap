@@ -172,13 +172,12 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   );
 
   const dismissRest = useCallback(() => {
-    if (restRef.current) clearInterval(restRef.current);
-    restRef.current = null;
+    stopRestInterval();
     endAtRef.current = null;
     cancelNotification();
     setRest(0);
     setBreakdown(defaultBreakdown(0));
-  }, [cancelNotification]);
+  }, [cancelNotification, stopRestInterval]);
 
   // BLD-553 battery fix: AppState listener pauses the 1Hz interval when
   // backgrounded (native notification still fires) and restarts it on

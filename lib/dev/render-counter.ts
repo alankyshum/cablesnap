@@ -9,6 +9,21 @@
  *     // ...
  *   }
  *
+ * ## Profiling window discipline (IMPORTANT)
+ *
+ * **Callers MUST call `resetRenderCounts()` at the start of each profiling
+ * window.** The module-level `startedAt` is set on first import (or on the
+ * most recent reset), so if you never reset, the rpm denominator spans the
+ * entire app lifetime — not the interval you actually care about. A 10-render
+ * burst that happened 30 minutes ago will report ~0 rpm even though it
+ * corresponds to a real hot path during the window you meant to sample.
+ *
+ * Recommended shape:
+ *
+ *   resetRenderCounts();   // denominator starts now
+ *   // ... run the workload (1 min real workout / N simulated ticks) ...
+ *   dumpRenderCounts();    // reads counts / elapsed-since-last-reset
+ *
  * Then from a React Native dev menu / console:
  *   require("@/lib/dev/render-counter").dumpRenderCounts();
  *
@@ -20,10 +35,11 @@
  * To investigate BLD-553 (battery drain during workout):
  *   1. Instrument the suspected hot components (GroupCardHeader, SetRow,
  *      SessionHeaderToolbar) with `countRender("Name")` behind `__DEV__`.
- *   2. Run a real workout for ~1 min with timer active.
- *   3. Call `dumpRenderCounts()` — anything re-rendering >60x/min while idle
+ *   2. Call `resetRenderCounts()` immediately before starting the window.
+ *   3. Run a real workout for ~1 min with timer active.
+ *   4. Call `dumpRenderCounts()` — anything re-rendering >60x/min while idle
  *      is a hot path and a battery-drain candidate.
- *   4. After profiling, remove the instrumentation (or leave only behind a
+ *   5. After profiling, remove the instrumentation (or leave only behind a
  *      feature flag) so the prod bundle stays clean.
  */
 
