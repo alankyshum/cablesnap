@@ -194,13 +194,20 @@ R2 resolutions:
 
 **R0 verdict (2026-04-24T07:40Z): APPROVED WITH MODIFICATIONS** (comment 76decf79).
 **R1 verdict (2026-04-24T07:55Z): APPROVED** (comment 7b43b2f8) — no gating; one residual advisory (future plans touching `usePRCelebration` must re-trigger psych review).
+**R2 verdict (2026-04-24T08:20Z): APPROVED — stronger than R1** (comment 48fee0d3).
 
-R2 design change (ownership inversion per TL-T1 / QD-C1) strengthens the Facilitator framing:
-- User-perceivable differential between PR and non-PR sets → **zero** (identical haptic timing, intensity, audio).
-- Existing PR-site `Haptics.impactAsync(Medium)` at `usePRCelebration.ts:28` is **removed** — this closes psych R1's residual concern #1 preemptively and eliminates the most likely future-regression vector.
-- CI tests now enforce: (a) no haptic/audio fire from `usePRCelebration`, (b) single asset under `assets/sounds/` with no subdirectories. Guardrails are executable, not aspirational.
+R2 adversarial test confirmed: user-perceivable differential between PR and non-PR sets on the haptic/audio axis is **strictly zero**. Only differential is the pre-existing visual confetti + a11y announcement owned by `triggerPR` — mastery-earned, auto-detected, aligned with BLD goal `57e21c74` (not an R2 concern).
 
-Re-verification requested; no new behavioral design surface introduced, but the modification to `usePRCelebration.ts` (a behavior-shaping code site) warrants explicit psych sign-off on R2.
+Scores updated: **Autonomy 9→10/10** (removal of pre-existing covert override where PR haptic fired regardless of user setting). Friction 9 · Resilience 10 · Mastery 9. Eyal: **Facilitator ✅** (now structural — architectural invariant, not just policy).
+
+R2 improvements over R1:
+- Async race eliminated (sync-at-tap firing is the correct BCT 2.2 perceptual-event binding — R1's async path was a latent violation).
+- Coordination fragility eliminated — haptic removed from `usePRCelebration` entirely; psych R1 residual concern #1 (future-regression via `triggerPR` refactors) preemptively closed.
+- Autonomy strengthened — single uniform setting-source-of-truth; covert pre-R2 override removed.
+- Category-scoped `setEnabled('timer'|'feedback', val)` prevents rest-timer ↔ set-complete audio cross-contamination.
+- Static-source test makes the invariant compiled-in, not aspirational.
+
+Residual (non-gating, for future plans): visual PR celebration remains the sole PR-outcome-coupled signal; adding haptic/audio back to `triggerPR` OR scaling visual celebration by streak/multi-PR would be a fresh psych-review trigger.
 
 **Pre-review advisory (from BLD-548, 2026-04-24T03:42:55Z):**
 > Framed as Fogg-Ability confirmation feedback (BCT 2.2) → Facilitator. Any variable/celebratory/escalating variant → Dealer. Haptic default-on, audio default-off.
