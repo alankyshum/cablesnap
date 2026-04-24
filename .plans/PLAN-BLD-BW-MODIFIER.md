@@ -263,7 +263,18 @@ Today, bodyweight PRs = max-reps PRs. Extend:
 - **NITS**: CSV gets new column (not unchanged); first-run sheet caption kept; +0 normalization codified as AC; e1RM dead-end mitigated with "Set bodyweight" CTA; accessibility label synced to mode-label model.
 
 ### Tech Lead (Technical Feasibility)
-_Pending — awaiting techlead re-review on revised plan. Schema direction now locked; audit enumeration request is moot (the 6 queries need no change)._
+**Verdict**: REVISION REQUIRED (2026-04-24T02:02Z, HEAD 70ac12a) — full comment on BLD-539. Summary:
+
+- **BLOCKER T-1**: `exercises.is_bodyweight` column does not exist. Plan must use `equipment === 'bodyweight'` (schema.ts:22, useSessionData.ts:124). Affects storage-model table, §1 guard, write-invariant, pre-merge audit SQL, AC-9.
+- **BLOCKER T-2**: `npm run db:generate` script does not exist and `drizzle/` migrations directory is not used in this project. Canonical additive-column pattern is 3-file (BLD-461): `tables.ts` CREATE TABLE DDL + `migrations.ts` `addColumnIfMissing(..., "REAL DEFAULT NULL")` + `schema.ts` drizzle def. Standardize type on `REAL` (matches `weight`, `rpe`); resolve NUMERIC/REAL inconsistency (lines 50, 133 vs 159).
+- **BLOCKER T-3**: Smart-default cache invalidation — `mutationVersion` is a focus-refetch gate, not a React Query invalidator. Plan must explicitly call `queryClient.invalidateQueries({ queryKey: ['bw-modifier-default', exerciseId] })` in `useSessionActions` on set complete. Without this the cache goes stale.
+- **MAJOR T-1**: `getWeightedBodyweightPRs()` must be a single aggregate query (`GROUP BY ws.exercise_id`), mirroring `getAllTimeBests`. Specify explicitly so claudecoder doesn't loop per-exercise. Also specify merge rule with `getAllTimeBests` bodyweight branch (augment same row, don't move to weighted section).
+- **MAJOR T-2**: CHECK constraint path is not achievable in SQLite without triggers (would need cross-table lookup). Helper-layer throw is canonical and only-viable. Remove Risk-table "Future: CHECK constraint" note. Concrete spec: new `updateSetBodyweightModifier(id, modifierKg)` helper in `session-sets.ts` that does one SELECT `equipment` and throws on non-BW; `updateSet` untouched.
+- **NITS**: +0 normalization locus (UI + helper), RISK table CHECK row, REAL/NUMERIC lock.
+
+Focus-point verdict: (a) ❌ T-2, (b) ✅ helper-layer (spec cleanup), (c) ⚠️ T-1, (d) ❌ T-3, (e) ✅ no extra audit obligations.
+
+Direction is correct; R1 is technically imprecise. R2 is a doc-level fix (~30–45 min). Re-review promised in ≤15 min.
 
 ### UX Designer (Visual Review)
 **Verdict**: APPROVE w/ REVISIONS (2026-04-24T01:53Z) — all 6 blocking revisions applied:
