@@ -30,12 +30,14 @@ const mockHistory = [
 jest.mock("../../lib/db/exercise-history", () => ({
   getExerciseRecords: jest.fn(),
   getBestSet: jest.fn(),
+  getBestBodyweightSet: jest.fn(),
   getExerciseHistory: jest.fn(),
 }));
 
 const {
   getExerciseRecords,
   getBestSet,
+  getBestBodyweightSet,
   getExerciseHistory,
 } = require("../../lib/db/exercise-history");
 
@@ -47,6 +49,7 @@ describe("useExerciseDrawerStats", () => {
   it("returns loading state initially, then loaded data with history", async () => {
     getExerciseRecords.mockResolvedValue(mockRecords);
     getBestSet.mockResolvedValue(mockBestSet);
+    getBestBodyweightSet.mockResolvedValue(null);
     getExerciseHistory.mockResolvedValue(mockHistory);
 
     const { result } = renderHook(() => useExerciseDrawerStats("ex-1"));
@@ -80,6 +83,7 @@ describe("useExerciseDrawerStats", () => {
     const emptyRecords = { ...mockRecords, total_sessions: 0, max_weight: null, max_reps: null, est_1rm: null, max_volume: null };
     getExerciseRecords.mockResolvedValue(emptyRecords);
     getBestSet.mockResolvedValue(null);
+    getBestBodyweightSet.mockResolvedValue(null);
     getExerciseHistory.mockResolvedValue([]);
 
     rerender({ id: "ex-empty" });
@@ -94,6 +98,7 @@ describe("useExerciseDrawerStats", () => {
   it("handles errors gracefully", async () => {
     getExerciseRecords.mockRejectedValue(new Error("DB error"));
     getBestSet.mockRejectedValue(new Error("DB error"));
+    getBestBodyweightSet.mockRejectedValue(new Error("DB error"));
     getExerciseHistory.mockRejectedValue(new Error("DB error"));
 
     const { result } = renderHook(() => useExerciseDrawerStats("ex-fail"));

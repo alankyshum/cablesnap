@@ -132,6 +132,83 @@ describe("ExerciseDrawerStats", () => {
     expect(getByText(/20 reps/)).toBeTruthy();
   });
 
+  it("displays weighted-bodyweight best as modifier prefix × reps (BLD-541)", () => {
+    useExerciseDrawerStats.mockReturnValue({
+      records: {
+        max_weight: 0,
+        max_reps: 8,
+        max_volume: null,
+        est_1rm: null,
+        total_sessions: 12,
+        is_bodyweight: true,
+        max_duration: null,
+        best_added_kg: 20,
+        best_assisted_kg: null,
+      },
+      bestSet: null,
+      bestBodyweightSet: { modifier_kg: 20, reps: 5 },
+      lastSession: {
+        session_id: "s-bw",
+        session_name: "Pull",
+        started_at: new Date("2026-04-20").getTime(),
+        max_weight: 0,
+        max_reps: 8,
+        total_reps: 24,
+        set_count: 3,
+        volume: 0,
+        avg_rpe: null,
+        max_modifier: 20,
+      },
+      loading: false,
+      error: false,
+    });
+
+    const { getByText } = render(
+      <ExerciseDrawerStats exerciseId="ex-bw-1" unit="kg" />
+    );
+
+    expect(getByText(/\+20 kg × 5/)).toBeTruthy();
+    expect(getByText(/\+20 kg × 8/)).toBeTruthy();
+  });
+
+  it("displays assisted bodyweight last session with signed minus sign", () => {
+    useExerciseDrawerStats.mockReturnValue({
+      records: {
+        max_weight: 0,
+        max_reps: 10,
+        max_volume: null,
+        est_1rm: null,
+        total_sessions: 4,
+        is_bodyweight: true,
+        max_duration: null,
+        best_added_kg: null,
+        best_assisted_kg: -15,
+      },
+      bestSet: null,
+      bestBodyweightSet: null,
+      lastSession: {
+        session_id: "s-assist",
+        session_name: "Pull-ups",
+        started_at: new Date("2026-04-20").getTime(),
+        max_weight: 0,
+        max_reps: 10,
+        total_reps: 30,
+        set_count: 3,
+        volume: 0,
+        avg_rpe: null,
+        max_modifier: -15,
+      },
+      loading: false,
+      error: false,
+    });
+
+    const { getByText } = render(
+      <ExerciseDrawerStats exerciseId="ex-bw-2" unit="kg" />
+    );
+
+    expect(getByText(/Assist\s*\u221215 kg × 10/)).toBeTruthy();
+  });
+
   it("displays weights in lb when unit is lb", () => {
     useExerciseDrawerStats.mockReturnValue({
       records: {

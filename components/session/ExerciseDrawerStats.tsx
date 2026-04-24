@@ -2,10 +2,11 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { useExerciseDrawerStats } from "@/hooks/useExerciseDrawerStats";
+import { useExerciseDrawerStats, type BestBodyweightSet } from "@/hooks/useExerciseDrawerStats";
 import { toDisplay } from "@/lib/units";
 import type { ExerciseRecords, ExerciseSession } from "@/lib/db/exercise-history";
 import { fontSizes } from "@/constants/design-tokens";
+import { formatBodyweightLoad, accessibilityLabelForModifier } from "@/lib/bodyweight";
 
 type Props = {
   exerciseId: string;
@@ -35,9 +36,21 @@ function unitLabel(unit: "kg" | "lb"): string {
 
 function getBestDisplayAndA11y(
   records: ExerciseRecords,
-  bestSet: { weight: number; reps: number } | null,
+  bestSet: { weight: number; reps: number; bodyweight_modifier_kg: number | null } | null,
+  bestBodyweightSet: BestBodyweightSet | null,
   unit: "kg" | "lb",
 ): { display: string; a11y: string } {
+  // BLD-541: for bodyweight exercises with a weighted-BW best set, render as
+  // "+20 kg × 5" or "Assist −15 kg × 5" (UX REV-6 — modifier text earns its
+  // screen real estate only when present; null-modifier falls back to reps).
+  if (records.is_bodyweight && bestBodyweightSet) {
+    const prefix = formatBodyweightLoad(bestBodyweightSet.modifier_kg, unit);
+    const a11yPrefix = accessibilityLabelForModifier(bestBodyweightSet.modifier_kg, unit);
+    return {
+      display: `${prefix} × ${bestBodyweightSet.reps}`,
+      a11y: `Personal best: ${a11yPrefix} for ${bestBodyweightSet.reps} reps`,
+    };
+  }
   if (bestSet && !records.is_bodyweight) {
     return {
       display: `${formatWeight(bestSet.weight, unit)}×${bestSet.reps}`,
@@ -82,7 +95,9 @@ function renderLastSession(
   });
 
   const lastBestStr = isBodyweight
-    ? `${session.max_reps} reps`
+    ? session.max_modifier != null
+      ? `${formatBodyweightLoad(session.max_modifier, unit)} × ${session.max_reps}`
+      : `${session.max_reps} reps`
     : `${formatWeight(session.max_weight, unit)} × ${session.max_reps}`;
 
   const volumeStr =
@@ -109,7 +124,7 @@ function renderLastSession(
 
 export function ExerciseDrawerStats({ exerciseId, unit }: Props) {
   const colors = useThemeColors();
-  const { records, bestSet, lastSession, loading, error } =
+  const { records, bestSet, bestBodyweightSet, lastSession, loading, error } =
     useExerciseDrawerStats(exerciseId);
 
   if (loading) {
@@ -179,7 +194,7 @@ export function ExerciseDrawerStats({ exerciseId, unit }: Props) {
   }
 
   // Compute display values using extracted helpers
-  const best = getBestDisplayAndA11y(records, bestSet, unit);
+  const best = getBestDisplayAndA11y(records, bestSet, bestBodyweightSet, unit);
   const e1rm = getE1rmDisplayAndA11y(records, unit);
   const sessionsDisplay = `${records.total_sessions}`;
   const sessionsA11y = `${records.total_sessions} sessions completed`;
