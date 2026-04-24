@@ -165,7 +165,24 @@ Advisory absorbed:
 - **S5** Asset format: R1 switches to WAV (matches existing `beep_high.wav`/`tick.wav`/`complete.wav`).
 
 ### Tech Lead (Feasibility)
-_Pending — requested 2026-04-24T07:28Z, awaiting response_
+
+**R1 verdict (2026-04-24T08:00Z): REQUEST CHANGES** (comment 350ec66b).
+
+Two gating items on control flow / API shape; three advisories. None contest the behavioral classification — QD and psych already approved that; findings are strictly about how R1 wires the solution into the existing codebase.
+
+Gating:
+- **T1 — `fire({ isPR })` premise unsatisfiable at tap time.** PR detection is an async DB query (`checkSetPR` in `lib/db/session-stats.ts:59` + `checkSetBodyweightModifierPR`), executed *after* `await completeSet(...)` in `hooks/useSessionActions.ts:254–295`. Neither branch works: awaiting the query delays the haptic (breaks Fogg-Ability / BCT 2.2 confirmation framing), and firing with `isPR=false` then discovering PR later re-creates the stacking (now temporally separated and outcome-correlated — arguably worse Dealer vector than the simultaneous stack we started with). **Recommended fix: invert ownership** — confirmation hook owns the only set-complete Medium haptic at tap time; `usePRCelebration.triggerPR` drops its `Haptics.impactAsync(Medium)` at `hooks/usePRCelebration.ts:28`. PR celebration remains visual + a11y; haptic was a redundant amplifier. Collapses hook signature to `fire()` and removes the entire `isPR` selector / plumbing requirement.
+- **T2 — `lib/audio.ts` module-scalar `enabled` will cross-contaminate settings.** The global `enabled` flag at `lib/audio.ts:22` is already mutated by the `timer_sound_enabled` setting (`app/session/[id].tsx:53`, `hooks/useSettingsData.ts:54`). Adding `set_complete` to the current `play(cue)` path makes the rest-timer audio toggle silently control the set-complete audio. R1 acknowledges the need for "independent per-cue enabled state" but doesn't specify the API. **Recommended shape:** category-scoped enablement (`timer` vs `feedback`) with `setCategoryEnabled(cat, val)`; the existing `setEnabled` becomes a `setCategoryEnabled("timer", ...)` alias (zero behavior change for existing cues). Reject any `play(cue, { bypassGlobal: true })` flag — leaks abstraction and doesn't compose.
+
+Advisories:
+- **T3 — Eager preload.** `lib/audio.ts.load()` is lazy (first-`play()` triggers). Rest-timer cues mask this because the first beep fires ~60 s post-mount; the first set-complete tap would hit cold load (> 100 ms on low-end Android). Expose `preload()` and call it from `app/session/[id].tsx` mount effect. Add to Acceptance Criteria.
+- **T4 — Lock the fire point to the event handler.** Plan correctly says "inside `onCheck(set)` handler". Add a regression test that rehydrates a session with ≥ 5 already-completed sets and asserts `Haptics.impactAsync` and `lib/audio.play('set_complete')` are both called **zero** times during rehydration — prevents a future refactor into `useEffect(() => { if (completed) fire() }, [completed])` that would double-fire on load.
+- **T5 — Pick one settings propagation pattern.** Hook can't read via React Query while Settings writes imperatively (stale reads until remount). Either both sides through React Query (with `queryClient.setQueryData` in the mutator) or both sides through an imperative event-bus / module-scalar (matches `setAudioEnabled` precedent — and lets the fire path skip a SQLite read on every tap). Either is acceptable; the plan needs to commit so test expectations are deterministic.
+
+Already correct in R1:
+- Dependencies (expo-haptics / expo-audio already in tree — zero new native surface), SQLite KV store choice, WAV format + size, `playsInSilentMode: false` assertion, single-asset Jest invariant, `it.each` discipline, 1800-line test-ceiling awareness.
+
+**Path to APPROVE:** R2 addresses T1 (ownership inversion) and T2 (category-gated enable). T3–T5 are nice-to-have but cheap to fold in. If T1 adopts the recommendation, the plan actually shrinks — no cross-cutting `isPR` propagation and no phantom "shared PR selector" extraction.
 
 ### Psychologist (Behavior-Design)
 
