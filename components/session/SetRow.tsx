@@ -237,7 +237,10 @@ export const SetRow = memo(function SetRow({
           )}
           <Pressable
             onPress={handleCheckPress}
-            hitSlop={16}
+            // Asymmetric hitSlop: expand up/down/left for gloved taps without
+            // eating into the adjacent delete Pressable's hit region on the
+            // right. Effective hit box: 60w × 72h (visible 48 + slop).
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 0 }}
             style={[
               styles.circleCheck,
               { borderColor: set.completed ? colors.primary : colors.onSurfaceVariant },
@@ -401,9 +404,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   circleCheck: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
