@@ -9,6 +9,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { ExerciseNotesPanel } from "./ExerciseNotesPanel";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
+import { fontSizes } from "../../constants/design-tokens";
 
 export type GroupCardHeaderProps = {
   group: ExerciseGroup;
@@ -61,7 +62,7 @@ export function GroupCardHeader({ group, modes, exerciseNotesOpen, exerciseNotes
                 accessibilityHint="Tap to refill from previous"
               >
                 <ProgressionIcon suggested={group.progressionSuggested} color={colors.primary} />
-                <Text style={[styles.previousPerf, { color: colors.primary }]}>
+                <Text numberOfLines={1} style={[styles.previousPerf, { color: colors.primary }]}>
                   {previousPerformance}
                 </Text>
               </Pressable>
@@ -125,7 +126,10 @@ const styles = StyleSheet.create({
   headerRow2: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   headerActions: { flexDirection: "row", alignItems: "center" },
   groupTitle: { fontWeight: "700" },
-  previousPerf: { fontSize: 11, lineHeight: 14, flexShrink: 1 },
+  previousPerf: { fontSize: fontSizes.xs, lineHeight: 16, flexShrink: 1 },
+  // minHeight:36 is below the 44dp touch target minimum; compensated by hitSlop
+  // ({ top:12, bottom:12, left:8, right:8 }) on the Pressable above → ~60dp tap-zone.
+  // Keep hitSlop in sync if you change minHeight.
   previousPerfBtn: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 36, flexWrap: "wrap" },
   previousPerfPressed: { opacity: 0.7 },
   iconBtn: { padding: 8 },
