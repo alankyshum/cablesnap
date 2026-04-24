@@ -2,14 +2,19 @@ import { useEffect, useReducer } from "react";
 import {
   getExerciseRecords,
   getBestSet,
+  getBestBodyweightSet,
   getExerciseHistory,
   type ExerciseRecords,
   type ExerciseSession,
 } from "@/lib/db/exercise-history";
 
+export type BestSet = { weight: number; reps: number; bodyweight_modifier_kg: number | null };
+export type BestBodyweightSet = { modifier_kg: number; reps: number };
+
 export type ExerciseDrawerStats = {
   records: ExerciseRecords | null;
-  bestSet: { weight: number; reps: number } | null;
+  bestSet: BestSet | null;
+  bestBodyweightSet: BestBodyweightSet | null;
   lastSession: ExerciseSession | null;
   loading: boolean;
   error: boolean;
@@ -18,7 +23,8 @@ export type ExerciseDrawerStats = {
 type State = {
   data: {
     records: ExerciseRecords;
-    bestSet: { weight: number; reps: number } | null;
+    bestSet: BestSet | null;
+    bestBodyweightSet: BestBodyweightSet | null;
     lastSession: ExerciseSession | null;
   } | null;
   fetchedId: string | null;
@@ -28,7 +34,7 @@ type State = {
 
 type Action =
   | { type: "fetch"; id: string }
-  | { type: "success"; id: string; records: ExerciseRecords; bestSet: { weight: number; reps: number } | null; lastSession: ExerciseSession | null }
+  | { type: "success"; id: string; records: ExerciseRecords; bestSet: BestSet | null; bestBodyweightSet: BestBodyweightSet | null; lastSession: ExerciseSession | null }
   | { type: "failure"; id: string };
 
 function reducer(state: State, action: Action): State {
@@ -37,7 +43,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, pending: true, error: false };
     case "success":
       return {
-        data: { records: action.records, bestSet: action.bestSet, lastSession: action.lastSession },
+        data: {
+          records: action.records,
+          bestSet: action.bestSet,
+          bestBodyweightSet: action.bestBodyweightSet,
+          lastSession: action.lastSession,
+        },
         fetchedId: action.id,
         pending: false,
         error: false,
@@ -63,15 +74,17 @@ export function useExerciseDrawerStats(
     Promise.all([
       getExerciseRecords(exerciseId),
       getBestSet(exerciseId),
+      getBestBodyweightSet(exerciseId),
       getExerciseHistory(exerciseId, 1, 0),
     ])
-      .then(([r, b, h]) => {
+      .then(([r, b, bw, h]) => {
         if (cancelled) return;
         dispatch({
           type: "success",
           id: exerciseId,
           records: r,
           bestSet: b,
+          bestBodyweightSet: bw,
           lastSession: h.length > 0 ? h[0] : null,
         });
       })
@@ -90,6 +103,7 @@ export function useExerciseDrawerStats(
     return {
       records: null,
       bestSet: null,
+      bestBodyweightSet: null,
       lastSession: null,
       loading: !!exerciseId && state.pending,
       error: false,
@@ -99,6 +113,7 @@ export function useExerciseDrawerStats(
   return {
     records: state.data?.records ?? null,
     bestSet: state.data?.bestSet ?? null,
+    bestBodyweightSet: state.data?.bestBodyweightSet ?? null,
     lastSession: state.data?.lastSession ?? null,
     loading: state.pending,
     error: state.error,

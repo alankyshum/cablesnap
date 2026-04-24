@@ -83,6 +83,69 @@ export async function checkSetPR(
   return weight > row.max_weight;
 }
 
+/**
+ * BLD-541: PR detection for weighted bodyweight sets. Returns true when the
+ * supplied signed modifier exceeds the absolute best for the exercise from
+ * prior finished sessions. Assisted (negative) modifiers are evaluated on the
+ * "least-assistance-ever" axis: more-negative is worse, less-negative is
+ * better, so a new value of −10 kg is a PR over −20 kg.
+ *
+ * Returns false for null modifier (pure-bodyweight set), for exercises with
+ * no prior weighted history on the same sign-axis, or when the new set does
+ * not strictly exceed the prior best.
+ */
+export async function checkSetBodyweightModifierPR(
+  exerciseId: string,
+  modifierKg: number | null,
+  currentSessionId: string
+): Promise<boolean> {
+  if (modifierKg == null) return false;
+  const db = await getDrizzle();
+
+  if (modifierKg > 0) {
+    const rows = await db
+      .select({ best: max(workoutSets.bodyweight_modifier_kg) })
+      .from(workoutSets)
+      .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+      .where(
+        and(
+          eq(workoutSets.exercise_id, exerciseId),
+          eq(workoutSets.completed, 1),
+          isNotNull(workoutSets.bodyweight_modifier_kg),
+          gt(workoutSets.bodyweight_modifier_kg, 0),
+          ne(workoutSets.set_type, 'warmup'),
+          isNotNull(workoutSessions.completed_at),
+          ne(workoutSets.session_id, currentSessionId)
+        )
+      );
+    const prev = rows[0]?.best;
+    if (prev == null) return true;
+    return modifierKg > prev;
+  }
+
+  // modifierKg < 0 — assisted. "Better" = less negative = closer to zero.
+  // SQLite MAX on negatives returns the value closest to zero, which is what
+  // we want to compare against.
+  const rows = await db
+    .select({ best: max(workoutSets.bodyweight_modifier_kg) })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        eq(workoutSets.exercise_id, exerciseId),
+        eq(workoutSets.completed, 1),
+        isNotNull(workoutSets.bodyweight_modifier_kg),
+        sql`${workoutSets.bodyweight_modifier_kg} < 0`,
+        ne(workoutSets.set_type, 'warmup'),
+        isNotNull(workoutSessions.completed_at),
+        ne(workoutSets.session_id, currentSessionId)
+      )
+    );
+  const prev = rows[0]?.best;
+  if (prev == null) return true;
+  return modifierKg > prev;
+}
+
 // ---- Progress Queries ----
 
 export async function getWeeklySessionCounts(

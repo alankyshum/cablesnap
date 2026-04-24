@@ -4,7 +4,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, TrainingMode, SetType } from "../types";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
-import { getDrizzle, withTransaction } from "./helpers";
+import { getDrizzle, withTransaction, getDatabase } from "./helpers";
 import { workoutSets, exercises, workoutSessions, templateExercises } from "./schema";
 
 export async function getSessionSets(
@@ -32,6 +32,7 @@ export async function getSessionSets(
       set_type: workoutSets.set_type,
       duration_seconds: workoutSets.duration_seconds,
       exercise_position: workoutSets.exercise_position,
+      bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -61,6 +62,7 @@ export async function getSessionSets(
     set_type: (r.set_type as SetType) ?? "normal",
     duration_seconds: r.duration_seconds ?? null,
     exercise_position: r.exercise_position ?? 0,
+    bodyweight_modifier_kg: r.bodyweight_modifier_kg ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -638,4 +640,89 @@ export async function updateExercisePositions(
       await stmt.finalizeAsync();
     }
   });
+}
+
+// ─── Bodyweight modifier (BLD-541) ──────────────────────────────────────────
+// Signed load modifier on bodyweight exercises only (equipment === 'bodyweight').
+// Positive = added weight (belt/vest/DB), Negative = assistance (band/machine), NULL = pure BW.
+// Storage column: workout_sets.bodyweight_modifier_kg (REAL DEFAULT NULL).
+
+/**
+ * Normalize a modifier input to canonical storage form.
+ * Normalizes ±0 (and NaN) to null so "Added 0 kg" / "Assisted 0 kg" never persists
+ * as a zero-magnitude row — it is the same as pure bodyweight.
+ *
+ * NOTE: keep in sync with lib/bodyweight.ts::normalizeModifier. Belt-and-braces
+ * duplication is intentional (helper layer + DB write boundary); if the two
+ * diverge, the DB layer must remain strictly no-looser than the helper.
+ */
+export function normalizeBodyweightModifier(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  if (!Number.isFinite(value)) return null;
+  if (value === 0) return null;
+  return value;
+}
+
+/**
+ * Update the bodyweight_modifier_kg on a set. Enforces the cross-table invariant
+ * that a non-null modifier may only be written to a set whose exercise has
+ * equipment = 'bodyweight'. Throws on violation.
+ *
+ * Called from the BodyweightModifierSheet and long-press shortcut.
+ * updateSet(...) is deliberately NOT widened to accept this parameter.
+ */
+export async function updateSetBodyweightModifier(
+  setId: string,
+  modifierKg: number | null
+): Promise<void> {
+  const normalized = normalizeBodyweightModifier(modifierKg);
+  const db = await getDrizzle();
+  const row = await db
+    .select({ equipment: exercises.equipment })
+    .from(workoutSets)
+    .innerJoin(exercises, eq(workoutSets.exercise_id, exercises.id))
+    .where(eq(workoutSets.id, setId))
+    .limit(1);
+  if (row.length === 0) {
+    throw new Error(`updateSetBodyweightModifier: set ${setId} not found`);
+  }
+  const equipment = row[0].equipment;
+  if (normalized !== null && equipment !== "bodyweight") {
+    throw new Error("bodyweight_modifier_kg only valid on bodyweight exercises");
+  }
+  await db
+    .update(workoutSets)
+    .set({ bodyweight_modifier_kg: normalized })
+    .where(eq(workoutSets.id, setId));
+}
+
+/**
+ * Fetch the most-recent non-warmup completed-set modifier for an exercise within
+ * the last 90 days. Powers the smart-default pre-fill on new bodyweight sets.
+ * Returns null if no prior modifier is found. A returned null matches both
+ * "no prior set" and "prior set was pure BW (modifier NULL)" — either way the
+ * new chip defaults to BW.
+ *
+ * NOTE: this intentionally does NOT filter on session completion (no join to
+ * workout_sessions.completed_at). Smart-default operates on completed *sets*,
+ * so an in-progress session's earlier sets still pre-fill subsequent ones.
+ * Contrast getWeightedBodyweightPRs in pr-dashboard.ts, which requires
+ * session-level completion because PRs count only toward finished workouts.
+ */
+export async function getLastBodyweightModifier(
+  exerciseId: string
+): Promise<number | null> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ bodyweight_modifier_kg: number | null }>(
+    `SELECT bodyweight_modifier_kg
+       FROM workout_sets
+      WHERE exercise_id = ?
+        AND set_type != 'warmup'
+        AND completed = 1
+        AND completed_at > strftime('%s', datetime('now','-90 days')) * 1000
+      ORDER BY completed_at DESC
+      LIMIT 1`,
+    [exerciseId]
+  );
+  return row?.bodyweight_modifier_kg ?? null;
 }

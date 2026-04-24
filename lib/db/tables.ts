@@ -116,7 +116,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       swapped_from_exercise_id TEXT DEFAULT NULL,
       set_type TEXT DEFAULT 'normal',
       duration_seconds INTEGER,
-      exercise_position INTEGER DEFAULT 0
+      exercise_position INTEGER DEFAULT 0,
+      bodyweight_modifier_kg REAL DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS food_entries (

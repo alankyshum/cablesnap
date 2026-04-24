@@ -6,6 +6,7 @@ import type { ThemeColors } from "@/hooks/useThemeColors";
 import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
+import { BodyweightModifierNotice } from "./BodyweightModifierNotice";
 import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseDetailPaneProps {
@@ -42,6 +43,8 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                   Custom
                 </Chip>
               )}
+              {/* BLD-541 AC-23: v1 user-trust microcopy on bodyweight exercise detail. */}
+              {detail.equipment === 'bodyweight' && <BodyweightModifierNotice colors={colors} />}
               <View style={styles.row}>
                 <View style={[styles.detailBadge, { backgroundColor: colors.primaryContainer }]}>
                   <Text style={[styles.detailBadgeText, { color: colors.onPrimaryContainer }]}>

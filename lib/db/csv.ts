@@ -15,6 +15,9 @@ export type WorkoutCSVRow = {
   link_id: string | null;
   training_mode: string | null;
   tempo: string | null;
+  // BLD-541: signed bodyweight modifier (kg) for the set. null for
+  // non-bodyweight sets AND for pure-bodyweight sets with no modifier.
+  bodyweight_modifier_kg: number | null;
 };
 
 export type NutritionCSVRow = {
@@ -66,6 +69,7 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       link_id: workoutSets.link_id,
       training_mode: workoutSets.training_mode,
       tempo: workoutSets.tempo,
+      bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
     })
     .from(workoutSessions)
     .innerJoin(workoutSets, sql`${workoutSets.session_id} = ${workoutSessions.id}`)

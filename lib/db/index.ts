@@ -79,6 +79,7 @@ export {
   getMaxWeightByExercise,
   getSessionPRs,
   checkSetPR,
+  checkSetBodyweightModifierPR,
   getRecentPRs,
   getExerciseHistory,
   getExerciseRecords,

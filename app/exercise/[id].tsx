@@ -39,6 +39,7 @@ import { useStrengthGoal } from "@/hooks/useStrengthGoals";
 import { useBottomSheet } from "@/components/ui/bottom-sheet";
 import GoalProgressCard from "@/components/exercise/GoalProgressCard";
 import GoalSetForm from "@/components/exercise/GoalSetForm";
+import { BodyweightModifierNotice } from "@/components/exercises/BodyweightModifierNotice";
 import { fontSizes } from "@/constants/design-tokens";
 
 function formatDateLong(ts: number): string {
@@ -103,6 +104,10 @@ export default function ExerciseDetail() {
   const exercise = d.exercise;
   const steps = exercise.instructions.split("\n").map((s) => s.trim()).filter(Boolean);
 
+  // BLD-541: renderHeader aggregates many optional detail rows; +1 branch
+  // for AC-23 bodyweight notice tips complexity over 15. Splitting out
+  // subcomponents is out-of-scope for this PR.
+  // eslint-disable-next-line complexity
   const renderHeader = () => (
     <View style={styles.content}>
       {exercise.is_custom && <Chip compact style={StyleSheet.flatten([styles.badge, { backgroundColor: colors.tertiaryContainer }])}>Custom</Chip>}
@@ -141,6 +146,9 @@ export default function ExerciseDetail() {
             {steps.map((step, i) => <Text key={i} variant="body" style={[styles.step, { color: colors.onSurface }]}>{step}</Text>)}</View>)}
         </>
       )}
+
+      {/* BLD-541 AC-23: v1 user-trust microcopy on bodyweight exercise detail. */}
+      {exercise.equipment === 'bodyweight' && <BodyweightModifierNotice colors={colors} />}
 
       {/* Goal Progress Card — above Records/Chart for discoverability */}
       <GoalSection goalState={goalState} colors={colors} bw={d.bw} unit={d.unit} onOpenSheet={goalSheet.open} />

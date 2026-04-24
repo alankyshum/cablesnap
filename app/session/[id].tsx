@@ -9,6 +9,7 @@ import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import { getAppSetting, addWarmupSets } from "../../lib/db";
+import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
 import { getTemplateDurationEstimates } from "../../lib/db/sessions";
 import { generateWarmupSets } from "../../lib/warmup";
 import * as Haptics from "expo-haptics";
@@ -31,6 +32,7 @@ import { SessionListFooter } from "../../components/session/SessionListFooter";
 import { SessionToolboxSheet } from "../../components/session/SessionToolboxSheet";
 import { SessionHeaderToolbar } from "../../components/session/SessionHeaderToolbar";
 import { PRCelebration } from "../../components/session/PRCelebration";
+import { BodyweightModifierSheet } from "../../components/session/BodyweightModifierSheet";
 
 export default function ActiveSession() {
   useEffect(() => {
@@ -100,6 +102,14 @@ export default function ActiveSession() {
   } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
+  const {
+    sheetRef: bwModifierSheetRef,
+    handleOpen: handleOpenBodyweightModifier,
+    handleClear: handleClearBodyweightModifier,
+    handleSave: handleSaveBodyweightModifier,
+    handleDismiss: handleDismissBodyweightModifier,
+    initialModifierKg: bwModifierInitial,
+  } = useBodyweightModifierSheet({ groups, updateGroupSet, showError });
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
 
@@ -207,6 +217,8 @@ export default function ActiveSession() {
       onToggleExerciseNotes={toggleExerciseNotes}
       onCycleSetType={handleCycleSetType}
       onLongPressSetType={handleLongPressSetType}
+      onOpenBodyweightModifier={handleOpenBodyweightModifier}
+      onClearBodyweightModifier={handleClearBodyweightModifier}
       onShowDetail={handleShowDetail}
       onSwap={handleSwapOpen}
       onDeleteExercise={handleDeleteExercise}
@@ -220,7 +232,7 @@ export default function ActiveSession() {
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
     />
-  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
@@ -336,6 +348,13 @@ export default function ActiveSession() {
         sheetRef={toolboxSheetRef}
         onOpenRestSettings={handleOpenRestSettings}
         onDismiss={handleToolboxDismiss}
+      />
+      <BodyweightModifierSheet
+        sheetRef={bwModifierSheetRef}
+        initialModifierKg={bwModifierInitial}
+        unit={unit}
+        onDone={handleSaveBodyweightModifier}
+        onDismiss={handleDismissBodyweightModifier}
       />
     </>
   );

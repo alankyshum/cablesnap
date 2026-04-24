@@ -219,7 +219,10 @@ describe("FTA decomposition structural tests", () => {
     ["components/session/ExerciseGroupCard.tsx", 300, "exercise group card main file"],
 
     // Batch 5
-    ["app/session/[id].tsx", 350, "session main file"],
+    // BLD-541: session main file bumped from 350 → 400 to fit bodyweight
+    // modifier sheet orchestration (ref, 3 handlers, useMemo, 1 sheet JSX).
+    // Per-set orchestration logic extracted to hooks/useBodyweightModifierSheet.
+    ["app/session/[id].tsx", 400, "session main file"],
     ["components/SubstitutionSheet.tsx", 260, "substitution sheet main file"],
     ["app/progress/achievements.tsx", 200, "achievements main file"],
     ["components/ShareCard.tsx", 200, "share card main file"],

@@ -132,6 +132,59 @@ describe("ExerciseDrawerStats", () => {
     expect(getByText(/20 reps/)).toBeTruthy();
   });
 
+  it.each([
+    {
+      name: "weighted-bodyweight best as modifier prefix × reps",
+      records: {
+        max_weight: 0, max_reps: 8, max_volume: null, est_1rm: null,
+        total_sessions: 12, is_bodyweight: true, max_duration: null,
+        best_added_kg: 20, best_assisted_kg: null,
+      },
+      bestBodyweightSet: { modifier_kg: 20, reps: 5 },
+      lastMaxModifier: 20, lastMaxReps: 8,
+      expected: [/\+20 kg × 5/, /\+20 kg × 8/],
+    },
+    {
+      name: "assisted bodyweight with signed minus sign",
+      records: {
+        max_weight: 0, max_reps: 10, max_volume: null, est_1rm: null,
+        total_sessions: 4, is_bodyweight: true, max_duration: null,
+        best_added_kg: null, best_assisted_kg: -15,
+      },
+      bestBodyweightSet: null,
+      lastMaxModifier: -15, lastMaxReps: 10,
+      expected: [/Assist\s*\u221215 kg × 10/],
+    },
+  ])("displays $name (BLD-541)", ({ records, bestBodyweightSet, lastMaxModifier, lastMaxReps, expected }) => {
+    useExerciseDrawerStats.mockReturnValue({
+      records,
+      bestSet: null,
+      bestBodyweightSet,
+      lastSession: {
+        session_id: "s-bw",
+        session_name: "Pull",
+        started_at: new Date("2026-04-20").getTime(),
+        max_weight: 0,
+        max_reps: lastMaxReps,
+        total_reps: lastMaxReps * 3,
+        set_count: 3,
+        volume: 0,
+        avg_rpe: null,
+        max_modifier: lastMaxModifier,
+      },
+      loading: false,
+      error: false,
+    });
+
+    const { getByText } = render(
+      <ExerciseDrawerStats exerciseId="ex-bw" unit="kg" />
+    );
+
+    for (const re of expected) {
+      expect(getByText(re)).toBeTruthy();
+    }
+  });
+
   it("displays weights in lb when unit is lb", () => {
     useExerciseDrawerStats.mockReturnValue({
       records: {

@@ -42,6 +42,22 @@ export type AllTimeBest = {
   est_1rm: number | null;
   session_count: number;
   is_weighted: boolean;
+  // BLD-541: weighted-bodyweight modifier PR signals (only non-null on BW exercises
+  // with at least one non-null modifier recorded).
+  best_added_kg: number | null;
+  best_assisted_kg: number | null;
+};
+
+/**
+ * Weighted-bodyweight PR aggregate per exercise (BLD-541).
+ * Single GROUP BY over workout_sets joined to exercises filtered to
+ * equipment = 'bodyweight'. Matches the single-aggregate pattern of
+ * `getAllTimeBests` — no N+1.
+ */
+export type WeightedBodyweightPR = {
+  exercise_id: string;
+  best_added_kg: number | null;   // max positive modifier (best = most added)
+  best_assisted_kg: number | null; // max negative modifier (best = least negative, closest to 0)
 };
 
 // ─── Queries ────────────────────────────────────────────────────────────────
@@ -264,6 +280,36 @@ export async function getRecentPRsWithDelta(
  * For weighted exercises: best weight and est 1RM from best single set.
  * For bodyweight exercises: best reps.
  */
+/**
+ * Weighted-bodyweight PR aggregate for all bodyweight exercises.
+ *
+ * Single aggregate query (per techlead MAJOR T-1 — no per-exercise loop, no N+1).
+ * Mirrors the single-GROUP-BY pattern of `getAllTimeBests`.
+ *
+ * Classifier: canonical `exercises.equipment = 'bodyweight'` (not the legacy
+ * history-derived `exercise-history.ts:150` heuristic — retired in a follow-up).
+ *
+ * Returns `best_added_kg` (MAX of positive modifiers) and `best_assisted_kg`
+ * (MAX of negative modifiers — least negative wins, closest to 0 = best).
+ */
+export async function getWeightedBodyweightPRs(): Promise<WeightedBodyweightPR[]> {
+  return await query<WeightedBodyweightPR>(
+    `SELECT
+       ws.exercise_id,
+       MAX(CASE WHEN ws.bodyweight_modifier_kg > 0 THEN ws.bodyweight_modifier_kg END) AS best_added_kg,
+       MAX(CASE WHEN ws.bodyweight_modifier_kg < 0 THEN ws.bodyweight_modifier_kg END) AS best_assisted_kg
+     FROM workout_sets ws
+     INNER JOIN exercises e ON ws.exercise_id = e.id
+     INNER JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE e.equipment = 'bodyweight'
+       AND ws.bodyweight_modifier_kg IS NOT NULL
+       AND ws.completed = 1
+       AND ws.set_type != 'warmup'
+       AND wss.completed_at IS NOT NULL
+     GROUP BY ws.exercise_id`
+  );
+}
+
 export async function getAllTimeBests(): Promise<AllTimeBest[]> {
   // Weighted exercises: max weight, best e1RM set, session count
   const weighted = await query<{
@@ -334,6 +380,11 @@ export async function getAllTimeBests(): Promise<AllTimeBest[]> {
      ORDER BY e.category ASC, e.name ASC`
   );
 
+  // BLD-541: Weighted-BW modifier PRs — augments bodyweight rows.
+  const weightedBwPRs = await getWeightedBodyweightPRs();
+  const bwPRMap = new Map<string, WeightedBodyweightPR>();
+  for (const p of weightedBwPRs) bwPRMap.set(p.exercise_id, p);
+
   const results: AllTimeBest[] = [];
 
   // Weighted results with e1RM computation
@@ -356,6 +407,8 @@ export async function getAllTimeBests(): Promise<AllTimeBest[]> {
       est_1rm: e1rm,
       session_count: w.session_count,
       is_weighted: true,
+      best_added_kg: null,
+      best_assisted_kg: null,
     });
   }
 
@@ -363,6 +416,7 @@ export async function getAllTimeBests(): Promise<AllTimeBest[]> {
   const weightedIds = new Set(weighted.map((w) => w.exercise_id));
   for (const b of bodyweight) {
     if (weightedIds.has(b.exercise_id)) continue;
+    const bwPr = bwPRMap.get(b.exercise_id);
     results.push({
       exercise_id: b.exercise_id,
       name: b.name,
@@ -374,6 +428,8 @@ export async function getAllTimeBests(): Promise<AllTimeBest[]> {
       est_1rm: null,
       session_count: b.session_count,
       is_weighted: false,
+      best_added_kg: bwPr?.best_added_kg ?? null,
+      best_assisted_kg: bwPr?.best_assisted_kg ?? null,
     });
   }
 

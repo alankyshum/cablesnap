@@ -23,7 +23,7 @@
 - 📊 **Progress Charts** — Visualize your fitness journey
 - 📱 **Responsive** — Works on phones and tablets
 - 🌙 **Dark Mode** — Auto-detects system preference
-- 📦 **Data Portable** — Full import/export (JSON backup, CSV)
+- 📦 **Data Portable** — Full import/export (JSON backup, CSV, incl. bodyweight modifier for weighted calisthenics)
 
 ## Tech Stack
 

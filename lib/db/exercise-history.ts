@@ -14,6 +14,10 @@ export type ExerciseSession = {
   set_count: number;
   volume: number;
   avg_rpe: number | null;
+  // BLD-541: signed best modifier in the session (kg). null when no weighted
+  // bodyweight set exists for the exercise in this session (or for pure
+  // weighted exercises — the column stays null on non-bodyweight rows).
+  max_modifier: number | null;
 };
 
 export type ExerciseRecords = {
@@ -24,6 +28,9 @@ export type ExerciseRecords = {
   total_sessions: number;
   is_bodyweight: boolean;
   max_duration: number | null;
+  // BLD-541: best added / assisted weighted-BW all-time bests (kg).
+  best_added_kg: number | null;
+  best_assisted_kg: number | null;
 };
 
 export async function getExerciseHistory(
@@ -43,6 +50,7 @@ export async function getExerciseHistory(
       set_count: count(workoutSets.id),
       volume: sql<number>`SUM(${workoutSets.weight} * ${workoutSets.reps})`,
       avg_rpe: sql<number | null>`AVG(CASE WHEN ${workoutSets.rpe} IS NOT NULL THEN ${workoutSets.rpe} END)`,
+      max_modifier: sql<number | null>`MAX(${workoutSets.bodyweight_modifier_kg})`,
     })
     .from(workoutSets)
     .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
@@ -69,6 +77,7 @@ export async function getExerciseHistory(
     set_count: r.set_count,
     volume: Number(r.volume ?? 0),
     avg_rpe: r.avg_rpe != null ? Number(r.avg_rpe) : null,
+    max_modifier: r.max_modifier != null ? Number(r.max_modifier) : null,
   }));
 }
 
@@ -114,7 +123,7 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
   ]);
 
   // Computed aggregates via sql``
-  const [vol, rm, weighted] = await Promise.all([
+  const [vol, rm, weighted, bwBests] = await Promise.all([
     queryOne<{ val: number | null }>(
       `SELECT MAX(sv) AS val FROM (
          SELECT SUM(ws.weight * ws.reps) AS sv
@@ -139,6 +148,20 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
       .from(workoutSets)
       .limit(1)
       .then((r) => r[0]),
+
+    // BLD-541: weighted-BW bests. Single aggregate; filters on completed sets
+    // with non-null modifier (so unsigned zero / null bodyweight rows excluded).
+    // Sign-axis semantics: for `best_assisted` (negative values), "best" means
+    // "closest to zero" = least assistance = MAX of negatives (NOT MIN).
+    queryOne<{ best_added: number | null; best_assisted: number | null }>(
+      `SELECT MAX(CASE WHEN ws.bodyweight_modifier_kg > 0 THEN ws.bodyweight_modifier_kg END) AS best_added,
+              MAX(CASE WHEN ws.bodyweight_modifier_kg < 0 THEN ws.bodyweight_modifier_kg END) AS best_assisted
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup'
+         AND ws.bodyweight_modifier_kg IS NOT NULL AND wss.completed_at IS NOT NULL`,
+      [exerciseId]
+    ),
   ]);
 
   return {
@@ -149,6 +172,8 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
     total_sessions: countResult?.val ?? 0,
     is_bodyweight: !(weighted?.val),
     max_duration: dur?.val != null ? Number(dur.val) : null,
+    best_added_kg: bwBests?.best_added != null ? Number(bwBests.best_added) : null,
+    best_assisted_kg: bwBests?.best_assisted != null ? Number(bwBests.best_assisted) : null,
   };
 }
 
@@ -380,12 +405,13 @@ export async function getRecentExerciseSetsBatch(
 
 export async function getBestSet(
   exerciseId: string,
-): Promise<{ weight: number; reps: number } | null> {
+): Promise<{ weight: number; reps: number; bodyweight_modifier_kg: number | null } | null> {
   const db = await getDrizzle();
   const rows = await db
     .select({
       weight: workoutSets.weight,
       reps: workoutSets.reps,
+      bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
     })
     .from(workoutSets)
     .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
@@ -404,7 +430,51 @@ export async function getBestSet(
     .limit(1);
 
   if (rows.length === 0) return null;
-  return { weight: rows[0].weight!, reps: rows[0].reps! };
+  return {
+    weight: rows[0].weight!,
+    reps: rows[0].reps!,
+    bodyweight_modifier_kg: rows[0].bodyweight_modifier_kg ?? null,
+  };
+}
+
+/**
+ * BLD-541: best weighted-BW set for a bodyweight exercise, picked by
+ * `bodyweight_modifier_kg * reps` descending (assisted sets contribute
+ * negative product and are never picked as "best" here — they're tracked
+ * on the assistance-reduction delta path instead).
+ *
+ * Returns null when the exercise has no weighted-BW completed sets in a
+ * finished session.
+ */
+export async function getBestBodyweightSet(
+  exerciseId: string,
+): Promise<{ modifier_kg: number; reps: number } | null> {
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      modifier_kg: workoutSets.bodyweight_modifier_kg,
+      reps: workoutSets.reps,
+    })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        eq(workoutSets.exercise_id, exerciseId),
+        eq(workoutSets.completed, 1),
+        ne(workoutSets.set_type, 'warmup'),
+        isNotNull(workoutSets.bodyweight_modifier_kg),
+        sql`${workoutSets.reps} > 0`,
+        isNotNull(workoutSessions.completed_at)
+      )
+    )
+    .orderBy(sql`${workoutSets.bodyweight_modifier_kg} * ${workoutSets.reps} DESC`)
+    .limit(1);
+
+  if (rows.length === 0) return null;
+  const m = rows[0].modifier_kg;
+  const r = rows[0].reps;
+  if (m == null || r == null) return null;
+  return { modifier_kg: Number(m), reps: Number(r) };
 }
 
 /**

@@ -1,4 +1,4 @@
-/* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
+/* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps, complexity */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Keyboard, Platform } from "react-native";
 import { useRouter } from "expo-router";
@@ -20,11 +20,16 @@ import {
   getSessionSets,
   updateSetDuration,
   checkSetPR,
+  checkSetBodyweightModifierPR,
   updateExercisePositions,
   getGoalForExercise,
   achieveGoal,
   getCurrentBestWeight,
 } from "../lib/db";
+import {
+  getLastBodyweightModifier,
+  updateSetBodyweightModifier,
+} from "../lib/db/session-sets";
 import { resolveRestSeconds, type RestBreakdown } from "../lib/rest";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
@@ -99,6 +104,10 @@ export function useSessionActions({
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // BLD-541: per-session rate-limiter for weighted-BW PR celebrations.
+  // Populated with exercise_id on first PR hit; further sets in the same
+  // session for the same exercise don't re-trigger the celebration.
+  const bwPRExerciseSet = useRef<Set<string>>(new Set());
 
   // Timer
   useEffect(() => {
@@ -187,15 +196,38 @@ export function useSessionActions({
   }, [groups, id, startRestWithDuration, startRestWithBreakdown]);
 
   const handleCheck = useCallback(async (set: SetWithMeta) => {
+    const group = groups.find((g) => g.exercise_id === set.exercise_id);
+
     if (set.completed) {
       updateGroupSet(set.id, { completed: false, completed_at: null });
       await uncompleteSet(set.id);
+      // BLD-541 R2: uncompleting a set changes which set is "latest
+      // completed" for this exercise, so the smart-default cache for
+      // bodyweight exercises must refresh too.
+      if (group?.is_bodyweight) {
+        queryClient.invalidateQueries({
+          queryKey: ['bw-modifier-default', set.exercise_id],
+        });
+      }
       return;
     }
 
     const now = Date.now();
     updateGroupSet(set.id, { completed: true, completed_at: now });
     await completeSet(set.id);
+
+    // BLD-541 R2: invalidate the smart-default cache so the next add-set
+    // for this bodyweight exercise reflects the just-completed modifier
+    // (including null for a BW-only set) as its starting point.
+    // Gated on the EXERCISE being bodyweight — NOT on modifier
+    // nullability: completing a null-modifier BW-only set still changes
+    // the "latest completed" reading and must invalidate stale non-null
+    // defaults that may have been cached within staleTime.
+    if (group?.is_bodyweight) {
+      queryClient.invalidateQueries({
+        queryKey: ['bw-modifier-default', set.exercise_id],
+      });
+    }
 
     // Live PR detection (non-blocking — errors never prevent set completion)
     if (set.set_type !== 'warmup' && set.weight && set.weight > 0 && id && triggerPR) {
@@ -205,6 +237,34 @@ export function useSessionActions({
           const group = groups.find((g) => g.exercise_id === set.exercise_id);
           const goalAchieved = await checkGoalAchievement(set.exercise_id);
           triggerPR(group?.name ?? "exercise", goalAchieved);
+          updateGroupSet(set.id, { is_pr: true });
+        }
+      } catch {
+        // PR detection must never block set completion
+      }
+    }
+
+    // BLD-541: weighted-bodyweight PR detection on set completion. Gated on a
+    // non-null modifier (pure-bodyweight sets don't celebrate). Rate-limited
+    // once-per-exercise-per-session via bwPRExerciseSet to avoid repeat
+    // celebrations on equal-or-better later sets within the same session.
+    if (
+      set.set_type !== 'warmup' &&
+      set.bodyweight_modifier_kg != null &&
+      id &&
+      triggerPR &&
+      !bwPRExerciseSet.current.has(set.exercise_id)
+    ) {
+      try {
+        const isBwPR = await checkSetBodyweightModifierPR(
+          set.exercise_id,
+          set.bodyweight_modifier_kg,
+          id
+        );
+        if (isBwPR) {
+          bwPRExerciseSet.current.add(set.exercise_id);
+          const group = groups.find((g) => g.exercise_id === set.exercise_id);
+          triggerPR(group?.name ?? "exercise", false);
           updateGroupSet(set.id, { is_pr: true });
         }
       } catch {
@@ -236,10 +296,45 @@ export function useSessionActions({
     const fallback = group?.is_voltra && group.training_modes.length > 1 ? group.training_modes[0] : null;
     const mode = modes[exerciseId] ?? fallback;
     const newSet = await addSet(id!, exerciseId, num, null, null, mode, null, undefined, undefined, group?.exercise_position ?? 0);
+
+    // BLD-541: smart-default the bodyweight modifier from the last session's
+    // most-recent completed set. Only runs for bodyweight groups. Persisted
+    // via the same updateSetBodyweightModifier entry point as the sheet, so
+    // the equipment-invariant and normalize() apply uniformly.
+    let defaultModifier: number | null = null;
+    if (group?.is_bodyweight) {
+      try {
+        // BLD-541: route smart-default through React Query so the
+        // ['bw-modifier-default', exerciseId] key has a real consumer.
+        // Sibling add-sets within staleTime reuse cache; explicit invalidation
+        // from the sheet + set-complete paths refreshes when semantics change.
+        defaultModifier = await queryClient.fetchQuery({
+          queryKey: ['bw-modifier-default', exerciseId],
+          queryFn: () => getLastBodyweightModifier(exerciseId),
+        });
+        if (defaultModifier != null) {
+          await updateSetBodyweightModifier(newSet.id, defaultModifier);
+          // Invalidate so the next add-set re-reads through the smart-default
+          // query if a newer set (with possibly different modifier) has since
+          // been persisted.
+          queryClient.invalidateQueries({
+            queryKey: ['bw-modifier-default', exerciseId],
+          });
+        }
+      } catch {
+        defaultModifier = null;
+      }
+    }
+
+    const setWithModifier: SetWithMeta = {
+      ...newSet,
+      bodyweight_modifier_kg: defaultModifier,
+      previous: "-",
+    };
     setGroups((prev) =>
       prev.map((g) =>
         g.exercise_id === exerciseId
-          ? { ...g, sets: [...g.sets, { ...newSet, previous: "-" }] }
+          ? { ...g, sets: [...g.sets, setWithModifier] }
           : g
       )
     );

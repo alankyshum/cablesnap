@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import WeightPicker from "../../components/WeightPicker";
+import { BodyweightModifierChip } from "./BodyweightModifierChip";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -41,6 +42,14 @@ export type SetRowProps = {
   onHalfStepOpen: (setId: string, base: number) => void;
   onCycleSetType: (setId: string) => void;
   onLongPressSetType: (setId: string) => void;
+  // Bodyweight modifier (only used when isBodyweight === true).
+  // When bodyweight, the pickerCol slot renders BodyweightModifierChip instead
+  // of WeightPicker; onOpenBodyweightModifier opens the sheet. Long-press
+  // clears to BW-only via onClearBodyweightModifier — MUST NOT fall through
+  // to onLongPressSetType (collision assertion, BLD-541 AC-10).
+  isBodyweight?: boolean;
+  onOpenBodyweightModifier?: (setId: string) => void;
+  onClearBodyweightModifier?: (setId: string) => void;
   // Timer controls (duration mode only)
   isTimerRunning?: boolean;
   isTimerActive?: boolean;
@@ -55,6 +64,7 @@ export const SetRow = memo(function SetRow({
   onHalfStepOpen, onCycleSetType, onLongPressSetType,
   isTimerRunning, isTimerActive, timerDisplaySeconds,
   onTimerStart, onTimerStop,
+  isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
 }: SetRowProps) {
   const colors = useThemeColors();
 
@@ -114,13 +124,23 @@ export const SetRow = memo(function SetRow({
             {set.previous}
           </Text>
           <View style={styles.pickerCol}>
-            <WeightPicker
-              value={set.weight}
-              step={step}
-              unit={unit}
-              onValueChange={onWeightChange}
-              accessibilityLabel={`Set ${set.set_number} weight`}
-            />
+            {isBodyweight ? (
+              <BodyweightModifierChip
+                modifierKg={set.bodyweight_modifier_kg ?? null}
+                unit={unit}
+                onPress={() => onOpenBodyweightModifier?.(set.id)}
+                onLongPress={() => onClearBodyweightModifier?.(set.id)}
+                setNumber={set.set_number}
+              />
+            ) : (
+              <WeightPicker
+                value={set.weight}
+                step={step}
+                unit={unit}
+                onValueChange={onWeightChange}
+                accessibilityLabel={`Set ${set.set_number} weight`}
+              />
+            )}
           </View>
           {isDurationMode ? (
             <View style={styles.durationCol}>
