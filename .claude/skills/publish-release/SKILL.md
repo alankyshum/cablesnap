@@ -106,7 +106,7 @@ Follow semver: `MAJOR.MINOR.PATCH`
 
 Ask the user what kind of release this is if unclear.
 
-## Step 2: Bump Version in All 3 Files (4 Locations)
+## Step 2: Bump Version in All 3 Files (4 Locations) + CHANGELOG.md
 
 All three files MUST have the exact same version string.
 The `android.versionCode` in `app.config.ts` MUST equal `CurrentVersionCode` in the F-Droid metadata.
@@ -149,6 +149,26 @@ grep 'CurrentVersionCode' fdroid/metadata/com.persoack.cablesnap.yml
 
 Increment it by 1. Then set `android.versionCode` in `app.config.ts` to the same value.
 
+### File 5: `CHANGELOG.md` — prepend a new section (BLD-571)
+
+`CHANGELOG.md` at the repo root is the **single source of truth** for
+release notes. The in-app "What's New" modal, the GitHub Release body, and
+the F-Droid `<versionCode>.txt` sidecars are all derived from it. Prepend
+a new section directly under the preamble, **before** any existing `## v*`
+section. It MUST carry a `<!-- versionCode: N -->` marker so the
+generator can emit the F-Droid sidecar.
+
+```markdown
+## vX.Y.Z — YYYY-MM-DD
+<!-- versionCode: N -->
+- Bullet describing a user-facing change.
+- Another bullet.
+```
+
+The date is the release date in ISO format. The `<!-- versionCode: N -->`
+marker MUST match the `versionCode` you set in `app.config.ts` above —
+this is how F-Droid per-version changelogs stay in sync.
+
 ### Validation
 
 After bumping, verify consistency:
@@ -158,15 +178,17 @@ grep '"version"' package.json
 grep 'version:' app.config.ts
 grep 'versionCode' app.config.ts
 grep 'CurrentVersion' fdroid/metadata/com.persoack.cablesnap.yml
+head -n 30 CHANGELOG.md
 ```
 
 All three version strings must match. `CurrentVersionCode` must be previous + 1.
-`android.versionCode` MUST equal `CurrentVersionCode`.
+`android.versionCode` MUST equal `CurrentVersionCode`. The top `CHANGELOG.md`
+section's header version + `<!-- versionCode: N -->` marker MUST match both.
 
 ## Step 3: Commit the Version Bump
 
 ```bash
-git add app.config.ts package.json fdroid/metadata/com.persoack.cablesnap.yml
+git add app.config.ts package.json fdroid/metadata/com.persoack.cablesnap.yml CHANGELOG.md
 git commit -m "release: vX.Y.Z"
 ```
 
@@ -203,11 +225,29 @@ git diff --cached --stat && git commit -m "chore: update store screenshots for v
 git push origin main
 ```
 
-## Step 6: Build APK Locally
+## Step 6: Regenerate Changelog Artifacts, then Build APK Locally
 
-Build the production APK on the local machine (Apple Silicon Mac) **before**
-creating the GitHub release. GitHub releases are **immutable** — you cannot
-upload assets to a release after creation.
+Before building the APK, regenerate the committed release-notes artifacts
+from `CHANGELOG.md` (BLD-571). This refreshes `lib/changelog.generated.ts`
+(consumed by the in-app "What's New" modal) and the per-version F-Droid
+`<versionCode>.txt` sidecar:
+
+```bash
+npm run changelog:gen
+git add lib/changelog.generated.ts fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+git diff --cached --stat
+git commit -m "chore: regenerate changelog artifacts for vX.Y.Z" || echo "nothing to commit"
+git push origin main
+```
+
+The generator will exit non-zero if `CHANGELOG.md` is missing or parses to
+zero entries — this is the drift alarm. If that happens, re-check Step 2
+to confirm you prepended a well-formed `## vX.Y.Z — YYYY-MM-DD` section
+with a `<!-- versionCode: N -->` marker.
+
+Then build the production APK on the local machine (Apple Silicon Mac)
+**before** creating the GitHub release. GitHub releases are **immutable**
+— you cannot upload assets to a release after creation.
 
 ```bash
 JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
@@ -240,50 +280,56 @@ cp build-*.apk cablesnap.apk
 GitHub releases are immutable — `gh release upload` after creation returns
 `HTTP 422: Cannot upload assets to an immutable release`.
 
+Extract the release notes for `vX.Y.Z` directly from `CHANGELOG.md` using
+a macOS/BSD-compatible `awk` state machine (BLD-571). Do **not** use
+`head -n -1` (GNU-only) or process substitution — the owner runs macOS
+and the release pipeline must work on vanilla Mac `bash`/`zsh`/`sh`:
+
 ```bash
-gh release create vX.Y.Z cablesnap.apk \
-  --title "vX.Y.Z" \
-  --target main \
-  --repo alankyshum/cablesnap \
-  --notes "$(cat <<'NOTES'
-## What's New
+NEW_VERSION="X.Y.Z"
+awk -v v="$NEW_VERSION" '
+  $0 ~ "^## v"v"([^0-9]|$)" { in_section=1; next }
+  in_section && /^## v/ { exit }
+  in_section { print }
+' CHANGELOG.md > /tmp/release-notes.md
 
-### Category 1
-- Change description
-
-### Category 2
-- Change description
+# Append F-Droid install instructions so the release body is self-contained.
+cat >> /tmp/release-notes.md <<'INSTALL'
 
 ## Install
 
 Add the F-Droid repo URL to your F-Droid client:
-\`\`\`
+
+```
 https://alankyshum.github.io/cablesnap/repo
-\`\`\`
-NOTES
-)"
+```
+INSTALL
+
+gh release create "v$NEW_VERSION" cablesnap.apk \
+  --title "v$NEW_VERSION" \
+  --target main \
+  --repo alankyshum/cablesnap \
+  --notes-file /tmp/release-notes.md
 ```
 
 This creates the tag via the GitHub API (bypassing repo tag-creation rules)
-and attaches the APK atomically.
+and attaches the APK atomically. The `awk` extractor reads from the FIRST
+`## v$NEW_VERSION` header up to (but not including) the next `## v` header,
+so re-running the release flow never drifts the notes relative to
+`CHANGELOG.md`.
 
 Verify the asset was attached:
 
 ```bash
-gh release view vX.Y.Z --json assets --jq '.assets[].name'
+gh release view "v$NEW_VERSION" --json assets --jq '.assets[].name'
 ```
 
 Should show `cablesnap.apk`.
 
 Release notes MUST include:
-- Grouped changes by category (Features, Fixes, Performance, etc.)
-- F-Droid install instructions at the bottom
-
-To generate the change list, compare with the previous tag:
-
-```bash
-git log --oneline PREV_TAG..vX.Y.Z
-```
+- A grouped list of user-facing changes (taken from CHANGELOG.md — single
+  source of truth).
+- F-Droid install instructions at the bottom (appended above).
 
 ## Step 8: F-Droid Repo Update (Automatic)
 

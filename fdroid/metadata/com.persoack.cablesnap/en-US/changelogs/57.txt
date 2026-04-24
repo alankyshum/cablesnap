@@ -1,0 +1,5 @@
+- Set-completion now confirms with a subtle haptic + audio cue — toggle separately from timer sounds in Settings → Preferences.
+- Previous-performance chip on the session screen now looks tappable again (affordance restored).
+- Adaptive rest timer now shows a "+N" overflow counter when the chip truncates.
+- Strava auth errors surface a proper toast with a "Get help" CTA.
+- Session screen performance pass: memoization + background-timer pause when the app is backgrounded.

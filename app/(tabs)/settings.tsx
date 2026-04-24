@@ -4,6 +4,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  View,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +14,8 @@ import FlowContainer, { flowCardStyle } from '../../components/ui/FlowContainer'
 import BodyProfileCard from '../../components/BodyProfileCard';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ChevronRight } from 'lucide-react-native';
 import PreferencesCard from '../../components/settings/PreferencesCard';
 import FrequencyGoalPicker from '../../components/settings/FrequencyGoalPicker';
 import IntegrationsCard from '../../components/settings/IntegrationsCard';
@@ -23,6 +26,7 @@ import DataManagementCard from '../../components/settings/DataManagementCard';
 import AutoBackupSection from '../../components/settings/AutoBackupSection';
 import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
+import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { fontSizes } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
@@ -36,6 +40,8 @@ export default function Settings() {
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
   const queryClient = useQueryClient();
+  const [releaseNotesVisible, setReleaseNotesVisible] = useState(false);
+  const appVersion = Constants.expoConfig?.version ?? '0.0.0';
   const {
     toast,
     loading, setLoading,
@@ -151,47 +157,79 @@ export default function Settings() {
         />
         <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
-            <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 4 }}>
+            <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
               About
             </Text>
-            <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-              CableSnap v{Constants.expoConfig?.version ?? '0.0.0'}
-              {'\n'}Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
-            </Text>
-            <Text
-              variant="body"
-              style={{ color: colors.primary, marginTop: 4 }}
-              onPress={() =>
-                Linking.openURL('https://github.com/alankyshum/cablesnap/blob/main/LICENSE')
-              }
-            >
-              AGPL-3.0 License
-            </Text>
             <Pressable
-              onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
-              accessibilityRole="link"
-              accessibilityLabel="Buy me a coffee"
-              style={{ marginTop: 8 }}
+              onPress={() => setReleaseNotesVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`View release notes, current version ${appVersion}`}
+              testID="settings-version-row"
+              android_ripple={{ color: colors.surfaceVariant }}
+              style={({ pressed }) => [
+                styles.versionRow,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
             >
-              <Image
-                source={require('../../assets/badges/bmc-button.png')}
-                style={{ width: 180, height: 50, resizeMode: 'contain' }}
-              />
+              <Text
+                variant="body"
+                style={{ color: colors.onSurface, fontSize: fontSizes.sm, fontWeight: '600' }}
+              >
+                {`CableSnap v${appVersion}`}
+              </Text>
+              <View style={styles.versionRowRight}>
+                <Text
+                  variant="body"
+                  style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm, marginRight: 4 }}
+                >
+                  What&apos;s new
+                </Text>
+                <ChevronRight size={18} color={colors.onSurfaceVariant} />
+              </View>
             </Pressable>
-            <Pressable
-              onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
-              accessibilityRole="link"
-              accessibilityLabel="Sponsor on thanks.dev"
-              style={{ marginTop: 8 }}
-            >
-              <Image
-                source={require('../../assets/badges/thanks-dev-button.png')}
-                style={{ width: 180, height: 24, resizeMode: 'contain' }}
-              />
-            </Pressable>
+            <View style={styles.aboutBlock}>
+              <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+                Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
+              </Text>
+              <Text
+                variant="body"
+                style={{ color: colors.primary, marginTop: 4 }}
+                onPress={() =>
+                  Linking.openURL('https://github.com/alankyshum/cablesnap/blob/main/LICENSE')
+                }
+              >
+                AGPL-3.0 License
+              </Text>
+              <Pressable
+                onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
+                accessibilityRole="link"
+                accessibilityLabel="Buy me a coffee"
+                style={{ marginTop: 8 }}
+              >
+                <Image
+                  source={require('../../assets/badges/bmc-button.png')}
+                  style={{ width: 180, height: 50, resizeMode: 'contain' }}
+                />
+              </Pressable>
+              <Pressable
+                onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
+                accessibilityRole="link"
+                accessibilityLabel="Sponsor on thanks.dev"
+                style={{ marginTop: 8 }}
+              >
+                <Image
+                  source={require('../../assets/badges/thanks-dev-button.png')}
+                  style={{ width: 180, height: 24, resizeMode: 'contain' }}
+                />
+              </Pressable>
+            </View>
           </CardContent>
         </Card>
       </FlowContainer>
+      <ReleaseNotesModal
+        visible={releaseNotesVisible}
+        onClose={() => setReleaseNotesVisible(false)}
+      />
     </ScrollView>
   );
 }
@@ -200,4 +238,18 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingTop: 16, paddingBottom: 48 },
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
+  versionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    minHeight: 44,
+  },
+  versionRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aboutBlock: {
+    marginTop: 4,
+  },
 });
