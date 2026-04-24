@@ -167,7 +167,24 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+
+**Verdict: ⚠️ APPROVE WITH REQUIRED EDITS** (2026-04-24, full critique in BLD-595 comments).
+
+Direction and value are right; plan is implementation-ready after these edits:
+
+1. **Chip layout — pick ONE explicit JSX shape.** Recommend chip as a sibling between the title column and `headerActions` in `headerRow1`, `flexShrink: 0`; add `flexWrap: "wrap"` to `headerRow1` so chip drops to a sub-row at narrow widths. Avoid stuffing it inside the title-column wrapper that already contains `previousPerfBtn`.
+2. **Drop the `arrow-collapse-*` icon family.** Those depict "merge/minimize," not cable height. Either use semantic verticals (`format-vertical-align-top/center/bottom`) or — preferred — drop the chip icon entirely; the text label + chip background already carry the signal, and the detail drawer/detail screen render mount as plain text.
+3. **Change "Switch cable:" → declarative form** (e.g., "Mount: Low → High" or "Cable: Low → High"). Imperative "Switch …" is borderline prescriptive and weakens the Behavior-Design = NO defence; declarative form keeps Classification airtight.
+4. **Acceptance criterion contradicts graceful degradation.** "Chip does not increase header height" is unachievable on <360dp where the chip wraps. Restate as: "no height regression on devices ≥360dp; on narrower screens the chip may wrap, increasing height by ≤24dp."
+5. **Add a Pixel 4a layout assertion** (snapshot or measured `onLayout` height), not only structural render checks.
+6. **Custom-exercise gap is the worst-case scenario.** A bodyweight exercise between two Voltra exercises with different mounts → no hint anywhere → user arrives at the high-cable exercise with the cable still low. Acceptable for v1 but **promote to a named follow-up**, don't bury in Edge Cases.
+7. **Align a11y vocabulary** with existing `app/exercise/[id].tsx:121` ("Mount position: Low on rack"). Don't introduce a third synonym across the codebase. Recommend chip = "Mount: Low", hint = "Mount changes: Low to High".
+8. **Drop `accessibilityRole="text"`** (Android warns; iOS doesn't need it).
+9. **RTL claim is overconfident.** Literal `→` in the hint string is RTL-hostile. Either use a mirrored icon component or document EN-only acceptance.
+10. **Test plan additions:** explicit cap ≤ 12 new test names via `it.each`; required cases — (a) chip+hints recompute after `onSwap`, (b) recompute after move-up/down, (c) chip hidden for `mount_position === null` (not just `undefined`), (d) `GroupCardHeader` does NOT re-render on unrelated mode changes (BLD-560 render-counter assertion).
+11. **Accept all techlead pins #1–#5** (producer path, drop `getItemLayout` row, primitive-only memo props, drop `accessibilityRole="text"`, extract `MountPositionChip` to its own file).
+
+With those edits the plan is implementation-ready.
 
 ### Tech Lead (Feasibility)
 
