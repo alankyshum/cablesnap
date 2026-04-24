@@ -90,8 +90,9 @@ describe("FTA decomposition structural tests", () => {
     ["components/session/SessionListFooter.tsx", "Cancel Workout", "has Cancel Workout action"],
 
     // Batch 5 — SubstitutionSheet decomposition
-    ["components/SubstitutionSheet.tsx", "SubstitutionItem", "imports SubstitutionItem"],
-    ["components/SubstitutionSheet.tsx", "EquipmentFilter", "imports EquipmentFilter"],
+    ["components/SubstitutionSheet.tsx", "SubstitutionSheetBody", "imports SubstitutionSheetBody"],
+    ["components/substitution/SubstitutionSheetBody.tsx", "SubstitutionItem", "body uses SubstitutionItem"],
+    ["components/substitution/SubstitutionSheetBody.tsx", "EquipmentFilter", "body uses EquipmentFilter"],
     ["components/substitution/SubstitutionItem.tsx", "matchColor", "uses matchColor"],
     ["components/substitution/EquipmentFilter.tsx", "Chip", "uses Chip"],
 
