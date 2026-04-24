@@ -8,6 +8,7 @@ import "react-native-reanimated";
 };
 
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -81,6 +82,7 @@ export default Sentry.wrap(function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+    <SafeAreaProvider>
     <ErrorBoundary>
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
@@ -116,6 +118,7 @@ export default Sentry.wrap(function RootLayout() {
       </OnboardingContext.Provider>
       </QueryProvider>
     </ErrorBoundary>
+    </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 });

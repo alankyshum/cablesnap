@@ -8,7 +8,10 @@ export type { ToastVariant, ToastData } from './toast-types';
 
 const ToastContext = createContext<ToastContextType | null>(null);
 
-const containerStyle: ViewStyle = { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, pointerEvents: 'box-none' };
+// BLD-569: anchored at bottom of screen so toasts sit near the primary
+// action area (set-complete button / FAB) rather than in peripheral vision.
+// Per-toast bottom offset + safe-area insets are applied in `toast-item.tsx`.
+const containerStyle: ViewStyle = { position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000, pointerEvents: 'box-none' };
 
 export function ToastProvider({ children, maxToasts = 3 }: { children: React.ReactNode; maxToasts?: number }) {
   const [toasts, setToasts] = useState<ToastData[]>([]);

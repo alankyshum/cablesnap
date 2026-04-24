@@ -889,3 +889,19 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: CableSnap's analytics feature architecture follows a four-layer pipeline: (1) dedicated DB query functions per signal, (2) a pure computation module (`lib/<feature>.ts`) with zero side effects that accepts pre-fetched data, (3) integration into `loadHomeData.ts` as a separate try/catch block within the second `Promise.all` batch, (4) conditional UI rendering with ErrorBoundary wrapping. The pure module pattern (matching `lib/insights.ts` and `lib/achievements.ts`) enables exhaustive unit testing without DB mocks.
 **Action**: When building a new analytics feature for the home screen, create `lib/<feature>.ts` with pure functions, add dedicated DB queries (do not repurpose existing ones), integrate into loadHomeData with its own try/catch, and wrap the UI component in ErrorBoundary. Use the overreaching implementation as the reference architecture.
 **Tags**: architecture, analytics, pure-functions, loadhomedata, errorboundary, multi-signal, home-screen, feature-pattern
+
+### Toast Copy Discipline — At-a-Glance Legibility During Workouts
+**Source**: BLD-569 — Toast hidden by cutout / too wide / too far from action (GitHub #353)
+**Date**: 2026-04-24
+**Context**: `toast` messages (set completion confirmations, Strava errors, save failures) fire mid-workout. The user glances once while mid-set — if the copy is longer than ~10 words they cannot parse it before it auto-dismisses, defeating the purpose. Reporter on Samsung Z Fold 6 explicitly called out "more than 10 words" as unreadable during a workout.
+**Learning**: Toast titles must be ≤ 60 chars (~10 words) — a word-budget proxy enforced by the `__tests__/components/toast-copy-length.test.ts` lint. Use the description arg for detail. Title is for scannable intent ("Notifications blocked"); description is for action ("Tap 'Open Settings' below to enable"). Never cram both into the title.
+**Action**: When adding a toast, call `toast.error('Short intent', 'Optional explanation')` not `toast.error('Full sentence explaining what went wrong and what to do')`. The lint at `__tests__/components/toast-copy-length.test.ts` will fail CI if a literal title exceeds 60 chars. Template literals with `${}` substitutions are exempt — keep those short too by convention.
+**Tags**: toast, ux, legibility, copy-discipline, lint, accessibility, workout-ux
+
+### Floating UI Must Use useSafeAreaInsets, Not Hardcoded Platform Offsets
+**Source**: BLD-569 — Toast hidden by screen cutout on Samsung Z Fold 6 (GitHub #353)
+**Date**: 2026-04-24
+**Context**: `components/ui/toast-item.tsx` originally used `top = (Platform.OS === 'ios' ? 59 : 20) + index * ...`. On devices with display cutouts (Z Fold 6, Pixel foldables, modern Samsungs), the Android status-bar inset exceeds 20dp, so the toast rendered UNDER the cutout and was physically obscured. Bottom-anchored tabs / FABs have the same risk with `bottom: 0` and gesture-bar insets.
+**Learning**: Any floating UI (toasts, banners, bottom bars, FABs) must read insets from `useSafeAreaInsets()` (react-native-safe-area-context). Hardcoded `Platform.OS === 'ios' ? N : M` constants break on modern Android devices with cutouts / punch-holes / gesture nav. `SafeAreaProvider` must wrap the app tree (in `app/_layout.tsx`) — this was missing and added as part of BLD-569.
+**Action**: For any positioned UI element, compute offset as `insets.top + N` (top anchor) or `insets.bottom + N` (bottom anchor). Never use `Platform.select` with hardcoded insets. If the app doesn't already have `<SafeAreaProvider>` at the root, add it before calling `useSafeAreaInsets()` in component trees (the hook returns zeros without a provider, silently degrading on physical devices).
+**Tags**: safe-area, insets, floating-ui, toast, banner, android-cutout, z-fold, platform-specific, safeareaprovider

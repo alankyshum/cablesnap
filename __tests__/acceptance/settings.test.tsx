@@ -322,7 +322,7 @@ describe('Settings Screen Acceptance', () => {
     await waitFor(() => {
       expect(requestPermission).not.toHaveBeenCalled()
     })
-    expect(await findByText(/Set up a weekly workout schedule/)).toBeTruthy()
+    expect(await findByText(/No workout schedule set/)).toBeTruthy()
   })
 
   it('shows permission-denied snack when permission is denied on toggle', async () => {
@@ -344,7 +344,7 @@ describe('Settings Screen Acceptance', () => {
     await waitFor(() => {
       expect(requestPermission).toHaveBeenCalled()
     })
-    expect(await findByText(/Notification permission denied.*Open Settings/)).toBeTruthy()
+    expect(await findByText(/Notifications blocked/)).toBeTruthy()
   })
 
   it('shows persistent schedule hint in error color when no schedule exists', async () => {

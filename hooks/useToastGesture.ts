@@ -6,7 +6,8 @@ import { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-nat
 const screenWidth = Dimensions.get("window").width;
 
 export function useToastGesture(id: string, onDismiss: (id: string) => void) {
-  const translateY = useSharedValue(-20);
+  // BLD-569: toast is now bottom-anchored, so slide UP from below into place.
+  const translateY = useSharedValue(20);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.85);
@@ -19,7 +20,9 @@ export function useToastGesture(id: string, onDismiss: (id: string) => void) {
 
   const dismiss = useCallback(() => {
     const cb = () => { 'worklet'; runOnJS(onDismiss)(id); };
+    // eslint-disable-next-line react-hooks/immutability -- reanimated shared values are mutated via `.value` by design
     opacity.value = withTiming(0, { duration: 150 }, (fin) => { if (fin) cb(); });
+    // eslint-disable-next-line react-hooks/immutability -- reanimated shared values are mutated via `.value` by design
     scale.value = withTiming(0.85, { duration: 150 });
   }, [id, onDismiss, opacity, scale]);
 
@@ -29,6 +32,7 @@ export function useToastGesture(id: string, onDismiss: (id: string) => void) {
       if (Math.abs(e.translationX) > screenWidth * 0.25 || Math.abs(e.velocityX) > 800) {
         const cb = () => { 'worklet'; runOnJS(onDismiss)(id); };
         translateX.value = withTiming(e.translationX > 0 ? screenWidth : -screenWidth, { duration: 200 });
+        // eslint-disable-next-line react-hooks/immutability -- reanimated shared values are mutated via `.value` by design
         opacity.value = withTiming(0, { duration: 150 }, (fin) => { if (fin) cb(); });
       } else {
         translateX.value = withTiming(0, { duration: 150 });
