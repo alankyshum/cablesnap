@@ -69,11 +69,9 @@ export async function setSetCompletionHaptic(val: boolean): Promise<void> {
   // Mark hydrated so any in-flight hydrate() does not overwrite the
   // explicit user choice with the stored (or default) value.
   hydrated = true;
-  try {
-    await setAppSetting(KEY_HAPTIC, val ? "true" : "false");
-  } catch {
-    // cache already updated; SQLite failure surfaces via caller toast.
-  }
+  // Rethrow SQLite write failures so the caller (PreferencesCard) can
+  // surface a toast. Cache/runtime state is already updated above.
+  await setAppSetting(KEY_HAPTIC, val ? "true" : "false");
 }
 
 export async function setSetCompletionAudio(val: boolean): Promise<void> {
@@ -82,11 +80,8 @@ export async function setSetCompletionAudio(val: boolean): Promise<void> {
   // Mirror into the audio module's per-category gate so play() short-
   // circuits before touching expo-audio when the user turned it off.
   setAudioEnabled("feedback", val);
-  try {
-    await setAppSetting(KEY_AUDIO, val ? "true" : "false");
-  } catch {
-    // cache already updated.
-  }
+  // Rethrow SQLite write failures so the caller can surface a toast.
+  await setAppSetting(KEY_AUDIO, val ? "true" : "false");
 }
 
 export function getSetCompletionHaptic(): boolean { return hapticEnabled; }

@@ -129,3 +129,24 @@ describe("useSetCompletionFeedback — hydration on mount", () => {
     expect(mockPlay).not.toHaveBeenCalled();
   });
 });
+
+
+describe("useSetCompletionFeedback — persistence-failure propagation (REVIEWER blocker)", () => {
+  // Regression lock: setAppSetting rejections must surface to the caller
+  // (PreferencesCard) so the UI can toast. Swallowing the error was a
+  // reviewer-blocking defect on PR #350.
+  type FailCase = {
+    name: string;
+    setter: (val: boolean) => Promise<void>;
+  };
+  const failCases: FailCase[] = [
+    { name: "setSetCompletionHaptic rethrows SQLite failures", setter: setSetCompletionHaptic },
+    { name: "setSetCompletionAudio rethrows SQLite failures", setter: setSetCompletionAudio },
+  ];
+
+  it.each(failCases)("$name", async ({ setter }) => {
+    const boom = new Error("sqlite write failed");
+    mockSet.mockRejectedValueOnce(boom);
+    await expect(setter(true)).rejects.toBe(boom);
+  });
+});
