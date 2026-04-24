@@ -60,65 +60,50 @@ function makeProps(overrides: Partial<SetRowProps> = {}): SetRowProps {
 }
 
 describe("SetRow — bodyweight modifier chip long-press collision (BLD-541 AC-10)", () => {
-  it("long-press on chip fires onClearBodyweightModifier and NOT onLongPressSetType", () => {
-    const onLongPressSetType = jest.fn();
-    const onClearBodyweightModifier = jest.fn();
+  type GestureCase = {
+    name: string;
+    target: RegExp;
+    event: "press" | "longPress";
+    expectCalled: "open" | "clear" | "cycle";
+  };
+  const cases: GestureCase[] = [
+    { name: "long-press chip → clear only", target: /Set 2 load, Weighted, plus 20 kilograms/i, event: "longPress", expectCalled: "clear" },
+    { name: "tap chip → open only", target: /Set 2 load, Weighted, plus 20 kilograms/i, event: "press", expectCalled: "open" },
+    { name: "long-press set-number → cycle only (no chip collision)", target: /Set 2, working set/i, event: "longPress", expectCalled: "cycle" },
+  ];
+
+  it.each(cases)("$name", ({ target, event, expectCalled }) => {
     const onOpenBodyweightModifier = jest.fn();
-    const { getByLabelText } = render(
-      <SetRow
-        {...makeProps({
-          onLongPressSetType,
-          onClearBodyweightModifier,
-          onOpenBodyweightModifier,
-        })}
-      />,
-    );
-
-    const chip = getByLabelText(/Set 2 load, Weighted, plus 20 kilograms/i);
-    fireEvent(chip, "longPress");
-
-    expect(onClearBodyweightModifier).toHaveBeenCalledTimes(1);
-    expect(onClearBodyweightModifier).toHaveBeenCalledWith("set-bw-1");
-    expect(onLongPressSetType).not.toHaveBeenCalled();
-    expect(onOpenBodyweightModifier).not.toHaveBeenCalled();
-  });
-
-  it("tap on chip opens the sheet and does NOT cycle set type", () => {
+    const onClearBodyweightModifier = jest.fn();
+    const onLongPressSetType = jest.fn();
     const onCycleSetType = jest.fn();
-    const onOpenBodyweightModifier = jest.fn();
     const { getByLabelText } = render(
       <SetRow
         {...makeProps({
-          onCycleSetType,
           onOpenBodyweightModifier,
-        })}
-      />,
-    );
-
-    const chip = getByLabelText(/Set 2 load, Weighted, plus 20 kilograms/i);
-    fireEvent.press(chip);
-
-    expect(onOpenBodyweightModifier).toHaveBeenCalledTimes(1);
-    expect(onOpenBodyweightModifier).toHaveBeenCalledWith("set-bw-1");
-    expect(onCycleSetType).not.toHaveBeenCalled();
-  });
-
-  it("long-press on the set-number column still cycles set type for bodyweight rows", () => {
-    const onLongPressSetType = jest.fn();
-    const onClearBodyweightModifier = jest.fn();
-    const { getByLabelText } = render(
-      <SetRow
-        {...makeProps({
-          onLongPressSetType,
           onClearBodyweightModifier,
+          onLongPressSetType,
+          onCycleSetType,
         })}
       />,
     );
 
-    const setNumber = getByLabelText(/Set 2, working set/i);
-    fireEvent(setNumber, "longPress");
+    const node = getByLabelText(target);
+    if (event === "press") fireEvent.press(node);
+    else fireEvent(node, "longPress");
 
-    expect(onLongPressSetType).toHaveBeenCalledTimes(1);
-    expect(onClearBodyweightModifier).not.toHaveBeenCalled();
+    if (expectCalled === "open") {
+      expect(onOpenBodyweightModifier).toHaveBeenCalledWith("set-bw-1");
+      expect(onClearBodyweightModifier).not.toHaveBeenCalled();
+      expect(onCycleSetType).not.toHaveBeenCalled();
+    } else if (expectCalled === "clear") {
+      expect(onClearBodyweightModifier).toHaveBeenCalledWith("set-bw-1");
+      expect(onOpenBodyweightModifier).not.toHaveBeenCalled();
+      expect(onLongPressSetType).not.toHaveBeenCalled();
+    } else {
+      expect(onLongPressSetType).toHaveBeenCalledTimes(1);
+      expect(onClearBodyweightModifier).not.toHaveBeenCalled();
+      expect(onOpenBodyweightModifier).not.toHaveBeenCalled();
+    }
   });
 });
