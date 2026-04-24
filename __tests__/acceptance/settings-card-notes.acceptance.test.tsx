@@ -45,13 +45,16 @@ describe("Session notes/delete button touch targets (BLD-258, GitHub #126)", () 
     expect(sessionSource).toContain("width: 36");
   });
 
-  it("circleCheck is consistent size with action buttons", () => {
-    // Both circleCheck and actionBtn should match in size (44dp post-BLD-558 for glove use).
+  it("circleCheck and actionBtn each meet ≥44dp touch target (BLD-258 floor, BLD-579 raised circleCheck to 48)", () => {
+    // BLD-258 established the 44dp glove-use floor for both controls.
+    // BLD-579 intentionally enlarged the primary affirmative circleCheck to 48dp while
+    // leaving secondary action buttons (notes, delete) at 44dp. Assert per-element
+    // minimums so the floor is still enforced without pinning strict equality.
     const circleCheckMatch = sessionSource.match(/circleCheck:\s*\{[^}]*width:\s*(\d+)/);
     const actionBtnMatch = sessionSource.match(/actionBtn:\s*\{[^}]*width:\s*(\d+)/);
     expect(circleCheckMatch).not.toBeNull();
     expect(actionBtnMatch).not.toBeNull();
-    expect(circleCheckMatch![1]).toBe(actionBtnMatch![1]);
+    expect(Number(circleCheckMatch![1])).toBeGreaterThanOrEqual(44);
     expect(Number(actionBtnMatch![1])).toBeGreaterThanOrEqual(44);
   });
 
