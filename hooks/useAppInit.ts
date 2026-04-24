@@ -86,5 +86,5 @@ export function useAppInit() {
     setupGlobalHandler();
   }, [unsupportedWeb]);
 
-  return { banner, setBanner, error, setError, ready, onboarded, setOnboarded };
+  return { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported: unsupportedWeb };
 }

@@ -65,6 +65,7 @@ describe("useAppInit — BLD-565 web SharedArrayBuffer short-circuit", () => {
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
     expect(result.current.error).toBe("MOCK_WEB_UNSUPPORTED_MESSAGE");
     expect(result.current.ready).toBe(true);
+    expect(result.current.webUnsupported).toBe(true);
   });
 
   it("short-circuits DB init when page is not cross-origin isolated", () => {
@@ -80,6 +81,7 @@ describe("useAppInit — BLD-565 web SharedArrayBuffer short-circuit", () => {
     expect(mockGetDatabase).not.toHaveBeenCalled();
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
     expect(result.current.error).toBe("MOCK_WEB_UNSUPPORTED_MESSAGE");
+    expect(result.current.webUnsupported).toBe(true);
   });
 
   it("proceeds with DB init when web capability check passes", async () => {
@@ -97,6 +99,7 @@ describe("useAppInit — BLD-565 web SharedArrayBuffer short-circuit", () => {
       expect(result.current.ready).toBe(true);
     });
     expect(result.current.error).toBeNull();
+    expect(result.current.webUnsupported).toBe(false);
     // hideAsync is called once after successful init (not the
     // short-circuit path, which also fires hideAsync immediately).
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
