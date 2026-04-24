@@ -75,7 +75,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
 }: GroupCardProps) {
   const colors = useThemeColors();
   const layout = useLayout();
-
   const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
   const linkIdx = group.link_id ? linked.findIndex((g) => g.exercise_id === group.exercise_id) : -1;
   const isFirstInLink = linkIdx === 0;
@@ -85,22 +84,16 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
     : 0;
   const groupColorIdx = group.link_id ? linkIds.indexOf(group.link_id) : -1;
   const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
-
   const suggestion = suggestions[group.exercise_id];
-
   // Reorder: only for non-superset exercises, ≥2 reorderable groups
   const reorderableGroups = groups.filter((g) => !g.link_id);
   const reorderIdx = group.link_id ? -1 : reorderableGroups.findIndex((g) => g.exercise_id === group.exercise_id);
   const showMoveButtons = !group.link_id && reorderableGroups.length >= 2;
   const isFirstReorderable = reorderIdx === 0;
   const isLastReorderable = reorderIdx === reorderableGroups.length - 1;
-
   const hasExistingWarmups = group.sets.some((s) => s.set_type === "warmup");
-  const hasWorkingWeight = suggestion != null && suggestion.weight > 0;
-  const showWarmupButton = !group.is_bodyweight && hasWorkingWeight && !hasExistingWarmups;
-
+  const showWarmupButton = !group.is_bodyweight && suggestion != null && suggestion.weight > 0 && !hasExistingWarmups;
   const firstSet = group.sets[0];
-
   const isDurationMode = group.trackingMode === "duration";
 
   const setTable = (

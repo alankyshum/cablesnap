@@ -9,7 +9,7 @@ import { activateKeepAwakeAsync } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
 import { getAppSetting, addWarmupSets } from "../../lib/db";
-import { queryClient } from "../../lib/query";
+import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
 import { getTemplateDurationEstimates } from "../../lib/db/sessions";
 import { generateWarmupSets } from "../../lib/warmup";
 import * as Haptics from "expo-haptics";
@@ -33,7 +33,6 @@ import { SessionToolboxSheet } from "../../components/session/SessionToolboxShee
 import { SessionHeaderToolbar } from "../../components/session/SessionHeaderToolbar";
 import { PRCelebration } from "../../components/session/PRCelebration";
 import { BodyweightModifierSheet } from "../../components/session/BodyweightModifierSheet";
-import { updateSetBodyweightModifier, normalizeBodyweightModifier } from "../../lib/db/session-sets";
 
 export default function ActiveSession() {
   useEffect(() => {
@@ -103,80 +102,16 @@ export default function ActiveSession() {
   } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
-  const bwModifierSheetRef = useRef<BottomSheet>(null);
-  const [bwModifierSetId, setBwModifierSetId] = useState<string | null>(null);
+  const {
+    sheetRef: bwModifierSheetRef,
+    handleOpen: handleOpenBodyweightModifier,
+    handleClear: handleClearBodyweightModifier,
+    handleSave: handleSaveBodyweightModifier,
+    handleDismiss: handleDismissBodyweightModifier,
+    initialModifierKg: bwModifierInitial,
+  } = useBodyweightModifierSheet({ groups, updateGroupSet, showError });
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
-
-  // BLD-541: open / clear / save handlers for the bodyweight modifier sheet.
-  // Persisted via updateSetBodyweightModifier; local list refreshed via
-  // updateGroupSet so the chip re-renders immediately without a DB re-read.
-  const handleOpenBodyweightModifier = useCallback((setId: string) => {
-    setBwModifierSetId(setId);
-    bwModifierSheetRef.current?.snapToIndex(0);
-  }, []);
-
-  const handleClearBodyweightModifier = useCallback(async (setId: string) => {
-    try {
-      await updateSetBodyweightModifier(setId, null);
-      updateGroupSet(setId, { bodyweight_modifier_kg: null });
-      // BLD-541 AC-26: invalidate the smart-default cache so the next new
-      // set for this exercise re-reads the latest modifier.
-      let exerciseIdForInvalidate: string | null = null;
-      for (const g of groups) {
-        if (g.sets.some((s) => s.id === setId)) {
-          exerciseIdForInvalidate = g.exercise_id;
-          break;
-        }
-      }
-      if (exerciseIdForInvalidate) {
-        queryClient.invalidateQueries({
-          queryKey: ["bw-modifier-default", exerciseIdForInvalidate],
-        });
-      }
-      Haptics.selectionAsync().catch(() => {});
-    } catch (err) {
-      showError((err as Error).message);
-    }
-  }, [updateGroupSet, showError, groups]);
-
-  const handleSaveBodyweightModifier = useCallback(async (modifierKg: number | null) => {
-    const setId = bwModifierSetId;
-    if (!setId) {
-      bwModifierSheetRef.current?.close();
-      return;
-    }
-    const normalized = normalizeBodyweightModifier(modifierKg);
-    try {
-      await updateSetBodyweightModifier(setId, normalized);
-      updateGroupSet(setId, { bodyweight_modifier_kg: normalized });
-      // BLD-541 AC-26: same invalidation path as the clear handler.
-      let exerciseIdForInvalidate: string | null = null;
-      for (const g of groups) {
-        if (g.sets.some((s) => s.id === setId)) {
-          exerciseIdForInvalidate = g.exercise_id;
-          break;
-        }
-      }
-      if (exerciseIdForInvalidate) {
-        queryClient.invalidateQueries({
-          queryKey: ["bw-modifier-default", exerciseIdForInvalidate],
-        });
-      }
-      bwModifierSheetRef.current?.close();
-    } catch (err) {
-      showError((err as Error).message);
-    }
-  }, [bwModifierSetId, updateGroupSet, showError, groups]);
-
-  const bwModifierInitial = useMemo(() => {
-    if (!bwModifierSetId) return null;
-    for (const g of groups) {
-      const s = g.sets.find((x) => x.id === bwModifierSetId);
-      if (s) return s.bodyweight_modifier_kg ?? null;
-    }
-    return null;
-  }, [bwModifierSetId, groups]);
 
   // Fetch estimated duration from template history (Phase 70)
   useEffect(() => {
@@ -419,7 +354,7 @@ export default function ActiveSession() {
         initialModifierKg={bwModifierInitial}
         unit={unit}
         onDone={handleSaveBodyweightModifier}
-        onDismiss={() => setBwModifierSetId(null)}
+        onDismiss={handleDismissBodyweightModifier}
       />
     </>
   );
