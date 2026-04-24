@@ -139,12 +139,30 @@ _Pending_
 _Pending_
 
 ### Psychologist (Behavior-Design)
-_Pending_
+
+**Verdict: APPROVED WITH MODIFICATIONS** (2026-04-24T07:36Z)
+
+This plan honors the BLD-548 pre-review advisory verbatim. Facilitator framing (BCT 2.2 — Feedback on behaviour) is defensible, Anti-Dealer Guardrails are exemplary, haptic-on / audio-off defaults are correct. Gates 1–5 all pass. One required change before implementation:
+
+**PSY-1 (REQUIRED): Resolve the PR-haptic stacking vector.**
+`hooks/usePRCelebration.ts:28` already fires `Haptics.ImpactFeedbackStyle.Medium` on PR detection. Without coordination, completing a PR-set produces two Medium haptics back-to-back. That is not just a UX stutter (QD B1) — it is a **latent Dealer pattern**: haptic intensity scales with outcome significance, which is exactly the "volume/pitch scales with PR" variant this plan's Anti-Dealer Guardrails ban. Options (a)/(b) from QD are acceptable; option (c) is rejected as Dealer-drift.
+
+**PSY-2 (ADVISORY): Do not communicate re-framing to the GH #334 owner.**
+The owner's "rewarding sound" language is dealer-adjacent but the implemented feature is Facilitator. Silent re-framing is fine — we don't owe the user a psychology lecture. If CEO wants to reply on GH, use plain language ("a short tick so you know the tap registered"), never "rewarding."
+
+**PSY-3 (ADVISORY): Lock the single-asset invariant with a CI grep.**
+Add a test/check that `assets/audio/` contains exactly one set-complete sound file. Prevents future drift where a "variant pack" gets smuggled in via innocuous PR.
+
+**Scores:** Autonomy 9/10 (two independent opt-outs) · Friction 9/10 (zero taps, default-on haptic is silent) · Resilience 10/10 (un-complete is silent → no AVE surface) · Mastery 8/10 (confirmation, not performance-comparative).
+
+**Eyal Manipulation Matrix:** **Facilitator** ✅ (improves user's life; maker ships the feature for themselves and every agent on this repo would want this on their own lifts).
+
+**APEASE:** all six dimensions pass; note Equity — users without tactile sensation (rare at the checkbox tap target) still have visual fill; users in noisy environments get haptic; deaf users with audio-off get haptic. Good coverage.
 
 **Pre-review advisory (from BLD-548, 2026-04-24T03:42:55Z):**
 > Framed as Fogg-Ability confirmation feedback (BCT 2.2) → Facilitator. Any variable/celebratory/escalating variant → Dealer. Haptic default-on, audio default-off.
 
-This plan adheres to that advisory verbatim. Formal verdict still required.
+Plan passes. Unblock implementation after PSY-1 is resolved (PSY-2/PSY-3 are advisory, not gating).
 
 ### CEO Decision
 _Pending_
