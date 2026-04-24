@@ -1,19 +1,19 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Platform, StyleSheet, View } from "react-native";
-import { Text } from "@/components/ui/text";
+import { Alert, Platform } from "react-native";
 import BottomSheet, {
   BottomSheetBackdrop,
-  BottomSheetFlatList,
 } from "@gorhom/bottom-sheet";
 import type { Exercise, Equipment } from "../lib/types";
-import { MUSCLE_LABELS } from "../lib/types";
+import { findSubstitutions } from "../lib/exercise-substitutions";
 import {
-  findSubstitutions,
-  type SubstitutionScore,
-} from "../lib/exercise-substitutions";
+  composeSearchResults,
+  isBlankQuery,
+} from "../lib/exercise-substitution-search";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { SubstitutionItem } from "./substitution/SubstitutionItem";
-import { EquipmentFilter } from "./substitution/EquipmentFilter";
+import {
+  SubstitutionSheetBody,
+  type ListRow,
+} from "./substitution/SubstitutionSheetBody";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheet | null>;
@@ -33,16 +33,38 @@ export default function SubstitutionSheet({
   const colors = useThemeColors();
   const snapPoints = useMemo(() => ["50%", "90%"], []);
   const [equipmentFilter, setEquipmentFilter] = useState<Equipment | null>(null);
+  const [query, setQuery] = useState<string>("");
 
   const scored = useMemo(() => {
     if (!sourceExercise) return [];
     return findSubstitutions(sourceExercise, allExercises);
   }, [sourceExercise, allExercises]);
 
-  const filtered = useMemo(() => {
-    if (!equipmentFilter) return scored;
-    return scored.filter((s) => s.exercise.equipment === equipmentFilter);
-  }, [scored, equipmentFilter]);
+  const composed = useMemo(
+    () =>
+      composeSearchResults({
+        query,
+        scored,
+        allExercises,
+        sourceExercise,
+        equipmentFilter,
+      }),
+    [query, scored, allExercises, sourceExercise, equipmentFilter]
+  );
+
+  const rows = useMemo<ListRow[]>(() => {
+    const out: ListRow[] = composed.relevance.map((item) => ({
+      kind: "item" as const,
+      item,
+    }));
+    if (composed.other.length > 0) {
+      out.push({ kind: "header", label: "Other exercises" });
+      for (const item of composed.other) {
+        out.push({ kind: "item", item });
+      }
+    }
+    return out;
+  }, [composed]);
 
   const availableEquipment = useMemo(() => {
     const set = new Set<Equipment>();
@@ -62,14 +84,11 @@ export default function SubstitutionSheet({
         onSelect(exercise);
         sheetRef.current?.close();
         setEquipmentFilter(null);
+        setQuery("");
       };
 
       if (Platform.OS === "web") {
-        if (
-          window.confirm(
-            `Replace ${sourceExercise.name} with ${exercise.name}?`
-          )
-        ) {
+        if (window.confirm(`Replace ${sourceExercise.name} with ${exercise.name}?`)) {
           doSwap();
         }
       } else {
@@ -88,20 +107,31 @@ export default function SubstitutionSheet({
 
   const handleClose = useCallback(() => {
     setEquipmentFilter(null);
+    setQuery("");
     onDismiss();
   }, [onDismiss]);
 
-  const noMuscleData =
+  const noMuscleData = Boolean(
     sourceExercise &&
-    (!sourceExercise.primary_muscles ||
-      sourceExercise.primary_muscles.length === 0);
-
-  const renderItem = useCallback(
-    ({ item }: { item: SubstitutionScore }) => (
-      <SubstitutionItem item={item} onPress={handleSelect} />
-    ),
-    [handleSelect]
+      (!sourceExercise.primary_muscles ||
+        sourceExercise.primary_muscles.length === 0)
   );
+
+  const hasQuery = !isBlankQuery(query);
+  const hasResults = rows.length > 0;
+  const relevanceEmpty = composed.relevance.length === 0;
+
+  let emptyMessage: string | null = null;
+  if (hasQuery && !hasResults) {
+    emptyMessage = `No exercises match "${query.trim()}"`;
+  } else if (!hasQuery && noMuscleData) {
+    emptyMessage = "No muscle data — search for any exercise above.";
+  } else if (!hasQuery && !noMuscleData && scored.length === 0) {
+    emptyMessage =
+      "No alternatives found. Search above or add the exercise manually.";
+  } else if (!hasQuery && !noMuscleData && relevanceEmpty && equipmentFilter) {
+    emptyMessage = "No alternatives with this equipment. Try removing the filter.";
+  }
 
   return (
     <BottomSheet
@@ -123,117 +153,19 @@ export default function SubstitutionSheet({
       handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
     >
       {sourceExercise && (
-        <View style={styles.container}>
-          <Text
-            variant="subtitle"
-            style={[styles.header, { color: colors.onSurface }]}
-          >
-            Alternatives for {sourceExercise.name}
-          </Text>
-
-          {sourceExercise.primary_muscles.length > 0 && (
-            <View style={styles.muscleRow}>
-              {sourceExercise.primary_muscles.map((m) => (
-                <View
-                  key={m}
-                  style={[
-                    styles.muscleChip,
-                    { backgroundColor: colors.primaryContainer },
-                  ]}
-                >
-                  <Text variant="caption"
-                    style={[
-                      styles.muscleText,
-                      { color: colors.onPrimaryContainer },
-                    ]}
-                  >
-                    {MUSCLE_LABELS[m]}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {noMuscleData ? (
-            <View style={styles.emptyState}>
-              <Text
-                variant="body"
-                style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
-              >
-                No muscle data — cannot suggest alternatives
-              </Text>
-            </View>
-          ) : (
-            <>
-              <EquipmentFilter
-                availableEquipment={availableEquipment}
-                equipmentFilter={equipmentFilter}
-                onFilterChange={setEquipmentFilter}
-              />
-
-              {scored.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text
-                    variant="body"
-                    style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
-                  >
-                    No alternatives found. Try adding the exercise manually.
-                  </Text>
-                </View>
-              ) : filtered.length === 0 && equipmentFilter ? (
-                <View style={styles.emptyState}>
-                  <Text
-                    variant="body"
-                    style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
-                  >
-                    No alternatives with this equipment. Try removing the
-                    filter.
-                  </Text>
-                </View>
-              ) : (
-                <BottomSheetFlatList
-                  data={filtered}
-                  keyExtractor={(item) => item.exercise.id}
-                  renderItem={renderItem}
-                  contentContainerStyle={styles.listContent}
-                />
-              )}
-            </>
-          )}
-        </View>
+        <SubstitutionSheetBody
+          sourceExercise={sourceExercise}
+          query={query}
+          setQuery={setQuery}
+          equipmentFilter={equipmentFilter}
+          setEquipmentFilter={setEquipmentFilter}
+          availableEquipment={availableEquipment}
+          rows={rows}
+          emptyMessage={emptyMessage}
+          noMuscleData={noMuscleData}
+          onSelect={handleSelect}
+        />
       )}
     </BottomSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  header: {
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  muscleRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginBottom: 8,
-  },
-  muscleChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  muscleText: {
-    lineHeight: 16,
-  },
-  listContent: {
-    paddingBottom: 32,
-  },
-  emptyState: {
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-  },
-});
