@@ -225,6 +225,7 @@ export type WorkoutSet = {
   set_type: SetType;
   duration_seconds: number | null;
   exercise_position: number;
+  bodyweight_modifier_kg?: number | null;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {

@@ -42,6 +42,9 @@ export type GroupCardProps = {
   onToggleExerciseNotes: (exerciseId: string) => void;
   onCycleSetType: (setId: string) => void;
   onLongPressSetType: (setId: string) => void;
+  // BLD-541 bodyweight modifier wiring (forwarded to SetRow when group is_bodyweight)
+  onOpenBodyweightModifier?: (setId: string) => void;
+  onClearBodyweightModifier?: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
@@ -63,6 +66,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onUpdate, onCheck, onDelete, onAddSet, onAddWarmups, onModeChange,
   onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
+  onOpenBodyweightModifier, onClearBodyweightModifier,
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
   onPrefill,
@@ -104,7 +108,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       <View style={styles.headerRow}>
         <Text variant="caption" style={[styles.colSet, { color: colors.onSurfaceVariant }]}>SET</Text>
         <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>PREV</Text>
-        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{unit === "lb" ? "LB" : "KG"}</Text>
+        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>
+          {group.is_bodyweight ? "LOAD" : (unit === "lb" ? "LB" : "KG")}
+        </Text>
         <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{isDurationMode ? "DURATION" : "REPS"}</Text>
         <View style={styles.colTrailing} />
       </View>
@@ -128,6 +134,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
             onHalfStepOpen={onHalfStepOpen}
             onCycleSetType={onCycleSetType}
             onLongPressSetType={onLongPressSetType}
+            isBodyweight={group.is_bodyweight}
+            onOpenBodyweightModifier={onOpenBodyweightModifier}
+            onClearBodyweightModifier={onClearBodyweightModifier}
             isTimerRunning={isActiveSet && (timerIsRunning ?? false)}
             isTimerActive={isActiveSet}
             timerDisplaySeconds={isActiveSet ? timerDisplaySeconds : undefined}
