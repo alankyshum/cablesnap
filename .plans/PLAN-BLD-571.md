@@ -125,8 +125,51 @@ None. Pure RN primitives + existing repo conventions.
 
 ## Review Feedback
 
-### Quality Director (UX)
-_Pending_
+### Quality Director (UX) — REQUEST CHANGES (2026-04-24)
+
+Directionally good, but four concrete blockers and two major concerns must be resolved before APPROVE.
+
+**🔴 Blockers**
+
+1. **`manifest.generated.ts` pattern cited in plan does not exist in this repo.** Grepped the tree: the only generator is `scripts/generate-exercise-illustrations.ts`, whose output (`generated-illustrations/illustrations-manifest.json`) is **gitignored and hosted on R2** (external) — not a committed-TS precedent. Plan must decide explicitly:
+   - **Commit `lib/changelog.generated.ts`** (recommended) — mirrors committed `assets/store-screenshots/`; CI freshness gate = `npm run changelog:gen && git diff --exit-code lib/changelog.generated.ts`. OR
+   - **Gitignore + regenerate at build time** — but then see blocker 2 (no prebuild hook wired) and F-Droid CI must run generator before `eas build`.
+
+2. **No `build`/`prebuild` npm script exists today.** `package.json` scripts are `start`, `android`, `ios`, `web`, `build:apk[:prod|:cloud]` — no `build` and no lifecycle hook point. `expo start` does NOT invoke npm `prebuild`; `eas build --local` also does not run arbitrary npm scripts before Metro bundles. Plan's "add prebuild/predev hook" is aspirational. Concrete fix: add `"changelog:gen": "tsx scripts/generate-changelog.ts"` and invoke from `prestart`, `preandroid`, `preios`, `preweb` (npm honors `pre<name>` lifecycle). Combined with blocker 1 → commit the output so cold CI is never dependent on codegen timing.
+
+3. **AC/back-compat contradiction.** AC "app bundle includes at least 5 release entries" vs back-compat "missing CHANGELOG → empty array, build succeeds". Pick one:
+   - **Hard-require** (preferred): generator fails non-zero if `CHANGELOG.md` missing or has <1 entries. Missing source = bug.
+   - **Soft fallback kept**: drop the ≥5 AC, add a CI job to assert entry count, retain the "No release notes available" empty-state.
+
+4. **Settings version row is not a standalone block today** (`app/(tabs)/settings.tsx:157-180`). The version text is concatenated with the app description inside the same `<Text>` and followed by an AGPL `Linking.openURL` link + BuyMeACoffee badge in the same `<CardContent>`. Wrapping the current `<Text>` in a `Pressable` will either make the description tappable (wrong touch target) or fight the AGPL link's onPress. Plan must specify: **split the version into its own dedicated row above the description**, matching the visual pattern of other Settings rows (e.g., FeedbackCard). The chevron + "What's new" hint should live only on that row.
+
+**🟡 Major concerns**
+
+5. **Single-source-of-truth / duplication risk.** `publish-release/SKILL.md` Step 7 has operators hand-write release notes into `gh release create --notes '...'`. Adding `CHANGELOG.md` without integrating it will cause drift within 2 releases. Fix: designate `CHANGELOG.md` as canonical, have the skill extract the top section and pass via `gh release create --notes-file`, and **have Step 2 of the skill include updating CHANGELOG.md** alongside the 3 version-bump files.
+
+6. **F-Droid per-version changelogs demoted to "stretch" is wrong.** F-Droid users read `fdroid/metadata/.../changelogs/<versionCode>.txt` in-client. Today only 1, 2, 7, 11 exist vs actual version codes 51+ — F-Droid is already lying to users. Writing the newest section to the corresponding `<versionCode>.txt` during release is ~10 lines in the generator/skill. Promote to AC.
+
+**🟢 Recommended**
+
+7. **`FlatList` for ~50 entries is over-engineered and nested-scroll implies antipattern.** Use `ScrollView` with `showsVerticalScrollIndicator`; entries wrap naturally. Perf diff negligible <200 items.
+
+8. **"Current version" detection is unspecified.** Plan says current is pinned with a chip but not *how*. Implementation compares `entry.version` to `Constants.expoConfig?.version`; generator must strip leading `v` from headers (or runtime tolerates both). Edge case: mismatch → omit chip, don't crash.
+
+9. **A11y label nit.** `accessibilityLabel="View release notes, current version {v}"` is correct; the trailing `"button"` in the example duplicates `accessibilityRole="button"` (screen readers append the role automatically). Remove from the plan example.
+
+**✅ Behavior-Design Classification: I concur with NO.**
+
+Sanity-checked against SKILL §3.2 triggers:
+- ❌ No gamification, streaks, rewards, badges
+- ❌ No notifications (explicit out)
+- ❌ No auto-popup (explicit out, owner preference)
+- ❌ No unread indicator on version row (explicit out)
+- ❌ No motivational copy, identity framing, re-engagement
+- ✅ User-initiated, pull-based, purely informational
+
+The classification holds **iff** the scope exclusions stay hard-excluded — particularly the "unread dot" temptation and "what's new" push nudge. Plan's Risk row 4 already codifies this; keep it. Any future move toward either = fresh Behavior-Design review (psychologist + QD).
+
+**Summary:** Fix blockers 1–4 and major concerns 5–6. 7–8 strongly recommended, 9 is a nit. After those, clean APPROVE.
 
 ### Tech Lead (Feasibility)
 _Pending_
