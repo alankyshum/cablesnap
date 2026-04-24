@@ -199,6 +199,14 @@ jobs:
 
       - name: Generate native project
         if: steps.check_commits.outputs.has_new_commits == 'true'
+        env:
+          # Sentry Expo config plugin reads these at prebuild time to generate
+          # android/sentry.properties. Missing values are handled gracefully
+          # (the plugin emits warning comments and falls back to env at build
+          # time), so an unconfigured secret does NOT break the release.
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
 
       - name: Boost Gradle JVM heap
@@ -243,6 +251,14 @@ jobs:
 
       - name: Build APK
         if: steps.check_commits.outputs.has_new_commits == 'true'
+        env:
+          # Sentry Android Gradle plugin reads these to upload debug symbols +
+          # source maps during assembleRelease. Missing SENTRY_AUTH_TOKEN is
+          # tolerated: the plugin logs a warning and ships an APK without
+          # source maps rather than hard-failing the build.
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           cd android
           ./gradlew assembleRelease

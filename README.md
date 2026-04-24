@@ -81,6 +81,18 @@ npm run web
 
 > **Note:** Expo Go is no longer supported for development. Use the development build workflow above.
 
+### Release Builds & Sentry Source Maps
+
+Signed release builds (via `gradle assembleRelease` in CI) upload JavaScript source maps to Sentry so that production stack traces are symbolicated. This requires three env vars at build time — all of which are optional: missing values only disable source-map upload, they never break the build.
+
+| Variable | Purpose |
+|----------|---------|
+| `SENTRY_ORG` | Sentry org slug (e.g. `alankyshum`) |
+| `SENTRY_PROJECT` | Sentry project slug (e.g. `cablesnap`) |
+| `SENTRY_AUTH_TOKEN` | Auth token with `project:releases` + `org:read` scopes. Create one at [Sentry → Account → Auth Tokens](https://docs.sentry.io/account/auth-tokens/). |
+
+In CI these are provided via GitHub Actions secrets (see `.github/workflows/scheduled-release.yml`). For local release builds, copy `.env.example` to `.env.local` and fill the values. Dev-mode (`expo start`) and F-Droid reproducible builds are unaffected.
+
 ## Project Structure
 
 ```
