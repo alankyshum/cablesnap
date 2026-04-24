@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability -- reanimated shared values must be mutated via `.value` */
 import { useCallback, useEffect } from "react";
 import { Dimensions } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
@@ -6,7 +7,8 @@ import { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-nat
 const screenWidth = Dimensions.get("window").width;
 
 export function useToastGesture(id: string, onDismiss: (id: string) => void) {
-  const translateY = useSharedValue(-20);
+  // BLD-569: toast is now bottom-anchored, so slide UP from below into place.
+  const translateY = useSharedValue(20);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.85);

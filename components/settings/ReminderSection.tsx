@@ -37,10 +37,10 @@ export default function ReminderSection({
           value={reminders}
           onValueChange={async (val) => {
             if (val) {
-              if (scheduleCount === 0) { toast.info("Set up a weekly workout schedule in your active program first"); return; }
+              if (scheduleCount === 0) { toast.info("No workout schedule set", "Add one to your active program first"); return; }
               try {
                 const granted = await requestPermission();
-                if (!granted) { setPermDenied(true); toast.error("Notification permission denied. Tap 'Open Settings' below to enable."); return; }
+                if (!granted) { setPermDenied(true); toast.error("Notifications blocked", "Tap 'Open Settings' below to enable"); return; }
                 setPermDenied(false);
                 const parts = reminderTime.split(":"); const h = Number(parts[0]); const m = Number(parts[1]);
                 const count = await scheduleReminders({ hour: h, minute: m });
@@ -118,7 +118,7 @@ export default function ReminderSection({
             if (val) {
               try {
                 const granted = await requestPermission();
-                if (!granted) { setPermDenied(true); toast.error("Notification permission denied. Tap 'Open Settings' below to enable."); return; }
+                if (!granted) { setPermDenied(true); toast.error("Notifications blocked", "Tap 'Open Settings' below to enable"); return; }
                 setPermDenied(false);
                 await setAppSetting("rest_notification_enabled", "true");
                 setRestNotifications(true);
