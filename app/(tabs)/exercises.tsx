@@ -190,7 +190,7 @@ export default function Exercises() {
   return (
     <View style={[styles.container, styles.wideRow, { backgroundColor: colors.background }]}>
       {list}
-      <ExerciseDetailPane detail={detail} colors={colors} profileGender={profileGender} />
+      <ExerciseDetailPane detail={detail} colors={colors} profileGender={profileGender} bottomInset={tabBarHeight} />
     </View>
   );
 }
