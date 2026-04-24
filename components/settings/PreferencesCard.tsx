@@ -38,6 +38,13 @@ export default function PreferencesCard({
   const [setCompleteHaptic, setSetCompleteHapticState] = useState(true);
   const [setCompleteAudio, setSetCompleteAudioState] = useState(false);
 
+  // BLD-580 helper-row tri-state (PLAN-BLD-580 §Technical Approach):
+  //   true  = hide helper (safe default; also post-interaction state)
+  //   false = show helper (only after hydration resolves a null stored value)
+  // Initialized `true` to guarantee the helper row CANNOT render before
+  // hydration completes (AC-4: no FOUC flash for returning users).
+  const [audioEverInteracted, setAudioEverInteracted] = useState(true);
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -53,6 +60,7 @@ export default function PreferencesCard({
       setRestAfterWarmup(warmup === "true");
       setSetCompleteHapticState(scHaptic !== "false");
       setSetCompleteAudioState(scAudio === "true");
+      setAudioEverInteracted(scAudio != null);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -83,6 +91,10 @@ export default function PreferencesCard({
 
   const updateSetCompleteAudio = async (val: boolean) => {
     setSetCompleteAudioState(val);
+    // BLD-580: any toggle interaction (either direction) permanently hides
+    // the discoverability helper row for this session; persistence is via
+    // feedback.setComplete.audio becoming non-null.
+    setAudioEverInteracted(true);
     try { await setSetCompletionAudio(val); }
     catch { toast.error("Failed to save set-complete sound setting"); }
   };
@@ -189,6 +201,20 @@ export default function PreferencesCard({
             accessibilityHint="Play a short confirmation tone when you tap to complete a set"
           />
         </View>
+        {/* BLD-580 discoverability helper row. Non-pressable (pure <Text>),
+            rendered ONLY while the user has never interacted with the audio
+            toggle. Auto-dismisses silently on first interaction. Locked
+            copy — DO NOT edit without updating AC-2 snapshot test. */}
+        {!audioEverInteracted && (
+          <Text
+            variant="caption"
+            accessibilityRole="text"
+            style={[styles.helperRow, { color: colors.onSurfaceVariant, fontSize: fontSizes.xs }]}
+            testID="set-complete-audio-helper"
+          >
+            Plays a short confirmation cue when you complete a set.
+          </Text>
+        )}
       </CardContent>
     </Card>
   );
@@ -199,4 +225,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   labelWithIcon: { flexDirection: "row", alignItems: "center" },
   tooltipText: { fontSize: fontSizes.xs, padding: 10, borderRadius: 6, marginBottom: 8, lineHeight: 18 },
+  helperRow: { marginTop: -4, marginBottom: 8, lineHeight: 18 },
 });
