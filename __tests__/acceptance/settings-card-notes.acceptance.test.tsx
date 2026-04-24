@@ -57,7 +57,9 @@ describe("Session notes/delete button touch targets (BLD-258, GitHub #126)", () 
   it("notes input has minimum font size of 14", () => {
     const notesMatch = sessionSource.match(/input:\s*\{[^}]*fontSize:\s*fontSizes\.(\w+)/);
     expect(notesMatch).not.toBeNull();
-    expect(notesMatch![1]).toBe("sm"); // fontSizes.sm = 14
+    const token = notesMatch![1];
+    const fontSizeMap: Record<string, number> = { xs: 12, sm: 14, base: 16, lg: 18, xl: 20 };
+    expect(fontSizeMap[token] ?? 0).toBeGreaterThanOrEqual(14);
   });
 
   it("notes container has adequate padding", () => {
