@@ -24,7 +24,7 @@ Does this shape user behavior? (see CEO §3.2 trigger list: gamification · stre
 - [x] **NO** — purely **informational/ergonomic UI**.
   - No streak, no XP, no badge, no celebration.
   - No reminder, no notification, no nudge copy.
-  - The transition cue is descriptive ("Switch cable: low → high"), NOT prescriptive ("You should…").
+  - The transition cue is **declarative** ("Mount: Low → High") — a noun phrase, never an imperative verb. NOT prescriptive ("You should…").
   - No re-engagement of lapsed users.
 
 Psychologist review: **N/A** under the Classification = NO branch (CEO instructions §3.2). Will still post a courtesy ping if any reviewer flags concern during Phase 2.
@@ -42,7 +42,7 @@ Psychologist review: **N/A** under the Classification = NO branch (CEO instructi
 Two small, additive UI elements on the live session screen (`app/session/[id].tsx` → `ExerciseGroupCard` → `GroupCardHeader`):
 
 1. **Mount-position chip** — a compact pill rendered next to the exercise title in `GroupCardHeader` whenever `group.mount_position` is set (which today is only true for Voltra/cable exercises).
-2. **Cable-switch transition hint** — between two consecutive `ExerciseGroupCard`s where both groups have a `mount_position` AND the values differ, render a thin, low-contrast inline strip ("Switch cable: low → high") above the second card.
+2. **Cable-switch transition hint** — between two consecutive `ExerciseGroupCard`s where both groups have a `mount_position` AND the values differ, render a thin, low-contrast inline strip ("Mount: Low → High") above the second card.
 
 Nothing else changes. No new tables, no new settings, no new gestures.
 
@@ -50,18 +50,19 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 
 #### Mount-position chip
 
-- Location: inline at the end of the title line in `GroupCardHeader` (same row as the exercise title; floats right of the title with `flexShrink: 1` on the title).
-- Content: a stylised cable-mount icon (`MaterialCommunityIcons` name `arrow-collapse-up` for high, `arrow-expand-vertical` for mid, `arrow-collapse-down` for low, `dots-horizontal` for floor) plus the localised label from `MOUNT_POSITION_LABELS` (e.g., "Low", "Mid", "High", "Floor").
-- Visual: rounded pill, `colors.surfaceVariant` background, `colors.onSurfaceVariant` text, 11pt label. Same height as the existing `previousPerf` row text (~18dp) — must not push the card taller.
-- Accessibility: `accessibilityLabel="Cable mount: <Label>"` on a non-interactive node. Do **not** set `accessibilityRole="text"` (iOS-only; emits a warning on Android). Hidden completely from the a11y tree when value is undefined.
-- Empty state: chip is **not rendered** when `group.mount_position` is `null`/`undefined`. Free-weight and bodyweight cards are unchanged.
+- **Location (explicit JSX shape):** chip is a NEW sibling inside `headerRow1`, sitting **between** the existing left title-column `<View style={{ flex: 1, flexShrink: 1 }}>` (which contains title + `previousPerfBtn`) and the right `headerActions` cluster. Chip wrapper carries `flexShrink: 0` and a small `marginLeft` (8dp). Title column keeps `flex: 1` so it compresses before the chip does. **`headerRow1` gains `flexWrap: "wrap"`** so the chip drops to a sub-row on widths <360dp instead of clipping behind the icon cluster. The existing `previousPerfBtn` is untouched (still inside the title column, unchanged styles).
+- **Content:** **text-only** chip — the `MOUNT_POSITION_LABELS` value (e.g., "Low", "Mid", "High", "Floor"). **No icon.** Rationale (per QD critique): the `arrow-collapse-*` family depicts "merge/minimize," not cable height, and the chip's `surfaceVariant` background already carries the signal. The detail drawer (`ExerciseDetailDrawer`) and detail screen (`app/exercise/[id].tsx`) render mount as plain text — the chip stays consistent with those existing surfaces.
+- Visual: rounded pill, `colors.surfaceVariant` background, `colors.onSurfaceVariant` text, 11pt label, 4dp vertical / 8dp horizontal padding. Target height ≤ 20dp at 360dp+.
+- Accessibility: `accessibilityLabel="Mount: <Label>"` on a non-interactive node (matches the existing detail-drawer noun phrase, no third synonym). **No `accessibilityRole="text"`** (iOS-only; Android warning). Hidden completely from the a11y tree when value is `null`/`undefined` (chip not rendered at all).
+- Empty state: chip is **not rendered** when `group.mount_position` is `null`/`undefined` (use `!group.mount_position` gate, NOT `=== undefined`, so DB-loaded `null` is treated identically). Free-weight and bodyweight cards are unchanged.
 
 #### Cable-switch transition hint
 
-- Location: rendered as a header element on the second card (i.e., inside the `FlatList`/`ScrollView` rendering the groups, immediately above the `ExerciseGroupCard` View — NOT inside the card).
-- Content: a single line with a small horizontal-arrow icon (`MaterialCommunityIcons` `swap-horizontal-bold`) and text "Switch cable: <prev label> → <next label>".
+- Location: rendered inside `renderExerciseGroup` (`app/session/[id].tsx:215`) as a sibling **above** the second `ExerciseGroupCard`, gated on `index > 0 && prev.mount_position && curr.mount_position && prev.mount_position !== curr.mount_position`. Read `groups[index-1]` from the data array via `renderItem`'s `{ item, index }`. Avoid `ItemSeparatorComponent` (cannot cleanly see neighbour data).
+- **Content (declarative noun phrase):** `MaterialCommunityIcons` `swap-horizontal-bold` icon component (mirrored automatically under `I18nManager.isRTL`, RTL-safe) followed by **"Mount: \<Prev Label\> → \<Next Label\>"**. We use the literal `→` glyph after the noun phrase because the surrounding text and the icon component carry the directional intent; if RTL is later enabled the icon flips and the text-direction renderer flips the line as a whole. Documented as accepted EN-only behaviour for v1 (see Edge Cases).
 - Visual: full-width, transparent background, 12pt `colors.onSurfaceVariant` text, 8dp vertical padding. No border, no card. Subtle by design — not a banner.
-- Accessibility: `accessibilityLabel="Cable switch from <prev> to <next>"` on a non-interactive node. Do **not** set `accessibilityRole="text"` (iOS-only; warns on Android). Reads naturally in screen-reader order before the next exercise heading.
+- **Copy is declarative, not imperative.** No "Switch …", no "You should …", no exclamation. The noun-phrase form keeps Behavior-Design Classification = NO airtight.
+- Accessibility: `accessibilityLabel="Mount changes: <Prev> to <Next>"` on a non-interactive node (vocabulary aligns with the chip's "Mount: <Label>" and the existing detail-drawer "Mount position: …"). **No `accessibilityRole="text"`**. Reads naturally in screen-reader order before the next exercise heading.
 - Suppression rules:
   - Hidden when either neighbour has no `mount_position`.
   - Hidden when both share the same value.
@@ -76,7 +77,7 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 | Two consecutive same-mount exercises | Chips on both, no transition hint between. |
 | Dark mode | Uses `useThemeColors()` tokens — no hardcoded hex strings. (Per learning BLD-385.) |
 | Reduced motion | No animation on chip; no animation on transition hint. |
-| Locale | Labels resolve through `MOUNT_POSITION_LABELS`. No new strings to internationalise beyond the literal "Switch cable: " + labels. |
+| Locale | Labels resolve through `MOUNT_POSITION_LABELS`. The hint string is just `"Mount: "` + label + `" → "` + label — EN-only, accepted for v1. RTL not supported v1; the icon component is RTL-safe but the literal `→` glyph is not — documented limitation. |
 
 ### Technical Approach
 
@@ -131,15 +132,22 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 
 - [ ] Given a session with a Voltra exercise that has `mount_position = "low"`, when the session screen renders, then a chip with icon + label "Low" appears on the same row as the exercise title.
 - [ ] Given a non-Voltra exercise with `mount_position = null`, when the session screen renders, then no chip is rendered for that group.
-- [ ] Given two consecutive groups with `mount_position` "low" and "high", when the session screen renders, then a transition hint "Switch cable: Low → High" appears between them.
+- [ ] Given two consecutive groups with `mount_position` "low" and "high", when the session screen renders, then a transition hint "Mount: Low → High" appears between them.
 - [ ] Given two consecutive groups with the same `mount_position`, when the session screen renders, then no transition hint is rendered between them.
 - [ ] Given a single-group session, no transition hint is rendered.
 - [ ] Chip and hint use `useThemeColors()` (no hardcoded hex). Verified in light + dark mode.
-- [ ] Chip's `accessibilityLabel` reads "Cable mount: <Label>"; hint's reads "Cable switch from <prev> to <next>".
-- [ ] Chip does not increase `GroupCardHeader` height versus the current main baseline (snapshot or layout assertion in the test).
+- [ ] Chip's `accessibilityLabel` reads "Mount: <Label>"; hint's reads "Mount changes: <Prev> to <Next>".
+- [ ] **No header height regression on devices ≥360dp width** (Pixel 4a / 393dp baseline). Verified via a Pixel 4a-width (393dp) `onLayout` height assertion comparing a Voltra group with a chip versus an identical group without `mount_position` — Δheight ≤ 1dp. On <360dp the chip MAY wrap to a sub-row, increasing height by ≤24dp; this is graceful degradation and is NOT a regression.
+- [ ] Chip uses `!group.mount_position` truthiness gate (handles both `undefined` and DB-loaded `null` identically).
 - [ ] No new lint warnings.
 - [ ] Existing tests green; new tests green; `npm run typecheck` green.
-- [ ] Pre-push `scripts/audit-tests.sh` passes (test count under cap; use `it.each` for matrix tests if needed — per learning BLD-457).
+- [ ] Pre-push `scripts/audit-tests.sh` passes (test count under cap; use `it.each` for matrix tests — per learning BLD-457).
+- [ ] **Test budget cap: ≤ 12 new test names** (achieved via `it.each` for the 4-mount × {chip-render, hint-suppress-same, hint-render-different} matrix).
+- [ ] Required cases (must be present, even within the 12-name cap):
+  - (a) `onSwap` mid-session replaces an exercise with a different mount → that card's chip AND **both** adjacent transition hints recompute.
+  - (b) `onMoveUp` / `onMoveDown` reorder → transition hints recompute against new neighbours.
+  - (c) Chip is hidden when `group.mount_position === null` (DB-loaded null), not only `undefined`.
+  - (d) `GroupCardHeader` render-counter assertion (BLD-560 pattern): adding the chip + hint does NOT cause `GroupCardHeader` to re-render on unrelated mode/state changes (e.g., `training_mode` toggle, `setsCompleted` increment on a different group).
 
 ## Edge Cases
 
@@ -148,12 +156,12 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 | Session with one exercise | No transition hint. Chip renders if applicable. |
 | Session where every exercise shares the same mount | Chips render on all; no hints anywhere. |
 | Mid-session swap (`onSwap`) replaces an exercise with a different mount | After the swap, the chip on that card updates AND the transition hints recompute against the new neighbour values. |
-| Custom user exercise without mount_position inserted between two Voltra exercises | No chip on the custom card. Transition hints suppressed for both adjacent boundaries (because one neighbour is mount-less). |
+| Custom user exercise without mount_position inserted between two Voltra exercises | No chip on the custom card. Transition hints suppressed for both adjacent boundaries (because one neighbour is mount-less). **Known limitation — see Follow-Ups §1.** |
 | Move-up / move-down reorder | Hints recompute with new adjacency. |
 | Very narrow screen (320dp) | Chip should not push the title to wrap onto more than 2 lines; at extreme widths the chip wraps onto its own row below the title (graceful degradation). |
 | Dark mode | All colours via theme tokens; no `#FFFFFF` or `#000000` literals. |
 | Reduced motion | No motion either way — no impact. |
-| RTL locale (future-proofing only) | Not required at v1 since we are EN-only; do not introduce RTL-hostile primitives. |
+| RTL locale (future-proofing only) | Not required v1 (EN-only). The transition icon is `MaterialCommunityIcons swap-horizontal-bold` (component, RTL-mirrored). The literal `→` glyph in the text is documented as a v1 EN-only acceptance; if RTL is later enabled, replace the literal arrow with the icon component on both sides of the labels. |
 
 ## Risk Assessment
 
@@ -163,6 +171,11 @@ Nothing else changes. No new tables, no new settings, no new gestures.
 | Chip clips behind right-side icon cluster on 320dp screens | Medium | Low | Add `flexWrap: "wrap"` to `headerRow1` (or set the chip wrapper `flexShrink: 0` and let the title row wrap) so the chip drops to a sub-line instead of clipping. Verify on 320dp. |
 | `ExerciseGroup` type missing `mount_position` requires producer change | Low (verified) | Low | Producer is `hooks/useSessionData.ts:112-129`. One-line addition: `mount_position: ex?.mount_position`. Confirmed in TL review. |
 | Memoisation regression caused by passing mount strings through new prop | Low | Low | New prop is a primitive string — no reference instability. `MountTransitionHint` accepts only primitives. Dev render counter (BLD-560 pattern) already in place to catch surprises in QA. |
+
+## Follow-Ups (named, NOT in scope for this issue)
+
+1. **Skip mount-less exercises when computing transition adjacency.** Today, a bodyweight or custom exercise inserted between two Voltra exercises with different mounts hides BOTH transition hints — the user has no warning at the second cable exercise. Acceptable for v1 (preserves locality, avoids surprises), but this is exactly the highest-friction scenario. Track as **BLD-XXX (open after this issue ships): Mount-transition hints should look past mount-less neighbours up to N=2 hops to find the most recent mount-bearing predecessor.** Includes UX exploration on whether to render the hint inline above the bodyweight card or above the next cable card.
+2. **Reuse `MountPositionChip` in the template editor and detail-drawer "next exercise" preview.** `MountPositionChip` is being extracted to its own file precisely so these surfaces can adopt it without touching the session header. Track as a separate enhancement issue.
 
 ## Review Feedback
 
@@ -212,4 +225,20 @@ With those edits the plan is implementation-ready. CEO can proceed without re-re
 N/A — Behavior-Design Classification = NO. This is an informational chip and a descriptive transition cue. No reward, streak, notification, social, or motivational copy. Will re-classify if any reviewer disagrees.
 
 ### CEO Decision
-_Pending — awaits QD + Techlead approval._
+
+**2026-04-24 — Plan v2 published; QD's 11 required edits and TL's 7 required edits are ALL incorporated.** Specifically:
+
+- (QD-1) Chip layout pinned: NEW sibling between left title-column and `headerActions`, `flexShrink: 0`, `headerRow1` `flexWrap: "wrap"`. Title column unchanged. `previousPerfBtn` untouched.
+- (QD-2) Icon dropped from chip — text-only, consistent with detail drawer & detail screen.
+- (QD-3) Copy changed from imperative "Switch cable: …" → declarative "Mount: Low → High". Behavior-Design Classification = NO defence is now airtight.
+- (QD-4) AC restated: no height regression on ≥360dp; chip MAY wrap on <360dp by ≤24dp.
+- (QD-5) Pixel 4a-width (393dp) `onLayout` Δheight assertion added to AC.
+- (QD-6) Custom-exercise gap promoted to a named Follow-Up (§1) instead of buried in Edge Cases.
+- (QD-7) A11y vocabulary aligned: chip "Mount: <Label>", hint "Mount changes: <Prev> to <Next>" (matches detail-drawer "Mount position: Low on rack" noun phrase).
+- (QD-8) `accessibilityRole="text"` already removed throughout (kept removed).
+- (QD-9) RTL clarified: icon is component (mirrored); literal `→` is EN-only v1 acceptance, documented in Edge Cases + Locale row.
+- (QD-10) Test plan: explicit ≤12-name cap + 4 required cases (swap, reorder, null vs undefined, render-counter regression).
+- (QD-11) All five techlead pins incorporated (producer path, drop `getItemLayout` row, primitive-only memo props, drop `accessibilityRole="text"`, extract `MountPositionChip` file).
+- (TL-1..7) all incorporated.
+
+Awaiting QD re-confirmation, then promoting to implementation issue.
