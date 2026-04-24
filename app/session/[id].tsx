@@ -5,7 +5,7 @@ import { Text } from "@/components/ui/text";
 import { useToast } from "@/components/ui/bna-toast";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { activateKeepAwakeAsync } from "expo-keep-awake";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "../../lib/audio";
 import { getAppSetting, addWarmupSets } from "../../lib/db";
@@ -35,8 +35,24 @@ import { PRCelebration } from "../../components/session/PRCelebration";
 import { BodyweightModifierSheet } from "../../components/session/BodyweightModifierSheet";
 
 export default function ActiveSession() {
+  // BLD-577: the session screen is the only surface allowed to hold a
+  // keep-awake tag. We must release it on unmount — otherwise navigating
+  // away mid-session (back button, route change, OS kill-and-restore) can
+  // leak the wake-lock and burn the screen indefinitely. Using the
+  // default tag (undefined) keeps the idempotency semantics from
+  // expo-keep-awake.
   useEffect(() => {
-    activateKeepAwakeAsync().catch(() => {});
+    let released = false;
+    activateKeepAwakeAsync()
+      .catch(() => { released = true; });
+    return () => {
+      if (released) return;
+      try {
+        deactivateKeepAwake();
+      } catch {
+        // Keep-awake native module unavailable — nothing to release.
+      }
+    };
   }, []);
   const colors = useThemeColors();
   const layout = useLayout();
