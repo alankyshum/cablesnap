@@ -14,7 +14,7 @@ source notes, per F-Droid hygiene requirements.
 | `tick.wav`      | MIT | Procedurally generated — short tick (1000 Hz). Created in-tree for CableSnap. |
 | `complete.wav`  | MIT | Procedurally generated — triple ascending beep (880 + 1100 + 1320 Hz). Created in-tree for CableSnap. |
 | `warning.wav`   | MIT | Procedurally generated — two rapid beeps (1000 Hz). Created in-tree for CableSnap. |
-| `set-complete.wav` | CC0-1.0 | Procedurally generated — two-pulse neutral click (1200 Hz + 1800 Hz, ~70 ms total), waived to the public domain via CC0-1.0. Created in-tree for CableSnap / BLD-559. Source script + parameters recorded in commit message. Reference: https://creativecommons.org/publicdomain/zero/1.0/ |
+| `set-complete.wav` | CC0-1.0 | Procedurally generated — single-note descending-pitch confirmation cue (660 Hz → 523.25 Hz glide, fundamental + 2nd/3rd harmonics, 5 ms linear attack + 60 ms exponential decay, 180 ms total, mono 16-bit PCM @ 22 050 Hz), waived to the public domain via CC0-1.0. Created in-tree for CableSnap / BLD-580. Pitch envelope is descending (anti-Dealer guardrail, PLAN-BLD-580 Psych-1 — never ascending). Source script + parameters recorded in commit message. Reference: https://creativecommons.org/publicdomain/zero/1.0/ |
 
 ## Notes
 
