@@ -1,10 +1,11 @@
 /* eslint-disable complexity, max-lines-per-function */
 import React, { useCallback, useMemo, memo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { I18nManager, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
+import SwipeToDelete from "../../components/SwipeToDelete";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -87,8 +88,27 @@ export const SetRow = memo(function SetRow({
   const chipLabel = SET_TYPE_LABELS[set.set_type]?.short;
   const typeLabel = set.set_type === "normal" ? "working set" : `${set.set_type} set`;
 
+  const handleDelete = useCallback(() => onDelete(set.id), [onDelete, set.id]);
+  // Screen-reader fallback: TalkBack / VoiceOver dispatch the built-in
+  // "activate" action when the user double-taps a focused, accessible element.
+  const onDeleteAccessibilityAction = useCallback(
+    (e: { nativeEvent: { actionName: string } }) => {
+      if (e.nativeEvent.actionName === "activate") handleDelete();
+    },
+    [handleDelete],
+  );
+
   return (
-    <View>
+    <View testID={`set-${set.id}-row`}>
+      <SwipeToDelete
+        onDelete={handleDelete}
+        widthBasis="container"
+        dismissThresholdFraction={0.5}
+        minDismissPx={120}
+        velocityDismissPxPerSec={1500}
+        velocityMinTranslatePx={80}
+        haptic
+      >
         <View
           style={[
             styles.setRow,
@@ -204,7 +224,7 @@ export const SetRow = memo(function SetRow({
           )}
           <Pressable
             onPress={() => onCheck(set)}
-            hitSlop={6}
+            hitSlop={16}
             style={[
               styles.circleCheck,
               { borderColor: set.completed ? colors.primary : colors.onSurfaceVariant },
@@ -219,15 +239,34 @@ export const SetRow = memo(function SetRow({
             )}
           </Pressable>
           <Pressable
-            onPress={() => onDelete(set.id)}
-            hitSlop={6}
-            style={styles.actionBtn}
-            accessibilityLabel={`Delete set ${set.set_number}`}
+            // Sighted: swipe is the primary delete path; single-tap is a
+            // no-op (no onPress) so sweaty/gloved fingers cannot misfire.
+            // Long-press (≥600ms) remains as a deliberate secondary path.
+            // a11y: accessible + role=button makes this a VoiceOver / TalkBack
+            // focus stop; the built-in "activate" action (fired on VO/TB
+            // double-tap) invokes onDelete directly so screen-reader users
+            // have a discoverable delete without needing to perform the
+            // swipe gesture.
+            accessible
             accessibilityRole="button"
+            accessibilityLabel={`Delete set ${set.set_number}`}
+            accessibilityHint={`Long-press to delete, or swipe the row ${I18nManager.isRTL ? "right" : "left"}`}
+            accessibilityActions={[{ name: "activate", label: `Delete set ${set.set_number}` }]}
+            onAccessibilityAction={onDeleteAccessibilityAction}
+            onLongPress={handleDelete}
+            delayLongPress={600}
+            style={styles.actionBtn}
+            testID={`set-${set.id}-delete-hint`}
           >
-            <MaterialCommunityIcons name="delete-outline" size={22} color={colors.error} />
+            <MaterialCommunityIcons
+              name="delete-outline"
+              size={22}
+              color={colors.error}
+              style={{ opacity: 0.35 }}
+            />
           </Pressable>
         </View>
+      </SwipeToDelete>
 
       <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
 
@@ -349,9 +388,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   circleCheck: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
@@ -374,10 +413,12 @@ const styles = StyleSheet.create({
   rpeChip: {
     borderWidth: 1.5,
     borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    minWidth: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    minWidth: 52,
+    minHeight: 44,
     alignItems: "center",
+    justifyContent: "center",
   },
   rpeChipText: {
     fontSize: fontSizes.xs,
@@ -396,9 +437,12 @@ const styles = StyleSheet.create({
   halfChip: {
     borderWidth: 1.5,
     borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minWidth: 48,
+    minHeight: 44,
     alignItems: "center",
+    justifyContent: "center",
   },
   rpeBadgeRow: {
     paddingHorizontal: 4,
