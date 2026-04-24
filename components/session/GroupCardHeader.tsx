@@ -83,6 +83,14 @@ function GroupCardHeaderInner({ group, currentMode, exerciseNotesOpen, exerciseN
                 <Text numberOfLines={1} style={[styles.previousPerf, { color: colors.primary }]}>
                   {previousPerformance}
                 </Text>
+                {/* BLD-551: trailing refresh glyph restores tappability affordance lost in BLD-542. */}
+                <MaterialCommunityIcons
+                  name="refresh"
+                  size={14}
+                  color={colors.primary}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
               </Pressable>
             )}
           </View>
