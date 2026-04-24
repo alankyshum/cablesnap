@@ -1,7 +1,7 @@
 # Feature Plan: Visual Exercise Illustrations (Start/End Positions)
 
 **Issue**: BLD-556  **Author**: CEO  **Date**: 2026-04-24
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW (R2, updated post techlead+QD critique)
 **Source**: GitHub #332 (alankyshum) — "For each of the exercise showing instruction in plain text isn't helpful"
 
 ## Problem Statement
@@ -153,7 +153,19 @@ Images live under `assets/exercise-illustrations/<exercise-id>/{start,end}.webp`
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+
+**Verdict: APPROVE WITH CHANGES** — 2026-04-24 (QD, full critique in BLD-556 comment thread)
+
+Plan is UX-sound; co-signs all 5 techlead changes. Adds 7 UX/a11y/safety concerns, of which 3 are blockers:
+
+1. **Exercise-technique safety gate** — Classification=NO exempts psych-review but NOT technique review. An AI image with wrong cable path or injurious joint angle is instruction that can cause injury. Require two-gate curation checklist in `CURATION.md` (visual-plausibility + technique) with per-exercise sign-off timestamps; invoke `review--sports-science` skill on the pilot set.
+2. **Partial-coverage rule: both-or-neither.** A lone "Start" image with no matching "End" reads as a data bug. `resolveExerciseImages` returns null unless BOTH keys resolve; falls back to text-only.
+3. **Substantive `accessibilityLabel`** — "exercise name + start position" communicates zero info to screen-reader users. Preferred: generator produces 1–2 sentence alt-text per position alongside the image (same prompt pass, ~free), committed to manifest, rendered as `accessibilityLabel`. Minimum: explicit pointer to text steps.
+
+Required (non-blocking): hardcode English `"Start position"` / `"End position"` captions (no active i18n in repo); use `expo-image` (already in deps) not RN `Image`; explicit tap-to-zoom decision (QD leans include); container-width breakpoint via `onLayout` (≥480px → side-by-side) not `layout.atLeastMedium` (bottom-sheet on tablet can be narrow).
+
+Suggestions: custom-exercise empty-state hint; specify `colors.surfaceAlt` for card; AI outputs must be transparent-alpha webp; pilot selection stresses prompt failure modes (low/mid/high mount, 1-arm vs 2-arm).
+
 
 ### Tech Lead (Feasibility)
 
@@ -175,4 +187,189 @@ Plan is architecturally sound (Metro static-require pattern correctly identified
 N/A — Classification = NO (purely informational exercise instruction, no behavior-shaping triggers).
 
 ### CEO Decision
-_Pending_
+
+Both reviewers APPROVE WITH CHANGES. All 12 required changes (5 techlead + 7 QD) incorporated below in the R2 revision — see "Plan Revisions — Round 2" section. Awaiting final LGTM from both before flipping to APPROVED and creating the implementation issue.
+
+---
+
+## Plan Revisions — Round 2 (supersedes sections above on conflict)
+
+### R2 scope reduction — 10-exercise PILOT, not full catalog
+
+PR1 ships **10 Voltra cable exercises** selected to stress-test the prompt:
+- 4 by popularity (to be selected by owner from the 56 Voltra set, or default to seed order top-4)
+- 6 by prompt-stress coverage: one each of {low mount, mid mount, high mount} × {1-arm, 2-arm} — ensures cable-geometry, attachment, and stance variance get exercised before burning the full catalog.
+
+Follow-ups:
+- **BLD-556-P2**: extend to remaining 46 Voltra exercises (pure catalog expansion; zero renderer changes).
+- **BLD-556-P3**: community (non-Voltra) exercises.
+- **BLD-556-P4**: custom-exercise image upload UX (hook planted in PR1, UX deferred).
+
+### R2 data model (additive DB migration, 3-file pattern)
+
+Apply the existing `lib/db/migrations.ts` `addColumnIfMissing` pattern:
+
+- `lib/db/tables.ts` — CREATE TABLE DDL gets `start_image_uri TEXT`, `end_image_uri TEXT`.
+- `lib/db/migrations.ts` — `addColumnIfMissing(db, "exercises", "start_image_uri", "TEXT DEFAULT NULL")` + same for `end_image_uri`.
+- `lib/db/schema.ts` — drizzle def updated.
+- `lib/types.ts` `Exercise` — `start_image_uri?: string; end_image_uri?: string;`.
+
+Seeded Voltra exercises do **not** populate these columns (they get images via the bundled manifest). Custom exercises use only these URI columns.
+
+### R2 resolver — single source of truth, both-or-neither
+
+```ts
+// assets/exercise-illustrations/resolve.ts
+import { manifest } from "./manifest.generated";
+import type { Exercise } from "@/lib/types";
+
+export type ExerciseImages = {
+  start: number | { uri: string };
+  end: number | { uri: string };
+  startAlt: string;
+  endAlt: string;
+};
+
+export function resolveExerciseImages(ex: Exercise): ExerciseImages | null {
+  if (ex.is_custom) {
+    if (!ex.start_image_uri || !ex.end_image_uri) return null; // both-or-neither
+    return {
+      start: { uri: ex.start_image_uri },
+      end: { uri: ex.end_image_uri },
+      startAlt: `${ex.name} start position — user-supplied illustration.`,
+      endAlt: `${ex.name} end position — user-supplied illustration.`,
+    };
+  }
+  const m = manifest[ex.id];
+  if (!m?.start || !m?.end || !m?.startAlt || !m?.endAlt) return null; // both-or-neither
+  return { start: m.start, end: m.end, startAlt: m.startAlt, endAlt: m.endAlt };
+}
+```
+
+### R2 manifest schema (generated)
+
+```ts
+// assets/exercise-illustrations/manifest.generated.ts
+// @generated — do not edit. Regenerate via `npm run generate:exercise-images`.
+
+export const manifest: Record<string, {
+  start: number;      // require() module id
+  end: number;
+  startAlt: string;   // 1–2 sentence alt text for accessibility
+  endAlt: string;
+}> = {
+  "voltra-001": {
+    start: require("./voltra-001/start.webp"),
+    end: require("./voltra-001/end.webp"),
+    startAlt: "Supine on floor, knees bent, cable handle held behind head with elbows flared.",
+    endAlt: "Torso curled up, shoulder blades lifted off floor, cable resistance engaged through abs.",
+  },
+  // ...deterministic-sorted by exercise id
+};
+```
+
+Alt text is produced in the same AI generation pass (extra prompt output slot is free; the image model returns both the image and a short description).
+
+### R2 generator spec
+
+Path: `scripts/generate-exercise-images.ts`. NPM script: `generate:exercise-images`.
+
+- **Provider:** OpenAI `gpt-image-1` (pinned). ToS grants commercial rights.
+- **Image size:** 384×384, WebP quality 75 (re-encode via `cwebp -q 75 -m 6 -pass 10` regardless of provider output format).
+- **Transparent alpha background:** required. Prompt instructs transparent bg; if returned PNG is RGB-solid, script fails that exercise with an error (don't commit a bad image).
+- **Idempotency:** `fingerprint.json` sidecar per exercise directory. Schema: `{ promptHash, model, modelVersion, generatedAt }`. `promptHash = sha256(promptTemplate + JSON.stringify({id, name, mount_position, attachment, instructions}))`.
+- **Run logic:**
+  - No files → generate.
+  - Both files + fingerprint matches → skip.
+  - Files exist but fingerprint missing OR hash drift → warn and require `--force-regen` flag (no silent regen, no silent drift).
+- **Manifest writer:** after a successful run, rewrites `manifest.generated.ts` with deterministic-sorted entries.
+- **Contact-sheet helper:** `--contact-sheet` flag emits `curation/contact-sheet.html` showing all pairs side-by-side for owner review.
+- **Secrets:** `OPENAI_API_KEY` from env; never committed; never logged.
+- **Not in CI:** manual dev-only; generated artifacts committed.
+
+### R2 curation — two-gate checklist
+
+`assets/exercise-illustrations/CURATION.md` — committed, append-only. Per exercise:
+
+```
+## voltra-001 — Abdominal Crunches
+- Visual plausibility: ✅ alan 2026-04-25 (no extra limbs, no text artifacts, style consistent)
+- Technique: ✅ alan 2026-04-25 (cable path routes through low mount, pelvis neutral, lumbar safe)
+- Model: gpt-image-1 v2025-09
+- Notes: regen 2× for cable path
+```
+
+Both sign-offs required before the image ships. If either is missing or ❌ → image is **excluded from the manifest**, exercise falls back to text-only (both-or-neither rule guarantees a lone image never leaks).
+
+Pilot batch (PR1, 10 exercises) additionally invokes `review--sports-science` skill; its output is pasted into CURATION.md alongside human sign-offs.
+
+### R2 renderer — UX decisions
+
+- **Placement:** start + end images render **above** the numbered steps in both `ExerciseDetailDrawer` (bottom sheet) and `ExerciseDetailPane` (tablet split-pane).
+- **Layout breakpoint:** container-width via `onLayout`, not device class. Threshold: container width ≥ 480px → side-by-side; < 480 → stacked vertically.
+- **Captions:** hardcoded English strings `"Start position"` / `"End position"` with `// TODO(i18n): track in follow-up` comment. No i18n hedge.
+- **Image component:** `expo-image` (already in deps), `contentFit="contain"`, transition fade 150ms, on transparent-alpha webp.
+- **Card background:** `colors.surfaceAlt` (dark/light themed). Image subject sits on transparent alpha; card provides the neutral tint.
+- **Tap-to-zoom:** IN SCOPE. Tap an image → full-screen modal viewer (lightweight `Modal` + pinch-zoom via `react-native-reanimated`+`react-native-gesture-handler` already in deps; no new package). ~60 LOC.
+- **Accessibility:**
+  - `accessibilityRole="image"`.
+  - `accessibilityLabel = resolved.startAlt` (or endAlt) — the substantive AI-generated description.
+  - If for any reason alt-text is missing, fall back to `${exerciseName} — start position. Detailed instructions follow in text below.`
+- **Custom-exercise empty state:** when `resolveExerciseImages(ex)` returns null AND `ex.is_custom`, render a single subtle line below the steps: `"Add your own illustration — coming soon"` (gray, small). Signals intentional absence, not data bug. For seeded exercises with missing manifest entries (bug path), render nothing — text is sufficient.
+
+### R2 bundle-size gate
+
+- Target: ≤ 8MB total for `assets/exercise-illustrations/**/*.webp`.
+- Hard fail: > 12MB.
+- Enforcement: `scripts/verify-exercise-illustrations-size.sh` using `du -sb`. Wired into existing pre-push / Bundle Gate workflow in `.github/workflows/` (pattern matches existing `scripts/verify-scenario-hook-not-in-bundle.sh`).
+- Pilot (10 exercises × 2 × 20KB ≈ 400KB) is well under threshold; full Voltra catalog (56×2×20KB ≈ 2.2MB) still under.
+
+### R2 test strategy (zero image-gen in CI)
+
+1. `__tests__/exercise-illustrations-manifest.test.ts` — every *pilot* exercise id appears in manifest with all 4 keys (start, end, startAlt, endAlt).
+2. `__tests__/exercise-illustrations-resolver.test.ts` — `resolveExerciseImages`:
+   - Seeded Voltra with full manifest → returns ExerciseImages.
+   - Seeded Voltra with missing end in manifest (simulated partial) → returns null.
+   - Custom with both URIs → returns URIs.
+   - Custom with only start URI → returns null (both-or-neither).
+   - Custom with no URIs → returns null.
+3. `__tests__/ExerciseDetailDrawer.test.tsx` — RTL:
+   - Voltra exercise with manifest → renders exactly 2 `<Image>` nodes with expected `accessibilityLabel = startAlt|endAlt`.
+   - Custom with no URIs → 0 `<Image>` nodes; "Add your own illustration" hint visible; steps still render.
+   - Container width 320 (phone) → flex-column; width 600 (tablet) → flex-row. Mock via `onLayout` event.
+4. `scripts/verify-exercise-illustrations-size.sh` — ensures under-cap; wired as GitHub Action job.
+
+### R2 updated acceptance criteria (supersedes earlier list)
+
+- [ ] `exercises.start_image_uri` and `exercises.end_image_uri` columns exist (additive migration; `addColumnIfMissing` pattern).
+- [ ] `Exercise` type in `lib/types.ts` has optional `start_image_uri` / `end_image_uri`.
+- [ ] `assets/exercise-illustrations/manifest.generated.ts` committed with 10 pilot entries, deterministic-sorted by id, `// @generated` header.
+- [ ] `assets/exercise-illustrations/<voltra-id>/{start,end}.webp` + `fingerprint.json` committed for 10 pilot exercises.
+- [ ] 384×384 webp quality 75; every `start.webp`/`end.webp` has transparent alpha channel (verifiable via `identify -format "%A"`).
+- [ ] `resolveExerciseImages` returns null when either image is missing (both-or-neither).
+- [ ] `scripts/generate-exercise-images.ts` runs idempotently: unchanged fingerprint → skip; drift → warn + require `--force-regen`.
+- [ ] `ExerciseDetailDrawer` on container width ≥ 480px renders start/end side-by-side; < 480px stacks vertically.
+- [ ] `ExerciseDetailPane` (tablet split) renders images above numbered steps.
+- [ ] Images render via `expo-image` `contentFit="contain"` inside a `colors.surfaceAlt` card.
+- [ ] Tap on either image opens full-screen modal viewer with pinch-zoom; dismissible via swipe-down or close button.
+- [ ] `accessibilityLabel` on each image = resolved `startAlt` / `endAlt` (AI-generated 1–2 sentence description), never the stub "exercise name + start".
+- [ ] Custom exercise without images → no image area; "Add your own illustration — coming soon" hint shown below steps.
+- [ ] Seeded exercise with partial manifest → no image area; no error, no placeholder.
+- [ ] `assets/exercise-illustrations/**/*.webp` total size ≤ 8MB; CI fails > 12MB.
+- [ ] `assets/exercise-illustrations/CURATION.md` has both visual-plausibility AND technique sign-offs per pilot exercise; `review--sports-science` skill output pasted for pilot batch.
+- [ ] All pilot images pass technique gate (cable path matches mount_position+attachment; joint angles plausible; no injury-risk poses).
+- [ ] Tests green: 3 new test files above + existing suite; `npm run typecheck` green; pre-push `scripts/audit-tests.sh` passes.
+- [ ] Bundle Gate CI job passes.
+
+### R2 risk update
+
+| Risk | L | I | Mitigation |
+|------|---|---|-----------|
+| AI anatomy / cable-path quality variance | High | High (injury risk, not just UX) | Two-gate CURATION.md (visual + technique); `review--sports-science` on pilot; both-or-neither ensures bad image never ships alone |
+| Prompt-template drift silently ages catalog | Medium | Medium | Fingerprint sidecar + `--force-regen` guard |
+| Bundle bloat | Low | Medium | 384 Q75 target; CI gate 12MB |
+| `expo-image` edge cases on old Android | Low | Low | Already in deps and used elsewhere in app |
+| Transparent-alpha rendering failure in dark mode | Low | Medium | Generator refuses RGB-solid outputs; manual pilot spot-check on dark theme during curation |
+| Tap-to-zoom gesture conflict with bottom-sheet drag | Medium | Low | Use `react-native-gesture-handler` `Tap` + `Pinch` composable; verify drawer drag still works in RTL tests |
+| Pilot exercise selection doesn't surface failure modes | Medium | Medium | Selection criteria: 4 popular + 6 prompt-stress (mount/arm coverage) — not seed-order-first-10 |
+
