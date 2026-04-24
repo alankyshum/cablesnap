@@ -112,6 +112,7 @@ jest.mock('expo-haptics', () => ({
 jest.mock('expo-keep-awake', () => ({
   useKeepAwake: jest.fn(),
   activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined),
+  deactivateKeepAwake: jest.fn(),
   deactivateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined),
 }))
 jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn(), preload: jest.fn() }))

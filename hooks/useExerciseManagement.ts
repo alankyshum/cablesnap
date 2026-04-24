@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/preserve-manual-memoization, react-hooks/exhaustive-deps */
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Haptics from "expo-haptics";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { useToast } from "@/components/ui/bna-toast";
@@ -219,6 +219,31 @@ export function useExerciseManagement({
     deleteExerciseTimer,
     deleteCountdownInterval,
   };
+
+  // BLD-577 battery fix: the three timer refs above (swap undo, pending
+  // delete commit, delete countdown) were previously only cleared on the
+  // user-driven paths (undo, commit, next delete). If the session screen
+  // unmounts with one of them live — e.g. the user backs out of the
+  // session within the 5-second delete window — the setInterval / setTimeout
+  // keeps running in the background and eventually runs against a stale
+  // closure (`setGroups` on an unmounted component). This hook-level
+  // unmount effect guarantees they're always released.
+  useEffect(() => {
+    return () => {
+      if (swapUndoTimer.current) {
+        clearTimeout(swapUndoTimer.current);
+        swapUndoTimer.current = null;
+      }
+      if (deleteExerciseTimer.current) {
+        clearTimeout(deleteExerciseTimer.current);
+        deleteExerciseTimer.current = null;
+      }
+      if (deleteCountdownInterval.current) {
+        clearInterval(deleteCountdownInterval.current);
+        deleteCountdownInterval.current = null;
+      }
+    };
+  }, []);
 
   return {
     detailExercise,

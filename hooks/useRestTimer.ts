@@ -21,6 +21,7 @@ import {
 } from "../lib/rest";
 import { isAvailable, scheduleRestComplete, cancelRestComplete } from "../lib/notifications";
 import { duration as durationTokens } from "../constants/design-tokens";
+import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
 
 export type SetContext = {
   exerciseId: string;
@@ -113,6 +114,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       setRest(secs);
       setBreakdown(nextBreakdown);
       scheduleNotification(secs);
+      sessionBreadcrumb("timer.rest.start", { secs });
       // Start unconditionally; AppState change listener will stop the interval
       // immediately if the app is actually backgrounded.
       startRestInterval();
@@ -177,6 +179,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     cancelNotification();
     setRest(0);
     setBreakdown(defaultBreakdown(0));
+    sessionBreadcrumb("timer.rest.dismiss");
   }, [cancelNotification, stopRestInterval]);
 
   // BLD-553 battery fix: AppState listener pauses the 1Hz interval when
