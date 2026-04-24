@@ -156,7 +156,20 @@ Images live under `assets/exercise-illustrations/<exercise-id>/{start,end}.webp`
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: APPROVE WITH CHANGES** — 2026-04-24 (techlead, full critique in BLD-556 comment thread)
+
+Plan is architecturally sound (Metro static-require pattern correctly identified, bundle-size awareness present, idempotent generator shape right). Five required changes before implementation:
+
+1. **Add custom-exercise hook NOW** — add optional `start_image_uri` / `end_image_uri` columns to `exercises` (additive migration per existing 3-file pattern in `lib/db/migrations.ts`) + single `resolveExerciseImages(ex)` helper. Cost ~10 LOC today, prevents a predictable schema migration later when custom-exercise image UX lands.
+2. **Pilot first (10 exercises, not 56)** — PR1 scope-reduced to top-10 highest-utility Voltra exercises with full pipeline (renderer, manifest, generator, curation, resolver, hook, tests, bundle gate). PR2 expands to remaining 46. Curation risk (AI anatomy variance) is unknown-unknown; de-risk before committing full catalog burn.
+3. **Tighten bundle knobs** — retarget 512×512 Q80 → **384×384 Q75 webp**; expected ~3–5MB actual. Replace 15MB criterion with **≤8MB target, 12MB hard fail**; enforce via `scripts/verify-exercise-illustrations-size.sh` in the existing Bundle Gate / pre-push pattern.
+4. **Fingerprint-based idempotency** — file-exists check is insufficient; prompt-template drift would silently skip regeneration. Write `fingerprint.json` sidecar per exercise (`sha256(template + {id, name, mount_position, attachment, instructions})` + model+version). Script warns on drift, requires `--force-regen` flag.
+5. **Pin provider: OpenAI `gpt-image-1`** — commercial-rights ToS is clean, cable-geometry quality best-in-class for instructional diagrams, ~$6–$13 total for 112 images. Explicitly NOT Flux-dev (non-commercial license unless Replicate-hosted — ship-blocker for F-Droid redistribution).
+
+**Ancillary:** `assets/exercise-illustrations/manifest.generated.ts` (deterministic-sorted, `// @generated` header, eslint-ignored but committed). Optional contact-sheet HTML helper for the curation pass. Test strategy = manifest-completeness test + resolver unit tests + renderer RTL tests; zero image-gen in CI.
+
+**Disagreements with plan: none material.** Approach, layering, and scope-out list are all correct.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (purely informational exercise instruction, no behavior-shaping triggers).
