@@ -31,6 +31,8 @@ import { SessionListFooter } from "../../components/session/SessionListFooter";
 import { SessionToolboxSheet } from "../../components/session/SessionToolboxSheet";
 import { SessionHeaderToolbar } from "../../components/session/SessionHeaderToolbar";
 import { PRCelebration } from "../../components/session/PRCelebration";
+import { BodyweightModifierSheet } from "../../components/session/BodyweightModifierSheet";
+import { updateSetBodyweightModifier, normalizeBodyweightModifier } from "../../lib/db/session-sets";
 
 export default function ActiveSession() {
   useEffect(() => {
@@ -100,8 +102,53 @@ export default function ActiveSession() {
   } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
+  const bwModifierSheetRef = useRef<BottomSheet>(null);
+  const [bwModifierSetId, setBwModifierSetId] = useState<string | null>(null);
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
+
+  // BLD-541: open / clear / save handlers for the bodyweight modifier sheet.
+  // Persisted via updateSetBodyweightModifier; local list refreshed via
+  // updateGroupSet so the chip re-renders immediately without a DB re-read.
+  const handleOpenBodyweightModifier = useCallback((setId: string) => {
+    setBwModifierSetId(setId);
+    bwModifierSheetRef.current?.snapToIndex(0);
+  }, []);
+
+  const handleClearBodyweightModifier = useCallback(async (setId: string) => {
+    try {
+      await updateSetBodyweightModifier(setId, null);
+      updateGroupSet(setId, { bodyweight_modifier_kg: null });
+      Haptics.selectionAsync().catch(() => {});
+    } catch (err) {
+      showError((err as Error).message);
+    }
+  }, [updateGroupSet, showError]);
+
+  const handleSaveBodyweightModifier = useCallback(async (modifierKg: number | null) => {
+    const setId = bwModifierSetId;
+    if (!setId) {
+      bwModifierSheetRef.current?.close();
+      return;
+    }
+    const normalized = normalizeBodyweightModifier(modifierKg);
+    try {
+      await updateSetBodyweightModifier(setId, normalized);
+      updateGroupSet(setId, { bodyweight_modifier_kg: normalized });
+      bwModifierSheetRef.current?.close();
+    } catch (err) {
+      showError((err as Error).message);
+    }
+  }, [bwModifierSetId, updateGroupSet, showError]);
+
+  const bwModifierInitial = useMemo(() => {
+    if (!bwModifierSetId) return null;
+    for (const g of groups) {
+      const s = g.sets.find((x) => x.id === bwModifierSetId);
+      if (s) return s.bodyweight_modifier_kg ?? null;
+    }
+    return null;
+  }, [bwModifierSetId, groups]);
 
   // Fetch estimated duration from template history (Phase 70)
   useEffect(() => {
@@ -207,6 +254,8 @@ export default function ActiveSession() {
       onToggleExerciseNotes={toggleExerciseNotes}
       onCycleSetType={handleCycleSetType}
       onLongPressSetType={handleLongPressSetType}
+      onOpenBodyweightModifier={handleOpenBodyweightModifier}
+      onClearBodyweightModifier={handleClearBodyweightModifier}
       onShowDetail={handleShowDetail}
       onSwap={handleSwapOpen}
       onDeleteExercise={handleDeleteExercise}
@@ -220,7 +269,7 @@ export default function ActiveSession() {
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
     />
-  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
@@ -336,6 +385,13 @@ export default function ActiveSession() {
         sheetRef={toolboxSheetRef}
         onOpenRestSettings={handleOpenRestSettings}
         onDismiss={handleToolboxDismiss}
+      />
+      <BodyweightModifierSheet
+        sheetRef={bwModifierSheetRef}
+        initialModifierKg={bwModifierInitial}
+        unit={unit}
+        onDone={handleSaveBodyweightModifier}
+        onDismiss={() => setBwModifierSetId(null)}
       />
     </>
   );
