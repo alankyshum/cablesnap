@@ -190,6 +190,8 @@ R2 resolutions:
 - **T2 (global `enabled` cross-contamination)** → R2 adopts TL's recommended category-scoped shape: `setEnabled(category: "timer" | "feedback", val)` with a `CUE_CATEGORY` map inside `lib/audio.ts`. Two existing call-sites (`app/session/[id].tsx:53`, `hooks/useSettingsData.ts:54`) migrate to `setEnabled("timer", val)`. Acceptance Criteria #10 asserts category isolation.
 - **T3–T5 advisory** → absorbed into Technical Approach (inline comments, existing `lib/audio.ts` load() reuse, migration of two timer-toggle call-sites).
 
+**R2 verdict (2026-04-24T09:13Z): APPROVE** (comment posted). T1 and T2 both adopted verbatim; no remaining gating items. T3 (eager preload on session mount), T4 (rehydration-zero-fire regression test), T5 (pick one settings-propagation pattern — recommend mirroring the existing imperative `setAudioEnabled` precedent so `fire()` stays synchronous) remain as non-gating advisories for the implementer to fold in while editing. Noted bonus: removing `Haptics.impactAsync` from `usePRCelebration.ts:28` also makes PR-set haptics honor the user's haptic-off preference, closing a pre-existing small accessibility gap.
+
 ### Psychologist (Behavior-Design)
 
 **R0 verdict (2026-04-24T07:40Z): APPROVED WITH MODIFICATIONS** (comment 76decf79).
