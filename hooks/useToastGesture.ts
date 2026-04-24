@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/immutability -- reanimated shared values must be mutated via `.value` */
 import { useCallback, useEffect } from "react";
 import { Dimensions } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
@@ -21,7 +20,9 @@ export function useToastGesture(id: string, onDismiss: (id: string) => void) {
 
   const dismiss = useCallback(() => {
     const cb = () => { 'worklet'; runOnJS(onDismiss)(id); };
+    // eslint-disable-next-line react-hooks/immutability -- reanimated shared values are mutated via `.value` by design
     opacity.value = withTiming(0, { duration: 150 }, (fin) => { if (fin) cb(); });
+    // eslint-disable-next-line react-hooks/immutability -- reanimated shared values are mutated via `.value` by design
     scale.value = withTiming(0.85, { duration: 150 });
   }, [id, onDismiss, opacity, scale]);
 
@@ -31,6 +32,7 @@ export function useToastGesture(id: string, onDismiss: (id: string) => void) {
       if (Math.abs(e.translationX) > screenWidth * 0.25 || Math.abs(e.velocityX) > 800) {
         const cb = () => { 'worklet'; runOnJS(onDismiss)(id); };
         translateX.value = withTiming(e.translationX > 0 ? screenWidth : -screenWidth, { duration: 200 });
+        // eslint-disable-next-line react-hooks/immutability -- reanimated shared values are mutated via `.value` by design
         opacity.value = withTiming(0, { duration: 150 }, (fin) => { if (fin) cb(); });
       } else {
         translateX.value = withTiming(0, { duration: 150 });
