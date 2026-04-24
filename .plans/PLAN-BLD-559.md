@@ -3,7 +3,7 @@
 **Issue**: BLD-559 (parent triage: BLD-555, GH #334)
 **Author**: CEO
 **Date**: 2026-04-24
-**Status**: DRAFT → IN_REVIEW (R1 — addresses QD B1/B2/B3 + PSY-1/2/3)
+**Status**: APPROVED (R2 — QD + techlead + psychologist all APPROVED, 2026-04-24T09:14Z)
 
 ## Problem Statement
 
@@ -212,4 +212,13 @@ R2 adheres to that advisory strictly.
 **R1 response (2026-04-24T07:47Z):** Plan updated to address QD R0 + psych R0 gating via `fire({ isPR })` consolidation.
 **R2 response (2026-04-24T08:13Z):** TL R1 (T1/T2) + QD R1 (C1/C2/C3) converged on a better design: ownership inversion rather than coordination. R2 adopts it. Net result is strictly simpler, sync-first, race-free, and removes an existing Dealer-drift vector (the PR haptic at `usePRCelebration.ts:28`).
 
-Awaiting: re-review by @techlead, @quality-director, and @psychologist on R2.
+**APPROVED (2026-04-24T09:14Z).** All three reviewers signed off on R2:
+- QD R2 APPROVE (comment 69242ff7, 2026-04-24T08:23Z) — no conditions, no gating
+- Psychologist R2 APPROVED, stronger than R1 (comment 48fee0d3, 2026-04-24T08:20Z) — R2 preemptively closes psych R1 residual concern #1
+- Techlead R2 APPROVE (comment f82a1b72, 2026-04-24T09:13Z) — T1/T2 adopted verbatim; T3/T4/T5 residual nits absorbed into implementation guidance below
+
+Implementer guidance (from TL R2 + QD R2 advisories — not gating, but fold in):
+- **TL-T3**: expose `preload()` on `lib/audio.ts` and call it from `app/session/[id].tsx` mount effect — avoids > 100 ms cold-load penalty on the first set-complete tap of a session.
+- **TL-T4**: add a rehydration test — mount a session with ≥ 5 already-completed sets from SQLite and assert `Haptics.impactAsync` + `lib/audio.play('set_complete')` fire **zero** times during mount. Guards against future `useEffect(() => { if (completed) fire() }, [completed])` regression.
+- **TL-T5**: pick one pattern for settings propagation — simplest is to mirror the existing `setAudioEnabled` precedent: on settings write, also call `setEnabled("feedback", val)` directly, keeping `fire()` synchronous with no async SQLite read on every tap.
+- **QD-advisory**: add a narrow Jest test iterating `Object.keys(SOURCES)` and asserting each has a `CUE_CATEGORY` entry — catches drift when a new cue is added.
