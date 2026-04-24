@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_comment": "BLD-565: expo-sqlite on web requires SharedArrayBuffer, which is only available in cross-origin-isolated pages. Meta tags cannot enable isolation — COOP must be an HTTP header. These headers apply when the dist/ bundle is deployed to Vercel.",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+        { "key": "Cross-Origin-Embedder-Policy", "value": "require-corp" }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import { Colors } from "@/theme/colors";
 import { getDatabase } from "@/lib/db";
+import { WEB_UNSUPPORTED_MESSAGE } from "@/lib/web-support";
 
 type Props = {
   banner: boolean;
@@ -11,6 +12,13 @@ type Props = {
 };
 
 export function LayoutBanners({ banner, setBanner, error, setError, themeColors }: Props) {
+  // BLD-565: on a web host without cross-origin isolation the only
+  // surfaced error is WEB_UNSUPPORTED_MESSAGE and a Retry call to
+  // getDatabase() would succeed (DB open is lazy) but the first query
+  // would still crash with `ReferenceError: SharedArrayBuffer is not
+  // defined`.  Suppress the Retry affordance for this specific error
+  // so the user is not led into the crash path.
+  const canRetry = !!error && error !== WEB_UNSUPPORTED_MESSAGE;
   return (
     <>
       {banner && (
@@ -28,9 +36,11 @@ export function LayoutBanners({ banner, setBanner, error, setError, themeColors 
           <Text style={{ color: themeColors.foreground }}>
             ❌ Database error: {error}. Try reloading the app.
           </Text>
-          <Text style={{ color: themeColors.primary, marginTop: 8, fontWeight: "600" }} onPress={() => { setError(null); getDatabase().catch((e) => setError(e?.message ?? "Retry failed")); }}>
-            Retry
-          </Text>
+          {canRetry && (
+            <Text style={{ color: themeColors.primary, marginTop: 8, fontWeight: "600" }} onPress={() => { setError(null); getDatabase().catch((e) => setError(e?.message ?? "Retry failed")); }}>
+              Retry
+            </Text>
+          )}
         </View>
       )}
     </>

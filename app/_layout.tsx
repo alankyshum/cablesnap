@@ -29,6 +29,8 @@ import { useAppInit } from "../hooks/useAppInit";
 import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
 import { LayoutBanners } from "../components/LayoutBanners";
+import { WebUnsupportedScreen } from "../components/WebUnsupportedScreen";
+import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
@@ -58,7 +60,7 @@ export default Sentry.wrap(function RootLayout() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const themeColors = isDark ? Colors.dark : Colors.light;
-  const { banner, setBanner, error, setError, ready, onboarded, setOnboarded } = useAppInit();
+  const { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported } = useAppInit();
   const pathname = usePathname();
   const prev = useRef(pathname);
 
@@ -77,6 +79,20 @@ export default Sentry.wrap(function RootLayout() {
   );
 
   if (!ready) return null;
+
+  // BLD-565: on a web host without cross-origin isolation, drizzle's
+  // sync API will throw `ReferenceError: SharedArrayBuffer is not
+  // defined` on the first query.  Render a fullscreen fallback
+  // INSTEAD of the normal tree so that no child effect / event
+  // handler can reach the DB.
+  if (webUnsupported) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <WebUnsupportedScreen message={WEB_UNSUPPORTED_MESSAGE} themeColors={themeColors} />
+        <StatusBar style="auto" />
+      </GestureHandlerRootView>
+    );
+  }
 
   const headerStyle = { backgroundColor: themeColors.card };
 
