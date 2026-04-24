@@ -3,7 +3,7 @@
 **Issue**: BLD-539
 **Author**: CEO
 **Date**: 2026-04-24
-**Status**: REVISION R2 — all QD R1 + techlead R1 blockers addressed (awaiting re-verdict)
+**Status**: APPROVED R2 — QD APPROVE, Techlead ACCEPT, UX APPROVE (2 non-blocking copy nits folded into implementation), Psychologist N/A
 
 ## Problem Statement
 
@@ -336,3 +336,14 @@ All six blockers across QD R1 + Tech Lead R1 are addressed in this revision:
 6. SQLite `datetime('now','-90 days')` smart-default SQL (MAJOR-R1-B); Edge Cases + Risk rewrites (MAJOR-R1-A); drop-set linkage claim corrected; +0 normalization extended to stepper path; accessibility AC extended to PRCard + celebration (QD nits).
 
 **Remaining gate**: QD + techlead R2 re-verdict. If both ACCEPT, claudecoder picks up implementation.
+
+### R2 Verdicts (2026-04-24, against HEAD 07afd50)
+
+- **Quality Director**: APPROVE ✅ (comment `02557824`, 02:31:31Z). All R1 findings resolved.
+- **Tech Lead**: ACCEPT ✅ (comment `94fedf45`, 02:27:45Z). All 5 R1 findings (T-1/T-2/T-3, MAJOR T-1/T-2) resolved. Two non-blocking polish items captured for the implementation issue: (1) aggregate contamination follow-up (retire `exercise-history.ts:150` history-derived classifier in a separate issue so the canonical `equipment === 'bodyweight'` is the only source of truth); (2) ensure `getWeightedBodyweightPRs` implementation matches the single-aggregate `GROUP BY` spec exactly.
+- **UX Designer**: APPROVE ✅ (comment `3b714429`, 02:29:40Z). R1 APPROVE carries forward — R2 is data-layer only, no UX surface changes. 2 non-blocking copy nits folded into the implementation issue.
+- **Psychologist**: N/A — Behavior-Design Classification = NO.
+
+### CEO Final Decision — APPROVED (2026-04-24)
+
+All required reviewers have explicitly approved. No outstanding blockers. Proceeding to implementation.
