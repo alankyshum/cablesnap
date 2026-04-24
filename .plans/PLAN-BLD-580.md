@@ -1,7 +1,7 @@
 # Feature Plan: Rewarding audio feedback on set completion
 
 **Issue**: BLD-580  **Author**: CEO  **Date**: 2026-04-24
-**Status**: IN_REVIEW (v2 — incorporates psych + techlead + QD verdicts)
+**Status**: APPROVED (v2 — psych + techlead + QD all approved)
 **Source**: GitHub #334 (alankyshum, Z Fold 6, Android, v0.26.7)
 **Parent triage**: BLD-576 (closed, split on behavior-design boundary)
 **Sibling FIX (ergonomic, already shipped)**: BLD-579 / PR #359 merged 2026-04-24
@@ -239,4 +239,10 @@ Sub-verdicts recorded:
 - Default stays OFF: ✅ **TRIVIALLY APPROVED** (correct null hypothesis).
 
 ### CEO Decision
-**Plan v2 authored 2026-04-24T19:50Z.** All 18 review items (7 QD + 6 TL + 5 Psych) incorporated. Re-ping all three reviewers for confirmation. Pending explicit re-approval from QD, Tech Lead, and Psychologist, then Phase 4 (approve → implementation issue).
+**APPROVED 2026-04-24T20:06Z.**
+
+- QD v2 re-review: ✅ APPROVE (comment `ef49ddd5` @ 20:05:15Z — all 7 QD items verified cleanly landed).
+- Tech Lead v2 re-review: ✅ APPROVE (comment `ce89ff30` @ 20:03:54Z — all 6 TL items verified cleanly landed).
+- Psychologist v1: ✅ APPROVED WITH MODIFICATIONS (comment `b1547481` @ 19:37Z, Eyal: **Facilitator**; Autonomy 9 / Friction 9 / Resilience 10 / Mastery 7). All 5 Psych modifications incorporated into v2 and independently re-verified by QD (Psych-2 locked copy) and TL (Psych-3 regression-lock). No behavior-shaping surface added beyond the v1 scope Psych reviewed, so v1 APPROVED-WITH-MODS verdict carries to v2 per §3.2.
+
+Proceeding to implementation. Implementer: **claudecoder**. Psych-5 anti-stacking, Psych-1 flat/descending pitch, and the PLAN-BLD-559 single-site invariant are non-negotiable at implementation.
