@@ -2,6 +2,42 @@ import * as SQLite from "expo-sqlite";
 import { createCoreTables, createExtensionTables, addColumnIfMissing, hasColumn } from "./tables";
 import { createScheduleAndIndexes } from "./table-migrations";
 
+/**
+ * BLD-622: Strip the removed "eccentric_overload" value from
+ * exercises.training_modes JSON arrays. Pure-string entry point so it can be
+ * unit-tested without an SQLite mock.
+ *
+ * Behaviour:
+ * - Valid JSON array → filter out "eccentric_overload"; if the result is
+ *   empty, return '["weight"]' as a safe default (every exercise must have at
+ *   least one mode).
+ * - Malformed JSON or non-array → return '["weight"]' fallback.
+ * - Returns null if the input contains no "eccentric_overload" reference (so
+ *   callers can skip the row entirely and avoid pointless writes).
+ */
+export function stripEccentricFromTrainingModesJSON(raw: string | null | undefined): string | null {
+  if (typeof raw !== "string" || !raw.includes("eccentric_overload")) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return '["weight"]';
+    const filtered = parsed.filter((m) => m !== "eccentric_overload");
+    return filtered.length === 0 ? '["weight"]' : JSON.stringify(filtered);
+  } catch {
+    return '["weight"]';
+  }
+}
+
+async function sanitizeExercisesTrainingModes(database: SQLite.SQLiteDatabase): Promise<void> {
+  const rows = await database.getAllAsync<{ id: string; training_modes: string | null }>(
+    `SELECT id, training_modes FROM exercises WHERE training_modes LIKE '%eccentric_overload%'`
+  );
+  for (const row of rows) {
+    const next = stripEccentricFromTrainingModesJSON(row.training_modes);
+    if (next === null) continue;
+    await database.runAsync(`UPDATE exercises SET training_modes = ? WHERE id = ?`, [next, row.id]);
+  }
+}
+
 async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise ON workout_sets(exercise_id);
@@ -79,17 +115,16 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // BLD-622: Eccentric training mode removed entirely. Sanitize legacy values.
   // - workout_sets.training_mode='eccentric_overload' → NULL (treated as standard set)
   // - template_exercises.training_mode='eccentric_overload' → NULL
-  // - exercises.training_modes JSON array: drop "eccentric_overload" entry
   await database.execAsync(`
     UPDATE workout_sets SET training_mode = NULL WHERE training_mode = 'eccentric_overload';
     UPDATE template_exercises SET training_mode = NULL WHERE training_mode = 'eccentric_overload';
-    UPDATE exercises
-      SET training_modes = REPLACE(REPLACE(REPLACE(training_modes,
-        '"eccentric_overload",', ''),
-        ',"eccentric_overload"', ''),
-        '"eccentric_overload"', '')
-      WHERE training_modes LIKE '%eccentric_overload%';
   `);
+  // - exercises.training_modes JSON array: drop "eccentric_overload" entries via
+  //   JS-side parse/filter/serialize. SQL chained REPLACE was fragile (couldn't
+  //   robustly handle whitespace, escaping, or middle positions in malformed
+  //   arrays). The JS path is explicit, contract-locked by unit tests, and falls
+  //   back to '["weight"]' if a row's JSON is corrupt.
+  await sanitizeExercisesTrainingModes(database);
 
   // Phase 66: strength goals table
   await database.execAsync(`

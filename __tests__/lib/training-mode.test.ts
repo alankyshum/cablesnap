@@ -1,4 +1,4 @@
-import { TRAINING_MODE_LABELS } from '../../lib/types'
+import { TRAINING_MODE_LABELS, VALID_TRAINING_MODES, coerceTrainingMode } from '../../lib/types'
 import type { TrainingMode } from '../../lib/types'
 import { createSet } from '../helpers/factories'
 
@@ -25,8 +25,7 @@ describe('TrainingMode types and labels', () => {
 
   it('eccentric_overload mode has been removed (BLD-622)', () => {
     expect(ALL_MODES).not.toContain('eccentric_overload' as TrainingMode)
-    // @ts-expect-error — eccentric_overload no longer in TrainingMode union
-    expect(TRAINING_MODE_LABELS['eccentric_overload']).toBeUndefined()
+    expect((TRAINING_MODE_LABELS as Record<string, unknown>)['eccentric_overload']).toBeUndefined()
   })
 
   it('WorkoutSet factory defaults training_mode and tempo to null', () => {
@@ -44,5 +43,29 @@ describe('TrainingMode types and labels', () => {
   it('legacy sets with null training_mode are valid', () => {
     const set = createSet({ training_mode: null })
     expect(set.training_mode).toBeNull()
+  })
+})
+
+describe('coerceTrainingMode (BLD-622 read-side guard)', () => {
+  it('passes through every valid mode', () => {
+    for (const mode of VALID_TRAINING_MODES) {
+      expect(coerceTrainingMode(mode)).toBe(mode)
+    }
+  })
+
+  it('coerces removed eccentric_overload to null', () => {
+    expect(coerceTrainingMode('eccentric_overload')).toBeNull()
+  })
+
+  it('coerces unknown / bogus strings to null', () => {
+    expect(coerceTrainingMode('made_up')).toBeNull()
+    expect(coerceTrainingMode('')).toBeNull()
+  })
+
+  it('coerces null / undefined / non-strings to null', () => {
+    expect(coerceTrainingMode(null)).toBeNull()
+    expect(coerceTrainingMode(undefined)).toBeNull()
+    expect(coerceTrainingMode(42)).toBeNull()
+    expect(coerceTrainingMode({})).toBeNull()
   })
 })
