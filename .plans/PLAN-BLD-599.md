@@ -199,7 +199,24 @@ Settings additions (existing key/value settings table):
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: REQUEST CHANGES** (minor — APPROVE once corrections below are folded into the plan). Concur with QD's APPROVE-WITH-CONDITIONS list. The plan's behavior-design discipline is sound; corrections are factual technical claims about the codebase.
+
+Required plan corrections before scoping the implementation ticket:
+
+1. **Migrations are NOT Drizzle-generated.** CableSnap uses hand-rolled `CREATE TABLE IF NOT EXISTS` SQL in `lib/db/tables.ts` (`createCoreTables` / `createExtensionTables`) called from `lib/db/migrations.ts`. Drizzle is only the typed query builder. Action: add the `water_logs` DDL block + index to `createExtensionTables`, add `"water_logs"` to the `VALID_TABLES` allowlist in `lib/db/tables.ts:5`, and add a `sqliteTable("water_logs", {...})` definition in `lib/db/schema.ts` for typed CRUD in `lib/db/hydration.ts`.
+2. **Nutrition tab does NOT use react-query.** Drop the `["water","day", dateLocal]` query-key plan. Data flow is `hooks/useNutritionData.ts` (useState + useFocusEffect + `load()` callback). Extend `useNutritionData`'s `Promise.all` with `getWaterEntriesForDate` + `getDailyTotalMl` and return `waterTotalMl`/`waterEntries`/`waterGoalMl` from the hook. Mutation handlers call existing `load()` afterward (matches the `remove` handler at `useNutritionData.ts:49`).
+3. **`lib/date-utils` does not exist** — use `lib/format.ts` → `formatDateKey(ts)` / `todayKey()`. (Already flagged by QD #3.)
+4. **`loadHomeData` is the workout home loader, not the Nutrition tab loader.** Remove the "extend `loadHomeData` with `today_water_ml`" line. Source the water total from the extended `useNutritionData` instead.
+5. **Test budget**: actual baseline (audit-tests.sh strict it/test counter) is **1977**, ceiling **2100** (env-overridable). Pin new tests at: 1 unit (`hydration-units` ~6–10 cases via `test.each`), 1 db (`db/hydration` ~5–8), 1 component (`water-section` ~4–6), 1 acceptance (~1–2). **Hard cap 25 new cases** → post-PR ≤ 2002, well under ceiling.
+6. **Acceptance criterion #2 200 ms wall-clock budget**: unenforceable in jest. Reword to "header total reflects new value on the next render after `load()` resolves." (Concur with QD #6.)
+7. **`app_settings` integration**: confirmed feasible. Use `setAppSetting(key, value)` from `lib/db/settings.ts` for `hydration.unit` / `hydration.daily_goal_ml` / `hydration.preset_{1,2,3}_ml` — values are TEXT (cast on read).
+
+Confirmed feasible (no plan changes): additive migration shape, route placement at `app/nutrition/water.tsx`, no new dependencies, single conversion module, day-rollover via `useFocusEffect`-driven re-derivation.
+
+Non-blocking suggestions: drop `created_at` (`logged_at` suffices for v1); drop `source` CHECK unless UI uses it; consider `date_key` naming over `date_local`; centralize the 5000 ml fat-finger cap as a named constant in `lib/hydration-units.ts` so tests share it.
+
+Comment thread: BLD-599 comment babf7279 (2026-04-25T02:31Z).
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Plan explicitly excludes all behavior-design triggers (Hard Exclusions list above). If reviewers identify any added trigger, classification flips to YES and psychologist review is required before merge.
