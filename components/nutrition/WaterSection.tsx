@@ -52,12 +52,12 @@ export function WaterSection({
         </View>
         <View
           accessibilityRole="progressbar"
-          accessibilityValue={{ min: 0, max: Math.max(goalMl, 1), now: Math.min(totalMl, goalMl) }}
+          accessibilityValue={{ min: 0, max: Math.max(goalMl, 1), now: totalMl }}
           // RN-Web ARIA fallback (props accepted via {...rest}-style passthrough on View).
           {...({
             "aria-valuemin": 0,
             "aria-valuemax": Math.max(goalMl, 1),
-            "aria-valuenow": Math.min(totalMl, goalMl),
+            "aria-valuenow": totalMl,
             role: "progressbar",
           } as Record<string, unknown>)}
         >

@@ -201,7 +201,11 @@ export default function HydrationCard({ colors, toast }: Props) {
           onPress={handleReset}
           accessibilityLabel="Reset hydration settings to defaults"
           accessibilityRole="button"
-          style={({ pressed }) => [{ marginTop: 12, alignSelf: "flex-start" }, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [
+            { marginTop: 12, alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingHorizontal: 4 },
+            pressed && { opacity: 0.6 },
+          ]}
+          hitSlop={8}
         >
           <Text variant="caption" style={{ color: colors.primary }}>Reset to defaults</Text>
         </Pressable>
@@ -215,7 +219,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12, gap: 12 },
   toggleRow: { flexDirection: "row", gap: 8 },
   toggleBtn: {
-    minHeight: 36,
+    minHeight: 44,
     minWidth: 56,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -226,7 +230,7 @@ const styles = StyleSheet.create({
   },
   input: {
     minWidth: 80,
-    minHeight: 40,
+    minHeight: 44,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,

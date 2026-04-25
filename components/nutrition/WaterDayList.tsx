@@ -45,7 +45,8 @@ export function WaterDayList({ entries, unit, colors, onDelete, onEdit }: Props)
           <SwipeToDelete onDelete={() => onDelete(entry)}>
             <TouchableOpacity
               onPress={() => onEdit(entry)}
-              accessibilityLabel={`Water entry ${formatVolume(entry.amount_ml, unit)} at ${timeOfDay(entry.logged_at)}`}
+              accessibilityLabel={`Edit water entry ${formatVolume(entry.amount_ml, unit)} at ${timeOfDay(entry.logged_at)}`}
+              accessibilityHint="Opens edit sheet with delete option. Swipe left to delete directly."
               accessibilityRole="button"
               style={{ minHeight: 48 }}
             >
@@ -59,14 +60,13 @@ export function WaterDayList({ entries, unit, colors, onDelete, onEdit }: Props)
                       {timeOfDay(entry.logged_at)}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => onDelete(entry)}
-                    accessibilityLabel="Delete water entry"
-                    hitSlop={8}
-                    style={{ padding: 8 }}
-                  >
-                    <MaterialCommunityIcons name="delete-outline" size={20} color={colors.onSurface} />
-                  </TouchableOpacity>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={colors.onSurfaceVariant}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
                 </CardContent>
               </Card>
             </TouchableOpacity>

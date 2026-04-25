@@ -68,6 +68,7 @@ export function WaterAmountSheet({
         </Text>
         <TextInput
           accessibilityLabel="Water amount"
+          accessibilityHint={unit === "ml" ? "Enter a positive number of milliliters." : "Enter a positive number of fluid ounces."}
           value={text}
           onChangeText={setText}
           keyboardType="numeric"
