@@ -179,7 +179,7 @@ describe("BLD-596 — chip does not regress GroupCardHeader memoisation", () => 
       act(() => {
         setter!((prev) => ({
           ...prev,
-          "ex-2": i % 2 === 0 ? "eccentric_overload" : "weight",
+          "ex-2": i % 2 === 0 ? "band" : "weight",
         }));
       });
     }

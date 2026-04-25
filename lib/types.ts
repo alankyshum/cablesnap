@@ -39,13 +39,33 @@ export type Attachment =
 
 export type TrainingMode =
   | "weight"
-  | "eccentric_overload"
   | "band"
   | "damper"
   | "isokinetic"
   | "isometric"
   | "custom_curves"
   | "rowing";
+
+/**
+ * Defense-in-depth set of valid TrainingMode values for runtime validation
+ * at every DB read/write boundary. Any unknown value (including the removed
+ * "eccentric_overload" — see BLD-622) is coerced to null by `coerceTrainingMode`.
+ */
+export const VALID_TRAINING_MODES: ReadonlySet<TrainingMode> = new Set<TrainingMode>([
+  "weight",
+  "band",
+  "damper",
+  "isokinetic",
+  "isometric",
+  "custom_curves",
+  "rowing",
+]);
+
+/** Returns the value if it's a valid TrainingMode, otherwise null. */
+export function coerceTrainingMode(value: unknown): TrainingMode | null {
+  if (typeof value !== "string") return null;
+  return VALID_TRAINING_MODES.has(value as TrainingMode) ? (value as TrainingMode) : null;
+}
 
 export type Category =
   | "abs_core"
@@ -230,7 +250,6 @@ export type WorkoutSet = {
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {
   weight: { label: "Standard", short: "STD", description: "Normal cable weight resistance — standard lifting" },
-  eccentric_overload: { label: "Eccentric", short: "ECC", description: "Heavier resistance on the lowering phase for muscle growth" },
   band: { label: "Band", short: "BND", description: "Resistance band attached for variable tension" },
   damper: { label: "Damper", short: "DMP", description: "Damper provides smooth, constant resistance" },
   isokinetic: { label: "Isokinetic", short: "ISO", description: "Machine controls speed — constant velocity throughout" },
