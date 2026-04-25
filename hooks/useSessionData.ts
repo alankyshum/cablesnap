@@ -126,9 +126,13 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           equipment: ex?.equipment ?? "other",
           exercise_position: s.exercise_position ?? 0,
           exerciseCategory: ex?.category ?? null,
+<<<<<<< Updated upstream
           // BLD-596: surface mount-position to the session screen so
           // GroupCardHeader/MountTransitionHint can render the chip + hint.
           mount_position: ex?.mount_position ?? null,
+=======
+          mount_position: ex?.mount_position,
+>>>>>>> Stashed changes
         });
       }
       const prev = prevCache[s.exercise_id]?.find(

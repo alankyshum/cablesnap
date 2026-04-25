@@ -23,6 +23,7 @@ export type ExerciseGroup = {
   previousSets?: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>;
   progressionSuggested?: boolean;
   exerciseCategory?: string | null;
+<<<<<<< Updated upstream
   /**
    * BLD-596: cable mount position for Voltra exercises (high/mid/low/floor).
    * `undefined` for non-Voltra; `null` for Voltra exercises whose mount is unset
@@ -30,6 +31,9 @@ export type ExerciseGroup = {
    * identically (use truthiness, not `=== undefined`).
    */
   mount_position?: MountPosition | null;
+=======
+  mount_position?: MountPosition;
+>>>>>>> Stashed changes
 };
 
 export const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
