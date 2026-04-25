@@ -3,7 +3,7 @@
 **Issue**: BLD-621
 **Author**: CEO
 **Date**: 2026-04-25
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW (rev 2 — folds in QD + TL conditions)
 
 ## Problem Statement
 
@@ -74,14 +74,18 @@ Plumb `training_mode` end-to-end through the **template** layer so it is:
 - Extend `TemplateExercise` with `training_mode: TrainingMode | null;` (matches `WorkoutSet.training_mode`).
 
 **DB layer (`lib/db/templates.ts`)** — additive changes only:
-1. `getTemplateById`: include `training_mode: templateExercises.training_mode` in the SELECT and map it onto each row.
+1. `getTemplateById` (lines 47–56): add `training_mode: templateExercises.training_mode` to the SELECT projection map and to the row→TemplateExercise mapper. **Do NOT** silently fix the pre-existing `target_duration_seconds` drop in this projection — out of scope (see Out-of-Scope section).
 2. `addExerciseToTemplate(... trainingMode: TrainingMode | null = null)`: accept and persist; default `null` preserves current callers.
 3. `updateTemplateExercise(... trainingMode: TrainingMode | null)`: accept and update.
-4. `duplicateTemplate`: copy `training_mode` from source row.
-5. `seed.ts`: starter-template seeding — confirm starter templates are not affected unless a starter explicitly pins a mode (none do today; leave `null`).
+4. `duplicateTemplate` (lines 155–172): add `training_mode: ex.training_mode` to the values block. **Do NOT** silently fix the pre-existing `target_duration_seconds` drop here either — out of scope.
 
-**Session bootstrap**
-- Identify the function that materializes `workout_sets` from `template_exercises` on session start (likely `lib/db/sessions.ts` or `lib/db/session-sets.ts`). Update it to pass `te.training_mode` into the inserted set rows. Implementation owner must confirm the exact entry point during scoping; spec is "first set per template_exercise inherits the template's training_mode; subsequent sets follow existing rules (currently inherit from previous set in the same exercise)."
+`seed.ts` already handles `training_mode` for starter templates (`lib/db/seed.ts:124,128`); no change needed there.
+
+**Session bootstrap** (location pinned by TL/QD reviews)
+- The template→sets seeding loop lives in `hooks/useSessionData.ts:244–258` (the `useEffect` that calls `addSetsBatch(setsToInsert)`). `lib/db/sessions.ts:128 startSession()` only inserts the `workout_sessions` row and does NOT materialize sets.
+- **Exact one-line fix**: in the `setsToInsert.push({…})` block at `hooks/useSessionData.ts:248–256`, add `trainingMode: te.training_mode ?? null,`. No DB-layer signature changes needed — `addSetsBatch` (`lib/db/session-sets.ts:196`) already accepts `s.trainingMode ?? null`.
+- Behavioral spec: first set per template_exercise inherits the template's `training_mode`; subsequent sets follow existing rules (inherit from previous set in the same exercise).
+- **Test ergonomics (suggested by both reviewers, non-blocking but recommended)**: extract the `tpl.exercises → setsToInsert` loop into a pure helper `buildInitialSetsFromTemplate(tpl, sessionId): SetsToInsert[]` (in `lib/db/templates.ts` or a new `lib/session-init.ts`). Table-driven unit tests cover null / `weight` / `eccentric_overload` / data-drift cases. The hook becomes a thin wiring layer. Matches the codebase's existing helper-extraction pattern (cf. `lib/format.ts`).
 
 **Hook (`hooks/useTemplateEditor.ts`)**
 - Surface `training_mode` in the editor state for each exercise.
@@ -90,8 +94,10 @@ Plumb `training_mode` end-to-end through the **template** layer so it is:
 **UI (`app/template/create.tsx`)**
 - Render `<TrainingModeSelector compact />` per exercise row when the gate condition holds (Voltra + multi-mode). Wire `onSelect` to the new hook action.
 
-**CSV / JSON import-export (`lib/db/import-export.ts`, `lib/db/csv.ts`)**
-- Templates JSON export already round-trips template_exercises rows; ensure `training_mode` is included in the serialized fields. CSV deals with `workout_sets`, not templates — no change.
+**CSV / JSON import-export**
+- Export side (`lib/db/import-export.ts:286`) uses `SELECT *` for `template_exercises`, so the new column round-trips automatically — no edit needed.
+- Import side: extend the `template_exercises` INSERT statement at `lib/db/import-export.ts:436` to include `training_mode` (and the corresponding values bind). Treat a missing field on legacy backups as `null`.
+- CSV deals with `workout_sets`, not templates — no change.
 
 **Performance**
 - One additional column read per template_exercise row — negligible (already in same row).
@@ -121,6 +127,7 @@ Plumb `training_mode` end-to-end through the **template** layer so it is:
 - Per-set training mode in templates (today only first-set mode; per-set is post-MVP).
 - Recommendations / suggestions for mode picks.
 - Migration of existing templates to populate `training_mode` (leave NULL — no behavior change).
+- **Pre-existing `target_duration_seconds` projection drop in `getTemplateById` (lib/db/templates.ts:47–56) and values-drop in `duplicateTemplate` (lines 155–172) — these are real data-loss bugs but separate from BLD-621. File a follow-up ticket if desired; do NOT bundle them into this PR.**
 
 ## Acceptance Criteria
 
@@ -133,7 +140,8 @@ Plumb `training_mode` end-to-end through the **template** layer so it is:
 - [ ] **Editor UI**: in `app/template/create.tsx`, exercises with `is_voltra && training_modes.length > 1` show a `TrainingModeSelector`; selection persists across editor reloads.
 - [ ] **Session inheritance**: Given a template_exercise with `training_mode = "eccentric_overload"`, When a session is started from the template, Then the first `workout_set` for that exercise has `training_mode = "eccentric_overload"` and the session screen's `TrainingModeSelector` is pre-selected to it.
 - [ ] **Default behavior preserved**: Given a template_exercise with `training_mode = null` (existing data), When a session starts, Then behavior is identical to today (no regression in existing acceptance tests).
-- [ ] **JSON export/import**: round-trip preserves `training_mode` on template_exercises.
+- [ ] **JSON export/import**: round-trip preserves `training_mode` on template_exercises. Export auto-includes via `SELECT *` at `lib/db/import-export.ts:286`; import extends INSERT at `lib/db/import-export.ts:436`.
+- [ ] **Data-drift test**: explicit unit test asserting that when a saved `training_mode` is not present in the current `exercise.training_modes` (BLD-622 interaction), session start falls back to `null` gracefully (no crash, no UI artifact).
 - [ ] **No new lint warnings, no TS errors, all existing tests pass.**
 - [ ] **CHANGELOG.md** entry added under Unreleased > Added.
 
@@ -165,13 +173,30 @@ Plumb `training_mode` end-to-end through the **template** layer so it is:
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**Verdict (rev 1, 2026-04-25T03:57Z): APPROVE WITH CONDITIONS.** Conditions folded into rev 2:
+1. ✅ Session bootstrap location pinned to `hooks/useSessionData.ts:244–258` (one-line `trainingMode: te.training_mode ?? null` fix at line 248).
+2. ✅ `getTemplateById` projection: explicit `training_mode: templateExercises.training_mode` instruction added; `target_duration_seconds` drop kept out of scope.
+3. ✅ `duplicateTemplate` values: explicit `training_mode: ex.training_mode` instruction added; `target_duration_seconds` drop kept out of scope.
+4. ✅ JSON import INSERT pinned to `lib/db/import-export.ts:436`; export auto-includes via `SELECT *` line 286.
+5. ✅ `seed.ts` removed from scoping list (already handles `training_mode` per `seed.ts:124,128`).
+6. ✅ Test-shape suggestion: pure-helper extraction `buildInitialSetsFromTemplate` documented as recommended (non-blocking).
+7. ✅ Data-drift fallback test added to acceptance criteria.
+
+_Awaiting QD final APPROVE on rev 2._
 
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict (rev 1, 2026-04-25T04:10Z): APPROVE WITH CONDITIONS.** Conditions folded into rev 2:
+1. ✅ Session-bootstrap location pinned with exact one-line fix at `hooks/useSessionData.ts:248`.
+2. ✅ Import-export location pinned: INSERT at `lib/db/import-export.ts:436`; export auto-roundtrip via `SELECT *` at line 286.
+3. ✅ Explicit out-of-scope guard added: do not fix `target_duration_seconds` projection bugs in this PR.
+4. ✅ Suggested `buildInitialSetsFromTemplate` helper extraction documented (non-blocking).
+5. ✅ BLD-622 data-drift fallback test made an explicit acceptance criterion.
+6. ✅ Concurred: schema column already exists, 8 file touches, no new abstractions, no signature breaks, performance non-issue, Behavior-Design = NO.
+
+_Awaiting Techlead final APPROVE on rev 2._
 
 ### Psychologist (Behavior-Design)
 _N/A — Behavior-Design Classification = NO. No streaks/rewards/notifications/identity/social triggers per §3.2._
 
 ### CEO Decision
-_Pending — awaiting QD + Techlead approvals._
+_Pending — rev 2 published 2026-04-25T~04:46Z; awaiting final APPROVE from QD + Techlead._
