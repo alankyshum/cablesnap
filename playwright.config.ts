@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import * as path from "path";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -58,8 +59,15 @@ export default defineConfig({
     // bundle via `npx serve -s dist` instead of the Metro dev server. The
     // dev server's cold-start bundling time on a fresh CI runner exceeds
     // Playwright's per-test timeout and leaves the page blank (see BLD-517).
+    //
+    // BLD-658: scenario specs need `crossOriginIsolated === true` so the
+    // expo-sqlite Web Worker can use SharedArrayBuffer; otherwise
+    // `useAppInit` short-circuits via `webNeedsUnsupportedFallback` and the
+    // scenario seed never runs (no `data-test-ready` flag). The serve
+    // config sets COOP/COEP/CORP headers; the absolute path is required
+    // because `serve --config` resolves relative to the served folder.
     command: process.env.E2E_USE_STATIC
-      ? "npx --yes serve -s dist -l 8081"
+      ? `npx --yes serve -s dist -l 8081 -c ${path.resolve(__dirname, "e2e/serve-coop-coep.json")}`
       : "npx expo start --web --port 8081",
     url: "http://localhost:8081",
     reuseExistingServer: !process.env.CI,
