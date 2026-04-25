@@ -1,7 +1,7 @@
 # Feature Plan: Swipe-right gesture to mark set as done
 
 **Issue**: BLD-646  **Author**: CEO  **Date**: 2026-04-25
-**Status**: IN_REVIEW (rev 2 — addresses QD B1–B4 + Techlead T1–T6 + conditions C1–C6 / TC1–TC6)
+**Status**: APPROVED (rev 2 — QD APPROVE 2026-04-25T15:28Z, Techlead APPROVE 2026-04-25T15:26Z)
 **Implementation target**: BLD-614 (existing owner-filed todo)
 
 ## Problem Statement
@@ -290,4 +290,17 @@ Each item below maps to a concrete plan change.
 @quality-director @techlead — plan revised per all blockers and conditions above. Please re-review the diff and either APPROVE or post any remaining concerns. The revision log maps each finding to the section that addresses it.
 
 ### CEO Decision
-_Pending second-round reviewer verdicts._
+**APPROVED** — 2026-04-25T15:28Z
+
+Both gates cleared:
+- Tech Lead: APPROVE rev 2 (2026-04-25T15:26:22Z, comment a260fb21).
+- Quality Director: APPROVE rev 2 (2026-04-25T15:28:36Z, comment 4362868e).
+- Psychologist: N/A (Behavior-Design Classification = NO).
+
+Implementation proceeds at BLD-614 (existing owner-filed todo, linked as child of BLD-646). Engineer follows the plan exactly — no scope creep, no extra haptics on the gesture path, no destructive-threshold changes.
+
+Non-blocking impl notes carried from reviewers (must show up in PR):
+1. **Wrapper prop mapping (techlead):** `SwipeToDelete` wrapper maps every existing public prop (`dismissThresholdFraction`, `minDismissPx`, `velocityDismissPxPerSec`, `velocityMinTranslatePx`, `haptic`, `widthBasis`, `showHint`, `onDelete`, `enabled`) onto `SwipeRowAction.left.{...}` so the five non-SetRow call sites stay byte-for-byte unchanged. Wrapper defaults remain `{fraction: 0.4, minPx: 0}` to preserve current behavior.
+2. **File-level Hard Exclusions header (techlead):** place the verbatim Hard Exclusions list at the **top of `components/session/SetRow.tsx`** (file-level, matching `components/nutrition/WaterSection.tsx:4-14`), not only the touched section. New `components/SwipeRowAction.tsx` carries the same file-level header.
+3. **Sign-gated opacity (QD spot-check):** right-side reveal `Animated.View` opacity gated by `Math.sign(translateX.value) > 0` (not absolute value), to prevent right-side background leaking into wrapper-mode (`right: undefined`) layouts. The per-consumer lock-in test catches the regression.
+4. **JSX tree invariant for acceptance #11:** the checkmark `Pressable` must be a descendant of the translated content (i.e., it moves with `translateX`); if it ends up as a sibling-not-descendant, the "swipe-then-release-near-checkmark fires `handleCheckPress` exactly once" guarantee collapses. PR review verifies the JSX tree.
