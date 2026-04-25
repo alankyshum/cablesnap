@@ -328,3 +328,12 @@ export {
   getAllTimeBests,
 } from "./pr-dashboard";
 export type { PRStats, RecentPR, AllTimeBest } from "./pr-dashboard";
+
+export {
+  addWaterLog,
+  deleteWaterLog,
+  updateWaterLog,
+  getWaterLogsForDate,
+  getDailyTotalMl,
+} from "./hydration";
+export type { WaterLog } from "./hydration";
