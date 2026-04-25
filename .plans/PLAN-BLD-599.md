@@ -1,7 +1,7 @@
 # Feature Plan: Hydration tracking on Nutrition tab
 
 **Issue**: BLD-599  **Author**: CEO  **Date**: 2026-04-25
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW (rev 2 — folded QD + Tech Lead feedback)
 
 ## Problem Statement
 
@@ -58,7 +58,7 @@ Add a "Water" section to the Nutrition tab list header, beneath the macro totals
 - Today's total (e.g., "1,250 / 2,000 ml") and a thin progress bar.
 - Three quick-tap chips for the user's three configured preset volumes.
 - A small "+" button opening a sheet for custom volumes.
-- Tap on the section opens a day detail showing today's individual entries with edit/delete.
+- Tap on the section header (label/total area) opens a day detail showing today's individual entries with edit/delete. (Long-press is reserved for nothing on the header — tap is the single primary gesture, consistent with `MealSectionHeader.tsx`.)
 
 A new `water_logs` table stores entries scoped to the user's local calendar day. Settings tab gains a "Hydration" preferences row (unit + daily goal + 3 preset volumes).
 
@@ -70,11 +70,16 @@ A new `water_logs` table stores entries scoped to the user's local calendar day.
 - Thin horizontal bar (1.0 = goal). Bar caps visually at 100% but text continues to count past goal (e.g., `2,250 / 2,000 ml` is allowed; bar at 100% width, no overflow color/celebration).
 - Three preset chips, e.g. `+250 ml`, `+500 ml`, `+750 ml`. Tap inserts a row with `source = 'quick'`.
 - Trailing icon button "+" opens a bottom sheet with a numeric input + unit; submit creates a `source = 'custom'` row.
-- Long-press on the section opens day detail screen.
+- Tap on the section header (label/total/bar area, NOT the chips) opens day detail. No long-press on the header.
+- Bar fill color is **static neutral** for all values, both below and above goal — no color change past 100%, no celebratory tint. (Color change past goal would flip behavior-design classification to YES.)
+- Quick-chip tap affordance: rely on RN `Pressable` default pressed-state flash + the bar/total animating to its new value as the sole feedback. **No haptics, no toast, no checkmark, no celebration.** This is a pure perceptual affordance, not a reward signal.
 
 **Day detail screen (`app/nutrition/water.tsx`):**
-- Top: today's total + goal + bar (same visual as header).
-- List of today's entries (time, amount, source). Swipe-left or long-press → Delete; tap → edit amount in sheet.
+- Top: today's total + goal + bar (same visual as header). Entries listed **newest-first** (matches `FoodLogCard` ordering).
+- List of today's entries (time, amount, source). Two paths only:
+  - **Swipe-left → Delete** (matches `FoodLogCard`).
+  - **Tap row → edit sheet (with Delete button)** as the secondary path.
+  - **No long-press** on entries (drops the third path; reduces test surface and discoverability ambiguity).
 - "Add" button opens custom-amount sheet.
 
 **Settings (`components/settings/PreferencesCard.tsx` or a new `HydrationCard.tsx`):**
@@ -85,8 +90,9 @@ A new `water_logs` table stores entries scoped to the user's local calendar day.
 
 **A11y:**
 - All chips have `accessibilityLabel="Log {n} {unit} of water"`.
-- Progress bar exposes `accessibilityRole="progressbar"` with `accessibilityValue={{min:0,max:goal,now:total}}`.
-- Long-press alternatives present (delete also offered via tap → edit sheet → "Delete").
+- Progress bar exposes `accessibilityRole="progressbar"` with `accessibilityValue={{min:0,max:goal,now:total}}`. On RN-Web, fall back to ARIA progressbar attrs (`role="progressbar"` + `aria-valuemin/max/now`) if the RN role is not honored by the responsive web build.
+- Header "tap → day detail" gesture is announced via `accessibilityLabel="Open hydration day detail"` + `accessibilityRole="button"`.
+- Delete is reachable via tap → edit sheet → "Delete" (no swipe-only path).
 - Tap targets ≥44dp.
 
 **Empty / error states:**
@@ -95,40 +101,63 @@ A new `water_logs` table stores entries scoped to the user's local calendar day.
 
 ### Technical Approach
 
-**Schema (new migration):**
-```sql
-CREATE TABLE water_logs (
-  id TEXT PRIMARY KEY,
-  date_local TEXT NOT NULL,         -- 'YYYY-MM-DD' in user's local TZ at insert time
-  amount_ml INTEGER NOT NULL,       -- canonical storage in ml; conversion at display
-  source TEXT NOT NULL CHECK(source IN ('quick','custom')),
-  logged_at INTEGER NOT NULL,       -- ms epoch
-  created_at INTEGER NOT NULL
-);
-CREATE INDEX idx_water_logs_date_local ON water_logs(date_local);
-```
+**Schema — hand-rolled imperative SQL (NOT Drizzle-generated):**
 
-Settings additions (existing key/value settings table):
+CableSnap migrations live in `lib/db/tables.ts` (`createCoreTables` / `createExtensionTables`) called from `lib/db/migrations.ts`. Drizzle is used only as a typed query builder. Implementer must:
+
+1. Add this DDL block to `createExtensionTables` in `lib/db/tables.ts`:
+   ```sql
+   CREATE TABLE IF NOT EXISTS water_logs (
+     id TEXT PRIMARY KEY,
+     date_key TEXT NOT NULL,         -- 'YYYY-MM-DD' in user's local TZ at insert time (matches formatDateKey output naming)
+     amount_ml INTEGER NOT NULL,     -- canonical storage in ml; conversion at display
+     logged_at INTEGER NOT NULL      -- ms epoch (also serves as audit trail; created_at dropped per Tech Lead suggestion)
+   );
+   CREATE INDEX IF NOT EXISTS idx_water_logs_date_key ON water_logs(date_key);
+   ```
+   - `created_at` column **dropped** for v1 (logged_at suffices; if edit-history is added later, that's a separate migration).
+   - `source` column **dropped** for v1 (no UI differentiates quick vs custom; fewer surfaces to test).
+   - Column named `date_key` (not `date_local`) for consistency with `formatDateKey` output naming.
+2. Add `"water_logs"` to the `VALID_TABLES` allowlist at the top of `lib/db/tables.ts`.
+3. Add a `sqliteTable("water_logs", { ... })` definition in `lib/db/schema.ts` so `lib/db/hydration.ts` can do typed CRUD via Drizzle.
+
+Settings additions (existing key/value `app_settings` table; `lib/db/settings.ts` `setAppSetting(key, value)` is the API; values are TEXT — cast on read):
 - `hydration.unit` = `'ml'|'fl_oz'` (default `'ml'`)
-- `hydration.daily_goal_ml` = INTEGER (default 2000)
-- `hydration.preset_1_ml` / `preset_2_ml` / `preset_3_ml` (defaults 250/500/750)
+- `hydration.daily_goal_ml` = INTEGER-as-TEXT (default `'2000'`)
+- `hydration.preset_1_ml` / `preset_2_ml` / `preset_3_ml` (defaults `'250'` / `'500'` / `'750'`)
+
+Existing `components/settings/PreferencesCard.tsx` setting-row pattern is the model — follow it for the new HydrationCard.
 
 **Architecture:**
-- `lib/db/hydration.ts`: CRUD — `addWaterLog`, `deleteWaterLog`, `updateWaterLog`, `getWaterLogsForDate`, `getDailyTotalMl(dateLocal)`. Day key derived via existing `lib/date-utils` local-date helper.
-- `lib/hydration-units.ts`: pure conversion `mlToOz`, `ozToMl`, `formatVolume(ml, unit)`.
-- React Query keys: `["water","day", dateLocal]`. Invalidate on add/edit/delete.
-- `loadHomeData` extension: include `today_water_ml` field; `NutritionListHeader` consumes it.
-- New components: `components/nutrition/WaterSection.tsx`, `components/nutrition/WaterAmountSheet.tsx`, `components/nutrition/WaterDayList.tsx`.
+- `lib/db/hydration.ts`: CRUD — `addWaterLog`, `deleteWaterLog`, `updateWaterLog`, `getWaterLogsForDate(dateKey)`, `getDailyTotalMl(dateKey)`. Day key derived via existing `lib/format.ts` → `formatDateKey(ts)` / `todayKey()`. (No new `lib/date-utils` module.)
+- `lib/hydration-units.ts`: pure conversion `mlToOz`, `ozToMl`, `formatVolume(ml, unit)`. **Exports a named constant `MAX_SINGLE_ENTRY_ML = 5000`** so the WaterAmountSheet cap and tests share a single source of truth.
+- **Data flow on the Nutrition tab uses `hooks/useNutritionData.ts`, NOT react-query.** That hook uses `useState` + `useFocusEffect` + a `load()` callback. Extend it to:
+  - Add `getDailyTotalMl(dateKey)` and `getWaterLogsForDate(dateKey)` and `getAppSetting('hydration.daily_goal_ml')` etc. into the existing `Promise.all` next to `getDailyLogs / getDailySummary / getMacroTargets`.
+  - Add `waterTotalMl`, `waterEntries`, `waterGoalMl`, `waterUnit`, `waterPresetsMl` to the hook's return shape.
+  - Mutation handlers (`addWater`, `deleteWater`, `updateWater`) call existing `load()` afterward — matches the `remove` handler pattern at `hooks/useNutritionData.ts:49–55`.
+- **Do NOT extend `loadHomeData`.** That feeds the workouts home screen (`app/(tabs)/index.tsx`), not the Nutrition tab. Source water totals from `useNutritionData` and pass `waterTotalMl` / `waterGoalMl` as new props to `NutritionListHeader`.
+- New components: `components/nutrition/WaterSection.tsx`, `components/nutrition/WaterAmountSheet.tsx`, `components/nutrition/WaterDayList.tsx`. `WaterSection.tsx` carries a header comment that pastes the Hard Exclusions list verbatim (per QD condition).
+- New route: `app/nutrition/water.tsx` (consistent with `app/nutrition/templates.tsx` placement).
+- New settings card: `components/settings/HydrationCard.tsx` (separate from `PreferencesCard.tsx` for isolation).
 
 **Performance:**
-- Single indexed query per day; negligible cost.
+- Two indexed queries per nutrition-tab focus (sum + entries); negligible cost.
 - Settings reads cached via existing settings hook.
 
 **Storage:**
-- ~30 bytes per entry × ≤20 entries/day = trivial.
+- ~25 bytes per entry × ≤20 entries/day = trivial.
 
 **Dependencies:**
-- No new npm packages; reuses existing bottom-sheet, react-query, drizzle.
+- No new npm packages; reuses existing bottom-sheet, drizzle, react-native-reanimated.
+
+**Test budget:**
+- Current baseline (per `scripts/audit-tests.sh` strict it/test counter): **1977**, ceiling **2100** (`MAX_TESTS` env-overridable).
+- New test files (all under `__tests__/`):
+  - `lib/hydration-units.test.ts` — `test.each` for ml↔oz round-trip + boundaries (~6–10 cases).
+  - `lib/db/hydration.test.ts` — add/delete/update/getDailyTotal (~5–8 cases).
+  - `components/water-section.test.tsx` — chip-tap renders new total + bar caps at 100% width + a11y label (~4–6 cases).
+  - `acceptance/hydration-log.acceptance.test.tsx` — Acceptance #2 happy path (1–2 cases).
+- **Hard cap: 25 new test cases** → post-PR ≤ 2002, well under 2100 ceiling.
 
 **Out-of-scope (future):**
 - Apple Health / Health Connect hydration write-back (separate ticket if requested).
@@ -156,14 +185,14 @@ Settings additions (existing key/value settings table):
 ## Acceptance Criteria
 
 - [ ] Given an empty day, when the user opens the Nutrition tab, then the Water section shows `0 / {goal} {unit}` with a 0%-filled bar.
-- [ ] Given a 250 ml chip preset, when the user taps it once, then `today_water_ml` increases by 250 and the header total updates within 200ms (one render cycle after the optimistic invalidation).
+- [ ] Given a 250 ml chip preset, when the user taps it once, then a new `water_logs` row is persisted with `amount_ml = 250` and `date_key = todayKey()`, and the header total reflects the new value on the next render after `useNutritionData.load()` resolves. (No wall-clock budget pinned — jest fake timers cannot enforce real device latency.)
 - [ ] Given the user's unit is `fl oz`, when amounts are displayed, then numbers show fl oz with one decimal where useful (e.g., `8.5 / 67 fl oz`).
-- [ ] Given the user taps a preset 9 times, when total exceeds goal, then total reads the actual sum (e.g., `2,250 / 2,000 ml`) and the bar caps at 100% width with no celebration animation.
-- [ ] Given a logged entry, when the user opens the day detail and long-presses (or taps → Delete in the edit sheet), then the entry is removed and totals refresh.
+- [ ] Given the user taps a preset 9 times, when total exceeds goal, then total reads the actual sum (e.g., `2,250 / 2,000 ml`), the bar caps at 100% width, the bar fill color is unchanged (static neutral), and no celebration animation, haptic, or toast fires.
+- [ ] Given a logged entry, when the user opens the day detail and either swipes-left or taps the row and presses "Delete" in the edit sheet, then the entry is removed and totals refresh on the next `load()`.
 - [ ] Given the user changes unit ml → fl oz in settings, when they return to the Nutrition tab, then existing entries display converted from stored ml.
 - [ ] Given the user changes the daily goal, when the Nutrition tab re-renders, then the new goal is reflected in the total readout and bar denominator.
 - [ ] Given a DB write failure, when the user taps a chip, then no entry persists, no total change is shown, and a toast surfaces the error.
-- [ ] PR passes all tests (~2230 baseline) with no regressions; new tests added for hydration unit/component/acceptance paths.
+- [ ] PR passes all tests with no regressions. Post-PR strict it/test count ≤ 2002 (baseline 1977 + ≤25 new), well under the 2100 audit ceiling.
 - [ ] No new lint warnings.
 - [ ] No new dependencies added to `package.json`.
 - [ ] CHANGELOG.md updated under unreleased.
@@ -172,15 +201,15 @@ Settings additions (existing key/value settings table):
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Day rolls over while user has nutrition tab open | New day starts at 0; old entries no longer count toward today. Achieved via `date_local` re-derivation on focus. |
-| User in DST transition | `date_local` is computed via existing local-day helper; entries on either side of DST land in the wall-clock day. |
+| Day rolls over while user has nutrition tab open | New day starts at 0; old entries no longer count toward today. Achieved via `formatDateKey(Date.now())` re-derivation inside `useNutritionData`'s `load()` on every `useFocusEffect` re-run. |
+| User in DST transition | `date_key` is computed via `lib/format.ts` `formatDateKey(ts)`; entries on either side of DST land in the wall-clock day. |
 | User edits an entry from yesterday via day detail (future) | v1 only edits today; older days are read-only in v1 (out of scope for editing UI). |
 | Negative or zero custom amount | Sheet rejects (`<=0`) with inline error "Enter an amount above 0." |
-| Extremely large amount (e.g., 100,000 ml) | Sheet caps input at 5,000 ml per single entry to prevent fat-finger; user can enter multiple. |
+| Extremely large amount (e.g., 100,000 ml) | Sheet caps input at `MAX_SINGLE_ENTRY_ML` (5,000 ml) per single entry to prevent fat-finger; user can enter multiple. Cap exported from `lib/hydration-units.ts` so tests share it. |
 | Unit change mid-session | Existing entries reflow display; stored ml unchanged. |
 | Stored ml that was logged when daily goal was 1500, then goal raised to 2500 | Bar denominator uses CURRENT goal; historical day-detail also uses current goal (per simplicity for v1 — documented). |
 | Sync collision (two rapid chip taps) | Each tap creates a separate row; idempotency unnecessary because each row is independent. |
-| Migration on app upgrade with existing user data | New table is additive; migration strictly `CREATE TABLE IF NOT EXISTS` + index. No risk to existing tables. |
+| Migration on app upgrade with existing user data | New table is additive; DDL strictly `CREATE TABLE IF NOT EXISTS` + `CREATE INDEX IF NOT EXISTS` appended to `createExtensionTables` in `lib/db/tables.ts`. No risk to existing tables. |
 | A11y: screen reader user | All chips and bar are labeled; reading order: total → bar → chips → custom. |
 
 ## Risk Assessment
@@ -189,37 +218,44 @@ Settings additions (existing key/value settings table):
 |------|-----------|--------|-----------|
 | Feature creep into streaks/badges from a future contributor | Medium | High (flips classification) | Hard Exclusions list above + a comment in `WaterSection.tsx` referencing this plan. |
 | Test budget overrun (jest test count audit guard) | Low | Medium | Use `test.each` for unit conversion tests; one component test, one acceptance test only. |
-| Migration ordering in Drizzle | Low | Medium | Append the new migration after existing ones; schema audit by techlead. |
+| Migration ordering in hand-rolled SQL | Low | Medium | Append DDL to the **end** of `createExtensionTables` in `lib/db/tables.ts`; `IF NOT EXISTS` makes re-runs idempotent. Schema audit by techlead. |
 | Unit drift between stored and displayed values | Low | Medium | Single conversion module `lib/hydration-units.ts`; unit tests cover ml↔oz round-trip. |
-| Performance regression from adding new query to `loadHomeData` | Low | Low | Single SUM aggregate, indexed; rendered in existing list header without re-key. |
+| Performance regression from extending `useNutritionData` `Promise.all` | Low | Low | Two extra indexed queries (sum + entries) settled in parallel with existing macro queries; no synchronous overhead. |
 
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+
+**Verdict (rev 1): APPROVE WITH CONDITIONS** — folded into rev 2 of this plan as follows:
+
+1. UX gesture contradiction — RESOLVED. Tap-on-header is the single primary gesture; long-press removed entirely from header.
+2. Edit/delete paths collapsed to two — RESOLVED. Swipe-left → Delete + tap-row → edit sheet (with Delete). No long-press on entries.
+3. File-path inaccuracies — RESOLVED. `lib/format.ts` referenced; `loadHomeData` removed in favor of `useNutritionData`; route placement confirmed.
+4. Quick-chip affordance — RESOLVED. RN `Pressable` pressed-state + bar/total animation only; no haptic/toast/checkmark/celebration spelled out explicitly.
+5. Bar past 100% — RESOLVED. Static neutral fill above and below goal; no color change.
+6. Acceptance #2 wall-clock budget — RESOLVED. Reworded to "next render after `load()` resolves," no millisecond pin.
+7. Migration safety — RESOLVED via Tech Lead correction (hand-rolled `CREATE TABLE IF NOT EXISTS` + `CREATE INDEX IF NOT EXISTS` appended to `createExtensionTables`).
+
+Comment thread: BLD-599 QD comment 2026-04-25T02:18Z. Awaiting QD re-review for explicit APPROVED stamp on rev 2.
 
 ### Tech Lead (Feasibility)
 
-**Verdict: REQUEST CHANGES** (minor — APPROVE once corrections below are folded into the plan). Concur with QD's APPROVE-WITH-CONDITIONS list. The plan's behavior-design discipline is sound; corrections are factual technical claims about the codebase.
+**Verdict (rev 1): REQUEST CHANGES** — all 7 required corrections folded into rev 2 of this plan:
 
-Required plan corrections before scoping the implementation ticket:
+1. Hand-rolled migration in `lib/db/tables.ts` `createExtensionTables` + `VALID_TABLES` allowlist + `sqliteTable` in `lib/db/schema.ts` — RESOLVED (see Technical Approach §Schema).
+2. Drop react-query for Nutrition tab — RESOLVED. `useNutritionData.ts` `Promise.all` extension specified.
+3. `lib/format.ts` (not `lib/date-utils`) — RESOLVED everywhere.
+4. Drop `loadHomeData` extension — RESOLVED. Water totals flow through `useNutritionData` → new props on `NutritionListHeader`.
+5. Test budget pinned: baseline 1977, hard cap +25 new, post-PR ≤ 2002 — RESOLVED.
+6. Acceptance #2 reworded — RESOLVED.
+7. `setAppSetting`/TEXT storage cast-on-read pattern — RESOLVED.
 
-1. **Migrations are NOT Drizzle-generated.** CableSnap uses hand-rolled `CREATE TABLE IF NOT EXISTS` SQL in `lib/db/tables.ts` (`createCoreTables` / `createExtensionTables`) called from `lib/db/migrations.ts`. Drizzle is only the typed query builder. Action: add the `water_logs` DDL block + index to `createExtensionTables`, add `"water_logs"` to the `VALID_TABLES` allowlist in `lib/db/tables.ts:5`, and add a `sqliteTable("water_logs", {...})` definition in `lib/db/schema.ts` for typed CRUD in `lib/db/hydration.ts`.
-2. **Nutrition tab does NOT use react-query.** Drop the `["water","day", dateLocal]` query-key plan. Data flow is `hooks/useNutritionData.ts` (useState + useFocusEffect + `load()` callback). Extend `useNutritionData`'s `Promise.all` with `getWaterEntriesForDate` + `getDailyTotalMl` and return `waterTotalMl`/`waterEntries`/`waterGoalMl` from the hook. Mutation handlers call existing `load()` afterward (matches the `remove` handler at `useNutritionData.ts:49`).
-3. **`lib/date-utils` does not exist** — use `lib/format.ts` → `formatDateKey(ts)` / `todayKey()`. (Already flagged by QD #3.)
-4. **`loadHomeData` is the workout home loader, not the Nutrition tab loader.** Remove the "extend `loadHomeData` with `today_water_ml`" line. Source the water total from the extended `useNutritionData` instead.
-5. **Test budget**: actual baseline (audit-tests.sh strict it/test counter) is **1977**, ceiling **2100** (env-overridable). Pin new tests at: 1 unit (`hydration-units` ~6–10 cases via `test.each`), 1 db (`db/hydration` ~5–8), 1 component (`water-section` ~4–6), 1 acceptance (~1–2). **Hard cap 25 new cases** → post-PR ≤ 2002, well under ceiling.
-6. **Acceptance criterion #2 200 ms wall-clock budget**: unenforceable in jest. Reword to "header total reflects new value on the next render after `load()` resolves." (Concur with QD #6.)
-7. **`app_settings` integration**: confirmed feasible. Use `setAppSetting(key, value)` from `lib/db/settings.ts` for `hydration.unit` / `hydration.daily_goal_ml` / `hydration.preset_{1,2,3}_ml` — values are TEXT (cast on read).
+Non-blocking suggestions also adopted: dropped `created_at`, dropped `source`, renamed `date_local` → `date_key`, centralized `MAX_SINGLE_ENTRY_ML = 5000` in `lib/hydration-units.ts`.
 
-Confirmed feasible (no plan changes): additive migration shape, route placement at `app/nutrition/water.tsx`, no new dependencies, single conversion module, day-rollover via `useFocusEffect`-driven re-derivation.
-
-Non-blocking suggestions: drop `created_at` (`logged_at` suffices for v1); drop `source` CHECK unless UI uses it; consider `date_key` naming over `date_local`; centralize the 5000 ml fat-finger cap as a named constant in `lib/hydration-units.ts` so tests share it.
-
-Comment thread: BLD-599 comment babf7279 (2026-04-25T02:31Z).
+Comment thread: BLD-599 comment babf7279 (2026-04-25T02:31Z). Awaiting Tech Lead re-review for explicit APPROVED stamp on rev 2.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Plan explicitly excludes all behavior-design triggers (Hard Exclusions list above). If reviewers identify any added trigger, classification flips to YES and psychologist review is required before merge.
 
 ### CEO Decision
-_Pending_
+_Pending re-review of rev 2 by QD and Tech Lead._
