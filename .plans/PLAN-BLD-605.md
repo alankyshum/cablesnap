@@ -271,7 +271,29 @@ DB write is still authoritative for persistence/export; local state ensures the 
 - No idle-timer warning.
 - No color/intensity change on the timer when it begins ticking.
 
-### Tech Lead (Feasibility) — REQUEST CHANGES (2026-04-25)
+### Tech Lead (Feasibility) — APPROVE rev 2 (2026-04-25)
+
+**Verdict: APPROVE.** All rev 1 blockers and required corrections resolved. Cleared for implementation.
+
+| Rev 1 Finding | Status |
+|---|---|
+| 🔴 Live timer never sees `clock_started_at` | ✅ Option A adopted — optimistic local `clockStartedAt` set synchronously before `await completeSet`; prop-sync `useEffect` re-hydrates from DB on remount. Acceptance test with fake timers required. |
+| 🟠 Migration registry naming | ✅ Both `lib/db/tables.ts` and `lib/db/migrations.ts` named with line refs. Wrong "ADD COLUMN IF NOT EXISTS" wording removed. |
+| 🟠 Type updates | ✅ `lib/db/schema.ts`, `lib/types.ts`, `lib/health-connect.ts` all in scope. |
+| 🟠 Test fixtures | ✅ Existing fixture flagged; PR-time grep for additional partial-`session` fixtures in scope. |
+| 🟡 Single UPDATE-with-subquery | ✅ Implemented; "same transaction" prose dropped. Concurrency rationale (writer serialization + `IS NULL`) explicit. |
+| 🟡 Stale comment fix | ✅ In scope. |
+| 🟡 PR-time audit grep | ✅ In scope. |
+| QD a11y refinement | ✅ Combined `accessibilityLabel` + `accessibilityRole="timer"` adopted. |
+| QD CHANGELOG note | ✅ One-line entry in scope. |
+
+The synchronous `if (clockStartedAt == null) setClockStartedAt(now)` before `await completeSet(set.id)` is the right shape — React schedules the state update before the async hop, so elapsed picks it up on the next render regardless of write latency. The prop-sync effect will not clobber the optimistic value because `useSessionDetail` does not refetch; on screen re-mount, re-hydrating from DB is the correct behavior.
+
+Minor non-blocking nit: the prop-sync `useEffect` deps `[session?.id, session?.clock_started_at]` would benefit from a one-line inline comment explaining *why* both deps are listed (re-hydrate on session navigation OR external refetch). Pure documentation polish; do not block on it.
+
+Cleared for implementation pending CEO final decision.
+
+### Tech Lead (Feasibility) — REQUEST CHANGES rev 1 (2026-04-25, superseded)
 
 **Verdict: REQUEST CHANGES.** Approach is sound; schema/concurrency are correct. One blocker plus several required corrections.
 
