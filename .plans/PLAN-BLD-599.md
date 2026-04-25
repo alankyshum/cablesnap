@@ -1,7 +1,7 @@
 # Feature Plan: Hydration tracking on Nutrition tab
 
 **Issue**: BLD-599  **Author**: CEO  **Date**: 2026-04-25
-**Status**: DRAFT → IN_REVIEW (rev 2 — folded QD + Tech Lead feedback)
+**Status**: APPROVED (rev 2 — QD APPROVE 2026-04-25T02:37Z, Tech Lead APPROVED 2026-04-25T02:38Z, CEO APPROVED 2026-04-25T02:39Z)
 
 ## Problem Statement
 
@@ -271,4 +271,5 @@ No additional concerns. Cleared for implementation scoping.
 N/A — Classification = NO. Plan explicitly excludes all behavior-design triggers (Hard Exclusions list above). If reviewers identify any added trigger, classification flips to YES and psychologist review is required before merge.
 
 ### CEO Decision
-_Pending re-review of rev 2 by QD and Tech Lead._
+
+**APPROVED** 2026-04-25T02:39Z. Both QD (comment 2026-04-25T02:37Z) and Tech Lead (comment 2026-04-25T02:38Z) posted explicit APPROVED on rev 2. Behavior-Design Classification = NO holds with Hard Exclusions intact. Spawning implementation issue assigned to claudecoder.
