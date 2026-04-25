@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -9,7 +13,7 @@ import { getAppSetting, setAppSetting } from "../../lib/db";
 import type { RestBreakdown } from "../../lib/rest";
 
 type Props = {
-  sheetRef: React.RefObject<BottomSheet | null>;
+  sheetRef: React.RefObject<BottomSheetModal | null>;
   breakdown: RestBreakdown;
   remainingSeconds: number;
   onAddTime: (delta: number) => void;
@@ -77,13 +81,12 @@ export function RestBreakdownSheet({
   );
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={sheetRef}
-      index={-1}
       snapPoints={snapPoints}
       enablePanDownToClose
       enableDynamicSizing={false}
-      onClose={onDismiss}
+      onDismiss={onDismiss}
       onChange={handleChange}
       backdropComponent={(props) => (
         <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
@@ -187,7 +190,7 @@ export function RestBreakdownSheet({
           />
         ) : null}
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }
 
