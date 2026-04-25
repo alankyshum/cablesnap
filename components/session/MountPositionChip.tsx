@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { fontSizes } from "@/constants/design-tokens";
 import { MOUNT_POSITION_LABELS, type MountPosition } from "../../lib/types";
 
 export type MountPositionChipProps = {
@@ -15,8 +16,8 @@ export type MountPositionChipProps = {
  * Uses `!mount` truthiness gate so DB-loaded `null` is treated identically to
  * `undefined`.
  *
- * Visual: rounded pill, surfaceVariant background, 11pt onSurfaceVariant text,
- * 4dp/8dp padding. Target height ≤20dp at 360dp+.
+ * Visual: rounded pill, surfaceVariant background, fontSizes.xs (12pt)
+ * onSurfaceVariant text, 4dp/8dp padding. Target height ≤20dp at 360dp+.
  *
  * Wrapper carries `flexShrink: 0` and a small marginLeft so the title column
  * compresses before the chip; parent `headerRow1` uses `flexWrap: "wrap"` so
@@ -50,8 +51,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   label: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: fontSizes.xs,
+    lineHeight: 16,
     fontWeight: "600",
   },
 });
