@@ -25,6 +25,7 @@ export {
   removeExerciseFromTemplate,
   reorderTemplateExercises,
   updateTemplateExercise,
+  updateTemplateExerciseTrainingMode,
   getTemplateExerciseCount,
   getTemplateExerciseCounts,
   getTemplatePrimaryMuscles,
@@ -33,6 +34,7 @@ export {
   addToExerciseLink,
   unlinkSingleExercise,
   updateLinkLabel,
+  buildInitialSetsFromTemplate,
 } from "./templates";
 
 export {

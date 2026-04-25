@@ -22,6 +22,10 @@ marker) at release time.
 
 ## Unreleased
 
+### Added
+- Workout templates now remember the training mode you pick per Voltra exercise; sessions started from the template open in the saved mode automatically.
+
+### Removed
 - Removed the **Eccentric** training mode chip and tempo tracking. Existing eccentric sets in your history are preserved as standard sets; other Voltra modes (Band, Damper, Isokinetic, Isometric, Custom, Rowing) are unchanged.
 
 ## v0.26.8 — 2026-04-24

@@ -105,6 +105,7 @@ export function createTemplateExercise(overrides: Partial<TemplateExercise> = {}
     link_id: null,
     link_label: '',
     target_duration_seconds: null,
+    training_mode: null,
     ...overrides,
   }
 }

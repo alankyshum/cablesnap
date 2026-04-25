@@ -201,6 +201,7 @@ export type TemplateExercise = {
   link_id: string | null;
   link_label: string;
   target_duration_seconds: number | null;
+  training_mode: TrainingMode | null;
   exercise?: Exercise;
 };
 
