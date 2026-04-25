@@ -39,7 +39,6 @@ export type Attachment =
 
 export type TrainingMode =
   | "weight"
-  | "eccentric_overload"
   | "band"
   | "damper"
   | "isokinetic"
@@ -230,7 +229,6 @@ export type WorkoutSet = {
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {
   weight: { label: "Standard", short: "STD", description: "Normal cable weight resistance — standard lifting" },
-  eccentric_overload: { label: "Eccentric", short: "ECC", description: "Heavier resistance on the lowering phase for muscle growth" },
   band: { label: "Band", short: "BND", description: "Resistance band attached for variable tension" },
   damper: { label: "Damper", short: "DMP", description: "Damper provides smooth, constant resistance" },
   isokinetic: { label: "Isokinetic", short: "ISO", description: "Machine controls speed — constant velocity throughout" },

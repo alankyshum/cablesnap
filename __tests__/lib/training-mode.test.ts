@@ -4,7 +4,7 @@ import { createSet } from '../helpers/factories'
 
 describe('TrainingMode types and labels', () => {
   const ALL_MODES: TrainingMode[] = [
-    'weight', 'eccentric_overload', 'band', 'damper',
+    'weight', 'band', 'damper',
     'isokinetic', 'isometric', 'custom_curves', 'rowing',
   ]
 
@@ -23,6 +23,12 @@ describe('TrainingMode types and labels', () => {
     }
   })
 
+  it('eccentric_overload mode has been removed (BLD-622)', () => {
+    expect(ALL_MODES).not.toContain('eccentric_overload' as TrainingMode)
+    // @ts-expect-error — eccentric_overload no longer in TrainingMode union
+    expect(TRAINING_MODE_LABELS['eccentric_overload']).toBeUndefined()
+  })
+
   it('WorkoutSet factory defaults training_mode and tempo to null', () => {
     const set = createSet()
     expect(set.training_mode).toBeNull()
@@ -30,8 +36,8 @@ describe('TrainingMode types and labels', () => {
   })
 
   it('WorkoutSet can be created with training_mode', () => {
-    const set = createSet({ training_mode: 'eccentric_overload', tempo: '3-1-5-1' })
-    expect(set.training_mode).toBe('eccentric_overload')
+    const set = createSet({ training_mode: 'band', tempo: '3-1-5-1' })
+    expect(set.training_mode).toBe('band')
     expect(set.tempo).toBe('3-1-5-1')
   })
 

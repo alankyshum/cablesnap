@@ -20,6 +20,10 @@ The `<!-- versionCode: N -->` marker is optional but required for F-Droid
 sidecar emission. The `publish-release` skill prepends a new section (with
 marker) at release time.
 
+## Unreleased
+
+- Removed the **Eccentric** training mode chip and tempo tracking. Existing eccentric sets in your history are preserved as standard sets; other Voltra modes (Band, Damper, Isokinetic, Isometric, Custom, Rowing) are unchanged.
+
 ## v0.26.8 — 2026-04-24
 <!-- versionCode: 57 -->
 - Set-completion now confirms with a subtle haptic + audio cue — toggle separately from timer sounds in Settings → Preferences.

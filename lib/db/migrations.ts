@@ -76,6 +76,21 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
 
+  // BLD-622: Eccentric training mode removed entirely. Sanitize legacy values.
+  // - workout_sets.training_mode='eccentric_overload' → NULL (treated as standard set)
+  // - template_exercises.training_mode='eccentric_overload' → NULL
+  // - exercises.training_modes JSON array: drop "eccentric_overload" entry
+  await database.execAsync(`
+    UPDATE workout_sets SET training_mode = NULL WHERE training_mode = 'eccentric_overload';
+    UPDATE template_exercises SET training_mode = NULL WHERE training_mode = 'eccentric_overload';
+    UPDATE exercises
+      SET training_modes = REPLACE(REPLACE(REPLACE(training_modes,
+        '"eccentric_overload",', ''),
+        ',"eccentric_overload"', ''),
+        '"eccentric_overload"', '')
+      WHERE training_modes LIKE '%eccentric_overload%';
+  `);
+
   // Phase 66: strength goals table
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS strength_goals (

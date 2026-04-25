@@ -69,7 +69,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to high mount on rack.\n2. Stand facing the Voltra, arms extended overhead.\n3. Pull cable down and back toward hips in a sweeping arc.\n4. Engage core to stabilize throughout the pull.\n5. Return to start with controlled tempo.",
       mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "One-arm Chest Fly with Rotation",
@@ -80,7 +80,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand sideways to the Voltra, arm extended to the side.\n3. Sweep arm across body while rotating torso.\n4. Focus on oblique engagement through the rotation.\n5. Return slowly, resisting the cable pull.",
       mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band", "eccentric_overload"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "One-arm Chest Press with Rotational Lunge",
@@ -102,7 +102,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand with back to Voltra, staggered stance.\n3. Press cable forward with one arm.\n4. Rotate spine through the press for full range of motion.\n5. Return slowly, controlling the rotation.",
       mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Squat with Rotational Force",
@@ -137,7 +137,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Stand facing the Voltra, arm at your side.\n3. Curl the handle upward, keeping elbow pinned to your side.\n4. Squeeze bicep at the top of the movement.\n5. Lower slowly with control.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band", "isokinetic"],
+      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Biceps Curls",
@@ -148,7 +148,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to floor mount.\n2. Stand upright, gripping handle with underhand grip.\n3. Curl the cable up toward your shoulder.\n4. Keep upper arm stationary throughout.\n5. Lower with a controlled eccentric phase.",
       mount_position: "floor",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Hammer Curl",
@@ -159,7 +159,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach rope to low mount on rack.\n2. Stand facing the Voltra, neutral grip on rope.\n3. Curl upward with thumbs pointing to the ceiling.\n4. Keep elbows close to your body.\n5. Lower slowly to full extension.",
       mount_position: "low",
       attachment: "rope",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "High Pulley Overhead Triceps Extension",
@@ -170,7 +170,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach rope to high mount on rack.\n2. Face away from Voltra, lean slightly forward.\n3. Extend arms overhead, straightening elbows.\n4. Squeeze triceps at full extension.\n5. Return slowly behind head, feeling the stretch.",
       mount_position: "high",
       attachment: "rope",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Lying Triceps Extension",
@@ -181,7 +181,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Lie supine with head toward the Voltra.\n3. Grip handle overhead with arms extended.\n4. Bend elbows to lower handle behind head.\n5. Extend arms back to start, squeezing triceps.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Seated One-arm Concentration Curl",
@@ -192,7 +192,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Sit on a bench, brace elbow against inner thigh.\n3. Curl cable upward with strict form.\n4. Squeeze at the top, then lower with control.\n5. Complete all reps before switching arms.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Single-arm Biceps Curls",
@@ -203,7 +203,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Stand sideways to Voltra, gripping handle in far hand.\n3. Curl handle up toward shoulder.\n4. Maintain upright posture, no swinging.\n5. Lower slowly and repeat.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Triceps Push-down",
@@ -214,7 +214,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach bar to high mount on rack.\n2. Stand facing the Voltra, grip bar with overhand grip.\n3. Push bar down by extending elbows.\n4. Keep upper arms pinned to your sides.\n5. Return slowly to start position.",
       mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "eccentric_overload", "band", "isokinetic"],
+      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Wrist Curl",
@@ -238,7 +238,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach bar to high mount on rack.\n2. Sit or kneel below the Voltra.\n3. Grip bar wide, pull down to upper chest.\n4. Squeeze shoulder blades together at the bottom.\n5. Return bar overhead with controlled tempo.",
       mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "eccentric_overload", "band", "isokinetic"],
+      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Close Grip Lat Pull-down",
@@ -249,7 +249,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach bar to high mount on rack.\n2. Sit or kneel below the Voltra.\n3. Grip bar with narrow, neutral grip.\n4. Pull down to upper chest, elbows driving back.\n5. Return to start with control, feeling the lat stretch.",
       mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Seated Cable Row",
@@ -260,7 +260,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Sit on floor or bench facing the Voltra.\n3. Pull handles toward your torso, squeezing shoulder blades.\n4. Keep chest up and back straight.\n5. Extend arms forward slowly to return.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band", "rowing"],
+      training_modes: ["weight", "band", "rowing"],
     }),
     voltra({
       name: "Single-arm Lat Pull-down",
@@ -271,7 +271,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to high mount on rack.\n2. Kneel or sit below the Voltra.\n3. Pull handle down with one arm to shoulder level.\n4. Focus on lat contraction, elbow driving down.\n5. Return with control and switch arms.",
       mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Single-arm Row on Bench",
@@ -282,7 +282,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Place one knee and hand on bench for support.\n3. Row cable upward, pulling elbow past your torso.\n4. Squeeze at the top, then lower slowly.\n5. Complete all reps before switching sides.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Spinal Extension",
@@ -304,7 +304,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Stand upright holding handle at sides.\n3. Shrug shoulders straight up toward ears.\n4. Hold briefly at the top, squeezing traps.\n5. Lower shoulders slowly and repeat.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Straight Arm Lat Pull-down",
@@ -315,7 +315,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach bar to high mount on rack.\n2. Stand facing the Voltra, arms extended overhead.\n3. Pull bar down in an arc to thighs, keeping arms straight.\n4. Squeeze lats hard at the bottom.\n5. Return to start position with control.",
       mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Supinated Seated Cable Row",
@@ -326,7 +326,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Sit facing the Voltra, palms facing up.\n3. Pull handle toward lower chest with supinated grip.\n4. Squeeze shoulder blades, emphasizing lower lats.\n5. Extend arms slowly to return.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band", "rowing"],
+      training_modes: ["weight", "band", "rowing"],
     }),
 
     // ── Chest (9) ────────────────────────────────────────────
@@ -339,7 +339,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Lie on bench positioned next to the Voltra.\n3. With slight elbow bend, sweep arm across body.\n4. Squeeze chest at the top of the movement.\n5. Lower slowly, feeling the chest stretch.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Crossover Fly",
@@ -350,7 +350,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to high mount on rack.\n2. Stand with back to Voltra, staggered stance.\n3. Bring arms together in front of chest in a hugging motion.\n4. Squeeze chest at the midline.\n5. Return slowly, arms out to sides.",
       mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Decline Flys",
@@ -361,7 +361,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to high mount on rack.\n2. Stand facing away, hands at shoulder height.\n3. Press arms downward and together in a sweeping arc.\n4. Focus on lower chest contraction.\n5. Return to start with control.",
       mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Incline Chest Press",
@@ -372,7 +372,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Sit on incline bench facing away from Voltra.\n3. Press cables upward and forward at incline angle.\n4. Squeeze chest at full extension.\n5. Lower slowly to chest level.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "One-arm Upper Chest Fly",
@@ -383,7 +383,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Stand sideways to Voltra, cable arm low.\n3. Sweep arm upward and across, targeting upper chest.\n4. Squeeze at the top of the arc.\n5. Return slowly and complete all reps before switching.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Single-arm Chest Press",
@@ -394,7 +394,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand with back to Voltra, staggered stance.\n3. Press cable forward with one arm at chest height.\n4. Extend fully, squeezing the chest.\n5. Return slowly and switch arms after set.",
       mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Standing Chest Press (Bar)",
@@ -405,7 +405,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach bar to mid mount on rack.\n2. Stand with back to Voltra, grip bar at chest width.\n3. Press bar forward until arms fully extend.\n4. Keep core braced for stability.\n5. Return to chest level with control.",
       mount_position: "mid",
       attachment: "bar",
-      training_modes: ["weight", "eccentric_overload", "band", "isokinetic"],
+      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Standing Chest Press (Handle)",
@@ -416,7 +416,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand with back to Voltra, handle at chest.\n3. Press handle forward in a straight line.\n4. Squeeze chest at full extension.\n5. Return handle to chest with controlled tempo.",
       mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Standing Decline Chest Fly",
@@ -427,7 +427,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to high mount on rack.\n2. Stand facing away from Voltra.\n3. With slight elbow bend, bring arms downward and together.\n4. Focus on lower chest squeeze at the bottom.\n5. Return to start position slowly.",
       mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
 
     // ── Legs & Glutes (9) ────────────────────────────────────
@@ -451,7 +451,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach bar to floor mount.\n2. Stand over the cable, feet hip-width.\n3. Hinge at hips, grip bar with straight arms.\n4. Drive through heels, extending hips to standing.\n5. Lower with control, pushing hips back.",
       mount_position: "floor",
       attachment: "bar",
-      training_modes: ["weight", "eccentric_overload", "band", "isokinetic"],
+      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Goblet Squat",
@@ -618,7 +618,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach bar to low mount on rack.\n2. Stand facing the Voltra, grip bar shoulder-width.\n3. Pull bar up along your body to chin height.\n4. Lead with elbows, keeping bar close to body.\n5. Lower to full arm extension with control.",
       mount_position: "low",
       attachment: "bar",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Upright Shoulder External Rotation",
@@ -642,7 +642,7 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach handle to low mount on rack.\n2. Stand with back to Voltra, handle at shoulder height.\n3. Press cable overhead until arms are fully extended.\n4. Keep core braced and avoid arching the lower back.\n5. Lower slowly to shoulder level with control.",
       mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "eccentric_overload", "band"],
+      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Kneeling Cable Crunch",
