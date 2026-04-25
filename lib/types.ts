@@ -210,6 +210,14 @@ export type WorkoutSession = {
   template_id: string | null;
   name: string;
   started_at: number;
+  /**
+   * BLD-630: timestamp at which the session's elapsed clock should start
+   * counting. Set to `Date.now()` the first time any set in the session is
+   * marked complete; `NULL` for legacy/unanchored rows (readers fall back to
+   * `started_at`). Once set, never rolled back — even if all sets are
+   * subsequently uncompleted.
+   */
+  clock_started_at: number | null;
   completed_at: number | null;
   duration_seconds: number | null;
   notes: string;

@@ -540,7 +540,8 @@ async function uploadActivity(
   const weightUnit = bodySettings.weight_unit as "kg" | "lb";
 
   const description = buildActivityDescription(sets, weightUnit);
-  const startDate = new Date(session.started_at).toISOString();
+  // BLD-630: anchor Strava activity start to first-completed-set.
+  const startDate = new Date(session.clock_started_at ?? session.started_at).toISOString();
   const elapsedTime = session.duration_seconds ?? 0;
 
   const response = await fetch(`${STRAVA_API_BASE}/activities`, {

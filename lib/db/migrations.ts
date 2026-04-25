@@ -81,6 +81,9 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // workout_sessions table
   await addColumnIfMissing(database, "workout_sessions", "program_day_id", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sessions", "rating", "INTEGER DEFAULT NULL");
+  // BLD-630: anchor session elapsed clock to first completed set.
+  // NULL = legacy/unanchored — readers fall back to started_at.
+  await addColumnIfMissing(database, "workout_sessions", "clock_started_at", "INTEGER");
 
   // workout_sets table
   await addColumnIfMissing(database, "workout_sets", "rpe", "REAL DEFAULT NULL");

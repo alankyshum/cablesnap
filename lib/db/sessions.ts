@@ -146,6 +146,9 @@ export async function startSession(
     template_id: templateId,
     name,
     started_at: now,
+    // BLD-630: not yet anchored — readers fall back to started_at until the
+    // first set in this session is completed.
+    clock_started_at: null,
     completed_at: null,
     duration_seconds: null,
     notes: "",
@@ -159,11 +162,17 @@ export async function completeSession(
 ): Promise<void> {
   const now = Date.now();
   const db = await getDrizzle();
-  const session = await db.select({ started_at: workoutSessions.started_at })
+  const session = await db.select({
+      started_at: workoutSessions.started_at,
+      clock_started_at: workoutSessions.clock_started_at,
+    })
     .from(workoutSessions)
     .where(eq(workoutSessions.id, id))
     .get();
-  const duration = session ? Math.floor((now - session.started_at) / 1000) : 0;
+  // BLD-630: duration is anchored to first-completed-set when available;
+  // fall back to started_at for legacy rows / sessions with no completed sets.
+  const anchor = session ? (session.clock_started_at ?? session.started_at) : 0;
+  const duration = session ? Math.floor((now - anchor) / 1000) : 0;
   await db.update(workoutSessions)
     .set({ completed_at: now, duration_seconds: duration, notes: notes ?? "" })
     .where(eq(workoutSessions.id, id));

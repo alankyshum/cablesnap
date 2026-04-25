@@ -91,6 +91,7 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       template_id TEXT,
       name TEXT NOT NULL,
       started_at INTEGER NOT NULL,
+      clock_started_at INTEGER DEFAULT NULL,
       completed_at INTEGER,
       duration_seconds INTEGER,
       notes TEXT DEFAULT '',

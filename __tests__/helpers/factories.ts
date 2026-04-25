@@ -116,6 +116,7 @@ export function createSession(overrides: Partial<WorkoutSession> = {}): WorkoutS
     template_id: null,
     name: 'Morning Workout',
     started_at: Date.now(),
+    clock_started_at: null,
     completed_at: null,
     duration_seconds: null,
     notes: '',

@@ -60,6 +60,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   template_id: text("template_id"),
   name: text("name").notNull(),
   started_at: integer("started_at").notNull(),
+  clock_started_at: integer("clock_started_at"),
   completed_at: integer("completed_at"),
   duration_seconds: integer("duration_seconds"),
   notes: text("notes").default(""),

@@ -111,7 +111,7 @@ export default function ActiveSession() {
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
 
   const {
-    elapsed, exerciseNotesOpen, exerciseNotesDraft, halfStep, nextHint, hintTimer,
+    elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, halfStep, nextHint, hintTimer,
     handleUpdate, handleCheck, handleAddSet, handleModeChange, handleRPE,
     handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleDelete,
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
@@ -297,6 +297,7 @@ export default function ActiveSession() {
             <SessionHeaderToolbar
               rest={rest}
               elapsed={elapsed}
+              clockStarted={clockStartedAt != null}
               estimatedDuration={estimatedDuration}
               breakdown={breakdown}
               onStartRest={handleToolboxStartRest}

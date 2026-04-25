@@ -26,6 +26,9 @@ marker) at release time.
 - Hydration tracking — log water in ml or fl oz from the Nutrition tab; configurable daily goal and preset volumes in Settings.
 - Workout templates now remember the training mode you pick per Voltra exercise; sessions started from the template open in the saved mode automatically.
 
+### Changed
+- Workout duration now starts when you log your first completed set, not the moment you tap Start (BLD-630).
+
 ### Removed
 - Removed the **Eccentric** training mode chip and tempo tracking. Existing eccentric sets in your history are preserved as standard sets; other Voltra modes (Band, Damper, Isokinetic, Isometric, Custom, Rowing) are unchanged.
 

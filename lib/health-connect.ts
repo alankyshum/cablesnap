@@ -111,6 +111,9 @@ export async function openHealthConnectSettings(): Promise<void> {
 
 interface SessionData {
   started_at: number;
+  /** BLD-630: when set, used as the canonical session start instead of
+   * `started_at` (which marks row creation, often inflated by pre-set idle). */
+  clock_started_at: number | null;
   completed_at: number | null;
   name: string | null;
 }
@@ -124,7 +127,7 @@ function buildExerciseSessionRecord(
   session: SessionData,
   completedSets: SetData[]
 ) {
-  const sessionStartMs = session.started_at;
+  const sessionStartMs = session.clock_started_at ?? session.started_at;
   const sessionEndMs = session.completed_at ?? Date.now();
 
   const exerciseMap = new Map<string, { startTime: string; endTime: string }>();

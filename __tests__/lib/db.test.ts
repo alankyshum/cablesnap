@@ -64,6 +64,9 @@ const mockDrizzleDb = {
   insert: jest.fn(() => createChainableInsert()),
   update: jest.fn(() => createChainableUpdate()),
   delete: jest.fn(() => createChainableDelete()),
+  // BLD-630: completeSet now issues a raw `db.run(sql`...`)` to anchor
+  // workout_sessions.clock_started_at on first set completion.
+  run: jest.fn(() => Promise.resolve()),
 };
 
 jest.mock("drizzle-orm/expo-sqlite", () => ({
@@ -464,6 +467,9 @@ describe("sets CRUD", () => {
     jest.spyOn(Date, "now").mockReturnValue(9000);
     await db.completeSet("set1");
     expect(mockDrizzleDb.update).toHaveBeenCalled();
+    // BLD-630: completeSet must also fire the session-anchor UPDATE so the
+    // elapsed clock starts on first set completion.
+    expect(mockDrizzleDb.run).toHaveBeenCalled();
     jest.restoreAllMocks();
   });
 
