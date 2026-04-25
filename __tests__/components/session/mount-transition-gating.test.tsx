@@ -313,22 +313,24 @@ describe("BLD-596 — real-render integration: swap/move recomputes hints", () =
   });
 });
 
-// Reviewer blocker #2 — Pixel 4a 393dp Δheight ≤ 1dp regression. jest-rntl
-// has no real layout engine (no Yoga in JSDOM), so we model the row height
-// by walking the rendered tree's StyleSheet props and computing each child's
-// intrinsic height analytically, then synthesize the result through real
-// `onLayout` events fired with `fireEvent` so the test exercises the same
-// Layout-event plumbing the production code uses.
+// Reviewer blocker #2 (round 3) — assert the FULL `GroupCardHeader` container
+// height delta, not just `headerRow1`. jest-rntl has no real layout engine
+// (no Yoga in the JSDOM test runner), so we resolve heights analytically by
+// walking the rendered StyleSheet tree end-to-end, then drive each variant's
+// real `onLayout` listener with the computed value so the layout-event
+// pipeline is exercised exactly as production wires it.
 //
 // Algorithm:
-//   1. Render `<GroupCardHeader>` twice — once with `mount_position: "high"`
-//      and once with `mount_position: null` — each wrapped in a parent View
-//      with a width=393 fixed constraint and an `onLayout` listener.
-//   2. Walk each rendered tree, locate the `headerRow1` View, compute its
-//      intrinsic height as `max(child.intrinsicHeight)` (since `flexDirection
-//      === "row"` && `alignItems === "center"`).
-//   3. Fire `onLayout` on the wrapper with the computed height.
-//   4. Assert that the captured height delta is ≤ 1dp.
+//   1. Render `<GroupCardHeader>` twice (mount=high vs mount=null) inside a
+//      wrapper View with width=393 and an `onLayout` listener.
+//   2. Locate the entire `headerWrap` node (the `<View>` returned at the top
+//      of `GroupCardHeader.tsx`) — NOT just `headerRow1`.
+//   3. Compute its full intrinsic height: column layout sums row1 + row2 +
+//      `gap` + paddings + `marginBottom`. Each row's intrinsic height is
+//      `max(child.height)` because they are `flexDirection: row` +
+//      `alignItems: center`.
+//   4. Fire `onLayout` with the computed height; capture in the wrapper.
+//   5. Assert `|height(with chip) - height(without chip)| <= 1`.
 type RNNode = {
   type: string;
   props: { style?: unknown; children?: RNNode | RNNode[] | string };
@@ -352,42 +354,46 @@ function intrinsicHeight(node: RNNode | null | undefined): number {
   const explicitH = typeof style.height === "number" ? (style.height as number) : 0;
   const padTop = (style.paddingTop as number) ?? (style.paddingVertical as number) ?? 0;
   const padBot = (style.paddingBottom as number) ?? (style.paddingVertical as number) ?? 0;
+  const marginTop = (style.marginTop as number) ?? (style.marginVertical as number) ?? 0;
+  const marginBot = (style.marginBottom as number) ?? (style.marginVertical as number) ?? 0;
+  const gap = (style.gap as number) ?? (style.rowGap as number) ?? 0;
 
   const kids = (node.children ?? []) as (RNNode | string)[];
   if (node.type === "Text") {
-    // Text → lineHeight wins; else fontSize * 1.2; else 16dp default.
     const lh = (style.lineHeight as number) ?? ((style.fontSize as number) ?? 14) * 1.2;
-    return Math.max(lh + padTop + padBot, minH, explicitH);
+    return Math.max(lh + padTop + padBot, minH, explicitH) + marginTop + marginBot;
   }
   const childHeights = kids.map((k) =>
     typeof k === "string" ? 0 : intrinsicHeight(k),
   );
   const isRow = (style.flexDirection as string) === "row";
-  const inner = childHeights.length === 0 ? 0
-    : isRow ? Math.max(...childHeights) : childHeights.reduce((a, b) => a + b, 0);
-  return Math.max(inner + padTop + padBot, minH, explicitH);
+  let inner = 0;
+  if (childHeights.length > 0) {
+    if (isRow) {
+      inner = Math.max(...childHeights);
+    } else {
+      inner = childHeights.reduce((a, b) => a + b, 0)
+        + gap * Math.max(0, childHeights.length - 1);
+    }
+  }
+  return Math.max(inner + padTop + padBot, minH, explicitH) + marginTop + marginBot;
 }
 
-function findHeaderRow1(node: RNNode | null | undefined): RNNode | null {
+function findNodeByStyle(
+  node: RNNode | null | undefined,
+  match: (s: Record<string, unknown>) => boolean,
+): RNNode | null {
   if (!node || typeof node === "string") return null;
   const style = flattenStyle(node.props?.style);
-  // headerRow1 signature: row + flexWrap:wrap + gap:4 + alignItems:center
-  if (
-    style.flexDirection === "row" &&
-    style.flexWrap === "wrap" &&
-    style.alignItems === "center" &&
-    style.gap === 4
-  ) {
-    return node;
-  }
+  if (match(style)) return node;
   for (const k of (node.children ?? []) as (RNNode | string)[]) {
-    const found = typeof k === "string" ? null : findHeaderRow1(k);
+    const found = typeof k === "string" ? null : findNodeByStyle(k, match);
     if (found) return found;
   }
   return null;
 }
 
-describe("BLD-596 — chip insertion does not regress header height at 393dp (Pixel 4a)", () => {
+describe("BLD-596 — chip insertion does not regress full header height at 393dp (Pixel 4a)", () => {
   function renderVariant(mount: MountPosition | null) {
     let captured = 0;
     const result = render(
@@ -423,10 +429,15 @@ describe("BLD-596 — chip insertion does not regress header height at 393dp (Pi
       </View>,
     );
     const tree = result.toJSON() as unknown as RNNode;
-    const row1 = findHeaderRow1(tree);
-    const computed = intrinsicHeight(row1);
-    // Fire the real onLayout event so the wrapper's listener records it
-    // exactly as RN would in production.
+    // headerWrap signature: gap:4 + marginBottom:8 (no flexDirection → column).
+    const headerWrap = findNodeByStyle(
+      tree,
+      (s) => s.gap === 4 && s.marginBottom === 8 && s.flexDirection === undefined,
+    );
+    // Reviewer non-blocking suggestion — fail loudly on style drift instead of
+    // a vacuous pass when the signature changes.
+    expect(headerWrap).not.toBeNull();
+    const computed = intrinsicHeight(headerWrap);
     const wrapper = result.getByTestId("header-wrapper");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { fireEvent } = require("@testing-library/react-native");
@@ -436,7 +447,7 @@ describe("BLD-596 — chip insertion does not regress header height at 393dp (Pi
     return { captured: () => captured, computed, result };
   }
 
-  it("|height(with chip) - height(without chip)| ≤ 1dp at width=393", () => {
+  it("|fullHeader(with chip) - fullHeader(without chip)| ≤ 1dp at width=393", () => {
     const withChip = renderVariant("high");
     const noChip = renderVariant(null);
 
@@ -444,8 +455,16 @@ describe("BLD-596 — chip insertion does not regress header height at 393dp (Pi
     expect(withChip.result.queryByText("High")).not.toBeNull();
     expect(noChip.result.queryByText("High")).toBeNull();
 
-    // The onLayout-captured heights match the analytically computed ones,
-    // proving the layout-event pipeline works for both variants.
+    // Both heights are computed from the FULL `headerWrap` container so any
+    // future regression in row2, the wrapper, or new sub-rows is also caught.
+    // Sanity-bound: a full Voltra header at 393dp is ≥ 56dp (move buttons are
+    // 56dp tall by design tokens) and ≤ 200dp (no notes panel in this test).
+    expect(withChip.computed).toBeGreaterThanOrEqual(56);
+    expect(noChip.computed).toBeGreaterThanOrEqual(56);
+    expect(withChip.computed).toBeLessThanOrEqual(200);
+
+    // Captured layout values match the analytical heights — exercises the
+    // real `onLayout` callback chain end-to-end.
     expect(withChip.captured()).toBe(withChip.computed);
     expect(noChip.captured()).toBe(noChip.computed);
 
