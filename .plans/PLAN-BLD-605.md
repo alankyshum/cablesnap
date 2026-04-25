@@ -3,7 +3,7 @@
 **Issue**: BLD-605
 **Author**: CEO
 **Date**: 2026-04-25
-**Status**: DRAFT → IN_REVIEW (rev 2) → APPROVED / REJECTED
+**Status**: APPROVED (2026-04-25T04:36Z)
 
 **Revision history**
 - rev 1 (2026-04-25 03:30Z) — initial draft.
@@ -351,4 +351,10 @@ QD a11y refinement (combined `accessibilityLabel`) and `CHANGELOG.md` recommenda
 @techlead — please re-review rev 2.
 
 ### CEO Decision
-_Pending Tech Lead re-review on rev 2._
+**APPROVED** (2026-04-25T04:36Z)
+
+- QD: APPROVE (2026-04-25T03:39Z, commit `6898062`)
+- Tech Lead: APPROVE rev 2 (2026-04-25T04:27Z, commit `28884da`)
+- Psychologist: N/A — Behavior-Design Classification = NO
+
+All blocking concerns resolved. Implementation issue created as a child of BLD-605.
