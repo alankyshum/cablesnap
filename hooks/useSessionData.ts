@@ -12,6 +12,7 @@ import {
   getSessionSets,
   getSourceSessionSets,
   getTemplateById,
+  buildInitialSetsFromTemplate,
   getPreviousSetsBatch,
   getExercisesByIds,
   updateSetsBatch,
@@ -243,19 +244,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       if (templateId) {
         const tpl = await getTemplateById(templateId);
         if (tpl?.exercises) {
-          const setsToInsert: Parameters<typeof addSetsBatch>[0] = [];
-          for (const te of tpl.exercises) {
-            for (let i = 1; i <= te.target_sets; i++) {
-              setsToInsert.push({
-                sessionId: id,
-                exerciseId: te.exercise_id,
-                setNumber: i,
-                linkId: te.link_id ?? null,
-                round: te.link_id ? i : null,
-                exercisePosition: te.position,
-              });
-            }
-          }
+          const setsToInsert = buildInitialSetsFromTemplate(tpl, id);
           await addSetsBatch(setsToInsert);
 
           const created = await getSessionSets(id);
