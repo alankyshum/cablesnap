@@ -339,6 +339,15 @@ export type MealTemplateItem = {
   food?: FoodEntry;
 };
 
+// --------------- Hydration (BLD-600) ---------------
+
+export type WaterLog = {
+  id: string;
+  date_key: string;
+  amount_ml: number;
+  logged_at: number;
+};
+
 // --------------- Body Tracking ---------------
 
 export type BodyWeight = {

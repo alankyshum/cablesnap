@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react-native';
 import PreferencesCard from '../../components/settings/PreferencesCard';
+import HydrationCard from '../../components/settings/HydrationCard';
 import FrequencyGoalPicker from '../../components/settings/FrequencyGoalPicker';
 import IntegrationsCard from '../../components/settings/IntegrationsCard';
 import CSVExportCard from '../../components/settings/CSVExportCard';
@@ -126,6 +127,7 @@ export default function Settings() {
             setRestNotifications={setRestNotifications}
           />
         </PreferencesCard>
+        <HydrationCard colors={colors} toast={toast} />
         <IntegrationsCard
           colors={colors}
           toast={toast}

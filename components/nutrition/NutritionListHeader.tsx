@@ -4,7 +4,9 @@ import { Text } from '@/components/ui/text';
 import { Card, CardContent } from '@/components/ui/card';
 import type { MacroTargets } from '@/lib/types';
 import { todayKey, formatDateKey } from '@/lib/format';
+import type { HydrationUnit } from '@/lib/hydration-units';
 import { MacroRow } from './MacroRow';
+import { WaterSection } from './WaterSection';
 
 const DAY_MS = 86_400_000;
 
@@ -21,6 +23,10 @@ type Props = {
   date: Date;
   summary: { calories: number; protein: number; carbs: number; fat: number };
   targets: MacroTargets | null;
+  waterTotalMl: number;
+  waterGoalMl: number;
+  waterUnit: HydrationUnit;
+  waterPresetsMl: [number, number, number];
   colors: {
     primary: string;
     onSurface: string;
@@ -32,17 +38,25 @@ type Props = {
   onNext: () => void;
   onEditTargets: () => void;
   onMealTemplates: () => void;
+  onWaterPreset: (amountMl: number) => void;
+  onWaterCustom: () => void;
 };
 
 export function NutritionListHeader({
   date,
   summary,
   targets,
+  waterTotalMl,
+  waterGoalMl,
+  waterUnit,
+  waterPresetsMl,
   colors,
   onPrev,
   onNext,
   onEditTargets,
   onMealTemplates,
+  onWaterPreset,
+  onWaterCustom,
 }: Props) {
   return (
     <>
@@ -96,6 +110,15 @@ export function NutritionListHeader({
               target={targets.fat}
               unit="g"
               colors={colors}
+            />
+            <WaterSection
+              totalMl={waterTotalMl}
+              goalMl={waterGoalMl}
+              unit={waterUnit}
+              presetsMl={waterPresetsMl}
+              colors={colors}
+              onPresetPress={onWaterPreset}
+              onCustomPress={onWaterCustom}
             />
             <Text
               variant="caption"
