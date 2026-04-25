@@ -48,7 +48,31 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import type { LucideIcon } from "lucide-react-native";
+import type { ComponentType } from "react";
+import type { LucideProps } from "lucide-react-native";
+import { Button } from "@/components/ui/button";
 import { radii, duration as durationTokens } from "../constants/design-tokens";
+
+/**
+ * Optional interactive overlay rendered inside the revealed background.
+ *
+ * When defined for a direction, that side renders the project's `<Button>`
+ * primitive in place of the decorative icon. The reveal container becomes
+ * `pointerEvents="box-none"` (so the Button itself receives taps) and the
+ * a11y screen-hiding attributes are removed so screen readers (TalkBack /
+ * VoiceOver) can focus and activate the Button without any gesture.
+ *
+ * Restores parity with legacy `SwipeToDelete`'s interactive `<Button
+ * onPress={onDelete} accessibilityLabel="Delete">` overlay (origin/main
+ * `components/SwipeToDelete.tsx:163-172`) for the five non-SetRow
+ * consumers, while keeping `SetRow` decorative-only (single write path
+ * via `handleCheckPress`).
+ */
+export type RevealTapTarget = {
+  icon: ComponentType<LucideProps>;
+  label: string;
+  onPress: () => void;
+};
 
 export type SwipeDirectionConfig = {
   /**
@@ -89,6 +113,14 @@ export type SwipeDirectionConfig = {
   commitBehavior: "slide-out" | "snap-back";
   /** Commit notification. Fired in the JS thread via runOnJS. */
   callback: () => void;
+  /**
+   * Optional interactive Button overlay rendered inside this side's reveal.
+   * When defined, the reveal becomes `pointerEvents="box-none"` and the
+   * screen-hiding a11y attributes are removed so the Button is tappable
+   * (partial-swipe-then-tap path) and focusable by TalkBack/VoiceOver.
+   * Decorative-icon-only behavior is preserved when this is undefined.
+   */
+  revealTapTarget?: RevealTapTarget;
 };
 
 interface SwipeRowActionProps {
@@ -335,24 +367,39 @@ export default function SwipeRowAction({
 
   const LeftIcon = left?.icon;
   const RightIcon = right?.icon;
+  const leftTap = left?.revealTapTarget;
+  const rightTap = right?.revealTapTarget;
 
   return (
     <View style={styles.wrapper} onLayout={onLayout}>
       {leftEnabled ? (
         <Animated.View
-          pointerEvents="none"
+          pointerEvents={leftTap ? "box-none" : "none"}
           style={[
             styles.actionBackground,
             leftBgAlignment,
             { backgroundColor: left!.color },
             leftBgStyle,
           ]}
-          // Reveal background is decorative; semantics belong on the
-          // consumer's primary control. Avoid duplicate a11y nodes.
-          importantForAccessibility="no-hide-descendants"
-          accessibilityElementsHidden
+          // Reveal background is decorative when no tap target is provided;
+          // semantics belong on the consumer's primary control. When a
+          // revealTapTarget is provided (e.g. SwipeToDelete wrapper for
+          // non-SetRow consumers), the Button owns its own a11y semantics.
+          importantForAccessibility={leftTap ? "yes" : "no-hide-descendants"}
+          accessibilityElementsHidden={leftTap ? false : true}
         >
-          {LeftIcon ? (
+          {leftTap ? (
+            <View style={styles.actionContent} pointerEvents="box-none">
+              <Button
+                variant="ghost"
+                size="icon"
+                icon={leftTap.icon}
+                onPress={leftTap.onPress}
+                accessibilityLabel={leftTap.label}
+                accessibilityRole="button"
+              />
+            </View>
+          ) : LeftIcon ? (
             <View style={styles.actionContent}>
               <LeftIcon size={22} color="#ffffff" />
             </View>
@@ -361,17 +408,28 @@ export default function SwipeRowAction({
       ) : null}
       {rightEnabled ? (
         <Animated.View
-          pointerEvents="none"
+          pointerEvents={rightTap ? "box-none" : "none"}
           style={[
             styles.actionBackground,
             rightBgAlignment,
             { backgroundColor: right!.color },
             rightBgStyle,
           ]}
-          importantForAccessibility="no-hide-descendants"
-          accessibilityElementsHidden
+          importantForAccessibility={rightTap ? "yes" : "no-hide-descendants"}
+          accessibilityElementsHidden={rightTap ? false : true}
         >
-          {RightIcon ? (
+          {rightTap ? (
+            <View style={styles.actionContent} pointerEvents="box-none">
+              <Button
+                variant="ghost"
+                size="icon"
+                icon={rightTap.icon}
+                onPress={rightTap.onPress}
+                accessibilityLabel={rightTap.label}
+                accessibilityRole="button"
+              />
+            </View>
+          ) : RightIcon ? (
             <View style={styles.actionContent}>
               <RightIcon size={22} color="#ffffff" />
             </View>

@@ -75,6 +75,18 @@ export default function SwipeToDelete({
         haptic,
         commitBehavior: "slide-out",
         callback: onDelete,
+        // Restore legacy interactive Button overlay (origin/main
+        // SwipeToDelete.tsx:163-172) — preserves partial-swipe-then-tap
+        // path and screen-reader Delete-without-gesture path for the five
+        // non-SetRow consumers (FoodLogCard, MealTemplatesSheet,
+        // WaterDayList, TemplateExerciseRow, app/nutrition/templates).
+        // SetRow uses SwipeRowAction directly without revealTapTarget,
+        // keeping its single-write-path convergence through handleCheckPress.
+        revealTapTarget: {
+          icon: Trash2,
+          label: "Delete",
+          onPress: onDelete,
+        },
       }}
       right={undefined}
     >
