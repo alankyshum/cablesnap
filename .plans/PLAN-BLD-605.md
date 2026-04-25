@@ -184,8 +184,25 @@ When the user completes their first set, the existing query invalidation (`bumpQ
 
 ## Review Feedback
 
-### Quality Director (UX)
-_Pending_
+### Quality Director (UX) — APPROVE (2026-04-25)
+
+**Verdict: APPROVE** for behavior-design / UX / quality. One non-blocking a11y nit.
+
+- **BD Classification = NO**: ✅ Correct. Functional accuracy fix only; hard exclusions match BLD-572 / BLD-599 pattern (enumerated, scoped, with "flip to YES if added" warning). Recommend porting hard exclusions as a header comment on the primary changed component (`hooks/useSessionActions.ts` or `app/session/[id].tsx`) per the BLD-599 SKILL.
+- **Empty-state copy** "Starts when you log your first set": ✅ Neutral system-state explanation, no imperative or urgency. (UX-designer owns final copy polish; alternatives like "Begins when you log a set" are stylistic only.)
+- **A11y nit (non-blocking)**: Wrap timer + caption in a single `accessible View` with combined `accessibilityLabel="Workout timer, 0:00, starts when you log your first set"` and `accessibilityRole="timer"`. After `clock_started_at` is set, drop the caption portion: `accessibilityLabel="Workout timer, ${formatTime(elapsed)}"`. No live-region announcement on the transition (correctly excluded).
+- **Uncomplete-only-set edge case**: ✅ Keeping the clock running is the right call — toggling on rapid completed↔uncompleted would feel passive-aggressive (banned).
+- **Zero-set completion fallback to `started_at`**: ✅ Acceptable; preserves legacy behavior.
+- **Strava + HC anchor switch**: ✅ No user-visible regression. Legacy NULL rows keep `started_at`; new rows export the more-accurate `clock_started_at`. Re-export creates new activities (no destructive overwrite). Recommend one-line `CHANGELOG.md` note: "Workout duration now starts at your first completed set, not when you tap Start."
+- **Audit grep**: I confirmed UI consumers of `started_at` are all date-display / date-bucketing use cases (`RecentWorkoutsList`, `WorkoutCards`, `SummaryCard`, `ExerciseDrawerStats`, `app/exercise/[id].tsx`, `useHistoryData`, `app/session/summary/[id].tsx:63`) and correctly out of scope. No live-duration consumer outside the active session screen.
+
+**Hard Exclusions reaffirmed** (flip Classification to YES if any are added):
+- No "log a set!" reminder/toast/push.
+- No streak protection or "saved your streak" copy.
+- No celebratory animation on first-set completion.
+- No comparative copy ("you usually start within 2 min").
+- No idle-timer warning.
+- No color/intensity change on the timer when it begins ticking.
 
 ### Tech Lead (Feasibility)
 _Pending_
