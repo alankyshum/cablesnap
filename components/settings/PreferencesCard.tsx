@@ -28,9 +28,11 @@ export default function PreferencesCard({
 }: Props) {
   const [soundTooltipVisible, setSoundTooltipVisible] = useState(false);
 
-  // Intelligent Rest Timer (BLD-531) settings — default-on via `setting !== "false"`.
+  // Intelligent Rest Timer (BLD-531) settings — adaptive rest defaults ON
+  // (`!== "false"`). Breakdown chip defaults OFF (BLD-616) — explicit "true"
+  // required, so initial state is `false` to avoid a hydration flash.
   const [adaptiveRest, setAdaptiveRest] = useState(true);
-  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [restAfterWarmup, setRestAfterWarmup] = useState(false);
 
   // BLD-559: set-completion confirmation feedback — haptic default ON,
@@ -56,7 +58,7 @@ export default function PreferencesCard({
     ]).then(([adaptive, show, warmup, scHaptic, scAudio]) => {
       if (cancelled) return;
       setAdaptiveRest(adaptive !== "false");
-      setShowBreakdown(show !== "false");
+      setShowBreakdown(show === "true");
       setRestAfterWarmup(warmup === "true");
       setSetCompleteHapticState(scHaptic !== "false");
       setSetCompleteAudioState(scAudio === "true");
