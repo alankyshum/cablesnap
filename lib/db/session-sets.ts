@@ -2,6 +2,7 @@
 import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, TrainingMode, SetType } from "../types";
+import { coerceTrainingMode } from "../types";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
@@ -56,7 +57,7 @@ export async function getSessionSets(
     notes: r.notes ?? "",
     link_id: r.link_id ?? null,
     round: r.round ?? null,
-    training_mode: (r.training_mode as TrainingMode) ?? null,
+    training_mode: coerceTrainingMode(r.training_mode),
     tempo: r.tempo ?? null,
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
     set_type: (r.set_type as SetType) ?? "normal",
@@ -108,7 +109,7 @@ export async function getSourceSessionSets(
     weight: r.weight,
     reps: r.reps,
     link_id: r.link_id,
-    training_mode: r.training_mode,
+    training_mode: coerceTrainingMode(r.training_mode),
     tempo: r.tempo,
     exercise_exists: r.exercise_exists != null,
     set_type: (r.set_type as SetType) ?? "normal",

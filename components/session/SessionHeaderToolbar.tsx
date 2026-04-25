@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import BottomSheet from "@gorhom/bottom-sheet";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
@@ -68,14 +68,16 @@ function SessionHeaderToolbarInner({
   const [pickerVisible, setPickerVisible] = useState(false);
   const [showRestDone, setShowRestDone] = useState(false);
   // When the prop is supplied (harness / future lifted-state consumer), use it
-  // as the source of truth. Otherwise, fall back to the internal DB-read state
-  // initialized to `true` (matches pre-BLD-537 behavior).
-  const [showBreakdownChipState, setShowBreakdownChip] = useState(true);
+  // as the source of truth. Otherwise, fall back to the internal DB-read state.
+  // Initial value is `false` so the chip never flashes during the async
+  // `getAppSetting("rest_show_breakdown")` window for fresh installs (BLD-616
+  // — default OFF).
+  const [showBreakdownChipState, setShowBreakdownChip] = useState(false);
   const showBreakdownChip =
     showBreakdownChipProp !== undefined ? showBreakdownChipProp : showBreakdownChipState;
   const prevRestRef = useRef(0);
   const restDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const breakdownSheetRef = useRef<BottomSheet>(null);
+  const breakdownSheetRef = useRef<BottomSheetModal>(null);
 
   // Settings state for the picker modal
   const [vibrateSetting, setVibrateSetting] = useState(true);
@@ -116,7 +118,7 @@ function SessionHeaderToolbarInner({
   }, [onDismissRest]);
 
   const handleRestLongPress = useCallback(() => {
-    breakdownSheetRef.current?.snapToIndex(0);
+    breakdownSheetRef.current?.present();
   }, []);
 
   const handleBreakdownDismiss = useCallback(() => {
@@ -131,11 +133,11 @@ function SessionHeaderToolbarInner({
   }, [rest, onStartRest, onDismissRest]);
 
   const handleBreakdownCut = useCallback(() => {
-    breakdownSheetRef.current?.close();
+    breakdownSheetRef.current?.dismiss();
     onDismissRest();
   }, [onDismissRest]);
 
-  // Load rest_show_breakdown setting (default on via !== "false").
+  // Load rest_show_breakdown setting (default OFF — explicit "true" required).
   // Loaded once on mount — users toggle this in Settings before a session, so
   // re-reading per tick of `rest` is a waste (SQLite hit every second). If the
   // user flips the toggle mid-session, it will take effect on the next session.
@@ -147,7 +149,7 @@ function SessionHeaderToolbarInner({
     if (showBreakdownChipProp !== undefined) return;
     let cancelled = false;
     getAppSetting("rest_show_breakdown").then((v) => {
-      if (!cancelled) setShowBreakdownChip(v !== "false");
+      if (!cancelled) setShowBreakdownChip(v === "true");
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [showBreakdownChipProp]);
@@ -198,7 +200,7 @@ function SessionHeaderToolbarInner({
   }, []);
 
   const handleEditAdaptiveRules = useCallback(() => {
-    breakdownSheetRef.current?.close();
+    breakdownSheetRef.current?.dismiss();
     router.push("/(tabs)/settings");
   }, []);
 
@@ -229,6 +231,13 @@ function SessionHeaderToolbarInner({
               selected={false}
               onPress={handleRestLongPress}
               compact
+              icon={
+                <MaterialCommunityIcons
+                  name="information-outline"
+                  size={14}
+                  color={colors.onSurfaceVariant}
+                />
+              }
               accessibilityLabel={`Adaptive rest reason: ${chipLabel}. Tap to see breakdown.`}
               accessibilityRole="button"
             >

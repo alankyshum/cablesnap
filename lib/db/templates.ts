@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { eq, sql, and, inArray, asc, desc, isNull, count } from "drizzle-orm";
-import type { WorkoutTemplate, TemplateExercise, MuscleGroup } from "../types";
+import type { WorkoutTemplate, TemplateExercise, MuscleGroup, TrainingMode } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction } from "./helpers";
 import {
@@ -12,6 +12,69 @@ import {
   programs,
 } from "./schema";
 import { mapRow } from "./exercises";
+
+/**
+ * Normalize a persisted training_mode against the exercise's currently allowed
+ * modes. If the saved mode is no longer present in the exercise's `training_modes`
+ * (data drift, e.g. a removed/renamed mode), return null so callers fall back
+ * to the exercise default — never silently coerce to a different mode.
+ *
+ * Exported for unit-test coverage of the BLD-622 data-drift fallback.
+ */
+export function normalizeTemplateTrainingMode(
+  saved: string | null | undefined,
+  exerciseTrainingModesJson: string | null | undefined
+): TrainingMode | null {
+  if (!saved) return null;
+  if (!exerciseTrainingModesJson) return saved as TrainingMode;
+  try {
+    const allowed = JSON.parse(exerciseTrainingModesJson) as string[];
+    if (Array.isArray(allowed) && allowed.includes(saved)) {
+      return saved as TrainingMode;
+    }
+    return null;
+  } catch {
+    return saved as TrainingMode;
+  }
+}
+
+export type InitialSetSeed = {
+  sessionId: string;
+  exerciseId: string;
+  setNumber: number;
+  linkId: string | null;
+  round: number | null;
+  exercisePosition: number;
+  trainingMode: TrainingMode | null;
+};
+
+/**
+ * Pure helper: derive the initial workout_sets seed list for a brand-new
+ * session created from a template. Returns one entry per (template_exercise,
+ * set_number) pair, inheriting `training_mode` from each template_exercise.
+ *
+ * Pure / no IO so the BLD-621 inheritance rule is unit-testable in isolation.
+ */
+export function buildInitialSetsFromTemplate(
+  template: Pick<WorkoutTemplate, "exercises">,
+  sessionId: string
+): InitialSetSeed[] {
+  const out: InitialSetSeed[] = [];
+  for (const te of template.exercises ?? []) {
+    for (let i = 1; i <= te.target_sets; i++) {
+      out.push({
+        sessionId,
+        exerciseId: te.exercise_id,
+        setNumber: i,
+        linkId: te.link_id ?? null,
+        round: te.link_id ? i : null,
+        exercisePosition: te.position,
+        trainingMode: te.training_mode ?? null,
+      });
+    }
+  }
+  return out;
+}
 
 export async function createTemplate(name: string): Promise<WorkoutTemplate> {
   const id = uuid();
@@ -54,6 +117,7 @@ export async function getTemplateById(
       link_id: templateExercises.link_id,
       link_label: templateExercises.link_label,
       target_duration_seconds: templateExercises.target_duration_seconds,
+      training_mode: templateExercises.training_mode,
       exercise_name: exercises.name,
       exercise_category: exercises.category,
       exercise_primary_muscles: exercises.primary_muscles,
@@ -63,6 +127,10 @@ export async function getTemplateById(
       exercise_difficulty: exercises.difficulty,
       exercise_is_custom: exercises.is_custom,
       exercise_deleted_at: exercises.deleted_at,
+      exercise_mount_position: exercises.mount_position,
+      exercise_attachment: exercises.attachment,
+      exercise_training_modes: exercises.training_modes,
+      exercise_is_voltra: exercises.is_voltra,
     })
     .from(templateExercises)
     .leftJoin(exercises, eq(templateExercises.exercise_id, exercises.id))
@@ -80,6 +148,7 @@ export async function getTemplateById(
     link_id: r.link_id ?? null,
     link_label: r.link_label ?? "",
     target_duration_seconds: r.target_duration_seconds ?? null,
+    training_mode: normalizeTemplateTrainingMode(r.training_mode, r.exercise_training_modes),
     exercise: r.exercise_name
       ? mapRow({
           id: r.exercise_id,
@@ -92,10 +161,10 @@ export async function getTemplateById(
           difficulty: r.exercise_difficulty!,
           is_custom: r.exercise_is_custom!,
           deleted_at: r.exercise_deleted_at,
-          mount_position: null,
-          attachment: null,
-          training_modes: null,
-          is_voltra: null,
+          mount_position: r.exercise_mount_position,
+          attachment: r.exercise_attachment,
+          training_modes: r.exercise_training_modes,
+          is_voltra: r.exercise_is_voltra,
         })
       : undefined,
   }));
@@ -170,6 +239,7 @@ export async function duplicateTemplate(id: string): Promise<string> {
         rest_seconds: ex.rest_seconds,
         link_id: linkId,
         link_label: ex.link_label,
+        training_mode: ex.training_mode,
       });
     }
   });
@@ -254,7 +324,8 @@ export async function addExerciseToTemplate(
   position: number,
   targetSets = 3,
   targetReps = "8-12",
-  restSeconds = 90
+  restSeconds = 90,
+  trainingMode: TrainingMode | null = null
 ): Promise<TemplateExercise> {
   const id = uuid();
   const db = await getDrizzle();
@@ -266,6 +337,7 @@ export async function addExerciseToTemplate(
     target_sets: targetSets,
     target_reps: targetReps,
     rest_seconds: restSeconds,
+    training_mode: trainingMode,
   });
   await db.update(workoutTemplates)
     .set({ updated_at: Date.now() })
@@ -281,6 +353,7 @@ export async function addExerciseToTemplate(
     link_id: null,
     link_label: "",
     target_duration_seconds: null,
+    training_mode: trainingMode,
   };
 }
 
@@ -362,6 +435,24 @@ export async function updateTemplateExercise(
     await db
       .update(templateExercises)
       .set({ target_sets: targetSets, target_reps: targetReps, rest_seconds: restSeconds })
+      .where(eq(templateExercises.id, id));
+    await db
+      .update(workoutTemplates)
+      .set({ updated_at: Date.now() })
+      .where(eq(workoutTemplates.id, templateId));
+  });
+}
+
+export async function updateTemplateExerciseTrainingMode(
+  id: string,
+  templateId: string,
+  trainingMode: TrainingMode | null
+): Promise<void> {
+  const db = await getDrizzle();
+  await withTransaction(async () => {
+    await db
+      .update(templateExercises)
+      .set({ training_mode: trainingMode })
       .where(eq(templateExercises.id, id));
     await db
       .update(workoutTemplates)

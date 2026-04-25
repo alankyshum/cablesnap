@@ -8,6 +8,7 @@ import "react-native-reanimated";
 };
 
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -105,6 +106,7 @@ export default Sentry.wrap(function RootLayout() {
       <ThemePreferenceProvider>
       <BNAThemeProvider>
         <ToastProvider>
+          <BottomSheetModalProvider>
           <LayoutToastBridge />
           {!onboarded && !pathname.startsWith("/onboarding") && (
             <Redirect href="/onboarding/welcome" />
@@ -128,6 +130,7 @@ export default Sentry.wrap(function RootLayout() {
             ))}
           </Stack>
           <StatusBar style="auto" />
+          </BottomSheetModalProvider>
         </ToastProvider>
       </BNAThemeProvider>
       </ThemePreferenceProvider>

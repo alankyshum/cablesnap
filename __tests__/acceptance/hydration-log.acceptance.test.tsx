@@ -65,8 +65,14 @@ const mockAddWaterLog = jest.fn(async (dateKey: string, amount: number) => {
   return row;
 });
 
-const mockGetDailyTotalMl = jest.fn(async () => waterTotalMl);
-const mockGetWaterLogsForDate = jest.fn(async () => [...waterEntries]);
+const mockGetDailyTotalMl = jest.fn(async (dateKey: string) => {
+  void dateKey;
+  return waterTotalMl;
+});
+const mockGetWaterLogsForDate = jest.fn(async (dateKey: string) => {
+  void dateKey;
+  return [...waterEntries];
+});
 
 jest.mock('../../lib/db', () => ({
   getDailyLogs: jest.fn().mockResolvedValue([]),

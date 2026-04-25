@@ -555,3 +555,82 @@ describe("estimateExportSize", () => {
     expect(label).toBeTruthy();
   });
 });
+
+// ---- BLD-622: eccentric_overload removal hardening ----
+
+describe("importData — workout_sets training_mode coercion (BLD-622)", () => {
+  function captureWorkoutSetsInserts() {
+    const inserts: { sql: string; params: unknown[] }[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("INSERT OR IGNORE INTO workout_sets")) {
+        inserts.push({ sql, params: params ?? [] });
+      }
+      return { changes: 1 };
+    });
+    return inserts;
+  }
+
+  // SQL columns: id, session_id, exercise_id, set_number, weight, reps, completed,
+  //              completed_at, rpe, notes, link_id, round, training_mode, tempo,
+  //              set_type, duration_seconds, bodyweight_modifier_kg
+  // training_mode is the 13th param (index 12).
+  const TRAINING_MODE_PARAM_INDEX = 12;
+
+  const baseRow = (overrides: Record<string, unknown> = {}) => ({
+    id: "ws1",
+    session_id: "s1",
+    exercise_id: "e1",
+    set_number: 1,
+    weight: 100,
+    reps: 8,
+    completed: 1,
+    completed_at: 2,
+    ...overrides,
+  });
+
+  it("coerces legacy 'eccentric_overload' training_mode to null on import", async () => {
+    const inserts = captureWorkoutSetsInserts();
+    await importData({
+      version: 6,
+      data: {
+        workout_sets: [baseRow({ training_mode: "eccentric_overload" })],
+      },
+    });
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBeNull();
+  });
+
+  it("preserves valid training_mode values (e.g. 'damper') unchanged", async () => {
+    const inserts = captureWorkoutSetsInserts();
+    await importData({
+      version: 6,
+      data: {
+        workout_sets: [baseRow({ training_mode: "damper" })],
+      },
+    });
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBe("damper");
+  });
+
+  it("coerces unknown training_mode strings to null (defense-in-depth)", async () => {
+    const inserts = captureWorkoutSetsInserts();
+    await importData({
+      version: 6,
+      data: {
+        workout_sets: [baseRow({ training_mode: "totally_made_up" })],
+      },
+    });
+    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBeNull();
+  });
+
+  it("preserves null training_mode as null", async () => {
+    const inserts = captureWorkoutSetsInserts();
+    await importData({
+      version: 6,
+      data: {
+        workout_sets: [baseRow({ training_mode: null })],
+      },
+    });
+    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBeNull();
+  });
+});

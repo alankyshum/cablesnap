@@ -298,4 +298,83 @@ describe("SessionHeaderToolbar", () => {
     );
     expect(queryByText("REST DONE ✓")).toBeNull();
   });
+
+  // BLD-616: default-OFF chip behaviour. With no `rest_show_breakdown` value
+  // persisted, the toolbar must NOT render the adaptive chip during a rest —
+  // even when an adaptive breakdown is available. Covers the AC-1 fresh-install
+  // path and the pre-hydration flash gap (initial useState must be `false`).
+  it("does NOT render adaptive chip on fresh install with no rest_show_breakdown setting", async () => {
+    mockGetAppSetting.mockResolvedValue(null);
+    const breakdown = {
+      totalSeconds: 130,
+      baseSeconds: 90,
+      factors: [{ label: "Heavy", multiplier: 1.2, deltaSeconds: 0 }],
+      isDefault: false,
+      reasonShort: "Heavy",
+      reasonAccessible: "Heavy set",
+    };
+
+    const { queryByTestId } = render(
+      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />
+    );
+
+    // No flash on first paint.
+    expect(queryByTestId("adaptive-chip")).toBeNull();
+
+    // After async getAppSetting resolves with null, chip remains hidden.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(queryByTestId("adaptive-chip")).toBeNull();
+  });
+
+  // BLD-616: chip renders only when setting is explicitly "true".
+  it("renders adaptive chip when rest_show_breakdown setting is explicitly 'true'", async () => {
+    mockGetAppSetting.mockImplementation(async (key: string) => {
+      if (key === "rest_show_breakdown") return "true";
+      return null;
+    });
+    const breakdown = {
+      totalSeconds: 130,
+      baseSeconds: 90,
+      factors: [{ label: "Heavy", multiplier: 1.2, deltaSeconds: 0 }],
+      isDefault: false,
+      reasonShort: "Heavy",
+      reasonAccessible: "Heavy set",
+    };
+
+    const { queryByTestId } = render(
+      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(queryByTestId("adaptive-chip")).toBeTruthy();
+  });
+
+  // BLD-616: chip stays hidden when user explicitly disabled it.
+  it("does NOT render adaptive chip when rest_show_breakdown is 'false'", async () => {
+    mockGetAppSetting.mockImplementation(async (key: string) => {
+      if (key === "rest_show_breakdown") return "false";
+      return null;
+    });
+    const breakdown = {
+      totalSeconds: 130,
+      baseSeconds: 90,
+      factors: [{ label: "Heavy", multiplier: 1.2, deltaSeconds: 0 }],
+      isDefault: false,
+      reasonShort: "Heavy",
+      reasonAccessible: "Heavy set",
+    };
+
+    const { queryByTestId } = render(
+      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(queryByTestId("adaptive-chip")).toBeNull();
+  });
 });

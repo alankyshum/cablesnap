@@ -8,7 +8,7 @@ const announce = jest.fn()
 jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(announce)
 
 describe('TrainingModeSelector', () => {
-  const modes = ['weight', 'eccentric_overload', 'band'] as const
+  const modes = ['weight', 'damper', 'band'] as const
   const defaults = {
     modes: [...modes],
     selected: 'weight' as const,
@@ -21,14 +21,14 @@ describe('TrainingModeSelector', () => {
   it('renders chip for each mode', () => {
     const { getByText } = renderScreen(<TrainingModeSelector {...defaults} />)
     expect(getByText('Standard')).toBeTruthy()
-    expect(getByText('Eccentric')).toBeTruthy()
+    expect(getByText('Damper')).toBeTruthy()
     expect(getByText('Band')).toBeTruthy()
   })
 
   it('calls onSelect when a chip is pressed', () => {
     const { getByText } = renderScreen(<TrainingModeSelector {...defaults} />)
-    fireEvent.press(getByText('Eccentric'))
-    expect(defaults.onSelect).toHaveBeenCalledWith('eccentric_overload')
+    fireEvent.press(getByText('Damper'))
+    expect(defaults.onSelect).toHaveBeenCalledWith('damper')
   })
 
   it('announces mode change for accessibility', () => {
@@ -48,9 +48,9 @@ describe('TrainingModeSelector', () => {
     )
   })
 
-  it('does NOT show tempo field when eccentric mode is selected (tempo removed)', () => {
+  it('does NOT show tempo field for any mode (tempo input removed)', () => {
     const { queryByPlaceholderText } = renderScreen(
-      <TrainingModeSelector {...defaults} selected="eccentric_overload" />
+      <TrainingModeSelector {...defaults} selected="damper" />
     )
     expect(queryByPlaceholderText(/Tempo/)).toBeNull()
   })

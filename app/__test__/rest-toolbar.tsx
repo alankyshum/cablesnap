@@ -104,11 +104,11 @@ export default function RestToolbarHarness() {
   if (Platform.OS !== "web") return null;
   if (!seed) return null;
 
-  // Resolve chip visibility synchronously from the seed. Default: true (chip
-  // shown) — matches the production default when `rest_show_breakdown` is
-  // unset. Only the literal string "false" hides the chip, matching
-  // `SessionHeaderToolbar`'s `v !== "false"` convention.
-  const showBreakdownChip = seed.settings?.rest_show_breakdown !== "false";
+  // Resolve chip visibility synchronously from the seed. Default OFF (BLD-616)
+  // — only the literal string "true" shows the chip, matching
+  // `SessionHeaderToolbar`'s `v === "true"` convention. Tests that exercise
+  // chip-visible states must set `rest_show_breakdown: "true"` explicitly.
+  const showBreakdownChip = seed.settings?.rest_show_breakdown === "true";
 
   return (
     <View>

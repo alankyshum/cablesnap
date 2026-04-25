@@ -60,6 +60,7 @@ const STATES: StateCase[] = [
         reasonShort: "Heavy · RPE 9",
         reasonAccessible: "Heavy set, RPE 9",
       },
+      settings: { rest_show_breakdown: "true" },
     },
   },
   {
@@ -75,7 +76,7 @@ const STATES: StateCase[] = [
         reasonShort: "Warmup",
         reasonAccessible: "Warmup set",
       },
-      settings: { rest_after_warmup_enabled: "true" },
+      settings: { rest_after_warmup_enabled: "true", rest_show_breakdown: "true" },
     },
   },
   {
@@ -91,6 +92,7 @@ const STATES: StateCase[] = [
         reasonShort: "Drop-set",
         reasonAccessible: "Drop-set",
       },
+      settings: { rest_show_breakdown: "true" },
     },
   },
   {
@@ -106,6 +108,7 @@ const STATES: StateCase[] = [
         reasonShort: "",
         reasonAccessible: "",
       },
+      settings: { rest_show_breakdown: "true" },
     },
   },
   {
@@ -144,6 +147,7 @@ const STATES: StateCase[] = [
         reasonShort: "Failure",
         reasonAccessible: "Failure set",
       },
+      settings: { rest_show_breakdown: "true" },
     },
   },
   {
@@ -167,6 +171,7 @@ const STATES: StateCase[] = [
         reasonShort: "Heavy · RPE 9 · Cable",
         reasonAccessible: "Heavy set, RPE 9, cable",
       },
+      settings: { rest_show_breakdown: "true" },
     },
   },
 ];
@@ -211,10 +216,10 @@ test.describe("@scenario adaptive-rest", () => {
       await expect(toolbar).toBeVisible({ timeout: 5_000 });
 
       // Async-resolve guard: the toolbar's useEffect reads `rest_show_breakdown`
-      // via `getAppSetting` (components/session/SessionHeaderToolbar.tsx:125-131).
-      // It starts with `showBreakdownChip=true`, flips to the persisted value
-      // on microtask resolve. Harness flips `data-test-ready` synchronously
-      // with first mount (app/__test__/rest-toolbar.tsx:89-93), so for the
+      // via `getAppSetting` (components/session/SessionHeaderToolbar.tsx).
+      // Default is OFF (BLD-616) — chip only renders when the setting is
+      // explicitly "true". Harness flips `data-test-ready` synchronously
+      // with first mount (app/__test__/rest-toolbar.tsx), so for the
       // "chip MUST NOT render" states (S4 isDefault=true, S5 setting=false)
       // we must wait for the chip to NOT be present before screenshotting.
       // This gates on the `adaptive-chip` testID on the chip-wrap View.

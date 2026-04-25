@@ -1,3 +1,6 @@
+// Behavior-Design = NO (BLD-621): training-mode persistence is a purely
+// functional authoring choice. Hard exclusions: no streaks, no badges, no
+// notifications, no celebratory animation, no comparative/social copy.
 import { useCallback, useState } from "react";
 import {
   Alert,
@@ -24,10 +27,12 @@ import {
   reorderTemplateExercises,
   updateTemplateName,
   updateTemplateExercise,
+  updateTemplateExerciseTrainingMode,
 } from "../../lib/db";
-import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/types";
+import type { Exercise, TemplateExercise, TrainingMode, WorkoutTemplate } from "../../lib/types";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import EditExerciseSheet from "../../components/EditExerciseSheet";
+import TrainingModeSelector from "../../components/TrainingModeSelector";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { bumpQueryVersion } from "../../lib/query";
 
@@ -132,9 +137,26 @@ export default function CreateTemplate() {
     }
   }, [editing, template, load, showError]);
 
+  const handleSetTrainingMode = useCallback(
+    async (te: TemplateExercise, mode: TrainingMode) => {
+      if (!template) return;
+      try {
+        await updateTemplateExerciseTrainingMode(te.id, template.id, mode);
+        await load();
+      } catch {
+        showError("Failed to update training mode");
+      }
+    },
+    [template, load, showError]
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: TemplateExercise; index: number }) => {
       const exName = item.exercise?.name ?? "exercise";
+      const modes = item.exercise?.training_modes;
+      const isVoltra = item.exercise?.is_voltra === true;
+      const showModeSelector = isVoltra && Array.isArray(modes) && modes.length > 1;
+      const selectedMode = (item.training_mode ?? modes?.[0]) as TrainingMode | undefined;
       return (
       <Pressable
         onPress={() => setEditing(item)}
@@ -142,32 +164,45 @@ export default function CreateTemplate() {
         accessibilityRole="button"
         accessibilityLabel={`Edit ${exName} settings`}
       >
-        <View style={styles.exerciseInfo}>
-          <Text variant="subtitle" style={{ color: colors.onSurface }}>
-            {item.exercise?.name ?? "Unknown Exercise"}
-          </Text>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
-          </Text>
+        <View style={styles.exerciseTopRow}>
+          <View style={styles.exerciseInfo}>
+            <Text variant="subtitle" style={{ color: colors.onSurface }}>
+              {item.exercise?.name ?? "Unknown Exercise"}
+            </Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+              {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
+            </Text>
+          </View>
+          <View style={styles.actions}>
+            <TouchableOpacity onPress={() => setEditing(item)} accessibilityLabel={`Edit ${exName} settings`} hitSlop={8} style={styles.iconBtn}>
+              <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.onSurface} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${exName} up`} hitSlop={8} style={styles.iconBtn}>
+              <MaterialCommunityIcons name="arrow-up" size={18} color={colors.onSurface} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => move(index, 1)} disabled={index === exercises.length - 1} accessibilityLabel={`Move ${exName} down`} hitSlop={8} style={styles.iconBtn}>
+              <MaterialCommunityIcons name="arrow-down" size={18} color={colors.onSurface} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${exName}`} hitSlop={8} style={styles.iconBtn}>
+              <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.actions}>
-          <TouchableOpacity onPress={() => setEditing(item)} accessibilityLabel={`Edit ${exName} settings`} hitSlop={8} style={styles.iconBtn}>
-            <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.onSurface} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${exName} up`} hitSlop={8} style={styles.iconBtn}>
-            <MaterialCommunityIcons name="arrow-up" size={18} color={colors.onSurface} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => move(index, 1)} disabled={index === exercises.length - 1} accessibilityLabel={`Move ${exName} down`} hitSlop={8} style={styles.iconBtn}>
-            <MaterialCommunityIcons name="arrow-down" size={18} color={colors.onSurface} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${exName}`} hitSlop={8} style={styles.iconBtn}>
-            <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
-          </TouchableOpacity>
-        </View>
+        {showModeSelector && (
+          <View style={styles.modeRow}>
+            <TrainingModeSelector
+              compact
+              modes={modes!}
+              selected={(selectedMode ?? modes![0]) as TrainingMode}
+              exercise={exName}
+              onSelect={(mode) => handleSetTrainingMode(item, mode)}
+            />
+          </View>
+        )}
       </Pressable>
       );
     },
-    [colors, exercises.length, move, remove]
+    [colors, exercises.length, move, remove, handleSetTrainingMode]
   );
 
   return (
@@ -244,11 +279,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exerciseRow: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  exerciseTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modeRow: {
+    marginTop: 6,
   },
   exerciseInfo: {
     flex: 1,

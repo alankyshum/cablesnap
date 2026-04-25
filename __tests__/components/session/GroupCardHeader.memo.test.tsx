@@ -133,7 +133,7 @@ describe("GroupCardHeader — React.memo subscription-slice (BLD-560)", () => {
       act(() => {
         setter!((prev) => ({
           ...prev,
-          "ex-2": i % 2 === 0 ? "eccentric_overload" : "weight",
+          "ex-2": i % 2 === 0 ? "band" : "weight",
         }));
       });
     }
@@ -161,7 +161,7 @@ describe("GroupCardHeader — React.memo subscription-slice (BLD-560)", () => {
     ).toBe(1);
 
     act(() => {
-      setter!((prev) => ({ ...prev, "ex-1": "eccentric_overload" }));
+      setter!((prev) => ({ ...prev, "ex-1": "band" }));
     });
 
     expect(
