@@ -280,7 +280,7 @@ export default function ActiveSession() {
   if (!session) {
     return (
       <>
-        <Stack.Screen options={{ title: "Workout" }} />
+        <Stack.Screen options={{ title: "Workout", gestureEnabled: false }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
           <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
         </View>
@@ -292,7 +292,7 @@ export default function ActiveSession() {
     <>
       <Stack.Screen
         options={{
-          title: session.name,
+          title: session.name, gestureEnabled: false, // BLD-614 swipe-back guard.
           headerRight: () => (
             <SessionHeaderToolbar
               rest={rest}
