@@ -39,28 +39,49 @@ import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
-// Module-level singleton that claims the one-time hint atomically across all
-// SetRow instances. Without this, multiple `set_number === 1` rows mounting
-// in the same render tick (multi-group session) would each pass the
-// `getAppSetting` null check before any of them flipped the flag — and all
-// of them would play the hint. The shared promise ensures only one row's
-// `then(true)` resolves; every other caller sees `then(false)`.
-let swipeCompleteHintClaim: Promise<boolean> | null = null;
+// Module-level claim: ensures exactly one SetRow caller per JS runtime ever
+// receives `won=true` for the swipe-right discoverability hint.
+//
+// State machine:
+//   1. `inFlight` — a promise representing the currently-running DB read+write.
+//      Concurrent same-tick callers all `await` it; whichever caller's invocation
+//      created it is the ONLY one that may receive `true`.
+//   2. `consumed` — once any caller has either resolved `true` (winner) or
+//      observed `seen` (loser), every subsequent call returns `false` without
+//      touching the DB. This stops the hint from replaying on later sessions
+//      within the same app runtime (e.g. user navigates Dashboard → Session
+//      twice — the second mount must not see `true` again).
+let swipeCompleteHintInFlight: Promise<boolean> | null = null;
+let swipeCompleteHintConsumed = false;
 function claimSwipeCompleteHintOnce(): Promise<boolean> {
-  if (!swipeCompleteHintClaim) {
-    swipeCompleteHintClaim = (async () => {
-      try {
-        const seen = await getAppSetting(SWIPE_COMPLETE_HINT_KEY);
-        if (seen) return false;
-        await setAppSetting(SWIPE_COMPLETE_HINT_KEY, "1");
-        return true;
-      } catch {
-        return false;
-      }
-    })();
+  if (swipeCompleteHintConsumed) return Promise.resolve(false);
+  if (swipeCompleteHintInFlight) {
+    // Concurrent caller — losers always see false even if the inflight winner
+    // resolves true. Chain off the same promise so we wait for completion.
+    return swipeCompleteHintInFlight.then(() => false);
   }
-  return swipeCompleteHintClaim;
+  swipeCompleteHintInFlight = (async () => {
+    try {
+      const seen = await getAppSetting(SWIPE_COMPLETE_HINT_KEY);
+      if (seen) return false;
+      await setAppSetting(SWIPE_COMPLETE_HINT_KEY, "1");
+      return true;
+    } catch {
+      return false;
+    } finally {
+      swipeCompleteHintConsumed = true;
+    }
+  })();
+  return swipeCompleteHintInFlight;
 }
+
+// Test-only: reset the module-level claim state. Exported under a `__` prefix
+// to discourage production use.
+export function __resetSwipeCompleteHintClaimForTests(): void {
+  swipeCompleteHintInFlight = null;
+  swipeCompleteHintConsumed = false;
+}
+export const __claimSwipeCompleteHintOnceForTests = claimSwipeCompleteHintOnce;
 
 export function formatDurationDisplay(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "0:00";
