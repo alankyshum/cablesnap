@@ -20,6 +20,10 @@ The `<!-- versionCode: N -->` marker is optional but required for F-Droid
 sidecar emission. The `publish-release` skill prepends a new section (with
 marker) at release time.
 
+## Unreleased
+
+- Hydration tracking — log water in ml or fl oz from the Nutrition tab; configurable daily goal and preset volumes in Settings.
+
 ## v0.26.8 — 2026-04-24
 <!-- versionCode: 57 -->
 - Set-completion now confirms with a subtle haptic + audio cue — toggle separately from timer sounds in Settings → Preferences.

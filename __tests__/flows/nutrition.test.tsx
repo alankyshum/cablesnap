@@ -79,6 +79,12 @@ jest.mock('../../lib/db', () => ({
   addDailyLog: (...args: unknown[]) => mockAddLog(...args),
   addFoodEntry: (...args: unknown[]) => mockAddEntry(...(args as [string, number, number, number, number, string, boolean])),
   getFavoriteFoods: (...args: unknown[]) => mockGetFavorites(...(args as [])),
+  getDailyTotalMl: jest.fn().mockResolvedValue(0),
+  getWaterLogsForDate: jest.fn().mockResolvedValue([]),
+  addWaterLog: jest.fn(),
+  deleteWaterLog: jest.fn(),
+  updateWaterLog: jest.fn(),
+  getAppSetting: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('../../components/InlineFoodSearch', () => {

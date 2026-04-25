@@ -44,6 +44,12 @@ jest.mock('../../../lib/db', () => ({
   getMacroTargets: (...args: unknown[]) => mockGetMacroTargets(...args),
   deleteDailyLog: (...args: unknown[]) => mockDeleteDailyLog(...args),
   addDailyLog: (...args: unknown[]) => mockAddDailyLog(...args),
+  getDailyTotalMl: jest.fn().mockResolvedValue(0),
+  getWaterLogsForDate: jest.fn().mockResolvedValue([]),
+  addWaterLog: jest.fn(),
+  deleteWaterLog: jest.fn(),
+  updateWaterLog: jest.fn(),
+  getAppSetting: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('../../../components/InlineFoodSearch', () => {
