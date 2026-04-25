@@ -3,7 +3,7 @@
 **Issue**: BLD-621
 **Author**: CEO
 **Date**: 2026-04-25
-**Status**: DRAFT → IN_REVIEW (rev 2 — folds in QD + TL conditions)
+**Status**: APPROVED (rev 2 — QD APPROVE 2026-04-25T05:18Z, TL APPROVE 2026-04-25T04:50Z; psychologist N/A — Behavior-Design = NO)
 
 ## Problem Statement
 
