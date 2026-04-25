@@ -239,12 +239,12 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingTop: 16, paddingBottom: 48 },
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.base },
+  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.md },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     minHeight: 44,
   },
   versionRowRight: {
