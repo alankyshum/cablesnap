@@ -72,7 +72,7 @@ type Params = {
   startRest: (ctx: string | SetContext) => void;
   startRestWithDuration: (secs: number) => void;
   startRestWithBreakdown: (breakdown: RestBreakdown) => void;
-  session: { started_at: number; name: string } | null;
+  session: { started_at: number; clock_started_at?: number | null; name: string } | null;
   showToast: (msg: string) => void;
   showError: (msg: string) => void;
   triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
@@ -99,6 +99,20 @@ export function useSessionActions({
 
   // --- local state ---
   const [elapsed, setElapsed] = useState(0);
+  // BLD-630: optimistic local mirror of `workout_sessions.clock_started_at`.
+  // The DB write inside completeSet is authoritative for persistence/export,
+  // but `useSessionDetail` fetches the session once on `[id]` and never
+  // re-runs, so without a local override the on-screen elapsed timer would
+  // never start ticking. We sync from the prop on session-id change.
+  const [clockStartedAt, setClockStartedAt] = useState<number | null>(
+    session?.clock_started_at ?? null,
+  );
+  useEffect(() => {
+    // Mirror DB anchor into local state when the session prop changes (e.g.
+    // navigating to another session, or a hydration roundtrip after restart).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- prop sync
+    setClockStartedAt(session?.clock_started_at ?? null);
+  }, [session?.clock_started_at]);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
   const [exerciseNotesDraft, setExerciseNotesDraft] = useState<Record<string, string>>({});
@@ -111,15 +125,29 @@ export function useSessionActions({
   const bwPRExerciseSet = useRef<Set<string>>(new Set());
 
   // Session-elapsed clock.
+  // BLD-630: the clock is now anchored to the first completed set, not the
+  // moment the user tapped Start. While `clockStartedAt` is null, elapsed
+  // stays at 0 and the 1Hz interval is not scheduled.
   // BLD-553 battery fix: pause setInterval when app is backgrounded. On some
   // RN runtimes setInterval continues to schedule wake-ups with the screen
   // off, and if it doesn't, React still triggers a render-burst as Date.now()
-  // jumps on resume. We recompute elapsed from session.started_at on resume,
+  // jumps on resume. We recompute elapsed from `clockStartedAt` on resume,
   // so there's no drift.
   useEffect(() => {
     if (!session) return;
+    if (clockStartedAt == null) {
+      // Not yet anchored — show 0:00 and don't run the interval. The "Starts
+      // when you log your first set" caption is rendered in the header.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing elapsed when clock unanchors
+      setElapsed(0);
+      if (timer.current) {
+        clearInterval(timer.current);
+        timer.current = null;
+      }
+      return;
+    }
     const update = () => {
-      setElapsed(Math.floor((Date.now() - session.started_at) / 1000));
+      setElapsed(Math.floor((Date.now() - clockStartedAt) / 1000));
     };
     const start = () => {
       if (timer.current) return;
@@ -157,7 +185,7 @@ export function useSessionActions({
       stop();
       sub.remove();
     };
-  }, [session]);
+  }, [session, clockStartedAt]);
 
   // Cleanup hint timer
   useEffect(() => {
@@ -251,6 +279,10 @@ export function useSessionActions({
 
     const now = Date.now();
     updateGroupSet(set.id, { completed: true, completed_at: now });
+    // BLD-630: anchor the session clock optimistically before the DB write
+    // so the elapsed timer starts ticking within the next render. The DB
+    // update inside `completeSet` is authoritative for persistence/export.
+    setClockStartedAt((prev) => (prev == null ? now : prev));
     await completeSet(set.id);
 
     // BLD-541 R2: invalidate the smart-default cache so the next add-set
@@ -697,6 +729,10 @@ export function useSessionActions({
 
   return {
     elapsed,
+    /** BLD-630: null until the user completes the first set in the session.
+     * Consumers (header) use this to render the "Starts when you log your
+     * first set" caption and the appropriate a11y label. */
+    clockStartedAt,
     exerciseNotesOpen,
     exerciseNotesDraft,
     halfStep,

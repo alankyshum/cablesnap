@@ -31,6 +31,13 @@ function presetLabel(seconds: number): string {
 type Props = {
   rest: number;
   elapsed: number;
+  /**
+   * BLD-630: when `false`, the elapsed timer is not yet anchored to a
+   * completed set. The header renders a small "Starts when you log your
+   * first set" caption and the a11y label is updated accordingly. Defaults
+   * to `true` when omitted (preserves harness/test back-compat).
+   */
+  clockStarted?: boolean;
   estimatedDuration?: number | null;
   breakdown?: RestBreakdown;
   onStartRest: (duration: number) => void;
@@ -54,6 +61,7 @@ type Props = {
 function SessionHeaderToolbarInner({
   rest,
   elapsed,
+  clockStarted = true,
   estimatedDuration,
   breakdown,
   onStartRest,
@@ -272,51 +280,15 @@ function SessionHeaderToolbarInner({
         )}
 
         {/* Elapsed time + remaining estimate */}
-        <Pressable
+        <ElapsedDisplay
+          elapsed={elapsed}
+          estimatedDuration={estimatedDuration ?? null}
+          isRestActive={isRestActive}
+          clockStarted={clockStarted}
+          colors={colors}
           onPress={handleElapsedTap}
           onLongPress={handleLongPress}
-          delayLongPress={400}
-          disabled={isRestActive}
-          accessibilityLabel={
-            (() => {
-              const remainingText = formatTimeRemaining(estimatedDuration ?? null, elapsed);
-              const base = `Elapsed time: ${formatTime(elapsed)}`;
-              if (isRestActive) return base;
-              const suffix = ". Tap to start rest timer. Long press for rest settings.";
-              if (remainingText) return `${base}, approximately ${Math.ceil(((estimatedDuration ?? 0) - elapsed) / 60)} minutes remaining${suffix}`;
-              return `${base}${suffix}`;
-            })()
-          }
-          accessibilityRole="button"
-          style={styles.elapsedButton}
-        >
-          <Text
-            variant="body"
-            testID="elapsed-time"
-            style={{
-              color: isRestActive ? colors.onSurfaceVariant : colors.primary,
-              fontSize: fontSizes.sm,
-            }}
-          >
-            {formatTime(elapsed)}
-          </Text>
-          {(() => {
-            const remainingText = formatTimeRemaining(estimatedDuration ?? null, elapsed);
-            if (!remainingText) return null;
-            return (
-              <Text
-                variant="body"
-                testID="elapsed-remaining"
-                style={{
-                  color: colors.onSurfaceVariant,
-                  fontSize: fontSizes.xs,
-                }}
-              >
-                {remainingText}
-              </Text>
-            );
-          })()}
-        </Pressable>
+        />
 
         {/* Wrench / toolbox button */}
         <Pressable
@@ -444,6 +416,88 @@ function RestDurationPicker({
 
 export const SessionHeaderToolbar = React.memo(SessionHeaderToolbarInner);
 
+function ElapsedRemaining({
+  elapsed,
+  estimatedDuration,
+  color,
+}: {
+  elapsed: number;
+  estimatedDuration: number | null;
+  color: string;
+}) {
+  const remainingText = formatTimeRemaining(estimatedDuration, elapsed);
+  if (!remainingText) return null;
+  return (
+    <Text
+      variant="body"
+      testID="elapsed-remaining"
+      style={{ color, fontSize: fontSizes.xs }}
+    >
+      {remainingText}
+    </Text>
+  );
+}
+
+type ElapsedDisplayColors = {
+  primary: string;
+  onSurfaceVariant: string;
+};
+
+function ElapsedDisplay({
+  elapsed,
+  estimatedDuration,
+  isRestActive,
+  clockStarted,
+  colors,
+  onPress,
+  onLongPress,
+}: {
+  elapsed: number;
+  estimatedDuration: number | null;
+  isRestActive: boolean;
+  clockStarted: boolean;
+  colors: ElapsedDisplayColors;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
+  const a11yLabel = buildElapsedA11yLabel({ elapsed, estimatedDuration, isRestActive, clockStarted });
+  const elapsedColor = isRestActive ? colors.onSurfaceVariant : colors.primary;
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
+      disabled={isRestActive}
+      accessibilityLabel={a11yLabel}
+      accessibilityRole={clockStarted ? "button" : "timer"}
+      style={styles.elapsedButton}
+    >
+      <Text
+        variant="body"
+        testID="elapsed-time"
+        style={{ color: elapsedColor, fontSize: fontSizes.sm }}
+      >
+        {formatTime(elapsed)}
+      </Text>
+      {clockStarted ? (
+        <ElapsedRemaining
+          elapsed={elapsed}
+          estimatedDuration={estimatedDuration}
+          color={colors.onSurfaceVariant}
+        />
+      ) : (
+        <Text
+          variant="body"
+          testID="elapsed-not-started-caption"
+          style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}
+        >
+          Starts when you log your first set
+        </Text>
+      )}
+    </Pressable>
+  );
+}
+
 function buildActiveA11yLabel(
   rest: number,
   showRestDone: boolean,
@@ -458,6 +512,30 @@ function buildActiveA11yLabel(
     return `Rest timer: ${min} minutes ${sec} seconds. ${breakdown.reasonAccessible}. Tap to dismiss. Long-press for breakdown.`;
   }
   return base;
+}
+
+function buildElapsedA11yLabel({
+  elapsed,
+  estimatedDuration,
+  isRestActive,
+  clockStarted,
+}: {
+  elapsed: number;
+  estimatedDuration: number | null;
+  isRestActive: boolean;
+  clockStarted: boolean;
+}): string {
+  const base = `Workout timer: ${formatTime(elapsed)}`;
+  // BLD-630: while unanchored, communicate the empty state and skip
+  // rest-timer hints (the primary instruction is "log a set").
+  if (!clockStarted) return `${base}, starts when you log your first set`;
+  if (isRestActive) return base;
+  const suffix = ". Tap to start rest timer. Long press for rest settings.";
+  const remainingText = formatTimeRemaining(estimatedDuration, elapsed);
+  if (remainingText) {
+    return `${base}, approximately ${Math.ceil(((estimatedDuration ?? 0) - elapsed) / 60)} minutes remaining${suffix}`;
+  }
+  return `${base}${suffix}`;
 }
 
 const styles = StyleSheet.create({

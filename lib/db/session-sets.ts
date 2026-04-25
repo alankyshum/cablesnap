@@ -323,9 +323,19 @@ export async function updateSetDuration(
 
 export async function completeSet(id: string): Promise<void> {
   const db = await getDrizzle();
+  const now = Date.now();
   await db.update(workoutSets)
-    .set({ completed: 1, completed_at: Date.now() })
+    .set({ completed: 1, completed_at: now })
     .where(eq(workoutSets.id, id));
+  // BLD-630: anchor the parent session's elapsed clock on first set
+  // completion only. The `clock_started_at IS NULL` guard makes this a no-op
+  // on subsequent set completions and idempotent under concurrent writers.
+  await db.run(sql`
+    UPDATE workout_sessions
+    SET clock_started_at = ${now}
+    WHERE id = (SELECT session_id FROM workout_sets WHERE id = ${id})
+      AND clock_started_at IS NULL
+  `);
 }
 
 export async function uncompleteSet(id: string): Promise<void> {
