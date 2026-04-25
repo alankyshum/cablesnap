@@ -320,6 +320,14 @@ describe("BLD-596 — real-render integration: swap/move recomputes hints", () =
 // real `onLayout` listener with the computed value so the layout-event
 // pipeline is exercised exactly as production wires it.
 //
+// NOTE for future reviewers: this is an *analytical* layout model + a
+// *synthesized* `layout` event — NOT a device-measured Yoga layout.
+// jest-rntl/JSDOM has no Yoga binding so all layout values must be derived
+// by walking StyleSheet props (paddings, margins, gap, lineHeight, minHeight,
+// row vs column folding rules) and then dispatched via `fireEvent('layout',
+// ...)`. End-to-end Yoga semantics are covered separately by the manual
+// Pixel-4a smoke check called out in the plan's QA appendix.
+//
 // Algorithm:
 //   1. Render `<GroupCardHeader>` twice (mount=high vs mount=null) inside a
 //      wrapper View with width=393 and an `onLayout` listener.
