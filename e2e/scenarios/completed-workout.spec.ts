@@ -25,7 +25,8 @@ const OUT_DIR = path.resolve(
 
 test.describe("@scenario completed-workout", () => {
   // v1 mobile only — skip on other Playwright projects to keep vision cost bounded.
-  test.beforeAll((_args, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright 1.59 requires destructured fixtures arg
+  test.beforeAll(({}, testInfo) => {
     test.skip(
       testInfo.project.name !== "mobile",
       "v1: mobile viewport only (TL#4)",
