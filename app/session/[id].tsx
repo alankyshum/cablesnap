@@ -214,27 +214,10 @@ export default function ActiveSession() {
   }, [id, unit, suggestions, groups, load, showError]);
 
   const renderExerciseGroup = useCallback(({ item: group, index }: { item: typeof groups[number]; index: number }) => {
-<<<<<<< Updated upstream
     const prevMount = index > 0 ? groups[index - 1]?.mount_position : undefined;
     const currMount = group.mount_position;
     return (<>
         {prevMount && currMount && prevMount !== currMount ? <MountTransitionHint prevMount={prevMount} nextMount={currMount} /> : null}
-=======
-    const prev = index > 0 ? groups[index - 1] : undefined;
-    const showHint =
-      !!prev &&
-      !!prev.mount_position &&
-      !!group.mount_position &&
-      prev.mount_position !== group.mount_position;
-    return (
-      <>
-        {showHint && (
-          <MountTransitionHint
-            prevMount={prev.mount_position!}
-            nextMount={group.mount_position!}
-          />
-        )}
->>>>>>> Stashed changes
         <ExerciseGroupCard
       group={group}
       step={step}
