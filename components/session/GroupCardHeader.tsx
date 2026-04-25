@@ -81,7 +81,7 @@ function GroupCardHeaderInner({ group, currentMode, exerciseNotesOpen, exerciseN
                 accessibilityHint="Tap to refill from previous"
               >
                 <ProgressionIcon suggested={group.progressionSuggested} color={colors.primary} />
-                <Text numberOfLines={1} style={[styles.previousPerf, { color: colors.primary }]}>
+                <Text numberOfLines={2} style={[styles.previousPerf, { color: colors.primary }]}>
                   {previousPerformance}
                 </Text>
                 {/* BLD-551: trailing refresh glyph restores tappability affordance lost in BLD-542. */}
