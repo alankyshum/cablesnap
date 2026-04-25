@@ -19,7 +19,8 @@ const OUT_DIR = path.resolve(
 );
 
 test.describe("@scenario workout-history", () => {
-  test.beforeAll((_args, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright 1.59 requires destructured fixtures arg
+  test.beforeAll(({}, testInfo) => {
     test.skip(
       testInfo.project.name !== "mobile",
       "v1: mobile viewport only (TL#4)",
