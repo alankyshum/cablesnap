@@ -434,8 +434,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "template_exercises": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label, target_duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.template_id, row.exercise_id, row.position, row.target_sets, row.target_reps, row.rest_seconds, row.link_id ?? null, row.link_label ?? "", row.target_duration_seconds ?? null]
+        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label, target_duration_seconds, training_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.exercise_id, row.position, row.target_sets, row.target_reps, row.rest_seconds, row.link_id ?? null, row.link_label ?? "", row.target_duration_seconds ?? null, row.training_mode ?? null]
       );
       return r.changes > 0;
     }
