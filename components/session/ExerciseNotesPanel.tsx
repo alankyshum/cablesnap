@@ -18,7 +18,8 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
     <View style={styles.container}>
       <Input
         type="textarea"
-        rows={3}
+        variant="outline"
+        rows={5}
         placeholder="Add exercise notes..."
         placeholderTextColor={colors.onSurfaceVariant}
         value={value}
@@ -38,5 +39,5 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4 },
-  input: { fontSize: fontSizes.base, minHeight: 96 },
+  input: { fontSize: fontSizes.lg, lineHeight: 24, minHeight: 140 },
 });
