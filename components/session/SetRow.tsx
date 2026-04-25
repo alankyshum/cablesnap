@@ -39,6 +39,29 @@ import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
+// Module-level singleton that claims the one-time hint atomically across all
+// SetRow instances. Without this, multiple `set_number === 1` rows mounting
+// in the same render tick (multi-group session) would each pass the
+// `getAppSetting` null check before any of them flipped the flag — and all
+// of them would play the hint. The shared promise ensures only one row's
+// `then(true)` resolves; every other caller sees `then(false)`.
+let swipeCompleteHintClaim: Promise<boolean> | null = null;
+function claimSwipeCompleteHintOnce(): Promise<boolean> {
+  if (!swipeCompleteHintClaim) {
+    swipeCompleteHintClaim = (async () => {
+      try {
+        const seen = await getAppSetting(SWIPE_COMPLETE_HINT_KEY);
+        if (seen) return false;
+        await setAppSetting(SWIPE_COMPLETE_HINT_KEY, "1");
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+  }
+  return swipeCompleteHintClaim;
+}
+
 export function formatDurationDisplay(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "0:00";
   if (seconds >= 3600) {
@@ -106,19 +129,10 @@ export const SetRow = memo(function SetRow({
   useEffect(() => {
     let cancelled = false;
     if (set.set_number !== 1) return;
-    (async () => {
-      try {
-        const seen = await getAppSetting(SWIPE_COMPLETE_HINT_KEY);
-        if (cancelled) return;
-        if (!seen) {
-          await setAppSetting(SWIPE_COMPLETE_HINT_KEY, "1");
-          if (!cancelled) setShowSwipeRightHint(true);
-        }
-      } catch {
-        // Persistent-flag failure must not break gesture UX. Silently skip
-        // the hint; user can still discover via accessibility hint string.
-      }
-    })();
+    claimSwipeCompleteHintOnce().then((won) => {
+      if (cancelled) return;
+      if (won) setShowSwipeRightHint(true);
+    });
     return () => {
       cancelled = true;
     };
@@ -205,7 +219,11 @@ export const SetRow = memo(function SetRow({
             { backgroundColor: colors.background },
             borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined,
           ]}
-          accessibilityHint="Swipe right to complete, swipe left to delete"
+          accessibilityHint={
+            I18nManager.isRTL
+              ? "Swipe left to complete, swipe right to delete"
+              : "Swipe right to complete, swipe left to delete"
+          }
         >
           <Pressable
             onPress={() => onCycleSetType(set.id)}

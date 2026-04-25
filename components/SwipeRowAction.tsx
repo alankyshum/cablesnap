@@ -190,6 +190,11 @@ export default function SwipeRowAction({
   const panGesture = Gesture.Pan()
     .enabled(anyEnabled)
     .activeOffsetX([-10, 10])
+    // Vertical-dominance guard: if the user crosses ±15px on Y before the
+    // pan activates horizontally, fail the recognizer so the parent
+    // ScrollView/FlatList wins the gesture. Without this a mostly-vertical
+    // drag that nudges sideways briefly would hijack list scroll.
+    .failOffsetY([-15, 15])
     .onUpdate((e) => {
       let v = e.translationX;
       // Disallow direction whose config is missing (gesture clamps to 0).
@@ -205,6 +210,13 @@ export default function SwipeRowAction({
     .onEnd((e) => {
       const t = e.translationX;
       const tSign = Math.sign(t);
+      // Belt-and-suspenders: if the release frame is vertical-dominant
+      // (|Δy| > |Δx|) — for example the user activated horizontally then
+      // drifted into a mostly-vertical drag — snap back without commit.
+      if (Math.abs(e.translationY) > Math.abs(t)) {
+        translateX.value = withSpring(0, { damping: 15, stiffness: 200 });
+        return;
+      }
       // Direction of release decides which config (if any) commits.
       const isLeft = tSign === leadingSign && leftEnabled;
       const isRight = tSign === trailingSign && rightEnabled;

@@ -12,9 +12,11 @@ import { render, act } from "@testing-library/react-native";
 
 // ---- gesture-handler mock that captures onUpdate / onEnd ----
 type Captured = {
-  onUpdate?: (e: { translationX: number; velocityX: number }) => void;
-  onEnd?: (e: { translationX: number; velocityX: number }) => void;
+  onUpdate?: (e: { translationX: number; translationY?: number; velocityX: number }) => void;
+  onEnd?: (e: { translationX: number; translationY?: number; velocityX: number }) => void;
   enabled?: boolean;
+  failOffsetY?: [number, number];
+  activeOffsetX?: [number, number];
 };
 const captured: { current: Captured } = { current: {} };
 
@@ -36,9 +38,16 @@ jest.mock("react-native-gesture-handler", () => {
       captured.current.enabled = v;
       return g;
     };
-    g.activeOffsetX = () => g;
+    g.activeOffsetX = (v: any) => {
+      captured.current.activeOffsetX = v;
+      return g;
+    };
     g.activeOffsetY = () => g;
     g.failOffsetX = () => g;
+    g.failOffsetY = (v: any) => {
+      captured.current.failOffsetY = v;
+      return g;
+    };
     g.minDistance = () => g;
     return g;
   };
@@ -187,21 +196,33 @@ describe("SwipeRowAction", () => {
     expect(onRight).not.toHaveBeenCalled();
   });
 
-  it("vertical-dominance scroll guard: gesture activates only on |Δx|>10 (activeOffsetX)", () => {
-    // The component sets activeOffsetX([-10, 10]); RNGH only invokes the
-    // worklets when activation condition met. We assert the configuration
-    // reaches the gesture rather than re-implementing RNGH semantics.
+  it("vertical-dominance: failOffsetY([-15,15]) configured AND |Δy|>|Δx| at release commits nothing", () => {
     const onLeft = jest.fn();
+    const onRight = jest.fn();
     render(
-      <SwipeRowAction left={{ ...baseLeft, callback: onLeft }} right={undefined}>
+      <SwipeRowAction
+        left={{ ...baseLeft, callback: onLeft }}
+        right={{ ...baseRight, callback: onRight }}
+      >
         <View />
       </SwipeRowAction>,
     );
-    // No translation update fired → no callback.
+    // Pre-activation guard: failOffsetY range present so RNGH fails the
+    // recognizer when Y crosses ±15 before activation.
+    expect(captured.current.failOffsetY).toEqual([-15, 15]);
+    expect(captured.current.activeOffsetX).toEqual([-10, 10]);
+    // Post-activation guard: even if the worklet is invoked with a
+    // vertical-dominant frame (|Δy| > |Δx|), neither callback fires.
     act(() => {
-      flush().onUpdate?.({ translationX: 5, velocityX: 0 });
-      flush().onEnd?.({ translationX: 5, velocityX: 0 });
+      flush().onEnd?.({ translationX: 30, translationY: 80, velocityX: 0 });
     });
+    expect(onRight).not.toHaveBeenCalled();
+    expect(onLeft).not.toHaveBeenCalled();
+    // And in the negative-X direction.
+    act(() => {
+      flush().onEnd?.({ translationX: -30, translationY: -80, velocityX: 0 });
+    });
+    expect(onRight).not.toHaveBeenCalled();
     expect(onLeft).not.toHaveBeenCalled();
   });
 
