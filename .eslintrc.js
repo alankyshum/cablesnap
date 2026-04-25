@@ -70,10 +70,13 @@ module.exports = {
       files: [
         "lib/animations/**",
         "components/ui/**",
+        "components/SwipeRowAction.tsx",
+        "components/SwipeToDelete.tsx",
       ],
       rules: {
         "react-hooks/immutability": "off",
         "react-hooks/exhaustive-deps": "warn",
+        complexity: "off",
       },
     },
   ],

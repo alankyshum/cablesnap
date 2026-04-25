@@ -1,19 +1,14 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { I18nManager, LayoutChangeEvent, StyleSheet, useWindowDimensions, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withDelay,
-  withSequence,
-  runOnJS,
-} from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { Button } from "@/components/ui/button";
+/**
+ * SwipeToDelete — thin wrapper around SwipeRowAction that pins the trailing
+ * edge to `undefined` and maps every legacy prop onto the leading-edge
+ * config. Existing call sites stay byte-for-byte unchanged (BLD-614).
+ *
+ * For new bidirectional swipe rows (e.g. session SetRow with swipe-right to
+ * complete) prefer SwipeRowAction directly.
+ */
+import React from "react";
 import { Trash2 } from "lucide-react-native";
-import { radii, duration as durationTokens } from "../constants/design-tokens";
+import SwipeRowAction from "./SwipeRowAction";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface SwipeToDeleteProps {
@@ -51,19 +46,6 @@ interface SwipeToDeleteProps {
   haptic?: boolean;
 }
 
-const REVEAL_THRESHOLD = -80;
-
-function triggerMediumHaptic() {
-  // Web / platforms without haptic support will reject; log in dev only so
-  // regressions surface during development without producing user-visible
-  // errors in production.
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch((err) => {
-    if (__DEV__) {
-      console.warn("[SwipeToDelete] haptic impact failed:", err);
-    }
-  });
-}
-
 export default function SwipeToDelete({
   children,
   onDelete,
@@ -77,126 +59,38 @@ export default function SwipeToDelete({
   haptic = false,
 }: SwipeToDeleteProps) {
   const colors = useThemeColors();
-  const { width: screenWidth } = useWindowDimensions();
-  const translateX = useSharedValue(0);
-  const [containerWidth, setContainerWidth] = useState<number>(screenWidth);
-
-  const onLayout = useCallback((e: LayoutChangeEvent) => {
-    const w = e.nativeEvent.layout.width;
-    if (w > 0) setContainerWidth(w);
-  }, []);
-
-  const basisWidth = widthBasis === "container" ? containerWidth : screenWidth;
-  // Whichever is greater: fraction of basis, or minDismissPx floor.
-  const fractionalThreshold = basisWidth * dismissThresholdFraction;
-  const effectiveThreshold = Math.max(fractionalThreshold, minDismissPx);
-  // RTL flip: swipe goes left-to-right on RTL locales.
-  const sign = I18nManager.isRTL ? 1 : -1;
-  const dismissThreshold = sign * effectiveThreshold;
-
-  useEffect(() => {
-    if (showHint && enabled) {
-      translateX.value = withDelay(
-        600,
-        withSequence(
-          withTiming(sign * 40, { duration: 300 }),
-          withSpring(0, { damping: 15, stiffness: 200 }),
-        ),
-      );
-    }
-  }, [showHint, enabled, translateX, sign]);
-
-  const panGesture = Gesture.Pan()
-    .enabled(enabled)
-    .activeOffsetX([-10, 10])
-    .onUpdate((e) => {
-      // Clamp to correct direction depending on locale.
-      translateX.value = sign < 0
-        ? Math.min(0, e.translationX)
-        : Math.max(0, e.translationX);
-    })
-    .onEnd((e) => {
-      const distanceMet = sign < 0
-        ? e.translationX < dismissThreshold
-        : e.translationX > dismissThreshold;
-      const velocityOverride =
-        velocityDismissPxPerSec !== undefined &&
-        Math.abs(e.velocityX) > velocityDismissPxPerSec &&
-        Math.abs(e.translationX) > velocityMinTranslatePx &&
-        (sign < 0 ? e.velocityX < 0 : e.velocityX > 0);
-
-      if (distanceMet || velocityOverride) {
-        if (haptic) runOnJS(triggerMediumHaptic)();
-        translateX.value = withTiming(
-          sign * basisWidth,
-          { duration: durationTokens.fast },
-          () => {
-            runOnJS(onDelete)();
-          },
-        );
-      } else if ((sign < 0 ? e.translationX : -e.translationX) < REVEAL_THRESHOLD) {
-        translateX.value = withSpring(sign * -REVEAL_THRESHOLD, { damping: 20, stiffness: 200 });
-      } else {
-        translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
-      }
-    });
-
-  const contentStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  const bgStyle = useAnimatedStyle(() => ({
-    opacity: Math.abs(translateX.value) > 10 ? 1 : 0,
-  }));
-
-  if (!enabled) return <>{children}</>;
-
   return (
-    <View style={styles.wrapper} onLayout={onLayout}>
-      <Animated.View
-        style={[
-          styles.deleteBackground,
-          sign < 0 ? styles.deleteBackgroundRight : styles.deleteBackgroundLeft,
-          { backgroundColor: colors.error },
-          bgStyle,
-        ]}
-      >
-        <View style={styles.deleteContent}>
-          <Button
-            variant="ghost"
-            size="icon"
-            icon={Trash2}
-            onPress={onDelete}
-            accessibilityLabel="Delete"
-            style={{ backgroundColor: "transparent" }}
-          />
-        </View>
-      </Animated.View>
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={contentStyle}>{children}</Animated.View>
-      </GestureDetector>
-    </View>
+    <SwipeRowAction
+      enabled={enabled}
+      showHint={showHint ? "left" : false}
+      widthBasis={widthBasis}
+      left={{
+        fraction: dismissThresholdFraction,
+        minPx: minDismissPx,
+        velocity: velocityDismissPxPerSec,
+        velocityMinTranslatePx,
+        color: colors.error,
+        icon: Trash2,
+        label: "Delete",
+        haptic,
+        commitBehavior: "slide-out",
+        callback: onDelete,
+        // Restore legacy interactive Button overlay (origin/main
+        // SwipeToDelete.tsx:163-172) — preserves partial-swipe-then-tap
+        // path and screen-reader Delete-without-gesture path for the five
+        // non-SetRow consumers (FoodLogCard, MealTemplatesSheet,
+        // WaterDayList, TemplateExerciseRow, app/nutrition/templates).
+        // SetRow uses SwipeRowAction directly without revealTapTarget,
+        // keeping its single-write-path convergence through handleCheckPress.
+        revealTapTarget: {
+          icon: Trash2,
+          label: "Delete",
+          onPress: onDelete,
+        },
+      }}
+      right={undefined}
+    >
+      {children}
+    </SwipeRowAction>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    overflow: "hidden",
-  },
-  deleteBackground: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    borderRadius: radii.md,
-  },
-  deleteBackgroundRight: {
-    alignItems: "flex-end",
-  },
-  deleteBackgroundLeft: {
-    alignItems: "flex-start",
-  },
-  deleteContent: {
-    width: 80,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

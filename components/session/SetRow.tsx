@@ -1,11 +1,33 @@
 /* eslint-disable complexity, max-lines-per-function */
-import React, { useCallback, useMemo, memo } from "react";
+/**
+ * SetRow — Hard Exclusions (Behavior-Design Classification: NO).
+ * This file MUST NOT introduce any of the following. If any of these is
+ * added, flip Classification to YES and require fresh psychologist review:
+ *   - no streaks
+ *   - no badges
+ *   - no celebrations
+ *   - no animations on goal-hit
+ *   - no haptics (commit haptic owned exclusively by useSetCompletionFeedback;
+ *     swipe gesture path emits no independent haptic — BLD-559 / BLD-614)
+ *   - no success-toasts
+ *   - no notifications
+ *   - no reminders
+ *
+ * Convergence: tap on the checkmark Pressable, swipe-right past threshold,
+ * and the VoiceOver "Mark complete" custom action all route through the
+ * same `handleCheckPress` callback. There is no second prop on this
+ * component for the swipe-complete path; `app/session/[id].tsx` does not
+ * wire any extra prop for it.
+ */
+import React, { useCallback, useEffect, useMemo, memo, useState } from "react";
 import { I18nManager, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Check, Trash2 } from "lucide-react-native";
 import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
-import SwipeToDelete from "../../components/SwipeToDelete";
+import SwipeRowAction from "../../components/SwipeRowAction";
+import { getAppSetting, setAppSetting } from "@/lib/db";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -14,6 +36,52 @@ import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
+
+const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
+
+// Module-level claim: ensures exactly one SetRow caller per JS runtime ever
+// receives `won=true` for the swipe-right discoverability hint.
+//
+// State machine:
+//   1. `inFlight` — a promise representing the currently-running DB read+write.
+//      Concurrent same-tick callers all `await` it; whichever caller's invocation
+//      created it is the ONLY one that may receive `true`.
+//   2. `consumed` — once any caller has either resolved `true` (winner) or
+//      observed `seen` (loser), every subsequent call returns `false` without
+//      touching the DB. This stops the hint from replaying on later sessions
+//      within the same app runtime (e.g. user navigates Dashboard → Session
+//      twice — the second mount must not see `true` again).
+let swipeCompleteHintInFlight: Promise<boolean> | null = null;
+let swipeCompleteHintConsumed = false;
+function claimSwipeCompleteHintOnce(): Promise<boolean> {
+  if (swipeCompleteHintConsumed) return Promise.resolve(false);
+  if (swipeCompleteHintInFlight) {
+    // Concurrent caller — losers always see false even if the inflight winner
+    // resolves true. Chain off the same promise so we wait for completion.
+    return swipeCompleteHintInFlight.then(() => false);
+  }
+  swipeCompleteHintInFlight = (async () => {
+    try {
+      const seen = await getAppSetting(SWIPE_COMPLETE_HINT_KEY);
+      if (seen) return false;
+      await setAppSetting(SWIPE_COMPLETE_HINT_KEY, "1");
+      return true;
+    } catch {
+      return false;
+    } finally {
+      swipeCompleteHintConsumed = true;
+    }
+  })();
+  return swipeCompleteHintInFlight;
+}
+
+// Test-only: reset the module-level claim state. Exported under a `__` prefix
+// to discourage production use.
+export function __resetSwipeCompleteHintClaimForTests(): void {
+  swipeCompleteHintInFlight = null;
+  swipeCompleteHintConsumed = false;
+}
+export const __claimSwipeCompleteHintOnceForTests = claimSwipeCompleteHintOnce;
 
 export function formatDurationDisplay(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "0:00";
@@ -74,6 +142,23 @@ export const SetRow = memo(function SetRow({
   // psychologist re-review per PLAN-BLD-559.
   const { fire: fireSetCompletionFeedback } = useSetCompletionFeedback();
 
+  // BLD-614: one-time swipe-right discoverability hint.
+  // Gated by a persistent flag in app_settings (codebase convention; AsyncStorage
+  // is not installed). The first SetRow rendered after this feature ships
+  // wins the race and sets the flag, so the hint plays exactly once per device.
+  const [showSwipeRightHint, setShowSwipeRightHint] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (set.set_number !== 1) return;
+    claimSwipeCompleteHintOnce().then((won) => {
+      if (cancelled) return;
+      if (won) setShowSwipeRightHint(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [set.set_number]);
+
   const handleCheckPress = useCallback(() => {
     // Fire feedback synchronously ONLY on false → true transition.
     if (!set.completed) {
@@ -111,16 +196,42 @@ export const SetRow = memo(function SetRow({
     [handleDelete],
   );
 
+  const onCheckAccessibilityAction = useCallback(
+    (e: { nativeEvent: { actionName: string } }) => {
+      if (e.nativeEvent.actionName === "complete") handleCheckPress();
+    },
+    [handleCheckPress],
+  );
+
   return (
     <View testID={`set-${set.id}-row`}>
-      <SwipeToDelete
-        onDelete={handleDelete}
+      <SwipeRowAction
         widthBasis="container"
-        dismissThresholdFraction={0.5}
-        minDismissPx={120}
-        velocityDismissPxPerSec={1500}
-        velocityMinTranslatePx={80}
-        haptic
+        showHint={showSwipeRightHint ? "right" : false}
+        left={{
+          fraction: 0.5,
+          minPx: 120,
+          velocity: 1500,
+          velocityMinTranslatePx: 80,
+          color: colors.error,
+          icon: Trash2,
+          label: `Delete set ${set.set_number}`,
+          haptic: true,
+          commitBehavior: "slide-out",
+          callback: handleDelete,
+        }}
+        right={{
+          fraction: 0.35,
+          minPx: 80,
+          velocity: 1500,
+          velocityMinTranslatePx: 80,
+          color: colors.primary,
+          icon: Check,
+          label: `Mark set ${set.set_number} complete`,
+          haptic: false,
+          commitBehavior: "snap-back",
+          callback: handleCheckPress,
+        }}
       >
         <View
           style={[
@@ -129,6 +240,11 @@ export const SetRow = memo(function SetRow({
             { backgroundColor: colors.background },
             borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined,
           ]}
+          accessibilityHint={
+            I18nManager.isRTL
+              ? "Swipe left to complete, swipe right to delete"
+              : "Swipe right to complete, swipe left to delete"
+          }
         >
           <Pressable
             onPress={() => onCycleSetType(set.id)}
@@ -249,6 +365,8 @@ export const SetRow = memo(function SetRow({
             accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: set.completed }}
+            accessibilityActions={[{ name: "complete", label: "Mark complete" }]}
+            onAccessibilityAction={onCheckAccessibilityAction}
           >
             {set.completed && (
               <MaterialCommunityIcons name="check" size={18} color={colors.onPrimary} />
@@ -282,7 +400,7 @@ export const SetRow = memo(function SetRow({
             />
           </Pressable>
         </View>
-      </SwipeToDelete>
+      </SwipeRowAction>
 
       <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
 
