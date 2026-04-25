@@ -335,6 +335,17 @@ export const strengthGoals = sqliteTable("strength_goals", {
   index("idx_strength_goals_active").on(table.achieved_at),
 ]);
 
+// ─── Hydration (BLD-600) ────────────────────────────────────────────────────
+
+export const waterLogs = sqliteTable("water_logs", {
+  id: text("id").primaryKey(),
+  date_key: text("date_key").notNull(),
+  amount_ml: integer("amount_ml").notNull(),
+  logged_at: integer("logged_at").notNull(),
+}, (table) => [
+  index("idx_water_logs_date_key").on(table.date_key),
+]);
+
 // ─── Inferred Select Types ─────────────────────────────────────────────────
 // Use these instead of manually-defined Row types.
 
@@ -364,3 +375,4 @@ export type StravaConnectionRow = typeof stravaConnection.$inferSelect;
 export type StravaSyncLogRow = typeof stravaSyncLog.$inferSelect;
 export type HealthConnectSyncLogRow = typeof healthConnectSyncLog.$inferSelect;
 export type StrengthGoalRow = typeof strengthGoals.$inferSelect;
+export type WaterLogRow = typeof waterLogs.$inferSelect;

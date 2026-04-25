@@ -10,7 +10,7 @@ const VALID_TABLES = new Set([
   "interaction_log", "progress_photos", "achievements_earned",
   "strava_connection", "strava_sync_log", "health_connect_sync_log",
   "meal_templates", "meal_template_items", "app_settings",
-  "program_schedule", "strength_goals",
+  "program_schedule", "strength_goals", "water_logs",
 ]);
 
 function assertValidTable(table: string): void {
@@ -319,6 +319,15 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       servings REAL NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_meal_template_items_template ON meal_template_items(template_id);
+
+    -- BLD-600: hydration tracking. Additive table, no impact on existing schema.
+    CREATE TABLE IF NOT EXISTS water_logs (
+      id TEXT PRIMARY KEY,
+      date_key TEXT NOT NULL,
+      amount_ml INTEGER NOT NULL,
+      logged_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_water_logs_date_key ON water_logs(date_key);
   `);
 }
 

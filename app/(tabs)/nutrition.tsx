@@ -11,6 +11,7 @@ import { NutritionListHeader } from '../../components/nutrition/NutritionListHea
 import { MealSectionHeader } from '../../components/nutrition/MealSectionHeader';
 import { MacroTargetsSheet } from '../../components/nutrition/MacroTargetsSheet';
 import { MealTemplatesSheet } from '../../components/nutrition/MealTemplatesSheet';
+import { WaterAmountSheet } from '../../components/nutrition/WaterAmountSheet';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { useNutritionData } from '@/hooks/useNutritionData';
 
@@ -33,10 +34,16 @@ export default function Nutrition() {
     remove,
     load,
     handleSnack,
+    waterTotalMl,
+    waterGoalMl,
+    waterUnit,
+    waterPresetsMl,
+    addWater,
   } = useNutritionData();
 
   const [targetsVisible, setTargetsVisible] = useState(false);
   const [templatesVisible, setTemplatesVisible] = useState(false);
+  const [waterSheetVisible, setWaterSheetVisible] = useState(false);
 
   const handleFoodLogged = useCallback(() => {
     load();
@@ -69,11 +76,17 @@ export default function Nutrition() {
             date={date}
             summary={summary}
             targets={targets}
+            waterTotalMl={waterTotalMl}
+            waterGoalMl={waterGoalMl}
+            waterUnit={waterUnit}
+            waterPresetsMl={waterPresetsMl}
             colors={colors}
             onPrev={prev}
             onNext={next}
             onEditTargets={() => setTargetsVisible(true)}
             onMealTemplates={() => setTemplatesVisible(true)}
+            onWaterPreset={(amt) => addWater(amt)}
+            onWaterCustom={() => setWaterSheetVisible(true)}
           />
         }
         ListEmptyComponent={
@@ -111,6 +124,13 @@ export default function Nutrition() {
         visible={templatesVisible}
         onClose={() => setTemplatesVisible(false)}
         onLogged={load}
+      />
+      <WaterAmountSheet
+        visible={waterSheetVisible}
+        onClose={() => setWaterSheetVisible(false)}
+        unit={waterUnit}
+        onSubmit={addWater}
+        colors={colors}
       />
     </View>
   );

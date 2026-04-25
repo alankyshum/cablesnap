@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 ### Added
+- Hydration tracking — log water in ml or fl oz from the Nutrition tab; configurable daily goal and preset volumes in Settings.
 - Workout templates now remember the training mode you pick per Voltra exercise; sessions started from the template open in the saved mode automatically.
 
 ### Removed
