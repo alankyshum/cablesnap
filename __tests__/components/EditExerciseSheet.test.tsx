@@ -18,6 +18,7 @@ const baseExercise: TemplateExercise = {
   link_id: null,
   link_label: '',
   target_duration_seconds: null,
+  training_mode: null,
   exercise: { id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: ['triceps'], equipment: 'barbell', instructions: '', difficulty: 'intermediate', is_custom: false, deleted_at: null } as TemplateExercise['exercise'],
 }
 
