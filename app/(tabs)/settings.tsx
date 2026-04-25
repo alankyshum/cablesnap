@@ -29,7 +29,7 @@ import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { fontSizes } from '@/constants/design-tokens';
+import { fontSizes, spacing } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import { handleExport, handleImport } from './_settings-handlers';
 import { setAppSetting, deleteAppSetting } from '@/lib/db';
@@ -239,12 +239,12 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingTop: 16, paddingBottom: 48 },
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
+  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.md },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: spacing.sm,
     minHeight: 44,
   },
   versionRowRight: {
