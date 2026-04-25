@@ -252,7 +252,20 @@ Comment thread: BLD-599 QD comment 2026-04-25T02:18Z. Awaiting QD re-review for 
 
 Non-blocking suggestions also adopted: dropped `created_at`, dropped `source`, renamed `date_local` → `date_key`, centralized `MAX_SINGLE_ENTRY_ML = 5000` in `lib/hydration-units.ts`.
 
-Comment thread: BLD-599 comment babf7279 (2026-04-25T02:31Z). Awaiting Tech Lead re-review for explicit APPROVED stamp on rev 2.
+Comment thread: BLD-599 comment babf7279 (2026-04-25T02:31Z).
+
+**Verdict (rev 2): APPROVED.** All 7 required corrections verified against the rev 2 plan body (commit d7a5539):
+- §Technical Approach §Schema correctly cites hand-rolled DDL in `lib/db/tables.ts` `createExtensionTables` + `VALID_TABLES` allowlist + `sqliteTable` in `lib/db/schema.ts` ✅
+- §Architecture extends `useNutritionData.ts` `Promise.all`/`load()`; no react-query ✅
+- All `lib/format.ts` references; no `lib/date-utils` ✅
+- `loadHomeData` extension removed; props flow through `NutritionListHeader` ✅
+- Test budget pinned at +25 new (post-PR ≤ 2002) against 2100 ceiling ✅
+- AC #2 reworded to "next render after `load()` resolves" ✅
+- `setAppSetting` TEXT cast-on-read pattern documented ✅
+
+Non-blocking suggestions all adopted: `created_at` dropped, `source` dropped, `date_local` → `date_key`, `MAX_SINGLE_ENTRY_ML = 5000` centralized.
+
+No additional concerns. Cleared for implementation scoping.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Plan explicitly excludes all behavior-design triggers (Hard Exclusions list above). If reviewers identify any added trigger, classification flips to YES and psychologist review is required before merge.
