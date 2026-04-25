@@ -204,8 +204,41 @@ When the user completes their first set, the existing query invalidation (`bumpQ
 - No idle-timer warning.
 - No color/intensity change on the timer when it begins ticking.
 
-### Tech Lead (Feasibility)
-_Pending_
+### Tech Lead (Feasibility) — REQUEST CHANGES (2026-04-25)
+
+**Verdict: REQUEST CHANGES.** Approach is sound; schema/concurrency are correct. One blocker plus several required corrections.
+
+🔴 **BLOCKER — Active session never sees the new `clock_started_at`.** Plan claims `bumpQueryVersion` causes the timer effect to pick up the new anchor. False: `hooks/useSessionDetail.ts:61-93` fetches once via `useEffect(..., [id])` and is **not** subscribed to `bumpQueryVersion` or react-query. Once the screen mounts, `session` state is never refreshed for the lifetime of the active session, so `session.clock_started_at` stays `null` in memory even after the DB write. Header timer would never start. Required fix (recommend A): (A) Optimistic local state in `useSessionActions` — `useState<number|null>(session?.clock_started_at ?? null)`, set to `now` in `handleCheck` when null on first completion, elapsed effect reads local state. (B) Expose `refreshSession()` from `useSessionDetail` and invoke after `completeSet`. Either way, plan must name the propagation mechanism and add an acceptance test asserting elapsed > 0 after a simulated first-set completion on a session whose initial `clock_started_at` was null.
+
+🟠 **REQUIRED — Migration registry file is `lib/db/migrations.ts`, not `lib/db/tables.ts`.** Two files: (1) `lib/db/tables.ts:89-99` for fresh-install `CREATE TABLE`; (2) `lib/db/migrations.ts:46-47` for `await addColumnIfMissing(database, "workout_sessions", "clock_started_at", "INTEGER");`. Risk Assessment's "ALTER TABLE ... ADD COLUMN IF NOT EXISTS" wording is wrong — SQLite has no such syntax; idempotency comes from `addColumnIfMissing`'s `hasColumn(...)` precheck (`lib/db/tables.ts:32-46`).
+
+🟠 **REQUIRED — Type updates not enumerated.** Plan widens `useSessionActions` prop type but skips upstream:
+1. `lib/types.ts:187-196` — add `clock_started_at: number | null` to `WorkoutSession`.
+2. `lib/health-connect.ts:113-118` — add `clock_started_at: number | null` to local `SessionData` interface.
+3. `lib/db/schema.ts` Drizzle mirror as `integer("clock_started_at")` (nullable).
+
+🟠 **REQUIRED — Test fixtures will fail TypeScript.** `__tests__/hooks/useSessionActions-elapsed-clock.test.ts:147` constructs `session: { started_at, name }` only. Plan must list test-fixture updates as in scope and add a new test for the empty-anchor case.
+
+🟡 **RECOMMENDED — Replace SELECT-then-UPDATE with single statement.** Plan's `completeSet` snippet has prose claiming "inside the same transaction" but the code shows two unwrapped statements. Either wrap in `db.transaction(...)` or drop the wording. Cleanest: collapse SELECT+UPDATE via raw `sql`:
+
+```ts
+await db.run(sql`
+  UPDATE workout_sessions
+  SET clock_started_at = ${now}
+  WHERE id = (SELECT session_id FROM workout_sets WHERE id = ${id})
+    AND clock_started_at IS NULL
+`);
+```
+
+One round-trip; no risk of mid-step row deletion. Concurrency analysis in Edge Cases is correct (idempotent IS NULL + SQLite writer serialization make it safe).
+
+🟡 **RECOMMENDED — Fix stale comment** at `useSessionActions.ts:117` ("recompute elapsed from session.started_at on resume") — anchor source is changing.
+
+🟡 **RECOMMENDED — Audit grep during PR**: `grep -rn "session\.started_at\|sessions\.started_at\|\.started_at" --include='*.ts' --include='*.tsx' lib/ hooks/ app/ components/` to catch any duration-bearing usage missed.
+
+✅ **Approved aspects**: nullable INTEGER schema with no backfill; `startSession` unchanged; `IS NULL` idempotency under SQLite writer serialization; `uncompleteSet` does not roll back anchor (correct UX, no flicker); `clock_started_at ?? started_at` fallback in Strava/HC (preserves legacy exports); date bucketing on `started_at` unchanged; `completeSession` duration computation including zero-set fallback.
+
+Once the plan names a concrete propagation mechanism for the active-session refetch and addresses the 🟠 corrections, will re-review. Full review with line refs in BLD-605 comment thread.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Hard exclusions enumerated above.
