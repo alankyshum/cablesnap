@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { spacing } from "@/constants/design-tokens";
 import { MOUNT_POSITION_LABELS, type MountPosition } from "../../lib/types";
 
 export type MountTransitionHintProps = {
@@ -77,9 +78,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   text: {
     fontSize: 12,
