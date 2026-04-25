@@ -38,14 +38,14 @@ describe("buildInitialSetsFromTemplate (BLD-621)", () => {
           exercise_id: "ex-1",
           position: 0,
           target_sets: 3,
-          training_mode: "eccentric_overload",
+          training_mode: "isokinetic",
         }),
       ],
     });
     const seeds = buildInitialSetsFromTemplate(tpl, "session-1");
     expect(seeds).toHaveLength(3);
     for (const s of seeds) {
-      expect(s.trainingMode).toBe("eccentric_overload");
+      expect(s.trainingMode).toBe("isokinetic");
       expect(s.sessionId).toBe("session-1");
       expect(s.exerciseId).toBe("ex-1");
     }
