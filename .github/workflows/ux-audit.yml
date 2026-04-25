@@ -1,0 +1,109 @@
+name: UX Audit (Daily Visual Capture)
+
+# Daily visual UX audit capture (BLD-481, unblocks BLD-645).
+#
+# Exports the web bundle in dev mode (so the `__TEST_SCENARIO__` seed hook is
+# active) and runs the scenario specs at the `mobile` viewport. Screenshots +
+# JSON metadata land in `.pixelslop/screenshots/scenarios/<scenario>/` and
+# are uploaded as a downloadable artifact for the ux-designer agent to
+# consume via `gh run download`.
+#
+# Why GitHub Actions, not the agent runtime container:
+#   - Container is shared infra and lacks Chromium runtime libs (libnss3,
+#     libxkbcommon0, libgbm1, …). `apt-get` / `sudo` are unavailable.
+#   - `npx playwright install --with-deps chromium` works on ubuntu-latest.
+#   - This workflow mirrors `e2e-update-snapshots.yml`, which already runs
+#     Playwright successfully in CI.
+#
+# Refs: BLD-481 (audit loop), BLD-494 (scenario hook), BLD-631 / BLD-644
+#       (prior attempts), BLD-645 (this workflow).
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Daily at 09:00 UTC — matches BLD-481 spec ("daily 09:00 local"). UTC is
+    # used because GH cron has no timezone support; agent triage absorbs the
+    # offset.
+    - cron: '0 9 * * *'
+
+# Multiple dispatches against the same ref shouldn't pile up.
+concurrency:
+  group: ux-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Capture scenario screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Export web bundle (dev mode for scenario seed hook)
+        # `--dev --no-minify` keeps `__DEV__=true` so `if (__DEV__)`-gated
+        # scenario hooks (lib/db/test-seed.ts) execute. Static export avoids
+        # Metro cold-start in CI (BLD-517).
+        run: npx expo export -p web --dev --no-minify
+
+      - name: Run scenario captures (mobile viewport)
+        env:
+          CI: 'true'
+          E2E_USE_STATIC: '1'
+        run: |
+          npx playwright test \
+            e2e/scenarios/completed-workout.spec.ts \
+            e2e/scenarios/workout-history.spec.ts \
+            --project=mobile
+
+      - name: Write empty-bundle marker if no screenshots produced
+        # If pauseAndCapture wrote zero files, surface that explicitly in the
+        # artifact instead of silently uploading nothing.
+        if: always()
+        run: |
+          OUT=".pixelslop/screenshots/scenarios"
+          mkdir -p "$OUT"
+          PNG_COUNT=$(find "$OUT" -name '*.png' -type f 2>/dev/null | wc -l)
+          if [ "$PNG_COUNT" -eq 0 ]; then
+            echo "::warning::ux-audit produced zero screenshots — emitting empty-bundle marker"
+            CAPTURED_AT="$(date -u +%FT%TZ)"
+            printf '{"warning":"no screenshots captured","runId":"%s","commitSha":"%s","ref":"%s","capturedAt":"%s"}\n' \
+              "${{ github.run_id }}" "${{ github.sha }}" "${{ github.ref }}" "$CAPTURED_AT" \
+              > "$OUT/_empty-bundle.json"
+          else
+            echo "Captured $PNG_COUNT screenshot(s)."
+          fi
+
+      - name: Upload screenshot bundle
+        # `if: always()` so partial captures still upload when a later spec
+        # fails. Naming includes run id so ux-designer can pin to a run.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ux-audit-${{ github.run_id }}
+          path: .pixelslop/screenshots/scenarios/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ux-audit-playwright-report-${{ github.run_id }}
+          path: playwright-report
+          retention-days: 14
