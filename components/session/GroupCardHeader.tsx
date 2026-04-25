@@ -7,6 +7,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import TrainingModeSelector from "../../components/TrainingModeSelector";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { ExerciseNotesPanel } from "./ExerciseNotesPanel";
+import { MountPositionChip } from "./MountPositionChip";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
 import { fontSizes } from "../../constants/design-tokens";
@@ -94,6 +95,7 @@ function GroupCardHeaderInner({ group, currentMode, exerciseNotesOpen, exerciseN
               </Pressable>
             )}
           </View>
+          <MountPositionChip mount={group.mount_position} />
           <View style={styles.headerActions}>
             {showMoveButtons && (
               <>
@@ -148,7 +150,7 @@ function GroupCardHeaderInner({ group, currentMode, exerciseNotesOpen, exerciseN
 
 const styles = StyleSheet.create({
   headerWrap: { gap: 4, marginBottom: 8 },
-  headerRow1: { flexDirection: "row", alignItems: "center", gap: 4 },
+  headerRow1: { flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" },
   headerRow2: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   headerActions: { flexDirection: "row", alignItems: "center" },
   groupTitle: { fontWeight: "700" },

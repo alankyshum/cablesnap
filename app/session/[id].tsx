@@ -26,6 +26,7 @@ import { useSetTypeActions } from "../../hooks/useSetTypeActions";
 import { useSessionTimer } from "../../hooks/useSessionTimer";
 import { usePRCelebration } from "../../hooks/usePRCelebration";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
+import { MountTransitionHint, shouldShowMountTransition } from "../../components/session/MountTransitionHint";
 import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDetailDrawer";
 import { SetTypeSheet } from "../../components/session/SetTypeSheet";
 import { SessionListHeader } from "../../components/session/SessionListHeader";
@@ -212,8 +213,12 @@ export default function ActiveSession() {
     }
   }, [id, unit, suggestions, groups, load, showError]);
 
-  const renderExerciseGroup = useCallback(({ item: group }: { item: typeof groups[number] }) => (
-    <ExerciseGroupCard
+  const renderExerciseGroup = useCallback(({ item: group, index }: { item: typeof groups[number]; index: number }) => {
+    const prev = index > 0 ? groups[index - 1] : undefined;
+    return (
+      <>
+        {shouldShowMountTransition(prev, group) ? <MountTransitionHint prevMount={prev!.mount_position!} nextMount={group.mount_position!} /> : null}
+        <ExerciseGroupCard
       group={group}
       step={step}
       unit={unit}
@@ -255,7 +260,9 @@ export default function ActiveSession() {
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
     />
-  ), [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+      </>
+    );
+  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
