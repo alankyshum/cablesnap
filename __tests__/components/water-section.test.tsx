@@ -69,6 +69,14 @@ describe('WaterSection', () => {
     expect(bars.length).toBeGreaterThan(0);
   });
 
+  it('reports actual (uncapped) totalMl in accessibilityValue.now even when over goal', () => {
+    const { UNSAFE_getAllByProps } = setup({ totalMl: 2250, goalMl: 2000 });
+    const bars = UNSAFE_getAllByProps({ accessibilityRole: 'progressbar' });
+    expect(bars.length).toBeGreaterThan(0);
+    expect(bars[0].props.accessibilityValue.now).toBe(2250);
+    expect(bars[0].props.accessibilityValue.max).toBe(2000);
+  });
+
   it('opens custom sheet via onCustomPress', () => {
     const { getByLabelText, onCustomPress } = setup();
     fireEvent.press(getByLabelText('Log custom amount of water'));
