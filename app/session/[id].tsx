@@ -26,7 +26,7 @@ import { useSetTypeActions } from "../../hooks/useSetTypeActions";
 import { useSessionTimer } from "../../hooks/useSessionTimer";
 import { usePRCelebration } from "../../hooks/usePRCelebration";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
-import { MountTransitionHint, shouldShowMountTransition } from "../../components/session/MountTransitionHint";
+import { MountTransitionHint } from "../../components/session/MountTransitionHint";
 import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDetailDrawer";
 import { SetTypeSheet } from "../../components/session/SetTypeSheet";
 import { SessionListHeader } from "../../components/session/SessionListHeader";
@@ -214,10 +214,10 @@ export default function ActiveSession() {
   }, [id, unit, suggestions, groups, load, showError]);
 
   const renderExerciseGroup = useCallback(({ item: group, index }: { item: typeof groups[number]; index: number }) => {
-    const prev = index > 0 ? groups[index - 1] : undefined;
-    return (
-      <>
-        {shouldShowMountTransition(prev, group) ? <MountTransitionHint prevMount={prev!.mount_position!} nextMount={group.mount_position!} /> : null}
+    const prevMount = index > 0 ? groups[index - 1]?.mount_position : undefined;
+    const currMount = group.mount_position;
+    return (<>
+        {prevMount && currMount && prevMount !== currMount ? <MountTransitionHint prevMount={prevMount} nextMount={currMount} /> : null}
         <ExerciseGroupCard
       group={group}
       step={step}
