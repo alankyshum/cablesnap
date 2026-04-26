@@ -1,0 +1,20 @@
+diff --git a/node_modules/expo-sqlite/web/WorkerChannel.ts b/node_modules/expo-sqlite/web/WorkerChannel.ts
+index 7fba380..6e6e2be 100644
+--- a/node_modules/expo-sqlite/web/WorkerChannel.ts
++++ b/node_modules/expo-sqlite/web/WorkerChannel.ts
+@@ -40,7 +40,14 @@ export function sendWorkerResult({
+     const resultJson = error != null ? serialize({ error }) : serialize({ result });
+     const resultBytes = new TextEncoder().encode(resultJson);
+     const length = resultBytes.length;
+-    resultArray.set(new Uint32Array([length]), 0);
++    // BLD-660: write the 4-byte length prefix as a true little-endian uint32.
++    // The previous form `resultArray.set(new Uint32Array([length]), 0)` does an
++    // element-wise typed conversion (Uint32 -> Uint8), so only `length & 0xFF`
++    // is written into byte 0 and bytes 1-3 stay zero. Any payload >= 256 bytes
++    // ended up with a truncated length prefix, causing the receiving thread to
++    // decode a partial JSON string and fail with "Unexpected end of JSON input"
++    // (see expo-sqlite-web sync bridge).
++    new DataView(resultArray.buffer).setUint32(0, length, true);
+     resultArray.set(resultBytes, 4);
+     Atomics.store(lock, 0, RESOLVED);
+   } else {

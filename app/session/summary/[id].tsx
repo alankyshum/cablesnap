@@ -19,11 +19,24 @@ import ComparisonCard from "../../../components/session/summary/ComparisonCard";
 import SetsCard from "../../../components/session/summary/SetsCard";
 import MusclesWorkedCard from "../../../components/session/summary/MusclesWorkedCard";
 import SummaryFooter from "../../../components/session/summary/SummaryFooter";
+import ErrorBoundary from "../../../components/ErrorBoundary";
 import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 
-export default function Summary() {
+export default function SummaryRoute() {
+  // BLD-660: wrap the Summary view in a route-local ErrorBoundary so a crash
+  // here (e.g. the BLD-660 expo-sqlite-web length-prefix truncation) shows the
+  // shared crash UI with retry/share-report controls instead of a white screen,
+  // and stays scoped to this route — the rest of the navigator keeps working.
+  return (
+    <ErrorBoundary>
+      <Summary />
+    </ErrorBoundary>
+  );
+}
+
+function Summary() {
   const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
