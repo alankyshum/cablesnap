@@ -150,16 +150,11 @@ function renderRow(opts: { set?: Partial<SetWithMeta> } = {}) {
       set={makeSet(opts.set)}
       step={5}
       unit="kg"
-      halfStep={null}
       trackingMode="reps"
       equipment="cable"
       onUpdate={noop}
       onCheck={onCheck}
       onDelete={onDelete}
-      onRPE={noop}
-      onHalfStep={noop}
-      onHalfStepClear={noop}
-      onHalfStepOpen={noop}
       onCycleSetType={noop}
       onLongPressSetType={noop}
     />,

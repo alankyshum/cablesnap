@@ -79,23 +79,17 @@ function renderRow(props: Partial<React.ComponentProps<typeof SetRow>> = {}) {
   const onDelete = jest.fn();
   const onCheck = jest.fn();
   const onUpdate = jest.fn();
-  const onRPE = jest.fn();
   const noop = jest.fn();
   const utils = render(
     <SetRow
       set={makeSet(props.set)}
       step={5}
       unit="kg"
-      halfStep={null}
       trackingMode="reps"
       equipment="cable"
       onUpdate={onUpdate}
       onCheck={onCheck}
       onDelete={onDelete}
-      onRPE={onRPE}
-      onHalfStep={noop}
-      onHalfStepClear={noop}
-      onHalfStepOpen={noop}
       onCycleSetType={noop}
       onLongPressSetType={noop}
       {...props}
@@ -155,15 +149,9 @@ describe("SetRow — BLD-543 delete affordance & hit targets", () => {
     expect(effectiveV).toBeGreaterThanOrEqual(60);
   });
 
-  it("RPE chips meet 44pt minimum tap target when shown", () => {
-    const { UNSAFE_getAllByProps } = renderRow({ set: makeSet({ completed: true }) });
-    // Any chip with role=radio should have minHeight ≥ 44
-    const chips = UNSAFE_getAllByProps({ accessibilityRole: "radio" });
-    expect(chips.length).toBeGreaterThan(0);
-    for (const chip of chips) {
-      const styles = Array.isArray(chip.props.style) ? chip.props.style : [chip.props.style];
-      const merged = Object.assign({}, ...styles.filter(Boolean));
-      expect(merged.minHeight ?? 0).toBeGreaterThanOrEqual(44);
-    }
+  it("does not render RPE chip radios (BLD-615: prompt removed)", () => {
+    const { UNSAFE_queryAllByProps } = renderRow({ set: makeSet({ completed: true }) });
+    const chips = UNSAFE_queryAllByProps({ accessibilityRole: "radio" });
+    expect(chips.length).toBe(0);
   });
 });
