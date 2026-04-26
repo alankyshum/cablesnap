@@ -23,7 +23,6 @@ export type GroupCardProps = {
   modes: Record<string, TrainingMode>;
   exerciseNotesOpen: boolean;
   exerciseNotesDraft: string | undefined;
-  halfStep: { setId: string; base: number } | null;
   linkIds: string[];
   groups: ExerciseGroup[];
   palette: string[];
@@ -33,10 +32,6 @@ export type GroupCardProps = {
   onAddSet: (exerciseId: string) => void;
   onAddWarmups: (exerciseId: string) => void;
   onModeChange: (exerciseId: string, mode: TrainingMode) => void;
-  onRPE: (set: SetWithMeta, val: number) => void;
-  onHalfStep: (setId: string, val: number) => void;
-  onHalfStepClear: () => void;
-  onHalfStepOpen: (setId: string, base: number) => void;
   onExerciseNotes: (exerciseId: string, text: string) => void;
   onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
   onToggleExerciseNotes: (exerciseId: string) => void;
@@ -62,10 +57,9 @@ export type GroupCardProps = {
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   group, step, unit, suggestions, modes,
-  exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette,
+  exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onAddWarmups, onModeChange,
-  onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
+  onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
@@ -115,16 +109,11 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
             set={set}
             step={step}
             unit={unit}
-            halfStep={halfStep}
             trackingMode={isDurationMode ? "duration" : "reps"}
             equipment={group.equipment}
             onUpdate={onUpdate}
             onCheck={onCheck}
             onDelete={onDelete}
-            onRPE={onRPE}
-            onHalfStep={onHalfStep}
-            onHalfStepClear={onHalfStepClear}
-            onHalfStepOpen={onHalfStepOpen}
             onCycleSetType={onCycleSetType}
             onLongPressSetType={onLongPressSetType}
             isBodyweight={group.is_bodyweight}

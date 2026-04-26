@@ -14,7 +14,6 @@ import {
   getAppSetting,
   uncompleteSet,
   updateSet,
-  updateSetRPE,
   updateSetNotes,
   updateSetTrainingMode,
   getSessionSets,
@@ -116,7 +115,6 @@ export function useSessionActions({
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
   const [exerciseNotesDraft, setExerciseNotesDraft] = useState<Record<string, string>>({});
-  const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // BLD-541: per-session rate-limiter for weighted-BW PR celebrations.
@@ -468,20 +466,6 @@ export function useSessionActions({
     }
   }, [groups]);
 
-  const handleRPE = useCallback(async (set: SetWithMeta, val: number) => {
-    const next = set.rpe === val ? null : val;
-    updateGroupSet(set.id, { rpe: next });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await updateSetRPE(set.id, next);
-  }, [updateGroupSet]);
-
-  const handleHalfStep = useCallback(async (setId: string, val: number) => {
-    updateGroupSet(setId, { rpe: val });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setHalfStep(null);
-    await updateSetRPE(setId, val);
-  }, [updateGroupSet]);
-
   const handleDelete = useCallback(async (setId: string) => {
     setGroups((prev) =>
       prev.map((g) => ({
@@ -491,11 +475,6 @@ export function useSessionActions({
       })).filter((g) => g.sets.length > 0)
     );
     await deleteSet(setId);
-  }, []);
-
-  const handleHalfStepClear = useCallback(() => setHalfStep(null), []);
-  const handleHalfStepOpen = useCallback((setId: string, base: number) => {
-    setHalfStep({ setId, base });
   }, []);
 
   const handleExerciseNotes = useCallback(async (exerciseId: string, text: string) => {
@@ -784,17 +763,12 @@ export function useSessionActions({
     clockStartedAt,
     exerciseNotesOpen,
     exerciseNotesDraft,
-    halfStep,
     nextHint,
     hintTimer,
     handleUpdate,
     handleCheck,
     handleAddSet,
     handleModeChange,
-    handleRPE,
-    handleHalfStep,
-    handleHalfStepClear,
-    handleHalfStepOpen,
     handleDelete,
     handleExerciseNotes,
     handleExerciseNotesDraftChange,
