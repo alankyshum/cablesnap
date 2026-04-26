@@ -395,8 +395,49 @@ export function useSessionActions({
       }
     }
 
+    // BLD-655: prefill weight/reps (or weight/duration_seconds) from the most
+    // recent working (non-warmup) set in the SAME current session. Mirrors —
+    // does NOT apply progression. Routes through the existing updateSet write
+    // path (single-write-path principle). Silent no-op when no usable source.
+    let prefillWeight: number | null = null;
+    let prefillReps: number | null = null;
+    let prefillDuration: number | null = null;
+    let prefillApplied = false;
+    if (group) {
+      const lastWorking = [...group.sets].filter((s) => s.set_type !== "warmup").slice(-1)[0];
+      if (lastWorking) {
+        const isDuration = group.trackingMode === "duration";
+        const candidateWeight = lastWorking.weight ?? null;
+        const candidateReps = isDuration ? null : (lastWorking.reps ?? null);
+        const candidateDuration = isDuration ? (lastWorking.duration_seconds ?? null) : null;
+        const hasAny =
+          candidateWeight != null || candidateReps != null || candidateDuration != null;
+        if (hasAny) {
+          try {
+            await updateSet(
+              newSet.id,
+              candidateWeight,
+              candidateReps,
+              isDuration ? candidateDuration : undefined
+            );
+            prefillWeight = candidateWeight;
+            prefillReps = candidateReps;
+            prefillDuration = candidateDuration;
+            prefillApplied = true;
+          } catch (err) {
+            // BLD-655 AC: do not throw, do not show unsaved values; row insert
+            // already succeeded. Single console.warn breadcrumb.
+            console.warn("[BLD-655] add-set prefill persistence failed", err);
+          }
+        }
+      }
+    }
+
     const setWithModifier: SetWithMeta = {
       ...newSet,
+      ...(prefillApplied
+        ? { weight: prefillWeight, reps: prefillReps, duration_seconds: prefillDuration }
+        : {}),
       bodyweight_modifier_kg: defaultModifier,
       previous: "-",
     };
