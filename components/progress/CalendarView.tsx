@@ -9,7 +9,7 @@ import {
 import { Text } from "@/components/ui/text";
 import { useFocusEffect } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
+import { useSegmentStyles } from "./useSegmentStyles";
 import {
   getMonthlyWorkoutDates,
   getWorkoutDatesForStreak,
@@ -29,7 +29,7 @@ type Props = {
 
 export default function CalendarView({ weekStartDay }: Props) {
   const colors = useThemeColors();
-  const tabBarHeight = useFloatingTabBarHeight();
+  const { scrollContainer, contentContainer } = useSegmentStyles();
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -143,11 +143,8 @@ export default function CalendarView({ weekStartDay }: Props) {
   return (
     // bounded list — ScrollView is intentional: renders fixed calendar grid + streak stats, not unbounded .map()
     <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={[
-        styles.container,
-        { paddingBottom: tabBarHeight + 16 },
-      ]}
+      style={scrollContainer}
+      contentContainerStyle={contentContainer}
     >
       {/* Month navigation header */}
       <View style={styles.header}>
@@ -248,9 +245,6 @@ export default function CalendarView({ weekStartDay }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
   centered: {
     alignItems: "center",
     justifyContent: "center",

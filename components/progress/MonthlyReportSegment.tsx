@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
+import { useSegmentStyles } from "./useSegmentStyles";
 import { spacing, fontSizes } from "@/constants/design-tokens";
 import { useMonthlyReport, formatMonthLabel, formatVolume } from "@/hooks/useMonthlyReport";
 import { toDisplay } from "@/lib/units";
@@ -23,6 +24,7 @@ import {
 export default function MonthlyReportSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
+  const { scrollContainer, contentContainer } = useSegmentStyles();
   const {
     data,
     loading,
@@ -68,8 +70,8 @@ export default function MonthlyReportSegment() {
 
   return (
     <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
+      style={scrollContainer}
+      contentContainerStyle={[contentContainer, { paddingHorizontal: layout.horizontalPadding }]}
     >
       {/* Month navigation */}
       <View style={styles.navRow}>
@@ -180,13 +182,6 @@ export default function MonthlyReportSegment() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    paddingVertical: spacing.base,
-    paddingBottom: spacing.xxxl,
-  },
   center: {
     flex: 1,
     justifyContent: "center",

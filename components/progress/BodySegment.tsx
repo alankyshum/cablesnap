@@ -13,6 +13,7 @@ import type { BodyWeight } from "../../lib/types";
 import { toDisplay } from "../../lib/units";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useSegmentStyles } from "./useSegmentStyles";
 import { useBodyMetrics } from "@/hooks/useBodyMetrics";
 import WeightLogModal from "./WeightLogModal";
 import {
@@ -108,6 +109,7 @@ function BodyModal({
 
 export default function BodySegment() {
   const colors = useThemeColors();
+  const { scrollContainer, contentContainer } = useSegmentStyles();
 
   const {
     settings,
@@ -195,13 +197,14 @@ export default function BodySegment() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={scrollContainer}>
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
         renderItem={renderEntry}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        contentContainerStyle={contentContainer}
         ListHeaderComponent={
           <>
             {latest && (

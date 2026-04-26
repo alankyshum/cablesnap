@@ -20,7 +20,7 @@ import {
 } from "../../lib/db/pr-dashboard";
 import type { RecentPR, PRStats } from "../../lib/db/pr-dashboard";
 import { useLayout } from "../../lib/layout";
-import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
+import { useSegmentStyles } from "./useSegmentStyles";
 import WeeklySummary from "../../components/WeeklySummary";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { WorkoutChartCard, SessionsCard } from "./WorkoutCards";
@@ -62,7 +62,7 @@ type SessionRow = {
 export default function WorkoutSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
-  const tabBarHeight = useFloatingTabBarHeight();
+  const { scrollContainer, contentContainer } = useSegmentStyles();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
@@ -197,11 +197,8 @@ export default function WorkoutSegment() {
     <FlatList
       data={[]}
       renderItem={null}
-      style={{ flex: 1 }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: tabBarHeight + 16 },
-      ]}
+      style={scrollContainer}
+      contentContainerStyle={contentContainer}
       ListHeaderComponent={
         layout.atLeastMedium ? (
           <>
@@ -252,10 +249,6 @@ const styles = StyleSheet.create({
   center: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 80,
   },
   grid: {
     flexDirection: "row",

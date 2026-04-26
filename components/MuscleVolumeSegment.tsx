@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View, FlatList } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View, FlatList } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react-native";
 import { MUSCLE_LABELS } from "../lib/types";
 import { useLayout } from "../lib/layout";
+import { useSegmentStyles } from "./progress/useSegmentStyles";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useMuscleVolume } from "@/hooks/useMuscleVolume";
 import type { VolumeRow } from "@/hooks/useMuscleVolume";
@@ -63,6 +64,7 @@ const MuscleRow = React.memo(function MuscleRow({
 export default function MuscleVolumeSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
+  const { scrollContainer, contentContainer } = useSegmentStyles();
   const {
     offset, setOffset, data, trend, selected, selectMuscle,
     loading, error, load, monday, maxSets, hasEnoughTrend, reduced, formatRange,
@@ -128,7 +130,7 @@ export default function MuscleVolumeSegment() {
   }
 
   return (
-    <View>
+    <ScrollView style={scrollContainer} contentContainerStyle={contentContainer}>
       {/* Week Selector */}
       <View style={styles.weekRow}>
         <Button variant="ghost" size="icon" icon={ChevronLeft} onPress={() => setOffset(offset - 1)} accessibilityLabel="Previous week" style={styles.chevron} />
@@ -264,7 +266,7 @@ export default function MuscleVolumeSegment() {
         onReset={resetLandmark}
         onResetAll={resetAllLandmarks}
       />
-    </View>
+    </ScrollView>
   );
 }
 

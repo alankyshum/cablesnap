@@ -22,7 +22,7 @@ describe("FTA decomposition structural tests", () => {
     // Batch 2 — progress.tsx decomposition
     ["app/(tabs)/progress.tsx", "WorkoutSegment", "imports WorkoutSegment"],
     ["app/(tabs)/progress.tsx", "BodySegment", "imports BodySegment"],
-    ["components/progress/WorkoutSegment.tsx", "useFloatingTabBarHeight", "uses useFloatingTabBarHeight"],
+    ["components/progress/WorkoutSegment.tsx", "useSegmentStyles", "uses useSegmentStyles"],
     ["components/progress/BodySegment.tsx", "useBodyMetrics", "uses useBodyMetrics"],
 
     // Batch 2 — session/detail/[id].tsx decomposition

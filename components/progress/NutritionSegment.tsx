@@ -6,7 +6,7 @@ import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
-import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
+import { useSegmentStyles } from "./useSegmentStyles";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useNutritionProgress, type NutritionPeriod } from "@/hooks/useNutritionProgress";
 import {
@@ -22,7 +22,7 @@ import { fontSizes } from "@/constants/design-tokens";
 export default function NutritionSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
-  const tabBarHeight = useFloatingTabBarHeight();
+  const { scrollContainer, contentContainer } = useSegmentStyles();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
 
@@ -75,8 +75,8 @@ export default function NutritionSegment() {
   if (loading) {
     return (
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
+        style={scrollContainer}
+        contentContainerStyle={contentContainer}
       >
         <SkeletonCard colors={colors} height={40} />
         <SkeletonCard colors={colors} height={200} />
@@ -119,8 +119,8 @@ export default function NutritionSegment() {
 
   return (
     <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
+      style={scrollContainer}
+      contentContainerStyle={contentContainer}
     >
       {/* Period selector */}
       <PeriodSelector period={period} onSelect={setPeriod} />
@@ -256,10 +256,6 @@ const styles = StyleSheet.create({
   center: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 80,
   },
   periodRow: {
     flexDirection: "row",
