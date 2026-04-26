@@ -236,8 +236,11 @@ export const SetRow = memo(function SetRow({
         <View
           style={[
             styles.setRow,
-            set.completed && { backgroundColor: colors.primaryContainer + "40" },
             { backgroundColor: colors.background },
+            // Outline highlight when completed (BLD-613). The base style reserves
+            // a 2px transparent border so the row's outer dimensions are byte-identical
+            // between completed and non-completed states — only the color toggles.
+            set.completed && { borderColor: colors.primary },
             borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined,
           ]}
           accessibilityHint={
@@ -498,9 +501,11 @@ const styles = StyleSheet.create({
   setRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
     borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: "transparent",
     marginBottom: 2,
   },
   colSet: {
