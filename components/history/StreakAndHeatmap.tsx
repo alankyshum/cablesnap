@@ -60,7 +60,7 @@ export default function StreakAndHeatmap({
               <Text variant="caption" style={{ color: colors.error }}>Unable to load heatmap data. Pull down to retry.</Text>
             </View>
           ) : (
-            <WorkoutHeatmap data={heatmapData} weeks={16} onDayPress={onDayPress} />
+            <WorkoutHeatmap data={heatmapData} weeks={16} onDayPress={onDayPress} totalAllTime={totalWorkouts} />
           )
         )}
       </View>

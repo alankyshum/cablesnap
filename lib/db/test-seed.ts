@@ -88,9 +88,14 @@ export async function seedScenario(): Promise<void> {
 export async function seedCompletedWorkout(
   db: Awaited<ReturnType<typeof getDatabase>>,
 ): Promise<void> {
-  const now = Math.floor(Date.now() / 1000);
-  const started = now - 60 * 60; // 1h ago
-  const completed = now - 60; // finished 1 minute ago
+  // BLD-662: timestamps MUST be milliseconds — production writes
+  // `started_at: Date.now()` (lib/db/sessions.ts:134) and history queries
+  // (`getSessionCountsByDay`, `getAllCompletedSessionWeeks`,
+  // `getSessionsByMonth`) all assume ms. Seeding seconds caused the heatmap
+  // / streak / dotMap aggregations to filter every seeded row out.
+  const now = Date.now();
+  const started = now - 60 * 60 * 1000; // 1h ago
+  const completed = now - 60 * 1000; // finished 1 minute ago
 
   await db.runAsync(
     `INSERT INTO workout_sessions
@@ -102,7 +107,7 @@ export async function seedCompletedWorkout(
       "Upper Body",
       started,
       completed,
-      completed - started,
+      Math.floor((completed - started) / 1000),
       "",
       4,
     ],
@@ -149,14 +154,15 @@ export async function seedCompletedWorkout(
 export async function seedWorkoutHistory(
   db: Awaited<ReturnType<typeof getDatabase>>,
 ): Promise<void> {
-  const now = Math.floor(Date.now() / 1000);
+  // BLD-662: milliseconds, see seedCompletedWorkout above.
+  const now = Date.now();
   const names = ["Upper Body", "Lower Body", "Push Day", "Pull Day", "Legs"];
 
   for (let i = 0; i < names.length; i += 1) {
     const daysAgo = i + 1;
-    const started = now - daysAgo * 24 * 60 * 60;
-    const duration = 45 * 60 + i * 5 * 60; // 45–65 minutes
-    const completed = started + duration;
+    const started = now - daysAgo * 24 * 60 * 60 * 1000;
+    const duration = 45 * 60 + i * 5 * 60; // 45–65 minutes (seconds — duration_seconds column)
+    const completed = started + duration * 1000;
 
     await db.runAsync(
       `INSERT INTO workout_sessions
