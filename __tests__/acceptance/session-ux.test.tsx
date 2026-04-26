@@ -146,18 +146,20 @@ describe('Session UX Acceptance', () => {
   })
 
   describe('Haptic Feedback', () => {
-    it('haptics module is wired into session screen', async () => {
+    it('fires haptic impact when a set is completed', async () => {
       setupSession()
       const { findByText, findByLabelText } = renderScreen(<ActiveSession />)
       await findByText('Squat')
+      ;(Haptics.impactAsync as jest.Mock).mockClear()
 
       const checkBtn = await findByLabelText('Mark set 1 complete')
       await waitFor(async () => {
         fireEvent.press(checkBtn)
       })
 
-      // Haptics is exercised by set completion, suggestion chip taps, etc.
-      expect(Haptics.impactAsync).toBeDefined()
+      await waitFor(() => {
+        expect(Haptics.impactAsync).toHaveBeenCalled()
+      })
     })
   })
 
