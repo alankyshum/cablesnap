@@ -11,6 +11,14 @@ type HeatmapProps = {
   data: Map<string, number>;
   weeks?: number;
   onDayPress?: (date: string) => void;
+  /**
+   * Total all-time completed workouts. Used only to disambiguate the empty-state
+   * copy: when `data` is empty AND `totalAllTime > 0`, we know the heatmap is
+   * empty because nothing landed in the visible window — not because the user
+   * has never worked out. Defaults to 0 (treats empty data as "no workouts ever").
+   * BLD-662.
+   */
+  totalAllTime?: number;
 };
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"] as const;
@@ -79,7 +87,7 @@ function buildGrid(weeks: number): CellData[][] {
   return grid;
 }
 
-export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: HeatmapProps) {
+export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllTime = 0 }: HeatmapProps) {
   const colors = useThemeColors();
   const layout = useLayout();
 
@@ -202,7 +210,9 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
       {!hasAnyWorkout && (
         <View style={styles.emptyState}>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-            Start working out to see your consistency here!
+            {totalAllTime > 0
+              ? `No completed workouts in the last ${weeks} weeks`
+              : "Start working out to see your consistency here!"}
           </Text>
         </View>
       )}

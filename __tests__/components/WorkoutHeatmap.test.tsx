@@ -81,4 +81,30 @@ describe("WorkoutHeatmap", () => {
     // Legend shows 3+ and the cell with count 3 also shows 3+
     expect(getAllByText("3+").length).toBeGreaterThanOrEqual(2);
   });
+
+  // BLD-662: when totalAllTime > 0 but the visible window is empty, the
+  // copy must NOT contradict the stat card ("X total" + "start working out").
+  it("uses 'no workouts in last N weeks' copy when totalAllTime > 0 and data empty", () => {
+    const { getByText, queryByText } = renderScreen(
+      <WorkoutHeatmap data={emptyData} totalAllTime={5} weeks={16} />
+    );
+    expect(getByText("No completed workouts in the last 16 weeks")).toBeTruthy();
+    expect(queryByText("Start working out to see your consistency here!")).toBeNull();
+  });
+
+  it("uses 'start working out' copy when totalAllTime is 0 (true new user)", () => {
+    const { getByText } = renderScreen(
+      <WorkoutHeatmap data={emptyData} totalAllTime={0} />
+    );
+    expect(getByText("Start working out to see your consistency here!")).toBeTruthy();
+  });
+
+  it("does not show empty state when data has workouts (regardless of totalAllTime)", () => {
+    const data = new Map([["2026-04-14", 1]]);
+    const { queryByText } = renderScreen(
+      <WorkoutHeatmap data={data} totalAllTime={5} />
+    );
+    expect(queryByText(/No completed workouts/)).toBeNull();
+    expect(queryByText("Start working out to see your consistency here!")).toBeNull();
+  });
 });
