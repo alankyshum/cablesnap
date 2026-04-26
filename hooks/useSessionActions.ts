@@ -600,6 +600,13 @@ export function useSessionActions({
     return prefillFromPrevious(exerciseId);
   }, [prefillFromPrevious]);
 
+  // Keep a ref to the latest prefillFromPrevious so the once-per-session
+  // effect always calls through the current closure (avoids stale `groups`).
+  const prefillFromPreviousRef = useRef(prefillFromPrevious);
+  useEffect(() => {
+    prefillFromPreviousRef.current = prefillFromPrevious;
+  }, [prefillFromPrevious]);
+
   // Auto-prefill once per session open. Fires after groups + previousSets are loaded.
   // Skips any group where the user has already touched working sets (completed OR has values).
   const autoPrefillFiredForSessionRef = useRef<string | null>(null);
@@ -629,7 +636,8 @@ export function useSessionActions({
 
     void (async () => {
       for (const eid of candidates) {
-        await prefillFromPrevious(eid, { silent: true });
+        // Use ref to call the latest closure (with current `groups`).
+        await prefillFromPreviousRef.current(eid, { silent: true });
       }
     })();
     // We intentionally omit `groups` and `prefillFromPrevious` from deps —

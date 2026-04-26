@@ -148,7 +148,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
             : durStr;
         } else if (prev.weight != null && prev.reps != null) {
           prevDisplay = prev.weight > 0 && prev.reps > 1
-            ? `${prev.weight}×${prev.reps} (1RM: ${Math.round(epley(prev.weight, prev.reps))})`
+            ? `${prev.weight}×${prev.reps}\n1RM: ${Math.round(epley(prev.weight, prev.reps))}`
             : `${prev.weight}×${prev.reps}`;
         }
       }
