@@ -32,6 +32,13 @@ marker) at release time.
 ### Removed
 - Removed the **Eccentric** training mode chip and tempo tracking. Existing eccentric sets in your history are preserved as standard sets; other Voltra modes (Band, Damper, Isokinetic, Isometric, Custom, Rowing) are unchanged.
 
+## v0.26.12 — 2026-04-26
+<!-- versionCode: 65 -->
+- Web: fixed a crash on the Summary screen and other queries that returned larger result sets — the SQLite worker was truncating its length prefix to one byte, corrupting any payload ≥256 bytes (BLD-660).
+- Workout history: heatmap now renders in a stable 7-column grid at every screen width — Sundays no longer wrap to a new row at narrow widths (BLD-661).
+- Workout history: heatmap, streak, and dot map now populate correctly from seeded sessions — timestamps are stored in milliseconds end-to-end (BLD-662).
+- Workout history: streak card labels clarified to make current vs longest streak unambiguous (BLD-663).
+
 ## v0.26.8 — 2026-04-24
 <!-- versionCode: 57 -->
 - Set-completion now confirms with a subtle haptic + audio cue — toggle separately from timer sounds in Settings → Preferences.

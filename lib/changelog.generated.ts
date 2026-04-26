@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.12",
+    "date": "2026-04-26",
+    "versionCode": 65,
+    "body": "- Web: fixed a crash on the Summary screen and other queries that returned larger result sets — the SQLite worker was truncating its length prefix to one byte, corrupting any payload ≥256 bytes (BLD-660).\n- Workout history: heatmap now renders in a stable 7-column grid at every screen width — Sundays no longer wrap to a new row at narrow widths (BLD-661).\n- Workout history: heatmap, streak, and dot map now populate correctly from seeded sessions — timestamps are stored in milliseconds end-to-end (BLD-662).\n- Workout history: streak card labels clarified to make current vs longest streak unambiguous (BLD-663)."
+  },
+  {
     "version": "0.26.8",
     "date": "2026-04-24",
     "versionCode": 57,

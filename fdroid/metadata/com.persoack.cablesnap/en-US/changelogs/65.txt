@@ -1,0 +1,4 @@
+- Web: fixed a crash on the Summary screen and other queries that returned larger result sets — the SQLite worker was truncating its length prefix to one byte, corrupting any payload ≥256 bytes (BLD-660).
+- Workout history: heatmap now renders in a stable 7-column grid at every screen width — Sundays no longer wrap to a new row at narrow widths (BLD-661).
+- Workout history: heatmap, streak, and dot map now populate correctly from seeded sessions — timestamps
+…see in-app release notes
