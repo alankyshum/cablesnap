@@ -28,10 +28,9 @@ import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
 import SwipeRowAction from "../../components/SwipeRowAction";
 import { getAppSetting, setAppSetting } from "@/lib/db";
-import { rpeColor, rpeText } from "../../lib/rpe";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { RPE_CHIPS, RPE_LABELS, type SetWithMeta } from "./types";
+import { type SetWithMeta } from "./types";
 import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
@@ -100,16 +99,11 @@ export type SetRowProps = {
   set: SetWithMeta;
   step: number;
   unit: "kg" | "lb";
-  halfStep: { setId: string; base: number } | null;
   trackingMode: "reps" | "duration";
   equipment: Equipment;
   onUpdate: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onCheck: (set: SetWithMeta) => void;
   onDelete: (setId: string) => void;
-  onRPE: (set: SetWithMeta, val: number) => void;
-  onHalfStep: (setId: string, val: number) => void;
-  onHalfStepClear: () => void;
-  onHalfStepOpen: (setId: string, base: number) => void;
   onCycleSetType: (setId: string) => void;
   onLongPressSetType: (setId: string) => void;
   // Bodyweight modifier (only used when isBodyweight === true).
@@ -129,9 +123,9 @@ export type SetRowProps = {
 };
 
 export const SetRow = memo(function SetRow({
-  set, step, unit, halfStep, trackingMode, equipment,
-  onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onCycleSetType, onLongPressSetType,
+  set, step, unit, trackingMode, equipment,
+  onUpdate, onCheck, onDelete,
+  onCycleSetType, onLongPressSetType,
   isTimerRunning, isTimerActive, timerDisplaySeconds,
   onTimerStart, onTimerStop,
   isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
@@ -419,80 +413,6 @@ export const SetRow = memo(function SetRow({
       </SwipeRowAction>
 
       <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
-
-      {set.completed && (
-        <View style={styles.rpeRow} accessibilityLabel="Rate of perceived exertion" accessibilityRole="radiogroup">
-          {RPE_CHIPS.map((val) => {
-            const selected = set.rpe === val;
-            return (
-              <Pressable
-                key={val}
-                onPress={() => onRPE(set, val)}
-                onLongPress={() => onHalfStepOpen(set.id, val)}
-                style={[
-                  styles.rpeChip,
-                  { borderColor: rpeColor(val) },
-                  selected && { backgroundColor: rpeColor(val) },
-                ]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`RPE ${val} ${RPE_LABELS[val]}`}
-              >
-                <Text style={[styles.rpeChipText, { color: selected ? rpeText(val) : rpeColor(val) }]}>
-                  {val} {RPE_LABELS[val]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
-      {halfStep && halfStep.setId === set.id && (
-        <View style={[styles.halfStepRow, { backgroundColor: colors.surfaceVariant }]}>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginRight: 8, fontSize: fontSizes.xs }}>
-            Half-step:
-          </Text>
-          {halfStep.base > 6 && (
-            <Pressable
-              onPress={() => onHalfStep(set.id, halfStep.base - 0.5)}
-              style={[styles.halfChip, { borderColor: rpeColor(halfStep.base - 0.5) }]}
-              accessibilityLabel={`RPE ${halfStep.base - 0.5}`}
-            >
-              <Text style={[styles.rpeChipText, { color: rpeColor(halfStep.base - 0.5) }]}>
-                {halfStep.base - 0.5}
-              </Text>
-            </Pressable>
-          )}
-          {halfStep.base < 10 && (
-            <Pressable
-              onPress={() => onHalfStep(set.id, halfStep.base + 0.5)}
-              style={[styles.halfChip, { borderColor: rpeColor(halfStep.base + 0.5) }]}
-              accessibilityLabel={`RPE ${halfStep.base + 0.5}`}
-            >
-              <Text style={[styles.rpeChipText, { color: rpeColor(halfStep.base + 0.5) }]}>
-                {halfStep.base + 0.5}
-              </Text>
-            </Pressable>
-          )}
-          <Pressable
-            onPress={onHalfStepClear}
-            style={[styles.halfChip, { borderColor: colors.outline }]}
-            accessibilityLabel="Cancel half-step picker"
-          >
-            <Text style={[styles.rpeChipText, { color: colors.onSurfaceVariant }]}>✕</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {set.completed && set.rpe != null && !Number.isInteger(set.rpe) && (
-        <View style={styles.rpeBadgeRow}>
-          <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
-            <Text style={{ color: rpeText(set.rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>
-              RPE {set.rpe}
-            </Text>
-          </View>
-        </View>
-      )}
     </View>
   );
 });
@@ -554,58 +474,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-  },
-  rpeRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 6,
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-    flexWrap: "wrap",
-  },
-  rpeChip: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    minWidth: 52,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rpeChipText: {
-    fontSize: fontSizes.xs,
-    fontWeight: "600",
-  },
-  halfStepRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    marginBottom: 4,
-    gap: 8,
-  },
-  halfChip: {
-    borderWidth: 1.5,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minWidth: 48,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rpeBadgeRow: {
-    paddingHorizontal: 4,
-    paddingBottom: 4,
-  },
-  rpeBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
   },
   durationCol: {
     flex: 1,

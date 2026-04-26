@@ -31,9 +31,3 @@ export type ExerciseGroup = {
    */
   mount_position?: MountPosition | null;
 };
-
-export const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
-
-export const RPE_LABELS: Record<number, string> = {
-  6: "Easy", 7: "Easy", 8: "Mod", 9: "Hard", 10: "Max",
-};

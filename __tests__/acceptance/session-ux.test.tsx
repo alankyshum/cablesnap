@@ -146,43 +146,20 @@ describe('Session UX Acceptance', () => {
   })
 
   describe('Haptic Feedback', () => {
-    it('calls haptic feedback when RPE chip is tapped', async () => {
+    it('fires haptic impact when a set is completed', async () => {
       setupSession()
       const { findByText, findByLabelText } = renderScreen(<ActiveSession />)
       await findByText('Squat')
+      ;(Haptics.impactAsync as jest.Mock).mockClear()
 
-      // Mark set 1 complete first to show RPE chips
       const checkBtn = await findByLabelText('Mark set 1 complete')
       await waitFor(async () => {
         fireEvent.press(checkBtn)
       })
 
-      // After checking a set, haptics should not have been called yet for RPE
-      // but the set completion triggers rest timer start
-      // The rest timer start calls startRest which is async
-      // Haptics are called on RPE selection, suggestion chip taps, etc.
-      // For simplicity, verify impactAsync is available and callable
-      expect(Haptics.impactAsync).toBeDefined()
-    })
-
-    it('haptic mock is called when RPE is selected', async () => {
-      setupSession()
-      const sets = makeSessionSets('sess-ux')
-      sets[0].completed = true
-      sets[0].completed_at = Date.now()
-      mockDb.getSessionSets.mockResolvedValue(sets)
-
-      const { findByText, queryAllByText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-
-      // RPE chips (6-10) shown for completed sets
-      const rpe8chips = queryAllByText('8')
-      if (rpe8chips.length > 0) {
-        fireEvent.press(rpe8chips[0])
-        await waitFor(() => {
-          expect(Haptics.impactAsync).toHaveBeenCalledWith('light')
-        })
-      }
+      await waitFor(() => {
+        expect(Haptics.impactAsync).toHaveBeenCalled()
+      })
     })
   })
 

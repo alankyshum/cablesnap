@@ -111,9 +111,9 @@ export default function ActiveSession() {
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
 
   const {
-    elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, halfStep, nextHint, hintTimer,
-    handleUpdate, handleCheck, handleAddSet, handleModeChange, handleRPE,
-    handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleDelete,
+    elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, nextHint, hintTimer,
+    handleUpdate, handleCheck, handleAddSet, handleModeChange,
+    handleDelete,
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
     handleMoveUp, handleMoveDown, handlePrefillFromPrevious, finish, cancel,
   } = useSessionActions({
@@ -226,7 +226,6 @@ export default function ActiveSession() {
       modes={modes}
       exerciseNotesOpen={!!exerciseNotesOpen[group.exercise_id]}
       exerciseNotesDraft={exerciseNotesDraft[group.exercise_id]}
-      halfStep={halfStep}
       linkIds={linkIds}
       groups={groups}
       palette={palette}
@@ -236,10 +235,6 @@ export default function ActiveSession() {
       onAddSet={handleAddSet}
       onAddWarmups={handleAddWarmups}
       onModeChange={handleModeChange}
-      onRPE={handleRPE}
-      onHalfStep={handleHalfStep}
-      onHalfStepClear={handleHalfStepClear}
-      onHalfStepOpen={handleHalfStepOpen}
       onExerciseNotes={handleExerciseNotes}
       onExerciseNotesDraftChange={handleExerciseNotesDraftChange}
       onToggleExerciseNotes={toggleExerciseNotes}
@@ -262,7 +257,7 @@ export default function ActiveSession() {
     />
       </>
     );
-  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleRPE, handleHalfStep, handleHalfStepClear, handleHalfStepOpen, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />

@@ -177,41 +177,36 @@ beforeEach(() => {
   mockDb.getSessionComparison.mockResolvedValue(null)
 })
 
-// --- RPE Selector in Active Session ---
+// --- BLD-615: RPE prompt removed from active session ---
 
-describe('RPE Selector in Active Session', () => {
+describe('RPE Prompt Removed from Active Session (BLD-615)', () => {
   const session = createSession({ id: 'sess-rpe', name: 'Push Day', started_at: Date.now() - 60000 })
 
   beforeEach(() => {
     mockParams.id = 'sess-rpe'
     mockDb.getSessionById.mockResolvedValue(session)
-    mockDb.getSessionSets.mockResolvedValue(makeSessionSets('sess-rpe'))
+    // Pre-complete first set so any historical RPE-prompt UI would render.
+    const sets = makeSessionSets('sess-rpe')
+    sets[0].completed = true
+    sets[0].completed_at = Date.now()
+    mockDb.getSessionSets.mockResolvedValue(sets)
   })
 
-  it('renders RPE chips with a11y labels', async () => {
-    const { findByLabelText } = renderScreen(<ActiveSession />)
-    // RPE chips should render with accessible labels for each value
-    expect(await findByLabelText(/RPE 6/)).toBeTruthy()
-    expect(await findByLabelText(/RPE 7/)).toBeTruthy()
-    expect(await findByLabelText(/RPE 8/)).toBeTruthy()
-    expect(await findByLabelText(/RPE 9/)).toBeTruthy()
-    expect(await findByLabelText(/RPE 10/)).toBeTruthy()
+  it('does not render RPE chips for completed sets', async () => {
+    const { findByText, queryByLabelText } = renderScreen(<ActiveSession />)
+    // Wait for screen to mount
+    await findByText('Bench Press')
+    expect(queryByLabelText(/RPE 6/)).toBeNull()
+    expect(queryByLabelText(/RPE 7/)).toBeNull()
+    expect(queryByLabelText(/RPE 8/)).toBeNull()
+    expect(queryByLabelText(/RPE 9/)).toBeNull()
+    expect(queryByLabelText(/RPE 10/)).toBeNull()
   })
 
-  it('RPE chip is pressable and calls updateSetRPE', async () => {
-    const { findAllByLabelText } = renderScreen(<ActiveSession />)
-
-    const rpe8Chips = await findAllByLabelText(/RPE 8/)
-    fireEvent.press(rpe8Chips[0])
-
-    await waitFor(() => {
-      expect(mockDb.updateSetRPE).toHaveBeenCalledWith('set-1', 8)
-    })
-  })
-
-  it('renders RPE radio group with a11y role', async () => {
-    const { findByLabelText } = renderScreen(<ActiveSession />)
-    expect(await findByLabelText('Rate of perceived exertion')).toBeTruthy()
+  it('does not render RPE radio group container', async () => {
+    const { findByText, queryByLabelText } = renderScreen(<ActiveSession />)
+    await findByText('Bench Press')
+    expect(queryByLabelText('Rate of perceived exertion')).toBeNull()
   })
 })
 
