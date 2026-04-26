@@ -14,6 +14,7 @@ import type { AnimatedStyle } from "react-native-reanimated";
 import type { ViewStyle } from "react-native";
 
 const MIN_TOUCH_TARGET = 48;
+const COLUMN_WIDTH_PCT = `${100 / 7}%` as `${number}%`;
 
 type Props = {
   colors: ThemeColors;
@@ -72,7 +73,7 @@ export default function CalendarGrid({
     return (
       <Pressable key={key} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)} accessibilityLabel={label} accessibilityRole="button"
         style={[styles.cell, {
-          width: cellSize, height: cellSize, borderRadius: cellSize / 2,
+          width: COLUMN_WIDTH_PCT, height: cellSize, borderRadius: cellSize / 2,
           borderWidth: isToday ? 2 : 0, borderColor: isToday ? colors.primary : "transparent",
           backgroundColor: cellBg,
         }]}>
@@ -96,7 +97,7 @@ export default function CalendarGrid({
   };
 
   const cells: React.ReactNode[] = [];
-  for (let i = 0; i < offset; i++) cells.push(<View key={`pad-${i}`} style={{ width: cellSize, height: cellSize }} />);
+  for (let i = 0; i < offset; i++) cells.push(<View key={`pad-${i}`} style={{ width: COLUMN_WIDTH_PCT, height: cellSize }} />);
   for (let d = 1; d <= total; d++) cells.push(renderDay(d));
 
   return (
@@ -118,7 +119,7 @@ export default function CalendarGrid({
 
       <View style={styles.grid}>
         {DAYS.map((d) => (
-          <View key={d} style={[styles.cell, { width: cellSize, height: 28 }]}>
+          <View key={d} style={[styles.cell, { width: COLUMN_WIDTH_PCT, height: 28 }]}>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs * scale }}>{d}</Text>
           </View>
         ))}
@@ -134,8 +135,8 @@ export default function CalendarGrid({
 const styles = StyleSheet.create({
   monthNav: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 8 },
   monthSummary: { textAlign: "center", marginBottom: spacing.sm },
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", paddingHorizontal: 2 },
-  cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, marginHorizontal: 2, minHeight: MIN_TOUCH_TARGET },
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
+  cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
   dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
   dot: { width: 5, height: 5, borderRadius: radii.sm },
   countBadge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },

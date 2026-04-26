@@ -21,7 +21,7 @@ function HistoryScreen() {
   const h = useHistoryData();
   const renderSession = useSessionRenderer({ colors });
 
-  const cellSize = Math.max(MIN_TOUCH_TARGET, Math.floor(layout.width / 7) - 4);
+  const cellSize = Math.max(MIN_TOUCH_TARGET, Math.floor((layout.width - layout.horizontalPadding * 2) / 7));
 
   return (
     <FlatList
