@@ -4,7 +4,10 @@ import {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSequence,
+  withDelay,
   interpolateColor,
+  useReducedMotion,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { play as playAudio } from "../lib/audio";
@@ -20,7 +23,6 @@ import {
   type RestBreakdown,
 } from "../lib/rest";
 import { isAvailable, scheduleRestComplete, cancelRestComplete } from "../lib/notifications";
-import { duration as durationTokens } from "../constants/design-tokens";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
 
 export type SetContext = {
@@ -51,6 +53,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       [colors.primaryContainer, colors.primary],
     ),
   }));
+  const reduceMotion = useReducedMotion();
   const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const prevRest = useRef(0);
 
@@ -247,11 +250,31 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           playAudio("complete");
         }
       });
+    }
 
-      // eslint-disable-next-line react-hooks/immutability
-      restFlash.value = 1;
-      // eslint-disable-next-line react-hooks/immutability
-      restFlash.value = withTiming(0, { duration: durationTokens.slow });
+    // BLD-611: one-shot start-flash on rest start (0 → positive). Single
+    // attention pulse on the timer chip in the session header. Honors OS
+    // Reduce Motion via a static tint hold (no opacity flicker, no cycles).
+    // Constraints: total ≤ 700 ms, single cycle ≥ 300 ms, accent palette only
+    // (interpolates primaryContainer ↔ primary). WCAG 2.3.1 (no strobe).
+    if (prevRest.current === 0 && rest > 0) {
+      if (reduceMotion) {
+        // Static tint hold: brief fade-in to peak, hold ~200 ms, fade back.
+        // No flicker — symmetric ease via withTiming endpoints.
+        // eslint-disable-next-line react-hooks/immutability
+        restFlash.value = withSequence(
+          withTiming(1, { duration: 100 }),
+          withDelay(200, withTiming(0, { duration: 100 })),
+        );
+      } else {
+        // Single pulse: rise to peak, return to baseline. ~650 ms total,
+        // one cycle, ≥300 ms total — within WCAG flash budget.
+        // eslint-disable-next-line react-hooks/immutability
+        restFlash.value = withSequence(
+          withTiming(1, { duration: 300 }),
+          withTiming(0, { duration: 350 }),
+        );
+      }
     }
 
     if (rest > 0 && rest <= 3) {
@@ -263,7 +286,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     }
 
     prevRest.current = rest;
-  }, [rest, restFlash]);
+  }, [rest, restFlash, reduceMotion]);
 
   // Cleanup on unmount
   useEffect(() => {
