@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import Animated, { type AnimatedStyle } from "react-native-reanimated";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
@@ -56,6 +57,12 @@ type Props = {
    * a getAppSetting/setAppSetting race (BLD-537).
    */
   showBreakdownChip?: boolean;
+  /**
+   * BLD-611: Animated style applied to the rest-timer chip wrapper so the
+   * chip can pulse on rest start (driven by useRestTimer.restFlashStyle).
+   * Optional — when omitted, the chip renders without background tint.
+   */
+  flashStyle?: AnimatedStyle;
 };
 
 function SessionHeaderToolbarInner({
@@ -70,6 +77,7 @@ function SessionHeaderToolbarInner({
   pickerRequested,
   onPickerDismissed,
   showBreakdownChip: showBreakdownChipProp,
+  flashStyle,
 }: Props) {
   const colors = useThemeColors();
   const { width: viewportWidth } = useWindowDimensions();
@@ -255,28 +263,33 @@ function SessionHeaderToolbarInner({
         )}
         {/* Rest countdown or "REST DONE ✓" */}
         {(isRestActive || showRestDone) && (
-          <Pressable
-            onPress={handleRestTap}
-            onLongPress={hasAdaptiveBreakdown ? handleRestLongPress : undefined}
-            delayLongPress={400}
-            accessibilityLabel={activeA11yLabel}
-            accessibilityLiveRegion="polite"
-            style={styles.timerButton}
+          <Animated.View
+            style={[styles.timerFlashWrap, flashStyle]}
+            testID="rest-timer-flash-wrap"
           >
-            <Text
-              variant="body"
-              testID="rest-countdown-text"
-              style={{
-                color: colors.primary,
-                fontWeight: "700",
-                fontSize: fontSizes.base,
-              }}
+            <Pressable
+              onPress={handleRestTap}
+              onLongPress={hasAdaptiveBreakdown ? handleRestLongPress : undefined}
+              delayLongPress={400}
+              accessibilityLabel={activeA11yLabel}
+              accessibilityLiveRegion="polite"
+              style={styles.timerButton}
             >
-              {showRestDone
-                ? "REST DONE ✓"
-                : `${String(Math.floor(rest / 60)).padStart(2, "0")}:${String(rest % 60).padStart(2, "0")}`}
-            </Text>
-          </Pressable>
+              <Text
+                variant="body"
+                testID="rest-countdown-text"
+                style={{
+                  color: colors.primary,
+                  fontWeight: "700",
+                  fontSize: fontSizes.base,
+                }}
+              >
+                {showRestDone
+                  ? "REST DONE ✓"
+                  : `${String(Math.floor(rest / 60)).padStart(2, "0")}:${String(rest % 60).padStart(2, "0")}`}
+              </Text>
+            </Pressable>
+          </Animated.View>
         )}
 
         {/* Elapsed time + remaining estimate */}
@@ -552,6 +565,10 @@ const styles = StyleSheet.create({
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
+  },
+  timerFlashWrap: {
+    borderRadius: 14,
+    paddingHorizontal: 4,
   },
   elapsedButton: {
     minHeight: 48,

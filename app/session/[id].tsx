@@ -87,7 +87,7 @@ export default function ActiveSession() {
   } = useSessionData({ id, templateId, sourceSessionId });
 
   const {
-    rest, breakdown, startRest, startRestWithDuration, startRestWithBreakdown, dismissRest, restRef,
+    rest, breakdown, restFlashStyle, startRest, startRestWithDuration, startRestWithBreakdown, dismissRest, restRef,
   } = useRestTimer({ sessionId: id, colors });
 
   const {
@@ -299,7 +299,7 @@ export default function ActiveSession() {
               elapsed={elapsed}
               clockStarted={clockStartedAt != null}
               estimatedDuration={estimatedDuration}
-              breakdown={breakdown}
+              breakdown={breakdown} flashStyle={restFlashStyle}
               onStartRest={handleToolboxStartRest}
               onDismissRest={dismissRest}
               onOpenToolbox={handleToolboxOpen}
