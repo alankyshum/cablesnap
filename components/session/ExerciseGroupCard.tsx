@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   colPrev: {
-    width: 64,
+    width: 80,
     textAlign: "center",
   },
   colLabel: {

@@ -269,9 +269,22 @@ export const SetRow = memo(function SetRow({
               </View>
             )}
           </Pressable>
-          <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>
-            {set.previous}
-          </Text>
+          <View style={styles.colPrev}>
+            {set.previous?.includes("\n") ? (
+              <>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+                  {set.previous.split("\n")[0]}
+                </Text>
+                <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", fontSize: 9, lineHeight: 12, opacity: 0.7 }}>
+                  {set.previous.split("\n")[1]}
+                </Text>
+              </>
+            ) : (
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+                {set.previous}
+              </Text>
+            )}
+          </View>
           <View style={styles.pickerCol}>
             {isBodyweight ? (
               <BodyweightModifierChip
@@ -505,8 +518,9 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   colPrev: {
-    width: 64,
-    textAlign: "center",
+    width: 80,
+    alignItems: "center",
+    justifyContent: "center",
   },
   warmupChip: {
     width: 28,

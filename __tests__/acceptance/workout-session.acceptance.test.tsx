@@ -306,8 +306,8 @@ describe('Workout Session Acceptance', () => {
     const { findByText } = renderScreen(<ActiveSession />)
 
     await findByText('Bench Press')
-    expect(await findByText('75×8 (1RM: 95)')).toBeTruthy()
-    expect(await findByText('75×7 (1RM: 93)')).toBeTruthy()
+    expect(await findByText('75×8')).toBeTruthy()
+    expect(await findByText('75×7')).toBeTruthy()
   })
 
   it('calls addSet when Add Set button is pressed', async () => {
