@@ -42,6 +42,7 @@ export {
   getTemplateDurationEstimates,
   completeSession,
   cancelSession,
+  deleteCompletedSession,
   getRecentSessions,
   getSessionById,
   getSessionSets,

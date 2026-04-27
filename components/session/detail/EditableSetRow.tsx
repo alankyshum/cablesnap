@@ -8,9 +8,13 @@ type Props = {
   setNumber: number;
   weight: number | null;
   reps: number | null;
+  rpe: number | null;
+  completed: 0 | 1;
   warning?: string;
   onChangeWeight: (v: number | null) => void;
   onChangeReps: (v: number | null) => void;
+  onChangeRpe: (v: number | null) => void;
+  onToggleCompleted: (v: 0 | 1) => void;
   onRemove: () => void;
 };
 
@@ -19,6 +23,16 @@ function parseNum(s: string): number | null {
   if (t.length === 0) return null;
   const n = Number(t);
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+// RPE input is bounded 0–10. Out-of-range or invalid → null.
+function parseRpe(s: string): number | null {
+  const t = s.trim();
+  if (t.length === 0) return null;
+  const n = Number(t);
+  if (!Number.isFinite(n)) return null;
+  if (n < 0 || n > 10) return null;
+  return n;
 }
 
 /**
@@ -30,9 +44,13 @@ export function EditableSetRow({
   setNumber,
   weight,
   reps,
+  rpe,
+  completed,
   warning,
   onChangeWeight,
   onChangeReps,
+  onChangeRpe,
+  onToggleCompleted,
   onRemove,
 }: Props) {
   const colors = useThemeColors();
@@ -62,6 +80,30 @@ export function EditableSetRow({
           placeholderTextColor={colors.onSurfaceVariant}
           returnKeyType="done"
         />
+        <TextInput
+          accessibilityLabel={`RPE for set ${setNumber}`}
+          style={[styles.rpeInput, { color: colors.onSurface, borderColor: colors.outline }]}
+          keyboardType="decimal-pad"
+          defaultValue={rpe == null ? "" : String(rpe)}
+          onEndEditing={(e) => onChangeRpe(parseRpe(e.nativeEvent.text))}
+          placeholder="RPE"
+          placeholderTextColor={colors.onSurfaceVariant}
+          returnKeyType="done"
+        />
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: completed === 1 }}
+          accessibilityLabel={`Completed for set ${setNumber}`}
+          onPress={() => onToggleCompleted(completed === 1 ? 0 : 1)}
+          hitSlop={8}
+          style={styles.iconBtn}
+        >
+          <MaterialCommunityIcons
+            name={completed === 1 ? "checkbox-marked" : "checkbox-blank-outline"}
+            size={22}
+            color={completed === 1 ? colors.primary : colors.onSurfaceVariant}
+          />
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Remove set ${setNumber}`}
@@ -100,6 +142,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     fontSize: fontSizes.base,
+  },
+  rpeInput: {
+    width: 56,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: fontSizes.base,
+    textAlign: "center",
   },
   iconBtn: {
     padding: 4,

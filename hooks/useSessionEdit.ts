@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, Alert, BackHandler, Platform } from "react-native";
 import {
-  cancelSession,
+  deleteCompletedSession,
   editCompletedSession,
   type SessionEditPayload,
   type SessionEditSetPatch,
@@ -37,6 +37,8 @@ type DraftSet = {
 };
 
 type DraftGroup = {
+  /** Stable per-group client key (always set, even if `exercise_id` repeats). */
+  groupKey: string;
   exercise_id: string;
   name: string;
   link_id: string | null;
@@ -47,9 +49,11 @@ type DraftGroup = {
 
 let nextKey = 0;
 const newKey = () => `draft-${++nextKey}`;
+const newGroupKey = () => `dg-${++nextKey}`;
 
 function snapshotFromGroups(groups: ExerciseGroup[]): DraftGroup[] {
   return groups.map((g) => ({
+    groupKey: newGroupKey(),
     exercise_id: g.exercise_id,
     name: g.name,
     link_id: g.link_id,
@@ -200,6 +204,7 @@ export function useSessionEdit({
     setDraft((prev) => [
       ...prev,
       {
+        groupKey: newGroupKey(),
         exercise_id: exercise.id,
         name: exercise.name,
         link_id: null,
@@ -338,7 +343,7 @@ export function useSessionEdit({
           style: "destructive",
           onPress: async () => {
             try {
-              await cancelSession(sessionId);
+              await deleteCompletedSession(sessionId);
               setEditing(false);
               setDraft([]);
               setDeletes([]);

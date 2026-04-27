@@ -184,7 +184,12 @@ export async function cancelSession(id: string): Promise<void> {
   // Delete the requested session
   await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
   await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
-  // Clean up any other orphan sessions (completed_at IS NULL)
+  // Clean up any other orphan sessions (completed_at IS NULL).
+  // NOTE: This sweep is intentional for the LIVE in-progress cancel flow only —
+  // it discards stale unfinished sessions left over from prior crashes/exits.
+  // Do NOT call cancelSession() to delete a completed (history) session: a
+  // concurrently in-progress workout would be silently destroyed. Use
+  // deleteCompletedSession() for targeted history deletes (BLD-690).
   const orphans = await db.select({ id: workoutSessions.id })
     .from(workoutSessions)
     .where(sql`${workoutSessions.completed_at} IS NULL`);
@@ -192,6 +197,26 @@ export async function cancelSession(id: string): Promise<void> {
     await db.delete(workoutSets).where(eq(workoutSets.session_id, o.id));
     await db.delete(workoutSessions).where(eq(workoutSessions.id, o.id));
   }
+}
+
+/**
+ * Delete a completed (history) session and ONLY its sets — no orphan sweep.
+ *
+ * Intended for the Edit-mode "Delete workout" affordance. The caller is
+ * responsible for ensuring `id` refers to a session the user explicitly
+ * chose to delete; in-progress sessions (`completed_at IS NULL`) other than
+ * the target are NEVER touched, so a concurrent live workout is preserved.
+ *
+ * Wraps the two deletes in `withTransaction` (per repo convention — matches
+ * `editCompletedSession` / `createTemplateFromSession`) so the operation is
+ * atomic and serialized through the shared txQueue.
+ */
+export async function deleteCompletedSession(id: string): Promise<void> {
+  const db = await getDrizzle();
+  await withTransaction(async () => {
+    await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
+    await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
+  });
 }
 
 export async function getRecentSessions(

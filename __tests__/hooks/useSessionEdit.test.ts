@@ -16,6 +16,7 @@ import { act, renderHook } from "@testing-library/react-native";
 
 jest.mock("@/lib/db", () => ({
   editCompletedSession: jest.fn(),
+  deleteCompletedSession: jest.fn(),
   cancelSession: jest.fn(),
 }));
 
@@ -23,7 +24,7 @@ jest.mock("@/components/ui/bna-toast", () => ({
   useToast: () => ({ toast: jest.fn() }),
 }));
 
-const { editCompletedSession, cancelSession } = require("@/lib/db");
+const { editCompletedSession, deleteCompletedSession, cancelSession } = require("@/lib/db");
 const { useSessionEdit } = require("../../hooks/useSessionEdit");
 
 type AnyHookReturn = ReturnType<typeof useSessionEdit>;
@@ -210,8 +211,8 @@ describe("useSessionEdit (BLD-690)", () => {
     addSpy.mockRestore();
   });
 
-  it("deleteWholeSession confirms via Alert and calls cancelSession + onSessionDeleted", async () => {
-    (cancelSession as jest.Mock).mockResolvedValue(undefined);
+  it("deleteWholeSession confirms via Alert and calls deleteCompletedSession (NOT cancelSession) + onSessionDeleted", async () => {
+    (deleteCompletedSession as jest.Mock).mockResolvedValue(undefined);
     const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const { result, onSessionDeleted } = setup();
     act(() => (result.current as AnyHookReturn).enterEdit());
@@ -223,9 +224,40 @@ describe("useSessionEdit (BLD-690)", () => {
     await act(async () => {
       await del!.onPress?.();
     });
-    expect(cancelSession).toHaveBeenCalledWith("sess1");
+    // BLD-690 reviewer fix: must NOT call cancelSession (which orphan-sweeps
+    // every uncompleted session and would wipe a concurrent live workout).
+    expect(deleteCompletedSession).toHaveBeenCalledWith("sess1");
+    expect(cancelSession).not.toHaveBeenCalled();
     expect(onSessionDeleted).toHaveBeenCalled();
     alertSpy.mockRestore();
+  });
+
+  it("updateSet supports rpe and completed flag wiring", () => {
+    const { result } = setup();
+    act(() => (result.current as AnyHookReturn).enterEdit());
+    act(() => (result.current as AnyHookReturn).updateSet(0, 0, { rpe: 9.5 }));
+    let s0 = (result.current as AnyHookReturn).draft[0].sets[0];
+    expect(s0.rpe).toBe(9.5);
+    expect((result.current as AnyHookReturn).dirty).toBe(true);
+    act(() => (result.current as AnyHookReturn).updateSet(0, 0, { completed: 0 }));
+    s0 = (result.current as AnyHookReturn).draft[0].sets[0];
+    expect(s0.completed).toBe(0);
+  });
+
+  it("save payload carries rpe and completed changes through to editCompletedSession", async () => {
+    (editCompletedSession as jest.Mock).mockResolvedValue(undefined);
+    const { result } = setup();
+    act(() => (result.current as AnyHookReturn).enterEdit());
+    act(() => (result.current as AnyHookReturn).updateSet(0, 0, { rpe: 7 }));
+    act(() => (result.current as AnyHookReturn).updateSet(0, 1, { completed: 0 }));
+    await act(async () => {
+      await (result.current as AnyHookReturn).save();
+    });
+    const [, payload] = (editCompletedSession as jest.Mock).mock.calls[0];
+    const s1 = payload.upserts.find((u: { id?: string }) => u.id === "s1");
+    const s2 = payload.upserts.find((u: { id?: string }) => u.id === "s2");
+    expect(s1).toMatchObject({ id: "s1", rpe: 7 });
+    expect(s2).toMatchObject({ id: "s2", completed: 0 });
   });
 });
 

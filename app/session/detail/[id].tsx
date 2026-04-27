@@ -47,6 +47,8 @@ export default function SessionDetail() {
           sets={dg.sets}
           onChangeWeight={(setIdx, v) => edit.updateSet(index, setIdx, { weight: v })}
           onChangeReps={(setIdx, v) => edit.updateSet(index, setIdx, { reps: v })}
+          onChangeRpe={(setIdx, v) => edit.updateSet(index, setIdx, { rpe: v })}
+          onToggleCompleted={(setIdx, v) => edit.updateSet(index, setIdx, { completed: v })}
           onRemoveSet={(setIdx) => edit.removeSet(index, setIdx)}
           onAddSet={() => edit.addSet(index)}
           onRemoveExercise={() => edit.removeExercise(index)}
@@ -94,7 +96,11 @@ export default function SessionDetail() {
       />
       <FlatList<ExerciseGroup | (typeof edit.draft)[number]>
         data={data}
-        keyExtractor={(group) => group.exercise_id}
+        keyExtractor={(group) =>
+          edit.editing
+            ? (group as (typeof edit.draft)[number]).groupKey
+            : (group as ExerciseGroup).exercise_id
+        }
         keyboardShouldPersistTaps="handled"
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}

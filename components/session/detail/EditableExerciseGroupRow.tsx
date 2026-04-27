@@ -10,6 +10,8 @@ type DraftSet = {
   set_number: number;
   weight: number | null;
   reps: number | null;
+  rpe: number | null;
+  completed: 0 | 1;
   warning?: string;
 };
 
@@ -18,6 +20,8 @@ type Props = {
   sets: DraftSet[];
   onChangeWeight: (setIdx: number, v: number | null) => void;
   onChangeReps: (setIdx: number, v: number | null) => void;
+  onChangeRpe: (setIdx: number, v: number | null) => void;
+  onToggleCompleted: (setIdx: number, v: 0 | 1) => void;
   onRemoveSet: (setIdx: number) => void;
   onAddSet: () => void;
   onRemoveExercise: () => void;
@@ -28,6 +32,8 @@ export function EditableExerciseGroupRow({
   sets,
   onChangeWeight,
   onChangeReps,
+  onChangeRpe,
+  onToggleCompleted,
   onRemoveSet,
   onAddSet,
   onRemoveExercise,
@@ -55,9 +61,13 @@ export function EditableExerciseGroupRow({
           setNumber={i + 1}
           weight={s.weight}
           reps={s.reps}
+          rpe={s.rpe}
+          completed={s.completed}
           warning={s.warning}
           onChangeWeight={(v) => onChangeWeight(i, v)}
           onChangeReps={(v) => onChangeReps(i, v)}
+          onChangeRpe={(v) => onChangeRpe(i, v)}
+          onToggleCompleted={(v) => onToggleCompleted(i, v)}
           onRemove={() => onRemoveSet(i)}
         />
       ))}
