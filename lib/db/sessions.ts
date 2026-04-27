@@ -210,12 +210,24 @@ export async function cancelSession(id: string): Promise<void> {
  * Wraps the two deletes in `withTransaction` (per repo convention — matches
  * `editCompletedSession` / `createTemplateFromSession`) so the operation is
  * atomic and serialized through the shared txQueue.
+ *
+ * Defense-in-depth (reviewer suggestion 7dd1ce22): the DELETE on
+ * workout_sessions is gated by `completed_at IS NOT NULL` so accidental
+ * misuse from a non-history flow cannot wipe an in-progress session row.
+ * If `id` does not reference a completed session, both deletes become
+ * no-ops — including the workoutSets delete being scoped to the same id.
  */
 export async function deleteCompletedSession(id: string): Promise<void> {
   const db = await getDrizzle();
   await withTransaction(async () => {
+    // Sets first — only ones owned by this session (always safe regardless
+    // of whether the session row qualifies for deletion below).
     await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
-    await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
+    // Session row: targeted by id AND guarded by completed_at IS NOT NULL.
+    await db.delete(workoutSessions).where(and(
+      eq(workoutSessions.id, id),
+      isNotNull(workoutSessions.completed_at),
+    ));
   });
 }
 
