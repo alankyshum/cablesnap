@@ -1,10 +1,20 @@
 import type { WorkoutSet, TrainingMode, Equipment, MountPosition } from "../../lib/types";
+import type { PrefillCandidate } from "../../hooks/resolvePrefillCandidate";
 
 export type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
   exercise_deleted?: boolean;
   previous?: string;
   is_pr?: boolean;
+  /**
+   * BLD-682 — display-only hydrated value from the previous workout's
+   * matching set. Surfaced by useSessionData when the row is pristine
+   * (weight/reps/duration_seconds/notes/bodyweight_modifier_kg all
+   * null AND completed=false). The picker reads this through the
+   * displayed-value derivation in SetRow; nothing here is persisted
+   * until the user expresses intent (touch picker / mark complete).
+   */
+  prefillCandidate?: PrefillCandidate | null;
 };
 
 export type ExerciseGroup = {

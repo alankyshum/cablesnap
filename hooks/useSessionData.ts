@@ -28,6 +28,7 @@ import {
 } from "../lib/format";
 import { uuid } from "../lib/uuid";
 import { getQueryVersion } from "../lib/query";
+import { derivePristinePrefillCandidate } from "./resolvePrefillCandidate";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 type UseSessionDataArgs = {
@@ -137,6 +138,32 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       );
       const group = map.get(s.exercise_id)!;
       const isDuration = group.trackingMode === "duration";
+
+      // BLD-682: display-only `prefillCandidate` for pristine rows.
+      // Looked up by set_number, then warmup-filtered (AC13). NEVER
+      // writes to the DB. SetRow uses this as the picker's displayed
+      // value until the user expresses intent (picker tap / mark
+      // complete). Pristine guard mirrors AC17.
+      const prefillCandidate = derivePristinePrefillCandidate(
+        {
+          weight: s.weight,
+          reps: s.reps,
+          duration_seconds: s.duration_seconds,
+          completed: s.completed,
+          notes: s.notes ?? null,
+          bodyweight_modifier_kg: s.bodyweight_modifier_kg ?? null,
+          set_number: s.set_number,
+        },
+        prevCache[s.exercise_id] as Array<{
+          weight: number | null;
+          reps: number | null;
+          duration_seconds: number | null;
+          set_type: string | null;
+          set_number: number;
+        }> | undefined,
+        isDuration ? "duration" : "reps",
+      );
+
       let prevDisplay = "-";
       if (prev) {
         if (isDuration && prev.duration_seconds != null && prev.duration_seconds > 0) {
@@ -155,6 +182,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       group.sets.push({
         ...s,
         previous: prevDisplay,
+        prefillCandidate,
       });
     }
     const groupList = [...map.values()];
