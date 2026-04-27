@@ -174,6 +174,26 @@ describe("IntegrationsCard — Health Connect toggle (BLD-715)", () => {
     expect(setHcPermissionDenied).toHaveBeenCalledWith(false);
   });
 
+  it("persistence failure on granted branch does NOT mark permission denied (techlead nit follow-up)", async () => {
+    mockRequestHCPermission.mockResolvedValueOnce(true);
+    const dbMod = jest.requireMock("@/lib/db") as { setAppSetting: jest.Mock };
+    dbMod.setAppSetting.mockRejectedValueOnce(new Error("db write failed"));
+    const { getByLabelText, setHcEnabled, setHcPermissionDenied } = renderCard();
+
+    const sw = getByLabelText("Sync workouts to Health Connect");
+    await act(async () => {
+      fireEvent(sw, "valueChange", true);
+    });
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith("Failed to enable Health Connect"));
+    expect(setHcEnabled).toHaveBeenCalledWith(false);
+    // Critical: permission was actually granted; do not surface the misleading CTA
+    const deniedCalls = setHcPermissionDenied.mock.calls.filter(([v]) => v === true);
+    expect(deniedCalls).toEqual([]);
+    // restore default behavior for subsequent tests
+    dbMod.setAppSetting.mockResolvedValue(undefined);
+  });
+
   it("inline CTA does NOT render when permission is granted", () => {
     const { queryByTestId } = renderCard({ hcEnabled: true, hcPermissionDenied: false });
     expect(queryByTestId("hc-permission-denied")).toBeNull();

@@ -121,9 +121,19 @@ export default function IntegrationsCard({
                       onValueChange={async (value) => {
                         if (value) {
                           setHcLoading(true);
+                          let granted = false;
+                          let permissionRequestFailed = false;
                           try {
-                            const granted = await requestHealthConnectPermission();
-                            if (granted) {
+                            granted = await requestHealthConnectPermission();
+                          } catch {
+                            permissionRequestFailed = true;
+                          }
+                          try {
+                            if (permissionRequestFailed) {
+                              setHcEnabled(false);
+                              setHcPermissionDenied(true);
+                              toast.error("Failed to enable Health Connect");
+                            } else if (granted) {
                               await setAppSetting("health_connect_enabled", "true");
                               setHcEnabled(true);
                               setHcPermissionDenied(false);
@@ -135,8 +145,9 @@ export default function IntegrationsCard({
                               AccessibilityInfo.announceForAccessibility("Health Connect permission denied. Open Health Connect settings to grant permission manually.");
                             }
                           } catch {
+                            // Persistence failure on the granted branch — permission is fine,
+                            // so don't surface the "permission required" CTA. Just toast.
                             setHcEnabled(false);
-                            setHcPermissionDenied(true);
                             toast.error("Failed to enable Health Connect");
                           }
                           finally { setHcLoading(false); }
