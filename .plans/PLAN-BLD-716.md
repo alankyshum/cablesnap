@@ -212,8 +212,60 @@ These ACs apply at the **M5 / feature-flag-removal** level. Per-milestone ACs ar
 
 ## Review Feedback
 
-### Quality Director (UX)
-_Pending — review request to follow_
+### Quality Director (UX) — REQUEST CHANGES (2026-04-27)
+
+**Verdict:** Plan is structurally sound but has **5 blockers** that must be resolved before implementation issues are created. UX surface and milestone sequencing are good; testability and SKILL-alignment claims are over-stated.
+
+**Blockers (must fix in plan):**
+
+1. **AC7 verification method is wrong.** Mitmproxy only inspects TCP/HTTP. Phone↔watch sync runs over Bluetooth via `MessageClient`/`DataClient` and never touches the IP stack — mitmproxy will trivially show "no traffic" even if the implementation were silently phoning home from a different code path. Replace AC7 method with: (a) airplane mode on phone + Bluetooth on, exercise the full feature, all watch→phone events still reconcile; AND (b) `tcpdump` / Network Inspector filtered to the app UID for 30 minutes of typical use shows zero packets to non-LAN destinations. Cite both methods in the AC.
+
+2. **F-Droid + GMS contradiction is unaddressed.** `play-services-wearable` requires Google Play Services on **both** the phone and the watch. F-Droid builds run on devices that may not have GMS (microG, GrapheneOS without sandboxed Google Play, etc.). The plan says F-Droid build is supported and frames this feature as the "open-source moat," but per the dependency table the watch bridge cannot function without GMS. Resolve one of: **(a)** explicitly scope: "F-Droid build of the phone app omits the wearable bridge module; release notes note that the Wear OS companion requires the Play Store build of CableSnap" (add to Out-of-scope; add to Risk table); **(b)** investigate an alternative path (microG support? open-source DataLayer alt?). Without this, AC10 (Pristine off) needs a second leg "F-Droid build does not bundle the bridge module at all."
+
+3. **AC8 (TalkBack on Wear) is not testable in CI.** `androidx.compose.ui.test` does not exercise screen-reader behavior; it can only assert that `contentDescription` strings are present on nodes. Split AC8 into:
+   - **AC8a (CI):** Compose UI tests assert every interactive node (steppers, Complete Set pill, control buttons, timer) has a non-empty `contentDescription` and that values update when state changes.
+   - **AC8b (Manual gate, M5):** TalkBack on a real Pixel Watch 2 reads the values correctly. Owner sign-off captured as a comment on the M5 PR.
+   The current AC8 implies CI coverage of behavior CI cannot give.
+
+4. **AC9 (Battery) is not a CI gate.** Battery measurement requires a physical watch and a 30-minute workout. Move AC9 out of any CI gate language; add a Manual QA Gates section that lists battery, TalkBack, on-device pairing, and Bluetooth-disconnect behavior. Also tighten the budget: ≤25%/30 min ≈ 50%/hour is loose for a Wear OS workout app — competitive bar (Strong, Hevy) is closer to 15–20%/hour with screen-on. Recommend ≤15% per 30-min workout (≤30%/hour with screen on for active set, ambient during rest); if the implementation can't hit that, defer ambient mode out of M5 per your risk-mitigation note (consistency check: that mitigation already exists).
+
+5. **AC8 contentDescription bar exceeds the phone baseline (Open Q3).** Direct-evidence answer: `grep -r "accessibilityLabel\|accessibilityRole\|accessibilityHint" --include="*.tsx"` in `app/` and `components/` returns **0 hits**. The phone app today has zero explicit screen-reader annotations and relies entirely on visible-text exposure. Shipping the watch app with first-class TalkBack labels is a *higher* bar than the phone — defensible, but creates a UX regression for TalkBack users who, mid-workout, will hear curated labels on the watch and silence/raw text on the phone. Pick one and document it in the plan:
+   - **(a)** Match the phone baseline: ship watch with text-driven a11y only (no contentDescription overrides). Cheap, but loses the watch a11y story. Or
+   - **(b)** Bring phone parity into scope: add a sub-task "Phone-side a11y pass on workout-session screens (`app/session/*`, `components/SetRow.*`) — labels and roles on weight/reps inputs and Complete Set" sized into M2 or M3. Recommend (b).
+
+**Major UX gaps (should fix):**
+
+6. **Edge cases missing — clock/timestamp authority.** AC4 says set inserts within 500ms with watch's weight/reps; AC6 says "all 3 sets reconciled with original timestamps." Whose clock generates `completedAt`? Watch and phone clocks routinely diverge by seconds (no NTP on Wear during a BT-only session). Spec must say: phone is timestamp authority on reconcile, OR watch timestamp + drift compensation, OR LWW with clock-skew tolerance. Today's edit conflict row says "phone wins" but doesn't cover timestamps.
+
+7. **Edge cases missing — watch app process death mid-workout.** Plan's `SetEventQueue.kt` description says "persists pending events when phone is disconnected" but does not specify *durable* storage. If the watch app process is killed (Wear OS aggressively reaps backgrounded apps), are queued events lost? Specify: DataStore / Room / file-backed, plus a recovery-on-launch step. Add edge-case row.
+
+8. **Edge cases missing — multi-watch pairing.** `DataClient` broadcasts to all paired nodes. If a user has 2 watches paired (e.g., personal + Garmin testing), `/set-complete` events could fire from both. Either document "first-event-wins per setNumber" or "exactly one Wear OS companion permitted per session" with an explicit guard. Add edge-case row.
+
+9. **Asymmetric workout-start flow.** Plan only describes watch→phone start (`/active-workout` from watch). What if the user starts a workout on the phone? Does the watch auto-jump to Live Tracking? Currently undocumented; AC3 only covers watch-initiated start. Either add an AC for phone-initiated start, OR explicitly out-of-scope for v1 (and add the empty-state banner: "Workout in progress on phone — open on phone to track").
+
+10. **"Defer until user releases focus" is undefined.** In the edge-case row about phone-side edits clobbering an in-progress watch stepper, "release focus" needs a concrete trigger (e.g., 1500ms idle on the stepper, or explicit Complete Set). Otherwise an absent-minded user with focus-locked steppers permanently desyncs.
+
+**Suggestions (not blockers):**
+
+- **Behavior-design re-classification at M5:** the classification is correctly NO today, but M5 includes release-notes copy. Add a checklist item: "M5 PR description includes self-classification of release-notes copy (no streaks/never-miss-a-day language)." Cheap guardrail.
+- **Empty Template Library copy:** "No templates synced — open CableSnap on your phone." Owner spec is fine but `ScalingLazyColumn` with no items can collapse to a tiny region on Wear OS — confirm the empty-state Compose surface is full-screen with reasonable line-wrap on a 384px display. Add to AC2 visual review.
+- **Long-press for Workout Controls (header) and Set Management (Set Counter):** two distinct long-presses on adjacent UI is discoverability-fragile. Consider replacing one with a `SwipeToReveal` row action (Compose-for-Wear primitive) and document the choice.
+- **AC11 "no new lint warnings":** if the watch module adds Kotlin lint to CI, the baseline differs from JS lint. Specify which linters and threshold ("zero new ktlint findings on watch module").
+
+**Open Question answers:**
+
+- **Q3 (a11y baseline):** Answered above (Blocker #5). Current phone baseline = informal/zero. Recommend option (b): bring phone parity into M2/M3 to avoid regression for TalkBack users.
+- **Q4 (heart-rate / Health Connect):** Keep deferred. BLD-715 owns it. Adding it as M6 doubles the scope and conflates platform-bridge work with a separate sensor-integration domain. If the owner asks for it later, treat as a fresh plan.
+
+**What's right (don't change):**
+
+- 5-PR sequenced milestones behind a feature flag, no stacking — correct cadence for a feature this size.
+- Phone-as-source-of-truth + optimistic watch UI — correct invariant.
+- Behavior-design classification (NO) is correct for the surface as drawn.
+- AC10 (Pristine off when flag is OFF) is well-specified — non-watch users see zero impact.
+- Out-of-scope list is appropriately tight (iOS, standalone, custom faces all deferred).
+
+**Re-review trigger:** Update plan to address Blockers 1–5 + Major Gaps 6–10. CEO can re-ping `@quality-director` for sign-off; expect ~10 min turnaround for delta review.
 
 ### Tech Lead (Feasibility)
 _Pending — review request to follow_
