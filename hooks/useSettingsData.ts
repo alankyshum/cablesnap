@@ -31,6 +31,7 @@ export function useSettingsData() {
   const [stravaLoading, setStravaLoading] = useState(false);
   const [hcEnabled, setHcEnabled] = useState(false);
   const [hcLoading, setHcLoading] = useState(false);
+  const [hcPermissionDenied, setHcPermissionDenied] = useState(false);
   const [hcSdkStatus, setHcSdkStatus] = useState<
     'available' | 'needs_install' | 'needs_update' | 'unavailable'
   >('unavailable');
@@ -111,15 +112,18 @@ export function useSettingsData() {
                     set('health_connect_enabled', 'false'),
                   );
                   setHcEnabled(false);
+                  setHcPermissionDenied(true);
                   toast.error('Health Connect permission was revoked');
                   AccessibilityInfo.announceForAccessibility(
                     'Health Connect permission was revoked',
                   );
                 } else {
                   setHcEnabled(true);
+                  setHcPermissionDenied(false);
                 }
               } else {
                 setHcEnabled(false);
+                setHcPermissionDenied(false);
               }
             }
           } catch {
@@ -148,6 +152,7 @@ export function useSettingsData() {
     stravaLoading, setStravaLoading,
     hcEnabled, setHcEnabled,
     hcLoading, setHcLoading,
+    hcPermissionDenied, setHcPermissionDenied,
     hcSdkStatus,
     weeklyGoal, setWeeklyGoal,
   };

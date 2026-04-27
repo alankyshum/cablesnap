@@ -61,6 +61,7 @@ export default function Settings() {
     stravaLoading, setStravaLoading,
     hcEnabled, setHcEnabled,
     hcLoading, setHcLoading,
+    hcPermissionDenied, setHcPermissionDenied,
     hcSdkStatus,
     weeklyGoal, setWeeklyGoal,
   } = useSettingsData();
@@ -139,6 +140,8 @@ export default function Settings() {
           setHcEnabled={setHcEnabled}
           hcLoading={hcLoading}
           setHcLoading={setHcLoading}
+          hcPermissionDenied={hcPermissionDenied}
+          setHcPermissionDenied={setHcPermissionDenied}
           hcSdkStatus={hcSdkStatus}
         />
         <AutoBackupSection colors={colors} toast={toast} />
