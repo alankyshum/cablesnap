@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View, FlatList } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View, FlatList } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react-native";
 import { MUSCLE_LABELS } from "../lib/types";
 import { useLayout } from "../lib/layout";
+import { useFloatingTabBarHeight } from "./FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useMuscleVolume } from "@/hooks/useMuscleVolume";
 import type { VolumeRow } from "@/hooks/useMuscleVolume";
@@ -63,6 +64,7 @@ const MuscleRow = React.memo(function MuscleRow({
 export default function MuscleVolumeSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const {
     offset, setOffset, data, trend, selected, selectMuscle,
     loading, error, load, monday, maxSets, hasEnoughTrend, reduced, formatRange,
@@ -128,7 +130,12 @@ export default function MuscleVolumeSegment() {
   }
 
   return (
-    <View>
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
+        testID="muscle-volume-scroll"
+      >
       {/* Week Selector */}
       <View style={styles.weekRow}>
         <Button variant="ghost" size="icon" icon={ChevronLeft} onPress={() => setOffset(offset - 1)} accessibilityLabel="Previous week" style={styles.chevron} />
@@ -256,6 +263,7 @@ export default function MuscleVolumeSegment() {
           </Card>
         </>
       )}
+      </ScrollView>
       <VolumeLandmarksSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
@@ -269,6 +277,8 @@ export default function MuscleVolumeSegment() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  scrollContent: { paddingBottom: 16 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
   weekRow: { flexDirection: "row", alignItems: "center", marginBottom: 8, paddingHorizontal: 4 },
   chevron: { minWidth: 48, minHeight: 48 },
