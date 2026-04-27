@@ -469,8 +469,8 @@ describe('Accessibility Compliance Audit', () => {
     it('set controls have accessible labels', async () => {
       const screen = renderScreen(<ActiveSession />)
       await waitFor(() => {
-        expect(screen.getByLabelText('Set 1 weight')).toBeTruthy()
-        expect(screen.getByLabelText('Set 1 reps')).toBeTruthy()
+        expect(screen.getByLabelText(/^Set 1 weight/)).toBeTruthy()
+        expect(screen.getByLabelText(/^Set 1 reps/)).toBeTruthy()
         expect(screen.getByLabelText(/Mark set 1/)).toBeTruthy()
       })
     })
