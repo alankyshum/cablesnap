@@ -213,7 +213,7 @@ export async function editCompletedSession(
 ## Acceptance Criteria
 
 - [ ] Given a completed session detail screen When the user taps the edit (pencil) icon Then the screen enters Edit mode with all sets rendered as editable inputs and Save/Cancel actions visible.
-- [ ] Given Edit mode When the user changes a weight from 80 → 82.5 and taps Save Then the session detail re-renders with weight 82.5, the database row's `weight_kg` is 82.5, and `workout_sessions.edited_at` is non-null.
+- [ ] Given Edit mode When the user changes a weight from 80 → 82.5 and taps Save Then the session detail re-renders with weight 82.5, the database row's `weight` column is 82.5 (kg by storage convention), and `workout_sessions.edited_at` is non-null.
 - [ ] Given Edit mode When the user taps "+ Add set" on an exercise group Then a new editable row appears prefilled with the previous set's weight/reps; on Save a new row exists in `workout_sets` with the correct `session_id`, `exercise_id`, and contiguous `set_number`.
 - [ ] Given Edit mode When the user taps the trash icon on a completed set Then a confirmation dialog appears; on Confirm + Save the row is removed AND remaining sets in that exercise are renumbered contiguously (1, 2, 3 — no gaps).
 - [ ] Given Edit mode When the user taps "+ Add exercise" Then the exercise picker opens; selecting an exercise appends a new exercise group with one empty editable set.
