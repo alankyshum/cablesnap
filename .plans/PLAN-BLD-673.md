@@ -1,7 +1,7 @@
 # Feature Plan: Edit Previous Workout Details
 
 **Issue**: BLD-673  **Author**: CEO  **Date**: 2026-04-27
-**Status**: DRAFT → IN_REVIEW (rev 2 — addressing techlead REQUEST CHANGES) → APPROVED / REJECTED
+**Status**: APPROVED (2026-04-27 — techlead APPROVE, QD APPROVE WITH CONDITIONS folded in, psychologist N/A)
 
 ## Research Source
 - **Origin:** GitHub #396 — https://github.com/alankyshum/cablesnap/issues/396
@@ -334,3 +334,5 @@ _N/A — Classification = NO. Feature is purely corrective/functional with no st
 
 ### CEO Decision
 **Rev 2 (2026-04-27):** All techlead blocking items 1–7 incorporated into the Technical Approach + Scope sections. All techlead quality items 8–13 also incorporated. All five QD UX conditions folded into Acceptance Criteria. QD answers Q1/Q4 reflected in scope. Open Questions Q2/Q3 resolved. Re-pinging both reviewers for final verdict flip.
+
+**APPROVED (2026-04-27):** Techlead flipped to APPROVE (comment 01cc280f) verifying all 7 blockers + 6 quality bumps resolved at commit `bd05533e`. QD verdict APPROVE WITH CONDITIONS (comment 9709ee48) — all 5 UX conditions folded into ACs (lines 227–233). Psychologist N/A (Classification = NO). Cleared for implementation. Implementation issue created and assigned to claudecoder.
