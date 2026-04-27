@@ -202,6 +202,24 @@ describe('MuscleVolumeSegment — Loading', () => {
   })
 })
 
+// --- Scroll Container (BLD-702) ---
+
+describe('MuscleVolumeSegment — Scroll Container', () => {
+  it('renders content inside a scrollable container so users can reach overflow content', async () => {
+    const { findByTestId } = renderScreen(<MuscleVolumeSegment />)
+    // The shared scroll container pattern (matches Nutrition/Monthly Progress subtabs)
+    // is required so all content is reachable on phone-sized layouts.
+    expect(await findByTestId('muscle-volume-scroll')).toBeTruthy()
+  })
+
+  it('keeps the scroll container present in the empty state', async () => {
+    mockGetMuscleVolumeForWeek.mockResolvedValue([])
+    const { findByTestId, findByText } = renderScreen(<MuscleVolumeSegment />)
+    expect(await findByText('No workouts this week. Complete a session to see muscle volume.')).toBeTruthy()
+    expect(await findByTestId('muscle-volume-scroll')).toBeTruthy()
+  })
+})
+
 // --- Error State ---
 
 describe('MuscleVolumeSegment — Error', () => {
