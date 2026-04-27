@@ -28,7 +28,12 @@ import {
 import {
   getLastBodyweightModifier,
   updateSetBodyweightModifier,
+  getPreviousSetsBatch,
 } from "../lib/db/session-sets";
+import {
+  resolvePrefillCandidate,
+  type PrefillCandidate,
+} from "./resolvePrefillCandidate";
 import { resolveRestSeconds, type RestBreakdown } from "../lib/rest";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
@@ -275,6 +280,50 @@ export function useSessionActions({
       return;
     }
 
+    // BLD-682 AC18: if this is a pristine row carrying a non-null
+    // prefillCandidate (display-only hydration value), persist the
+    // candidate via updateSet BEFORE the completion write so the DB
+    // reflects exactly what the sighted user sees in the picker.
+    // Single-write-path / write-on-intent: tapping the set-number is
+    // the user's deliberate intent.
+    const candidate = set.prefillCandidate ?? null;
+    const isPristine =
+      set.weight == null &&
+      set.reps == null &&
+      set.duration_seconds == null &&
+      !set.completed &&
+      (set.notes == null || set.notes === "") &&
+      (set.bodyweight_modifier_kg == null);
+    let persistedWeight: number | null = set.weight ?? null;
+    if (isPristine && candidate &&
+      (candidate.weight != null || candidate.reps != null || candidate.duration_seconds != null)
+    ) {
+      const isDuration = group?.trackingMode === "duration";
+      try {
+        await updateSet(
+          set.id,
+          candidate.weight,
+          candidate.reps,
+          isDuration ? candidate.duration_seconds : undefined,
+        );
+        persistedWeight = candidate.weight;
+        // Mirror persistence into local state so subsequent renders /
+        // PR-detection use the just-written values.
+        updateGroupSet(set.id, {
+          weight: candidate.weight,
+          reps: candidate.reps,
+          ...(isDuration ? { duration_seconds: candidate.duration_seconds } : {}),
+        });
+      } catch (err) {
+        // Same write-fault contract as AC6 — completion still proceeds,
+        // single console.warn breadcrumb. The completion write below
+        // will record a "completed-with-null-values" row rather than
+        // block the user's primary intent.
+        // eslint-disable-next-line no-console
+        console.warn("[BLD-682] pristine-completion candidate persistence failed", err);
+      }
+    }
+
     const now = Date.now();
     updateGroupSet(set.id, { completed: true, completed_at: now });
     // BLD-630: anchor the session clock optimistically before the DB write
@@ -297,9 +346,12 @@ export function useSessionActions({
     }
 
     // Live PR detection (non-blocking — errors never prevent set completion)
-    if (set.set_type !== 'warmup' && set.weight && set.weight > 0 && id && triggerPR) {
+    // BLD-682: use persisted weight, which may have been hoisted from
+    // prefillCandidate above, so PR detection sees the value the user
+    // actually logged on this completion.
+    if (set.set_type !== 'warmup' && persistedWeight && persistedWeight > 0 && id && triggerPR) {
       try {
-        const isPR = await checkSetPR(set.exercise_id, set.weight, id);
+        const isPR = await checkSetPR(set.exercise_id, persistedWeight, id);
         if (isPR) {
           const group = groups.find((g) => g.exercise_id === set.exercise_id);
           const goalAchieved = await checkGoalAchievement(set.exercise_id);
@@ -393,40 +445,65 @@ export function useSessionActions({
       }
     }
 
-    // BLD-655: prefill weight/reps (or weight/duration_seconds) from the most
-    // recent working (non-warmup) set in the SAME current session. Mirrors —
-    // does NOT apply progression. Routes through the existing updateSet write
-    // path (single-write-path principle). Silent no-op when no usable source.
+    // BLD-655 + BLD-682: prefill weight/reps (or weight/duration_seconds)
+    // using the resolvePrefillCandidate helper.
+    //   1. In-session prior working set (BLD-655 path).
+    //   2. Otherwise, the matching set from the previous workout (BLD-682).
+    // Routes through the existing updateSet write path (single-write-path).
+    // Silent no-op when no usable source. AC16: previous-workout
+    // getPreviousSetsBatch MUST NOT be called when in-session lastWorking
+    // already exists — short-circuit BEFORE the DB query.
     let prefillWeight: number | null = null;
     let prefillReps: number | null = null;
     let prefillDuration: number | null = null;
     let prefillApplied = false;
     if (group) {
-      const lastWorking = [...group.sets].filter((s) => s.set_type !== "warmup").slice(-1)[0];
-      if (lastWorking) {
-        const isDuration = group.trackingMode === "duration";
-        const candidateWeight = lastWorking.weight ?? null;
-        const candidateReps = isDuration ? null : (lastWorking.reps ?? null);
-        const candidateDuration = isDuration ? (lastWorking.duration_seconds ?? null) : null;
-        const hasAny =
-          candidateWeight != null || candidateReps != null || candidateDuration != null;
-        if (hasAny) {
-          try {
-            await updateSet(
-              newSet.id,
-              candidateWeight,
-              candidateReps,
-              isDuration ? candidateDuration : undefined
-            );
-            prefillWeight = candidateWeight;
-            prefillReps = candidateReps;
-            prefillDuration = candidateDuration;
-            prefillApplied = true;
-          } catch (err) {
-            // BLD-655 AC: do not throw, do not show unsaved values; row insert
-            // already succeeded. Single console.warn breadcrumb.
-            console.warn("[BLD-655] add-set prefill persistence failed", err);
+      const hasInSessionWorking = group.sets.some((s) => s.set_type !== "warmup");
+
+      let previousSetForSlot: PrefillCandidate & { set_type: string | null } | null = null;
+      if (!hasInSessionWorking && id) {
+        try {
+          const batch = await getPreviousSetsBatch([exerciseId], id);
+          // AC13: match by set_number first; warmup filtering happens in
+          // the helper, not in the SQL.
+          const match = batch[exerciseId]?.find((p) => p.set_number === num);
+          if (match) {
+            previousSetForSlot = {
+              weight: match.weight,
+              reps: match.reps,
+              duration_seconds: match.duration_seconds,
+              set_type: match.set_type,
+            };
           }
+        } catch {
+          previousSetForSlot = null;
+        }
+      }
+
+      const candidate = resolvePrefillCandidate(
+        { trackingMode: group.trackingMode, sets: group.sets },
+        previousSetForSlot,
+      );
+
+      if (candidate) {
+        const isDuration = group.trackingMode === "duration";
+        try {
+          await updateSet(
+            newSet.id,
+            candidate.weight,
+            candidate.reps,
+            isDuration ? candidate.duration_seconds : undefined,
+          );
+          prefillWeight = candidate.weight;
+          prefillReps = candidate.reps;
+          prefillDuration = candidate.duration_seconds;
+          prefillApplied = true;
+        } catch (err) {
+          // AC6: do not throw, do not show unsaved values; row insert
+          // already succeeded. Single console.warn breadcrumb. Tag both
+          // BLD-655 and BLD-682 so log readers find either ticket.
+          // eslint-disable-next-line no-console
+          console.warn("[BLD-682] add-set previous-workout prefill persistence failed", err);
         }
       }
     }
@@ -620,50 +697,16 @@ export function useSessionActions({
     return prefillFromPrevious(exerciseId);
   }, [prefillFromPrevious]);
 
-  // Keep a ref to the latest prefillFromPrevious so the once-per-session
-  // effect always calls through the current closure (avoids stale `groups`).
-  const prefillFromPreviousRef = useRef(prefillFromPrevious);
-  useEffect(() => {
-    prefillFromPreviousRef.current = prefillFromPrevious;
-  }, [prefillFromPrevious]);
+  // BLD-682: the once-per-session-open auto-prefill effect was removed —
+  // it violated AC5 (zero `updateSet` calls during hydration of pristine
+  // rows). Pristine rows are now surfaced via `prefillCandidate` from
+  // useSessionData (display-only) and persisted on user intent only:
+  //   - explicit "+ Add Set" tap (handleAddSet, above)
+  //   - explicit "Prefill from last session" button (handlePrefillFromPrevious)
+  //   - first picker interaction (handleUpdate, above)
+  //   - set-completion of a pristine row carrying a candidate (handleCheck, AC18)
+  // No more hydration-write-storm.
 
-  // Auto-prefill once per session open. Fires after groups + previousSets are loaded.
-  // Skips any group where the user has already touched working sets (completed OR has values).
-  const autoPrefillFiredForSessionRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!id) return;
-    if (groups.length === 0) return;
-    if (autoPrefillFiredForSessionRef.current === id) return;
-    autoPrefillFiredForSessionRef.current = id;
-
-    // Snapshot of candidate exercise ids to auto-prefill. We evaluate synchronously
-    // against the current `groups` state so later async DB work doesn't depend on
-    // stale refs, and so we never re-trigger.
-    const candidates = groups
-      .filter((g) => {
-        if (!g.previousSets || g.previousSets.length === 0) return false;
-        const workingSets = g.sets.filter((s) => s.set_type !== "warmup");
-        if (workingSets.length === 0) return false;
-        // Skip if any working set was already touched by the user.
-        const anyTouched = workingSets.some((s) =>
-          s.completed || s.weight != null || s.reps != null || s.duration_seconds != null,
-        );
-        return !anyTouched;
-      })
-      .map((g) => g.exercise_id);
-
-    if (candidates.length === 0) return;
-
-    void (async () => {
-      for (const eid of candidates) {
-        // Use ref to call the latest closure (with current `groups`).
-        await prefillFromPreviousRef.current(eid, { silent: true });
-      }
-    })();
-    // We intentionally omit `groups` and `prefillFromPrevious` from deps —
-    // this is a once-per-session effect guarded by the ref.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, groups.length > 0]);
 
   const finish = () => {
     confirmAction(
