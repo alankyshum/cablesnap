@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 import RatingWidget from "@/components/RatingWidget";
+import { EditedPill } from "@/components/session/EditedPill";
 import { formatDuration } from "@/lib/format";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { SessionRow } from "@/hooks/useHistoryData";
@@ -33,6 +34,7 @@ export function useSessionRenderer({ colors }: Props) {
                 <Text variant="subtitle" style={{ color: colors.onSurface, flex: 1, minWidth: 0 }} numberOfLines={1}>
                   {item.name || "Untitled workout"}
                 </Text>
+                {item.edited_at != null && <EditedPill editedAt={item.edited_at} colors={colors} size="compact" />}
                 {item.rating != null && item.rating > 0 && <RatingWidget value={item.rating} readOnly size="small" />}
               </View>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>

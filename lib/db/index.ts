@@ -42,6 +42,7 @@ export {
   getTemplateDurationEstimates,
   completeSession,
   cancelSession,
+  deleteCompletedSession,
   getRecentSessions,
   getSessionById,
   getSessionSets,
@@ -107,10 +108,13 @@ export {
   createTemplateFromSession,
   swapExerciseInSession,
   undoSwapInSession,
+  editCompletedSession,
+  EditCompletedSessionError,
   getSourceSessionSets,
   updateExercisePositions,
 } from "./sessions";
 export type { RestContext } from "./sessions";
+export type { SessionEditPayload, SessionEditSetPatch } from "./sessions";
 export type { ExerciseCategory, RestInputs, RestFactor, RestBreakdown } from "../rest";
 export type { ExerciseSession, ExerciseRecords, SourceSessionSet } from "./sessions";
 export type { E1RMTrendRow, WeeklyE1RMRow, SessionRPERow, SessionRatingRow } from "./sessions";

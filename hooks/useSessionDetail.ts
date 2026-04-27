@@ -58,39 +58,52 @@ export function useSessionDetail(id: string | undefined) {
     [colors],
   );
 
-  useEffect(() => {
+  /**
+   * BLD-690: Re-load session, sets, PRs, and counts. Exposed so
+   * `useSessionEdit` can call it after `editCompletedSession` resolves.
+   * Without this, the screen would show stale data because the load effect
+   * was previously keyed only on `[id]`.
+   */
+  const refresh = useCallback(async () => {
     if (!id) return;
-    (async () => {
-      const sess = await getSessionById(id);
-      if (!sess) return;
-      setSession(sess);
-      setRating(sess.rating ?? null);
-      setNotesText(sess.notes ?? "");
-      setNotesExpanded(!!(sess.notes && sess.notes.length > 0));
+    const sess = await getSessionById(id);
+    if (!sess) return;
+    setSession(sess);
+    setRating(sess.rating ?? null);
+    setNotesText(sess.notes ?? "");
+    setNotesExpanded(!!(sess.notes && sess.notes.length > 0));
 
-      const [sets, prData, setCount] = await Promise.all([
-        getSessionSets(id),
-        getSessionPRs(id),
-        getSessionSetCount(id),
-      ]);
-      setPrs(prData);
-      setCompletedSetCount(setCount);
-      const map = new Map<string, ExerciseGroup>();
-      for (const s of sets) {
-        if (!map.has(s.exercise_id)) {
-          map.set(s.exercise_id, {
-            exercise_id: s.exercise_id,
-            name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
-            sets: [],
-            link_id: s.link_id ?? null,
-            swapped_from_name: (s as SetWithName).swapped_from_name ?? null,
-          });
-        }
-        map.get(s.exercise_id)!.sets.push(s);
+    const [sets, prData, setCount] = await Promise.all([
+      getSessionSets(id),
+      getSessionPRs(id),
+      getSessionSetCount(id),
+    ]);
+    setPrs(prData);
+    setCompletedSetCount(setCount);
+    const map = new Map<string, ExerciseGroup>();
+    for (const s of sets) {
+      if (!map.has(s.exercise_id)) {
+        map.set(s.exercise_id, {
+          exercise_id: s.exercise_id,
+          name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
+          sets: [],
+          link_id: s.link_id ?? null,
+          swapped_from_name: (s as SetWithName).swapped_from_name ?? null,
+        });
       }
-      setGroups([...map.values()]);
-    })();
+      map.get(s.exercise_id)!.sets.push(s);
+    }
+    setGroups([...map.values()]);
   }, [id]);
+
+  useEffect(() => {
+    // Wrap in async IIFE — without this, eslint flags
+    // "Calling setState synchronously within an effect" because the linter
+    // can't see through the .then() boundary of refresh().
+    (async () => {
+      await refresh();
+    })();
+  }, [refresh]);
 
   const volume = useCallback(() => {
     let total = 0;
@@ -214,5 +227,6 @@ export function useSessionDetail(id: string | undefined) {
     openTemplateModal,
     closeTemplateModal,
     colors,
+    refresh,
   };
 }

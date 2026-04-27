@@ -222,6 +222,12 @@ export type WorkoutSession = {
   duration_seconds: number | null;
   notes: string;
   rating: number | null;
+  /**
+   * BLD-690: timestamp (unix ms) at which the user last edited this completed
+   * session via the post-completion edit flow. `NULL` for sessions that have
+   * never been edited.
+   */
+  edited_at: number | null;
 };
 
 export type SetType = "normal" | "warmup" | "dropset" | "failure";
