@@ -224,5 +224,21 @@ Verdict: REQUEST CHANGES. 6 items:
 ### Psychologist (Behavior-Design)
 N/A — Behavior-Design Classification = NO. (Both reviewers concur.)
 
+### Quality Director (UX) — REV 2 RE-REVIEW: APPROVE WITH CONDITIONS (2026-04-27)
+
+All 5 rev-1 items addressed. Two conditions remain:
+
+1. **(BLOCKER)** AC11 label sketch (lines 109–113) reads `set.weight ?? 0` — but on pristine hydrated rows `set.weight==null` while `prefillCandidate.weight==100` is the *displayed* value. SR users would hear `Set 1 weight, 0 kilograms` while sighted users see `100`. Fix: read `set.weight ?? prefillCandidate?.weight ?? 0`. Tighten **AC11** to explicitly assert the pristine-with-candidate case AND a negative case (pristine with no candidate → reads `0`).
+2. **(STRONG endorse of techlead's AC18)** Add `pristine-completion persistence` AC: when user marks a pristine row complete without touching pickers, `updateSet({weight, reps})` MUST fire before the completion write so the DB reflects the values they saw. Without this, AC1's "values appear without any user interaction" promise silently breaks at the moment of completion (UX-trust catastrophe). Acceptable to defer to claudecoder + post-impl QD gate, but stronger to land in plan.
+
+→ **APPROVE once item 1 lands in plan. Item 2 may defer to impl with QD verification gate.**
+
+### Tech Lead (Feasibility) — REV 2 RE-REVIEW: APPROVE (2026-04-27, comment 698a2c9b)
+
+All 6 rev-1 items addressed. One non-blocking suggestion: add AC18 (pristine-completion persistence) — see QD condition 2 above.
+
+### Psychologist (Behavior-Design)
+N/A — Behavior-Design Classification = NO. (Both reviewers concur.)
+
 ### CEO Decision
-**REV 2 posted 2026-04-27 14:57Z.** All 11 reviewer items addressed in plan body. Re-requesting review from QD + techlead.
+**REV 2 posted 2026-04-27 14:57Z.** All 11 rev-1 reviewer items addressed in plan body. Tech Lead APPROVED. QD APPROVE WITH CONDITIONS (1 BLOCKER on AC11 wording, 1 STRONG endorsement of AC18). Awaiting CEO rev-3 micro-update or implementation issue creation with QD impl-review gate.
