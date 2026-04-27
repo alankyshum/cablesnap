@@ -263,6 +263,27 @@ describe("useSessionActions — handleAddSet prev-workout fallback (BLD-682)", (
     expect(mockUpdateSet).not.toHaveBeenCalled();
   });
 
+  it("BLOCKER 2026-04-27 (reviewer/techlead/QD): un-completed prior row → no prefill, no updateSet write", async () => {
+    // Regression lock: getPreviousSetsBatch returns ALL prior rows
+    // including completed=false. handleAddSet MUST filter them out at
+    // the consumer layer (lib/db/session-sets.ts:469 stays unchanged so
+    // progression detection at useSessionData.ts:200 keeps working).
+    mockGetPreviousSetsBatch.mockResolvedValueOnce({
+      "ex-1": [
+        { set_number: 1, weight: 100, reps: 8, duration_seconds: null, set_type: "normal", completed: false, rpe: null },
+      ],
+    });
+    const params = makeParams([makeGroup()]);
+    const { result } = renderHook(() => useSessionActions(params));
+    await act(async () => { await flush(); });
+
+    await act(async () => { await result.current.handleAddSet("ex-1"); });
+
+    expect(mockGetPreviousSetsBatch).toHaveBeenCalledTimes(1);
+    // Un-completed prior row is rejected: no candidate persistence.
+    expect(mockUpdateSet).not.toHaveBeenCalled();
+  });
+
   it("AC15: bodyweight modifier prev-set is NOT carried over (BLD-541 default unchanged)", async () => {
     mockAddSet.mockResolvedValueOnce(makeNewSet());
     mockGetLastBodyweightModifier.mockResolvedValueOnce(null);

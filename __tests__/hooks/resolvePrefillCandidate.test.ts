@@ -96,12 +96,13 @@ const pristineRow = (overrides: Partial<{ weight: number | null; reps: number | 
   ...overrides,
 });
 
-const prevRow = (overrides: Partial<{ weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; set_number: number }> = {}) => ({
+const prevRow = (overrides: Partial<{ weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; set_number: number; completed: boolean }> = {}) => ({
   weight: 100,
   reps: 8,
   duration_seconds: null,
   set_type: "normal" as string | null,
   set_number: 1,
+  completed: true,
   ...overrides,
 });
 
@@ -177,5 +178,34 @@ describe("derivePristinePrefillCandidate", () => {
     const a = derivePristinePrefillCandidate(row, prev, "reps");
     const b = derivePristinePrefillCandidate(row, prev, "reps");
     expect(a).toEqual(b);
+  });
+
+  it("BLOCKER 2026-04-27 (reviewer/techlead/QD): un-completed prior row of same set_number → null", () => {
+    // Regression lock: getPreviousSetsBatch returns ALL prior-session
+    // rows including completed=false (lib/db/session-sets.ts:469 — kept
+    // intentionally for progression detection at useSessionData.ts:200).
+    // Every prefill consumer MUST filter `&& p.completed` to avoid
+    // flashing/persisting an un-confirmed value.
+    expect(
+      derivePristinePrefillCandidate(
+        pristineRow(),
+        [prevRow({ weight: 100, reps: 8, completed: false })],
+        "reps",
+      ),
+    ).toBeNull();
+  });
+
+  it("BLOCKER follow-up: completed=true peer at same set_number → still prefills (un-completed first row is skipped)", () => {
+    // Sanity check that the new predicate does not over-filter.
+    expect(
+      derivePristinePrefillCandidate(
+        pristineRow(),
+        [
+          prevRow({ weight: 100, reps: 8, completed: false }),
+          prevRow({ weight: 95, reps: 5, completed: true }),
+        ],
+        "reps",
+      ),
+    ).toEqual({ weight: 95, reps: 5, duration_seconds: null });
   });
 });

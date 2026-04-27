@@ -160,6 +160,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           duration_seconds: number | null;
           set_type: string | null;
           set_number: number;
+          completed: boolean;
         }> | undefined,
         isDuration ? "duration" : "reps",
       );

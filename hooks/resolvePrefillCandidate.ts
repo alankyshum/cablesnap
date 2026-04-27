@@ -96,7 +96,7 @@ export type PristineRow = {
 
 export function derivePristinePrefillCandidate(
   row: PristineRow,
-  prevSets: Array<SetLike & { set_number: number }> | undefined | null,
+  prevSets: Array<SetLike & { set_number: number; completed: boolean }> | undefined | null,
   trackingMode: "reps" | "duration",
 ): PrefillCandidate | null {
   const isPristine =
@@ -108,9 +108,13 @@ export function derivePristinePrefillCandidate(
     (row.bodyweight_modifier_kg == null);
   if (!isPristine) return null;
   if (!prevSets || prevSets.length === 0) return null;
-  // AC13: match by set_number first, THEN filter warmup at the helper
-  // layer (not in SQL). The shape here is the row from getPreviousSetsBatch.
-  const candidate = prevSets.find((p) => p.set_number === row.set_number);
+  // AC13 + reviewer/techlead/QD BLOCKER (2026-04-27 16:03Z): match by
+  // set_number AND require completed=true. lib/db/session-sets.ts:469
+  // intentionally returns ALL prior-session rows (progression detection
+  // needs them); every prefill consumer filters `&& p.completed` to
+  // avoid flashing/persisting an un-confirmed value. Warmup filter at
+  // helper layer (not SQL).
+  const candidate = prevSets.find((p) => p.set_number === row.set_number && p.completed);
   if (!candidate) return null;
   if (candidate.set_type === "warmup") return null;
   return shapeCandidate(candidate, trackingMode);

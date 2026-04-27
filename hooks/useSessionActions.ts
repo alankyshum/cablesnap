@@ -464,9 +464,13 @@ export function useSessionActions({
       if (!hasInSessionWorking && id) {
         try {
           const batch = await getPreviousSetsBatch([exerciseId], id);
-          // AC13: match by set_number first; warmup filtering happens in
-          // the helper, not in the SQL.
-          const match = batch[exerciseId]?.find((p) => p.set_number === num);
+          // AC13 + reviewer/techlead/QD BLOCKER (2026-04-27 16:03Z):
+          // match by set_number AND require completed=true. Prior
+          // session rows include un-completed sets (lib/db/session-sets.ts:469
+          // returns ALL rows so progression detection can use them);
+          // every prefill consumer must filter `&& p.completed`. Warmup
+          // filtering happens in the helper.
+          const match = batch[exerciseId]?.find((p) => p.set_number === num && p.completed);
           if (match) {
             previousSetForSlot = {
               weight: match.weight,
