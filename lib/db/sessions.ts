@@ -153,6 +153,7 @@ export async function startSession(
     duration_seconds: null,
     notes: "",
     rating: null,
+    edited_at: null,
   };
 }
 
@@ -355,4 +356,222 @@ export async function undoSwapInSession(
   await db.update(workoutSets)
     .set({ exercise_id: originalExerciseId, swapped_from_exercise_id: null })
     .where(inArray(workoutSets.id, setIds));
+}
+
+// ---- Edit Completed Session (BLD-690) ----
+
+/**
+ * PATCH-style upsert for a single set in a completed session.
+ * Only fields explicitly present (not `undefined`) are written; untouched
+ * columns are preserved on existing rows. `id` absent ⇒ insert with fresh uuid.
+ */
+export interface SessionEditSetPatch {
+  id?: string;
+  exercise_id: string;
+  set_number?: number;
+  weight?: number | null;
+  reps?: number | null;
+  completed?: 0 | 1;
+  completed_at?: number | null;
+  rpe?: number | null;
+  notes?: string;
+  link_id?: string | null;
+  round?: number | null;
+  training_mode?: string | null;
+  tempo?: string | null;
+  swapped_from_exercise_id?: string | null;
+  set_type?: string;
+  duration_seconds?: number | null;
+  exercise_position?: number;
+  bodyweight_modifier_kg?: number | null;
+}
+
+export interface SessionEditPayload {
+  upserts: SessionEditSetPatch[];
+  deletes: string[];
+}
+
+export class EditCompletedSessionError extends Error {
+  constructor(message: string, public readonly code: string) {
+    super(message);
+    this.name = "EditCompletedSessionError";
+  }
+}
+
+/**
+ * Edit a completed session atomically. All inserts / updates / deletes happen
+ * inside a single `withTransaction` block. After mutations settle,
+ * `set_number` is renumbered contiguously per (session_id, exercise_id) — only
+ * `set_number` is touched; `link_id`, `round`, and every other column are
+ * preserved. `workout_sessions.edited_at` is stamped to `now` inside the same
+ * transaction so the edit pill appears as soon as the next read happens.
+ */
+export async function editCompletedSession(
+  sessionId: string,
+  payload: SessionEditPayload,
+  now: number = Date.now(),
+): Promise<void> {
+  const upserts = payload.upserts ?? [];
+  const deletes = payload.deletes ?? [];
+
+  // ── Validation (defense in depth — mirrors client) ──────────────────────
+  for (const u of upserts) {
+    if (u.weight != null && u.weight < 0) {
+      throw new EditCompletedSessionError(
+        "weight must be ≥ 0",
+        "invalid_weight",
+      );
+    }
+    if (u.reps != null && u.reps < 0) {
+      throw new EditCompletedSessionError(
+        "reps must be ≥ 0",
+        "invalid_reps",
+      );
+    }
+    // Auto-flip completed=1 + reps=0 → completed=0 (per AC #12).
+    if (u.completed === 1 && u.reps != null && u.reps < 1) {
+      u.completed = 0;
+      u.completed_at = null;
+    }
+    if (!u.id) {
+      // Insert path: must specify exercise_id at minimum.
+      if (!u.exercise_id) {
+        throw new EditCompletedSessionError(
+          "exercise_id required for inserts",
+          "missing_exercise_id",
+        );
+      }
+    }
+  }
+
+  const db = await getDrizzle();
+
+  await withTransaction(async () => {
+    if (deletes.length > 0) {
+      await db.delete(workoutSets).where(and(
+        eq(workoutSets.session_id, sessionId),
+        inArray(workoutSets.id, deletes),
+      ));
+    }
+    for (const u of upserts) {
+      if (u.id) {
+        await applyEditUpdate(db, sessionId, u, now);
+      } else {
+        await applyEditInsert(db, sessionId, u, now);
+      }
+    }
+    await renumberSessionSets(db, sessionId);
+    await db.update(workoutSessions)
+      .set({ edited_at: now })
+      .where(eq(workoutSessions.id, sessionId));
+  });
+}
+
+const PATCHABLE_COLUMNS: ReadonlyArray<keyof SessionEditSetPatch> = [
+  "set_number", "weight", "reps", "completed", "rpe", "notes", "link_id",
+  "round", "training_mode", "tempo", "swapped_from_exercise_id", "set_type",
+  "duration_seconds", "exercise_position", "bodyweight_modifier_kg",
+];
+
+async function applyEditUpdate(
+  db: Awaited<ReturnType<typeof getDrizzle>>,
+  sessionId: string,
+  u: SessionEditSetPatch,
+  now: number,
+): Promise<void> {
+  const updates: Record<string, unknown> = {};
+  for (const k of PATCHABLE_COLUMNS) {
+    if (u[k] !== undefined) updates[k as string] = u[k];
+  }
+  if (u.exercise_id !== undefined) updates.exercise_id = u.exercise_id;
+
+  // completed_at semantics: caller value wins; 0→1 stamps now; 1→0 nulls.
+  if (u.completed_at !== undefined) {
+    updates.completed_at = u.completed_at;
+  } else if (u.completed === 1) {
+    updates.completed_at = now;
+  } else if (u.completed === 0) {
+    updates.completed_at = null;
+  }
+
+  if (Object.keys(updates).length === 0) return;
+  await db.update(workoutSets)
+    .set(updates)
+    .where(and(eq(workoutSets.id, u.id!), eq(workoutSets.session_id, sessionId)));
+}
+
+async function applyEditInsert(
+  db: Awaited<ReturnType<typeof getDrizzle>>,
+  sessionId: string,
+  u: SessionEditSetPatch,
+  now: number,
+): Promise<void> {
+  const completed: 0 | 1 = u.completed ?? 0;
+  const completedAt = u.completed_at !== undefined
+    ? u.completed_at
+    : completed === 1 ? now : null;
+  const newRow = buildEditInsertRow(sessionId, u, completed, completedAt);
+  await db.insert(workoutSets).values(newRow as never);
+}
+
+function buildEditInsertRow(
+  sessionId: string,
+  u: SessionEditSetPatch,
+  completed: 0 | 1,
+  completedAt: number | null,
+): Record<string, unknown> {
+  return {
+    id: uuid(),
+    session_id: sessionId,
+    exercise_id: u.exercise_id,
+    set_number: u.set_number ?? 1,
+    weight: u.weight ?? null,
+    reps: u.reps ?? null,
+    completed,
+    completed_at: completedAt,
+    rpe: u.rpe ?? null,
+    notes: u.notes ?? "",
+    link_id: u.link_id ?? null,
+    round: u.round ?? null,
+    training_mode: u.training_mode ?? null,
+    tempo: u.tempo ?? null,
+    swapped_from_exercise_id: u.swapped_from_exercise_id ?? null,
+    set_type: u.set_type ?? "normal",
+    duration_seconds: u.duration_seconds ?? null,
+    exercise_position: u.exercise_position ?? 0,
+    bodyweight_modifier_kg: u.bodyweight_modifier_kg ?? null,
+  };
+}
+
+async function renumberSessionSets(
+  db: Awaited<ReturnType<typeof getDrizzle>>,
+  sessionId: string,
+): Promise<void> {
+  // Renumber set_number contiguously per (session, exercise_id). Only
+  // set_number is touched; link_id, round, and every other column are
+  // preserved verbatim (techlead blocker #4).
+  const remaining = await db.select({
+    id: workoutSets.id,
+    exercise_id: workoutSets.exercise_id,
+    set_number: workoutSets.set_number,
+  })
+    .from(workoutSets)
+    .where(eq(workoutSets.session_id, sessionId))
+    .orderBy(asc(workoutSets.exercise_id), asc(workoutSets.set_number));
+
+  const groups = new Map<string, typeof remaining>();
+  for (const r of remaining) {
+    if (!groups.has(r.exercise_id)) groups.set(r.exercise_id, []);
+    groups.get(r.exercise_id)!.push(r);
+  }
+  for (const [, rows] of groups) {
+    for (let i = 0; i < rows.length; i++) {
+      const expected = i + 1;
+      if (rows[i].set_number !== expected) {
+        await db.update(workoutSets)
+          .set({ set_number: expected })
+          .where(eq(workoutSets.id, rows[i].id));
+      }
+    }
+  }
 }
