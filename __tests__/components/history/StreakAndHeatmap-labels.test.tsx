@@ -13,7 +13,7 @@ const colors = {
   error: "#f00",
 } as unknown as ThemeColors;
 
-describe("StreakAndHeatmap stat labels (BLD-663)", () => {
+describe("StreakAndHeatmap stat labels (BLD-663, BLD-685)", () => {
   function renderStats() {
     return renderScreen(
       <StreakAndHeatmap
@@ -31,14 +31,16 @@ describe("StreakAndHeatmap stat labels (BLD-663)", () => {
     );
   }
 
-  it("uses self-describing labels (current / longest / workouts) instead of two ambiguous 'weeks' labels", () => {
+  it("uses self-describing streak-noun labels (BLD-685: 'current streak' / 'longest streak' / 'workouts')", () => {
     const { getByText, queryAllByText } = renderStats();
-    expect(getByText("current")).toBeTruthy();
-    expect(getByText("longest")).toBeTruthy();
+    expect(getByText("current streak")).toBeTruthy();
+    expect(getByText("longest streak")).toBeTruthy();
     expect(getByText("workouts")).toBeTruthy();
-    // Regression guard: the streak card must not render two adjacent "weeks" labels.
+    // Regression guards: never regress to BLD-663 ("weeks"/"total") or to bare adjectives without the "streak" noun (BLD-685).
     expect(queryAllByText("weeks").length).toBe(0);
     expect(queryAllByText("total").length).toBe(0);
+    expect(queryAllByText("current").length).toBe(0);
+    expect(queryAllByText("longest").length).toBe(0);
   });
 
   it("preserves accessibilityLabel with units for screen readers", () => {

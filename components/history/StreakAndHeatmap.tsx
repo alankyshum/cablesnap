@@ -30,12 +30,12 @@ export default function StreakAndHeatmap({
           <View style={styles.streakItem} accessibilityLabel={`Current streak: ${currentStreak} weeks`}>
             <Icon name={Flame} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{currentStreak}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>current</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>current streak</Text>
           </View>
           <View style={styles.streakItem} accessibilityLabel={`Longest streak: ${longestStreak} weeks`}>
             <Icon name={Trophy} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{longestStreak}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>longest</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>longest streak</Text>
           </View>
           <View style={styles.streakItem} accessibilityLabel={`Total workouts: ${totalWorkouts}`}>
             <Icon name={Dumbbell} size={20} color={colors.primary} />
