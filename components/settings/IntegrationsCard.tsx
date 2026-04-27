@@ -4,11 +4,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Activity, HeartPulse } from "lucide-react-native";
+import { Activity, AlertCircle, ExternalLink, HeartPulse } from "lucide-react-native";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import { setAppSetting } from "@/lib/db";
+import {
+  disableHealthConnect,
+  openHealthConnectSettings,
+  requestHealthConnectPermission,
+} from "@/lib/health-connect";
 import { connectStrava, disconnect as disconnectStrava, getStravaSupportAction, getStravaUserMessage } from "@/lib/strava";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
@@ -24,13 +29,16 @@ type Props = {
   setHcEnabled: (v: boolean) => void;
   hcLoading: boolean;
   setHcLoading: (v: boolean) => void;
+  hcPermissionDenied: boolean;
+  setHcPermissionDenied: (v: boolean) => void;
   hcSdkStatus: "available" | "needs_install" | "needs_update" | "unavailable";
 };
 
 export default function IntegrationsCard({
   colors, toast,
   stravaAthlete, setStravaAthlete, stravaLoading, setStravaLoading,
-  hcEnabled, setHcEnabled, hcLoading, setHcLoading, hcSdkStatus,
+  hcEnabled, setHcEnabled, hcLoading, setHcLoading,
+  hcPermissionDenied, setHcPermissionDenied, hcSdkStatus,
 }: Props) {
   if (Platform.OS === "web") return null;
 
@@ -114,25 +122,30 @@ export default function IntegrationsCard({
                         if (value) {
                           setHcLoading(true);
                           try {
-                            const { requestHealthConnectPermission } = await import("../../lib/health-connect");
                             const granted = await requestHealthConnectPermission();
                             if (granted) {
                               await setAppSetting("health_connect_enabled", "true");
                               setHcEnabled(true);
+                              setHcPermissionDenied(false);
                               toast.success("Health Connect enabled");
                             } else {
                               setHcEnabled(false);
+                              setHcPermissionDenied(true);
                               toast.error("Health Connect permission denied");
-                              AccessibilityInfo.announceForAccessibility("Health Connect permission denied");
+                              AccessibilityInfo.announceForAccessibility("Health Connect permission denied. Open Health Connect settings to grant permission manually.");
                             }
-                          } catch { setHcEnabled(false); toast.error("Failed to enable Health Connect"); }
+                          } catch {
+                            setHcEnabled(false);
+                            setHcPermissionDenied(true);
+                            toast.error("Failed to enable Health Connect");
+                          }
                           finally { setHcLoading(false); }
                         } else {
                           setHcLoading(true);
                           try {
-                            const { disableHealthConnect } = await import("../../lib/health-connect");
                             await disableHealthConnect();
                             setHcEnabled(false);
+                            setHcPermissionDenied(false);
                             toast.success("Health Connect disabled");
                           } catch { toast.error("Failed to disable Health Connect"); }
                           finally { setHcLoading(false); }
@@ -140,7 +153,41 @@ export default function IntegrationsCard({
                       }}
                     />
                   </View>
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.</Text>
+                  {hcPermissionDenied && !hcEnabled ? (
+                    <View
+                      testID="hc-permission-denied"
+                      style={[styles.deniedBlock, { backgroundColor: colors.errorContainer, borderColor: colors.error }]}
+                    >
+                      <View style={styles.deniedHeader}>
+                        <AlertCircle size={16} color={colors.error} />
+                        <Text variant="body" style={{ color: colors.onErrorContainer, fontSize: fontSizes.sm, fontWeight: "600", marginLeft: 6 }}>
+                          Permission required
+                        </Text>
+                      </View>
+                      <Text variant="caption" style={{ color: colors.onErrorContainer, marginTop: 4 }}>
+                        Android did not grant CableSnap permission to write to Health Connect. If you tapped Deny earlier, the system may stop showing the prompt — open Health Connect settings and grant the “Write exercise sessions” permission manually, then come back and try the toggle again.
+                      </Text>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={ExternalLink}
+                        style={{ marginTop: 10, alignSelf: "flex-start", minHeight: 48 }}
+                        onPress={async () => {
+                          try {
+                            await openHealthConnectSettings();
+                          } catch {
+                            toast.error("Could not open Health Connect settings");
+                          }
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open Health Connect settings"
+                      >
+                        Open Health Connect settings
+                      </Button>
+                    </View>
+                  ) : (
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.</Text>
+                  )}
                 </View>
               ) : (
                 <View>
@@ -175,4 +222,11 @@ export default function IntegrationsCard({
 const styles = StyleSheet.create({
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  deniedBlock: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  deniedHeader: { flexDirection: "row", alignItems: "center" },
 });

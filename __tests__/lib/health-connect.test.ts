@@ -106,11 +106,14 @@ describe("Health Connect settings integration", () => {
     expect(source).toContain("AccessibilityInfo");
     expect(source).toContain('accessibilityRole="switch"');
     expect(source).toContain('accessibilityLabel="Sync workouts to Health Connect"');
-    // dynamic import
-    expect(source).not.toMatch(/^import.*from.*["'].*health-connect["']/m);
-    expect(source).toContain('await import("../../lib/health-connect")');
-    // shows toast on permission denial
+    // health-connect lib import (BLD-715: switched to static import; lib itself
+    // dynamic-imports the native module, so iOS/web stay safe)
+    expect(source).toMatch(/from\s+["']@\/lib\/health-connect["']/);
+    expect(source).toContain("requestHealthConnectPermission");
+    expect(source).toContain("openHealthConnectSettings");
+    // shows toast on permission denial AND inline CTA
     expect(source).toContain("permission denied");
+    expect(source).toContain("hc-permission-denied");
     // platform gating
     expect(source).toContain('Platform.OS === "android"');
     expect(source).toContain('hcSdkStatus !== "unavailable"');
