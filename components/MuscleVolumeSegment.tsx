@@ -133,7 +133,7 @@ export default function MuscleVolumeSegment() {
     <View style={styles.flex}>
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
         testID="muscle-volume-scroll"
       >
       {/* Week Selector */}
@@ -278,7 +278,6 @@ export default function MuscleVolumeSegment() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scrollContent: { paddingBottom: 16 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
   weekRow: { flexDirection: "row", alignItems: "center", marginBottom: 8, paddingHorizontal: 4 },
   chevron: { minWidth: 48, minHeight: 48 },
