@@ -1,7 +1,7 @@
 # Feature Plan: Auto-prefill new set from previous workout's matching set
 
 **Issue**: BLD-682  **Author**: CEO  **Date**: 2026-04-27
-**Status**: DRAFT → IN_REVIEW → **REV 2 (CEO, 2026-04-27 14:57Z) — addressing QD + techlead REQUEST CHANGES**
+**Status**: DRAFT → IN_REVIEW → REV 2 → **APPROVED (CEO, 2026-04-27 15:07Z) — rev 3 closes QD's two conditions; techlead APPROVE + QD APPROVE WITH CONDITIONS now satisfied**
 
 ## Research Source
 - **Origin:** GitHub issue alankyshum/cablesnap#328 (owner-reported, 2026-04-24)
@@ -105,11 +105,17 @@ Replace fixed font sizes with `fontSizes.xs` for the primary line, keep 9pt seco
 
 #### A11y label fix (`components/session/SetRow.tsx` lines 300, 359)
 
+**Critical: read the *displayed* value, not the persisted one.** Under option-B hydration `set.weight` is `null` on a pristine row while `prefillCandidate.weight === 100` is what the picker actually shows. A label keyed off `set.weight ?? 0` would announce "0 kilograms" while the sighted user sees `100` — silently re-introducing the rev-1 a11y bug in subtler form (QD rev-2 BLOCKER):
+
 ```tsx
+// In SetRow render scope — derive ONCE then reuse for both label + picker value:
+const displayedWeight = set.weight ?? prefillCandidate?.weight ?? 0
+const displayedReps   = set.reps   ?? prefillCandidate?.reps   ?? 0
+
 // WeightPicker (line 300)
-accessibilityLabel={`Set ${set.set_number} weight, ${set.weight ?? 0} ${unitWord}`}
+accessibilityLabel={`Set ${set.set_number} weight, ${displayedWeight} ${unitWord}`}
 // RepsPicker (line 359)
-accessibilityLabel={`Set ${set.set_number} reps, ${set.reps ?? 0}`}
+accessibilityLabel={`Set ${set.set_number} reps, ${displayedReps}`}
 ```
 
 `unitWord` = `'kilograms'` for `kg` / `'pounds'` for `lb` — pulled from a small lookup; do NOT concatenate the bare symbol (TalkBack mispronounces `kg` as a letter sequence).
@@ -159,13 +165,17 @@ No DB migration. No schema change. No new dependencies.
 - [ ] **AC8**: All existing useSessionActions / SetRow / useSessionData tests pass; new unit tests cover AC1, AC3, AC4, AC6, AC7, AC11–AC15.
 - [ ] **AC9**: PR passes typecheck, lint, full test suite, and pre-push gates (LICENSE, illustration size, audit-tests, FTA <70 on changed files including `resolvePrefillCandidate` and `handleAddSet`).
 - [ ] **AC10**: GitHub #328 is updated when shipped, citing the version that contains the fix.
-- [ ] **AC11 — A11y label includes value (BLOCKER from QD)**. RNTL test mounts `SetRow` with `weight=100, reps=8, unit='kg'` and asserts `accessibilityLabel` for the WeightPicker matches `Set 1 weight, 100 kilograms` and RepsPicker matches `Set 1 reps, 8`. Same test with `unit='lb'` asserts the WeightPicker label uses `pounds`.
+- [ ] **AC11 — A11y label reads the *displayed* value (BLOCKER from QD rev-1 + rev-2)**. RNTL test mounts `SetRow` and asserts:
+  - **Persisted-value case:** `set.weight=100, set.reps=8, prefillCandidate=null, unit='kg'` → WeightPicker label `Set 1 weight, 100 kilograms`; RepsPicker `Set 1 reps, 8`. Same test with `unit='lb'` → `pounds`.
+  - **Pristine-with-candidate case (option-B hydration):** `set.weight=null, set.reps=null, prefillCandidate={weight:100, reps:8}, unit='kg'` → WeightPicker label `Set 1 weight, 100 kilograms`; RepsPicker `Set 1 reps, 8`. The label MUST match what the sighted user sees in the picker.
+  - **Negative case (no data):** `set.weight=null, set.reps=null, prefillCandidate=null` → WeightPicker `Set 1 weight, 0 kilograms`; RepsPicker `Set 1 reps, 0`. No false-positive value.
 - [ ] **AC12 — Partial prior set**. Given a previous session where `weight=100, reps=null, duration_seconds=null`, When the user adds a set, Then WeightPicker shows 100 and RepsPicker remains empty (NOT 0, NOT a default placeholder). Test asserts no `updateSet` call writes `reps=0`.
 - [ ] **AC13 — Warmup-only history + lookup ordering**. Given the only logged sets in the prior session are warmups, When the user adds a working set, Then no prefill occurs (silent no-op) AND the warmup values are not written. Test pins the rule: lookup matches by `set_number` first, then filters out `set_type === 'warmup'`. Test asserts a `getPreviousSetsBatch` spy is called exactly once with the working set_number, and the warmup row is filtered in the helper, not in the SQL.
 - [ ] **AC14 — Unit conversion at display**. Given prior set `weight=100` (canonical kg) and user's display unit = `lb` with WeightPicker step=5, When the user adds a set, Then the picker displays `220` (rounded to step), NOT `220.46` and NOT `100`. Test asserts the picker's `value` prop matches the rounded-to-step lb value.
 - [ ] **AC15 — Bodyweight modifier preserved**. Given a bodyweight exercise with prior set `bodyweight_modifier_kg=-20, reps=10`, When the user adds a new bodyweight set, Then `reps=10` is prefilled but `bodyweight_modifier_kg` stays at the BLD-541 default (or null) — NOT `-20`. Test asserts no `updateSetBodyweightModifier` call fires from the BLD-682 prefill path.
 - [ ] **AC16 — Fallback ordering (techlead item 6)**. When in-session `lastWorking` exists, the previous-workout `getPreviousSetsBatch` MUST NOT be consulted. Test mounts a session with one in-session working set and asserts the `getPreviousSetsBatch` spy is NEVER called during a second add-set.
 - [ ] **AC17 — Idempotence guard (techlead item 2)**. The hydration display-only path is keyed by `set.id` so re-renders do not redundantly recompute. Pristine guard checks `weight==null && reps==null && duration_seconds==null && completed==false && notes==null && bodyweight_modifier_kg==null`. Test double-mounts the hook with the same data and asserts `prefillCandidate` derivation is stable (no thrash).
+- [ ] **AC18 — Pristine-row completion persists candidate (techlead clarification + QD STRONG, rev-2)**. Given a pristine session row showing `prefillCandidate = { weight: 100, reps: 8 }`, when the user taps the set-number to mark complete WITHOUT touching the pickers, then `updateSet` is called exactly once with `{weight: 100, reps: 8}` BEFORE the completion write, and the persisted DB row reflects `weight=100, reps=8, completed=true`. Test asserts the order via mock-call timeline (`updateSet` call must precede the completion mutation). Without AC18, AC1's "values appear without any user interaction" promise silently breaks at the moment that matters most: the user thinks they logged 100×8; the DB stores nulls + completed=true. Same `single-write-path` (one `updateSet` call) and `write-on-intent` (set-completion is deliberate user action) — fully consistent with the option-B contract.
 
 ## Edge Cases
 
@@ -186,6 +196,7 @@ No DB migration. No schema change. No new dependencies.
 | User added a quick `notes` to a row before touching pickers | Treat row as touched → no prefill display swap; `prefillCandidate` is null. Pristine guard includes `notes==null`. |
 | User opens session, scrolls WeightPicker on row 1 to 102.5 immediately | No async write race possible (option B = display-only); the picker simply moves. First commit happens on user's release of the picker via existing handler. |
 | Pre-seeded template row that user never touches | Stays `weight=null`, `reps=null` in DB. No phantom commits. AC5 enforces zero `updateSet` calls during hydration. |
+| `setComplete` on pristine row with non-null `prefillCandidate` | `updateSet({weight, reps})` fires exactly once BEFORE the completion write; DB row reflects the displayed values. AC18 enforces. |
 | RTL (`I18nManager.isRTL = true`) on long previous-record string | AC7 — both lines visible, alignment respects direction, never ellipsed. |
 
 ## Risk Assessment
@@ -225,4 +236,16 @@ Verdict: REQUEST CHANGES. 6 items:
 N/A — Behavior-Design Classification = NO. (Both reviewers concur.)
 
 ### CEO Decision
-**REV 2 posted 2026-04-27 14:57Z.** All 11 reviewer items addressed in plan body. Re-requesting review from QD + techlead.
+**REV 3 posted 2026-04-27 15:07Z. PLAN APPROVED.**
+
+Rev-2 review verdicts:
+- **Techlead** (comment 698a2c9b): **APPROVE.** All 6 rev-1 items addressed. Non-blocking AC18 implementation clarification flagged.
+- **QD** (comment 5ac29b9f): **APPROVE WITH CONDITIONS** — (1) BLOCKER: AC11 label must read the *displayed* value (`set.weight ?? prefillCandidate?.weight`); (2) STRONG: add AC18.
+
+Rev 3 changes:
+- §A11y label fix: derive `displayedWeight` / `displayedReps` once and key both label and picker value off the same expression. Eliminates the option-B hydration silent-a11y-gap.
+- AC11: expanded to assert all three label cases — persisted-value, pristine-with-candidate, negative (no candidate, no data) — with explicit `pounds` variant.
+- AC18: pristine-completion persistence added, with mock-call timeline assertion that `updateSet` precedes the completion write.
+- Edge Cases: row added for `setComplete` on pristine row with non-null `prefillCandidate`.
+
+Both QD conditions closed in plan body. Plan APPROVED. Creating implementation issue.
