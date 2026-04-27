@@ -471,6 +471,56 @@ describe('Workout Session Acceptance', () => {
     alertSpy.mockRestore()
   })
 
+  describe('templateId population', () => {
+    it('creates sets from template with pre-filled weights and reps from previous session', async () => {
+      const session = createSession({ id: 'sess-template', name: 'Push Day', started_at: Date.now() - 60000 })
+      mockParams.id = 'sess-template'
+      mockParams.templateId = 'tpl-1'
+      mockDb.getSessionById.mockResolvedValue(session)
+
+      const createdSets = [
+        { ...createSet({ id: 'new-t1', session_id: 'sess-template', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
+        { ...createSet({ id: 'new-t2', session_id: 'sess-template', exercise_id: 'ex-1', set_number: 2 }), exercise_name: 'Bench Press', exercise_deleted: false },
+      ]
+      mockDb.getSessionSets
+        .mockResolvedValueOnce([])
+        .mockResolvedValue(createdSets)
+      mockDb.getTemplateById.mockResolvedValue({
+        id: 'tpl-1',
+        exercises: [
+          { exercise_id: 'ex-1', target_sets: 2, link_id: null, position: 1 },
+        ],
+      })
+      mockDb.addSetsBatch.mockResolvedValue(createdSets)
+      mockDb.getPreviousSetsBatch.mockResolvedValue({
+        'ex-1': [
+          { set_number: 1, weight: 80, reps: 10, duration_seconds: null, completed: true, rpe: null, set_type: 'working' },
+          { set_number: 2, weight: 85, reps: 8, duration_seconds: null, completed: true, rpe: null, set_type: 'working' },
+        ],
+      })
+      mockDb.getExerciseById.mockResolvedValue(exercise)
+      mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
+
+      renderScreen(<ActiveSession />)
+
+      await waitFor(() => {
+        expect(mockDb.getTemplateById).toHaveBeenCalledWith('tpl-1')
+        expect(mockDb.addSetsBatch).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 1 }),
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 2 }),
+          ])
+        )
+        expect(mockDb.updateSetsBatch).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'new-t1', weight: 80, reps: 10 }),
+            expect.objectContaining({ id: 'new-t2', weight: 85, reps: 8 }),
+          ])
+        )
+      })
+    })
+  })
+
   describe('sourceSessionId population', () => {
     it('creates sets from source session with pre-filled weights and reps', async () => {
       const session = createSession({ id: 'sess-repeat', name: 'Push Day', started_at: Date.now() - 60000 })
