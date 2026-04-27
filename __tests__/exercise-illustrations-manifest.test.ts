@@ -1,7 +1,7 @@
 /**
  * BLD-561: Exercise illustration manifest completeness.
  *
- * Until the pilot images are generated (OPENAI_API_KEY required for
+ * Until the pilot images are generated (GEMINI_API_KEY or GOOGLE_API_KEY required for
  * `npm run generate:exercise-images`), the manifest is intentionally empty
  * and every pilot exercise falls back to text-only via the both-or-neither
  * rule in `resolveExerciseImages`. That's fine; the resolver test exercises
@@ -13,6 +13,7 @@
  */
 import { manifest } from "../assets/exercise-illustrations/manifest.generated";
 import { PILOT_EXERCISE_IDS } from "../assets/exercise-illustrations/pilot-ids";
+import { seedExercises } from "../lib/seed";
 
 describe("exercise-illustrations manifest", () => {
   it("has a valid module shape (empty or populated)", () => {
@@ -39,10 +40,10 @@ describe("exercise-illustrations manifest", () => {
     }
   });
 
-  it("has no stray non-pilot entries", () => {
-    const pilotSet = new Set(PILOT_EXERCISE_IDS);
+  it("contains only known seeded exercise ids", () => {
+    const seededIds = new Set(seedExercises().map((exercise) => exercise.id));
     for (const id of Object.keys(manifest)) {
-      expect(pilotSet.has(id)).toBe(true);
+      expect(seededIds.has(id)).toBe(true);
     }
   });
 });

@@ -13,14 +13,14 @@
 export const PILOT_EXERCISE_IDS: readonly string[] = [
   // Popular / canonical
   "voltra-001", // Abdominal Crunches — low mount, 2-arm
-  "voltra-013", // Bicep Curls — low mount, 2-arm (see seed)
-  "voltra-029", // Chest Press — mid mount, 2-arm (see seed)
-  "voltra-045", // Lat Pulldown — high mount, 2-arm (see seed)
+  "voltra-013", // High Pulley Overhead Triceps Extension — high mount, rope
+  "voltra-029", // Crossover Fly — high mount, 2-arm
+  "voltra-045", // Side Kicks — low mount, ankle strap
   // Prompt-stress grid
   "voltra-003", // Half Kneeling Chop — high mount, 1-arm diagonal
   "voltra-005", // One-arm Chest Fly with Rotation — mid mount, 1-arm
   "voltra-007", // Single Arm Chest Press with Spinal Rotation — mid mount, 1-arm
-  "voltra-010", // mount stress — additional low-mount coverage
-  "voltra-020", // mid mount 2-arm alt
-  "voltra-035", // high mount 1-arm alt
+  "voltra-010", // Biceps Curls (Low Pulley) — low mount, 1-arm
+  "voltra-020", // Close Grip Lat Pull-down — high mount, bar
+  "voltra-035", // Standing Chest Press (Handle) — mid mount, 1-arm
 ];
