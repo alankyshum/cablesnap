@@ -3,6 +3,19 @@ jest.mock('../../lib/db', () => ({
   getSessionSets: jest.fn().mockResolvedValue([]),
   getSourceSessionSets: jest.fn().mockResolvedValue([]),
   getTemplateById: jest.fn().mockResolvedValue(null),
+  buildInitialSetsFromTemplate: jest.fn((tpl, sessionId) => {
+    if (!tpl?.exercises) return []
+    return tpl.exercises.flatMap((te: { exercise_id: string; target_sets: number; link_id?: string | null; position?: number }) =>
+      Array.from({ length: te.target_sets }, (_, i) => ({
+        sessionId,
+        exerciseId: te.exercise_id,
+        setNumber: i + 1,
+        linkId: te.link_id ?? null,
+        round: te.link_id ? i + 1 : null,
+        exercisePosition: te.position ?? 0,
+      }))
+    )
+  }),
   addSet: jest.fn().mockResolvedValue(undefined),
   addSetsBatch: jest.fn().mockResolvedValue([]),
   completeSet: jest.fn().mockResolvedValue(undefined),
