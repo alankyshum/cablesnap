@@ -124,7 +124,7 @@ function Summary() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Workout Complete!" }} />
+      <Stack.Screen options={{ title: session.name?.trim() || "Summary" }} />
       <FlatList
         data={listData}
         keyExtractor={(s) => s.key}
