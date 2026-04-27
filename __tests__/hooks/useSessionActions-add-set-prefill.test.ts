@@ -17,6 +17,7 @@ const mockAddSet = jest.fn();
 const mockAnnounce = jest.fn();
 const mockGetLastBodyweightModifier = jest.fn();
 const mockUpdateSetBodyweightModifier = jest.fn();
+const mockGetPreviousSetsBatch = jest.fn().mockResolvedValue({});
 
 jest.mock("../../lib/db", () => ({
   addSet: (...args: any[]) => mockAddSet(...args),
@@ -45,6 +46,7 @@ jest.mock("../../lib/db", () => ({
 jest.mock("../../lib/db/session-sets", () => ({
   getLastBodyweightModifier: (...args: any[]) => mockGetLastBodyweightModifier(...args),
   updateSetBodyweightModifier: (...args: any[]) => mockUpdateSetBodyweightModifier(...args),
+  getPreviousSetsBatch: (...args: any[]) => mockGetPreviousSetsBatch(...args),
 }));
 
 jest.mock("../../lib/query", () => ({
@@ -298,9 +300,10 @@ describe("useSessionActions — handleAddSet in-session prefill (BLD-655)", () =
     expect(mockUpdateSet).not.toHaveBeenCalled();
   });
 
-  it("first set being added (group.sets empty): no source, no prefill", async () => {
+  it("first set being added (group.sets empty), no prev-workout history: silent no-op (BLD-682)", async () => {
     const group = makeGroup({ sets: [] });
     const params = makeParams([group]);
+    mockGetPreviousSetsBatch.mockResolvedValueOnce({});
     const { result } = renderHook(() => useSessionActions(params));
     await act(async () => { await flush(); });
 
@@ -356,7 +359,7 @@ describe("useSessionActions — handleAddSet in-session prefill (BLD-655)", () =
     });
 
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("BLD-655"),
+      expect.stringContaining("BLD-682"),
       expect.any(Error)
     );
 

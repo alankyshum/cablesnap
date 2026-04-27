@@ -167,6 +167,21 @@ export const SetRow = memo(function SetRow({
 
   const isDurationMode = trackingMode === "duration";
 
+  // BLD-682: derive the *displayed* value once and key BOTH the picker
+  // `value` prop AND the accessibilityLabel off the same expression.
+  // Rationale: under option-B hydration `set.weight` is null on a
+  // pristine row while `prefillCandidate.weight === 100` is what the
+  // picker actually shows. A label keyed off `set.weight ?? 0` would
+  // announce "0 kilograms" while the sighted user sees `100`. (AC11.)
+  const candidate = set.prefillCandidate ?? null;
+  const displayedWeight = set.weight ?? candidate?.weight ?? null;
+  const displayedReps = set.reps ?? candidate?.reps ?? null;
+  const displayedDuration = set.duration_seconds ?? candidate?.duration_seconds ?? null;
+  const unitWord = unit === "lb" ? "pounds" : "kilograms";
+  const a11yWeightLabel = `Set ${set.set_number} weight, ${displayedWeight ?? 0} ${unitWord}`;
+  const a11yRepsLabel = `Set ${set.set_number} reps, ${displayedReps ?? 0}`;
+  const a11yDurationLabel = `Set ${set.set_number} duration, ${displayedDuration ?? 0} seconds`;
+
   const chipStyle = useMemo(() => {
     switch (set.set_type) {
       case "warmup": return { bg: colors.surfaceVariant, fg: colors.onSurfaceVariant };
@@ -269,15 +284,41 @@ export const SetRow = memo(function SetRow({
           <View style={styles.colPrev}>
             {set.previous?.includes("\n") ? (
               <>
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+                <Text
+                  style={{
+                    color: colors.onSurfaceVariant,
+                    textAlign: "center",
+                    fontSize: fontSizes.xs,
+                    flexShrink: 1,
+                  }}
+                  numberOfLines={2}
+                >
                   {set.previous.split("\n")[0]}
                 </Text>
-                <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", fontSize: 9, lineHeight: 12, opacity: 0.7 }}>
+                <Text
+                  style={{
+                    color: colors.onSurfaceVariant,
+                    textAlign: "center",
+                    fontSize: 9,
+                    lineHeight: 12,
+                    opacity: 0.7,
+                    flexShrink: 1,
+                  }}
+                  numberOfLines={2}
+                >
                   {set.previous.split("\n")[1]}
                 </Text>
               </>
             ) : (
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+              <Text
+                style={{
+                  color: colors.onSurfaceVariant,
+                  textAlign: "center",
+                  fontSize: fontSizes.xs,
+                  flexShrink: 1,
+                }}
+                numberOfLines={2}
+              >
                 {set.previous}
               </Text>
             )}
@@ -293,11 +334,11 @@ export const SetRow = memo(function SetRow({
               />
             ) : (
               <WeightPicker
-                value={set.weight}
+                value={displayedWeight}
                 step={step}
                 unit={unit}
                 onValueChange={onWeightChange}
-                accessibilityLabel={`Set ${set.set_number} weight`}
+                accessibilityLabel={a11yWeightLabel}
               />
             )}
           </View>
@@ -340,10 +381,10 @@ export const SetRow = memo(function SetRow({
                 ) : (
                   <View style={{ flex: 1 }}>
                     <WeightPicker
-                      value={set.duration_seconds}
+                      value={displayedDuration}
                       step={1}
                       onValueChange={onDurationChange}
-                      accessibilityLabel={`Set ${set.set_number} duration, ${set.duration_seconds ?? 0} seconds`}
+                      accessibilityLabel={a11yDurationLabel}
                       max={36000}
                     />
                   </View>
@@ -353,10 +394,10 @@ export const SetRow = memo(function SetRow({
           ) : (
             <View style={styles.pickerCol}>
               <WeightPicker
-                value={set.reps}
+                value={displayedReps}
                 step={1}
                 onValueChange={onRepsChange}
-                accessibilityLabel={`Set ${set.set_number} reps`}
+                accessibilityLabel={a11yRepsLabel}
                 max={999}
               />
             </View>
@@ -443,7 +484,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   colPrev: {
-    width: 80,
+    width: 88,
     alignItems: "center",
     justifyContent: "center",
   },
