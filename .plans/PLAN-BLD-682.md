@@ -1,7 +1,7 @@
 # Feature Plan: Auto-prefill new set from previous workout's matching set
 
 **Issue**: BLD-682  **Author**: CEO  **Date**: 2026-04-27
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW → **REV 2 (CEO, 2026-04-27 14:57Z) — addressing QD + techlead REQUEST CHANGES**
 
 ## Research Source
 - **Origin:** GitHub issue alankyshum/cablesnap#328 (owner-reported, 2026-04-24)
@@ -34,10 +34,12 @@ BLD-655 added prefill from prior **in-session** sets (set 2 reuses set 1). It do
 
 ### Overview
 
-Two coordinated changes:
+Three coordinated changes:
 
-1. **Prefill on first add-set & on session hydration.** Extend the BLD-655 prefill path so that when a set is created and there is *no* in-session prior working set to copy from, fall back to the matching set from the previous workout (`prevCache[exercise_id][set_number]`). Same write path (`updateSet`), same silent-no-op contract.
-2. **Tighten previous-chip layout.** Shrink the chip's font and allow up to 2 lines so long strings (`100×12\n1RM: 178`) never truncate. Keep `colPrev` width unchanged.
+1. **Prefill on first add-set (write-on-intent).** Extend the BLD-655 prefill path inside `handleAddSet` so that when there is no in-session prior working set, fall back to the matching set from the previous workout. Same `updateSet` write path. User pressed "+ Add Set" → user expressed intent → write is fine.
+2. **Display-only hydration (no write on read).** For pre-seeded template rows (rows that exist with empty values when the session opens), the previous-workout values are surfaced **as the picker's displayed value only** (via component prop) until the user touches the row. Persist on first user interaction via the existing handler. This eliminates the phantom-commit, snap-back, and hydration-write-storm risks both reviewers flagged.
+3. **Tighten previous-chip layout.** Reduce font to `fontSizes.xs` + `numberOfLines={2}` + `flexShrink: 1`. **Drop `adjustsFontSizeToFit`** (iOS-only, no-op on RN Web, conflicts with `numberOfLines` on Android — per techlead). If 360dp worst-case still clips, widen `colPrev` from 80→88 dp.
+4. **Fix WeightPicker / RepsPicker accessibilityLabel to include the value (A11y BLOCKER from QD).** Mirror the duration picker pattern at `SetRow.tsx:346`. Without this, screen-reader users miss the prefill entirely.
 
 ### UX Design
 
@@ -49,19 +51,77 @@ Two coordinated changes:
 - **No previous data**: silent no-op. Picker shows current empty/zero state.
 - **Bodyweight & duration tracking**: prefill applies in the same shape as BLD-655 (weight + reps OR weight + duration_seconds). Bodyweight modifier prefill is unchanged (its own smart-default already exists).
 - **Previous chip readability**:
-  - Reduce both Text variants in `colPrev` to `fontSizes.xs` (or 9pt for the secondary line, matching today's smaller line).
-  - Add `numberOfLines={2}` and `adjustsFontSizeToFit` (or equivalent React Native pattern) so the text scales rather than clips.
-- **No new copy, no celebration, no toast.** Prefill is invisible — the values just appear, exactly like a smart default.
+  - Reduce both Text variants in `colPrev` to `fontSizes.xs` for the primary line and keep the existing 9pt for the secondary 1RM line.
+  - Add `numberOfLines={2}` and `flexShrink: 1`.
+  - Do NOT use `adjustsFontSizeToFit` — iOS-only, no-op on RN Web, conflicts with `numberOfLines` on Android (techlead item 3).
+  - If 360dp worst-case content (`1234×12\n1RM: 1789`) still clips, widen `colPrev` from 80→88 dp as a deterministic fallback (engineer to verify with the AC7 matrix).
+- **A11y — accessibilityLabel must include the value.** Update `WeightPicker` accessibilityLabel from `Set N weight` → `Set N weight, X kilograms` (or `pounds` per unit token). Update `RepsPicker` from `Set N reps` → `Set N reps, X`. Mirror the duration-picker pattern at `SetRow.tsx:346`. Use the unit *word* (`kilograms`/`pounds`), not the bare symbol — speech synthesis pronounces them correctly.
+- **No new copy, no celebration, no toast.** Prefill is invisible — the values just appear, exactly like a smart default. Do NOT call `AccessibilityInfo.announceForAccessibility` (would stutter on session open with many prefilled rows).
 
 ### Technical Approach
 
-- File: `hooks/useSessionActions.ts`, function `handleAddSet`. After the BLD-655 `lastWorking` lookup, if `lastWorking == null`, attempt a **template-fallback** lookup using `prevCache[exerciseId]`. The cache is already in scope via `useSessionData`; expose it through a small shared accessor (or pass `previousSetForSlot(exerciseId, setNumber)` into `handleAddSet`).
-  - Match on `set_number` first, then on `set_type` filter (skip warmup when adding a working set).
-  - Ignore previous sets where `weight==null && reps==null && duration_seconds==null`.
-- File: `hooks/useSessionData.ts`. Optionally also seed the **initial** sets array (sets that exist in the current session row but were never edited — currently weight/reps null) with matched prev values **only** when `set.weight==null && set.reps==null && set.completed==false`. This handles users who load an existing template-seeded session with empty placeholder rows (the common path per GH #328).
-  - Crucially: this seeding must **not** persist a write on read. It either (a) routes through the same `updateSet` write path on first paint via an effect, or (b) is purely display until the user touches the row, at which point the existing handler persists. **Choose (a)** to match BLD-655's "single-write-path" principle — engineer to confirm during implementation.
-- File: `components/session/SetRow.tsx`, `colPrev` block (lines 269–284). Replace fixed font sizes with theme tokens and add `numberOfLines={2}` plus `adjustsFontSizeToFit` (or RN equivalent — engineer to verify the cross-platform behaviour).
-- No DB migration. No schema change. No new hooks. No new dependencies.
+#### Helper: `resolvePrefillCandidate` (extracted; explicit deliverable per techlead item 5)
+
+`handleAddSet` is already ~140 lines (BLD-541 + BLD-596 + BLD-655). A fourth in-line branch would breach the FTA <70 budget (AC9) and make AC1/AC3/AC4 hard to unit-test. Extract:
+
+```ts
+// hooks/useSessionActions.ts (or co-located helper file)
+export function resolvePrefillCandidate(
+  group: SessionGroup,
+  previousSetForSlot: SetRow | null,
+  newSetNumber: number,
+): { weight: number | null; reps: number | null; duration_seconds: number | null } | null {
+  // 1. In-session lookup (BLD-655 path): most recent non-warmup set in group.sets
+  const lastWorking = [...group.sets].filter(s => s.set_type !== 'warmup').slice(-1)[0]
+  if (lastWorking) return shapeCandidate(lastWorking, group.trackingMode)
+
+  // 2. Previous-workout fallback (BLD-682)
+  if (previousSetForSlot && previousSetForSlot.set_type !== 'warmup') {
+    return shapeCandidate(previousSetForSlot, group.trackingMode)
+  }
+  return null
+}
+```
+
+`handleAddSet` calls it once, applies via `updateSet`. Tests target the helper.
+
+#### `prevCache` access (techlead item 4 — option B chosen)
+
+Inside `handleAddSet`, when `lastWorking == null`, call the existing `getPreviousSetsBatch([exerciseId], sessionId)` (or equivalent already-exported lib/db function) directly to fetch the matching previous set. **Rationale:** zero cross-hook coupling, ~50–150ms latency amortised by other add-set work (already does similar BW-modifier query), trivially revertible. A long-term `getPreviousSetForSlot` accessor in `useSessionData` deserves its own ticket if/when more callers need it.
+
+Match rule (AC13 enforces): match by `set_number` first, then filter by `set_type !== 'warmup'`. Ignore candidates where `weight==null && reps==null && duration_seconds==null`.
+
+#### Hydration prefill (option B — display-only, NOT option A)
+
+**Reversed from rev 1.** Hydration in `useSessionData.ts` does NOT write to the DB. The `previous` field already attaches the prior-set chip text to each set; we additionally surface a **`prefillCandidate`** field on each pristine set row (where `weight==null && reps==null && duration_seconds==null && completed==false && notes==null`). `SetRow` reads `prefillCandidate` and uses it as the picker's `value` prop **when the user has not yet touched the row**. On first user interaction with the picker, `SetRow` calls the existing change handler with the candidate value (or whatever value the user dialed) — that's the single write, on intent.
+
+`pristine` guard MUST also consider `set.notes` (per QD item 5 — note presence = user touched the row).
+
+This eliminates: phantom commits, async race vs user input (snap-back), and the 5×3=15 `updateSet` writes on every session open.
+
+#### `colPrev` chip layout (`components/session/SetRow.tsx` lines 269–284)
+
+Replace fixed font sizes with `fontSizes.xs` for the primary line, keep 9pt secondary. Add `numberOfLines={2}` and `flexShrink: 1`. Do NOT use `adjustsFontSizeToFit`. Verify on Playwright web @ 360dp (AC7).
+
+#### A11y label fix (`components/session/SetRow.tsx` lines 300, 359)
+
+```tsx
+// WeightPicker (line 300)
+accessibilityLabel={`Set ${set.set_number} weight, ${set.weight ?? 0} ${unitWord}`}
+// RepsPicker (line 359)
+accessibilityLabel={`Set ${set.set_number} reps, ${set.reps ?? 0}`}
+```
+
+`unitWord` = `'kilograms'` for `kg` / `'pounds'` for `lb` — pulled from a small lookup; do NOT concatenate the bare symbol (TalkBack mispronounces `kg` as a letter sequence).
+
+#### Files touched
+
+- `hooks/useSessionActions.ts` — extract helper, call it in `handleAddSet`, add prev-workout fallback branch.
+- `hooks/useSessionData.ts` — surface `prefillCandidate` per pristine set row (no write).
+- `components/session/SetRow.tsx` — read `prefillCandidate` for picker value display; update `colPrev` layout (lines 269–284); fix accessibilityLabels (lines 300, 359).
+- New helper file or co-located export for `resolvePrefillCandidate`.
+
+No DB migration. No schema change. No new dependencies.
 
 ### Performance / storage / offline
 
@@ -88,12 +148,24 @@ Two coordinated changes:
 - [ ] **AC2**: Given the same conditions as AC1 and the user adds a second set, Then the second set inherits from the first in-session set (BLD-655 behaviour, unchanged).
 - [ ] **AC3**: Given an exercise has *no* prior session history, When the user taps "+ Add Set", Then the row appears with empty/zero pickers (silent no-op, no error log).
 - [ ] **AC4**: Given a duration-tracked exercise (e.g. plank) with a prior set of `0kg × 60s`, When the user adds a set, Then weight=0 and duration_seconds=60 are prefilled.
-- [ ] **AC5**: Prefilled values are persisted via the existing `updateSet` write path (same single-write-path principle as BLD-655). No new direct DB writes.
-- [ ] **AC6**: If `updateSet` throws during prefill, the row insert still succeeds, no values are shown as "unsaved", and a single `console.warn("[BLD-682] add-set previous-workout prefill persistence failed", err)` breadcrumb is emitted.
-- [ ] **AC7**: A previous-performance chip with the value `100×12\n1RM: 178` renders fully visible (no `…` truncation) on the narrowest supported viewport (`360dp` Android width). Snapshot/component test asserts `numberOfLines >= 2` and that the rendered substring `1RM: 178` is present.
-- [ ] **AC8**: All existing useSessionActions / SetRow / useSessionData tests pass; new unit tests cover AC1, AC3, AC4, AC6, AC7.
-- [ ] **AC9**: PR passes typecheck, lint, full test suite, and pre-push gates (LICENSE, illustration size, audit-tests, FTA <70 on changed files).
+- [ ] **AC5**: Prefilled values via the `handleAddSet` path are persisted via the existing `updateSet` write API. **Hydration prefill (display-only) does NOT write.** Verified by an `updateSet`-spy test: zero `updateSet` calls fire during session hydration of pristine rows; exactly one fires per `handleAddSet` invocation.
+- [ ] **AC6**: If `updateSet` throws during `handleAddSet` prefill, the row insert still succeeds, no values are shown as "unsaved", and a single `console.warn("[BLD-682] add-set previous-workout prefill persistence failed", err)` breadcrumb is emitted.
+- [ ] **AC7**: `colPrev` chip renders without text-overflow ellipsis on a 360dp viewport for **all** of the following inputs (Playwright web @ 360dp + Jest snapshot):
+  - `100×8` — single short line.
+  - `100×12\n1RM: 178` — both lines visible (the GH #328 case).
+  - `1234×12\n1RM: 1789` — worst-case heavy lifter; both lines visible OR `colPrev` widens via the 80→88 dp fallback. NEVER ellipsed.
+  - RTL (`I18nManager.isRTL = true`) — both lines visible; alignment respects direction.
+  Test asserts the rendered DOM does NOT contain a CSS-applied `text-overflow: ellipsis` truncation AND the literal substring (`1RM: 178` or `1RM: 1789`) is present.
+- [ ] **AC8**: All existing useSessionActions / SetRow / useSessionData tests pass; new unit tests cover AC1, AC3, AC4, AC6, AC7, AC11–AC15.
+- [ ] **AC9**: PR passes typecheck, lint, full test suite, and pre-push gates (LICENSE, illustration size, audit-tests, FTA <70 on changed files including `resolvePrefillCandidate` and `handleAddSet`).
 - [ ] **AC10**: GitHub #328 is updated when shipped, citing the version that contains the fix.
+- [ ] **AC11 — A11y label includes value (BLOCKER from QD)**. RNTL test mounts `SetRow` with `weight=100, reps=8, unit='kg'` and asserts `accessibilityLabel` for the WeightPicker matches `Set 1 weight, 100 kilograms` and RepsPicker matches `Set 1 reps, 8`. Same test with `unit='lb'` asserts the WeightPicker label uses `pounds`.
+- [ ] **AC12 — Partial prior set**. Given a previous session where `weight=100, reps=null, duration_seconds=null`, When the user adds a set, Then WeightPicker shows 100 and RepsPicker remains empty (NOT 0, NOT a default placeholder). Test asserts no `updateSet` call writes `reps=0`.
+- [ ] **AC13 — Warmup-only history + lookup ordering**. Given the only logged sets in the prior session are warmups, When the user adds a working set, Then no prefill occurs (silent no-op) AND the warmup values are not written. Test pins the rule: lookup matches by `set_number` first, then filters out `set_type === 'warmup'`. Test asserts a `getPreviousSetsBatch` spy is called exactly once with the working set_number, and the warmup row is filtered in the helper, not in the SQL.
+- [ ] **AC14 — Unit conversion at display**. Given prior set `weight=100` (canonical kg) and user's display unit = `lb` with WeightPicker step=5, When the user adds a set, Then the picker displays `220` (rounded to step), NOT `220.46` and NOT `100`. Test asserts the picker's `value` prop matches the rounded-to-step lb value.
+- [ ] **AC15 — Bodyweight modifier preserved**. Given a bodyweight exercise with prior set `bodyweight_modifier_kg=-20, reps=10`, When the user adds a new bodyweight set, Then `reps=10` is prefilled but `bodyweight_modifier_kg` stays at the BLD-541 default (or null) — NOT `-20`. Test asserts no `updateSetBodyweightModifier` call fires from the BLD-682 prefill path.
+- [ ] **AC16 — Fallback ordering (techlead item 6)**. When in-session `lastWorking` exists, the previous-workout `getPreviousSetsBatch` MUST NOT be consulted. Test mounts a session with one in-session working set and asserts the `getPreviousSetsBatch` spy is NEVER called during a second add-set.
+- [ ] **AC17 — Idempotence guard (techlead item 2)**. The hydration display-only path is keyed by `set.id` so re-renders do not redundantly recompute. Pristine guard checks `weight==null && reps==null && duration_seconds==null && completed==false && notes==null && bodyweight_modifier_kg==null`. Test double-mounts the hook with the same data and asserts `prefillCandidate` derivation is stable (no thrash).
 
 ## Edge Cases
 
@@ -110,27 +182,47 @@ Two coordinated changes:
 | Offline / DB write fails | AC6 — graceful, single warn, row still appears. |
 | Long previous-record string (`100×12\n1RM: 178`) | AC7 — wraps to 2 lines or font shrinks, never truncates. |
 | `colPrev` rendered in landscape on tablet (wide viewport) | Text still wraps at most 2 lines; never grows column width. |
-| A11y: screen reader on prefilled row | Existing accessibility labels still announce "Set N weight / reps"; no new announcement needed. |
+| A11y: screen reader on prefilled row | accessibilityLabel includes the value + unit word (`Set 1 weight, 100 kilograms`). Mirror duration-picker pattern at `SetRow.tsx:346`. AC11 enforces. |
+| User added a quick `notes` to a row before touching pickers | Treat row as touched → no prefill display swap; `prefillCandidate` is null. Pristine guard includes `notes==null`. |
+| User opens session, scrolls WeightPicker on row 1 to 102.5 immediately | No async write race possible (option B = display-only); the picker simply moves. First commit happens on user's release of the picker via existing handler. |
+| Pre-seeded template row that user never touches | Stays `weight=null`, `reps=null` in DB. No phantom commits. AC5 enforces zero `updateSet` calls during hydration. |
+| RTL (`I18nManager.isRTL = true`) on long previous-record string | AC7 — both lines visible, alignment respects direction, never ellipsed. |
 
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Prefill writes a value the user did not intend, then they complete the set without noticing | Low | Medium | Mirrors what apps like Strong/Hevy do by default. The "set complete" tap is still required; values are visible in the picker before completion. AC1 ensures behavior is predictable. |
-| Race between the read-time seeding (option a) and a user editing the row before the write lands | Low | Low | Use the same idempotent `updateSet` path; engineer to add a guard so seeding only fires when the row is still pristine (`weight==null && reps==null && completed==false`). |
-| `adjustsFontSizeToFit` behaves differently on web vs native | Medium | Low | Component test on web (Playwright) + native (Jest) covers AC7 on both. If `adjustsFontSizeToFit` doesn't work on web, fall back to a `min(fontSize, computedFitSize)` calculation — engineer's call. |
-| Increased session-load cost from extra prefill writes on every empty-row exercise | Low | Low | `prevCache` is already loaded; the only added cost is `updateSet` calls on rows that would otherwise be empty. Bounded by sets-per-session (typically <30). |
+| ~~Race between the read-time seeding (option a) and a user editing the row before the write lands~~ | N/A | N/A | **Eliminated by option B** (display-only hydration). No async seed write means no race. |
+| Heavy-lifter content (`1234×12\n1RM: 1789`) still clips on 360dp despite `numberOfLines={2}` + `fontSizes.xs` | Medium | Low | Deterministic fallback: widen `colPrev` 80→88 dp. AC7 worst-case test catches it. No iOS/Android divergence because we don't use `adjustsFontSizeToFit`. |
+| BLD-541 bodyweight-modifier default gets clobbered by stale prefill | Low | Medium | Pristine guard includes `bodyweight_modifier_kg==null`. AC15 test enforces no `updateSetBodyweightModifier` call from BLD-682 path. |
+| `getPreviousSetsBatch` adds 50–150ms to add-set latency | Low | Low | Already in lib/db; amortised by existing BW-modifier and PR queries on add-set. If profiling shows regression, add a session-scoped memo cache (separate ticket). |
 
 ## Review Feedback
 
-### Quality Director (UX)
-_Pending_
+### Quality Director (UX) — REV 1: REQUEST CHANGES (2026-04-27, comment 1063b63b)
 
-### Tech Lead (Feasibility)
-_Pending_
+Verdict: REQUEST CHANGES. SKILL alignment ✅. Behavior-Design = NO confirmed. 5 items:
+
+1. **(BLOCKER, A11y)** WeightPicker/RepsPicker accessibilityLabel must include value+unit word. Mirror duration-picker `SetRow.tsx:346`. → **Addressed in rev 2 §Technical Approach + AC11.**
+2. **Adopt option (b) for hydration prefill.** → **Addressed in rev 2 §Technical Approach (Hydration prefill = display-only) + Risk row N/A.**
+3. **Rewrite AC7** to verify rendered output (Playwright web + Jest), 4-case matrix. → **Addressed in rev 2 AC7.**
+4. **Add AC12–AC15** for partial prior, warmup-only ordering, unit conversion display, bodyweight modifier preservation. → **Addressed (AC12, AC13, AC14, AC15).**
+5. **Pristine guard considers `set.notes`.** → **Addressed in §Technical Approach (Hydration) + AC17.**
+
+### Tech Lead (Feasibility) — REV 1: REQUEST CHANGES (2026-04-27, comment 30320731)
+
+Verdict: REQUEST CHANGES. 6 items:
+
+1. **Reverse hydration recommendation: option (b), not (a).** → **Addressed.**
+2. **Idempotence guard AC11** — `seededSetIds` ref + `bodyweight_modifier_kg==null` pristine guard. → **Addressed in §Technical Approach + AC15 + AC17** (renumbered; QD's AC11 is the A11y blocker).
+3. **Drop `adjustsFontSizeToFit`.** Use `numberOfLines={2}` + `fontSizes.xs` + `flexShrink: 1`; widen `colPrev` 80→88 dp as fallback. → **Addressed.**
+4. **Pick `prevCache` access strategy: option B** (call `getPreviousSetsBatch` directly inside `handleAddSet`). → **Addressed.**
+5. **Extract `resolvePrefillCandidate` helper** as explicit deliverable. → **Addressed in §Technical Approach (helper sketch + signature).**
+6. **AC gaps:** fallback-ordering AC + `updateSet`-spy AC. → **Addressed (AC16 + AC5 spy clause).**
 
 ### Psychologist (Behavior-Design)
-N/A — Behavior-Design Classification = NO.
+N/A — Behavior-Design Classification = NO. (Both reviewers concur.)
 
 ### CEO Decision
-_Pending — awaiting QD + Techlead reviews._
+**REV 2 posted 2026-04-27 14:57Z.** All 11 reviewer items addressed in plan body. Re-requesting review from QD + techlead.
