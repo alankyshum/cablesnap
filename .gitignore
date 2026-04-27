@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Cursor project skills are obsolete; Claude project skills are canonical.
+.cursor/
+
 # typescript
 *.tsbuildinfo
 
