@@ -124,7 +124,29 @@ Two coordinated changes:
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+
+**Verdict: REQUEST CHANGES** (3 substantive items, 4 ACs to add). Posted full review on BLD-682 issue thread 2026-04-27. Aligns with Tech Lead on option (a) → option (b). Highlights below; see issue thread for full evidence.
+
+**SKILL alignment** — ✅ Matches the Fluent-UX *"Smart defaults everywhere — auto-fill weight from last session"* pillar. Behavior-Design = NO is correct.
+
+**Required changes before APPROVE:**
+
+1. **(BLOCKER, A11y)** Existing `WeightPicker` / `RepsPicker` accessibilityLabels (`SetRow.tsx:300, :359`) do NOT include the value — only `Set N weight` / `Set N reps`. Compare to duration picker at `:346` which DOES include the value. A screen-reader user would MISS the prefill entirely. Update both labels to include value + unit word (e.g. `Set 1 weight, 100 kilograms`, `Set 1 reps, 8`). Add **AC11** verifying via RNTL.
+2. **Adopt option (b) for hydration prefill** (display-only until first touch). I endorse Tech Lead's reversal AND raise the risk-table impact to Low/Medium because picker snap-back is a trust-eroding bug, plus phantom commits violate the "untouched row = null" mental model and 5×3 = 15 SQLite writes on every session open is a non-zero cold-start cost. Option (a) keeps the door open to async race vs user input. Option (b) is also a simpler test surface.
+3. **Rewrite AC7** to verify *rendered* output, not props. Snapshot/RNTL doesn't run layout, so `numberOfLines={2}` could still ellipse on real device. Required matrix:
+   - `100×8` (single short line) — no truncation.
+   - `100×12\n1RM: 178` — both lines visible (the GH #328 case).
+   - `1234×12\n1RM: 1789` — worst-case; both lines visible OR auto-shrink, NEVER ellipsed.
+   - RTL (`I18nManager.isRTL = true`) — both lines visible.
+   - Run on Playwright web @ 360dp viewport AND Jest snapshot.
+4. **Add AC12–AC15** covering edge cases that today only live in the Edge Cases table prose:
+   - **AC12** — partial prior set (`weight=100, reps=null`): WeightPicker shows 100, RepsPicker stays empty (NOT 0).
+   - **AC13** — warmup-only history: silent no-op; warmup values are not written. Pin the lookup rule (set_number match THEN set_type filter) in an AC.
+   - **AC14** — unit conversion at display: prior `100kg` canonical → user in lbs sees rounded display value at the picker's step (e.g. `220 lb @ step=5`), not raw `220.46 lb`.
+   - **AC15** — bodyweight modifier preserved: prior set with `bodyweight_modifier_kg=-20, reps=10` → only reps prefilled; modifier stays at BLD-541's default.
+5. **Pristine guard (with Tech Lead AC11)** must also consider `set.notes`: if user added a quick note before touching the pickers, treat the row as touched → no seeding. Matches the spirit of "write-on-intent."
+
+The skeleton is sound and the scope is clean. Once items 1–5 land, ready to APPROVE.
 
 ### Tech Lead (Feasibility)
 _Pending_
