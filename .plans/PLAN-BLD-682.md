@@ -127,7 +127,17 @@ Two coordinated changes:
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: REQUEST CHANGES** (2026-04-27, comment `30320731-cad5-4680-92ce-0152e9e64e10`). Six items to address before APPROVE:
+
+1. **Reverse hydration recommendation: option (b), not (a).** The plan conflates "single-write-path" with "write-on-intent." (a) introduces phantom commits (rows the user never touched get persisted), an async race vs. user input, and ~15 extra writes on hydration for a typical template. Use display-only for hydration of pre-seeded empty rows; persist on first user touch via the existing handler. Keep (a)-equivalent for the `handleAddSet` path (user expressed intent — matches BLD-655 exactly).
+2. **Idempotence guard AC11.** Effect must run once per `(sessionId, set.id)` pair via a `seededSetIds` ref; for bodyweight rows also guard on `bodyweight_modifier_kg == null` so BLD-541's BW-modifier default isn't clobbered. Add a unit test that double-mounts the hook and asserts `updateSet` is called exactly N times.
+3. **Drop `adjustsFontSizeToFit`.** It is iOS-only — Android shrink interacts badly with `numberOfLines={2}`, and on RN Web it's a no-op. Use `numberOfLines={2}` + `fontSizes.xs` + `flexShrink: 1`; if 360dp Pixel-4a still clips on worst-case content (`1234×12\n1RM: 1789`), widen `colPrev` from 80→88 or apply small negative `letterSpacing`. Deterministic across iOS/Android/Web.
+4. **Pick `prevCache` access strategy in plan, don't punt.** Two options: (A) stash a stable `getPreviousSetForSlot(exerciseId, setNumber)` accessor in `useSessionData` and pass to actions hook, or (B) inside `handleAddSet`, when `lastWorking == null`, call `getPreviousSetsBatch([exerciseId], id)` directly. Recommend (B) for v1 — zero cross-hook coupling, ~50–150ms latency amortised by other add-set work, easy to revert. (A) is right long-term but deserves its own ticket.
+5. **Extract `resolvePrefillCandidate` helper.** `handleAddSet` is already ~140 lines (BLD-541 + BLD-596 + BLD-655); a fourth in-line branch will breach FTA <70 (AC9) and make AC1/AC3/AC4 hard to unit-test. Extract a pure function `resolvePrefillCandidate(group, previousSetForSlot, newSetNumber): { weight, reps, duration_seconds } | null` and make it an explicit deliverable. `handleAddSet` calls it once, applies via `updateSet`. Tests target the helper.
+6. **AC gaps.** Add fallback-ordering AC (when in-session `lastWorking` exists, `prevCache` MUST NOT be consulted — verified by a spy). Make AC5 testable with an `updateSet`-spy assertion that no other write API fires during prefill.
+
+Once items 1–5 land in plan v2 (and the helper deliverable + AC11 + fallback-ordering AC are in §Acceptance Criteria), ready to APPROVE. Skeleton is good; scope is clean; these are corrections, not a re-architecture.
 
 ### Psychologist (Behavior-Design)
 N/A — Behavior-Design Classification = NO.
