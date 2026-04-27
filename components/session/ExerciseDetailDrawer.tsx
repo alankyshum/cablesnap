@@ -10,6 +10,7 @@ import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { ExerciseDrawerStats } from "./ExerciseDrawerStats";
 import { ExerciseTutorialLink } from "../exercises/ExerciseTutorialLink";
+import { ExerciseInstructionsList } from "../exercises/ExerciseInstructionsList";
 import type { Exercise } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -23,11 +24,6 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
   const layout = useLayout();
   const profileGender = useProfileGender();
   const { width: screenWidth } = useWindowDimensions();
-
-  const steps = exercise.instructions
-    ?.split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean) ?? [];
 
   const musclesAndMeta = (
     <>
@@ -99,22 +95,29 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
     </>
   );
 
-  const instructions = steps.length > 0 ? (
+  const instructions = (
     <View style={styles.detailSection}>
-      <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
-        Instructions
-      </Text>
-      {steps.map((step, i) => (
-        <Text key={i} variant="body" style={{ color: colors.onSurface, marginTop: 6, lineHeight: 22 }}>
-          {step}
-        </Text>
-      ))}
+      <ExerciseInstructionsList
+        instructions={exercise.instructions}
+        colors={colors}
+        showHeading
+        testIDPrefix="exercise-detail-drawer-instructions"
+      />
     </View>
-  ) : null;
+  );
 
   const mapWidth = layout.atLeastMedium
     ? Math.min(screenWidth - 64, 600)
     : screenWidth - 48;
+
+  const muscleMap = (
+    <MuscleMap
+      primary={exercise.primary_muscles}
+      secondary={exercise.secondary_muscles}
+      width={mapWidth}
+      gender={profileGender}
+    />
+  );
 
   return (
     <BottomSheetFlatList
@@ -141,16 +144,14 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
                   />
                 </View>
               </View>
-              <MuscleMap
-                primary={exercise.primary_muscles}
-                secondary={exercise.secondary_muscles}
-                width={mapWidth}
-                gender={profileGender}
-              />
+              {muscleMap}
             </>
           ) : (
             <>
               {musclesAndMeta}
+              <View style={styles.detailMuscleMapNarrow}>
+                {muscleMap}
+              </View>
               {instructions}
               <ExerciseTutorialLink
                 exerciseName={exercise.name}
@@ -197,5 +198,9 @@ const styles = StyleSheet.create({
   },
   detailSection: {
     marginBottom: 16,
+  },
+  detailMuscleMapNarrow: {
+    alignItems: "center",
+    marginVertical: 8,
   },
 });

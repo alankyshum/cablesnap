@@ -8,6 +8,7 @@ import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { BodyweightModifierNotice } from "./BodyweightModifierNotice";
 import { ExerciseTutorialLink } from "./ExerciseTutorialLink";
+import { ExerciseInstructionsList, parseInstructionSteps } from "./ExerciseInstructionsList";
 import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseDetailPaneProps {
@@ -18,10 +19,7 @@ export interface ExerciseDetailPaneProps {
 }
 
 export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset }: ExerciseDetailPaneProps) {
-  const steps = detail?.instructions
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const steps = parseInstructionSteps(detail?.instructions);
 
   return (
     <View style={[styles.detailPane, { borderLeftColor: colors.outlineVariant }]}>
@@ -136,25 +134,13 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                   </View>
                 )}
               </View>
-              {steps && steps.length > 0 && (
-                <>
-                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16 }}>
-                    Instructions
-                  </Text>
-                  {steps.map((step, i) => {
-                    const text = step.replace(/^\d+\.\s*/, "");
-                    return (
-                      <View key={i} style={styles.stepRow}>
-                        <Text variant="body" style={{ color: colors.onSurfaceVariant, lineHeight: 22, minWidth: 20 }}>
-                          {i + 1}.
-                        </Text>
-                        <Text variant="body" style={{ color: colors.onSurface, lineHeight: 22, flex: 1 }}>
-                          {text}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </>
+              {steps.length > 0 && (
+                <ExerciseInstructionsList
+                  instructions={detail.instructions}
+                  colors={colors}
+                  showHeading
+                  testIDPrefix="exercise-detail-pane-instructions"
+                />
               )}
               <ExerciseTutorialLink exerciseName={detail.name} testID="exercise-tutorial-link-pane" />
             </>
@@ -203,10 +189,5 @@ const styles = StyleSheet.create({
   detailBadgeText: {
     fontSize: fontSizes.xs,
     lineHeight: 16,
-  },
-  stepRow: {
-    flexDirection: "row",
-    marginTop: 6,
-    gap: 4,
   },
 });
