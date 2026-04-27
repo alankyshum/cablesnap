@@ -132,6 +132,27 @@ describe('Workout Summary — app-bar title (BLD-684)', () => {
     expect(title).not.toBe('Workout Complete!')
   })
 
+  it.each([
+    ['short label', 'Push'],
+    ['long label', 'Upper Body Hypertrophy Day'],
+  ])('app-bar title differs from hero h1 — %s (%s)', async (_label, name) => {
+    const { session, exercises, sets } = createCompletedWorkoutFixture()
+    mockDb.getSessionById.mockResolvedValue({ ...session, name })
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExercisesByIds.mockResolvedValue(exercises)
+
+    const screen = renderScreen(<Summary />)
+    await screen.findByText('Workout Complete!')
+
+    const appBarTitle = lastTitle()
+    const heroH1 = 'Workout Complete!'
+    expect(appBarTitle).toBe(name)
+    expect(appBarTitle).not.toBe(heroH1)
+    // Truncation/ellipsis of long titles is delegated to the native header
+    // (no manual width clamp in the screen source) — keep the title string
+    // intact and let the platform handle overflow.
+  })
+
   it('falls back to "Summary" when the session has no name', async () => {
     const { session, exercises, sets } = createCompletedWorkoutFixture()
     const namelessSession = { ...session, name: '   ' }
