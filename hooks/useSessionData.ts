@@ -262,8 +262,8 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
           for (const s of created) {
             const prev = prevCache[s.exercise_id]?.find((p) => p.set_number === s.set_number);
-            if (prev && prev.weight != null) {
-              setsToUpdate.push({ id: s.id, weight: prev.weight, reps: null });
+            if (prev && (prev.weight != null || prev.reps != null)) {
+              setsToUpdate.push({ id: s.id, weight: prev.weight, reps: prev.reps });
             }
           }
           await updateSetsBatch(setsToUpdate);
