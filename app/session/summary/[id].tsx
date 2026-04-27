@@ -18,6 +18,7 @@ import WeightIncreasesCard from "../../../components/session/summary/WeightIncre
 import ComparisonCard from "../../../components/session/summary/ComparisonCard";
 import SetsCard from "../../../components/session/summary/SetsCard";
 import MusclesWorkedCard from "../../../components/session/summary/MusclesWorkedCard";
+import { EditedPill } from "@/components/session/EditedPill";
 import SummaryFooter from "../../../components/session/summary/SummaryFooter";
 import ErrorBoundary from "../../../components/ErrorBoundary";
 import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
@@ -203,7 +204,7 @@ function Summary() {
 
 function SummaryHeader({ colors, session, duration, durationSpokenText, completedCount, setsBreakdown, volumeDisplay, unit, rating, onRatingChange, notesExpanded, setNotesExpanded, notesText, setNotesText, onNotesSave }: {
   colors: ReturnType<typeof useThemeColors>;
-  session: { completed_at?: number | null; name?: string | null; duration_seconds?: number | null };
+  session: { completed_at?: number | null; name?: string | null; duration_seconds?: number | null; edited_at?: number | null };
   duration: string;
   durationSpokenText: string;
   completedCount: number;
@@ -224,6 +225,11 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
         <MaterialCommunityIcons name="check-circle" size={48} color={colors.primary} />
         <Text variant="heading" style={[styles.title, { color: colors.onBackground }]} accessibilityRole="header">Workout Complete!</Text>
         <Text variant="body" style={{ color: colors.onSurfaceVariant }} numberOfLines={1} ellipsizeMode="tail">{session.name}</Text>
+        {session.edited_at != null && (
+          <View style={{ marginTop: 4 }}>
+            <EditedPill editedAt={session.edited_at} colors={colors} />
+          </View>
+        )}
       </View>
       <View style={styles.stats}>
         <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Duration: ${durationSpokenText}`}>

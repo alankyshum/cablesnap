@@ -1,18 +1,25 @@
-import { StyleSheet, TouchableOpacity, View, FlatList } from "react-native";
+import { StyleSheet, View, FlatList } from "react-native";
+import { useRouter } from "expo-router";
+import ExercisePickerSheet from "@/components/ExercisePickerSheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useLayout } from "@/lib/layout";
 import { useSessionDetail } from "@/hooks/useSessionDetail";
+import { useSessionEdit } from "@/hooks/useSessionEdit";
 import { SummaryCard } from "@/components/session/detail/SummaryCard";
 import { RatingNotesCard } from "@/components/session/detail/RatingNotesCard";
 import { ExerciseGroupRow } from "@/components/session/detail/ExerciseGroupRow";
+import type { ExerciseGroup } from "@/hooks/useSessionDetail";
+import { SessionDetailHeaderActions } from "@/components/session/detail/SessionDetailHeaderActions";
+import { PRsCard } from "@/components/session/detail/PRsCard";
+import { EditableExerciseGroupRow } from "@/components/session/detail/EditableExerciseGroupRow";
 import { TemplateModal } from "@/components/session/detail/TemplateModal";
+import { EditedPill } from "@/components/session/EditedPill";
 
 export default function SessionDetail() {
   const layout = useLayout();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     session, groups, prs, rating, notesText, setNotesText,
@@ -20,8 +27,34 @@ export default function SessionDetail() {
     setTemplateName, completedSetCount, saving, linkIds, palette,
     volume, completedSets, handleRatingChange, handleNotesSave,
     handleSaveAsTemplate, handleRepeatWorkout, openTemplateModal,
-    closeTemplateModal, colors,
+    closeTemplateModal, colors, refresh,
   } = useSessionDetail(id);
+
+  const edit = useSessionEdit({
+    sessionId: id,
+    sessionStartedAt: session?.started_at ?? null,
+    groups,
+    refresh,
+    onSessionDeleted: () => router.back(),
+  });
+
+  const renderItem = ({ item: group, index }: { item: ExerciseGroup | (typeof edit.draft)[number]; index: number }) => {
+    if (edit.editing) {
+      const dg = group as (typeof edit.draft)[number];
+      return (
+        <EditableExerciseGroupRow
+          exerciseName={dg.name}
+          sets={dg.sets}
+          onChangeWeight={(setIdx, v) => edit.updateSet(index, setIdx, { weight: v })}
+          onChangeReps={(setIdx, v) => edit.updateSet(index, setIdx, { reps: v })}
+          onRemoveSet={(setIdx) => edit.removeSet(index, setIdx)}
+          onAddSet={() => edit.addSet(index)}
+          onRemoveExercise={() => edit.removeExercise(index)}
+        />
+      );
+    }
+    return <ExerciseGroupRow group={group as ExerciseGroup} groups={groups} linkIds={linkIds} palette={palette} colors={colors} />;
+  };
 
   if (!session) {
     return (
@@ -34,37 +67,47 @@ export default function SessionDetail() {
     );
   }
 
+  const showReadOnlyExtras = !edit.editing && !!session.completed_at;
+  const showPRs = !edit.editing && prs.length > 0;
+  const data = edit.editing ? edit.draft : groups;
+
   return (
     <>
       <Stack.Screen
         options={{
           title: session.name,
-          headerRight: session.completed_at
-            ? () => (
-                <TouchableOpacity
-                  onPress={openTemplateModal}
-                  disabled={completedSetCount === 0}
-                  accessibilityLabel="Save as template"
-                  accessibilityHint={completedSetCount === 0 ? "No exercises to save" : "Save this workout as a reusable template"}
-                  hitSlop={8}
-                  style={{ padding: 8 }}
-                >
-                  <MaterialCommunityIcons name="content-save-outline" size={24} color={completedSetCount === 0 ? colors.onSurfaceDisabled : colors.onSurface} />
-                </TouchableOpacity>
-              )
-            : undefined,
+          headerRight: () => (
+            <SessionDetailHeaderActions
+              editing={edit.editing}
+              dirty={edit.dirty}
+              saving={edit.saving}
+              showEditButton={!!session.completed_at}
+              completedSetCount={completedSetCount}
+              onCancel={edit.cancel}
+              onSave={() => void edit.save()}
+              onEnterEdit={edit.enterEdit}
+              onOpenTemplate={openTemplateModal}
+              colors={colors}
+            />
+          ),
         }}
       />
-      <FlatList
-        data={groups}
+      <FlatList<ExerciseGroup | (typeof edit.draft)[number]>
+        data={data}
         keyExtractor={(group) => group.exercise_id}
+        keyboardShouldPersistTaps="handled"
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 48 }}
         ListHeaderComponent={
           <>
+            {session.edited_at != null && (
+              <View style={{ marginBottom: 8 }}>
+                <EditedPill editedAt={session.edited_at} colors={colors} />
+              </View>
+            )}
             <SummaryCard session={session} completedSets={completedSets()} volume={volume()} colors={colors} />
 
-            {session.completed_at && (
+            {showReadOnlyExtras && (
               <RatingNotesCard
                 rating={rating}
                 onRatingChange={handleRatingChange}
@@ -77,50 +120,49 @@ export default function SessionDetail() {
               />
             )}
 
-            {prs.length > 0 && (
-              <Card
-                style={StyleSheet.flatten([styles.prCard, { backgroundColor: colors.tertiaryContainer }])}
-                accessibilityLabel={`${prs.length} new personal record${prs.length > 1 ? "s" : ""} achieved in this workout`}
-              >
-                <CardContent>
-                  <View style={styles.prHeader}>
-                    <MaterialCommunityIcons name="trophy" size={20} color={colors.onTertiaryContainer} />
-                    <Text variant="title" style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}>
-                      {prs.length} New PR{prs.length > 1 ? "s" : ""}
-                    </Text>
-                  </View>
-                  {prs.map((pr) => (
-                    <View key={pr.exercise_id} style={styles.prRow}>
-                      <Text variant="body" style={{ color: colors.onTertiaryContainer, flex: 1 }} accessibilityLabel={`New personal record: ${pr.name}, ${pr.previous_max} to ${pr.weight}`}>
-                        {pr.name}
-                      </Text>
-                      <Text variant="body" style={{ color: colors.onTertiaryContainer }}>
-                        {pr.previous_max} → {pr.weight}
-                      </Text>
-                    </View>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+            {showPRs && <PRsCard prs={prs} colors={colors} />}
 
-            {session.completed_at && (
+            {showReadOnlyExtras && (
               <Button variant="outline" onPress={handleRepeatWorkout} disabled={completedSetCount === 0} style={styles.repeatButton} accessibilityLabel="Repeat workout" accessibilityHint="Start a new session with the same exercises and weights" accessibilityRole="button" label="Repeat Workout" />
             )}
           </>
         }
-        renderItem={({ item: group }) => (
-          <ExerciseGroupRow group={group} groups={groups} linkIds={linkIds} palette={palette} colors={colors} />
-        )}
+        renderItem={renderItem}
         ListFooterComponent={
-          <TemplateModal
-            visible={templateModalVisible}
-            templateName={templateName}
-            onNameChange={setTemplateName}
-            onSave={handleSaveAsTemplate}
-            onClose={closeTemplateModal}
-            saving={saving}
-            colors={colors}
-          />
+          <>
+            {edit.editing && edit.isEmpty && (
+              <Button
+                variant="outline"
+                onPress={edit.deleteWholeSession}
+                style={styles.repeatButton}
+                accessibilityLabel="Delete workout"
+                label="Delete workout"
+              />
+            )}
+            {edit.editing && (
+              <Button
+                variant="outline"
+                onPress={() => edit.setPickerVisible(true)}
+                style={styles.repeatButton}
+                accessibilityLabel="Add exercise"
+                label="+ Add exercise"
+              />
+            )}
+            <TemplateModal
+              visible={templateModalVisible}
+              templateName={templateName}
+              onNameChange={setTemplateName}
+              onSave={handleSaveAsTemplate}
+              onClose={closeTemplateModal}
+              saving={saving}
+              colors={colors}
+            />
+            <ExercisePickerSheet
+              visible={edit.pickerVisible}
+              onDismiss={() => edit.setPickerVisible(false)}
+              onPick={(ex) => edit.addExercise(ex)}
+            />
+          </>
         }
       />
     </>
