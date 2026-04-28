@@ -7,18 +7,25 @@
  * schema state:
  *
  *   1. Fresh DB (none of the legacy columns present)        → 0 drops
- *   2. Upgraded DB (all 5 legacy columns present)            → 5 drops
+ *   2. Upgraded DB (all 4 legacy columns present)            → 4 drops
  *   3. Partially-migrated DB (some legacy columns present)   → only those dropped
  *
  * The repo has no real-SQLite test harness — `expo-sqlite` is universally
  * mocked. We simulate `PRAGMA table_info(<table>)` by tracking which
  * columns are "present" per table and assert the `execAsync` calls.
  *
- * Sequencing note: we drop AFTER the rest of `migrate()` runs. Earlier steps
- * call `addColumnIfMissing` which (under the real driver) would re-add the
- * legacy columns via `ALTER TABLE`. They no longer do, since `migrations.ts`
- * was stripped in this same PR. We assert that statement-set explicitly:
- * no `ADD COLUMN` for any legacy field, plus the right `DROP COLUMN` set.
+ * BLD-783 rebase note: the original BLD-773 drop set included
+ * `workout_sets.mount_position`, but BLD-771 (per-set cable variant
+ * logging — landed on main during the PR's review window) reclaims that
+ * exact column name with new semantics. Dropping it would destroy live
+ * BLD-771 data. The drop is now scoped to 4 columns; the workout_sets
+ * `mount_position` column is preserved with its new BLD-771 semantics.
+ *
+ * Sequencing note: we drop AFTER the rest of `migrate()` runs. Earlier
+ * steps call `addColumnIfMissing` for `workout_sets.mount_position`
+ * (BLD-771); the test allows that ADD but disallows ADD/DROP for the
+ * dropped legacy fields (`training_mode`, `training_modes`, and
+ * `exercises.mount_position`).
  */
 
 const tables: Record<string, Set<string>> = {};
@@ -137,7 +144,7 @@ beforeEach(() => {
 });
 
 describe("migrate() — BLD-773 drop legacy F12/F13 columns", () => {
-  it("drops all five legacy columns on an upgraded DB that has them all", async () => {
+  it("drops the four legacy columns on an upgraded DB that has them all", async () => {
     resetSchema(withLegacyColumns());
     await migrate(mockDb as any);
 
@@ -145,17 +152,17 @@ describe("migrate() — BLD-773 drop legacy F12/F13 columns", () => {
     expect(drops).toEqual(
       expect.arrayContaining([
         "ALTER TABLE workout_sets DROP COLUMN training_mode",
-        "ALTER TABLE workout_sets DROP COLUMN mount_position",
         "ALTER TABLE template_exercises DROP COLUMN training_mode",
         "ALTER TABLE exercises DROP COLUMN mount_position",
         "ALTER TABLE exercises DROP COLUMN training_modes",
       ])
     );
-    expect(drops).toHaveLength(5);
+    expect(drops).toHaveLength(4);
 
     // Post-migration: legacy columns are gone from the simulated schema.
     expect(tables.workout_sets.has("training_mode")).toBe(false);
-    expect(tables.workout_sets.has("mount_position")).toBe(false);
+    // BLD-783: workout_sets.mount_position is preserved (BLD-771 reclaim).
+    expect(tables.workout_sets.has("mount_position")).toBe(true);
     expect(tables.template_exercises.has("training_mode")).toBe(false);
     expect(tables.exercises.has("mount_position")).toBe(false);
     expect(tables.exercises.has("training_modes")).toBe(false);
@@ -168,12 +175,17 @@ describe("migrate() — BLD-773 drop legacy F12/F13 columns", () => {
     expect(dropStatementsFor(execCalls)).toEqual([]);
   });
 
-  it("does not re-add the legacy columns via ADD COLUMN anywhere in migrate()", async () => {
+  it("does not re-add the dropped legacy columns via ADD COLUMN anywhere in migrate()", async () => {
     resetSchema(ALL_TABLES_FRESH);
     await migrate(mockDb as any);
 
+    // BLD-783: workout_sets.mount_position is intentionally re-added by
+    // BLD-771 (per-set cable variant logging) — exclude it from the
+    // "must-not-be-re-added" list. The other three legacy fields stay
+    // forbidden.
     const addLegacy = execCalls.filter((sql) =>
-      /ALTER TABLE \w+ ADD COLUMN (training_mode|training_modes|mount_position)\b/i.test(sql)
+      /ALTER TABLE (workout_sets|template_exercises) ADD COLUMN training_mode\b/i.test(sql) ||
+      /ALTER TABLE exercises ADD COLUMN (mount_position|training_modes)\b/i.test(sql)
     );
     expect(addLegacy).toEqual([]);
   });
@@ -201,8 +213,9 @@ describe("migrate() — BLD-773 drop legacy F12/F13 columns", () => {
   it("post-migration round-trip: a session+set INSERT path uses no legacy columns", async () => {
     // Smoke-test that the canonical workout_sets column set after migration
     // does not include legacy F12/F13 fields. This guards against accidental
-    // re-introduction of `training_mode` or `mount_position` to the live
-    // INSERT path in lib/db/session-sets.ts.
+    // re-introduction of `training_mode` to the live INSERT path in
+    // lib/db/session-sets.ts. BLD-783: `mount_position` is now BLD-771's
+    // cable-variant column and is expected to be present after migration.
     resetSchema(withLegacyColumns());
     await migrate(mockDb as any);
 
@@ -211,6 +224,7 @@ describe("migrate() — BLD-773 drop legacy F12/F13 columns", () => {
     expect(tables.workout_sets.has("set_type")).toBe(true);
     expect(tables.workout_sets.has("duration_seconds")).toBe(true);
     expect(tables.workout_sets.has("training_mode")).toBe(false);
-    expect(tables.workout_sets.has("mount_position")).toBe(false);
+    // BLD-783/BLD-771: mount_position is reclaimed for cable variant logging.
+    expect(tables.workout_sets.has("mount_position")).toBe(true);
   });
 });

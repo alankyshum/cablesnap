@@ -130,12 +130,22 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // because `createCoreTables` no longer declares them. Drop them here so
   // upgraded DBs converge with the canonical schema in `lib/db/schema.ts`.
   //
+  // BLD-783 rebase note: the original BLD-773 drop set included
+  // `workout_sets.mount_position`, but BLD-771 (per-set cable variant
+  // logging) — landed on main while this PR was in review — reclaims that
+  // exact column name with new semantics (cable pulley position, autofilled
+  // from history). Dropping it here would destroy live BLD-771 data on
+  // every boot. The legacy F13 mount_position lived on `exercises` (a
+  // per-exercise default), which we still drop. Surviving values on
+  // workout_sets.mount_position from F13-era rows are safe to leave in
+  // place — BLD-771 readers gate through `isMountPosition()` and treat
+  // unknown strings as null.
+  //
   // `dropColumnIfExists` is idempotent (no-op when the column is absent),
   // so this block is safe on every boot regardless of starting schema state.
   // SQLite ≥ 3.35 supports native `ALTER TABLE ... DROP COLUMN`; Expo SQLite
   // 55 ships >= 3.45 so no table rebuild is needed.
   await dropColumnIfExists(database, "workout_sets", "training_mode");
-  await dropColumnIfExists(database, "workout_sets", "mount_position");
   await dropColumnIfExists(database, "template_exercises", "training_mode");
   await dropColumnIfExists(database, "exercises", "mount_position");
   await dropColumnIfExists(database, "exercises", "training_modes");

@@ -26,6 +26,12 @@ export type Equipment =
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
+// BLD-771: cable pulley mount position. Re-added during BLD-783 rebase
+// because BLD-771 reclaims the `mount_position` column for per-set
+// cable variant logging (distinct from the legacy F13 per-exercise mount
+// position which was removed in BLD-772). See lib/cable-variant.ts.
+export type MountPosition = "high" | "mid" | "low" | "floor";
+
 export type Attachment =
   | "handle"
   | "ring_handle"
@@ -142,6 +148,15 @@ export const GRIP_WIDTH_LABELS: Record<GripWidth, string> = {
   narrow: "Narrow",
   shoulder: "Shoulder-width",
   wide: "Wide",
+};
+
+// BLD-771 (re-added in BLD-783 rebase): display labels for cable mount
+// positions used in the per-set variant chip and picker.
+export const MOUNT_POSITION_LABELS: Record<MountPosition, string> = {
+  high: "High",
+  mid: "Mid",
+  low: "Low",
+  floor: "Floor",
 };
 
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {
