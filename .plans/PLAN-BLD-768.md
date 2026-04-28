@@ -178,7 +178,16 @@ ALTER TABLE workout_sets ADD COLUMN grip_type TEXT DEFAULT NULL;
 ALTER TABLE workout_sets ADD COLUMN grip_width TEXT DEFAULT NULL;
 ```
 
-Use `addColumnIfMissing` at **`lib/db/tables.ts:39`** (resolves QD-6 — concrete file:line cite). The function lives in `tables.ts` and was used in BLD-771 PR #426 for the cable variant columns; idempotency is implicitly tested by BLD-771's "second run = no-op" migration test (`__tests__/lib/db/migration-cable-variant.test.ts` from PR #426). **Slice 1 includes a symmetric idempotency test** for the grip columns to make the assertion explicit, not implicit.
+Use `addColumnIfMissing` (declared in `lib/db/tables.ts:39`); **call sites for ALTER ADD COLUMN live in `lib/db/migrations.ts`**. The new grip columns must be added immediately after BLD-771's cable variant migrations at `lib/db/migrations.ts:110-111`:
+```ts
+// existing BLD-771 lines 110-111:
+await addColumnIfMissing(database, "workout_sets", "attachment", "TEXT DEFAULT NULL");
+await addColumnIfMissing(database, "workout_sets", "mount_position", "TEXT DEFAULT NULL");
+// new BLD-768 lines (slice 1):
+await addColumnIfMissing(database, "workout_sets", "grip_type", "TEXT DEFAULT NULL");
+await addColumnIfMissing(database, "workout_sets", "grip_width", "TEXT DEFAULT NULL");
+```
+Idempotency is implicitly tested by BLD-771's "second run = no-op" migration test (`__tests__/lib/db/migration-cable-variant.test.ts` from PR #426). **Slice 1 includes a symmetric idempotency test** for the grip columns to make the assertion explicit, not implicit. (Resolves QD-6 + QD-7.)
 
 **Indexing:** add a partial index symmetric with BLD-771's (`idx_workout_sets_exercise_variant`):
 ```sql
@@ -263,6 +272,7 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 - [ ] **Snapshot test:** for `equipment:"bodyweight", name:"Push-Up"`, SetRow renders BodyweightModifierChip but NO grip footer.
 - [ ] **Snapshot test:** for `equipment:"cable", name:"Lat Pulldown"`, SetRow renders WeightPicker in `pickerCol` AND cable footer (NOT grip footer).
 - [ ] **Mutual exclusion test:** in a single screen with two SetRows (one cable Pulldown, one bodyweight Pull-Up), each renders its own footer with its own ref; tapping one does NOT open the other's sheet.
+- [ ] **Focus-return isolation test (QD-10):** open cable sheet on row A; without closing, open grip sheet on row B; close grip sheet → focus returns to row B's grip footer Pressable; close cable sheet → focus returns to row A's cable footer Pressable. Asserts `useVariantPickerSheet` and `useBodyweightGripPickerSheet` each maintain their own `returnFocusHandleRef` (hook-local `useRef`), never share state.
 - [ ] **Weighted pull-up test:** `bodyweight_modifier_kg = 15` AND `grip_type = "overhand"` both render simultaneously without overlap.
 - [ ] Footer Pressable has its own ref `bodyweightGripFooterRef` for focus return.
 
@@ -337,9 +347,9 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 
 ## Slicing — proposed (subject to techlead refinement)
 
-1. `feat(db): add grip_type + grip_width to workout_sets (BLD-N)` — migration via `addColumnIfMissing` (`lib/db/tables.ts:39`), schema, INSERT/UPDATE in `session-sets.ts`, `import-export.ts` round-trip, **explicit idempotency test** + import-export round-trip test, `audit-vocab.sh` patterns. EXPLAIN QUERY PLAN test. **~3 hr.**
+1. `feat(db): add grip_type + grip_width to workout_sets (BLD-N)` — migration via `addColumnIfMissing` in `lib/db/migrations.ts` (after the BLD-771 cable variant calls at lines 110-111), schema, INSERT/UPDATE in `session-sets.ts`, `import-export.ts` round-trip, **explicit idempotency test** + import-export round-trip test, `audit-vocab.sh` patterns. EXPLAIN QUERY PLAN test. **~3 hr.**
 2. `feat: bodyweight-variant module (BLD-N)` — `lib/bodyweight-variant.ts` with vocab consts (compile-time exhaustiveness guards), `isBodyweightGripExercise()` (regex + asymmetry note), `getLastBodyweightVariant()`, type guards. **10 gating tests + 5 autofill tests.** **~1.5 hr.**
-3. `feat(ui): per-set grip chips + footer + sibling sheet (BLD-N)` — `<SetGripTypeChip />`, `<SetGripWidthChip />`, new footer Pressable in `SetRow` with own ref, sibling `<BodyweightGripPickerSheet />`, sibling `useBodyweightGripPickerSheet` hook, focus-return / reduce-motion / announce-once-per-session reused via hook. **3 snapshot tests + 2 mutual-exclusion tests + composite a11y label tests.** **~3.5 hr.**
+3. `feat(ui): per-set grip chips + footer + sibling sheet (BLD-N)` — `<SetGripTypeChip />`, `<SetGripWidthChip />`, new footer Pressable in `SetRow` with own ref, sibling `<BodyweightGripPickerSheet />`, sibling `useBodyweightGripPickerSheet` hook, focus-return / reduce-motion / announce-once-per-session reused via hook. **3 snapshot tests + 2 mutual-exclusion tests + 1 focus-return-isolation test (QD-10) + composite a11y label tests.** **~3.5 hr.**
 4. `feat(analytics): grip filter + discovery banner on PR Dashboard (BLD-N)` — filter dropdown extension, header badge, soft roadmap footer, dismissible banner with `app_settings.bodyweight_grip_banner_dismissed`. **1 regression test.** **Best-effort: if banner runs over 1.5h, ship the filter only and split banner to a follow-up issue.** **~2.5 hr.**
 
 **Total: 10–11 engineer-hours.** If slice 4 banner runs over budget, ship slices 1–3 + filter (no banner) and split the banner to a successor issue. Acceptance criteria for the banner are explicitly fallback-tolerant.
@@ -355,7 +365,8 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 - **QD-3 (mutual exclusion):** Edge case table now covers cable + bodyweight in same workout. Mutual-exclusion test in AC. Footer ref naming clarified (`bodyweightGripFooterRef` vs cable's `variantFooterRef`). Hook Decision: sibling `useBodyweightGripPickerSheet`, not parameterized.
 - **QD-4 (sheet parameterize vs sibling):** Sheet Decision section added. **Sibling `BodyweightGripPickerSheet` chosen.** Rationale: avoiding regression risk on freshly-merged BLD-771 QD-B2 default semantics outweighs ~80 LOC duplication. Defer parameterization to use-case 4+.
 - **QD-5 (a11y strings):** Verified actual BLD-771 a11y format (`"Attachment: Rope"`, `"Mount: Low"`). Mirrored as `"Grip: Overhand"`, `"Width: Narrow"`. All four single-/dual-attribute cases specified explicitly. Code comment in chip files cross-references BLD-771.
-- **QD-6 (`addColumnIfMissing` cite):** File:line cite added (`lib/db/tables.ts:39`). Slice 1 AC includes an explicit symmetric idempotency test (not just implicit reliance on BLD-771's test).
+- **QD-6 (`addColumnIfMissing` cite):** Function declared in `tables.ts:39`; new ALTER ADD COLUMN call sites go in `lib/db/migrations.ts` immediately after BLD-771's lines 110-111. Slice 1 AC includes an explicit symmetric idempotency test (not just implicit reliance on BLD-771's test).
+- **QD-7 (rev-2 → rev-3 fix):** Plan §Data model corrected to point at `lib/db/migrations.ts:110-111` (call sites) instead of `tables.ts:39` (function declaration only).
 - **QD-S1 (footer copy):** Softened from `"Dip styles + foot elevation coming soon"` to `"More bodyweight variant types planned"`. No specific feature names, no timeline.
 - **QD-S2 (empty-state CTA):** Discovery banner added (one-time, dismissible, ≥10 historical sets, 0 grip-tagged). Slice 4 best-effort with fallback to plain CTA. Behavior-design risk reviewed in Risk Assessment.
 - **QD-S3 (test count):** Spelled out. **21 tests across 5 categories.** Confirmed under BLD-814 budget.
@@ -363,6 +374,13 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 - **QD-S5 (`audit-vocab.sh`):** Verified to exist (3.2K, real script). Slice 1 dep, NOT slice 2.
 
 _Re-tag @quality-director on commit of rev 2 — pending._
+
+**Rev 2 verdict (commit `04e785a0` + `8ce1e157`):** APPROVE WITH CONDITIONS. All 6 rev-1 blockers resolved. Four new conditions:
+
+- **QD-7** (rev-3 fix): wrong file cite — addressed above (migrations.ts not tables.ts).
+- **QD-8** (a11y composite label asymmetry — pick one): plan's grip-footer composite labels enumerate values (e.g. `"Set 1 grip variant: Overhand, Narrow"`), but cable footer at `SetRow.tsx:511` is terse (`"Set 1 cable variant"`). **Decision (rev 3):** keep grip footer richer, document the intentional asymmetry. Rationale: BLD-771 just merged; mutating its a11y now risks regressing screen-reader test contracts pinned in BLD-704. Slice 3 will add a code comment in BOTH `SetRow.tsx` (cable footer block) and the new grip footer block stating: *"a11y composite labels diverge intentionally — cable footer is terse (legacy BLD-771); grip footer enumerates values (BLD-768). Standardize when revisiting cable footer post-Voltra."* If ux-designer (tagged on rev-2) prefers symmetry, the cheaper fix is enriching the cable footer label in a follow-up issue (BLD-820 candidate), NOT downgrading grip.
+- **QD-9** (placeholder count divergence — defer to ux-designer): cable footer renders ONE combined `"Tap to set variant"` placeholder when both `attachment` and `mount_position` are null (`SetRow.tsx:534-540`); plan §UX has TWO separate `"Tap to set grip"` + `"Tap to set width"` chip placeholders. Two affordances are arguably more discoverable but it IS a UX divergence. **Tagging @ux-designer on rev-2 for a 5-line verdict before slice 3 starts.** If they say "make symmetric," cheaper to combine into one footer placeholder; if they say "two is better," document the choice in the same code comment as QD-8.
+- **QD-10** (mutual-exclusion test enrichment): focus-return isolation test added to AC at slice 3, asserting `useVariantPickerSheet` and `useBodyweightGripPickerSheet` each maintain their own hook-local `returnFocusHandleRef` (`useRef`), never shared.
 
 ### Tech Lead (Feasibility)
 **Rev 1:** Pending — was waiting on rev-1 review pass.
