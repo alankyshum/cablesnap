@@ -4,6 +4,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, TrainingMode, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { coerceTrainingMode } from "../types";
 import { isAttachment, isMountPosition } from "../cable-variant";
+import { isGripType, isGripWidth } from "../bodyweight-grip-variant";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
@@ -899,8 +900,59 @@ export async function getRecentVariantHistory(
       LIMIT ?`,
     [exerciseId, limit]
   );
-  return rows.map((row) => ({
+   return rows.map((row) => ({
     attachment: isAttachment(row.attachment) ? row.attachment : null,
     mount_position: isMountPosition(row.mount_position) ? row.mount_position : null,
+  }));
+}
+
+/**
+ * BLD-822: Fetch the recent bodyweight-grip-variant history window for an
+ * exercise. Sibling of `getRecentVariantHistory` (BLD-771) — same shape, grip
+ * vocabulary. Returns up to `limit` rows ordered newest-first, suitable for
+ * passing into the pure `getLastBodyweightGripVariant()` helper in
+ * `lib/bodyweight-grip-variant.ts`.
+ *
+ * Order: `s.started_at DESC, ws.set_number DESC` (joined to workout_sessions).
+ * Identical ordering rationale as cable variant — current in-progress session
+ * has highest `started_at`, so its rows surface first; within a session,
+ * `set_number DESC` selects the latest set.
+ *
+ * Window size 50: same heuristic as cable. The pure helper short-circuits on
+ * both attributes resolving, so typical paths read 10–20 rows.
+ *
+ * Index plan (PLAN-BLD-768.md line 311 AC, line 344 risk): the WHERE clause
+ * `ws.exercise_id = ?` is covered by `idx_workout_sets_exercise`
+ * (`lib/db/migrations.ts:43`). EXPLAIN QUERY PLAN on a 1k+ seeded DB confirms
+ * SEARCH USING INDEX, not SCAN — verified by
+ * `__tests__/lib/db/grip-history-query-plan.test.ts`. If a future change
+ * adds a partial-index migration, that test will catch any planner
+ * regression because it asserts the literal "USING INDEX
+ * idx_workout_sets_exercise" plan token.
+ *
+ * No silent default: if a row's `grip_type` / `grip_width` is not a valid
+ * union member it falls through the type guard and surfaces as `null`. The
+ * pure autofill helper then keeps scanning for the next non-null carrier.
+ */
+export async function getRecentBodyweightGripHistory(
+  exerciseId: string,
+  limit: number = 50
+): Promise<{ grip_type: GripType | null; grip_width: GripWidth | null }[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<{
+    grip_type: string | null;
+    grip_width: string | null;
+  }>(
+    `SELECT ws.grip_type, ws.grip_width
+       FROM workout_sets ws
+       JOIN workout_sessions s ON s.id = ws.session_id
+      WHERE ws.exercise_id = ?
+      ORDER BY s.started_at DESC, ws.set_number DESC
+      LIMIT ?`,
+    [exerciseId, limit]
+  );
+  return rows.map((row) => ({
+    grip_type: isGripType(row.grip_type) ? row.grip_type : null,
+    grip_width: isGripWidth(row.grip_width) ? row.grip_width : null,
   }));
 }
