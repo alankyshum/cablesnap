@@ -177,13 +177,13 @@ If slice 4 runs over 4 hours, ship 1–3 and split slice 4 into its own PR.
 - Bottom-sheet picker on row-tap with two segmented controls + Clear action.
 - "Variant filter" dropdown on PR Dashboard / Strength Overview with header badge "Showing: All variants (N logged)" and roadmap-hint footer (resolves QD-C2).
 - Tests: migration upgrade-fixture + idempotency, EXPLAIN QUERY PLAN on 10k-set DB, gate-leak snapshot, a11y label/focus-return, import-export round-trip (resolves QD-C4).
-- Follow-up issue **BLD-768** filed for "Bodyweight grip variants (pull-ups, dips, rows)" — visible roadmap signal (resolves QD-C5).
+- Follow-up issue **BLD-770** filed for "Bodyweight grip variants (pull-ups, dips, rows)" — visible roadmap signal (resolves QD-C5).
 
 **Out of scope (deferred):**
 - Multi-line graphs splitting variants automatically.
 - Dual-cable cross-coordination (`dual_high/mid/low`). Phase 2. **Not** in v1 enum.
 - Suggesting variant rotation ("you've done rope 3x this week, try V-bar"). Behavior-design — separate plan + psychologist review.
-- Adding per-set fields to NON-cable exercises (bodyweight pull-up grip variations). Tracked as **BLD-768** (filed as part of this plan's commit).
+- Adding per-set fields to NON-cable exercises (bodyweight pull-up grip variations). Tracked as **BLD-770** (filed as part of this plan's commit).
 - Extending the `Attachment` enum to include `v_bar`, `lat_bar`, `single_handle`. If user feedback shows demand post-launch, extend the existing union; v1 ships with the 7 existing values.
 
 ## Acceptance Criteria
@@ -246,7 +246,7 @@ If slice 4 runs over 4 hours, ship 1–3 and split slice 4 into its own PR.
 | UI clutter on cable exercises | Low | Medium | Two side-by-side ≤20dp chips matching existing pattern; self-suppress on null. |
 | Variant filter complicates analytics | Low | Medium | Default "All variants" path is unchanged; filter state is component-local, never persisted. |
 | Scope creep into behavior-shaping (rotation suggestions) | Medium | Medium (psych gate) | Explicitly out-of-scope; future would be a new PLAN with psychologist review. |
-| Pull-up grip variant pressure (users requesting bodyweight grip support) | Medium | Low | BLD-768 follow-up filed; visible roadmap hint in filter dropdown footer (resolves QD-C5). |
+| Pull-up grip variant pressure (users requesting bodyweight grip support) | Medium | Low | BLD-770 follow-up filed; visible roadmap hint in filter dropdown footer (resolves QD-C5). |
 | `addColumnIfMissing` race on first launch | Low | Medium | Verify migrations complete before any query in `lib/db/index.ts` (resolves TL-TR1) — code-review gate, not plan gate. |
 | Test seed regressions | Low | Low | Run full test suite; update `lib/test-seed.ts` if needed (resolves TL-TR3). |
 
@@ -334,7 +334,7 @@ Plan §Testing covers happy paths. Add:
 
 **C5. Pull-up grip variants — out-of-scope is defensible BUT users will ask.**
 §Scope explicitly excludes bodyweight grip variants. This is correct for v1 (cable-niche brand fit). However:
-- Add a one-line note in the variant filter dropdown ("Grip variants for bodyweight coming soon") OR file the follow-up as BLD-768 right now and link it. Otherwise the most-requested adjacent feature dies in a comment thread.
+- Add a one-line note in the variant filter dropdown ("Grip variants for bodyweight coming soon") OR file the follow-up as BLD-770 right now and link it. Otherwise the most-requested adjacent feature dies in a comment thread.
 
 #### PASS items (no action needed)
 
@@ -377,7 +377,7 @@ All four blockers resolved, all five conditions resolved. Plan is ready for impl
 - ✅ **C2** — Header badge "Showing: All variants (N logged)" (line 91, AC line 205), empty-state CTA "Log this variant in your next session" (line 92, AC line 204), roadmap-hint footer "Coming soon: split-line view per variant" (line 93). Filter persistence semantics specified (intra-screen survives, cold-start resets — line 94).
 - ✅ **C3** — Focus return on sheet dismiss (line 84, AC line 206), `useReducedMotion` (line 85, AC line 208), per-session ref-gated autofill announcement (line 86, AC line 207), landscape/tablet inline layout >600dp via existing `useResponsiveLayout` (line 87).
 - ✅ **C4** — Upgrade-fixture migration test (AC line 192), EXPLAIN QUERY PLAN on 10k-set DB (AC line 210, with partial-index fallback), gate-leak snapshot for non-cable exercises (AC line 195), import-export round-trip test (AC line 202).
-- ✅ **C5** — BLD-768 follow-up for bodyweight grip variants to be filed at plan approval; visible roadmap hint in filter dropdown footer (line 93, line 180).
+- ✅ **C5** — BLD-770 follow-up for bodyweight grip variants to be filed at plan approval; visible roadmap hint in filter dropdown footer (line 93, line 180).
 
 **Bonus wins from rev 2 not in original critique:**
 - Vocabulary fork eliminated entirely (R1 risk neutralized) — `ATTACHMENT_VALUES` / `MOUNT_POSITION_VALUES` consts in `lib/cable-variant.ts` are single source of truth (line 113–120).
@@ -476,7 +476,7 @@ N/A — Classification = NO. No behavior-shaping triggers. Functional/data-track
 8. **Test coverage:** real upgrade-fixture migration test, EXPLAIN QUERY PLAN on 10k DB, gate-leak snapshot, import-export round-trip.
 9. **Const vocab in `lib/cable-variant.ts`** — single source of truth.
 10. **NULL overload (B3):** explicit decision to accept; analytic question answerable via "post-migration cutoff timestamp" recipe documented in plan epilogue. No companion column.
-11. **BLD-768 follow-up issue** for "Bodyweight grip variants (pull-ups, dips, rows)" — to be filed at plan approval.
+11. **BLD-770 follow-up issue** for "Bodyweight grip variants (pull-ups, dips, rows)" — to be filed at plan approval.
 
 **Awaiting:** QD re-review of rev 2.
 
