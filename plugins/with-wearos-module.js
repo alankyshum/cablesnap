@@ -136,6 +136,20 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // expo/react-native sub-projects that publish singleVariant
             // \`release\`.
             matchingFallbacks = ["release"]
+            // Force CMake to use the same \`Release\` build type as the
+            // canonical Play \`release\` buildType, instead of AGP's default
+            // \`RelWithDebInfo\` for non-canonical release buildTypes. RN
+            // native libs (notably shopify/react-native-skia) hardcode
+            // prebuilt-binary paths under a \`release\`-named directory and
+            // fail with "Skia prebuilt binaries not found!" if AGP picks
+            // \`RelWithDebInfo\`. Reusing the Play release CMake artifacts
+            // is correct anyway — Play and F-Droid only differ in JVM-side
+            // excludes (GMS Wearable + Wear bridge), never in native code.
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Release"
+                }
+            }
         }
 `;
 
