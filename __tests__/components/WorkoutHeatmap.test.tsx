@@ -83,20 +83,31 @@ describe("WorkoutHeatmap", () => {
     const { getAllByText } = renderScreen(
       <WorkoutHeatmap data={data} />
     );
-    // Legend shows 3+ and the cell with count 3 also shows 3+
-    expect(getAllByText("3+").length).toBeGreaterThanOrEqual(2);
+    // BLD-732: numeric labels are intentionally hidden from a11y (the
+    // parent Pressable already announces the count via accessibilityLabel).
+    // They exist purely as a visual non-color cue, so we must opt into
+    // hidden elements to assert they render. Legend shows '3+' and the
+    // body cell with count 3 also shows '3+'. (BLD-763.)
+    expect(
+      getAllByText("3+", { includeHiddenElements: true }).length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   // BLD-732: numeric labels are the non-color cue. Each step must render
   // its count inside the cell so deuteranopia/protanopia users can still
-  // distinguish 1 / 2 / 3+.
+  // distinguish 1 / 2 / 3+. The labels are marked
+  // `accessibilityElementsHidden` because the parent Pressable announces
+  // the count via accessibilityLabel — so the queries below must opt into
+  // hidden elements to find them. (BLD-763.)
   it("renders numeric '1' label for cells with exactly 1 workout (BLD-732)", () => {
     const data = new Map([["2026-04-14", 1]]);
     const { getAllByText } = renderScreen(
       <WorkoutHeatmap data={data} />
     );
     // Legend shows '1' and the body cell with count 1 also shows '1'.
-    expect(getAllByText("1").length).toBeGreaterThanOrEqual(2);
+    expect(
+      getAllByText("1", { includeHiddenElements: true }).length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("renders numeric '2' label for cells with exactly 2 workouts (BLD-732)", () => {
@@ -105,7 +116,9 @@ describe("WorkoutHeatmap", () => {
       <WorkoutHeatmap data={data} />
     );
     // Legend shows '2' and the body cell with count 2 also shows '2'.
-    expect(getAllByText("2").length).toBeGreaterThanOrEqual(2);
+    expect(
+      getAllByText("2", { includeHiddenElements: true }).length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("does not render a numeric label for cells with zero workouts (BLD-732)", () => {
@@ -113,7 +126,10 @@ describe("WorkoutHeatmap", () => {
       <WorkoutHeatmap data={emptyData} />
     );
     // Step-0 cells stay unlabelled — the empty fill is the cue.
-    expect(queryByText("0")).toBeNull();
+    // Use `includeHiddenElements` because the legend's labels are hidden
+    // from a11y (BLD-763); we need to assert no '0' exists anywhere,
+    // visible OR hidden.
+    expect(queryByText("0", { includeHiddenElements: true })).toBeNull();
   });
 
   it("legend exposes a screen-reader summary of all four steps (BLD-732)", () => {
