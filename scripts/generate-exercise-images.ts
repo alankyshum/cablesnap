@@ -155,7 +155,7 @@ async function callOpenAI(prompt: string, apiKey: string): Promise<GenerationRes
   return { pngBuffer: Buffer.from(first.b64_json, "base64"), altText };
 }
 
-async function describePose(prompt: string, position: "start" | "end", ex: Exercise, apiKey: string): Promise<string> {
+async function describePose(position: "start" | "end", ex: Exercise, apiKey: string): Promise<string> {
   // Separate small text call for substantive accessibility alt-text.
   // Kept in the same script so one command produces both image and alt.
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -353,14 +353,20 @@ async function processExercise(
   }
   if (haveFiles && existing && existing.promptHash !== promptHash && !cli.forceRegen) {
     console.warn(`[gen] ${ex.id}: prompt fingerprint drift detected — pass --force-regen to regenerate.`);
+    // Preserve the prior manifest entry so that running without --force-regen
+    // leaves the manifest unchanged for drifted exercises (without this, the
+    // subsequent atomic writeManifest() would silently drop the entry and
+    // orphan the on-disk webp files until --force-regen is run).
+    const prior = await loadPriorAltText(ex.id);
+    if (prior) manifestEntries.set(ex.id, prior);
     return;
   }
 
   await generateImagesFor(ex, exDir, apiKey ?? "", cli.dryRun);
   if (cli.dryRun) return;
 
-  const startAlt = await describePose(buildPrompt(ex, "start"), "start", ex, apiKey!);
-  const endAlt = await describePose(buildPrompt(ex, "end"), "end", ex, apiKey!);
+  const startAlt = await describePose("start", ex, apiKey!);
+  const endAlt = await describePose("end", ex, apiKey!);
   manifestEntries.set(ex.id, { startAlt, endAlt });
 
   writeFingerprint(exDir, {
