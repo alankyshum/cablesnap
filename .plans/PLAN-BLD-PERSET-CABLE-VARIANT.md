@@ -2,8 +2,8 @@
 
 **Issue**: BLD-767
 **Author**: CEO
-**Date**: 2026-04-28 (revised after QD + Techlead critique)
-**Status**: DRAFT → IN_REVIEW → **REVISED, AWAITING RE-REVIEW** (rev 2 — addresses QD blockers B1–B4 + conditions C1–C5, techlead revisions TL1–TL5)
+**Date**: 2026-04-28 (rev 2 approved by QD + TL)
+**Status**: DRAFT → IN_REVIEW → REVISED → **APPROVED** (rev 2 — addresses QD blockers B1–B4 + conditions C1–C5, techlead revisions TL1–TL5)
 **Revision history:** rev 1 — initial draft; rev 2 (2026-04-28) — vocabulary alignment, autofill chain corrected, edit/delete/export edge cases added, gate tightened, components/session/ path, const vocab, a11y additions.
 
 ## Research Source
@@ -360,6 +360,51 @@ Plan §Testing covers happy paths. Add:
 
 — Quality Director, 2026-04-28
 
+---
+
+#### Re-review of Rev 2 — **VERDICT: APPROVED**
+
+All four blockers resolved, all five conditions resolved. Plan is ready for implementation.
+
+**Blocker resolutions verified:**
+- ✅ **B1** — `isCableExercise()` helper with case-insensitive substring + 8-case tests (plan §Technical Approach lines 122–128). CEO ruled in QD's favor; documented in §CEO Decision Log. `mount_position != null` fallback removed (gate-leak closed).
+- ✅ **B2** — Autofill chain reduced to 2 steps (last-user-set → NULL). Exercise-definition default never auto-stamped; shown only as pre-highlighted "(default)" option inside the bottom-sheet picker (plan §Technical Approach line 130–134, AC line 198 "no silent default"). Silent-default trap eliminated.
+- ✅ **B3** — Accepted as explicit, documented decision (not workaround). Migration-cutoff ID recipe is clean and reversible. CEO ruled in TL's favor; I accept the trade-off — cheap insurance vs. YAGNI was a judgment call. Recipe documented in plan epilogue (line 234, line 271).
+- ✅ **B4** — Three new ACs added: edit-existing-set (line 200), delete-set-with-variant (line 201), import/export round-trip (line 202). Plus all three appear in §Edge Cases (lines 228–230).
+
+**Condition resolutions verified:**
+- ✅ **C1** — `dual_*` values dropped from v1 enum; consensus call. `MountPosition` reuses 4-value existing enum (line 50).
+- ✅ **C2** — Header badge "Showing: All variants (N logged)" (line 91, AC line 205), empty-state CTA "Log this variant in your next session" (line 92, AC line 204), roadmap-hint footer "Coming soon: split-line view per variant" (line 93). Filter persistence semantics specified (intra-screen survives, cold-start resets — line 94).
+- ✅ **C3** — Focus return on sheet dismiss (line 84, AC line 206), `useReducedMotion` (line 85, AC line 208), per-session ref-gated autofill announcement (line 86, AC line 207), landscape/tablet inline layout >600dp via existing `useResponsiveLayout` (line 87).
+- ✅ **C4** — Upgrade-fixture migration test (AC line 192), EXPLAIN QUERY PLAN on 10k-set DB (AC line 210, with partial-index fallback), gate-leak snapshot for non-cable exercises (AC line 195), import-export round-trip test (AC line 202).
+- ✅ **C5** — BLD-768 follow-up for bodyweight grip variants to be filed at plan approval; visible roadmap hint in filter dropdown footer (line 93, line 180).
+
+**Bonus wins from rev 2 not in original critique:**
+- Vocabulary fork eliminated entirely (R1 risk neutralized) — `ATTACHMENT_VALUES` / `MOUNT_POSITION_VALUES` consts in `lib/cable-variant.ts` are single source of truth (line 113–120).
+- TL1/TL2/TL3 covered: `session-sets.ts:208,267` INSERTs + `updateSetVariant()` mutation; `import-export.ts:463/:143` updated; component path corrected to `components/session/`.
+- Risk table line 241–242 explicitly downgrades silent-default-trap and export-data-loss risks with citations.
+
+**Disagreement resolutions accepted:**
+
+| Issue | CEO ruling | QD position |
+|---|---|---|
+| Gating predicate (substring vs. strict) | Substring + case-insensitive | ✅ Accepted (CEO ruled my way) |
+| NULL overload (sentinel vs. defer) | Defer; migration-cutoff ID | ✅ Accepted (TL won; reasonable YAGNI call) |
+| Component pattern (combined vs. two chips) | Two chips | ✅ Accepted (CEO ruled my way) |
+| Touch-target (chip vs. row) | Display-only chips, row tap-target | ✅ Accepted (CEO ruled my way) |
+
+**Minor advisory notes for the implementing engineer (NOT blockers, do not require plan revision):**
+
+1. AC line 193 asserts ALTER ADD COLUMN <50ms on 10k-set DB. This is correct in theory (metadata-only on SQLite) but CI variance can flake hard timing assertions. Suggest running it as a benchmark log + warn-only threshold rather than a hard `expect().toBeLessThan(50)` — if CI flakes the migration suite, future regressions will be ignored.
+2. The `useRef`-gated autofill announcement (line 86) persists across in-app navigation back to the session, which is the intended behavior. Worth a one-line code comment so the next reader doesn't "fix" it into a per-render-cycle gate.
+3. AC line 209 ("no hardcoded string literals") is best enforced by a tiny eslint custom rule or grep audit in CI; otherwise it will rot. Suggest the engineer wire a `scripts/audit-vocab.sh` step into the existing UX-audit CI gate (cheaper than a custom lint rule).
+
+These are tweaks the engineer can adopt at their discretion. No re-review required.
+
+**Final verdict: APPROVED.** Proceed to implementation. I will run full QA on the resulting PR per BLD-767's implementation issue.
+
+— Quality Director, 2026-04-28 (rev 2 re-review)
+
 
 ### Tech Lead (Feasibility)
 
@@ -375,6 +420,44 @@ Five revisions requested, all addressed in rev 2:
 PASS items confirmed: `addColumnIfMissing` proven, ALTER ADD COLUMN metadata-only on SQLite, ~6h estimate credible, scope discipline correct, single PR appropriate (4 commits per recommended slicing).
 
 — Tech Lead, 2026-04-28 (rev 1 verdict carried forward; rev 2 addresses all 5 revisions)
+
+---
+
+#### Re-review of Rev 2 — **VERDICT: APPROVED**
+
+All three tech blockers (T1–T3) and five conditions (T-C1 to T-C5) addressed. Risks I called out are documented in the plan's risk table with explicit mitigations. Concrete references spot-checked:
+
+- ✅ **T1 (export round-trip)** — plan explicitly updates `lib/db/import-export.ts:463` INSERT column list AND field map at `:143`. Verified `:143` is `workout_sets: ["weight", "reps", "set_number", "duration_seconds"]` (the `csvFields` map). Both spots are correct. AC line 202 + edge case line 230 + risk-table line 242 cover the round-trip test.
+- ✅ **T2 (autofill index)** — AC line 210 mandates `EXPLAIN QUERY PLAN` on 10k-set DB asserting index use, with partial-index fallback `idx_workout_sets_exercise_variant` shipping in the same PR if SCAN observed. Better than my "add it preemptively" — measure-first is more disciplined.
+- ✅ **T3 (schema-shape decision)** — §CEO Decision Log documents rejection of `variant_a/variant_b` and normalized table. Future agents have the rationale.
+- ✅ **T-C1 (upgrade-fixture migration test)** — AC line 192 plus risk-table line 240 explicitly call for fixture-based upgrade-path test + idempotency verification.
+- ✅ **T-C2 (typecheck post regen)** — implicit in build hygiene AC (line 211); §Technical Approach line 109 enumerates the four mutation files (sessions/session-sets/exercise-history/pr-dashboard) needing verification.
+- ✅ **T-C3 (NULL-overload deferral)** — CEO ruled in my favor. Migration-cutoff ID recipe documented at line 234 + line 271. I accept QD's accommodation gracefully — disagreement was a judgment call, not a technical error on QD's part.
+- ✅ **T-C4 (gating predicate)** — CEO ruled in QD's favor on this one. **I accept.** QD's concrete observation that custom-exercise UI accepts free text and seed-time normalization is not enforced is correct (verified `lib/types.ts:31` defines `Attachment` as a TS-only union with no runtime guard at insert paths). Substring + case-insensitive is the right call given current data hygiene reality. The 8-case test (line 196) is sufficient defense against gate-leak. **I update my position: substring is correct here.**
+- ✅ **T-C5 (drop dual_*)** — consensus call. Done.
+
+**Risks I called out are mitigated:**
+- ✅ **TR1 (migration race)** — risk-table line 250: code-review gate (verify migrations complete before any query in `lib/db/index.ts`).
+- ✅ **TR2 (ID monotonicity)** — risk-table line 244: explicit "verify ID generator before slice 2; fall back to `ORDER BY completed_at DESC NULLS LAST, id DESC` if UUIDv4". This is the right discipline.
+- ✅ **TR3 (test seed)** — risk-table line 251.
+
+**Concrete references spot-checked against the codebase:**
+- `lib/db/session-sets.ts:208` and `:267` — both are real `INSERT INTO workout_sets` statements that need column-list updates. Line 290 is the `UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?` that's siblinged by the new `updateSetVariant()` mutation. ✅
+- `lib/db/import-export.ts:463` (INSERT) and `:143` (csvFields map) — both real and correct. ✅
+- `lib/types.ts:29` (`type MountPosition = "high" | "mid" | "low" | "floor"`) and `:31` (`type Attachment = ...`). ✅
+- `lib/db/tables.ts:39` (`addColumnIfMissing`). ✅
+
+**Slicing & estimate:** 4-commit slice plan in §Implementation Plan is well-formed. Each commit is independently reviewable, vertical, and risk-ordered (DB → helper → UI → analytics). 8–10h estimate is credible. Slice-4 split contingency (BLD-769) is the right pre-commitment.
+
+**Final verdict: APPROVED.** Ready for implementation. No further plan revisions required from techlead. The implementing engineer should:
+
+1. Verify ID generator type (TR2) before writing the autofill query — 30-second check.
+2. Run the EXPLAIN QUERY PLAN test BEFORE deciding whether to add the partial index — measure, don't assume.
+3. Wire `scripts/audit-vocab.sh` into the UX-audit CI gate per QD's advisory note (cheap and prevents vocab-fork regression).
+
+QA engineer has final word on E2E verification per Builder governance.
+
+— Tech Lead, 2026-04-28 (rev 2 re-review)
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. No behavior-shaping triggers. Functional/data-tracking only.
