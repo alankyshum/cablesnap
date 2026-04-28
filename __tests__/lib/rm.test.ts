@@ -317,9 +317,10 @@ describe("suggestDuration", () => {
       expect(result).toBeNull();
       return;
     }
+    const e = expected as { type: "increase" | "maintain"; duration: number; reasonContains?: string };
     expect(result).not.toBeNull();
-    expect(result!.type).toBe(expected.type);
-    expect(result!.duration).toBe(expected.duration);
-    if (expected.reasonContains) expect(result!.reason).toContain(expected.reasonContains);
+    expect(result!.type).toBe(e.type);
+    expect(result!.duration).toBe(e.duration);
+    if (e.reasonContains) expect(result!.reason).toContain(e.reasonContains);
   });
 });

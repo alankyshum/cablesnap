@@ -86,7 +86,7 @@ describe("evaluateAchievements", () => {
       "transformation",
     ],
   ] as const)("earns %s", (_label, partial, expectedId) => {
-    const earned = earnedIds({ ...emptyContext(), ...partial });
+    const earned = earnedIds({ ...emptyContext(), ...(partial as Partial<AchievementContext>) });
     expect(earned).toContain(expectedId);
   });
 
