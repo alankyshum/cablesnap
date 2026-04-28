@@ -45,6 +45,14 @@ dependencies {
   implementation "com.google.android.gms:play-services-wearable:18.2.0"
 }
 
-static def safeExtGet(prop, fallback) {
+// NOTE: NOT `static def`. Groovy static methods lose access to the script
+// binding (where `rootProject` lives), which produces:
+//   "Apparent variable 'rootProject' was found in a static scope but doesn't
+//    refer to a local variable, static field or class."
+// at `gradle :wear:assembleRelease` configure-time. This pattern matches the
+// stock Expo `expo-modules-template` Android `build.gradle` exactly — see e.g.
+// node_modules/expo-modules-core/android/build.gradle which uses the same
+// non-static helper. Do not re-add `static` here.
+def safeExtGet(prop, fallback) {
   rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
 }

@@ -105,40 +105,63 @@ describe("patchSettingsGradle", () => {
 // patchAppBuildGradle
 // ----------------------------------------------------------------------------
 describe("patchAppBuildGradle", () => {
-  it("emits flavorDimensions + productFlavors with playRelease and fdroidRelease", () => {
+  it("emits a `releaseFdroid` build type that initWith release", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    expect(out).toContain('flavorDimensions "distribution"');
-    expect(out).toMatch(/productFlavors\s*\{[\s\S]*playRelease\s*\{/);
-    expect(out).toMatch(/productFlavors\s*\{[\s\S]*fdroidRelease\s*\{/);
-    // Both flavors must declare the same dimension.
-    const playBlock = out.match(/playRelease\s*\{[\s\S]*?\n\s*\}/)[0];
-    const fdroidBlock = out.match(/fdroidRelease\s*\{[\s\S]*?\n\s*\}/)[0];
-    expect(playBlock).toContain('dimension "distribution"');
-    expect(fdroidBlock).toContain('dimension "distribution"');
+    // The pivot from productFlavors to buildTypes (CEO-approved 2026-04-28)
+    // is required because the Expo autolinker propagates productFlavors into
+    // every Expo subproject, breaking expo-module-gradle-plugin's
+    // singular-`release`-component publishing config. buildTypes are NOT
+    // propagated. See plugins/with-wearos-module.js header for full
+    // root-cause writeup.
+    expect(out).toMatch(/buildTypes\s*\{[\s\S]*releaseFdroid\s*\{/);
+    // Inheritance from `release` keeps signing/minify/shrinker config
+    // single-sourced — Play <-> F-Droid drift is structurally impossible.
+    expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?initWith release/);
+    // matchingFallbacks lets dependency variant resolution fall back to
+    // `release` for upstream singleVariant publishing.
+    expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?matchingFallbacks\s*=\s*\["release"\]/);
+    // Sentinel marker for idempotency.
+    expect(out).toContain("// cablesnap:wearos:build-types");
   });
 
-  it("places flavors inside the existing android { ... } block, after defaultConfig", () => {
+  it("does NOT emit productFlavors or flavorDimensions", () => {
+    // Regression guard: the autolinker conflict that drove the pivot must
+    // never silently come back. If a future refactor reaches for flavors,
+    // this test fails loudly.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    const androidIdx = out.indexOf("android {");
-    const flavorsIdx = out.indexOf("flavorDimensions");
+    expect(out).not.toContain("flavorDimensions");
+    expect(out).not.toContain("productFlavors");
+    expect(out).not.toContain("playRelease");
+    expect(out).not.toContain("fdroidRelease ");
+  });
+
+  it("places releaseFdroid inside the existing buildTypes { ... } block", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    const buildTypesIdx = out.indexOf("buildTypes {");
+    const releaseFdroidIdx = out.indexOf("releaseFdroid {");
     const dependenciesIdx = out.indexOf("\ndependencies {");
-    // flavorDimensions must sit between `android {` and the top-level
-    // `dependencies {` block — i.e. inside `android { ... }`.
-    expect(androidIdx).toBeGreaterThan(-1);
-    expect(flavorsIdx).toBeGreaterThan(androidIdx);
-    expect(flavorsIdx).toBeLessThan(dependenciesIdx);
+    expect(buildTypesIdx).toBeGreaterThan(-1);
+    expect(releaseFdroidIdx).toBeGreaterThan(buildTypesIdx);
+    expect(releaseFdroidIdx).toBeLessThan(dependenciesIdx);
+    // releaseFdroid must come AFTER the inner `release { ... }` block so
+    // `initWith release` resolves to an already-defined build type.
+    const releaseInnerIdx = out.indexOf(
+      "release {\n            signingConfig",
+    );
+    expect(releaseInnerIdx).toBeGreaterThan(-1);
+    expect(releaseFdroidIdx).toBeGreaterThan(releaseInnerIdx);
   });
 
-  it("emits fdroidRelease excludes for com.google.android.gms and the bridge module", () => {
+  it("emits releaseFdroid excludes for com.google.android.gms and the bridge module", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    // Sentinel is present.
     expect(out).toContain("// cablesnap:wearos:fdroid-excludes");
     // Each of the three configurations names must carry both excludes —
-    // this is the core AC10b safeguard.
+    // this is the core AC10b safeguard. Belt-and-suspenders across
+    // Implementation + RuntimeClasspath + CompileClasspath.
     for (const cfg of [
-      "fdroidReleaseImplementation",
-      "fdroidReleaseRuntimeClasspath",
-      "fdroidReleaseCompileClasspath",
+      "releaseFdroidImplementation",
+      "releaseFdroidRuntimeClasspath",
+      "releaseFdroidCompileClasspath",
     ]) {
       const blockRegex = new RegExp(
         `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.android\\.gms"[\\s\\S]*?exclude module: "expo-wearos-bridge"[\\s\\S]*?\\}`,
@@ -166,18 +189,22 @@ describe("patchAppBuildGradle", () => {
     expect(thrice).toBe(once);
   });
 
-  it("throws a clear error when the defaultConfig anchor is missing", () => {
+  it("throws a clear error when the buildTypes/release anchor is missing", () => {
     expect(() => patchAppBuildGradle("// empty gradle\n")).toThrow(
-      /with-wearos-module.*defaultConfig/,
+      /with-wearos-module.*buildTypes.*release/,
     );
   });
 
   it("throws a clear error when the dependencies anchor is missing", () => {
-    // Fixture has defaultConfig but no top-level `dependencies {`.
+    // Fixture has buildTypes/release but no top-level `dependencies {`.
     const noDeps = `apply plugin: "com.android.application"
 android {
-    defaultConfig {
-        applicationId 'com.persoack.cablesnap'
+    buildTypes {
+        debug { signingConfig signingConfigs.debug }
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+        }
     }
 }
 `;
@@ -197,6 +224,15 @@ android {
   it("preserves the existing release signingConfig line", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("signingConfig signingConfigs.debug");
+  });
+
+  it("preserves the existing release block's minify/shrinker settings", () => {
+    // The whole point of `initWith release` is that we don't duplicate this
+    // config — but the original release block must remain intact. If a
+    // future patch accidentally rewrites the release block contents, this
+    // test catches it.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toContain("shrinkResources enableShrinkResources.toBoolean()");
   });
 });
 
