@@ -112,6 +112,14 @@ jobs:
       - name: Assemble :wear (Wear OS standalone APK)
         # M0 ships an empty Wear OS app. Just proving it compiles + signs is
         # the M0 acceptance gate for the watch APK.
+        #
+        # SENTRY_DISABLE_AUTO_UPLOAD=true: skip @sentry/react-native's
+        # source-map upload gradle task (sentry.gradle:11 honors this env
+        # var as the canonical CI escape hatch). This CI verifies build
+        # correctness only — Sentry source-map upload is environmentally
+        # optional and intentionally not configured for wear-tests.yml.
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           cd android
           ./gradlew :wear:assembleRelease
@@ -120,6 +128,17 @@ jobs:
         # AC10b is duplicated here so PRs touching the bridge / plugin / wear
         # template can fail FAST without waiting for a full release build.
         # Same check runs in scheduled-release.yml as the canonical gate.
+        #
+        # SENTRY_DISABLE_AUTO_UPLOAD=true: the :app:createBundle…SentryUpload
+        # gradle task fails without SENTRY_AUTH_TOKEN, which we deliberately
+        # do not propagate to this step. The official F-Droid build path
+        # (fdroid/metadata/com.persoack.cablesnap.yml) ships without Sentry
+        # secrets too — Sentry upload is environmentally optional. This CI
+        # gate verifies build correctness + AC10b GMS-free grep, not source
+        # map upload. Escape hatch documented at
+        # node_modules/@sentry/react-native/sentry.gradle:11.
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -euo pipefail
           cd android
