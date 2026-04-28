@@ -266,6 +266,9 @@ export type WorkoutSet = {
   duration_seconds: number | null;
   exercise_position: number;
   bodyweight_modifier_kg?: number | null;
+  // BLD-771: per-set cable variant logging. NULL = user did not specify.
+  attachment?: Attachment | null;
+  mount_position?: MountPosition | null;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {

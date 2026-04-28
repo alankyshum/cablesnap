@@ -16,7 +16,20 @@ jest.mock('../../lib/db', () => ({
       }))
     )
   }),
-  addSet: jest.fn().mockResolvedValue(undefined),
+  addSet: jest.fn().mockImplementation(
+    (sessionId, exerciseId, setNumber, weight, reps, _restSeconds, durationSeconds) => Promise.resolve({
+      id: `set-${exerciseId}-${setNumber}`,
+      session_id: sessionId,
+      exercise_id: exerciseId,
+      set_number: setNumber,
+      weight: weight ?? null,
+      reps: reps ?? null,
+      duration_seconds: durationSeconds ?? null,
+      completed: 0,
+      attachment: null,
+      mount_position: null,
+    }),
+  ),
   addSetsBatch: jest.fn().mockResolvedValue([]),
   completeSet: jest.fn().mockResolvedValue(undefined),
   uncompleteSet: jest.fn().mockResolvedValue(undefined),

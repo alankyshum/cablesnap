@@ -19,13 +19,15 @@
  * component for the swipe-complete path; `app/session/[id].tsx` does not
  * wire any extra prop for it.
  */
-import React, { useCallback, useEffect, useMemo, memo, useState } from "react";
-import { I18nManager, Pressable, StyleSheet, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
+import { findNodeHandle, I18nManager, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Check, Trash2 } from "lucide-react-native";
 import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
+import { SetAttachmentChip } from "./SetAttachmentChip";
+import { SetMountPositionChip } from "./SetMountPositionChip";
 import SwipeRowAction from "../../components/SwipeRowAction";
 import { getAppSetting, setAppSetting } from "@/lib/db";
 import { radii } from "../../constants/design-tokens";
@@ -35,6 +37,7 @@ import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
+import { isCableExercise } from "../../lib/cable-variant";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
@@ -114,6 +117,20 @@ export type SetRowProps = {
   isBodyweight?: boolean;
   onOpenBodyweightModifier?: (setId: string) => void;
   onClearBodyweightModifier?: (setId: string) => void;
+  // BLD-771: per-set cable variant. Chips are display-only and tap to open
+  // the picker via onOpenVariantPicker; long-press clears via onClearVariant
+  // (writes NULL/NULL through updateSetVariant — same write path as the
+  // picker's Clear button, so the silent-default-trap closure is uniform).
+  // Both callbacks are optional; the chips self-suppress when equipment is
+  // not cable (gate is isCableExercise(equipment)) so passing the props for
+  // non-cable rows is a no-op.
+  //
+  // Reviewer blocker #4 (PR #426): onOpenVariantPicker accepts a returnFocus
+  // node handle so the picker hook can restore VO/TalkBack focus to the
+  // originating row on dismiss. SetRow captures its variant footer Pressable
+  // via a ref and resolves the handle via React Native's findNodeHandle().
+  onOpenVariantPicker?: (setId: string, returnFocusHandle: number | null) => void;
+  onClearVariant?: (setId: string) => void;
   // Timer controls (duration mode only)
   isTimerRunning?: boolean;
   isTimerActive?: boolean;
@@ -129,8 +146,13 @@ export const SetRow = memo(function SetRow({
   isTimerRunning, isTimerActive, timerDisplaySeconds,
   onTimerStart, onTimerStop,
   isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
+  onOpenVariantPicker, onClearVariant,
 }: SetRowProps) {
   const colors = useThemeColors();
+  // BLD-771: ref to the variant footer Pressable so the picker hook can
+  // resolve its accessibility node handle on open and restore VO/TalkBack
+  // focus to it on dismiss (reviewer blocker #4, PR #426).
+  const variantFooterRef = useRef<View>(null);
   // BLD-559: synchronous confirmation feedback owned exclusively here.
   // usePRCelebration MUST NOT fire haptic/audio. Any change here requires
   // psychologist re-review per PLAN-BLD-559.
@@ -453,6 +475,73 @@ export const SetRow = memo(function SetRow({
         </View>
       </SwipeRowAction>
 
+      {/*
+        BLD-771: Cable variant chips. Rendered as a footer row below the main
+        set row (so the 360dp landscape budget for the input row is unchanged,
+        per BLD-633 row-density review). Self-suppress when equipment is not
+        cable — `isCableExercise()` is the single gate, so adding new cable
+        equipment values to the union (lib/cable-variant.ts) makes them
+        appear here automatically.
+
+        Tap → onOpenVariantPicker (parent owns picker visibility state and
+        routes through the `updateSetVariant` write path).
+        Long-press → onClearVariant (writes NULL/NULL — same write path).
+
+        Each chip self-suppresses on null/undefined (BLD-771 plan: chips are
+        visible-when-set, picker-tap-target-when-empty); the wrapping
+        Pressable below keeps a tap target available even when both chips
+        are null, so users can open the picker on a fresh cable set.
+      */}
+      {isCableExercise({ equipment }) ? (
+        <Pressable
+          ref={variantFooterRef}
+          onPress={() => {
+            // Reviewer blocker #4 (PR #426): pass the originating row's
+            // accessibility handle to the picker hook so VO/TalkBack focus
+            // can be restored to this same Pressable on dismiss.
+            const handle = variantFooterRef.current
+              ? findNodeHandle(variantFooterRef.current)
+              : null;
+            onOpenVariantPicker?.(set.id, handle);
+          }}
+          onLongPress={() => onClearVariant?.(set.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Set ${set.set_number} cable variant`}
+          accessibilityHint="Double tap to choose attachment and pulley position; long press to clear"
+          style={styles.variantFooter}
+        >
+          {set.attachment == null && set.mount_position == null ? (
+            // Reviewer blocker #3 (PR #426): when both fields are null the
+            // chips self-suppress, leaving a zero-height Pressable with no
+            // visible tap-target. Render an explicit "Tap to set variant"
+            // placeholder so the affordance is discoverable on first-time
+            // sets (no autofill history) and after long-press clear. Styled
+            // as a dashed-outline pill so it reads as "empty / tap to fill"
+            // rather than as a value.
+            <View
+              style={[
+                styles.variantPlaceholder,
+                { borderColor: colors.outline },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.variantPlaceholderLabel,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Tap to set variant
+              </Text>
+            </View>
+          ) : (
+            <>
+              <SetAttachmentChip attachment={set.attachment ?? null} />
+              <SetMountPositionChip mount={set.mount_position ?? null} />
+            </>
+          )}
+        </Pressable>
+      ) : null}
+
       <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
     </View>
   );
@@ -468,6 +557,35 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "transparent",
     marginBottom: 2,
+  },
+  // BLD-771: footer row for cable variant chips. flexWrap so on narrow
+  // screens (360dp landscape) the second chip wraps below rather than
+  // overflowing. paddingLeft aligns the chips with the set-number column.
+  variantFooter: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+    paddingLeft: 36,
+    paddingTop: 2,
+    paddingBottom: 2,
+  },
+  // BLD-771: empty-state placeholder pill rendered when both attachment
+  // and mount_position are null. Dashed outline reads as "tap to fill"
+  // rather than as a real chip value, while keeping a visible tap target
+  // for the picker.
+  variantPlaceholder: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    alignSelf: "center",
+  },
+  variantPlaceholderLabel: {
+    fontSize: fontSizes.xs,
+    lineHeight: 16,
+    fontWeight: "500",
   },
   colSet: {
     width: 36,
