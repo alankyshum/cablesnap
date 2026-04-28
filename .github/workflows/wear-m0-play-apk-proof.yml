@@ -68,6 +68,21 @@ jobs:
         # wear-tests.yml).
         run: npx expo prebuild --clean --platform android
 
+      - name: Diagnostic — snapshot post-prebuild gradle files
+        # BLD-736 ninth-order finding: hypothesis (b) refuted (autolinker
+        # DOES handle in-tree modules; see PLAN-BLD-716.md addendum). The
+        # real reason `play-services-wearable` transitive classes don't
+        # land in app-release.apk is unknown without seeing what gradle
+        # files the prebuild + autolinker actually emit. Snapshot now,
+        # before any other step touches them, so the artifact captures
+        # the source of truth even if assemble fails.
+        if: always()
+        run: |
+          mkdir -p /tmp/wearos-m0-diag
+          cp android/app/build.gradle /tmp/wearos-m0-diag/post-prebuild-app-build.gradle 2>/dev/null || true
+          cp android/settings.gradle /tmp/wearos-m0-diag/post-prebuild-settings.gradle 2>/dev/null || true
+          cp android/build.gradle /tmp/wearos-m0-diag/post-prebuild-project-build.gradle 2>/dev/null || true
+
       - name: Boost Gradle JVM heap
         # Same memory bump wear-tests.yml uses; without it Gradle OOMs on
         # the standard ubuntu-latest runner during the full release build.
@@ -79,6 +94,24 @@ jobs:
           else
             echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
           fi
+
+      - name: Diagnostic — dump :app:releaseRuntimeClasspath
+        # Captures the resolved transitive runtime dependency tree for
+        # :app's release variant. Search the artifact for
+        # `play-services-wearable` to determine whether it's in the chain
+        # at all. If absent → autolinker's :expo → :expo-wearos-bridge
+        # path is breaking before AGP merges deps. If present but classes
+        # still missing in APK → R8/dex packaging is the culprit (deeper
+        # rabbit hole). Either result tells us where to look next.
+        if: always()
+        working-directory: android
+        run: |
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --no-daemon \
+            > /tmp/wearos-m0-diag/app-release-runtime-classpath.txt 2>&1 || true
+          # Tail to GHA log so a fast-fail is still visible without artifact download.
+          echo "=== releaseRuntimeClasspath tail (first match for wearable) ==="
+          grep -B2 -A2 'wearable' /tmp/wearos-m0-diag/app-release-runtime-classpath.txt || \
+            echo "(no 'wearable' string in releaseRuntimeClasspath)"
 
       - name: Assemble :app assembleRelease (Play flavor) + verify GMS-Wearable PRESENT
         # SENTRY_DISABLE_AUTO_UPLOAD=true: same canonical escape hatch
@@ -111,4 +144,14 @@ jobs:
           name: cablesnap-play-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload diagnostic bundle
+        # Always run — diagnostics matter most when assemble fails.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wearos-m0-diagnostics
+          path: /tmp/wearos-m0-diag/
+          if-no-files-found: warn
           retention-days: 7

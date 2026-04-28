@@ -8,12 +8,6 @@ const {
   patchProjectBuildGradle,
   copyDirRecursive,
   rmDirRecursive,
-  // Option A — exported so tests can verify the canonical project name flows
-  // end-to-end (settings.gradle include + projectDir, :app dependency, and
-  // the F-Droid `exclude module` lines all reference the same string).
-  BRIDGE_GRADLE_PROJECT_NAME,
-  BRIDGE_PROJECT_INCLUDE_MARKER,
-  BRIDGE_APP_IMPLEMENTATION_MARKER,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -255,120 +249,6 @@ android {
     // test catches it.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("shrinkResources enableShrinkResources.toBoolean()");
-  });
-});
-
-// ----------------------------------------------------------------------------
-// Option A — in-tree bridge module Gradle wiring
-// ----------------------------------------------------------------------------
-//
-// `expo-modules-autolinking` enumerates ONLY `node_modules/`. The bridge at
-// `modules/expo-wearos-bridge/` has no `package.json` and the root has no
-// `expo.autolinking.searchPaths`, so the autolinker NEVER wires the bridge
-// into `:app`. Result before this fix: `:app/build.gradle` had no
-// `implementation project(':expo-wearos-bridge')`, the bridge's transitive
-// `play-services-wearable:18.2.0` never reached the Play APK, and AC10a
-// (Play APK CONTAINS GMS Wearable classes) silently failed at runtime.
-//
-// These four tests fence the four invariants of the fix:
-//   1. settings.gradle gets `include ':expo-wearos-bridge'` + projectDir.
-//   2. :app/build.gradle dependencies block gets `implementation project(...)`.
-//   3. Both injections are idempotent across re-runs (`expo prebuild`
-//      regenerates these files, then re-applies the plugin).
-//   4. F-Droid NO-OP: under the `releaseFdroid` build type, the existing
-//      `releaseFdroidImplementation { exclude module: "expo-wearos-bridge" }`
-//      block strips the dependency from the F-Droid runtime + compile
-//      classpaths. The plugin output's `releaseFdroid` excludes block must
-//      still mention the bridge module by name AFTER our patches run, so
-//      AC10b (F-Droid APK GMS-Wearable class count == 0) is preserved.
-//      This test is mandatory per the QD verification contract update at
-//      019dd96b — it's the symmetric counter-test to the Play APK proof.
-describe("Option A — bridge Gradle wiring (autolinker gap)", () => {
-  it("emits `include ':expo-wearos-bridge'` with projectDir in settings.gradle", () => {
-    const out = patchSettingsGradle(SETTINGS_FIXTURE);
-    expect(out).toContain(BRIDGE_PROJECT_INCLUDE_MARKER);
-    expect(out).toContain(`include '${BRIDGE_GRADLE_PROJECT_NAME}'`);
-    // projectDir must point relative to the prebuild output's `android/`
-    // directory at `../modules/expo-wearos-bridge/android` — the bridge's
-    // Gradle root.
-    expect(out).toContain(
-      `project('${BRIDGE_GRADLE_PROJECT_NAME}').projectDir = new File(rootProject.projectDir, '../modules/expo-wearos-bridge/android')`,
-    );
-    // The pre-existing `:wear` standalone watch APK include must still be
-    // present — the new injection must compose with the prior one.
-    expect(out).toContain("include ':wear'");
-  });
-
-  it("emits `implementation project(':expo-wearos-bridge')` inside :app dependencies", () => {
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    expect(out).toContain(BRIDGE_APP_IMPLEMENTATION_MARKER);
-    expect(out).toContain(
-      `implementation project('${BRIDGE_GRADLE_PROJECT_NAME}')`,
-    );
-    // The implementation line must sit INSIDE the dependencies { } block,
-    // not outside it. We verify by checking the substring ordering: the
-    // marker must appear AFTER the opening `dependencies {` and BEFORE the
-    // pre-existing `implementation("com.facebook.react:react-android")`.
-    const depsOpen = out.indexOf("\ndependencies {");
-    const markerIdx = out.indexOf(BRIDGE_APP_IMPLEMENTATION_MARKER);
-    const reactImplIdx = out.indexOf(
-      'implementation("com.facebook.react:react-android")',
-    );
-    expect(depsOpen).toBeGreaterThan(-1);
-    expect(markerIdx).toBeGreaterThan(depsOpen);
-    expect(markerIdx).toBeLessThan(reactImplIdx);
-  });
-
-  it("is idempotent across multiple prebuilds (settings + app)", () => {
-    const settingsOnce = patchSettingsGradle(SETTINGS_FIXTURE);
-    const settingsTwice = patchSettingsGradle(settingsOnce);
-    const settingsThrice = patchSettingsGradle(settingsTwice);
-    expect(settingsTwice).toBe(settingsOnce);
-    expect(settingsThrice).toBe(settingsOnce);
-    // Belt-and-suspenders: count the bridge include line — must appear
-    // exactly once even after three prebuild cycles.
-    const bridgeIncludeCount =
-      settingsThrice.split(`include '${BRIDGE_GRADLE_PROJECT_NAME}'`).length -
-      1;
-    expect(bridgeIncludeCount).toBe(1);
-
-    const appOnce = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    const appTwice = patchAppBuildGradle(appOnce);
-    const appThrice = patchAppBuildGradle(appTwice);
-    expect(appTwice).toBe(appOnce);
-    expect(appThrice).toBe(appOnce);
-    const bridgeImplCount =
-      appThrice.split(`implementation project('${BRIDGE_GRADLE_PROJECT_NAME}')`)
-        .length - 1;
-    expect(bridgeImplCount).toBe(1);
-  });
-
-  it("preserves F-Droid NO-OP — releaseFdroid still excludes the bridge module (AC10b symmetry)", () => {
-    // MANDATORY per QD verification contract update 019dd96b: this is the
-    // symmetric counter-test to the Play APK GMS-Wearable proof (AC10a).
-    // Adding the bridge as a dependency to `:app` would normally pull
-    // `play-services-wearable` into BOTH Play and F-Droid APKs. The
-    // pre-existing `releaseFdroidImplementation { exclude module:
-    // "expo-wearos-bridge" }` block (lines 171/175/179 of plugin source)
-    // strips it from F-Droid. This test verifies that block survives the
-    // new injection unchanged so AC10b (F-Droid GMS class count == 0)
-    // still holds.
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    // All three F-Droid configurations must still exclude the bridge.
-    expect(out).toMatch(
-      /releaseFdroidImplementation\s*\{[\s\S]*?exclude module:\s*"expo-wearos-bridge"/,
-    );
-    expect(out).toMatch(
-      /releaseFdroidRuntimeClasspath\s*\{[\s\S]*?exclude module:\s*"expo-wearos-bridge"/,
-    );
-    expect(out).toMatch(
-      /releaseFdroidCompileClasspath\s*\{[\s\S]*?exclude module:\s*"expo-wearos-bridge"/,
-    );
-    // And exclude the GMS group transitively — defense in depth in case
-    // some future library declares its own GMS Wearable dependency.
-    expect(out).toMatch(
-      /releaseFdroidImplementation\s*\{[\s\S]*?exclude group:\s*"com\.google\.android\.gms"/,
-    );
   });
 });
 

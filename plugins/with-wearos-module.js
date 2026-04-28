@@ -71,21 +71,6 @@ const SETTINGS_MARKER = "// cablesnap:wearos:settings-include";
 const BUILD_TYPES_MARKER = "// cablesnap:wearos:build-types";
 const FDROID_EXCLUDES_MARKER = "// cablesnap:wearos:fdroid-excludes";
 const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter";
-// Option A — sentinels for the in-tree bridge module Gradle wiring.
-// `expo-modules-autolinking` enumerates ONLY `node_modules/`. The bridge at
-// `modules/expo-wearos-bridge/` has no `package.json` and the root has no
-// `expo.autolinking.searchPaths`, so the autolinker never wires it into
-// `:app`. Without explicit Gradle injection, `:app/build.gradle` has no
-// `implementation project(':expo-wearos-bridge')`, the bridge's transitive
-// `play-services-wearable:18.2.0` never reaches the Play APK, and AC10a
-// (Play APK CONTAINS GMS Wearable classes) silently fails. The two
-// sentinels below fence the two Gradle injections that wire it correctly.
-// See `.plans/PLAN-BLD-716.md` Implementation Addendum §"Eighth-order
-// finding — autolinker root cause" for the full rationale.
-const BRIDGE_PROJECT_INCLUDE_MARKER =
-  "// cablesnap:wearos:bridge-project-include";
-const BRIDGE_APP_IMPLEMENTATION_MARKER =
-  "// cablesnap:wearos:bridge-app-implementation";
 
 // Where the wear-template lives in the source tree, and where the prebuild
 // output expects to find the `:wear` subproject.
@@ -96,21 +81,6 @@ const WEAR_TEMPLATE_RELATIVE = path.join(
 );
 const WEAR_PROJECT_RELATIVE = path.join("android", "wear");
 
-// Gradle project name for the in-tree bridge library module. Must match
-// every place that references it: settings.gradle `include`, projectDir,
-// :app dependencies, AND the existing FDROID_EXCLUDES_BLOCK's
-// `exclude module: "expo-wearos-bridge"` lines (which were authored
-// before the autolinker gap was understood, and now finally have a
-// dependency to actually exclude).
-const BRIDGE_GRADLE_PROJECT_NAME = ":expo-wearos-bridge";
-// Where the bridge module's `android/` Gradle project lives, relative to
-// the prebuild output's `android/` directory. The bridge sits at
-// `modules/expo-wearos-bridge/android/` in the repo root, which from
-// `android/settings.gradle`'s perspective (rootProject.projectDir =
-// `<repo>/android`) is `../modules/expo-wearos-bridge/android`.
-const BRIDGE_PROJECT_DIR_RELATIVE_FROM_ANDROID =
-  "../modules/expo-wearos-bridge/android";
-
 // ---------------------------------------------------------------------------
 // settings.gradle patch — register `:wear` as a Gradle subproject.
 // ---------------------------------------------------------------------------
@@ -120,38 +90,18 @@ include ':wear'
 project(':wear').projectDir = new File(rootProject.projectDir, 'wear')
 `;
 
-// Option A — register `:expo-wearos-bridge` as an in-tree library subproject.
-// AGP can resolve it as `com.android.library` because
-// `modules/expo-wearos-bridge/android/build.gradle` declares it. Without
-// this `include`, `:app`'s `implementation project(':expo-wearos-bridge')`
-// (emitted in the app/build.gradle patch below) would fail with "Project
-// with path ':expo-wearos-bridge' could not be found." Path is computed
-// relative to the prebuild output's `android/` directory: from there,
-// `../modules/expo-wearos-bridge/android` reaches the bridge's Gradle root.
-const BRIDGE_PROJECT_INCLUDE_BLOCK = `
-${BRIDGE_PROJECT_INCLUDE_MARKER}
-include '${BRIDGE_GRADLE_PROJECT_NAME}'
-project('${BRIDGE_GRADLE_PROJECT_NAME}').projectDir = new File(rootProject.projectDir, '${BRIDGE_PROJECT_DIR_RELATIVE_FROM_ANDROID}')
-`;
-
 function patchSettingsGradle(contents) {
+  if (contents.includes(SETTINGS_MARKER)) {
+    return contents;
+  }
+  // Append at the end of settings.gradle. Order doesn't matter for
+  // `include` calls — Gradle accumulates them all before evaluating
+  // subprojects.
   let out = contents;
   if (!out.endsWith("\n")) {
     out = out + "\n";
   }
-  // 1. Register `:wear` standalone watch APK subproject (idempotent).
-  if (!out.includes(SETTINGS_MARKER)) {
-    // Append at the end of settings.gradle. Order doesn't matter for
-    // `include` calls — Gradle accumulates them all before evaluating
-    // subprojects.
-    out = out + SETTINGS_BLOCK;
-  }
-  // 2. Register `:expo-wearos-bridge` in-tree library project (idempotent).
-  //    See BRIDGE_PROJECT_INCLUDE_BLOCK comment for autolinker context.
-  if (!out.includes(BRIDGE_PROJECT_INCLUDE_MARKER)) {
-    out = out + BRIDGE_PROJECT_INCLUDE_BLOCK;
-  }
-  return out;
+  return out + SETTINGS_BLOCK;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,23 +181,6 @@ configurations {
 }
 `;
 
-// Option A — inject `implementation project(':expo-wearos-bridge')` into
-// `:app`'s top-level dependencies block. This is the missing link that
-// `expo-modules-autolinking` would normally emit for installed modules
-// under `node_modules/`, but does NOT emit for in-tree modules at
-// `modules/expo-wearos-bridge/`. Without this, the bridge's compiled
-// classes (and its transitive `play-services-wearable:18.2.0`) never
-// reach app-release.apk — even though the bridge module itself is
-// configured by Gradle. AC10a (Play APK CONTAINS GMS Wearable) requires
-// this dependency. AC10b (F-Droid APK does NOT) is preserved because the
-// existing `releaseFdroidImplementation { exclude module:
-// "expo-wearos-bridge" }` block above strips this dependency from the
-// F-Droid runtime + compile classpaths.
-const BRIDGE_APP_IMPLEMENTATION_BLOCK = `
-    ${BRIDGE_APP_IMPLEMENTATION_MARKER}
-    implementation project('${BRIDGE_GRADLE_PROJECT_NAME}')
-`;
-
 function patchAppBuildGradle(contents) {
   let out = contents;
 
@@ -289,25 +222,6 @@ function patchAppBuildGradle(contents) {
       );
     }
     out = out.replace(depsAnchor, `${FDROID_EXCLUDES_BLOCK}\n$1`);
-  }
-
-  // 3. Option A — inject `implementation project(':expo-wearos-bridge')`
-  //    INTO the top-level dependencies block. We anchor on the SAME
-  //    `\ndependencies\s*\{` opening that step 2 anchored BEFORE, and
-  //    insert immediately AFTER its opening brace + newline so the new
-  //    line sits cleanly at the top of the dependencies block. The
-  //    sentinel marker makes this idempotent across re-runs of prebuild.
-  if (!out.includes(BRIDGE_APP_IMPLEMENTATION_MARKER)) {
-    const depsOpenAnchor = /(\ndependencies\s*\{\n)/;
-    if (!depsOpenAnchor.test(out)) {
-      throw new Error(
-        "with-wearos-module: could not find `dependencies {` opening for bridge implementation injection",
-      );
-    }
-    out = out.replace(
-      depsOpenAnchor,
-      `$1${BRIDGE_APP_IMPLEMENTATION_BLOCK}`,
-    );
   }
 
   return out;
@@ -475,7 +389,3 @@ module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
-// Option A — exported so tests can verify Gradle wiring uses the canonical name.
-module.exports.BRIDGE_GRADLE_PROJECT_NAME = BRIDGE_GRADLE_PROJECT_NAME;
-module.exports.BRIDGE_PROJECT_INCLUDE_MARKER = BRIDGE_PROJECT_INCLUDE_MARKER;
-module.exports.BRIDGE_APP_IMPLEMENTATION_MARKER = BRIDGE_APP_IMPLEMENTATION_MARKER;
