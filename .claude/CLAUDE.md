@@ -180,7 +180,14 @@ Alternatively, move non-route code out of `app/` entirely (into `components/`, `
 
 ## Test Budget & Deduplication
 
-The test suite has a **budget of 1800 test cases**. Before adding tests, agents MUST:
+**Canonical policy: `docs/QA-BUDGET.md`** (owned by Quality Director). Read it before changing tests.
+
+Current caps (as of BLD-814 reconciliation):
+- **Declaration count** (grep `it()`/`test()`): warn 2000, **hard cap 2100**
+- **Runtime** (`npm test` wall-clock): warn 120s, **hard cap 150s**
+- Suite/file count is **not** a budget metric.
+
+Before adding tests, agents MUST:
 
 1. Run `./scripts/audit-tests.sh` to check the current count
 2. If over budget, consolidate overlapping tests before adding new ones

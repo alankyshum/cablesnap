@@ -24,7 +24,9 @@ if [ -f "scripts/verify-exercise-illustrations-size.sh" ]; then
 fi
 
 # ─── Test Budget Gate ────────────────────────────────────────────
-# Blocks push if test count exceeds budget (1800 test cases)
+# Blocks push if test count or runtime exceeds budget.
+# Canonical policy: docs/QA-BUDGET.md (warn 2000 / hard 2100 declarations,
+# warn 120s / hard 150s runtime). Owned by Quality Director.
 if [ -f "scripts/audit-tests.sh" ]; then
   echo "🧪 Running test audit..."
   if ! ./scripts/audit-tests.sh 2>/dev/null; then
