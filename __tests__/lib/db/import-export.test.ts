@@ -80,151 +80,90 @@ describe("exportAllData", () => {
 // ---- Validation ----
 
 describe("validateBackupFileSize", () => {
-  it("rejects files over 50MB", () => {
-    const err = validateBackupFileSize(51 * 1024 * 1024);
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("file_too_large");
-  });
-
-  it("accepts files under 50MB", () => {
-    const err = validateBackupFileSize(10 * 1024 * 1024);
-    expect(err).toBeNull();
+  it.each([
+    { name: "rejects files over 50MB", bytes: 51 * 1024 * 1024, expectedType: "file_too_large" as const },
+    { name: "accepts files under 50MB", bytes: 10 * 1024 * 1024, expectedType: null },
+  ])("$name", ({ bytes, expectedType }) => {
+    const err = validateBackupFileSize(bytes);
+    if (expectedType === null) {
+      expect(err).toBeNull();
+    } else {
+      expect(err).not.toBeNull();
+      expect(err!.type).toBe(expectedType);
+    }
   });
 });
 
 describe("validateBackupData", () => {
-  it("rejects non-object data", () => {
-    const err = validateBackupData("not an object");
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("corrupt_json");
-  });
+  // Consolidated as parameterized cases (BLD-816). Each row exercises one
+  // validation branch — the assertion shape is the same so they fold cleanly.
+  type RejectCase = { name: string; payload: unknown; type: string; messageContains?: string };
+  type AcceptCase = { name: string; payload: unknown };
 
-  it("rejects missing version", () => {
-    const err = validateBackupData({ data: {} });
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("missing_version");
-  });
+  const rejects: RejectCase[] = [
+    { name: "non-object data", payload: "not an object", type: "corrupt_json" },
+    { name: "missing version", payload: { data: {} }, type: "missing_version" },
+    {
+      name: "future version (v7+)",
+      payload: { version: 7, data: { exercises: [{ id: "1" }] } },
+      type: "future_version",
+      messageContains: "update the app",
+    },
+    { name: "v3 without data key", payload: { version: 3 }, type: "missing_data" },
+    {
+      name: "empty backup",
+      payload: { version: 3, data: { exercises: [], workout_templates: [] } },
+      type: "empty_backup",
+    },
+    {
+      name: "invalid table (not an array)",
+      payload: { version: 3, data: { exercises: "not an array" } },
+      type: "invalid_table",
+    },
+    {
+      name: "negative calorie values",
+      payload: { version: 3, data: { food_entries: [{ id: "1", calories: -100 }] } },
+      type: "negative_values",
+    },
+    {
+      name: "negative weight values",
+      payload: { version: 3, data: { body_weight: [{ id: "1", weight: -5 }] } },
+      type: "negative_values",
+    },
+    {
+      name: "negative reps values",
+      payload: { version: 3, data: { workout_sets: [{ id: "1", reps: -3 }] } },
+      type: "negative_values",
+    },
+  ];
 
-  it("rejects future version (v7+)", () => {
-    const err = validateBackupData({ version: 7, data: { exercises: [{ id: "1" }] } });
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("future_version");
-    expect(err!.message).toContain("update the app");
-  });
-
-  it("accepts v6 backup", () => {
-    const err = validateBackupData({
-      version: 6,
-      data: { exercises: [{ id: "1", name: "Squat" }] },
-    });
-    expect(err).toBeNull();
-  });
-
-  it("accepts v5 backup", () => {
-    const err = validateBackupData({
-      version: 5,
-      data: { exercises: [{ id: "1", name: "Bench" }] },
-    });
-    expect(err).toBeNull();
-  });
-
-  it("accepts v4 backup", () => {
-    const err = validateBackupData({
-      version: 4,
-      data: { exercises: [{ id: "1", name: "Bench" }] },
-    });
-    expect(err).toBeNull();
-  });
-
-  it("accepts v2 backup", () => {
-    const err = validateBackupData({
-      version: 2,
-      exercises: [{ id: "1", name: "Bench" }],
-    });
-    expect(err).toBeNull();
-  });
-
-  it("accepts v3 backup", () => {
-    const err = validateBackupData({
-      version: 3,
-      data: {
-        exercises: [{ id: "1", name: "Bench" }],
+  const accepts: AcceptCase[] = [
+    { name: "v6 backup", payload: { version: 6, data: { exercises: [{ id: "1", name: "Squat" }] } } },
+    { name: "v5 backup", payload: { version: 5, data: { exercises: [{ id: "1", name: "Bench" }] } } },
+    { name: "v4 backup", payload: { version: 4, data: { exercises: [{ id: "1", name: "Bench" }] } } },
+    { name: "v3 backup", payload: { version: 3, data: { exercises: [{ id: "1", name: "Bench" }] } } },
+    { name: "v2 backup (legacy top-level keys)", payload: { version: 2, exercises: [{ id: "1", name: "Bench" }] } },
+    {
+      name: "null numeric values in nullable fields",
+      payload: {
+        version: 3,
+        data: {
+          body_weight: [{ id: "1", weight: 70 }],
+          workout_sets: [{ id: "1", weight: null, reps: null, set_number: 1 }],
+        },
       },
-    });
-    expect(err).toBeNull();
-  });
+    },
+  ];
 
-  it("rejects v3 without data key", () => {
-    const err = validateBackupData({ version: 3 });
+  it.each(rejects)("rejects $name with type=$type", ({ payload, type, messageContains }) => {
+    const err = validateBackupData(payload);
     expect(err).not.toBeNull();
-    expect(err!.type).toBe("missing_data");
+    expect(err!.type).toBe(type);
+    if (messageContains) expect(err!.message).toContain(messageContains);
   });
 
-  it("rejects empty backup", () => {
-    const err = validateBackupData({
-      version: 3,
-      data: {
-        exercises: [],
-        workout_templates: [],
-      },
-    });
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("empty_backup");
-  });
-
-  it("rejects invalid table (not an array)", () => {
-    const err = validateBackupData({
-      version: 3,
-      data: {
-        exercises: "not an array",
-      },
-    });
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("invalid_table");
-  });
-
-  it("rejects negative calorie values", () => {
-    const err = validateBackupData({
-      version: 3,
-      data: {
-        food_entries: [{ id: "1", calories: -100 }],
-      },
-    });
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("negative_values");
-  });
-
-  it("rejects negative weight values", () => {
-    const err = validateBackupData({
-      version: 3,
-      data: {
-        body_weight: [{ id: "1", weight: -5 }],
-      },
-    });
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("negative_values");
-  });
-
-  it("rejects negative reps values", () => {
-    const err = validateBackupData({
-      version: 3,
-      data: {
-        workout_sets: [{ id: "1", reps: -3 }],
-      },
-    });
-    expect(err).not.toBeNull();
-    expect(err!.type).toBe("negative_values");
-  });
-
-  it("allows null numeric values (nullable fields)", () => {
-    const err = validateBackupData({
-      version: 3,
-      data: {
-        body_weight: [{ id: "1", weight: 70 }],
-        workout_sets: [{ id: "1", weight: null, reps: null, set_number: 1 }],
-      },
-    });
-    expect(err).toBeNull();
+  it.each(accepts)("accepts $name", ({ payload }) => {
+    expect(validateBackupData(payload)).toBeNull();
   });
 });
 
