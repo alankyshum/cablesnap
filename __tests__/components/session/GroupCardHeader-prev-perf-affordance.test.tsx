@@ -56,6 +56,7 @@ function makeGroup(overrides: Partial<ExerciseGroup> = {}): ExerciseGroup {
 
 const baseProps = {
   group: makeGroup(),
+  currentMode: undefined,
   modes: {} as Record<string, never>,
   exerciseNotesOpen: false,
   exerciseNotesDraft: undefined,

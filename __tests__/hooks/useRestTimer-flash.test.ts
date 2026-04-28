@@ -13,9 +13,9 @@
 import { renderHook, act } from "@testing-library/react-native";
 
 // Override the global reanimated mock so we can spy on animation primitives.
-const mockWithTiming = jest.fn((v: unknown) => v);
+const mockWithTiming = jest.fn((...args: unknown[]) => args[0]);
 const mockWithSequence = jest.fn((...args: unknown[]) => { void args; return "SEQ"; });
-const mockWithDelay = jest.fn((_d: number, v: unknown) => v);
+const mockWithDelay = jest.fn((...args: unknown[]) => args[1]);
 const mockReduceMotion = { value: false };
 
 jest.mock("react-native-reanimated", () => {
