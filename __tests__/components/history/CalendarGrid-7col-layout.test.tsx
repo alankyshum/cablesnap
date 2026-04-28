@@ -1,8 +1,10 @@
 import React from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue, useAnimatedStyle } from "react-native-reanimated";
+import { render } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ToastProvider } from "../../../components/ui/bna-toast";
 import CalendarGrid from "../../../components/history/CalendarGrid";
-import { renderScreen } from "../../helpers/render";
 import { DAYS } from "../../../lib/format";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
@@ -68,34 +70,60 @@ function findAncestorWithWidth(node: RNNode | null): unknown {
 }
 
 describe("CalendarGrid 7-column layout (BLD-661)", () => {
-  // BLD-817 perf: All three tests are read-only assertions against the same
-  // CalendarGrid output. Render once in beforeAll instead of three times in
-  // each `it`, then reuse `getByText`. Cuts wall-clock from ~6.7s to ~2.5s
-  // (the bulk was three full mounts of CalendarGrid + reanimated + gestures).
-  let getByText: ReturnType<typeof renderScreen>["getByText"];
+  // BLD-817 perf (Path 2): All three tests are read-only assertions against
+  // the same CalendarGrid output. Render once in beforeAll, capture every
+  // label/date width into Maps, then unmount immediately. Each `it` block
+  // asserts against the captured Maps — no live tree access required, so
+  // CI's react-test-renderer cross-test unmount can't bite us. Cuts wall-
+  // clock from ~6.7s to ~2.5s — the bulk was three full mounts of
+  // CalendarGrid + reanimated + gesture-handler.
+  const SAMPLE_DATES = ["1", "5", "15", "20", "30"] as const;
+  const labelFound = new Map<string, boolean>();
+  const labelWidth = new Map<string, unknown>();
+  const dateWidth = new Map<string, unknown>();
 
   beforeAll(() => {
-    ({ getByText } = renderScreen(<CalendarHarness cellSize={48} />));
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    const { getByText, unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <CalendarHarness cellSize={48} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    try {
+      for (const label of DAYS) {
+        const node = getByText(label) as unknown as RNNode;
+        labelFound.set(label, !!node);
+        labelWidth.set(label, findAncestorWithWidth(node));
+      }
+      for (const day of SAMPLE_DATES) {
+        const node = getByText(day) as unknown as RNNode;
+        dateWidth.set(day, findAncestorWithWidth(node));
+      }
+    } finally {
+      unmount();
+    }
   });
 
   it("renders all 7 weekday header labels (no wrap to a 6+1 layout)", () => {
     for (const label of DAYS) {
-      expect(getByText(label)).toBeTruthy();
+      expect(labelFound.get(label)).toBe(true);
     }
   });
 
   it("uses percent-based column widths so 7 cells always fit one row", () => {
     for (const label of DAYS) {
-      const width = findAncestorWithWidth(getByText(label) as unknown as RNNode);
-      expect(width).toBe(PERCENT_WIDTH);
+      expect(labelWidth.get(label)).toBe(PERCENT_WIDTH);
     }
   });
 
   it("date Pressables also use percent-based widths (so day cells align under their weekday header)", () => {
     // April 2026 has 30 days. Sample a representative spread of dates.
-    for (const day of ["1", "5", "15", "20", "30"]) {
-      const width = findAncestorWithWidth(getByText(day) as unknown as RNNode);
-      expect(width).toBe(PERCENT_WIDTH);
+    for (const day of SAMPLE_DATES) {
+      expect(dateWidth.get(day)).toBe(PERCENT_WIDTH);
     }
   });
 });
