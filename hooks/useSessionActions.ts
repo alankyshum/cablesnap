@@ -29,7 +29,10 @@ import {
   getLastBodyweightModifier,
   updateSetBodyweightModifier,
   getPreviousSetsBatch,
+  getRecentVariantHistory,
+  updateSetVariant,
 } from "../lib/db/session-sets";
+import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import {
   resolvePrefillCandidate,
   type PrefillCandidate,
@@ -442,6 +445,43 @@ export function useSessionActions({
         }
       } catch {
         defaultModifier = null;
+      }
+    }
+
+    // BLD-771: autofill cable variant (attachment + mount_position) from the
+    // user's last logged set on this exercise. Gated on `isCableExercise()`
+    // — never runs for non-cable equipment, which prevents writing variant
+    // data to barbell / dumbbell / machine sets that have no UI to surface
+    // it (would be invisible-but-persistent state, AC line 195).
+    //
+    // Mirrors the bodyweight smart-default pattern above:
+    //   1. fetchQuery against React Query so siblings within staleTime share.
+    //   2. Per-attribute resolution via getLastVariant() — so if user has
+    //      last attachment='rope' but no recent mount_position, only
+    //      attachment is autofilled (AC line 199 independent attributes).
+    //   3. Persisted via updateSetVariant() — same entry point the picker
+    //      uses, so the silent-default-trap closure (QD-B2) is uniform.
+    //
+    // Returns NULL/NULL when the user has no prior history. NEVER falls back
+    // to exercises.attachment / exercises.mount_position default — that's
+    // the QD-B2 trap, which is closed by getLastVariant() reading only
+    // workout_sets, never the exercise definition.
+    if (group && isCableExercise({ equipment: group.equipment })) {
+      try {
+        const history = await queryClient.fetchQuery({
+          queryKey: ['variant-history', exerciseId],
+          queryFn: () => getRecentVariantHistory(exerciseId),
+        });
+        const last = getLastVariant(history);
+        if (last.attachment !== null || last.mount_position !== null) {
+          await updateSetVariant(newSet.id, last.attachment, last.mount_position);
+          queryClient.invalidateQueries({
+            queryKey: ['variant-history', exerciseId],
+          });
+        }
+      } catch {
+        // Autofill is best-effort; on any error the set is created with
+        // NULL/NULL and the user can pick via the chip → picker flow.
       }
     }
 
