@@ -437,7 +437,7 @@ describe("sessions CRUD", () => {
 });
 
 describe("sets CRUD", () => {
-  it("addSet creates a new set", async () => {
+  it("addSet creates a new set, with optional link_id and round", async () => {
     await initDb();
     const result = await db.addSet("s1", "ex1", 1);
     expect(result.id).toBe(MOCK_UUID);
@@ -447,48 +447,28 @@ describe("sets CRUD", () => {
     expect(result.weight).toBeNull();
     expect(result.reps).toBeNull();
     expect(result.completed).toBe(false);
+
+    const linked = await db.addSet("s1", "ex1", 2, "link1", 3);
+    expect(linked.link_id).toBe("link1");
+    expect(linked.round).toBe(3);
   });
 
-  it("addSet with link_id and round", async () => {
+  // BLD-630 note: completeSet must also fire the session-anchor UPDATE.
+  it.each([
+    { name: "updateSet", run: () => db.updateSet("set1", 100, 8), expectMethod: "update" as const },
+    { name: "completeSet (also fires session-anchor run)", run: () => db.completeSet("set1"), expectMethod: "update" as const, alsoRun: true },
+    { name: "deleteSet", run: () => db.deleteSet("set1"), expectMethod: "delete" as const },
+    { name: "updateSetRPE", run: () => db.updateSetRPE("set1", 8.5), expectMethod: "update" as const },
+    { name: "updateSetNotes", run: () => db.updateSetNotes("set1", "felt strong"), expectMethod: "update" as const },
+  ])("$name fires the expected Drizzle call", async ({ run, expectMethod, alsoRun }) => {
     await initDb();
-    const result = await db.addSet("s1", "ex1", 2, "link1", 3);
-    expect(result.link_id).toBe("link1");
-    expect(result.round).toBe(3);
-  });
-
-  it("updateSet updates weight and reps", async () => {
-    await initDb();
-    await db.updateSet("set1", 100, 8);
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
-  });
-
-  it("completeSet marks set completed", async () => {
-    await initDb();
-    jest.spyOn(Date, "now").mockReturnValue(9000);
-    await db.completeSet("set1");
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
-    // BLD-630: completeSet must also fire the session-anchor UPDATE so the
-    // elapsed clock starts on first set completion.
-    expect(mockDrizzleDb.run).toHaveBeenCalled();
-    jest.restoreAllMocks();
-  });
-
-  it("deleteSet removes the set", async () => {
-    await initDb();
-    await db.deleteSet("set1");
-    expect(mockDrizzleDb.delete).toHaveBeenCalled();
-  });
-
-  it("updateSetRPE updates RPE value", async () => {
-    await initDb();
-    await db.updateSetRPE("set1", 8.5);
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
-  });
-
-  it("updateSetNotes updates notes", async () => {
-    await initDb();
-    await db.updateSetNotes("set1", "felt strong");
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
+    if (alsoRun) jest.spyOn(Date, "now").mockReturnValue(9000);
+    await run();
+    expect(mockDrizzleDb[expectMethod]).toHaveBeenCalled();
+    if (alsoRun) {
+      expect(mockDrizzleDb.run).toHaveBeenCalled();
+      jest.restoreAllMocks();
+    }
   });
 });
 
@@ -516,10 +496,12 @@ describe("nutrition CRUD", () => {
     expect(result[0].is_favorite).toBe(true);
   });
 
-  it("toggleFavorite toggles the flag", async () => {
+  it("toggleFavorite, deleteDailyLog fire expected Drizzle calls", async () => {
     await initDb();
     await db.toggleFavorite("f1");
     expect(mockDrizzleDb.update).toHaveBeenCalled();
+    await db.deleteDailyLog("log1");
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 
   it("addDailyLog creates a log entry", async () => {
@@ -533,49 +515,29 @@ describe("nutrition CRUD", () => {
     jest.restoreAllMocks();
   });
 
-  it("deleteDailyLog removes the log", async () => {
-    await initDb();
-    await db.deleteDailyLog("log1");
-    expect(mockDrizzleDb.delete).toHaveBeenCalled();
-  });
-
-  it("getMacroTargets returns defaults when no row exists", async () => {
+  it("getMacroTargets returns defaults when no row exists, otherwise existing row", async () => {
     await initDb();
     mockDrizzleGet(null);
-
     jest.spyOn(Date, "now").mockReturnValue(4000);
-    const result = await db.getMacroTargets();
-    expect(result.calories).toBe(2000);
-    expect(result.protein).toBe(150);
-    expect(result.carbs).toBe(250);
-    expect(result.fat).toBe(65);
+    const defaults = await db.getMacroTargets();
+    expect(defaults.calories).toBe(2000);
+    expect(defaults.protein).toBe(150);
+    expect(defaults.carbs).toBe(250);
+    expect(defaults.fat).toBe(65);
     jest.restoreAllMocks();
-  });
 
-  it("getMacroTargets returns existing row", async () => {
-    await initDb();
     const existing = { id: "mt1", calories: 1800, protein: 180, carbs: 200, fat: 60, updated_at: 100 };
     mockDrizzleGet(existing);
-
-    const result = await db.getMacroTargets();
-    expect(result).toEqual(existing);
+    expect(await db.getMacroTargets()).toEqual(existing);
   });
 
-  it("getDailySummary returns zero totals for empty day", async () => {
+  it("getDailySummary returns zero or computed totals based on row presence", async () => {
     await initDb();
-    // getDailySummary now uses Drizzle with .get()
     mockDrizzleGet({ calories: null, protein: null, carbs: null, fat: null });
+    expect(await db.getDailySummary("2024-01-15")).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-    const result = await db.getDailySummary("2024-01-15");
-    expect(result).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
-  });
-
-  it("getDailySummary returns computed totals", async () => {
-    await initDb();
     mockDrizzleGet({ calories: 500, protein: 40, carbs: 60, fat: 15 });
-
-    const result = await db.getDailySummary("2024-01-15");
-    expect(result).toEqual({ calories: 500, protein: 40, carbs: 60, fat: 15 });
+    expect(await db.getDailySummary("2024-01-15")).toEqual({ calories: 500, protein: 40, carbs: 60, fat: 15 });
   });
 });
 
@@ -631,9 +593,11 @@ describe("body tracking CRUD", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("deleteBodyWeight removes the entry", async () => {
+  it("deleteBodyWeight, deleteBodyMeasurements fire Drizzle.delete", async () => {
     await initDb();
     await db.deleteBodyWeight("bw1");
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
+    await db.deleteBodyMeasurements("bm1");
     expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 
@@ -679,12 +643,6 @@ describe("body tracking CRUD", () => {
 
     const result = await db.getLatestMeasurements();
     expect(result).toBeNull();
-  });
-
-  it("deleteBodyMeasurements removes the entry", async () => {
-    await initDb();
-    await db.deleteBodyMeasurements("bm1");
-    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 });
 
