@@ -32,6 +32,14 @@ def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.ab
 if (expoModulesCorePlugin.exists()) {
   apply from: expoModulesCorePlugin
   applyKotlinExpoModulesCorePlugin()
+  // useCoreDependencies() wires `:expo-modules-core` onto this module's
+  // Kotlin compile classpath, providing `expo.modules.kotlin.*` (Module,
+  // ModuleDefinition, Name). Without it, compileReleaseKotlin fails with
+  // "Unresolved reference 'expo'". Pattern matches every working in-tree
+  // Expo module — see node_modules/expo-health-connect/android/build.gradle
+  // for the canonical applyKotlinExpoModulesCorePlugin/useCoreDependencies
+  // pairing.
+  useCoreDependencies()
 }
 
 android {

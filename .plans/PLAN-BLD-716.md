@@ -614,3 +614,48 @@ The flag was introduced in the very first BLD-736 commit (`c3701208`), almost ce
 > **When a Gradle task name keeps recurring as the failure point across iterations even though the previous round's upstream fix demonstrably landed, the bug is upstream of the *task*, not downstream of it.** Recurring task name + different stack-trace details = scrutinise the workflow inputs (env, flags, install steps) and the task's own contract before chasing more downstream architectural theories. Attributed via QD review on BLD-736.
 
 **Defence-in-depth additions (none required for M0):** if a future workflow legitimately needs `--ignore-scripts` (e.g. a sandboxed lint job that doesn't compile native code), it MUST add an explicit follow-up `npx install-skia` step to maintain the libskia.a invariant.
+
+### Sixth-order issue: missing `useCoreDependencies()` in bridge module's `build.gradle`
+
+**Symptom:** With Skia configure unblocked (fourth-order fix), the build finally advanced into the Kotlin compile phase. `:expo-wearos-bridge:compileReleaseKotlin` then failed immediately:
+
+```
+e: WearOSModule.kt:3:8 Unresolved reference 'expo'.
+e: WearOSModule.kt:4:8 Unresolved reference 'expo'.
+e: WearOSModule.kt:28:22 Unresolved reference 'Module'.
+e: WearOSModule.kt:29:31 Unresolved reference 'ModuleDefinition'.
+e: WearOSModule.kt:30:5 Unresolved reference 'Name'.
+> Task :expo-wearos-bridge:compileReleaseKotlin FAILED
+```
+
+**Misdiagnosis (mine, recorded for posterity):** I hypothesised the failure was a continuation of the autolinker variant-routing problem — that `:app:releaseFdroid`'s consumption of `:expo-wearos-bridge` via `matchingFallbacks = ["release"]` was somehow stripping the bridge's compile-time access to `expo-modules-core`'s Kotlin metadata. Wrong. QD did the actual investigation and found the real cause via direct file comparison.
+
+**Real root cause (QD's finding):** `modules/expo-wearos-bridge/android/build.gradle:31-35` was calling `applyKotlinExpoModulesCorePlugin()` but NOT `useCoreDependencies()`. These are two distinct functions defined in `node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle`:
+
+| Function | Line in `ExpoModulesCorePlugin.gradle` | What it does |
+|---|---|---|
+| `applyKotlinExpoModulesCorePlugin` | 44 | Sets up `kotlin-android` plugin + `kotlinVersion`/`kspVersion` ext properties. Does NOT add `:expo-modules-core` as a dep. |
+| `useCoreDependencies` | 111–119 | `implementation project(':expo-modules-core')` + `kotlin-stdlib-jdk7`. **This is what gives Kotlin source access to `expo.modules.kotlin.*` API.** |
+
+Side-by-side comparison with `node_modules/expo-health-connect/android/build.gradle` (a working in-tree reference module) confirmed: it calls **both**. Our bridge module called only one. The kotlin compiler's classpath therefore had no `expo.modules.kotlin.*` symbols, hence the unresolved-reference cascade.
+
+**Why this didn't fail in earlier rounds:** every prior run died at `:shopify_react-native-skia:configureCMakeRelWithDebInfo` during the build-graph **configure** phase — i.e. before any task in the `compile` phase started executing. With Skia configure passing on the fourth-order fix, the build advanced into the compile phase for the first time and immediately hit this latent defect. Same observation as third-order: the ordering of build-phase failures is "configure tasks first, then compile tasks", and each successful round merely advances the failure boundary one phase to the right.
+
+**Final fix (commit on this addendum):**
+
+```diff
+   def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+   if (expoModulesCorePlugin.exists()) {
+     apply from: expoModulesCorePlugin
+     applyKotlinExpoModulesCorePlugin()
++    useCoreDependencies()
+   }
+```
+
+One additional line. No other changes.
+
+**Lesson learned (recorded for M1+ — pairing rule):**
+
+> **In any in-repo (`modules/`) Expo module's `android/build.gradle`, `applyKotlinExpoModulesCorePlugin()` and `useCoreDependencies()` MUST be called as a pair.** The first wires the Kotlin compile plugin; the second wires the `:expo-modules-core` classpath dependency. Calling only one produces a build that configures cleanly but fails at `compileReleaseKotlin` with `Unresolved reference 'expo'`. This pairing is enforced by convention in every Expo node_module that uses the same template (`expo-health-connect`, `expo-modules-core` itself, etc.) — there is no in-repo `modules/` example to copy from in this codebase, which is why the original M0 commit dropped the second call. M1+ implementers adding Functions/Events/Views to `expo-wearos-bridge` (or any future `modules/expo-*` package) should treat the two calls as inseparable.
+
+**Process meta-lesson (CEO's anti-thrash budget rule):** rounds 1–4 (Groovy → autolinker pivot → variantFilter → Skia postinstall) and round 5 (this fix) all turned out to be real, mechanically-verifiable defects sequenced by which build phase happened to be reached first. None were speculative. The CEO's "stop iterating" directive on round 5 was nevertheless correct — it forced QD to do the side-by-side file comparison rather than letting techlead push another hypothesis-driven fix. Rule for future PRs of this shape: **if the same "STOP and produce evidence" cycle repeats four times, the fifth investigation should default to comparison-against-a-working-reference rather than top-down hypothesis generation.**
