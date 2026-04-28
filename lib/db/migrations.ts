@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { createCoreTables, createExtensionTables, addColumnIfMissing, hasColumn } from "./tables";
+import { createCoreTables, createExtensionTables, addColumnIfMissing, hasColumn, dropColumnIfExists } from "./tables";
 import { createScheduleAndIndexes } from "./table-migrations";
 
 async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -122,4 +122,21 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   } catch {
     // SQLite on some platforms doesn't support partial indexes — constraint enforced at app level
   }
+
+  // ── Destructive cleanup of legacy F12/F13 columns (BLD-773) ──
+  // F12 (Training Mode) and F13 (Mount Position) were removed from app
+  // reads/writes earlier in this PR, but the physical SQLite columns still
+  // exist on already-upgraded user databases. Fresh installs are unaffected
+  // because `createCoreTables` no longer declares them. Drop them here so
+  // upgraded DBs converge with the canonical schema in `lib/db/schema.ts`.
+  //
+  // `dropColumnIfExists` is idempotent (no-op when the column is absent),
+  // so this block is safe on every boot regardless of starting schema state.
+  // SQLite ≥ 3.35 supports native `ALTER TABLE ... DROP COLUMN`; Expo SQLite
+  // 55 ships >= 3.45 so no table rebuild is needed.
+  await dropColumnIfExists(database, "workout_sets", "training_mode");
+  await dropColumnIfExists(database, "workout_sets", "mount_position");
+  await dropColumnIfExists(database, "template_exercises", "training_mode");
+  await dropColumnIfExists(database, "exercises", "mount_position");
+  await dropColumnIfExists(database, "exercises", "training_modes");
 }

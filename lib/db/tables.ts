@@ -45,6 +45,24 @@ export async function addColumnIfMissing(database: SQLite.SQLiteDatabase, table:
   }
 }
 
+/**
+ * Idempotently drop a column from a table.
+ *
+ * No-op when the column is already absent (fresh DBs, or already-migrated
+ * upgraded DBs). Uses SQLite's native `ALTER TABLE ... DROP COLUMN`,
+ * available since SQLite 3.35 (Expo SQLite 55 ships >= 3.45).
+ *
+ * Mirrors the contract of `addColumnIfMissing`: safe to call on every app
+ * boot, regardless of starting schema state.
+ */
+export async function dropColumnIfExists(database: SQLite.SQLiteDatabase, table: string, column: string): Promise<void> {
+  assertValidTable(table);
+  assertSafeSQL(column, "column name");
+  if (await hasColumn(database, table, column)) {
+    await database.execAsync(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+  }
+}
+
 export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
