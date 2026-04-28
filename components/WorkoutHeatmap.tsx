@@ -21,7 +21,9 @@ type HeatmapProps = {
   totalAllTime?: number;
 };
 
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+// GitHub-style: only Mon/Wed/Fri labeled to avoid T/T and S/S ambiguity (BLD-686).
+// rowIdx 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+const DAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""] as const;
 
 function getMondayOfWeek(date: Date): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -101,7 +103,8 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
     return g;
   }, [data, weeks]);
 
-  const labelWidth = 18;
+  // BLD-686: bumped from 18 to 22 to accommodate 3-letter weekday labels (Mon/Wed/Fri).
+  const labelWidth = 22;
   const gap = 2;
   const availableWidth = layout.width - layout.horizontalPadding * 2 - labelWidth - gap;
   const cellSize = Math.max(14, Math.min(24, Math.floor((availableWidth - gap * (weeks - 1)) / weeks)));

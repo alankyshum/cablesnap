@@ -29,12 +29,17 @@ describe("WorkoutHeatmap", () => {
     expect(queryByText("Start working out to see your consistency here!")).toBeNull();
   });
 
-  it("renders day labels", () => {
-    const { getAllByText } = renderScreen(
+  it("renders unambiguous weekday labels (BLD-686: GitHub-style Mon/Wed/Fri only)", () => {
+    const { getAllByText, queryAllByText } = renderScreen(
       <WorkoutHeatmap data={emptyData} />
     );
-    expect(getAllByText("M").length).toBeGreaterThanOrEqual(1);
-    expect(getAllByText("S").length).toBeGreaterThanOrEqual(1);
+    // Only Mon/Wed/Fri rows show labels — Tue/Thu/Sat/Sun are blank to avoid T/T and S/S collisions.
+    expect(getAllByText("Mon").length).toBeGreaterThanOrEqual(1);
+    expect(getAllByText("Wed").length).toBeGreaterThanOrEqual(1);
+    expect(getAllByText("Fri").length).toBeGreaterThanOrEqual(1);
+    // Regression guard: never reintroduce ambiguous single-letter labels.
+    expect(queryAllByText("T").length).toBe(0);
+    expect(queryAllByText("S").length).toBe(0);
   });
 
   it("renders accessibility labels on cells", () => {
