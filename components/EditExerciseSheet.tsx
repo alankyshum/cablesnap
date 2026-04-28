@@ -70,7 +70,7 @@ export default function EditExerciseSheet({
   );
 
   const cycleSetType = (index: number) => {
-    setSetTypes((prev) => {
+    setSetTypes(() => {
       const next = [...visibleSetTypes];
       const current = next[index] ?? "normal";
       const currentIndex = SET_TYPE_CYCLE.indexOf(current);

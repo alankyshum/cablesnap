@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -18,12 +18,7 @@ function WeightPicker({ value, unit, onValueChange, accessibilityLabel, min = 0,
   const colors = useThemeColors();
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState(value != null ? String(value) : "0");
-
-  useEffect(() => {
-    if (!focused) {
-      setDraft(value != null ? String(value) : "0");
-    }
-  }, [focused, value]);
+  const displayValue = focused ? draft : (value != null ? String(value) : "0");
 
   const startEdit = useCallback(() => {
     setDraft(value != null ? String(value) : "");
@@ -45,7 +40,7 @@ function WeightPicker({ value, unit, onValueChange, accessibilityLabel, min = 0,
   return (
     <View style={[styles.container, { borderColor: focused ? colors.primary : colors.outlineVariant, backgroundColor: colors.surface }]}>
       <TextInput
-        value={draft}
+        value={displayValue}
         onChangeText={setDraft}
         onFocus={startEdit}
         onBlur={endEdit}

@@ -90,13 +90,21 @@ jest.mock('react-native-reanimated', () => {
   const React = require('react')
   const noop = () => {}
   const noopValue = (v: unknown) => ({ value: v })
+  const AnimatedView = React.forwardRef((props: unknown, ref: unknown) => React.createElement('View', { ...(props as object), ref }))
+  AnimatedView.displayName = 'AnimatedView'
+  const AnimatedText = React.forwardRef((props: unknown, ref: unknown) => React.createElement('Text', { ...(props as object), ref }))
+  AnimatedText.displayName = 'AnimatedText'
+  const createAnimatedComponent = (Component: React.ComponentType<unknown>) => {
+    const AnimatedComponent = React.forwardRef((props: unknown, ref: unknown) => React.createElement(Component, { ...(props as object), ref }))
+    AnimatedComponent.displayName = `Animated(${Component.displayName || Component.name || 'Component'})`
+    return AnimatedComponent
+  }
   return {
     __esModule: true,
     default: {
-      View: React.forwardRef((props: unknown, ref: unknown) => React.createElement('View', { ...(props as object), ref })),
-      Text: React.forwardRef((props: unknown, ref: unknown) => React.createElement('Text', { ...(props as object), ref })),
-      createAnimatedComponent: (Component: React.ComponentType<unknown>) =>
-        React.forwardRef((props: unknown, ref: unknown) => React.createElement(Component, { ...(props as object), ref })),
+      View: AnimatedView,
+      Text: AnimatedText,
+      createAnimatedComponent,
     },
     useSharedValue: noopValue,
     useDerivedValue: (fn: () => unknown) => ({ value: fn() }),
@@ -120,8 +128,7 @@ jest.mock('react-native-reanimated', () => {
     Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
     runOnUI: (fn: (...args: unknown[]) => unknown) => fn,
     runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
-    createAnimatedComponent: (Component: React.ComponentType<unknown>) =>
-      React.forwardRef((props: unknown, ref: unknown) => React.createElement(Component, { ...(props as object), ref })),
+    createAnimatedComponent,
     measure: () => ({ x: 0, y: 0, width: 0, height: 0, pageX: 0, pageY: 0 }),
     scrollTo: noop,
     setGestureState: noop,

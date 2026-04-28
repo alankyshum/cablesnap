@@ -1,5 +1,4 @@
 import React from 'react'
-import { Alert } from 'react-native'
 import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -35,12 +35,8 @@ export default function BackupCategorySheet({
   onConfirm,
 }: Props) {
   const colors = useThemeColors();
-  const [selected, setSelected] = useState<Set<BackupCategoryName>>(new Set(initialSelected));
-
-  useEffect(() => {
-    if (!visible) return;
-    setSelected(new Set(initialSelected));
-  }, [visible, initialSelected]);
+  const [draftSelected, setDraftSelected] = useState<Set<BackupCategoryName> | null>(null);
+  const selected = draftSelected ?? new Set(initialSelected);
 
   const selectedCount = selected.size;
   const title = mode === 'import' ? 'Choose what to import' : 'Choose what to export';
@@ -55,21 +51,29 @@ export default function BackupCategorySheet({
   );
 
   const toggleCategory = (category: BackupCategoryName) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
+    setDraftSelected((prev) => {
+      const next = new Set(prev ?? initialSelected);
       if (next.has(category)) next.delete(category);
       else next.add(category);
       return next;
     });
   };
 
-  const selectAll = () => setSelected(new Set(categories));
-  const clearAll = () => setSelected(new Set());
+  const selectAll = () => setDraftSelected(new Set(categories));
+  const clearAll = () => setDraftSelected(new Set());
+  const handleClose = () => {
+    setDraftSelected(null);
+    onClose();
+  };
+  const handleConfirm = () => {
+    onConfirm(orderedSelected);
+    setDraftSelected(null);
+  };
 
   return (
     <BottomSheet
       isVisible={visible}
-      onClose={onClose}
+      onClose={handleClose}
       title={title}
       snapPoints={[0.62, 0.85]}
     >
@@ -136,7 +140,7 @@ export default function BackupCategorySheet({
       <View style={styles.footer}>
         <Button
           variant="outline"
-          onPress={onClose}
+          onPress={handleClose}
           disabled={loading}
           style={styles.footerButton}
           accessibilityLabel={`Cancel ${mode}`}
@@ -145,7 +149,7 @@ export default function BackupCategorySheet({
         </Button>
         <Button
           variant="default"
-          onPress={() => onConfirm(orderedSelected)}
+          onPress={handleConfirm}
           disabled={loading || selectedCount === 0}
           loading={loading}
           style={styles.footerButton}

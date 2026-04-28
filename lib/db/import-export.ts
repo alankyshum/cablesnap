@@ -206,12 +206,6 @@ type ImportOptions = {
   selectedCategories?: BackupCategoryName[];
 };
 
-const APP_SETTINGS_CATEGORY_ORDER: BackupCategoryName[] = [
-  "plate_calculator_settings",
-  "rest_timer_settings",
-  "app_preferences",
-];
-
 function getDefaultSelectedCategories(): BackupCategoryName[] {
   return [...BACKUP_CATEGORY_ORDER];
 }

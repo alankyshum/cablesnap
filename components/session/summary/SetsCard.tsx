@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import type { WorkoutSet } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
-import { fontSizes } from "@/constants/design-tokens";
 
 type SetGroup = {
   name: string;

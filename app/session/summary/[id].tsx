@@ -57,7 +57,7 @@ function Summary() {
   );
 
   const data = useSummaryData(id);
-  const { session, completed, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount, primaryMuscles, secondaryMuscles } = data;
+  const { session, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount, primaryMuscles, secondaryMuscles } = data;
   const actions = useSummaryActions(id);
 
   // Sync rating/notes when session loads
