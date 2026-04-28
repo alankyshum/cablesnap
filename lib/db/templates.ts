@@ -131,6 +131,8 @@ export async function getTemplateById(
       exercise_attachment: exercises.attachment,
       exercise_training_modes: exercises.training_modes,
       exercise_is_voltra: exercises.is_voltra,
+      exercise_start_image_uri: exercises.start_image_uri,
+      exercise_end_image_uri: exercises.end_image_uri,
     })
     .from(templateExercises)
     .leftJoin(exercises, eq(templateExercises.exercise_id, exercises.id))
@@ -165,6 +167,8 @@ export async function getTemplateById(
           attachment: r.exercise_attachment,
           training_modes: r.exercise_training_modes,
           is_voltra: r.exercise_is_voltra,
+          start_image_uri: r.exercise_start_image_uri,
+          end_image_uri: r.exercise_end_image_uri,
         })
       : undefined,
   }));

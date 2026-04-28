@@ -61,7 +61,9 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       mount_position TEXT DEFAULT NULL,
       attachment TEXT DEFAULT 'handle',
       training_modes TEXT DEFAULT '["weight"]',
-      is_voltra INTEGER DEFAULT 0
+      is_voltra INTEGER DEFAULT 0,
+      start_image_uri TEXT DEFAULT NULL,
+      end_image_uri TEXT DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_templates (

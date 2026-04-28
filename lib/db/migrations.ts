@@ -65,6 +65,9 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "exercises", "attachment", "TEXT DEFAULT 'handle'");
   await addColumnIfMissing(database, "exercises", "training_modes", `TEXT DEFAULT '["weight"]'`);
   await addColumnIfMissing(database, "exercises", "is_voltra", "INTEGER DEFAULT 0");
+  // BLD-561: visual exercise illustrations — user-supplied URIs for custom exercises.
+  await addColumnIfMissing(database, "exercises", "start_image_uri", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "exercises", "end_image_uri", "TEXT DEFAULT NULL");
 
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");

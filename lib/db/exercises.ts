@@ -21,6 +21,9 @@ function mapRow(row: ExerciseRow): Exercise {
     attachment: (row.attachment as Exercise["attachment"]) ?? undefined,
     training_modes: row.training_modes ? JSON.parse(row.training_modes) : undefined,
     is_voltra: row.is_voltra === 1 ? true : undefined,
+    // BLD-561: optional user-supplied illustration URIs (custom exercises only).
+    start_image_uri: row.start_image_uri ?? undefined,
+    end_image_uri: row.end_image_uri ?? undefined,
   };
 }
 

@@ -29,6 +29,9 @@ export const exercises = sqliteTable("exercises", {
   attachment: text("attachment").default("handle"),
   training_modes: text("training_modes").default('["weight"]'),
   is_voltra: integer("is_voltra").default(0),
+  // BLD-561: optional user-supplied illustration URIs for custom exercises.
+  start_image_uri: text("start_image_uri"),
+  end_image_uri: text("end_image_uri"),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {
