@@ -12,8 +12,8 @@ import { renderHook, waitFor } from "@testing-library/react-native";
 
 const mockHideAsync = jest.fn();
 const mockGetDatabase = jest.fn();
-const mockIsMemoryFallback = jest.fn(() => false);
-const mockIsOnboardingComplete = jest.fn(async () => true);
+const mockIsMemoryFallback = jest.fn((...args: unknown[]): boolean => { void args; return false; });
+const mockIsOnboardingComplete = jest.fn(async (...args: unknown[]): Promise<boolean> => { void args; return true; });
 const mockSetupGlobalHandler = jest.fn();
 const mockDetectWebSharedMemorySupport = jest.fn();
 
