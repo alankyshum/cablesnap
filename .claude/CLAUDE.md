@@ -19,6 +19,37 @@ CableSnap is licensed under **AGPL-3.0-or-later**. All agents MUST comply:
 - **Styling:** React Native StyleSheet
 - **Testing:** Jest (unit), Playwright (e2e), Maestro (mobile e2e)
 
+## Concurrent-Agent Safety (MANDATORY for parallel work)
+
+`/projects/cablesnap` is a single shared filesystem mount across agent
+containers. When two agents work in parallel, `git checkout` on one yanks
+the working tree out from under the other — silently — and corrupts any
+untracked artefacts (image gen output, build outputs, snapshots, dev-server
+state). See `.learnings/INDEX.md` → "Concurrent-Agent Safety" and BLD-765.
+
+**Rule:** Use a per-branch git worktree whenever the work
+- generates untracked artefacts (image gen, builds, snapshots), OR
+- requires a stable branch checkout while another CableSnap agent might be active.
+
+When in doubt, use a worktree. The cost is sub-second; the upside is no clobbered work.
+
+```bash
+# Start (idempotent — reuses if the worktree already exists)
+eval "$(./scripts/agent-worktree.sh start bld-N-feature)"
+cd "$AGENT_WORKTREE_DIR"
+
+# ... do work, run tests, generate artefacts ...
+
+# Stop at session end (refuses if dirty; pass --force to discard)
+eval "$(./scripts/agent-worktree.sh stop bld-N-feature)"
+```
+
+Subcommands:
+- `start <branch>` — create or reuse `/tmp/wt-<branch>`. Fetches from origin if missing.
+- `stop <branch> [--force]` — remove worktree. No-op if missing. Refuses dirty without `--force`.
+- `status [<branch>]` — show one or all worktrees.
+- `list` — `git worktree list` shorthand.
+
 ## Dev Server (Human — port 8081)
 
 **The user starts the dev server manually on port 8081. Do NOT auto-start it.**

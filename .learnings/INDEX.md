@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
 Last updated: 2026-04-28
-Total learnings: 217
+Total learnings: 218
 
 ## How to Use This Knowledge Base
 
@@ -30,6 +30,32 @@ scripts/memory-cli add "Decision Name" "Body details" main "source"
 If both paths fail, file an infra ticket — do **not** silently skip the memory
 step. See BLD-746 process learning for full context.
 
+## Concurrent-Agent Safety (canonical)
+
+`/projects/cablesnap` is a shared mount across agent containers. If two
+agents are active at the same time, `git checkout` on one **silently**
+yanks the working tree out from under the other and corrupts untracked
+artefacts (image gen, builds, snapshots, dev-server state).
+
+**Rule:** Use a per-branch git worktree whenever the work generates
+untracked artefacts OR another CableSnap agent might be active. When in
+doubt, use a worktree.
+
+```bash
+# Start an isolated worktree
+eval "$(./scripts/agent-worktree.sh start bld-N-feature)"
+cd "$AGENT_WORKTREE_DIR"
+
+# ... do work ...
+
+# Clean up at session end
+eval "$(./scripts/agent-worktree.sh stop bld-N-feature)"
+```
+
+See BLD-765 learning in `process/quality-pipeline.md` for the full
+incident and pattern. The script is idempotent, recovers stale locks,
+and refuses to remove dirty worktrees without `--force`.
+
 ## Categories
 
 ### Patterns
@@ -57,6 +83,7 @@ step. See BLD-746 process learning for full context.
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-28 | BLD-765 | Per-Agent Git Worktrees Are Mandatory for Concurrent CableSnap Work | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-746 | Memory-CLI Path Discoverability — Documented vs Actual Locations Diverge | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-732 | CVD-Immune Intensity Encoding for Low-Cardinality Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-28 | BLD-732 | Verification-Gap vs Code-Defect: The Conditional-Approval Discriminator | Process | [quality-pipeline.md](process/quality-pipeline.md) |
