@@ -282,7 +282,7 @@ EXAMPLES:
   # Inspect everything currently checked out
   ./scripts/agent-worktree.sh list
 
-See BLD-765 and .learnings/patterns/agent-worktrees.md for full context.
+See BLD-765 and .agents/CONCURRENT-AGENT-SAFETY.md for full context.
 EOF
 }
 
