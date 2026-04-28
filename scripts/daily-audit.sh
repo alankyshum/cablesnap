@@ -6,6 +6,16 @@
 #   2. BLD_480_PRE_FIX_SHA — pinned parent of `6f067cc` (BLD-480's fix PR #292)
 #      which reproduces the MusclesWorkedCard cropping bug
 #
+# Each scenario emits four PNGs per viewport (BLD-744):
+#   <scenario>/<viewport>.png                  ← baseline
+#   <scenario>/<viewport>-deuteranopia.png     ← CVD: red-green (~6% males)
+#   <scenario>/<viewport>-protanopia.png       ← CVD: red-cone (~2% males)
+#   <scenario>/<viewport>-tritanopia.png       ← CVD: blue-cone (rare)
+# Implemented via Chromium DevTools Protocol's
+# `Emulation.setEmulatedVisionDeficiency` in `e2e/scenarios/capture-with-cvd.ts`.
+# The CVD captures share a single browser session per scenario, so runtime
+# stays well under 2x baseline.
+#
 # The pre-fix commit is the PERMANENT DAILY SMOKE (QD#1). If the ux-designer
 # vision pipeline silently regresses, the audit loop would produce green audits
 # indefinitely; running scenarios against this known-bad commit every day
@@ -17,7 +27,7 @@
 # MusclesWorkedCard | body-figure. The match-check is performed by the
 # ux-designer agent itself on intake (see AGENTS-ux-designer.md).
 #
-# Refs: BLD-494, TL#6, QD#1, QD#2
+# Refs: BLD-494, BLD-744, TL#6, QD#1, QD#2
 
 set -euo pipefail
 

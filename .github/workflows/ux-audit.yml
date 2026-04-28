@@ -3,10 +3,14 @@ name: UX Audit (Daily Visual Capture)
 # Daily visual UX audit capture (BLD-481, unblocks BLD-645).
 #
 # Exports the web bundle in dev mode (so the `__TEST_SCENARIO__` seed hook is
-# active) and runs the scenario specs at the `mobile` viewport. Screenshots +
-# JSON metadata land in `.pixelslop/screenshots/scenarios/<scenario>/` and
-# are uploaded as a downloadable artifact for the ux-designer agent to
-# consume via `gh run download`.
+# active) and runs the scenario specs at the `mobile` viewport. Each scenario
+# emits a baseline screenshot AND three CVD-emulated variants (deuteranopia /
+# protanopia / tritanopia) via Chromium DevTools Protocol's
+# `Emulation.setEmulatedVisionDeficiency` — see `e2e/scenarios/capture-with-cvd.ts`
+# (BLD-744). Screenshots + JSON metadata land in
+# `.pixelslop/screenshots/scenarios/<scenario>/` and are uploaded as a
+# downloadable artifact for the ux-designer agent to consume via
+# `gh run download`.
 #
 # Why GitHub Actions, not the agent runtime container:
 #   - Container is shared infra and lacks Chromium runtime libs (libnss3,
@@ -16,7 +20,7 @@ name: UX Audit (Daily Visual Capture)
 #     Playwright successfully in CI.
 #
 # Refs: BLD-481 (audit loop), BLD-494 (scenario hook), BLD-631 / BLD-644
-#       (prior attempts), BLD-645 (this workflow).
+#       (prior attempts), BLD-645 (this workflow), BLD-744 (CVD captures).
 
 on:
   workflow_dispatch: {}

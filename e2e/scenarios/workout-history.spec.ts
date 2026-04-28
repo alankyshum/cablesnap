@@ -3,13 +3,15 @@
  *
  * Seeds 5 completed sessions via window.__TEST_SCENARIO__, navigates to
  * /history, and captures a screenshot at the `mobile` Playwright project
- * viewport (v1 is mobile-only per TL#4).
+ * viewport (v1 is mobile-only per TL#4). Each scenario also captures three
+ * CVD-emulated variants (deuteranopia / protanopia / tritanopia) via the
+ * helper in `./capture-with-cvd.ts` (BLD-744).
  *
- * Refs: BLD-494, BLD-481
+ * Refs: BLD-494, BLD-481, BLD-744
  */
 import { test, expect } from "@playwright/test";
-import * as fs from "fs";
 import * as path from "path";
+import { captureWithCvd } from "./capture-with-cvd";
 
 const SCENARIO = "workout-history";
 const OUT_DIR = path.resolve(
@@ -41,22 +43,20 @@ test.describe("@scenario workout-history", () => {
     });
     await page.waitForTimeout(500);
 
-    fs.mkdirSync(OUT_DIR, { recursive: true });
     const viewport = "mobile";
-    const pngPath = path.join(OUT_DIR, `${viewport}.png`);
-    const metaPath = path.join(OUT_DIR, `${viewport}.json`);
-
-    await page.screenshot({ path: pngPath, fullPage: true });
-
-    const meta = {
-      scenario: SCENARIO,
-      label: "workout-history-populated",
-      route: "/history",
+    await captureWithCvd({
+      page,
+      outDir: OUT_DIR,
       viewport,
-      viewportSize: page.viewportSize(),
-      commitSha: process.env.GITHUB_SHA ?? process.env.COMMIT_SHA ?? null,
-      capturedAt: new Date().toISOString(),
-    };
-    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+      meta: {
+        scenario: SCENARIO,
+        label: "workout-history-populated",
+        route: "/history",
+        viewport,
+        viewportSize: page.viewportSize(),
+        commitSha: process.env.GITHUB_SHA ?? process.env.COMMIT_SHA ?? null,
+        capturedAt: new Date().toISOString(),
+      },
+    });
   });
 });

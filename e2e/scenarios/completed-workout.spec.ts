@@ -3,17 +3,19 @@
  *
  * Seeds one completed session via window.__TEST_SCENARIO__, navigates to the
  * post-workout summary screen, and captures a screenshot at the `mobile`
- * Playwright project viewport (v1 is mobile-only per TL#4).
+ * Playwright project viewport (v1 is mobile-only per TL#4). Each scenario
+ * also captures three CVD-emulated variants (deuteranopia / protanopia /
+ * tritanopia) via the helper in `./capture-with-cvd.ts` (BLD-744).
  *
  * The seeded session id is pinned in `lib/db/test-seed.ts#seedCompletedWorkout`
  * as `scenario-session-1`, so this spec can navigate directly to the summary
  * route without first reading the DB.
  *
- * Refs: BLD-494, BLD-481
+ * Refs: BLD-494, BLD-481, BLD-744
  */
 import { test, expect } from "@playwright/test";
-import * as fs from "fs";
 import * as path from "path";
+import { captureWithCvd } from "./capture-with-cvd";
 
 const SCENARIO = "completed-workout";
 const SESSION_ID = "scenario-session-1";
@@ -49,22 +51,20 @@ test.describe("@scenario completed-workout", () => {
     });
     await page.waitForTimeout(500);
 
-    fs.mkdirSync(OUT_DIR, { recursive: true });
     const viewport = "mobile";
-    const pngPath = path.join(OUT_DIR, `${viewport}.png`);
-    const metaPath = path.join(OUT_DIR, `${viewport}.json`);
-
-    await page.screenshot({ path: pngPath, fullPage: true });
-
-    const meta = {
-      scenario: SCENARIO,
-      label: "post-workout-summary",
-      route: `/session/summary/${SESSION_ID}`,
+    await captureWithCvd({
+      page,
+      outDir: OUT_DIR,
       viewport,
-      viewportSize: page.viewportSize(),
-      commitSha: process.env.GITHUB_SHA ?? process.env.COMMIT_SHA ?? null,
-      capturedAt: new Date().toISOString(),
-    };
-    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+      meta: {
+        scenario: SCENARIO,
+        label: "post-workout-summary",
+        route: `/session/summary/${SESSION_ID}`,
+        viewport,
+        viewportSize: page.viewportSize(),
+        commitSha: process.env.GITHUB_SHA ?? process.env.COMMIT_SHA ?? null,
+        capturedAt: new Date().toISOString(),
+      },
+    });
   });
 });
