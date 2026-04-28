@@ -24,30 +24,16 @@ function assertResult(input: string, expected: Partial<NlpResult>, label: string
 type ArchetypeCase = [input: string, expected: Partial<NlpResult>];
 
 describe("parseExerciseDescription", () => {
-  it("parses chest archetypes", () => {
+  it("parses archetypes across all body categories", () => {
     const cases: ArchetypeCase[] = [
+      // chest
       ["bench press", { category: "chest", primary_muscles: ["chest"], secondary_muscles: ["triceps", "shoulders"] }],
       ["dumbbell bench press", { name: "Dumbbell Bench Press", category: "chest", equipment: "dumbbell", primary_muscles: ["chest"] }],
       ["decline bench", { category: "chest", primary_muscles: ["chest"] }],
       ["push ups", { category: "chest", primary_muscles: ["chest"], secondary_muscles: ["triceps", "shoulders"] }],
       ["cable crossover", { category: "chest", equipment: "cable", primary_muscles: ["chest"] }],
       ["dip", { category: "chest", primary_muscles: ["chest", "triceps"] }],
-    ];
-    for (const [input, expected] of cases) assertResult(input, expected, `chest: ${input}`);
-
-    // Incline barbell bench press — needs name-component assertions
-    const r = assertResult("incline barbell bench press", {
-      category: "chest",
-      equipment: "barbell",
-      primary_muscles: ["chest"],
-    }, "chest: incline barbell bench press");
-    expect(r.name).toContain("Incline");
-    expect(r.name).toContain("Barbell");
-    expect(r.name).toContain("Bench Press");
-  });
-
-  it("parses back archetypes", () => {
-    const cases: ArchetypeCase[] = [
+      // back
       ["lat pulldown", { category: "back", primary_muscles: ["lats"], secondary_muscles: ["biceps"] }],
       ["pull-up", { category: "back", primary_muscles: ["lats", "back"] }],
       ["chin-up", { category: "back", primary_muscles: ["lats", "biceps"] }],
@@ -56,12 +42,7 @@ describe("parseExerciseDescription", () => {
       ["shrug", { category: "back", primary_muscles: ["traps"] }],
       ["t-bar row", { category: "back", primary_muscles: ["back", "lats"] }],
       ["back extension", { category: "back", primary_muscles: ["back"] }],
-    ];
-    for (const [input, expected] of cases) assertResult(input, expected, `back: ${input}`);
-  });
-
-  it("parses shoulder archetypes", () => {
-    const cases: ArchetypeCase[] = [
+      // shoulders
       ["overhead press", { category: "shoulders", primary_muscles: ["shoulders"], secondary_muscles: ["triceps"] }],
       ["military press", { category: "shoulders", primary_muscles: ["shoulders"] }],
       ["lateral raise", { category: "shoulders", primary_muscles: ["shoulders"] }],
@@ -69,12 +50,7 @@ describe("parseExerciseDescription", () => {
       ["arnold press", { category: "shoulders", primary_muscles: ["shoulders"] }],
       ["rear delt fly", { category: "shoulders", primary_muscles: ["shoulders"] }],
       ["upright row", { category: "shoulders", primary_muscles: ["shoulders", "traps"] }],
-    ];
-    for (const [input, expected] of cases) assertResult(input, expected, `shoulders: ${input}`);
-  });
-
-  it("parses arm archetypes", () => {
-    const cases: ArchetypeCase[] = [
+      // arms
       ["bicep curl", { category: "arms", primary_muscles: ["biceps"] }],
       ["dumbbell curl", { category: "arms", equipment: "dumbbell", primary_muscles: ["biceps"] }],
       ["tricep pushdown", { category: "arms", primary_muscles: ["triceps"] }],
@@ -82,12 +58,7 @@ describe("parseExerciseDescription", () => {
       ["hammer curl", { category: "arms", primary_muscles: ["biceps"] }],
       ["wrist curl", { category: "arms", primary_muscles: ["forearms"] }],
       ["tricep kickback", { category: "arms", primary_muscles: ["triceps"] }],
-    ];
-    for (const [input, expected] of cases) assertResult(input, expected, `arms: ${input}`);
-  });
-
-  it("parses leg archetypes", () => {
-    const cases: ArchetypeCase[] = [
+      // legs
       ["squat", { category: "legs_glutes", primary_muscles: ["quads", "glutes"], secondary_muscles: ["hamstrings", "core"] }],
       ["barbell back squat", { category: "legs_glutes", equipment: "barbell", primary_muscles: ["quads", "glutes"] }],
       ["leg press", { category: "legs_glutes", primary_muscles: ["quads", "glutes"] }],
@@ -99,12 +70,7 @@ describe("parseExerciseDescription", () => {
       ["romanian deadlift", { category: "legs_glutes", primary_muscles: ["hamstrings", "glutes"] }],
       ["rdl", { category: "legs_glutes", primary_muscles: ["hamstrings", "glutes"] }],
       ["good morning", { category: "legs_glutes", primary_muscles: ["hamstrings", "back"] }],
-    ];
-    for (const [input, expected] of cases) assertResult(input, expected, `legs: ${input}`);
-  });
-
-  it("parses core archetypes", () => {
-    const cases: ArchetypeCase[] = [
+      // core
       ["crunch", { category: "abs_core", primary_muscles: ["core"] }],
       ["plank", { category: "abs_core", primary_muscles: ["core"] }],
       ["sit-up", { category: "abs_core", primary_muscles: ["core"] }],
@@ -112,7 +78,17 @@ describe("parseExerciseDescription", () => {
       ["leg raise", { category: "abs_core", primary_muscles: ["core"] }],
       ["ab rollout", { category: "abs_core", primary_muscles: ["core"] }],
     ];
-    for (const [input, expected] of cases) assertResult(input, expected, `core: ${input}`);
+    for (const [input, expected] of cases) assertResult(input, expected, `archetype: ${input}`);
+
+    // Incline barbell bench press — needs name-component assertions
+    const r = assertResult("incline barbell bench press", {
+      category: "chest",
+      equipment: "barbell",
+      primary_muscles: ["chest"],
+    }, "chest: incline barbell bench press");
+    expect(r.name).toContain("Incline");
+    expect(r.name).toContain("Barbell");
+    expect(r.name).toContain("Bench Press");
   });
 
   it("extracts equipment from keywords and abbreviations", () => {
@@ -171,42 +147,24 @@ describe("parseExerciseDescription", () => {
     }
   });
 
-  describe("name construction", () => {
-    it("constructs clean name with equipment + archetype", () => {
-      const r = parseExerciseDescription("dumbbell bench press");
-      expect(r.name).toBe("Dumbbell Bench Press");
-    });
+  it("constructs clean names: equipment+archetype, strips noise, omits bodyweight", () => {
+    expect(parseExerciseDescription("dumbbell bench press").name).toBe("Dumbbell Bench Press");
 
-    it("strips noise words from unknown exercises", () => {
-      const r = parseExerciseDescription("exercise for the chest using my bodyweight");
-      expect(r.name).not.toContain("for");
-      expect(r.name).not.toContain("the");
-      expect(r.name).not.toContain("using");
-      expect(r.name).not.toContain("my");
-    });
+    const noisy = parseExerciseDescription("exercise for the chest using my bodyweight");
+    for (const w of ["for", "the", "using", "my"]) expect(noisy.name).not.toContain(w);
 
-    it("does not include bodyweight in name", () => {
-      const r = parseExerciseDescription("bodyweight squat");
-      expect(r.name).not.toContain("Bodyweight");
-    });
+    expect(parseExerciseDescription("bodyweight squat").name).not.toContain("Bodyweight");
   });
 
-  describe("muscle keyword fallback", () => {
-    it("picks up muscle names when no archetype matches", () => {
-      const r = parseExerciseDescription("glute activation drill");
-      expect(r.primary_muscles).toContain("glutes");
-    });
+  it("muscle-keyword fallback: detects muscle, infers category, supports multi-group", () => {
+    const r1 = parseExerciseDescription("glute activation drill");
+    expect(r1.primary_muscles).toContain("glutes");
 
-    it("infers category from muscle group", () => {
-      const r = parseExerciseDescription("hamstring stretch");
-      expect(r.category).toBe("legs_glutes");
-    });
+    expect(parseExerciseDescription("hamstring stretch").category).toBe("legs_glutes");
 
-    it("detects multiple muscle groups", () => {
-      const r = parseExerciseDescription("chest and triceps combo");
-      expect(r.primary_muscles).toContain("chest");
-      expect(r.primary_muscles).toContain("triceps");
-    });
+    const r3 = parseExerciseDescription("chest and triceps combo");
+    expect(r3.primary_muscles).toContain("chest");
+    expect(r3.primary_muscles).toContain("triceps");
   });
 
   it("parses realistic user inputs", () => {
@@ -240,52 +198,22 @@ describe("parseExerciseDescription", () => {
     expect(gibberish.name).toBeTruthy();
   });
 
-  describe("confidence tracking", () => {
-    it("marks equipment as high confidence when keyword found", () => {
-      const r = parseExerciseDescription("barbell bench press");
-      expect(r.confidence.equipment).toBe("high");
-    });
-
-    it("marks category as high confidence from archetype", () => {
-      const r = parseExerciseDescription("bench press");
-      expect(r.confidence.category).toBe("high");
-    });
-
-    it("marks category as medium confidence from muscle fallback", () => {
-      const r = parseExerciseDescription("glute activation drill");
-      expect(r.confidence.category).toBe("medium");
-    });
-
-    it("does not include equipment confidence when not detected", () => {
-      const r = parseExerciseDescription("bench press");
-      expect(r.confidence.equipment).toBeUndefined();
-    });
+  it("tracks confidence: high for archetype/equipment, medium for muscle fallback, undefined when missing", () => {
+    expect(parseExerciseDescription("barbell bench press").confidence.equipment).toBe("high");
+    expect(parseExerciseDescription("bench press").confidence.category).toBe("high");
+    expect(parseExerciseDescription("glute activation drill").confidence.category).toBe("medium");
+    expect(parseExerciseDescription("bench press").confidence.equipment).toBeUndefined();
   });
 
-  describe("edge cases", () => {
-    it("handles mixed case input", () => {
-      assertResult("BARBELL BENCH PRESS", { category: "chest", equipment: "barbell" }, "edge: mixed case");
-    });
+  it("handles edge cases: case, whitespace, punctuation, no duplicate cable, secondary excludes primary", () => {
+    assertResult("BARBELL BENCH PRESS", { category: "chest", equipment: "barbell" }, "edge: mixed case");
+    assertResult("  dumbbell   bench   press  ", { category: "chest", equipment: "dumbbell" }, "edge: whitespace");
+    assertResult("pull_up", { category: "back", primary_muscles: ["lats", "back"] }, "edge: underscore");
 
-    it("handles extra whitespace", () => {
-      assertResult("  dumbbell   bench   press  ", { category: "chest", equipment: "dumbbell" }, "edge: whitespace");
-    });
+    const cable = parseExerciseDescription("cable row");
+    expect((cable.name.match(/cable/gi) || []).length).toBeLessThanOrEqual(1);
 
-    it("handles hyphens and underscores", () => {
-      assertResult("pull_up", { category: "back", primary_muscles: ["lats", "back"] }, "edge: underscore");
-    });
-
-    it("does not duplicate cable modifier when equipment is cable", () => {
-      const r = parseExerciseDescription("cable row");
-      const cableCount = (r.name.match(/cable/gi) || []).length;
-      expect(cableCount).toBeLessThanOrEqual(1);
-    });
-
-    it("secondary muscles exclude any primary muscles", () => {
-      const r = parseExerciseDescription("bench press");
-      for (const m of r.primary_muscles) {
-        expect(r.secondary_muscles).not.toContain(m);
-      }
-    });
+    const bp = parseExerciseDescription("bench press");
+    for (const m of bp.primary_muscles) expect(bp.secondary_muscles).not.toContain(m);
   });
 });
