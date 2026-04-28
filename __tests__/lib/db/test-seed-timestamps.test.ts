@@ -7,6 +7,13 @@
  * via `date(started_at / 1000, 'unixepoch')`).
  *
  * `duration_seconds` stays in SECONDS (column is `*_seconds`).
+ *
+ * Note: tests call `seedCompletedWorkout` / `seedWorkoutHistory` directly
+ * (they are exported for unit tests) instead of going through `seedScenario`.
+ * `seedScenario`'s `__DEV__` guard is inlined to `false` by `babel-preset-expo`
+ * under `NODE_ENV=test`, so the public entry point would short-circuit and
+ * exercise none of the seed logic. The guard behaviour itself is covered by
+ * `__tests__/lib/db/test-seed-guards.test.ts`.
  */
 
 const inserts: Array<{ sql: string; params: unknown[] }> = [];
@@ -26,21 +33,9 @@ jest.mock("../../../lib/db/helpers", () => ({
 jest.mock("react-native", () => ({ Platform: { OS: "web" } }));
 
 describe("test-seed timestamps (BLD-662)", () => {
-  const realDev = (globalThis as any).__DEV__;
-  const originalWindow = (globalThis as any).window;
-  const originalDocument = (globalThis as any).document;
-
   beforeEach(() => {
     inserts.length = 0;
     jest.clearAllMocks();
-    (globalThis as any).__DEV__ = true;
-    (globalThis as any).document = { body: { dataset: {} } };
-  });
-
-  afterAll(() => {
-    (globalThis as any).__DEV__ = realDev;
-    (globalThis as any).window = originalWindow;
-    (globalThis as any).document = originalDocument;
   });
 
   // 2026-01-01T00:00:00Z in ms = 1767225600000; in s = 1767225600.
@@ -48,9 +43,8 @@ describe("test-seed timestamps (BLD-662)", () => {
   const isMillisecondTimestamp = (n: number) => n > 1e12;
 
   test("seedWorkoutHistory inserts started_at / completed_at as milliseconds", async () => {
-    (globalThis as any).window = { __TEST_SCENARIO__: "workout-history" };
-    const { seedScenario } = require("../../../lib/db/test-seed");
-    await seedScenario();
+    const { seedWorkoutHistory } = require("../../../lib/db/test-seed");
+    await seedWorkoutHistory(mockDb);
 
     const sessionInserts = inserts.filter((i) => i.sql.includes("INSERT INTO workout_sessions"));
     expect(sessionInserts).toHaveLength(5);
@@ -74,13 +68,13 @@ describe("test-seed timestamps (BLD-662)", () => {
   });
 
   test("seedWorkoutHistory sessions land within the last 16 weeks (heatmap window)", async () => {
-    (globalThis as any).window = { __TEST_SCENARIO__: "workout-history" };
-    const { seedScenario } = require("../../../lib/db/test-seed");
-    await seedScenario();
+    const { seedWorkoutHistory } = require("../../../lib/db/test-seed");
+    await seedWorkoutHistory(mockDb);
 
     const now = Date.now();
     const sixteenWeeksMs = 16 * 7 * 24 * 60 * 60 * 1000;
     const sessionInserts = inserts.filter((i) => i.sql.includes("INSERT INTO workout_sessions"));
+    expect(sessionInserts).toHaveLength(5);
 
     for (const ins of sessionInserts) {
       const startedAt = ins.params[3] as number;
@@ -91,9 +85,8 @@ describe("test-seed timestamps (BLD-662)", () => {
   });
 
   test("seedCompletedWorkout inserts started_at / completed_at as milliseconds", async () => {
-    (globalThis as any).window = { __TEST_SCENARIO__: "completed-workout" };
-    const { seedScenario } = require("../../../lib/db/test-seed");
-    await seedScenario();
+    const { seedCompletedWorkout } = require("../../../lib/db/test-seed");
+    await seedCompletedWorkout(mockDb);
 
     const sessionInserts = inserts.filter((i) => i.sql.includes("INSERT INTO workout_sessions"));
     expect(sessionInserts).toHaveLength(1);
