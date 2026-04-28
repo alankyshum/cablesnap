@@ -659,3 +659,72 @@ One additional line. No other changes.
 > **In any in-repo (`modules/`) Expo module's `android/build.gradle`, `applyKotlinExpoModulesCorePlugin()` and `useCoreDependencies()` MUST be called as a pair.** The first wires the Kotlin compile plugin; the second wires the `:expo-modules-core` classpath dependency. Calling only one produces a build that configures cleanly but fails at `compileReleaseKotlin` with `Unresolved reference 'expo'`. This pairing is enforced by convention in every Expo node_module that uses the same template (`expo-health-connect`, `expo-modules-core` itself, etc.) — there is no in-repo `modules/` example to copy from in this codebase, which is why the original M0 commit dropped the second call. M1+ implementers adding Functions/Events/Views to `expo-wearos-bridge` (or any future `modules/expo-*` package) should treat the two calls as inseparable.
 
 **Process meta-lesson (CEO's anti-thrash budget rule):** rounds 1–4 (Groovy → autolinker pivot → variantFilter → Skia postinstall) and round 5 (this fix) all turned out to be real, mechanically-verifiable defects sequenced by which build phase happened to be reached first. None were speculative. The CEO's "stop iterating" directive on round 5 was nevertheless correct — it forced QD to do the side-by-side file comparison rather than letting techlead push another hypothesis-driven fix. Rule for future PRs of this shape: **if the same "STOP and produce evidence" cycle repeats four times, the fifth investigation should default to comparison-against-a-working-reference rather than top-down hypothesis generation.**
+
+---
+
+### Seventh-order finding — Sentry source-map upload secret gap (workflow plumbing, NOT architectural)
+
+After the sixth-order `useCoreDependencies()` fix landed on `fe62e6fc` and the bridge module compiled cleanly, the `Wear OS UI tests` workflow advanced ~9 minutes further into the release-build graph and failed at:
+
+```
+> Task :app:createBundleReleaseFdroidJsAndAssets_SentryUpload_com.persoack.…@0.26.15+68_68
+error: Auth token is required for this request. Please run `sentry-cli login` and try again!
+> Task :app:createBundleReleaseFdroidJsAndAssets_SentryUpload_… FAILED
+```
+
+**Categorization (CEO + QD jointly):** this is NOT a seventh-order BLD-736 architectural defect. The Sentry upload task lives in `node_modules/@sentry/react-native/sentry.gradle` and exists on every release-class build of `:app` regardless of whether the watch bridge is present or absent. Three pieces of evidence supported the categorization:
+
+1. **F-Droid official build path already builds without Sentry secrets** (`fdroid/metadata/com.persoack.cablesnap.yml` has none; the shipping `versionCode: 68` was built that way) — Sentry source-map upload is environmentally optional for F-Droid release builds.
+2. **`wear-tests.yml` only set `SENTRY_*` env vars on the `expo prebuild` step**, not on the `Assemble :app releaseFdroid` step. Until the bridge compiled successfully on `fe62e6fc`, the workflow had never reached an assemble step that triggered the Sentry gradle plugin's upload task — so the gap was latent, not BLD-736-introduced.
+3. **`@sentry/react-native/sentry.gradle:11` provides `SENTRY_DISABLE_AUTO_UPLOAD=true` as the canonical CI escape hatch** for environments that don't wire Sentry credentials.
+
+**Final fix (commit `04003c67`):** added `env: SENTRY_DISABLE_AUTO_UPLOAD: "true"` to both the `Assemble :wear` (defensive) and `Assemble :app releaseFdroid + verify GMS-free (AC10b)` steps in `.github/workflows/wear-tests.yml`. Inline comments cite `sentry.gradle:11` and the F-Droid precedent. Single file, 19 insertions.
+
+**End-state verification (run `25048347271` on `04003c67`):**
+
+```
+:wear:assembleRelease                                                   ✅ BUILD SUCCESSFUL in 3m 32s
+:app:createBundleReleaseFdroidJsAndAssets_SentryUpload_…                SKIPPED  ← escape hatch worked
+:app:createBundleReleaseFdroidJsAndAssets_SentryUploadCleanUp           SKIPPED
+:app:assembleReleaseFdroid                                              ✅ BUILD SUCCESSFUL in 27m 9s
+GMS Wearable class hits in …/app-releaseFdroid.apk: 0
+AC10b OK — F-Droid APK is GMS-Wearable-free.
+```
+
+Total wall-clock: 31m 55s on standard `ubuntu-latest`.
+
+---
+
+### Process meta-lesson — phase-vs-technique framing (CEO directive after round 6)
+
+QD identified, and CEO formalized, the diagnostic technique → build phase mapping that emerged across rounds 1–6:
+
+| Build phase | Failure surface | Right diagnostic technique |
+|---|---|---|
+| **Configure** | `:shopify_react-native-skia:configureCMakeRelWithDebInfo` style errors; AGP `variantFilter` rejecting requested variant; settings.gradle / autolinker producing wrong topology. | **Architectural inspection** — read AGP/autolinker source to understand the build-graph contract being violated. Comparison-against-working-reference is often unavailable here because the configure-phase artifact (the build graph itself) doesn't exist on disk. Rounds 1–4. |
+| **Compile** | `compileReleaseKotlin` / `compileReleaseJavaWithJavac` with `Unresolved reference` or unresolved type errors. | **Side-by-side comparison vs a working in-tree module** (`expo-health-connect/android/build.gradle`). Compile-phase failures usually mean a missing dep or missing plugin call — both of which are visible by diff against any node_module that compiles successfully. Round 5–6. |
+| **Assemble / package** | Bundle/upload tasks failing on credentials, signing, packaging-merger conflicts. | **Workflow / environment audit** — these are usually CI plumbing or secret gaps, not code defects. Compare against the canonical release path's environment (here: `scheduled-release.yml` and `fdroid/metadata/com.persoack.cablesnap.yml`). Round 7 (Sentry secret). |
+
+**Key insight:** the *order* of these phase failures is deterministic — configure failures fire first, then compile, then assemble. Each successful round merely advances the failure boundary one phase to the right. So the right technique to reach for at any given round is determined by the build phase the most recent failure exposed, not by iteration count. CEO's "anti-thrash budget" rule (round 5) interrupted hypothesis-driven thrash at exactly the moment the failure surface had moved to a phase where comparison-against-working-reference becomes available; that's why the rule worked.
+
+**Restatement for M1+ implementers:** when a build fails on this codebase, before iterating, identify which phase the failing task belongs to. Then pick the matching technique. Don't bring architectural-inspection tools to a compile-phase failure (you'll re-derive what side-by-side diff would have shown in 2 minutes), and don't bring side-by-side comparison to a configure-phase failure (the build graph isn't on disk yet to compare). Round 7's Sentry diagnosis was efficient precisely because we recognized "this is an assemble-phase task, the right tool is workflow/env audit, not code inspection" — and the categorization stayed disciplined despite happening immediately after six rounds of code-defect diagnosis.
+
+---
+
+### Gate 3 / proof-workflow rationale
+
+The `wear-tests.yml` workflow proves the *negative* AC10b assertion (F-Droid APK is GMS-Wearable-free, count = 0). Variant-split correctness also requires a *positive* assertion: the Play APK must contain the GMS Wearable classes. Three options were considered for the positive proof:
+
+| Option | Cost | Risk |
+|---|---|---|
+| (a) Trigger `scheduled-release.yml` from the PR branch | 0 (workflow already exists) | **Vetoed** — `scheduled-release.yml` lines 87/170/358 perform `git tag`, `git push origin main`, and `gh release create`. Running it on a feature branch would push tags/commits to `main` and cut a GitHub release. |
+| (b) Add a step to `wear-tests.yml` that also runs `:app:assembleRelease` | Low | Doubles the wall-clock of the path-filtered Wear OS UI tests workflow on every PR (~30 min → ~50+ min); blast radius too large for a check that needs to run only when verifying the variant split. |
+| (c) New `workflow_dispatch`-only file | Small (one file) | None — `contents: read` only, no side effects, manual trigger. |
+
+CEO authorized option (c). The new workflow `.github/workflows/wear-m0-play-apk-proof.yml` is `workflow_dispatch` only, has `permissions: contents: read`, builds `:app:assembleRelease`, runs the inverse grep gate (`grep -c gms/wearable > 0`), uploads the resulting APK as an artifact, and never tags / pushes / releases. Trigger:
+
+```
+gh workflow run "Wear OS M0 — Play APK GMS proof" --ref bld-736-wearos-m0-build-infra
+```
+
+Same `SENTRY_DISABLE_AUTO_UPLOAD=true` env on the assemble step, for the same reason as `wear-tests.yml`.
