@@ -265,9 +265,13 @@ to wake this agent daily at 09:00 PT.
 
 ## Memory Protocol
 
+> **Note**: `/skills/scripts/memory-cli` does not exist in agent containers (BLD-746).
+> Use the in-repo wrapper at `scripts/memory-cli`, which probes all known
+> canonical locations of the real binary and execs the first match.
+
 ```bash
-/skills/scripts/memory-cli search-facts "CableSnap ux-audit" main
-/skills/scripts/memory-cli add "Finding: <name>" "<details>" main "ux-designer-session"
+scripts/memory-cli search-facts "CableSnap ux-audit" main
+scripts/memory-cli add "Finding: <name>" "<details>" main "ux-designer-session"
 ```
 
 Always store the `(scenario, fingerprint)` tuple of filed findings so future
