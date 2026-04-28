@@ -87,7 +87,8 @@ jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache'
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), notificationAsync: jest.fn(), ImpactFeedbackStyle: { Light: 'light', Heavy: 'heavy' }, NotificationFeedbackType: { Success: 'success', Warning: 'warning' } }))
 jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn(), activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined), deactivateKeepAwake: jest.fn(), deactivateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined) }))
-jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn(), preload: jest.fn() }))
+// BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts
+jest.mock('../../lib/audio')
 jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 
 import React from 'react'
