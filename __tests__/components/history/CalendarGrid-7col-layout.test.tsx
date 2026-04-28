@@ -68,15 +68,23 @@ function findAncestorWithWidth(node: RNNode | null): unknown {
 }
 
 describe("CalendarGrid 7-column layout (BLD-661)", () => {
+  // BLD-817 perf: All three tests are read-only assertions against the same
+  // CalendarGrid output. Render once in beforeAll instead of three times in
+  // each `it`, then reuse `getByText`. Cuts wall-clock from ~6.7s to ~2.5s
+  // (the bulk was three full mounts of CalendarGrid + reanimated + gestures).
+  let getByText: ReturnType<typeof renderScreen>["getByText"];
+
+  beforeAll(() => {
+    ({ getByText } = renderScreen(<CalendarHarness cellSize={48} />));
+  });
+
   it("renders all 7 weekday header labels (no wrap to a 6+1 layout)", () => {
-    const { getByText } = renderScreen(<CalendarHarness cellSize={48} />);
     for (const label of DAYS) {
       expect(getByText(label)).toBeTruthy();
     }
   });
 
   it("uses percent-based column widths so 7 cells always fit one row", () => {
-    const { getByText } = renderScreen(<CalendarHarness cellSize={48} />);
     for (const label of DAYS) {
       const width = findAncestorWithWidth(getByText(label) as unknown as RNNode);
       expect(width).toBe(PERCENT_WIDTH);
@@ -84,7 +92,6 @@ describe("CalendarGrid 7-column layout (BLD-661)", () => {
   });
 
   it("date Pressables also use percent-based widths (so day cells align under their weekday header)", () => {
-    const { getByText } = renderScreen(<CalendarHarness cellSize={48} />);
     // April 2026 has 30 days. Sample a representative spread of dates.
     for (const day of ["1", "5", "15", "20", "30"]) {
       const width = findAncestorWithWidth(getByText(day) as unknown as RNNode);
