@@ -728,3 +728,76 @@ gh workflow run "Wear OS M0 — Play APK GMS proof" --ref bld-736-wearos-m0-buil
 ```
 
 Same `SENTRY_DISABLE_AUTO_UPLOAD=true` env on the assemble step, for the same reason as `wear-tests.yml`.
+
+### Eighth-order finding — Expo autolinker enumerates only `node_modules/` (Gate 3 root cause)
+
+**Surfaced by:** Gate 3 (Play APK GMS proof, `wear-m0-play-apk-proof.yml`) on CI run `25050300633` — the inverse-grep gate reported `GMS Wearable class hits in app-release.apk: 0`, FAILING the positive assertion. AC10a (Play APK CONTAINS GMS Wearable) silently regressed.
+
+**Status:** Gate 3 worked exactly as designed. It is the symmetric counter-test to AC10b and the only thing that could surface this gap before users hit a runtime `ClassNotFoundException` for `com.google.android.gms.wearable.*` in the phone-side bridge.
+
+**Root cause (hypothesis (b), pre-confirmed by direct evidence, NOT a speculative fix):**
+
+`expo-modules-autolinking` enumerates module directories ONLY under `node_modules/`. There are exactly two ways for a directory to be a candidate:
+
+1. It exists at `node_modules/<scope>/<name>/` AND has an `expo-module.config.json` AND a `package.json`.
+2. The host project declares `expo.autolinking.searchPaths` in its root `package.json`, pointing at additional roots.
+
+The bridge at `modules/expo-wearos-bridge/`:
+- ✗ is NOT under `node_modules/` (it's in-tree, lives in the repo root next to `app/`, intentionally so it can be edited like first-party code).
+- ✗ has NO `package.json` (verified: `ls modules/expo-wearos-bridge/package.json` → no such file).
+- ✗ root `package.json` has NO `expo.autolinking.searchPaths` key (verified: `jq '.expo.autolinking' package.json` → null).
+
+Therefore the autolinker NEVER discovers the bridge. `applyNativeModulesAppBuildGradle(project)` (the line emitted at the end of every Expo-prebuilt `:app/build.gradle`) iterates the autolinker's discovered set, which doesn't contain the bridge, so it emits zero `implementation project(':expo-wearos-bridge')` lines. The bridge module's own `android/build.gradle` IS present in the repo and DOES declare `implementation "com.google.android.gms:play-services-wearable:18.2.0"`, but a Gradle subproject that nobody depends on contributes zero classes to the consuming APK.
+
+The wiring path was simply never closed. This is a **plumbing gap**, not an architectural defect. AC10b (F-Droid grep == 0) was passing trivially — there were no GMS classes in either APK because the bridge was an island.
+
+**Three options considered:**
+
+| Option | What it does | Verdict |
+|---|---|---|
+| (A) Plugin extension — emit `include ':expo-wearos-bridge'` in settings.gradle and `implementation project(':expo-wearos-bridge')` in `:app/build.gradle` from `with-wearos-module.js`. | Same pattern as the existing `:wear` standalone-watch include; idempotent via sentinels; composes with the existing F-Droid `exclude module: "expo-wearos-bridge"` block (which finally has a real dependency to exclude). | ✅ **Selected (CEO ruling `48cc831d`).** Permanent infrastructure, single source of truth in the plugin, M1+ in-tree modules can follow the same pattern. |
+| (B) Add `package.json` to `modules/expo-wearos-bridge/` + `expo.autolinking.searchPaths` to root `package.json`. | Lets the autolinker discover the bridge naturally. | Deferred to post-M0. Adds a `package.json` whose only purpose is autolinker visibility (no scripts, no deps), and the root `searchPaths` config affects every future tool that consumes autolinker output. Larger blast radius than Option A for an M0 build-infra change. |
+| (C) `expo.autolinking.searchPaths: ["./modules"]` only (no per-module package.json). | Smaller config touch than (B). | Rejected. Without per-module `package.json`, the autolinker still needs version metadata, and several autolinker code paths assume `package.json` exists for resolution. Mixing Option C with (B) re-collapses to (B). |
+
+**What changed in code (this commit slice):**
+
+`plugins/with-wearos-module.js`:
+- Adds two new sentinel constants: `BRIDGE_PROJECT_INCLUDE_MARKER` (`cablesnap:wearos:bridge-project-include`) and `BRIDGE_APP_IMPLEMENTATION_MARKER` (`cablesnap:wearos:bridge-app-implementation`).
+- Adds `BRIDGE_GRADLE_PROJECT_NAME = ':expo-wearos-bridge'` as the single source of truth — the same string is referenced by the settings.gradle include, projectDir, `:app` dependency, AND the pre-existing `releaseFdroid{Implementation,RuntimeClasspath,CompileClasspath} { exclude module: "expo-wearos-bridge" }` block (which was authored before this gap was understood and now finally has a dependency to actually exclude).
+- `patchSettingsGradle` extended to also emit `include ':expo-wearos-bridge'` + `project(':expo-wearos-bridge').projectDir = new File(rootProject.projectDir, '../modules/expo-wearos-bridge/android')`. Fenced by the new sentinel; idempotent across `expo prebuild` re-runs.
+- `patchAppBuildGradle` extended with a step 3 that injects `implementation project(':expo-wearos-bridge')` immediately AFTER the opening `dependencies {` line. Fenced by the new sentinel; idempotent.
+- Three new `module.exports.*` so tests can verify the canonical name flows end-to-end without string-literal drift.
+
+`__tests__/plugins/with-wearos-module.test.js`:
+- New describe block `Option A — bridge Gradle wiring (autolinker gap)` with 4 tests, moving total Jest count from 39 → 43 per QD verification contract update `019dd96b`:
+  1. Positive include — settings.gradle gets sentinel + include + projectDir AND retains the pre-existing `:wear` include (composability).
+  2. Positive implementation — `:app/build.gradle` gets sentinel + `implementation project(...)`, verified to sit INSIDE the dependencies block via substring ordering (deps-open < marker < pre-existing react-android impl).
+  3. Idempotency — three re-applies on each of settings + app produce bytewise-identical output; bridge include + impl appear exactly once.
+  4. **F-Droid NO-OP (mandatory)** — symmetric counter-test to the Play APK proof: under `releaseFdroid`, the existing `releaseFdroid{Implementation,RuntimeClasspath,CompileClasspath} { exclude module: "expo-wearos-bridge"; exclude group: "com.google.android.gms" }` block STILL excludes the bridge after the new injection, so AC10b (F-Droid GMS-Wearable class count == 0) is preserved.
+
+**What did NOT change:**
+
+- No app-behavior code; M0 stays build-infra only.
+- No edits to `package.json`, no autolinker config keys.
+- No edits to the bridge module's own `android/build.gradle` (it already declared `play-services-wearable:18.2.0`).
+- No edits to `with-release-signing.js` or other plugins.
+- No baseline metadata changes; F-Droid metadata file remains 69 lines, `0.26.16/69`.
+
+**GMS-Wearable class count baseline (placeholder, fill from first green Gate 3 run):**
+
+```
+BASELINE_GMS_WEARABLE_CLASSES = TBD
+```
+
+Will be filled in a follow-up commit immediately after the Play APK proof workflow returns a non-zero count. The QD-aligned drift gate is **±20% from baseline** — significant deviations (e.g., a future GMS Wearable major version bump shifting class counts) trip the gate and force a deliberate baseline-bump review rather than silent drift. CEO STOP range `[5, 200]` from ruling `42522238` brackets sensible counts; values outside that range trigger an immediate stop regardless of baseline.
+
+**Sharp edge for M1+:** any future in-tree Expo module added under `modules/<name>/` will ALSO be invisible to the autolinker for the same reason. Two acceptable patterns going forward:
+
+1. **Plugin pattern** (preferred for build-infra modules like the bridge) — extend `plugins/with-<name>-module.js` with a sentinel-fenced `include` + `implementation project(...)` injection, mirroring this commit. Pros: single source of truth, no `package.json` proliferation. Cons: every new module needs a plugin entry.
+2. **Autolinker pattern** (preferred for app-behavior modules) — give the module a real `package.json` AND register its parent directory in root `expo.autolinking.searchPaths`. Pros: scales without per-module plugin code. Cons: a `package.json` whose only purpose is autolinker visibility (no scripts, no deps) is a smell that compounds over time; root `searchPaths` config affects every future tool consuming autolinker output.
+
+The decision should be re-evaluated when the second in-tree Expo module is added; one bridge does not establish a pattern, two do.
+
+**Process meta-lesson — Gate 3 paid for itself on its first run.**
+
+The Play APK proof workflow was added in this same PR (commits `daa4137c` + `e68b53c3`) as a defense against a hypothetical regression where someone refactors the build-type split and accidentally drops GMS from the Play APK along with the F-Droid APK. We added it pre-emptively, not in response to a specific failure. On its very first run it surfaced an eighth-order plumbing gap that would have shipped to production, manifested as a runtime `ClassNotFoundException` only on real Wear-paired devices, and been diagnostic-hostile (no Gradle/AGP error, no static-analysis warning, just "the wearable companion API silently no-ops"). **Lesson: symmetric counter-tests (positive AND negative assertions) are not redundant; they catch entire classes of plumbing gaps that single-sided proofs miss.** The cost of running Gate 3 once per release-eligible PR is dwarfed by one such averted regression.
