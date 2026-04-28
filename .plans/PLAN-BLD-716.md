@@ -787,3 +787,48 @@ Plausible culprits the artifact will discriminate between:
 
 **Process meta-lesson.** "Symmetric counter-tests" guard against silent regressions of F-Droid NO-OP, but they only matter when the positive case actually delivers value. Option A's positive tests passed (Jest verified the strings landed in gradle files) yet the integration was a no-op — Jest was testing the plugin output, not the build outcome. Gate 3's APK grep is the only test that proves the integration. Lesson: when adding wiring that duplicates a framework's own behavior, either prove the framework wasn't doing it OR don't add the wiring.
 
+---
+
+### Tenth-order finding (M0 #3): mergeExtDexRelease external-dep elision — hypothesis (g) CONFIRMED
+
+**Context.** Diagnostic round on `e1e1ec13` uploaded `wearos-m0-diagnostics` artifact. Two facts emerged:
+
+1. **Resolution is correct.** `app-release-runtime-classpath.txt` line 795–798 shows the full transitive chain:
+
+   ```
+   +--- project :expo
+   |    +--- project :expo-wearos-bridge
+   |    |    +--- project :expo-modules-core (*)
+   |    |    \--- com.google.android.gms:play-services-wearable:18.2.0
+   ```
+
+2. **No `productFlavors`.** `post-prebuild-app-build.gradle:135–160` shows only `buildTypes { debug, release, releaseFdroid }`. Play vs F-Droid is build-type only. Refutes hypothesis (c) (variant matching gap).
+
+So the gap is **post-resolution, pre-DEX**: deps tree contains `play-services-wearable:18.2.0`, resulting `app-release.apk` has zero `gms.wearable` classes.
+
+**Cause — AGP `mergeExtDexRelease` external-dep elision.** AGP's external-deps DEX merger elides AARs whose classes carry zero incoming bytecode references from any consuming module's `classes.jar`, even with `minifyEnabled false`. This is **not** R8 shrinking — R8 didn't run on this release variant. It happens at packaging time, after resolution but before DEX merge. The bridge's `WearOSModule.kt` had zero references to `com.google.android.gms.wearable.*`; therefore the bridge AAR's `classes.jar` had zero incoming bytecode references; therefore `mergeExtDexRelease` elided `play-services-wearable.aar` from the `:app` external-deps DEX merge set.
+
+**Fix — load-class reference in bridge Kotlin.** Added a companion-object property to `modules/expo-wearos-bridge/android/src/main/java/com/persoack/cablesnap/wearbridge/WearOSModule.kt`:
+
+```kotlin
+companion object {
+  @Suppress("unused")
+  private val WEARABLE_API_CLASS: Class<*> = Wearable::class.java
+}
+```
+
+Kotlin compiles this to a static initializer (`<clinit>`) with an `LDC` (load-class) instruction for `Wearable.class`. The `LDC` creates a hard reference at the bridge's JVM symbol table that AGP's dex merger respects — `mergeExtDexRelease` now packs `play-services-wearable.aar` into `:app`'s external-deps DEX. AC10a (Gate 3 grep) verifies.
+
+**F-Droid story.** Bridge module is excluded from `releaseFdroid` build type entirely via `releaseFdroidImplementation { exclude module: "expo-wearos-bridge" }`. Therefore the `WEARABLE_API_CLASS` reference is also absent from F-Droid — the load-class pin only matters in Play. AC10b (F-Droid count = 0) remains satisfied.
+
+**M1+ sharp-edge marker (revised).** The load-class pin pattern is **M0-only**. M1 lands actual `Wearable.getMessageClient(context)` calls in the bridge, which subsume the pin. M1 MUST:
+
+1. Replace `WEARABLE_API_CLASS` with real `MessageClient`/`DataClient` calls.
+2. Verify Gate 3 still passes after the pin is removed (real calls now provide the references that mergeExtDexRelease respects).
+
+If M1 forgets step 2, the symptom returns. The pin is intentionally `@Suppress("unused")` and tagged in kdoc as M0-only so M1 deletes it.
+
+**Baseline.** `BASELINE_GMS_WEARABLE_CLASSES = TBD` — fill from this PR's successful Gate 3 grep.
+
+**Process meta-lesson 2.** Dependency RESOLUTION proves nothing about dependency PACKAGING. Future Gradle bug-hunts that show the dep in `:dependencies` output but missing from APK output must verify packaging-stage artifacts: `mergeExtDex<Variant>` task input AARs, the bridge AAR's own `classes.jar` contents, and any `<Variant>RuntimeClasspath` artifact view. The `:dependencies` task reports the resolved graph; AGP's packaging tasks decide what actually ships.
+
