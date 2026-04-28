@@ -40,6 +40,10 @@ export type GroupCardProps = {
   // BLD-541 bodyweight modifier wiring (forwarded to SetRow when group is_bodyweight)
   onOpenBodyweightModifier?: (setId: string) => void;
   onClearBodyweightModifier?: (setId: string) => void;
+  // BLD-771 cable variant wiring (forwarded to SetRow; SetRow self-gates on
+  // isCableExercise(equipment) so passing for non-cable groups is a no-op).
+  onOpenVariantPicker?: (setId: string) => void;
+  onClearVariant?: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
@@ -61,6 +65,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onUpdate, onCheck, onDelete, onAddSet, onAddWarmups, onModeChange,
   onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
+  onOpenVariantPicker, onClearVariant,
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
   onPrefill,
@@ -119,6 +124,8 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
             isBodyweight={group.is_bodyweight}
             onOpenBodyweightModifier={onOpenBodyweightModifier}
             onClearBodyweightModifier={onClearBodyweightModifier}
+            onOpenVariantPicker={onOpenVariantPicker}
+            onClearVariant={onClearVariant}
             isTimerRunning={isActiveSet && (timerIsRunning ?? false)}
             isTimerActive={isActiveSet}
             timerDisplaySeconds={isActiveSet ? timerDisplaySeconds : undefined}

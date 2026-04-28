@@ -11,6 +11,7 @@ import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "
 import { getAppSetting, addWarmupSets } from "../../lib/db";
 import { sessionBreadcrumb } from "../../lib/session-breadcrumbs";
 import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
+import { useVariantPickerSheet } from "../../hooks/useVariantPickerSheet";
 import { getTemplateDurationEstimates } from "../../lib/db/sessions";
 import { generateWarmupSets } from "../../lib/warmup";
 import * as Haptics from "expo-haptics";
@@ -35,6 +36,7 @@ import { SessionToolboxSheet } from "../../components/session/SessionToolboxShee
 import { SessionHeaderToolbar } from "../../components/session/SessionHeaderToolbar";
 import { PRCelebration } from "../../components/session/PRCelebration";
 import { BodyweightModifierSheet } from "../../components/session/BodyweightModifierSheet";
+import { VariantPickerSheet } from "../../components/session/VariantPickerSheet";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -134,6 +136,15 @@ export default function ActiveSession() {
     handleDismiss: handleDismissBodyweightModifier,
     initialModifierKg: bwModifierInitial,
   } = useBodyweightModifierSheet({ groups, updateGroupSet, showError });
+  // BLD-771: cable variant picker. Sibling of useBodyweightModifierSheet.
+  const {
+    isVisible: variantPickerVisible,
+    handleOpen: handleOpenVariantPicker,
+    handleClose: handleCloseVariantPicker,
+    handleClear: handleClearVariant,
+    handleConfirm: handleConfirmVariant,
+    initialValues: variantInitial,
+  } = useVariantPickerSheet({ groups, updateGroupSet, showError });
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
 
@@ -242,6 +253,8 @@ export default function ActiveSession() {
       onLongPressSetType={handleLongPressSetType}
       onOpenBodyweightModifier={handleOpenBodyweightModifier}
       onClearBodyweightModifier={handleClearBodyweightModifier}
+      onOpenVariantPicker={handleOpenVariantPicker}
+      onClearVariant={handleClearVariant}
       onShowDetail={handleShowDetail}
       onSwap={handleSwapOpen}
       onDeleteExercise={handleDeleteExercise}
@@ -257,7 +270,7 @@ export default function ActiveSession() {
     />
       </>
     );
-  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleOpenVariantPicker, handleClearVariant, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
@@ -381,6 +394,14 @@ export default function ActiveSession() {
         unit={unit}
         onDone={handleSaveBodyweightModifier}
         onDismiss={handleDismissBodyweightModifier}
+      />
+      <VariantPickerSheet
+        isVisible={variantPickerVisible}
+        onClose={handleCloseVariantPicker}
+        attachment={variantInitial.attachment}
+        mount={variantInitial.mount}
+        onConfirm={handleConfirmVariant}
+        setNumber={variantInitial.setNumber}
       />
     </>
   );

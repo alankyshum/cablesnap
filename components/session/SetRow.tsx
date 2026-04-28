@@ -26,6 +26,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Check, Trash2 } from "lucide-react-native";
 import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
+import { SetAttachmentChip } from "./SetAttachmentChip";
+import { SetMountPositionChip } from "./SetMountPositionChip";
 import SwipeRowAction from "../../components/SwipeRowAction";
 import { getAppSetting, setAppSetting } from "@/lib/db";
 import { radii } from "../../constants/design-tokens";
@@ -35,6 +37,7 @@ import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
+import { isCableExercise } from "../../lib/cable-variant";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
@@ -114,6 +117,15 @@ export type SetRowProps = {
   isBodyweight?: boolean;
   onOpenBodyweightModifier?: (setId: string) => void;
   onClearBodyweightModifier?: (setId: string) => void;
+  // BLD-771: per-set cable variant. Chips are display-only and tap to open
+  // the picker via onOpenVariantPicker; long-press clears via onClearVariant
+  // (writes NULL/NULL through updateSetVariant — same write path as the
+  // picker's Clear button, so the silent-default-trap closure is uniform).
+  // Both callbacks are optional; the chips self-suppress when equipment is
+  // not cable (gate is isCableExercise(equipment)) so passing the props for
+  // non-cable rows is a no-op.
+  onOpenVariantPicker?: (setId: string) => void;
+  onClearVariant?: (setId: string) => void;
   // Timer controls (duration mode only)
   isTimerRunning?: boolean;
   isTimerActive?: boolean;
@@ -129,6 +141,7 @@ export const SetRow = memo(function SetRow({
   isTimerRunning, isTimerActive, timerDisplaySeconds,
   onTimerStart, onTimerStop,
   isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
+  onOpenVariantPicker, onClearVariant,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-559: synchronous confirmation feedback owned exclusively here.
@@ -453,6 +466,37 @@ export const SetRow = memo(function SetRow({
         </View>
       </SwipeRowAction>
 
+      {/*
+        BLD-771: Cable variant chips. Rendered as a footer row below the main
+        set row (so the 360dp landscape budget for the input row is unchanged,
+        per BLD-633 row-density review). Self-suppress when equipment is not
+        cable — `isCableExercise()` is the single gate, so adding new cable
+        equipment values to the union (lib/cable-variant.ts) makes them
+        appear here automatically.
+
+        Tap → onOpenVariantPicker (parent owns picker visibility state and
+        routes through the `updateSetVariant` write path).
+        Long-press → onClearVariant (writes NULL/NULL — same write path).
+
+        Each chip self-suppresses on null/undefined (BLD-771 plan: chips are
+        visible-when-set, picker-tap-target-when-empty); the wrapping
+        Pressable below keeps a tap target available even when both chips
+        are null, so users can open the picker on a fresh cable set.
+      */}
+      {isCableExercise({ equipment }) ? (
+        <Pressable
+          onPress={() => onOpenVariantPicker?.(set.id)}
+          onLongPress={() => onClearVariant?.(set.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Set ${set.set_number} cable variant`}
+          accessibilityHint="Double tap to choose attachment and pulley position; long press to clear"
+          style={styles.variantFooter}
+        >
+          <SetAttachmentChip attachment={set.attachment ?? null} />
+          <SetMountPositionChip mount={set.mount_position ?? null} />
+        </Pressable>
+      ) : null}
+
       <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
     </View>
   );
@@ -468,6 +512,18 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "transparent",
     marginBottom: 2,
+  },
+  // BLD-771: footer row for cable variant chips. flexWrap so on narrow
+  // screens (360dp landscape) the second chip wraps below rather than
+  // overflowing. paddingLeft aligns the chips with the set-number column.
+  variantFooter: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+    paddingLeft: 36,
+    paddingTop: 2,
+    paddingBottom: 2,
   },
   colSet: {
     width: 36,
