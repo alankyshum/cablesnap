@@ -150,14 +150,86 @@ describe("BLD-682 AC11: a11y label reads displayed value (not nullable set.weigh
     expect(getAllByLabelText("Set 1 reps, 0").length).toBeGreaterThan(0);
   });
 
-  it("AC14: lb unit renders 'pounds' in the weight label", () => {
-    const set = makeSet({
-      weight: null,
-      prefillCandidate: { weight: 220, reps: 8, duration_seconds: null },
+  // BLD-704 — AC14 reframed: pin the SetRow no-conversion / pass-through
+  // contract. SetRow is a display-only renderer; the `unit` prop changes
+  // ONLY the unit *word* in the accessibilityLabel, never the *number*.
+  //
+  // Verified at the time of writing: no kg↔lb math runs at this seam.
+  // - components/session/SetRow.tsx:177-181 (displayedWeight, a11y label)
+  // - components/session/ExerciseGroupCard.tsx (parent — passes set.weight straight through)
+  // - hooks/useSessionData.ts:149 (reads s.weight from DB, no transform)
+  // - hooks/resolvePrefillCandidate.ts (pure shape helper, no conversion)
+  // The only production callers of kgToLb / lbToKg / convertWeight are
+  // hooks/useBodyProfile.ts (body weight, not set weight), lib/strava.ts,
+  // and lib/plates.ts — none touch the session SetRow render path.
+  //
+  // Architectural decision (BLD-704, CEO + techlead verdict):
+  //   - SetRow is a pure display layer. Storage units in → labelled units out.
+  //   - If conversion is ever required, it MUST be introduced UPSTREAM —
+  //     either at the data layer or in useSessionData — NOT inside SetRow.
+  //     The Fix Placement Framework (single source of truth: storage units)
+  //     forbids per-component conversion that would silently desync display
+  //     and persistence.
+  //
+  // Why these tests exist:
+  //   - Original PR #402 AC14 only asserted the unit *word* swap
+  //     ("kilograms" → "pounds"). That's a weak invariant — it would still
+  //     pass even if a future commit accidentally introduced kg→lb math at
+  //     the SetRow seam (the displayed number would change, but the test
+  //     wouldn't notice). These tests pin the *number* too, so any
+  //     accidental conversion at this layer fails loudly.
+  //
+  // If you are reading this comment because a test below is failing after
+  // you added conversion logic somewhere, STOP and consider:
+  //   1. Is the conversion at the right layer? (Almost certainly NOT
+  //      SetRow — see useSessionData / data layer per the framework.)
+  //   2. Did you also update the persisted storage unit, or only the
+  //      display? Silent display-only conversion creates a unit-system
+  //      mismatch the moment the user switches preferences.
+  //   3. If the answer is genuinely "yes, conversion at SetRow is correct
+  //      now", update these tests AND post a comment on BLD-704 (or open
+  //      a fresh planning issue) explaining the architectural shift.
+  describe("AC14: SetRow is a pass-through display — `unit` prop swaps the WORD only", () => {
+    it("set.weight=45 + unit='lb' → label reads '45 pounds' (NOT silently converted to 99.2)", () => {
+      const set = makeSet({ weight: 45, reps: 8 });
+      const props = { ...baseProps(set), unit: "lb" as const };
+      const { getAllByLabelText, queryAllByLabelText } = render(<SetRow {...props} />);
+      // Substring matching — resilient to "Set 1 …" prefix changes — but
+      // anchored on the exact number `45` and the unit word `pounds`.
+      const matches = queryAllByLabelText(/(?:^|[^\d.])45(?:[^\d.]|$).*\bpounds\b/);
+      expect(matches.length).toBeGreaterThan(0);
+      // Exact-string sanity check against the current label format.
+      expect(getAllByLabelText("Set 1 weight, 45 pounds").length).toBeGreaterThan(0);
+      // Defensive: no rounded-conversion result may appear under any unit.
+      // 45 kg → 99.2 lb under kgToLb. If any of these appear, conversion
+      // has leaked into SetRow and the architectural contract is broken.
+      expect(queryAllByLabelText(/\b99\b.*\bpounds\b/).length).toBe(0);
+      expect(queryAllByLabelText(/\b99\.2\b.*\bpounds\b/).length).toBe(0);
+      expect(queryAllByLabelText(/\b100\b.*\bpounds\b/).length).toBe(0);
     });
-    const props = { ...baseProps(set), unit: "lb" as const };
-    const { getAllByLabelText } = render(<SetRow {...props} />);
-    expect(getAllByLabelText("Set 1 weight, 220 pounds").length).toBeGreaterThan(0);
+
+    it("sibling: set.weight=45 + unit='kg' → label reads '45 kilograms' (same number, different word)", () => {
+      const set = makeSet({ weight: 45, reps: 8 });
+      const props = { ...baseProps(set), unit: "kg" as const };
+      const { getAllByLabelText, queryAllByLabelText } = render(<SetRow {...props} />);
+      const matches = queryAllByLabelText(/(?:^|[^\d.])45(?:[^\d.]|$).*\bkilograms\b/);
+      expect(matches.length).toBeGreaterThan(0);
+      expect(getAllByLabelText("Set 1 weight, 45 kilograms").length).toBeGreaterThan(0);
+    });
+
+    it("prefillCandidate path: candidate.weight=45 + unit='lb' → label reads '45 pounds' (no conversion of candidate either)", () => {
+      // Pristine row — prefillCandidate provides the displayed value.
+      // The pass-through contract MUST hold for the candidate path too;
+      // resolvePrefillCandidate is a pure shape helper with no conversion.
+      const set = makeSet({
+        weight: null,
+        prefillCandidate: { weight: 45, reps: 8, duration_seconds: null },
+      });
+      const props = { ...baseProps(set), unit: "lb" as const };
+      const { getAllByLabelText, queryAllByLabelText } = render(<SetRow {...props} />);
+      expect(queryAllByLabelText(/(?:^|[^\d.])45(?:[^\d.]|$).*\bpounds\b/).length).toBeGreaterThan(0);
+      expect(getAllByLabelText("Set 1 weight, 45 pounds").length).toBeGreaterThan(0);
+    });
   });
 
   it("AC4: duration mode label reads displayed duration, not nullable set.duration_seconds", () => {
