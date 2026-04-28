@@ -186,9 +186,14 @@ describe('Workout Session Acceptance', () => {
     mockDb.getExerciseById.mockResolvedValue(exercise)
     mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
-    const { findByText } = renderScreen(<ActiveSession />)
+    const { findByTestId } = renderScreen(<ActiveSession />)
 
-    expect(await findByText('Bench Press')).toBeTruthy()
+    // BLD-783: query by stable testID instead of text — `findByText('Bench Press')`
+    // matched multiple a11y-labelled host nodes ("Remove Bench Press", "Swap Bench
+    // Press", etc.) introduced by the exercise card headers in the consolidated PR.
+    const heading = await findByTestId('exercise-heading-ex-1')
+    expect(heading).toBeTruthy()
+    expect(heading.props.children).toBe('Bench Press')
   })
 
   it('calls completeSession when finish workout is confirmed', async () => {

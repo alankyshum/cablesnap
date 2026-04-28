@@ -167,10 +167,6 @@ export default function ActiveSession() {
     toolboxSheetRef.current?.snapToIndex(0);
   }, [setPickerOpen]);
 
-  const handleToolboxDismiss = useCallback(() => {
-    // no-op — sheet handles its own close
-  }, []);
-
   const handleToolboxStartRest = useCallback((seconds: number) => {
     startRestWithDuration(seconds);
   }, [startRestWithDuration]);
@@ -385,7 +381,7 @@ export default function ActiveSession() {
       <SessionToolboxSheet
         sheetRef={toolboxSheetRef}
         onOpenRestSettings={handleOpenRestSettings}
-        onDismiss={handleToolboxDismiss}
+        onDismiss={() => { /* no-op */ }}
       />
       <BodyweightModifierSheet sheetRef={bwModifierSheetRef} initialModifierKg={bwModifierInitial} unit={unit} onDone={handleSaveBodyweightModifier} onDismiss={handleDismissBodyweightModifier} />
       <VariantPickerSheet isVisible={variant.isVisible} onClose={variant.handleClose} onConfirm={variant.handleConfirm} {...variant.initialValues} />
