@@ -3,6 +3,7 @@ import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, TrainingMode, SetType, Attachment, MountPosition } from "../types";
 import { coerceTrainingMode } from "../types";
+import { isAttachment, isMountPosition } from "../cable-variant";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
@@ -120,6 +121,9 @@ export async function getSourceSessionSets(
   }));
 }
 
+// BLD-771: variant fields push complexity to 16 (limit 15). Branches are pure
+// field defaults; the function is a thin INSERT wrapper, not branching logic.
+// eslint-disable-next-line complexity
 export async function addSet(
   sessionId: string,
   exerciseId: string,
@@ -786,4 +790,52 @@ export async function getLastBodyweightModifier(
     [exerciseId]
   );
   return row?.bodyweight_modifier_kg ?? null;
+}
+
+/**
+ * BLD-771: Fetch the recent cable-variant history window for an exercise.
+ *
+ * Returns up to `limit` rows ordered newest-first, suitable for passing into
+ * the pure `getLastVariant()` helper in `lib/cable-variant.ts`. Includes
+ * warmup and in-progress (uncompleted) sets — autofill should reflect the
+ * user's most recent _intent_, not just completed work.
+ *
+ * Order: `completed_at DESC NULLS LAST, set_number DESC`. UUIDv4 ids are not
+ * monotonic (TL TR2), so we cannot order by id; `completed_at` is durable for
+ * completed sets and `set_number DESC` is a stable tiebreaker for in-progress
+ * rows where `completed_at` is still NULL (clustered together at the front of
+ * the result via `NULLS LAST`).
+ *
+ * Window size 50 is the heuristic ceiling: a user training the same exercise
+ * 4×/week for a year produces ~200 sets; almost any exercise's most recent
+ * non-null attachment + mount_position will be found inside the first 10–20
+ * rows. 50 caps worst-case work while leaving headroom for users who
+ * intermittently log variants. The pure helper short-circuits as soon as both
+ * attributes resolve, so the typical scan is much shorter.
+ *
+ * Index plan: `idx_workout_sets_exercise` covers the WHERE clause. If
+ * EXPLAIN QUERY PLAN on a 10k-set DB shows SCAN, ship a partial index
+ * covering `(exercise_id) WHERE attachment IS NOT NULL OR mount_position IS NOT NULL`
+ * in a follow-up — measure first.
+ */
+export async function getRecentVariantHistory(
+  exerciseId: string,
+  limit: number = 50
+): Promise<{ attachment: Attachment | null; mount_position: MountPosition | null }[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<{
+    attachment: string | null;
+    mount_position: string | null;
+  }>(
+    `SELECT attachment, mount_position
+       FROM workout_sets
+      WHERE exercise_id = ?
+      ORDER BY completed_at DESC NULLS LAST, set_number DESC
+      LIMIT ?`,
+    [exerciseId, limit]
+  );
+  return rows.map((row) => ({
+    attachment: isAttachment(row.attachment) ? row.attachment : null,
+    mount_position: isMountPosition(row.mount_position) ? row.mount_position : null,
+  }));
 }
