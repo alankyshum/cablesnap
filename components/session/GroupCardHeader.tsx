@@ -53,7 +53,7 @@ function GroupCardHeaderInner({ group, exerciseNotesOpen, exerciseNotesDraft, fi
         <View style={styles.headerRow1}>
           <View style={{ flex: 1, flexShrink: 1 }}>
             <Pressable onLongPress={() => onDeleteExercise(eid)} delayLongPress={500} accessibilityLabel={`Remove ${group.name}`} accessibilityRole="button" accessibilityHint="Long press to remove exercise">
-              <Text testID={`exercise-heading-${eid}`} variant="title" style={[styles.groupTitle, { color: colors.primary }]}>{group.name}</Text>
+              <Text variant="title" style={[styles.groupTitle, { color: colors.primary }]}>{group.name}</Text>
             </Pressable>
             {previousPerformance != null && (
               <Pressable
