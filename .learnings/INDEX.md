@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
-Last updated: 2026-04-21
-Total learnings: 213
+Last updated: 2026-04-28
+Total learnings: 217
 
 ## How to Use This Knowledge Base
 
@@ -10,6 +10,25 @@ Before starting work on a task, search this index for relevant learnings:
 2. Read the pitfalls section for your technology stack
 3. Review recent decisions for architectural context
 4. Search by tags if looking for something specific
+
+## Memory CLI Invocation (canonical)
+
+The memory-cli binary is **not** at `/skills/scripts/memory-cli` despite what most
+agent instructions claim. Use one of these working invocations from inside a
+CableSnap agent container:
+
+```bash
+# Preferred — wrapper in this repo, probes all known locations:
+scripts/memory-cli search-facts "query" main
+scripts/memory-cli search-nodes "query" main
+scripts/memory-cli add "Decision Name" "Body details" main "source"
+
+# Direct, also works:
+/skills/claude-skills/tool--memory/scripts/memory-cli <subcommand> ...
+```
+
+If both paths fail, file an infra ticket — do **not** silently skip the memory
+step. See BLD-746 process learning for full context.
 
 ## Categories
 
@@ -38,6 +57,10 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-28 | BLD-746 | Memory-CLI Path Discoverability — Documented vs Actual Locations Diverge | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-28 | BLD-732 | CVD-Immune Intensity Encoding for Low-Cardinality Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-28 | BLD-732 | Verification-Gap vs Code-Defect: The Conditional-Approval Discriminator | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-28 | BLD-732 | Env-Infra Blockers Must Not Gate User-Facing UX/A11y PRs With Independently-Verified Authorship | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-21 | BLD-467 | Split Independent Seed Operations into Separate Transactions | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-21 | BLD-467 | Backfill FK Dependencies Before Seeding Child Rows | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-21 | BLD-466 | Expo Router Route Params Cannot Transport Large Data Payloads | Pitfalls | [build-config.md](pitfalls/build-config.md) |
