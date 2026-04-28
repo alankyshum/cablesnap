@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import type { WorkoutSet, TrainingMode, SetType, Attachment, MountPosition } from "../types";
+import type { WorkoutSet, TrainingMode, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { coerceTrainingMode } from "../types";
 import { isAttachment, isMountPosition } from "../cable-variant";
 import { categorize, type ExerciseCategory } from "../rest";
@@ -37,6 +37,8 @@ export async function getSessionSets(
       bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
       attachment: workoutSets.attachment,
       mount_position: workoutSets.mount_position,
+      grip_type: workoutSets.grip_type,
+      grip_width: workoutSets.grip_width,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -69,6 +71,11 @@ export async function getSessionSets(
     bodyweight_modifier_kg: r.bodyweight_modifier_kg ?? null,
     attachment: (r.attachment as Attachment | null) ?? null,
     mount_position: (r.mount_position as MountPosition | null) ?? null,
+    // BLD-768: per-set bodyweight grip variant. Cast at the DB read boundary;
+    // values are constrained by `lib/bodyweight-grip-variant.ts` type guards
+    // wherever they re-enter the system (CSV import, future analytics filter).
+    grip_type: (r.grip_type as GripType | null) ?? null,
+    grip_width: (r.grip_width as GripWidth | null) ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -138,7 +145,11 @@ export async function addSet(
   // BLD-771: per-set cable variant. Pass values from autofill helper at call site.
   // Both null when user has no prior variant on this exercise (no silent default).
   attachment?: Attachment | null,
-  mountPosition?: MountPosition | null
+  mountPosition?: MountPosition | null,
+  // BLD-768: per-set bodyweight grip variant. Same no-silent-default rule as
+  // cable variants — both NULL when user has no prior grip on this exercise.
+  gripType?: GripType | null,
+  gripWidth?: GripWidth | null
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
@@ -156,6 +167,8 @@ export async function addSet(
     exercise_position: exercisePosition ?? 0,
     attachment: attachment ?? null,
     mount_position: mountPosition ?? null,
+    grip_type: gripType ?? null,
+    grip_width: gripWidth ?? null,
   });
   return {
     id,
@@ -178,6 +191,8 @@ export async function addSet(
     exercise_position: exercisePosition ?? 0,
     attachment: attachment ?? null,
     mount_position: mountPosition ?? null,
+    grip_type: gripType ?? null,
+    grip_width: gripWidth ?? null,
   };
 }
 
@@ -196,6 +211,9 @@ export async function addSetsBatch(
     // BLD-771: per-set cable variant (autofilled by caller from history).
     attachment?: Attachment | null;
     mountPosition?: MountPosition | null;
+    // BLD-768: per-set bodyweight grip variant (autofilled by caller from history).
+    gripType?: GripType | null;
+    gripWidth?: GripWidth | null;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
@@ -221,12 +239,14 @@ export async function addSetsBatch(
       exercise_position: s.exercisePosition ?? 0,
       attachment: s.attachment ?? null,
       mount_position: s.mountPosition ?? null,
+      grip_type: s.gripType ?? null,
+      grip_width: s.gripWidth ?? null,
     };
   });
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position, attachment, mount_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
@@ -234,6 +254,9 @@ export async function addSetsBatch(
           r.id, r.session_id, r.exercise_id, r.set_number,
           r.link_id, r.round, r.training_mode, r.tempo, r.set_type, r.exercise_position,
           r.attachment ?? null, r.mount_position ?? null,
+          // BLD-768: positional binding contract — grip_type at index 12, grip_width at index 13.
+          // Pinned by `__tests__/lib/db/add-sets-batch-bodyweight-grip.test.ts`.
+          r.grip_type ?? null, r.grip_width ?? null,
         ]);
       }
     } finally {
@@ -362,6 +385,33 @@ export async function updateSetVariant(
   const values: Record<string, unknown> = {};
   if (attachment !== undefined) values.attachment = attachment;
   if (mountPosition !== undefined) values.mount_position = mountPosition;
+  if (Object.keys(values).length === 0) return;
+  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
+}
+
+/**
+ * BLD-768: Update per-set bodyweight grip variant (grip_type + grip_width).
+ *
+ * Sibling of `updateSetVariant()` (cable, BLD-771). Same 3-way undefined/null/value
+ * contract:
+ *   - value (GripType | GripWidth) → write that value
+ *   - null                         → write null (explicit clear)
+ *   - undefined                    → DO NOT write the column at all
+ *   - both undefined               → no-op (no UPDATE issued)
+ *
+ * Both attributes are independent — passing `gripType` and leaving `gripWidth`
+ * undefined leaves the existing grip_width untouched. To explicitly clear,
+ * pass null.
+ */
+export async function updateSetBodyweightVariant(
+  id: string,
+  gripType: GripType | null | undefined,
+  gripWidth: GripWidth | null | undefined
+): Promise<void> {
+  const db = await getDrizzle();
+  const values: Record<string, unknown> = {};
+  if (gripType !== undefined) values.grip_type = gripType;
+  if (gripWidth !== undefined) values.grip_width = gripWidth;
   if (Object.keys(values).length === 0) return;
   await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
 }

@@ -67,10 +67,12 @@ describe('addSetsBatch — variant positional binding (BLD-771)', () => {
     // rather than the total count.
     expect(mockExecuteAsync).toHaveBeenCalled();
     const args = mockExecuteAsync.mock.calls.at(-1)![0] as unknown[];
-    expect(args).toHaveLength(12);
+    // BLD-768: param count grew from 12 → 14 with grip_type + grip_width.
+    // Cable variant slots (10, 11) remain stable.
+    expect(args).toHaveLength(14);
     // Slot order is: id, session_id, exercise_id, set_number, link_id,
     // round, training_mode, tempo, set_type, exercise_position,
-    // attachment, mount_position.
+    // attachment, mount_position, grip_type, grip_width.
     expect(args[1]).toBe('sess-1');           // session_id
     expect(args[2]).toBe('ex-1');             // exercise_id
     expect(args[3]).toBe(1);                  // set_number
