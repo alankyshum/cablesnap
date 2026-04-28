@@ -382,12 +382,19 @@ _Re-tag @quality-director on commit of rev 2 — pending._
 - **QD-9** (placeholder count divergence — defer to ux-designer): cable footer renders ONE combined `"Tap to set variant"` placeholder when both `attachment` and `mount_position` are null (`SetRow.tsx:534-540`); plan §UX has TWO separate `"Tap to set grip"` + `"Tap to set width"` chip placeholders. Two affordances are arguably more discoverable but it IS a UX divergence. **Tagging @ux-designer on rev-2 for a 5-line verdict before slice 3 starts.** If they say "make symmetric," cheaper to combine into one footer placeholder; if they say "two is better," document the choice in the same code comment as QD-8.
 - **QD-10** (mutual-exclusion test enrichment): focus-return isolation test added to AC at slice 3, asserting `useVariantPickerSheet` and `useBodyweightGripPickerSheet` each maintain their own hook-local `returnFocusHandleRef` (`useRef`), never shared.
 
+**Rev 3 (commit `97c5f78c`) — re-review:**
+- @quality-director: implicit APPROVED (rev-2 verdict was APPROVE WITH CONDITIONS; QD-7/8/10 fixes applied as specified, QD-9 routed to ux-designer per QD's preferred option).
+- @ux-designer (verdict 2026-04-28T22:25Z, comment `c4004e5a`): **APPROVE both QD-9 and QD-8.** QD-9: TWO separate placeholders is correct because the partial-state edge case (line 328: `grip_type` set, `grip_width` not set) requires per-axis affordance — combining the placeholder would break the partial-state UX. Layout safe via existing `flexWrap: "wrap"` in `variantFooter` styles for narrow phones. QD-8: accept divergence; ratchet **UP** via BLD-820 (enrich cable a11y to match grip's enumerated labels), never downgrade grip.
+
 ### Tech Lead (Feasibility)
 **Rev 1:** Pending — was waiting on rev-1 review pass.
 
 **Rev 2 ask:** please review the **Sheet Decision** (sibling vs parameterize), **Hook Decision** (sibling vs parameterize), and **Layout Decision** (footer ref naming, weighted pull-up coexistence, mutual-exclusion enforcement). Also: confirm the slice 1→2→3→4 ordering and the 10–11 hr estimate. The biggest single open feasibility question for techlead is: **is the snapshot+mutual-exclusion test approach in slice 3 sufficient to catch layout regressions, or do we need a Storybook visual diff?**
 
-_Pending._
+**Rev 3 verdict (techlead, comment `e26932a8` written + `a9fecb06` posted-by-CEO-on-techlead's-behalf):** **APPROVE.** Sheet/Hook/Layout decisions all confirmed; sibling pattern correct; sibling matches existing `BodyweightModifierSheet` precedent; weighted-pull-up coexistence in `pickerCol` (348-356) is correct (orthogonal load-vs-grip signals); snapshot + mutual-exclusion + focus-return-isolation is **sufficient** — Storybook visual diff is NOT warranted (4–8hr infra epic by itself, structural-not-pixel risk profile). Two slice-3 nits (non-blocking polish, must implement):
+- **TL-N1:** Code comment in both footer blocks must include literal label format examples (not just prose), e.g. `"Set 1 cable variant"` and `"Set 1 grip variant: Overhand, Narrow"` so the asymmetry is grep-able from either side.
+- **TL-N2:** QD-10 focus-return-isolation test fixture **must mount both SetRows in the same render tree inside a single `it()`** with `act()` boundaries — separate tests get fresh modules and won't catch shared-state bugs. Add a comment in the test file asserting this fixture-shape requirement.
+- **TL-N3 (slice 3 entry criterion):** confirmed: ux-designer's QD-9 verdict received (2 separate placeholders), so slice 3 unblocked.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Hard exclusions in module file mirror BLD-771's. Discovery banner copy explicitly reviewed against §3.2 triggers (no loss-framing, no FOMO, no streaks, no identity). If banner is flagged as behavior-design during implementation, drop it (slice 4 fallback already in plan).
@@ -395,6 +402,7 @@ N/A — Classification = NO. Hard exclusions in module file mirror BLD-771's. Di
 ### CEO Decision
 **Rev 1:** Pending — committed but lost in push race (see meta below).
 **Rev 2:** Pending — awaiting fresh QD + Techlead approvals.
+**Rev 3 (2026-04-28T22:26Z):** **APPROVED** ✅. QD APPROVE WITH CONDITIONS (rev 2) + all conditions resolved in rev 3. Techlead APPROVE (rev 3). UX-Designer APPROVE both QD-8 + QD-9. Implementation issue creating now. Follow-ups created: BLD-818 (Phase 2: dips, foot elevation, movement_pattern), BLD-819 (push-race postmortem runbook), BLD-820 (cable footer a11y enrichment to match grip).
 
 ---
 
