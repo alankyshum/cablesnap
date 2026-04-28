@@ -47,14 +47,41 @@ function formatDateKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Background color for a heatmap cell.
+ *
+ * BLD-732 a11y fix: use a clear opacity ramp on the primary color so the
+ * 1-workout, 2-workout, and 3+-workout steps are perceptually distinct.
+ * Previously 1 and 2 used different theme tokens that rendered as nearly
+ * identical light-orange tints; deuteranopia/protanopia simulation could
+ * not distinguish them.
+ *
+ * Step 0 stays on `surfaceVariant` (background tone) so an empty week is
+ * visually distinct from a 1-workout week even with the increased opacity
+ * floor on step 1.
+ */
 function heatmapColor(
   count: number,
-  colors: { surfaceVariant: string; primaryContainer: string; primary: string }
+  colors: { surfaceVariant: string; primary: string }
 ): string {
   if (count === 0) return colors.surfaceVariant;
-  if (count === 1) return colors.primaryContainer;
-  if (count === 2) return withOpacity(colors.primary, 0.7);
+  if (count === 1) return withOpacity(colors.primary, 0.3);
+  if (count === 2) return withOpacity(colors.primary, 0.6);
   return colors.primary;
+}
+
+/**
+ * Foreground color for the numeric label inside a filled heatmap cell.
+ *
+ * Step 1 uses a tinted background that is too light to support white text,
+ * so we render the count in `onPrimaryContainer` (dark accent foreground)
+ * for the lowest step and `onPrimary` for the higher (saturated) steps.
+ */
+function heatmapTextColor(
+  count: number,
+  colors: { onPrimary: string; onPrimaryContainer: string }
+): string {
+  return count <= 1 ? colors.onPrimaryContainer : colors.onPrimary;
 }
 
 type CellData = {
@@ -119,23 +146,34 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
     return false;
   }, [grid]);
 
-  const renderDots = (count: number, size: number) => {
+  /**
+   * Numeric label inside a filled cell.
+   *
+   * BLD-732 a11y fix: provides a non-color cue so deuteranopia/protanopia
+   * users can distinguish step 1 / step 2 / step 3+. The same encoding is
+   * used in the body and the legend.
+   *
+   * Empty cells render nothing (the empty background is the cue for "0").
+   * The label is hidden from assistive tech because the parent Pressable
+   * already announces the full date and count via accessibilityLabel.
+   */
+  const renderCellLabel = (count: number, size: number) => {
     if (count === 0) return null;
-    if (count >= 3) {
-      return (
-        <Text style={[styles.cellText, { fontSize: Math.max(fontSizes.xs, size * 0.5), color: colors.onPrimary }]}>
-          3+
-        </Text>
-      );
-    }
-    const dotSize = Math.max(3, size * 0.15);
+    const text = count >= 3 ? "3+" : String(count);
     return (
-      <View style={styles.dotsRow}>
-        <View style={[styles.cellDot, { width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: count === 1 ? colors.onPrimaryContainer : colors.onPrimary }]} />
-        {count >= 2 && (
-          <View style={[styles.cellDot, { width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: colors.onPrimary }]} />
-        )}
-      </View>
+      <Text
+        style={[
+          styles.cellText,
+          {
+            fontSize: Math.max(fontSizes.xs, size * 0.5),
+            color: heatmapTextColor(count, colors),
+          },
+        ]}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      >
+        {text}
+      </Text>
     );
   };
 
@@ -178,15 +216,24 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
                   },
                 ]}
               >
-                {!isFuture && renderDots(cell.count, cellSize)}
+                {!isFuture && renderCellLabel(cell.count, cellSize)}
               </Pressable>
             );
           })}
         </View>
       ))}
 
-      {/* Color Legend */}
-      <View style={styles.legend}>
+      {/* Color Legend
+       * BLD-732: shows all 4 steps (0/1/2/3+) using the same encoding as
+       * the heatmap body — opacity ramp + numeric label as the non-color
+       * cue. The 0-step gets an explicit border so it remains distinct
+       * from the surrounding card surface even when surfaceVariant blends
+       * with the panel background.
+       */}
+      <View
+        style={styles.legend}
+        accessibilityLabel="Heatmap legend: 0, 1, 2, and 3 or more workouts"
+      >
         <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant }}>
           Less
         </Text>
@@ -198,10 +245,14 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
               {
                 backgroundColor: heatmapColor(level, colors),
                 borderRadius: radii.sm,
+                borderWidth: level === 0 ? StyleSheet.hairlineWidth : 0,
+                borderColor: colors.outline ?? colors.onSurfaceVariant,
               },
             ]}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
           >
-            {renderDots(level, 16)}
+            {renderCellLabel(level, 18)}
           </View>
         ))}
         <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant }}>
@@ -243,13 +294,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
   },
-  dotsRow: {
-    flexDirection: "row",
-    gap: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cellDot: {},
   legend: {
     flexDirection: "row",
     alignItems: "center",
@@ -259,8 +303,8 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   legendCell: {
-    width: 14,
-    height: 14,
+    width: 18,
+    height: 18,
     alignItems: "center",
     justifyContent: "center",
   },
