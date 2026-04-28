@@ -525,6 +525,20 @@ The autolinker has **zero `buildType`/`BuildType` references** (`grep -n "buildT
 
 `expo-module-gradle-plugin`'s `MavenPublicationExtension.kt:39` hardcodes `getByName("release")`. If a future milestone adds buildTypes that need their own publishing component (e.g. `releaseStaging`), a third pivot would be required. M0–M5 only need `release` + `releaseFdroid`, both of which resolve to the same `release` component via `matchingFallbacks`, so this is **non-blocking through M5**. We will revisit if M6+ requires it.
 
+### Second-order issue: AGP buildType propagation to library subprojects (CMake)
+
+After the productFlavors→buildTypes pivot resolved the Expo autolinker conflict, CI run `25043839381` (commit `cd9d1424`) surfaced a separate failure on `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]` with `Skia prebuilt binaries not found!`. Root cause:
+
+1. AGP **also** propagates buildTypes (not just productFlavors) from `:app` to every library subproject it resolves against. Each subproject then synthesises its own `releaseFdroid` variant.
+2. For library subprojects with CMake-built native code, AGP names the CMake configure task off the variant. For non-canonical release buildTypes (anything other than the literal name `release`), AGP picks `RelWithDebInfo` as the CMake build type — hence task `configureCMakeRelWithDebInfo`.
+3. `@shopify/react-native-skia/android/CMakeLists.txt:25` hardcodes its prebuilt-binary path lookup under a `release`-named directory. Searching for prebuilts under a `RelWithDebInfo` path fails fast with the FATAL_ERROR above.
+
+`-DCMAKE_BUILD_TYPE=Release` injected into `:app`'s `releaseFdroid` buildType (commit `cd9d1424`, kept as defence-in-depth) does NOT propagate into subproject CMake configure tasks — those run inside each library's own gradle script.
+
+**Fix (commit `<follow-up>`):** project-level `android/build.gradle` now carries a `subprojects { android.variantFilter { variant -> if (buildType.name == "releaseFdroid") setIgnore(true) } }` block (injected via the plugin's new `withProjectBuildGradle` mod). Library subprojects skip the propagated `releaseFdroid` variant entirely, so AGP never creates the failing `configureCMakeRelWithDebInfo` task for them. Dependency resolution from `:app`'s `releaseFdroid` falls back to each library's `release` variant via the already-declared `matchingFallbacks = ["release"]`.
+
+This is correct because Play and F-Droid only differ in JVM-side classpath excludes (GMS Wearable group + `expo-wearos-bridge` module). Native code is bit-identical between the two variants. Reusing each library's `release` native artifacts is exactly what we want — no native-code drift, no doubled native-build time.
+
 ### What changed in code
 
 - `modules/expo-wearos-bridge/android/build.gradle` — drop `static` from `safeExtGet`; doc-comment now describes the unconditional-build + `:app`-local exclude strategy.

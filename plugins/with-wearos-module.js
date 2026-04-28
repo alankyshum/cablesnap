@@ -58,6 +58,7 @@ const fs = require("fs");
 const path = require("path");
 const {
   withAppBuildGradle,
+  withProjectBuildGradle,
   withSettingsGradle,
   withDangerousMod,
 } = require("expo/config-plugins");
@@ -69,6 +70,7 @@ const {
 const SETTINGS_MARKER = "// cablesnap:wearos:settings-include";
 const BUILD_TYPES_MARKER = "// cablesnap:wearos:build-types";
 const FDROID_EXCLUDES_MARKER = "// cablesnap:wearos:fdroid-excludes";
+const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter";
 
 // Where the wear-template lives in the source tree, and where the prebuild
 // output expects to find the `:wear` subproject.
@@ -236,6 +238,71 @@ function patchAppBuildGradle(contents) {
 }
 
 // ---------------------------------------------------------------------------
+// android/build.gradle (project-level) patch — strip the `releaseFdroid`
+// buildType from every library subproject.
+// ---------------------------------------------------------------------------
+//
+// AGP propagates buildTypes declared on `:app` to every library subproject
+// it resolves against, just like it does for productFlavors. Each library
+// subproject then synthesises its own `releaseFdroid` variant; for the
+// minority of libs that ship CMake-built native code (notably
+// `:shopify_react-native-skia`), AGP picks `RelWithDebInfo` as the CMake
+// build type for any non-canonical release buildType. Skia hardcodes its
+// prebuilt-binary path under a `release`-named directory and fails with
+// "Skia prebuilt binaries not found!" on `:shopify_react-native-skia:
+// configureCMakeRelWithDebInfo[...]`.
+//
+// Fix: tell AGP NOT to create the `releaseFdroid` variant in any subproject
+// other than `:app`. With `matchingFallbacks = ["release"]` already declared
+// on `:app`'s `releaseFdroid` buildType, dependency resolution falls back
+// to each library's `release` variant — which is exactly what we want
+// (Play and F-Droid only differ in JVM-side excludes, never in library
+// internals).
+//
+// Implementation note: `android.variantFilter` is the AGP 8.x-stable API
+// and works on every plugin that applies the AGP `library` plugin. Newer
+// AGP recommends `androidComponents.beforeVariants {}` but the legacy API
+// is still supported and avoids requiring a `gradle.kotlin.dsl`-style
+// reference. The `if (project != rootProject.findProject(':app'))` guard
+// is belt-and-suspenders — `subprojects {}` excludes the root project but
+// would still apply to `:app` if `:app` were registered as a subproject
+// of itself (it isn't, but the guard makes the intent explicit and is
+// cheap to check).
+
+const SUBPROJECT_FILTER_BLOCK = `
+${SUBPROJECT_FILTER_MARKER}
+subprojects { subproject ->
+    subproject.plugins.withId("com.android.library") {
+        subproject.android.variantFilter { variant ->
+            if (variant.buildType.name == "releaseFdroid") {
+                // No library subproject declares releaseFdroid itself; AGP
+                // synthesises it from :app's declaration. Skip it so CMake
+                // configure tasks for non-canonical release buildTypes
+                // (RelWithDebInfo) are never created. :app's
+                // matchingFallbacks routes to each library's release
+                // variant for dependency resolution.
+                setIgnore(true)
+            }
+        }
+    }
+}
+`;
+
+function patchProjectBuildGradle(contents) {
+  if (contents.includes(SUBPROJECT_FILTER_MARKER)) {
+    return contents;
+  }
+  // Append at end-of-file. `subprojects { ... }` blocks are
+  // order-independent — Gradle accumulates and applies them in the
+  // configuration phase before any subproject is evaluated.
+  let out = contents;
+  if (!out.endsWith("\n")) {
+    out = out + "\n";
+  }
+  return out + SUBPROJECT_FILTER_BLOCK;
+}
+
+// ---------------------------------------------------------------------------
 // withDangerousMod: copy modules/expo-wearos-bridge/wear-template → android/wear
 // ---------------------------------------------------------------------------
 //
@@ -289,7 +356,20 @@ const withWearOsModule = (config) => {
     return cfg;
   });
 
-  // 3. Copy wear-template → android/wear.
+  // 3. Patch project-level android/build.gradle: drop `releaseFdroid` from
+  //    library subprojects so AGP doesn't synthesise CMake configure tasks
+  //    for it. See the SUBPROJECT_FILTER_BLOCK comment above.
+  config = withProjectBuildGradle(config, (cfg) => {
+    if (cfg.modResults.language !== "groovy") {
+      throw new Error(
+        `with-wearos-module: expected Groovy project build.gradle, got ${cfg.modResults.language}`,
+      );
+    }
+    cfg.modResults.contents = patchProjectBuildGradle(cfg.modResults.contents);
+    return cfg;
+  });
+
+  // 4. Copy wear-template → android/wear.
   config = withDangerousMod(config, [
     "android",
     async (cfg) => {
@@ -313,6 +393,7 @@ module.exports = withWearOsModule;
 // `expo prebuild` in CI; the patch helpers below are unit-tested directly.
 module.exports.patchSettingsGradle = patchSettingsGradle;
 module.exports.patchAppBuildGradle = patchAppBuildGradle;
+module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;

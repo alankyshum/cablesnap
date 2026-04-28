@@ -5,6 +5,7 @@ const path = require("path");
 const {
   patchSettingsGradle,
   patchAppBuildGradle,
+  patchProjectBuildGradle,
   copyDirRecursive,
   rmDirRecursive,
 } = require("../../plugins/with-wearos-module");
@@ -233,6 +234,88 @@ android {
     // test catches it.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("shrinkResources enableShrinkResources.toBoolean()");
+  });
+});
+
+// ----------------------------------------------------------------------------
+// patchProjectBuildGradle — drop releaseFdroid from library subprojects
+// ----------------------------------------------------------------------------
+//
+// Verifies the project-level android/build.gradle patch that injects a
+// `subprojects { android.variantFilter { ... setIgnore(true) } }` block to
+// keep AGP from synthesising the propagated `releaseFdroid` buildType in
+// every library subproject. Without this patch, RN native libs (notably
+// shopify/react-native-skia) hit "Skia prebuilt binaries not found!" on
+// `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]`
+// because AGP picks `RelWithDebInfo` for non-canonical release buildTypes.
+const PROJECT_BUILD_GRADLE_FIXTURE = `buildscript {
+    ext {
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35
+        targetSdkVersion = 35
+        ndkVersion = "27.1.12297006"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    repositories {
+        maven {
+            url(new File(['node', '--print', "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), '../android'))
+        }
+        google()
+        mavenCentral()
+    }
+}
+`;
+
+describe("patchProjectBuildGradle", () => {
+  it("emits the subproject-variant-filter sentinel marker", () => {
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).toContain("// cablesnap:wearos:subproject-variant-filter");
+  });
+
+  it("emits a subprojects block scoped to com.android.library", () => {
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /subprojects\s*\{[\s\S]*subproject\.plugins\.withId\("com\.android\.library"\)/,
+    );
+  });
+
+  it("filters out variants whose buildType is releaseFdroid via setIgnore(true)", () => {
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /variantFilter\s*\{[\s\S]*?variant\.buildType\.name\s*==\s*"releaseFdroid"[\s\S]*?setIgnore\(true\)/,
+    );
+  });
+
+  it("preserves the existing buildscript and allprojects blocks intact", () => {
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).toContain('apply plugin: "com.facebook.react.rootproject"');
+    expect(out).toContain("allprojects {");
+    // Filter block appended after the existing top-level config — order
+    // doesn't matter for `subprojects {}` but appending at end keeps the
+    // template's original layout intact for diff readability.
+    expect(out.indexOf("// cablesnap:wearos:subproject-variant-filter"))
+      .toBeGreaterThan(out.indexOf("allprojects {"));
+  });
+
+  it("is idempotent (running twice yields the same output as running once)", () => {
+    const once = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    const twice = patchProjectBuildGradle(once);
+    const thrice = patchProjectBuildGradle(twice);
+    expect(twice).toBe(once);
+    expect(thrice).toBe(once);
   });
 });
 
