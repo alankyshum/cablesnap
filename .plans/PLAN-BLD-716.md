@@ -210,6 +210,9 @@ All payloads are JSON-stringified and < 1KB. Phone is single-source-of-truth: th
 - Heart-rate integration (separate Health Connect work — see BLD-715)
 - Wear OS 3 support (legacy; would require divergent Compose-for-Wear API surface)
 - Custom watch faces or complications (separate XL feature)
+- **F-Droid hosting of the watch APK** (per QD-2 / TL-2): the watch APK has a hard `com.google.android.gms:play-services-wearable` dependency, which F-Droid's Inclusion Criteria reject. F-Droid hosts only the GMS-free `fdroidRelease` phone APK; the Wear OS companion is Play-Store-only. Release notes will state this explicitly.
+- **Phone-initiated workout-start auto-jump on watch** (per QD-9): if the user starts a workout on the phone (not the watch), the watch shows a banner "Workout in progress on phone — open on phone to track" and does NOT auto-jump to Live Tracking in v1. Symmetric phone→watch start flow is a post-v1 follow-up.
+- **Sentry opt-out toggle** (per TL-9 honesty correction): today `app/_layout.tsx:37` initializes Sentry unconditionally with no user toggle. The watch path inherits the same behavior. Adding a privacy toggle is a separate follow-up CEO will file post-merge — explicitly NOT in this plan.
 
 ## Milestones
 
@@ -217,13 +220,27 @@ This XL feature ships as a **5-PR sequence**, each independently mergeable, behi
 
 | M | Scope | PR size | Reviewer(s) |
 |---|---|---|---|
-| **M1** | Custom Expo module skeleton + DataLayer wrapper (no UI). Phone broadcasts hello-world to watch; watch logcat-prints. Smoke test only. | S/M | techlead |
-| **M2** | Watch app M1: Template Library screen. Phone sends templates; watch displays + tap-to-start sends `/active-workout` to phone. Phone listener stub. | M | techlead + QD |
+| **M0** | Build infrastructure: Config Plugin (`plugins/with-wearos-module.js`), Gradle product-flavor split (`playRelease` / `fdroidRelease`), F-Droid metadata `Builds:` block, `.github/workflows/scheduled-release.yml` updated to publish 2 phone APKs + 1 watch APK, empty `:wear` Gradle subproject builds and signs, GHA KVM-runner spike for Wear emulator (with manual-only fallback if KVM unavailable). No app behavior changes. | M | techlead |
+| **M1** | Custom Expo module skeleton + DataLayer wrapper (no UI). Phone broadcasts hello-world to watch; watch logcat-prints. Smoke test only. | S | techlead |
+| **M2** | Watch app M1: Template Library screen. Phone sends templates; watch displays + tap-to-start sends `/active-workout` to phone. Phone listener stub. **Phone-side a11y parity pass on `app/session/*` and `components/SetRow.*`** (per QD-5 option b): `accessibilityLabel`/`accessibilityRole`/`accessibilityHint` on weight/reps inputs, set rows, and Complete Set on phone. | M | techlead + QD |
 | **M3** | Watch app M2: Live Workout Tracking screen. Steppers + Complete Set. Phone receives `/set-complete` → routes to existing `addSet`/`updateSet`. | M/L | techlead + QD |
 | **M4** | Watch app M3: Rest Timer + haptics. Set Management sheet. Workout Controls. | M | techlead + QD |
-| **M5** | Disconnect-tolerant queue + ambient mode + a11y polish + feature-flag removal + release notes. | M | techlead + QD |
+| **M5** | Disconnect-tolerant queue + ambient mode + a11y polish + feature-flag removal + release notes. **Manual QA gates run here** (see Manual QA Gates section below). | M | techlead + QD |
 
 CEO will only create the next milestone's implementation issue **after the previous milestone's PR is merged.** No stacking.
+
+### Manual QA Gates (M5 owner sign-off — NOT CI)
+
+These gates require physical hardware and are signed off by the owner as a comment on the M5 PR. They are explicitly **not** CI-gated.
+
+| Gate | Method | Pass criterion |
+|---|---|---|
+| **Battery (AC9)** | Pixel Watch 2, 30-min workout, screen-on during active set + ambient during rest | ≤15% battery drain |
+| **TalkBack (AC8b)** | Pixel Watch 2 with TalkBack enabled, full workout flow | Steppers, exercise names, timer countdown, Complete Set all read correctly with units |
+| **On-device pairing (AC1)** | Fresh-install Pixel Watch 2 paired to Pixel 8 phone | Watch app appears in launcher within 60s |
+| **Bluetooth disconnect (AC6)** | Phone in airplane mode mid-workout, complete 3 sets on watch, re-enable BT | All 3 sets reconcile with original `completedAt` timestamps |
+| **Airplane reconcile (AC7a)** | Phone airplane mode + BT on, full 5-set workout from watch | All events reconcile; zero non-LAN packets |
+| **Packet capture (AC7b)** | `tcpdump` / Network Inspector on phone app UID, 30 min typical use | Zero non-LAN packets; capture attached to M5 PR |
 
 ## Acceptance Criteria
 
@@ -235,11 +252,14 @@ These ACs apply at the **M5 / feature-flag-removal** level. Per-milestone ACs ar
 - [ ] **AC4 (Complete set)** — Given Live Tracking, when the user taps "Complete Set", then a row is inserted in the phone SQLite `sets` table with the watch's weight/reps within 500ms p99.
 - [ ] **AC5 (Rest timer)** — When a set completes, then the watch transitions to Rest Timer with the user's configured duration; haptic double-buzz fires on completion ±100ms; "+30s" extends; "Skip" returns immediately.
 - [ ] **AC6 (Disconnect tolerance)** — Given watch is mid-workout and the user walks out of Bluetooth range, when the user completes 3 more sets and returns to range, then all 3 sets are reconciled to the phone with original timestamps.
-- [ ] **AC7 (Offline-first guarantee)** — No network requests originate from either device for sync purposes (verify via mitmproxy / Charles capture).
-- [ ] **AC8 (A11y)** — TalkBack on Wear OS reads weight/reps stepper values, exercise names, and timer countdown correctly. Rotary input adjusts steppers ±1.
-- [ ] **AC9 (Battery)** — A 30-minute workout with watch screen on for the active set + ambient during rest drains ≤ 25% battery on Pixel Watch 2.
-- [ ] **AC10 (Pristine off)** — Feature flag OFF (default until release): no watch-app code paths run on phone; no Wear OS module loaded; no battery/perf impact for non-watch users.
-- [ ] **AC11 (Build)** — Phone builds cleanly with watch module added; CI runs both phone tests and watch Compose UI tests; no new lint warnings.
+- [ ] **AC7a (Offline-first — airplane reconcile, manual M5)** — Put phone in airplane mode with Bluetooth ON; complete a 5-set workout from the watch; disable airplane mode. All 5 set events reconcile to the phone SQLite `sets` table; **zero** non-LAN network packets originate from either device during the test (mitmproxy is rejected per QD-1 — it cannot observe Bluetooth Wearable Data Layer traffic).
+- [ ] **AC7b (Offline-first — packet capture, manual M5)** — On the phone, run `tcpdump` (or Android Studio Network Inspector) filtered to the CableSnap app UID for 30 minutes of typical Watch+Phone usage (template sync, workout start, 10+ Complete Set events, rest timers, workout finish). Result: **zero** packets to non-LAN destinations. Capture saved as a CI artifact attached to the M5 PR for owner sign-off.
+- [ ] **AC8a (A11y — CI gate)** — Compose UI tests assert every interactive node on the watch (weight stepper, reps stepper, Complete Set pill, +30s/Skip buttons, control buttons, timer countdown text) exposes a non-empty `contentDescription`, and that `contentDescription` updates when the underlying value changes (weight 40 → 45 reflects in description).
+- [ ] **AC8b (A11y — manual M5 gate)** — TalkBack enabled on a real Pixel Watch 2: reads weight/reps stepper values with units ("forty-five kilograms"), reads exercise names, announces timer countdown at 10s / 5s / 0s, announces Complete Set tap. Owner sign-off captured as a comment on the M5 PR.
+- [ ] **AC9 (Battery — manual M5 gate, NOT CI)** — A 30-minute workout with watch screen on for the active set and ambient mode during rest drains **≤15%** battery on a Pixel Watch 2 (~30%/hr). Measured manually; if missed, ambient mode defers out of M5 per Risk row 6. **Not** a CI gate.
+- [ ] **AC10a (Pristine off — feature flag)** — Feature flag OFF (default until release): no watch-app code paths run on phone; no Wear OS module loaded; no battery/perf impact for non-watch users.
+- [ ] **AC10b (Pristine off — F-Droid build)** — `unzip -l app-fdroidRelease.apk | grep -c 'com/google/android/gms/wearable'` returns **0**. The F-Droid phone APK contains zero `com.google.android.gms.wearable` classes; the bridge module is excluded at the Gradle source-set level under the `fdroidRelease` flavor.
+- [ ] **AC11 (Build)** — Phone builds cleanly under both `playRelease` and `fdroidRelease` flavors; CI runs phone tests on every PR; **Wear OS Compose UI tests run on a path-filtered job** triggered only by changes under `modules/expo-wearos-bridge/**` or `wear-template/**`; zero new ktlint findings on watch module; zero new ESLint findings on JS bridge.
 - [ ] **AC12 (No regressions)** — All existing phone-only tests pass; existing workout flows unaffected with watch unpaired.
 
 ## Edge Cases
@@ -257,6 +277,11 @@ These ACs apply at the **M5 / feature-flag-removal** level. Per-milestone ACs ar
 | Locale = RTL (Arabic, Hebrew) | Layouts mirror; numerical steppers retain LTR digit display |
 | Color-blind user (deuteranopia) | Status badges (active/paused) use icon + text, not color alone |
 | Phone is iOS | Wear OS module not loaded; Wear OS pairing not advertised; no degradation |
+| Optimistic Complete Set rejected by phone (session finished, exercise deleted mid-workout) — TL-8 | Watch shows 3-second toast "Set rejected — workout state changed" + a Refresh affordance that re-pulls the active workout snapshot from the phone; watch state reverts to pre-tap; no silent loss |
+| Watch app process killed by Wear OS while phone disconnected — QD-7 | `SetEventQueue.kt` is durable on Wear OS DataStore (Proto), 200-event cap; on watch app relaunch, queue is read and any pending events replay via `MessageClient` immediately if a phone connection exists |
+| User has 2+ Wear OS devices paired to the phone — QD-8 | Phone's `WearMessageReceiverService` accepts events from all paired nodes; first-event-wins per `(sessionId, exerciseId, setNumber)` via dedup LRU; second event from a different node silently dropped with Sentry breadcrumb |
+| User starts workout on phone (not watch) — QD-9 | Watch shows "Workout in progress on phone — open on phone to track" banner; does NOT auto-jump to Live Tracking in v1 (out-of-scope) |
+| Phone updates a set while watch stepper is mid-edit — QD-10 | "Release focus" = **1500ms idle on the stepper OR an explicit Complete Set tap**; until then, the incoming `/set-update` is buffered and applied on focus release with a brief flash to indicate the change |
 
 ## Risk Assessment
 
