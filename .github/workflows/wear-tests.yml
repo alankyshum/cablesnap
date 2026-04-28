@@ -109,18 +109,18 @@ jobs:
           cd android
           ./gradlew :wear:assembleRelease
 
-      - name: Assemble :app fdroidRelease + verify GMS-free (AC10b)
+      - name: Assemble :app releaseFdroid + verify GMS-free (AC10b)
         # AC10b is duplicated here so PRs touching the bridge / plugin / wear
         # template can fail FAST without waiting for a full release build.
         # Same check runs in scheduled-release.yml as the canonical gate.
         run: |
           set -euo pipefail
           cd android
-          ./gradlew :app:assembleFdroidRelease
+          ./gradlew :app:assembleReleaseFdroid
           cd ..
-          APK=android/app/build/outputs/apk/fdroidRelease/app-fdroidRelease.apk
+          APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
           if [ ! -f "$APK" ]; then
-            echo "::error::Expected $APK to exist after assembleFdroidRelease."
+            echo "::error::Expected $APK to exist after assembleReleaseFdroid."
             exit 1
           fi
           GMS_COUNT=$(unzip -l "$APK" | grep -c 'com/google/android/gms/wearable' || true)

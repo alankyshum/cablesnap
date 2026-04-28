@@ -266,27 +266,30 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
-          # M0 (BLD-736) introduces a phone-app product-flavor split:
-          #   - playRelease   — Watch bridge + GMS Wearable wired in.
-          #   - fdroidRelease — bridge + GMS excluded; F-Droid-safe.
+          # M0 (BLD-736) introduces a phone-app build-type split (pivoted from
+          # productFlavors after CEO approval 2026-04-28; see plan addendum):
+          #   - release       — Watch bridge + GMS Wearable wired in (Play).
+          #   - releaseFdroid — initWith release; bridge + GMS excluded via
+          #                     :app configurations excludes (F-Droid-safe).
           # The Wear OS standalone watch APK is also built here (Play-only).
           # See .plans/PLAN-BLD-716.md §"F-Droid + Play split" + §"Watch APK
           # distribution".
           set -euo pipefail
           cd android
           ./gradlew \
-            :app:assemblePlayRelease \
-            :app:assembleFdroidRelease \
+            :app:assembleRelease \
+            :app:assembleReleaseFdroid \
             :wear:assembleRelease
           cd ..
-          # Phone APK (Play flavor) — the canonical `cablesnap.apk` retained
-          # for the existing Play Store / GitHub-Release pipeline.
-          cp android/app/build/outputs/apk/playRelease/app-playRelease.apk cablesnap.apk
-          # Phone APK (F-Droid flavor) — what the F-Droid build server's
-          # `Builds:` recipe also produces locally; we attach it as a
-          # separate release asset so external mirrors can verify the
+          # Phone APK (Play / `release` build type) — the canonical
+          # `cablesnap.apk` retained for the existing Play Store /
+          # GitHub-Release pipeline.
+          cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
+          # Phone APK (`releaseFdroid` build type) — what the F-Droid build
+          # server's `Builds:` recipe also produces locally; we attach it as
+          # a separate release asset so external mirrors can verify the
           # GMS-free build matches.
-          cp android/app/build/outputs/apk/fdroidRelease/app-fdroidRelease.apk cablesnap-fdroid.apk
+          cp android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk cablesnap-fdroid.apk
           # Watch APK — Wear OS 4 standalone artifact; Play-only (F-Droid
           # rejects GMS).
           cp android/wear/build/outputs/apk/release/wear-release.apk cablesnap-wear.apk
@@ -300,7 +303,7 @@ jobs:
           # com/google/android/gms/wearable/* classes. We verify by listing
           # the APK's classes.dex entries and grepping. If even one shows up,
           # fail the release — that means the with-wearos-module plugin's
-          # configurations { fdroidReleaseImplementation { exclude ... } }
+          # configurations { releaseFdroidImplementation { exclude ... } }
           # block stopped working as expected.
           set -euo pipefail
           GMS_COUNT=$(unzip -l cablesnap-fdroid.apk \

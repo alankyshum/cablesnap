@@ -40,14 +40,17 @@ ship the watch APK source in this package's `wear-template/` directory and copy
 it during prebuild via `plugins/with-wearos-module.js`. Decision rationale:
 PLAN-BLD-716.md §"Repo integration strategy (decided per TL-1)".
 
-## F-Droid flavor purity (AC10b)
+## F-Droid build purity (AC10b)
 
-The F-Droid build (`assembleFdroidRelease`) **must not** include any
+The F-Droid build (`assembleReleaseFdroid`) **must not** include any
 `com.google.android.gms.wearable` classes. This is enforced two ways:
 
-1. The Config Plugin places the GMS dependency inside `playReleaseImplementation`
-   only (never in `implementation` or `fdroidReleaseImplementation`).
-2. CI runs `unzip -l app-fdroidRelease.apk | grep -c 'com/google/android/gms/wearable'`
+1. The Config Plugin emits `releaseFdroid{Implementation,Runtime,Compile}Classpath`
+   excludes for both `com.google.android.gms` (group) and `expo-wearos-bridge`
+   (module), so neither this library's classes nor GMS Wearable resolve in
+   the F-Droid variant's classpath.
+2. CI runs `unzip -l app-releaseFdroid.apk | grep -c 'com/google/android/gms/wearable'`
    and fails the build if the count is non-zero.
 
-See PLAN-BLD-716.md §"F-Droid + Play split (decided per TL-2)".
+See PLAN-BLD-716.md §"F-Droid + Play split (decided per TL-2)" plus the
+Implementation Addendum (productFlavors → buildTypes pivot, 2026-04-28).

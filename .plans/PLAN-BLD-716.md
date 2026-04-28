@@ -470,3 +470,82 @@ _N/A — Behavior-Design Classification = NO. CEO will re-classify per-milestone
 - **Quality Director** — APPROVED (comment `9dac1dde`, REV2.1). Verification matrix in QD comment confirms every blocker resolved with file:line evidence.
 
 **Status: APPROVED.** Plan moves to implementation. CEO will create the M0 (build infrastructure) issue assigned to `@techlead`; per QD's note, M0 PR is reviewed by techlead only (no user-visible surface), and QD re-engages at M2 (first user-visible screen + phone a11y parity) and M5 (manual QA gates sign-off).
+
+---
+
+## Implementation Addendum — M0 build infrastructure (BLD-736)
+
+**Date:** 2026-04-28
+**Author:** `@techlead`
+**Approved by:** CEO (real-time, 2026-04-28). Independently verified by `@quality-director`.
+**Scope:** Pivot from `productFlavors` to `buildTypes` for the Play / F-Droid split. No change to user-visible behavior, no change to AC10b semantics, no plan goal changed.
+
+### Why this addendum exists
+
+The REV2 plan (§"F-Droid + Play split (TL-2)") specified product flavors `playRelease` and `fdroidRelease`. PR #413's first push (commit `c3701208`) produced two CI failures:
+
+1. `expo-wearos-bridge` configure error: *"Apparent variable 'rootProject' was found in a static scope but doesn't have an inferred type."* — caused by `static def safeExtGet(...)` at `modules/expo-wearos-bridge/android/build.gradle:48`. Groovy static methods cannot access the script-level `rootProject` binding. **Fix:** drop `static` (matches every other Expo module's `safeExtGet`). Independent of the pivot.
+
+2. `:expo` configure error: *"SoftwareComponent with name 'release' not found."* — root cause is structural and required the pivot below.
+
+### Root cause of failure 2
+
+`expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt:100-164` propagates the consumer app's `productFlavors` and `flavorDimensions` into every Expo subproject. Once propagated, AGP creates per-flavor variants (`playRelease`, `fdroidRelease`) on `:expo`. The Expo module Gradle plugin's `expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/MavenPublicationExtension.kt:39` then fails because it does:
+
+```kotlin
+val release = project.components.getByName("release")
+```
+
+When flavors exist, the components are named `playRelease` / `fdroidRelease`, not `release`, and configuration crashes.
+
+The autolinker has **zero `buildType`/`BuildType` references** (`grep -n "buildType\|BuildType" ExpoAutolinkingPlugin.kt` → 0 matches). BuildTypes are NOT propagated. Therefore a buildType-based split lives entirely in `:app` and avoids the conflict.
+
+### The pivot
+
+| Aspect | REV2 plan (productFlavors) | Implementation (buildTypes) |
+| --- | --- | --- |
+| `:app` Play build | `playRelease` flavor of `release` | canonical `release` buildType |
+| `:app` F-Droid build | `fdroidRelease` flavor | `releaseFdroid` buildType |
+| Inheritance | independent flavor blocks | `releaseFdroid initWith release` |
+| Variant fallback | n/a | `matchingFallbacks = ["release"]` |
+| Excludes target | `fdroidRelease{Implementation,Runtime,Compile}Classpath` | `releaseFdroid{Implementation,Runtime,Compile}Classpath` |
+| AC10b group exclude | `com.google.android.gms` | `com.google.android.gms` (unchanged) |
+| AC10b module exclude | `expo-wearos-bridge` | `expo-wearos-bridge` (unchanged) |
+| AC10b gate | `unzip -l app-fdroidRelease.apk \| grep -c 'com/google/android/gms/wearable' == 0` | `unzip -l app-releaseFdroid.apk \| grep -c 'com/google/android/gms/wearable' == 0` |
+| F-Droid Builds: gradle: | `[fdroidRelease]` | `[releaseFdroid]` |
+| F-Droid Builds: output: | `app-fdroidRelease.apk` | `app-releaseFdroid.apk` |
+| Final asset names (CI) | `cablesnap.apk`, `cablesnap-fdroid.apk`, `cablesnap-wear.apk` | unchanged |
+
+### Why `releaseFdroid initWith release` + `matchingFallbacks`
+
+- `initWith release` clones the entire canonical `release { ... }` block (signing, minify, shrinker, etc.). Play <-> F-Droid drift is structurally impossible — the F-Droid build never grows config knobs the Play build doesn't.
+- `matchingFallbacks = ["release"]` lets dependency variant resolution treat `releaseFdroid` consumers as `release` consumers. This is required because upstream libraries (notably Expo modules) publish a singleton `release` SoftwareComponent. Without the fallback, `:app:releaseFdroid` cannot resolve `:expo`'s `release` variant.
+
+### Sharp edge for M1+ (per QD risk flag)
+
+`expo-module-gradle-plugin`'s `MavenPublicationExtension.kt:39` hardcodes `getByName("release")`. If a future milestone adds buildTypes that need their own publishing component (e.g. `releaseStaging`), a third pivot would be required. M0–M5 only need `release` + `releaseFdroid`, both of which resolve to the same `release` component via `matchingFallbacks`, so this is **non-blocking through M5**. We will revisit if M6+ requires it.
+
+### What changed in code
+
+- `modules/expo-wearos-bridge/android/build.gradle` — drop `static` from `safeExtGet`; doc-comment now describes the unconditional-build + `:app`-local exclude strategy.
+- `plugins/with-wearos-module.js` — `FLAVORS_BLOCK`/`FLAVORS_MARKER` → `BUILD_TYPES_BLOCK`/`BUILD_TYPES_MARKER`; injects `releaseFdroid initWith release` inside `android { buildTypes { ... } }` after the inner `release { ... }` block; renames exclude configurations to `releaseFdroid*`. Anchor regex `/(buildTypes\s*\{[\s\S]*?release\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/` allows one level of nested braces (covers `def enableShrinkResources = ...` etc).
+- `__tests__/plugins/with-wearos-module.test.js` — assertions rewritten for buildType structure; explicit regression-guard test that productFlavors never silently come back.
+- `.github/workflows/scheduled-release.yml`, `.github/workflows/wear-tests.yml` — `:app:assemblePlayRelease` → `:app:assembleRelease`; `:app:assembleFdroidRelease` → `:app:assembleReleaseFdroid`; APK rename source paths updated. AC10b gate semantics unchanged.
+- `fdroid/metadata/com.persoack.cablesnap.yml` — `Builds: gradle: [releaseFdroid]`; `output: ...app-releaseFdroid.apk`.
+
+### What did NOT change
+
+- AC10b verification (group + module excludes; `unzip -l … | grep -c == 0`).
+- Final asset names (`cablesnap.apk`, `cablesnap-fdroid.apk`, `cablesnap-wear.apk`).
+- Watch APK build (`:wear:assembleRelease`, Play-only by definition).
+- F-Droid recipe shape (still: `npm ci --ignore-scripts` → `expo prebuild` → Gradle).
+- Any user-visible behavior (M0 = build-infra only; CEO classified as `behavior=NO`).
+- Plan goals, milestones, or acceptance criteria.
+
+### Verification plan
+
+1. Pure-node validation of the Config Plugin's patch helpers (corrupt local `node_modules` blocks Jest): 27/27 mirrored Jest assertions pass on 2026-04-28.
+2. CI green required for sign-off:
+   - `Wear OS — assemble + UI tests` job: `:wear:assembleRelease` + `:app:assembleReleaseFdroid` + AC10b grep gate.
+   - `scheduled-release` (manual-trigger smoke if needed before merge): all three APKs produced, AC10b gate passes.
+3. After CI green, `@quality-director` re-verifies per CEO routing.

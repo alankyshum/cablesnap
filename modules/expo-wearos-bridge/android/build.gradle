@@ -4,10 +4,23 @@
 // DataLayerHelper, and DeviceEventEmitter wiring per PLAN-BLD-716.md
 // §"Phone-side bridge concurrency model".
 //
-// This module is compiled in only under the `playRelease` flavor. The
-// `fdroidRelease` flavor explicitly excludes it via the source-set guard
-// emitted by `plugins/with-wearos-module.js`. AC10b enforces the resulting
-// APK contains zero `com.google.android.gms.wearable` classes.
+// **F-Droid exclusion strategy (post-pivot, 2026-04-28).**
+// Originally this module was conditionally compiled only under a
+// `playRelease` product flavor. That approach is incompatible with the Expo
+// autolinker (`expo-modules-autolinking/.../ExpoAutolinkingPlugin.kt:100-164`),
+// which propagates the consumer app's `productFlavors`+`flavorDimensions`
+// into every Expo subproject. Once propagated, `:expo` ends up with a
+// per-flavor variant set, which breaks
+// `expo-modules-core/.../MavenPublicationExtension.kt:39
+// components.getByName("release")` at configure time. The autolinker has
+// ZERO buildType propagation, so the Play/F-Droid split now lives entirely
+// in `:app` via a `releaseFdroid initWith release` build type. This module
+// is therefore unconditional — the Config Plugin emits dependency excludes
+// in `:app`'s `releaseFdroid{Implementation,Runtime,Compile}Classpath` so
+// neither this library's classes nor its GMS Wearable transitive dep land
+// in the F-Droid APK. AC10b (zero `com.google.android.gms.wearable` classes)
+// is enforced by an `unzip -l` grep gate in CI. See
+// `.plans/PLAN-BLD-716.md` Implementation Addendum for full root cause.
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
@@ -38,10 +51,11 @@ android {
 }
 
 dependencies {
-  // GMS Wearable lives here, NOT in the root phone-app dependencies block,
-  // and the entire library is excluded from `fdroidRelease` via the
-  // Config Plugin's source-set guard. F-Droid AC10b: zero gms.wearable
-  // classes in app-fdroidRelease.apk.
+  // GMS Wearable is a transitive dep of this library, NOT a root phone-app
+  // dep. The Config Plugin emits `releaseFdroid{Impl,Runtime,Compile}` excludes
+  // in :app for both `com.google.android.gms` (group) and `expo-wearos-bridge`
+  // (module), so neither this library's classes nor GMS Wearable land in
+  // app-releaseFdroid.apk. AC10b: zero gms.wearable classes in the F-Droid APK.
   implementation "com.google.android.gms:play-services-wearable:18.2.0"
 }
 
