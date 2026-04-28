@@ -9,11 +9,11 @@ name: CI
 #
 # Job split rationale (Option C): typecheck and jest run as separate jobs so
 # each can be independently marked non-blocking via `continue-on-error: true`
-# until the pre-existing failures on `main` are cleaned up.
-# - typecheck: 10 pre-existing TS errors → see BLD-747.
+# until the pre-existing failures on `main` are cleaned up. Typecheck flipped
+# back to blocking in BLD-764 once the pre-existing TS errors were cleared.
 # - jest: 12 pre-existing test failures across 3 suites (supersets,
-#   session-add-exercise, WorkoutHeatmap) → see BLD-753.
-# Both jobs flip back to blocking once their respective cleanup tickets land.
+#   session-add-exercise, WorkoutHeatmap) → see BLD-753. Flips to blocking
+#   once those failures are fixed.
 
 on:
   pull_request: {}
@@ -35,11 +35,6 @@ jobs:
     name: Typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # TODO(BLD-747): flip to blocking (remove `continue-on-error`) after the
-    # 10 pre-existing typecheck errors discovered by this workflow's first
-    # run on PR #415 are cleaned up. Until then, typecheck failures surface
-    # as warnings on the PR but do not block merge.
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
