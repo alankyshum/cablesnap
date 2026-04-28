@@ -222,17 +222,73 @@ describe('Dashboard Acceptance', () => {
     mockGetWeekAdherence.mockResolvedValue([])
   })
 
-  describe('Stats summary displays', () => {
-    it('shows streak, weekly workouts, and PR count', async () => {
+  describe('Default render (no mock overrides)', () => {
+    // Consolidates: stats summary, recent workouts list (excl. empty/PR override),
+    // quick-start, navigation, accessible labels — all share the default beforeEach
+    // setup, so we render once and assert across the full surface.
+    it('renders stats, sessions, templates, quick-start, and a11y labels', async () => {
       const { getByLabelText } = renderScreen(<Dashboard />)
 
       await waitFor(() => {
+        // Stats summary
         expect(getByLabelText(/week streak/)).toBeTruthy()
         expect(getByLabelText(/workouts this week/)).toBeTruthy()
         expect(getByLabelText(/recent personal records/)).toBeTruthy()
+        // Recent workouts list
+        expect(getByLabelText(/View workout: Morning Push/)).toBeTruthy()
+        expect(getByLabelText(/View workout: Evening Pull/)).toBeTruthy()
+        // View-all-history affordance
+        expect(getByLabelText('View all workout history')).toBeTruthy()
+        // Quick-start + create-template
+        expect(getByLabelText('Quick start workout')).toBeTruthy()
+        expect(getByLabelText('Create new template')).toBeTruthy()
+        // Template card
+        expect(getByLabelText(/Start workout from template: Push Day/)).toBeTruthy()
+        // Segmented buttons
+        expect(getByLabelText('Templates tab')).toBeTruthy()
+        expect(getByLabelText('Programs tab')).toBeTruthy()
       })
+
+      // a11y roles on cards
+      expect(getByLabelText(/Start workout from template: Push Day/).props.accessibilityRole).toBe('button')
+      expect(getByLabelText(/View workout: Morning Push/).props.accessibilityRole).toBe('button')
     })
 
+    it('press handlers route correctly: session detail, history, quick-start, create-template, template-card', async () => {
+      const { getByLabelText } = renderScreen(<Dashboard />)
+
+      await waitFor(() => {
+        expect(getByLabelText(/View workout: Morning Push/)).toBeTruthy()
+      })
+
+      // Navigate to a session
+      fireEvent.press(getByLabelText(/View workout: Morning Push/))
+      expect(mockRouter.push).toHaveBeenCalledWith('/session/detail/s1')
+
+      // Navigate to history
+      fireEvent.press(getByLabelText('View all workout history'))
+      expect(mockRouter.push).toHaveBeenCalledWith('/history')
+
+      // Create-template navigates
+      fireEvent.press(getByLabelText('Create new template'))
+      expect(mockRouter.push).toHaveBeenCalledWith('/template/create')
+
+      // Quick-start workflow
+      fireEvent.press(getByLabelText('Quick start workout'))
+      await waitFor(() => {
+        expect(mockStartSession).toHaveBeenCalledWith(null, 'Quick Workout')
+        expect(mockRouter.push).toHaveBeenCalledWith('/session/new-session')
+      })
+
+      // Template-card starts a session for that template
+      fireEvent.press(getByLabelText(/Start workout from template: Push Day/))
+      await waitFor(() => {
+        expect(mockStartSession).toHaveBeenCalledWith('tpl-1', 'Push Day')
+      })
+    })
+  })
+
+  describe('Stats / PR count from data', () => {
     it('shows PR count from data', async () => {
       mockGetRecentPRs.mockResolvedValue([
         { exercise: 'Bench Press', weight: 100, reps: 5 },
@@ -247,77 +303,8 @@ describe('Dashboard Acceptance', () => {
     })
   })
 
-  describe('Recent workouts list', () => {
-    it('shows recent workout sessions', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText(/View workout: Morning Push/)).toBeTruthy()
-        expect(getByLabelText(/View workout: Evening Pull/)).toBeTruthy()
-      })
-    })
-
-    it('shows empty state for new users with no workouts', async () => {
-      mockGetRecentSessions.mockResolvedValue([])
-      const { getByText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByText(/No workouts yet/)).toBeTruthy()
-      })
-    })
-
-    it('navigates to workout detail on press', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText(/View workout: Morning Push/)).toBeTruthy()
-      })
-
-      fireEvent.press(getByLabelText(/View workout: Morning Push/))
-      expect(mockRouter.push).toHaveBeenCalledWith('/session/detail/s1')
-    })
-
-    it('shows view all history button when sessions exist', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('View all workout history')).toBeTruthy()
-      })
-
-      fireEvent.press(getByLabelText('View all workout history'))
-      expect(mockRouter.push).toHaveBeenCalledWith('/history')
-    })
-  })
-
-  describe('Quick-start buttons', () => {
-    it('quick start button is pressable and starts a session', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('Quick start workout')).toBeTruthy()
-      })
-
-      fireEvent.press(getByLabelText('Quick start workout'))
-
-      await waitFor(() => {
-        expect(mockStartSession).toHaveBeenCalledWith(null, 'Quick Workout')
-        expect(mockRouter.push).toHaveBeenCalledWith('/session/new-session')
-      })
-    })
-  })
-
   describe('Active session banner', () => {
-    it('shows resume banner when there is an active session', async () => {
-      mockGetActiveSession.mockResolvedValue(activeSession)
-
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('Resume active workout: Current Workout')).toBeTruthy()
-      })
-    })
-
-    it('navigates to active session on press', async () => {
+    it('shows resume banner and navigates on press when active session exists', async () => {
       mockGetActiveSession.mockResolvedValue(activeSession)
 
       const { getByLabelText } = renderScreen(<Dashboard />)
@@ -341,34 +328,7 @@ describe('Dashboard Acceptance', () => {
     })
   })
 
-  describe('Navigation to major sections', () => {
-    it('create template navigates to template creation', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('Create new template')).toBeTruthy()
-      })
-
-      fireEvent.press(getByLabelText('Create new template'))
-      expect(mockRouter.push).toHaveBeenCalledWith('/template/create')
-    })
-
-    it('template card navigates to start workout', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText(/Start workout from template: Push Day/)).toBeTruthy()
-      })
-
-      fireEvent.press(getByLabelText(/Start workout from template: Push Day/))
-
-      await waitFor(() => {
-        expect(mockStartSession).toHaveBeenCalledWith('tpl-1', 'Push Day')
-      })
-    })
-  })
-
-  describe('Empty state for new users', () => {
+  describe('Empty states for new users', () => {
     it('shows empty template state when no templates or starters exist', async () => {
       mockGetTemplates.mockResolvedValue([])
 
@@ -390,7 +350,7 @@ describe('Dashboard Acceptance', () => {
       })
     })
 
-    it('shows zeros in stats for new users', async () => {
+    it('shows zeros in stats when no completed weeks/PRs/adherence', async () => {
       mockGetAllCompletedSessionWeeks.mockResolvedValue([])
       mockGetRecentPRs.mockResolvedValue([])
       mockGetWeekAdherence.mockResolvedValue([])
@@ -404,82 +364,27 @@ describe('Dashboard Acceptance', () => {
     })
   })
 
-  describe('Accessible labels present', () => {
-    it('quick start button has accessibility label', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('Quick start workout')).toBeTruthy()
-      })
-    })
-
-    it('stat cards have accessibility labels', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText(/week streak/)).toBeTruthy()
-        expect(getByLabelText(/workouts this week/)).toBeTruthy()
-        expect(getByLabelText(/recent personal records/)).toBeTruthy()
-      })
-    })
-
-    it('template cards have accessibility labels and roles', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        const card = getByLabelText(/Start workout from template: Push Day/)
-        expect(card).toBeTruthy()
-        expect(card.props.accessibilityRole).toBe('button')
-      })
-    })
-
-    it('session cards have accessibility labels and roles', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        const card = getByLabelText(/View workout: Morning Push/)
-        expect(card).toBeTruthy()
-        expect(card.props.accessibilityRole).toBe('button')
-      })
-    })
-
-    it('segmented buttons have accessibility labels', async () => {
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('Templates tab')).toBeTruthy()
-        expect(getByLabelText('Programs tab')).toBeTruthy()
-      })
-    })
-  })
-
   describe('Today schedule card', () => {
-    it('shows today schedule when schedule exists', async () => {
-      mockGetTodaySchedule.mockResolvedValue({
-        template_id: 'tpl-1',
-        template_name: 'Push Day',
-        exercise_count: 5,
-      })
+    const todayFixture = {
+      template_id: 'tpl-1',
+      template_name: 'Push Day',
+      exercise_count: 5,
+    }
 
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
+    it('shows pending and completed states based on isTodayCompleted', async () => {
+      // Pending state
+      mockGetTodaySchedule.mockResolvedValue(todayFixture)
+      mockIsTodayCompleted.mockResolvedValue(false)
+      const pending = renderScreen(<Dashboard />)
       await waitFor(() => {
-        expect(getByLabelText(/Today's workout: Push Day/)).toBeTruthy()
+        expect(pending.getByLabelText(/Today's workout: Push Day/)).toBeTruthy()
       })
-    })
 
-    it('shows completed state when today is done', async () => {
-      mockGetTodaySchedule.mockResolvedValue({
-        template_id: 'tpl-1',
-        template_name: 'Push Day',
-        exercise_count: 5,
-      })
+      // Completed state — re-render with completed=true
       mockIsTodayCompleted.mockResolvedValue(true)
-
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
+      const completed = renderScreen(<Dashboard />)
       await waitFor(() => {
-        expect(getByLabelText(/Completed: Push Day/)).toBeTruthy()
+        expect(completed.getByLabelText(/Completed: Push Day/)).toBeTruthy()
       })
     })
   })
@@ -489,33 +394,6 @@ describe('Dashboard Acceptance', () => {
       program: { id: 'prog-1', name: 'Push Pull Legs' },
       day: { id: 'day-1', template_id: 'tpl-1', template_name: 'Push Day', label: 'Day 1' },
     }
-
-    it('defaults to programs when nextWorkout exists', async () => {
-      mockGetNextWorkout.mockResolvedValue(nextWorkoutFixture)
-
-      const { getByLabelText, queryByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('Create new program')).toBeTruthy()
-      })
-      expect(queryByLabelText('Create new template')).toBeNull()
-    })
-
-    it('allows switching to templates when nextWorkout exists', async () => {
-      mockGetNextWorkout.mockResolvedValue(nextWorkoutFixture)
-
-      const { getByLabelText } = renderScreen(<Dashboard />)
-
-      await waitFor(() => {
-        expect(getByLabelText('Create new program')).toBeTruthy()
-      })
-
-      fireEvent.press(getByLabelText('Templates tab'))
-
-      await waitFor(() => {
-        expect(getByLabelText('Create new template')).toBeTruthy()
-      })
-    })
 
     it('defaults to templates when no nextWorkout', async () => {
       mockGetNextWorkout.mockResolvedValue(null)
@@ -527,20 +405,24 @@ describe('Dashboard Acceptance', () => {
       })
     })
 
-    it('can freely switch segments with active program', async () => {
+    it('defaults to programs when nextWorkout exists, and switches freely between segments', async () => {
       mockGetNextWorkout.mockResolvedValue(nextWorkoutFixture)
 
-      const { getByLabelText } = renderScreen(<Dashboard />)
+      const { getByLabelText, queryByLabelText } = renderScreen(<Dashboard />)
 
+      // Defaults to programs
       await waitFor(() => {
         expect(getByLabelText('Create new program')).toBeTruthy()
       })
+      expect(queryByLabelText('Create new template')).toBeNull()
 
+      // Switch to templates
       fireEvent.press(getByLabelText('Templates tab'))
       await waitFor(() => {
         expect(getByLabelText('Create new template')).toBeTruthy()
       })
 
+      // Switch back to programs
       fireEvent.press(getByLabelText('Programs tab'))
       await waitFor(() => {
         expect(getByLabelText('Create new program')).toBeTruthy()

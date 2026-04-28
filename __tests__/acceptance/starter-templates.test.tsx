@@ -106,35 +106,15 @@ describe('Recommend Screen — Beginner', () => {
     mockParams = { level: 'beginner', weight: 'kg', measurement: 'cm' }
   })
 
-  it('shows recommended Full Body template name', () => {
-    const { getByText } = renderScreen(<Recommend />)
-    expect(getByText('Full Body')).toBeTruthy()
-  })
-
-  it('shows "We Recommend" heading', () => {
-    const { getByText } = renderScreen(<Recommend />)
-    expect(getByText('We Recommend')).toBeTruthy()
-  })
-
-  it('shows Recommended chip', () => {
-    const { getByText } = renderScreen(<Recommend />)
-    expect(getByText('Recommended')).toBeTruthy()
-  })
-
-  it('shows exercise count and duration for Full Body', () => {
+  it('renders Full Body recommendation with heading, chip, exercise count, duration, and skip', () => {
     const fullBody = STARTER_TEMPLATES.find(t => t.recommended)!
-    const { getByText } = renderScreen(<Recommend />)
+    const { getByText, getByLabelText } = renderScreen(<Recommend />)
+    expect(getByText('Full Body')).toBeTruthy()
+    expect(getByText('We Recommend')).toBeTruthy()
+    expect(getByText('Recommended')).toBeTruthy()
     expect(getByText(`${fullBody.exercises.length} exercises`)).toBeTruthy()
     expect(getByText(fullBody.duration)).toBeTruthy()
-  })
-
-  it('has Start with Full Body button with correct a11y label', () => {
-    const { getByLabelText } = renderScreen(<Recommend />)
     expect(getByLabelText('Start with Full Body')).toBeTruthy()
-  })
-
-  it('has skip button with a11y label', () => {
-    const { getByLabelText } = renderScreen(<Recommend />)
     expect(getByLabelText('Skip recommendation and explore on your own')).toBeTruthy()
   })
 
@@ -156,23 +136,11 @@ describe('Recommend Screen — Intermediate', () => {
     mockParams = { level: 'intermediate', weight: 'kg', measurement: 'cm' }
   })
 
-  it('shows PPL program name "Push / Pull / Legs"', () => {
+  it('renders PPL program with name, description, day cycle, and Program chip', () => {
     const { getByText } = renderScreen(<Recommend />)
     expect(getByText(STARTER_PROGRAM.name)).toBeTruthy()
-  })
-
-  it('shows PPL program description', () => {
-    const { getByText } = renderScreen(<Recommend />)
     expect(getByText(STARTER_PROGRAM.description)).toBeTruthy()
-  })
-
-  it('shows day cycle count', () => {
-    const { getByText } = renderScreen(<Recommend />)
     expect(getByText(`${STARTER_PROGRAM.days.length}-day cycle`)).toBeTruthy()
-  })
-
-  it('shows Program chip', () => {
-    const { getByText } = renderScreen(<Recommend />)
     expect(getByText('Program')).toBeTruthy()
   })
 
@@ -194,36 +162,18 @@ describe('Recommend Screen — Advanced', () => {
     mockParams = { level: 'advanced', weight: 'kg', measurement: 'cm' }
   })
 
-  it('shows "Browse Our Templates" heading', () => {
-    const { getByText } = renderScreen(<Recommend />)
-    expect(getByText('Browse Our Templates')).toBeTruthy()
-  })
-
-  it('shows at least 3 browse templates with names visible', () => {
+  it('renders Browse Templates view with heading, template names, info, browse-all, and skip', () => {
     const browse = STARTER_TEMPLATES.slice(0, 3)
-    const { getByText } = renderScreen(<Recommend />)
+    const { getByText, getAllByText, getByLabelText } = renderScreen(<Recommend />)
+    expect(getByText('Browse Our Templates')).toBeTruthy()
     for (const tpl of browse) {
       expect(getByText(tpl.name)).toBeTruthy()
     }
-  })
-
-  it('shows exercise count and difficulty for browse templates', () => {
-    const browse = STARTER_TEMPLATES.slice(0, 3)
-    const { getAllByText } = renderScreen(<Recommend />)
-    // Each browse template shows its info; some may share the same text
     const uniqueTexts = [...new Set(browse.map(tpl => `${tpl.exercises.length} exercises · ${tpl.difficulty}`))]
     for (const text of uniqueTexts) {
       expect(getAllByText(text).length).toBeGreaterThan(0)
     }
-  })
-
-  it('has Browse All Templates button with a11y label', () => {
-    const { getByLabelText } = renderScreen(<Recommend />)
     expect(getByLabelText('Browse all workout templates')).toBeTruthy()
-  })
-
-  it('has skip button', () => {
-    const { getByLabelText } = renderScreen(<Recommend />)
     expect(getByLabelText('Skip and explore on your own')).toBeTruthy()
   })
 
@@ -252,25 +202,13 @@ describe('Pick Template Screen', () => {
     mockGetTemplates.mockResolvedValue(mockTemplates)
   })
 
-  it('renders search bar with a11y label', async () => {
-    const { getByLabelText } = renderScreen(<PickTemplate />)
+  it('renders search bar, all templates, and per-template a11y labels', async () => {
+    const { getByText, getByLabelText } = renderScreen(<PickTemplate />)
     await waitFor(() => {
       expect(getByLabelText('Search templates')).toBeTruthy()
-    })
-  })
-
-  it('shows all templates in the list', async () => {
-    const { getByText } = renderScreen(<PickTemplate />)
-    await waitFor(() => {
       for (const tpl of mockTemplates) {
         expect(getByText(tpl.name)).toBeTruthy()
       }
-    })
-  })
-
-  it('templates are pressable with a11y labels', async () => {
-    const { getByLabelText } = renderScreen(<PickTemplate />)
-    await waitFor(() => {
       expect(getByLabelText('Select template: Full Body')).toBeTruthy()
       expect(getByLabelText('Select template: Upper Push')).toBeTruthy()
     })
@@ -322,31 +260,13 @@ describe('Template Detail — Starter Template', () => {
     })
   })
 
-  it('shows exercise names for the template', async () => {
-    const { getByText } = renderScreen(<EditTemplate />)
+  it('renders exercise list, sets/reps, exercise count header, and STARTER chip', async () => {
+    const { getByText, getAllByText, getByLabelText } = renderScreen(<EditTemplate />)
+    const setsRepsText = `${fullBody.exercises[0].target_sets} × ${fullBody.exercises[0].target_reps} · ${fullBody.exercises[0].rest_seconds}s rest`
     await waitFor(() => {
       expect(getByText('Voltra Exercise 039')).toBeTruthy()
-    })
-  })
-
-  it('shows target sets and reps for exercises', async () => {
-    const { getAllByText } = renderScreen(<EditTemplate />)
-    const text = `${fullBody.exercises[0].target_sets} × ${fullBody.exercises[0].target_reps} · ${fullBody.exercises[0].rest_seconds}s rest`
-    await waitFor(() => {
-      expect(getAllByText(text).length).toBeGreaterThan(0)
-    })
-  })
-
-  it('shows exercise count in header', async () => {
-    const { getByText } = renderScreen(<EditTemplate />)
-    await waitFor(() => {
+      expect(getAllByText(setsRepsText).length).toBeGreaterThan(0)
       expect(getByText(`Exercises (${fullBody.exercises.length})`)).toBeTruthy()
-    })
-  })
-
-  it('shows STARTER chip for starter templates', async () => {
-    const { getByLabelText } = renderScreen(<EditTemplate />)
-    await waitFor(() => {
       expect(getByLabelText('Starter template, read-only. Duplicate to edit.')).toBeTruthy()
     })
   })
@@ -384,17 +304,11 @@ describe('Template Detail — Founders Favourite Day A (5 exercises)', () => {
     })
   })
 
-  it('renders all 5 exercises without crash', async () => {
-    const { getByText } = renderScreen(<EditTemplate />)
-    await waitFor(() => {
-      expect(getByText(`Exercises (${dayA.exercises.length})`)).toBeTruthy()
-    })
-  })
-
-  it('shows correct sets and reps for advanced template', async () => {
-    const { getAllByText } = renderScreen(<EditTemplate />)
+  it('renders all 5 exercises with correct sets and reps', async () => {
+    const { getByText, getAllByText } = renderScreen(<EditTemplate />)
     const text = `${dayA.exercises[0].target_sets} × ${dayA.exercises[0].target_reps} · ${dayA.exercises[0].rest_seconds}s rest`
     await waitFor(() => {
+      expect(getByText(`Exercises (${dayA.exercises.length})`)).toBeTruthy()
       expect(getAllByText(text).length).toBeGreaterThan(0)
     })
   })
@@ -403,33 +317,27 @@ describe('Template Detail — Founders Favourite Day A (5 exercises)', () => {
 // --- Starter template data verification ---
 
 describe('Starter Template Data Integrity', () => {
-  it('has exactly one recommended template (Full Body)', () => {
+  it('has exactly one recommended template (Full Body) and all templates have exercises', () => {
     expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(8)
     const recommended = STARTER_TEMPLATES.filter(t => t.recommended)
     expect(recommended).toHaveLength(1)
     expect(recommended[0].name).toBe('Full Body')
+    for (const tpl of STARTER_TEMPLATES) {
+      expect(tpl.exercises.length).toBeGreaterThan(0)
+    }
   })
 
-  it('PPL starter program references valid template IDs', () => {
+  it('starter programs reference valid template IDs and PPL has Push/Pull/Legs days', () => {
     const templateIds = STARTER_TEMPLATES.map(t => t.id)
     for (const prog of STARTER_PROGRAMS) {
       for (const day of prog.days) {
         expect(templateIds).toContain(day.template_id)
       }
     }
-  })
-
-  it('PPL has 3 days: Push, Pull, Legs & Core', () => {
     const ppl = STARTER_PROGRAMS.find(p => p.id === 'starter-prog-1')!
     expect(ppl.days).toHaveLength(3)
     expect(ppl.days[0].label).toBe('Push')
     expect(ppl.days[1].label).toBe('Pull')
     expect(ppl.days[2].label).toBe('Legs & Core')
-  })
-
-  it('all templates have at least 1 exercise', () => {
-    for (const tpl of STARTER_TEMPLATES) {
-      expect(tpl.exercises.length).toBeGreaterThan(0)
-    }
   })
 })

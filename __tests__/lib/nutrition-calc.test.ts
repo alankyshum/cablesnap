@@ -11,50 +11,34 @@ import {
 
 describe("nutrition-calc", () => {
   describe("convertToMetric", () => {
-    it("passes through metric values", () => {
-      const result = convertToMetric(75, "kg", 175, "cm");
-      expect(result.weight_kg).toBe(75);
-      expect(result.height_cm).toBe(175);
-    });
-
-    it("converts lb to kg", () => {
-      const result = convertToMetric(165, "lb", 175, "cm");
-      expect(result.weight_kg).toBeCloseTo(74.84, 1);
-    });
-
-    it("converts inches to cm", () => {
-      const result = convertToMetric(75, "kg", 69, "in");
-      expect(result.height_cm).toBeCloseTo(175.26, 1);
-    });
-
-    it("converts both units simultaneously", () => {
-      const result = convertToMetric(165, "lb", 69, "in");
-      expect(result.weight_kg).toBeCloseTo(74.84, 1);
-      expect(result.height_cm).toBeCloseTo(175.26, 1);
+    it.each([
+      { name: "passes through metric values", w: 75, wu: "kg" as const, h: 175, hu: "cm" as const, expectKg: 75, expectCm: 175 },
+      { name: "converts lb to kg", w: 165, wu: "lb" as const, h: 175, hu: "cm" as const, expectKg: 74.84, expectCm: 175 },
+      { name: "converts inches to cm", w: 75, wu: "kg" as const, h: 69, hu: "in" as const, expectKg: 75, expectCm: 175.26 },
+      { name: "converts both units simultaneously", w: 165, wu: "lb" as const, h: 69, hu: "in" as const, expectKg: 74.84, expectCm: 175.26 },
+    ])("$name", ({ w, wu, h, hu, expectKg, expectCm }) => {
+      const result = convertToMetric(w, wu, h, hu);
+      expect(result.weight_kg).toBeCloseTo(expectKg, 1);
+      expect(result.height_cm).toBeCloseTo(expectCm, 1);
     });
   });
 
   describe("calculateBMR", () => {
-    it("calculates male BMR using Mifflin-St Jeor", () => {
-      // 75kg, 175cm, 30yo male: 10*75 + 6.25*175 - 5*30 + 5 = 750 + 1093.75 - 150 + 5 = 1698.75
-      const bmr = calculateBMR(75, 175, 30, "male");
-      expect(bmr).toBeCloseTo(1698.75, 2);
+    it.each([
+      // 75kg, 175cm, 30yo male: 10*75 + 6.25*175 - 5*30 + 5 = 1698.75
+      { name: "male Mifflin-St Jeor", w: 75, h: 175, age: 30, sex: "male" as const, expected: 1698.75 },
+      // 60kg, 165cm, 25yo female: 10*60 + 6.25*165 - 5*25 - 161 = 1345.25
+      { name: "female Mifflin-St Jeor", w: 60, h: 165, age: 25, sex: "female" as const, expected: 1345.25 },
+    ])("calculates $name", ({ w, h, age, sex, expected }) => {
+      expect(calculateBMR(w, h, age, sex)).toBeCloseTo(expected, 2);
     });
 
-    it("calculates female BMR using Mifflin-St Jeor", () => {
-      // 60kg, 165cm, 25yo female: 10*60 + 6.25*165 - 5*25 - 161 = 600 + 1031.25 - 125 - 161 = 1345.25
-      const bmr = calculateBMR(60, 165, 25, "female");
-      expect(bmr).toBeCloseTo(1345.25, 2);
-    });
-
-    it("male BMR is higher than female for same stats", () => {
+    it("monotonic invariants: male > female (same stats), young > old (same sex)", () => {
       const male = calculateBMR(70, 170, 30, "male");
       const female = calculateBMR(70, 170, 30, "female");
       expect(male).toBeGreaterThan(female);
-      expect(male - female).toBeCloseTo(166, 0); // +5 vs -161 = 166 difference
-    });
+      expect(male - female).toBeCloseTo(166, 0); // +5 vs -161 = 166
 
-    it("BMR decreases with age", () => {
       const young = calculateBMR(75, 175, 20, "male");
       const old = calculateBMR(75, 175, 50, "male");
       expect(young).toBeGreaterThan(old);
@@ -64,61 +48,38 @@ describe("nutrition-calc", () => {
 
   describe("calculateTDEE", () => {
     const bmr = 1700;
-
-    it("applies sedentary multiplier (1.2)", () => {
-      expect(calculateTDEE(bmr, "sedentary")).toBeCloseTo(2040, 0);
-    });
-
-    it("applies lightly active multiplier (1.375)", () => {
-      expect(calculateTDEE(bmr, "lightly_active")).toBeCloseTo(2337.5, 0);
-    });
-
-    it("applies moderately active multiplier (1.55)", () => {
-      expect(calculateTDEE(bmr, "moderately_active")).toBeCloseTo(2635, 0);
-    });
-
-    it("applies very active multiplier (1.725)", () => {
-      expect(calculateTDEE(bmr, "very_active")).toBeCloseTo(2932.5, 0);
-    });
-
-    it("applies extra active multiplier (1.9)", () => {
-      expect(calculateTDEE(bmr, "extra_active")).toBeCloseTo(3230, 0);
+    it.each([
+      { level: "sedentary" as const, multiplier: 1.2, expected: 2040 },
+      { level: "lightly_active" as const, multiplier: 1.375, expected: 2337.5 },
+      { level: "moderately_active" as const, multiplier: 1.55, expected: 2635 },
+      { level: "very_active" as const, multiplier: 1.725, expected: 2932.5 },
+      { level: "extra_active" as const, multiplier: 1.9, expected: 3230 },
+    ])("applies $level multiplier ($multiplier)", ({ level, expected }) => {
+      expect(calculateTDEE(bmr, level)).toBeCloseTo(expected, 0);
     });
   });
 
   describe("calculateMacros", () => {
-    it("calculates macros for maintain goal", () => {
+    it("calculates macros for maintain goal (full breakdown)", () => {
       const macros = calculateMacros(2500, 75, "maintain");
       expect(macros.calories).toBe(2500);
       expect(macros.protein).toBe(165); // 75 * 2.2
       expect(macros.fat).toBe(69); // round(2500 * 0.25 / 9)
-      // carbs = (2500 - 165*4 - 69*9) / 4 = (2500 - 660 - 621) / 4 = 1219 / 4 = 304.75 -> 305
+      // carbs = (2500 - 165*4 - 69*9) / 4 = 304.75 -> 305
       expect(macros.carbs).toBe(305);
     });
 
-    it("applies -500 kcal for cut goal", () => {
-      const macros = calculateMacros(2500, 75, "cut");
-      expect(macros.calories).toBe(2000);
-    });
-
-    it("applies +300 kcal for bulk goal", () => {
-      const macros = calculateMacros(2500, 75, "bulk");
-      expect(macros.calories).toBe(2800);
-    });
-
-    it("floors calories at 1200", () => {
-      const macros = calculateMacros(1500, 50, "cut");
-      // 1500 - 500 = 1000, floored to 1200
-      expect(macros.calories).toBe(1200);
+    it.each([
+      { name: "cut: -500 kcal", goal: "cut" as const, tdee: 2500, w: 75, expectedCal: 2000 },
+      { name: "bulk: +300 kcal", goal: "bulk" as const, tdee: 2500, w: 75, expectedCal: 2800 },
+      { name: "floors calories at 1200", goal: "cut" as const, tdee: 1500, w: 50, expectedCal: 1200 },
+    ])("$name", ({ goal, tdee, w, expectedCal }) => {
+      expect(calculateMacros(tdee, w, goal).calories).toBe(expectedCal);
     });
 
     it("floors carbs at 0 when protein + fat exceed calories", () => {
-      // Very heavy person with low TDEE
+      // Heavy person with low TDEE → carbs would go negative → clamped 0
       const macros = calculateMacros(1200, 120, "cut");
-      // calories = max(1200, 700) = 1200
-      // protein = 120 * 2.2 = 264g = 1056 cal
-      // fat = round(1200 * 0.25 / 9) = 33g = 297 cal
-      // carbs = (1200 - 1056 - 297) / 4 = -153/4 -> floored to 0
       expect(macros.carbs).toBe(0);
       expect(macros.protein).toBe(264);
     });
@@ -184,25 +145,17 @@ describe("nutrition-calc", () => {
       expect(result.calories).toBe(2633);
       expect(result.protein).toBe(165); // 75 * 2.2
     });
-    it("uses rmr_override when provided", () => {
-      const profile: NutritionProfile = { ...baseProfile, rmr_override: 1750 };
-      const result = calculateFromProfile(profile);
+    it("uses rmr_override when truthy, ignores otherwise (null/0)", () => {
+      const baseline = calculateFromProfile(baseProfile);
+
+      // truthy override changes the calorie target
+      const withOverride = calculateFromProfile({ ...baseProfile, rmr_override: 1750 });
       // TDEE = 1750 * 1.55 = 2712.5, calories = round(2712.5) = 2713
-      expect(result.calories).toBe(2713);
-    });
+      expect(withOverride.calories).toBe(2713);
 
-    it("ignores rmr_override when null", () => {
-      const profile: NutritionProfile = { ...baseProfile, rmr_override: null };
-      const result = calculateFromProfile(profile);
-      const baseline = calculateFromProfile(baseProfile);
-      expect(result.calories).toBe(baseline.calories);
-    });
-
-    it("ignores rmr_override when 0", () => {
-      const profile: NutritionProfile = { ...baseProfile, rmr_override: 0 };
-      const result = calculateFromProfile(profile);
-      const baseline = calculateFromProfile(baseProfile);
-      expect(result.calories).toBe(baseline.calories);
+      // null/0 are treated as "no override" → identical to baseline
+      expect(calculateFromProfile({ ...baseProfile, rmr_override: null }).calories).toBe(baseline.calories);
+      expect(calculateFromProfile({ ...baseProfile, rmr_override: 0 }).calories).toBe(baseline.calories);
     });
 
     it("applies calorie floor with low rmr_override", () => {
@@ -220,18 +173,14 @@ describe("nutrition-calc", () => {
   });
 
   describe("calculateDeviationPercent", () => {
-    it("calculates percentage deviation accurately", () => {
+    it.each([
       // 2000 vs 1700 → |300/1700| * 100 = 17.65%
-      expect(calculateDeviationPercent(2000, 1700)).toBeCloseTo(17.65, 1);
-    });
-
-    it("returns 0 when estimatedBMR is 0", () => {
-      expect(calculateDeviationPercent(1750, 0)).toBe(0);
-    });
-
-    it("returns absolute deviation for values below estimate", () => {
-      // 1400 vs 1700 → |300/1700| * 100 = 17.65%
-      expect(calculateDeviationPercent(1400, 1700)).toBeCloseTo(17.65, 1);
+      { name: "above estimate", measured: 2000, estimate: 1700, expected: 17.65 },
+      // 1400 vs 1700 → also 17.65%
+      { name: "below estimate (absolute)", measured: 1400, estimate: 1700, expected: 17.65 },
+      { name: "0 estimate → 0", measured: 1750, estimate: 0, expected: 0 },
+    ])("$name", ({ measured, estimate, expected }) => {
+      expect(calculateDeviationPercent(measured, estimate)).toBeCloseTo(expected, 1);
     });
   });
 
