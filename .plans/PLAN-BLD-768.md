@@ -19,7 +19,7 @@ CableSnap is positioned as a **cable + bodyweight** tracker. BLD-771 just shippe
 - `seed-community.ts:321-366` already ships 6 push-up rows as **separate exercises** (Push-Up, Wide, Diamond, Decline, Incline, Archer). Per-set push-up grip chips would create double-tracking with existing exercise-level differentiation. **Push-ups OUT.**
 - `seed-community.ts:413-428` ships exactly one Pull-Up and one Chin-Up. No width variants. Per-set grip is the right pattern here.
 - `seed-community.ts:386` ships one Inverted Row. Per-set grip is the right pattern.
-- `seed-community.ts:452` ships only "Bench Dip"; per-set dip-style would conflict with users who have already created custom Ring/Parallel-Bar Dip exercises. **Dips DEFERRED — BLD-769 follow-up will resolve seed/custom collision with explicit migration story.** (QD-S4: this is a hard Phase-2 commitment, not a vague punt — tracker issue created up-front.)
+- `seed-community.ts:452` ships only "Bench Dip"; per-set dip-style would conflict with users who have already created custom Ring/Parallel-Bar Dip exercises. **Dips DEFERRED — BLD-818 follow-up will resolve seed/custom collision with explicit migration story.** (QD-S4: this is a hard Phase-2 commitment, not a vague punt — tracker issue created up-front.)
 
 This is a more conservative scope than the original BLD-768 sketch: **only add per-set variants where the lift is logged as one exercise but materially different across sets.** Pull-ups, chin-ups, inverted rows pass that test. Push-ups (already differentiated) and dips (collide with custom-exercise pattern) don't.
 
@@ -126,7 +126,7 @@ export function isBodyweightGripExercise(
 }
 ```
 
-**Open Question on `movement_pattern`** (resolves QD-S4): we **commit to** introducing a structural `movement_pattern` column on `exercises` as a Phase-2 follow-up (BLD-769 alongside dip-style). Tracker issue created up-front. Until then, the regex gate is v1.
+**Open Question on `movement_pattern`** (resolves QD-S4): we **commit to** introducing a structural `movement_pattern` column on `exercises` as a Phase-2 follow-up (BLD-818 alongside dip-style). Tracker issue created up-front. Until then, the regex gate is v1.
 
 ### UX Design
 
@@ -159,7 +159,7 @@ export function isBodyweightGripExercise(
 **Empty / Error / Edge states:**
 - Pre-migration history user (resolves QD-S2 partially — see below): NULL grip, "All variants (0 logged)" badge, no broken UI.
 - **Discovery banner (one-time, dismissible)** for users with ≥10 historical sets and 0 grip-tagged sets on a bodyweight grip exercise: shown on the PR Dashboard exercise detail screen. Copy: *"Tag your future pull-ups with grip width and type to see split progression curves. Past sets stay as-is."* Dismiss persists in `app_settings` (`bodyweight_grip_banner_dismissed`). **This is a partial QD-S2 fix** — full design (banner styling, dismiss UX) deferred to slice 4 with a fallback to the simple CTA if slice 4 runs over budget.
-- Custom exercise that should match but regex misses (e.g., "Front Lever"): chip won't render. Workaround: rename exercise. Acceptable v1; v2 movement_pattern column (BLD-769 commit) addresses it.
+- Custom exercise that should match but regex misses (e.g., "Front Lever"): chip won't render. Workaround: rename exercise. Acceptable v1; v2 movement_pattern column (BLD-818 commit) addresses it.
 - Chip touch target ≥44×44 dp (already enforced in shared chip styles).
 
 ### Technical Approach
@@ -229,13 +229,13 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 
 **Out:**
 - Push-up grip variants (already differentiated as separate exercise rows).
-- Dip styles (parallel-bar / ring / straight-bar) — **DEFERRED to BLD-769 with explicit migration story**.
-- Foot elevation for inverted rows — **DEFERRED to BLD-769 alongside dip styles**.
+- Dip styles (parallel-bar / ring / straight-bar) — **DEFERRED to BLD-818 with explicit migration story**.
+- Foot elevation for inverted rows — **DEFERRED to BLD-818 alongside dip styles**.
 - Tempo logging.
 - Range-of-motion / depth tagging.
 - Custom user-defined grip vocabulary.
 - Variant rotation suggestions / behavioral nudges (Classification trigger).
-- Structural `movement_pattern` column on `exercises` — **DEFERRED to BLD-769 (Phase-2 commitment)**.
+- Structural `movement_pattern` column on `exercises` — **DEFERRED to BLD-818 (Phase-2 commitment)**.
 - Banner full polish (animation, slide-in transition) — slice 4 best-effort, fallback to plain CTA if over budget.
 
 ## Acceptance Criteria
@@ -325,7 +325,7 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Regex still misses an edge form (rev-1 had `\b` bug) | Low (after rev-2 fix + 10 test cases) | Low | Explicit ✓/✗ test list. Documented limitation for `"Pull Up"` (space). v2 movement_pattern is committed (BLD-769). |
+| Regex still misses an edge form (rev-1 had `\b` bug) | Low (after rev-2 fix + 10 test cases) | Low | Explicit ✓/✗ test list. Documented limitation for `"Pull Up"` (space). v2 movement_pattern is committed (BLD-818). |
 | Sibling sheet duplication drifts from cable sheet over time | Medium | Low | Code comments in both files cross-referencing each other. PR review checklist item: "if changing one sheet, consider whether the sibling needs the same change." Future refactor at 4+ use-cases. |
 | Layout collision: weighted pull-up shows two stacked footers + modifier chip overflows | Low | High | Explicit snapshot test for the weighted-pull-up case in slice 3 AC. Visual regression caught at slice 3. |
 | Pre-migration history user dismisses banner before understanding it | Medium | Low | Banner copy is informational, not motivational. No re-prompt. Variant filter dropdown remains discoverable as the secondary path. |
@@ -333,7 +333,7 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 | Migration race condition with concurrent reads | Low | High | Reuse BLD-771's "migrations complete before any query" guarantee in `lib/db/index.ts`. |
 | Partial index not selected by SQLite planner | Low | Medium | EXPLAIN-first protocol before shipping the index. |
 | Behavior-design creep ("you've done wide 3x, try narrow") | Low (caught early) | High | Hard exclusion comment in `lib/bodyweight-variant.ts` mirroring BLD-771. Any addition flips Classification → YES → fresh psych review. |
-| Future `movement_pattern` refactor (BLD-769) requires data backfill | Medium | Low | Columns are independent of any future structural classification. BLD-769 only changes the gate predicate, not the data shape. Documented in BLD-769 acceptance criteria up-front. |
+| Future `movement_pattern` refactor (BLD-818) requires data backfill | Medium | Low | Columns are independent of any future structural classification. BLD-818 only changes the gate predicate, not the data shape. Documented in BLD-818 acceptance criteria up-front. |
 
 ## Slicing — proposed (subject to techlead refinement)
 
@@ -359,7 +359,7 @@ WHERE grip_type IS NOT NULL OR grip_width IS NOT NULL;
 - **QD-S1 (footer copy):** Softened from `"Dip styles + foot elevation coming soon"` to `"More bodyweight variant types planned"`. No specific feature names, no timeline.
 - **QD-S2 (empty-state CTA):** Discovery banner added (one-time, dismissible, ≥10 historical sets, 0 grip-tagged). Slice 4 best-effort with fallback to plain CTA. Behavior-design risk reviewed in Risk Assessment.
 - **QD-S3 (test count):** Spelled out. **21 tests across 5 categories.** Confirmed under BLD-814 budget.
-- **QD-S4 (movement_pattern):** Committed as Phase-2 (BLD-769) follow-up alongside dip-style work, NOT vague punt. Tracker issue created up-front.
+- **QD-S4 (movement_pattern):** Committed as Phase-2 (BLD-818) follow-up alongside dip-style work, NOT vague punt. Tracker issue created up-front.
 - **QD-S5 (`audit-vocab.sh`):** Verified to exist (3.2K, real script). Slice 1 dep, NOT slice 2.
 
 _Re-tag @quality-director on commit of rev 2 — pending._
