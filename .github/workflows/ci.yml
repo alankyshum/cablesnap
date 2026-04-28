@@ -10,10 +10,9 @@ name: CI
 # Job split rationale (Option C): typecheck and jest run as separate jobs so
 # each can be independently marked non-blocking via `continue-on-error: true`
 # until the pre-existing failures on `main` are cleaned up.
-# - typecheck: 10 pre-existing TS errors → see BLD-747.
-# - jest: 3 failing tests in WorkoutHeatmap.test.tsx (missing
-#   `useAnimatedProps` reanimated mock entry) → see BLD-749.
-# Both jobs flip back to blocking once their respective cleanup tickets land.
+# - typecheck: 10 pre-existing TS errors → see BLD-747 (still non-blocking).
+# - jest: blocking (BLD-749 mock fix landed in 0e4d6784).
+# Typecheck flips back to blocking once BLD-747 cleanup lands.
 
 on:
   pull_request: {}
@@ -64,10 +63,6 @@ jobs:
     name: Jest
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # TODO(BLD-749): flip to blocking (remove `continue-on-error`) after the
-    # `useAnimatedProps` entry is added to the reanimated jest mock and the
-    # 3 currently-failing WorkoutHeatmap tests pass on `main`.
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
