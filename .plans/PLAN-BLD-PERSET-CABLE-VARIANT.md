@@ -188,67 +188,91 @@ If slice 4 runs over 4 hours, ship 1–3 and split slice 4 into its own PR.
 
 ## Acceptance Criteria
 
-- [ ] Given a brand new install, when I migrate the DB, then `workout_sets.attachment` and `workout_sets.mount_position` columns exist and default to NULL.
-- [ ] Given an existing install with workout history (upgrade from a real seeded pre-migration fixture), when migration runs, then all existing rows have NULL for both new columns, zero rows are altered or lost, and re-running migration on the upgraded DB is a no-op.
-- [ ] Given `EXPLAIN QUERY PLAN` is captured for the autofill lookup against a 10k-set seeded DB, then the plan uses an index (no `SCAN TABLE workout_sets`).
-- [ ] Given a cable exercise (`isCableExercise(ex) === true`) in an active session, when I add a new set with no prior history, then no chip renders and a subdued "Tap to set variant" affordance is visible.
-- [ ] Given a cable exercise where my last completed set had `attachment='rope'` and `mount_position='high'`, when I add a new set, then the new set's chips display "Att: Rope" and "Mount: High" populated from the last set, and the row saves with those values if I tap Save.
-- [ ] Given a cable exercise with NO prior user-explicit set, when I open the bottom-sheet, then the picker pre-highlights the value from `exercises.attachment`/`exercises.mount_position` labeled "(default)" but the underlying set value remains NULL until I tap Confirm.
-- [ ] Given a NON-cable exercise (`isCableExercise(ex) === false`), even one with `mount_position` populated on the exercise definition (Voltra-tagged), when I add a set, then NO chip is rendered.
-- [ ] Given a saved set with variant data, when I tap the row again, then the bottom-sheet re-opens pre-populated and Save writes through and updates the session's `updated_at`.
-- [ ] Given a saved set with variant data, when I delete the set, then the row is removed and analytics queries do not double-count the variant for that exercise.
-- [ ] Given variant data exists in `workout_sets`, when I export to CSV/JSON and re-import, then `attachment` and `mount_position` are preserved on the round-trip.
-- [ ] Given the variant filter on the PR Dashboard, when I select "Rope · High", then only sets matching `attachment='rope' AND mount_position='high'` are shown; the header badge reads "Showing: Rope · High (N logged)".
-- [ ] Given the variant filter is set to "Rope · High" on the PR Dashboard, when I navigate away and return, then the filter resets to "All variants" (no AsyncStorage persistence).
-- [ ] Given a user with screen reader enabled, when an autofilled set first renders in a session, then `AccessibilityInfo.announceForAccessibility` fires exactly once with "Variant autofilled from last session".
-- [ ] Given the bottom-sheet is dismissed, when focus returns, then it lands on the set row that opened the sheet (NOT page top).
-- [ ] Given `useReducedMotion()` returns true, when the bottom-sheet opens, then animation duration is 0.
-- [ ] PR passes all tests, no new lint warnings, typecheck passes, no regression in existing PR Dashboard / Strength Overview / session flow.
+- [ ] **Migration — fresh install:** Given a brand new install, when I migrate the DB, then `workout_sets.attachment` and `workout_sets.mount_position` columns exist with `DEFAULT NULL`.
+- [ ] **Migration — upgrade path:** Given an existing install with workout history (test fixture: copy a seeded pre-migration DB), when migration runs, then all existing rows have NULL for both new columns, zero rows are altered or lost, and a second-run is a no-op (idempotent).
+- [ ] **Migration — perf:** Given a 10k-set DB, the ALTER ADD COLUMN completes in <50ms (metadata-only).
+- [ ] **Gating — cable exercises render chips:** Given a cable exercise (matched by `isCableExercise()` substring helper) in an active session, when I view a set row that has variant data populated, then `<SetAttachmentChip />` and/or `<SetMountPositionChip />` render with their text labels (e.g., "Att: Rope", "Mount: High").
+- [ ] **Gating — non-cable exercises render no chips:** Given a NON-cable exercise (e.g., barbell back squat, dumbbell curl), when I view any set row, then NO variant chip is rendered (snapshot-tested).
+- [ ] **Gating — predicate test cases:** `isCableExercise()` returns `true` for `"cable"`, `"Cable"`, `"cable_machine"`, `"Cable, Dumbbell"`; `false` for `"dumbbell"`, `""`, `null`/`undefined`.
+- [ ] **Autofill — last-set wins:** Given a previous set of this exercise with `attachment='rope'`, when I add a new set in the same or later session, then the new set's autofilled `attachment` is `'rope'`.
+- [ ] **Autofill — no silent default:** Given the user has NEVER logged a variant for this exercise, when I add a new set, then both `attachment` and `mount_position` save as NULL (no auto-stamp from `exercises.attachment` / `exercises.mount_position`); the chip is hidden and a "Tap to set variant" affordance appears.
+- [ ] **Autofill — independence:** Given a previous set has `attachment='rope', mount_position=NULL`, then a new set autofills `attachment='rope'` only and leaves `mount_position` as NULL (each attribute resolves independently).
+- [ ] **Edit existing set:** Given a set with `attachment='rope'`, when I open its variant sheet, edit to `'bar'`, and confirm, then the set's `attachment` is `'bar'` and the parent session's `updated_at` advances.
+- [ ] **Delete set with variant:** Given a deleted set previously had variant data, then variant-aware analytics counts (e.g., "N logged" badge) decrement by exactly one and there is no double-count.
+- [ ] **Import / export round-trip:** Given a workout with variant data, when I export to CSV/JSON and re-import into a fresh DB, then the imported sets contain the same `attachment` and `mount_position` values (no silent drop).
+- [ ] **Variant filter — match:** Given the filter selects `(attachment='rope', mount_position='high')` on the PR Dashboard, then only sets matching exactly that tuple appear in the progression line.
+- [ ] **Variant filter — empty state:** Given the filter selects a variant with no matching sets, then the empty-state shows "No sets logged with this variant yet" plus a CTA "Log this variant in your next session."
+- [ ] **Variant filter — header badge:** Given the default "All variants" filter, then a header badge displays `Showing: All variants (N logged)` where N = count of sets with non-null variant on this exercise.
+- [ ] **A11y — focus return:** Given the bottom-sheet was opened from a set row, when it dismisses, then focus returns to that set row (not page top).
+- [ ] **A11y — autofill announce:** First autofill in a session triggers exactly one VoiceOver/TalkBack announcement; subsequent autofills in the same session are silent (per-session ref-gated).
+- [ ] **A11y — reduce-motion:** When `useReducedMotion()` returns true, sheet animation duration is 0.
+- [ ] **Vocab consistency:** All call sites (picker, autofill helper, analytics filter) import attachment / mount_position values from `lib/cable-variant.ts` — no hardcoded string literals (lint rule or grep audit).
+- [ ] **Index plan:** `EXPLAIN QUERY PLAN` for the autofill lookup on a 10k-set seeded DB shows index usage (no `SCAN TABLE workout_sets`). If SCAN occurs, partial index `idx_workout_sets_exercise_variant` ships in the same PR.
+- [ ] **Build hygiene:** PR passes typecheck, lint (no new warnings), unit/integration tests, and the existing UX-audit CI step.
+- [ ] **No regression:** PR Dashboard / Strength Overview render identically for users who have NEVER logged a variant (visual smoke test).
 
 ## Edge Cases
 
 | Scenario | Expected |
 |---|---|
-| Exercise definition has no attachment (custom exercise, attachment=NULL) | No chip; bottom-sheet picker shows no pre-highlight |
-| User logs 50 sets — autofill perf | Single query per session-load, cached; no per-set DB hit |
-| Existing user with months of history | All historical sets read with NULL variant; analytics unchanged until user opts into filter |
-| Switching variant mid-session | Each set saves independently; no propagation |
-| Migration on huge DB (10k+ sets) | ALTER ADD COLUMN with default NULL is O(1) (metadata-only) — TL verified |
-| Web vs native | Bottom-sheet uses existing `components/ui/bottom-sheet.tsx` (platform-aware) |
-| User taps Clear in bottom-sheet | Saves NULL for that field; chip hides |
-| Filter selects (rope, high) but no matching sets exist | "No sets logged with this variant yet" + CTA "Log this variant in your next session" |
-| A11y: screen reader user | Chips announce "Mount: High" / "Att: Rope"; row announces "Tap to edit variant" |
-| **Edit a set already saved with variant data** | Row tap re-opens bottom-sheet pre-populated; Save writes through + updates `updated_at` |
-| **Delete a set with variant data** | Row deleted; no cascade; analytics queries unchanged (count rows, not strings) |
-| **Export → import round-trip** | Both columns survive CSV/JSON export and re-import |
-| Cable exercise mistagged in seed (e.g., `equipment="machine"`) | Bug — fix the seed in same PR; do NOT broaden the gate |
-| Equipment field is `"Cable, Dumbbell"` compound | `isCableExercise` returns true (substring match); chip renders |
-| User exports DB on v1.0 → upgrades app → re-imports | Variant columns NULL on imported rows (graceful — no error) |
-| User on small phone in landscape | Chips render inline right-of weight×reps when row width > 600dp; below otherwise |
-| User cold-starts app with active filter selected | Filter resets to "All variants" |
+| Cable exercise, never logged a variant | Both chips hidden; row shows subdued "Tap to set variant"; tapping opens sheet pre-selecting exercise-definition default labeled "(default)" but does NOT save it on cancel. |
+| Custom exercise with `equipment='Cable Machine'` | `isCableExercise()` returns true (substring); chips render normally. |
+| Custom exercise with `equipment=''` or NULL | `isCableExercise()` returns false; no chips. |
+| User logs 50 sets in one session — autofill perf | Single DB query at session-load, cached in active-session state; per-set updates are in-memory until save. |
+| Existing user with months of pre-migration history | All historical sets have NULL variant; analytics unchanged; "All variants (0 logged)" badge shows on first cable-exercise visit. |
+| Switching variant mid-session (e.g. set 1 = rope, set 2 = bar) | Each set persists independently. Autofill for set 3 reflects set 2 (last-set wins). |
+| Migration on huge DB (10k+ sets) | ALTER ADD COLUMN with default NULL is O(1) metadata-only (verified — see Risk R1). |
+| Web vs native | Bottom-sheet uses platform-native sheet on iOS/Android; web fallback uses existing modal pattern (`components/ui/bottom-sheet.tsx` already abstracts this). |
+| User clears variant via sheet's "Clear" action | Saves NULL; chip hides; analytics counts as "no variant". |
+| Filter picks `(rope, high)` with no matches | Empty-state with CTA (see AC). |
+| Edit a set already saved with variant | Sheet re-opens with current values pre-selected; save writes through; `workout_sessions.updated_at` advances. |
+| Delete a set with variant | Row-level delete (existing); no cascade required; analytics counts update. |
+| Export → Import round-trip | Variant data preserved (TL2 / QD-B4 fix). |
+| Set has `mount_position` only (no attachment) | Only the mount chip renders; attachment chip self-suppresses. |
+| A11y: screen reader on a row with both chips | Reads "Set 1, 30kg, 10 reps, attachment rope, mount high, double-tap to edit." Order matches visual reading. |
+| Reduce-motion enabled | Sheet appears instantly (animation duration 0). |
+| Pre-migration analytics question ("variant adoption %") | Computed as `count(non-null variant) / count(sets WHERE id > <migration_cutoff_id>)`. Documented in plan epilogue. |
 
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Migration breaks existing DBs | Low | High | Use proven `addColumnIfMissing`; test on copy of seeded DB; rollback by ignoring columns (NULL-tolerant) |
-| UI clutter on cable exercises | Medium | Medium | Show chip only when value differs from default OR on tap; subdued styling otherwise |
-| Variant filter complicates analytics queries | Low | Medium | Filter is opt-in; default queries ignore variant columns |
-| Users misuse field (typos, inconsistent values) | Low | Low | Use enum dropdown, not free text — controlled vocabulary |
-| Scope creep into behavior-shaping (variant rotation suggestions) | Medium | Medium (psych gate) | Explicitly out-of-scope; future feature would re-plan |
-| Performance: autofill query on session load | Low | Low | Single indexed query; cached per-session |
-| Web platform divergence in bottom-sheet | Low | Medium | Reuse existing UI pattern proven in app |
+| Migration breaks existing DBs | Low | High | Proven `addColumnIfMissing` (30+ uses); fixture-based upgrade-path test (resolves QD-C4 / TL-C1); NULL-tolerant rollback. |
+| Silent-default trap (chip auto-stamps `'handle'`) | **Was Medium, now eliminated** | High | Autofill chain dropped step 2 entirely (resolves QD-B2). Exercise-definition default shown in sheet only, never written without explicit user action. |
+| Export / import data-loss | **Was High, now Low** | High | Updated `lib/db/import-export.ts` INSERT column list + field map; round-trip test in AC (resolves TL2 / QD-B4). |
+| Autofill query performs SCAN at scale | Low | Medium | EXPLAIN QUERY PLAN test on 10k-set DB asserts index use; partial index added if SCAN observed (resolves TL5). |
+| ID-based ORDER BY returns wrong "last" set | Low | Medium | Verify ID generator before slice 2; fall back to `ORDER BY completed_at DESC NULLS LAST, id DESC` if IDs are random UUIDv4 (resolves TL-TR2). |
+| Vocabulary fork (parallel enums) | **Was Medium, now eliminated** | High | Reuse existing `Attachment` / `MountPosition` types from `lib/types.ts`; controlled-vocab consts in `lib/cable-variant.ts` (resolves QD-B1-vocab / TL4). |
+| UI clutter on cable exercises | Low | Medium | Two side-by-side ≤20dp chips matching existing pattern; self-suppress on null. |
+| Variant filter complicates analytics | Low | Medium | Default "All variants" path is unchanged; filter state is component-local, never persisted. |
+| Scope creep into behavior-shaping (rotation suggestions) | Medium | Medium (psych gate) | Explicitly out-of-scope; future would be a new PLAN with psychologist review. |
+| Pull-up grip variant pressure (users requesting bodyweight grip support) | Medium | Low | BLD-768 follow-up filed; visible roadmap hint in filter dropdown footer (resolves QD-C5). |
+| `addColumnIfMissing` race on first launch | Low | Medium | Verify migrations complete before any query in `lib/db/index.ts` (resolves TL-TR1) — code-review gate, not plan gate. |
+| Test seed regressions | Low | Low | Run full test suite; update `lib/test-seed.ts` if needed (resolves TL-TR3). |
 
-## Implementation Plan (high-level — for techlead feasibility check)
+## Implementation Plan (4-commit slice — for the engineer)
 
-1. **Migration & schema** (~30 min): add 2 columns + addColumnIfMissing call + Drizzle schema update.
-2. **Autofill helper** (`lib/cable-variant.ts`, ~60 LOC + tests, ~45 min).
-3. **`<CableVariantChip />` + bottom-sheet picker** (~150 LOC + tests, ~2 hr).
-4. **Wire into active session** set rows (~40 LOC, ~30 min).
-5. **PR Dashboard variant filter** (~80 LOC + 1 query helper, ~1.5 hr).
-6. **Tests + a11y verification** (~1 hr).
+Per Techlead's recommendation, ship as 4 atomic commits in one PR:
 
-Estimated total: ~6 engineer-hours. Single PR.
+1. **`feat(db): add attachment + mount_position to workout_sets (BLD-N)`** — migration via `addColumnIfMissing`, Drizzle schema update, INSERT/UPDATE mutations in `lib/db/session-sets.ts`, `lib/db/import-export.ts` round-trip update, migration upgrade-fixture test, EXPLAIN QUERY PLAN test, import-export round-trip test. **~3 hr**.
+2. **`feat: cable-variant module (BLD-N)`** — `lib/cable-variant.ts` with `ATTACHMENT_VALUES`, `MOUNT_POSITION_VALUES`, `isCableExercise()`, `getLastVariant()` autofill helper. Unit tests for all 8 gating cases + autofill chain. **~1.5 hr**.
+3. **`feat(ui): per-set variant chips + bottom-sheet picker (BLD-N)`** — `<SetAttachmentChip />`, `<SetMountPositionChip />`, integration into `SetRow`, bottom-sheet with two segmented controls + Clear action, focus-return on dismiss, reduce-motion handling, autofill announcement gating. Snapshot tests for cable vs non-cable rendering. **~3 hr**.
+4. **`feat(analytics): variant filter on PR Dashboard / Strength Overview (BLD-N)`** — filter dropdown, header badge `Showing: All variants (N logged)`, empty-state CTA, roadmap-hint footer. **~2 hr**.
+
+**Total estimate: 8–10 engineer-hours** (revised up from 6h to fold in QD/TL conditions). Single PR. If slice 4 stretches beyond 4 hours, ship 1–3 first and split slice 4 into a follow-up PR (filed as BLD-769).
+
+## CEO Decision Log (disagreement resolutions)
+
+Recording explicit decisions where QD and Techlead diverged, so future agents do not relitigate:
+
+| Issue | QD position | Techlead position | **CEO decision** | Rationale |
+|---|---|---|---|---|
+| **Gating predicate** | Substring + case-insensitive (`equipment.toLowerCase().includes('cable')`) with broad test coverage | Strict equality `equipment === "cable"` plus defensive test for casing variants | **Substring + case-insensitive** (QD wins) | Custom-exercise UI accepts free text; data normalization is not enforced at write-time today. Inclusive predicate has near-zero false-positive cost (no plausible `"cable bracelet"` etc.). Strict equality risks dropping legitimate community-imported / custom exercises. |
+| **NULL overload — explicit-skip vs. pre-migration distinction** | Sentinel `''` OR companion `variant_logged_at INTEGER` column | Defer; use migration-cutoff `id` for analytics if needed later | **Defer** (Techlead wins) | YAGNI for the analytics question. Adding a column or sentinel now adds complexity for a hypothetical analytics need. Migration-cutoff ID is a clean, reversible mechanism if/when needed. |
+| **Substring vs. enum extension for additional cable values** | Reuse + extend existing `Attachment` enum | (no specific objection) | **Reuse + extend** (consensus) | Single source of truth; v1 ships with 7 values; extensions go through `ATTACHMENT_LABELS`. |
+| **Dual-cable values in v1 enum** | Drop | Drop | **Drop** (consensus) | Out-of-scope clearly. |
+| **Component pattern — combined chip vs. two chips** | Two side-by-side chips matching existing `MountPositionChip` pattern | (deferred to QD on UX) | **Two chips** (QD wins) | Consistency with existing session UI; preserves per-attribute screen-reader granularity. |
+| **Touch-target — chip vs. row** | Display-only chips; row is tap-target | (deferred to QD on UX) | **Display-only chips, row tap-target** (QD wins) | Matches existing 20dp chip family. |
 
 ## Review Feedback
 
