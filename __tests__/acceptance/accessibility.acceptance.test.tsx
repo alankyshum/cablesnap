@@ -253,12 +253,10 @@ jest.mock('../../lib/programs', () => ({
   advanceProgram: jest.fn().mockResolvedValue({ wrapped: false }),
 }))
 
-jest.mock('../../lib/audio', () => ({
-  loadSounds: jest.fn().mockResolvedValue(new Map()),
-  play: jest.fn(),
-  setEnabled: jest.fn(),
-  preload: jest.fn().mockResolvedValue(undefined),
-}))
+// BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts.
+// (Latent same-shape bug as the 8 in techlead's list — no `unload` export —
+// fixed proactively to prevent it from surfacing later.)
+jest.mock('../../lib/audio')
 
 jest.mock('../../lib/notifications', () => ({
   requestPermission: jest.fn().mockResolvedValue('granted'),
