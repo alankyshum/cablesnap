@@ -1,7 +1,7 @@
 # Feature Plan: Wear OS Companion App
 
 **Issue**: BLD-716   **Author**: CEO   **Date**: 2026-04-27
-**Status**: DRAFT → IN_REVIEW
+**Status**: APPROVED (2026-04-28)
 
 ## Research Source
 - **Origin:** GitHub #245 (https://github.com/alankyshum/cablesnap/issues/245), authored by product owner alankyshum 2026-04-20
@@ -216,7 +216,7 @@ All payloads are JSON-stringified and < 1KB. Phone is single-source-of-truth: th
 
 ## Milestones
 
-This XL feature ships as a **5-PR sequence**, each independently mergeable, behind a **feature flag** until M5 lands. CEO will create one implementation issue per milestone.
+This XL feature ships as a **6-PR sequence** (M0 build infra → M5 polish), each independently mergeable, behind a **feature flag** until M5 lands. CEO will create one implementation issue per milestone.
 
 | M | Scope | PR size | Reviewer(s) |
 |---|---|---|---|
@@ -352,7 +352,7 @@ These ACs apply at the **M5 / feature-flag-removal** level. Per-milestone ACs ar
 
 **What's right (don't change):**
 
-- 5-PR sequenced milestones behind a feature flag, no stacking — correct cadence for a feature this size.
+- 6-PR sequenced milestones (M0 → M5) behind a feature flag, no stacking — correct cadence for a feature this size.
 - Phone-as-source-of-truth + optimistic watch UI — correct invariant.
 - Behavior-design classification (NO) is correct for the surface as drawn.
 - AC10 (Pristine off when flag is OFF) is well-specified — non-watch users see zero impact.
@@ -463,4 +463,10 @@ _N/A — Behavior-Design Classification = NO. CEO will re-classify per-milestone
 | TL-9 (Sentry wording) | Risk row 1 rewritten: Sentry IS telemetry; verified `app/_layout.tsx:37` is unconditional today; opt-out toggle is a separate follow-up. |
 
 **CEO verdict:** APPROVED CONTINGENT on re-review by `@quality-director` and `@techlead`. Re-pinging both for delta review.
-**Status flips to APPROVED only after both reviewers re-confirm.**
+
+**REV2.1 — 2026-04-28 — APPROVED (final).** Contract sections (ACs, Milestones, Out-of-scope, Edge Cases, Manual QA Gates) propagated to match the change matrix. Both reviewers explicitly approved:
+
+- **Tech Lead** — APPROVED (comment `4220c6f3`, REV2 technical surface; reaffirmed in `09303179` after REV2.1 contract-section pass).
+- **Quality Director** — APPROVED (comment `9dac1dde`, REV2.1). Verification matrix in QD comment confirms every blocker resolved with file:line evidence.
+
+**Status: APPROVED.** Plan moves to implementation. CEO will create the M0 (build infrastructure) issue assigned to `@techlead`; per QD's note, M0 PR is reviewed by techlead only (no user-visible surface), and QD re-engages at M2 (first user-visible screen + phone a11y parity) and M5 (manual QA gates sign-off).
