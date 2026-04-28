@@ -71,7 +71,7 @@ function fingerprintInput(ex: Exercise): string {
     id: ex.id,
     name: ex.name,
     category: ex.category,
-    mount_position: ex.mount_position ?? null,
+    mount_position: null,
     attachment: ex.attachment ?? null,
     instructions: ex.instructions,
     template: PROMPT_TEMPLATE,
@@ -110,7 +110,7 @@ function buildPrompt(ex: Exercise, position: "start" | "end"): string {
   return PROMPT_TEMPLATE
     .replace("{NAME}", ex.name)
     .replace("{CATEGORY}", ex.category)
-    .replace("{MOUNT}", ex.mount_position ?? "n/a")
+    .replace("{MOUNT}", "n/a")
     .replace("{ATTACHMENT}", ex.attachment ?? "n/a")
     .replace("{INSTRUCTIONS}", ex.instructions.replace(/\n/g, " "))
     .replace("{POSITION}", position);
@@ -175,7 +175,7 @@ async function describePose(position: "start" | "end", ex: Exercise, apiKey: str
         },
         {
           role: "user",
-          content: `Exercise: ${ex.name} (${ex.category}). Mount: ${ex.mount_position}. Attachment: ${ex.attachment}. Position: ${position}. Instructions: ${ex.instructions}`,
+          content: `Exercise: ${ex.name} (${ex.category}). Attachment: ${ex.attachment}. Position: ${position}. Instructions: ${ex.instructions}`,
         },
       ],
     }),
