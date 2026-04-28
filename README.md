@@ -51,6 +51,25 @@ cd cablesnap
 npm install
 ```
 
+The `postinstall` step runs `npx --no-install patch-package` to apply patches
+in `patches/` against `node_modules/`. Two install-time concerns are handled:
+
+1. `patch-package` is declared in `dependencies` (not `devDependencies`) so it
+   is installed even when `NODE_ENV=production` or `npm config omit=dev` —
+   common in headless agent / CI containers. It is invoked only via the
+   `postinstall` hook and is never imported by app code, so it has no impact
+   on the production bundle.
+2. `npx --no-install` resolves the binary directly from `node_modules/.bin/`
+   instead of relying on shell `PATH`, which makes the hook robust to
+   containers that strip `node_modules/.bin` from `PATH`.
+
+If you ever need to skip patches (e.g., a fast lockfile-only install), use
+`npm install --ignore-scripts`.
+
+The `prepare` script (`husky || true`) installs git hooks for local
+contributors but no-ops when `husky` is absent (production / CI / agent
+containers where `devDependencies` are skipped).
+
 ### Development Build (Recommended)
 
 CableSnap uses [expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/) instead of Expo Go, which enables native module support (e.g., HealthKit integration).
