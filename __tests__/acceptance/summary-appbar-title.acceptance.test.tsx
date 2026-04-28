@@ -1,13 +1,26 @@
 /**
- * Acceptance test for BLD-684:
- * Completed-workout summary must not duplicate "Workout Complete!" in
- * both the app-bar title and the hero h1.
+ * Acceptance test for BLD-731 (supersedes BLD-684's app-bar contract):
+ *
+ * BLD-684 originally fixed a duplication where both the app-bar title
+ * and the hero h1 rendered the literal string "Workout Complete!". The
+ * fix at the time was to set the app-bar title to `session.name`. That
+ * created a NEW duplication (BLD-731): the workout name now appeared
+ * twice — once in the app bar and once in the hero subtitle.
+ *
+ * BLD-731 supersedes BLD-684's app-bar contract: the canonical surface
+ * for the workout name is the hero subtitle, and the app bar shows the
+ * static label "Summary" for ALL sessions (including blank names).
  *
  * Renders app/session/summary/[id].tsx with a completed-workout fixture
  * and asserts:
- *  - The app-bar Stack.Screen `title` is the workout name (session.name),
- *    not the literal hero string "Workout Complete!".
- *  - When session.name is missing/blank, falls back to "Summary".
+ *  - The app-bar Stack.Screen `title` is the literal string "Summary",
+ *    independent of session.name.
+ *  - The app-bar title is NEVER equal to the hero subtitle text (no
+ *    duplication of the workout name across surfaces) — preserves the
+ *    de-duplication intent of BLD-684.
+ *  - The hero subtitle still renders session.name (canonical surface).
+ *  - When session.name is missing/blank, the app bar still shows
+ *    "Summary" (regression guard).
  */
 
 const mockStackScreenSpy = jest.fn()
@@ -109,14 +122,14 @@ function lastTitle(): string | undefined {
   return undefined
 }
 
-describe('Workout Summary — app-bar title (BLD-684)', () => {
+describe('Workout Summary — app-bar title (BLD-731 supersedes BLD-684)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockStackScreenSpy.mockClear()
     resetIds()
   })
 
-  it('app-bar title is the workout name, not the hero "Workout Complete!" string', async () => {
+  it('app-bar title is the literal "Summary", not the hero "Workout Complete!" string', async () => {
     const { session, exercises, sets } = createCompletedWorkoutFixture()
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
@@ -128,14 +141,15 @@ describe('Workout Summary — app-bar title (BLD-684)', () => {
     await screen.findByText('Workout Complete!')
 
     const title = lastTitle()
-    expect(title).toBe(session.name)
+    expect(title).toBe('Summary')
     expect(title).not.toBe('Workout Complete!')
   })
 
   it.each([
     ['short label', 'Push'],
     ['long label', 'Upper Body Hypertrophy Day'],
-  ])('app-bar title differs from hero h1 — %s (%s)', async (_label, name) => {
+    ['typical label', 'Upper Body'],
+  ])('app-bar title is "Summary" and does not duplicate the hero subtitle — %s (%s)', async (_label, name) => {
     const { session, exercises, sets } = createCompletedWorkoutFixture()
     mockDb.getSessionById.mockResolvedValue({ ...session, name })
     mockDb.getSessionSets.mockResolvedValue(sets)
@@ -145,15 +159,17 @@ describe('Workout Summary — app-bar title (BLD-684)', () => {
     await screen.findByText('Workout Complete!')
 
     const appBarTitle = lastTitle()
-    const heroH1 = 'Workout Complete!'
-    expect(appBarTitle).toBe(name)
-    expect(appBarTitle).not.toBe(heroH1)
-    // Truncation/ellipsis of long titles is delegated to the native header
-    // (no manual width clamp in the screen source) — keep the title string
-    // intact and let the platform handle overflow.
+    // App bar always shows the literal "Summary" — the canonical surface
+    // for the workout name is the hero subtitle.
+    expect(appBarTitle).toBe('Summary')
+    // De-duplication intent (preserved from BLD-684): app bar title must
+    // NEVER equal the workout name rendered in the hero.
+    expect(appBarTitle).not.toBe(name)
+    // Hero subtitle remains the canonical surface for the workout name.
+    await screen.findByText(name)
   })
 
-  it('falls back to "Summary" when the session has no name', async () => {
+  it('falls back to "Summary" when the session has no name (regression guard)', async () => {
     const { session, exercises, sets } = createCompletedWorkoutFixture()
     const namelessSession = { ...session, name: '   ' }
     mockDb.getSessionById.mockResolvedValue(namelessSession)
