@@ -83,10 +83,24 @@ jest.mock('../../lib/db', () => ({
   getCSVCounts: jest.fn().mockResolvedValue({ sessions: 5, entries: 12 }),
   getAppSetting: jest.fn().mockResolvedValue('true'),
   setAppSetting: jest.fn().mockResolvedValue(undefined),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
   getSchedule: jest.fn().mockResolvedValue([]),
   getTemplates: jest.fn().mockResolvedValue([]),
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
   getStravaConnection: jest.fn().mockResolvedValue(null),
+  // Backup category exports added in BLD-773 consolidated bugfixes branch
+  BACKUP_CATEGORY_ORDER: ['workouts', 'nutrition', 'body', 'settings'],
+  BACKUP_CATEGORY_LABELS: {
+    workouts: 'Workouts',
+    nutrition: 'Nutrition',
+    body: 'Body Metrics',
+    settings: 'Settings',
+  },
+  BACKUP_TABLE_LABELS: {},
+  getBackupCategoryCounts: jest.fn().mockResolvedValue({}),
+  getPresentBackupCategories: jest.fn().mockResolvedValue([]),
+  validateBackupFileSize: jest.fn().mockReturnValue(true),
+  validateBackupData: jest.fn().mockReturnValue({ valid: true }),
 }))
 
 jest.mock('../../lib/strava', () => ({

@@ -223,6 +223,20 @@ jest.mock('../../lib/db', () => ({
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   duplicateProgram: jest.fn().mockResolvedValue('dup-p1'),
   getStravaConnection: jest.fn().mockResolvedValue(null),
+  // Backup category exports added in BLD-773 consolidated bugfixes branch
+  BACKUP_CATEGORY_ORDER: ['workouts', 'nutrition', 'body', 'settings'],
+  BACKUP_CATEGORY_LABELS: {
+    workouts: 'Workouts',
+    nutrition: 'Nutrition',
+    body: 'Body Metrics',
+    settings: 'Settings',
+  },
+  BACKUP_TABLE_LABELS: {},
+  getBackupCategoryCounts: jest.fn().mockResolvedValue({}),
+  getPresentBackupCategories: jest.fn().mockResolvedValue([]),
+  validateBackupFileSize: jest.fn().mockReturnValue(true),
+  validateBackupData: jest.fn().mockReturnValue({ valid: true }),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/db/pr-dashboard', () => ({

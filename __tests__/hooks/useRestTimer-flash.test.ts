@@ -47,6 +47,8 @@ jest.mock("../../lib/notifications", () => ({
 jest.mock("../../lib/db", () => ({
   getRestSecondsForExercise: jest.fn().mockResolvedValue(60),
   getAppSetting: jest.fn().mockResolvedValue("true"),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
   getRestContext: jest.fn(),
 }));
 
