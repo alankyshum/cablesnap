@@ -136,22 +136,12 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // variant (the common case). Without this, Gradle errors with
             // "could not resolve releaseFdroidApiElements" against
             // expo/react-native sub-projects that publish singleVariant
-            // \`release\`.
+            // \`release\`. Critically, this is ALSO what makes the project-
+            // level \`androidComponents.beforeVariants { enable = false }\`
+            // patch (see patchProjectBuildGradle) safe — when libraries
+            // disable their propagated \`releaseFdroid\` variant entirely,
+            // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
-            // Force CMake to use the same \`Release\` build type as the
-            // canonical Play \`release\` buildType, instead of AGP's default
-            // \`RelWithDebInfo\` for non-canonical release buildTypes. RN
-            // native libs (notably shopify/react-native-skia) hardcode
-            // prebuilt-binary paths under a \`release\`-named directory and
-            // fail with "Skia prebuilt binaries not found!" if AGP picks
-            // \`RelWithDebInfo\`. Reusing the Play release CMake artifacts
-            // is correct anyway — Play and F-Droid only differ in JVM-side
-            // excludes (GMS Wearable + Wear bridge), never in native code.
-            externalNativeBuild {
-                cmake {
-                    arguments "-DCMAKE_BUILD_TYPE=Release"
-                }
-            }
         }
 `;
 
@@ -238,8 +228,8 @@ function patchAppBuildGradle(contents) {
 }
 
 // ---------------------------------------------------------------------------
-// android/build.gradle (project-level) patch — strip the `releaseFdroid`
-// buildType from every library subproject.
+// android/build.gradle (project-level) patch — disable the `releaseFdroid`
+// variant in every library subproject.
 // ---------------------------------------------------------------------------
 //
 // AGP propagates buildTypes declared on `:app` to every library subproject
@@ -252,36 +242,37 @@ function patchAppBuildGradle(contents) {
 // "Skia prebuilt binaries not found!" on `:shopify_react-native-skia:
 // configureCMakeRelWithDebInfo[...]`.
 //
-// Fix: tell AGP NOT to create the `releaseFdroid` variant in any subproject
-// other than `:app`. With `matchingFallbacks = ["release"]` already declared
-// on `:app`'s `releaseFdroid` buildType, dependency resolution falls back
-// to each library's `release` variant — which is exactly what we want
-// (Play and F-Droid only differ in JVM-side excludes, never in library
-// internals).
+// Fix: disable the `releaseFdroid` variant in every library subproject so
+// AGP never configures it (no CMake configure task, no dependency
+// resolution, no published outputs). With `matchingFallbacks = ["release"]`
+// already declared on `:app`'s `releaseFdroid` buildType, dependency
+// resolution falls back to each library's `release` variant — which is
+// exactly what we want (Play and F-Droid only differ in JVM-side excludes,
+// never in library internals).
 //
-// Implementation note: `android.variantFilter` is the AGP 8.x-stable API
-// and works on every plugin that applies the AGP `library` plugin. Newer
-// AGP recommends `androidComponents.beforeVariants {}` but the legacy API
-// is still supported and avoids requiring a `gradle.kotlin.dsl`-style
-// reference. The `if (project != rootProject.findProject(':app'))` guard
-// is belt-and-suspenders — `subprojects {}` excludes the root project but
-// would still apply to `:app` if `:app` were registered as a subproject
-// of itself (it isn't, but the guard makes the intent explicit and is
-// cheap to check).
+// API choice — `AndroidComponentsExtension.beforeVariants { enable = false }`:
+//   The legacy `android.variantFilter { setIgnore(true) }` API does NOT drop
+//   the variant from the task graph. AGP treats it as a *publishing* filter
+//   (output won't be uploaded) but still configures the variant — including
+//   creating its `configureCMake*` task — during the configuration phase.
+//   That's exactly what we DON'T want: we need the CMake task to never
+//   exist for `releaseFdroid` in library subprojects. The modern
+//   `androidComponents.beforeVariants(selector) { variant.enable = false }`
+//   API drops the variant before its tasks are wired in. Available since
+//   AGP 7.0; RN 0.83 ships AGP 8.x. Confirmed by CEO + QD on 2026-04-28
+//   after run 25044680026 surfaced the variantFilter limitation empirically.
 
 const SUBPROJECT_FILTER_BLOCK = `
 ${SUBPROJECT_FILTER_MARKER}
 subprojects { subproject ->
     subproject.plugins.withId("com.android.library") {
-        subproject.android.variantFilter { variant ->
-            if (variant.buildType.name == "releaseFdroid") {
-                // No library subproject declares releaseFdroid itself; AGP
-                // synthesises it from :app's declaration. Skip it so CMake
-                // configure tasks for non-canonical release buildTypes
-                // (RelWithDebInfo) are never created. :app's
-                // matchingFallbacks routes to each library's release
-                // variant for dependency resolution.
-                setIgnore(true)
+        subproject.androidComponents {
+            beforeVariants(selector().withBuildType("releaseFdroid")) { variant ->
+                // Drops the variant entirely — no configureCMake* task, no
+                // dependency resolution, no published outputs. :app's
+                // matchingFallbacks routes consumption to each library's
+                // \`release\` variant.
+                variant.enable = false
             }
         }
     }

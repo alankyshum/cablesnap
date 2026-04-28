@@ -136,6 +136,21 @@ describe("patchAppBuildGradle", () => {
     expect(out).not.toContain("fdroidRelease ");
   });
 
+  it("does NOT inject -DCMAKE_BUILD_TYPE on releaseFdroid (regression guard)", () => {
+    // Earlier iteration injected `externalNativeBuild { cmake { arguments
+    // "-DCMAKE_BUILD_TYPE=Release" } }` as defence-in-depth. CEO + QD
+    // determined on 2026-04-28 that this never reached the actually-
+    // failing process (Skia subproject's CMake configure runs in the
+    // library subproject's classpath, not :app's). The real fix lives in
+    // patchProjectBuildGradle (beforeVariants disable). Removed to avoid
+    // misleading future readers.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).not.toContain("-DCMAKE_BUILD_TYPE");
+    expect(out).not.toMatch(
+      /releaseFdroid\s*\{[\s\S]*?externalNativeBuild\s*\{[\s\S]*?cmake/,
+    );
+  });
+
   it("places releaseFdroid inside the existing buildTypes { ... } block", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     const buildTypesIdx = out.indexOf("buildTypes {");
@@ -238,16 +253,25 @@ android {
 });
 
 // ----------------------------------------------------------------------------
-// patchProjectBuildGradle — drop releaseFdroid from library subprojects
+// patchProjectBuildGradle — disable releaseFdroid variant in library subprojects
 // ----------------------------------------------------------------------------
 //
 // Verifies the project-level android/build.gradle patch that injects a
-// `subprojects { android.variantFilter { ... setIgnore(true) } }` block to
-// keep AGP from synthesising the propagated `releaseFdroid` buildType in
-// every library subproject. Without this patch, RN native libs (notably
+// `subprojects { plugins.withId("com.android.library") { androidComponents {
+// beforeVariants(selector().withBuildType("releaseFdroid")) { variant.enable
+// = false } } } }` block. Without this patch, RN native libs (notably
 // shopify/react-native-skia) hit "Skia prebuilt binaries not found!" on
 // `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]`
-// because AGP picks `RelWithDebInfo` for non-canonical release buildTypes.
+// because AGP picks `RelWithDebInfo` as the CMake build type for any
+// non-canonical release buildType.
+//
+// Initial implementation used the legacy `android.variantFilter { setIgnore
+// (true) }` API. CI run 25044680026 (2026-04-28) showed that variantFilter
+// does NOT drop the variant from the task graph — it's a publishing filter,
+// not a configuration filter — so configureCMake* tasks still ran on the
+// propagated `releaseFdroid` variant. CEO + QD aligned on the modern
+// `AndroidComponentsExtension.beforeVariants` API which actually disables
+// variant configuration. Available since AGP 7.0; RN 0.83 ships AGP 8.x.
 const PROJECT_BUILD_GRADLE_FIXTURE = `buildscript {
     ext {
         buildToolsVersion = "35.0.0"
@@ -292,11 +316,26 @@ describe("patchProjectBuildGradle", () => {
     );
   });
 
-  it("filters out variants whose buildType is releaseFdroid via setIgnore(true)", () => {
+  it("emits an androidComponents.beforeVariants selector for releaseFdroid", () => {
     const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
     expect(out).toMatch(
-      /variantFilter\s*\{[\s\S]*?variant\.buildType\.name\s*==\s*"releaseFdroid"[\s\S]*?setIgnore\(true\)/,
+      /androidComponents\s*\{[\s\S]*?beforeVariants\(\s*selector\(\)\.withBuildType\("releaseFdroid"\)\s*\)/,
     );
+  });
+
+  it("disables matching variants via variant.enable = false", () => {
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(/beforeVariants[\s\S]*?variant\.enable\s*=\s*false/);
+  });
+
+  it("does NOT use the legacy variantFilter / setIgnore API (regression guard)", () => {
+    // The legacy `android.variantFilter { setIgnore(true) }` API is a
+    // publishing filter — it does NOT drop the variant from the task graph,
+    // so configureCMake* tasks still run on the propagated buildType. This
+    // test guards against silently reverting to that broken approach.
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).not.toMatch(/variantFilter/);
+    expect(out).not.toMatch(/setIgnore\s*\(/);
   });
 
   it("preserves the existing buildscript and allprojects blocks intact", () => {

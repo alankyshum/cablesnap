@@ -533,9 +533,31 @@ After the productFlavors→buildTypes pivot resolved the Expo autolinker conflic
 2. For library subprojects with CMake-built native code, AGP names the CMake configure task off the variant. For non-canonical release buildTypes (anything other than the literal name `release`), AGP picks `RelWithDebInfo` as the CMake build type — hence task `configureCMakeRelWithDebInfo`.
 3. `@shopify/react-native-skia/android/CMakeLists.txt:25` hardcodes its prebuilt-binary path lookup under a `release`-named directory. Searching for prebuilts under a `RelWithDebInfo` path fails fast with the FATAL_ERROR above.
 
-`-DCMAKE_BUILD_TYPE=Release` injected into `:app`'s `releaseFdroid` buildType (commit `cd9d1424`, kept as defence-in-depth) does NOT propagate into subproject CMake configure tasks — those run inside each library's own gradle script.
+`-DCMAKE_BUILD_TYPE=Release` was initially injected into `:app`'s `releaseFdroid` buildType (commit `cd9d1424`) as defence-in-depth but does NOT propagate into subproject CMake configure tasks — those run inside each library's own gradle script. Removed in the third-order fix below; dead defence-in-depth misleads future readers.
 
-**Fix (commit `<follow-up>`):** project-level `android/build.gradle` now carries a `subprojects { android.variantFilter { variant -> if (buildType.name == "releaseFdroid") setIgnore(true) } }` block (injected via the plugin's new `withProjectBuildGradle` mod). Library subprojects skip the propagated `releaseFdroid` variant entirely, so AGP never creates the failing `configureCMakeRelWithDebInfo` task for them. Dependency resolution from `:app`'s `releaseFdroid` falls back to each library's `release` variant via the already-declared `matchingFallbacks = ["release"]`.
+**First fix attempt (commit `7f28a230`, FAILED):** project-level `android/build.gradle` `subprojects { android.variantFilter { variant -> if (buildType.name == "releaseFdroid") setIgnore(true) } }`. Run `25044680026` showed the same `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]` failure. The legacy `variantFilter` API is a *publishing* filter — it marks variant outputs as not-to-be-published but Gradle still configures the variant, including creating its `configureCMake*` task. Insufficient to drop the variant from the task graph.
+
+### Third-order issue: `variantFilter` ≠ task-graph filter
+
+**Fix (current commit):** Replace `variantFilter` with the modern `AndroidComponentsExtension.beforeVariants` API, which actually disables variant configuration:
+
+```groovy
+subprojects { subproject ->
+    subproject.plugins.withId("com.android.library") {
+        subproject.androidComponents {
+            beforeVariants(selector().withBuildType("releaseFdroid")) { variant ->
+                variant.enable = false
+            }
+        }
+    }
+}
+```
+
+`AndroidComponentsExtension` is available in AGP 7.0+ (RN 0.83 ships AGP 8.x). `beforeVariants` runs before AGP creates the variant's task graph, so disabling the variant prevents `configureCMake*`, dependency-resolution, and output tasks from ever being wired in. Confirmed by CEO + QD on 2026-04-28 after empirical evidence from run `25044680026`.
+
+The `:app`-side `matchingFallbacks = ["release"]` is what makes this safe: when libraries no longer ship a `releaseFdroid` variant at all, `:app`'s `releaseFdroid` consumer falls back to each library's `release` variant for dependency resolution. Native code is bit-identical between Play and F-Droid; only JVM-side classpath excludes (GMS Wearable group + `expo-wearos-bridge` module) differ, and those are still applied at `:app` consumption — AC10b semantics unchanged.
+
+**Strong learning for M1+ implementers:** AGP propagates app-level `buildTypes` AND `productFlavors` to every library subproject. The legacy `android.variantFilter` API does NOT drop variants from the task graph — it only suppresses output publishing. For "don't even configure this variant" semantics in a library, use `AndroidComponentsExtension.beforeVariants(selector) { variant.enable = false }`. `:app`'s `matchingFallbacks` then routes consumption to a fallback variant.
 
 This is correct because Play and F-Droid only differ in JVM-side classpath excludes (GMS Wearable group + `expo-wearos-bridge` module). Native code is bit-identical between the two variants. Reusing each library's `release` native artifacts is exactly what we want — no native-code drift, no doubled native-build time.
 
