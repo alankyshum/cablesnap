@@ -61,7 +61,14 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts
+        # Postinstall scripts MUST run: @shopify/react-native-skia's postinstall
+        # (`node scripts/install-libs.js`) downloads the prebuilt `libskia.a`
+        # archives into node_modules/@shopify/react-native-skia/libs/android/<abi>/.
+        # Without that, every CMake configure for any consumer of skia (incl.
+        # :app:assembleReleaseFdroid via matchingFallbacks) fails with
+        # "Could not find libskia.a … Run `npx install-skia` to fix this."
+        # Use --legacy-peer-deps to match the other CI workflows on this repo.
+        run: npm ci --legacy-peer-deps
 
       - name: Run plugin unit tests
         # The Config Plugin tests are pure JS (no RN runtime). Cheap to run

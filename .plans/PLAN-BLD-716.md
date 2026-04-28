@@ -585,3 +585,32 @@ This is correct because Play and F-Droid only differ in JVM-side classpath exclu
    - `Wear OS — assemble + UI tests` job: `:wear:assembleRelease` + `:app:assembleReleaseFdroid` + AC10b grep gate.
    - `scheduled-release` (manual-trigger smoke if needed before merge): all three APKs produced, AC10b gate passes.
 3. After CI green, `@quality-director` re-verifies per CEO routing.
+
+### Fourth-order issue: `npm ci --ignore-scripts` skipped Skia's prebuilt download
+
+**Symptom:** After the third-order `beforeVariants { enable = false }` patch landed, the Wear OS UI-tests workflow STILL failed at the same Gradle task — `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]` — with `Could not find libskia.a at .../libs/android/arm64-v8a` and the literal remediation hint `Run \`npx install-skia\` to fix this.`
+
+**Misdiagnosis (rounds 1–3):** I read the recurring CMake task name (`configureCMakeRelWithDebInfo`) as evidence the `releaseFdroid` build type was still propagating to library subprojects. Each round I shipped a real fix for a real upstream issue (Groovy compile → autolinker flavor propagation → AGP `variantFilter` semantics), but I framed each as "the" fix when it was necessary-not-sufficient. The Skia symptom kept surfacing because a fourth, unrelated defect was sitting at the back of the queue, masked by every upstream compile-time failure.
+
+**Real root cause:** `.github/workflows/wear-tests.yml:64` ran `npm ci --ignore-scripts`. Every other workflow on this repo (`bundle-gate.yml`, `e2e-update-snapshots.yml`, `ux-audit.yml`, `scheduled-release.yml`) runs `npm ci --legacy-peer-deps` or bare `npm ci` — i.e. with postinstall scripts enabled. `--ignore-scripts` skips `@shopify/react-native-skia`'s `postinstall` (`node scripts/install-libs.js`), which is what unpacks the prebuilt `libskia.a` archives into `node_modules/@shopify/react-native-skia/libs/android/<abi>/`. Without those archives, every CMake configure for any skia consumer (including `:app:assembleReleaseFdroid` consuming `:shopify_react-native-skia:release` via `matchingFallbacks`) hits `Skia prebuilt binaries not found!`.
+
+The flag was introduced in the very first BLD-736 commit (`c3701208`), almost certainly as a workaround for Skia's known `postinstall ENOTEMPTY` loop on uncleaned local `node_modules`. The same loop bit me locally this session. The fix-for-the-fix never propagated back into the workflow before merge.
+
+**Final fix (commit on this addendum):**
+
+```diff
+       - name: Install dependencies
+-        run: npm ci --ignore-scripts
++        # Postinstall scripts MUST run: @shopify/react-native-skia's postinstall
++        # downloads the prebuilt libskia.a archives. Without them, CMake
++        # configure fails with "Could not find libskia.a … npx install-skia".
++        run: npm ci --legacy-peer-deps
+```
+
+**The `beforeVariants` patch is still load-bearing.** Run `25045502241` confirmed it works: Skia's own configure log printed `buildType: release` (canonical, not `releaseFdroid`), proving `:app:releaseFdroid` is consuming each library's `release` variant via `matchingFallbacks` rather than triggering propagated `releaseFdroid` variants in libraries. Without the patch, every library would synthesise duplicate CMake configure tasks; build time would inflate. Keep it.
+
+**Lesson learned (recorded for M1+):**
+
+> **When a Gradle task name keeps recurring as the failure point across iterations even though the previous round's upstream fix demonstrably landed, the bug is upstream of the *task*, not downstream of it.** Recurring task name + different stack-trace details = scrutinise the workflow inputs (env, flags, install steps) and the task's own contract before chasing more downstream architectural theories. Attributed via QD review on BLD-736.
+
+**Defence-in-depth additions (none required for M0):** if a future workflow legitimately needs `--ignore-scripts` (e.g. a sandboxed lint job that doesn't compile native code), it MUST add an explicit follow-up `npx install-skia` step to maintain the libskia.a invariant.
