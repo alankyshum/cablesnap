@@ -194,14 +194,14 @@ These ACs apply at the **M5 / feature-flag-removal** level. Per-milestone ACs ar
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Custom Expo module fails to load on some Android OEMs | Medium | High (blocks feature on affected devices) | Lazy-load module; fail-soft to phone-only; collect telemetry-free crash signals via Sentry breadcrumb |
+| Custom Expo module fails to load on some Android OEMs | Medium | High (blocks feature on affected devices) | Lazy-load module; fail-soft to phone-only. Crash reporting flows through the phone's existing `@sentry/react-native` pipe (TL-9: clarified — Sentry IS telemetry, not "telemetry-free"). **Verified state:** today the phone unconditionally initializes Sentry in `app/_layout.tsx:37` with no user toggle. Watch path inherits the same behavior; introducing a Sentry opt-out toggle is **explicitly out of scope** here and tracked as a separate follow-up (CEO will file a privacy-toggle issue post-merge). |
+| Disrupts existing offline-first guarantee | Low | High | AC7a (airplane-mode) + AC7b (`tcpdump` per-UID) explicitly verified at M5 manual QA. Mitmproxy is **not** used (per QD-1, cannot observe Bluetooth Wearable Data Layer traffic). |
 | Bluetooth pairing UX is fragile (Google's Wearable API has known quirks) | High | Medium | Heavy on-device QA matrix (Pixel Watch 2, Galaxy Watch 6, Galaxy Watch 4 minimum); document known limitations |
 | Watch app review delays at Play Store (Wear OS apps go through Wear-specific review) | Medium | Medium | Submit M5 to internal testing track first; allow 2-week buffer before public release |
 | Compose-for-Wear API churn between releases | Low | Medium | Pin Compose-for-Wear version in `wear/build.gradle`; document upgrade path |
 | Battery regression > AC9 budget | Medium | High | M5 perf gate is mandatory; if missed, defer ambient mode to a follow-up |
 | Multi-week schedule slips | High | Low (no external pressure) | Independently mergeable milestones — value ships incrementally |
 | New native code increases attack surface | Low | Medium | Keep watch module narrow (only the 4 message types in the protocol table); no eval / no dynamic code paths |
-| Disrupts existing offline-first guarantee | Low | High | AC7 explicitly verified via mitmproxy in M5 QA |
 
 ## Open Questions for Reviewers
 
@@ -344,4 +344,30 @@ These ACs apply at the **M5 / feature-flag-removal** level. Per-milestone ACs ar
 _N/A — Behavior-Design Classification = NO. CEO will re-classify per-milestone if scope drifts._
 
 ### CEO Decision
-_Pending reviews_
+
+**REV2 — 2026-04-28** — All QD blockers (1–5) and TL blockers (TL-1 through TL-5) have been addressed in this revision; QD major gaps (6–10) and TL gaps (TL-6 through TL-9) are also folded in. Specifically:
+
+| Blocker | Resolution location |
+|---|---|
+| QD-1 (mitmproxy wrong) | AC7 split into AC7a (airplane mode) + AC7b (tcpdump per-UID). Risk row "offline-first" updated. |
+| QD-2 (F-Droid + GMS) | "F-Droid + Play split" section + AC10b new + Out-of-scope row "F-Droid hosting of the watch APK". |
+| QD-3 (AC8 not CI-testable) | Split into AC8a (CI: contentDescription) + AC8b (manual M5 with TalkBack). |
+| QD-4 (AC9 not CI-testable, budget loose) | Moved to manual; tightened to ≤15%/30 min. Manual QA Gates section added. |
+| QD-5 (a11y phone-baseline regression) | Option (b): A11y parity pass added to M2 on `app/session/*` and `components/SetRow.*`. |
+| QD-6 (clock authority) | "Clock authority" subsection added: watch monotonic clock, clamp to `[sessionStart, now()+60s]`, phone-wins LWW on conflict. |
+| QD-7 (process-death durability) | "Watch-side durable event queue" subsection: Wear OS DataStore (Proto)-backed, 200-event capacity. |
+| QD-8 (multi-watch pairing) | "Multi-watch pairing" subsection + edge-case row. |
+| QD-9 (asymmetric workout-start) | Out-of-scope row for v1; banner-only watch UX; edge-case row. |
+| QD-10 ("release focus" undefined) | Edge-case row updated: 1500ms idle OR explicit Complete Set tap. |
+| TL-1 (managed-Expo vs Gradle wear/) | Path (b) chosen: Config Plugin at `plugins/with-wearos-module.js` + native module at `modules/expo-wearos-bridge/`. |
+| TL-2 (F-Droid + GMS structural) | "F-Droid + Play split" section: `playRelease` / `fdroidRelease` flavor split, F-Droid metadata update, M0 owns this work. |
+| TL-3 (watch APK distribution) | "Watch APK distribution" section: Play-only, `com.persoack.cablesnap.wear`, dual signing strategy. |
+| TL-4 (JS thread bridge) | "Phone-side bridge concurrency model" section with explicit `WearableListenerService → DeviceEventEmitter → useWatchSync` flow + bounded native queue + cold-bundle replay. |
+| TL-5 (M1 too thin) | M0 added; pipeline is now 6 milestones, not 5. |
+| TL-6 (module location) | `modules/expo-wearos-bridge/` for native module; `plugins/with-wearos-module.js` for Config Plugin. |
+| TL-7 (CI cost) | M0 adds path-filtered Wear UI test job; AC11 specifies CI matrix. |
+| TL-8 (rollback path) | Edge-case row added: optimistic rejection → 3-second toast + Refresh affordance. |
+| TL-9 (Sentry wording) | Risk row 1 rewritten: Sentry IS telemetry; verified `app/_layout.tsx:37` is unconditional today; opt-out toggle is a separate follow-up. |
+
+**CEO verdict:** APPROVED CONTINGENT on re-review by `@quality-director` and `@techlead`. Re-pinging both for delta review.
+**Status flips to APPROVED only after both reviewers re-confirm.**
