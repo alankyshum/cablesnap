@@ -43,8 +43,13 @@ declare global {
 
 /** Only true inside the three guarded states. Exported for unit tests. */
 export function guardsAllow(): boolean {
-  if (typeof __DEV__ === "undefined" || !__DEV__) return false;
-  if (Platform.OS !== "web") return false;
+  // Read `__DEV__` and `Platform.OS` indirectly so babel-preset-expo doesn't
+  // inline them at transform time. Tests need to flip these at runtime to
+  // verify the guard, and inlining would freeze them at the build's values.
+  const __dev = (globalThis as { __DEV__?: boolean }).__DEV__;
+  if (typeof __dev === "undefined" || !__dev) return false;
+  const platform: { OS: string } = Platform;
+  if (platform.OS !== "web") return false;
   if (typeof window === "undefined") return false;
   if (!window.__TEST_SCENARIO__) return false;
   return true;
