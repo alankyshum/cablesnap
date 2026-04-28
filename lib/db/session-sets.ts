@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import type { WorkoutSet, TrainingMode, SetType } from "../types";
+import type { WorkoutSet, TrainingMode, SetType, Attachment, MountPosition } from "../types";
 import { coerceTrainingMode } from "../types";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
@@ -34,6 +34,8 @@ export async function getSessionSets(
       duration_seconds: workoutSets.duration_seconds,
       exercise_position: workoutSets.exercise_position,
       bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
+      attachment: workoutSets.attachment,
+      mount_position: workoutSets.mount_position,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -64,6 +66,8 @@ export async function getSessionSets(
     duration_seconds: r.duration_seconds ?? null,
     exercise_position: r.exercise_position ?? 0,
     bodyweight_modifier_kg: r.bodyweight_modifier_kg ?? null,
+    attachment: (r.attachment as Attachment | null) ?? null,
+    mount_position: (r.mount_position as MountPosition | null) ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -126,7 +130,12 @@ export async function addSet(
   tempo?: string | null,
   _isWarmup?: boolean,
   setType?: SetType,
-  exercisePosition?: number
+  exercisePosition?: number,
+  // BLD-771: per-set cable variant. Pass values from autofill helper at call site.
+  // Both null when user has no prior variant on this exercise (no silent default).
+  attachment?: Attachment | null,
+  mountPosition?: MountPosition | null
+// eslint-disable-next-line complexity -- thin DB wrapper, branches are field defaults
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
@@ -142,6 +151,8 @@ export async function addSet(
     tempo: tempo ?? null,
     set_type: resolvedType,
     exercise_position: exercisePosition ?? 0,
+    attachment: attachment ?? null,
+    mount_position: mountPosition ?? null,
   });
   return {
     id,
@@ -162,6 +173,8 @@ export async function addSet(
     set_type: resolvedType,
     duration_seconds: null,
     exercise_position: exercisePosition ?? 0,
+    attachment: attachment ?? null,
+    mount_position: mountPosition ?? null,
   };
 }
 
@@ -177,6 +190,9 @@ export async function addSetsBatch(
     isWarmup?: boolean;
     setType?: SetType;
     exercisePosition?: number;
+    // BLD-771: per-set cable variant (autofilled by caller from history).
+    attachment?: Attachment | null;
+    mountPosition?: MountPosition | null;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
@@ -200,18 +216,21 @@ export async function addSetsBatch(
       set_type: resolvedType,
       duration_seconds: null,
       exercise_position: s.exercisePosition ?? 0,
+      attachment: s.attachment ?? null,
+      mount_position: s.mountPosition ?? null,
     };
   });
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position, attachment, mount_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
           r.link_id, r.round, r.training_mode, r.tempo, r.set_type, r.exercise_position,
+          r.attachment ?? null, r.mount_position ?? null,
         ]);
       }
     } finally {
@@ -319,6 +338,29 @@ export async function updateSetDuration(
 ): Promise<void> {
   const db = await getDrizzle();
   await db.update(workoutSets).set({ duration_seconds: durationSeconds }).where(eq(workoutSets.id, id));
+}
+
+/**
+ * BLD-771: Update per-set cable variant (attachment + mount_position).
+ *
+ * Sibling of `updateSet()` (which updates weight/reps only). Either field may
+ * be null to clear the value (the bottom-sheet picker's "Clear" action).
+ *
+ * Both attributes are independent — passing `attachment` and leaving
+ * `mountPosition` undefined leaves the existing mount_position untouched. To
+ * explicitly clear, pass null.
+ */
+export async function updateSetVariant(
+  id: string,
+  attachment: Attachment | null | undefined,
+  mountPosition: MountPosition | null | undefined
+): Promise<void> {
+  const db = await getDrizzle();
+  const values: Record<string, unknown> = {};
+  if (attachment !== undefined) values.attachment = attachment;
+  if (mountPosition !== undefined) values.mount_position = mountPosition;
+  if (Object.keys(values).length === 0) return;
+  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
 }
 
 export async function completeSet(id: string): Promise<void> {

@@ -102,6 +102,13 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "workout_sets", "duration_seconds", "INTEGER");
   await addColumnIfMissing(database, "workout_sets", "exercise_position", "INTEGER DEFAULT 0");
   await addColumnIfMissing(database, "workout_sets", "bodyweight_modifier_kg", "REAL DEFAULT NULL");
+  // BLD-771: per-set cable variant logging.
+  // NULL = user did not specify or pre-migration row. NEVER auto-stamped from
+  // `exercises.attachment` default — see `lib/cable-variant.ts` for autofill chain.
+  // ALTER ADD COLUMN with default NULL is metadata-only on SQLite (O(1) regardless
+  // of row count). Idempotent via `addColumnIfMissing`.
+  await addColumnIfMissing(database, "workout_sets", "attachment", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sets", "mount_position", "TEXT DEFAULT NULL");
 
   // workout_sets.set_type migration (replaces deprecated is_warmup column)
   if (!(await hasColumn(database, "workout_sets", "set_type"))) {
