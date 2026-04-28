@@ -466,6 +466,13 @@ export function useSessionActions({
     // to exercises.attachment / exercises.mount_position default — that's
     // the QD-B2 trap, which is closed by getLastVariant() reading only
     // workout_sets, never the exercise definition.
+    //
+    // Reviewer blocker #1 (PR #426): the autofilled values MUST also be
+    // captured into the in-memory `setWithModifier` row below — otherwise
+    // the new SetRow renders with NULL/NULL chips until a refresh, and the
+    // user can accidentally overwrite the unseen autofill.
+    let autofilledAttachment: typeof newSet.attachment = null;
+    let autofilledMountPosition: typeof newSet.mount_position = null;
     if (group && isCableExercise({ equipment: group.equipment })) {
       try {
         const history = await queryClient.fetchQuery({
@@ -475,6 +482,8 @@ export function useSessionActions({
         const last = getLastVariant(history);
         if (last.attachment !== null || last.mount_position !== null) {
           await updateSetVariant(newSet.id, last.attachment, last.mount_position);
+          autofilledAttachment = last.attachment;
+          autofilledMountPosition = last.mount_position;
           queryClient.invalidateQueries({
             queryKey: ['variant-history', exerciseId],
           });
@@ -558,6 +567,12 @@ export function useSessionActions({
         ? { weight: prefillWeight, reps: prefillReps, duration_seconds: prefillDuration }
         : {}),
       bodyweight_modifier_kg: defaultModifier,
+      // Reviewer blocker #1 (PR #426): propagate variant autofill into the
+      // in-memory row so chips render with the autofilled values immediately
+      // instead of after a refresh. Falls through to `newSet`'s NULL when
+      // autofill resolved to NULL or the gate (isCableExercise) was false.
+      attachment: autofilledAttachment ?? newSet.attachment,
+      mount_position: autofilledMountPosition ?? newSet.mount_position,
       previous: "-",
     };
     setGroups((prev) =>

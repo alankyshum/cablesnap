@@ -62,6 +62,23 @@ describe("useSessionActions — cable variant autofill contract (BLD-771)", () =
         /queryClient\.invalidateQueries\(\{\s*queryKey:\s*\['variant-history', exerciseId\]/,
     },
     {
+      // Reviewer blocker #1 (PR #426): persistence to DB alone is not
+      // enough — the newly-added in-memory row must also reflect the
+      // autofilled attachment/mount_position so the chips render with the
+      // resolved values immediately, without waiting for a DB round-trip.
+      name: "in-memory setWithModifier reflects autofilled attachment",
+      shouldMatch:
+        /attachment:\s*autofilledAttachment\s*\?\?\s*newSet\.attachment/,
+    },
+    {
+      // Reviewer blocker #1 (PR #426): same for mount_position — the
+      // in-memory row carries the autofilled value, not just whatever
+      // the DB row was created with.
+      name: "in-memory setWithModifier reflects autofilled mount_position",
+      shouldMatch:
+        /mount_position:\s*autofilledMountPosition\s*\?\?\s*newSet\.mount_position/,
+    },
+    {
       name: "does NOT call getRecentVariantHistory directly outside the fetchQuery queryFn",
       // Source mentions: import + queryFn + this assertion comment. Anything
       // beyond ~3 references would suggest a direct call bypassing React Query.

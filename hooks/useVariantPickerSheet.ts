@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { AccessibilityInfo } from "react-native";
 import * as Haptics from "expo-haptics";
 import { updateSetVariant } from "@/lib/db/session-sets";
 import { queryClient } from "@/lib/query";
@@ -34,6 +35,11 @@ export function useVariantPickerSheet({
   showError,
 }: UseVariantPickerSheetArgs) {
   const [setId, setPendingSetId] = useState<string | null>(null);
+  // Reviewer blocker #4 (PR #426): capture the originating row's
+  // accessibility node handle on open so we can restore VO/TalkBack focus
+  // to it when the picker closes. Stored in a ref (not state) because we
+  // never want a focus-handle change to trigger a re-render of the sheet.
+  const returnFocusHandleRef = useRef<number | null>(null);
 
   const findExerciseIdForSet = useCallback((id: string): string | null => {
     for (const g of groups) {
@@ -49,13 +55,28 @@ export function useVariantPickerSheet({
     });
   }, []);
 
-  const handleOpen = useCallback((id: string) => {
+  const handleOpen = useCallback((id: string, returnFocusHandle: number | null = null) => {
+    returnFocusHandleRef.current = returnFocusHandle;
     setPendingSetId(id);
+  }, []);
+
+  const restoreFocus = useCallback(() => {
+    // setAccessibilityFocus is a no-op when no screen reader is active, so
+    // it's safe to call unconditionally. Wrapped in a setTimeout so the
+    // sheet's exit animation has finished before the platform attempts to
+    // move focus (avoids the focus jumping back into the closing sheet).
+    const handle = returnFocusHandleRef.current;
+    returnFocusHandleRef.current = null;
+    if (handle == null) return;
+    setTimeout(() => {
+      AccessibilityInfo.setAccessibilityFocus(handle);
+    }, 100);
   }, []);
 
   const handleClose = useCallback(() => {
     setPendingSetId(null);
-  }, []);
+    restoreFocus();
+  }, [restoreFocus]);
 
   const handleClear = useCallback(async (id: string) => {
     try {
@@ -77,6 +98,7 @@ export function useVariantPickerSheet({
   }) => {
     if (!setId) {
       setPendingSetId(null);
+      restoreFocus();
       return;
     }
     try {
@@ -87,10 +109,11 @@ export function useVariantPickerSheet({
       });
       invalidateHistoryCache(findExerciseIdForSet(setId));
       setPendingSetId(null);
+      restoreFocus();
     } catch (err) {
       showError((err as Error).message);
     }
-  }, [setId, updateGroupSet, showError, findExerciseIdForSet, invalidateHistoryCache]);
+  }, [setId, updateGroupSet, showError, findExerciseIdForSet, invalidateHistoryCache, restoreFocus]);
 
   // Pre-populate the sheet with whatever is on the set right now — `null` if
   // never set. Computed inline (no useMemo) because the work is trivial and

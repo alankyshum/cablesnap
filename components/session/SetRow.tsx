@@ -19,8 +19,8 @@
  * component for the swipe-complete path; `app/session/[id].tsx` does not
  * wire any extra prop for it.
  */
-import React, { useCallback, useEffect, useMemo, memo, useState } from "react";
-import { I18nManager, Pressable, StyleSheet, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
+import { findNodeHandle, I18nManager, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Check, Trash2 } from "lucide-react-native";
@@ -124,7 +124,12 @@ export type SetRowProps = {
   // Both callbacks are optional; the chips self-suppress when equipment is
   // not cable (gate is isCableExercise(equipment)) so passing the props for
   // non-cable rows is a no-op.
-  onOpenVariantPicker?: (setId: string) => void;
+  //
+  // Reviewer blocker #4 (PR #426): onOpenVariantPicker accepts a returnFocus
+  // node handle so the picker hook can restore VO/TalkBack focus to the
+  // originating row on dismiss. SetRow captures its variant footer Pressable
+  // via a ref and resolves the handle via React Native's findNodeHandle().
+  onOpenVariantPicker?: (setId: string, returnFocusHandle: number | null) => void;
   onClearVariant?: (setId: string) => void;
   // Timer controls (duration mode only)
   isTimerRunning?: boolean;
@@ -144,6 +149,10 @@ export const SetRow = memo(function SetRow({
   onOpenVariantPicker, onClearVariant,
 }: SetRowProps) {
   const colors = useThemeColors();
+  // BLD-771: ref to the variant footer Pressable so the picker hook can
+  // resolve its accessibility node handle on open and restore VO/TalkBack
+  // focus to it on dismiss (reviewer blocker #4, PR #426).
+  const variantFooterRef = useRef<View>(null);
   // BLD-559: synchronous confirmation feedback owned exclusively here.
   // usePRCelebration MUST NOT fire haptic/audio. Any change here requires
   // psychologist re-review per PLAN-BLD-559.
@@ -485,15 +494,51 @@ export const SetRow = memo(function SetRow({
       */}
       {isCableExercise({ equipment }) ? (
         <Pressable
-          onPress={() => onOpenVariantPicker?.(set.id)}
+          ref={variantFooterRef}
+          onPress={() => {
+            // Reviewer blocker #4 (PR #426): pass the originating row's
+            // accessibility handle to the picker hook so VO/TalkBack focus
+            // can be restored to this same Pressable on dismiss.
+            const handle = variantFooterRef.current
+              ? findNodeHandle(variantFooterRef.current)
+              : null;
+            onOpenVariantPicker?.(set.id, handle);
+          }}
           onLongPress={() => onClearVariant?.(set.id)}
           accessibilityRole="button"
           accessibilityLabel={`Set ${set.set_number} cable variant`}
           accessibilityHint="Double tap to choose attachment and pulley position; long press to clear"
           style={styles.variantFooter}
         >
-          <SetAttachmentChip attachment={set.attachment ?? null} />
-          <SetMountPositionChip mount={set.mount_position ?? null} />
+          {set.attachment == null && set.mount_position == null ? (
+            // Reviewer blocker #3 (PR #426): when both fields are null the
+            // chips self-suppress, leaving a zero-height Pressable with no
+            // visible tap-target. Render an explicit "Tap to set variant"
+            // placeholder so the affordance is discoverable on first-time
+            // sets (no autofill history) and after long-press clear. Styled
+            // as a dashed-outline pill so it reads as "empty / tap to fill"
+            // rather than as a value.
+            <View
+              style={[
+                styles.variantPlaceholder,
+                { borderColor: colors.outline },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.variantPlaceholderLabel,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Tap to set variant
+              </Text>
+            </View>
+          ) : (
+            <>
+              <SetAttachmentChip attachment={set.attachment ?? null} />
+              <SetMountPositionChip mount={set.mount_position ?? null} />
+            </>
+          )}
         </Pressable>
       ) : null}
 
@@ -524,6 +569,23 @@ const styles = StyleSheet.create({
     paddingLeft: 36,
     paddingTop: 2,
     paddingBottom: 2,
+  },
+  // BLD-771: empty-state placeholder pill rendered when both attachment
+  // and mount_position are null. Dashed outline reads as "tap to fill"
+  // rather than as a real chip value, while keeping a visible tap target
+  // for the picker.
+  variantPlaceholder: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    alignSelf: "center",
+  },
+  variantPlaceholderLabel: {
+    fontSize: fontSizes.xs,
+    lineHeight: 16,
+    fontWeight: "500",
   },
   colSet: {
     width: 36,

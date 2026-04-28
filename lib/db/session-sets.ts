@@ -139,7 +139,6 @@ export async function addSet(
   // Both null when user has no prior variant on this exercise (no silent default).
   attachment?: Attachment | null,
   mountPosition?: MountPosition | null
-// eslint-disable-next-line complexity -- thin DB wrapper, branches are field defaults
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
@@ -800,18 +799,24 @@ export async function getLastBodyweightModifier(
  * warmup and in-progress (uncompleted) sets — autofill should reflect the
  * user's most recent _intent_, not just completed work.
  *
- * Order: `completed_at DESC NULLS LAST, set_number DESC`. UUIDv4 ids are not
- * monotonic (TL TR2), so we cannot order by id; `completed_at` is durable for
- * completed sets and `set_number DESC` is a stable tiebreaker for in-progress
- * rows where `completed_at` is still NULL (clustered together at the front of
- * the result via `NULLS LAST`).
+ * Order: `s.started_at DESC, ws.set_number DESC` (joined to workout_sessions).
+ * `started_at` is `notNull integer` on workout_sessions, so no NULLS-FIRST/LAST
+ * handling is needed. The current in-progress session has the highest
+ * `started_at`, so its rows naturally surface first; within a session,
+ * `set_number DESC` selects the latest set the user touched. UUIDv4 ids are
+ * not monotonic (TL TR2), so we cannot order by id.
  *
  * Window size 50 is the heuristic ceiling: a user training the same exercise
- * 4×/week for a year produces ~200 sets; almost any exercise's most recent
- * non-null attachment + mount_position will be found inside the first 10–20
- * rows. 50 caps worst-case work while leaving headroom for users who
- * intermittently log variants. The pure helper short-circuits as soon as both
- * attributes resolve, so the typical scan is much shorter.
+ * 4×/week for a year produces ~200 sets; in the typical case the most recent
+ * non-null attachment + mount_position is found inside the first 10–20 rows
+ * and the pure helper short-circuits as soon as both attributes resolve.
+ *
+ * Caveat (do NOT bump this thinking it's a perf knob): in the cold-start
+ * pathological case — one ancient session with the only non-null variant
+ * plus 50 newer bare-set sessions — the scan will read all 50 rows and
+ * resolve to NULL. That is correct per the "no silent default" rule
+ * (autofill must reflect _recent_ user intent, not unbounded ancient
+ * history); it is NOT a bug to fix by widening the window.
  *
  * Index plan: `idx_workout_sets_exercise` covers the WHERE clause. If
  * EXPLAIN QUERY PLAN on a 10k-set DB shows SCAN, ship a partial index
@@ -823,14 +828,24 @@ export async function getRecentVariantHistory(
   limit: number = 50
 ): Promise<{ attachment: Attachment | null; mount_position: MountPosition | null }[]> {
   const database = await getDatabase();
+  // Reviewer blocker #2 (PR #426): the prior `ORDER BY completed_at DESC
+  // NULLS LAST` deprioritized in-progress (uncompleted) rows behind older
+  // completed rows, so a mid-session variant change on the current set was
+  // ignored by the next add-set autofill. Joining workout_sessions and
+  // ordering by `started_at DESC` naturally surfaces the current session
+  // first (current = highest started_at), then prior sessions in reverse
+  // chronological order. Within a session, `set_number DESC` selects the
+  // latest set the user touched. No NULLS-FIRST/LAST required because
+  // `started_at` is `notNull` on workout_sessions.
   const rows = await database.getAllAsync<{
     attachment: string | null;
     mount_position: string | null;
   }>(
-    `SELECT attachment, mount_position
-       FROM workout_sets
-      WHERE exercise_id = ?
-      ORDER BY completed_at DESC NULLS LAST, set_number DESC
+    `SELECT ws.attachment, ws.mount_position
+       FROM workout_sets ws
+       JOIN workout_sessions s ON s.id = ws.session_id
+      WHERE ws.exercise_id = ?
+      ORDER BY s.started_at DESC, ws.set_number DESC
       LIMIT ?`,
     [exerciseId, limit]
   );
