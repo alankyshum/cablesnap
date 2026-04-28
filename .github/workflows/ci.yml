@@ -1,0 +1,89 @@
+name: CI
+
+# Runs typecheck (`tsc --noEmit`) and unit tests (`jest`) on every PR and on
+# pushes to `main`. Establishes the automated verification gate that was
+# missing from the repo (BLD-742).
+#
+# Scope intentionally narrow per BLD-742 spec: no lint, no coverage, no e2e,
+# no matrix. Bundle Gate (`bundle-gate.yml`) continues to run independently.
+#
+# Job split rationale (Option C): typecheck and jest run as separate jobs so
+# each can be independently marked non-blocking via `continue-on-error: true`
+# until the pre-existing failures on `main` are cleaned up.
+# - typecheck: 10 pre-existing TS errors → see BLD-747.
+# - jest: 12 pre-existing test failures across 3 suites (supersets,
+#   session-add-exercise, WorkoutHeatmap) → see BLD-753.
+# Both jobs flip back to blocking once their respective cleanup tickets land.
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+
+# Cancel in-progress runs on new commits to the same ref to save CI minutes.
+# Mirrors the pattern in `bundle-gate.yml`.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # TODO(BLD-747): flip to blocking (remove `continue-on-error`) after the
+    # 10 pre-existing typecheck errors discovered by this workflow's first
+    # run on PR #415 are cleaned up. Until then, typecheck failures surface
+    # as warnings on the PR but do not block merge.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Pinned to match `bundle-gate.yml`. No `.nvmrc` or `engines` field
+          # in the repo to source from. Bump in lockstep with the other CI.
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # `--legacy-peer-deps` matches `bundle-gate.yml` — known peer-dep
+        # conflicts in the Expo / React Native dependency tree.
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  jest:
+    name: Jest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # TODO(BLD-753): flip to blocking (remove `continue-on-error`) after the
+    # 12 pre-existing test failures across 3 suites surfaced by this
+    # workflow's first run are fixed (supersets, session-add-exercise,
+    # WorkoutHeatmap). BLD-749 mock fix already landed; remaining failures
+    # are real assertion mismatches against current UI behavior.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Jest
+        # `--ci` disables watch/snapshot-write; `--runInBand` keeps memory
+        # usage predictable on the GitHub-hosted runner.
+        run: npm test -- --ci --runInBand
