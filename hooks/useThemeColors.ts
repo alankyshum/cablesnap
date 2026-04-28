@@ -31,6 +31,10 @@ export function useThemeColors() {
 
     // Surface / Background
     surface: t.card,
+    // BLD-561: subtle alt-surface used for illustration cards. Keeps an inline
+    // image visually distinct from surrounding text without competing with the
+    // primary card. Light = soft tint of muted; Dark = a hair lighter than card.
+    surfaceAlt: isDark ? "#1A1F26" : "#F2F4F7",
     surfaceVariant: t.muted,
     onSurface: t.foreground,
     onSurfaceVariant: t.mutedForeground,

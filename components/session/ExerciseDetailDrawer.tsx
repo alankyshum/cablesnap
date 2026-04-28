@@ -11,6 +11,7 @@ import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { ExerciseDrawerStats } from "./ExerciseDrawerStats";
 import { ExerciseTutorialLink } from "../exercises/ExerciseTutorialLink";
 import { ExerciseInstructionsList } from "../exercises/ExerciseInstructionsList";
+import { ExerciseIllustrationCards } from "../exercises/ExerciseIllustrationCards";
 import type { Exercise } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -97,6 +98,12 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
 
   const instructions = (
     <View style={styles.detailSection}>
+      {/* BLD-561: start/end illustrations above the numbered text steps. The
+          cards component itself uses onLayout to flip side-by-side ≥480px and
+          stacks vertically below; renders empty-state hint for custom
+          exercises without images and renders null for seeded exercises with
+          no manifest entry (both-or-neither rule). */}
+      <ExerciseIllustrationCards exercise={exercise} />
       <ExerciseInstructionsList
         instructions={exercise.instructions}
         colors={colors}

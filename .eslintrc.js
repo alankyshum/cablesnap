@@ -72,6 +72,7 @@ module.exports = {
         "components/ui/**",
         "components/SwipeRowAction.tsx",
         "components/SwipeToDelete.tsx",
+        "components/exercises/ExerciseImageZoomModal.tsx",
       ],
       rules: {
         "react-hooks/immutability": "off",

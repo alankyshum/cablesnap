@@ -9,6 +9,7 @@ import { MuscleMap } from "../../components/MuscleMap";
 import { BodyweightModifierNotice } from "./BodyweightModifierNotice";
 import { ExerciseTutorialLink } from "./ExerciseTutorialLink";
 import { ExerciseInstructionsList, parseInstructionSteps } from "./ExerciseInstructionsList";
+import { ExerciseIllustrationCards } from "./ExerciseIllustrationCards";
 import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseDetailPaneProps {
@@ -135,13 +136,23 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                 )}
               </View>
               {steps.length > 0 && (
-                <ExerciseInstructionsList
-                  instructions={detail.instructions}
-                  colors={colors}
-                  showHeading
-                  testIDPrefix="exercise-detail-pane-instructions"
-                />
+                <>
+                  {/* BLD-561: start/end position illustrations render above the
+                      numbered text steps when a manifest entry (or custom URIs)
+                      resolves; render nothing for seeded exercises without a
+                      manifest entry per the both-or-neither rule. */}
+                  <ExerciseIllustrationCards exercise={detail} />
+                  <ExerciseInstructionsList
+                    instructions={detail.instructions}
+                    colors={colors}
+                    showHeading
+                    testIDPrefix="exercise-detail-pane-instructions"
+                  />
+                </>
               )}
+              {/* Custom exercises with no instructions still get the empty-state
+                  illustration hint via the cards component. */}
+              {steps.length === 0 && <ExerciseIllustrationCards exercise={detail} />}
               <ExerciseTutorialLink exerciseName={detail.name} testID="exercise-tutorial-link-pane" />
             </>
           }
