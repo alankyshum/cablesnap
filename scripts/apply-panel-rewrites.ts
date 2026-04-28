@@ -237,6 +237,29 @@ async function main(): Promise<void> {
     writeManifest(manifest);
     console.log(`\n[apply] wrote ${MANIFEST_PATH}; updated ${updates.length} entries`);
     console.log(`[apply] busted curate cache for: ${updates.map((u) => u.id).join(", ")}`);
+
+    // Bump manifest.round.json so curate's round lock-in (BLD-743 Guardrail
+    // #4) refuses to emit CURATION blocks from any cache entry whose
+    // `round` is stale. The proposalHash check already busts stale cache
+    // for updated entries; the round bump is the visible governance trail
+    // ("which alt-text iteration is in the manifest right now").
+    const roundPath = path.join(ASSET_DIR, "manifest.round.json");
+    const prev = fs.existsSync(roundPath)
+      ? (JSON.parse(fs.readFileSync(roundPath, "utf8")) as {
+          round: number;
+          updatedAt: string;
+          notes?: string;
+        })
+      : { round: 0, updatedAt: new Date(0).toISOString() };
+    const next = {
+      round: prev.round + 1,
+      updatedAt: new Date().toISOString(),
+      notes: `Bumped by scripts/apply-panel-rewrites.ts after applying panel-recommended alt-text rewrites for: ${updates.map((u) => u.id).join(", ")}.`,
+    };
+    fs.writeFileSync(roundPath, JSON.stringify(next, null, 2) + "\n");
+    console.log(
+      `[apply] bumped ${roundPath}: round ${prev.round} → ${next.round}`,
+    );
     console.log(`[apply] next: re-run scripts/curate-exercise-images.ts to verify panel APPROVE`);
   } else {
     console.log("\n[apply] no updates needed");

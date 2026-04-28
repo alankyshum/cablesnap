@@ -63,12 +63,144 @@ import type { Exercise } from "../lib/types";
 const ROOT = path.resolve(__dirname, "..");
 const ASSET_DIR = path.join(ROOT, "assets/exercise-illustrations");
 const MANIFEST_PATH = path.join(ASSET_DIR, "manifest.generated.ts");
+const MANIFEST_ROUND_PATH = path.join(ASSET_DIR, "manifest.round.json");
 const CURATION_PATH = path.join(ASSET_DIR, "CURATION.md");
 const REVIEW_PY_PATH = path.join(
   ROOT,
   ".claude/skills/review--sports-science/scripts/review.py",
 );
 const CACHE_DIR = path.join(ROOT, ".cache/curate");
+
+/**
+ * Frozen safety-keyword list for the deterministic discriminator.
+ *
+ * BLD-743 — CEO Option A (comment 90c5899b) ratifies QD's Guardrail #1:
+ * a deterministic regex-based discriminator over the panel's "Safety
+ * Concerns" section, NOT an LLM classifier (no second-order judgement
+ * calls). Case-insensitive whole-word matching against this list, plus
+ * ratings tokens {LOW, MEDIUM, HIGH, CRITICAL} (NONE → not a hit).
+ *
+ * The list is FROZEN at this commit. Any expansion requires a fresh CEO
+ * sign-off (record the addition in CURATION.md alongside the link to
+ * the new approval). Do NOT mutate this array via tooling — it is a
+ * governance constant.
+ */
+const SAFETY_KEYWORDS: readonly string[] = Object.freeze([
+  "risk",
+  "injury",
+  "danger",
+  "unsafe",
+  "avoid",
+  "harm",
+  "strain",
+  "compress",
+  "impinge",
+  "herniat",
+  "tear",
+  "sprain",
+  "hyperextend",
+  "overload",
+  "pinch",
+  "nerve",
+  "disc",
+  "lumbar",
+  "shear",
+  "instabil",
+  "dislocat",
+  "subluxat",
+  "contraindicat",
+]);
+
+/**
+ * Tokens used by the panel's "Safety Concerns" section to grade severity.
+ * Anything above NONE counts as a real safety concern even if no keyword
+ * from the SAFETY_KEYWORDS list happens to appear (defense in depth).
+ */
+const NON_NONE_RATINGS: readonly string[] = Object.freeze([
+  "LOW",
+  "MEDIUM",
+  "HIGH",
+  "CRITICAL",
+]);
+
+export type SafetyClass = "SAFETY" | "REFINEMENT" | "N/A";
+
+/**
+ * Extract the verbatim "Safety Concerns" section from a panel output.
+ * Returns the empty string if the section is missing.
+ *
+ * The expert-system prompt mandates a `Safety Concerns` heading; we accept
+ * `## Safety Concerns`, `Safety Concerns:`, or bare `Safety Concerns` and
+ * stop at the next heading-like line (any line starting with the next
+ * top-level section name from the prompt: Evidence-Based Recommendations,
+ * Engagement Psychology, Verdict, or any `##`-prefixed heading).
+ */
+export function extractSafetySection(panel: string): string {
+  const re = /(^|\n)\s*(?:#{1,6}\s*)?Safety Concerns\s*:?\s*\n/i;
+  const m = re.exec(panel);
+  if (!m) return "";
+  const start = m.index + m[0].length;
+  const tail = panel.slice(start);
+  const stopRe =
+    /\n\s*(?:#{1,6}\s*)?(?:Evidence-Based Recommendations|Engagement Psychology|Verdict)\b|\n#{1,6}\s/i;
+  const stop = stopRe.exec(tail);
+  const body = stop ? tail.slice(0, stop.index) : tail;
+  return body.trim();
+}
+
+/**
+ * Deterministic safety/refinement discriminator (BLD-743 Guardrail #1).
+ *
+ * Rule (verbatim from CEO comment 90c5899b):
+ *   SAFETY if Safety Concerns non-empty AND (any keyword OR any rating in
+ *           {LOW, MEDIUM, HIGH, CRITICAL} other than NONE)
+ *   REFINEMENT otherwise
+ *
+ * Returns N/A only when the panel did not emit a Safety Concerns section
+ * at all (this should never happen for an APPROVE_WITH_CHANGES verdict
+ * given the canonical prompt; treated as SAFETY by gateBlocks() for
+ * fail-closed behavior).
+ */
+export function classifySafety(panel: string): SafetyClass {
+  const section = extractSafetySection(panel);
+  if (!section) return "N/A";
+  // Strip any "NONE" tokens before scanning so they don't false-trigger
+  // the rating regex (panel sometimes writes "Severity: NONE" for a
+  // non-issue).
+  const upper = section.toUpperCase();
+  const keywordRe = new RegExp(
+    `\\b(?:${SAFETY_KEYWORDS.map((k) => k.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")).join("|")})\\w*\\b`,
+    "i",
+  );
+  const hasKeyword = keywordRe.test(section);
+  // Match a rating token preceded by whitespace/colon/dash/parenthesis so
+  // we don't pick up substrings of other words.
+  const ratingRe = new RegExp(
+    `(?:^|[\\s:\\-\\(])(?:${NON_NONE_RATINGS.join("|")})\\b`,
+    "i",
+  );
+  // The regex above matches against the upper-cased section so casing is
+  // already normalized; but use upper anyway for clarity.
+  const hasRating = ratingRe.test(upper);
+  return hasKeyword || hasRating ? "SAFETY" : "REFINEMENT";
+}
+
+type RoundFile = { round: number; updatedAt: string; notes?: string };
+
+function loadManifestRound(): RoundFile {
+  if (!fs.existsSync(MANIFEST_ROUND_PATH)) {
+    throw new Error(
+      `[curate] missing ${MANIFEST_ROUND_PATH}. Create it with {"round": 1, "updatedAt": "<iso>"} or run apply-panel-rewrites.ts to bump it.`,
+    );
+  }
+  const raw = JSON.parse(fs.readFileSync(MANIFEST_ROUND_PATH, "utf8"));
+  if (typeof raw.round !== "number" || !Number.isInteger(raw.round) || raw.round < 0) {
+    throw new Error(
+      `[curate] ${MANIFEST_ROUND_PATH}: round must be a non-negative integer; got ${JSON.stringify(raw.round)}`,
+    );
+  }
+  return raw as RoundFile;
+}
 
 /**
  * Extract `EXPERT_SYSTEM_PROMPT` verbatim from the canonical
@@ -258,7 +390,10 @@ async function callPanel(
   return { content, modelUsed: body.model ?? "gpt-5" };
 }
 
-function deriveGates(panelOutput: string): {
+function deriveGates(
+  panelOutput: string,
+  safetyClass: SafetyClass,
+): {
   visual: "PASS" | "FAIL";
   technique: "PASS" | "FAIL";
   verdict: string;
@@ -275,13 +410,18 @@ function deriveGates(panelOutput: string): {
   else if (upper.includes("APPROVE")) verdict = "APPROVE";
   else verdict = "UNKNOWN";
 
+  // Single source of truth: the gate decision is gateBlocks(). The visual
+  // marker is informational; the binding decision is the curation gate
+  // line in the rendered sign-off. We mirror gateBlocks here so the
+  // ✅/❌ glyphs in CURATION agree with the merge decision.
+  const blocking = gateBlocks(verdict, safetyClass);
+  if (!blocking) {
+    return { visual: "PASS", technique: "PASS", verdict };
+  }
   switch (verdict) {
-    case "APPROVE":
-      return { visual: "PASS", technique: "PASS", verdict };
     case "APPROVE_WITH_CHANGES":
-      // Per CEO plan + QD acceptance bar: APPROVE_WITH_CHANGES on technique
-      // blocks merge until addressed. Mark technique FAIL so CURATION
-      // reflects the gate is not closed.
+      // Blocking AWC means safety-classed AWC. Visual is fine; technique
+      // fails because the panel flagged real safety concerns.
       return { visual: "PASS", technique: "FAIL", verdict };
     case "NEEDS_RESEARCH":
     case "REJECT":
@@ -295,6 +435,32 @@ function gitHead(): string {
   return execSync("git rev-parse HEAD", { cwd: ROOT }).toString().trim();
 }
 
+/**
+ * Single source of truth for the merge-blocking rule.
+ *
+ * BLD-743 — CEO Option A (comment 90c5899b) ratifies QD's Guardrail #2
+ * verbatim: a verdict blocks the gate if it is REJECT, NEEDS_RESEARCH,
+ * UNKNOWN, OR if it is APPROVE_WITH_CHANGES classified as SAFETY.
+ * APPROVE_WITH_CHANGES classified as REFINEMENT is allowed; pure APPROVE
+ * is allowed.
+ *
+ * `check-curation-gate.ts` re-exports this function so the pre-push hook
+ * and the Bundle Gate CI step run the *same* logic against the committed
+ * CURATION.md — no second implementation, no drift.
+ */
+export function gateBlocks(verdict: string, safetyClass: SafetyClass): boolean {
+  const v = verdict.toUpperCase().trim();
+  if (v === "REJECT" || v === "NEEDS_RESEARCH" || v === "UNKNOWN") return true;
+  if (v === "APPROVE_WITH_CHANGES") {
+    // Fail-closed: a missing Safety Concerns section (N/A) is treated as
+    // SAFETY for blocking purposes. The canonical prompt always emits the
+    // section; absence indicates the panel did not follow format and the
+    // verdict is therefore not trustworthy.
+    return safetyClass !== "REFINEMENT";
+  }
+  return false;
+}
+
 function renderSignOff(
   ex: Exercise,
   panelOutput: string,
@@ -303,28 +469,45 @@ function renderSignOff(
   reviewer: string,
   commitHash: string,
   timestampUtc: string,
+  round: number,
+  safetyClass: SafetyClass,
 ): string {
   const visualMark = gates.visual === "PASS" ? "✅" : "❌";
   const techniqueMark = gates.technique === "PASS" ? "✅" : "❌";
+  const blocking = gateBlocks(gates.verdict, safetyClass);
+  const gateMark = blocking ? "❌ BLOCK" : "✅ PASS";
+  const safetySection = extractSafetySection(panelOutput);
+  const safetyExcerpt =
+    safetySection.length > 0
+      ? safetySection
+      : "_(panel did not emit a Safety Concerns section — treated as SAFETY for fail-closed gating)_";
   return [
     `## ${ex.id} — ${ex.name}`,
+    `- Round: **${round}**`,
+    `- Curation gate: ${gateMark} (verdict=\`${gates.verdict}\`, safety-class=\`${safetyClass}\` — \`gateBlocks()\` from \`scripts/curate-exercise-images.ts\`)`,
     `- Visual plausibility: ${visualMark} ${reviewer} ${timestampUtc} (alt-text + image-pair gate via substitute panel; QD will run manual UI inspection on 3-of-10 final pass)`,
     `- Technique: ${techniqueMark} ${reviewer} ${timestampUtc} (panel verdict: **${gates.verdict}**)`,
-    `- Model: \`gpt-image-1\` (image), \`gpt-4o-mini\` (alt-text), \`${modelUsed}\` (review panel — CEO Option B substitute for \`gemini-3.1-pro-preview\` per BLD-743 comment 447c9f3a-e41e-4f35-bcd9-b58a1f35b018; methodology preserved verbatim by loading \`EXPERT_SYSTEM_PROMPT\` at runtime from \`.claude/skills/review--sports-science/scripts/review.py\`. Setting deviation: gpt-5 rejects non-default temperature, so default (1) is used; original reviewer used 0.3.)`,
+    `- Model: \`gpt-image-1\` (image), \`gpt-4o-mini\` (alt-text), \`${modelUsed}\` (review panel — CEO Option B substitute for \`gemini-3.1-pro-preview\` per BLD-743 comment 447c9f3a-e41e-4f35-bcd9-b58a1f35b018; methodology preserved verbatim by loading \`EXPERT_SYSTEM_PROMPT\` at runtime from \`.claude/skills/review--sports-science/scripts/review.py\`. Setting deviations: \`temperature\` defaulted (1) — gpt-5 rejects non-default; \`reasoning_effort=medium\`; \`max_completion_tokens=16384\`.)`,
     `- review--sports-science (substitute): Reviewer=\`${reviewer}\`, commit=\`${commitHash}\`, timestamp=\`${timestampUtc}\``,
     ``,
-    `<details><summary>Panel output</summary>`,
+    `<details><summary>Safety Concerns (verbatim, classifier input)</summary>`,
+    ``,
+    safetyExcerpt,
+    ``,
+    `</details>`,
+    ``,
+    `<details><summary>Panel output (full)</summary>`,
     ``,
     panelOutput,
     ``,
     `</details>`,
     ``,
-    `- Regeneration notes: alt-text regenerated for voltra-013/-020/-029 with explicit start=loaded-lengthened / end=contracted-peak prompt convention (semantic-collapse fix from initial generator run). Image pairs unchanged from original \`gpt-image-1\` generation.`,
+    `- Regeneration notes: alt-text round ${round} (panel-recommended rewrites applied via \`scripts/apply-panel-rewrites.ts\`). Image pairs unchanged from original \`gpt-image-1\` generation.`,
     ``,
   ].join("\n");
 }
 
-function rewriteCuration(blocks: string[]): void {
+function rewriteCuration(blocks: string[], roundFile: RoundFile): void {
   const orig = fs.readFileSync(CURATION_PATH, "utf8");
   const marker = "## Sign-offs";
   const head = orig.includes(marker) ? orig.slice(0, orig.indexOf(marker)) : orig;
@@ -332,6 +515,12 @@ function rewriteCuration(blocks: string[]): void {
     `## Sign-offs`,
     ``,
     `_Generated by \`scripts/curate-exercise-images.ts\` — substitute reviewer per CEO Option B (BLD-743 comment 447c9f3a). \`EXPERT_SYSTEM_PROMPT\` loaded at runtime from \`.claude/skills/review--sports-science/scripts/review.py\` to prevent silent drift (per QD comment 556a429b)._`,
+    ``,
+    `**Curation gate (BLD-743 — CEO Option A, comment 90c5899b):**`,
+    `- Manifest alt-text round: **${roundFile.round}** (\`manifest.round.json\` updated ${roundFile.updatedAt})`,
+    `- Discriminator: deterministic regex over the panel's "Safety Concerns" section (frozen \`SAFETY_KEYWORDS\` list + non-NONE rating tokens). See \`scripts/curate-exercise-images.ts\` \`classifySafety()\`.`,
+    `- Gate logic: \`gateBlocks(verdict, safetyClass)\` — blocks on REJECT, NEEDS_RESEARCH, UNKNOWN, or APPROVE_WITH_CHANGES classified as SAFETY. APPROVE_WITH_CHANGES classified as REFINEMENT is allowed.`,
+    `- Verifier: \`scripts/check-curation-gate.ts\` (wired into \`.husky/pre-push\` and the Bundle Gate CI step).`,
     ``,
     ...blocks,
   ].join("\n");
@@ -345,6 +534,13 @@ type CacheEntry = {
   panel: string;
   modelUsed: string;
   proposalHash: string;
+  /**
+   * Manifest round at the time the panel was called. Used by the
+   * round lock-in assertion (BLD-743 Guardrail #4): if a cache entry's
+   * round disagrees with the current `manifest.round.json`, we refuse to
+   * emit a CURATION block from it (force a fresh panel call).
+   */
+  round?: number;
 };
 
 function cachePathFor(id: string): string {
@@ -397,6 +593,11 @@ async function main(): Promise<void> {
     `[curate] loaded EXPERT_SYSTEM_PROMPT (${expertPrompt.length} chars) from review.py`,
   );
 
+  const roundFile = loadManifestRound();
+  console.log(
+    `[curate] manifest round=${roundFile.round} (updated ${roundFile.updatedAt})`,
+  );
+
   const all = seedExercises();
   const exById = new Map(all.map((e) => [e.id, e]));
   const manifest = loadManifest();
@@ -407,6 +608,8 @@ async function main(): Promise<void> {
   const gateSummary: Array<{
     id: string;
     verdict: string;
+    safetyClass: SafetyClass;
+    blocking: boolean;
     visual: string;
     technique: string;
     cached: boolean;
@@ -445,6 +648,28 @@ async function main(): Promise<void> {
       panel = cacheEntry!.panel;
       modelUsed = cacheEntry!.modelUsed;
       cached = true;
+      // Round lock-in (Guardrail #4): if a cached entry is missing the
+      // `round` stamp (legacy) we adopt the current round on first re-emit
+      // and update the cache. If it's present and disagrees, refuse to
+      // emit — operator must `CURATE_REFRESH=1` to re-call.
+      if (cacheEntry!.round === undefined) {
+        console.log(
+          `[curate] ${id}: cache predates round-stamping; stamping round=${roundFile.round}`,
+        );
+        saveCache(id, {
+          panel,
+          modelUsed,
+          proposalHash,
+          round: roundFile.round,
+        });
+      } else if (cacheEntry!.round !== roundFile.round) {
+        throw new Error(
+          `[curate] ${id}: round lock-in violation. Cache round=${cacheEntry!.round}; manifest round=${roundFile.round}. ` +
+            `The proposal hash matched (alt text unchanged), but the manifest round was bumped without a corresponding alt-text change — ` +
+            `one of the inputs is wrong. Either revert the round bump or run \`CURATE_REFRESH=1 npx tsx scripts/curate-exercise-images.ts --ids ${id}\` ` +
+            `to recall the panel and re-stamp the cache.`,
+        );
+      }
     } else if (!inSubset || skipUncached) {
       console.log(
         `[curate] ${id}: skipping (no cache; not in subset / skip-uncached)`,
@@ -453,6 +678,8 @@ async function main(): Promise<void> {
       gateSummary.push({
         id,
         verdict: "PENDING",
+        safetyClass: "N/A",
+        blocking: true,
         visual: "PENDING",
         technique: "PENDING",
         cached: false,
@@ -467,24 +694,43 @@ async function main(): Promise<void> {
       const result = await callPanel(expertPrompt, proposal, research, openaiKey);
       panel = result.content;
       modelUsed = result.modelUsed;
-      saveCache(id, { panel, modelUsed, proposalHash });
+      saveCache(id, {
+        panel,
+        modelUsed,
+        proposalHash,
+        round: roundFile.round,
+      });
     }
 
-    const gates = deriveGates(panel);
+    const safetyClass = classifySafety(panel);
+    const gates = deriveGates(panel, safetyClass);
+    const blocking = gateBlocks(gates.verdict, safetyClass);
     gateSummary.push({
       id,
       verdict: gates.verdict,
+      safetyClass,
+      blocking,
       visual: gates.visual,
       technique: gates.technique,
       cached,
       skipped,
     });
     console.log(
-      `[curate] ${id}: verdict=${gates.verdict} visual=${gates.visual} technique=${gates.technique}${cached ? " (cached)" : ""}`,
+      `[curate] ${id}: verdict=${gates.verdict} safety=${safetyClass} block=${blocking}${cached ? " (cached)" : ""}`,
     );
 
     blocks.push(
-      renderSignOff(ex, panel, modelUsed, gates, reviewer, head, ts),
+      renderSignOff(
+        ex,
+        panel,
+        modelUsed,
+        gates,
+        reviewer,
+        head,
+        ts,
+        roundFile.round,
+        safetyClass,
+      ),
     );
   }
 
@@ -493,7 +739,7 @@ async function main(): Promise<void> {
   // file untouched so reviewers don't see half-populated sign-offs.
   const allCovered = blocks.length === PILOT_EXERCISE_IDS.length;
   if (allCovered) {
-    rewriteCuration(blocks);
+    rewriteCuration(blocks, roundFile);
     console.log(`\n[curate] wrote ${CURATION_PATH}`);
   } else {
     console.log(
@@ -504,26 +750,34 @@ async function main(): Promise<void> {
   console.log("\n[curate] gate summary:");
   for (const r of gateSummary) {
     const tag = r.skipped ? " (skipped)" : r.cached ? " (cached)" : "";
+    const blockTag = r.blocking ? "BLOCK" : "PASS ";
     console.log(
-      `  ${r.id.padEnd(12)} verdict=${r.verdict.padEnd(22)} visual=${r.visual} technique=${r.technique}${tag}`,
+      `  ${r.id.padEnd(12)} verdict=${r.verdict.padEnd(22)} safety=${r.safetyClass.padEnd(10)} gate=${blockTag}${tag}`,
     );
   }
-  const failing = gateSummary.filter(
-    (r) => !r.skipped && (r.visual === "FAIL" || r.technique === "FAIL"),
-  );
-  if (failing.length > 0) {
+  const blocking = gateSummary.filter((r) => !r.skipped && r.blocking);
+  if (blocking.length > 0) {
     console.log(
-      `\n[curate] ${failing.length}/${gateSummary.length} exercises did not PASS both gates. Address findings and re-run.`,
+      `\n[curate] ${blocking.length}/${gateSummary.length} exercises BLOCK the curation gate. Address findings and re-run.`,
     );
     process.exitCode = 2;
   } else if (allCovered) {
     console.log(
-      `\n[curate] all ${gateSummary.length}/${gateSummary.length} PASS both gates.`,
+      `\n[curate] all ${gateSummary.length}/${gateSummary.length} PASS the curation gate.`,
     );
   }
 }
 
-main().catch((err) => {
-  console.error("[curate] fatal:", (err as Error).message);
-  process.exit(1);
-});
+// Only run main() when invoked as a CLI entry point. Importing this module
+// (e.g., from `scripts/check-curation-gate.ts` to reuse `gateBlocks()` —
+// QD Guardrail #2: single source of truth) must NOT trigger a panel run.
+const invokedAsScript =
+  require.main === module ||
+  (process.argv[1] &&
+    path.resolve(process.argv[1]) === path.resolve(__filename));
+if (invokedAsScript) {
+  main().catch((err) => {
+    console.error("[curate] fatal:", (err as Error).message);
+    process.exit(1);
+  });
+}

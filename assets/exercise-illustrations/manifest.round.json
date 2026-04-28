@@ -1,0 +1,5 @@
+{
+  "round": 1,
+  "updatedAt": "2026-04-28T00:00:00.000Z",
+  "notes": "BLD-743 — Round 0 = original generator alt text; Round 1 = panel-recommended rewrites applied via scripts/apply-panel-rewrites.ts. Bumped automatically by apply-panel-rewrites.ts. Read by scripts/curate-exercise-images.ts (round lock-in / Guardrail #4) and stamped into every CURATION sign-off."
+}
