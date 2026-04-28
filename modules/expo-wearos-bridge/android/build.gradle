@@ -1,0 +1,50 @@
+// expo-wearos-bridge — phone-side native module (Expo Modules convention).
+//
+// M0 status: empty Kotlin module class only. M1 lands the WearableListenerService,
+// DataLayerHelper, and DeviceEventEmitter wiring per PLAN-BLD-716.md
+// §"Phone-side bridge concurrency model".
+//
+// This module is compiled in only under the `playRelease` flavor. The
+// `fdroidRelease` flavor explicitly excludes it via the source-set guard
+// emitted by `plugins/with-wearos-module.js`. AC10b enforces the resulting
+// APK contains zero `com.google.android.gms.wearable` classes.
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'com.persoack.cablesnap.wearbridge'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+if (expoModulesCorePlugin.exists()) {
+  apply from: expoModulesCorePlugin
+  applyKotlinExpoModulesCorePlugin()
+}
+
+android {
+  namespace 'com.persoack.cablesnap.wearbridge'
+
+  compileSdkVersion safeExtGet('compileSdkVersion', 36)
+
+  defaultConfig {
+    minSdkVersion safeExtGet('minSdkVersion', 26)
+    targetSdkVersion safeExtGet('targetSdkVersion', 35)
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  // GMS Wearable lives here, NOT in the root phone-app dependencies block,
+  // and the entire library is excluded from `fdroidRelease` via the
+  // Config Plugin's source-set guard. F-Droid AC10b: zero gms.wearable
+  // classes in app-fdroidRelease.apk.
+  implementation "com.google.android.gms:play-services-wearable:18.2.0"
+}
+
+static def safeExtGet(prop, fallback) {
+  rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}
