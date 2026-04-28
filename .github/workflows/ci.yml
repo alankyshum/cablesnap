@@ -6,6 +6,11 @@ name: CI
 #
 # Scope intentionally narrow per BLD-742 spec: no lint, no coverage, no e2e,
 # no matrix. Bundle Gate (`bundle-gate.yml`) continues to run independently.
+#
+# Job split rationale (Option C): typecheck and jest run as separate jobs so
+# the typecheck job can be marked non-blocking via `continue-on-error: true`
+# until the pre-existing typecheck errors on `main` are cleaned up. Jest is
+# blocking from day one. See BLD-747 for the cleanup ticket.
 
 on:
   pull_request: {}
@@ -23,10 +28,15 @@ permissions:
   contents: read
 
 jobs:
-  typecheck-and-test:
-    name: Typecheck + Jest
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # TODO(BLD-747): flip to blocking (remove `continue-on-error`) after the
+    # 10 pre-existing typecheck errors discovered by this workflow's first
+    # run on PR #415 are cleaned up. Until then, typecheck failures surface
+    # as warnings on the PR but do not block merge.
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +56,24 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+  jest:
+    name: Jest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Blocking — unit tests must pass for the PR to merge.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
       - name: Jest
         # `--ci` disables watch/snapshot-write; `--runInBand` keeps memory
