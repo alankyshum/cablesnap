@@ -50,6 +50,8 @@ Subcommands:
 - `status [<branch>]` — show one or all worktrees.
 - `list` — `git worktree list` shorthand.
 
+Full doctrine: [`.agents/CONCURRENT-AGENT-SAFETY.md`](../.agents/CONCURRENT-AGENT-SAFETY.md).
+
 ## Dev Server (Human — port 8081)
 
 **The user starts the dev server manually on port 8081. Do NOT auto-start it.**

@@ -56,6 +56,8 @@ See BLD-765 learning in `process/quality-pipeline.md` for the full
 incident and pattern. The script is idempotent, recovers stale locks,
 and refuses to remove dirty worktrees without `--force`.
 
+Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.agents/CONCURRENT-AGENT-SAFETY.md).
+
 ## Categories
 
 ### Patterns
