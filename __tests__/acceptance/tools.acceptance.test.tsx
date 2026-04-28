@@ -32,6 +32,8 @@ const mockGetBodySettings = jest.fn().mockResolvedValue({ weight_unit: 'kg' })
 
 jest.mock('../../lib/db', () => ({
   getBodySettings: (...args: unknown[]) => mockGetBodySettings(...args),
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
 }))
 
 import PlateCalculator from '../../app/tools/plates'

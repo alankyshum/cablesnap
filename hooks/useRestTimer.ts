@@ -15,6 +15,8 @@ import {
   getRestSecondsForExercise,
   getAppSetting,
   getRestContext,
+  setAppSetting,
+  deleteAppSetting,
 } from "../lib/db";
 import type { SetType } from "../lib/types";
 import {
@@ -22,7 +24,12 @@ import {
   defaultBreakdown,
   type RestBreakdown,
 } from "../lib/rest";
-import { isAvailable, scheduleRestComplete, cancelRestComplete } from "../lib/notifications";
+import {
+  isAvailable,
+  requestPermission,
+  scheduleRestComplete,
+  cancelRestComplete,
+} from "../lib/notifications";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
 
 export type SetContext = {
@@ -37,11 +44,53 @@ type UseRestTimerOptions = {
   colors: { primaryContainer: string; primary: string };
 };
 
+type PersistedRestTimerState = {
+  sessionId: string;
+  endTimestamp: number;
+  durationSeconds: number;
+  breakdown: RestBreakdown;
+  notificationId: string | null;
+};
+
+const DEFAULT_REST_SECONDS = 30;
+const REST_DEFAULT_SECONDS_KEY = "rest_timer_default_seconds";
+const ACTIVE_REST_TIMER_KEY = "rest_timer_active_state";
+
+function sanitizeRestSeconds(value: string | null): number {
+  const parsed = value == null ? Number.NaN : parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_REST_SECONDS;
+}
+
+function parsePersistedRestTimerState(value: string | null): PersistedRestTimerState | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<PersistedRestTimerState>;
+    if (
+      typeof parsed.sessionId !== "string"
+      || typeof parsed.endTimestamp !== "number"
+      || typeof parsed.durationSeconds !== "number"
+    ) {
+      return null;
+    }
+    return {
+      sessionId: parsed.sessionId,
+      endTimestamp: parsed.endTimestamp,
+      durationSeconds: parsed.durationSeconds,
+      breakdown: parsed.breakdown ?? defaultBreakdown(parsed.durationSeconds),
+      notificationId: typeof parsed.notificationId === "string" ? parsed.notificationId : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   const [rest, setRest] = useState(0);
   // Breakdown lives in useState (per plan) so the breakdown sheet re-renders when
   // a new timer starts. Ref-based storage caused stale reads (TL blocker #7).
   const [breakdown, setBreakdown] = useState<RestBreakdown>(() => defaultBreakdown(0));
+  const [persistedDurationSeconds, setPersistedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
+  const [selectedDurationSeconds, setSelectedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
   const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endAtRef = useRef<number | null>(null);
   const notificationIdRef = useRef<string | null>(null);
@@ -57,25 +106,57 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const prevRest = useRef(0);
 
+  const persistLastUsedDuration = useCallback((seconds: number) => {
+    setPersistedDurationSeconds(seconds);
+    void setAppSetting(REST_DEFAULT_SECONDS_KEY, String(seconds)).catch(() => {});
+  }, []);
+
+  const persistActiveTimerState = useCallback((state: PersistedRestTimerState | null) => {
+    if (!state) {
+      void deleteAppSetting(ACTIVE_REST_TIMER_KEY).catch(() => {});
+      return;
+    }
+    void setAppSetting(ACTIVE_REST_TIMER_KEY, JSON.stringify(state)).catch(() => {});
+  }, []);
+
   const cancelNotification = useCallback(() => {
     if (notificationIdRef.current) {
-      cancelRestComplete(notificationIdRef.current);
+      void cancelRestComplete(notificationIdRef.current);
       notificationIdRef.current = null;
     }
   }, []);
 
-  const scheduleNotification = useCallback(async (seconds: number) => {
+  const clearPersistedActiveTimer = useCallback(() => {
+    endAtRef.current = null;
+    notificationIdRef.current = null;
+    persistActiveTimerState(null);
+  }, [persistActiveTimerState]);
+
+  const scheduleNotification = useCallback(async (
+    seconds: number,
+    endTimestamp: number,
+    nextBreakdown: RestBreakdown,
+  ) => {
     if (!sessionId || seconds <= 0) return;
     try {
       const setting = await getAppSetting("rest_notification_enabled");
       if (setting === "false") return;
       if (!isAvailable()) return;
+      const granted = await requestPermission();
+      if (!granted) return;
       const id = await scheduleRestComplete(seconds, sessionId);
       notificationIdRef.current = id;
+      persistActiveTimerState({
+        sessionId,
+        endTimestamp,
+        durationSeconds: seconds,
+        breakdown: nextBreakdown,
+        notificationId: id,
+      });
     } catch {
       // Non-critical — timer still works without notification
     }
-  }, [sessionId]);
+  }, [persistActiveTimerState, sessionId]);
 
   // BLD-553: extracted tick so we can pause/restart the 1Hz interval on
   // AppState background/foreground transitions (battery drain mitigation).
@@ -95,11 +176,12 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       if (remaining <= 0) {
         if (restRef.current) clearInterval(restRef.current);
         restRef.current = null;
-        endAtRef.current = null;
         cancelNotification();
+        clearPersistedActiveTimer();
+        setBreakdown(defaultBreakdown(0));
       }
     }, 1000);
-  }, [cancelNotification]);
+  }, [cancelNotification, clearPersistedActiveTimer]);
 
   const stopRestInterval = useCallback(() => {
     if (restRef.current) {
@@ -112,17 +194,36 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     (secs: number, nextBreakdown: RestBreakdown) => {
       stopRestInterval();
       cancelNotification();
-      const endAt = Date.now() + secs * 1000;
-      endAtRef.current = endAt;
+      const endTimestamp = Date.now() + secs * 1000;
+      endAtRef.current = endTimestamp;
       setRest(secs);
       setBreakdown(nextBreakdown);
-      scheduleNotification(secs);
+      setSelectedDurationSeconds(secs);
+      persistLastUsedDuration(secs);
+      if (sessionId) {
+        persistActiveTimerState({
+          sessionId,
+          endTimestamp,
+          durationSeconds: secs,
+          breakdown: nextBreakdown,
+          notificationId: null,
+        });
+      }
+      void scheduleNotification(secs, endTimestamp, nextBreakdown);
       sessionBreadcrumb("timer.rest.start", { secs });
       // Start unconditionally; AppState change listener will stop the interval
       // immediately if the app is actually backgrounded.
       startRestInterval();
     },
-    [cancelNotification, scheduleNotification, startRestInterval, stopRestInterval],
+    [
+      cancelNotification,
+      persistActiveTimerState,
+      persistLastUsedDuration,
+      scheduleNotification,
+      sessionId,
+      startRestInterval,
+      stopRestInterval,
+    ],
   );
 
   /**
@@ -178,12 +279,63 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
 
   const dismissRest = useCallback(() => {
     stopRestInterval();
-    endAtRef.current = null;
     cancelNotification();
+    clearPersistedActiveTimer();
     setRest(0);
     setBreakdown(defaultBreakdown(0));
     sessionBreadcrumb("timer.rest.dismiss");
-  }, [cancelNotification, stopRestInterval]);
+  }, [cancelNotification, clearPersistedActiveTimer, stopRestInterval]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [savedDefault, savedActiveTimer] = await Promise.all([
+          getAppSetting(REST_DEFAULT_SECONDS_KEY),
+          getAppSetting(ACTIVE_REST_TIMER_KEY),
+        ]);
+        if (cancelled) return;
+
+        const nextPersistedDuration = sanitizeRestSeconds(savedDefault);
+        setPersistedDurationSeconds(nextPersistedDuration);
+        setSelectedDurationSeconds(nextPersistedDuration);
+
+        const restoredState = parsePersistedRestTimerState(savedActiveTimer);
+        if (!restoredState || !sessionId || restoredState.sessionId !== sessionId) {
+          return;
+        }
+
+        notificationIdRef.current = restoredState.notificationId;
+        setBreakdown(restoredState.breakdown);
+        setSelectedDurationSeconds(restoredState.durationSeconds);
+
+        const remaining = Math.max(0, Math.ceil((restoredState.endTimestamp - Date.now()) / 1000));
+        if (remaining <= 0) {
+          clearPersistedActiveTimer();
+          setRest(0);
+          setBreakdown(defaultBreakdown(0));
+          setSelectedDurationSeconds(nextPersistedDuration);
+          return;
+        }
+
+        endAtRef.current = restoredState.endTimestamp;
+        setRest(remaining);
+        if (AppState.currentState === "active") {
+          startRestInterval();
+        }
+      } catch {
+        if (!cancelled) {
+          setPersistedDurationSeconds(DEFAULT_REST_SECONDS);
+          setSelectedDurationSeconds(DEFAULT_REST_SECONDS);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clearPersistedActiveTimer, sessionId, startRestInterval]);
 
   // BLD-553 battery fix: AppState listener pauses the 1Hz interval when
   // backgrounded (native notification still fires) and restarts it on
@@ -199,8 +351,9 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           setRest(remaining);
           if (remaining <= 0) {
             stopRestInterval();
-            endAtRef.current = null;
             cancelNotification();
+            clearPersistedActiveTimer();
+            setBreakdown(defaultBreakdown(0));
           } else {
             startRestInterval();
           }
@@ -212,17 +365,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     };
     const sub = AppState.addEventListener("change", handleAppState);
     return () => sub.remove();
-  }, [cancelNotification, startRestInterval, stopRestInterval]);
-
-  // BLD-553: ensure haptic setTimeouts are cleared on unmount and stop the
-  // interval in case the hook unmounts mid-rest.
-  useEffect(() => {
-    return () => {
-      restHapticTimers.current.forEach((t) => clearTimeout(t));
-      restHapticTimers.current = [];
-      stopRestInterval();
-    };
-  }, [stopRestInterval]);
+  }, [cancelNotification, clearPersistedActiveTimer, startRestInterval, stopRestInterval]);
 
   // Haptic + audio feedback on rest timer completion and countdown
   useEffect(() => {
@@ -288,19 +431,19 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     prevRest.current = rest;
   }, [rest, restFlash, reduceMotion]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (restRef.current) clearInterval(restRef.current);
-      for (const t of restHapticTimers.current) clearTimeout(t);
-      cancelNotification();
+      restHapticTimers.current.forEach((t) => clearTimeout(t));
+      restHapticTimers.current = [];
+      stopRestInterval();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [stopRestInterval]);
 
   return {
     rest,
     breakdown,
+    persistedDurationSeconds,
+    selectedDurationSeconds,
     restFlashStyle,
     startRest,
     startRestWithDuration,

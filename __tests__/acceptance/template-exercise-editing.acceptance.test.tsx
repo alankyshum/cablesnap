@@ -68,7 +68,8 @@ jest.mock('../../components/EditExerciseSheet', () => {
         onPress: () => props.onSave(
           props.exercise?.target_sets ?? 3,
           props.exercise?.target_reps ?? '8-12',
-          props.exercise?.rest_seconds ?? 90
+          props.exercise?.rest_seconds ?? 90,
+          props.exercise?.set_types ?? Array.from({ length: props.exercise?.target_sets ?? 3 }, () => 'normal')
         ),
       }),
     )
@@ -78,8 +79,8 @@ const mockExercise1 = createExercise({ id: 'ex-1', name: 'Bench Press', category
 const mockExercise2 = createExercise({ id: 'ex-2', name: 'Squat', category: 'legs_glutes' })
 
 const mockTemplateExercises: TemplateExercise[] = [
-  createTemplateExercise({ id: 'te-1', template_id: 'tpl-1', exercise_id: 'ex-1', position: 0, target_sets: 4, target_reps: '6-8', rest_seconds: 120, exercise: mockExercise1 }),
-  createTemplateExercise({ id: 'te-2', template_id: 'tpl-1', exercise_id: 'ex-2', position: 1, target_sets: 3, target_reps: '10', rest_seconds: 90, exercise: mockExercise2 }),
+  createTemplateExercise({ id: 'te-1', template_id: 'tpl-1', exercise_id: 'ex-1', position: 0, target_sets: 4, target_reps: '6-8', rest_seconds: 120, set_types: ['warmup', 'normal', 'dropset', 'failure'], exercise: mockExercise1 }),
+  createTemplateExercise({ id: 'te-2', template_id: 'tpl-1', exercise_id: 'ex-2', position: 1, target_sets: 3, target_reps: '10', rest_seconds: 90, set_types: ['normal', 'normal', 'failure'], exercise: mockExercise2 }),
 ]
 
 const mockTemplate: WorkoutTemplate & { exercises: TemplateExercise[] } = {
@@ -144,11 +145,11 @@ describe('Template Exercise Editing Acceptance', () => {
 
     await findByTestId('edit-exercise-sheet')
     if (mockEditSheetProps) {
-      mockEditSheetProps.onSave(5, '3-5', 90)
+      mockEditSheetProps.onSave(5, '3-5', 90, ['warmup', 'normal', 'normal', 'dropset', 'failure'])
     }
 
     await waitFor(() => {
-      expect(mockUpdateTemplateExercise).toHaveBeenCalledWith('te-1', 'tpl-1', 5, '3-5', 90)
+      expect(mockUpdateTemplateExercise).toHaveBeenCalledWith('te-1', 'tpl-1', 5, '3-5', 90, ['warmup', 'normal', 'normal', 'dropset', 'failure'])
     })
   })
 
@@ -161,7 +162,7 @@ describe('Template Exercise Editing Acceptance', () => {
 
     await findByTestId('edit-exercise-sheet')
     if (mockEditSheetProps) {
-      mockEditSheetProps.onSave(4, '6-8', 120)
+      mockEditSheetProps.onSave(4, '6-8', 120, ['warmup', 'normal', 'dropset', 'failure'])
     }
 
     await waitFor(() => {
@@ -181,7 +182,7 @@ describe('Template Exercise Editing Acceptance', () => {
 
     await findByTestId('edit-exercise-sheet')
     if (mockEditSheetProps) {
-      mockEditSheetProps.onSave(4, '6-8', 120)
+      mockEditSheetProps.onSave(4, '6-8', 120, ['warmup', 'normal', 'dropset', 'failure'])
     }
 
     await waitFor(() => {
@@ -202,8 +203,8 @@ describe('Template Exercise Editing Acceptance', () => {
 
   it('preserves link_id when editing linked exercises', async () => {
     const mockLinkedExercises: TemplateExercise[] = [
-      createTemplateExercise({ id: 'te-1', template_id: 'tpl-1', exercise_id: 'ex-1', position: 0, target_sets: 4, target_reps: '6-8', rest_seconds: 120, link_id: 'link-1', link_label: 'A', exercise: mockExercise1 }),
-      createTemplateExercise({ id: 'te-2', template_id: 'tpl-1', exercise_id: 'ex-2', position: 1, target_sets: 3, target_reps: '10', rest_seconds: 90, link_id: 'link-1', link_label: 'A', exercise: mockExercise2 }),
+      createTemplateExercise({ id: 'te-1', template_id: 'tpl-1', exercise_id: 'ex-1', position: 0, target_sets: 4, target_reps: '6-8', rest_seconds: 120, link_id: 'link-1', link_label: 'A', set_types: ['warmup', 'normal', 'dropset', 'failure'], exercise: mockExercise1 }),
+      createTemplateExercise({ id: 'te-2', template_id: 'tpl-1', exercise_id: 'ex-2', position: 1, target_sets: 3, target_reps: '10', rest_seconds: 90, link_id: 'link-1', link_label: 'A', set_types: ['normal', 'normal', 'failure'], exercise: mockExercise2 }),
     ]
     mockGetTemplateById.mockResolvedValue({ ...mockTemplate, exercises: mockLinkedExercises })
 
@@ -213,12 +214,11 @@ describe('Template Exercise Editing Acceptance', () => {
 
     await findByTestId('edit-exercise-sheet')
     if (mockEditSheetProps) {
-      mockEditSheetProps.onSave(5, '3-5', 60)
+      mockEditSheetProps.onSave(5, '3-5', 60, ['warmup', 'normal', 'normal', 'dropset', 'failure'])
     }
 
     await waitFor(() => {
-      // Only sets/reps/rest updated, not link_id
-      expect(mockUpdateTemplateExercise).toHaveBeenCalledWith('te-1', 'tpl-1', 5, '3-5', 60)
+      expect(mockUpdateTemplateExercise).toHaveBeenCalledWith('te-1', 'tpl-1', 5, '3-5', 60, ['warmup', 'normal', 'normal', 'dropset', 'failure'])
     })
   })
 })

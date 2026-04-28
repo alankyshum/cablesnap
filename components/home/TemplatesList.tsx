@@ -25,21 +25,23 @@ type Props = {
   onDelete: (t: WorkoutTemplate) => void;
   onOptions: (t: WorkoutTemplate) => void;
   onEdit: (id: string) => void;
+  onImport: () => void;
 };
 
 export function buildMetaBadges(
   meta: (typeof STARTER_TEMPLATES)[number] | undefined,
   counts: Record<string, number>,
   durationEstimates: Record<string, number | null>,
-  itemId: string
+  item: Pick<WorkoutTemplate, "id" | "source">
 ): MetaBadge[] {
   if (meta) {
     return [difficultyBadge(meta.difficulty), { icon: "clock-outline", label: meta.duration }, { icon: "dumbbell", label: `${meta.exercises.length} exercises` }];
   }
   const badges: MetaBadge[] = [];
-  const est = durationEstimates[itemId];
+  if (item.source === "coach") badges.push({ icon: "account-tie", label: "Coach" });
+  const est = durationEstimates[item.id];
   if (est != null) badges.push({ icon: "clock-outline", label: formatDurationEstimate(est) });
-  badges.push({ icon: "dumbbell", label: `${counts[itemId] ?? 0} exercises` });
+  badges.push({ icon: "dumbbell", label: `${counts[item.id] ?? 0} exercises` });
   return badges;
 }
 
@@ -58,15 +60,20 @@ export function buildMenuItems(
   ];
 }
 
-export function TemplatesList({ colors, templates, counts, durationEstimates, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit }: Props) {
+export function TemplatesList({ colors, templates, counts, durationEstimates, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit, onImport }: Props) {
   const router = useRouter();
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text variant="subtitle" style={{ color: colors.onBackground }}>Templates</Text>
-        <Button variant="ghost" size="sm" onPress={() => router.push("/template/create")} accessibilityLabel="Create new template">
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: fontSizes.sm }}>Create</Text></View>
-        </Button>
+        <View style={styles.headerActions}>
+          <Button variant="ghost" size="sm" onPress={onImport} accessibilityLabel="Import template">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="file-import-outline" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: fontSizes.sm }}>Import</Text></View>
+          </Button>
+          <Button variant="ghost" size="sm" onPress={() => router.push("/template/create")} accessibilityLabel="Create new template">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: fontSizes.sm }}>Create</Text></View>
+          </Button>
+        </View>
       </View>
       {templates.length === 0 ? (
         <View style={styles.empty}>
@@ -78,7 +85,7 @@ export function TemplatesList({ colors, templates, counts, durationEstimates, st
           {templates.map((item) => {
             const meta = starterMeta(item.id);
             const isStarter = !!meta || !!item.is_starter;
-            const metaBadges = buildMetaBadges(meta, counts, durationEstimates, item.id);
+            const metaBadges = buildMetaBadges(meta, counts, durationEstimates, item);
             if (isStarter) metaBadges.push({ icon: "star-outline", label: "Starter" });
             const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
             if (meta?.recommended) badges.push({ label: "RECOMMENDED", type: "recommended" });
@@ -104,6 +111,7 @@ const styles = StyleSheet.create({
   flowList: { flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-start" },
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
   empty: { alignItems: "center", paddingVertical: 16 },
   emptyBtn: { marginTop: 8 },
 });

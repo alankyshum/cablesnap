@@ -116,6 +116,7 @@ export function useSummaryData(id: string | undefined) {
   const grouped = useMemo(() => {
     const map = new Map<string, { name: string; sets: typeof completed }>();
     for (const s of completed) {
+      if (s.set_type === "warmup") continue;
       const key = s.exercise_id;
       if (!map.has(key)) map.set(key, { name: s.exercise_name ?? key, sets: [] });
       map.get(key)!.sets.push(s);

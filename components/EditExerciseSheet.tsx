@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Keyboard,
   Pressable,
@@ -8,14 +8,20 @@ import {
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { TemplateExercise } from "../lib/types";
-import { elevation } from "../constants/design-tokens";
+import { Chip } from "@/components/ui/chip";
+import type { SetType, TemplateExercise } from "../lib/types";
+import { SET_TYPE_CYCLE, SET_TYPE_LABELS } from "../lib/types";
+import { elevation, fontSizes } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+
+function normalizeEditorSetTypes(setTypes: SetType[] | undefined, targetSets: number): SetType[] {
+  return Array.from({ length: targetSets }, (_, index) => setTypes?.[index] ?? "normal");
+}
 
 type Props = {
   visible: boolean;
   exercise: TemplateExercise | null;
-  onSave: (sets: number, reps: string, rest: number) => void;
+  onSave: (sets: number, reps: string, rest: number, setTypes: SetType[]) => void;
   onDismiss: () => void;
 };
 
@@ -37,13 +43,16 @@ export default function EditExerciseSheet({
   const [sets, setSets] = useState(initialSets);
   const [reps, setReps] = useState(initialReps);
   const [rest, setRest] = useState(initialRest);
+  const [setTypes, setSetTypes] = useState<SetType[]>(normalizeEditorSetTypes(exercise?.set_types, exercise?.target_sets ?? DEFAULT_SETS));
   const [prevVisible, setPrevVisible] = useState(visible);
 
   // Reset state when sheet opens (derived state pattern)
   if (visible && !prevVisible) {
-    setSets(String(exercise?.target_sets ?? DEFAULT_SETS));
+    const nextTargetSets = exercise?.target_sets ?? DEFAULT_SETS;
+    setSets(String(nextTargetSets));
     setReps(exercise?.target_reps ?? DEFAULT_REPS);
     setRest(String(exercise?.rest_seconds ?? DEFAULT_REST));
+    setSetTypes(normalizeEditorSetTypes(exercise?.set_types, nextTargetSets));
   }
   if (visible !== prevVisible) {
     setPrevVisible(visible);
@@ -55,11 +64,25 @@ export default function EditExerciseSheet({
   const repsValid = reps.trim().length > 0;
   const restValid = !isNaN(parsedRest) && parsedRest >= 0;
   const canSave = setsValid && repsValid && restValid;
+  const visibleSetTypes = useMemo(
+    () => normalizeEditorSetTypes(setTypes, setsValid ? parsedSets : (exercise?.target_sets ?? DEFAULT_SETS)),
+    [exercise?.target_sets, parsedSets, setTypes, setsValid]
+  );
+
+  const cycleSetType = (index: number) => {
+    setSetTypes((prev) => {
+      const next = [...visibleSetTypes];
+      const current = next[index] ?? "normal";
+      const currentIndex = SET_TYPE_CYCLE.indexOf(current);
+      next[index] = SET_TYPE_CYCLE[(currentIndex + 1) % SET_TYPE_CYCLE.length];
+      return next;
+    });
+  };
 
   const handleSave = () => {
     if (!canSave) return;
     Keyboard.dismiss();
-    onSave(parsedSets, reps.trim(), parsedRest);
+    onSave(parsedSets, reps.trim(), parsedRest, normalizeEditorSetTypes(setTypes, parsedSets));
   };
 
   if (!visible) return null;
@@ -130,6 +153,30 @@ export default function EditExerciseSheet({
           error={rest.length > 0 && !restValid ? "Invalid rest time" : undefined}
         />
 
+        {setsValid && (
+          <View style={styles.setTypeSection}>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+              Set types
+            </Text>
+            <View style={styles.setTypeGrid}>
+              {visibleSetTypes.map((type, index) => (
+                <Chip
+                  key={`set-type-${index + 1}`}
+                  selected={type !== "normal"}
+                  onPress={() => cycleSetType(index)}
+                  compact
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set ${index + 1} type: ${SET_TYPE_LABELS[type].label}`}
+                  style={styles.setTypeChip}
+                  textStyle={{ fontSize: fontSizes.xs }}
+                >
+                  {`Set ${index + 1}: ${SET_TYPE_LABELS[type].label}`}
+                </Chip>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={styles.buttons}>
           <Button
             variant="ghost"
@@ -183,6 +230,17 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
+  },
+  setTypeSection: {
+    marginBottom: 12,
+  },
+  setTypeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  setTypeChip: {
+    minHeight: 40,
   },
   buttons: {
     flexDirection: "row",

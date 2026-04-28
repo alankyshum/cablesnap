@@ -126,6 +126,8 @@ const mockGetSessionAvgRPE = jest.fn().mockResolvedValue(7.5)
 const mockDeleteTemplate = jest.fn().mockResolvedValue(undefined)
 const mockDuplicateTemplate = jest.fn().mockResolvedValue('dup-1')
 const mockDuplicateProgram = jest.fn().mockResolvedValue('dup-prog-1')
+const mockImportCoachTemplates = jest.fn().mockResolvedValue(['coach-1'])
+const mockValidateCoachTemplateImportData = jest.fn().mockReturnValue({ success: true, data: { version: 1, templates: [] } })
 const mockGetTodaySchedule = jest.fn().mockResolvedValue(null)
 const mockIsTodayCompleted = jest.fn().mockResolvedValue(false)
 const mockGetWeekAdherence = jest.fn().mockResolvedValue([])
@@ -147,6 +149,8 @@ jest.mock('../../lib/db', () => ({
   deleteTemplate: (...args: unknown[]) => mockDeleteTemplate(...args),
   duplicateTemplate: (...args: unknown[]) => mockDuplicateTemplate(...args),
   duplicateProgram: (...args: unknown[]) => mockDuplicateProgram(...args),
+  importCoachTemplates: (...args: unknown[]) => mockImportCoachTemplates(...args),
+  validateCoachTemplateImportData: (...args: unknown[]) => mockValidateCoachTemplateImportData(...args),
   getTodaySchedule: (...args: unknown[]) => mockGetTodaySchedule(...args),
   isTodayCompleted: (...args: unknown[]) => mockIsTodayCompleted(...args),
   getWeekAdherence: (...args: unknown[]) => mockGetWeekAdherence(...args),
@@ -242,6 +246,7 @@ describe('Dashboard Acceptance', () => {
         // Quick-start + create-template
         expect(getByLabelText('Quick start workout')).toBeTruthy()
         expect(getByLabelText('Create new template')).toBeTruthy()
+        expect(getByLabelText('Import template')).toBeTruthy()
         // Template card
         expect(getByLabelText(/Start workout from template: Push Day/)).toBeTruthy()
         // Segmented buttons

@@ -15,38 +15,39 @@ describe("buildMetaBadges", () => {
   };
 
   it("returns difficulty + clock + exercise count badges for starter templates", () => {
-    const badges = buildMetaBadges(starterMeta, {}, {}, "starter-1");
+    const badges = buildMetaBadges(starterMeta, {}, {}, { id: "starter-1", source: null });
     expect(badges).toHaveLength(3);
     expect(badges[0]).toMatchObject({ label: "Beginner", difficulty: "beginner" });
     expect(badges[1]).toMatchObject({ icon: "clock-outline", label: "~35 min" });
     expect(badges[2]).toMatchObject({ icon: "dumbbell", label: "2 exercises" });
   });
 
-  it("returns clock + exercise count badges for user template with duration estimate", () => {
+  it("returns coach + clock + exercise count badges for coach template with duration estimate", () => {
     const counts = { "tpl-1": 5 };
-    const durations = { "tpl-1": 2700 }; // 45 min
-    const badges = buildMetaBadges(undefined, counts, durations, "tpl-1");
-    expect(badges).toHaveLength(2);
-    expect(badges[0]).toMatchObject({ icon: "clock-outline", label: "~45m" });
-    expect(badges[1]).toMatchObject({ icon: "dumbbell", label: "5 exercises" });
+    const durations = { "tpl-1": 2700 };
+    const badges = buildMetaBadges(undefined, counts, durations, { id: "tpl-1", source: "coach" });
+    expect(badges).toHaveLength(3);
+    expect(badges[0]).toMatchObject({ icon: "account-tie", label: "Coach" });
+    expect(badges[1]).toMatchObject({ icon: "clock-outline", label: "~45m" });
+    expect(badges[2]).toMatchObject({ icon: "dumbbell", label: "5 exercises" });
   });
 
   it("omits clock badge when duration estimate is null", () => {
     const counts = { "tpl-2": 3 };
     const durations = { "tpl-2": null };
-    const badges = buildMetaBadges(undefined, counts, durations, "tpl-2");
+    const badges = buildMetaBadges(undefined, counts, durations, { id: "tpl-2", source: null });
     expect(badges).toHaveLength(1);
     expect(badges[0]).toMatchObject({ icon: "dumbbell", label: "3 exercises" });
   });
 
   it("omits clock badge when template has no duration entry", () => {
-    const badges = buildMetaBadges(undefined, { "tpl-3": 4 }, {}, "tpl-3");
+    const badges = buildMetaBadges(undefined, { "tpl-3": 4 }, {}, { id: "tpl-3", source: null });
     expect(badges).toHaveLength(1);
     expect(badges[0]).toMatchObject({ icon: "dumbbell", label: "4 exercises" });
   });
 
   it("defaults exercise count to 0 when missing from counts map", () => {
-    const badges = buildMetaBadges(undefined, {}, {}, "tpl-unknown");
+    const badges = buildMetaBadges(undefined, {}, {}, { id: "tpl-unknown", source: null });
     expect(badges).toHaveLength(1);
     expect(badges[0]).toMatchObject({ icon: "dumbbell", label: "0 exercises" });
   });

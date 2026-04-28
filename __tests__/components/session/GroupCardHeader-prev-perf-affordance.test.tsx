@@ -32,11 +32,6 @@ jest.mock("@/hooks/useThemeColors", () => ({
   }),
 }));
 
-jest.mock("../../../components/TrainingModeSelector", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 jest.mock("../../../components/session/ExerciseNotesPanel", () => ({
   __esModule: true,
   ExerciseNotesPanel: () => null,
@@ -46,7 +41,6 @@ function makeGroup(overrides: Partial<ExerciseGroup> = {}): ExerciseGroup {
   return {
     exercise_id: "ex-1",
     name: "Cable Row",
-    training_modes: ["concentric"],
     is_voltra: false,
     sets: [],
     progressionSuggested: false,
@@ -56,12 +50,9 @@ function makeGroup(overrides: Partial<ExerciseGroup> = {}): ExerciseGroup {
 
 const baseProps = {
   group: makeGroup(),
-  currentMode: undefined,
-  modes: {} as Record<string, never>,
   exerciseNotesOpen: false,
   exerciseNotesDraft: undefined,
   firstSet: undefined as SetWithMeta | undefined,
-  onModeChange: jest.fn(),
   onExerciseNotes: jest.fn(),
   onExerciseNotesDraftChange: jest.fn(),
   onToggleExerciseNotes: jest.fn(),

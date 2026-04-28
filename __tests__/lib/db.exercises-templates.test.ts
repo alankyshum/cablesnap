@@ -173,12 +173,12 @@ describe("templates CRUD", () => {
   it("getTemplates returns all templates", async () => {
     await ctx.initDb();
     setDrizzleQueryResult([
-      { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: 0 },
+      { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: 0, source: null },
     ]);
 
     const result = await ctx.db.getTemplates();
     expect(result).toEqual([
-      { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: false },
+      { id: "t1", name: "Push", created_at: 100, updated_at: 200, is_starter: false, source: null },
     ]);
     resetDrizzleResults();
   });

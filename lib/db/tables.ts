@@ -58,9 +58,7 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       difficulty TEXT NOT NULL,
       is_custom INTEGER DEFAULT 0,
       deleted_at INTEGER DEFAULT NULL,
-      mount_position TEXT DEFAULT NULL,
       attachment TEXT DEFAULT 'handle',
-      training_modes TEXT DEFAULT '["weight"]',
       is_voltra INTEGER DEFAULT 0,
       start_image_uri TEXT DEFAULT NULL,
       end_image_uri TEXT DEFAULT NULL
@@ -71,7 +69,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       name TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      is_starter INTEGER DEFAULT 0
+      is_starter INTEGER DEFAULT 0,
+      source TEXT
     );
 
     CREATE TABLE IF NOT EXISTS template_exercises (
@@ -85,7 +84,7 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       link_id TEXT DEFAULT NULL,
       link_label TEXT DEFAULT '',
       target_duration_seconds INTEGER,
-      training_mode TEXT DEFAULT NULL
+      set_types TEXT DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS workout_sessions (
@@ -114,7 +113,6 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       notes TEXT DEFAULT '',
       link_id TEXT DEFAULT NULL,
       round INTEGER DEFAULT NULL,
-      training_mode TEXT DEFAULT NULL,
       tempo TEXT DEFAULT NULL,
       swapped_from_exercise_id TEXT DEFAULT NULL,
       set_type TEXT DEFAULT 'normal',

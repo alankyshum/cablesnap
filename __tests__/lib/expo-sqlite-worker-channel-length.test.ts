@@ -112,7 +112,6 @@ describe('expo-sqlite-web WorkerChannel length-prefix protocol (BLD-660)', () =>
         'notes',
         'link_id',
         'round',
-        'training_mode',
         'tempo',
         'swapped_from_exercise_id',
         'set_type',

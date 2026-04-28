@@ -2,7 +2,6 @@ import React from "react";
 import { render, fireEvent, act } from "@testing-library/react-native";
 import { SessionHeaderToolbar } from "../../../components/session/SessionHeaderToolbar";
 
-// Mock expo-vector-icons
 jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => {
   const { Text } = require("react-native");
   return {
@@ -11,7 +10,6 @@ jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => {
   };
 });
 
-// Mock theme colors
 jest.mock("@/hooks/useThemeColors", () => ({
   useThemeColors: () => ({
     primary: "#6200ee",
@@ -25,7 +23,6 @@ jest.mock("@/hooks/useThemeColors", () => ({
   }),
 }));
 
-// Mock db
 const mockGetAppSetting = jest.fn().mockResolvedValue(null);
 const mockSetAppSetting = jest.fn().mockResolvedValue(undefined);
 jest.mock("../../../lib/db", () => ({
@@ -33,7 +30,6 @@ jest.mock("../../../lib/db", () => ({
   setAppSetting: (...args: unknown[]) => mockSetAppSetting(...args),
 }));
 
-// Mock format
 jest.mock("../../../lib/format", () => ({
   formatTime: (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -54,6 +50,8 @@ const defaultProps = {
   onStartRest: jest.fn(),
   onDismissRest: jest.fn(),
   onOpenToolbox: jest.fn(),
+  persistedDurationSeconds: 30,
+  selectedDurationSeconds: 30,
 };
 
 describe("SessionHeaderToolbar", () => {
@@ -69,44 +67,45 @@ describe("SessionHeaderToolbar", () => {
 
   it("renders elapsed time and toolbox button when no rest active", () => {
     const { getByText, queryByText } = render(
-      <SessionHeaderToolbar {...defaultProps} />
+      <SessionHeaderToolbar {...defaultProps} />,
     );
     expect(getByText("5:00")).toBeTruthy();
     expect(getByText("wrench")).toBeTruthy();
-    // No rest countdown visible
     expect(queryByText(/^\d{2}:\d{2}$/)).toBeNull();
   });
 
   it("renders rest countdown when rest > 0", () => {
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={90} />
+      <SessionHeaderToolbar {...defaultProps} rest={90} />,
     );
     expect(getByText("01:30")).toBeTruthy();
     expect(getByText("5:00")).toBeTruthy();
   });
 
-  it("tapping elapsed time starts rest with default duration (90s)", async () => {
+  it("tapping elapsed time starts rest with selected duration (30s by default)", async () => {
     const onStartRest = jest.fn();
-    mockGetAppSetting.mockResolvedValue(null);
 
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} onStartRest={onStartRest} />
+      <SessionHeaderToolbar {...defaultProps} onStartRest={onStartRest} />,
     );
 
     await act(async () => {
       fireEvent.press(getByText("5:00"));
     });
 
-    expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_default_seconds");
-    expect(onStartRest).toHaveBeenCalledWith(90);
+    expect(onStartRest).toHaveBeenCalledWith(30);
+    expect(mockGetAppSetting).not.toHaveBeenCalledWith("rest_timer_default_seconds");
   });
 
-  it("tapping elapsed time uses saved default duration", async () => {
+  it("tapping elapsed time uses the provided selected duration", async () => {
     const onStartRest = jest.fn();
-    mockGetAppSetting.mockResolvedValue("60");
 
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} onStartRest={onStartRest} />
+      <SessionHeaderToolbar
+        {...defaultProps}
+        selectedDurationSeconds={60}
+        onStartRest={onStartRest}
+      />,
     );
 
     await act(async () => {
@@ -120,7 +119,7 @@ describe("SessionHeaderToolbar", () => {
     const onStartRest = jest.fn();
 
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={45} onStartRest={onStartRest} />
+      <SessionHeaderToolbar {...defaultProps} rest={45} onStartRest={onStartRest} />,
     );
 
     await act(async () => {
@@ -134,7 +133,7 @@ describe("SessionHeaderToolbar", () => {
     const onDismissRest = jest.fn();
 
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={45} onDismissRest={onDismissRest} />
+      <SessionHeaderToolbar {...defaultProps} rest={45} onDismissRest={onDismissRest} />,
     );
 
     fireEvent.press(getByText("00:45"));
@@ -145,7 +144,7 @@ describe("SessionHeaderToolbar", () => {
     const onOpenToolbox = jest.fn();
 
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} onOpenToolbox={onOpenToolbox} />
+      <SessionHeaderToolbar {...defaultProps} onOpenToolbox={onOpenToolbox} />,
     );
 
     fireEvent.press(getByText("wrench"));
@@ -154,15 +153,13 @@ describe("SessionHeaderToolbar", () => {
 
   it("shows REST DONE ✓ for 3 seconds when rest reaches 0", () => {
     const { rerender, getByText, queryByText } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={1} />
+      <SessionHeaderToolbar {...defaultProps} rest={1} />,
     );
 
-    // Rest goes to 0
     rerender(<SessionHeaderToolbar {...defaultProps} rest={0} />);
 
     expect(getByText("REST DONE ✓")).toBeTruthy();
 
-    // After 3 seconds, it disappears
     act(() => {
       jest.advanceTimersByTime(3000);
     });
@@ -173,11 +170,11 @@ describe("SessionHeaderToolbar", () => {
   it("tapping REST DONE ✓ dismisses it immediately", () => {
     const onDismissRest = jest.fn();
     const { rerender, getByText, queryByText } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={1} onDismissRest={onDismissRest} />
+      <SessionHeaderToolbar {...defaultProps} rest={1} onDismissRest={onDismissRest} />,
     );
 
     rerender(
-      <SessionHeaderToolbar {...defaultProps} rest={0} onDismissRest={onDismissRest} />
+      <SessionHeaderToolbar {...defaultProps} rest={0} onDismissRest={onDismissRest} />,
     );
 
     fireEvent.press(getByText("REST DONE ✓"));
@@ -189,10 +186,9 @@ describe("SessionHeaderToolbar", () => {
     mockGetAppSetting.mockResolvedValue("true");
 
     const { getByText, queryByText } = render(
-      <SessionHeaderToolbar {...defaultProps} />
+      <SessionHeaderToolbar {...defaultProps} />,
     );
 
-    // Duration picker not visible initially
     expect(queryByText("Rest Duration")).toBeNull();
 
     await act(async () => {
@@ -206,28 +202,45 @@ describe("SessionHeaderToolbar", () => {
     expect(getByText("2m")).toBeTruthy();
   });
 
-  it("selecting a preset starts rest and saves default", async () => {
-    const onStartRest = jest.fn();
+  it("shows current and last-used rest values in the picker", async () => {
     mockGetAppSetting.mockResolvedValue("true");
 
-    const { getByText, queryByText } = render(
-      <SessionHeaderToolbar {...defaultProps} onStartRest={onStartRest} />
+    const { getByText } = render(
+      <SessionHeaderToolbar
+        {...defaultProps}
+        persistedDurationSeconds={60}
+        selectedDurationSeconds={30}
+      />,
     );
 
-    // Open picker
     await act(async () => {
       fireEvent(getByText("5:00"), "longPress");
     });
 
-    // Select 60s preset
+    expect(getByText("Current: 30s")).toBeTruthy();
+    expect(getByText("Last used: 1m")).toBeTruthy();
+    expect(getByText("Current")).toBeTruthy();
+    expect(getByText("Last used")).toBeTruthy();
+  });
+
+  it("selecting a preset starts rest without saving settings in the toolbar", async () => {
+    const onStartRest = jest.fn();
+    mockGetAppSetting.mockResolvedValue("true");
+
+    const { getByText, queryByText } = render(
+      <SessionHeaderToolbar {...defaultProps} onStartRest={onStartRest} />,
+    );
+
+    await act(async () => {
+      fireEvent(getByText("5:00"), "longPress");
+    });
+
     await act(async () => {
       fireEvent.press(getByText("1m"));
     });
 
-    expect(mockSetAppSetting).toHaveBeenCalledWith("rest_timer_default_seconds", "60");
+    expect(mockSetAppSetting).not.toHaveBeenCalledWith("rest_timer_default_seconds", expect.any(String));
     expect(onStartRest).toHaveBeenCalledWith(60);
-
-    // Picker should close
     expect(queryByText("Rest Duration")).toBeNull();
   });
 
@@ -236,17 +249,14 @@ describe("SessionHeaderToolbar", () => {
     mockGetAppSetting.mockResolvedValue("true");
 
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} onStartRest={onStartRest} />
+      <SessionHeaderToolbar {...defaultProps} onStartRest={onStartRest} />,
     );
 
-    // Open picker
     await act(async () => {
       fireEvent(getByText("5:00"), "longPress");
     });
 
     expect(getByText("Rest Duration")).toBeTruthy();
-
-    // Dismiss via overlay — verify no rest started
     expect(onStartRest).not.toHaveBeenCalled();
   });
 
@@ -259,7 +269,7 @@ describe("SessionHeaderToolbar", () => {
         {...defaultProps}
         pickerRequested={false}
         onPickerDismissed={onPickerDismissed}
-      />
+      />,
     );
 
     await act(async () => {
@@ -268,7 +278,7 @@ describe("SessionHeaderToolbar", () => {
           {...defaultProps}
           pickerRequested={true}
           onPickerDismissed={onPickerDismissed}
-        />
+        />,
       );
     });
 
@@ -280,10 +290,9 @@ describe("SessionHeaderToolbar", () => {
     mockGetAppSetting.mockResolvedValue("true");
 
     const { getByText } = render(
-      <SessionHeaderToolbar {...defaultProps} />
+      <SessionHeaderToolbar {...defaultProps} />,
     );
 
-    // Open picker
     await act(async () => {
       fireEvent(getByText("5:00"), "longPress");
     });
@@ -294,15 +303,11 @@ describe("SessionHeaderToolbar", () => {
 
   it("does not show REST DONE ✓ on initial render with rest=0", () => {
     const { queryByText } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={0} />
+      <SessionHeaderToolbar {...defaultProps} rest={0} />,
     );
     expect(queryByText("REST DONE ✓")).toBeNull();
   });
 
-  // BLD-616: default-OFF chip behaviour. With no `rest_show_breakdown` value
-  // persisted, the toolbar must NOT render the adaptive chip during a rest —
-  // even when an adaptive breakdown is available. Covers the AC-1 fresh-install
-  // path and the pre-hydration flash gap (initial useState must be `false`).
   it("does NOT render adaptive chip on fresh install with no rest_show_breakdown setting", async () => {
     mockGetAppSetting.mockResolvedValue(null);
     const breakdown = {
@@ -315,20 +320,17 @@ describe("SessionHeaderToolbar", () => {
     };
 
     const { queryByTestId } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />
+      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />,
     );
 
-    // No flash on first paint.
     expect(queryByTestId("adaptive-chip")).toBeNull();
 
-    // After async getAppSetting resolves with null, chip remains hidden.
     await act(async () => {
       await Promise.resolve();
     });
     expect(queryByTestId("adaptive-chip")).toBeNull();
   });
 
-  // BLD-616: chip renders only when setting is explicitly "true".
   it("renders adaptive chip when rest_show_breakdown setting is explicitly 'true'", async () => {
     mockGetAppSetting.mockImplementation(async (key: string) => {
       if (key === "rest_show_breakdown") return "true";
@@ -344,7 +346,7 @@ describe("SessionHeaderToolbar", () => {
     };
 
     const { queryByTestId } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />
+      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />,
     );
 
     await act(async () => {
@@ -353,7 +355,6 @@ describe("SessionHeaderToolbar", () => {
     expect(queryByTestId("adaptive-chip")).toBeTruthy();
   });
 
-  // BLD-616: chip stays hidden when user explicitly disabled it.
   it("does NOT render adaptive chip when rest_show_breakdown is 'false'", async () => {
     mockGetAppSetting.mockImplementation(async (key: string) => {
       if (key === "rest_show_breakdown") return "false";
@@ -369,7 +370,7 @@ describe("SessionHeaderToolbar", () => {
     };
 
     const { queryByTestId } = render(
-      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />
+      <SessionHeaderToolbar {...defaultProps} rest={130} breakdown={breakdown} />,
     );
 
     await act(async () => {

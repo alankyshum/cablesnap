@@ -6,6 +6,10 @@ jest.mock("@/hooks/useThemeColors", () => ({
   useThemeColors: () => ({ onSurfaceVariant: "#666" }),
 }));
 
+jest.mock("../../lib/db", () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+}));
+
 describe("PlateHint", () => {
   it("renders plate breakdown for barbell, hides for non-barbell, shows remainder, respects units", () => {
     // Barbell with weight > bar: shows plate hint

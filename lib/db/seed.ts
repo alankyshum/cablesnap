@@ -24,8 +24,8 @@ export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   if (toInsert.length > 0) {
     await database.withTransactionAsync(async () => {
       const stmt = await database.prepareAsync(
-        `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, mount_position, attachment, training_modes, is_voltra)
-     VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom, $mount_position, $attachment, $training_modes, $is_voltra)`
+        `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, attachment, is_voltra)
+     VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom, $attachment, $is_voltra)`
       );
       try {
         for (const ex of toInsert) {
@@ -39,9 +39,7 @@ export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
             $instructions: ex.instructions,
             $difficulty: ex.difficulty,
             $is_custom: ex.is_custom ? 1 : 0,
-            $mount_position: ex.mount_position ?? null,
             $attachment: ex.attachment ?? "handle",
-            $training_modes: JSON.stringify(ex.training_modes ?? ["weight"]),
             $is_voltra: ex.is_voltra ? 1 : 0,
           });
         }
@@ -78,15 +76,14 @@ async function backfillStarterExercises(
     const ex = exerciseMap.get(id);
     if (!ex) continue;
     await database.runAsync(
-      `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, mount_position, attachment, training_modes, is_voltra)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, attachment, is_voltra)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         ex.id, ex.name, ex.category,
         JSON.stringify(ex.primary_muscles), JSON.stringify(ex.secondary_muscles),
         ex.equipment, ex.instructions, ex.difficulty,
         ex.is_custom ? 1 : 0,
-        ex.mount_position ?? null, ex.attachment ?? "handle",
-        JSON.stringify(ex.training_modes ?? ["weight"]),
+        ex.attachment ?? "handle",
         ex.is_voltra ? 1 : 0,
       ]
     );
@@ -121,12 +118,12 @@ async function upsertTemplates(database: SQLite.SQLiteDatabase): Promise<void> {
       // INSERT if missing, then UPDATE to repair canonical columns.
       // INSERT OR IGNORE alone cannot fix corrupted rows (BLD-467).
       await database.runAsync(
-        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, training_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds, ex.training_mode ?? null]
+        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, set_types) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds, JSON.stringify(ex.set_types ?? [])]
       );
       await database.runAsync(
-        "UPDATE template_exercises SET template_id = ?, exercise_id = ?, position = ?, target_sets = ?, target_reps = ?, rest_seconds = ?, training_mode = ? WHERE id = ?",
-        [tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds, ex.training_mode ?? null, ex.id]
+        "UPDATE template_exercises SET template_id = ?, exercise_id = ?, position = ?, target_sets = ?, target_reps = ?, rest_seconds = ?, set_types = ? WHERE id = ?",
+        [tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds, JSON.stringify(ex.set_types ?? []), ex.id]
       );
     }
   }

@@ -1,4 +1,4 @@
-import type { Difficulty, TrainingMode } from "./types";
+import type { Difficulty, SetType } from "./types";
 
 export type StarterExercise = {
   id: string;
@@ -6,7 +6,7 @@ export type StarterExercise = {
   target_sets: number;
   target_reps: string;
   rest_seconds: number;
-  training_mode?: TrainingMode;
+  set_types?: SetType[];
 };
 
 export type StarterTemplate = {

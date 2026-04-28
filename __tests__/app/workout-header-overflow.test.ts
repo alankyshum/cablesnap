@@ -23,12 +23,12 @@ describe("Workout session exercise header two-row layout (BLD-203, updated BLD-3
     expect(sessionSrc).toContain("swap-horizontal");
   });
 
-  it("row 2 has Details and training mode", () => {
+  it("row 2 has Details button", () => {
     const row2Match = sessionSrc.match(/headerRow2:\s*\{[^}]+\}/s);
     expect(row2Match).not.toBeNull();
     expect(row2Match![0]).toContain('flexDirection: "row"');
     expect(sessionSrc).toContain("Details");
-    expect(sessionSrc).toContain("TrainingModeSelector");
+    expect(sessionSrc).not.toContain("ModeSelector");
   });
 
   it("exercise name Text does not use numberOfLines", () => {

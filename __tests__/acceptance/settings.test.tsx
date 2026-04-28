@@ -83,12 +83,37 @@ const mockGetBodySettings = jest.fn().mockResolvedValue({
 })
 
 jest.mock('../../lib/db', () => ({
-  exportAllData: jest.fn().mockResolvedValue({ version: 3, app_version: '1.0.0', exported_at: '2026-04-15T00:00:00.000Z', data: {}, counts: {} }),
+  exportAllData: jest.fn().mockResolvedValue({ version: 7, app_version: '1.0.0', exported_at: '2026-04-15T00:00:00.000Z', data: {}, counts: {} }),
   importData: jest.fn().mockResolvedValue({ inserted: 0, skipped: 0, perTable: {} }),
-  estimateExportSize: jest.fn().mockResolvedValue({ bytes: 1024, label: '1 KB' }),
   validateBackupFileSize: jest.fn().mockReturnValue(null),
   validateBackupData: jest.fn().mockReturnValue(null),
   getBackupCounts: jest.fn().mockReturnValue({}),
+  getBackupCategoryCounts: jest.fn().mockReturnValue({
+    workout_templates: 1,
+    workout_history: 0,
+    exercises: 1,
+    nutrition: 0,
+    body_metrics: 0,
+    programs: 0,
+    plate_calculator_settings: 0,
+    rest_timer_settings: 0,
+    app_preferences: 0,
+    achievements: 0,
+  }),
+  getPresentBackupCategories: jest.fn().mockReturnValue(['workout_templates', 'exercises']),
+  BACKUP_CATEGORY_ORDER: ['workout_templates', 'workout_history', 'exercises', 'nutrition', 'body_metrics', 'programs', 'plate_calculator_settings', 'rest_timer_settings', 'app_preferences', 'achievements'],
+  BACKUP_CATEGORY_LABELS: {
+    workout_templates: 'Workout templates',
+    workout_history: 'Workout session history',
+    exercises: 'Exercises',
+    nutrition: 'Nutrition',
+    body_metrics: 'Body metrics',
+    programs: 'Programs',
+    plate_calculator_settings: 'Plate calculator settings',
+    rest_timer_settings: 'Rest timer settings',
+    app_preferences: 'App preferences',
+    achievements: 'Achievements',
+  },
   BACKUP_TABLE_LABELS: {},
   IMPORT_TABLE_ORDER: [],
   getWorkoutCSVData: jest.fn().mockResolvedValue([]),
@@ -98,6 +123,7 @@ jest.mock('../../lib/db', () => ({
   getCSVCounts: jest.fn().mockResolvedValue({ sessions: 5, entries: 12 }),
   getAppSetting: (...args: unknown[]) => mockGetAppSetting(...args),
   setAppSetting: (...args: unknown[]) => mockSetAppSetting(...args),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
   getSchedule: jest.fn().mockResolvedValue([{ day: 1 }, { day: 3 }, { day: 5 }]),
   getBodySettings: (...args: unknown[]) => mockGetBodySettings(...args),
   updateBodySettings: (...args: unknown[]) => mockUpdateBodySettings(...args),
@@ -332,6 +358,15 @@ describe('Settings Screen Acceptance', () => {
     const importBtn = await findByLabelText('Import data')
     expect(importBtn).toBeTruthy()
     fireEvent.press(importBtn)
+  })
+
+  it('Export All button opens the selective export sheet', async () => {
+    const { findByLabelText, findByText } = renderScreen(<Settings />)
+    const btn = await findByLabelText('Export all data as JSON')
+    expect(btn).toBeTruthy()
+    fireEvent.press(btn)
+    expect(await findByText('Choose what to export')).toBeTruthy()
+    expect(await findByText('Workout templates')).toBeTruthy()
   })
 
   it('CSV export buttons and date range selector buttons have accessible labels', async () => {

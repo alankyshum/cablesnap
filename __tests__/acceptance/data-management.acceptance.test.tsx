@@ -55,8 +55,9 @@ jest.mock('../../lib/notifications', () => ({
 }))
 
 const mockWrite = jest.fn().mockResolvedValue(undefined)
+const mockText = jest.fn().mockResolvedValue('{}')
 jest.mock('expo-file-system', () => ({
-  File: jest.fn().mockImplementation(() => ({ write: mockWrite, uri: 'file:///test' })),
+  File: jest.fn().mockImplementation(() => ({ write: mockWrite, text: mockText, uri: 'file:///test' })),
   Paths: { cache: '/cache' },
 }))
 jest.mock('expo-sharing', () => ({
@@ -67,12 +68,37 @@ jest.mock('expo-document-picker', () => ({
 }))
 
 jest.mock('../../lib/db', () => ({
-  exportAllData: jest.fn().mockResolvedValue({ version: 3, app_version: '1.0.0', exported_at: '2026-04-15T00:00:00.000Z', data: { exercises: [{ id: '1' }], workout_templates: [], workout_sessions: [], workout_sets: [] }, counts: { exercises: 1 } }),
+  exportAllData: jest.fn().mockResolvedValue({ version: 7, app_version: '1.0.0', exported_at: '2026-04-15T00:00:00.000Z', data: {}, counts: { exercises: 1, workout_templates: 1 } }),
   importData: jest.fn().mockResolvedValue({ inserted: 5, skipped: 0, perTable: {} }),
-  estimateExportSize: jest.fn().mockResolvedValue({ bytes: 1024, label: '1 KB' }),
   validateBackupFileSize: jest.fn().mockReturnValue(null),
   validateBackupData: jest.fn().mockReturnValue(null),
   getBackupCounts: jest.fn().mockReturnValue({}),
+  getBackupCategoryCounts: jest.fn().mockReturnValue({
+    workout_templates: 1,
+    workout_history: 0,
+    exercises: 1,
+    nutrition: 0,
+    body_metrics: 0,
+    programs: 0,
+    plate_calculator_settings: 0,
+    rest_timer_settings: 0,
+    app_preferences: 0,
+    achievements: 0,
+  }),
+  getPresentBackupCategories: jest.fn().mockReturnValue(['workout_templates', 'exercises']),
+  BACKUP_CATEGORY_ORDER: ['workout_templates', 'workout_history', 'exercises', 'nutrition', 'body_metrics', 'programs', 'plate_calculator_settings', 'rest_timer_settings', 'app_preferences', 'achievements'],
+  BACKUP_CATEGORY_LABELS: {
+    workout_templates: 'Workout templates',
+    workout_history: 'Workout session history',
+    exercises: 'Exercises',
+    nutrition: 'Nutrition',
+    body_metrics: 'Body metrics',
+    programs: 'Programs',
+    plate_calculator_settings: 'Plate calculator settings',
+    rest_timer_settings: 'Rest timer settings',
+    app_preferences: 'App preferences',
+    achievements: 'Achievements',
+  },
   BACKUP_TABLE_LABELS: {},
   IMPORT_TABLE_ORDER: [],
   getWorkoutCSVData: jest.fn().mockResolvedValue([{ date: '2024-01-15', exercise: 'Bench', set_number: 1, weight: 60, reps: 10, duration_seconds: 1800, notes: '', set_rpe: 8, set_notes: '', link_id: null }]),
@@ -82,6 +108,7 @@ jest.mock('../../lib/db', () => ({
   getCSVCounts: jest.fn().mockResolvedValue({ sessions: 10, entries: 25 }),
   getAppSetting: jest.fn().mockResolvedValue('true'),
   setAppSetting: jest.fn().mockResolvedValue(undefined),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
   getSchedule: jest.fn().mockResolvedValue([]),
   getTemplates: jest.fn().mockResolvedValue([]),
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
@@ -95,12 +122,9 @@ jest.mock('../../lib/strava', () => ({
 
 import Settings from '../../app/(tabs)/settings'
 
-const { exportAllData, importData, getWorkoutCSVData, setAppSetting, estimateExportSize } = require('../../lib/db')
+const { exportAllData, importData, getWorkoutCSVData, setAppSetting } = require('../../lib/db')
 const { shareAsync } = require('expo-sharing')
 const { getDocumentAsync } = require('expo-document-picker')
-
-// Spy on Alert.alert to auto-confirm
-const alertSpy = jest.spyOn(Alert, 'alert')
 
 describe('Data Management Acceptance', () => {
   beforeEach(() => {
@@ -120,22 +144,15 @@ describe('Data Management Acceptance', () => {
     expect(await findByLabelText(/25 nutrition entries/)).toBeTruthy()
   })
 
-  it('exports all data as JSON', async () => {
-    // Auto-press "Export" in the confirmation alert
-    alertSpy.mockImplementation((_title, _message, buttons) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const exportBtn = buttons?.find((b: any) => b.text === 'Export')
-      if (exportBtn?.onPress) exportBtn.onPress()
-    })
-
-    const { findByLabelText } = renderScreen(<Settings />)
+  it('exports all data as JSON after selecting categories', async () => {
+    const { findByLabelText, findByText } = renderScreen(<Settings />)
 
     const btn = await findByLabelText('Export all data as JSON')
     fireEvent.press(btn)
 
-    await waitFor(() => {
-      expect(estimateExportSize).toHaveBeenCalled()
-    })
+    expect(await findByText('Choose what to export')).toBeTruthy()
+    fireEvent.press(await findByLabelText('Export Selected'))
+
     await waitFor(() => {
       expect(exportAllData).toHaveBeenCalled()
     })
@@ -170,6 +187,38 @@ describe('Data Management Acceptance', () => {
       expect(getDocumentAsync).toHaveBeenCalled()
     })
     expect(importData).not.toHaveBeenCalled()
+  })
+
+  it('opens selective import flow and routes with selected categories', async () => {
+    mockText.mockResolvedValue(JSON.stringify({
+      version: 7,
+      app_version: '1.0.0',
+      exported_at: '2026-04-15T00:00:00.000Z',
+      data: {
+        workout_templates: { workout_templates: [{ id: 't1' }] },
+        exercises: { exercises: [{ id: 'e1' }] },
+      },
+    }))
+    getDocumentAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file:///import.json', size: 256 }],
+    })
+
+    const { findByLabelText, findByText } = renderScreen(<Settings />)
+
+    fireEvent.press(await findByLabelText('Import data'))
+
+    expect(await findByText('Choose what to import')).toBeTruthy()
+    fireEvent.press(await findByLabelText('Import Selected'))
+
+    await waitFor(() => {
+      expect(mockRouter.push).toHaveBeenCalledWith({
+        pathname: '/settings/import-backup',
+        params: expect.objectContaining({
+          selectedCategories: 'workout_templates,exercises',
+        }),
+      })
+    })
   })
 
   it('shows error log count', async () => {

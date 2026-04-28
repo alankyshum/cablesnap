@@ -10,7 +10,6 @@ jest.mock('../../lib/db', () => ({
   updateSet: jest.fn().mockResolvedValue(undefined),
   updateSetRPE: jest.fn().mockResolvedValue(undefined),
   updateSetNotes: jest.fn().mockResolvedValue(undefined),
-  updateSetTrainingMode: jest.fn().mockResolvedValue(undefined),
   updateSetTempo: jest.fn().mockResolvedValue(undefined),
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
@@ -23,6 +22,7 @@ jest.mock('../../lib/db', () => ({
   getExerciseById: jest.fn(),
   getExercisesByIds: jest.fn().mockResolvedValue({}),
   getAppSetting: jest.fn().mockResolvedValue('true'),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
   getSessionPRs: jest.fn().mockResolvedValue([]),
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
   getSessionWeightIncreases: jest.fn().mockResolvedValue([]),
@@ -42,7 +42,6 @@ jest.mock('../../lib/programs', () => ({
 jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
-jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 const mockParams: Record<string, string> = {}
@@ -61,6 +60,17 @@ jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
+  requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  scheduleNotificationAsync: jest.fn(),
+  cancelAllScheduledNotificationsAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
+  getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
+  SchedulableTriggerInputTypes: { WEEKLY: 'weekly', TIME_INTERVAL: 'timeInterval' },
+}))
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
@@ -76,6 +86,53 @@ jest.mock('expo-keep-awake', () => ({
 // BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts
 jest.mock('../../lib/audio')
 jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
+jest.mock('react-native-reanimated', () => {
+  const React = require('react')
+  const noop = () => {}
+  const noopValue = (v: unknown) => ({ value: v })
+  return {
+    __esModule: true,
+    default: {
+      View: React.forwardRef((props: unknown, ref: unknown) => React.createElement('View', { ...(props as object), ref })),
+      Text: React.forwardRef((props: unknown, ref: unknown) => React.createElement('Text', { ...(props as object), ref })),
+      createAnimatedComponent: (Component: React.ComponentType<unknown>) =>
+        React.forwardRef((props: unknown, ref: unknown) => React.createElement(Component, { ...(props as object), ref })),
+    },
+    useSharedValue: noopValue,
+    useDerivedValue: (fn: () => unknown) => ({ value: fn() }),
+    useAnimatedStyle: (fn: () => unknown) => fn(),
+    useAnimatedProps: (fn: () => unknown) => fn(),
+    useAnimatedScrollHandler: () => noop,
+    useAnimatedGestureHandler: () => noop,
+    useAnimatedRef: () => ({ current: null }),
+    useAnimatedReaction: noop,
+    useReducedMotion: () => false,
+    withTiming: (v: unknown) => v,
+    withSpring: (v: unknown) => v,
+    withDecay: (v: unknown) => v,
+    withDelay: (_delay: unknown, v: unknown) => v,
+    withSequence: (...args: unknown[]) => args[args.length - 1],
+    withRepeat: (v: unknown) => v,
+    cancelAnimation: noop,
+    Easing: { bezier: () => noop, out: noop, in: noop, inOut: noop },
+    interpolate: (v: unknown) => v,
+    interpolateColor: (_value: unknown, _inputRange: unknown, outputRange: unknown[]) => outputRange[0],
+    Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
+    runOnUI: (fn: (...args: unknown[]) => unknown) => fn,
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+    createAnimatedComponent: (Component: React.ComponentType<unknown>) =>
+      React.forwardRef((props: unknown, ref: unknown) => React.createElement(Component, { ...(props as object), ref })),
+    measure: () => ({ x: 0, y: 0, width: 0, height: 0, pageX: 0, pageY: 0 }),
+    scrollTo: noop,
+    setGestureState: noop,
+    makeMutable: noopValue,
+    SharedValue: {},
+    ReduceMotion: { System: 'system', Always: 'always', Never: 'never' },
+    getRelativeCoords: () => ({ x: 0, y: 0 }),
+    enableLayoutAnimations: noop,
+    configureLayoutAnimations: noop,
+  }
+})
 
 import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
@@ -181,6 +238,25 @@ describe('Session UX Acceptance', () => {
 
       // Old "Skip rest timer" banner button no longer exists in list content
       expect(queryByLabelText('Skip rest timer')).toBeNull()
+    })
+  })
+
+  describe('Session restore hydration', () => {
+    it('hydrates persisted weight and reps after remount', async () => {
+      setupSession()
+
+      const first = renderScreen(<ActiveSession />)
+      await first.findByText('Squat')
+      expect(await first.findByLabelText('Set 1 weight, 100 kilograms')).toBeTruthy()
+      expect(await first.findByLabelText('Set 1 reps, 5')).toBeTruthy()
+
+      first.unmount()
+
+      setupSession()
+      const second = renderScreen(<ActiveSession />)
+      await second.findByText('Squat')
+      expect(await second.findByLabelText('Set 1 weight, 100 kilograms')).toBeTruthy()
+      expect(await second.findByLabelText('Set 1 reps, 5')).toBeTruthy()
     })
   })
 

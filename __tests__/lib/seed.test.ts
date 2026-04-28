@@ -89,10 +89,7 @@ describe("Voltra exercises", () => {
 
   it("all have Voltra metadata", () => {
     for (const e of voltra) {
-      expect(e.mount_position).toBeTruthy();
       expect(e.attachment).toBeTruthy();
-      expect(e.training_modes).toBeDefined();
-      expect(e.training_modes!.length).toBeGreaterThan(0);
     }
   });
 });

@@ -98,17 +98,22 @@ describe('updateSession', () => {
 describe('createTemplateFromSession', () => {
   it('creates template from session with exercises', async () => {
     mockDrizzleAllResult = [
-      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, training_mode: 'weight' },
-      { exercise_id: 'ex-1', set_number: 2, reps: 10, link_id: null, training_mode: 'weight' },
-      { exercise_id: 'ex-2', set_number: 1, reps: 12, link_id: null, training_mode: null },
+      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, set_type: 'warmup' },
+      { exercise_id: 'ex-1', set_number: 2, reps: 10, link_id: null, set_type: 'failure' },
+      { exercise_id: 'ex-2', set_number: 1, reps: 12, link_id: null, set_type: 'normal' },
     ];
 
     const result = await createTemplateFromSession('sess-1', 'My Template');
     expect(result).toBeTruthy();
     expect(typeof result).toBe('string');
-
-    // Should create template + 2 template_exercises via drizzle insert
-    expect(mockInsert).toHaveBeenCalledTimes(3); // 1 template + 2 exercises
+    expect(mockInsert).toHaveBeenCalledTimes(3);
+    expect(mockInsertValues.mock.calls[0][0]).toMatchObject({ name: 'My Template', source: null });
+    expect(mockInsertValues.mock.calls[1][0]).toMatchObject({
+      exercise_id: 'ex-1',
+      target_sets: 2,
+      target_reps: '10',
+      set_types: JSON.stringify(['warmup', 'failure']),
+    });
   });
 
   it('handles empty session (no completed sets)', async () => {
@@ -122,8 +127,8 @@ describe('createTemplateFromSession', () => {
 
   it('preserves superset groupings via link_id remapping', async () => {
     mockDrizzleAllResult = [
-      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: 'link-old', training_mode: 'weight' },
-      { exercise_id: 'ex-2', set_number: 1, reps: 10, link_id: 'link-old', training_mode: 'weight' },
+      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: 'link-old', set_type: 'normal' },
+      { exercise_id: 'ex-2', set_number: 1, reps: 10, link_id: 'link-old', set_type: 'normal' },
     ];
 
     await createTemplateFromSession('sess-1', 'Superset Template');
@@ -144,9 +149,9 @@ describe('createTemplateFromSession', () => {
 
   it('uses max reps as target_reps', async () => {
     mockDrizzleAllResult = [
-      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, training_mode: 'weight' },
-      { exercise_id: 'ex-1', set_number: 2, reps: 12, link_id: null, training_mode: 'weight' },
-      { exercise_id: 'ex-1', set_number: 3, reps: 10, link_id: null, training_mode: 'weight' },
+      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, set_type: 'normal' },
+      { exercise_id: 'ex-1', set_number: 2, reps: 12, link_id: null, set_type: 'normal' },
+      { exercise_id: 'ex-1', set_number: 3, reps: 10, link_id: null, set_type: 'failure' },
     ];
 
     await createTemplateFromSession('sess-1', 'Rep Template');
@@ -159,9 +164,9 @@ describe('createTemplateFromSession', () => {
 
   it('sets target_sets to count of completed sets per exercise', async () => {
     mockDrizzleAllResult = [
-      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, training_mode: 'weight' },
-      { exercise_id: 'ex-1', set_number: 2, reps: 8, link_id: null, training_mode: 'weight' },
-      { exercise_id: 'ex-1', set_number: 3, reps: 8, link_id: null, training_mode: 'weight' },
+      { exercise_id: 'ex-1', set_number: 1, reps: 8, link_id: null, set_type: 'warmup' },
+      { exercise_id: 'ex-1', set_number: 2, reps: 8, link_id: null, set_type: 'normal' },
+      { exercise_id: 'ex-1', set_number: 3, reps: 8, link_id: null, set_type: 'failure' },
     ];
 
     await createTemplateFromSession('sess-1', 'Set Count Template');

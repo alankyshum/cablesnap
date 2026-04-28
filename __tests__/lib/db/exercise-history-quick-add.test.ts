@@ -10,15 +10,15 @@ const mockRecentRows = [
     id: "ex-1", name: "Barbell Bench Press", category: "chest",
     primary_muscles: '["chest"]', secondary_muscles: '["triceps"]',
     equipment: "barbell", instructions: "", difficulty: "intermediate",
-    is_custom: 0, deleted_at: null, mount_position: null,
-    attachment: "handle", training_modes: '["weight"]', is_voltra: 0,
+    is_custom: 0, deleted_at: null,
+    attachment: "handle", is_voltra: 0,
   },
   {
     id: "ex-2", name: "Barbell Squat", category: "legs_glutes",
     primary_muscles: '["quads"]', secondary_muscles: '["glutes"]',
     equipment: "barbell", instructions: "", difficulty: "intermediate",
-    is_custom: 0, deleted_at: null, mount_position: null,
-    attachment: "handle", training_modes: '["weight"]', is_voltra: 0,
+    is_custom: 0, deleted_at: null,
+    attachment: "handle", is_voltra: 0,
   },
 ];
 
@@ -27,15 +27,15 @@ const mockFrequentRows = [
     id: "ex-3", name: "Deadlift", category: "back",
     primary_muscles: '["back"]', secondary_muscles: '["hamstrings"]',
     equipment: "barbell", instructions: "", difficulty: "advanced",
-    is_custom: 0, deleted_at: null, mount_position: null,
-    attachment: "handle", training_modes: '["weight"]', is_voltra: 0,
+    is_custom: 0, deleted_at: null,
+    attachment: "handle", is_voltra: 0,
   },
   {
     id: "ex-1", name: "Barbell Bench Press", category: "chest",
     primary_muscles: '["chest"]', secondary_muscles: '["triceps"]',
     equipment: "barbell", instructions: "", difficulty: "intermediate",
-    is_custom: 0, deleted_at: null, mount_position: null,
-    attachment: "handle", training_modes: '["weight"]', is_voltra: 0,
+    is_custom: 0, deleted_at: null,
+    attachment: "handle", is_voltra: 0,
   },
 ];
 

@@ -90,7 +90,6 @@ jest.mock('react-native-body-highlighter', () => {
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
 jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/confirm', () => ({ confirmAction: jest.fn() }))
-jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
 jest.mock('../../components/MuscleMap', () => ({ MuscleMap: 'MuscleMap' }))
 jest.mock('../../components/WeightPicker', () => 'WeightPicker')
 jest.mock('../../components/ExercisePickerSheet', () => 'ExercisePickerSheet')
@@ -189,7 +188,6 @@ jest.mock('../../lib/db', () => ({
   updateSetsBatch: jest.fn().mockResolvedValue(undefined),
   updateSetRPE: jest.fn().mockResolvedValue(undefined),
   updateSetNotes: jest.fn().mockResolvedValue(undefined),
-  updateSetTrainingMode: jest.fn().mockResolvedValue(undefined),
   updateSetTempo: jest.fn().mockResolvedValue(undefined),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
   getPreviousSets: jest.fn().mockResolvedValue([]),
@@ -442,7 +440,7 @@ describe('Accessibility Compliance Audit', () => {
         {
           id: 'set-1', session_id: 'sess-1', exercise_id: 'ex-1', set_number: 1,
           weight: 80, reps: 8, completed: false, completed_at: null,
-          rpe: null, notes: null, link_id: null, training_mode: null, tempo: null,
+          rpe: null, notes: null, link_id: null, tempo: null,
           exercise_name: 'Bench Press', exercise_deleted: false,
         },
       ])

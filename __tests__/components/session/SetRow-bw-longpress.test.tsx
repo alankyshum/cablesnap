@@ -24,7 +24,6 @@ function makeSet(overrides: Partial<SetWithMeta> = {}): SetWithMeta {
     notes: "",
     link_id: null,
     round: null,
-    training_mode: null,
     tempo: null,
     swapped_from_exercise_id: null,
     set_type: "normal",

@@ -95,7 +95,7 @@ function Summary() {
   }, [grouped, unit]);
 
   const share = async () => {
-    const lines = [`🏋️ ${session?.name ?? "Workout"} Complete!`, `Duration: ${duration}`, `Sets: ${completed.length}`, `Volume: ${volumeDisplay.toLocaleString()} ${unit}`];
+    const lines = [`🏋️ ${session?.name ?? "Workout"} Complete!`, `Duration: ${duration}`, `Sets: ${completedSetCount}`, `Volume: ${volumeDisplay.toLocaleString()} ${unit}`];
     if (prs.length > 0) { lines.push("", "🏆 New PRs:"); for (const pr of prs) lines.push(`  ${pr.name}: ${toDisplay(pr.weight, unit)} ${unit}`); }
     if (repPrs.length > 0) { if (prs.length === 0) lines.push("", "🏆 New PRs:"); for (const pr of repPrs) lines.push(`  ${pr.name}: ${pr.reps} reps`); }
     try { await Share.share({ message: lines.join("\n") }); } catch { /* cancelled */ }
@@ -136,7 +136,7 @@ function Summary() {
             session={session}
             duration={duration}
             durationSpokenText={durationSpoken(session.duration_seconds)}
-            completedCount={completed.length}
+            completedCount={completedSetCount}
             setsBreakdown={setsBreakdown}
             volumeDisplay={volumeDisplay}
             unit={unit}
@@ -180,7 +180,7 @@ function Summary() {
             handleCaptureAndShare={actions.handleCaptureAndShare}
             shareCardDate={shareCardDate}
             duration={duration}
-            completedCount={completed.length}
+            completedCount={completedSetCount}
             volumeDisplay={volumeDisplay.toLocaleString()}
             unit={unit}
             rating={actions.rating}

@@ -99,9 +99,12 @@ export default function MuscleVolumeSegment() {
     }
   }, [data, landmarks, selectMuscle]);
 
+  // Match sibling Progress segments (Workouts/Nutrition): horizontal padding lives on
+  // the scroll container via layout.horizontalPadding, not on individual cards.
+  const horizontalPadding = layout.horizontalPadding ?? 16;
   const chartWidth = layout.atLeastMedium
-    ? (layout.width - 96) / 2 - 32
-    : layout.width - 48;
+    ? (layout.width - horizontalPadding * 2 - 12) / 2 - 32
+    : layout.width - horizontalPadding * 2 - 16;
 
   // ---- Render ----
 
@@ -133,7 +136,11 @@ export default function MuscleVolumeSegment() {
     <View style={styles.flex}>
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
+        contentContainerStyle={{
+          paddingHorizontal: horizontalPadding,
+          paddingTop: 16,
+          paddingBottom: tabBarHeight + 16,
+        }}
         testID="muscle-volume-scroll"
       >
       {/* Week Selector */}
@@ -279,9 +286,9 @@ export default function MuscleVolumeSegment() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
-  weekRow: { flexDirection: "row", alignItems: "center", marginBottom: 8, paddingHorizontal: 4 },
+  weekRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   chevron: { minWidth: 48, minHeight: 48 },
-  card: { marginHorizontal: 16, marginBottom: 12 },
+  card: { marginBottom: 12 },
   flowRow: { flexDirection: "row", gap: 12 },
   flowCard: { flex: 1 },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, minHeight: 48 },

@@ -22,9 +22,9 @@ jest.mock("react-native-reanimated", () => {
   const actual = jest.requireActual("../../__mocks__/react-native-reanimated");
   return {
     ...actual,
-    withTiming: (...args: unknown[]) => mockWithTiming(...args),
+    withTiming: (value: unknown, config?: unknown) => mockWithTiming(value, config),
     withSequence: (...args: unknown[]) => mockWithSequence(...args),
-    withDelay: (...args: unknown[]) => mockWithDelay(...(args as [number, unknown])),
+    withDelay: (delayMs: number, value: unknown) => mockWithDelay(delayMs, value),
     useReducedMotion: () => mockReduceMotion.value,
   };
 });
@@ -87,13 +87,15 @@ describe("useRestTimer — BLD-611 rest-start flash", () => {
     const args = mockWithTiming.mock.calls;
     // First two timing calls correspond to the two legs of the start-flash.
     expect(args.length).toBeGreaterThanOrEqual(2);
-    const [v1, opts1] = args[0] as [number, { duration: number }];
-    const [v2, opts2] = args[1] as [number, { duration: number }];
+    const [v1, opts1] = args[0];
+    const [v2, opts2] = args[1];
     expect(v1).toBe(1);
     expect(v2).toBe(0);
-
+ 
     // WCAG / spec: total ≤ 700 ms, ≥ 300 ms total.
-    const total = opts1.duration + opts2.duration;
+    expect(opts1).toEqual(expect.objectContaining({ duration: expect.any(Number) }));
+    expect(opts2).toEqual(expect.objectContaining({ duration: expect.any(Number) }));
+    const total = (opts1 as { duration: number }).duration + (opts2 as { duration: number }).duration;
     expect(total).toBeLessThanOrEqual(700);
     expect(total).toBeGreaterThanOrEqual(300);
   });

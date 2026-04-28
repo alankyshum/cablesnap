@@ -238,7 +238,6 @@ export const SetRow = memo(function SetRow({
     }
   }, [set.set_type, colors]);
 
-  const borderColor = chipStyle?.bg;
   const chipLabel = SET_TYPE_LABELS[set.set_type]?.short;
   const typeLabel = set.set_type === "normal" ? "working set" : `${set.set_type} set`;
 
@@ -297,7 +296,6 @@ export const SetRow = memo(function SetRow({
             // a 2px transparent border so the row's outer dimensions are byte-identical
             // between completed and non-completed states — only the color toggles.
             set.completed && { borderColor: colors.primary },
-            borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined,
           ]}
           accessibilityHint={
             I18nManager.isRTL
@@ -698,7 +696,7 @@ export const SetRow = memo(function SetRow({
         );
       })() : null}
 
-      <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
+      <PlateHint weight={displayedWeight} unit={unit} equipment={equipment} />
     </View>
   );
 });

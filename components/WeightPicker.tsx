@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -17,7 +17,13 @@ type Props = {
 function WeightPicker({ value, unit, onValueChange, accessibilityLabel, min = 0, max = 500 }: Props) {
   const colors = useThemeColors();
   const [focused, setFocused] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(value != null ? String(value) : "0");
+
+  useEffect(() => {
+    if (!focused) {
+      setDraft(value != null ? String(value) : "0");
+    }
+  }, [focused, value]);
 
   const startEdit = useCallback(() => {
     setDraft(value != null ? String(value) : "");
@@ -25,19 +31,21 @@ function WeightPicker({ value, unit, onValueChange, accessibilityLabel, min = 0,
   }, [value]);
 
   const endEdit = useCallback(() => {
-    setFocused(false);
     const num = parseFloat(draft);
     if (!isNaN(num) && num >= min && num <= max) {
+      const next = String(num);
+      setDraft(next);
       onValueChange(num);
+    } else {
+      setDraft(value != null ? String(value) : "0");
     }
-  }, [draft, min, max, onValueChange]);
-
-  const display = value != null ? String(value) : "0";
+    setFocused(false);
+  }, [draft, min, max, onValueChange, value]);
 
   return (
     <View style={[styles.container, { borderColor: focused ? colors.primary : colors.outlineVariant, backgroundColor: colors.surface }]}>
       <TextInput
-        value={focused ? draft : display}
+        value={draft}
         onChangeText={setDraft}
         onFocus={startEdit}
         onBlur={endEdit}

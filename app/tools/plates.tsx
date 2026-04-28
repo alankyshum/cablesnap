@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   barInputWrap: {
-    width: 90,
+    width: 124,
   },
   row: {
     flexDirection: "row",
