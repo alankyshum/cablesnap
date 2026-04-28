@@ -63,6 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "./plugins/with-release-signing",
+    "./plugins/with-wearos-module",
     [
       // Sentry Expo config plugin — wires the Android Gradle plugin so that
       // release builds upload source maps + debug-ids. The plugin falls back
