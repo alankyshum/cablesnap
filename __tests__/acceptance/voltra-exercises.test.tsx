@@ -57,62 +57,38 @@ describe('Voltra Exercise Database Acceptance', () => {
     mockGetAll.mockResolvedValue(allSeeded)
   })
 
-  // ── Data Integrity Tests ──────────────────────────────────
+  // ── Data Integrity (consolidated) ────────────────────────
 
   describe('Voltra Movement Bank data', () => {
     it('contains exactly 56 Voltra exercises', () => {
       expect(voltraExercises).toHaveLength(56)
     })
 
-    it('all Voltra exercises use cable equipment', () => {
+    it('every Voltra exercise has required core metadata', () => {
       for (const ex of voltraExercises) {
+        // equipment + flags
         expect(ex.equipment).toBe('cable')
-      }
-    })
-
-    it('all Voltra exercises have is_voltra=true and is_custom=false', () => {
-      for (const ex of voltraExercises) {
         expect(ex.is_voltra).toBe(true)
         expect(ex.is_custom).toBe(false)
-      }
-    })
-
-    it('every Voltra exercise has mount_position metadata', () => {
-      for (const ex of voltraExercises) {
+        // mount position
         expect(ex.mount_position).toBeDefined()
         expect(['high', 'mid', 'low', 'floor']).toContain(ex.mount_position)
-      }
-    })
-
-    it('every Voltra exercise has attachment metadata', () => {
-      for (const ex of voltraExercises) {
+        // attachment
         expect(ex.attachment).toBeDefined()
         expect(ex.attachment).toBeTruthy()
-      }
-    })
-
-    it('every Voltra exercise has at least one training mode', () => {
-      for (const ex of voltraExercises) {
+        // training modes
         expect(ex.training_modes).toBeDefined()
         expect(ex.training_modes!.length).toBeGreaterThan(0)
-      }
-    })
-
-    it('every Voltra exercise has instructions', () => {
-      for (const ex of voltraExercises) {
+        // instructions
         expect(ex.instructions).toBeTruthy()
         expect(ex.instructions.length).toBeGreaterThan(10)
-      }
-    })
-
-    it('Voltra exercise IDs use voltra-NNN format', () => {
-      for (const ex of voltraExercises) {
+        // ID format
         expect(ex.id).toMatch(/^voltra-\d{3}$/)
       }
     })
   })
 
-  // ── Category Distribution Tests ──────────────────────────
+  // ── Category Distribution (table-driven) ─────────────────
 
   describe('muscle group categories', () => {
     const categoryGroups: Record<string, Exercise[]> = {}
@@ -126,28 +102,15 @@ describe('Voltra Exercise Database Acceptance', () => {
       expect(categories).toEqual(['abs_core', 'arms', 'back', 'chest', 'legs_glutes', 'shoulders'])
     })
 
-    it('Abs & Core has 10 exercises', () => {
-      expect(categoryGroups['abs_core']).toHaveLength(10)
-    })
-
-    it('Arms has 9 exercises', () => {
-      expect(categoryGroups['arms']).toHaveLength(9)
-    })
-
-    it('Back has 9 exercises', () => {
-      expect(categoryGroups['back']).toHaveLength(9)
-    })
-
-    it('Chest has 9 exercises', () => {
-      expect(categoryGroups['chest']).toHaveLength(9)
-    })
-
-    it('Legs & Glutes has 9 exercises', () => {
-      expect(categoryGroups['legs_glutes']).toHaveLength(9)
-    })
-
-    it('Shoulders has 10 exercises', () => {
-      expect(categoryGroups['shoulders']).toHaveLength(10)
+    it.each([
+      ['abs_core', 10],
+      ['arms', 9],
+      ['back', 9],
+      ['chest', 9],
+      ['legs_glutes', 9],
+      ['shoulders', 10],
+    ] as const)('category %s has %i exercises', (cat, count) => {
+      expect(categoryGroups[cat]).toHaveLength(count)
     })
   })
 
@@ -166,96 +129,48 @@ describe('Voltra Exercise Database Acceptance', () => {
       expect(await findByText('Face Pulls with External Rotation')).toBeTruthy()
     })
 
-    it('filters Voltra exercises by Abs & Core category', async () => {
+    it.each([
+      [
+        'abs_core',
+        ['Abdominal Crunches', 'Trunk Horizontal Rotations', 'Kneeling Cable Crunch'],
+        ['Biceps Curls', 'Wide Grip Lat Pull-down', 'Bench Fly'],
+      ],
+      [
+        'arms',
+        ['Biceps Curls', 'Triceps Push-down', 'Hammer Curl'],
+        ['Abdominal Crunches'],
+      ],
+      [
+        'back',
+        ['Wide Grip Lat Pull-down', 'Seated Cable Row'],
+        ['Bench Fly'],
+      ],
+      [
+        'chest',
+        ['Bench Fly', 'Crossover Fly', 'Incline Chest Press'],
+        ['Abdominal Crunches'],
+      ],
+      [
+        'legs_glutes',
+        ['Goblet Squat', 'Hip Extension'],
+        ['Abdominal Crunches'],
+      ],
+      [
+        'shoulders',
+        ['Face Pulls with External Rotation', 'Lateral Raises Two Arms', 'Cable Overhead Press'],
+        ['Abdominal Crunches'],
+      ],
+    ] as const)('filters Voltra exercises by %s category', async (cat, visible, hidden) => {
       const { findByText, getByText, queryByText } = renderScreen(<Exercises />)
 
       await findByText('Abdominal Crunches')
 
-      const chipLabel = CATEGORY_LABELS['abs_core']
+      const chipLabel = CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS]
       fireEvent.press(getByText(chipLabel))
 
       await waitFor(() => {
-        // Abs & Core exercises visible
-        expect(queryByText('Abdominal Crunches')).toBeTruthy()
-        expect(queryByText('Trunk Horizontal Rotations')).toBeTruthy()
-        expect(queryByText('Kneeling Cable Crunch')).toBeTruthy()
-        // Other categories hidden
-        expect(queryByText('Biceps Curls')).toBeNull()
-        expect(queryByText('Wide Grip Lat Pull-down')).toBeNull()
-        expect(queryByText('Bench Fly')).toBeNull()
-      })
-    })
-
-    it('filters Voltra exercises by Arms category', async () => {
-      const { findByText, getByText, queryByText } = renderScreen(<Exercises />)
-
-      await findByText('Abdominal Crunches')
-
-      fireEvent.press(getByText(CATEGORY_LABELS['arms']))
-
-      await waitFor(() => {
-        expect(queryByText('Biceps Curls')).toBeTruthy()
-        expect(queryByText('Triceps Push-down')).toBeTruthy()
-        expect(queryByText('Hammer Curl')).toBeTruthy()
-        expect(queryByText('Abdominal Crunches')).toBeNull()
-      })
-    })
-
-    it('filters Voltra exercises by Back category', async () => {
-      const { findByText, getByText, queryByText } = renderScreen(<Exercises />)
-
-      await findByText('Abdominal Crunches')
-
-      fireEvent.press(getByText(CATEGORY_LABELS['back']))
-
-      await waitFor(() => {
-        expect(queryByText('Wide Grip Lat Pull-down')).toBeTruthy()
-        expect(queryByText('Seated Cable Row')).toBeTruthy()
-        expect(queryByText('Bench Fly')).toBeNull()
-      })
-    })
-
-    it('filters Voltra exercises by Chest category', async () => {
-      const { findByText, getByText, queryByText } = renderScreen(<Exercises />)
-
-      await findByText('Abdominal Crunches')
-
-      fireEvent.press(getByText(CATEGORY_LABELS['chest']))
-
-      await waitFor(() => {
-        expect(queryByText('Bench Fly')).toBeTruthy()
-        expect(queryByText('Crossover Fly')).toBeTruthy()
-        expect(queryByText('Incline Chest Press')).toBeTruthy()
-        expect(queryByText('Abdominal Crunches')).toBeNull()
-      })
-    })
-
-    it('filters Voltra exercises by Legs & Glutes category', async () => {
-      const { findByText, getByText, queryByText } = renderScreen(<Exercises />)
-
-      await findByText('Abdominal Crunches')
-
-      fireEvent.press(getByText(CATEGORY_LABELS['legs_glutes']))
-
-      await waitFor(() => {
-        expect(queryByText('Goblet Squat')).toBeTruthy()
-        expect(queryByText('Hip Extension')).toBeTruthy()
-        expect(queryByText('Abdominal Crunches')).toBeNull()
-      })
-    })
-
-    it('filters Voltra exercises by Shoulders category', async () => {
-      const { findByText, getByText, queryByText } = renderScreen(<Exercises />)
-
-      await findByText('Abdominal Crunches')
-
-      fireEvent.press(getByText(CATEGORY_LABELS['shoulders']))
-
-      await waitFor(() => {
-        expect(queryByText('Face Pulls with External Rotation')).toBeTruthy()
-        expect(queryByText('Lateral Raises Two Arms')).toBeTruthy()
-        expect(queryByText('Cable Overhead Press')).toBeTruthy()
-        expect(queryByText('Abdominal Crunches')).toBeNull()
+        for (const name of visible) expect(queryByText(name)).toBeTruthy()
+        for (const name of hidden) expect(queryByText(name)).toBeNull()
       })
     })
 
@@ -280,40 +195,26 @@ describe('Voltra Exercise Database Acceptance', () => {
   // ── Exercise Detail Metadata Tests ───────────────────────
 
   describe('cable-specific metadata in exercise details', () => {
-    it('exercise detail shows mount position for Voltra exercises', async () => {
-      // Verify that a Voltra exercise data includes displayable mount position
+    it('exposes mount position + attachment metadata with human-readable labels', () => {
+      // Spot-check on Abdominal Crunches
       const abCrunches = voltraExercises.find((e) => e.name === 'Abdominal Crunches')!
       expect(abCrunches.mount_position).toBeDefined()
       expect(MOUNT_POSITION_LABELS[abCrunches.mount_position!]).toBeTruthy()
-    })
-
-    it('exercise detail shows attachment type for Voltra exercises', async () => {
-      const abCrunches = voltraExercises.find((e) => e.name === 'Abdominal Crunches')!
       expect(abCrunches.attachment).toBeDefined()
       expect(ATTACHMENT_LABELS[abCrunches.attachment!]).toBeTruthy()
-    })
 
-    it('all mount positions have human-readable labels', () => {
+      // All mount positions / attachments used across Voltra have labels
       const mountPositions = new Set(voltraExercises.map((e) => e.mount_position!))
       for (const pos of mountPositions) {
         expect(MOUNT_POSITION_LABELS[pos]).toBeTruthy()
       }
-    })
-
-    it('all attachment types have human-readable labels', () => {
       const attachments = new Set(voltraExercises.map((e) => e.attachment!))
       for (const att of attachments) {
         expect(ATTACHMENT_LABELS[att]).toBeTruthy()
       }
-    })
 
-    it('Voltra exercises use varied mount positions', () => {
-      const mountPositions = new Set(voltraExercises.map((e) => e.mount_position))
+      // Variety
       expect(mountPositions.size).toBeGreaterThanOrEqual(3)
-    })
-
-    it('Voltra exercises use varied attachments', () => {
-      const attachments = new Set(voltraExercises.map((e) => e.attachment))
       expect(attachments.size).toBeGreaterThanOrEqual(2)
     })
   })
@@ -321,22 +222,16 @@ describe('Voltra Exercise Database Acceptance', () => {
   // ── Total Count Verification ─────────────────────────────
 
   describe('correct total count', () => {
-    it('seed data returns Voltra + community exercises combined', () => {
+    it('seed data combines Voltra + community exercises with unique names and IDs', () => {
       const nonVoltra = allSeeded.filter((e) => !e.is_voltra)
       expect(nonVoltra.length).toBeGreaterThan(0)
       expect(allSeeded.length).toBe(voltraExercises.length + nonVoltra.length)
-    })
 
-    it('no duplicate exercise names within Voltra exercises', () => {
       const names = voltraExercises.map((e) => e.name)
-      const uniqueNames = new Set(names)
-      expect(uniqueNames.size).toBe(names.length)
-    })
+      expect(new Set(names).size).toBe(names.length)
 
-    it('no duplicate exercise IDs within Voltra exercises', () => {
       const ids = voltraExercises.map((e) => e.id)
-      const uniqueIds = new Set(ids)
-      expect(uniqueIds.size).toBe(ids.length)
+      expect(new Set(ids).size).toBe(ids.length)
     })
   })
 })
