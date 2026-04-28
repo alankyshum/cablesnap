@@ -24,7 +24,13 @@ name: Wear OS M0 — Play APK GMS proof
 # verify).
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:           # keep — for post-merge manual reruns
+  pull_request:                # add — for pre-merge Gate 3 evidence
+    paths:
+      - '.github/workflows/wear-m0-play-apk-proof.yml'
+      - 'plugins/with-wearos-module.js'
+      - 'modules/expo-wearos-bridge/**'
+      - 'android/app/build.gradle'
 
 permissions:
   contents: read
