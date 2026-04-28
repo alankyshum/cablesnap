@@ -95,9 +95,7 @@ jest.mock("../../lib/seed", () => ({
   seedExercises: jest.fn(() => []),
 }));
 
-// Database module loaded once at the top level; see comment near `db = require(...)` below.
-// Use const since BLD-817 perf refactor: module isn't reassigned anymore.
-// eslint-disable-next-line prefer-const
+// Force re-require db module for each test to reset singleton
 let db: typeof import("../../lib/db");
 
 // Helper: initialize the database (consumes migration mocks), then clear mocks
@@ -117,17 +115,6 @@ function mockDrizzleAll(value: any[]) {
   drizzleQueryResult = value;
 }
 
-// BLD-817 perf: load db module once at the top level (instead of re-requiring
-// inside every beforeEach). The db module's only mutable state is on
-// globalThis (singleton cache) + the `memoryFallback` boolean inside
-// helpers.ts. Clearing the globalThis keys in beforeEach is sufficient for
-// the 45 tests in this file that don't touch the platform mock.
-//
-// The two "getDatabase web fallback" tests still need full module isolation
-// (they swap react-native Platform). They live at the END of the file and
-// call jest.resetModules() + jest.doMock locally.
-db = require("../../lib/db");
-
 beforeEach(() => {
   jest.clearAllMocks();
   resetDrizzleResults();
@@ -136,14 +123,28 @@ beforeEach(() => {
   mockDb.getFirstAsync.mockResolvedValue({ count: 10 });
   mockDb.runAsync.mockResolvedValue({ changes: 1 });
 
-  // Clear globalThis singleton so each test starts fresh. The db module
-  // reads/writes only these keys for caching; clearing them is equivalent
-  // to a fresh module load for our purposes (no other top-level state).
+  // Clear globalThis singleton so each test starts fresh
   const g = globalThis as any;
   delete g.__cablesnap_db;
   delete g.__cablesnap_drizzle;
   delete g.__cablesnap_init;
   delete g.__cablesnap_memfb;
+
+  // Reset the cached db module to clear singleton
+  jest.resetModules();
+  jest.doMock("expo-sqlite", () => ({
+    openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
+  }));
+  jest.doMock("drizzle-orm/expo-sqlite", () => ({
+    drizzle: jest.fn(() => mockDrizzleDb),
+  }));
+  jest.doMock("../../lib/seed", () => ({
+    seedExercises: jest.fn(() => []),
+  }));
+  jest.doMock("expo-crypto", () => ({
+    randomUUID: jest.fn(() => "test-uuid-1234"),
+  }));
+  db = require("../../lib/db");
 });
 
 describe("getDatabase", () => {
@@ -151,6 +152,65 @@ describe("getDatabase", () => {
     const result = await db.getDatabase();
     expect(result).toBeDefined();
     expect(mockDb.execAsync).toHaveBeenCalled();
+  });
+});
+
+describe("getDatabase web fallback", () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const originalPlatform = jest.requireActual("react-native").Platform;
+
+  it("falls back to :memory: on web when OPFS fails", async () => {
+    jest.resetModules();
+
+    const failOnce = jest.fn()
+      .mockRejectedValueOnce(new Error("cannot create file"))
+      .mockResolvedValue(mockDb);
+
+    jest.doMock("expo-sqlite", () => ({
+      openDatabaseAsync: failOnce,
+    }));
+    jest.doMock("drizzle-orm/expo-sqlite", () => ({
+      drizzle: jest.fn(() => mockDrizzleDb),
+    }));
+    jest.doMock("react-native", () => ({
+      Platform: { OS: "web" },
+    }));
+    jest.doMock("../../lib/seed", () => ({
+      seedExercises: jest.fn(() => []),
+    }));
+
+    const dbMod = require("../../lib/db");
+    const result = await dbMod.getDatabase();
+
+    expect(result).toBe(mockDb);
+    expect(failOnce).toHaveBeenCalledTimes(2);
+    expect(failOnce).toHaveBeenNthCalledWith(1, "cablesnap.db");
+    expect(failOnce).toHaveBeenNthCalledWith(2, ":memory:");
+    expect(dbMod.isMemoryFallback()).toBe(true);
+  });
+
+  it("throws on non-web platform when open fails", async () => {
+    jest.resetModules();
+
+    const fail = jest.fn().mockRejectedValue(new Error("native crash"));
+
+    jest.doMock("expo-sqlite", () => ({
+      openDatabaseAsync: fail,
+    }));
+    jest.doMock("drizzle-orm/expo-sqlite", () => ({
+      drizzle: jest.fn(() => mockDrizzleDb),
+    }));
+    jest.doMock("react-native", () => ({
+      Platform: { OS: "android" },
+    }));
+    jest.doMock("../../lib/seed", () => ({
+      seedExercises: jest.fn(() => []),
+    }));
+
+    const dbMod = require("../../lib/db");
+    await expect(dbMod.getDatabase()).rejects.toThrow("native crash");
+    expect(fail).toHaveBeenCalledTimes(1);
+    expect(dbMod.isMemoryFallback()).toBe(false);
   });
 });
 
@@ -662,65 +722,5 @@ describe("data validation edge cases", () => {
 
     await db.completeSession("s1");
     expect(mockDrizzleDb.update).toHaveBeenCalled();
-  });
-});
-
-// BLD-817 perf: "getDatabase web fallback" intentionally lives at the END of
-// the file. Both tests call jest.resetModules() + jest.doMock to swap
-// react-native Platform; running them last avoids re-instantiating the heavy
-// db module in the middle of the 45-test sequence above.
-describe("getDatabase web fallback", () => {
-  it("falls back to :memory: on web when OPFS fails", async () => {
-    jest.resetModules();
-
-    const failOnce = jest.fn()
-      .mockRejectedValueOnce(new Error("cannot create file"))
-      .mockResolvedValue(mockDb);
-
-    jest.doMock("expo-sqlite", () => ({
-      openDatabaseAsync: failOnce,
-    }));
-    jest.doMock("drizzle-orm/expo-sqlite", () => ({
-      drizzle: jest.fn(() => mockDrizzleDb),
-    }));
-    jest.doMock("react-native", () => ({
-      Platform: { OS: "web" },
-    }));
-    jest.doMock("../../lib/seed", () => ({
-      seedExercises: jest.fn(() => []),
-    }));
-
-    const dbMod = require("../../lib/db");
-    const result = await dbMod.getDatabase();
-
-    expect(result).toBe(mockDb);
-    expect(failOnce).toHaveBeenCalledTimes(2);
-    expect(failOnce).toHaveBeenNthCalledWith(1, "cablesnap.db");
-    expect(failOnce).toHaveBeenNthCalledWith(2, ":memory:");
-    expect(dbMod.isMemoryFallback()).toBe(true);
-  });
-
-  it("throws on non-web platform when open fails", async () => {
-    jest.resetModules();
-
-    const fail = jest.fn().mockRejectedValue(new Error("native crash"));
-
-    jest.doMock("expo-sqlite", () => ({
-      openDatabaseAsync: fail,
-    }));
-    jest.doMock("drizzle-orm/expo-sqlite", () => ({
-      drizzle: jest.fn(() => mockDrizzleDb),
-    }));
-    jest.doMock("react-native", () => ({
-      Platform: { OS: "android" },
-    }));
-    jest.doMock("../../lib/seed", () => ({
-      seedExercises: jest.fn(() => []),
-    }));
-
-    const dbMod = require("../../lib/db");
-    await expect(dbMod.getDatabase()).rejects.toThrow("native crash");
-    expect(fail).toHaveBeenCalledTimes(1);
-    expect(dbMod.isMemoryFallback()).toBe(false);
   });
 });
