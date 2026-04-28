@@ -151,6 +151,10 @@ jobs:
             echo '```'
             echo "https://alankyshum.github.io/cablesnap/repo"
             echo '```'
+            echo ""
+            echo "## Wear OS companion (Play Store only)"
+            echo ""
+            echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The F-Droid build of CableSnap (\`cablesnap-fdroid.apk\`) is fully functional on its own; the watch APK is an optional companion."
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -262,11 +266,53 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
+          # M0 (BLD-736) introduces a phone-app product-flavor split:
+          #   - playRelease   — Watch bridge + GMS Wearable wired in.
+          #   - fdroidRelease — bridge + GMS excluded; F-Droid-safe.
+          # The Wear OS standalone watch APK is also built here (Play-only).
+          # See .plans/PLAN-BLD-716.md §"F-Droid + Play split" + §"Watch APK
+          # distribution".
+          set -euo pipefail
           cd android
-          ./gradlew assembleRelease
+          ./gradlew \
+            :app:assemblePlayRelease \
+            :app:assembleFdroidRelease \
+            :wear:assembleRelease
           cd ..
-          cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
-          echo "APK built: $(ls -lh cablesnap.apk)"
+          # Phone APK (Play flavor) — the canonical `cablesnap.apk` retained
+          # for the existing Play Store / GitHub-Release pipeline.
+          cp android/app/build/outputs/apk/playRelease/app-playRelease.apk cablesnap.apk
+          # Phone APK (F-Droid flavor) — what the F-Droid build server's
+          # `Builds:` recipe also produces locally; we attach it as a
+          # separate release asset so external mirrors can verify the
+          # GMS-free build matches.
+          cp android/app/build/outputs/apk/fdroidRelease/app-fdroidRelease.apk cablesnap-fdroid.apk
+          # Watch APK — Wear OS 4 standalone artifact; Play-only (F-Droid
+          # rejects GMS).
+          cp android/wear/build/outputs/apk/release/wear-release.apk cablesnap-wear.apk
+          echo "Built artifacts:"
+          ls -lh cablesnap.apk cablesnap-fdroid.apk cablesnap-wear.apk
+
+      - name: AC10b — verify F-Droid APK contains zero GMS Wearable classes
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          # Plan AC10b: the F-Droid flavor APK MUST NOT carry any
+          # com/google/android/gms/wearable/* classes. We verify by listing
+          # the APK's classes.dex entries and grepping. If even one shows up,
+          # fail the release — that means the with-wearos-module plugin's
+          # configurations { fdroidReleaseImplementation { exclude ... } }
+          # block stopped working as expected.
+          set -euo pipefail
+          GMS_COUNT=$(unzip -l cablesnap-fdroid.apk \
+            | grep -c 'com/google/android/gms/wearable' \
+            || true)
+          echo "GMS Wearable class hits in cablesnap-fdroid.apk: $GMS_COUNT"
+          if [ "$GMS_COUNT" -ne 0 ]; then
+            echo "::error::AC10b violated — cablesnap-fdroid.apk contains $GMS_COUNT GMS Wearable class entries."
+            echo "::error::Inspect the APK with: unzip -l cablesnap-fdroid.apk | grep gms/wearable"
+            exit 1
+          fi
+          echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
 
       - name: Verify APK signature matches committed fingerprint
         if: steps.check_commits.outputs.has_new_commits == 'true'
@@ -345,6 +391,8 @@ jobs:
           name: dry-run-signed-apk
           path: |
             cablesnap.apk
+            cablesnap-fdroid.apk
+            cablesnap-wear.apk
             apksigner.log
           if-no-files-found: warn
           retention-days: 14
@@ -354,9 +402,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+          # All three artifacts are attached to the same GitHub Release:
+          #   cablesnap.apk          — Play-flavor phone APK (canonical)
+          #   cablesnap-fdroid.apk   — F-Droid-flavor phone APK (GMS-free)
+          #   cablesnap-wear.apk     — Wear OS 4+ companion APK (Play-only)
+          # The auto-fdroid workflow keys off cablesnap.apk presence to
+          # decide whether to refresh the F-Droid repo; the actual F-Droid
+          # repo build pulls cablesnap-fdroid.apk per
+          # `.github/workflows/fdroid-release.yml`.
           VERSION="${{ steps.next_version.outputs.version }}"
-          gh release create "v$VERSION" cablesnap.apk \
+          gh release create "v$VERSION" \
+            cablesnap.apk \
+            cablesnap-fdroid.apk \
+            cablesnap-wear.apk \
             --title "v$VERSION" \
             --target main \
             --notes "${{ steps.release_notes.outputs.notes }}"
-          echo "Released v$VERSION with APK attached."
+          echo "Released v$VERSION with phone (Play + F-Droid) and Wear OS APKs attached."
