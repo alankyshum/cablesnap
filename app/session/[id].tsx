@@ -136,15 +136,7 @@ export default function ActiveSession() {
     handleDismiss: handleDismissBodyweightModifier,
     initialModifierKg: bwModifierInitial,
   } = useBodyweightModifierSheet({ groups, updateGroupSet, showError });
-  // BLD-771: cable variant picker. Sibling of useBodyweightModifierSheet.
-  const {
-    isVisible: variantPickerVisible,
-    handleOpen: handleOpenVariantPicker,
-    handleClose: handleCloseVariantPicker,
-    handleClear: handleClearVariant,
-    handleConfirm: handleConfirmVariant,
-    initialValues: variantInitial,
-  } = useVariantPickerSheet({ groups, updateGroupSet, showError });
+  const variant = useVariantPickerSheet({ groups, updateGroupSet, showError });
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
 
@@ -253,8 +245,7 @@ export default function ActiveSession() {
       onLongPressSetType={handleLongPressSetType}
       onOpenBodyweightModifier={handleOpenBodyweightModifier}
       onClearBodyweightModifier={handleClearBodyweightModifier}
-      onOpenVariantPicker={handleOpenVariantPicker}
-      onClearVariant={handleClearVariant}
+      onOpenVariantPicker={variant.handleOpen} onClearVariant={variant.handleClear}
       onShowDetail={handleShowDetail}
       onSwap={handleSwapOpen}
       onDeleteExercise={handleDeleteExercise}
@@ -270,7 +261,7 @@ export default function ActiveSession() {
     />
       </>
     );
-  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleOpenVariantPicker, handleClearVariant, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
@@ -395,14 +386,7 @@ export default function ActiveSession() {
         onDone={handleSaveBodyweightModifier}
         onDismiss={handleDismissBodyweightModifier}
       />
-      <VariantPickerSheet
-        isVisible={variantPickerVisible}
-        onClose={handleCloseVariantPicker}
-        attachment={variantInitial.attachment}
-        mount={variantInitial.mount}
-        onConfirm={handleConfirmVariant}
-        setNumber={variantInitial.setNumber}
-      />
+      <VariantPickerSheet isVisible={variant.isVisible} onClose={variant.handleClose} onConfirm={variant.handleConfirm} {...variant.initialValues} />
     </>
   );
 }

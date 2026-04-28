@@ -140,7 +140,7 @@ describe("VariantPickerSheet — BLD-771", () => {
 
   it("Clear resets staged values; confirm afterwards writes NULL", () => {
     const onConfirm = jest.fn();
-    const { getByTestId, getByLabelText } = render(
+    const { getByLabelText } = render(
       <VariantPickerSheet
         isVisible
         onClose={jest.fn()}

@@ -67,16 +67,20 @@ describe("useSessionActions — cable variant autofill contract (BLD-771)", () =
       // autofilled attachment/mount_position so the chips render with the
       // resolved values immediately, without waiting for a DB round-trip.
       name: "in-memory setWithModifier reflects autofilled attachment",
+      // Optional chaining + `?? null` tail is permitted: defensive guard for
+      // mocked addSet returning undefined in the acceptance suite. Semantics
+      // unchanged — autofill still wins, NULL fallback when no autofill.
       shouldMatch:
-        /attachment:\s*autofilledAttachment\s*\?\?\s*newSet\.attachment/,
+        /attachment:\s*autofilledAttachment\s*\?\?\s*newSet\??\.attachment(\s*\?\?\s*null)?/,
     },
     {
       // Reviewer blocker #1 (PR #426): same for mount_position — the
       // in-memory row carries the autofilled value, not just whatever
       // the DB row was created with.
       name: "in-memory setWithModifier reflects autofilled mount_position",
+      // See attachment counterpart above re: optional chaining + null tail.
       shouldMatch:
-        /mount_position:\s*autofilledMountPosition\s*\?\?\s*newSet\.mount_position/,
+        /mount_position:\s*autofilledMountPosition\s*\?\?\s*newSet\??\.mount_position(\s*\?\?\s*null)?/,
     },
     {
       name: "does NOT call getRecentVariantHistory directly outside the fetchQuery queryFn",

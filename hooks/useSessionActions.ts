@@ -571,8 +571,8 @@ export function useSessionActions({
       // in-memory row so chips render with the autofilled values immediately
       // instead of after a refresh. Falls through to `newSet`'s NULL when
       // autofill resolved to NULL or the gate (isCableExercise) was false.
-      attachment: autofilledAttachment ?? newSet.attachment,
-      mount_position: autofilledMountPosition ?? newSet.mount_position,
+      attachment: autofilledAttachment ?? newSet?.attachment ?? null,
+      mount_position: autofilledMountPosition ?? newSet?.mount_position ?? null,
       previous: "-",
     };
     setGroups((prev) =>
