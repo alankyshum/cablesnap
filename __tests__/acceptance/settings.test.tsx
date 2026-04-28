@@ -126,38 +126,22 @@ describe('Settings Screen Acceptance', () => {
     mockGetAppSetting.mockResolvedValue('true')
   })
 
-  // ── Screen Structure ──────────────────────────────────
+  // ── Screen Structure & About ──────────────────────────────────
 
-  it('renders the About section', async () => {
-    const { findByText } = renderScreen(<Settings />)
-    expect(await findByText('About')).toBeTruthy()
-  })
-
-  it('renders all section titles', async () => {
+  it('renders all section titles, app name/version, and open-source description', async () => {
     const { findByText } = renderScreen(<Settings />)
     expect(await findByText('Units')).toBeTruthy()
     expect(await findByText('Preferences')).toBeTruthy()
     expect(await findByText('Data Management')).toBeTruthy()
     expect(await findByText('Feedback & Reports')).toBeTruthy()
     expect(await findByText('About')).toBeTruthy()
-  })
-
-  // ── About Section ──────────────────────────────────
-
-  it('renders About section with app name and version', async () => {
-    const { findByText } = renderScreen(<Settings />)
-    const about = await findByText(/CableSnap v/)
-    expect(about).toBeTruthy()
-  })
-
-  it('shows open-source description in About', async () => {
-    const { findByText } = renderScreen(<Settings />)
+    expect(await findByText(/CableSnap v/)).toBeTruthy()
     expect(await findByText(/Free & open-source workout tracker/)).toBeTruthy()
   })
 
   // ── Unit Toggles (Weight kg/lb) ──────────────────────────────────
 
-  it('shows weight unit toggle defaulting to kg', async () => {
+  it('shows weight unit toggle defaulting to kg with both options visible', async () => {
     const { findByText } = renderScreen(<Settings />)
     expect(await findByText('Weight')).toBeTruthy()
     expect(await findByText('kg')).toBeTruthy()
@@ -197,17 +181,12 @@ describe('Settings Screen Acceptance', () => {
 
   // ── Unit Toggles (Measurements cm/in) ──────────────────────────────────
 
-  it('shows measurement unit toggle defaulting to cm', async () => {
+  it('shows measurement unit toggle defaulting to cm and updates when in is pressed', async () => {
     const { findAllByText, findByText } = renderScreen(<Settings />)
     const matches = await findAllByText('Measurements')
     expect(matches.length).toBeGreaterThanOrEqual(1)
     expect(await findByText('cm')).toBeTruthy()
     expect(await findByText('in')).toBeTruthy()
-  })
-
-  it('measurement unit toggle calls updateBodySettings when in is pressed', async () => {
-    const { findByText } = renderScreen(<Settings />)
-    await findByText('Units')
 
     const inButton = await findByText('in')
     fireEvent.press(inButton)
@@ -219,15 +198,10 @@ describe('Settings Screen Acceptance', () => {
 
   // ── Timer Sound Toggle ──────────────────────────────────
 
-  it('renders Timer Sound switch with accessible label', async () => {
+  it('Timer Sound switch renders, has accessible label, and saves setting on toggle off', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
     const toggle = await findByLabelText('Timer Sound')
     expect(toggle).toBeTruthy()
-  })
-
-  it('Timer Sound switch is interactive — toggling off saves setting', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-    const toggle = await findByLabelText('Timer Sound')
 
     fireEvent(toggle, 'valueChange', false)
 
@@ -239,7 +213,7 @@ describe('Settings Screen Acceptance', () => {
     })
   })
 
-  it('Timer Sound switch is interactive — toggling on saves setting', async () => {
+  it('Timer Sound switch saves setting on toggle on (starting from off)', async () => {
     mockGetAppSetting.mockResolvedValue('false')
 
     const { findByLabelText } = renderScreen(<Settings />)
@@ -257,13 +231,7 @@ describe('Settings Screen Acceptance', () => {
 
   // ── Workout Reminders Toggle ──────────────────────────────────
 
-  it('renders Workout Reminders switch with accessible label', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-    const toggle = await findByLabelText('Workout Reminders')
-    expect(toggle).toBeTruthy()
-  })
-
-  it('Workout Reminders switch enables reminders when toggled on', async () => {
+  it('Workout Reminders switch renders, has accessible label, and enables reminders when toggled on', async () => {
     // Start with reminders off
     mockGetAppSetting.mockImplementation((key: string) => {
       if (key === 'reminders_enabled') return Promise.resolve('false')
@@ -273,6 +241,7 @@ describe('Settings Screen Acceptance', () => {
 
     const { findByLabelText } = renderScreen(<Settings />)
     const toggle = await findByLabelText('Workout Reminders')
+    expect(toggle).toBeTruthy()
 
     fireEvent(toggle, 'valueChange', true)
 
@@ -305,7 +274,7 @@ describe('Settings Screen Acceptance', () => {
     })
   })
 
-  it('shows schedule-required snack when no workout days scheduled', async () => {
+  it('shows schedule-required snack and persistent error hint when no workout days scheduled', async () => {
     const { getSchedule } = require('../../lib/db')
     getSchedule.mockResolvedValue([])
 
@@ -316,8 +285,11 @@ describe('Settings Screen Acceptance', () => {
     })
 
     const { findByLabelText, findByText } = renderScreen(<Settings />)
-    const toggle = await findByLabelText('Workout Reminders')
 
+    // Persistent schedule hint visible up-front
+    expect(await findByText(/No workout days scheduled/)).toBeTruthy()
+
+    const toggle = await findByLabelText('Workout Reminders')
     fireEvent(toggle, 'valueChange', true)
 
     await waitFor(() => {
@@ -348,84 +320,53 @@ describe('Settings Screen Acceptance', () => {
     expect(await findByText(/Notifications blocked/)).toBeTruthy()
   })
 
-  it('shows persistent schedule hint in error color when no schedule exists', async () => {
-    const { getSchedule } = require('../../lib/db')
-    getSchedule.mockResolvedValue([])
+  // ── Export/Import & CSV ──────────────────────────────────
 
-    mockGetAppSetting.mockImplementation((key: string) => {
-      if (key === 'reminders_enabled') return Promise.resolve('false')
-      if (key === 'timer_sound_enabled') return Promise.resolve('true')
-      return Promise.resolve(null)
-    })
-
-    const { findByText } = renderScreen(<Settings />)
-    const hint = await findByText(/No workout days scheduled/)
-    expect(hint).toBeTruthy()
-  })
-
-  // ── Export Data Button ──────────────────────────────────
-
-  it('Export All button is pressable and has accessible label', async () => {
+  it('Export All and Import buttons are pressable with accessible labels', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
-    const btn = await findByLabelText('Export all data as JSON')
-    expect(btn).toBeTruthy()
-    fireEvent.press(btn)
+    const exportBtn = await findByLabelText('Export all data as JSON')
+    expect(exportBtn).toBeTruthy()
+    fireEvent.press(exportBtn)
     // Pressing triggers the export — just verify it doesn't crash
+
+    const importBtn = await findByLabelText('Import data')
+    expect(importBtn).toBeTruthy()
+    fireEvent.press(importBtn)
   })
 
-  it('Import button is pressable and has accessible label', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-    const btn = await findByLabelText('Import data')
-    expect(btn).toBeTruthy()
-    fireEvent.press(btn)
-  })
-
-  // ── CSV Export Buttons ──────────────────────────────────
-
-  it('CSV export buttons have accessible labels', async () => {
+  it('CSV export buttons and date range selector buttons have accessible labels', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
     expect(await findByLabelText('Export workouts as CSV')).toBeTruthy()
     expect(await findByLabelText('Export nutrition as CSV')).toBeTruthy()
     expect(await findByLabelText('Export body weight as CSV')).toBeTruthy()
     expect(await findByLabelText('Export body measurements as CSV')).toBeTruthy()
-  })
-
-  it('CSV date range selector buttons are visible', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
     expect(await findByLabelText('Date range 7 days')).toBeTruthy()
     expect(await findByLabelText('Date range 30 days')).toBeTruthy()
     expect(await findByLabelText('Date range 90 days')).toBeTruthy()
     expect(await findByLabelText('Date range All')).toBeTruthy()
   })
 
-  // ── Feedback & Reports Section ──────────────────────────────────
+  // ── Feedback & Reports ──────────────────────────────────
 
-  it('Report Bug button is pressable and navigates', async () => {
+  it.each([
+    { label: 'Report a bug', expected: { pathname: '/feedback', params: { type: 'bug' } } },
+    { label: 'Request a feature', expected: { pathname: '/feedback', params: { type: 'feature' } } },
+  ])('$label button navigates to feedback screen with correct params', async ({ label, expected }) => {
     const { findByLabelText } = renderScreen(<Settings />)
-    const btn = await findByLabelText('Report a bug')
+    const btn = await findByLabelText(label)
     fireEvent.press(btn)
 
     await waitFor(() => {
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        expect.objectContaining({ pathname: '/feedback', params: { type: 'bug' } })
-      )
+      expect(mockRouter.push).toHaveBeenCalledWith(expect.objectContaining(expected))
     })
   })
 
-  it('Feature Request button is pressable and navigates', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-    const btn = await findByLabelText('Request a feature')
-    fireEvent.press(btn)
+  it('Error log button shows count, renders as single text node, and navigates on press', async () => {
+    const { findByLabelText, findByText } = renderScreen(<Settings />)
 
-    await waitFor(() => {
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        expect.objectContaining({ pathname: '/feedback', params: { type: 'feature' } })
-      )
-    })
-  })
+    // Renders count as single text node (no View-wrapped text)
+    expect(await findByText('Errors (2)')).toBeTruthy()
 
-  it('Error log button shows count and navigates', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
     const btn = await findByLabelText(/View error log/)
     fireEvent.press(btn)
 
@@ -434,32 +375,15 @@ describe('Settings Screen Acceptance', () => {
     })
   })
 
-  it('Error log button renders count as single text node (no View-wrapped text)', async () => {
-    const { findByText } = renderScreen(<Settings />)
-    const label = await findByText('Errors (2)')
-    expect(label).toBeTruthy()
-  })
-
-  // ── Import from Strong Button ──────────────────────────────────
-
-  // Import from Strong was removed — feature no longer exists
-
   // ── Accessibility ──────────────────────────────────
 
-  it('all switches have accessibilityRole="switch"', async () => {
+  it('all switches have accessibilityRole="switch" and accessibilityHint text', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
     const timerSound = await findByLabelText('Timer Sound')
     const remindersToggle = await findByLabelText('Workout Reminders')
 
     expect(timerSound.props.accessibilityRole).toBe('switch')
     expect(remindersToggle.props.accessibilityRole).toBe('switch')
-  })
-
-  it('switches have accessibilityHint text', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-    const timerSound = await findByLabelText('Timer Sound')
-    const remindersToggle = await findByLabelText('Workout Reminders')
-
     expect(timerSound.props.accessibilityHint).toBeTruthy()
     expect(remindersToggle.props.accessibilityHint).toBeTruthy()
   })
