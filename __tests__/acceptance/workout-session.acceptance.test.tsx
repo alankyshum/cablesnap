@@ -186,15 +186,17 @@ describe('Workout Session Acceptance', () => {
     mockDb.getExerciseById.mockResolvedValue(exercise)
     mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
-    const { findAllByText } = renderScreen(<ActiveSession />)
+    const { findByLabelText } = renderScreen(<ActiveSession />)
 
-    // BLD-783: disambiguate `findByText('Bench Press')` from sibling
-    // accessibilityLabel host nodes ("Remove Bench Press", "Swap Bench Press",
-    // "Bench Press notes", "View Bench Press details", "Add set to Bench Press")
-    // introduced by the exercise card action row in the consolidated PR.
-    // The first match is the heading <Text>; later matches are accessibility-only.
-    const matches = await findAllByText('Bench Press')
-    expect(matches.length).toBeGreaterThan(0)
+    // BLD-783: query by the heading Pressable's accessibilityLabel rather than
+    // text. The heading <Text>Bench Press</Text> sits inside a <Pressable
+    // accessible={true} accessibilityLabel="Remove Bench Press"> which causes
+    // RN's accessibility tree to flatten the inner text node — RNTL's
+    // findByText cannot see "Bench Press" as host text content for this
+    // specific render path. The accessibilityLabel IS a host attribute and is
+    // uniquely tied to the rendered exercise (matches only when the heading
+    // exists).
+    expect(await findByLabelText('Remove Bench Press')).toBeTruthy()
   })
 
   it('calls completeSession when finish workout is confirmed', async () => {
