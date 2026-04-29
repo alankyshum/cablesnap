@@ -179,7 +179,7 @@ export default function CableSetupFinder() {
                 selected={mountFilter === pos}
                 onPress={() => toggleMount(pos)}
                 accessibilityRole="checkbox"
-                accessibilityState={{ checked: mountFilter === pos }}
+                accessibilityState={{ selected: mountFilter === pos }}
                 accessibilityLabel={`Mount position: ${MOUNT_POSITION_LABELS[pos]}`}
               >
                 {MOUNT_POSITION_LABELS[pos]}
@@ -208,7 +208,7 @@ export default function CableSetupFinder() {
                   selected={attachmentFilter === att}
                   onPress={() => toggleAttachment(att)}
                   accessibilityRole="checkbox"
-                  accessibilityState={{ checked: attachmentFilter === att }}
+                  accessibilityState={{ selected: attachmentFilter === att }}
                   accessibilityLabel={`Attachment: ${ATTACHMENT_LABELS[att]}`}
                 >
                   {ATTACHMENT_LABELS[att]}
