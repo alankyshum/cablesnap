@@ -1,0 +1,103 @@
+name: Wear OS M0 — Play APK GMS proof
+
+# Gate 3 — verifies Play-flavor APK ships GMS Wearable client classes.
+#
+# Purpose: positive verification that the **Play-flavor** APK (build type
+# `release`, NOT `releaseFdroid`) includes the GMS Wearable client classes
+# that the F-Droid flavor deliberately excludes. This is the symmetric
+# inverse of AC10b: AC10b proves F-Droid is GMS-Wearable-FREE; this workflow
+# proves Play is GMS-Wearable-PRESENT, so the variant split is functioning
+# end-to-end for the watch surface.
+#
+# This workflow exists separately from `scheduled-release.yml` because
+# scheduled-release performs side-effects (git tag, push, gh release).
+# This file: workflow_dispatch + pull_request only, contents: read only,
+# builds the Play-flavor APK, runs the GMS-presence gate, uploads the APK
+# as an artifact only. No tag, no push, no release.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/wear-m0-play-apk-proof.yml'
+      - 'plugins/with-wearos-module.js'
+      - 'modules/expo-wearos-bridge/**'
+      - 'android/app/build.gradle'
+
+permissions:
+  contents: read
+
+jobs:
+  play-apk-proof:
+    name: Build :app:assembleRelease + verify GMS-Wearable PRESENT
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate native project
+        run: npx expo prebuild --clean --platform android
+
+      - name: Boost Gradle JVM heap
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+
+      - name: Assemble :app assembleRelease (Play flavor) + verify GMS-Wearable PRESENT
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew :app:assembleRelease
+          cd ..
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::Expected $APK to exist after assembleRelease."
+            exit 1
+          fi
+          # Extract DEX files and search for GMS Wearable class descriptors.
+          # `unzip -l` only lists zip entries (classes.dex, classes2.dex, etc.)
+          # — individual Java class paths are compiled INTO the binary DEX
+          # format and invisible to zip-level listing. We must inspect DEX
+          # contents directly via `strings` on the extracted dex files.
+          TMPDIR_DEX=$(mktemp -d)
+          unzip -q -o "$APK" 'classes*.dex' -d "$TMPDIR_DEX"
+          GMS_COUNT=$(strings "$TMPDIR_DEX"/classes*.dex | grep -c 'com/google/android/gms/wearable' || true)
+          rm -rf "$TMPDIR_DEX"
+          echo "GMS Wearable class hits in $APK (via dex strings): $GMS_COUNT"
+          if [ "$GMS_COUNT" -eq 0 ]; then
+            echo "::error::Variant split broken — Play APK is missing GMS Wearable classes (expected count > 0)."
+            exit 1
+          fi
+          echo "Play APK GMS proof OK — F-Droid (excluded) and Play (included) variants are correctly differentiated."
+
+      - name: Upload Play APK as artifact (no release / no tag / no push)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cablesnap-play-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 7

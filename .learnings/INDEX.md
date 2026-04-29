@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
-Last updated: 2026-04-28
-Total learnings: 218
+Last updated: 2026-04-29
+Total learnings: 220
 
 ## How to Use This Knowledge Base
 
@@ -85,6 +85,7 @@ Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.ag
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-29 | BLD-844 | React 19 Gates React.act Behind NODE_ENV=test — Force It in jest.config.js | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-28 | BLD-765 | Per-Agent Git Worktrees Are Mandatory for Concurrent CableSnap Work | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-746 | Memory-CLI Path Discoverability — Documented vs Actual Locations Diverge | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-732 | CVD-Immune Intensity Encoding for Low-Cardinality Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
@@ -308,3 +309,4 @@ Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.ag
 | 2026-04-12 | BLD-13 | Never Execute Side Effects Inside setState Updaters | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-93 | expo-notifications Requires Explicit expo-modules-core | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-14 | BLD-93 | qa-cablesnap CODE-02 False Positive with sub.remove() | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
+| 2026-04-29 | BLD-832 | Skia postinstall EACCES — use optionalDependencies + restore | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |

@@ -1,0 +1,80 @@
+// expo-wearos-bridge — phone-side native module (Expo Modules convention).
+//
+// M0 status: empty Kotlin module class only. M1 lands the WearableListenerService,
+// DataLayerHelper, and DeviceEventEmitter wiring per PLAN-BLD-716.md
+// §"Phone-side bridge concurrency model".
+//
+// **F-Droid exclusion strategy (post-pivot, 2026-04-28).**
+// Originally this module was conditionally compiled only under a
+// `playRelease` product flavor. That approach is incompatible with the Expo
+// autolinker (`expo-modules-autolinking/.../ExpoAutolinkingPlugin.kt:100-164`),
+// which propagates the consumer app's `productFlavors`+`flavorDimensions`
+// into every Expo subproject. Once propagated, `:expo` ends up with a
+// per-flavor variant set, which breaks
+// `expo-modules-core/.../MavenPublicationExtension.kt:39
+// components.getByName("release")` at configure time. The autolinker has
+// ZERO buildType propagation, so the Play/F-Droid split now lives entirely
+// in `:app` via a `releaseFdroid initWith release` build type. This module
+// is therefore unconditional — the Config Plugin emits dependency excludes
+// in `:app`'s `releaseFdroid{Implementation,Runtime,Compile}Classpath` so
+// neither this library's classes nor its GMS Wearable transitive dep land
+// in the F-Droid APK. AC10b (zero `com.google.android.gms.wearable` classes)
+// is enforced by an `unzip -l` grep gate in CI. See
+// `.plans/PLAN-BLD-716.md` Implementation Addendum for full root cause.
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'com.persoack.cablesnap.wearbridge'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+if (expoModulesCorePlugin.exists()) {
+  apply from: expoModulesCorePlugin
+  applyKotlinExpoModulesCorePlugin()
+  // useCoreDependencies() wires `:expo-modules-core` onto this module's
+  // Kotlin compile classpath, providing `expo.modules.kotlin.*` (Module,
+  // ModuleDefinition, Name). Without it, compileReleaseKotlin fails with
+  // "Unresolved reference 'expo'". Pattern matches every working in-tree
+  // Expo module — see node_modules/expo-health-connect/android/build.gradle
+  // for the canonical applyKotlinExpoModulesCorePlugin/useCoreDependencies
+  // pairing.
+  useCoreDependencies()
+}
+
+android {
+  namespace 'com.persoack.cablesnap.wearbridge'
+
+  compileSdkVersion safeExtGet('compileSdkVersion', 36)
+
+  defaultConfig {
+    minSdkVersion safeExtGet('minSdkVersion', 26)
+    targetSdkVersion safeExtGet('targetSdkVersion', 35)
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  // GMS Wearable is a transitive dep of this library, NOT a root phone-app
+  // dep. The Config Plugin emits `releaseFdroid{Impl,Runtime,Compile}` excludes
+  // in :app for both `com.google.android.gms` (group) and `expo-wearos-bridge`
+  // (module), so neither this library's classes nor GMS Wearable land in
+  // app-releaseFdroid.apk. AC10b: zero gms.wearable classes in the F-Droid APK.
+  implementation "com.google.android.gms:play-services-wearable:18.2.0"
+}
+
+// NOTE: NOT `static def`. Groovy static methods lose access to the script
+// binding (where `rootProject` lives), which produces:
+//   "Apparent variable 'rootProject' was found in a static scope but doesn't
+//    refer to a local variable, static field or class."
+// at `gradle :wear:assembleRelease` configure-time. This pattern matches the
+// stock Expo `expo-modules-template` Android `build.gradle` exactly — see e.g.
+// node_modules/expo-modules-core/android/build.gradle which uses the same
+// non-static helper. Do not re-add `static` here.
+def safeExtGet(prop, fallback) {
+  rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}

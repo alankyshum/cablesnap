@@ -72,10 +72,10 @@ const sampleData: VolumeRow[] = [
 ]
 
 const sampleTrend: TrendRow[] = [
-  { week: 'W1', sets: 10 },
-  { week: 'W2', sets: 12 },
-  { week: 'W3', sets: 14 },
-  { week: 'W4', sets: 15 },
+  { week: '3/4', sets: 10 },
+  { week: '3/11', sets: 12 },
+  { week: '3/18', sets: 14 },
+  { week: '3/25', sets: 15 },
 ]
 
 beforeEach(() => {
@@ -217,6 +217,24 @@ describe('MuscleVolumeSegment — Scroll Container', () => {
     const { findByTestId, findByText } = renderScreen(<MuscleVolumeSegment />)
     expect(await findByText('No workouts this week. Complete a session to see muscle volume.')).toBeTruthy()
     expect(await findByTestId('muscle-volume-scroll')).toBeTruthy()
+  })
+})
+
+// --- Trend Chart Axes (BLD-848) ---
+
+describe('MuscleVolumeSegment — Trend Chart Axes', () => {
+  it('mounts the trend chart container when there is enough data', async () => {
+    const { findByTestId } = renderScreen(<MuscleVolumeSegment />)
+    // hasEnoughTrend requires >=2 weeks with sets>0 (sampleTrend has 4)
+    expect(await findByTestId('volume-trend-chart')).toBeTruthy()
+  })
+
+  it('renders bar chart scale caption with maxSets value', async () => {
+    const { findByLabelText } = renderScreen(<MuscleVolumeSegment />)
+    // maxSets is the larger of any sample row's sets and the largest MRV landmark.
+    // Default landmarks may exceed sample sets, so we just assert the scale row
+    // exists with a numeric upper bound (non-zero) — accessibility label format.
+    expect(await findByLabelText(/Scale: 0 to \d+ sets/)).toBeTruthy()
   })
 })
 

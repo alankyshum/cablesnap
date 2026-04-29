@@ -2,6 +2,13 @@
 
 ## Learnings
 
+### React 19 Gates `React.act` Behind `NODE_ENV === 'test'` — Force It in `jest.config.js`
+**Source**: BLD-844 (and prior attempt BLD-740) — ~900 acceptance tests crashed with `TypeError: actImplementation is not a function`
+**Date**: 2026-04-29
+**Context**: After upgrading to React 19.2 + RN 0.83.4, `@testing-library/react-native@13.3.3`'s `build/act.js` captures `typeof React.act === 'function' ? React.act : reactTestRenderer.act` at module-load time. React 19 only exports `React.act` (and `react-test-renderer`'s `act`) when `process.env.NODE_ENV === 'test'` at the moment `react` is first required — the export is gated for production-bundle size. Jest auto-sets `NODE_ENV=test` only when the parent env doesn't already define it; CI runners, IDE harnesses, and Paperclip's run harness pre-set `NODE_ENV=production` (or leave it inherited), bypassing the auto-set. Result: `React.act` is undefined, the captured `reactAct` is undefined, and every `render()` throws.
+**Learning**: The `npm test` script wraps jest in `cross-env NODE_ENV=test`, but that only protects invocations *through* the script. Direct `jest`, `npx jest`, IDE test runners, pre-commit hooks, and CI flows that bypass the npm script all skip the wrapper. The robust fix is to set `process.env.NODE_ENV = 'test'` at the **top of `jest.config.js`** — that's the earliest jest-controlled hook and runs before jest-expo resolves React, before `setupFiles`, and before any test file imports `@testing-library/react-native`. A test-setup shim (`global.act = require('react-dom/test-utils').act`) would not work because RNT captures `reactAct` at import time, before `setupFilesAfterEach` ever runs. Upgrading RNT to v14 (the React-19 track) is a major breaking change (async `render`/`fireEvent`/`act`, `HostElement` replaces `ReactTestInstance`, removed APIs) — way out of scope for a CI-unblocker fix.
+**Action**: Keep `process.env.NODE_ENV = 'test'` as the first non-comment statement in `jest.config.js`. Do not remove it during config refactors. When bumping React or React Native, re-run `npx jest __tests__/components/chip.test.tsx` directly (no `npm test` wrapper) to confirm the gate still works — if React's gating semantics change again, this test will fail loudly. If the gate is ever loosened (React stops requiring `NODE_ENV=test` to expose `act`), this line becomes a no-op and can stay until the next config cleanup. The `cross-env NODE_ENV=test jest` in `package.json` test scripts is now defense-in-depth; both can coexist safely.
+
 ### Metro Bundler Requires Explicit WASM Extension for expo-sqlite Web
 **Source**: BLD-14 — Pipeline halt: CableSnap build broken
 **Date**: 2026-04-12

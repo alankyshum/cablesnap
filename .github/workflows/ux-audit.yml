@@ -24,6 +24,10 @@ name: UX Audit (Daily Visual Capture)
 
 on:
   workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   schedule:
     # Daily at 09:00 UTC — matches BLD-481 spec ("daily 09:00 local"). UTC is
     # used because GH cron has no timezone support; agent triage absorbs the
@@ -39,8 +43,22 @@ permissions:
   contents: read
 
 jobs:
+  vocab-audit:
+    name: Vocab consistency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run vocab consistency audit
+        run: bash scripts/audit-vocab.sh
+
   capture:
     name: Capture scenario screenshots
+    # Only run the heavy screenshot capture on schedule or manual dispatch,
+    # not on every PR/push (where we only need the vocab audit).
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

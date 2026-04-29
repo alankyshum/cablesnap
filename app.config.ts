@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
-    versionCode: 70,
+    versionCode: 71,
   },
   web: {
     favicon: "./assets/favicon.png",
@@ -63,6 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "./plugins/with-release-signing",
+    "./plugins/with-wearos-module",
     [
       // Sentry Expo config plugin — wires the Android Gradle plugin so that
       // release builds upload source maps + debug-ids. The plugin falls back

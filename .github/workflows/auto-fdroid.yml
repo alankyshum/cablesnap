@@ -9,23 +9,43 @@ permissions:
 
 jobs:
   trigger-fdroid:
-    name: Trigger F-Droid update if APK uploaded
+    name: Trigger F-Droid update if F-Droid APK uploaded
     runs-on: ubuntu-latest
     steps:
-      - name: Check for APK asset and trigger F-Droid
+      - name: Check for F-Droid APK asset and trigger F-Droid pipeline
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Per BLD-736 (M0 build infrastructure), the scheduled-release
+          # workflow now publishes three APKs per release:
+          #   - cablesnap.apk         (Play-flavor phone APK)
+          #   - cablesnap-fdroid.apk  (F-Droid-flavor phone APK, GMS-free)
+          #   - cablesnap-wear.apk    (Wear OS standalone, Play-only)
+          # The F-Droid repo update only consumes cablesnap-fdroid.apk.
+          # We trigger only when that asset is present, so old releases (or
+          # manual ones missing the F-Droid build) don't accidentally
+          # publish the Play APK to F-Droid.
+          set -euo pipefail
           TAG="${{ github.event.release.tag_name }}"
-          echo "Release edited: $TAG"
+          echo "Release published: $TAG"
 
-          # Check if cablesnap.apk exists in release assets
-          APK_EXISTS=$(gh api repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets \
-            --jq '[.[] | select(.name == "cablesnap.apk")] | length')
+          FDROID_APK_EXISTS=$(gh api repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets \
+            --jq '[.[] | select(.name == "cablesnap-fdroid.apk")] | length')
 
-          if [ "$APK_EXISTS" -gt 0 ]; then
-            echo "APK found in release $TAG, triggering F-Droid update..."
+          if [ "$FDROID_APK_EXISTS" -gt 0 ]; then
+            echo "cablesnap-fdroid.apk found in release $TAG, triggering F-Droid update..."
             gh workflow run fdroid-release.yml -f tag="$TAG" --repo ${{ github.repository }}
           else
-            echo "No cablesnap.apk found in release $TAG, skipping."
+            # Backwards compatibility: legacy releases (pre-M0) only attach
+            # cablesnap.apk. Fall back to it so older releases still update
+            # the F-Droid repo, but log a warning so we notice when M0 lands
+            # and the new asset name should be present.
+            LEGACY_APK_EXISTS=$(gh api repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets \
+              --jq '[.[] | select(.name == "cablesnap.apk")] | length')
+            if [ "$LEGACY_APK_EXISTS" -gt 0 ]; then
+              echo "::warning::cablesnap-fdroid.apk missing — falling back to cablesnap.apk (pre-BLD-736 release)."
+              gh workflow run fdroid-release.yml -f tag="$TAG" --repo ${{ github.repository }}
+            else
+              echo "No phone APK found in release $TAG, skipping F-Droid update."
+            fi
           fi

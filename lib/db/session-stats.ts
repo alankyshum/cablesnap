@@ -664,7 +664,11 @@ export async function getMuscleVolumeTrend(
     if (idx >= 0 && idx < weeks) buckets[idx] += row.sets;
   }
 
-  return buckets.map((sets, i) => ({ week: `W${i + 1}`, sets }));
+  return buckets.map((sets, i) => {
+    const d = new Date(oldest);
+    d.setDate(d.getDate() + i * 7);
+    return { week: `${d.getMonth() + 1}/${d.getDate()}`, sets };
+  });
 }
 
 export async function getSessionDurationPRs(

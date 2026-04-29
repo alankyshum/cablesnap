@@ -1,0 +1,5 @@
+{
+  "round": 3,
+  "updatedAt": "2026-04-29T03:10:00.000Z",
+  "notes": "BLD-743 — Round 0 = original generator alt text; Round 1 = panel-recommended rewrites applied via scripts/apply-panel-rewrites.ts (commit cfe18bc0); Round 2 = severity-tier follow-up: hand-targeted rewrites for voltra-001 (cable-path positive cue), voltra-013 (allow scapular upward rotation), voltra-020 (allow natural scapular elevation overhead) per CEO ruling 0e827b56 + QD spec 50965182; Round 3 = Ship-9 ruling (CEO comment 9c5812a9): voltra-001 + voltra-020 dropped from pilot (deferred to BLD-843 safetyNote schema work); 8 surviving entries keep their round-2 alt text; cache hash-match re-stamp logic in scripts/curate-exercise-images.ts handles the round bump cleanly. Read by scripts/curate-exercise-images.ts (round lock-in / Guardrail #4) and stamped into every CURATION sign-off."
+}

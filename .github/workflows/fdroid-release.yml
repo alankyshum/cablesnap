@@ -24,13 +24,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download APK from GitHub Release
+      - name: Download F-Droid APK from GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Per BLD-736 the GitHub Release attaches three APKs:
+          #   cablesnap.apk          (Play-flavor)
+          #   cablesnap-fdroid.apk   (F-Droid-flavor, GMS-free)
+          #   cablesnap-wear.apk     (Wear OS, Play-only)
+          # The F-Droid repo MUST publish the GMS-free build. We try the
+          # F-Droid asset first, fall back to the legacy single-asset name
+          # for pre-M0 releases.
+          set -euo pipefail
           TAG="${{ inputs.tag }}"
-          echo "Downloading APK from release $TAG..."
-          gh release download "$TAG" --pattern "cablesnap.apk" --output cablesnap.apk
+          echo "Downloading F-Droid APK from release $TAG..."
+          if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx 'cablesnap-fdroid.apk'; then
+            gh release download "$TAG" --pattern "cablesnap-fdroid.apk" --output cablesnap.apk
+            echo "Pulled cablesnap-fdroid.apk and renamed to cablesnap.apk for the F-Droid repo."
+          else
+            echo "::warning::cablesnap-fdroid.apk missing — falling back to cablesnap.apk (pre-BLD-736 release)."
+            gh release download "$TAG" --pattern "cablesnap.apk" --output cablesnap.apk
+          fi
           ls -la cablesnap.apk
 
       - name: Restore F-Droid keystore

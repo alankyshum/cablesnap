@@ -1,0 +1,206 @@
+name: Wear OS UI tests
+
+# Path-filtered Wear OS Compose UI test job. Per BLD-736 / .plans/PLAN-BLD-716.md
+# §AC11 ("Wear OS Compose UI tests run on a path-filtered job triggered only by
+# changes under modules/expo-wearos-bridge/** or wear-template/**"), this
+# workflow runs ONLY on PRs and pushes that touch the watch surface — phone
+# tests stay on every PR via the existing test workflow.
+#
+# M0 (this PR) ships the harness only — no Wear UI tests exist yet. The
+# `:wear:assembleRelease` step proves the empty Wear OS app compiles with the
+# Config Plugin's prebuild output. M2..M5 will land actual Compose UI tests
+# under wear-template/src/androidTest/.
+#
+# GHA KVM spike (per CEO's M0 kickoff comment): GitHub Actions Linux runners
+# (ubuntu-22.04 / ubuntu-24.04) have shipped /dev/kvm since 2023-04 — see
+# https://github.blog/changelog/2023-02-23-hardware-accelerated-android-virtualization-on-actions-windows-and-linux-larger-hosted-runners/.
+# We probe for /dev/kvm explicitly at job start; if absent the emulator-based
+# test step is skipped with a clear notice and the job exits 0 with a job
+# summary marking it as manual-only fallback (per PLAN-BLD-716.md §M0
+# "GHA KVM-runner spike for Wear emulator (with manual-only fallback if KVM
+# unavailable)").
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'modules/expo-wearos-bridge/**'
+      - 'plugins/with-wearos-module.js'
+      - '__tests__/plugins/with-wearos-module.test.js'
+      - '.github/workflows/wear-tests.yml'
+  pull_request:
+    paths:
+      - 'modules/expo-wearos-bridge/**'
+      - 'plugins/with-wearos-module.js'
+      - '__tests__/plugins/with-wearos-module.test.js'
+      - '.github/workflows/wear-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  wear-build:
+    name: Wear OS — assemble + (optional) UI tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # Postinstall scripts MUST run: @shopify/react-native-skia's postinstall
+        # (`node scripts/install-libs.js`) downloads the prebuilt `libskia.a`
+        # archives into node_modules/@shopify/react-native-skia/libs/android/<abi>/.
+        # Without that, every CMake configure for any consumer of skia (incl.
+        # :app:assembleReleaseFdroid via matchingFallbacks) fails with
+        # "Could not find libskia.a … Run `npx install-skia` to fix this."
+        # Use --legacy-peer-deps to match the other CI workflows on this repo.
+        run: npm ci --legacy-peer-deps
+
+      - name: Run plugin unit tests
+        # The Config Plugin tests are pure JS (no RN runtime). Cheap to run
+        # and they catch most M0 regressions before we even spin up Gradle.
+        run: npx jest __tests__/plugins/with-wearos-module.test.js
+
+      - name: Generate native project
+        env:
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: npx expo prebuild --clean --platform android
+
+      - name: Verify wear template was copied to android/wear/
+        # Sanity check: the Config Plugin's withDangerousMod hook must have
+        # produced an android/wear/build.gradle.kts in the prebuild output.
+        # If this fails, the plugin is broken in CI but maybe passing locally.
+        run: |
+          set -euo pipefail
+          if [ ! -f android/wear/build.gradle.kts ]; then
+            echo "::error::android/wear/build.gradle.kts is missing after expo prebuild — Config Plugin did not run."
+            ls -la android/ || true
+            exit 1
+          fi
+          if ! grep -q ":wear" android/settings.gradle; then
+            echo "::error::android/settings.gradle does not include ':wear' — Config Plugin's settings.gradle patch did not run."
+            exit 1
+          fi
+          echo "Config Plugin output looks correct: android/wear/ exists, settings.gradle includes :wear."
+
+      - name: Boost Gradle JVM heap
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+
+      - name: Assemble :wear (Wear OS standalone APK)
+        # M0 ships an empty Wear OS app. Just proving it compiles + signs is
+        # the M0 acceptance gate for the watch APK.
+        #
+        # SENTRY_DISABLE_AUTO_UPLOAD=true: skip @sentry/react-native's
+        # source-map upload gradle task (sentry.gradle:11 honors this env
+        # var as the canonical CI escape hatch). This CI verifies build
+        # correctness only — Sentry source-map upload is environmentally
+        # optional and intentionally not configured for wear-tests.yml.
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        run: |
+          cd android
+          ./gradlew :wear:assembleRelease
+
+      - name: Assemble :app releaseFdroid + verify GMS-free (AC10b)
+        # AC10b is duplicated here so PRs touching the bridge / plugin / wear
+        # template can fail FAST without waiting for a full release build.
+        # Same check runs in scheduled-release.yml as the canonical gate.
+        #
+        # SENTRY_DISABLE_AUTO_UPLOAD=true: the :app:createBundle…SentryUpload
+        # gradle task fails without SENTRY_AUTH_TOKEN, which we deliberately
+        # do not propagate to this step. The official F-Droid build path
+        # (fdroid/metadata/com.persoack.cablesnap.yml) ships without Sentry
+        # secrets too — Sentry upload is environmentally optional. This CI
+        # gate verifies build correctness + AC10b GMS-free grep, not source
+        # map upload. Escape hatch documented at
+        # node_modules/@sentry/react-native/sentry.gradle:11.
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew :app:assembleReleaseFdroid
+          cd ..
+          APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::Expected $APK to exist after assembleReleaseFdroid."
+            exit 1
+          fi
+          GMS_TMPDIR=$(mktemp -d)
+          unzip -q -o "$APK" 'classes*.dex' -d "$GMS_TMPDIR"
+          GMS_COUNT=$(strings "$GMS_TMPDIR"/classes*.dex | grep -c 'com/google/android/gms/wearable' || true)
+          rm -rf "$GMS_TMPDIR"
+          echo "GMS Wearable class hits in $APK (via dex strings): $GMS_COUNT"
+          if [ "$GMS_COUNT" -ne 0 ]; then
+            echo "::error::AC10b violated — F-Droid APK contains $GMS_COUNT GMS Wearable class entries."
+            exit 1
+          fi
+          echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
+
+      - name: KVM availability spike
+        id: kvm
+        # Probe for /dev/kvm. Standard ubuntu-latest runners enabled nested
+        # virtualization for /dev/kvm in 2023-04. If for some reason it's
+        # absent on this runner image, we still want the job to succeed but
+        # mark the Wear UI test step as manual-only fallback (per the plan).
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo "kvm_present=true" >> "$GITHUB_OUTPUT"
+            echo "/dev/kvm present — Wear OS emulator-based UI tests can run on this runner."
+          else
+            echo "kvm_present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::/dev/kvm absent on this runner — Wear UI tests will be skipped (manual-only fallback per PLAN-BLD-716.md M0)."
+          fi
+
+      - name: Wear OS UI tests (Compose) — emulator
+        if: steps.kvm.outputs.kvm_present == 'true'
+        # M0 has no Compose UI tests yet — this step is wired for M2+ when
+        # wear-template/src/androidTest/ lands. Today this is a no-op task
+        # name that resolves to no test sources, so it succeeds trivially.
+        # Per AC11 the matrix is: path-filtered, runs on KVM-enabled
+        # runners only, manual-only fallback otherwise.
+        run: |
+          echo "::notice::Wear OS UI tests harness ready. M0 ships no test sources yet — M2+ will land Compose UI tests under wear-template/src/androidTest/."
+          # When androidTest sources land, replace the next line with
+          #   ./gradlew :wear:connectedAndroidTest
+          # (with reactivecircus/android-emulator-runner@v2 supplying the
+          # Wear OS 4 emulator image on this runner).
+          true
+
+      - name: Manual-only fallback notice
+        if: steps.kvm.outputs.kvm_present == 'false'
+        run: |
+          {
+            echo "## Wear OS UI tests — manual fallback required"
+            echo ""
+            echo "This runner does not expose /dev/kvm, so the Wear OS"
+            echo "emulator cannot start. Per PLAN-BLD-716.md §M0,"
+            echo "Wear UI tests are manual-only on this run."
+            echo ""
+            echo "To re-enable automatic runs, the workflow must move to"
+            echo "a runner image that exposes /dev/kvm (default standard"
+            echo "ubuntu-latest runners do as of 2023-04)."
+          } >> "$GITHUB_STEP_SUMMARY"

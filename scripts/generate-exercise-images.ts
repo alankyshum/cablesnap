@@ -30,6 +30,7 @@ import { execFileSync } from "node:child_process";
 import { seedExercises } from "../lib/seed";
 import { PILOT_EXERCISE_IDS } from "../assets/exercise-illustrations/pilot-ids";
 import type { Exercise } from "../lib/types";
+import { ALT_TEXT_SYSTEM_PROMPT, altTextUserPrompt } from "./exercise-prompts";
 
 const ROOT = path.resolve(__dirname, "..");
 const ASSET_DIR = path.join(ROOT, "assets/exercise-illustrations");
@@ -158,6 +159,9 @@ async function callOpenAI(prompt: string, apiKey: string): Promise<GenerationRes
 async function describePose(position: "start" | "end", ex: Exercise, apiKey: string): Promise<string> {
   // Separate small text call for substantive accessibility alt-text.
   // Kept in the same script so one command produces both image and alt.
+  // Prompt strings are imported from `./exercise-prompts.ts` so the
+  // alt-text-only regen path (`scripts/regen-alt-text.ts`) cannot drift.
+  // See QD comment 556a429b on BLD-743 for the drift-prevention requirement.
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -168,14 +172,17 @@ async function describePose(position: "start" | "end", ex: Exercise, apiKey: str
       model: "gpt-4o-mini",
       temperature: 0.2,
       messages: [
-        {
-          role: "system",
-          content:
-            "You write 1-2 sentence descriptive alt-text for an exercise illustration. Describe body position, cable path, and key joint angles. No second person, no bullet points.",
-        },
+        { role: "system", content: ALT_TEXT_SYSTEM_PROMPT },
         {
           role: "user",
-          content: `Exercise: ${ex.name} (${ex.category}). Attachment: ${ex.attachment}. Position: ${position}. Instructions: ${ex.instructions}`,
+          content: altTextUserPrompt({
+            exerciseName: ex.name,
+            category: ex.category,
+            mountPosition: ex.mount_position ?? "any",
+            attachment: ex.attachment ?? "handle",
+            position,
+            instructions: ex.instructions,
+          }),
         },
       ],
     }),

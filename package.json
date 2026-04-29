@@ -36,7 +36,7 @@
     "screenshots:frame": "tsx scripts/generate-store-screenshots.ts",
     "screenshots": "npm run screenshots:raw && npm run screenshots:frame",
     "prepare": "husky || true",
-    "postinstall": "npx --no-install patch-package"
+    "postinstall": "npx --no-install patch-package && node scripts/skia-setup.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -45,7 +45,6 @@
     "@react-native-community/netinfo": "11.5.2",
     "@sentry/react-native": "^8.8.0",
     "@shopify/flash-list": "2.0.2",
-    "@shopify/react-native-skia": "2.6.2",
     "@tanstack/react-query": "^5.99.2",
     "drizzle-orm": "^0.45.2",
     "expo": "~55.0.15",
@@ -131,5 +130,8 @@
       "eslint --max-warnings=0"
     ]
   },
-  "private": true
+  "private": true,
+  "optionalDependencies": {
+    "@shopify/react-native-skia": "2.6.2"
+  }
 }

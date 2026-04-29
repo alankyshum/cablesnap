@@ -62,3 +62,17 @@ jobs:
 
       - name: Verify exercise illustration bundle size (BLD-561)
         run: bash scripts/verify-exercise-illustrations-size.sh
+
+      - name: Verify curation gate (BLD-743)
+        # Deterministic safety-keyword discriminator over CURATION.md
+        # sign-off blocks. Single source of truth for the gate logic is
+        # scripts/curate-exercise-images.ts (gateBlocks); this CI step
+        # imports that function via scripts/check-curation-gate.ts.
+        # Skip when CURATION.md is absent (e.g., transient state on
+        # branches before BLD-743 lands).
+        run: |
+          if [ -f assets/exercise-illustrations/CURATION.md ]; then
+            npx tsx scripts/check-curation-gate.ts
+          else
+            echo "(no CURATION.md — skipping BLD-743 curation gate)"
+          fi

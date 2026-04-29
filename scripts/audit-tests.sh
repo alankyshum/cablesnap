@@ -162,7 +162,7 @@ else
   RUNTIME_LOG="$(mktemp)"
   START_EPOCH=$(date +%s)
   set +e
-  ( cd "$PROJECT_ROOT" && npm test --silent -- --silent ) >"$RUNTIME_LOG" 2>&1
+  ( cd "$PROJECT_ROOT" && NODE_ENV=test npx jest --silent ) >"$RUNTIME_LOG" 2>&1
   TEST_EXIT=$?
   set -e
   END_EPOCH=$(date +%s)

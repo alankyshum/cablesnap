@@ -56,7 +56,7 @@ if [[ "$stash_count" -gt 0 ]]; then
 fi
 
 # 3. Working tree must be clean apart from the target plan file.
-dirty="$(git status --porcelain | grep -v -E "^(\?\?| M| A) ?${PLAN_FILE//./\\.}\$" || true)"
+dirty="$(git status --porcelain -uall | grep -v -E "^(\?\?| M| A) ?${PLAN_FILE//./\\.}\$" || true)"
 if [[ -n "$dirty" ]]; then
   echo "FATAL: working tree has changes other than $PLAN_FILE:" >&2
   echo "$dirty" >&2

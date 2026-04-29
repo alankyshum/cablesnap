@@ -9,6 +9,7 @@ import { MUSCLE_LABELS } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import { useFloatingTabBarHeight } from "./FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useMuscleVolumeChartWidth } from "@/hooks/useMuscleVolumeChartWidth";
 import { useMuscleVolume } from "@/hooks/useMuscleVolume";
 import type { VolumeRow } from "@/hooks/useMuscleVolume";
 import { getVolumeStatus } from "../lib/volume-landmarks";
@@ -102,9 +103,9 @@ export default function MuscleVolumeSegment() {
   // Match sibling Progress segments (Workouts/Nutrition): horizontal padding lives on
   // the scroll container via layout.horizontalPadding, not on individual cards.
   const horizontalPadding = layout.horizontalPadding ?? 16;
-  const chartWidth = layout.atLeastMedium
-    ? (layout.width - horizontalPadding * 2 - 12) / 2 - 32
-    : layout.width - horizontalPadding * 2 - 16;
+  // Chart width math is in useMuscleVolumeChartWidth (kept hooked out so the
+  // main file stays under the FTA 300-line decomposition cap).
+  const chartWidth = useMuscleVolumeChartWidth();
 
   // ---- Render ----
 
