@@ -43,7 +43,7 @@
     "@gorhom/bottom-sheet": "^5.2.9",
     "@quidone/react-native-wheel-picker": "^1.6.4",
     "@react-native-community/netinfo": "11.5.2",
-    "@sentry/react-native": "^8.8.0",
+    "@sentry/react-native": "^8.9.2",
     "@shopify/flash-list": "2.0.2",
     "@tanstack/react-query": "^5.99.2",
     "drizzle-orm": "^0.45.2",
