@@ -121,6 +121,7 @@ export function createSession(overrides: Partial<WorkoutSession> = {}): WorkoutS
     notes: '',
     rating: null,
     edited_at: null,
+    import_batch_id: null,
     ...overrides,
   }
 }

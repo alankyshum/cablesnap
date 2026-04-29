@@ -165,7 +165,7 @@ describe("convertWeights", () => {
   it("converts lbs to kg", () => {
     const sessions = [
       { date: 0, name: "Test", durationSeconds: null, sets: [
-        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as const, weight: 225, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
+        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: 225, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
       ] },
     ];
     const converted = convertWeights(sessions, "lbs");
@@ -176,7 +176,7 @@ describe("convertWeights", () => {
   it("preserves kg weights unchanged", () => {
     const sessions = [
       { date: 0, name: "Test", durationSeconds: null, sets: [
-        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as const, weight: 100, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
+        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: 100, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
       ] },
     ];
     const converted = convertWeights(sessions, "kg");
@@ -186,7 +186,7 @@ describe("convertWeights", () => {
   it("handles null weights", () => {
     const sessions = [
       { date: 0, name: "Test", durationSeconds: null, sets: [
-        { exerciseRawName: "Push-ups", matchedExerciseId: null, matchConfidence: null as const, weight: null, reps: 20, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
+        { exerciseRawName: "Push-ups", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: null, reps: 20, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
       ] },
     ];
     const converted = convertWeights(sessions, "lbs");

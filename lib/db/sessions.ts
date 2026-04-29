@@ -153,6 +153,7 @@ export async function startSession(
     notes: "",
     rating: null,
     edited_at: null,
+    import_batch_id: null,
   };
 }
 
