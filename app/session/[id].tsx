@@ -383,13 +383,7 @@ export default function ActiveSession() {
         onOpenRestSettings={handleOpenRestSettings}
         onDismiss={handleToolboxDismiss}
       />
-      <BodyweightModifierSheet
-        sheetRef={bwModifierSheetRef}
-        initialModifierKg={bwModifierInitial}
-        unit={unit}
-        onDone={handleSaveBodyweightModifier}
-        onDismiss={handleDismissBodyweightModifier}
-      />
+      <BodyweightModifierSheet sheetRef={bwModifierSheetRef} initialModifierKg={bwModifierInitial} unit={unit} onDone={handleSaveBodyweightModifier} onDismiss={handleDismissBodyweightModifier} />
       <VariantPickerSheet isVisible={variant.isVisible} onClose={variant.handleClose} onConfirm={variant.handleConfirm} {...variant.initialValues} />
       <BodyweightGripPickerSheet isVisible={bodyweightGrip.isVisible} onClose={bodyweightGrip.handleClose} onConfirm={bodyweightGrip.handleConfirm} {...bodyweightGrip.initialValues} />
     </>

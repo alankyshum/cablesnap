@@ -9,6 +9,9 @@ import * as path from "path";
 
 const src = [
   fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"), "utf-8"),
+  // BLD-822: setTable JSX + headerRow/colSet/colLabel styles extracted to sibling
+  // for FTA decomposition (ExerciseGroupCard ≤300 lines).
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupSetTable.tsx"), "utf-8"),
   fs.readFileSync(path.resolve(__dirname, "../../components/session/GroupCardHeader.tsx"), "utf-8"),
   fs.readFileSync(path.resolve(__dirname, "../../components/session/SetRow.tsx"), "utf-8"),
 ].join("\n");
