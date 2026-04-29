@@ -170,9 +170,13 @@ export async function getVariantSetCount(
   scope?: VariantScope,
 ): Promise<number> {
   const variantSql = buildVariantSql(scope);
-  // When scope is empty, retain the original "any variant logged" gate so the
-  // default badge still reports total variant adoption on this exercise.
-  const adoptionGate = variantSql.params.length === 0 || variantSql.sql === ""
+  // When scope is genuinely empty (no constrained dimensions), retain the
+  // original "any variant logged" gate so the default badge reports total
+  // variant adoption. We check sql === "" rather than params.length === 0
+  // because explicit-null scopes like {attachment: null} produce non-empty SQL
+  // ("AND ws.attachment IS NULL") but empty params — using params.length would
+  // incorrectly trigger the adoption gate for a legitimate filter.
+  const adoptionGate = variantSql.sql === ""
     ? " AND (ws.attachment IS NOT NULL OR ws.mount_position IS NOT NULL)"
     : "";
   const row = await queryOne<{ n: number | null }>(

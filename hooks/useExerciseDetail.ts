@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import {
   getExerciseById,
@@ -45,6 +45,10 @@ export function useExerciseDetail(id: string | undefined) {
   // Empty object = "All variants" (default, current behavior).
   const [variantScope, setVariantScopeState] = useState<VariantScope>({});
   const [variantTotal, setVariantTotal] = useState<number>(0);
+  // Ref mirror so useFocusEffect always reads the latest scope on re-entry
+  // without re-creating the callback (which would re-trigger the effect on
+  // every scope change, causing unnecessary reloads on blur→return).
+  const variantScopeRef = useRef<VariantScope>(variantScope);
 
   const loadRecords = useCallback(async (eid: string, scope?: VariantScope) => {
     setRecordsLoading(true); setRecordsError(false);
@@ -85,6 +89,7 @@ export function useExerciseDetail(id: string | undefined) {
   // the exercise-detail screen stay consistent (BLD-788 review feedback).
   const setVariantScope = useCallback(
     (next: VariantScope) => {
+      variantScopeRef.current = next;
       setVariantScopeState(next);
       if (id) {
         loadRecords(id, next);
@@ -104,16 +109,16 @@ export function useExerciseDetail(id: string | undefined) {
 
   useFocusEffect(useCallback(() => {
     if (!id) return;
+    const scope = variantScopeRef.current;
     getExerciseById(id).then(setExercise);
     getBodySettings().then((s) => setUnit(s.weight_unit));
-    loadRecords(id, variantScope);
-    loadChart(id, variantScope);
+    loadRecords(id, scope);
+    loadChart(id, scope);
     loadHistory(id);
-    // Default-state badge: count of any-variant-logged sets on this exercise.
-    // Active-state badge count is updated through setVariantScope.
-    loadVariantTotal(id);
-    // variantScope intentionally omitted — setVariantScope handles in-screen
-    // changes; focus-effect only re-runs on screen re-entry.
+    // Badge count scoped to the active filter (or default "any variant" when
+    // scope is empty). Uses the ref so blur→return always reloads with the
+    // user's last-selected filter, not the stale initial closure value.
+    loadVariantTotal(id, scope);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, loadRecords, loadChart, loadHistory, loadVariantTotal]));
 

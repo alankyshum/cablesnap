@@ -162,6 +162,28 @@ describe('BLD-788 variant scope filter', () => {
       expect(sql).toMatch(/ws\.attachment\s+IS\s+NOT\s+NULL\s+OR\s+ws\.mount_position\s+IS\s+NOT\s+NULL/);
       expect(helpers.queryOne.mock.calls[0][1]).toEqual(['ex-3']);
     });
+
+    // BLD-788 review blocker: explicit-null scope ({attachment: null}) must NOT
+    // trigger the adoption gate. buildVariantSql returns non-empty SQL but empty
+    // params for IS NULL predicates — the old params.length check was wrong.
+    test('explicit-null attachment scope does NOT trigger adoption gate', async () => {
+      helpers.queryOne.mockResolvedValueOnce({ n: 3 });
+      await getVariantSetCount('ex-4', { attachment: null });
+      const sql = helpers.queryOne.mock.calls[0][0] as string;
+      // Should have IS NULL predicate from the scope, NOT the adoption gate
+      expect(sql).toMatch(/ws\.attachment\s+IS\s+NULL/);
+      expect(sql).not.toMatch(/ws\.attachment\s+IS\s+NOT\s+NULL\s+OR\s+ws\.mount_position\s+IS\s+NOT\s+NULL/);
+      expect(helpers.queryOne.mock.calls[0][1]).toEqual(['ex-4']);
+    });
+
+    test('explicit-null mount_position scope does NOT trigger adoption gate', async () => {
+      helpers.queryOne.mockResolvedValueOnce({ n: 1 });
+      await getVariantSetCount('ex-5', { mount_position: null });
+      const sql = helpers.queryOne.mock.calls[0][0] as string;
+      expect(sql).toMatch(/ws\.mount_position\s+IS\s+NULL/);
+      expect(sql).not.toMatch(/ws\.attachment\s+IS\s+NOT\s+NULL\s+OR\s+ws\.mount_position\s+IS\s+NOT\s+NULL/);
+      expect(helpers.queryOne.mock.calls[0][1]).toEqual(['ex-5']);
+    });
   });
 
   // ── chart functions: variant-scope filtering ────────────────────
