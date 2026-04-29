@@ -23,6 +23,24 @@ if [ -f "scripts/verify-exercise-illustrations-size.sh" ]; then
   fi
 fi
 
+# ─── Curation Gate (BLD-743 — CEO Option A, comment 90c5899b) ──
+# Blocks push if any pilot exercise has a sign-off block in CURATION.md
+# whose `gateBlocks(verdict, safetyClass)` returns true (REJECT,
+# NEEDS_RESEARCH, UNKNOWN, or APPROVE_WITH_CHANGES classified SAFETY by
+# the deterministic discriminator). Single source of truth for the gate
+# logic is `scripts/curate-exercise-images.ts`; this hook calls
+# `scripts/check-curation-gate.ts` which imports the same function.
+if [ -f "scripts/check-curation-gate.ts" ] && [ -f "assets/exercise-illustrations/CURATION.md" ]; then
+  echo "🩺 Verifying exercise curation gate (BLD-743)..."
+  if ! npx tsx scripts/check-curation-gate.ts; then
+    echo ""
+    echo "Curation gate BLOCKED push. Address findings in CURATION.md and re-run:"
+    echo "  OPENAI_API_KEY=… PERPLEXITY_API_KEY=… npx tsx scripts/curate-exercise-images.ts"
+    echo "To skip this check (governance escape hatch only): git push --no-verify"
+    exit 1
+  fi
+fi
+
 # ─── Test Budget Gate ────────────────────────────────────────────
 # Blocks push if test count exceeds budget (1800 test cases)
 if [ -f "scripts/audit-tests.sh" ]; then

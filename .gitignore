@@ -4,6 +4,8 @@
 node_modules/
 node_modules
 
+# BLD-743 — local LLM-call cache for scripts/curate-exercise-images.ts
+.cache/
 # Expo
 .expo/
 dist/
