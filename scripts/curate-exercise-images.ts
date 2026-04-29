@@ -112,18 +112,12 @@ const SAFETY_KEYWORDS: readonly string[] = Object.freeze([
 ]);
 
 /**
- * Tokens used by the panel's "Safety Concerns" section to grade severity.
- * Anything above NONE counts as a real safety concern even if no keyword
- * from the SAFETY_KEYWORDS list happens to appear (defense in depth).
+ * (Severity tiering supersedes the prior `NON_NONE_RATINGS` constant —
+ * `classifySafety` now distinguishes MEDIUM/HIGH/CRITICAL from LOW
+ * inline via word-boundary regex; see `SafetyClass` below.)
  */
-const NON_NONE_RATINGS: readonly string[] = Object.freeze([
-  "LOW",
-  "MEDIUM",
-  "HIGH",
-  "CRITICAL",
-]);
 
-export type SafetyClass = "SAFETY" | "REFINEMENT" | "N/A";
+export type SafetyClass = "SAFETY_HIGH" | "SAFETY_LOW" | "REFINEMENT" | "N/A";
 
 /**
  * Extract the verbatim "Safety Concerns" section from a panel output.
@@ -149,40 +143,62 @@ export function extractSafetySection(panel: string): string {
 }
 
 /**
- * Deterministic safety/refinement discriminator (BLD-743 Guardrail #1).
+ * Severity-tiered safety/refinement discriminator (BLD-743 — CEO ruling
+ * comment 0e827b56, ratifying QD's spec from comment 50965182).
  *
- * Rule (verbatim from CEO comment 90c5899b):
- *   SAFETY if Safety Concerns non-empty AND (any keyword OR any rating in
- *           {LOW, MEDIUM, HIGH, CRITICAL} other than NONE)
- *   REFINEMENT otherwise
+ * Returns one of four classes:
+ *   - SAFETY_HIGH  — section contains a MEDIUM/HIGH/CRITICAL severity
+ *                    rating (matched case-sensitively against the
+ *                    prompt's uppercase grammar; lowercase prose words
+ *                    like "too high" must NOT trigger). Catches
+ *                    `LOW to MEDIUM` correctly because the bare uppercase
+ *                    `MEDIUM` token is present. BLOCKS merge when paired
+ *                    with APPROVE_WITH_CHANGES.
+ *   - SAFETY_LOW   — only LOW rating(s) are present, OR a SAFETY_KEYWORD
+ *                    is present without an explicit rating. ALLOWED
+ *                    through the gate as a refinement-with-coaching-note.
+ *   - REFINEMENT   — section is non-empty but has no keywords and no
+ *                    severity ratings (pure stylistic feedback).
+ *   - N/A          — section absent. Fail-closed: gateBlocks() treats
+ *                    N/A on AWC as blocking (panel didn't follow format).
  *
- * Returns N/A only when the panel did not emit a Safety Concerns section
- * at all (this should never happen for an APPROVE_WITH_CHANGES verdict
- * given the canonical prompt; treated as SAFETY by gateBlocks() for
- * fail-closed behavior).
+ * Edge cases explicitly handled (CEO + QD asked for unit-test fixtures):
+ *   - "LOW to MEDIUM"  → SAFETY_HIGH (MEDIUM token present)
+ *   - "NONE–LOW"       → SAFETY_LOW  (no MEDIUM+, has LOW + likely keyword)
+ *   - "Severity: NONE" → REFINEMENT  (NONE rating ignored; if no keywords
+ *                                     either, drops through to REFINEMENT)
  */
 export function classifySafety(panel: string): SafetyClass {
   const section = extractSafetySection(panel);
-  if (!section) return "N/A";
-  // Strip any "NONE" tokens before scanning so they don't false-trigger
-  // the rating regex (panel sometimes writes "Severity: NONE" for a
-  // non-issue).
-  const upper = section.toUpperCase();
+  if (!section || section.trim() === "") return "N/A";
+
+  // Strip explicit "NONE" tokens before scanning so they don't false-match
+  // any future tooling that looks for severity tokens broadly.
+  // Severity-rating tokens MUST match the prompt's uppercase grammar
+  // (LOW/MEDIUM/HIGH/CRITICAL/NONE). Case-insensitive matching produces
+  // false positives on prose words like "too high" or "too low"; observed
+  // with voltra-029 (BLD-743 round-2 follow-up). The canonical
+  // EXPERT_SYSTEM_PROMPT in review.py emits ratings in uppercase.
+  const hasMediumPlus = /\b(?:MEDIUM|HIGH|CRITICAL)\b/.test(section);
+  if (hasMediumPlus) return "SAFETY_HIGH";
+
+  const hasLow = /\bLOW\b/.test(section);
   const keywordRe = new RegExp(
     `\\b(?:${SAFETY_KEYWORDS.map((k) => k.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")).join("|")})\\w*\\b`,
     "i",
   );
   const hasKeyword = keywordRe.test(section);
-  // Match a rating token preceded by whitespace/colon/dash/parenthesis so
-  // we don't pick up substrings of other words.
-  const ratingRe = new RegExp(
-    `(?:^|[\\s:\\-\\(])(?:${NON_NONE_RATINGS.join("|")})\\b`,
-    "i",
-  );
-  // The regex above matches against the upper-cased section so casing is
-  // already normalized; but use upper anyway for clarity.
-  const hasRating = ratingRe.test(upper);
-  return hasKeyword || hasRating ? "SAFETY" : "REFINEMENT";
+
+  // LOW rating with or without keyword → SAFETY_LOW (the panel flagged
+  // a real but minor risk).
+  if (hasLow) return "SAFETY_LOW";
+
+  // Keyword without explicit rating → conservatively classify SAFETY_LOW
+  // (panel mentioned a risk vocabulary item even if not severity-rated).
+  if (hasKeyword) return "SAFETY_LOW";
+
+  // Non-empty section with no risks named: pure REFINEMENT.
+  return "REFINEMENT";
 }
 
 type RoundFile = { round: number; updatedAt: string; notes?: string };
@@ -452,11 +468,14 @@ export function gateBlocks(verdict: string, safetyClass: SafetyClass): boolean {
   const v = verdict.toUpperCase().trim();
   if (v === "REJECT" || v === "NEEDS_RESEARCH" || v === "UNKNOWN") return true;
   if (v === "APPROVE_WITH_CHANGES") {
-    // Fail-closed: a missing Safety Concerns section (N/A) is treated as
-    // SAFETY for blocking purposes. The canonical prompt always emits the
-    // section; absence indicates the panel did not follow format and the
-    // verdict is therefore not trustworthy.
-    return safetyClass !== "REFINEMENT";
+    // Severity tiering (CEO ruling 0e827b56, QD spec 50965182):
+    //   - SAFETY_HIGH  → BLOCK (MEDIUM/HIGH/CRITICAL named risk)
+    //   - SAFETY_LOW   → PASS  (LOW-rated risk or unrated keyword;
+    //                            ship as-is with coaching-note follow-up)
+    //   - REFINEMENT   → PASS  (no risks named, pure stylistic feedback)
+    //   - N/A          → BLOCK (panel did not emit Safety Concerns section
+    //                            — fail-closed; verdict not trustworthy)
+    return safetyClass === "SAFETY_HIGH" || safetyClass === "N/A";
   }
   return false;
 }
@@ -480,7 +499,7 @@ function renderSignOff(
   const safetyExcerpt =
     safetySection.length > 0
       ? safetySection
-      : "_(panel did not emit a Safety Concerns section — treated as SAFETY for fail-closed gating)_";
+      : "_(panel did not emit a Safety Concerns section — classified N/A and fail-closed BLOCK on AWC)_";
   return [
     `## ${ex.id} — ${ex.name}`,
     `- Round: **${round}**`,
@@ -516,10 +535,10 @@ function rewriteCuration(blocks: string[], roundFile: RoundFile): void {
     ``,
     `_Generated by \`scripts/curate-exercise-images.ts\` — substitute reviewer per CEO Option B (BLD-743 comment 447c9f3a). \`EXPERT_SYSTEM_PROMPT\` loaded at runtime from \`.claude/skills/review--sports-science/scripts/review.py\` to prevent silent drift (per QD comment 556a429b)._`,
     ``,
-    `**Curation gate (BLD-743 — CEO Option A, comment 90c5899b):**`,
+    `**Curation gate (BLD-743 — CEO Option C with severity tiering, comment 0e827b56; QD spec 50965182):**`,
     `- Manifest alt-text round: **${roundFile.round}** (\`manifest.round.json\` updated ${roundFile.updatedAt})`,
-    `- Discriminator: deterministic regex over the panel's "Safety Concerns" section (frozen \`SAFETY_KEYWORDS\` list + non-NONE rating tokens). See \`scripts/curate-exercise-images.ts\` \`classifySafety()\`.`,
-    `- Gate logic: \`gateBlocks(verdict, safetyClass)\` — blocks on REJECT, NEEDS_RESEARCH, UNKNOWN, or APPROVE_WITH_CHANGES classified as SAFETY. APPROVE_WITH_CHANGES classified as REFINEMENT is allowed.`,
+    `- Discriminator: severity-tiered regex over the panel's "Safety Concerns" section. Tiers: \`SAFETY_HIGH\` (MEDIUM/HIGH/CRITICAL token), \`SAFETY_LOW\` (LOW token or unrated \`SAFETY_KEYWORDS\` mention), \`REFINEMENT\` (non-empty, no risk named), \`N/A\` (section absent). See \`scripts/curate-exercise-images.ts\` \`classifySafety()\`.`,
+    `- Gate logic: \`gateBlocks(verdict, safetyClass)\` — blocks on REJECT, NEEDS_RESEARCH, UNKNOWN, or APPROVE_WITH_CHANGES with \`SAFETY_HIGH\`/\`N/A\`. APPROVE_WITH_CHANGES with \`SAFETY_LOW\` or \`REFINEMENT\` is allowed (ship as-is; coaching-note follow-ups for SAFETY_LOW tracked in \`coachingNotes\` field).`,
     `- Verifier: \`scripts/check-curation-gate.ts\` (wired into \`.husky/pre-push\` and the Bundle Gate CI step).`,
     ``,
     ...blocks,
@@ -663,12 +682,22 @@ async function main(): Promise<void> {
           round: roundFile.round,
         });
       } else if (cacheEntry!.round !== roundFile.round) {
-        throw new Error(
-          `[curate] ${id}: round lock-in violation. Cache round=${cacheEntry!.round}; manifest round=${roundFile.round}. ` +
-            `The proposal hash matched (alt text unchanged), but the manifest round was bumped without a corresponding alt-text change — ` +
-            `one of the inputs is wrong. Either revert the round bump or run \`CURATE_REFRESH=1 npx tsx scripts/curate-exercise-images.ts --ids ${id}\` ` +
-            `to recall the panel and re-stamp the cache.`,
+        // Hash matched (alt text unchanged for THIS exercise) but the
+        // global manifest round was bumped because OTHER exercises in
+        // the same batch had alt-text changes. The cached panel output
+        // is still valid for this exercise — re-stamp the cache to the
+        // new round and continue. (BLD-743 — supports CEO/QD severity-
+        // tiering follow-up where only voltra-001/-013/-020 needed
+        // alt-text rewrites in round 2.)
+        console.log(
+          `[curate] ${id}: hash match; re-stamping cache round ${cacheEntry!.round} → ${roundFile.round} (alt text unchanged)`,
         );
+        saveCache(id, {
+          panel,
+          modelUsed,
+          proposalHash,
+          round: roundFile.round,
+        });
       }
     } else if (!inSubset || skipUncached) {
       console.log(

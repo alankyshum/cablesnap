@@ -70,16 +70,30 @@ export function parseCurationBlocks(text: string): ParsedBlock[] {
     const round = roundMatch ? Number(roundMatch[1]) : null;
 
     // Curation gate line: `- Curation gate: ✅ PASS (verdict=`X`, safety-class=`Y` ...)
+    // safety-class tokens: SAFETY_HIGH, SAFETY_LOW, REFINEMENT, N/A
+    // (The legacy binary `SAFETY` token from BLD-743 round-1 is no longer
+    // emitted; we treat it as `SAFETY_HIGH` for backwards-compat parsing
+    // so a stale CURATION.md still fails closed under the new gate.)
     const gateMatch =
-      /-\s*Curation gate:[^\n]*verdict=`([A-Z_]+)`[^\n]*safety-class=`([A-Za-z/]+)`/.exec(
+      /-\s*Curation gate:[^\n]*verdict=`([A-Z_]+)`[^\n]*safety-class=`([A-Za-z_/]+)`/.exec(
         part,
       );
     const verdict = gateMatch ? gateMatch[1] : "UNKNOWN";
     const rawClass = gateMatch ? gateMatch[2] : null;
-    const safetyClass: SafetyClass | null =
-      rawClass === "SAFETY" || rawClass === "REFINEMENT" || rawClass === "N/A"
-        ? rawClass
-        : null;
+    let safetyClass: SafetyClass | null;
+    if (
+      rawClass === "SAFETY_HIGH" ||
+      rawClass === "SAFETY_LOW" ||
+      rawClass === "REFINEMENT" ||
+      rawClass === "N/A"
+    ) {
+      safetyClass = rawClass;
+    } else if (rawClass === "SAFETY") {
+      // Backwards-compat: legacy binary classifier output → fail-closed.
+      safetyClass = "SAFETY_HIGH";
+    } else {
+      safetyClass = null;
+    }
 
     out.push({ id, round, verdict, safetyClass });
   }
