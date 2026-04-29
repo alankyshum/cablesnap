@@ -121,7 +121,12 @@ ORDER BY category, name
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**APPROVE WITH CONDITIONS** (2026-04-29)
+- BLOCKER: `addExerciseToSession` does not exist — plan must clarify implementation approach (new function vs navigation reuse)
+- Resolve "no active session" TBD — recommend hiding '+' button, not auto-starting sessions
+- Seed data has 0 exercises for ring_handle, squat_harness, carabiner — consider dynamic chip visibility
+- Add chip toggle visual affordance to UX spec
+- Add back-navigation test case
 ### Tech Lead (Feasibility)
 _Pending_
 ### Psychologist (Behavior-Design)
