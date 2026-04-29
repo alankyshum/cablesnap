@@ -14,9 +14,17 @@ export type ManifestEntry = {
   end: number;
   startAlt: string;
   endAlt: string;
+  safetyNote?: string;
 };
 
 export const manifest: Record<string, ManifestEntry> = {
+  "voltra-001": {
+    start: require("./voltra-001/start.webp"),
+    end: require("./voltra-001/end.webp"),
+    startAlt: "Start position: Lie on your back with knees bent about 90°. Position your head near the low pulley so the cable runs at a slight upward angle from the low mount to your hands and stays clear of your face/neck. Grip the handle with both hands centered (if using a single D\u2011handle) and hold it just above your forehead/temples; elbows slightly forward. Do not pull on your head. Gently posteriorly tilt the pelvis so your lower back contacts the floor. Keep your chin softly tucked (neck long, eyes up). Lightly brace before moving.",
+    endAlt: "End position: Exhale as you curl your ribcage toward your pelvis, lifting your shoulder blades 2\u20133 inches off the floor via thoracic flexion. Keep your lower back in light contact with the floor and avoid jutting the chin. Hands stay at the forehead/temples with elbows slightly forward\u2014maintain a light grip; don\u2019t tug the head. The cable stays taut without rubbing your face/neck. Pause briefly, then inhale as you return under control.",
+    safetyNote: "Keep your face clear of the cable path. Position yourself at least 12 inches from the low pulley to avoid contact with hardware.",
+  },
   "voltra-003": {
     start: require("./voltra-003/start.webp"),
     end: require("./voltra-003/end.webp"),
@@ -46,6 +54,13 @@ export const manifest: Record<string, ManifestEntry> = {
     end: require("./voltra-013/end.webp"),
     startAlt: "Stand facing away from the high pulley with a slight forward lean and a staggered, stable stance (knees soft). Brace your core (ribs down, neutral low back) and grip the rope with neutral wrists. Bring your upper arms vertical and close to your head—slightly in front of your ears if needed—keeping them mostly still. Elbows bent about 90–110°, pointing forward without forcing them tight (a comfortable elbow path is fine; do not jam them in). The rope rests just behind your head under light tension; you may feel a gentle triceps stretch. Let your shoulder blades sit naturally — they should be free to upwardly rotate as your arms reach overhead, not clamped down. Head and neck neutral.",
     endAlt: "Keep your upper arms fixed near your head. Exhale and extend only at the elbows until your arms are straight overhead—vertical or slightly in front of your head in line with the cable—stopping just shy of a hard lockout. Allow your shoulder blades to rotate upward naturally as your elbows extend overhead (don’t force them down). Don’t pop the ribs up or arch the low back. The rope is taut above your head at peak contraction. Inhale and control the return behind your head for about 2–3 seconds.",
+  },
+  "voltra-020": {
+    start: require("./voltra-020/start.webp"),
+    end: require("./voltra-020/end.webp"),
+    startAlt: "Start: Seated or tall\u2011kneeling under the high pulley with a close, neutral\u2011grip bar/handle. Sit tall and hinge slightly (about 5\u201315°) from the hips so your torso is just reclined; ribs stacked, spine neutral. Arms reach overhead with elbows straight but not locked. Let your shoulder blades rotate upward so the cable stays taut and you feel a gentle lat stretch\u2014without shrugging.",
+    endAlt: "Finish: Pull the bar to the top of your chest (collarbone/upper sternum) by driving your elbows down toward your ribs, not behind your body. At the bottom, forearms are near vertical; elbows close to your sides and bent about 90\u2013110°. Shoulder blades are down with a slight squeeze; chest tall without arching your low back; head neutral. Avoid shrugging or leaning farther back; pause, then control the return. If kneeling, anchor your legs and use a load that keeps you down.",
+    safetyNote: "This exercise uses a neutral grip on a straight bar, which may feel unfamiliar. If you experience wrist discomfort, try a wider grip or use a different handle attachment.",
   },
   "voltra-029": {
     start: require("./voltra-029/start.webp"),
