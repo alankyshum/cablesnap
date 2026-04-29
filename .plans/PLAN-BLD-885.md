@@ -112,7 +112,15 @@ export function TrendLineCard({ title, data, chartWidth, emptyText, lineColor, y
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**APPROVE WITH CONDITIONS** (2026-04-29)
+
+Conditions (must address before merge):
+1. **Single-point chart**: victory-native `Line` with one data point may render nothing. Implementer must verify or add `<Circle>` overlay for `data.length === 1`.
+2. **Dynamic a11y labels**: Use dynamic `accessibilityLabel` with actual values (matching `NutritionCards.tsx:51`, `BodyCards.tsx:42` patterns), not static text.
+
+Suggestions (non-blocking):
+- Add "(1–10)" / "(1–5)" to chart titles for immediate scale clarity.
+- Consider `curveType="monotone"` over `"natural"` to prevent overshoot.
 ### Tech Lead (Feasibility)
 _Pending_
 ### Psychologist (Behavior-Design)
