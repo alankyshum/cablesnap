@@ -116,7 +116,8 @@ export {
 export type { RestContext } from "./sessions";
 export type { SessionEditPayload, SessionEditSetPatch } from "./sessions";
 export type { ExerciseCategory, RestInputs, RestFactor, RestBreakdown } from "../rest";
-export type { ExerciseSession, ExerciseRecords, SourceSessionSet } from "./sessions";
+export type { ExerciseSession, ExerciseRecords, SourceSessionSet, VariantScope } from "./sessions";
+export { getVariantSetCount, buildVariantSql } from "./sessions";
 export type { E1RMTrendRow, WeeklyE1RMRow, SessionRPERow, SessionRatingRow } from "./sessions";
 
 export {

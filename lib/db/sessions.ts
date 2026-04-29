@@ -73,8 +73,10 @@ export {
   getRecentExerciseSets,
   getRecentExerciseSetsBatch,
   getBestSet,
+  getVariantSetCount,
+  buildVariantSql,
 } from "./exercise-history";
-export type { ExerciseSession, ExerciseRecords } from "./exercise-history";
+export type { ExerciseSession, ExerciseRecords, VariantScope } from "./exercise-history";
 
 // ---- Duration Estimates ----
 
