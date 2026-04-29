@@ -16,22 +16,33 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
+const projectRoot = path.join(__dirname, "..");
 const skiaDir = path.join(
-  __dirname,
-  "..",
+  projectRoot,
   "node_modules",
   "@shopify",
   "react-native-skia"
 );
 const skiaPkg = path.join(skiaDir, "package.json");
 
+// Read Skia version from project package.json optionalDependencies
+const projectPkg = JSON.parse(
+  fs.readFileSync(path.join(projectRoot, "package.json"), "utf8")
+);
+const skiaVersion =
+  (projectPkg.optionalDependencies &&
+    projectPkg.optionalDependencies["@shopify/react-native-skia"]) ||
+  (projectPkg.dependencies &&
+    projectPkg.dependencies["@shopify/react-native-skia"]) ||
+  "2.6.2"; // fallback
+
 // Step 1: Restore Skia package if npm cleaned it up after postinstall failure
 if (!fs.existsSync(skiaPkg)) {
   console.log("-- Skia package incomplete, reinstalling with --ignore-scripts...");
   try {
     execSync(
-      "npm install --ignore-scripts --no-save @shopify/react-native-skia@2.6.2",
-      { stdio: "inherit", cwd: path.join(__dirname, "..") }
+      "npm install --ignore-scripts --no-save @shopify/react-native-skia@" + skiaVersion,
+      { stdio: "inherit", cwd: projectRoot }
     );
     console.log("-- Skia package restored");
   } catch (e) {
@@ -60,7 +71,7 @@ if (!fs.existsSync(skiaScript)) {
 try {
   execSync("node " + JSON.stringify(skiaScript), {
     stdio: "inherit",
-    cwd: path.join(__dirname, ".."),
+    cwd: projectRoot,
   });
 } catch (e) {
   console.error("-- Skia install-libs.js failed:", e.message);
