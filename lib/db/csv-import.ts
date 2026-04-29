@@ -58,6 +58,11 @@ export async function importCsvSessions(
   matchResults: Map<string, MatchResult>,
   onProgress?: (progress: CsvImportProgress) => void,
 ): Promise<CsvImportResult> {
+  // Guard: block import if a workout is currently in progress
+  if (await hasActiveWorkout()) {
+    throw new Error("Cannot import while a workout is in progress. Please finish or discard your current workout first.");
+  }
+
   const batchId = uuid();
   let sessionsInserted = 0;
   let setsInserted = 0;
