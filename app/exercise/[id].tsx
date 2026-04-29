@@ -33,6 +33,8 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useExerciseDetail, MAX_ITEMS } from "@/hooks/useExerciseDetail";
 import ExerciseRecordsCard from "@/components/exercise/ExerciseRecordsCard";
 import ExerciseChartCard from "@/components/exercise/ExerciseChartCard";
+import ExerciseVariantFilter from "@/components/exercise/ExerciseVariantFilter";
+import { isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
 import { useStrengthGoal } from "@/hooks/useStrengthGoals";
@@ -155,13 +157,24 @@ export default function ExerciseDetail() {
 
       <FlowContainer gap={16}>
         <ExerciseRecordsCard colors={colors} records={d.records} recordsLoading={d.recordsLoading} recordsError={d.recordsError}
-          best={d.best} bw={d.bw} unit={d.unit} exerciseId={id} loadRecords={d.loadRecords}
+          best={d.best} bw={d.bw} unit={d.unit} exerciseId={id}
+          loadRecords={(eid) => d.loadRecords(eid, d.variantScope)}
+          variantFilterActive={d.variantScope.attachment !== undefined || d.variantScope.mount_position !== undefined}
           style={layout.atLeastMedium ? { ...flowCardStyle, maxWidth: 560 } : undefined} />
         <ExerciseChartCard colors={colors} bw={d.bw} unit={d.unit} chart={d.chart} chart1RM={d.chart1RM}
           activeChart={d.activeChart} chartMode={d.chartMode} setChartMode={d.setChartMode}
           chartLoading={d.chartLoading} chartError={d.chartError} exerciseId={id} exerciseName={exercise.name} loadChart={d.loadChart}
           style={layout.atLeastMedium ? { ...flowCardStyle, maxWidth: 560 } : undefined} />
       </FlowContainer>
+
+      {/* BLD-788: cable variant analytics filter — only renders for cable exercises. */}
+      {isCableExercise(exercise) && (
+        <ExerciseVariantFilter
+          scope={d.variantScope}
+          onChange={d.setVariantScope}
+          variantTotal={d.variantTotal}
+        />
+      )}
 
       {strengthLevel && (
         <StrengthLevelBadge

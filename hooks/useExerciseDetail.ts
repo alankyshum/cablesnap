@@ -8,8 +8,10 @@ import {
   getExercise1RMChartData,
   getBodySettings,
   getBestSet,
+  getVariantSetCount,
   type ExerciseSession,
   type ExerciseRecords as Records,
+  type VariantScope,
 } from "@/lib/db";
 import type { Exercise } from "@/lib/types";
 
@@ -39,12 +41,31 @@ export function useExerciseDetail(id: string | undefined) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  const loadRecords = useCallback(async (eid: string) => {
+  // BLD-788: per-exercise variant filter scope. Component-local; never persisted.
+  // Empty object = "All variants" (default, current behavior).
+  const [variantScope, setVariantScopeState] = useState<VariantScope>({});
+  const [variantTotal, setVariantTotal] = useState<number>(0);
+
+  const loadRecords = useCallback(async (eid: string, scope?: VariantScope) => {
     setRecordsLoading(true); setRecordsError(false);
-    try { const [r, b] = await Promise.all([getExerciseRecords(eid), getBestSet(eid)]); setRecords(r); setBest(b); }
-    catch { setRecordsError(true); }
+    try {
+      const [r, b] = await Promise.all([getExerciseRecords(eid, scope), getBestSet(eid, scope)]);
+      setRecords(r);
+      setBest(b);
+    } catch { setRecordsError(true); }
     finally { setRecordsLoading(false); }
   }, []);
+
+  // Setter wrapper: state change + immediate records reload — event-driven so we
+  // don't trigger ESLint's react-hooks/set-state-in-effect on a useEffect+setState
+  // cascade. The reload here is the user's intent, not a passive sync.
+  const setVariantScope = useCallback(
+    (next: VariantScope) => {
+      setVariantScopeState(next);
+      if (id) loadRecords(id, next);
+    },
+    [id, loadRecords]
+  );
 
   const loadChart = useCallback(async (eid: string) => {
     setChartLoading(true); setChartError(false);
@@ -64,7 +85,13 @@ export function useExerciseDetail(id: string | undefined) {
     if (!id) return;
     getExerciseById(id).then(setExercise);
     getBodySettings().then((s) => setUnit(s.weight_unit));
-    loadRecords(id); loadChart(id); loadHistory(id);
+    loadRecords(id, variantScope);
+    loadChart(id);
+    loadHistory(id);
+    getVariantSetCount(id).then(setVariantTotal).catch(() => setVariantTotal(0));
+    // variantScope intentionally omitted — setVariantScope handles in-screen
+    // changes; focus-effect only re-runs on screen re-entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, loadRecords, loadChart, loadHistory]));
 
   const loadMore = useCallback(async () => {
@@ -87,5 +114,6 @@ export function useExerciseDetail(id: string | undefined) {
     history, historyLoading, historyError, loadingMore, hasMore,
     loadRecords, loadChart, loadHistory, loadMore,
     bw, activeChart,
+    variantScope, setVariantScope, variantTotal,
   };
 }
