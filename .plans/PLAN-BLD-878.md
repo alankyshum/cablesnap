@@ -1,7 +1,7 @@
 # Feature Plan: Exercise Library — Equipment & Muscle Group Filters
 
 **Issue**: BLD-878  **Author**: CEO  **Date**: 2026-04-29
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Research Source
 - **Origin:** Own analysis — exercise library audit + knowledge base review
@@ -31,21 +31,30 @@ All three filter dimensions (category, equipment, muscle) apply as AND logic: se
 
 ### UX Design
 
-**Layout:**
+**Layout (revised per QD+TL review — bottom sheet pattern):**
 ```
-[Search bar                    ]
-[Category chips: Arms | Back | Chest | ...]
-[Equipment chips: Barbell | Dumbbell | Cable | Machine | Bodyweight | ...]
-[Muscle chips: Biceps | Triceps | Quads | Glutes | ...]
+[Search bar                  ] [Filter button (badge: N active)]
+[Category chips: Arms | Back | Chest | ...]   ← stays inline
 [Exercise list]
+
+── Filter bottom sheet (on tap) ──────────────
+Equipment:  [Barbell] [Dumbbell] [Cable] [Machine] [Bodyweight] [Kettlebell] [Band] [Other]
+Muscles (sectioned by region):
+  Upper: [Chest] [Back] [Shoulders] [Biceps] [Triceps] [Forearms]
+  Core:  [Abs/Core] [Obliques]
+  Lower: [Quads] [Hamstrings] [Glutes] [Calves] [Hip Flexors]
+  Full:  [Full Body]
+[Clear All]                                   [Apply (N selected)]
+──────────────────────────────────────────────
 ```
 
-- Each filter row is a horizontal `FlatList` of `Chip` components (matching existing pattern).
-- Equipment chips use equipment-appropriate icons from MaterialCommunityIcons.
-- Muscle chips use the existing muscle color dots as icon indicators.
-- Active chip count shown as a badge or the row header shows "(N active)".
-- A "Clear all" action appears when any filter is active.
-- Empty state message updates to reflect active filters: "No exercises match your filters."
+- Category chips remain as an inline horizontal `FlatList` (only 6 chips — fits fine).
+- Equipment and muscle group filters move to a **bottom sheet** triggered by a filter button next to the search bar.
+- Filter button shows a badge with the count of active equipment + muscle filters.
+- Muscle groups are sectioned using `MUSCLE_GROUPS_BY_REGION` for discoverability.
+- Equipment chips use icons from MaterialCommunityIcons (new `EQUIPMENT_ICONS` map).
+- A "Clear all" action in the sheet resets equipment + muscle selections.
+- Empty state message updates to reflect active filters: "No exercises match your filters. (N filters active)"
 
 **Accessibility:**
 - Each chip has `accessibilityLabel="Filter by {type}: {value}"`, `accessibilityRole="button"`, `accessibilityState={{ selected }}`.
@@ -61,8 +70,9 @@ All three filter dimensions (category, equipment, muscle) apply as AND logic: se
 
 **File changes:**
 1. `app/(tabs)/exercises.tsx` — Add equipment and muscle group filter state + chip rows. Extend the `filtered` useMemo to include equipment and muscle group filtering.
-2. `lib/types.ts` — Export `EQUIPMENT_LIST` and `EQUIPMENT_LABELS` (already exist). Add `MUSCLE_GROUP_LIST` and `MUSCLE_GROUP_LABELS` if not present.
-3. `constants/theme.ts` — Add `EQUIPMENT_ICONS` map (equipment → MaterialCommunityIcons glyph name).
+2. `lib/types.ts` — Reference `MUSCLE_GROUPS_BY_REGION`, `MUSCLE_LABELS`, and `EQUIPMENT_LIST`/`EQUIPMENT_LABELS` (already exist).
+3. `constants/theme.ts` — Add new `EQUIPMENT_ICONS` map (equipment → MaterialCommunityIcons glyph name).
+4. New component: `components/ExerciseFilterSheet.tsx` — Bottom sheet with equipment + muscle group chip sections.
 
 **Filter logic (in `filtered` useMemo):**
 ```typescript
@@ -77,7 +87,7 @@ if (muscleSet.size > 0 && !ex.primary_muscles.some(m => muscleSet.has(m))) retur
 
 **State management:** Extend the existing `selected` Set or use three separate Sets (one per dimension). Separate Sets is cleaner for type safety.
 
-**Performance:** All filtering is client-side on the already-fetched exercise list. No new queries needed. With ~200 exercises, filtering is instant.
+**Performance:** All filtering is client-side on the already-fetched exercise list. No new queries needed. With ~56 seeded exercises (growing over time), filtering is instant. `primary_muscles` is already deserialized to `MuscleGroup[]` by `mapRow()` in `lib/db/exercises.ts` — no extra JSON.parse needed.
 
 ## Scope
 **In:**
@@ -103,6 +113,7 @@ if (muscleSet.size > 0 && !ex.primary_muscles.some(m => muscleSet.has(m))) retur
 - [ ] Given any filter is active, When I tap "Clear all", Then all filters reset and the full list is shown
 - [ ] All filter chips have correct `accessibilityLabel`, `accessibilityRole`, and `accessibilityState`
 - [ ] PR passes all existing tests with no regressions
+- [ ] New tests cover: (1) equipment filter shows only matching exercises, (2) muscle group filter shows only matching exercises, (3) AND logic across dimensions (category + equipment + muscle), (4) OR logic within a dimension (two equipment types selected), (5) empty state when no exercises match, (6) clear all resets filters and shows full list
 - [ ] No new lint warnings
 
 ## Edge Cases
@@ -118,7 +129,7 @@ if (muscleSet.size > 0 && !ex.primary_muscles.some(m => muscleSet.has(m))) retur
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Chip rows take too much vertical space | Medium | Medium | Use compact chip variant; consider collapsible sections in v2 |
+| Chip rows take too much vertical space | ~~Medium~~ Resolved | — | Bottom sheet pattern — only category chips inline |
 | Users confused by AND vs OR logic | Low | Low | Standard UX pattern; empty state guides users |
 | Performance with complex filtering | Very Low | Low | Client-side filter on ~200 items is instant |
 
@@ -173,4 +184,12 @@ if (muscleSet.size > 0 && !ex.primary_muscles.some(m => muscleSet.has(m))) retur
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO
 ### CEO Decision
-_Pending_
+**APPROVED** — 2026-04-29
+
+All three blockers resolved in this revision:
+- B1+B2: Bottom sheet pattern replaces inline chip rows for equipment + muscle filters. Category chips stay inline (6 chips, fits fine). Muscle groups sectioned by `MUSCLE_GROUPS_BY_REGION` for discoverability.
+- B3: AC updated with 6 explicit filter test requirements.
+- Factual corrections applied (56 exercises, correct type references, `mapRow()` deserialization noted).
+- Non-blocking suggestions S1 (filter badge) and S2 (filter count in empty state) incorporated.
+
+Ready for implementation.
