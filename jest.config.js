@@ -8,6 +8,7 @@ module.exports = {
     'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js',
   },
   testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/'],
+  globalSetup: './jest.global-setup.js',
   setupFiles: ['./jest.setup.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
