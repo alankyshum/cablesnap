@@ -21,6 +21,11 @@ const helpers = require('../../../lib/db/helpers') as {
 };
 
 import { buildVariantSql, getVariantSetCount } from '../../../lib/db/exercise-history';
+import {
+  getExerciseChartData,
+  getExercise1RMChartData,
+  getExerciseDurationChartData,
+} from '../../../lib/db/exercise-history';
 import type { VariantScope } from '../../../lib/db/exercise-history';
 
 describe('BLD-788 variant scope filter', () => {
@@ -124,6 +129,86 @@ describe('BLD-788 variant scope filter', () => {
       expect(sql).toMatch(/wss\.completed_at\s+IS\s+NOT\s+NULL/);
       expect(sql).toMatch(/ws\.attachment\s+IS\s+NOT\s+NULL\s+OR\s+ws\.mount_position\s+IS\s+NOT\s+NULL/);
       expect(params).toEqual(['ex-xyz']);
+    });
+
+    test('with scope, replaces "any variant logged" gate with exact-tuple predicate', async () => {
+      helpers.queryOne.mockResolvedValueOnce({ n: 12 });
+      const n = await getVariantSetCount('ex-1', { attachment: 'rope', mount_position: 'high' });
+      expect(n).toBe(12);
+      const call = helpers.queryOne.mock.calls[0];
+      const sql = call[0] as string;
+      const params = call[1] as unknown[];
+      // Adoption gate gone, tuple predicate applied
+      expect(sql).not.toMatch(/ws\.attachment\s+IS\s+NOT\s+NULL\s+OR\s+ws\.mount_position\s+IS\s+NOT\s+NULL/);
+      expect(sql).toMatch(/ws\.attachment\s*=\s*\?\s*AND\s*ws\.mount_position\s*=\s*\?/);
+      expect(params).toEqual(['ex-1', 'rope', 'high']);
+    });
+
+    test('with single-dimension scope, gates on attachment only', async () => {
+      helpers.queryOne.mockResolvedValueOnce({ n: 5 });
+      await getVariantSetCount('ex-2', { attachment: 'bar' });
+      const sql = helpers.queryOne.mock.calls[0][0] as string;
+      const params = helpers.queryOne.mock.calls[0][1] as unknown[];
+      expect(sql).toMatch(/ws\.attachment\s*=\s*\?/);
+      expect(sql).not.toMatch(/ws\.mount_position\s*=/);
+      expect(params).toEqual(['ex-2', 'bar']);
+    });
+
+    test('empty-object scope is equivalent to undefined scope (default badge)', async () => {
+      helpers.queryOne.mockResolvedValueOnce({ n: 42 });
+      await getVariantSetCount('ex-3', {});
+      const sql = helpers.queryOne.mock.calls[0][0] as string;
+      // Adoption gate present (empty scope → default "any variant logged" count)
+      expect(sql).toMatch(/ws\.attachment\s+IS\s+NOT\s+NULL\s+OR\s+ws\.mount_position\s+IS\s+NOT\s+NULL/);
+      expect(helpers.queryOne.mock.calls[0][1]).toEqual(['ex-3']);
+    });
+  });
+
+  // ── chart functions: variant-scope filtering ────────────────────
+
+  describe('chart functions accept VariantScope', () => {
+    beforeEach(() => helpers.query.mockResolvedValue([]));
+
+    test('getExerciseChartData empty scope → no variant fragment, original params', async () => {
+      await getExerciseChartData('ex-1');
+      const [sql, params] = helpers.query.mock.calls[0];
+      expect(sql as string).not.toMatch(/ws\.attachment\s*=\s*\?/);
+      expect(sql as string).not.toMatch(/ws\.mount_position\s*=\s*\?/);
+      expect(params).toEqual(['ex-1', 20]);
+    });
+
+    test('getExerciseChartData tuple scope → splices fragment + threads params', async () => {
+      await getExerciseChartData('ex-1', 20, { attachment: 'rope', mount_position: 'high' });
+      const [sql, params] = helpers.query.mock.calls[0];
+      expect(sql as string).toMatch(/ws\.attachment\s*=\s*\?\s*AND\s*ws\.mount_position\s*=\s*\?/);
+      // exercise_id, attachment param, mount param, limit — in that order
+      expect(params).toEqual(['ex-1', 'rope', 'high', 20]);
+    });
+
+    test('getExercise1RMChartData single-dimension scope', async () => {
+      await getExercise1RMChartData('ex-1', 20, { attachment: 'bar' });
+      const [sql, params] = helpers.query.mock.calls[0];
+      expect(sql as string).toMatch(/ws\.attachment\s*=\s*\?/);
+      expect(sql as string).not.toMatch(/ws\.mount_position\s*=/);
+      expect(params).toEqual(['ex-1', 'bar', 20]);
+    });
+
+    test('getExerciseDurationChartData NULL scope → IS NULL predicate', async () => {
+      await getExerciseDurationChartData('ex-1', 20, { mount_position: null });
+      const [sql, params] = helpers.query.mock.calls[0];
+      expect(sql as string).toMatch(/ws\.mount_position\s+IS\s+NULL/);
+      // No mount param bound — only exerciseId + limit
+      expect(params).toEqual(['ex-1', 20]);
+    });
+
+    test('getExerciseChartData fallback (reps) query also receives scope', async () => {
+      // First call returns empty → triggers the fallback reps query
+      helpers.query.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+      await getExerciseChartData('ex-1', 20, { attachment: 'rope' });
+      expect(helpers.query.mock.calls.length).toBe(2);
+      const [sql, params] = helpers.query.mock.calls[1];
+      expect(sql as string).toMatch(/ws\.attachment\s*=\s*\?/);
+      expect(params).toEqual(['ex-1', 'rope', 20]);
     });
   });
 });

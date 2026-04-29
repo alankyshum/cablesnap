@@ -65,7 +65,7 @@ function formatBadge(scope: VariantScope, variantTotal: number): string {
   if (scope.mount_position !== undefined) {
     parts.push(scope.mount_position === null ? "(no mount)" : MOUNT_POSITION_LABELS[scope.mount_position]);
   }
-  return `Showing: ${parts.join(" · ")}`;
+  return `Showing: ${parts.join(" · ")} (${variantTotal} logged)`;
 }
 
 export default function ExerciseVariantFilter({

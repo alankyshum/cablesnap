@@ -106,18 +106,18 @@ describe("ExerciseVariantFilter — BLD-788", () => {
     expect(onChange).toHaveBeenCalledWith({ attachment: "bar" });
   });
 
-  it("renders active-state badge as 'Showing: Rope · High'", () => {
+  it("renders active-state badge as 'Showing: Rope · High (N logged)' with the filter count", () => {
     const { getByText } = render(
       <ExerciseVariantFilter
         scope={{ attachment: "rope", mount_position: "high" }}
         onChange={jest.fn()}
-        variantTotal={5}
+        variantTotal={12}
       />
     );
-    expect(getByText("Showing: Rope · High")).toBeTruthy();
+    expect(getByText("Showing: Rope · High (12 logged)")).toBeTruthy();
   });
 
-  it("renders single-dimension active badge correctly", () => {
+  it("renders single-dimension active badge with count", () => {
     const { getByText } = render(
       <ExerciseVariantFilter
         scope={{ attachment: "bar" }}
@@ -125,7 +125,7 @@ describe("ExerciseVariantFilter — BLD-788", () => {
         variantTotal={5}
       />
     );
-    expect(getByText("Showing: Bar")).toBeTruthy();
+    expect(getByText("Showing: Bar (5 logged)")).toBeTruthy();
   });
 
   it("Clear button resets scope to empty object", () => {

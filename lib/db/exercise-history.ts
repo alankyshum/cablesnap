@@ -158,9 +158,23 @@ function variantDrizzleConditions(scope?: VariantScope) {
  * field populated (used for the "All variants (N logged)" header badge).
  *
  * Counts completed, non-warmup sets in completed sessions where attachment
- * or mount_position is non-null. Independent of the active filter.
+ * or mount_position is non-null.
+ *
+ * When `scope` is supplied, counts sets matching the active filter exactly
+ * (used for the "Showing: Rope · High (12 logged)" active-state badge).
+ * When `scope` is omitted or empty, returns the global "any variant"
+ * count for the default-state badge.
  */
-export async function getVariantSetCount(exerciseId: string): Promise<number> {
+export async function getVariantSetCount(
+  exerciseId: string,
+  scope?: VariantScope,
+): Promise<number> {
+  const variantSql = buildVariantSql(scope);
+  // When scope is empty, retain the original "any variant logged" gate so the
+  // default badge still reports total variant adoption on this exercise.
+  const adoptionGate = variantSql.params.length === 0 || variantSql.sql === ""
+    ? " AND (ws.attachment IS NOT NULL OR ws.mount_position IS NOT NULL)"
+    : "";
   const row = await queryOne<{ n: number | null }>(
     `SELECT COUNT(*) AS n
        FROM workout_sets ws
@@ -168,9 +182,8 @@ export async function getVariantSetCount(exerciseId: string): Promise<number> {
       WHERE ws.exercise_id = ?
         AND ws.completed = 1
         AND ws.set_type != 'warmup'
-        AND wss.completed_at IS NOT NULL
-        AND (ws.attachment IS NOT NULL OR ws.mount_position IS NOT NULL)`,
-    [exerciseId]
+        AND wss.completed_at IS NOT NULL${adoptionGate}${variantSql.sql}`,
+    [exerciseId, ...variantSql.params]
   );
   return Number(row?.n ?? 0);
 }
@@ -244,6 +257,10 @@ export async function getExerciseRecords(
     ),
 
     db
+      // is_bodyweight is an exercise-level property: does this exercise have
+      // ANY weighted history at all? Intentionally unscoped by VariantScope —
+      // a cable row stays a non-bodyweight exercise even when the active
+      // filter selects a tuple with zero weighted sets.
       .select({ val: sql<number>`EXISTS(SELECT 1 FROM workout_sets WHERE exercise_id = ${exerciseId} AND completed = 1 AND weight > 0)` })
       .from(workoutSets)
       .limit(1)
@@ -279,8 +296,10 @@ export async function getExerciseRecords(
 
 export async function getExercise1RMChartData(
   exerciseId: string,
-  limit: number = 20
+  limit: number = 20,
+  scope?: VariantScope
 ): Promise<{ date: number; value: number }[]> {
+  const v = buildVariantSql(scope);
   // Nested subquery (inner SELECT + ORDER + LIMIT, outer re-order) — use raw sql
   return query<{ date: number; value: number }>(
     `SELECT * FROM (
@@ -295,19 +314,21 @@ export async function getExercise1RMChartData(
          AND ws.reps IS NOT NULL
          AND ws.reps > 0
          AND ws.set_type != 'warmup'
-         AND wss.completed_at IS NOT NULL
+         AND wss.completed_at IS NOT NULL${v.sql}
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
        LIMIT ?
      ) ORDER BY date ASC`,
-    [exerciseId, limit]
+    [exerciseId, ...v.params, limit]
   );
 }
 
 export async function getExerciseChartData(
   exerciseId: string,
-  limit: number = 20
+  limit: number = 20,
+  scope?: VariantScope
 ): Promise<{ date: number; value: number }[]> {
+  const v = buildVariantSql(scope);
   const rows = await query<{ date: number; value: number }>(
     `SELECT * FROM (
        SELECT wss.started_at AS date,
@@ -319,12 +340,12 @@ export async function getExerciseChartData(
          AND ws.weight IS NOT NULL
          AND ws.weight > 0
          AND ws.set_type != 'warmup'
-         AND wss.completed_at IS NOT NULL
+         AND wss.completed_at IS NOT NULL${v.sql}
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
        LIMIT ?
      ) ORDER BY date ASC`,
-    [exerciseId, limit]
+    [exerciseId, ...v.params, limit]
   );
 
   if (rows.length > 0) return rows;
@@ -338,19 +359,21 @@ export async function getExerciseChartData(
        WHERE ws.exercise_id = ?
          AND ws.completed = 1
          AND wss.completed_at IS NOT NULL
-         AND ws.set_type != 'warmup'
+         AND ws.set_type != 'warmup'${v.sql}
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
        LIMIT ?
      ) ORDER BY date ASC`,
-    [exerciseId, limit]
+    [exerciseId, ...v.params, limit]
   );
 }
 
 export async function getExerciseDurationChartData(
   exerciseId: string,
-  limit: number = 20
+  limit: number = 20,
+  scope?: VariantScope
 ): Promise<{ date: number; value: number }[]> {
+  const v = buildVariantSql(scope);
   return query<{ date: number; value: number }>(
     `SELECT * FROM (
        SELECT wss.started_at AS date,
@@ -362,12 +385,12 @@ export async function getExerciseDurationChartData(
          AND ws.duration_seconds IS NOT NULL
          AND ws.duration_seconds > 0
          AND ws.set_type != 'warmup'
-         AND wss.completed_at IS NOT NULL
+         AND wss.completed_at IS NOT NULL${v.sql}
        GROUP BY wss.id
        ORDER BY wss.started_at DESC
        LIMIT ?
      ) ORDER BY date ASC`,
-    [exerciseId, limit]
+    [exerciseId, ...v.params, limit]
   );
 }
 

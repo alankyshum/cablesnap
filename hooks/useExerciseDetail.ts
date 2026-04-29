@@ -56,23 +56,44 @@ export function useExerciseDetail(id: string | undefined) {
     finally { setRecordsLoading(false); }
   }, []);
 
-  // Setter wrapper: state change + immediate records reload — event-driven so we
-  // don't trigger ESLint's react-hooks/set-state-in-effect on a useEffect+setState
-  // cascade. The reload here is the user's intent, not a passive sync.
-  const setVariantScope = useCallback(
-    (next: VariantScope) => {
-      setVariantScopeState(next);
-      if (id) loadRecords(id, next);
-    },
-    [id, loadRecords]
-  );
-
-  const loadChart = useCallback(async (eid: string) => {
+  const loadChart = useCallback(async (eid: string, scope?: VariantScope) => {
     setChartLoading(true); setChartError(false);
-    try { const [c, c1rm] = await Promise.all([getExerciseChartData(eid), getExercise1RMChartData(eid)]); setChart(c); setChart1RM(c1rm); }
+    try {
+      const [c, c1rm] = await Promise.all([
+        getExerciseChartData(eid, undefined, scope),
+        getExercise1RMChartData(eid, undefined, scope),
+      ]);
+      setChart(c); setChart1RM(c1rm);
+    }
     catch { setChartError(true); }
     finally { setChartLoading(false); }
   }, []);
+
+  // BLD-788: load the badge count. When `scope` is non-empty, returns the
+  // count for the active filter ("Showing: Rope · High (12 logged)"); when
+  // empty, returns the global "any variant logged" count for the default
+  // badge ("All variants (42 logged)").
+  const loadVariantTotal = useCallback(async (eid: string, scope?: VariantScope) => {
+    try { setVariantTotal(await getVariantSetCount(eid, scope)); }
+    catch { setVariantTotal(0); }
+  }, []);
+
+  // Setter wrapper: state change + immediate reloads — event-driven so we
+  // don't trigger ESLint's react-hooks/set-state-in-effect on a useEffect+setState
+  // cascade. The reloads here are the user's intent, not a passive sync.
+  // Both records AND chart must reload on scope change so the two cards on
+  // the exercise-detail screen stay consistent (BLD-788 review feedback).
+  const setVariantScope = useCallback(
+    (next: VariantScope) => {
+      setVariantScopeState(next);
+      if (id) {
+        loadRecords(id, next);
+        loadChart(id, next);
+        loadVariantTotal(id, next);
+      }
+    },
+    [id, loadRecords, loadChart, loadVariantTotal]
+  );
 
   const loadHistory = useCallback(async (eid: string) => {
     setHistoryLoading(true); setHistoryError(false);
@@ -86,13 +107,15 @@ export function useExerciseDetail(id: string | undefined) {
     getExerciseById(id).then(setExercise);
     getBodySettings().then((s) => setUnit(s.weight_unit));
     loadRecords(id, variantScope);
-    loadChart(id);
+    loadChart(id, variantScope);
     loadHistory(id);
-    getVariantSetCount(id).then(setVariantTotal).catch(() => setVariantTotal(0));
+    // Default-state badge: count of any-variant-logged sets on this exercise.
+    // Active-state badge count is updated through setVariantScope.
+    loadVariantTotal(id);
     // variantScope intentionally omitted — setVariantScope handles in-screen
     // changes; focus-effect only re-runs on screen re-entry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, loadRecords, loadChart, loadHistory]));
+  }, [id, loadRecords, loadChart, loadHistory, loadVariantTotal]));
 
   const loadMore = useCallback(async () => {
     if (!id || loadingMore || !hasMore || history.length >= MAX_ITEMS) return;

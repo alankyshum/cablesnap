@@ -163,7 +163,7 @@ export default function ExerciseDetail() {
           style={layout.atLeastMedium ? { ...flowCardStyle, maxWidth: 560 } : undefined} />
         <ExerciseChartCard colors={colors} bw={d.bw} unit={d.unit} chart={d.chart} chart1RM={d.chart1RM}
           activeChart={d.activeChart} chartMode={d.chartMode} setChartMode={d.setChartMode}
-          chartLoading={d.chartLoading} chartError={d.chartError} exerciseId={id} exerciseName={exercise.name} loadChart={d.loadChart}
+          chartLoading={d.chartLoading} chartError={d.chartError} exerciseId={id} exerciseName={exercise.name} loadChart={(eid) => d.loadChart(eid, d.variantScope)}
           style={layout.atLeastMedium ? { ...flowCardStyle, maxWidth: 560 } : undefined} />
       </FlowContainer>
 
