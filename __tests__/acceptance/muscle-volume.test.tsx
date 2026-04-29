@@ -220,6 +220,24 @@ describe('MuscleVolumeSegment — Scroll Container', () => {
   })
 })
 
+// --- Trend Chart Axes (BLD-848) ---
+
+describe('MuscleVolumeSegment — Trend Chart Axes', () => {
+  it('mounts the trend chart container when there is enough data', async () => {
+    const { findByTestId } = renderScreen(<MuscleVolumeSegment />)
+    // hasEnoughTrend requires >=2 weeks with sets>0 (sampleTrend has 4)
+    expect(await findByTestId('volume-trend-chart')).toBeTruthy()
+  })
+
+  it('renders bar chart scale caption with maxSets value', async () => {
+    const { findByLabelText } = renderScreen(<MuscleVolumeSegment />)
+    // maxSets is the larger of any sample row's sets and the largest MRV landmark.
+    // Default landmarks may exceed sample sets, so we just assert the scale row
+    // exists with a numeric upper bound (non-zero) — accessibility label format.
+    expect(await findByLabelText(/Scale: 0 to \d+ sets/)).toBeTruthy()
+  })
+})
+
 // --- Error State ---
 
 describe('MuscleVolumeSegment — Error', () => {
