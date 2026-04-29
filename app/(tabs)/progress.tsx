@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { SegmentedControl } from "@/components/ui/segmented-control";
-import { useLayout } from "../../lib/layout";
+import { ScrollableTabs } from "@/components/ui/scrollable-tabs";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import WorkoutSegment from "@/components/progress/WorkoutSegment";
 import BodySegment from "@/components/progress/BodySegment";
@@ -11,13 +10,14 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function Progress() {
   const colors = useThemeColors();
-  const layout = useLayout();
   const [segment, setSegment] = useState("workouts");
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.segmentContainer, { paddingHorizontal: layout.horizontalPadding }]}>
-        <SegmentedControl
+      <View style={styles.tabsContainer}>
+        {/* ScrollableTabs handles its own edge padding via contentContainerStyle —
+            do NOT wrap with horizontal padding or the trailing fade gets clipped. */}
+        <ScrollableTabs
           value={segment}
           onValueChange={setSegment}
           buttons={[
@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  segmentContainer: {
-    padding: 16,
+  tabsContainer: {
+    paddingTop: 16,
     paddingBottom: 0,
   },
 });
