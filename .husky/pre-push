@@ -1,5 +1,20 @@
 #!/bin/sh
 
+# ─── Skip on branch deletes (BLD-791) ───────────────────────────
+# A delete push sends local_sha = 0{40} for every ref. Nothing to audit.
+zero='0000000000000000000000000000000000000000'
+all_deletes=true
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$local_sha" != "$zero" ]; then
+    all_deletes=false
+    break
+  fi
+done
+if $all_deletes; then
+  echo "⏭️  Branch delete — skipping all pre-push gates."
+  exit 0
+fi
+
 # ─── License Integrity Gate ──────────────────────────────────────
 # Blocks push if LICENSE file has been tampered with
 if [ -f "scripts/check-license.sh" ]; then
