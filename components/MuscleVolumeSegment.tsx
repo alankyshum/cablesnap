@@ -9,6 +9,7 @@ import { MUSCLE_LABELS } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import { useFloatingTabBarHeight } from "./FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useMuscleVolumeChartWidth } from "@/hooks/useMuscleVolumeChartWidth";
 import { useMuscleVolume } from "@/hooks/useMuscleVolume";
 import type { VolumeRow } from "@/hooks/useMuscleVolume";
 import { getVolumeStatus } from "../lib/volume-landmarks";
@@ -99,9 +100,9 @@ export default function MuscleVolumeSegment() {
     }
   }, [data, landmarks, selectMuscle]);
 
-  const chartWidth = layout.atLeastMedium
-    ? (layout.width - 96) / 2 - 32
-    : layout.width - 48;
+  // Chart width math is in useMuscleVolumeChartWidth (kept hooked out so the
+  // main file stays under the FTA 300-line decomposition cap).
+  const chartWidth = useMuscleVolumeChartWidth();
 
   // ---- Render ----
 
