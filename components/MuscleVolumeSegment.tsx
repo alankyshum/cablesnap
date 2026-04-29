@@ -99,9 +99,20 @@ export default function MuscleVolumeSegment() {
     }
   }, [data, landmarks, selectMuscle]);
 
+  // Chart width math:
+  // - Phone (single column): each card has marginHorizontal: 16 (32 total), Card has padding: 18 (36 total internal).
+  //   Available chart inner width = layout.width - 32 - 36 = layout.width - 68.
+  // - Tablet (two columns inside flowRow with gap: 12):
+  //   Outer flowRow has marginHorizontal: 16 from each card -> use card margins;
+  //   Each card width = (layout.width - 32 - 12) / 2 = (layout.width - 44) / 2,
+  //   minus Card internal padding (36) -> chart inner = (layout.width - 44)/2 - 36.
+  //   On tablet we also let the chart auto-size via flex:1 (chartWidth=undefined),
+  //   which handles edge cases (split-screen, very wide displays) more reliably
+  //   than a hard-pinned width. The phone path keeps an explicit width so victory-native
+  //   has stable bounds during the initial layout pass.
   const chartWidth = layout.atLeastMedium
-    ? (layout.width - 96) / 2 - 32
-    : layout.width - 48;
+    ? undefined
+    : layout.width - 68;
 
   // ---- Render ----
 

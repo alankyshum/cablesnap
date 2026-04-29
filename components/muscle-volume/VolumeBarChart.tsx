@@ -42,9 +42,20 @@ export default function VolumeBarChart({
 }: Props) {
   return (
     <CardContent>
-      <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
         Sets per Muscle Group
       </Text>
+      <View
+        style={styles.scaleRow}
+        accessibilityLabel={`Scale: 0 to ${maxSets} sets`}
+      >
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+          0
+        </Text>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+          {maxSets} sets
+        </Text>
+      </View>
       <View style={styles.bars}>
         {data.map((item) => {
           const pct = (item.sets / maxSets) * 100;
@@ -118,6 +129,13 @@ export default function VolumeBarChart({
 const styles = StyleSheet.create({
   bars: {
     position: "relative",
+  },
+  scaleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingLeft: 76, // align with bar track (label width 64 + marginRight 8 + padding 4)
+    paddingRight: 32, // align with trailing sets number column (width 28 + small gutter)
+    marginBottom: 8,
   },
   barRow: {
     flexDirection: "row",
