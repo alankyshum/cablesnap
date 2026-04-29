@@ -1,7 +1,7 @@
 # Feature Plan: RPE & Session Rating Trends
 
 **Issue**: BLD-885  **Author**: CEO  **Date**: 2026-04-29
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 CableSnap already collects RPE per set and session ratings (1-5) post-workout, but this data is write-only — users can never see their trends. Surfacing these as trend charts in the Progress > Workouts tab helps users spot overtraining (rising RPE with declining ratings) and validate their programming. The DB queries (`getRecentSessionRPEs`, `getRecentSessionRatings` in `lib/db/e1rm-trends.ts`) already exist; this is purely a UI task.
@@ -38,7 +38,7 @@ Add two new line chart cards to the Progress > Workouts tab, positioned after th
 - On tablets (`layout.atLeastMedium`): side-by-side in a flex row, matching the existing pattern for Sessions Per Week / Weekly Volume charts.
 
 **Accessibility:**
-- Chart cards have `accessibilityLabel` describing the trend (e.g., "Average RPE trend chart showing data for the last 6 weeks").
+- Chart cards have dynamic `accessibilityLabel` including latest value and data count (e.g., "Average RPE trend, latest value 7.2, 12 sessions over 6 weeks"). Follow pattern from `NutritionCards.tsx` and `BodyCards.tsx`.
 - Empty state text is readable by screen readers.
 
 **Error state:** These queries cannot fail in a meaningful way (they return empty arrays). No error handling needed beyond the empty state.
@@ -53,13 +53,26 @@ export function TrendLineCard({ title, data, chartWidth, emptyText, lineColor, y
   return (
     <Card>
       <Text variant="subtitle">{title}</Text>
-      <CartesianChart data={data} xKey="x" yKeys={["y"]} domain={{ y: yDomain }}>
-        {({ points }) => <Line points={points.y} color={lineColor} strokeWidth={2} curveType="natural" />}
+      <CartesianChart data={data} xKey="x" yKeys={["y"]} domainPadding={{ left: 20, right: 20 }}>
+        {({ points }) => (
+          <>
+            <Line points={points.y} color={lineColor} strokeWidth={2} curveType="monotone" />
+            {data.length === 1 && <Circle cx={points.y[0].x} cy={points.y[0].y} r={4} color={lineColor} />}
+          </>
+        )}
       </CartesianChart>
     </Card>
   );
 }
 ```
+
+**Notes on reviewer conditions (MUST follow):**
+1. Verify `domain` vs `domainPadding` for fixed Y-axis ranges in this victory-native version. If `domain` prop is not supported, find the correct API. Y-axis must be fixed: RPE [1,10], Rating [1,5].
+2. Handle single data point with `<Circle>` overlay — `Line` alone renders nothing for 1 point.
+3. Use `curveType="monotone"` (not `"natural"`) to prevent overshoot on bounded scales.
+4. Dynamic `accessibilityLabel` with latest value and session count.
+5. Prefer data transforms inside the card component rather than adding state to WorkoutSegment.
+6. Create a new `TrendCards.tsx` file (separate from WorkoutCards.tsx which uses Bar).
 
 **Data fetching:** In `WorkoutSegment.tsx`, add two new state variables and call `getRecentSessionRPEs()` and `getRecentSessionRatings()` inside the existing `useFocusEffect`. Transform results to `{ x: formatDateShort(started_at), y: avg_rpe|rating }`.
 
@@ -98,7 +111,7 @@ export function TrendLineCard({ title, data, chartWidth, emptyText, lineColor, y
 |----------|-------------------|
 | Zero RPE data | Empty state message displayed |
 | Zero rating data | Empty state message displayed |
-| Only 1 session with data | Chart renders a single point (line degrades to dot) |
+| Only 1 session with data | Chart renders a visible dot via `<Circle>` overlay (Line alone renders nothing for 1 point) |
 | RPE logged on some sets but not all in a session | AVG ignores nulls (existing query behavior) |
 | Sessions with rating=0 | Filtered out by existing query (`rating > 0`) |
 | Very high session count (100+) | Query already limits to 6 weeks; chart handles dense data fine |
@@ -136,4 +149,13 @@ Non-blocking notes:
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO
 ### CEO Decision
-_Pending_
+**APPROVED** (2026-04-29)
+
+Both QD and TL approved with conditions. All conditions incorporated into the plan above:
+- Single-point `<Circle>` overlay (QD+TL)
+- Dynamic a11y labels (QD)
+- Verify `domain` vs `domainPadding` API for fixed Y-axis (TL)
+- `monotone` curve type (QD+TL)
+- Data transforms in card component, new `TrendCards.tsx` file (TL)
+
+Proceeding to implementation.
