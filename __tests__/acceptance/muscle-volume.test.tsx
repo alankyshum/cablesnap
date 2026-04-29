@@ -72,10 +72,10 @@ const sampleData: VolumeRow[] = [
 ]
 
 const sampleTrend: TrendRow[] = [
-  { week: 'W1', sets: 10 },
-  { week: 'W2', sets: 12 },
-  { week: 'W3', sets: 14 },
-  { week: 'W4', sets: 15 },
+  { week: '3/4', sets: 10 },
+  { week: '3/11', sets: 12 },
+  { week: '3/18', sets: 14 },
+  { week: '3/25', sets: 15 },
 ]
 
 beforeEach(() => {
