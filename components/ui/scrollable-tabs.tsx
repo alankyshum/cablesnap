@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * ScrollableTabs — horizontally scrollable underline tabs.
  *
@@ -88,7 +87,7 @@ export function ScrollableTabs({
   const inactiveColor = useColor("mutedForeground");
   const bgColor = useColor("background");
 
-  const tabs = buttons as ScrollableTabsButton[];
+  const tabs: readonly ScrollableTabsButton[] = buttons;
   const layoutsRef = useRef<Record<string, TabLayout>>({});
   const [containerWidth, setContainerWidth] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);

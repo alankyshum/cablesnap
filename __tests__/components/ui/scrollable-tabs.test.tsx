@@ -6,6 +6,7 @@
  * onValueChange, and the active tab's accessibility state flips.
  */
 import React from "react";
+import { ScrollView, View } from "react-native";
 import { fireEvent, render } from "@testing-library/react-native";
 
 jest.mock("@/hooks/useColor", () => ({
@@ -32,16 +33,17 @@ jest.mock("expo-haptics", () => ({
 
 import * as Haptics from "expo-haptics";
 import { ScrollableTabs } from "../../../components/ui/scrollable-tabs";
+import type { ScrollableTabsButton } from "../../../components/ui/scrollable-tabs";
 
 const impactAsyncMock = Haptics.impactAsync as jest.Mock;
 
-const FIVE_TABS = [
+const FIVE_TABS: readonly ScrollableTabsButton[] = [
   { value: "workouts", label: "Workouts", accessibilityLabel: "Workouts progress" },
   { value: "body", label: "Body", accessibilityLabel: "Body metrics" },
   { value: "muscles", label: "Muscles", accessibilityLabel: "Muscle volume analysis" },
   { value: "nutrition", label: "Nutrition", accessibilityLabel: "Nutrition trends" },
   { value: "monthly", label: "Monthly", accessibilityLabel: "Monthly training report" },
-] as const;
+];
 
 beforeEach(() => {
   impactAsyncMock.mockClear();
@@ -53,7 +55,7 @@ describe("ScrollableTabs (BLD-849)", () => {
       <ScrollableTabs
         value="workouts"
         onValueChange={() => {}}
-        buttons={FIVE_TABS as any}
+        buttons={FIVE_TABS}
       />,
     );
     // Every label must be rendered as text exactly as supplied.
@@ -68,7 +70,7 @@ describe("ScrollableTabs (BLD-849)", () => {
       <ScrollableTabs
         value="workouts"
         onValueChange={onValueChange}
-        buttons={FIVE_TABS as any}
+        buttons={FIVE_TABS}
       />,
     );
     fireEvent.press(getByText("Body"));
@@ -82,7 +84,7 @@ describe("ScrollableTabs (BLD-849)", () => {
       <ScrollableTabs
         value="workouts"
         onValueChange={onValueChange}
-        buttons={FIVE_TABS as any}
+        buttons={FIVE_TABS}
       />,
     );
     fireEvent.press(getByText("Workouts"));
@@ -96,7 +98,7 @@ describe("ScrollableTabs (BLD-849)", () => {
       <ScrollableTabs
         value="workouts"
         onValueChange={() => {}}
-        buttons={FIVE_TABS as any}
+        buttons={FIVE_TABS}
       />,
     );
     expect(
@@ -110,7 +112,7 @@ describe("ScrollableTabs (BLD-849)", () => {
       <ScrollableTabs
         value="muscles"
         onValueChange={() => {}}
-        buttons={FIVE_TABS as any}
+        buttons={FIVE_TABS}
       />,
     );
     expect(
@@ -141,11 +143,58 @@ describe("ScrollableTabs (BLD-849)", () => {
       <ScrollableTabs
         value="workouts"
         onValueChange={() => {}}
-        buttons={FIVE_TABS as any}
+        buttons={FIVE_TABS}
       />,
     );
     expect(getByTestId("scrollable-tabs-indicator")).toBeTruthy();
     // Root container exposes tablist for assistive tech.
     expect(root.props.accessibilityRole).toBe("tablist");
+  });
+
+  it("shows the trailing fade only when content overflows the container and we are not scrolled to the end", () => {
+    const { getByTestId, queryByTestId, UNSAFE_getAllByType } = render(
+      <ScrollableTabs
+        value="workouts"
+        onValueChange={() => {}}
+        buttons={FIVE_TABS}
+      />,
+    );
+    // 1) Initial render: container has zero width (no layout yet) — fade
+    //    should be hidden because contentWidth (0) is not > containerWidth (0).
+    expect(queryByTestId("scrollable-tabs-trailing-fade")).toBeNull();
+
+    // 2) Container measures 200px wide.
+    const tablist = UNSAFE_getAllByType(View).find(
+      (n) => n.props.accessibilityRole === "tablist",
+    );
+    expect(tablist).toBeTruthy();
+    fireEvent(tablist!, "layout", {
+      nativeEvent: { layout: { x: 0, y: 0, width: 200, height: 48 } },
+    });
+
+    // 3) ScrollView reports content width of 600px (overflows by 400px) and
+    //    we are scrolled to the start. Fade must appear.
+    const scrollView = UNSAFE_getAllByType(ScrollView)[0];
+    fireEvent(scrollView, "contentSizeChange", 600, 48);
+    fireEvent.scroll(scrollView, {
+      nativeEvent: {
+        contentOffset: { x: 0, y: 0 },
+        contentSize: { width: 600, height: 48 },
+        layoutMeasurement: { width: 200, height: 48 },
+      },
+    });
+    expect(getByTestId("scrollable-tabs-trailing-fade")).toBeTruthy();
+
+    // 4) Scroll to the end (offset 400 → right edge reaches contentWidth).
+    //    Fade must hide so the user does not see a phantom fade at the
+    //    actual end of content.
+    fireEvent.scroll(scrollView, {
+      nativeEvent: {
+        contentOffset: { x: 400, y: 0 },
+        contentSize: { width: 600, height: 48 },
+        layoutMeasurement: { width: 200, height: 48 },
+      },
+    });
+    expect(queryByTestId("scrollable-tabs-trailing-fade")).toBeNull();
   });
 });
