@@ -3,10 +3,8 @@ import React, { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
-import { useLayout } from "../../lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { GroupCardHeader } from "./GroupCardHeader";
-import { SuggestionChip } from "./SuggestionChip";
 import { ExerciseGroupSetTable } from "./ExerciseGroupSetTable";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
@@ -76,7 +74,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onTimerStart, onTimerStop,
 }: GroupCardProps) {
   const colors = useThemeColors();
-  const layout = useLayout();
   const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
   const linkIdx = group.link_id ? linked.findIndex((g) => g.exercise_id === group.exercise_id) : -1;
   const isFirstInLink = linkIdx === 0;
@@ -128,16 +125,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
     />
   );
 
-  const suggestionChip = suggestion ? (
-    <SuggestionChip
-      suggestion={suggestion}
-      sets={group.sets}
-      step={step}
-      onUpdate={onUpdate}
-      colors={colors}
-    />
-  ) : null;
-
   return (
     <View style={styles.group}>
       {isFirstInLink && group.link_id && (
@@ -164,6 +151,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           firstSet={firstSet}
           previousPerformance={group.previousSummary}
           previousPerformanceA11y={group.previousSummaryA11y}
+          suggestion={suggestion}
+          step={step}
+          onUpdate={onUpdate}
           onModeChange={onModeChange}
           onExerciseNotes={onExerciseNotes}
           onExerciseNotesDraftChange={onExerciseNotesDraftChange}
@@ -178,23 +168,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           isLast={isLastReorderable}
           showMoveButtons={showMoveButtons}
         />
-        {layout.atLeastMedium ? (
-          <View style={styles.groupWideRow}>
-            {suggestionChip && (
-              <View style={styles.groupInfoCol}>
-                {suggestionChip}
-              </View>
-            )}
-            <View style={suggestionChip ? styles.groupSetsCol : { flex: 1 }}>
-              {setTable}
-            </View>
-          </View>
-        ) : (
-          <>
-            {suggestionChip}
-            {setTable}
-          </>
-        )}
+        {/* BLD-850: removed tablet 2-col split (regression of BLD-716) — set
+            table renders full-width on every breakpoint. */}
+        {setTable}
       </View>
       <Separator style={styles.divider} />
     </View>
@@ -204,17 +180,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
 const styles = StyleSheet.create({
   group: {
     marginBottom: 8,
-  },
-  groupWideRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  groupInfoCol: {
-    flex: 2,
-    minWidth: 160,
-  },
-  groupSetsCol: {
-    flex: 3,
   },
   divider: { marginTop: 8, marginBottom: 12 },
   linkGroupHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 6, marginBottom: 4, borderRadius: 4 },
