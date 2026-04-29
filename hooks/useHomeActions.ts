@@ -1,9 +1,11 @@
 import { useCallback } from "react";
 import { Alert } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { softDeleteProgram } from "../lib/programs";
-import { deleteTemplate, duplicateTemplate, duplicateProgram, startSession } from "../lib/db";
+import { deleteTemplate, duplicateTemplate, duplicateProgram, importCoachTemplates, startSession, validateCoachTemplateImportData } from "../lib/db";
 import type { Program, WorkoutTemplate } from "../lib/types";
 import { STARTER_TEMPLATES } from "../lib/starter-templates";
 import { bumpQueryVersion } from "../lib/query";
@@ -12,7 +14,7 @@ import { useToast } from "../components/ui/bna-toast";
 export function useHomeActions() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { info } = useToast();
+  const { info, success, error } = useToast();
   const reload = useCallback(() => queryClient.invalidateQueries({ queryKey: ["home"] }), [queryClient]);
   const starterMeta = useCallback((id: string) => STARTER_TEMPLATES.find((s) => s.id === id), []);
 
@@ -42,5 +44,46 @@ export function useHomeActions() {
     Alert.alert(item.name, undefined, [{ text: "Duplicate", onPress: () => handleDuplicateProgram(item) }, { text: "Cancel", style: "cancel" }]);
   }, [handleDuplicateProgram]);
 
-  return { router, info, reload, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions };
+  const importTemplates = useCallback(async () => {
+    try {
+      // Minimal coach template JSON:
+      // { "version": 1, "templates": [{ "name": "Push Day", "exercises": [{ "exercise_id": "ex-1", "target_sets": 3, "target_reps": "8-12", "rest_seconds": 90, "set_types": ["warmup", "normal", "failure"] }] }] }
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/json",
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const file = new File(result.assets[0].uri);
+      const raw = await file.text();
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        error("Invalid template file");
+        return;
+      }
+
+      const validated = validateCoachTemplateImportData(parsed);
+      if (!validated.success) {
+        error(validated.error);
+        return;
+      }
+
+      const importedIds = await importCoachTemplates(validated.data);
+      if (importedIds.length === 0) {
+        info("No templates imported");
+        return;
+      }
+
+      bumpQueryVersion("home");
+      reload();
+      success(importedIds.length === 1 ? "1 template imported" : `${importedIds.length} templates imported`);
+    } catch {
+      error("Template import failed");
+    }
+  }, [error, info, reload, success]);
+
+  return { router, info, reload, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions, importTemplates };
 }

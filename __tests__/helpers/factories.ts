@@ -105,7 +105,6 @@ export function createTemplateExercise(overrides: Partial<TemplateExercise> = {}
     link_id: null,
     link_label: '',
     target_duration_seconds: null,
-    training_mode: null,
     ...overrides,
   }
 }
@@ -140,7 +139,6 @@ export function createSet(overrides: Partial<WorkoutSet> = {}): WorkoutSet {
     notes: '',
     link_id: null,
     round: null,
-    training_mode: null,
     tempo: null,
     swapped_from_exercise_id: null,
     set_type: 'normal',

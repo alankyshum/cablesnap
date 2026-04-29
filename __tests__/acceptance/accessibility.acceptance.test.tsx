@@ -90,7 +90,6 @@ jest.mock('react-native-body-highlighter', () => {
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
 jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/confirm', () => ({ confirmAction: jest.fn() }))
-jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
 jest.mock('../../components/MuscleMap', () => ({ MuscleMap: 'MuscleMap' }))
 jest.mock('../../components/WeightPicker', () => 'WeightPicker')
 jest.mock('../../components/ExercisePickerSheet', () => 'ExercisePickerSheet')
@@ -189,7 +188,6 @@ jest.mock('../../lib/db', () => ({
   updateSetsBatch: jest.fn().mockResolvedValue(undefined),
   updateSetRPE: jest.fn().mockResolvedValue(undefined),
   updateSetNotes: jest.fn().mockResolvedValue(undefined),
-  updateSetTrainingMode: jest.fn().mockResolvedValue(undefined),
   updateSetTempo: jest.fn().mockResolvedValue(undefined),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
   getPreviousSets: jest.fn().mockResolvedValue([]),
@@ -225,6 +223,20 @@ jest.mock('../../lib/db', () => ({
   duplicateTemplate: jest.fn().mockResolvedValue('dup-1'),
   duplicateProgram: jest.fn().mockResolvedValue('dup-p1'),
   getStravaConnection: jest.fn().mockResolvedValue(null),
+  // Backup category exports added in BLD-773 consolidated bugfixes branch
+  BACKUP_CATEGORY_ORDER: ['workouts', 'nutrition', 'body', 'settings'],
+  BACKUP_CATEGORY_LABELS: {
+    workouts: 'Workouts',
+    nutrition: 'Nutrition',
+    body: 'Body Metrics',
+    settings: 'Settings',
+  },
+  BACKUP_TABLE_LABELS: {},
+  getBackupCategoryCounts: jest.fn().mockResolvedValue({}),
+  getPresentBackupCategories: jest.fn().mockResolvedValue([]),
+  validateBackupFileSize: jest.fn().mockReturnValue(true),
+  validateBackupData: jest.fn().mockReturnValue({ valid: true }),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/db/pr-dashboard', () => ({
@@ -442,7 +454,7 @@ describe('Accessibility Compliance Audit', () => {
         {
           id: 'set-1', session_id: 'sess-1', exercise_id: 'ex-1', set_number: 1,
           weight: 80, reps: 8, completed: false, completed_at: null,
-          rpe: null, notes: null, link_id: null, training_mode: null, tempo: null,
+          rpe: null, notes: null, link_id: null, tempo: null,
           exercise_name: 'Bench Press', exercise_deleted: false,
         },
       ])

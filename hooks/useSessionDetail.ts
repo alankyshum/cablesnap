@@ -109,7 +109,7 @@ export function useSessionDetail(id: string | undefined) {
     let total = 0;
     for (const g of groups) {
       for (const s of g.sets) {
-        if (s.completed && s.weight && s.reps) {
+        if (s.completed && s.set_type !== "warmup" && s.weight && s.reps) {
           total += s.weight * s.reps;
         }
       }
@@ -121,7 +121,7 @@ export function useSessionDetail(id: string | undefined) {
     let count = 0;
     for (const g of groups) {
       for (const s of g.sets) {
-        if (s.completed) count++;
+        if (s.completed && s.set_type !== "warmup") count++;
       }
     }
     return count;

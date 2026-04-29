@@ -12,7 +12,6 @@ jest.mock('../../lib/db', () => ({
   updateSetsBatch: jest.fn().mockResolvedValue(undefined),
   updateSetRPE: jest.fn().mockResolvedValue(undefined),
   updateSetNotes: jest.fn().mockResolvedValue(undefined),
-  updateSetTrainingMode: jest.fn().mockResolvedValue(undefined),
   updateSetTempo: jest.fn().mockResolvedValue(undefined),
   deleteSet: jest.fn().mockResolvedValue(undefined),
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
@@ -56,7 +55,6 @@ jest.mock('../../lib/units', () => ({
   KG_TO_LB: 2.20462,
   LB_TO_KG: 0.453592,
 }))
-jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 const mockParams: Record<string, string> = {}

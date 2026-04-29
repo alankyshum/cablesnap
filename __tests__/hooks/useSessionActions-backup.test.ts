@@ -24,7 +24,6 @@ jest.mock("../../lib/db", () => ({
   updateSet: jest.fn(),
   updateSetRPE: jest.fn(),
   updateSetNotes: jest.fn(),
-  updateSetTrainingMode: jest.fn(),
   getSessionSets: (...args: any[]) => mockGetSessionSets(...args),
   updateSetDuration: jest.fn(),
   checkSetPR: jest.fn(),

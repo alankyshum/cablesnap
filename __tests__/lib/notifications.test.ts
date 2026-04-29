@@ -234,8 +234,8 @@ describe("notifications", () => {
       expect(id).toBe("notif-id");
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
         content: {
-          title: "Rest Complete",
-          body: "Time for your next set 💪",
+          title: "Rest complete",
+          body: "Time for your next set.",
           sound: "default",
           data: { sessionId: "session-1", type: "rest_complete" },
         },

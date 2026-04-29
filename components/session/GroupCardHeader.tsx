@@ -29,7 +29,7 @@ export type GroupCardHeaderProps = {
    * tests and parent wiring even though the in-header mode pill was
    * removed. Mode-picker UI moves to the Details modal in a follow-up.
    */
-  currentMode: TrainingMode | undefined;
+  currentMode?: TrainingMode | undefined;
   exerciseNotesOpen: boolean;
   exerciseNotesDraft: string | undefined;
   firstSet: SetWithMeta | undefined;
@@ -41,7 +41,7 @@ export type GroupCardHeaderProps = {
   suggestion?: Suggestion | null;
   step?: number;
   onUpdate?: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
-  onModeChange: (exerciseId: string, mode: TrainingMode) => void;
+  onModeChange?: (exerciseId: string, mode: TrainingMode) => void;
   onExerciseNotes: (exerciseId: string, text: string) => void;
   onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
   onToggleExerciseNotes: (exerciseId: string) => void;

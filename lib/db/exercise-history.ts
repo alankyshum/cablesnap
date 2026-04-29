@@ -499,9 +499,7 @@ export async function getRecentExercises(
       difficulty: exercises.difficulty,
       is_custom: exercises.is_custom,
       deleted_at: exercises.deleted_at,
-      mount_position: exercises.mount_position,
       attachment: exercises.attachment,
-      training_modes: exercises.training_modes,
       is_voltra: exercises.is_voltra,
     })
     .from(workoutSets)
@@ -542,9 +540,7 @@ export async function getFrequentExercises(
       difficulty: exercises.difficulty,
       is_custom: exercises.is_custom,
       deleted_at: exercises.deleted_at,
-      mount_position: exercises.mount_position,
       attachment: exercises.attachment,
-      training_modes: exercises.training_modes,
       is_voltra: exercises.is_voltra,
     })
     .from(workoutSets)

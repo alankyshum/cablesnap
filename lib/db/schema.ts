@@ -25,9 +25,7 @@ export const exercises = sqliteTable("exercises", {
   is_custom: integer("is_custom").default(0),
   deleted_at: integer("deleted_at"),
   // Voltra-specific columns (added via ALTER TABLE)
-  mount_position: text("mount_position"),
   attachment: text("attachment").default("handle"),
-  training_modes: text("training_modes").default('["weight"]'),
   is_voltra: integer("is_voltra").default(0),
   // BLD-561: optional user-supplied illustration URIs for custom exercises.
   start_image_uri: text("start_image_uri"),
@@ -40,6 +38,7 @@ export const workoutTemplates = sqliteTable("workout_templates", {
   created_at: integer("created_at").notNull(),
   updated_at: integer("updated_at").notNull(),
   is_starter: integer("is_starter").default(0),
+  source: text("source"),
 });
 
 export const templateExercises = sqliteTable("template_exercises", {
@@ -53,7 +52,7 @@ export const templateExercises = sqliteTable("template_exercises", {
   link_id: text("link_id"),
   link_label: text("link_label").default(""),
   target_duration_seconds: integer("target_duration_seconds"),
-  training_mode: text("training_mode"),
+  set_types: text("set_types").default("[]"),
 }, (table) => [
   index("idx_template_exercises_template").on(table.template_id),
 ]);
@@ -88,7 +87,6 @@ export const workoutSets = sqliteTable("workout_sets", {
   notes: text("notes").default(""),
   link_id: text("link_id"),
   round: integer("round"),
-  training_mode: text("training_mode"),
   tempo: text("tempo"),
   swapped_from_exercise_id: text("swapped_from_exercise_id"),
   set_type: text("set_type").default("normal"),

@@ -18,7 +18,7 @@ const baseExercise: TemplateExercise = {
   link_id: null,
   link_label: '',
   target_duration_seconds: null,
-  training_mode: null,
+  set_types: ['warmup', 'normal', 'dropset', 'failure'],
   exercise: { id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: ['triceps'], equipment: 'barbell', instructions: '', difficulty: 'intermediate', is_custom: false, deleted_at: null } as TemplateExercise['exercise'],
 }
 
@@ -36,13 +36,15 @@ describe('EditExerciseSheet', () => {
   })
 
   it('renders pre-filled values when visible', () => {
-    const { getByDisplayValue, getByText } = renderScreen(
+    const { getByDisplayValue, getByText, getByLabelText } = renderScreen(
       <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     expect(getByText('Bench Press')).toBeTruthy()
     expect(getByDisplayValue('4')).toBeTruthy()
     expect(getByDisplayValue('6-8')).toBeTruthy()
     expect(getByDisplayValue('120')).toBeTruthy()
+    expect(getByLabelText('Set 1 type: Warm-up')).toBeTruthy()
+    expect(getByLabelText('Set 4 type: Failure')).toBeTruthy()
   })
 
   it('uses default fallbacks when exercise has null values', () => {
@@ -75,7 +77,16 @@ describe('EditExerciseSheet', () => {
     )
     fireEvent.press(getByLabelText('Save exercise settings'))
     expect(Keyboard.dismiss).toHaveBeenCalled()
-    expect(onSave).toHaveBeenCalledWith(4, '6-8', 120)
+    expect(onSave).toHaveBeenCalledWith(4, '6-8', 120, ['warmup', 'normal', 'dropset', 'failure'])
+  })
+
+  it('cycles set type chips before saving', () => {
+    const { getByLabelText } = renderScreen(
+      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+    )
+    fireEvent.press(getByLabelText('Set 2 type: Normal'))
+    fireEvent.press(getByLabelText('Save exercise settings'))
+    expect(onSave).toHaveBeenCalledWith(4, '6-8', 120, ['warmup', 'warmup', 'dropset', 'failure'])
   })
 
   it('calls onDismiss when Cancel is pressed', () => {
@@ -119,7 +130,7 @@ describe('EditExerciseSheet', () => {
     )
     fireEvent.changeText(getByLabelText('Rest time in seconds'), '0')
     fireEvent.press(getByLabelText('Save exercise settings'))
-    expect(onSave).toHaveBeenCalledWith(4, '6-8', 0)
+    expect(onSave).toHaveBeenCalledWith(4, '6-8', 0, ['warmup', 'normal', 'dropset', 'failure'])
   })
 
   it('allows AMRAP as reps value', () => {
@@ -128,7 +139,7 @@ describe('EditExerciseSheet', () => {
     )
     fireEvent.changeText(getByLabelText('Target reps'), 'AMRAP')
     fireEvent.press(getByLabelText('Save exercise settings'))
-    expect(onSave).toHaveBeenCalledWith(4, 'AMRAP', 120)
+    expect(onSave).toHaveBeenCalledWith(4, 'AMRAP', 120, ['warmup', 'normal', 'dropset', 'failure'])
   })
 
   it('has accessibilityViewIsModal on the sheet', () => {

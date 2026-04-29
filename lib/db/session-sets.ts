@@ -1,8 +1,7 @@
 /* eslint-disable max-lines */
 import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import type { WorkoutSet, TrainingMode, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
-import { coerceTrainingMode } from "../types";
+import type { WorkoutSet, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { isAttachment, isMountPosition } from "../cable-variant";
 import { isGripType, isGripWidth } from "../bodyweight-grip-variant";
 import { categorize, type ExerciseCategory } from "../rest";
@@ -29,7 +28,6 @@ export async function getSessionSets(
       notes: workoutSets.notes,
       link_id: workoutSets.link_id,
       round: workoutSets.round,
-      training_mode: workoutSets.training_mode,
       tempo: workoutSets.tempo,
       swapped_from_exercise_id: workoutSets.swapped_from_exercise_id,
       set_type: workoutSets.set_type,
@@ -63,7 +61,6 @@ export async function getSessionSets(
     notes: r.notes ?? "",
     link_id: r.link_id ?? null,
     round: r.round ?? null,
-    training_mode: coerceTrainingMode(r.training_mode),
     tempo: r.tempo ?? null,
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
     set_type: (r.set_type as SetType) ?? "normal",
@@ -89,7 +86,6 @@ export type SourceSessionSet = {
   weight: number | null;
   reps: number | null;
   link_id: string | null;
-  training_mode: string | null;
   tempo: string | null;
   exercise_exists: boolean;
   set_type: SetType;
@@ -106,7 +102,6 @@ export async function getSourceSessionSets(
       weight: workoutSets.weight,
       reps: workoutSets.reps,
       link_id: workoutSets.link_id,
-      training_mode: workoutSets.training_mode,
       tempo: workoutSets.tempo,
       exercise_exists: exercises.id,
       set_type: workoutSets.set_type,
@@ -122,7 +117,6 @@ export async function getSourceSessionSets(
     weight: r.weight,
     reps: r.reps,
     link_id: r.link_id,
-    training_mode: coerceTrainingMode(r.training_mode),
     tempo: r.tempo,
     exercise_exists: r.exercise_exists != null,
     set_type: (r.set_type as SetType) ?? "normal",
@@ -138,7 +132,6 @@ export async function addSet(
   setNumber: number,
   linkId?: string | null,
   round?: number | null,
-  trainingMode?: TrainingMode | null,
   tempo?: string | null,
   _isWarmup?: boolean,
   setType?: SetType,
@@ -162,7 +155,6 @@ export async function addSet(
     set_number: setNumber,
     link_id: linkId ?? null,
     round: round ?? null,
-    training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     set_type: resolvedType,
     exercise_position: exercisePosition ?? 0,
@@ -184,7 +176,6 @@ export async function addSet(
     notes: "",
     link_id: linkId ?? null,
     round: round ?? null,
-    training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     swapped_from_exercise_id: null,
     set_type: resolvedType,
@@ -204,7 +195,6 @@ export async function addSetsBatch(
     setNumber: number;
     linkId?: string | null;
     round?: number | null;
-    trainingMode?: TrainingMode | null;
     tempo?: string | null;
     isWarmup?: boolean;
     setType?: SetType;
@@ -232,7 +222,6 @@ export async function addSetsBatch(
       notes: "",
       link_id: s.linkId ?? null,
       round: s.round ?? null,
-      training_mode: s.trainingMode ?? null,
       tempo: s.tempo ?? null,
       swapped_from_exercise_id: null,
       set_type: resolvedType,
@@ -247,13 +236,13 @@ export async function addSetsBatch(
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.link_id, r.round, r.training_mode, r.tempo, r.set_type, r.exercise_position,
+          r.link_id, r.round, r.tempo, r.set_type, r.exercise_position,
           r.attachment ?? null, r.mount_position ?? null,
           // BLD-768: positional binding contract — grip_type at index 12, grip_width at index 13.
           // Pinned by `__tests__/lib/db/add-sets-batch-bodyweight-variant.test.ts`.
@@ -272,7 +261,6 @@ export async function addWarmupSets(
   exerciseId: string,
   warmupSets: { weight: number; reps: number }[],
   linkId?: string | null,
-  trainingMode?: TrainingMode | null,
   tempo?: string | null,
   exercisePosition?: number
 ): Promise<WorkoutSet[]> {
@@ -293,7 +281,6 @@ export async function addWarmupSets(
     notes: "",
     link_id: linkId ?? null,
     round: null,
-    training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
     swapped_from_exercise_id: null,
     set_type: "warmup" as SetType,
@@ -310,13 +297,13 @@ export async function addWarmupSets(
 
     // Insert warmup sets
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, training_mode, tempo, set_type, exercise_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, link_id, round, tempo, set_type, exercise_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
-          r.weight, r.reps, r.link_id, r.round, r.training_mode, r.tempo, "warmup", r.exercise_position,
+          r.weight, r.reps, r.link_id, r.round, r.tempo, "warmup", r.exercise_position,
         ]);
       }
     } finally {
@@ -471,13 +458,6 @@ export async function updateSetNotes(id: string, notes: string): Promise<void> {
   const db = await getDrizzle();
   await db.update(workoutSets)
     .set({ notes })
-    .where(eq(workoutSets.id, id));
-}
-
-export async function updateSetTrainingMode(id: string, mode: TrainingMode | null): Promise<void> {
-  const db = await getDrizzle();
-  await db.update(workoutSets)
-    .set({ training_mode: mode })
     .where(eq(workoutSets.id, id));
 }
 

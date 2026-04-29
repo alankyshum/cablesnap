@@ -22,22 +22,21 @@ jest.mock("react-native", () => ({
 }));
 
 jest.mock("expo-splash-screen", () => ({
-  hideAsync: (...args: unknown[]) => mockHideAsync(...args),
+  hideAsync: () => mockHideAsync(),
 }));
 
 jest.mock("../../lib/db", () => ({
-  getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
-  isMemoryFallback: (...args: unknown[]) => mockIsMemoryFallback(...args),
-  isOnboardingComplete: (...args: unknown[]) => mockIsOnboardingComplete(...args),
+  getDatabase: () => mockGetDatabase(),
+  isMemoryFallback: () => mockIsMemoryFallback(),
+  isOnboardingComplete: () => mockIsOnboardingComplete(),
 }));
 
 jest.mock("../../lib/errors", () => ({
-  setupGlobalHandler: (...args: unknown[]) => mockSetupGlobalHandler(...args),
+  setupGlobalHandler: () => mockSetupGlobalHandler(),
 }));
 
 jest.mock("../../lib/web-support", () => ({
-  detectWebSharedMemorySupport: (...args: unknown[]) =>
-    mockDetectWebSharedMemorySupport(...args),
+  detectWebSharedMemorySupport: () => mockDetectWebSharedMemorySupport(),
   WEB_UNSUPPORTED_MESSAGE: "MOCK_WEB_UNSUPPORTED_MESSAGE",
 }));
 

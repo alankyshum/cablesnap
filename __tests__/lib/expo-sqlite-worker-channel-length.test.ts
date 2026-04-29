@@ -98,29 +98,51 @@ describe('expo-sqlite-web WorkerChannel length-prefix protocol (BLD-660)', () =>
   });
 
   it('round-trips a JSON payload >256 bytes through the fixed length prefix', () => {
-    const json = JSON.stringify({
-      result: [
-        'id',
-        'session_id',
-        'exercise_id',
-        'set_number',
-        'weight',
-        'reps',
-        'completed',
-        'completed_at',
-        'rpe',
-        'notes',
-        'link_id',
-        'round',
-        'training_mode',
-        'tempo',
-        'swapped_from_exercise_id',
-        'set_type',
-        'duration_seconds',
-        'exercise_position',
-        'bodyweight_modifier_kg',
-      ],
-    });
+    // Simulate a realistic SELECT * FROM workout_sets result payload — column
+    // list plus a couple of rows. This is what the runtime actually marshals
+    // through WorkerChannel and is the regression case for BLD-660 (payloads
+    // larger than the original 256-byte length-prefix truncation point).
+    const columns = [
+      'id',
+      'session_id',
+      'exercise_id',
+      'set_number',
+      'weight',
+      'reps',
+      'completed',
+      'completed_at',
+      'rpe',
+      'notes',
+      'link_id',
+      'round',
+      'tempo',
+      'swapped_from_exercise_id',
+      'set_type',
+      'duration_seconds',
+      'exercise_position',
+      'bodyweight_modifier_kg',
+    ];
+    const row = {
+      id: 'set-0123456789abcdef',
+      session_id: 'sess-0123456789abcdef',
+      exercise_id: 'ex-0123456789abcdef',
+      set_number: 1,
+      weight: 100,
+      reps: 8,
+      completed: 1,
+      completed_at: 1700000000000,
+      rpe: 8.5,
+      notes: '',
+      link_id: null,
+      round: null,
+      tempo: null,
+      swapped_from_exercise_id: null,
+      set_type: 'normal',
+      duration_seconds: null,
+      exercise_position: 0,
+      bodyweight_modifier_kg: null,
+    };
+    const json = JSON.stringify({ columns, rows: [row, { ...row, set_number: 2 }] });
     expect(json.length).toBeGreaterThan(256); // sanity — must hit the bug class
 
     const bytes = new TextEncoder().encode(json);

@@ -27,12 +27,10 @@ import {
   reorderTemplateExercises,
   updateTemplateName,
   updateTemplateExercise,
-  updateTemplateExerciseTrainingMode,
 } from "../../lib/db";
-import type { Exercise, TemplateExercise, TrainingMode, WorkoutTemplate } from "../../lib/types";
+import type { Exercise, SetType, TemplateExercise, WorkoutTemplate } from "../../lib/types";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 import EditExerciseSheet from "../../components/EditExerciseSheet";
-import TrainingModeSelector from "../../components/TrainingModeSelector";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { bumpQueryVersion } from "../../lib/query";
 
@@ -126,10 +124,10 @@ export default function CreateTemplate() {
     await load();
   }, [template, exercises, load]);
 
-  const handleEditSave = useCallback(async (sets: number, reps: string, rest: number) => {
+  const handleEditSave = useCallback(async (sets: number, reps: string, rest: number, setTypes: SetType[]) => {
     if (!editing || !template) return;
     try {
-      await updateTemplateExercise(editing.id, template.id, sets, reps, rest);
+      await updateTemplateExercise(editing.id, template.id, sets, reps, rest, setTypes);
       setEditing(null);
       await load();
     } catch {
@@ -137,26 +135,9 @@ export default function CreateTemplate() {
     }
   }, [editing, template, load, showError]);
 
-  const handleSetTrainingMode = useCallback(
-    async (te: TemplateExercise, mode: TrainingMode) => {
-      if (!template) return;
-      try {
-        await updateTemplateExerciseTrainingMode(te.id, template.id, mode);
-        await load();
-      } catch {
-        showError("Failed to update training mode");
-      }
-    },
-    [template, load, showError]
-  );
-
   const renderItem = useCallback(
     ({ item, index }: { item: TemplateExercise; index: number }) => {
       const exName = item.exercise?.name ?? "exercise";
-      const modes = item.exercise?.training_modes;
-      const isVoltra = item.exercise?.is_voltra === true;
-      const showModeSelector = isVoltra && Array.isArray(modes) && modes.length > 1;
-      const selectedMode = (item.training_mode ?? modes?.[0]) as TrainingMode | undefined;
       return (
       <Pressable
         onPress={() => setEditing(item)}
@@ -188,21 +169,10 @@ export default function CreateTemplate() {
             </TouchableOpacity>
           </View>
         </View>
-        {showModeSelector && (
-          <View style={styles.modeRow}>
-            <TrainingModeSelector
-              compact
-              modes={modes!}
-              selected={(selectedMode ?? modes![0]) as TrainingMode}
-              exercise={exName}
-              onSelect={(mode) => handleSetTrainingMode(item, mode)}
-            />
-          </View>
-        )}
       </Pressable>
       );
     },
-    [colors, exercises.length, move, remove, handleSetTrainingMode]
+    [colors, exercises.length, move, remove]
   );
 
   return (

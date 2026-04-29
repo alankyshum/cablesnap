@@ -57,20 +57,6 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                   </Text>
                 </View>
               </View>
-              {detail.mount_position && (
-                <>
-                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: fontSizes.xs }}>
-                    Mount Position
-                  </Text>
-                  <Text
-                    variant="body"
-                    style={{ color: colors.onSurface, marginTop: 4 }}
-                    accessibilityLabel={`Mount position: ${detail.mount_position} on rack`}
-                  >
-                    {detail.mount_position}
-                  </Text>
-                </>
-              )}
               {detail.attachment && (
                 <>
                   <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: fontSizes.xs }}>
@@ -84,22 +70,6 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                     {detail.attachment}
                   </Text>
                 </>
-              )}
-              {detail.training_modes && detail.training_modes.length > 0 && (
-                <View accessibilityLabel={`Compatible training modes: ${detail.training_modes.join(", ")}`}>
-                  <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontSize: fontSizes.xs }}>
-                    Training Modes
-                  </Text>
-                  <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
-                    {detail.training_modes.map((m) => (
-                      <View key={m} style={[styles.detailBadge, { backgroundColor: colors.secondaryContainer }]}>
-                        <Text style={[styles.detailBadgeText, { color: colors.onSecondaryContainer }]}>
-                          {m.replace(/_/g, " ")}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
               )}
               <MuscleMap
                 primary={detail.primary_muscles}

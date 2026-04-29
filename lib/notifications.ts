@@ -161,8 +161,8 @@ export async function scheduleRestComplete(
   try {
     const id = await mod.scheduleNotificationAsync({
       content: {
-        title: "Rest Complete",
-        body: "Time for your next set 💪",
+        title: "Rest complete",
+        body: "Time for your next set.",
         sound: "default",
         data: { sessionId, type: "rest_complete" },
       },

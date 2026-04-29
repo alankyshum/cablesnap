@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
-import { TRAINING_MODE_LABELS, SET_TYPE_LABELS } from "@/lib/types";
+import { SET_TYPE_LABELS } from "@/lib/types";
 import { rpeColor, rpeText } from "@/lib/rpe";
 import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 import type { ThemeColors } from "@/hooks/useThemeColors";
@@ -85,13 +85,6 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
                 <Text variant="body" style={{ color: colors.onSurface }}>
                   {set.weight ?? 0} × {set.reps ?? 0}
                 </Text>
-                {set.training_mode && set.training_mode !== "weight" && (
-                  <View style={[styles.modeBadge, { backgroundColor: colors.secondaryContainer }]}>
-                    <Text style={{ color: colors.onSecondaryContainer, fontSize: fontSizes.xs, fontWeight: "700" }}>
-                      {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
-                    </Text>
-                  </View>
-                )}
                 {set.tempo && (
                   <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
                     ♩ {set.tempo}
@@ -142,12 +135,6 @@ const styles = StyleSheet.create({
   rpeBadge: {
     borderRadius: 12,
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  modeBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 6,
     paddingVertical: 2,
     marginLeft: 8,
   },

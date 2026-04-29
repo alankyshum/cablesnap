@@ -3,7 +3,7 @@ import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
 import { seedExercises } from '../../lib/seed'
 import type { Exercise } from '../../lib/types'
-import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS } from '../../lib/types'
+import { CATEGORY_LABELS, ATTACHMENT_LABELS } from '../../lib/types'
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 
@@ -70,16 +70,18 @@ describe('Voltra Exercise Database Acceptance', () => {
         expect(ex.equipment).toBe('cable')
         expect(ex.is_voltra).toBe(true)
         expect(ex.is_custom).toBe(false)
-        // mount position
-        expect(ex.mount_position).toBeDefined()
-        expect(['high', 'mid', 'low', 'floor']).toContain(ex.mount_position)
-        // attachment
+      }
+    })
+
+    it('every Voltra exercise has attachment metadata', () => {
+      for (const ex of voltraExercises) {
         expect(ex.attachment).toBeDefined()
         expect(ex.attachment).toBeTruthy()
-        // training modes
-        expect(ex.training_modes).toBeDefined()
-        expect(ex.training_modes!.length).toBeGreaterThan(0)
-        // instructions
+      }
+    })
+
+    it('every Voltra exercise has instructions', () => {
+      for (const ex of voltraExercises) {
         expect(ex.instructions).toBeTruthy()
         expect(ex.instructions.length).toBeGreaterThan(10)
         // ID format
@@ -195,26 +197,21 @@ describe('Voltra Exercise Database Acceptance', () => {
   // ── Exercise Detail Metadata Tests ───────────────────────
 
   describe('cable-specific metadata in exercise details', () => {
-    it('exposes mount position + attachment metadata with human-readable labels', () => {
-      // Spot-check on Abdominal Crunches
+    it('exercise detail shows attachment type for Voltra exercises', async () => {
       const abCrunches = voltraExercises.find((e) => e.name === 'Abdominal Crunches')!
-      expect(abCrunches.mount_position).toBeDefined()
-      expect(MOUNT_POSITION_LABELS[abCrunches.mount_position!]).toBeTruthy()
       expect(abCrunches.attachment).toBeDefined()
       expect(ATTACHMENT_LABELS[abCrunches.attachment!]).toBeTruthy()
+    })
 
-      // All mount positions / attachments used across Voltra have labels
-      const mountPositions = new Set(voltraExercises.map((e) => e.mount_position!))
-      for (const pos of mountPositions) {
-        expect(MOUNT_POSITION_LABELS[pos]).toBeTruthy()
-      }
+    it('all attachment types have human-readable labels', () => {
       const attachments = new Set(voltraExercises.map((e) => e.attachment!))
       for (const att of attachments) {
         expect(ATTACHMENT_LABELS[att]).toBeTruthy()
       }
+    })
 
-      // Variety
-      expect(mountPositions.size).toBeGreaterThanOrEqual(3)
+    it('Voltra exercises use varied attachments', () => {
+      const attachments = new Set(voltraExercises.map((e) => e.attachment))
       expect(attachments.size).toBeGreaterThanOrEqual(2)
     })
   })

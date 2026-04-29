@@ -22,8 +22,10 @@ import {
   validateBackupData,
   validateBackupFileSize,
   getBackupCounts,
+  getBackupCategoryCounts,
   estimateExportSize,
   IMPORT_TABLE_ORDER,
+  type BackupV7,
 } from "../../../lib/db/import-export";
 
 beforeEach(() => {
@@ -36,23 +38,59 @@ beforeEach(() => {
 // ---- Export v3 Format ----
 
 describe("exportAllData", () => {
-  it("produces v6 format with data wrapper and counts", async () => {
+  it("produces v7 category-keyed format with data wrapper and counts", async () => {
     mockDb.getAllAsync.mockResolvedValue([]);
     const result = await exportAllData();
-    expect(result.version).toBe(6);
+    expect(result.version).toBe(7);
     expect(result.data).toBeDefined();
     expect(result.counts).toBeDefined();
     expect(result.exported_at).toBeDefined();
     expect(result.app_version).toBeDefined();
+    expect(result.data).toHaveProperty("workout_templates");
   });
 
-  it("includes all 20 tables", async () => {
+  it("includes all tables under category sections", async () => {
     mockDb.getAllAsync.mockResolvedValue([]);
-    const result = await exportAllData();
-    for (const table of IMPORT_TABLE_ORDER) {
-      expect(result.data).toHaveProperty(table);
-      expect(Array.isArray((result.data as Record<string, unknown>)[table])).toBe(true);
-    }
+    const result = await exportAllData() as BackupV7;
+    expect(result.data.workout_templates).toEqual({
+      workout_templates: [],
+      template_exercises: [],
+    });
+    expect(result.data.workout_history).toEqual({
+      workout_sessions: [],
+      workout_sets: [],
+    });
+    expect(result.data.exercises).toEqual({
+      exercises: [],
+    });
+  });
+
+  it("omits unchecked categories from selective export", async () => {
+    mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+      if (sql.includes("app_settings")) {
+        return [
+          { key: "plate_calculator_unit", value: "kg" },
+          { key: "rest_timer_sound", value: "chime" },
+          { key: "theme", value: "dark" },
+        ];
+      }
+      if (sql.includes("exercises")) return [{ id: "e1" }];
+      if (sql.includes("workout_templates")) return [{ id: "t1" }];
+      if (sql.includes("template_exercises")) return [{ id: "te1" }];
+      return [];
+    });
+
+    const result = await exportAllData({
+      selectedCategories: ["workout_templates", "plate_calculator_settings"],
+    }) as BackupV7;
+
+    expect(result.data).toHaveProperty("workout_templates");
+    expect(result.data).toHaveProperty("plate_calculator_settings");
+    expect(result.data).not.toHaveProperty("exercises");
+    expect(result.data).not.toHaveProperty("rest_timer_settings");
+    expect(result.data.plate_calculator_settings?.app_settings).toEqual([
+      { key: "plate_calculator_unit", value: "kg" },
+    ]);
   });
 
   it("calls progress callback per table", async () => {
@@ -104,8 +142,8 @@ describe("validateBackupData", () => {
     { name: "non-object data", payload: "not an object", type: "corrupt_json" },
     { name: "missing version", payload: { data: {} }, type: "missing_version" },
     {
-      name: "future version (v7+)",
-      payload: { version: 7, data: { exercises: [{ id: "1" }] } },
+      name: "future version (v8+)",
+      payload: { version: 8, data: { exercises: [{ id: "1" }] } },
       type: "future_version",
       messageContains: "update the app",
     },
@@ -116,9 +154,14 @@ describe("validateBackupData", () => {
       type: "empty_backup",
     },
     {
-      name: "invalid table (not an array)",
-      payload: { version: 3, data: { exercises: "not an array" } },
-      type: "invalid_table",
+      name: "malformed category payload (no importable arrays)",
+      payload: { version: 7, data: { exercises: { exercises: "not an array" } } },
+      type: "empty_backup",
+    },
+    {
+      name: "malformed category payload (no importable arrays)",
+      payload: { version: 7, data: { exercises: { exercises: "not an array" } } },
+      type: "empty_backup",
     },
     {
       name: "negative calorie values",
@@ -138,6 +181,7 @@ describe("validateBackupData", () => {
   ];
 
   const accepts: AcceptCase[] = [
+    { name: "v7 backup", payload: { version: 7, data: { exercises: { exercises: [{ id: "1" }] } } } },
     { name: "v6 backup", payload: { version: 6, data: { exercises: [{ id: "1", name: "Squat" }] } } },
     { name: "v5 backup", payload: { version: 5, data: { exercises: [{ id: "1", name: "Bench" }] } } },
     { name: "v4 backup", payload: { version: 4, data: { exercises: [{ id: "1", name: "Bench" }] } } },
@@ -195,6 +239,27 @@ describe("getBackupCounts", () => {
     expect(counts.workout_templates).toBe(2);
     expect(counts.workout_sessions).toBe(1);
     expect(counts.workout_sets).toBe(1);
+  });
+});
+
+describe("getBackupCategoryCounts", () => {
+  it("returns category counts for v7 format", () => {
+    const counts = getBackupCategoryCounts({
+      version: 7,
+      data: {
+        workout_templates: {
+          workout_templates: [{ id: "t1" }],
+          template_exercises: [{ id: "te1" }, { id: "te2" }],
+        },
+        exercises: {
+          exercises: [{ id: "e1" }],
+        },
+      },
+    });
+
+    expect(counts.workout_templates).toBe(3);
+    expect(counts.exercises).toBe(1);
+    expect(counts.workout_history).toBe(0);
   });
 });
 
@@ -376,6 +441,67 @@ describe("importData", () => {
     expect(inserted).toContain("program_log");
     expect(inserted).toContain("program_schedule");
   });
+
+  it("imports only selected categories and preserves unchecked app settings", async () => {
+    const sqlCalls: { sql: string; params: unknown[] }[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
+      sqlCalls.push({ sql, params: params ?? [] });
+      return { changes: 1 };
+    });
+
+    await importData(
+      {
+        version: 7,
+        data: {
+          plate_calculator_settings: {
+            app_settings: [{ key: "plate_calculator_unit", value: "kg" }],
+          },
+          rest_timer_settings: {
+            app_settings: [{ key: "rest_timer_sound", value: "bell" }],
+          },
+          exercises: {
+            exercises: [{ id: "e1", name: "Bench", category: "chest", primary_muscles: "", secondary_muscles: "", equipment: "barbell", instructions: "", difficulty: "beginner", is_custom: 0 }],
+          },
+        },
+      },
+      { selectedCategories: ["plate_calculator_settings", "exercises"] },
+    );
+
+    const appSettingInserts = sqlCalls.filter((c) => c.sql.includes("INSERT OR IGNORE INTO app_settings"));
+    expect(appSettingInserts).toHaveLength(1);
+    expect(appSettingInserts[0].params).toContain("plate_calculator_unit");
+    expect(appSettingInserts[0].params).not.toContain("rest_timer_sound");
+    expect(sqlCalls.some((c) => c.sql.includes("INSERT OR IGNORE INTO exercises"))).toBe(true);
+  });
+
+  it("supports full export/import round-trip without losing records", async () => {
+    const tableRows: Record<string, unknown[]> = {
+      exercises: [{ id: "e1", name: "Bench", category: "chest", primary_muscles: "", secondary_muscles: "", equipment: "barbell", instructions: "", difficulty: "beginner", is_custom: 0 }],
+      workout_templates: [{ id: "t1", name: "Push", created_at: 1, updated_at: 1 }],
+      template_exercises: [{ id: "te1", template_id: "t1", exercise_id: "e1", position: 0, target_sets: 3, target_reps: "8", rest_seconds: 60 }],
+      workout_sessions: [{ id: "s1", template_id: "t1", name: "Push Day", started_at: 1, completed_at: 2, duration_seconds: 3600, notes: "" }],
+      workout_sets: [{ id: "ws1", session_id: "s1", exercise_id: "e1", set_number: 1, weight: 100, reps: 8, completed: 1, completed_at: 2 }],
+      app_settings: [{ key: "theme", value: "dark" }],
+    };
+
+    mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+      const table = sql.replace("SELECT * FROM ", "");
+      return tableRows[table] ?? [];
+    });
+    mockDb.runAsync.mockResolvedValue({ changes: 1 });
+
+    const exported = await exportAllData();
+    const imported = await importData(exported);
+
+    expect(exported.version).toBe(7);
+    expect(imported.inserted).toBeGreaterThan(0);
+    expect(imported.perTable.exercises.inserted).toBe(1);
+    expect(imported.perTable.workout_templates.inserted).toBe(1);
+    expect(imported.perTable.template_exercises.inserted).toBe(1);
+    expect(imported.perTable.workout_sessions.inserted).toBe(1);
+    expect(imported.perTable.workout_sets.inserted).toBe(1);
+    expect(imported.perTable.app_settings.inserted).toBe(1);
+  });
 });
 
 // ---- Import Meal Templates ----
@@ -497,79 +623,3 @@ describe("estimateExportSize", () => {
 
 // ---- BLD-622: eccentric_overload removal hardening ----
 
-describe("importData — workout_sets training_mode coercion (BLD-622)", () => {
-  function captureWorkoutSetsInserts() {
-    const inserts: { sql: string; params: unknown[] }[] = [];
-    mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
-      if (sql.includes("INSERT OR IGNORE INTO workout_sets")) {
-        inserts.push({ sql, params: params ?? [] });
-      }
-      return { changes: 1 };
-    });
-    return inserts;
-  }
-
-  // SQL columns: id, session_id, exercise_id, set_number, weight, reps, completed,
-  //              completed_at, rpe, notes, link_id, round, training_mode, tempo,
-  //              set_type, duration_seconds, bodyweight_modifier_kg
-  // training_mode is the 13th param (index 12).
-  const TRAINING_MODE_PARAM_INDEX = 12;
-
-  const baseRow = (overrides: Record<string, unknown> = {}) => ({
-    id: "ws1",
-    session_id: "s1",
-    exercise_id: "e1",
-    set_number: 1,
-    weight: 100,
-    reps: 8,
-    completed: 1,
-    completed_at: 2,
-    ...overrides,
-  });
-
-  it("coerces legacy 'eccentric_overload' training_mode to null on import", async () => {
-    const inserts = captureWorkoutSetsInserts();
-    await importData({
-      version: 6,
-      data: {
-        workout_sets: [baseRow({ training_mode: "eccentric_overload" })],
-      },
-    });
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBeNull();
-  });
-
-  it("preserves valid training_mode values (e.g. 'damper') unchanged", async () => {
-    const inserts = captureWorkoutSetsInserts();
-    await importData({
-      version: 6,
-      data: {
-        workout_sets: [baseRow({ training_mode: "damper" })],
-      },
-    });
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBe("damper");
-  });
-
-  it("coerces unknown training_mode strings to null (defense-in-depth)", async () => {
-    const inserts = captureWorkoutSetsInserts();
-    await importData({
-      version: 6,
-      data: {
-        workout_sets: [baseRow({ training_mode: "totally_made_up" })],
-      },
-    });
-    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBeNull();
-  });
-
-  it("preserves null training_mode as null", async () => {
-    const inserts = captureWorkoutSetsInserts();
-    await importData({
-      version: 6,
-      data: {
-        workout_sets: [baseRow({ training_mode: null })],
-      },
-    });
-    expect(inserts[0].params[TRAINING_MODE_PARAM_INDEX]).toBeNull();
-  });
-});

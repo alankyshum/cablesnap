@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import SwipeToDelete from "@/components/SwipeToDelete";
 import { linkLabel } from "@/hooks/useTemplateEditor";
+import { SET_TYPE_LABELS } from "@/lib/types";
 import type { TemplateExercise } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
@@ -52,6 +53,11 @@ export function TemplateExerciseRow({
   const linkIdx = item.link_id ? linkIds.indexOf(item.link_id) : -1;
   const color = linkIdx >= 0 ? palette[linkIdx % palette.length] : undefined;
 
+  const setTypeSummary = (item.set_types ?? [])
+    .map((type, itemIndex) => type === "normal" ? null : `S${itemIndex + 1} ${SET_TYPE_LABELS[type].short}`)
+    .filter(Boolean)
+    .join(" · ");
+
   if (starter) {
     return (
       <Pressable
@@ -80,7 +86,7 @@ export function TemplateExerciseRow({
             variant="caption"
             style={{ color: colors.onSurfaceVariant }}
           >
-            {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
+            {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest{setTypeSummary ? ` · ${setTypeSummary}` : ""}
           </Text>
         </View>
       </Pressable>
@@ -159,7 +165,7 @@ export function TemplateExerciseRow({
               variant="caption"
               style={{ color: colors.onSurfaceVariant }}
             >
-              {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
+              {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest{setTypeSummary ? ` · ${setTypeSummary}` : ""}
             </Text>
             {item.exercise?.deleted_at && !selecting && (
               <Button
