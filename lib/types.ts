@@ -263,6 +263,12 @@ export type WorkoutSession = {
    * never been edited.
    */
   edited_at: number | null;
+  /**
+   * BLD-890: groups sessions imported from competitor CSV files.
+   * All sessions from a single import share the same batch ID,
+   * enabling bulk undo/delete. NULL for organically created sessions.
+   */
+  import_batch_id: string | null;
 };
 
 export type SetType = "normal" | "warmup" | "dropset" | "failure";

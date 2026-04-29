@@ -69,6 +69,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   program_day_id: text("program_day_id"),
   rating: integer("rating"),
   edited_at: integer("edited_at"),
+  import_batch_id: text("import_batch_id"),
 }, (table) => [
   index("idx_workout_sessions_completed").on(table.completed_at),
   index("idx_workout_sessions_started_at").on(table.started_at),

@@ -53,6 +53,9 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // BLD-690: timestamp at which the user last edited a completed session via
   // the post-completion edit flow. NULL = never edited.
   await addColumnIfMissing(database, "workout_sessions", "edited_at", "INTEGER DEFAULT NULL");
+  // BLD-890: CSV import batch ID — groups imported sessions for undo/bulk-delete.
+  // NULL for sessions created organically (not imported).
+  await addColumnIfMissing(database, "workout_sessions", "import_batch_id", "TEXT DEFAULT NULL");
 
   // workout_sets table
   await addColumnIfMissing(database, "workout_sets", "rpe", "REAL DEFAULT NULL");
