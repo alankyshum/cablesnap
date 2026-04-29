@@ -463,7 +463,7 @@ export function useSessionActions({
     // Mirrors the bodyweight smart-default pattern above:
     //   1. fetchQuery against React Query so siblings within staleTime share.
     //   2. Per-attribute resolution via getLastVariant() — so if user has
-    //      last attachment='rope' but no recent mount_position, only
+     //      last attachment is e.g. rope but no recent mount_position, only
     //      attachment is autofilled (AC line 199 independent attributes).
     //   3. Persisted via updateSetVariant() — same entry point the picker
     //      uses, so the silent-default-trap closure (QD-B2) is uniform.
@@ -510,7 +510,7 @@ export function useSessionActions({
     // set can only enter one of the two blocks.
     //
     // Per-attribute resolution via `getLastBodyweightGripVariant()` — if the
-    // user's last set has grip_type='overhand' but no grip_width, only
+     // user's last set has e.g. grip_type of overhand but no grip_width, only
     // grip_type autofills. NULL/NULL when no prior history (closes the QD-B2
     // silent-default trap; there is no exercise-level default to fall back
     // onto for grip — the column doesn't exist on `exercises`).
