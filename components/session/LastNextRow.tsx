@@ -237,7 +237,7 @@ export function LastNextRow({
             onPress={(e) => {
               // Stop the parent Pressable from firing its confirm dialog when
               // the user taps the trailing info icon.
-              e.stopPropagation?.();
+              e?.stopPropagation?.();
               onOpenExplainer();
             }}
             hitSlop={8}

@@ -44,13 +44,23 @@ jest.mock("@/hooks/useThemeColors", () => ({
   }),
 }));
 
-jest.mock("../../../components/TrainingModeSelector", () => {
-  const { Text } = require("react-native");
-  return { __esModule: true, default: () => <Text>ModeSelector</Text> };
-});
+// BLD-850: TrainingModeSelector is no longer rendered inside the header
+// (mode picker moves to the Details modal in a follow-up). The mock is
+// retained in the off-chance another consumer still imports it via this
+// test file's transitive graph, but it's now a no-op factory.
+jest.mock("../../../components/TrainingModeSelector", () => ({
+  __esModule: true,
+  default: () => null,
+}));
 
 jest.mock("../../../components/session/ExerciseNotesPanel", () => ({
   ExerciseNotesPanel: () => null,
+}));
+
+// BLD-850: SuggestionExplainerModal is rendered as a sibling of headerWrap
+// even when hidden; mock it out so we don't pull in the full Modal tree.
+jest.mock("../../../components/session/SuggestionExplainerModal", () => ({
+  SuggestionExplainerModal: () => null,
 }));
 
 const noop = () => {};
@@ -60,6 +70,12 @@ const commonProps = {
   firstSet: undefined,
   previousPerformance: null,
   previousPerformanceA11y: null,
+  // BLD-850: new optional props on GroupCardHeader. We default suggestion
+  // to null + step/onUpdate to stable identities so the LastNextRow render
+  // path is fully exercised by the memo regression check.
+  suggestion: null,
+  step: 2.5,
+  onUpdate: noop,
   onModeChange: noop,
   onExerciseNotes: noop,
   onExerciseNotesDraftChange: noop,

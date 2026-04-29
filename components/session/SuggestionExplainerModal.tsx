@@ -37,8 +37,8 @@ export function SuggestionExplainerModal({ visible, onClose }: SuggestionExplain
       <Pressable
         style={styles.backdrop}
         onPress={onClose}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
+        accessibilityLabel="Close explainer"
+        accessibilityRole="button"
       >
         <Pressable
           // Inner Pressable swallows taps so the backdrop press doesn't fire
