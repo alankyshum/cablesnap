@@ -19,7 +19,6 @@ export {
   deleteSetsBatch,
   updateSetRPE,
   updateSetNotes,
-  updateSetTrainingMode,
   updateSetTempo,
   updateSetWarmup,
   updateSetType,
@@ -299,6 +298,7 @@ export async function createTemplateFromSession(
       created_at: now,
       updated_at: now,
       is_starter: 0,
+      source: null,
     });
 
     const sets = await db.select({
@@ -306,7 +306,7 @@ export async function createTemplateFromSession(
       set_number: workoutSets.set_number,
       reps: workoutSets.reps,
       link_id: workoutSets.link_id,
-      training_mode: workoutSets.training_mode,
+      set_type: workoutSets.set_type,
     })
       .from(workoutSets)
       .where(and(eq(workoutSets.session_id, sessionId), eq(workoutSets.completed, 1)))
@@ -351,6 +351,7 @@ export async function createTemplateFromSession(
         rest_seconds: 90,
         link_id: linkId,
         link_label: "",
+        set_types: JSON.stringify(group.map((s) => s.set_type ?? "normal")),
       });
     }
   });
@@ -414,7 +415,6 @@ export interface SessionEditSetPatch {
   notes?: string;
   link_id?: string | null;
   round?: number | null;
-  training_mode?: string | null;
   tempo?: string | null;
   swapped_from_exercise_id?: string | null;
   set_type?: string;
@@ -506,7 +506,7 @@ export async function editCompletedSession(
 
 const PATCHABLE_COLUMNS: ReadonlyArray<keyof SessionEditSetPatch> = [
   "set_number", "weight", "reps", "completed", "rpe", "notes", "link_id",
-  "round", "training_mode", "tempo", "swapped_from_exercise_id", "set_type",
+  "round", "tempo", "swapped_from_exercise_id", "set_type",
   "duration_seconds", "exercise_position", "bodyweight_modifier_kg",
 ];
 
@@ -570,7 +570,6 @@ function buildEditInsertRow(
     notes: u.notes ?? "",
     link_id: u.link_id ?? null,
     round: u.round ?? null,
-    training_mode: u.training_mode ?? null,
     tempo: u.tempo ?? null,
     swapped_from_exercise_id: u.swapped_from_exercise_id ?? null,
     set_type: u.set_type ?? "normal",

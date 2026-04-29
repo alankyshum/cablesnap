@@ -4,11 +4,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import {
   importData,
-  getBackupCounts,
+  getBackupCategoryCounts,
+  BACKUP_CATEGORY_LABELS,
+  BACKUP_CATEGORY_ORDER,
   BACKUP_TABLE_LABELS,
   IMPORT_TABLE_ORDER,
 } from "../../lib/db";
-import type { BackupTableName, ImportProgress } from "../../lib/db";
+import type { BackupCategoryName, BackupTableName, ImportProgress } from "../../lib/db";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,12 +25,11 @@ type ImportResult = {
 };
 
 function PreviewList({
-  tablesToShow, counts, missingTables, version, totalRecords, exportedAt, appVersion,
+  categoriesToShow, categoryCounts, version, totalRecords, exportedAt, appVersion,
   importProgress, loading, onImport, onCancel,
 }: {
-  tablesToShow: BackupTableName[];
-  counts: Record<BackupTableName, number>;
-  missingTables: BackupTableName[];
+  categoriesToShow: BackupCategoryName[];
+  categoryCounts: Partial<Record<BackupCategoryName, number>>;
   version: number;
   totalRecords: number;
   exportedAt: string | null;
@@ -42,7 +43,7 @@ function PreviewList({
   const layout = useLayout();
   return (
     <FlatList
-      data={tablesToShow}
+      data={categoriesToShow}
       keyExtractor={(item) => item}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
       ListHeaderComponent={
@@ -67,10 +68,10 @@ function PreviewList({
           <Card style={styles.card}>
             <CardContent>
               <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-                Records to Import
+                Categories to Import
               </Text>
               <View style={{ flexDirection: "row", paddingVertical: 8 }}>
-                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>Data</Text>
+                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>Category</Text>
                 <Text variant="caption" style={{ width: 60, textAlign: "right", color: colors.onSurfaceVariant }}>Count</Text>
               </View>
               <Separator />
@@ -78,22 +79,23 @@ function PreviewList({
           </Card>
         </>
       }
-      renderItem={({ item: tableName }) => (
-        <View style={{ paddingHorizontal: 0 }}>
-          <View style={{ flexDirection: "row", paddingVertical: 10 }} accessibilityLabel={`${BACKUP_TABLE_LABELS[tableName]}: ${counts[tableName]} records`}>
-            <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{BACKUP_TABLE_LABELS[tableName]}</Text>
-            <Text variant="body" style={{ width: 60, textAlign: "right", color: colors.onSurface }}>{counts[tableName]}</Text>
+      renderItem={({ item: category }) => {
+        const count = categoryCounts[category] ?? 0;
+        return (
+          <View style={{ paddingHorizontal: 0 }}>
+            <View style={{ flexDirection: "row", paddingVertical: 10 }} accessibilityLabel={`${BACKUP_CATEGORY_LABELS[category]}: ${count} records`}>
+              <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{BACKUP_CATEGORY_LABELS[category]}</Text>
+              <Text variant="body" style={{ width: 60, textAlign: "right", color: colors.onSurface }}>{count}</Text>
+            </View>
+            <Separator />
           </View>
-          <Separator />
-        </View>
-      )}
+        );
+      }}
       ListFooterComponent={
         <>
-          {missingTables.length > 0 && (
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
-              {missingTables.length} table{missingTables.length !== 1 ? "s" : ""} not present in this v{version} backup (this is normal for older backups).
-            </Text>
-          )}
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+            Only the selected categories will be imported. Unchecked categories in your current app data will be left untouched.
+          </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
             Existing records with the same ID will be skipped — your current data will not be overwritten.
           </Text>
@@ -213,7 +215,11 @@ export default function ImportBackup() {
   const colors = useThemeColors();
   const router = useRouter();
   const toast = useToast();
-  const { backupJson, filePath } = useLocalSearchParams<{ backupJson?: string; filePath?: string }>();
+  const { backupJson, filePath, selectedCategories: selectedCategoriesParam } = useLocalSearchParams<{
+    backupJson?: string;
+    filePath?: string;
+    selectedCategories?: string;
+  }>();
   const [loading, setLoading] = useState(false);
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -222,30 +228,28 @@ export default function ImportBackup() {
   const version = parsed ? Number(parsed.version ?? 0) : 0;
   const exportedAt = parsed ? ((parsed.exported_at as string) ?? null) : null;
   const appVersion = parsed ? ((parsed.app_version as string) ?? null) : null;
-  const counts = useMemo(
-    () => (parsed ? getBackupCounts(parsed) : ({} as Record<BackupTableName, number>)),
+  const selectedCategories = useMemo(
+    () =>
+      (selectedCategoriesParam ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value): value is BackupCategoryName => BACKUP_CATEGORY_ORDER.includes(value as BackupCategoryName)),
+    [selectedCategoriesParam],
+  );
+  const categoryCounts = useMemo(
+    () => (parsed ? getBackupCategoryCounts(parsed) : ({} as Partial<Record<BackupCategoryName, number>>)),
     [parsed],
   );
+  const categoriesToShow = useMemo(() => {
+    if (!parsed) return [];
+    const base = selectedCategories.length > 0
+      ? selectedCategories
+      : BACKUP_CATEGORY_ORDER.filter((category) => (categoryCounts[category] ?? 0) > 0);
+    return base.filter((category, index) => base.indexOf(category) === index);
+  }, [parsed, selectedCategories, categoryCounts]);
   const totalRecords = useMemo(
-    () => (parsed ? IMPORT_TABLE_ORDER.reduce((sum, t) => sum + (counts[t] ?? 0), 0) : 0),
-    [parsed, counts],
-  );
-
-  const missingTables = useMemo(
-    () =>
-      parsed && version <= 2
-        ? IMPORT_TABLE_ORDER.filter(
-            (t) =>
-              (counts[t] ?? 0) === 0 &&
-              ["programs", "program_days", "program_log", "app_settings", "program_schedule", "achievements_earned"].includes(t),
-          )
-        : [],
-    [parsed, version, counts],
-  );
-
-  const tablesToShow = useMemo(
-    () => (parsed ? IMPORT_TABLE_ORDER.filter((t) => (counts[t] ?? 0) > 0) : []),
-    [parsed, counts],
+    () => categoriesToShow.reduce((sum, category) => sum + (categoryCounts[category] ?? 0), 0),
+    [categoriesToShow, categoryCounts],
   );
 
   if (fileLoading) {
@@ -284,14 +288,18 @@ export default function ImportBackup() {
     setLoading(true);
     setImportProgress("Starting import...");
     try {
-      const importResult = await importData(parsed, (progress: ImportProgress) => {
-        if (progress.table === "done") {
-          setImportProgress(null);
-        } else {
-          const label = BACKUP_TABLE_LABELS[progress.table as BackupTableName] ?? progress.table;
-          setImportProgress(`Importing ${label}... (${progress.tableIndex + 1}/${progress.totalTables})`);
-        }
-      });
+      const importResult = await importData(
+        parsed,
+        (progress: ImportProgress) => {
+          if (progress.table === "done") {
+            setImportProgress(null);
+          } else {
+            const label = BACKUP_TABLE_LABELS[progress.table as BackupTableName] ?? progress.table;
+            setImportProgress(`Importing ${label}... (${progress.tableIndex + 1}/${progress.totalTables})`);
+          }
+        },
+        selectedCategories.length > 0 ? { selectedCategories } : undefined,
+      );
       setResult(importResult);
       toast.success(`Import complete — ${importResult.inserted} records added, ${importResult.skipped} skipped`);
     } catch {
@@ -306,9 +314,16 @@ export default function ImportBackup() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {!result ? (
         <PreviewList
-          tablesToShow={tablesToShow} counts={counts} missingTables={missingTables}
-          version={version} totalRecords={totalRecords} exportedAt={exportedAt} appVersion={appVersion}
-          importProgress={importProgress} loading={loading} onImport={handleImport} onCancel={() => router.back()}
+          categoriesToShow={categoriesToShow}
+          categoryCounts={categoryCounts}
+          version={version}
+          totalRecords={totalRecords}
+          exportedAt={exportedAt}
+          appVersion={appVersion}
+          importProgress={importProgress}
+          loading={loading}
+          onImport={handleImport}
+          onCancel={() => router.back()}
         />
       ) : (
         <ResultList result={result} onDone={() => router.back()} />

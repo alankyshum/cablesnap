@@ -13,7 +13,6 @@ export type WorkoutCSVRow = {
   set_rpe: number | null;
   set_notes: string;
   link_id: string | null;
-  training_mode: string | null;
   tempo: string | null;
   // BLD-541: signed bodyweight modifier (kg) for the set. null for
   // non-bodyweight sets AND for pure-bodyweight sets with no modifier.
@@ -67,7 +66,6 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       set_rpe: workoutSets.rpe,
       set_notes: workoutSets.notes,
       link_id: workoutSets.link_id,
-      training_mode: workoutSets.training_mode,
       tempo: workoutSets.tempo,
       bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
     })

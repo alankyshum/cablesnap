@@ -92,7 +92,7 @@ describe('updateSetType', () => {
 
 describe('addSet with setType', () => {
   it('inserts set with set_type = dropset', async () => {
-    const result = await addSet('sess-1', 'ex-1', 1, null, null, null, null, false, 'dropset');
+    const result = await addSet('sess-1', 'ex-1', 1, null, null, null, false, 'dropset');
     expect(result.set_type).toBe('dropset');
   });
 
@@ -102,7 +102,7 @@ describe('addSet with setType', () => {
   });
 
   it('defaults to normal when no setType provided', async () => {
-    const result = await addSet('sess-1', 'ex-1', 1, null, null, null, null, true);
+    const result = await addSet('sess-1', 'ex-1', 1, null, null, null, true);
     expect(result.set_type).toBe('normal');
   });
 });
@@ -145,7 +145,7 @@ describe('getSessionSets', () => {
         completed_at: null, rpe: null, notes: null,
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
-        training_mode: null, tempo: null,
+tempo: null,
         swapped_from_exercise_id: null, set_type: 'warmup',
         duration_seconds: null,
       },
@@ -155,7 +155,7 @@ describe('getSessionSets', () => {
         completed_at: null, rpe: null, notes: null,
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
-        training_mode: null, tempo: null,
+tempo: null,
         swapped_from_exercise_id: null, set_type: 'dropset',
         duration_seconds: null,
       },
@@ -165,7 +165,7 @@ describe('getSessionSets', () => {
         completed_at: null, rpe: null, notes: null,
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
-        training_mode: null, tempo: null,
+tempo: null,
         swapped_from_exercise_id: null, set_type: 'failure',
         duration_seconds: null,
       },
@@ -185,7 +185,7 @@ describe('getSessionSets', () => {
         completed_at: null, rpe: null, notes: null,
         exercise_name: 'Squat', exercise_deleted_at: null, swapped_from_name: null,
         link_id: null, round: null,
-        training_mode: null, tempo: null,
+tempo: null,
         swapped_from_exercise_id: null,
         duration_seconds: null,
         // set_type intentionally missing

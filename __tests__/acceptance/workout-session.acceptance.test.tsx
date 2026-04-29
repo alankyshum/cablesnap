@@ -5,7 +5,7 @@ jest.mock('../../lib/db', () => ({
   getTemplateById: jest.fn().mockResolvedValue(null),
   buildInitialSetsFromTemplate: jest.fn((tpl, sessionId) => {
     if (!tpl?.exercises) return []
-    return tpl.exercises.flatMap((te: { exercise_id: string; target_sets: number; link_id?: string | null; position?: number }) =>
+    return tpl.exercises.flatMap((te: { exercise_id: string; target_sets: number; link_id?: string | null; position?: number; set_types?: string[] }) =>
       Array.from({ length: te.target_sets }, (_, i) => ({
         sessionId,
         exerciseId: te.exercise_id,
@@ -13,6 +13,7 @@ jest.mock('../../lib/db', () => ({
         linkId: te.link_id ?? null,
         round: te.link_id ? i + 1 : null,
         exercisePosition: te.position ?? 0,
+        setType: te.set_types?.[i] ?? 'normal',
       }))
     )
   }),
@@ -39,7 +40,6 @@ jest.mock('../../lib/db', () => ({
   updateSetsBatch: jest.fn().mockResolvedValue(undefined),
   updateSetRPE: jest.fn().mockResolvedValue(undefined),
   updateSetNotes: jest.fn().mockResolvedValue(undefined),
-  updateSetTrainingMode: jest.fn().mockResolvedValue(undefined),
   updateSetTempo: jest.fn().mockResolvedValue(undefined),
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
   getMaxWeightByExercise: jest.fn().mockResolvedValue({}),
@@ -52,6 +52,7 @@ jest.mock('../../lib/db', () => ({
   getExerciseById: jest.fn(),
   getExercisesByIds: jest.fn().mockResolvedValue({}),
   getAppSetting: jest.fn().mockResolvedValue('true'),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
   getSessionPRs: jest.fn().mockResolvedValue([]),
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
   getSessionDurationPRs: jest.fn().mockResolvedValue([]),
@@ -61,8 +62,18 @@ jest.mock('../../lib/db', () => ({
   getSessionSetCount: jest.fn().mockResolvedValue(0),
   getSessionSetCounts: jest.fn().mockResolvedValue({}),
   createTemplateFromSession: jest.fn().mockResolvedValue('new-template-id'),
-  buildAchievementContext: jest.fn().mockResolvedValue({}),
-  getEarnedAchievementIds: jest.fn().mockResolvedValue([]),
+  buildAchievementContext: jest.fn().mockResolvedValue({
+    totalWorkouts: 0,
+    workoutDates: [],
+    prCount: 0,
+    maxSessionVolume: 0,
+    lifetimeVolume: 0,
+    nutritionDays: [],
+    bodyWeightCount: 0,
+    progressPhotoCount: 0,
+    bodyMeasurementCount: 0,
+  }),
+  getEarnedAchievementIds: jest.fn().mockResolvedValue(new Set()),
   saveEarnedAchievements: jest.fn().mockResolvedValue(undefined),
   getAllExercises: jest.fn().mockResolvedValue([]),
   swapExerciseInSession: jest.fn().mockResolvedValue([]),
@@ -79,7 +90,6 @@ jest.mock('../../lib/programs', () => ({
 jest.mock('../../lib/rm', () => ({ ...jest.requireActual('../../lib/rm'), suggest: jest.fn().mockReturnValue(null) }))
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
 jest.mock('../../lib/units', () => ({ toDisplay: (v: number) => v, toKg: (v: number) => v, KG_TO_LB: 2.20462, LB_TO_KG: 0.453592 }))
-jest.mock('../../components/TrainingModeSelector', () => 'TrainingModeSelector')
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 const mockParams: Record<string, string> = {}
@@ -103,6 +113,23 @@ jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn(), activateKeepAwake
 // BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts
 jest.mock('../../lib/audio')
 jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
+jest.mock('react-native-reanimated', () => {
+  const { View } = require('react-native')
+  return {
+    __esModule: true,
+    default: { View, createAnimatedComponent: (c: unknown) => c },
+    useSharedValue: (init: unknown) => ({ value: init }),
+    useAnimatedStyle: () => ({}),
+    useAnimatedProps: () => ({}),
+    useReducedMotion: () => false,
+    cancelAnimation: jest.fn(),
+    withTiming: (v: unknown) => v,
+    withSpring: (v: unknown) => v,
+    withDelay: (_d: unknown, v: unknown) => v,
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+    Easing: { bezier: () => (t: number) => t },
+  }
+})
 
 import React from 'react'
 import { Alert } from 'react-native'
@@ -159,9 +186,17 @@ describe('Workout Session Acceptance', () => {
     mockDb.getExerciseById.mockResolvedValue(exercise)
     mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
 
-    const { findByText } = renderScreen(<ActiveSession />)
+    const { findByLabelText } = renderScreen(<ActiveSession />)
 
-    expect(await findByText('Bench Press')).toBeTruthy()
+    // BLD-783: extend timeout to 5000ms — this test races the effect chain
+    // (getSessionById → getSessionSets → getExercisesByIds → groups → GroupCard)
+    // under CI parallel-shard load. Default 1000ms is insufficient as the FIRST
+    // test of the suite, where there is no warm-up. Sibling tests later in the
+    // suite pass with default timeouts. The rendered tree dump on timeout
+    // confirms the elements exist; only the timing is the issue.
+    expect(
+      await findByLabelText('Remove Bench Press', {}, { timeout: 5000 })
+    ).toBeTruthy()
   })
 
   it('calls completeSession when finish workout is confirmed', async () => {
@@ -352,7 +387,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(addBtn)
 
     await waitFor(() => {
-      expect(mockDb.addSet).toHaveBeenCalledWith('sess-add', 'ex-1', 4, null, null, null, null, undefined, undefined, 0)
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-add', 'ex-1', 4, null, null, null, undefined, undefined, 0)
     })
   })
 
@@ -506,8 +541,8 @@ describe('Workout Session Acceptance', () => {
       mockDb.getSessionById.mockResolvedValue(session)
 
       const createdSets = [
-        { ...createSet({ id: 'new-t1', session_id: 'sess-template', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
-        { ...createSet({ id: 'new-t2', session_id: 'sess-template', exercise_id: 'ex-1', set_number: 2 }), exercise_name: 'Bench Press', exercise_deleted: false },
+        { ...createSet({ id: 'new-t1', session_id: 'sess-template', exercise_id: 'ex-1', set_number: 1, set_type: 'warmup' }), exercise_name: 'Bench Press', exercise_deleted: false },
+        { ...createSet({ id: 'new-t2', session_id: 'sess-template', exercise_id: 'ex-1', set_number: 2, set_type: 'failure' }), exercise_name: 'Bench Press', exercise_deleted: false },
       ]
       mockDb.getSessionSets
         .mockResolvedValueOnce([])
@@ -515,14 +550,14 @@ describe('Workout Session Acceptance', () => {
       mockDb.getTemplateById.mockResolvedValue({
         id: 'tpl-1',
         exercises: [
-          { exercise_id: 'ex-1', target_sets: 2, link_id: null, position: 1 },
+          { exercise_id: 'ex-1', target_sets: 2, target_reps: '12,8', set_types: ['warmup', 'failure'], link_id: null, position: 1 },
         ],
       })
       mockDb.addSetsBatch.mockResolvedValue(createdSets)
       mockDb.getPreviousSetsBatch.mockResolvedValue({
         'ex-1': [
-          { set_number: 1, weight: 80, reps: 10, duration_seconds: null, completed: true, rpe: null, set_type: 'working' },
-          { set_number: 2, weight: 85, reps: 8, duration_seconds: null, completed: true, rpe: null, set_type: 'working' },
+          { set_number: 1, weight: 80, reps: 10, duration_seconds: null, completed: true, rpe: null, set_type: 'normal' },
+          { set_number: 2, weight: 85, reps: 8, duration_seconds: null, completed: true, rpe: null, set_type: 'failure' },
         ],
       })
       mockDb.getExerciseById.mockResolvedValue(exercise)
@@ -534,8 +569,8 @@ describe('Workout Session Acceptance', () => {
         expect(mockDb.getTemplateById).toHaveBeenCalledWith('tpl-1')
         expect(mockDb.addSetsBatch).toHaveBeenCalledWith(
           expect.arrayContaining([
-            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 1 }),
-            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 2 }),
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 1, setType: 'warmup' }),
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 2, setType: 'failure' }),
           ])
         )
         expect(mockDb.updateSetsBatch).toHaveBeenCalledWith(
@@ -544,6 +579,46 @@ describe('Workout Session Acceptance', () => {
             expect.objectContaining({ id: 'new-t2', weight: 85, reps: 8 }),
           ])
         )
+      })
+    })
+
+    it('falls back to template target reps when previous session data is missing', async () => {
+      const session = createSession({ id: 'sess-template-fallback', name: 'Push Day', started_at: Date.now() - 60000 })
+      mockParams.id = 'sess-template-fallback'
+      mockParams.templateId = 'tpl-fallback'
+      mockDb.getSessionById.mockResolvedValue(session)
+
+      const createdSets = [
+        { ...createSet({ id: 'new-f1', session_id: 'sess-template-fallback', exercise_id: 'ex-1', set_number: 1, set_type: 'warmup' }), exercise_name: 'Bench Press', exercise_deleted: false },
+        { ...createSet({ id: 'new-f2', session_id: 'sess-template-fallback', exercise_id: 'ex-1', set_number: 2, set_type: 'failure' }), exercise_name: 'Bench Press', exercise_deleted: false },
+      ]
+      mockDb.getSessionSets
+        .mockResolvedValueOnce([])
+        .mockResolvedValue(createdSets)
+      mockDb.getTemplateById.mockResolvedValue({
+        id: 'tpl-fallback',
+        exercises: [
+          { exercise_id: 'ex-1', target_sets: 2, target_reps: '12,8', set_types: ['warmup', 'failure'], link_id: null, position: 1 },
+        ],
+      })
+      mockDb.addSetsBatch.mockResolvedValue(createdSets)
+      mockDb.getPreviousSetsBatch.mockResolvedValue({ 'ex-1': [] })
+      mockDb.getExerciseById.mockResolvedValue(exercise)
+      mockDb.getExercisesByIds.mockResolvedValue({ 'ex-1': exercise })
+
+      renderScreen(<ActiveSession />)
+
+      await waitFor(() => {
+        expect(mockDb.addSetsBatch).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 1, setType: 'warmup' }),
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 2, setType: 'failure' }),
+          ])
+        )
+        expect(mockDb.updateSetsBatch).toHaveBeenCalledWith([
+          { id: 'new-f1', weight: null, reps: 12 },
+          { id: 'new-f2', weight: null, reps: 8 },
+        ])
       })
     })
   })
@@ -556,8 +631,8 @@ describe('Workout Session Acceptance', () => {
       mockDb.getSessionById.mockResolvedValue(session)
       mockDb.getSessionSets.mockResolvedValue([]) // empty — triggers population
       mockDb.getSourceSessionSets.mockResolvedValue([
-        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: null, training_mode: 'weight', tempo: null, exercise_exists: true },
-        { exercise_id: 'ex-1', set_number: 2, weight: 85, reps: 8, link_id: null, training_mode: 'weight', tempo: null, exercise_exists: true },
+        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: null, tempo: null, exercise_exists: true },
+        { exercise_id: 'ex-1', set_number: 2, weight: 85, reps: 8, link_id: null, tempo: null, exercise_exists: true },
       ])
       mockDb.addSetsBatch.mockResolvedValue([
         { ...createSet({ id: 'new-1', session_id: 'sess-repeat', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
@@ -572,8 +647,8 @@ describe('Workout Session Acceptance', () => {
         expect(mockDb.getSourceSessionSets).toHaveBeenCalledWith('source-1')
         expect(mockDb.addSetsBatch).toHaveBeenCalledWith(
           expect.arrayContaining([
-            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 1, trainingMode: 'weight' }),
-            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 2, trainingMode: 'weight' }),
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 1 }),
+            expect.objectContaining({ exerciseId: 'ex-1', setNumber: 2 }),
           ])
         )
         expect(mockDb.updateSetsBatch).toHaveBeenCalledWith(
@@ -592,8 +667,8 @@ describe('Workout Session Acceptance', () => {
       mockDb.getSessionById.mockResolvedValue(session)
       mockDb.getSessionSets.mockResolvedValue([])
       mockDb.getSourceSessionSets.mockResolvedValue([
-        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: null, training_mode: null, tempo: null, exercise_exists: true },
-        { exercise_id: 'ex-deleted', set_number: 1, weight: 60, reps: 12, link_id: null, training_mode: null, tempo: null, exercise_exists: false },
+        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: null, tempo: null, exercise_exists: true },
+        { exercise_id: 'ex-deleted', set_number: 1, weight: 60, reps: 12, link_id: null, tempo: null, exercise_exists: false },
       ])
       mockDb.addSetsBatch.mockResolvedValue([
         { ...createSet({ id: 'new-1', session_id: 'sess-del', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },
@@ -622,8 +697,8 @@ describe('Workout Session Acceptance', () => {
       mockDb.getSessionById.mockResolvedValue(session)
       mockDb.getSessionSets.mockResolvedValue([])
       mockDb.getSourceSessionSets.mockResolvedValue([
-        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: 'old-link-1', training_mode: null, tempo: '3-1-2', exercise_exists: true },
-        { exercise_id: 'ex-2', set_number: 1, weight: 40, reps: 12, link_id: 'old-link-1', training_mode: null, tempo: null, exercise_exists: true },
+        { exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 10, link_id: 'old-link-1', tempo: '3-1-2', exercise_exists: true },
+        { exercise_id: 'ex-2', set_number: 1, weight: 40, reps: 12, link_id: 'old-link-1', tempo: null, exercise_exists: true },
       ])
       mockDb.addSetsBatch.mockResolvedValue([
         { ...createSet({ id: 'new-1', session_id: 'sess-link', exercise_id: 'ex-1', set_number: 1 }), exercise_name: 'Bench Press', exercise_deleted: false },

@@ -1,4 +1,4 @@
-import type { WorkoutSet, TrainingMode, Equipment, MountPosition } from "../../lib/types";
+import type { WorkoutSet, Equipment } from "../../lib/types";
 import type { PrefillCandidate } from "../../hooks/resolvePrefillCandidate";
 
 export type SetWithMeta = WorkoutSet & {
@@ -22,7 +22,6 @@ export type ExerciseGroup = {
   name: string;
   sets: SetWithMeta[];
   link_id: string | null;
-  training_modes: TrainingMode[];
   is_voltra: boolean;
   is_bodyweight: boolean;
   trackingMode: "reps" | "duration";
@@ -33,11 +32,4 @@ export type ExerciseGroup = {
   previousSets?: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>;
   progressionSuggested?: boolean;
   exerciseCategory?: string | null;
-  /**
-   * BLD-596: cable mount position for Voltra exercises (high/mid/low/floor).
-   * `undefined` for non-Voltra; `null` for Voltra exercises whose mount is unset
-   * (custom user exercises). Consumers MUST treat `null` and `undefined`
-   * identically (use truthiness, not `=== undefined`).
-   */
-  mount_position?: MountPosition | null;
 };

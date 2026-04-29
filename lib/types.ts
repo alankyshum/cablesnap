@@ -26,6 +26,10 @@ export type Equipment =
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
+// BLD-771: cable pulley mount position. Re-added during BLD-783 rebase
+// because BLD-771 reclaims the `mount_position` column for per-set
+// cable variant logging (distinct from the legacy F13 per-exercise mount
+// position which was removed in BLD-772). See lib/cable-variant.ts.
 export type MountPosition = "high" | "mid" | "low" | "floor";
 
 export type Attachment =
@@ -93,9 +97,7 @@ export type Exercise = {
   difficulty: Difficulty;
   is_custom: boolean;
   deleted_at?: number | null;
-  mount_position?: MountPosition;
   attachment?: Attachment;
-  training_modes?: TrainingMode[];
   is_voltra?: boolean;
   // BLD-561: optional user-supplied illustration URIs for custom exercises.
   // Seeded Voltra exercises get illustrations via the bundled manifest, NOT
@@ -122,13 +124,6 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   shoulders: "Shoulders",
 };
 
-export const MOUNT_POSITION_LABELS: Record<MountPosition, string> = {
-  high: "High",
-  mid: "Mid",
-  low: "Low",
-  floor: "Floor",
-};
-
 export const ATTACHMENT_LABELS: Record<Attachment, string> = {
   handle: "Handle",
   ring_handle: "Ring Handle",
@@ -153,6 +148,15 @@ export const GRIP_WIDTH_LABELS: Record<GripWidth, string> = {
   narrow: "Narrow",
   shoulder: "Shoulder-width",
   wide: "Wide",
+};
+
+// BLD-771 (re-added in BLD-783 rebase): display labels for cable mount
+// positions used in the per-set variant chip and picker.
+export const MOUNT_POSITION_LABELS: Record<MountPosition, string> = {
+  high: "High",
+  mid: "Mid",
+  low: "Low",
+  floor: "Floor",
 };
 
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {
@@ -209,12 +213,15 @@ export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
   full_body: "Full Body",
 };
 
+export type TemplateSource = "coach" | null;
+
 export type WorkoutTemplate = {
   id: string;
   name: string;
   created_at: number;
   updated_at: number;
   is_starter?: boolean;
+  source?: TemplateSource;
   exercises?: TemplateExercise[];
 };
 
@@ -229,7 +236,7 @@ export type TemplateExercise = {
   link_id: string | null;
   link_label: string;
   target_duration_seconds: number | null;
-  training_mode: TrainingMode | null;
+  set_types?: SetType[];
   exercise?: Exercise;
 };
 
@@ -282,7 +289,6 @@ export type WorkoutSet = {
   notes: string;
   link_id: string | null;
   round: number | null;
-  training_mode: TrainingMode | null;
   tempo: string | null;
   swapped_from_exercise_id: string | null;
   set_type: SetType;
@@ -297,16 +303,6 @@ export type WorkoutSet = {
   // see `lib/bodyweight-grip-variant.ts` for autofill chain.
   grip_type?: GripType | null;
   grip_width?: GripWidth | null;
-};
-
-export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {
-  weight: { label: "Standard", short: "STD", description: "Normal cable weight resistance — standard lifting" },
-  band: { label: "Band", short: "BND", description: "Resistance band attached for variable tension" },
-  damper: { label: "Damper", short: "DMP", description: "Damper provides smooth, constant resistance" },
-  isokinetic: { label: "Isokinetic", short: "ISO", description: "Machine controls speed — constant velocity throughout" },
-  isometric: { label: "Isometric", short: "ISOM", description: "Hold position against resistance — no movement" },
-  custom_curves: { label: "Custom", short: "CRV", description: "Custom resistance profile set on the Volta" },
-  rowing: { label: "Rowing", short: "ROW", description: "Rowing movement pattern with cable resistance" },
 };
 
 export type LinkedGroup = {

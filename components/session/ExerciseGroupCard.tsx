@@ -7,7 +7,6 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { GroupCardHeader } from "./GroupCardHeader";
 import { ExerciseGroupSetTable } from "./ExerciseGroupSetTable";
 import type { SetWithMeta, ExerciseGroup } from "./types";
-import type { TrainingMode } from "../../lib/types";
 import type { Suggestion } from "../../lib/rm";
 
 export type GroupCardProps = {
@@ -15,7 +14,6 @@ export type GroupCardProps = {
   step: number;
   unit: "kg" | "lb";
   suggestions: Record<string, Suggestion | null>;
-  modes: Record<string, TrainingMode>;
   exerciseNotesOpen: boolean;
   exerciseNotesDraft: string | undefined;
   linkIds: string[];
@@ -26,7 +24,6 @@ export type GroupCardProps = {
   onDelete: (setId: string) => void;
   onAddSet: (exerciseId: string) => void;
   onAddWarmups: (exerciseId: string) => void;
-  onModeChange: (exerciseId: string, mode: TrainingMode) => void;
   onExerciseNotes: (exerciseId: string, text: string) => void;
   onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
   onToggleExerciseNotes: (exerciseId: string) => void;
@@ -60,9 +57,9 @@ export type GroupCardProps = {
 };
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
-  group, step, unit, suggestions, modes,
+  group, step, unit, suggestions,
   exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette,
-  onUpdate, onCheck, onDelete, onAddSet, onAddWarmups, onModeChange,
+  onUpdate, onCheck, onDelete, onAddSet, onAddWarmups,
   onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
   onOpenVariantPicker, onClearVariant,
@@ -145,7 +142,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
         <GroupCardHeader
           group={group}
-          currentMode={modes[group.exercise_id]}
           exerciseNotesOpen={exerciseNotesOpen}
           exerciseNotesDraft={exerciseNotesDraft}
           firstSet={firstSet}
@@ -154,7 +150,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           suggestion={suggestion}
           step={step}
           onUpdate={onUpdate}
-          onModeChange={onModeChange}
           onExerciseNotes={onExerciseNotes}
           onExerciseNotesDraftChange={onExerciseNotesDraftChange}
           onToggleExerciseNotes={onToggleExerciseNotes}

@@ -32,7 +32,6 @@ jest.mock("../../lib/db", () => ({
   updateSet: (...args: any[]) => mockUpdateSet(...args),
   updateSetRPE: jest.fn(),
   updateSetNotes: jest.fn(),
-  updateSetTrainingMode: jest.fn(),
   getSessionSets: jest.fn().mockResolvedValue([]),
   updateSetDuration: jest.fn(),
   checkSetPR: jest.fn().mockResolvedValue(null),
@@ -123,7 +122,6 @@ function makeNewSet(overrides: any = {}) {
     notes: "",
     link_id: null,
     round: null,
-    training_mode: null,
     tempo: null,
     swapped_from_exercise_id: null,
     set_type: "normal",
@@ -138,7 +136,6 @@ function makeGroup(overrides: any = {}) {
     exercise_id: "ex-1",
     name: "Bench",
     link_id: null,
-    training_modes: [],
     is_voltra: false,
     is_bodyweight: false,
     trackingMode: "reps" as const,
@@ -156,8 +153,6 @@ function makeParams(groups: any[] = []) {
     id: "session-1",
     groups: groups as any,
     setGroups: jest.fn(),
-    modes: {},
-    setModes: jest.fn(),
     updateGroupSet: jest.fn(),
     startRest: jest.fn(),
     startRestWithDuration: jest.fn(),
@@ -370,32 +365,5 @@ describe("useSessionActions — handleAddSet in-session prefill (BLD-655)", () =
     expect(appended.reps).toBe(null);
 
     warnSpy.mockRestore();
-  });
-
-  it("Voltra multi-mode: training_mode follows existing rule; weight/reps still copied", async () => {
-    const group = makeGroup({
-      is_voltra: true,
-      training_modes: ["concentric", "eccentric"],
-      sets: [
-        { id: "s1", weight: 50, reps: 10, duration_seconds: null, completed: true, set_type: "normal", training_mode: "concentric" },
-      ],
-    });
-    const params = makeParams([group]);
-    // explicit mode set => respected
-    (params as any).modes = { "ex-1": "eccentric" };
-    const { result } = renderHook(() => useSessionActions(params));
-    await act(async () => { await flush(); });
-
-    await act(async () => {
-      await result.current.handleAddSet("ex-1");
-    });
-
-    // addSet was called with training_mode='eccentric' (existing rule unchanged)
-    expect(mockAddSet).toHaveBeenCalledWith(
-      "session-1", "ex-1", 2,
-      null, null, "eccentric", null, undefined, undefined, 0
-    );
-    // prefill still applied from last working set regardless of mode
-    expect(mockUpdateSet).toHaveBeenCalledWith("new-set-id", 50, 10, undefined);
   });
 });

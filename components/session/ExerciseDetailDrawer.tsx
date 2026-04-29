@@ -45,16 +45,6 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
           </Text>
         </View>
       </View>
-      {exercise.mount_position && (
-        <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
-            Mount Position
-          </Text>
-          <Text variant="body" style={{ color: colors.onSurface, marginTop: 2 }}>
-            {exercise.mount_position}
-          </Text>
-        </View>
-      )}
       {exercise.attachment && (
         <View style={styles.detailSection}>
           <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>

@@ -28,7 +28,6 @@ import { useSetTypeActions } from "../../hooks/useSetTypeActions";
 import { useSessionTimer } from "../../hooks/useSessionTimer";
 import { usePRCelebration } from "../../hooks/usePRCelebration";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
-import { MountTransitionHint } from "../../components/session/MountTransitionHint";
 import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDetailDrawer";
 import { SetTypeSheet } from "../../components/session/SetTypeSheet";
 import { SessionListHeader } from "../../components/session/SessionListHeader";
@@ -86,12 +85,21 @@ export default function ActiveSession() {
   }, []);
 
   const {
-    session, groups, setGroups, step, unit, suggestions, modes, setModes,
+    session, groups, setGroups, step, unit, suggestions,
     allExercises, linkIds, palette, updateGroupSet, load,
   } = useSessionData({ id, templateId, sourceSessionId });
 
   const {
-    rest, breakdown, restFlashStyle, startRest, startRestWithDuration, startRestWithBreakdown, dismissRest, restRef,
+    rest,
+    breakdown,
+    persistedDurationSeconds,
+    selectedDurationSeconds,
+    restFlashStyle,
+    startRest,
+    startRestWithDuration,
+    startRestWithBreakdown,
+    dismissRest,
+    restRef,
   } = useRestTimer({ sessionId: id, colors });
 
   const {
@@ -116,12 +124,12 @@ export default function ActiveSession() {
 
   const {
     elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, nextHint, hintTimer,
-    handleUpdate, handleCheck, handleAddSet, handleModeChange,
+    handleUpdate, handleCheck, handleAddSet,
     handleDelete,
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
     handleMoveUp, handleMoveDown, handlePrefillFromPrevious, finish, cancel,
   } = useSessionActions({
-    id, groups, setGroups, modes, setModes, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, session, showToast, showError, triggerPR, unit,
+    id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, session, showToast, showError, triggerPR, unit,
   });
 
   const {
@@ -158,10 +166,6 @@ export default function ActiveSession() {
     setPickerOpen(false);
     toolboxSheetRef.current?.snapToIndex(0);
   }, [setPickerOpen]);
-
-  const handleToolboxDismiss = useCallback(() => {
-    // no-op — sheet handles its own close
-  }, []);
 
   const handleToolboxStartRest = useCallback((seconds: number) => {
     startRestWithDuration(seconds);
@@ -208,7 +212,6 @@ export default function ActiveSession() {
         exerciseId,
         warmupSets,
         group?.link_id,
-        group?.sets[0]?.training_mode,
         group?.sets[0]?.tempo,
         group?.exercise_position ?? 0
       );
@@ -219,17 +222,13 @@ export default function ActiveSession() {
     }
   }, [id, unit, suggestions, groups, load, showError]);
 
-  const renderExerciseGroup = useCallback(({ item: group, index }: { item: typeof groups[number]; index: number }) => {
-    const prevMount = index > 0 ? groups[index - 1]?.mount_position : undefined;
-    const currMount = group.mount_position;
-    return (<>
-        {prevMount && currMount && prevMount !== currMount ? <MountTransitionHint prevMount={prevMount} nextMount={currMount} /> : null}
-        <ExerciseGroupCard
+  const renderExerciseGroup = useCallback(({ item: group }: { item: typeof groups[number]; index: number }) => {
+    return (
+      <ExerciseGroupCard
       group={group}
       step={step}
       unit={unit}
       suggestions={suggestions}
-      modes={modes}
       exerciseNotesOpen={!!exerciseNotesOpen[group.exercise_id]}
       exerciseNotesDraft={exerciseNotesDraft[group.exercise_id]}
       linkIds={linkIds}
@@ -240,7 +239,6 @@ export default function ActiveSession() {
       onDelete={handleDelete}
       onAddSet={handleAddSet}
       onAddWarmups={handleAddWarmups}
-      onModeChange={handleModeChange}
       onExerciseNotes={handleExerciseNotes}
       onExerciseNotesDraftChange={handleExerciseNotesDraftChange}
       onToggleExerciseNotes={toggleExerciseNotes}
@@ -263,9 +261,8 @@ export default function ActiveSession() {
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
     />
-      </>
     );
-  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
@@ -302,7 +299,10 @@ export default function ActiveSession() {
               elapsed={elapsed}
               clockStarted={clockStartedAt != null}
               estimatedDuration={estimatedDuration}
-              breakdown={breakdown} flashStyle={restFlashStyle}
+              breakdown={breakdown}
+              persistedDurationSeconds={persistedDurationSeconds}
+              selectedDurationSeconds={selectedDurationSeconds}
+              flashStyle={restFlashStyle}
               onStartRest={handleToolboxStartRest}
               onDismissRest={dismissRest}
               onOpenToolbox={handleToolboxOpen}
@@ -381,7 +381,7 @@ export default function ActiveSession() {
       <SessionToolboxSheet
         sheetRef={toolboxSheetRef}
         onOpenRestSettings={handleOpenRestSettings}
-        onDismiss={handleToolboxDismiss}
+        onDismiss={() => { /* no-op */ }}
       />
       <BodyweightModifierSheet sheetRef={bwModifierSheetRef} initialModifierKg={bwModifierInitial} unit={unit} onDone={handleSaveBodyweightModifier} onDismiss={handleDismissBodyweightModifier} />
       <VariantPickerSheet isVisible={variant.isVisible} onClose={variant.handleClose} onConfirm={variant.handleConfirm} {...variant.initialValues} />

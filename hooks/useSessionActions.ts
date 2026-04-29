@@ -15,7 +15,6 @@ import {
   uncompleteSet,
   updateSet,
   updateSetNotes,
-  updateSetTrainingMode,
   getSessionSets,
   updateSetDuration,
   checkSetPR,
@@ -50,7 +49,6 @@ import {
   getProgramDayById,
   advanceProgram,
 } from "../lib/programs";
-import type { TrainingMode } from "../lib/types";
 import { formatTime, computePrefillSets } from "../lib/format";
 import { confirmAction } from "../lib/confirm";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
@@ -79,8 +77,6 @@ type Params = {
   id: string | undefined;
   groups: ExerciseGroup[];
   setGroups: React.Dispatch<React.SetStateAction<ExerciseGroup[]>>;
-  modes: Record<string, TrainingMode>;
-  setModes: React.Dispatch<React.SetStateAction<Record<string, TrainingMode>>>;
   updateGroupSet: (setId: string, updates: Partial<SetWithMeta>) => void;
   startRest: (ctx: string | SetContext) => void;
   startRestWithDuration: (secs: number) => void;
@@ -96,8 +92,6 @@ export function useSessionActions({
   id,
   groups,
   setGroups,
-  modes,
-  setModes,
   updateGroupSet,
   startRest,
   startRestWithDuration,
@@ -421,9 +415,7 @@ export function useSessionActions({
   const handleAddSet = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
     const num = (group?.sets.length ?? 0) + 1;
-    const fallback = group?.is_voltra && group.training_modes.length > 1 ? group.training_modes[0] : null;
-    const mode = modes[exerciseId] ?? fallback;
-    const newSet = await addSet(id!, exerciseId, num, null, null, mode, null, undefined, undefined, group?.exercise_position ?? 0);
+    const newSet = await addSet(id!, exerciseId, num, null, null, null, undefined, undefined, group?.exercise_position ?? 0);
 
     // BLD-541: smart-default the bodyweight modifier from the last session's
     // most-recent completed set. Only runs for bodyweight groups. Persisted
@@ -633,25 +625,7 @@ export function useSessionActions({
           : g
       )
     );
-  }, [id, groups, modes]);
-
-  const handleModeChange = useCallback(async (exerciseId: string, mode: TrainingMode) => {
-    setModes((prev) => ({ ...prev, [exerciseId]: mode }));
-    const group = groups.find((g) => g.exercise_id === exerciseId);
-    if (!group) return;
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.exercise_id === exerciseId
-          ? { ...g, sets: g.sets.map((s) => (s.completed ? s : { ...s, training_mode: mode })) }
-          : g
-      )
-    );
-    for (const set of group.sets) {
-      if (!set.completed) {
-        await updateSetTrainingMode(set.id, mode);
-      }
-    }
-  }, [groups]);
+  }, [id, groups]);
 
   const handleDelete = useCallback(async (setId: string) => {
     setGroups((prev) =>
@@ -921,7 +895,6 @@ export function useSessionActions({
     handleUpdate,
     handleCheck,
     handleAddSet,
-    handleModeChange,
     handleDelete,
     handleExerciseNotes,
     handleExerciseNotesDraftChange,

@@ -18,7 +18,8 @@ import {
   updateSetsBatch,
   updateExercisePositions,
 } from "../lib/db";
-import type { WorkoutSession, TrainingMode, Exercise } from "../lib/types";
+import { parseTemplateTargetReps } from "../lib/db/templates";
+import type { WorkoutSession, Exercise } from "../lib/types";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 import { epley, suggest, type Suggestion } from "../lib/rm";
 import {
@@ -47,7 +48,6 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
   const [step, setStep] = useState(2.5);
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
-  const [modes, setModes] = useState<Record<string, TrainingMode>>({});
   const [maxes, setMaxes] = useState<Record<string, number>>({});
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
 
@@ -115,22 +115,18 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     for (const s of sets) {
       if (!map.has(s.exercise_id)) {
         const ex = exerciseMeta[s.exercise_id];
-        const parsed: TrainingMode[] = ex?.training_modes ?? [];
+        const isDurationExercise = /target duration|hold for the target duration/i.test(ex?.instructions ?? "");
         map.set(s.exercise_id, {
           exercise_id: s.exercise_id,
           name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
           sets: [],
           link_id: s.link_id ?? null,
-          training_modes: parsed,
           is_voltra: ex?.is_voltra ?? false,
           is_bodyweight: ex ? ex.equipment === "bodyweight" : false,
-          trackingMode: parsed.includes("isometric" as TrainingMode) ? "duration" : "reps",
+          trackingMode: isDurationExercise ? "duration" : "reps",
           equipment: ex?.equipment ?? "other",
           exercise_position: s.exercise_position ?? 0,
           exerciseCategory: ex?.category ?? null,
-          // BLD-596: surface mount-position to the session screen so
-          // GroupCardHeader/MountTransitionHint can render the chip + hint.
-          mount_position: ex?.mount_position ?? null,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
@@ -280,11 +276,21 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           const exerciseIds = [...new Set(created.map((s) => s.exercise_id))];
           const prevCache = await getPreviousSetsBatch(exerciseIds, id);
 
+          const templateExerciseMap = new Map(tpl.exercises.map((exercise) => [exercise.exercise_id, exercise]));
           const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
           for (const s of created) {
-            const prev = prevCache[s.exercise_id]?.find((p) => p.set_number === s.set_number);
-            if (prev && (prev.weight != null || prev.reps != null)) {
-              setsToUpdate.push({ id: s.id, weight: prev.weight, reps: prev.reps });
+            const completedPrevSets = (prevCache[s.exercise_id] ?? []).filter((p) => p.completed);
+            const exactPrev = completedPrevSets.find((p) => p.set_number === s.set_number);
+            const fallbackPrev = completedPrevSets[completedPrevSets.length - 1];
+            const templateExercise = templateExerciseMap.get(s.exercise_id);
+            const fallbackReps = templateExercise
+              ? parseTemplateTargetReps(templateExercise.target_reps, s.set_number)
+              : null;
+
+            const weight = exactPrev?.weight ?? fallbackPrev?.weight ?? null;
+            const reps = exactPrev?.reps ?? fallbackPrev?.reps ?? fallbackReps;
+            if (weight != null || reps != null) {
+              setsToUpdate.push({ id: s.id, weight, reps });
             }
           }
           await updateSetsBatch(setsToUpdate);
@@ -324,7 +330,6 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
               setNumber: s.set_number,
               linkId: newLinkId,
               round: newLinkId ? s.set_number : null,
-              trainingMode: (s.training_mode as TrainingMode) ?? null,
               tempo: s.tempo ?? null,
               setType: s.set_type,
             });
@@ -393,8 +398,6 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     step,
     unit,
     suggestions,
-    modes,
-    setModes,
     maxes,
     allExercises,
     linkIds,

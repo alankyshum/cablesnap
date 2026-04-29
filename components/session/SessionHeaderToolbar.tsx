@@ -21,7 +21,7 @@ import { truncateChipLabel, type RestBreakdown } from "../../lib/rest";
 import { RestBreakdownSheet } from "./RestBreakdownSheet";
 
 const REST_PRESETS = [30, 60, 90, 120] as const;
-const DEFAULT_REST_SECONDS = 90;
+const DEFAULT_REST_SECONDS = 30;
 const REST_DONE_DISPLAY_MS = 3000;
 
 function presetLabel(seconds: number): string {
@@ -44,6 +44,8 @@ type Props = {
   onStartRest: (duration: number) => void;
   onDismissRest: () => void;
   onOpenToolbox: () => void;
+  persistedDurationSeconds?: number;
+  selectedDurationSeconds?: number;
   pickerRequested?: boolean;
   onPickerDismissed?: () => void;
   /**
@@ -74,6 +76,8 @@ function SessionHeaderToolbarInner({
   onStartRest,
   onDismissRest,
   onOpenToolbox,
+  persistedDurationSeconds = DEFAULT_REST_SECONDS,
+  selectedDurationSeconds = DEFAULT_REST_SECONDS,
   pickerRequested,
   onPickerDismissed,
   showBreakdownChip: showBreakdownChipProp,
@@ -117,12 +121,10 @@ function SessionHeaderToolbarInner({
     };
   }, []);
 
-  const handleElapsedTap = useCallback(async () => {
+  const handleElapsedTap = useCallback(() => {
     if (rest > 0) return; // Disabled when rest is active
-    const savedDefault = await getAppSetting("rest_timer_default_seconds");
-    const duration = savedDefault ? parseInt(savedDefault, 10) : DEFAULT_REST_SECONDS;
-    onStartRest(isNaN(duration) || duration < 1 ? DEFAULT_REST_SECONDS : duration);
-  }, [rest, onStartRest]);
+    onStartRest(selectedDurationSeconds);
+  }, [rest, onStartRest, selectedDurationSeconds]);
 
   const handleRestTap = useCallback(() => {
     onDismissRest();
@@ -195,9 +197,8 @@ function SessionHeaderToolbarInner({
     onPickerDismissed?.();
   }, [pickerRequested, onPickerDismissed]);
 
-  const handlePresetSelect = useCallback(async (seconds: number) => {
+  const handlePresetSelect = useCallback((seconds: number) => {
     setPickerVisible(false);
-    await setAppSetting("rest_timer_default_seconds", String(seconds));
     onStartRest(seconds);
   }, [onStartRest]);
 
@@ -323,6 +324,8 @@ function SessionHeaderToolbarInner({
         visible={pickerVisible}
         vibrateSetting={vibrateSetting}
         soundSetting={soundSetting}
+        persistedDurationSeconds={persistedDurationSeconds}
+        selectedDurationSeconds={selectedDurationSeconds}
         onSelectPreset={handlePresetSelect}
         onVibrateToggle={handleVibrateToggle}
         onSoundToggle={handleSoundToggle}
@@ -349,6 +352,8 @@ type PickerProps = {
   visible: boolean;
   vibrateSetting: boolean;
   soundSetting: boolean;
+  persistedDurationSeconds: number;
+  selectedDurationSeconds: number;
   onSelectPreset: (seconds: number) => void;
   onVibrateToggle: (value: boolean) => void;
   onSoundToggle: (value: boolean) => void;
@@ -359,6 +364,8 @@ function RestDurationPicker({
   visible,
   vibrateSetting,
   soundSetting,
+  persistedDurationSeconds,
+  selectedDurationSeconds,
   onSelectPreset,
   onVibrateToggle,
   onSoundToggle,
@@ -386,18 +393,42 @@ function RestDurationPicker({
             Rest Duration
           </Text>
 
+          <View style={styles.selectionSummary}>
+            <Text variant="body" style={{ color: colors.onSurface }}>
+              Current: {presetLabel(selectedDurationSeconds)}
+            </Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+              Last used: {presetLabel(persistedDurationSeconds)}
+            </Text>
+          </View>
+
           <View style={styles.presetsRow}>
-            {REST_PRESETS.map((seconds) => (
-              <Chip
-                key={seconds}
-                selected={false}
-                onPress={() => onSelectPreset(seconds)}
-                accessibilityRole="button"
-                accessibilityLabel={`Start ${presetLabel(seconds)} rest timer`}
-              >
-                {presetLabel(seconds)}
-              </Chip>
-            ))}
+            {REST_PRESETS.map((seconds) => {
+              const isSelected = seconds === selectedDurationSeconds;
+              const isPersisted = seconds === persistedDurationSeconds;
+              const metaLabel = [
+                isSelected ? "Current" : null,
+                isPersisted ? "Last used" : null,
+              ].filter(Boolean).join(" • ");
+
+              return (
+                <View key={seconds} style={styles.presetChipWrap}>
+                  <Chip
+                    selected={isSelected}
+                    onPress={() => onSelectPreset(seconds)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Start ${presetLabel(seconds)} rest timer${metaLabel ? `. ${metaLabel}.` : ""}`}
+                  >
+                    {presetLabel(seconds)}
+                  </Chip>
+                  {metaLabel ? (
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+                      {metaLabel}
+                    </Text>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
 
           <View style={styles.settingRow}>
@@ -598,11 +629,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },
+  selectionSummary: {
+    gap: 2,
+    marginBottom: 16,
+  },
   presetsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginBottom: 20,
+  },
+  presetChipWrap: {
+    alignItems: "center",
+    gap: 4,
   },
   settingRow: {
     flexDirection: "row",

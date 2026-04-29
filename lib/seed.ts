@@ -1,4 +1,4 @@
-import type { Exercise, MountPosition, Attachment, TrainingMode } from "./types";
+import type { Exercise, Attachment } from "./types";
 import { communityExercises } from "./seed-community";
 
 let counter = 0;
@@ -8,9 +8,7 @@ function id(): string {
 }
 
 type Voltra = Omit<Exercise, "id" | "is_custom" | "equipment"> & {
-  mount_position: MountPosition;
   attachment: Attachment;
-  training_modes: TrainingMode[];
 };
 
 function voltra(ex: Voltra): Exercise {
@@ -34,9 +32,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Lie supine with knees bent, holding cable behind head.\n3. Curl torso upward, squeezing abs at the top.\n4. Lower slowly to starting position.\n5. Keep lower back pressed to the floor throughout.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "isometric"],
     }),
     voltra({
       name: "Anti-rotational Supine Bicycle",
@@ -45,9 +41,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["quads"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to mid mount on rack.\n2. Lie supine with cable to one side, arms extended holding handle.\n3. Perform bicycle kicks while resisting rotational pull.\n4. Maintain stable torso throughout the movement.\n5. Switch sides after completing reps.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band", "isometric"],
     }),
     voltra({
       name: "Half Kneeling Chop",
@@ -56,9 +50,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to high mount on rack.\n2. Kneel with inside knee down, outside foot forward.\n3. Pull cable diagonally across body from high to low.\n4. Rotate torso through the movement, engaging obliques.\n5. Return slowly to start position with control.",
-      mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "High Row",
@@ -67,9 +59,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps", "shoulders"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to high mount on rack.\n2. Stand facing the Voltra, arms extended overhead.\n3. Pull cable down and back toward hips in a sweeping arc.\n4. Engage core to stabilize throughout the pull.\n5. Return to start with controlled tempo.",
-      mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "One-arm Chest Fly with Rotation",
@@ -78,9 +68,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders"],
       difficulty: "advanced",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand sideways to the Voltra, arm extended to the side.\n3. Sweep arm across body while rotating torso.\n4. Focus on oblique engagement through the rotation.\n5. Return slowly, resisting the cable pull.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "One-arm Chest Press with Rotational Lunge",
@@ -89,9 +77,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["quads", "shoulders", "triceps"],
       difficulty: "advanced",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand with back to Voltra, handle at chest height.\n3. Step forward into a lunge while pressing cable forward.\n4. Rotate torso away from the cable as you press.\n5. Return to standing position with control.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Single Arm Chest Press with Spinal Rotation",
@@ -100,9 +86,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders", "triceps"],
       difficulty: "advanced",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand with back to Voltra, staggered stance.\n3. Press cable forward with one arm.\n4. Rotate spine through the press for full range of motion.\n5. Return slowly, controlling the rotation.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Squat with Rotational Force",
@@ -111,9 +95,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["hamstrings"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand sideways to Voltra, holding handle at chest.\n3. Squat down while resisting rotational pull.\n4. Drive through heels to return to standing.\n5. Maintain neutral spine throughout.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Trunk Horizontal Rotations",
@@ -122,9 +104,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand sideways to Voltra, arms extended holding handle.\n3. Rotate torso away from anchor, keeping arms straight.\n4. Control the return to prevent cable from snapping back.\n5. Complete reps on one side, then switch.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band", "isokinetic", "isometric"],
     }),
 
     // ── Arms (9) ─────────────────────────────────────────────
@@ -135,9 +115,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["forearms"],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand facing the Voltra, arm at your side.\n3. Curl the handle upward, keeping elbow pinned to your side.\n4. Squeeze bicep at the top of the movement.\n5. Lower slowly with control.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Biceps Curls",
@@ -146,9 +124,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["forearms"],
       difficulty: "beginner",
       instructions: "1. Attach handle to floor mount.\n2. Stand upright, gripping handle with underhand grip.\n3. Curl the cable up toward your shoulder.\n4. Keep upper arm stationary throughout.\n5. Lower with a controlled eccentric phase.",
-      mount_position: "floor",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Hammer Curl",
@@ -157,9 +133,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach rope to low mount on rack.\n2. Stand facing the Voltra, neutral grip on rope.\n3. Curl upward with thumbs pointing to the ceiling.\n4. Keep elbows close to your body.\n5. Lower slowly to full extension.",
-      mount_position: "low",
       attachment: "rope",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "High Pulley Overhead Triceps Extension",
@@ -168,9 +142,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "intermediate",
       instructions: "1. Attach rope to high mount on rack.\n2. Face away from Voltra, lean slightly forward.\n3. Extend arms overhead, straightening elbows.\n4. Squeeze triceps at full extension.\n5. Return slowly behind head, feeling the stretch.",
-      mount_position: "high",
       attachment: "rope",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Lying Triceps Extension",
@@ -179,9 +151,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Lie supine with head toward the Voltra.\n3. Grip handle overhead with arms extended.\n4. Bend elbows to lower handle behind head.\n5. Extend arms back to start, squeezing triceps.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Seated One-arm Concentration Curl",
@@ -190,9 +160,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["forearms"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Sit on a bench, brace elbow against inner thigh.\n3. Curl cable upward with strict form.\n4. Squeeze at the top, then lower with control.\n5. Complete all reps before switching arms.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Single-arm Biceps Curls",
@@ -201,9 +169,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["forearms"],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand sideways to Voltra, gripping handle in far hand.\n3. Curl handle up toward shoulder.\n4. Maintain upright posture, no swinging.\n5. Lower slowly and repeat.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Triceps Push-down",
@@ -212,9 +178,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach bar to high mount on rack.\n2. Stand facing the Voltra, grip bar with overhand grip.\n3. Push bar down by extending elbows.\n4. Keep upper arms pinned to your sides.\n5. Return slowly to start position.",
-      mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Wrist Curl",
@@ -223,9 +187,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Sit with forearm resting on thigh, wrist over knee.\n3. Curl wrist upward against cable resistance.\n4. Lower slowly to full wrist extension.\n5. Keep forearm stationary throughout.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
 
     // ── Back (9) ─────────────────────────────────────────────
@@ -236,9 +198,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps", "traps"],
       difficulty: "intermediate",
       instructions: "1. Attach bar to high mount on rack.\n2. Sit or kneel below the Voltra.\n3. Grip bar wide, pull down to upper chest.\n4. Squeeze shoulder blades together at the bottom.\n5. Return bar overhead with controlled tempo.",
-      mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Close Grip Lat Pull-down",
@@ -247,9 +207,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps", "traps"],
       difficulty: "intermediate",
       instructions: "1. Attach bar to high mount on rack.\n2. Sit or kneel below the Voltra.\n3. Grip bar with narrow, neutral grip.\n4. Pull down to upper chest, elbows driving back.\n5. Return to start with control, feeling the lat stretch.",
-      mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Seated Cable Row",
@@ -258,9 +216,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps", "traps"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Sit on floor or bench facing the Voltra.\n3. Pull handles toward your torso, squeezing shoulder blades.\n4. Keep chest up and back straight.\n5. Extend arms forward slowly to return.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "rowing"],
     }),
     voltra({
       name: "Single-arm Lat Pull-down",
@@ -269,9 +225,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to high mount on rack.\n2. Kneel or sit below the Voltra.\n3. Pull handle down with one arm to shoulder level.\n4. Focus on lat contraction, elbow driving down.\n5. Return with control and switch arms.",
-      mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Single-arm Row on Bench",
@@ -280,9 +234,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Place one knee and hand on bench for support.\n3. Row cable upward, pulling elbow past your torso.\n4. Squeeze at the top, then lower slowly.\n5. Complete all reps before switching sides.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Spinal Extension",
@@ -291,9 +243,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["glutes", "hamstrings"],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand facing the Voltra, hold handle at chest.\n3. Hinge at hips, lowering torso forward.\n4. Extend back to upright, squeezing lower back.\n5. Move slowly with controlled range of motion.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "isometric"],
     }),
     voltra({
       name: "Standing Shrugs",
@@ -302,9 +252,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand upright holding handle at sides.\n3. Shrug shoulders straight up toward ears.\n4. Hold briefly at the top, squeezing traps.\n5. Lower shoulders slowly and repeat.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Straight Arm Lat Pull-down",
@@ -313,9 +261,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["core", "triceps"],
       difficulty: "intermediate",
       instructions: "1. Attach bar to high mount on rack.\n2. Stand facing the Voltra, arms extended overhead.\n3. Pull bar down in an arc to thighs, keeping arms straight.\n4. Squeeze lats hard at the bottom.\n5. Return to start position with control.",
-      mount_position: "high",
       attachment: "bar",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Supinated Seated Cable Row",
@@ -324,9 +270,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Sit facing the Voltra, palms facing up.\n3. Pull handle toward lower chest with supinated grip.\n4. Squeeze shoulder blades, emphasizing lower lats.\n5. Extend arms slowly to return.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "rowing"],
     }),
 
     // ── Chest (9) ────────────────────────────────────────────
@@ -337,9 +281,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Lie on bench positioned next to the Voltra.\n3. With slight elbow bend, sweep arm across body.\n4. Squeeze chest at the top of the movement.\n5. Lower slowly, feeling the chest stretch.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Crossover Fly",
@@ -348,9 +290,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to high mount on rack.\n2. Stand with back to Voltra, staggered stance.\n3. Bring arms together in front of chest in a hugging motion.\n4. Squeeze chest at the midline.\n5. Return slowly, arms out to sides.",
-      mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Decline Flys",
@@ -359,9 +299,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to high mount on rack.\n2. Stand facing away, hands at shoulder height.\n3. Press arms downward and together in a sweeping arc.\n4. Focus on lower chest contraction.\n5. Return to start with control.",
-      mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Incline Chest Press",
@@ -370,9 +308,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders", "triceps"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Sit on incline bench facing away from Voltra.\n3. Press cables upward and forward at incline angle.\n4. Squeeze chest at full extension.\n5. Lower slowly to chest level.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "One-arm Upper Chest Fly",
@@ -381,9 +317,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders"],
       difficulty: "advanced",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand sideways to Voltra, cable arm low.\n3. Sweep arm upward and across, targeting upper chest.\n4. Squeeze at the top of the arc.\n5. Return slowly and complete all reps before switching.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Single-arm Chest Press",
@@ -392,9 +326,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["triceps", "shoulders"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand with back to Voltra, staggered stance.\n3. Press cable forward with one arm at chest height.\n4. Extend fully, squeezing the chest.\n5. Return slowly and switch arms after set.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Standing Chest Press (Bar)",
@@ -403,9 +335,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["triceps", "shoulders"],
       difficulty: "beginner",
       instructions: "1. Attach bar to mid mount on rack.\n2. Stand with back to Voltra, grip bar at chest width.\n3. Press bar forward until arms fully extend.\n4. Keep core braced for stability.\n5. Return to chest level with control.",
-      mount_position: "mid",
       attachment: "bar",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Standing Chest Press (Handle)",
@@ -414,9 +344,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["triceps", "shoulders"],
       difficulty: "beginner",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand with back to Voltra, handle at chest.\n3. Press handle forward in a straight line.\n4. Squeeze chest at full extension.\n5. Return handle to chest with controlled tempo.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Standing Decline Chest Fly",
@@ -425,9 +353,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["shoulders"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to high mount on rack.\n2. Stand facing away from Voltra.\n3. With slight elbow bend, bring arms downward and together.\n4. Focus on lower chest squeeze at the bottom.\n5. Return to start position slowly.",
-      mount_position: "high",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
 
     // ── Legs & Glutes (9) ────────────────────────────────────
@@ -438,9 +364,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "intermediate",
       instructions: "1. Attach ankle strap to low mount on rack.\n2. Lie supine, strap around one ankle.\n3. Simultaneously crunch torso and pull knee toward chest.\n4. Squeeze abs and hip flexors at the top.\n5. Lower both torso and leg with control.",
-      mount_position: "low",
       attachment: "ankle_strap",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Deadlift",
@@ -449,9 +373,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["core", "quads"],
       difficulty: "intermediate",
       instructions: "1. Attach bar to floor mount.\n2. Stand over the cable, feet hip-width.\n3. Hinge at hips, grip bar with straight arms.\n4. Drive through heels, extending hips to standing.\n5. Lower with control, pushing hips back.",
-      mount_position: "floor",
       attachment: "bar",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Goblet Squat",
@@ -460,9 +382,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["core", "hamstrings"],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand facing the Voltra, hold handle at chest.\n3. Squat down, keeping chest up and back straight.\n4. Drive through heels to return to standing.\n5. Maintain upright torso throughout.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Hip Extension",
@@ -471,9 +391,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["hamstrings"],
       difficulty: "beginner",
       instructions: "1. Attach ankle strap to low mount on rack.\n2. Stand facing the Voltra, strap around one ankle.\n3. Extend leg backward, squeezing glute at the top.\n4. Keep standing leg slightly bent for balance.\n5. Return slowly and complete all reps before switching.",
-      mount_position: "low",
       attachment: "ankle_strap",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Leg Curl Bird Dog",
@@ -482,9 +400,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["core"],
       difficulty: "advanced",
       instructions: "1. Attach ankle strap to low mount on rack.\n2. Get on all fours, strap around one ankle.\n3. Extend strapped leg back while reaching opposite arm forward.\n4. Curl heel toward glute against cable resistance.\n5. Return to bird dog position with control.",
-      mount_position: "low",
       attachment: "ankle_strap",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Lying Hip Flexion",
@@ -493,9 +409,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["core"],
       difficulty: "beginner",
       instructions: "1. Attach ankle strap to low mount on rack.\n2. Lie supine with feet toward the Voltra.\n3. Raise strapped leg upward, keeping knee slightly bent.\n4. Lower slowly against cable resistance.\n5. Complete all reps before switching legs.",
-      mount_position: "low",
       attachment: "ankle_strap",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Reverse Lunges with Cable Pull",
@@ -504,9 +418,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["hamstrings", "core"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand facing the Voltra, holding handle at chest.\n3. Step backward into a reverse lunge.\n4. Drive through front heel to return to standing.\n5. Alternate legs or complete one side first.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Seated Hip Internal Rotation",
@@ -515,9 +427,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach ankle strap to low mount on rack.\n2. Sit on bench, strap around ankle, cable to outside.\n3. Rotate lower leg inward against cable resistance.\n4. Control the return to external rotation.\n5. Complete all reps before switching.",
-      mount_position: "low",
       attachment: "ankle_strap",
-      training_modes: ["weight", "band", "isometric"],
     }),
     voltra({
       name: "Side Kicks",
@@ -526,9 +436,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["quads"],
       difficulty: "beginner",
       instructions: "1. Attach ankle strap to low mount on rack.\n2. Stand sideways to Voltra, strap on far ankle.\n3. Kick leg out to the side against resistance.\n4. Keep standing leg slightly bent for balance.\n5. Return slowly and complete all reps before switching.",
-      mount_position: "low",
       attachment: "ankle_strap",
-      training_modes: ["weight", "band"],
     }),
 
     // ── Shoulders (9) ────────────────────────────────────────
@@ -539,9 +447,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["back"],
       difficulty: "intermediate",
       instructions: "1. Attach rope to mid mount on rack.\n2. Stand facing the Voltra, grip rope with both hands.\n3. Pull rope toward face, elbows high.\n4. Rotate forearms upward at the end of the pull.\n5. Return slowly to start position.",
-      mount_position: "mid",
       attachment: "rope",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Front Raise (Bar)",
@@ -550,9 +456,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["core"],
       difficulty: "beginner",
       instructions: "1. Attach bar to low mount on rack.\n2. Stand facing away from Voltra, bar behind you.\n3. Raise bar forward and up to shoulder height.\n4. Keep arms straight, slight elbow bend.\n5. Lower slowly to start position.",
-      mount_position: "low",
       attachment: "bar",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Front Raise (Handle)",
@@ -561,9 +465,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["core"],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand facing away from Voltra, cable between legs.\n3. Raise handle forward and up to shoulder height.\n4. Keep arm straight with slight elbow bend.\n5. Lower with control and repeat.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Lateral Raises Two Arms",
@@ -572,9 +474,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["traps"],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand on the cable, handle in each hand.\n3. Raise both arms out to sides to shoulder height.\n4. Keep slight bend in elbows.\n5. Lower slowly with control.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Lateral Raises One-arm",
@@ -583,9 +483,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["traps"],
       difficulty: "beginner",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand sideways to Voltra, cable in far hand.\n3. Raise arm out to the side to shoulder height.\n4. Keep slight bend in elbow throughout.\n5. Lower slowly and switch sides after set.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band", "isokinetic"],
     }),
     voltra({
       name: "Shoulder External Rotation",
@@ -594,9 +492,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand sideways, elbow bent 90 degrees at side.\n3. Rotate forearm outward against cable resistance.\n4. Keep upper arm pinned to your body.\n5. Return slowly to start position.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band", "isometric"],
     }),
     voltra({
       name: "Shoulder Internal Rotation",
@@ -605,9 +501,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "beginner",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand sideways, elbow bent 90 degrees at side.\n3. Rotate forearm inward across body against resistance.\n4. Keep upper arm stationary.\n5. Return to neutral slowly.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band", "isometric"],
     }),
     voltra({
       name: "Upright Rows (Bar)",
@@ -616,9 +510,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["biceps"],
       difficulty: "intermediate",
       instructions: "1. Attach bar to low mount on rack.\n2. Stand facing the Voltra, grip bar shoulder-width.\n3. Pull bar up along your body to chin height.\n4. Lead with elbows, keeping bar close to body.\n5. Lower to full arm extension with control.",
-      mount_position: "low",
       attachment: "bar",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Upright Shoulder External Rotation",
@@ -627,9 +519,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["traps"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to mid mount on rack.\n2. Stand facing Voltra, elbow raised to shoulder height.\n3. Rotate forearm upward from horizontal to vertical.\n4. Keep upper arm at shoulder height throughout.\n5. Lower slowly and repeat.",
-      mount_position: "mid",
       attachment: "handle",
-      training_modes: ["weight", "band", "isometric"],
     }),
 
     // ── Additional ──────────────────────────────────────────
@@ -640,9 +530,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: ["triceps", "core"],
       difficulty: "intermediate",
       instructions: "1. Attach handle to low mount on rack.\n2. Stand with back to Voltra, handle at shoulder height.\n3. Press cable overhead until arms are fully extended.\n4. Keep core braced and avoid arching the lower back.\n5. Lower slowly to shoulder level with control.",
-      mount_position: "low",
       attachment: "handle",
-      training_modes: ["weight", "band"],
     }),
     voltra({
       name: "Kneeling Cable Crunch",
@@ -651,9 +539,7 @@ export function seedExercises(): Exercise[] {
       secondary_muscles: [],
       difficulty: "intermediate",
       instructions: "1. Attach rope to high mount on rack.\n2. Kneel facing the Voltra, grip rope behind head.\n3. Crunch downward, pulling elbows toward knees.\n4. Squeeze abs hard at the bottom of the movement.\n5. Return slowly to upright kneeling position.",
-      mount_position: "high",
       attachment: "rope",
-      training_modes: ["weight", "band"],
     }),
     ...communityExercises(),
   ];

@@ -21,7 +21,7 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
+import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -116,19 +116,9 @@ export default function ExerciseDetail() {
         <Chip compact style={StyleSheet.flatten([styles.difficultyChip, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }])}>{exercise.difficulty}</Chip>
       </View>
 
-      {exercise.mount_position && (
-        <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>Mount Position</Text>
-          <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={`Mount position: ${MOUNT_POSITION_LABELS[exercise.mount_position]} on rack`}>{MOUNT_POSITION_LABELS[exercise.mount_position]}</Text></View>
-      )}
       {exercise.attachment && (
         <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>Attachment</Text>
           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={`Attachment: ${ATTACHMENT_LABELS[exercise.attachment]}`}>{ATTACHMENT_LABELS[exercise.attachment]}</Text></View>
-      )}
-      {exercise.training_modes && exercise.training_modes.length > 0 && (
-        <View style={styles.section} accessibilityLabel={`Compatible training modes: ${exercise.training_modes.join(", ")}`}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>Training Modes</Text>
-          <View style={styles.chipRow}>{exercise.training_modes.map((m) => <Chip key={m} compact style={StyleSheet.flatten([styles.muscleChip, { backgroundColor: colors.secondaryContainer }])}>{m.replace(/_/g, " ")}</Chip>)}</View>
-        </View>
       )}
 
       {layout.atLeastMedium ? (

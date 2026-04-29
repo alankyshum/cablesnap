@@ -25,7 +25,6 @@ export {
   removeExerciseFromTemplate,
   reorderTemplateExercises,
   updateTemplateExercise,
-  updateTemplateExerciseTrainingMode,
   getTemplateExerciseCount,
   getTemplateExerciseCounts,
   getTemplatePrimaryMuscles,
@@ -35,6 +34,8 @@ export {
   unlinkSingleExercise,
   updateLinkLabel,
   buildInitialSetsFromTemplate,
+  parseTemplateTargetReps,
+  importCoachTemplates,
 } from "./templates";
 
 export {
@@ -59,7 +60,6 @@ export {
   deleteSetsBatch,
   updateSetRPE,
   updateSetNotes,
-  updateSetTrainingMode,
   updateSetTempo,
   updateSetWarmup,
   updateSetType,
@@ -187,11 +187,19 @@ export {
   validateBackupFileSize,
   validateBackupData,
   getBackupCounts,
+  getBackupCategoryCounts,
+  getPresentBackupCategories,
   BACKUP_TABLE_LABELS,
   IMPORT_TABLE_ORDER,
+  BACKUP_CATEGORY_LABELS,
+  BACKUP_CATEGORY_ORDER,
 } from "./import-export";
+export { validateCoachTemplateImportData } from "../schemas";
 export type {
   BackupV3,
+  BackupV7,
+  BackupFile,
+  BackupCategoryName,
   BackupTableName,
   ExportProgress,
   ImportProgress,

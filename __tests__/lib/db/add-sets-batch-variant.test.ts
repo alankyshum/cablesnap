@@ -2,12 +2,16 @@
 // BLD-771: Lock the positional contract of addSetsBatch's prepared INSERT.
 //
 // Techlead review on PR #426 (comment 5ccee2ba) flagged that the
-// 12-placeholder prepared statement is positional and easy to silently
-// break in a future refactor. This test pins:
+// prepared statement is positional and easy to silently break in a
+// future refactor. This test pins:
 //
-//   - attachment is bound at index 10 (11th param)
-//   - mount_position is bound at index 11 (12th param, last)
+//   - attachment is bound at index 9 (10th param)
+//   - mount_position is bound at index 10 (11th param, last)
 //   - returned results carry the variant fields through unchanged
+//
+// BLD-783 rebase update: BLD-773 dropped the legacy `training_mode`
+// column, so the binding shrank from 12 → 11 slots. The variant slots
+// shifted left by one (10 → 9 and 11 → 10).
 //
 // We assert on the args passed to executeAsync (positional) rather than
 // on the SQL string, because the SQL string is what we'd otherwise need
@@ -51,7 +55,7 @@ beforeEach(() => {
 });
 
 describe('addSetsBatch — variant positional binding (BLD-771)', () => {
-  it('binds attachment at param index 10 and mount_position at param index 11', async () => {
+  it('binds attachment at param index 9 and mount_position at param index 10', async () => {
     await addSetsBatch([
       {
         sessionId: 'sess-1',
@@ -67,15 +71,15 @@ describe('addSetsBatch — variant positional binding (BLD-771)', () => {
     // rather than the total count.
     expect(mockExecuteAsync).toHaveBeenCalled();
     const args = mockExecuteAsync.mock.calls.at(-1)![0] as unknown[];
-    expect(args).toHaveLength(14);
+    expect(args).toHaveLength(13);
     // Slot order is: id, session_id, exercise_id, set_number, link_id,
-    // round, training_mode, tempo, set_type, exercise_position,
+    // round, tempo, set_type, exercise_position,
     // attachment, mount_position, grip_type, grip_width.
     expect(args[1]).toBe('sess-1');           // session_id
     expect(args[2]).toBe('ex-1');             // exercise_id
     expect(args[3]).toBe(1);                  // set_number
-    expect(args[10]).toBe('rope');            // attachment
-    expect(args[11]).toBe('low');             // mount_position
+    expect(args[9]).toBe('rope');             // attachment
+    expect(args[10]).toBe('low');             // mount_position
   });
 
   it('binds null at attachment + mount_position slots when caller omits them (no silent default)', async () => {
@@ -88,8 +92,8 @@ describe('addSetsBatch — variant positional binding (BLD-771)', () => {
     ]);
 
     const args = mockExecuteAsync.mock.calls.at(-1)![0] as unknown[];
+    expect(args[9]).toBeNull();
     expect(args[10]).toBeNull();
-    expect(args[11]).toBeNull();
   });
 
   it('returned results round-trip the variant fields unchanged', async () => {

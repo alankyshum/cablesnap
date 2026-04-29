@@ -31,8 +31,16 @@ import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { fontSizes, spacing } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
-import { handleExport, handleImport } from './_settings-handlers';
-import { setAppSetting, deleteAppSetting } from '@/lib/db';
+import BackupCategorySheet from '@/components/settings/BackupCategorySheet';
+import { handleExport, pickImportBackup } from './_settings-handlers';
+import {
+  BACKUP_CATEGORY_ORDER,
+  deleteAppSetting,
+  getBackupCategoryCounts,
+  getPresentBackupCategories,
+  setAppSetting,
+  type BackupCategoryName,
+} from '@/lib/db';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function Settings() {
@@ -42,6 +50,11 @@ export default function Settings() {
   const tabBarHeight = useFloatingTabBarHeight();
   const queryClient = useQueryClient();
   const [releaseNotesVisible, setReleaseNotesVisible] = useState(false);
+  const [exportSheetVisible, setExportSheetVisible] = useState(false);
+  const [importSheetVisible, setImportSheetVisible] = useState(false);
+  const [pendingImportJson, setPendingImportJson] = useState<string | null>(null);
+  const [importCategories, setImportCategories] = useState<BackupCategoryName[]>([]);
+  const [importCategoryCounts, setImportCategoryCounts] = useState<Partial<Record<BackupCategoryName, number>>>({});
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
   const {
     toast,
@@ -80,6 +93,42 @@ export default function Settings() {
     } catch {
       toast.error('Failed to save training goal');
     }
+  };
+
+  const openImportSheet = async () => {
+    const picked = await pickImportBackup({ toast, setLoading });
+    if (!picked) return;
+
+    const presentCategories = getPresentBackupCategories(picked.data);
+    if (presentCategories.length === 0) {
+      toast.info('No importable backup categories found');
+      return;
+    }
+
+    setPendingImportJson(picked.raw);
+    setImportCategories(presentCategories);
+    setImportCategoryCounts(getBackupCategoryCounts(picked.data));
+    setImportSheetVisible(true);
+  };
+
+  const closeImportSheet = () => {
+    setImportSheetVisible(false);
+    setPendingImportJson(null);
+    setImportCategories([]);
+    setImportCategoryCounts({});
+  };
+
+  const confirmImportCategories = (selectedCategories: BackupCategoryName[]) => {
+    const backupJson = pendingImportJson;
+    closeImportSheet();
+    if (!backupJson) return;
+    router.push({
+      pathname: '/settings/import-backup',
+      params: {
+        backupJson,
+        selectedCategories: selectedCategories.join(','),
+      },
+    });
   };
 
   return (
@@ -149,8 +198,8 @@ export default function Settings() {
           colors={colors}
           loading={loading}
           exportProgress={exportProgress}
-          onExport={() => handleExport(deps)}
-          onImport={() => handleImport(deps)}
+          onExport={() => setExportSheetVisible(true)}
+          onImport={openImportSheet}
         />
         <CSVExportCard colors={colors} />
         <FeedbackCard
@@ -234,6 +283,28 @@ export default function Settings() {
       <ReleaseNotesModal
         visible={releaseNotesVisible}
         onClose={() => setReleaseNotesVisible(false)}
+      />
+      <BackupCategorySheet
+        visible={exportSheetVisible}
+        mode="export"
+        categories={BACKUP_CATEGORY_ORDER}
+        initialSelected={BACKUP_CATEGORY_ORDER}
+        loading={loading}
+        onClose={() => setExportSheetVisible(false)}
+        onConfirm={(selectedCategories) => {
+          setExportSheetVisible(false);
+          void handleExport(deps, selectedCategories);
+        }}
+      />
+      <BackupCategorySheet
+        visible={importSheetVisible}
+        mode="import"
+        categories={importCategories}
+        initialSelected={importCategories}
+        counts={importCategoryCounts}
+        loading={loading}
+        onClose={closeImportSheet}
+        onConfirm={confirmImportCategories}
       />
     </ScrollView>
   );

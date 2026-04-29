@@ -1,10 +1,3 @@
-/**
- * BLD-621: session bootstrap inherits training_mode from template_exercise.
- *
- * Tests the pure helper used by hooks/useSessionData when a session is created
- * from a template — covers the "Session inheritance" acceptance criterion.
- */
-
 jest.mock("expo-crypto", () => ({ randomUUID: jest.fn(() => "test-uuid") }));
 jest.mock("drizzle-orm/expo-sqlite", () => ({ drizzle: jest.fn() }));
 jest.mock("expo-sqlite", () => ({ openDatabaseAsync: jest.fn() }));
@@ -30,45 +23,6 @@ describe("buildInitialSetsFromTemplate (BLD-621)", () => {
     expect(buildInitialSetsFromTemplate({ exercises: undefined }, "s1")).toEqual([]);
   });
 
-  it("inherits training_mode from each template_exercise into every set", () => {
-    const tpl = makeTemplate({
-      exercises: [
-        createTemplateExercise({
-          id: "te-1",
-          exercise_id: "ex-1",
-          position: 0,
-          target_sets: 3,
-          training_mode: "isokinetic",
-        }),
-      ],
-    });
-    const seeds = buildInitialSetsFromTemplate(tpl, "session-1");
-    expect(seeds).toHaveLength(3);
-    for (const s of seeds) {
-      expect(s.trainingMode).toBe("isokinetic");
-      expect(s.sessionId).toBe("session-1");
-      expect(s.exerciseId).toBe("ex-1");
-    }
-    expect(seeds.map((s) => s.setNumber)).toEqual([1, 2, 3]);
-  });
-
-  it("preserves null training_mode (legacy templates start with no preference)", () => {
-    const tpl = makeTemplate({
-      exercises: [
-        createTemplateExercise({
-          exercise_id: "ex-2",
-          target_sets: 2,
-          training_mode: null,
-        }),
-      ],
-    });
-    const seeds = buildInitialSetsFromTemplate(tpl, "session-2");
-    expect(seeds).toHaveLength(2);
-    for (const s of seeds) {
-      expect(s.trainingMode).toBeNull();
-    }
-  });
-
   it("carries link_id and assigns round numbers for linked supersets", () => {
     const tpl = makeTemplate({
       exercises: [
@@ -78,7 +32,6 @@ describe("buildInitialSetsFromTemplate (BLD-621)", () => {
           position: 0,
           target_sets: 2,
           link_id: "link-x",
-          training_mode: "weight",
         }),
         createTemplateExercise({
           id: "te-b",
@@ -86,16 +39,29 @@ describe("buildInitialSetsFromTemplate (BLD-621)", () => {
           position: 1,
           target_sets: 2,
           link_id: null,
-          training_mode: null,
         }),
       ],
     });
     const seeds = buildInitialSetsFromTemplate(tpl, "s");
     const linked = seeds.filter((s) => s.exerciseId === "ex-a");
     expect(linked.map((s) => s.round)).toEqual([1, 2]);
-    expect(linked.every((s) => s.linkId === "link-x" && s.trainingMode === "weight")).toBe(true);
+    expect(linked.every((s) => s.linkId === "link-x")).toBe(true);
     const unlinked = seeds.filter((s) => s.exerciseId === "ex-b");
-    expect(unlinked.every((s) => s.round === null && s.linkId === null && s.trainingMode === null)).toBe(true);
+    expect(unlinked.every((s) => s.round === null && s.linkId === null)).toBe(true);
+  });
+
+  it("emits setType for each seeded set using template set_types", () => {
+    const tpl = makeTemplate({
+      exercises: [
+        createTemplateExercise({
+          exercise_id: "ex-1",
+          target_sets: 3,
+          set_types: ["warmup", "normal", "failure"],
+        }),
+      ],
+    });
+    const seeds = buildInitialSetsFromTemplate(tpl, "s");
+    expect(seeds.map((seed) => seed.setType)).toEqual(["warmup", "normal", "failure"]);
   });
 
   it("emits exercise_position for each seed", () => {

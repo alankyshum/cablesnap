@@ -14,7 +14,7 @@ import {
   unlinkSingleExercise,
   updateTemplateExercise,
 } from "@/lib/db";
-import type { Exercise, TemplateExercise, WorkoutTemplate } from "@/lib/types";
+import type { Exercise, SetType, TemplateExercise, WorkoutTemplate } from "@/lib/types";
 
 export function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
   const count = exercises.filter((e) => e.link_id === linkId).length;
@@ -171,10 +171,10 @@ export function useTemplateEditor({ id, router }: { id: string | undefined; rout
     await load();
   }, [id, load]);
 
-  const handleEditSave = useCallback(async (sets: number, reps: string, rest: number) => {
+  const handleEditSave = useCallback(async (sets: number, reps: string, rest: number, setTypes: SetType[]) => {
     if (!editing || !id) return;
     try {
-      await updateTemplateExercise(editing.id, id, sets, reps, rest);
+      await updateTemplateExercise(editing.id, id, sets, reps, rest, setTypes);
       setEditing(null);
       await load();
     } catch {

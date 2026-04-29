@@ -422,13 +422,13 @@ describe("useSessionData hydration — zero updateSet writes (BLD-705 / AC5)", (
     mockGetExercisesByIds.mockResolvedValue({
       "ex-1": {
         id: "ex-1",
-        // duration-tracked exercise: useSessionData treats
-        // `training_modes` containing "isometric" as duration mode.
-        training_modes: ["isometric"],
+        // useSessionData detects duration mode via instructions text
+        // (post-BLD-773 mechanism — replaces the legacy training_modes
+        // ["isometric"] sentinel removed by F12/F13 column drops).
+        instructions: "Hold for the target duration.",
         is_voltra: false,
         equipment: "barbell",
         category: "core",
-        mount_position: null,
       },
     });
     mockGetSessionSets.mockResolvedValue([

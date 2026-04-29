@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const templateSetTypeSchema = z.enum(["normal", "warmup", "dropset", "failure"]);
+const templateSourceSchema = z.enum(["coach"]);
+
 const exerciseImportSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -17,6 +20,7 @@ const templateImportSchema = z.object({
   name: z.string(),
   created_at: z.number(),
   updated_at: z.number(),
+  source: templateSourceSchema.nullable().optional(),
 });
 
 const templateExerciseImportSchema = z.object({
@@ -29,6 +33,24 @@ const templateExerciseImportSchema = z.object({
   rest_seconds: z.number(),
   link_id: z.string().nullable().optional(),
   link_label: z.string().optional(),
+  target_duration_seconds: z.number().nullable().optional(),
+  set_types: z.array(templateSetTypeSchema).optional(),
+});
+
+const coachTemplateExerciseSchema = z.object({
+  exercise_id: z.string(),
+  target_sets: z.number().int().min(1),
+  target_reps: z.string().min(1),
+  rest_seconds: z.number().int().min(0).default(90),
+  link_id: z.string().nullable().optional(),
+  link_label: z.string().optional(),
+  target_duration_seconds: z.number().int().min(0).nullable().optional(),
+  set_types: z.array(templateSetTypeSchema).optional(),
+});
+
+const coachTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  exercises: z.array(coachTemplateExerciseSchema).min(1),
 });
 
 const sessionImportSchema = z.object({
@@ -54,7 +76,6 @@ const setImportSchema = z.object({
   set_notes: z.string().optional(),
   link_id: z.string().nullable().optional(),
   round: z.number().nullable().optional(),
-  training_mode: z.string().nullable().optional(),
   tempo: z.string().nullable().optional(),
 });
 
@@ -138,10 +159,28 @@ export const importDataSchema = z.object({
   body_settings: z.array(bodySettingsImportSchema).optional(),
 });
 
+export const coachTemplateImportSchema = z.object({
+  version: z.literal(1),
+  templates: z.array(coachTemplateSchema).min(1),
+});
+
 export type ImportData = z.infer<typeof importDataSchema>;
+export type CoachTemplateImportData = z.infer<typeof coachTemplateImportSchema>;
 
 export function validateImportData(data: unknown): { success: true; data: ImportData } | { success: false; error: string } {
   const result = importDataSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const firstError = result.error.issues[0];
+  return {
+    success: false,
+    error: `Invalid data: ${firstError.path.join(".")} - ${firstError.message}`,
+  };
+}
+
+export function validateCoachTemplateImportData(data: unknown): { success: true; data: CoachTemplateImportData } | { success: false; error: string } {
+  const result = coachTemplateImportSchema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
   }

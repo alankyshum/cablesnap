@@ -2,12 +2,13 @@
 // BLD-768: Lock the positional contract of addSetsBatch's prepared INSERT
 // for bodyweight grip variant fields (grip_type, grip_width).
 //
-// Mirror of add-sets-batch-variant.test.ts (BLD-771). The 14-placeholder
+// Mirror of add-sets-batch-variant.test.ts (BLD-771). The 13-placeholder
 // prepared statement is positional and easy to silently break in a future
-// refactor. This test pins:
+// refactor. After BLD-771's training_mode column drop the INSERT is 13
+// placeholders, not 14. This test pins:
 //
-//   - grip_type is bound at index 12 (13th param)
-//   - grip_width is bound at index 13 (14th param, last)
+//   - grip_type is bound at index 11 (12th param)
+//   - grip_width is bound at index 12 (13th param, last)
 //   - returned results carry the variant fields through unchanged
 //   - omitting variant fields binds null (no silent default)
 const mockExecuteAsync = jest.fn().mockResolvedValue({ changes: 1 });
@@ -48,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('addSetsBatch — bodyweight variant positional binding (BLD-768)', () => {
-  it('binds grip_type at param index 12 and grip_width at param index 13', async () => {
+  it('binds grip_type at param index 11 and grip_width at param index 12', async () => {
     await addSetsBatch([
       {
         sessionId: 'sess-1',
@@ -61,17 +62,17 @@ describe('addSetsBatch — bodyweight variant positional binding (BLD-768)', () 
 
     expect(mockExecuteAsync).toHaveBeenCalled();
     const args = mockExecuteAsync.mock.calls.at(-1)![0] as unknown[];
-    expect(args).toHaveLength(14);
-    // Slot order: id, session_id, exercise_id, set_number, link_id, round,
-    // training_mode, tempo, set_type, exercise_position, attachment,
-    // mount_position, grip_type, grip_width.
+    expect(args).toHaveLength(13);
+    // Slot order (post-BLD-771 column drop): id, session_id, exercise_id,
+    // set_number, link_id, round, tempo, set_type, exercise_position,
+    // attachment, mount_position, grip_type, grip_width.
     expect(args[1]).toBe('sess-1');           // session_id
     expect(args[2]).toBe('ex-1');             // exercise_id
     expect(args[3]).toBe(1);                  // set_number
-    expect(args[10]).toBeNull();              // attachment
-    expect(args[11]).toBeNull();              // mount_position
-    expect(args[12]).toBe('overhand');        // grip_type
-    expect(args[13]).toBe('narrow');          // grip_width
+    expect(args[9]).toBeNull();               // attachment
+    expect(args[10]).toBeNull();              // mount_position
+    expect(args[11]).toBe('overhand');        // grip_type
+    expect(args[12]).toBe('narrow');          // grip_width
   });
 
   it('binds null at grip_type + grip_width slots when caller omits them (no silent default)', async () => {
@@ -84,8 +85,8 @@ describe('addSetsBatch — bodyweight variant positional binding (BLD-768)', () 
     ]);
 
     const args = mockExecuteAsync.mock.calls.at(-1)![0] as unknown[];
+    expect(args[11]).toBeNull();
     expect(args[12]).toBeNull();
-    expect(args[13]).toBeNull();
   });
 
   it('returned results round-trip the bodyweight variant fields unchanged', async () => {
@@ -128,9 +129,9 @@ describe('addSetsBatch — bodyweight variant positional binding (BLD-768)', () 
       },
     ]);
     const args = mockExecuteAsync.mock.calls.at(-1)![0] as unknown[];
-    expect(args[10]).toBeNull();              // attachment must NOT bleed
-    expect(args[11]).toBeNull();              // mount_position must NOT bleed
-    expect(args[12]).toBe('overhand');
-    expect(args[13]).toBe('narrow');
+    expect(args[9]).toBeNull();               // attachment must NOT bleed
+    expect(args[10]).toBeNull();              // mount_position must NOT bleed
+    expect(args[11]).toBe('overhand');
+    expect(args[12]).toBe('narrow');
   });
 });

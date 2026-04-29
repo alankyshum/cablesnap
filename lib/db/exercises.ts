@@ -17,9 +17,7 @@ function mapRow(row: ExerciseRow): Exercise {
     difficulty: row.difficulty as Exercise["difficulty"],
     is_custom: row.is_custom === 1,
     deleted_at: row.deleted_at ?? undefined,
-    mount_position: (row.mount_position as Exercise["mount_position"]) ?? undefined,
     attachment: (row.attachment as Exercise["attachment"]) ?? undefined,
-    training_modes: row.training_modes ? JSON.parse(row.training_modes) : undefined,
     is_voltra: row.is_voltra === 1 ? true : undefined,
     // BLD-561: optional user-supplied illustration URIs (custom exercises only).
     start_image_uri: row.start_image_uri ?? undefined,

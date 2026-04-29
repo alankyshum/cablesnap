@@ -14,7 +14,6 @@ describe("workoutCSV — bodyweight_modifier_kg column (BLD-541)", () => {
     set_rpe: null,
     set_notes: "",
     link_id: null,
-    training_mode: null,
     tempo: null,
   };
 
