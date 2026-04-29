@@ -159,9 +159,9 @@ describe("validateBackupData", () => {
       type: "empty_backup",
     },
     {
-      name: "invalid table (not an array)",
-      payload: { version: 3, data: { exercises: "not an array" } },
-      type: "invalid_table",
+      name: "malformed category payload (no importable arrays)",
+      payload: { version: 7, data: { exercises: { exercises: "not an array" } } },
+      type: "empty_backup",
     },
     {
       name: "negative calorie values",

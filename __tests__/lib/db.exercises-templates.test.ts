@@ -48,9 +48,7 @@ describe("exercises CRUD", () => {
         difficulty: "intermediate",
         is_custom: 0,
         deleted_at: null,
-        mount_position: "mid",
         attachment: "single_handle",
-        training_modes: '["strength"]',
         is_voltra: 1,
       },
     ]);
@@ -61,9 +59,7 @@ describe("exercises CRUD", () => {
     expect(exercises[0].primary_muscles).toEqual(["chest"]);
     expect(exercises[0].secondary_muscles).toEqual(["triceps"]);
     expect(exercises[0].is_custom).toBe(false);
-    expect(exercises[0].mount_position).toBe("mid");
     expect(exercises[0].attachment).toBe("single_handle");
-    expect(exercises[0].training_modes).toEqual(["strength"]);
     expect(exercises[0].is_voltra).toBe(true);
     expect(exercises[0].deleted_at).toBeUndefined();
   });
@@ -89,9 +85,7 @@ describe("exercises CRUD", () => {
       difficulty: "beginner",
       is_custom: 1,
       deleted_at: null,
-      mount_position: "low",
       attachment: "rope",
-      training_modes: '["strength","hypertrophy"]',
       is_voltra: 0,
     });
 
@@ -100,8 +94,7 @@ describe("exercises CRUD", () => {
     expect(exercise!.name).toBe("Cable Squat");
     expect(exercise!.primary_muscles).toEqual(["quads", "glutes"]);
     expect(exercise!.is_custom).toBe(true);
-    expect(exercise!.mount_position).toBe("low");
-    expect(exercise!.training_modes).toEqual(["strength", "hypertrophy"]);
+    expect(exercise!.attachment).toBe("rope");
   });
 
   it("createCustomExercise inserts and returns exercise", async () => {
