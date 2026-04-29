@@ -140,8 +140,16 @@ jobs:
             echo "::error::Expected $APK to exist after assembleRelease."
             exit 1
           fi
-          GMS_COUNT=$(unzip -l "$APK" | grep -c 'com/google/android/gms/wearable' || true)
-          echo "GMS Wearable class hits in $APK: $GMS_COUNT"
+          # Extract DEX files and search for GMS Wearable class descriptors.
+          # `unzip -l` only lists zip entries (classes.dex, classes2.dex, etc.)
+          # — individual Java class paths are compiled INTO the binary DEX
+          # format and invisible to zip-level listing. We must inspect DEX
+          # contents directly via `strings` on the extracted dex files.
+          TMPDIR_DEX=$(mktemp -d)
+          unzip -q -o "$APK" 'classes*.dex' -d "$TMPDIR_DEX"
+          GMS_COUNT=$(strings "$TMPDIR_DEX"/classes*.dex | grep -c 'com/google/android/gms/wearable' || true)
+          rm -rf "$TMPDIR_DEX"
+          echo "GMS Wearable class hits in $APK (via dex strings): $GMS_COUNT"
           if [ "$GMS_COUNT" -eq 0 ]; then
             echo "::error::Variant split broken — Play APK is missing GMS Wearable classes (expected count > 0)."
             exit 1

@@ -306,13 +306,20 @@ jobs:
           # configurations { releaseFdroidImplementation { exclude ... } }
           # block stopped working as expected.
           set -euo pipefail
-          GMS_COUNT=$(unzip -l cablesnap-fdroid.apk \
+          # Extract DEX files and search for GMS Wearable class descriptors.
+          # `unzip -l` only lists zip entries (classes.dex, classes2.dex, etc.)
+          # — individual Java class paths are compiled INTO the binary DEX
+          # format and invisible to zip-level listing. We must inspect DEX
+          # contents directly via `strings` on the extracted dex files.
+          TMPDIR_DEX=$(mktemp -d)
+          unzip -q -o cablesnap-fdroid.apk 'classes*.dex' -d "$TMPDIR_DEX"
+          GMS_COUNT=$(strings "$TMPDIR_DEX"/classes*.dex \
             | grep -c 'com/google/android/gms/wearable' \
             || true)
-          echo "GMS Wearable class hits in cablesnap-fdroid.apk: $GMS_COUNT"
+          rm -rf "$TMPDIR_DEX"
+          echo "GMS Wearable class hits in cablesnap-fdroid.apk (via dex strings): $GMS_COUNT"
           if [ "$GMS_COUNT" -ne 0 ]; then
             echo "::error::AC10b violated — cablesnap-fdroid.apk contains $GMS_COUNT GMS Wearable class entries."
-            echo "::error::Inspect the APK with: unzip -l cablesnap-fdroid.apk | grep gms/wearable"
             exit 1
           fi
           echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
