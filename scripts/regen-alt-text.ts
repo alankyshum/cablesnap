@@ -84,7 +84,7 @@ async function describePose(
   return content;
 }
 
-type ManifestEntries = Map<string, { startAlt: string; endAlt: string }>;
+type ManifestEntries = Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>;
 
 function loadManifestEntries(): ManifestEntries {
   // Parse manifest.generated.ts as text — we can't `import` it because the
@@ -97,9 +97,13 @@ function loadManifestEntries(): ManifestEntries {
     /"([^"]+)":\s*\{[^}]*?startAlt:\s*("(?:\\.|[^"\\])*")[^}]*?endAlt:\s*("(?:\\.|[^"\\])*")[^}]*?\}/gs;
   let m: RegExpExecArray | null;
   while ((m = blockRe.exec(src)) !== null) {
+    const block = m[0];
+    const safetyMatch = block.match(/safetyNote:\s*("(?:\\.|[^"\\])*")/);
+    const safetyNote = safetyMatch ? (JSON.parse(safetyMatch[1]) as string) : undefined;
     entries.set(m[1], {
       startAlt: JSON.parse(m[2]) as string,
       endAlt: JSON.parse(m[3]) as string,
+      ...(safetyNote ? { safetyNote } : {}),
     });
   }
   if (entries.size === 0) {
@@ -111,7 +115,7 @@ function loadManifestEntries(): ManifestEntries {
 }
 
 function writeManifest(
-  entries: Map<string, { startAlt: string; endAlt: string }>,
+  entries: Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>,
 ): void {
   const sorted = Array.from(entries.entries()).sort((a, b) =>
     a[0].localeCompare(b[0]),
@@ -133,16 +137,20 @@ function writeManifest(
     "  end: number;",
     "  startAlt: string;",
     "  endAlt: string;",
+    "  safetyNote?: string;",
     "};",
     "",
     "export const manifest: Record<string, ManifestEntry> = {",
   ];
-  for (const [id, { startAlt, endAlt }] of sorted) {
+  for (const [id, { startAlt, endAlt, safetyNote }] of sorted) {
     lines.push(`  "${id}": {`);
     lines.push(`    start: require("./${id}/start.webp"),`);
     lines.push(`    end: require("./${id}/end.webp"),`);
     lines.push(`    startAlt: ${JSON.stringify(startAlt)},`);
     lines.push(`    endAlt: ${JSON.stringify(endAlt)},`);
+    if (safetyNote) {
+      lines.push(`    safetyNote: ${JSON.stringify(safetyNote)},`);
+    }
     lines.push(`  },`);
   }
   lines.push("};", "");
@@ -193,7 +201,7 @@ async function main(): Promise<void> {
         `[regen-alt] ${id}: regenerated startAlt and endAlt are byte-identical. Prompt or model is still collapsing semantics — refusing to write. Inspect images and adjust the system prompt or regenerate the image pair.`,
       );
     }
-    entries.set(id, { startAlt, endAlt });
+    entries.set(id, { startAlt, endAlt, safetyNote: entries.get(id)?.safetyNote });
   }
 
   writeManifest(entries);

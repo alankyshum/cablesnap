@@ -225,7 +225,7 @@ function verifyAlpha(webpPath: string): void {
   }
 }
 
-function writeManifest(entries: Map<string, { startAlt: string; endAlt: string }>): void {
+function writeManifest(entries: Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>): void {
   const sorted = Array.from(entries.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   const lines: string[] = [
     "// @generated — do not edit. Regenerate via `npm run generate:exercise-images`.",
@@ -244,16 +244,20 @@ function writeManifest(entries: Map<string, { startAlt: string; endAlt: string }
     "  end: number;",
     "  startAlt: string;",
     "  endAlt: string;",
+    "  safetyNote?: string;",
     "};",
     "",
     "export const manifest: Record<string, ManifestEntry> = {",
   ];
-  for (const [id, { startAlt, endAlt }] of sorted) {
+  for (const [id, { startAlt, endAlt, safetyNote }] of sorted) {
     lines.push(`  "${id}": {`);
     lines.push(`    start: require("./${id}/start.webp"),`);
     lines.push(`    end: require("./${id}/end.webp"),`);
     lines.push(`    startAlt: ${JSON.stringify(startAlt)},`);
     lines.push(`    endAlt: ${JSON.stringify(endAlt)},`);
+    if (safetyNote) {
+      lines.push(`    safetyNote: ${JSON.stringify(safetyNote)},`);
+    }
     lines.push(`  },`);
   }
   lines.push("};", "");
@@ -302,12 +306,12 @@ function preflightBinaries(): void {
 
 async function loadPriorAltText(
   exId: string,
-): Promise<{ startAlt: string; endAlt: string } | null> {
+): Promise<{ startAlt: string; endAlt: string; safetyNote?: string } | null> {
   try {
     const prior = await import(MANIFEST_PATH);
     const entry = prior.manifest?.[exId];
     if (entry?.startAlt && entry?.endAlt) {
-      return { startAlt: entry.startAlt, endAlt: entry.endAlt };
+      return { startAlt: entry.startAlt, endAlt: entry.endAlt, safetyNote: entry.safetyNote };
     }
   } catch {
     // ignore — will regenerate on next run if alt missing
@@ -401,7 +405,7 @@ async function main(): Promise<void> {
   }
   console.log(`[gen] pilot exercises: ${pilot.length}/${PILOT_EXERCISE_IDS.length} resolved`);
 
-  const manifestEntries = new Map<string, { startAlt: string; endAlt: string }>();
+  const manifestEntries = new Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>();
   for (const ex of pilot) {
     await processExercise(ex, cli, apiKey, manifestEntries);
   }

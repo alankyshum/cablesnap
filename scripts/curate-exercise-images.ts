@@ -244,7 +244,7 @@ function loadExpertSystemPrompt(): string {
   return m[1];
 }
 
-type Manifest = Map<string, { startAlt: string; endAlt: string }>;
+type Manifest = Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>;
 
 function loadManifest(): Manifest {
   const src = fs.readFileSync(MANIFEST_PATH, "utf8");
@@ -253,9 +253,14 @@ function loadManifest(): Manifest {
     /"([^"]+)":\s*\{[^}]*?startAlt:\s*("(?:\\.|[^"\\])*")[^}]*?endAlt:\s*("(?:\\.|[^"\\])*")[^}]*?\}/gs;
   let m: RegExpExecArray | null;
   while ((m = blockRe.exec(src)) !== null) {
+    // Extract safetyNote if present in the block
+    const block = m[0];
+    const safetyMatch = block.match(/safetyNote:\s*("(?:\\.|[^"\\])*")/);
+    const safetyNote = safetyMatch ? (JSON.parse(safetyMatch[1]) as string) : undefined;
     out.set(m[1], {
       startAlt: JSON.parse(m[2]) as string,
       endAlt: JSON.parse(m[3]) as string,
+      ...(safetyNote ? { safetyNote } : {}),
     });
   }
   return out;
@@ -643,6 +648,11 @@ async function main(): Promise<void> {
     if (alt.startAlt === alt.endAlt) {
       throw new Error(
         `${id}: startAlt === endAlt; alt text collapsed semantically. Run regen-alt-text.ts before curation.`,
+      );
+    }
+    if (alt.safetyNote && alt.safetyNote.length > 300) {
+      console.warn(
+        `[curate] WARNING: ${id} safetyNote is ${alt.safetyNote.length} chars (>300). Consider shortening.`,
       );
     }
 

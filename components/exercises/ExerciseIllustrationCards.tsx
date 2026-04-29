@@ -8,6 +8,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import { Image } from "expo-image";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { Exercise } from "@/lib/types";
@@ -103,10 +104,32 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
           <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>End position</Text>
         </Pressable>
       </View>
+      {resolved.safetyNote ? (
+        <View
+          style={styles.safetyRow}
+          accessibilityRole="text"
+          accessibilityLabel={resolved.safetyNote}
+          testID="exercise-safety-note"
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color={colors.onSurfaceVariant}
+            style={styles.safetyIcon}
+          />
+          <Text
+            variant="body"
+            style={[styles.safetyText, { color: colors.onSurfaceVariant }]}
+          >
+            {resolved.safetyNote}
+          </Text>
+        </View>
+      ) : null}
       <ExerciseImageZoomModal
         visible={zoom !== null}
         source={zoom === "start" ? resolved.start : zoom === "end" ? resolved.end : null}
         accessibilityLabel={zoom === "start" ? resolved.startAlt : resolved.endAlt}
+        safetyNote={resolved.safetyNote}
         onClose={() => setZoom(null)}
       />
     </>
@@ -145,5 +168,20 @@ const styles = StyleSheet.create({
   hintWrap: {
     marginTop: 12,
     marginBottom: 8,
+  },
+  safetyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  safetyIcon: {
+    marginRight: 6,
+    marginTop: 1,
+  },
+  safetyText: {
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 18,
   },
 });

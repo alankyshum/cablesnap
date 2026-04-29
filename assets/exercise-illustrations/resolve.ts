@@ -12,6 +12,7 @@ export type ResolvedExerciseImages = {
   end: number | { uri: string };
   startAlt: string;
   endAlt: string;
+  safetyNote?: string;
 };
 
 export function resolveExerciseImages(
@@ -38,5 +39,6 @@ export function resolveExerciseImages(
     end: entry.end,
     startAlt: entry.startAlt,
     endAlt: entry.endAlt,
+    safetyNote: entry.safetyNote || undefined,
   };
 }
