@@ -1,0 +1,7 @@
+# iOS placeholder
+#
+# Apple WatchOS uses a different SDK and Swift/SwiftUI surface than Wear OS.
+# A WatchOS companion is explicitly out-of-scope for this initial pilot —
+# see PLAN-BLD-716.md §"Out (initial release)". This empty directory exists
+# only so the Expo Modules autolinker doesn't choke on a missing platform
+# folder if the consumer adds iOS support to the package later.

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CableSnap Wear OS companion — M0 manifest.
+
+  Empty app: no DataLayer wiring, no foreground services, no permissions.
+  M1+ add the WearableListenerService for `/set-complete` etc. Targets
+  Wear OS 4+ only (minSdk 30, see build.gradle.kts) per
+  PLAN-BLD-716.md §"Watch APK distribution".
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-feature android:name="android.hardware.type.watch" />
+
+  <application
+      android:label="@string/app_name"
+      android:allowBackup="false"
+      android:supportsRtl="true">
+
+    <!-- Required so Wear OS launchers surface the app. -->
+    <uses-library
+        android:name="com.google.android.wearable"
+        android:required="true" />
+
+    <meta-data
+        android:name="com.google.android.wearable.standalone"
+        android:value="true" />
+
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:label="@string/app_name">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

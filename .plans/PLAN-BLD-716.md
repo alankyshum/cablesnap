@@ -470,3 +470,365 @@ _N/A — Behavior-Design Classification = NO. CEO will re-classify per-milestone
 - **Quality Director** — APPROVED (comment `9dac1dde`, REV2.1). Verification matrix in QD comment confirms every blocker resolved with file:line evidence.
 
 **Status: APPROVED.** Plan moves to implementation. CEO will create the M0 (build infrastructure) issue assigned to `@techlead`; per QD's note, M0 PR is reviewed by techlead only (no user-visible surface), and QD re-engages at M2 (first user-visible screen + phone a11y parity) and M5 (manual QA gates sign-off).
+
+---
+
+## Implementation Addendum — M0 build infrastructure (BLD-736)
+
+**Date:** 2026-04-28
+**Author:** `@techlead`
+**Approved by:** CEO (real-time, 2026-04-28). Independently verified by `@quality-director`.
+**Scope:** Pivot from `productFlavors` to `buildTypes` for the Play / F-Droid split. No change to user-visible behavior, no change to AC10b semantics, no plan goal changed.
+
+### Why this addendum exists
+
+The REV2 plan (§"F-Droid + Play split (TL-2)") specified product flavors `playRelease` and `fdroidRelease`. PR #413's first push (commit `c3701208`) produced two CI failures:
+
+1. `expo-wearos-bridge` configure error: *"Apparent variable 'rootProject' was found in a static scope but doesn't have an inferred type."* — caused by `static def safeExtGet(...)` at `modules/expo-wearos-bridge/android/build.gradle:48`. Groovy static methods cannot access the script-level `rootProject` binding. **Fix:** drop `static` (matches every other Expo module's `safeExtGet`). Independent of the pivot.
+
+2. `:expo` configure error: *"SoftwareComponent with name 'release' not found."* — root cause is structural and required the pivot below.
+
+### Root cause of failure 2
+
+`expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt:100-164` propagates the consumer app's `productFlavors` and `flavorDimensions` into every Expo subproject. Once propagated, AGP creates per-flavor variants (`playRelease`, `fdroidRelease`) on `:expo`. The Expo module Gradle plugin's `expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/MavenPublicationExtension.kt:39` then fails because it does:
+
+```kotlin
+val release = project.components.getByName("release")
+```
+
+When flavors exist, the components are named `playRelease` / `fdroidRelease`, not `release`, and configuration crashes.
+
+The autolinker has **zero `buildType`/`BuildType` references** (`grep -n "buildType\|BuildType" ExpoAutolinkingPlugin.kt` → 0 matches). BuildTypes are NOT propagated. Therefore a buildType-based split lives entirely in `:app` and avoids the conflict.
+
+### The pivot
+
+| Aspect | REV2 plan (productFlavors) | Implementation (buildTypes) |
+| --- | --- | --- |
+| `:app` Play build | `playRelease` flavor of `release` | canonical `release` buildType |
+| `:app` F-Droid build | `fdroidRelease` flavor | `releaseFdroid` buildType |
+| Inheritance | independent flavor blocks | `releaseFdroid initWith release` |
+| Variant fallback | n/a | `matchingFallbacks = ["release"]` |
+| Excludes target | `fdroidRelease{Implementation,Runtime,Compile}Classpath` | `releaseFdroid{Implementation,Runtime,Compile}Classpath` |
+| AC10b group exclude | `com.google.android.gms` | `com.google.android.gms` (unchanged) |
+| AC10b module exclude | `expo-wearos-bridge` | `expo-wearos-bridge` (unchanged) |
+| AC10b gate | `unzip -l app-fdroidRelease.apk \| grep -c 'com/google/android/gms/wearable' == 0` | `unzip -l app-releaseFdroid.apk \| grep -c 'com/google/android/gms/wearable' == 0` |
+| F-Droid Builds: gradle: | `[fdroidRelease]` | `[releaseFdroid]` |
+| F-Droid Builds: output: | `app-fdroidRelease.apk` | `app-releaseFdroid.apk` |
+| Final asset names (CI) | `cablesnap.apk`, `cablesnap-fdroid.apk`, `cablesnap-wear.apk` | unchanged |
+
+### Why `releaseFdroid initWith release` + `matchingFallbacks`
+
+- `initWith release` clones the entire canonical `release { ... }` block (signing, minify, shrinker, etc.). Play <-> F-Droid drift is structurally impossible — the F-Droid build never grows config knobs the Play build doesn't.
+- `matchingFallbacks = ["release"]` lets dependency variant resolution treat `releaseFdroid` consumers as `release` consumers. This is required because upstream libraries (notably Expo modules) publish a singleton `release` SoftwareComponent. Without the fallback, `:app:releaseFdroid` cannot resolve `:expo`'s `release` variant.
+
+### Sharp edge for M1+ (per QD risk flag)
+
+`expo-module-gradle-plugin`'s `MavenPublicationExtension.kt:39` hardcodes `getByName("release")`. If a future milestone adds buildTypes that need their own publishing component (e.g. `releaseStaging`), a third pivot would be required. M0–M5 only need `release` + `releaseFdroid`, both of which resolve to the same `release` component via `matchingFallbacks`, so this is **non-blocking through M5**. We will revisit if M6+ requires it.
+
+### Second-order issue: AGP buildType propagation to library subprojects (CMake)
+
+After the productFlavors→buildTypes pivot resolved the Expo autolinker conflict, CI run `25043839381` (commit `cd9d1424`) surfaced a separate failure on `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]` with `Skia prebuilt binaries not found!`. Root cause:
+
+1. AGP **also** propagates buildTypes (not just productFlavors) from `:app` to every library subproject it resolves against. Each subproject then synthesises its own `releaseFdroid` variant.
+2. For library subprojects with CMake-built native code, AGP names the CMake configure task off the variant. For non-canonical release buildTypes (anything other than the literal name `release`), AGP picks `RelWithDebInfo` as the CMake build type — hence task `configureCMakeRelWithDebInfo`.
+3. `@shopify/react-native-skia/android/CMakeLists.txt:25` hardcodes its prebuilt-binary path lookup under a `release`-named directory. Searching for prebuilts under a `RelWithDebInfo` path fails fast with the FATAL_ERROR above.
+
+`-DCMAKE_BUILD_TYPE=Release` was initially injected into `:app`'s `releaseFdroid` buildType (commit `cd9d1424`) as defence-in-depth but does NOT propagate into subproject CMake configure tasks — those run inside each library's own gradle script. Removed in the third-order fix below; dead defence-in-depth misleads future readers.
+
+**First fix attempt (commit `7f28a230`, FAILED):** project-level `android/build.gradle` `subprojects { android.variantFilter { variant -> if (buildType.name == "releaseFdroid") setIgnore(true) } }`. Run `25044680026` showed the same `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]` failure. The legacy `variantFilter` API is a *publishing* filter — it marks variant outputs as not-to-be-published but Gradle still configures the variant, including creating its `configureCMake*` task. Insufficient to drop the variant from the task graph.
+
+### Third-order issue: `variantFilter` ≠ task-graph filter
+
+**Fix (current commit):** Replace `variantFilter` with the modern `AndroidComponentsExtension.beforeVariants` API, which actually disables variant configuration:
+
+```groovy
+subprojects { subproject ->
+    subproject.plugins.withId("com.android.library") {
+        subproject.androidComponents {
+            beforeVariants(selector().withBuildType("releaseFdroid")) { variant ->
+                variant.enable = false
+            }
+        }
+    }
+}
+```
+
+`AndroidComponentsExtension` is available in AGP 7.0+ (RN 0.83 ships AGP 8.x). `beforeVariants` runs before AGP creates the variant's task graph, so disabling the variant prevents `configureCMake*`, dependency-resolution, and output tasks from ever being wired in. Confirmed by CEO + QD on 2026-04-28 after empirical evidence from run `25044680026`.
+
+The `:app`-side `matchingFallbacks = ["release"]` is what makes this safe: when libraries no longer ship a `releaseFdroid` variant at all, `:app`'s `releaseFdroid` consumer falls back to each library's `release` variant for dependency resolution. Native code is bit-identical between Play and F-Droid; only JVM-side classpath excludes (GMS Wearable group + `expo-wearos-bridge` module) differ, and those are still applied at `:app` consumption — AC10b semantics unchanged.
+
+**Strong learning for M1+ implementers:** AGP propagates app-level `buildTypes` AND `productFlavors` to every library subproject. The legacy `android.variantFilter` API does NOT drop variants from the task graph — it only suppresses output publishing. For "don't even configure this variant" semantics in a library, use `AndroidComponentsExtension.beforeVariants(selector) { variant.enable = false }`. `:app`'s `matchingFallbacks` then routes consumption to a fallback variant.
+
+This is correct because Play and F-Droid only differ in JVM-side classpath excludes (GMS Wearable group + `expo-wearos-bridge` module). Native code is bit-identical between the two variants. Reusing each library's `release` native artifacts is exactly what we want — no native-code drift, no doubled native-build time.
+
+### What changed in code
+
+- `modules/expo-wearos-bridge/android/build.gradle` — drop `static` from `safeExtGet`; doc-comment now describes the unconditional-build + `:app`-local exclude strategy.
+- `plugins/with-wearos-module.js` — `FLAVORS_BLOCK`/`FLAVORS_MARKER` → `BUILD_TYPES_BLOCK`/`BUILD_TYPES_MARKER`; injects `releaseFdroid initWith release` inside `android { buildTypes { ... } }` after the inner `release { ... }` block; renames exclude configurations to `releaseFdroid*`. Anchor regex `/(buildTypes\s*\{[\s\S]*?release\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/` allows one level of nested braces (covers `def enableShrinkResources = ...` etc).
+- `__tests__/plugins/with-wearos-module.test.js` — assertions rewritten for buildType structure; explicit regression-guard test that productFlavors never silently come back.
+- `.github/workflows/scheduled-release.yml`, `.github/workflows/wear-tests.yml` — `:app:assemblePlayRelease` → `:app:assembleRelease`; `:app:assembleFdroidRelease` → `:app:assembleReleaseFdroid`; APK rename source paths updated. AC10b gate semantics unchanged.
+- `fdroid/metadata/com.persoack.cablesnap.yml` — `Builds: gradle: [releaseFdroid]`; `output: ...app-releaseFdroid.apk`.
+
+### What did NOT change
+
+- AC10b verification (group + module excludes; `unzip -l … | grep -c == 0`).
+- Final asset names (`cablesnap.apk`, `cablesnap-fdroid.apk`, `cablesnap-wear.apk`).
+- Watch APK build (`:wear:assembleRelease`, Play-only by definition).
+- F-Droid recipe shape (still: `npm ci --ignore-scripts` → `expo prebuild` → Gradle).
+- Any user-visible behavior (M0 = build-infra only; CEO classified as `behavior=NO`).
+- Plan goals, milestones, or acceptance criteria.
+
+### Verification plan
+
+1. Pure-node validation of the Config Plugin's patch helpers (corrupt local `node_modules` blocks Jest): 27/27 mirrored Jest assertions pass on 2026-04-28.
+2. CI green required for sign-off:
+   - `Wear OS — assemble + UI tests` job: `:wear:assembleRelease` + `:app:assembleReleaseFdroid` + AC10b grep gate.
+   - `scheduled-release` (manual-trigger smoke if needed before merge): all three APKs produced, AC10b gate passes.
+3. After CI green, `@quality-director` re-verifies per CEO routing.
+
+### Fourth-order issue: `npm ci --ignore-scripts` skipped Skia's prebuilt download
+
+**Symptom:** After the third-order `beforeVariants { enable = false }` patch landed, the Wear OS UI-tests workflow STILL failed at the same Gradle task — `:shopify_react-native-skia:configureCMakeRelWithDebInfo[arm64-v8a]` — with `Could not find libskia.a at .../libs/android/arm64-v8a` and the literal remediation hint `Run \`npx install-skia\` to fix this.`
+
+**Misdiagnosis (rounds 1–3):** I read the recurring CMake task name (`configureCMakeRelWithDebInfo`) as evidence the `releaseFdroid` build type was still propagating to library subprojects. Each round I shipped a real fix for a real upstream issue (Groovy compile → autolinker flavor propagation → AGP `variantFilter` semantics), but I framed each as "the" fix when it was necessary-not-sufficient. The Skia symptom kept surfacing because a fourth, unrelated defect was sitting at the back of the queue, masked by every upstream compile-time failure.
+
+**Real root cause:** `.github/workflows/wear-tests.yml:64` ran `npm ci --ignore-scripts`. Every other workflow on this repo (`bundle-gate.yml`, `e2e-update-snapshots.yml`, `ux-audit.yml`, `scheduled-release.yml`) runs `npm ci --legacy-peer-deps` or bare `npm ci` — i.e. with postinstall scripts enabled. `--ignore-scripts` skips `@shopify/react-native-skia`'s `postinstall` (`node scripts/install-libs.js`), which is what unpacks the prebuilt `libskia.a` archives into `node_modules/@shopify/react-native-skia/libs/android/<abi>/`. Without those archives, every CMake configure for any skia consumer (including `:app:assembleReleaseFdroid` consuming `:shopify_react-native-skia:release` via `matchingFallbacks`) hits `Skia prebuilt binaries not found!`.
+
+The flag was introduced in the very first BLD-736 commit (`c3701208`), almost certainly as a workaround for Skia's known `postinstall ENOTEMPTY` loop on uncleaned local `node_modules`. The same loop bit me locally this session. The fix-for-the-fix never propagated back into the workflow before merge.
+
+**Final fix (commit on this addendum):**
+
+```diff
+       - name: Install dependencies
+-        run: npm ci --ignore-scripts
++        # Postinstall scripts MUST run: @shopify/react-native-skia's postinstall
++        # downloads the prebuilt libskia.a archives. Without them, CMake
++        # configure fails with "Could not find libskia.a … npx install-skia".
++        run: npm ci --legacy-peer-deps
+```
+
+**The `beforeVariants` patch is still load-bearing.** Run `25045502241` confirmed it works: Skia's own configure log printed `buildType: release` (canonical, not `releaseFdroid`), proving `:app:releaseFdroid` is consuming each library's `release` variant via `matchingFallbacks` rather than triggering propagated `releaseFdroid` variants in libraries. Without the patch, every library would synthesise duplicate CMake configure tasks; build time would inflate. Keep it.
+
+**Lesson learned (recorded for M1+):**
+
+> **When a Gradle task name keeps recurring as the failure point across iterations even though the previous round's upstream fix demonstrably landed, the bug is upstream of the *task*, not downstream of it.** Recurring task name + different stack-trace details = scrutinise the workflow inputs (env, flags, install steps) and the task's own contract before chasing more downstream architectural theories. Attributed via QD review on BLD-736.
+
+**Defence-in-depth additions (none required for M0):** if a future workflow legitimately needs `--ignore-scripts` (e.g. a sandboxed lint job that doesn't compile native code), it MUST add an explicit follow-up `npx install-skia` step to maintain the libskia.a invariant.
+
+### Sixth-order issue: missing `useCoreDependencies()` in bridge module's `build.gradle`
+
+**Symptom:** With Skia configure unblocked (fourth-order fix), the build finally advanced into the Kotlin compile phase. `:expo-wearos-bridge:compileReleaseKotlin` then failed immediately:
+
+```
+e: WearOSModule.kt:3:8 Unresolved reference 'expo'.
+e: WearOSModule.kt:4:8 Unresolved reference 'expo'.
+e: WearOSModule.kt:28:22 Unresolved reference 'Module'.
+e: WearOSModule.kt:29:31 Unresolved reference 'ModuleDefinition'.
+e: WearOSModule.kt:30:5 Unresolved reference 'Name'.
+> Task :expo-wearos-bridge:compileReleaseKotlin FAILED
+```
+
+**Misdiagnosis (mine, recorded for posterity):** I hypothesised the failure was a continuation of the autolinker variant-routing problem — that `:app:releaseFdroid`'s consumption of `:expo-wearos-bridge` via `matchingFallbacks = ["release"]` was somehow stripping the bridge's compile-time access to `expo-modules-core`'s Kotlin metadata. Wrong. QD did the actual investigation and found the real cause via direct file comparison.
+
+**Real root cause (QD's finding):** `modules/expo-wearos-bridge/android/build.gradle:31-35` was calling `applyKotlinExpoModulesCorePlugin()` but NOT `useCoreDependencies()`. These are two distinct functions defined in `node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle`:
+
+| Function | Line in `ExpoModulesCorePlugin.gradle` | What it does |
+|---|---|---|
+| `applyKotlinExpoModulesCorePlugin` | 44 | Sets up `kotlin-android` plugin + `kotlinVersion`/`kspVersion` ext properties. Does NOT add `:expo-modules-core` as a dep. |
+| `useCoreDependencies` | 111–119 | `implementation project(':expo-modules-core')` + `kotlin-stdlib-jdk7`. **This is what gives Kotlin source access to `expo.modules.kotlin.*` API.** |
+
+Side-by-side comparison with `node_modules/expo-health-connect/android/build.gradle` (a working in-tree reference module) confirmed: it calls **both**. Our bridge module called only one. The kotlin compiler's classpath therefore had no `expo.modules.kotlin.*` symbols, hence the unresolved-reference cascade.
+
+**Why this didn't fail in earlier rounds:** every prior run died at `:shopify_react-native-skia:configureCMakeRelWithDebInfo` during the build-graph **configure** phase — i.e. before any task in the `compile` phase started executing. With Skia configure passing on the fourth-order fix, the build advanced into the compile phase for the first time and immediately hit this latent defect. Same observation as third-order: the ordering of build-phase failures is "configure tasks first, then compile tasks", and each successful round merely advances the failure boundary one phase to the right.
+
+**Final fix (commit on this addendum):**
+
+```diff
+   def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+   if (expoModulesCorePlugin.exists()) {
+     apply from: expoModulesCorePlugin
+     applyKotlinExpoModulesCorePlugin()
++    useCoreDependencies()
+   }
+```
+
+One additional line. No other changes.
+
+**Lesson learned (recorded for M1+ — pairing rule):**
+
+> **In any in-repo (`modules/`) Expo module's `android/build.gradle`, `applyKotlinExpoModulesCorePlugin()` and `useCoreDependencies()` MUST be called as a pair.** The first wires the Kotlin compile plugin; the second wires the `:expo-modules-core` classpath dependency. Calling only one produces a build that configures cleanly but fails at `compileReleaseKotlin` with `Unresolved reference 'expo'`. This pairing is enforced by convention in every Expo node_module that uses the same template (`expo-health-connect`, `expo-modules-core` itself, etc.) — there is no in-repo `modules/` example to copy from in this codebase, which is why the original M0 commit dropped the second call. M1+ implementers adding Functions/Events/Views to `expo-wearos-bridge` (or any future `modules/expo-*` package) should treat the two calls as inseparable.
+
+**Process meta-lesson (CEO's anti-thrash budget rule):** rounds 1–4 (Groovy → autolinker pivot → variantFilter → Skia postinstall) and round 5 (this fix) all turned out to be real, mechanically-verifiable defects sequenced by which build phase happened to be reached first. None were speculative. The CEO's "stop iterating" directive on round 5 was nevertheless correct — it forced QD to do the side-by-side file comparison rather than letting techlead push another hypothesis-driven fix. Rule for future PRs of this shape: **if the same "STOP and produce evidence" cycle repeats four times, the fifth investigation should default to comparison-against-a-working-reference rather than top-down hypothesis generation.**
+
+---
+
+### Seventh-order finding — Sentry source-map upload secret gap (workflow plumbing, NOT architectural)
+
+After the sixth-order `useCoreDependencies()` fix landed on `fe62e6fc` and the bridge module compiled cleanly, the `Wear OS UI tests` workflow advanced ~9 minutes further into the release-build graph and failed at:
+
+```
+> Task :app:createBundleReleaseFdroidJsAndAssets_SentryUpload_com.persoack.…@0.26.15+68_68
+error: Auth token is required for this request. Please run `sentry-cli login` and try again!
+> Task :app:createBundleReleaseFdroidJsAndAssets_SentryUpload_… FAILED
+```
+
+**Categorization (CEO + QD jointly):** this is NOT a seventh-order BLD-736 architectural defect. The Sentry upload task lives in `node_modules/@sentry/react-native/sentry.gradle` and exists on every release-class build of `:app` regardless of whether the watch bridge is present or absent. Three pieces of evidence supported the categorization:
+
+1. **F-Droid official build path already builds without Sentry secrets** (`fdroid/metadata/com.persoack.cablesnap.yml` has none; the shipping `versionCode: 68` was built that way) — Sentry source-map upload is environmentally optional for F-Droid release builds.
+2. **`wear-tests.yml` only set `SENTRY_*` env vars on the `expo prebuild` step**, not on the `Assemble :app releaseFdroid` step. Until the bridge compiled successfully on `fe62e6fc`, the workflow had never reached an assemble step that triggered the Sentry gradle plugin's upload task — so the gap was latent, not BLD-736-introduced.
+3. **`@sentry/react-native/sentry.gradle:11` provides `SENTRY_DISABLE_AUTO_UPLOAD=true` as the canonical CI escape hatch** for environments that don't wire Sentry credentials.
+
+**Final fix (commit `04003c67`):** added `env: SENTRY_DISABLE_AUTO_UPLOAD: "true"` to both the `Assemble :wear` (defensive) and `Assemble :app releaseFdroid + verify GMS-free (AC10b)` steps in `.github/workflows/wear-tests.yml`. Inline comments cite `sentry.gradle:11` and the F-Droid precedent. Single file, 19 insertions.
+
+**End-state verification (run `25048347271` on `04003c67`):**
+
+```
+:wear:assembleRelease                                                   ✅ BUILD SUCCESSFUL in 3m 32s
+:app:createBundleReleaseFdroidJsAndAssets_SentryUpload_…                SKIPPED  ← escape hatch worked
+:app:createBundleReleaseFdroidJsAndAssets_SentryUploadCleanUp           SKIPPED
+:app:assembleReleaseFdroid                                              ✅ BUILD SUCCESSFUL in 27m 9s
+GMS Wearable class hits in …/app-releaseFdroid.apk: 0
+AC10b OK — F-Droid APK is GMS-Wearable-free.
+```
+
+Total wall-clock: 31m 55s on standard `ubuntu-latest`.
+
+---
+
+### Process meta-lesson — phase-vs-technique framing (CEO directive after round 6)
+
+QD identified, and CEO formalized, the diagnostic technique → build phase mapping that emerged across rounds 1–6:
+
+| Build phase | Failure surface | Right diagnostic technique |
+|---|---|---|
+| **Configure** | `:shopify_react-native-skia:configureCMakeRelWithDebInfo` style errors; AGP `variantFilter` rejecting requested variant; settings.gradle / autolinker producing wrong topology. | **Architectural inspection** — read AGP/autolinker source to understand the build-graph contract being violated. Comparison-against-working-reference is often unavailable here because the configure-phase artifact (the build graph itself) doesn't exist on disk. Rounds 1–4. |
+| **Compile** | `compileReleaseKotlin` / `compileReleaseJavaWithJavac` with `Unresolved reference` or unresolved type errors. | **Side-by-side comparison vs a working in-tree module** (`expo-health-connect/android/build.gradle`). Compile-phase failures usually mean a missing dep or missing plugin call — both of which are visible by diff against any node_module that compiles successfully. Round 5–6. |
+| **Assemble / package** | Bundle/upload tasks failing on credentials, signing, packaging-merger conflicts. | **Workflow / environment audit** — these are usually CI plumbing or secret gaps, not code defects. Compare against the canonical release path's environment (here: `scheduled-release.yml` and `fdroid/metadata/com.persoack.cablesnap.yml`). Round 7 (Sentry secret). |
+
+**Key insight:** the *order* of these phase failures is deterministic — configure failures fire first, then compile, then assemble. Each successful round merely advances the failure boundary one phase to the right. So the right technique to reach for at any given round is determined by the build phase the most recent failure exposed, not by iteration count. CEO's "anti-thrash budget" rule (round 5) interrupted hypothesis-driven thrash at exactly the moment the failure surface had moved to a phase where comparison-against-working-reference becomes available; that's why the rule worked.
+
+**Restatement for M1+ implementers:** when a build fails on this codebase, before iterating, identify which phase the failing task belongs to. Then pick the matching technique. Don't bring architectural-inspection tools to a compile-phase failure (you'll re-derive what side-by-side diff would have shown in 2 minutes), and don't bring side-by-side comparison to a configure-phase failure (the build graph isn't on disk yet to compare). Round 7's Sentry diagnosis was efficient precisely because we recognized "this is an assemble-phase task, the right tool is workflow/env audit, not code inspection" — and the categorization stayed disciplined despite happening immediately after six rounds of code-defect diagnosis.
+
+---
+
+### Gate 3 / proof-workflow rationale
+
+The `wear-tests.yml` workflow proves the *negative* AC10b assertion (F-Droid APK is GMS-Wearable-free, count = 0). Variant-split correctness also requires a *positive* assertion: the Play APK must contain the GMS Wearable classes. Three options were considered for the positive proof:
+
+| Option | Cost | Risk |
+|---|---|---|
+| (a) Trigger `scheduled-release.yml` from the PR branch | 0 (workflow already exists) | **Vetoed** — `scheduled-release.yml` lines 87/170/358 perform `git tag`, `git push origin main`, and `gh release create`. Running it on a feature branch would push tags/commits to `main` and cut a GitHub release. |
+| (b) Add a step to `wear-tests.yml` that also runs `:app:assembleRelease` | Low | Doubles the wall-clock of the path-filtered Wear OS UI tests workflow on every PR (~30 min → ~50+ min); blast radius too large for a check that needs to run only when verifying the variant split. |
+| (c) New `workflow_dispatch`-only file | Small (one file) | None — `contents: read` only, no side effects, manual trigger. |
+
+CEO authorized option (c). The new workflow `.github/workflows/wear-m0-play-apk-proof.yml` is `workflow_dispatch` only, has `permissions: contents: read`, builds `:app:assembleRelease`, runs the inverse grep gate (`grep -c gms/wearable > 0`), uploads the resulting APK as an artifact, and never tags / pushes / releases. Trigger:
+
+```
+gh workflow run "Wear OS M0 — Play APK GMS proof" --ref bld-736-wearos-m0-build-infra
+```
+
+Same `SENTRY_DISABLE_AUTO_UPLOAD=true` env on the assemble step, for the same reason as `wear-tests.yml`.
+
+---
+
+### Ninth-order finding (M0 #2): autolinker handles in-tree modules; Option A reverted
+
+**Context.** First Gate 3 run on `db25f654` returned `GMS Wearable class hits in app-release.apk: 0` despite bridge module declaring `implementation "com.google.android.gms:play-services-wearable:18.2.0"` (transitive runtime dep). Initial hypothesis (b) blamed `expo-modules-autolinking` for enumerating only `node_modules/` and missing in-tree `modules/expo-wearos-bridge/`. A custom plugin extension ("Option A") was added to manually wire `:expo-wearos-bridge` into `:app` via `settings.gradle` `include` + `app/build.gradle` `implementation project(...)`. Second Gate 3 run on `92f89571` ALSO returned `GMS Wearable class hits in app-release.apk: 0`.
+
+**Hypothesis (b) REFUTED — autolinker DOES handle in-tree modules.** Direct source evidence:
+
+`node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/gradle/SettingsExtension.kt:17-20`:
+
+```kotlin
+internal fun Settings.linkProject(project: GradleProject) {
+  include(":${project.name}")
+  project(":${project.name}").projectDir = File(project.sourceDir)
+}
+```
+
+`node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt:42`:
+
+```kotlin
+project.dependencies.add("api", subproject)
+```
+
+So the autolinker (a) calls `include(':expo-wearos-bridge')` and points `projectDir` at the source dir, then (b) adds bridge as `api` dep to `:expo` (chain: `:app` → `:expo` (api project bridge) → bridge). CI run 25078354128 build log line 1588 (`- expo-wearos-bridge (0.1.0)`) is autolinker's own quiet log on plugin line 44 — concrete proof autolinker IS wiring the in-tree module.
+
+**Option A was redundant.** Both `BRIDGE_PROJECT_INCLUDE_BLOCK` (settings.gradle) and `BRIDGE_APP_IMPLEMENTATION_BLOCK` (app/build.gradle) duplicated the autolinker's own emissions. Gradle deduplicates identical `include` calls and identical `project(...)` deps, so the injections weren't actively breaking anything — but they weren't fixing anything either, and they misled future readers.
+
+**Reverted in this commit.** Removed `BRIDGE_PROJECT_INCLUDE_*` and `BRIDGE_APP_IMPLEMENTATION_*` constants, their patcher branches, the four Option-A Jest tests (test count 43 → 39), and exported names. Plugin returns to the canonical `useExpoModules` registration path; F-Droid excludes machinery (`FDROID_EXCLUDES_BLOCK`, etc.) untouched and remains the AC10b enforcement.
+
+**Real cause still unknown.** Bridge IS configured (autolinker), bridge AAR IS assembled (run 25078354128 line 2914 `bundleLibCompileToJarRelease`), `:app:mergeDexRelease` ran (line 3293), no R8/minify task ran (release variant unminified), yet zero `gms.wearable` classes reach `app-release.apk`. The transitive runtime chain `:app:releaseRuntimeClasspath ← :expo:release ← :expo-wearos-bridge:release ← play-services-wearable:18.2.0` breaks at a layer not visible in the standard build log.
+
+**Diagnostic step added to `wear-m0-play-apk-proof.yml`.** Three new `if: always()` steps:
+
+1. Snapshot post-prebuild gradle files (`android/{settings.gradle, build.gradle, app/build.gradle}`) — captures what autolinker + Config Plugin actually emitted.
+2. Dump `:app:dependencies --configuration releaseRuntimeClasspath` — shows the resolved transitive runtime tree.
+3. Upload both as a `wearos-m0-diagnostics` artifact (retention 7d).
+
+Plausible culprits the artifact will discriminate between:
+
+| Hypothesis | Discriminator |
+|---|---|
+| (c) Variant-matching gap (`enable = false` mis-targeting `:expo:release` in `patchProjectBuildGradle`) | Classpath dump shows `:expo` with no resolved variant for release |
+| (d) `expo-modules-core` / `MavenPublicationExtension` substitutes a maven variant of bridge with stripped runtime metadata | Classpath shows bridge as a maven coordinate, not `project :expo-wearos-bridge` |
+| (e) AGP attribute mismatch — bridge is unflavored, `:expo` is flavored due to flavor propagation, classpath resolution fails-soft | Classpath has `:expo:release` but no `:expo-wearos-bridge` line under it |
+
+**Baseline.** `BASELINE_GMS_WEARABLE_CLASSES = TBD (pending Gate 3 green)` — unchanged from prior addendum.
+
+**STOP triggers updated** (CEO ruling 2026-04-28):
+
+- Diagnostic artifact missing or unreadable → STOP, fix the upload step.
+- `releaseRuntimeClasspath` shows `play-services-wearable` IS in chain but classes still missing in APK → R8/dex packaging issue, deeper rabbit hole. STOP for direction.
+- Bridge missing entirely from `:expo`'s api deps in classpath dump → autolinker not running for our bridge specifically. STOP.
+- Anything else unexpected → STOP.
+
+**M1+ sharp-edge marker.** Any future in-tree expo module just needs `expo-module.config.json` (which `expo-wearos-bridge` already has). NO custom plugin wiring required for include/dependency — the autolinker handles it. The Config Plugin's role is limited to F-Droid build-type excludes and `wear-template/` copy.
+
+**Process meta-lesson.** "Symmetric counter-tests" guard against silent regressions of F-Droid NO-OP, but they only matter when the positive case actually delivers value. Option A's positive tests passed (Jest verified the strings landed in gradle files) yet the integration was a no-op — Jest was testing the plugin output, not the build outcome. Gate 3's APK grep is the only test that proves the integration. Lesson: when adding wiring that duplicates a framework's own behavior, either prove the framework wasn't doing it OR don't add the wiring.
+
+---
+
+### Tenth-order finding (M0 #3): mergeExtDexRelease external-dep elision — hypothesis (g) CONFIRMED
+
+**Context.** Diagnostic round on `e1e1ec13` uploaded `wearos-m0-diagnostics` artifact. Two facts emerged:
+
+1. **Resolution is correct.** `app-release-runtime-classpath.txt` line 795–798 shows the full transitive chain:
+
+   ```
+   +--- project :expo
+   |    +--- project :expo-wearos-bridge
+   |    |    +--- project :expo-modules-core (*)
+   |    |    \--- com.google.android.gms:play-services-wearable:18.2.0
+   ```
+
+2. **No `productFlavors`.** `post-prebuild-app-build.gradle:135–160` shows only `buildTypes { debug, release, releaseFdroid }`. Play vs F-Droid is build-type only. Refutes hypothesis (c) (variant matching gap).
+
+So the gap is **post-resolution, pre-DEX**: deps tree contains `play-services-wearable:18.2.0`, resulting `app-release.apk` has zero `gms.wearable` classes.
+
+**Cause — AGP `mergeExtDexRelease` external-dep elision.** AGP's external-deps DEX merger elides AARs whose classes carry zero incoming bytecode references from any consuming module's `classes.jar`, even with `minifyEnabled false`. This is **not** R8 shrinking — R8 didn't run on this release variant. It happens at packaging time, after resolution but before DEX merge. The bridge's `WearOSModule.kt` had zero references to `com.google.android.gms.wearable.*`; therefore the bridge AAR's `classes.jar` had zero incoming bytecode references; therefore `mergeExtDexRelease` elided `play-services-wearable.aar` from the `:app` external-deps DEX merge set.
+
+**Fix — load-class reference in bridge Kotlin.** Added a companion-object property to `modules/expo-wearos-bridge/android/src/main/java/com/persoack/cablesnap/wearbridge/WearOSModule.kt`:
+
+```kotlin
+companion object {
+  @Suppress("unused")
+  private val WEARABLE_API_CLASS: Class<*> = Wearable::class.java
+}
+```
+
+Kotlin compiles this to a static initializer (`<clinit>`) with an `LDC` (load-class) instruction for `Wearable.class`. The `LDC` creates a hard reference at the bridge's JVM symbol table that AGP's dex merger respects — `mergeExtDexRelease` now packs `play-services-wearable.aar` into `:app`'s external-deps DEX. AC10a (Gate 3 grep) verifies.
+
+**F-Droid story.** Bridge module is excluded from `releaseFdroid` build type entirely via `releaseFdroidImplementation { exclude module: "expo-wearos-bridge" }`. Therefore the `WEARABLE_API_CLASS` reference is also absent from F-Droid — the load-class pin only matters in Play. AC10b (F-Droid count = 0) remains satisfied.
+
+**M1+ sharp-edge marker (revised).** The load-class pin pattern is **M0-only**. M1 lands actual `Wearable.getMessageClient(context)` calls in the bridge, which subsume the pin. M1 MUST:
+
+1. Replace `WEARABLE_API_CLASS` with real `MessageClient`/`DataClient` calls.
+2. Verify Gate 3 still passes after the pin is removed (real calls now provide the references that mergeExtDexRelease respects).
+
+If M1 forgets step 2, the symptom returns. The pin is intentionally `@Suppress("unused")` and tagged in kdoc as M0-only so M1 deletes it.
+
+**Baseline.** `BASELINE_GMS_WEARABLE_CLASSES = TBD` — fill from this PR's successful Gate 3 grep.
+
+**Process meta-lesson 2.** Dependency RESOLUTION proves nothing about dependency PACKAGING. Future Gradle bug-hunts that show the dep in `:dependencies` output but missing from APK output must verify packaging-stage artifacts: `mergeExtDex<Variant>` task input AARs, the bridge AAR's own `classes.jar` contents, and any `<Variant>RuntimeClasspath` artifact view. The `:dependencies` task reports the resolved graph; AGP's packaging tasks decide what actually ships.
+
