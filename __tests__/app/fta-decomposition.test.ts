@@ -76,7 +76,9 @@ describe("FTA decomposition structural tests", () => {
 
     // Batch 4 — ExerciseGroupCard.tsx decomposition
     ["components/session/ExerciseGroupCard.tsx", "GroupCardHeader", "imports GroupCardHeader"],
-    ["components/session/ExerciseGroupCard.tsx", "SuggestionChip", "imports SuggestionChip"],
+    // BLD-850: SuggestionChip absorbed into LastNextRow which is owned by GroupCardHeader.
+    ["components/session/GroupCardHeader.tsx", "LastNextRow", "imports LastNextRow"],
+    ["components/session/GroupCardHeader.tsx", "SuggestionExplainerModal", "imports SuggestionExplainerModal"],
 
     // Batch 5 — session/[id].tsx decomposition
     ["app/session/[id].tsx", "useSessionActions", "imports useSessionActions"],
@@ -183,7 +185,9 @@ describe("FTA decomposition structural tests", () => {
     ["components/muscle-volume/VolumeBarChart.tsx", "muscle volume VolumeBarChart"],
     ["components/muscle-volume/VolumeTrendChart.tsx", "muscle volume VolumeTrendChart"],
     ["components/session/GroupCardHeader.tsx", "session GroupCardHeader"],
-    ["components/session/SuggestionChip.tsx", "session SuggestionChip"],
+    // BLD-850: SuggestionChip removed. Replaced by LastNextRow + SuggestionExplainerModal.
+    ["components/session/LastNextRow.tsx", "session LastNextRow"],
+    ["components/session/SuggestionExplainerModal.tsx", "session SuggestionExplainerModal"],
 
     // Batch 6
     ["components/floating-tab-bar/CenterButton.tsx", "floating tab bar CenterButton"],
