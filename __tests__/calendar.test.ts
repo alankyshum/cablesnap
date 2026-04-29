@@ -13,6 +13,7 @@ import {
 describe("calculateStreaks", () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 3, 18)); // April 18, 2026
   });
 
   afterEach(() => {
@@ -20,163 +21,107 @@ describe("calculateStreaks", () => {
   });
 
   it("returns 0/0 for empty array", () => {
-    const result = calculateStreaks([]);
-    expect(result).toEqual({ currentStreak: 0, longestStreak: 0 });
+    expect(calculateStreaks([])).toEqual({ currentStreak: 0, longestStreak: 0 });
   });
 
-  it("returns current streak of 1 when only today", () => {
-    jest.setSystemTime(new Date(2026, 3, 18)); // April 18, 2026
-    const result = calculateStreaks(["2026-04-18"]);
-    expect(result.currentStreak).toBe(1);
-    expect(result.longestStreak).toBe(1);
+  // Single-date current/longest streak behavior
+  it.each([
+    ["only today",                     ["2026-04-18"],    1, 1],
+    ["only yesterday",                 ["2026-04-17"],    1, 1],
+    ["last workout 2 days ago breaks", ["2026-04-16"],    0, 1],
+  ] as const)("single date: %s", (_label, dates, current, longest) => {
+    const result = calculateStreaks([...dates]);
+    expect(result.currentStreak).toBe(current);
+    expect(result.longestStreak).toBe(longest);
   });
 
-  it("returns current streak of 1 when only yesterday", () => {
-    jest.setSystemTime(new Date(2026, 3, 18));
-    const result = calculateStreaks(["2026-04-17"]);
-    expect(result.currentStreak).toBe(1);
-    expect(result.longestStreak).toBe(1);
-  });
-
-  it("returns current streak 0 when last workout was 2 days ago", () => {
-    jest.setSystemTime(new Date(2026, 3, 18));
-    const result = calculateStreaks(["2026-04-16"]);
-    expect(result.currentStreak).toBe(0);
-    expect(result.longestStreak).toBe(1);
-  });
-
-  it("calculates consecutive streak from today", () => {
-    jest.setSystemTime(new Date(2026, 3, 18));
-    const dates = [
-      "2026-04-18",
-      "2026-04-17",
-      "2026-04-16",
-      "2026-04-15",
-    ];
-    const result = calculateStreaks(dates);
-    expect(result.currentStreak).toBe(4);
-    expect(result.longestStreak).toBe(4);
-  });
-
-  it("calculates consecutive streak from yesterday", () => {
-    jest.setSystemTime(new Date(2026, 3, 18));
-    const dates = [
-      "2026-04-17",
-      "2026-04-16",
-      "2026-04-15",
-    ];
-    const result = calculateStreaks(dates);
-    expect(result.currentStreak).toBe(3);
-    expect(result.longestStreak).toBe(3);
-  });
-
-  it("breaks streak with a gap", () => {
-    jest.setSystemTime(new Date(2026, 3, 18));
-    const dates = [
-      "2026-04-18",
-      "2026-04-17",
-      // gap on April 16
-      "2026-04-15",
-      "2026-04-14",
-      "2026-04-13",
-    ];
-    const result = calculateStreaks(dates);
-    expect(result.currentStreak).toBe(2);
-    expect(result.longestStreak).toBe(3);
-  });
-
-  it("finds longest streak in the past", () => {
-    jest.setSystemTime(new Date(2026, 3, 18));
-    const dates = [
-      "2026-04-18",
-      // gap
-      "2026-04-10",
-      "2026-04-09",
-      "2026-04-08",
-      "2026-04-07",
-      "2026-04-06",
-    ];
-    const result = calculateStreaks(dates);
-    expect(result.currentStreak).toBe(1);
-    expect(result.longestStreak).toBe(5);
-  });
-
-  it("handles single-day workouts scattered", () => {
-    jest.setSystemTime(new Date(2026, 3, 18));
-    const dates = [
-      "2026-04-18",
-      "2026-04-14",
-      "2026-04-10",
-      "2026-04-05",
-    ];
-    const result = calculateStreaks(dates);
-    expect(result.currentStreak).toBe(1);
-    expect(result.longestStreak).toBe(1);
+  // Multi-date streak computation: anchored today/yesterday, gaps, scattered
+  it.each([
+    [
+      "consecutive streak from today",
+      ["2026-04-18", "2026-04-17", "2026-04-16", "2026-04-15"],
+      4,
+      4,
+    ],
+    [
+      "consecutive streak from yesterday",
+      ["2026-04-17", "2026-04-16", "2026-04-15"],
+      3,
+      3,
+    ],
+    [
+      "streak breaks with a gap (current=2, longest=3)",
+      ["2026-04-18", "2026-04-17", "2026-04-15", "2026-04-14", "2026-04-13"],
+      2,
+      3,
+    ],
+    [
+      "longest streak in the past with today=1",
+      ["2026-04-18", "2026-04-10", "2026-04-09", "2026-04-08", "2026-04-07", "2026-04-06"],
+      1,
+      5,
+    ],
+    [
+      "scattered single-day workouts",
+      ["2026-04-18", "2026-04-14", "2026-04-10", "2026-04-05"],
+      1,
+      1,
+    ],
+  ] as const)("%s", (_label, dates, current, longest) => {
+    const result = calculateStreaks([...dates]);
+    expect(result.currentStreak).toBe(current);
+    expect(result.longestStreak).toBe(longest);
   });
 });
 
 // --- getMonthDays ---
 
 describe("getMonthDays", () => {
-  it("returns 31 for January", () => {
-    expect(getMonthDays(2026, 0)).toBe(31);
-  });
-
-  it("returns 28 for February 2026 (non-leap)", () => {
-    expect(getMonthDays(2026, 1)).toBe(28);
-  });
-
-  it("returns 29 for February 2024 (leap year)", () => {
-    expect(getMonthDays(2024, 1)).toBe(29);
-  });
-
-  it("returns 30 for April", () => {
-    expect(getMonthDays(2026, 3)).toBe(30);
+  it.each([
+    ["January 2026 → 31",                  2026, 0,  31],
+    ["February 2026 (non-leap) → 28",      2026, 1,  28],
+    ["February 2024 (leap year) → 29",     2024, 1,  29],
+    ["April 2026 → 30",                    2026, 3,  30],
+  ] as const)("%s", (_label, year, month, expected) => {
+    expect(getMonthDays(year, month)).toBe(expected);
   });
 });
 
 // --- getFirstDayOfWeek ---
 
 describe("getFirstDayOfWeek", () => {
-  it("returns correct offset for Sunday start", () => {
+  it.each([
     // April 2026 starts on Wednesday (day 3 from Sunday=0)
-    expect(getFirstDayOfWeek(2026, 3, 0)).toBe(3);
-  });
-
-  it("returns correct offset for Monday start", () => {
+    ["April 2026, Sunday-start → 3",                     2026, 3, 0, 3],
     // April 2026 starts on Wednesday; offset from Monday=1: (3-1+7)%7 = 2
-    expect(getFirstDayOfWeek(2026, 3, 1)).toBe(2);
-  });
-
-  it("returns 0 when month starts on week start day", () => {
-    // June 2026 starts on Monday (day 1)
-    expect(getFirstDayOfWeek(2026, 5, 1)).toBe(0);
+    ["April 2026, Monday-start → 2",                     2026, 3, 1, 2],
+    // June 2026 starts on Monday — equals weekStart, expect 0
+    ["June 2026, Monday-start (matches start day) → 0",  2026, 5, 1, 0],
+  ] as const)("%s", (_label, year, month, weekStart, expected) => {
+    expect(getFirstDayOfWeek(year, month, weekStart)).toBe(expected);
   });
 });
 
 // --- generateCalendarGrid ---
 
 describe("generateCalendarGrid", () => {
-  it("generates correct grid for April 2026 Sunday start", () => {
-    const grid = generateCalendarGrid(2026, 3, 0);
-    // April 2026 starts on Wednesday, so 3 nulls then 1-30
-    expect(grid.slice(0, 3)).toEqual([null, null, null]);
-    expect(grid[3]).toBe(1);
-    expect(grid[grid.length - 1]).toBe(30);
-    expect(grid.length).toBe(33); // 3 + 30
+  it("generates correct grid for April 2026, Sunday & Monday start", () => {
+    // April 2026 starts on Wednesday → 3 leading nulls (Sunday-start)
+    const sun = generateCalendarGrid(2026, 3, 0);
+    expect(sun.slice(0, 3)).toEqual([null, null, null]);
+    expect(sun[3]).toBe(1);
+    expect(sun[sun.length - 1]).toBe(30);
+    expect(sun.length).toBe(33); // 3 + 30
+
+    // Offset of 2 for Monday-start
+    const mon = generateCalendarGrid(2026, 3, 1);
+    expect(mon.slice(0, 2)).toEqual([null, null]);
+    expect(mon[2]).toBe(1);
+    expect(mon.length).toBe(32); // 2 + 30
   });
 
-  it("generates correct grid for April 2026 Monday start", () => {
-    const grid = generateCalendarGrid(2026, 3, 1);
-    // Offset of 2 (Wednesday from Monday)
-    expect(grid.slice(0, 2)).toEqual([null, null]);
-    expect(grid[2]).toBe(1);
-    expect(grid.length).toBe(32); // 2 + 30
-  });
-
-  it("handles February leap year", () => {
+  it("handles February leap year (2024 → 29 days)", () => {
     const grid = generateCalendarGrid(2024, 1, 0);
-    // Feb 2024 starts on Thursday (offset 4 from Sunday)
     const days = grid.filter((d) => d !== null);
     expect(days.length).toBe(29);
   });
@@ -185,17 +130,16 @@ describe("generateCalendarGrid", () => {
 // --- getWeekDayLabels ---
 
 describe("getWeekDayLabels", () => {
-  it("returns Sunday-first labels for weekStartDay=0", () => {
-    const labels = getWeekDayLabels(0);
-    expect(labels).toEqual(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
+  it("returns Sunday-first and Monday-first label sets", () => {
+    expect(getWeekDayLabels(0)).toEqual([
+      "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
+    ]);
+    expect(getWeekDayLabels(1)).toEqual([
+      "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun",
+    ]);
   });
 
-  it("returns Monday-first labels for weekStartDay=1", () => {
-    const labels = getWeekDayLabels(1);
-    expect(labels).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
-  });
-
-  it("returns Saturday-first labels for weekStartDay=6", () => {
+  it("rotates correctly for arbitrary start day (Saturday=6)", () => {
     const labels = getWeekDayLabels(6);
     expect(labels[0]).toBe("Sat");
     expect(labels[6]).toBe("Fri");
@@ -205,25 +149,19 @@ describe("getWeekDayLabels", () => {
 // --- formatMonthYear ---
 
 describe("formatMonthYear", () => {
-  it("formats April 2026", () => {
-    const result = formatMonthYear(2026, 3);
-    // Locale-dependent, but should contain "April" and "2026"
-    expect(result).toContain("2026");
+  it("formats April 2026 (locale-tolerant year check)", () => {
+    expect(formatMonthYear(2026, 3)).toContain("2026");
   });
 });
 
 // --- dateToISO ---
 
 describe("dateToISO", () => {
-  it("formats single-digit month and day", () => {
-    expect(dateToISO(2026, 0, 5)).toBe("2026-01-05");
-  });
-
-  it("formats double-digit month and day", () => {
-    expect(dateToISO(2026, 11, 25)).toBe("2026-12-25");
-  });
-
-  it("handles month index correctly (0-based)", () => {
-    expect(dateToISO(2026, 3, 18)).toBe("2026-04-18");
+  it.each([
+    ["pads single-digit month and day",   2026, 0,  5,  "2026-01-05"],
+    ["renders double-digit month and day", 2026, 11, 25, "2026-12-25"],
+    ["treats month index as 0-based",      2026, 3,  18, "2026-04-18"],
+  ] as const)("%s", (_label, year, month, day, expected) => {
+    expect(dateToISO(year, month, day)).toBe(expected);
   });
 });

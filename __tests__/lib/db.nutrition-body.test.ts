@@ -64,10 +64,12 @@ describe("nutrition CRUD", () => {
     expect(result[0].is_favorite).toBe(true);
   });
 
-  it("toggleFavorite toggles the flag", async () => {
+  it("toggleFavorite, deleteDailyLog fire expected Drizzle calls", async () => {
     await ctx.initDb();
     await ctx.db.toggleFavorite("f1");
     expect(mockDrizzleDb.update).toHaveBeenCalled();
+    await ctx.db.deleteDailyLog("log1");
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 
   it("addDailyLog creates a log entry", async () => {
@@ -81,48 +83,29 @@ describe("nutrition CRUD", () => {
     jest.restoreAllMocks();
   });
 
-  it("deleteDailyLog removes the log", async () => {
-    await ctx.initDb();
-    await ctx.db.deleteDailyLog("log1");
-    expect(mockDrizzleDb.delete).toHaveBeenCalled();
-  });
-
-  it("getMacroTargets returns defaults when no row exists", async () => {
+  it("getMacroTargets returns defaults when no row exists, otherwise existing row", async () => {
     await ctx.initDb();
     mockDrizzleGet(null);
-
     jest.spyOn(Date, "now").mockReturnValue(4000);
-    const result = await ctx.db.getMacroTargets();
-    expect(result.calories).toBe(2000);
-    expect(result.protein).toBe(150);
-    expect(result.carbs).toBe(250);
-    expect(result.fat).toBe(65);
+    const defaults = await ctx.db.getMacroTargets();
+    expect(defaults.calories).toBe(2000);
+    expect(defaults.protein).toBe(150);
+    expect(defaults.carbs).toBe(250);
+    expect(defaults.fat).toBe(65);
     jest.restoreAllMocks();
-  });
 
-  it("getMacroTargets returns existing row", async () => {
-    await ctx.initDb();
     const existing = { id: "mt1", calories: 1800, protein: 180, carbs: 200, fat: 60, updated_at: 100 };
     mockDrizzleGet(existing);
-
-    const result = await ctx.db.getMacroTargets();
-    expect(result).toEqual(existing);
+    expect(await ctx.db.getMacroTargets()).toEqual(existing);
   });
 
-  it("getDailySummary returns zero totals for empty day", async () => {
+  it("getDailySummary returns zero or computed totals based on row presence", async () => {
     await ctx.initDb();
     mockDrizzleGet({ calories: null, protein: null, carbs: null, fat: null });
+    expect(await ctx.db.getDailySummary("2024-01-15")).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-    const result = await ctx.db.getDailySummary("2024-01-15");
-    expect(result).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
-  });
-
-  it("getDailySummary returns computed totals", async () => {
-    await ctx.initDb();
     mockDrizzleGet({ calories: 500, protein: 40, carbs: 60, fat: 15 });
-
-    const result = await ctx.db.getDailySummary("2024-01-15");
-    expect(result).toEqual({ calories: 500, protein: 40, carbs: 60, fat: 15 });
+    expect(await ctx.db.getDailySummary("2024-01-15")).toEqual({ calories: 500, protein: 40, carbs: 60, fat: 15 });
   });
 });
 
@@ -182,9 +165,11 @@ describe("body tracking CRUD", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("deleteBodyWeight removes the entry", async () => {
+  it("deleteBodyWeight, deleteBodyMeasurements fire Drizzle.delete", async () => {
     await ctx.initDb();
     await ctx.db.deleteBodyWeight("bw1");
+    expect(mockDrizzleDb.delete).toHaveBeenCalled();
+    await ctx.db.deleteBodyMeasurements("bm1");
     expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 
@@ -235,11 +220,5 @@ describe("body tracking CRUD", () => {
 
     const result = await ctx.db.getLatestMeasurements();
     expect(result).toBeNull();
-  });
-
-  it("deleteBodyMeasurements removes the entry", async () => {
-    await ctx.initDb();
-    await ctx.db.deleteBodyMeasurements("bm1");
-    expect(mockDrizzleDb.delete).toHaveBeenCalled();
   });
 });

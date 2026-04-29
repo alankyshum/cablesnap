@@ -87,7 +87,7 @@ describe("sessions CRUD", () => {
 });
 
 describe("sets CRUD", () => {
-  it("addSet creates a new set", async () => {
+  it("addSet creates a new set, with optional link_id and round", async () => {
     await ctx.initDb();
     const result = await ctx.db.addSet("s1", "ex1", 1);
     expect(result.id).toBe(MOCK_UUID);
@@ -97,48 +97,28 @@ describe("sets CRUD", () => {
     expect(result.weight).toBeNull();
     expect(result.reps).toBeNull();
     expect(result.completed).toBe(false);
+
+    const linked = await ctx.db.addSet("s1", "ex1", 2, "link1", 3);
+    expect(linked.link_id).toBe("link1");
+    expect(linked.round).toBe(3);
   });
 
-  it("addSet with link_id and round", async () => {
+  // BLD-630 note: completeSet must also fire the session-anchor UPDATE.
+  it.each([
+    { name: "updateSet", run: () => ctx.db.updateSet("set1", 100, 8), expectMethod: "update" as const },
+    { name: "completeSet (also fires session-anchor run)", run: () => ctx.db.completeSet("set1"), expectMethod: "update" as const, alsoRun: true },
+    { name: "deleteSet", run: () => ctx.db.deleteSet("set1"), expectMethod: "delete" as const },
+    { name: "updateSetRPE", run: () => ctx.db.updateSetRPE("set1", 8.5), expectMethod: "update" as const },
+    { name: "updateSetNotes", run: () => ctx.db.updateSetNotes("set1", "felt strong"), expectMethod: "update" as const },
+  ])("$name fires the expected Drizzle call", async ({ run, expectMethod, alsoRun }) => {
     await ctx.initDb();
-    const result = await ctx.db.addSet("s1", "ex1", 2, "link1", 3);
-    expect(result.link_id).toBe("link1");
-    expect(result.round).toBe(3);
-  });
-
-  it("updateSet updates weight and reps", async () => {
-    await ctx.initDb();
-    await ctx.db.updateSet("set1", 100, 8);
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
-  });
-
-  it("completeSet marks set completed", async () => {
-    await ctx.initDb();
-    jest.spyOn(Date, "now").mockReturnValue(9000);
-    await ctx.db.completeSet("set1");
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
-    // BLD-630: completeSet must also fire the session-anchor UPDATE so the
-    // elapsed clock starts on first set completion.
-    expect(mockDrizzleDb.run).toHaveBeenCalled();
-    jest.restoreAllMocks();
-  });
-
-  it("deleteSet removes the set", async () => {
-    await ctx.initDb();
-    await ctx.db.deleteSet("set1");
-    expect(mockDrizzleDb.delete).toHaveBeenCalled();
-  });
-
-  it("updateSetRPE updates RPE value", async () => {
-    await ctx.initDb();
-    await ctx.db.updateSetRPE("set1", 8.5);
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
-  });
-
-  it("updateSetNotes updates notes", async () => {
-    await ctx.initDb();
-    await ctx.db.updateSetNotes("set1", "felt strong");
-    expect(mockDrizzleDb.update).toHaveBeenCalled();
+    if (alsoRun) jest.spyOn(Date, "now").mockReturnValue(9000);
+    await run();
+    expect(mockDrizzleDb[expectMethod]).toHaveBeenCalled();
+    if (alsoRun) {
+      expect(mockDrizzleDb.run).toHaveBeenCalled();
+      jest.restoreAllMocks();
+    }
   });
 });
 

@@ -34,96 +34,115 @@ describe("exercise-substitutions", () => {
       expect(details.difficultyProx).toBe(5);
     });
 
-    it("scores primary muscle overlap proportionally", () => {
-      const source = makeExercise({ primary_muscles: ["chest", "triceps"] });
-      const candidate = makeExercise({
-        id: "b",
-        primary_muscles: ["chest", "shoulders"],
-      });
-      const details = scoreSubstitutionDetailed(source, candidate);
-      // intersection: [chest] = 1, union: [chest, triceps, shoulders] = 3
-      // 1/3 * 50 = ~17
-      expect(details.primaryOverlap).toBe(17);
-    });
+    type Field = "primaryOverlap" | "secondaryOverlap" | "equipmentMatch" | "categoryMatch" | "difficultyProx";
+    const cases: {
+      name: string;
+      source: Partial<Exercise>;
+      candidate: Partial<Exercise>;
+      field: Field;
+      expected: number;
+    }[] = [
+      // Muscle overlap proportional scoring
+      {
+        name: "primary muscle overlap proportional (1/3 * 50 = 17)",
+        source: { primary_muscles: ["chest", "triceps"] },
+        candidate: { primary_muscles: ["chest", "shoulders"] },
+        field: "primaryOverlap",
+        expected: 17,
+      },
+      {
+        name: "secondary muscle overlap proportional (1/3 * 20 = 7)",
+        source: { secondary_muscles: ["shoulders", "core"] },
+        candidate: { secondary_muscles: ["shoulders", "biceps"] },
+        field: "secondaryOverlap",
+        expected: 7,
+      },
+      {
+        name: "empty primary muscles -> 0",
+        source: { primary_muscles: [] },
+        candidate: { primary_muscles: ["chest"] },
+        field: "primaryOverlap",
+        expected: 0,
+      },
+      {
+        name: "empty secondary muscles -> 0",
+        source: { secondary_muscles: [] },
+        candidate: { secondary_muscles: [] },
+        field: "secondaryOverlap",
+        expected: 0,
+      },
+      // Equipment scoring
+      {
+        name: "same equipment -> 15",
+        source: { equipment: "barbell" },
+        candidate: { equipment: "barbell" },
+        field: "equipmentMatch",
+        expected: 15,
+      },
+      {
+        name: "same equipment group (free weights: barbell/dumbbell) -> 8",
+        source: { equipment: "barbell" },
+        candidate: { equipment: "dumbbell" },
+        field: "equipmentMatch",
+        expected: 8,
+      },
+      {
+        name: "same equipment group (machines: machine/cable) -> 8",
+        source: { equipment: "machine" },
+        candidate: { equipment: "cable" },
+        field: "equipmentMatch",
+        expected: 8,
+      },
+      {
+        name: "different equipment group (barbell vs bodyweight) -> 0",
+        source: { equipment: "barbell" },
+        candidate: { equipment: "bodyweight" },
+        field: "equipmentMatch",
+        expected: 0,
+      },
+      // Category scoring
+      {
+        name: "same category -> 10",
+        source: { category: "chest" },
+        candidate: { category: "chest" },
+        field: "categoryMatch",
+        expected: 10,
+      },
+      {
+        name: "different category -> 0",
+        source: { category: "chest" },
+        candidate: { category: "back" },
+        field: "categoryMatch",
+        expected: 0,
+      },
+      // Difficulty proximity
+      {
+        name: "same difficulty -> 5",
+        source: { difficulty: "intermediate" },
+        candidate: { difficulty: "intermediate" },
+        field: "difficultyProx",
+        expected: 5,
+      },
+      {
+        name: "±1 difficulty -> 3",
+        source: { difficulty: "intermediate" },
+        candidate: { difficulty: "beginner" },
+        field: "difficultyProx",
+        expected: 3,
+      },
+      {
+        name: "±2 difficulty -> 1",
+        source: { difficulty: "beginner" },
+        candidate: { difficulty: "advanced" },
+        field: "difficultyProx",
+        expected: 1,
+      },
+    ];
 
-    it("scores secondary muscle overlap proportionally", () => {
-      const source = makeExercise({
-        secondary_muscles: ["shoulders", "core"],
-      });
-      const candidate = makeExercise({
-        id: "b",
-        secondary_muscles: ["shoulders", "biceps"],
-      });
-      const details = scoreSubstitutionDetailed(source, candidate);
-      // intersection: [shoulders] = 1, union: [shoulders, core, biceps] = 3
-      // 1/3 * 20 = ~7
-      expect(details.secondaryOverlap).toBe(7);
-    });
-
-    it("gives 15 pts for same equipment", () => {
-      const source = makeExercise({ equipment: "barbell" });
-      const candidate = makeExercise({ id: "b", equipment: "barbell" });
-      expect(scoreSubstitutionDetailed(source, candidate).equipmentMatch).toBe(15);
-    });
-
-    it("gives 8 pts for same equipment group (free weights)", () => {
-      const source = makeExercise({ equipment: "barbell" });
-      const candidate = makeExercise({ id: "b", equipment: "dumbbell" });
-      expect(scoreSubstitutionDetailed(source, candidate).equipmentMatch).toBe(8);
-    });
-
-    it("gives 8 pts for same equipment group (machines)", () => {
-      const source = makeExercise({ equipment: "machine" });
-      const candidate = makeExercise({ id: "b", equipment: "cable" });
-      expect(scoreSubstitutionDetailed(source, candidate).equipmentMatch).toBe(8);
-    });
-
-    it("gives 0 pts for different equipment group", () => {
-      const source = makeExercise({ equipment: "barbell" });
-      const candidate = makeExercise({ id: "b", equipment: "bodyweight" });
-      expect(scoreSubstitutionDetailed(source, candidate).equipmentMatch).toBe(0);
-    });
-
-    it("gives 10 pts for same category", () => {
-      const source = makeExercise({ category: "chest" });
-      const candidate = makeExercise({ id: "b", category: "chest" });
-      expect(scoreSubstitutionDetailed(source, candidate).categoryMatch).toBe(10);
-    });
-
-    it("gives 0 pts for different category", () => {
-      const source = makeExercise({ category: "chest" });
-      const candidate = makeExercise({ id: "b", category: "back" });
-      expect(scoreSubstitutionDetailed(source, candidate).categoryMatch).toBe(0);
-    });
-
-    it("gives 5 pts for same difficulty", () => {
-      const source = makeExercise({ difficulty: "intermediate" });
-      const candidate = makeExercise({ id: "b", difficulty: "intermediate" });
-      expect(scoreSubstitutionDetailed(source, candidate).difficultyProx).toBe(5);
-    });
-
-    it("gives 3 pts for ±1 difficulty", () => {
-      const source = makeExercise({ difficulty: "intermediate" });
-      const candidate = makeExercise({ id: "b", difficulty: "beginner" });
-      expect(scoreSubstitutionDetailed(source, candidate).difficultyProx).toBe(3);
-    });
-
-    it("gives 1 pt for ±2 difficulty", () => {
-      const source = makeExercise({ difficulty: "beginner" });
-      const candidate = makeExercise({ id: "b", difficulty: "advanced" });
-      expect(scoreSubstitutionDetailed(source, candidate).difficultyProx).toBe(1);
-    });
-
-    it("handles empty primary muscles", () => {
-      const source = makeExercise({ primary_muscles: [] });
-      const candidate = makeExercise({ id: "b", primary_muscles: ["chest"] });
-      expect(scoreSubstitutionDetailed(source, candidate).primaryOverlap).toBe(0);
-    });
-
-    it("handles empty secondary muscles", () => {
-      const source = makeExercise({ secondary_muscles: [] });
-      const candidate = makeExercise({ id: "b", secondary_muscles: [] });
-      expect(scoreSubstitutionDetailed(source, candidate).secondaryOverlap).toBe(0);
+    it.each(cases)("$name", ({ source, candidate, field, expected }) => {
+      const s = makeExercise({ id: "a", ...source });
+      const c = makeExercise({ id: "b", ...candidate });
+      expect(scoreSubstitutionDetailed(s, c)[field]).toBe(expected);
     });
   });
 
@@ -136,42 +155,37 @@ describe("exercise-substitutions", () => {
   });
 
   describe("findSubstitutions", () => {
-    it("returns empty array when source has no primary muscles", () => {
-      const source = makeExercise({ primary_muscles: [] });
-      const candidates = [makeExercise({ id: "b" })];
-      expect(findSubstitutions(source, candidates)).toEqual([]);
-    });
+    it("excludes source, deleted, and below-threshold candidates; returns [] when source has no primary muscles", () => {
+      // No primary muscles -> empty
+      expect(
+        findSubstitutions(makeExercise({ primary_muscles: [] }), [makeExercise({ id: "b" })])
+      ).toEqual([]);
 
-    it("excludes source exercise from results", () => {
-      const source = makeExercise({ id: "a" });
-      const candidates = [
+      // Excludes source by id
+      const sourceA = makeExercise({ id: "a" });
+      const r1 = findSubstitutions(sourceA, [
         makeExercise({ id: "a" }),
         makeExercise({ id: "b" }),
-      ];
-      const results = findSubstitutions(source, candidates);
-      expect(results.every((r) => r.exercise.id !== "a")).toBe(true);
-    });
+      ]);
+      expect(r1.every((r) => r.exercise.id !== "a")).toBe(true);
 
-    it("excludes deleted exercises from results", () => {
-      const source = makeExercise({ id: "a" });
-      const candidates = [
+      // Excludes deleted_at
+      const r2 = findSubstitutions(sourceA, [
         makeExercise({ id: "b", deleted_at: Date.now() }),
         makeExercise({ id: "c" }),
-      ];
-      const results = findSubstitutions(source, candidates);
-      expect(results.every((r) => r.exercise.id !== "b")).toBe(true);
-      expect(results.length).toBe(1);
-    });
+      ]);
+      expect(r2.every((r) => r.exercise.id !== "b")).toBe(true);
+      expect(r2.length).toBe(1);
 
-    it("filters out exercises below minimum threshold (20)", () => {
-      const source = makeExercise({
+      // Below minimum threshold (20)
+      const lowSource = makeExercise({
         id: "a",
         primary_muscles: ["chest"],
         secondary_muscles: [],
         category: "chest",
         equipment: "barbell",
       });
-      const lowScoreCandidate = makeExercise({
+      const lowCandidate = makeExercise({
         id: "b",
         primary_muscles: ["calves"],
         secondary_muscles: [],
@@ -179,44 +193,33 @@ describe("exercise-substitutions", () => {
         equipment: "bodyweight",
         difficulty: "advanced",
       });
-      const results = findSubstitutions(source, [lowScoreCandidate]);
-      // calves vs chest = 0 overlap, different category, different equipment, different difficulty
-      expect(results.length).toBe(0);
+      expect(findSubstitutions(lowSource, [lowCandidate]).length).toBe(0);
     });
 
-    it("sorts by score descending", () => {
-      const source = makeExercise({ id: "a", primary_muscles: ["chest", "triceps"] });
-      const perfect = makeExercise({ id: "b" }); // same muscles
+    it("sorts by score descending and respects limit (custom and default 20)", () => {
+      // Sort
+      const sortSource = makeExercise({ id: "a", primary_muscles: ["chest", "triceps"] });
+      const perfect = makeExercise({ id: "b" });
       const partial = makeExercise({
         id: "c",
         primary_muscles: ["chest"],
         secondary_muscles: [],
         equipment: "dumbbell",
       });
-      const results = findSubstitutions(source, [partial, perfect]);
-      expect(results[0].exercise.id).toBe("b");
-      expect(results[1].exercise.id).toBe("c");
+      const sortResults = findSubstitutions(sortSource, [partial, perfect]);
+      expect(sortResults[0].exercise.id).toBe("b");
+      expect(sortResults[1].exercise.id).toBe("c");
+
+      // Custom limit
+      const limitSource = makeExercise({ id: "a" });
+      const candidates = Array.from({ length: 30 }, (_, i) => makeExercise({ id: `ex-${i}` }));
+      expect(findSubstitutions(limitSource, candidates, 5).length).toBe(5);
+
+      // Default limit 20
+      expect(findSubstitutions(limitSource, candidates).length).toBe(20);
     });
 
-    it("limits results to specified limit", () => {
-      const source = makeExercise({ id: "a" });
-      const candidates = Array.from({ length: 30 }, (_, i) =>
-        makeExercise({ id: `ex-${i}` })
-      );
-      const results = findSubstitutions(source, candidates, 5);
-      expect(results.length).toBe(5);
-    });
-
-    it("defaults to max 20 results", () => {
-      const source = makeExercise({ id: "a" });
-      const candidates = Array.from({ length: 30 }, (_, i) =>
-        makeExercise({ id: `ex-${i}` })
-      );
-      const results = findSubstitutions(source, candidates);
-      expect(results.length).toBe(20);
-    });
-
-    it("exercises with same primary muscles score >80%", () => {
+    it("scores same-muscle-different-equipment >80% and includes custom exercises", () => {
       const source = makeExercise({
         id: "a",
         primary_muscles: ["chest", "triceps"],
@@ -233,17 +236,14 @@ describe("exercise-substitutions", () => {
         category: "chest",
         difficulty: "intermediate",
       });
-      const results = findSubstitutions(source, [sameMuscleDiffEquip]);
-      expect(results.length).toBe(1);
-      // 50 (primary) + 20 (secondary) + 8 (same group) + 10 (category) + 5 (difficulty) = 93
-      expect(results[0].score).toBeGreaterThan(80);
-    });
+      const r = findSubstitutions(source, [sameMuscleDiffEquip]);
+      expect(r.length).toBe(1);
+      // 50 + 20 + 8 + 10 + 5 = 93
+      expect(r[0].score).toBeGreaterThan(80);
 
-    it("includes custom exercises", () => {
-      const source = makeExercise({ id: "a" });
+      // custom exercises included
       const custom = makeExercise({ id: "custom-1", is_custom: true });
-      const results = findSubstitutions(source, [custom]);
-      expect(results.length).toBe(1);
+      expect(findSubstitutions(makeExercise({ id: "a" }), [custom]).length).toBe(1);
     });
   });
 });
