@@ -34,6 +34,7 @@ module.exports = {
   useSharedValue: noopValue,
   useDerivedValue: (fn) => ({ value: fn() }),
   useAnimatedStyle: (fn) => fn(),
+  useAnimatedProps: (fn) => fn(),
   useAnimatedScrollHandler: () => noop,
   useAnimatedGestureHandler: () => noop,
   useAnimatedRef: () => ({ current: null }),

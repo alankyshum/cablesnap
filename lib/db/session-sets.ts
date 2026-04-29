@@ -1,8 +1,10 @@
 /* eslint-disable max-lines */
 import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import type { WorkoutSet, TrainingMode, SetType } from "../types";
+import type { WorkoutSet, TrainingMode, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { coerceTrainingMode } from "../types";
+import { isAttachment, isMountPosition } from "../cable-variant";
+import { isGripType, isGripWidth } from "../bodyweight-grip-variant";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
@@ -34,6 +36,10 @@ export async function getSessionSets(
       duration_seconds: workoutSets.duration_seconds,
       exercise_position: workoutSets.exercise_position,
       bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
+      attachment: workoutSets.attachment,
+      mount_position: workoutSets.mount_position,
+      grip_type: workoutSets.grip_type,
+      grip_width: workoutSets.grip_width,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -64,6 +70,13 @@ export async function getSessionSets(
     duration_seconds: r.duration_seconds ?? null,
     exercise_position: r.exercise_position ?? 0,
     bodyweight_modifier_kg: r.bodyweight_modifier_kg ?? null,
+    attachment: (r.attachment as Attachment | null) ?? null,
+    mount_position: (r.mount_position as MountPosition | null) ?? null,
+    // BLD-768: per-set bodyweight grip variant. Cast at the DB read boundary;
+    // values are constrained by `lib/bodyweight-grip-variant.ts` type guards
+    // wherever they re-enter the system (CSV import, future analytics filter).
+    grip_type: (r.grip_type as GripType | null) ?? null,
+    grip_width: (r.grip_width as GripWidth | null) ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -116,6 +129,9 @@ export async function getSourceSessionSets(
   }));
 }
 
+// BLD-771: variant fields push complexity to 16 (limit 15). Branches are pure
+// field defaults; the function is a thin INSERT wrapper, not branching logic.
+// eslint-disable-next-line complexity
 export async function addSet(
   sessionId: string,
   exerciseId: string,
@@ -126,7 +142,15 @@ export async function addSet(
   tempo?: string | null,
   _isWarmup?: boolean,
   setType?: SetType,
-  exercisePosition?: number
+  exercisePosition?: number,
+  // BLD-771: per-set cable variant. Pass values from autofill helper at call site.
+  // Both null when user has no prior variant on this exercise (no silent default).
+  attachment?: Attachment | null,
+  mountPosition?: MountPosition | null,
+  // BLD-768: per-set bodyweight grip variant. Same no-silent-default rule as
+  // cable variants — both NULL when user has no prior grip on this exercise.
+  gripType?: GripType | null,
+  gripWidth?: GripWidth | null
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
@@ -142,6 +166,10 @@ export async function addSet(
     tempo: tempo ?? null,
     set_type: resolvedType,
     exercise_position: exercisePosition ?? 0,
+    attachment: attachment ?? null,
+    mount_position: mountPosition ?? null,
+    grip_type: gripType ?? null,
+    grip_width: gripWidth ?? null,
   });
   return {
     id,
@@ -162,6 +190,10 @@ export async function addSet(
     set_type: resolvedType,
     duration_seconds: null,
     exercise_position: exercisePosition ?? 0,
+    attachment: attachment ?? null,
+    mount_position: mountPosition ?? null,
+    grip_type: gripType ?? null,
+    grip_width: gripWidth ?? null,
   };
 }
 
@@ -177,6 +209,12 @@ export async function addSetsBatch(
     isWarmup?: boolean;
     setType?: SetType;
     exercisePosition?: number;
+    // BLD-771: per-set cable variant (autofilled by caller from history).
+    attachment?: Attachment | null;
+    mountPosition?: MountPosition | null;
+    // BLD-768: per-set bodyweight grip variant (autofilled by caller from history).
+    gripType?: GripType | null;
+    gripWidth?: GripWidth | null;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
@@ -200,18 +238,26 @@ export async function addSetsBatch(
       set_type: resolvedType,
       duration_seconds: null,
       exercise_position: s.exercisePosition ?? 0,
+      attachment: s.attachment ?? null,
+      mount_position: s.mountPosition ?? null,
+      grip_type: s.gripType ?? null,
+      grip_width: s.gripWidth ?? null,
     };
   });
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
         await stmt.executeAsync([
           r.id, r.session_id, r.exercise_id, r.set_number,
           r.link_id, r.round, r.training_mode, r.tempo, r.set_type, r.exercise_position,
+          r.attachment ?? null, r.mount_position ?? null,
+          // BLD-768: positional binding contract — grip_type at index 12, grip_width at index 13.
+          // Pinned by `__tests__/lib/db/add-sets-batch-bodyweight-variant.test.ts`.
+          r.grip_type ?? null, r.grip_width ?? null,
         ]);
       }
     } finally {
@@ -319,6 +365,56 @@ export async function updateSetDuration(
 ): Promise<void> {
   const db = await getDrizzle();
   await db.update(workoutSets).set({ duration_seconds: durationSeconds }).where(eq(workoutSets.id, id));
+}
+
+/**
+ * BLD-771: Update per-set cable variant (attachment + mount_position).
+ *
+ * Sibling of `updateSet()` (which updates weight/reps only). Either field may
+ * be null to clear the value (the bottom-sheet picker's "Clear" action).
+ *
+ * Both attributes are independent — passing `attachment` and leaving
+ * `mountPosition` undefined leaves the existing mount_position untouched. To
+ * explicitly clear, pass null.
+ */
+export async function updateSetVariant(
+  id: string,
+  attachment: Attachment | null | undefined,
+  mountPosition: MountPosition | null | undefined
+): Promise<void> {
+  const db = await getDrizzle();
+  const values: Record<string, unknown> = {};
+  if (attachment !== undefined) values.attachment = attachment;
+  if (mountPosition !== undefined) values.mount_position = mountPosition;
+  if (Object.keys(values).length === 0) return;
+  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
+}
+
+/**
+ * BLD-768: Update per-set bodyweight grip variant (grip_type + grip_width).
+ *
+ * Sibling of `updateSetVariant()` (cable, BLD-771). Same 3-way undefined/null/value
+ * contract:
+ *   - value (GripType | GripWidth) → write that value
+ *   - null                         → write null (explicit clear)
+ *   - undefined                    → DO NOT write the column at all
+ *   - both undefined               → no-op (no UPDATE issued)
+ *
+ * Both attributes are independent — passing `gripType` and leaving `gripWidth`
+ * undefined leaves the existing grip_width untouched. To explicitly clear,
+ * pass null.
+ */
+export async function updateSetBodyweightVariant(
+  id: string,
+  gripType: GripType | null | undefined,
+  gripWidth: GripWidth | null | undefined
+): Promise<void> {
+  const db = await getDrizzle();
+  const values: Record<string, unknown> = {};
+  if (gripType !== undefined) values.grip_type = gripType;
+  if (gripWidth !== undefined) values.grip_width = gripWidth;
+  if (Object.keys(values).length === 0) return;
+  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
 }
 
 export async function completeSet(id: string): Promise<void> {
@@ -744,4 +840,119 @@ export async function getLastBodyweightModifier(
     [exerciseId]
   );
   return row?.bodyweight_modifier_kg ?? null;
+}
+
+/**
+ * BLD-771: Fetch the recent cable-variant history window for an exercise.
+ *
+ * Returns up to `limit` rows ordered newest-first, suitable for passing into
+ * the pure `getLastVariant()` helper in `lib/cable-variant.ts`. Includes
+ * warmup and in-progress (uncompleted) sets — autofill should reflect the
+ * user's most recent _intent_, not just completed work.
+ *
+ * Order: `s.started_at DESC, ws.set_number DESC` (joined to workout_sessions).
+ * `started_at` is `notNull integer` on workout_sessions, so no NULLS-FIRST/LAST
+ * handling is needed. The current in-progress session has the highest
+ * `started_at`, so its rows naturally surface first; within a session,
+ * `set_number DESC` selects the latest set the user touched. UUIDv4 ids are
+ * not monotonic (TL TR2), so we cannot order by id.
+ *
+ * Window size 50 is the heuristic ceiling: a user training the same exercise
+ * 4×/week for a year produces ~200 sets; in the typical case the most recent
+ * non-null attachment + mount_position is found inside the first 10–20 rows
+ * and the pure helper short-circuits as soon as both attributes resolve.
+ *
+ * Caveat (do NOT bump this thinking it's a perf knob): in the cold-start
+ * pathological case — one ancient session with the only non-null variant
+ * plus 50 newer bare-set sessions — the scan will read all 50 rows and
+ * resolve to NULL. That is correct per the "no silent default" rule
+ * (autofill must reflect _recent_ user intent, not unbounded ancient
+ * history); it is NOT a bug to fix by widening the window.
+ *
+ * Index plan: `idx_workout_sets_exercise` covers the WHERE clause. If
+ * EXPLAIN QUERY PLAN on a 10k-set DB shows SCAN, ship a partial index
+ * covering `(exercise_id) WHERE attachment IS NOT NULL OR mount_position IS NOT NULL`
+ * in a follow-up — measure first.
+ */
+export async function getRecentVariantHistory(
+  exerciseId: string,
+  limit: number = 50
+): Promise<{ attachment: Attachment | null; mount_position: MountPosition | null }[]> {
+  const database = await getDatabase();
+  // Reviewer blocker #2 (PR #426): the prior `ORDER BY completed_at DESC
+  // NULLS LAST` deprioritized in-progress (uncompleted) rows behind older
+  // completed rows, so a mid-session variant change on the current set was
+  // ignored by the next add-set autofill. Joining workout_sessions and
+  // ordering by `started_at DESC` naturally surfaces the current session
+  // first (current = highest started_at), then prior sessions in reverse
+  // chronological order. Within a session, `set_number DESC` selects the
+  // latest set the user touched. No NULLS-FIRST/LAST required because
+  // `started_at` is `notNull` on workout_sessions.
+  const rows = await database.getAllAsync<{
+    attachment: string | null;
+    mount_position: string | null;
+  }>(
+    `SELECT ws.attachment, ws.mount_position
+       FROM workout_sets ws
+       JOIN workout_sessions s ON s.id = ws.session_id
+      WHERE ws.exercise_id = ?
+      ORDER BY s.started_at DESC, ws.set_number DESC
+      LIMIT ?`,
+    [exerciseId, limit]
+  );
+   return rows.map((row) => ({
+    attachment: isAttachment(row.attachment) ? row.attachment : null,
+    mount_position: isMountPosition(row.mount_position) ? row.mount_position : null,
+  }));
+}
+
+/**
+ * BLD-822: Fetch the recent bodyweight-grip-variant history window for an
+ * exercise. Sibling of `getRecentVariantHistory` (BLD-771) — same shape, grip
+ * vocabulary. Returns up to `limit` rows ordered newest-first, suitable for
+ * passing into the pure `getLastBodyweightGripVariant()` helper in
+ * `lib/bodyweight-grip-variant.ts`.
+ *
+ * Order: `s.started_at DESC, ws.set_number DESC` (joined to workout_sessions).
+ * Identical ordering rationale as cable variant — current in-progress session
+ * has highest `started_at`, so its rows surface first; within a session,
+ * `set_number DESC` selects the latest set.
+ *
+ * Window size 50: same heuristic as cable. The pure helper short-circuits on
+ * both attributes resolving, so typical paths read 10–20 rows.
+ *
+ * Index plan (PLAN-BLD-768.md line 311 AC, line 344 risk): the WHERE clause
+ * `ws.exercise_id = ?` is covered by `idx_workout_sets_exercise`
+ * (`lib/db/migrations.ts:43`). EXPLAIN QUERY PLAN on a 1k+ seeded DB confirms
+ * SEARCH USING INDEX, not SCAN — verified by
+ * `__tests__/lib/db/grip-history-query-plan.test.ts`. If a future change
+ * adds a partial-index migration, that test will catch any planner
+ * regression because it asserts the literal "USING INDEX
+ * idx_workout_sets_exercise" plan token.
+ *
+ * No silent default: if a row's `grip_type` / `grip_width` is not a valid
+ * union member it falls through the type guard and surfaces as `null`. The
+ * pure autofill helper then keeps scanning for the next non-null carrier.
+ */
+export async function getRecentBodyweightGripHistory(
+  exerciseId: string,
+  limit: number = 50
+): Promise<{ grip_type: GripType | null; grip_width: GripWidth | null }[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<{
+    grip_type: string | null;
+    grip_width: string | null;
+  }>(
+    `SELECT ws.grip_type, ws.grip_width
+       FROM workout_sets ws
+       JOIN workout_sessions s ON s.id = ws.session_id
+      WHERE ws.exercise_id = ?
+      ORDER BY s.started_at DESC, ws.set_number DESC
+      LIMIT ?`,
+    [exerciseId, limit]
+  );
+  return rows.map((row) => ({
+    grip_type: isGripType(row.grip_type) ? row.grip_type : null,
+    grip_width: isGripWidth(row.grip_width) ? row.grip_width : null,
+  }));
 }

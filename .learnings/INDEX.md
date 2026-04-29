@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
-Last updated: 2026-04-21
-Total learnings: 213
+Last updated: 2026-04-29
+Total learnings: 219
 
 ## How to Use This Knowledge Base
 
@@ -10,6 +10,53 @@ Before starting work on a task, search this index for relevant learnings:
 2. Read the pitfalls section for your technology stack
 3. Review recent decisions for architectural context
 4. Search by tags if looking for something specific
+
+## Memory CLI Invocation (canonical)
+
+The memory-cli binary is **not** at `/skills/scripts/memory-cli` despite what most
+agent instructions claim. Use one of these working invocations from inside a
+CableSnap agent container:
+
+```bash
+# Preferred — wrapper in this repo, probes all known locations:
+scripts/memory-cli search-facts "query" main
+scripts/memory-cli search-nodes "query" main
+scripts/memory-cli add "Decision Name" "Body details" main "source"
+
+# Direct, also works:
+/skills/claude-skills/tool--memory/scripts/memory-cli <subcommand> ...
+```
+
+If both paths fail, file an infra ticket — do **not** silently skip the memory
+step. See BLD-746 process learning for full context.
+
+## Concurrent-Agent Safety (canonical)
+
+`/projects/cablesnap` is a shared mount across agent containers. If two
+agents are active at the same time, `git checkout` on one **silently**
+yanks the working tree out from under the other and corrupts untracked
+artefacts (image gen, builds, snapshots, dev-server state).
+
+**Rule:** Use a per-branch git worktree whenever the work generates
+untracked artefacts OR another CableSnap agent might be active. When in
+doubt, use a worktree.
+
+```bash
+# Start an isolated worktree
+eval "$(./scripts/agent-worktree.sh start bld-N-feature)"
+cd "$AGENT_WORKTREE_DIR"
+
+# ... do work ...
+
+# Clean up at session end
+eval "$(./scripts/agent-worktree.sh stop bld-N-feature)"
+```
+
+See BLD-765 learning in `process/quality-pipeline.md` for the full
+incident and pattern. The script is idempotent, recovers stale locks,
+and refuses to remove dirty worktrees without `--force`.
+
+Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.agents/CONCURRENT-AGENT-SAFETY.md).
 
 ## Categories
 
@@ -38,6 +85,12 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-29 | BLD-844 | React 19 Gates React.act Behind NODE_ENV=test — Force It in jest.config.js | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-28 | BLD-765 | Per-Agent Git Worktrees Are Mandatory for Concurrent CableSnap Work | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-28 | BLD-746 | Memory-CLI Path Discoverability — Documented vs Actual Locations Diverge | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-28 | BLD-732 | CVD-Immune Intensity Encoding for Low-Cardinality Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-28 | BLD-732 | Verification-Gap vs Code-Defect: The Conditional-Approval Discriminator | Process | [quality-pipeline.md](process/quality-pipeline.md) |
+| 2026-04-28 | BLD-732 | Env-Infra Blockers Must Not Gate User-Facing UX/A11y PRs With Independently-Verified Authorship | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-21 | BLD-467 | Split Independent Seed Operations into Separate Transactions | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-21 | BLD-467 | Backfill FK Dependencies Before Seeding Child Rows | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-21 | BLD-466 | Expo Router Route Params Cannot Transport Large Data Payloads | Pitfalls | [build-config.md](pitfalls/build-config.md) |

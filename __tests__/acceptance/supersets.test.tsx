@@ -115,7 +115,8 @@ jest.mock('expo-keep-awake', () => ({
   deactivateKeepAwake: jest.fn(),
   deactivateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined),
 }))
-jest.mock('../../lib/audio', () => ({ play: jest.fn(), setEnabled: jest.fn(), preload: jest.fn() }))
+// BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts
+jest.mock('../../lib/audio')
 jest.mock('victory-native', () => ({
   CartesianChart: 'CartesianChart',
   Line: 'Line',

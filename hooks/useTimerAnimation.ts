@@ -4,6 +4,7 @@ import {
   useAnimatedStyle,
   withTiming,
   type SharedValue,
+  type AnimatedStyle,
 } from "react-native-reanimated"
 import { hexToRgb } from "@/lib/format"
 
@@ -17,7 +18,10 @@ interface TimerAnimationInput {
 }
 
 interface TimerAnimationResult {
-  bgStyle: { backgroundColor: string }
+  // Reanimated 3+: useAnimatedStyle returns an AnimatedStyleHandle that the
+  // <Animated.View> style prop accepts. Surface it as AnimatedStyle so
+  // callers can pass it directly without casting.
+  bgStyle: AnimatedStyle<{ backgroundColor: string }>
   bgColor: string
   ringProgress: SharedValue<number>
 }

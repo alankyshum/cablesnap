@@ -11,6 +11,8 @@ import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "
 import { getAppSetting, addWarmupSets } from "../../lib/db";
 import { sessionBreadcrumb } from "../../lib/session-breadcrumbs";
 import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
+import { useVariantPickerSheet } from "../../hooks/useVariantPickerSheet";
+import { useBodyweightGripPickerSheet } from "../../hooks/useBodyweightGripPickerSheet";
 import { getTemplateDurationEstimates } from "../../lib/db/sessions";
 import { generateWarmupSets } from "../../lib/warmup";
 import * as Haptics from "expo-haptics";
@@ -35,6 +37,8 @@ import { SessionToolboxSheet } from "../../components/session/SessionToolboxShee
 import { SessionHeaderToolbar } from "../../components/session/SessionHeaderToolbar";
 import { PRCelebration } from "../../components/session/PRCelebration";
 import { BodyweightModifierSheet } from "../../components/session/BodyweightModifierSheet";
+import { VariantPickerSheet } from "../../components/session/VariantPickerSheet";
+import { BodyweightGripPickerSheet } from "../../components/session/BodyweightGripPickerSheet";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -134,6 +138,8 @@ export default function ActiveSession() {
     handleDismiss: handleDismissBodyweightModifier,
     initialModifierKg: bwModifierInitial,
   } = useBodyweightModifierSheet({ groups, updateGroupSet, showError });
+  const variant = useVariantPickerSheet({ groups, updateGroupSet, showError });
+  const bodyweightGrip = useBodyweightGripPickerSheet({ groups, updateGroupSet, showError });
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
 
@@ -242,6 +248,8 @@ export default function ActiveSession() {
       onLongPressSetType={handleLongPressSetType}
       onOpenBodyweightModifier={handleOpenBodyweightModifier}
       onClearBodyweightModifier={handleClearBodyweightModifier}
+      onOpenVariantPicker={variant.handleOpen} onClearVariant={variant.handleClear}
+      onOpenBodyweightGripPicker={bodyweightGrip.handleOpen} onClearBodyweightGrip={bodyweightGrip.handleClear}
       onShowDetail={handleShowDetail}
       onSwap={handleSwapOpen}
       onDeleteExercise={handleDeleteExercise}
@@ -257,7 +265,7 @@ export default function ActiveSession() {
     />
       </>
     );
-  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  }, [step, unit, suggestions, modes, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleModeChange, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />
@@ -375,13 +383,9 @@ export default function ActiveSession() {
         onOpenRestSettings={handleOpenRestSettings}
         onDismiss={handleToolboxDismiss}
       />
-      <BodyweightModifierSheet
-        sheetRef={bwModifierSheetRef}
-        initialModifierKg={bwModifierInitial}
-        unit={unit}
-        onDone={handleSaveBodyweightModifier}
-        onDismiss={handleDismissBodyweightModifier}
-      />
+      <BodyweightModifierSheet sheetRef={bwModifierSheetRef} initialModifierKg={bwModifierInitial} unit={unit} onDone={handleSaveBodyweightModifier} onDismiss={handleDismissBodyweightModifier} />
+      <VariantPickerSheet isVisible={variant.isVisible} onClose={variant.handleClose} onConfirm={variant.handleConfirm} {...variant.initialValues} />
+      <BodyweightGripPickerSheet isVisible={bodyweightGrip.isVisible} onClose={bodyweightGrip.handleClose} onConfirm={bodyweightGrip.handleConfirm} {...bodyweightGrip.initialValues} />
     </>
   );
 }

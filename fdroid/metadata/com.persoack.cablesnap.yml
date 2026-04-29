@@ -30,8 +30,8 @@ Description: |
   - CSV export and sharing
   - Dark mode support
 
-CurrentVersion: 0.26.16
-CurrentVersionCode: 69
+CurrentVersion: 0.26.17
+CurrentVersionCode: 70
 
 # F-Droid build server build recipe.
 #
@@ -54,9 +54,9 @@ CurrentVersionCode: 69
 # group from the releaseFdroid* configurations, and the F-Droid build server
 # never installs Google Play Services on its build VMs anyway.
 Builds:
-  - versionName: 0.26.16
-    versionCode: 69
-    commit: v0.26.16
+  - versionName: 0.26.17
+    versionCode: 70
+    commit: v0.26.17
     subdir: android/app
     sudo:
       - apt-get update

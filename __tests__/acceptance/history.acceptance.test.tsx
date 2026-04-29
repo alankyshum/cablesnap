@@ -129,88 +129,43 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Calendar view', () => {
-    it('renders month label and navigation buttons', async () => {
+    it('renders month label, navigation buttons, and responds to chevron presses', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
         expect(screen.getByLabelText('Previous month')).toBeTruthy()
         expect(screen.getByLabelText('Next month')).toBeTruthy()
-      })
-    })
-
-    it('navigates to previous month on chevron press', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText('Previous month')).toBeTruthy()
       })
 
       fireEvent.press(screen.getByLabelText('Previous month'))
-
-      // After pressing, the month label should have changed
-      // The component re-renders with new month state
+      // After pressing, the month label should have changed (re-renders with new state)
       expect(screen.getByLabelText('Previous month')).toBeTruthy()
-    })
-
-    it('navigates to next month on chevron press', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText('Next month')).toBeTruthy()
-      })
 
       fireEvent.press(screen.getByLabelText('Next month'))
-
       expect(screen.getByLabelText('Next month')).toBeTruthy()
     })
   })
 
   describe('Workout indicators on dates', () => {
-    it('shows workout day labels on dates with sessions', async () => {
+    it('shows workout day labels (single, multiple) and rest day labels', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
-        const label5 = screen.getByLabelText(/5.*1 workout/)
-        expect(label5).toBeTruthy()
-      })
-    })
-
-    it('shows multiple workout indicators for dates with multiple sessions', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        const label10 = screen.getByLabelText(/10.*2 workouts/)
-        expect(label10).toBeTruthy()
-      })
-    })
-
-    it('shows rest day label on dates without sessions', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        const restDays = screen.getAllByLabelText(/rest day/)
-        expect(restDays.length).toBeGreaterThan(0)
+        expect(screen.getByLabelText(/5.*1 workout/)).toBeTruthy()
+        expect(screen.getByLabelText(/10.*2 workouts/)).toBeTruthy()
+        expect(screen.getAllByLabelText(/rest day/).length).toBeGreaterThan(0)
       })
     })
   })
 
   describe('Session cards', () => {
-    it('renders session cards with name, duration, and set count', async () => {
+    it('renders session cards with names, set counts, and navigates to detail on press', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
         expect(screen.getByLabelText(/Push Day/)).toBeTruthy()
         expect(screen.getByLabelText(/Pull Day/)).toBeTruthy()
         expect(screen.getByLabelText(/Legs/)).toBeTruthy()
-      })
-    })
-
-    it('shows set count on session cards', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
         expect(screen.getByLabelText(/15 sets/)).toBeTruthy()
         expect(screen.getByLabelText(/12 sets/)).toBeTruthy()
         expect(screen.getByLabelText(/18 sets/)).toBeTruthy()
-      })
-    })
-
-    it('navigates to session detail on card press', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText(/Push Day/)).toBeTruthy()
       })
 
       fireEvent.press(screen.getByLabelText(/Push Day/))
@@ -219,7 +174,7 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Tapping a date filters sessions', () => {
-    it('filters to show only sessions for the tapped date', async () => {
+    it('filters to selected date, shows clear chip, and clears filter when chip is pressed', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
         expect(screen.getByLabelText(/5.*1 workout/)).toBeTruthy()
@@ -231,30 +186,6 @@ describe('Workout History & Calendar Acceptance', () => {
         expect(screen.getAllByLabelText(/Push Day/).length).toBeGreaterThan(0)
         expect(screen.queryByLabelText(/Pull Day/)).toBeNull()
         expect(screen.queryByLabelText(/Legs/)).toBeNull()
-      })
-    })
-
-    it('shows clear filter chip when date is selected', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText(/5.*1 workout/)).toBeTruthy()
-      })
-
-      fireEvent.press(screen.getByLabelText(/5.*1 workout/))
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Clear filter')).toBeTruthy()
-      })
-    })
-
-    it('clears filter when chip is pressed', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText(/5.*1 workout/)).toBeTruthy()
-      })
-
-      fireEvent.press(screen.getByLabelText(/5.*1 workout/))
-      await waitFor(() => {
         expect(screen.getByLabelText('Clear filter')).toBeTruthy()
       })
 
@@ -269,14 +200,13 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Empty states', () => {
-    it('shows empty state for days with no workouts', async () => {
+    it('shows rest day empty state when tapping a day with no workouts', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
         const restDays = screen.getAllByLabelText(/rest day/)
         expect(restDays.length).toBeGreaterThan(0)
       })
 
-      // Tap a specific rest day (day 2 or 3 which won't have sessions)
       const restDays = screen.getAllByLabelText(/rest day/)
       fireEvent.press(restDays[0])
 
@@ -297,14 +227,7 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Search', () => {
-    it('renders search bar with accessible label', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText('Search workout history')).toBeTruthy()
-      })
-    })
-
-    it('calls searchSessions on query input', async () => {
+    it('renders search bar and calls searchSessions on debounced query input', async () => {
       jest.useFakeTimers()
       const matchingSessions = [sessionsThisMonth[0]]
       mockSearchSessions.mockResolvedValue(matchingSessions)
@@ -338,16 +261,10 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Heatmap section', () => {
-    it('renders heatmap toggle with accessible label', async () => {
+    it('renders heatmap toggle and collapses/expands on press', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
         expect(screen.getByLabelText(/Last 16 Weeks/)).toBeTruthy()
-      })
-    })
-
-    it('collapses and expands heatmap on toggle press', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
         expect(screen.getByTestId('workout-heatmap')).toBeTruthy()
       })
 
@@ -366,18 +283,12 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Accessible labels', () => {
-    it('all navigation buttons have accessible labels', async () => {
+    it('navigation buttons have labels and session cards have role button', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
         expect(screen.getByLabelText('Previous month')).toBeTruthy()
         expect(screen.getByLabelText('Next month')).toBeTruthy()
         expect(screen.getByLabelText('Search workout history')).toBeTruthy()
-      })
-    })
-
-    it('session cards have role button', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
         const card = screen.getByLabelText(/Push Day/)
         expect(card.props.accessibilityRole || card.props.role).toBe('button')
       })
@@ -402,37 +313,27 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Inline day detail panel', () => {
-    it('shows day detail panel when day with workout is tapped', async () => {
+    it('shows panel for day with workout, collapses on re-tap, and has polite live region', async () => {
       const screen = renderScreen(<History />)
       await waitFor(() => {
         expect(screen.getByLabelText(/5.*1 workout/)).toBeTruthy()
       })
 
+      // Open panel
       fireEvent.press(screen.getByLabelText(/5.*1 workout/))
-
       await waitFor(() => {
-        // Panel should show session info
+        // Panel should show session info: calendar cell + detail panel item
         const panels = screen.getAllByLabelText(/Push Day/)
-        expect(panels.length).toBeGreaterThan(1) // calendar cell + detail panel item
-      })
-    })
-
-    it('collapses panel when same day tapped again', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText(/5.*1 workout/)).toBeTruthy()
+        expect(panels.length).toBeGreaterThan(1)
       })
 
-      fireEvent.press(screen.getByLabelText(/5.*1 workout/))
-      await waitFor(() => {
-        expect(screen.getAllByLabelText(/Push Day/).length).toBeGreaterThan(1)
-      })
+      // Has accessibilityLiveRegion polite on panel
+      const panelNodes = screen.UNSAFE_queryAllByProps({ accessibilityLiveRegion: 'polite' })
+      expect(panelNodes.length).toBeGreaterThan(0)
 
       // Tap same day again to collapse
       fireEvent.press(screen.getByLabelText(/5.*1 workout/))
       await waitFor(() => {
-        // Only 1 Push Day element (the session card in the list, but no detail panel)
-        // Actually the FlashList may not render when filtered to day 5 after collapse
         // The key assertion is the panel is gone
         expect(screen.queryByText('Rest day')).toBeFalsy()
       })
@@ -450,21 +351,6 @@ describe('Workout History & Calendar Acceptance', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Rest day')).toBeTruthy()
-      })
-    })
-
-    it('has accessibilityLiveRegion polite on panel', async () => {
-      const screen = renderScreen(<History />)
-      await waitFor(() => {
-        expect(screen.getByLabelText(/5.*1 workout/)).toBeTruthy()
-      })
-
-      fireEvent.press(screen.getByLabelText(/5.*1 workout/))
-
-      await waitFor(() => {
-        // Find the panel container by looking for the element with accessibilityLiveRegion
-        const panelNodes = screen.UNSAFE_queryAllByProps({ accessibilityLiveRegion: 'polite' })
-        expect(panelNodes.length).toBeGreaterThan(0)
       })
     })
   })

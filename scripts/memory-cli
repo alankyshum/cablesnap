@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# memory-cli — discoverability wrapper for the Graphiti memory client
+#
+# Why this exists
+# ---------------
+# All Builder agent instructions reference `/skills/scripts/memory-cli`, but no
+# binary has ever existed at that path inside agent runtime containers. The
+# real CLI ships under the `tool--memory` skill. Without this wrapper, every
+# agent's session-open `search-facts` call fails silently and the
+# knowledge-graph layer of CableSnap is invisible.
+#
+# This wrapper:
+#   1. Probes the known canonical locations of the real memory-cli.
+#   2. Execs the first one found, forwarding all args.
+#   3. Prints a single, actionable error if nothing is found — so future
+#      agents see "fix your container" rather than "memory store is broken."
+#
+# See BLD-746 for the full diagnosis. Once the host bind-mount adds
+# /skills/scripts/memory-cli, this wrapper can stay as a lightweight shim
+# (it's idempotent — the first found path wins) or be removed.
+#
+# Usage:
+#   scripts/memory-cli search-facts "query" main
+#   scripts/memory-cli search-nodes "query" main
+#   scripts/memory-cli add "Decision Name" "Body details" main "source"
+
+set -euo pipefail
+
+CANDIDATES=(
+  # Direct skill source — most reliable, present in every container today.
+  "/skills/claude-skills/tool--memory/scripts/memory-cli"
+  # Hashed symlink under the agent home, also points at the same source.
+  "${HOME:-/paperclip}/.claude/skills/tool-memory--b85488da58/scripts/memory-cli"
+  # Documented (but currently non-existent) double-dash variant — kept so
+  # this wrapper keeps working if someone normalizes the symlink name.
+  "${HOME:-/paperclip}/.claude/skills/tool--memory/scripts/memory-cli"
+  # Hypothetical future host-side fix for BLD-746.
+  "/skills/scripts/memory-cli"
+)
+
+for cli in "${CANDIDATES[@]}"; do
+  if [[ -x "$cli" ]]; then
+    exec "$cli" "$@"
+  fi
+done
+
+cat >&2 <<'ERR'
+memory-cli: no working memory-cli binary found on this container.
+
+Searched (in order):
+  - /skills/claude-skills/tool--memory/scripts/memory-cli
+  - $HOME/.claude/skills/tool-memory--b85488da58/scripts/memory-cli
+  - $HOME/.claude/skills/tool--memory/scripts/memory-cli
+  - /skills/scripts/memory-cli
+
+This means the tool--memory skill is not mounted in this container.
+File the gap on BLD-746 (or its successor) — do NOT silently skip the
+memory step. Inline-curate to the Paperclip issue thread as a stopgap.
+ERR
+exit 127

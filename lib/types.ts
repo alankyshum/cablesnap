@@ -37,6 +37,13 @@ export type Attachment =
   | "squat_harness"
   | "carabiner";
 
+// BLD-768: per-set bodyweight grip variant logging.
+// Pull-ups / chin-ups / inverted rows: grip type and grip width materially
+// change muscle emphasis but the lift is logged as one exercise.
+// Asymmetry vs cable variants is documented in `lib/bodyweight-grip-variant.ts`.
+export type GripType = "overhand" | "underhand" | "neutral" | "mixed";
+export type GripWidth = "narrow" | "shoulder" | "wide";
+
 export type TrainingMode =
   | "weight"
   | "band"
@@ -130,6 +137,22 @@ export const ATTACHMENT_LABELS: Record<Attachment, string> = {
   bar: "Bar",
   squat_harness: "Squat Harness",
   carabiner: "Carabiner",
+};
+
+// BLD-768: bodyweight grip variant labels — paired with `GripType` / `GripWidth`.
+// VoiceOver-friendly noun-first labels mirror BLD-771's convention
+// (`"Attachment: Rope"`, `"Mount: Low"`).
+export const GRIP_TYPE_LABELS: Record<GripType, string> = {
+  overhand: "Overhand",
+  underhand: "Underhand",
+  neutral: "Neutral",
+  mixed: "Mixed",
+};
+
+export const GRIP_WIDTH_LABELS: Record<GripWidth, string> = {
+  narrow: "Narrow",
+  shoulder: "Shoulder-width",
+  wide: "Wide",
 };
 
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {
@@ -266,6 +289,14 @@ export type WorkoutSet = {
   duration_seconds: number | null;
   exercise_position: number;
   bodyweight_modifier_kg?: number | null;
+  // BLD-771: per-set cable variant logging. NULL = user did not specify.
+  attachment?: Attachment | null;
+  mount_position?: MountPosition | null;
+  // BLD-768: per-set bodyweight grip variant logging. NULL = user did not specify
+  // (or pre-migration row). NEVER auto-stamped from any exercise-level default —
+  // see `lib/bodyweight-grip-variant.ts` for autofill chain.
+  grip_type?: GripType | null;
+  grip_width?: GripWidth | null;
 };
 
 export const TRAINING_MODE_LABELS: Record<TrainingMode, { label: string; short: string; description: string }> = {

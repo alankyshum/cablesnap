@@ -96,50 +96,40 @@ beforeEach(() => {
 });
 
 describe("createGoal", () => {
-  it("creates a weight goal with correct fields", async () => {
-    const result = await createGoal({
+  it("creates goals with correct fields, defaults, and unique IDs across variants", async () => {
+    // Weight goal with all fields
+    const weightGoal = await createGoal({
       exerciseId: "ex-1",
       targetWeight: 100,
       targetReps: null,
       deadline: "2026-06-01",
     });
+    expect(weightGoal.exercise_id).toBe("ex-1");
+    expect(weightGoal.target_weight).toBe(100);
+    expect(weightGoal.target_reps).toBeNull();
+    expect(weightGoal.deadline).toBe("2026-06-01");
+    expect(weightGoal.achieved_at).toBeNull();
+    expect(weightGoal.id).toBeTruthy();
+    expect(weightGoal.created_at).toBeTruthy();
+    expect(weightGoal.updated_at).toBeTruthy();
 
-    expect(result.exercise_id).toBe("ex-1");
-    expect(result.target_weight).toBe(100);
-    expect(result.target_reps).toBeNull();
-    expect(result.deadline).toBe("2026-06-01");
-    expect(result.achieved_at).toBeNull();
-    expect(result.id).toBeTruthy();
-    expect(result.created_at).toBeTruthy();
-    expect(result.updated_at).toBeTruthy();
-  });
+    // Bodyweight (reps) goal
+    const repsGoal = await createGoal({ exerciseId: "ex-2", targetReps: 20 });
+    expect(repsGoal.exercise_id).toBe("ex-2");
+    expect(repsGoal.target_weight).toBeNull();
+    expect(repsGoal.target_reps).toBe(20);
+    expect(repsGoal.deadline).toBeNull();
 
-  it("creates a bodyweight (reps) goal", async () => {
-    const result = await createGoal({
-      exerciseId: "ex-2",
-      targetReps: 20,
-    });
+    // Defaults all optional fields to null
+    const minimalGoal = await createGoal({ exerciseId: "ex-3" });
+    expect(minimalGoal.target_weight).toBeNull();
+    expect(minimalGoal.target_reps).toBeNull();
+    expect(minimalGoal.deadline).toBeNull();
+    expect(minimalGoal.achieved_at).toBeNull();
 
-    expect(result.exercise_id).toBe("ex-2");
-    expect(result.target_weight).toBeNull();
-    expect(result.target_reps).toBe(20);
-    expect(result.deadline).toBeNull();
-  });
-
-  it("defaults optional fields to null", async () => {
-    const result = await createGoal({ exerciseId: "ex-3" });
-
-    expect(result.target_weight).toBeNull();
-    expect(result.target_reps).toBeNull();
-    expect(result.deadline).toBeNull();
-    expect(result.achieved_at).toBeNull();
-  });
-
-  it("generates a unique ID for each goal", async () => {
-    const r1 = await createGoal({ exerciseId: "ex-1", targetWeight: 50 });
-    const r2 = await createGoal({ exerciseId: "ex-2", targetWeight: 60 });
-
-    expect(r1.id).not.toBe(r2.id);
+    // Unique IDs per goal
+    expect(weightGoal.id).not.toBe(repsGoal.id);
+    expect(repsGoal.id).not.toBe(minimalGoal.id);
   });
 
   it("throws when an active goal already exists for the exercise", async () => {
@@ -154,7 +144,7 @@ describe("createGoal", () => {
 });
 
 describe("getGoalForExercise", () => {
-  it("returns the goal when one exists", async () => {
+  it("returns the goal when one exists, null otherwise", async () => {
     const mockGoal = {
       id: "g-1",
       exercise_id: "ex-1",
@@ -166,60 +156,48 @@ describe("getGoalForExercise", () => {
       updated_at: "2026-04-20T00:00:00Z",
     };
     mockDrizzleGetResult = mockGoal;
+    expect(await getGoalForExercise("ex-1")).toEqual(mockGoal);
 
-    const result = await getGoalForExercise("ex-1");
-    expect(result).toEqual(mockGoal);
-  });
-
-  it("returns null when no active goal exists", async () => {
     mockDrizzleGetResult = undefined;
-
-    const result = await getGoalForExercise("ex-nonexistent");
-    expect(result).toBeNull();
+    expect(await getGoalForExercise("ex-nonexistent")).toBeNull();
   });
 });
 
 describe("getActiveGoals", () => {
-  it("returns all active (non-achieved) goals", async () => {
+  it("returns all active (non-achieved) goals or empty array", async () => {
     const goals = [
       { id: "g-1", exercise_id: "ex-1", achieved_at: null },
       { id: "g-2", exercise_id: "ex-2", achieved_at: null },
     ];
     mockDrizzleAllResult = goals;
-
     const result = await getActiveGoals();
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe("g-1");
-  });
 
-  it("returns empty array when no active goals", async () => {
     mockDrizzleAllResult = [];
-
-    const result = await getActiveGoals();
-    expect(result).toEqual([]);
+    expect(await getActiveGoals()).toEqual([]);
   });
 });
 
 describe("updateGoal", () => {
-  it("updates target weight", async () => {
-    await updateGoal("g-1", { targetWeight: 120 });
-    expect(mockUpdateSet).toHaveProperty("target_weight", 120);
+  type UpdateCase = {
+    name: string;
+    input: Parameters<typeof updateGoal>[1];
+    expectProp: string;
+    expectValue: unknown;
+  };
+
+  const cases: UpdateCase[] = [
+    { name: "updates target weight", input: { targetWeight: 120 }, expectProp: "target_weight", expectValue: 120 },
+    { name: "updates target reps", input: { targetReps: 25 }, expectProp: "target_reps", expectValue: 25 },
+    { name: "updates deadline", input: { deadline: "2026-12-01" }, expectProp: "deadline", expectValue: "2026-12-01" },
+    { name: "clears deadline when set to null", input: { deadline: null }, expectProp: "deadline", expectValue: null },
+  ];
+
+  it.each(cases)("$name", async ({ input, expectProp, expectValue }) => {
+    await updateGoal("g-1", input);
+    expect(mockUpdateSet).toHaveProperty(expectProp, expectValue);
     expect(mockUpdateSet).toHaveProperty("updated_at");
-  });
-
-  it("updates target reps", async () => {
-    await updateGoal("g-1", { targetReps: 25 });
-    expect(mockUpdateSet).toHaveProperty("target_reps", 25);
-  });
-
-  it("updates deadline", async () => {
-    await updateGoal("g-1", { deadline: "2026-12-01" });
-    expect(mockUpdateSet).toHaveProperty("deadline", "2026-12-01");
-  });
-
-  it("clears deadline when set to null", async () => {
-    await updateGoal("g-1", { deadline: null });
-    expect(mockUpdateSet).toHaveProperty("deadline", null);
   });
 
   it("only updates provided fields plus updated_at", async () => {
@@ -260,89 +238,65 @@ describe("getCompletedGoals", () => {
 });
 
 describe("getCurrentBestWeight", () => {
-  it("returns the max weight from completed workout sets", async () => {
-    mockDb.getAllAsync.mockResolvedValue([{ best: 95.5 }]);
+  it("returns max weight, or null when no completed sets exist or query is empty", async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([{ best: 95.5 }]);
+    expect(await getCurrentBestWeight("ex-1")).toBe(95.5);
 
-    const result = await getCurrentBestWeight("ex-1");
-    expect(result).toBe(95.5);
-  });
+    mockDb.getAllAsync.mockResolvedValueOnce([{ best: null }]);
+    expect(await getCurrentBestWeight("ex-no-history")).toBeNull();
 
-  it("returns null when no completed sets exist", async () => {
-    mockDb.getAllAsync.mockResolvedValue([{ best: null }]);
-
-    const result = await getCurrentBestWeight("ex-no-history");
-    expect(result).toBeNull();
-  });
-
-  it("returns null when query returns empty", async () => {
-    mockDb.getAllAsync.mockResolvedValue([]);
-
-    const result = await getCurrentBestWeight("ex-empty");
-    expect(result).toBeNull();
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
+    expect(await getCurrentBestWeight("ex-empty")).toBeNull();
   });
 });
 
 describe("getCurrentBestReps", () => {
-  it("returns the max reps from completed workout sets", async () => {
-    mockDb.getAllAsync.mockResolvedValue([{ best: 15 }]);
+  it("returns max reps, or null when no completed sets exist", async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([{ best: 15 }]);
+    expect(await getCurrentBestReps("ex-pullups")).toBe(15);
 
-    const result = await getCurrentBestReps("ex-pullups");
-    expect(result).toBe(15);
-  });
-
-  it("returns null when no completed sets exist", async () => {
-    mockDb.getAllAsync.mockResolvedValue([{ best: null }]);
-
-    const result = await getCurrentBestReps("ex-no-data");
-    expect(result).toBeNull();
+    mockDb.getAllAsync.mockResolvedValueOnce([{ best: null }]);
+    expect(await getCurrentBestReps("ex-no-data")).toBeNull();
   });
 });
 
 describe("getCurrentBestWeightsByExercise", () => {
-  it("returns empty record for empty input", async () => {
+  it("returns empty record for empty input without querying", async () => {
     const result = await getCurrentBestWeightsByExercise([]);
     expect(result).toEqual({});
     expect(mockDb.getAllAsync).not.toHaveBeenCalled();
   });
 
-  it("returns best weights keyed by exercise ID", async () => {
-    mockDb.getAllAsync.mockResolvedValue([
+  it("returns best weights keyed by exercise ID, with null for exercises lacking completed sets", async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([
       { exercise_id: "ex-1", best: 100 },
       { exercise_id: "ex-3", best: 60 },
     ]);
+    expect(
+      await getCurrentBestWeightsByExercise(["ex-1", "ex-2", "ex-3"])
+    ).toEqual({ "ex-1": 100, "ex-2": null, "ex-3": 60 });
 
-    const result = await getCurrentBestWeightsByExercise(["ex-1", "ex-2", "ex-3"]);
-    expect(result).toEqual({ "ex-1": 100, "ex-2": null, "ex-3": 60 });
-  });
-
-  it("returns null for exercises with no completed sets", async () => {
-    mockDb.getAllAsync.mockResolvedValue([]);
-
-    const result = await getCurrentBestWeightsByExercise(["ex-empty"]);
-    expect(result).toEqual({ "ex-empty": null });
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
+    expect(await getCurrentBestWeightsByExercise(["ex-empty"])).toEqual({ "ex-empty": null });
   });
 });
 
 describe("getCurrentBestRepsByExercise", () => {
-  it("returns empty record for empty input", async () => {
+  it("returns empty record for empty input without querying", async () => {
     const result = await getCurrentBestRepsByExercise([]);
     expect(result).toEqual({});
     expect(mockDb.getAllAsync).not.toHaveBeenCalled();
   });
 
-  it("returns best reps keyed by exercise ID", async () => {
-    mockDb.getAllAsync.mockResolvedValue([
+  it("returns best reps keyed by exercise ID, with null for exercises lacking completed sets", async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([
       { exercise_id: "ex-pullups", best: 15 },
     ]);
+    expect(
+      await getCurrentBestRepsByExercise(["ex-pullups", "ex-pushups"])
+    ).toEqual({ "ex-pullups": 15, "ex-pushups": null });
 
-    const result = await getCurrentBestRepsByExercise(["ex-pullups", "ex-pushups"]);
-    expect(result).toEqual({ "ex-pullups": 15, "ex-pushups": null });
-  });
-
-  it("returns null for exercises with no completed sets", async () => {
-    mockDb.getAllAsync.mockResolvedValue([]);
-
-    const result = await getCurrentBestRepsByExercise(["ex-none"]);
-    expect(result).toEqual({ "ex-none": null });
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
+    expect(await getCurrentBestRepsByExercise(["ex-none"])).toEqual({ "ex-none": null });
   });
 });

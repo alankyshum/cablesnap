@@ -2,18 +2,13 @@
 import React, { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useLayout } from "../../lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { SetRow } from "./SetRow";
 import { GroupCardHeader } from "./GroupCardHeader";
-import { SuggestionChip } from "./SuggestionChip";
+import { ExerciseGroupSetTable } from "./ExerciseGroupSetTable";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
 import type { Suggestion } from "../../lib/rm";
-import { fontSizes } from "@/constants/design-tokens";
 
 export type GroupCardProps = {
   group: ExerciseGroup;
@@ -40,6 +35,15 @@ export type GroupCardProps = {
   // BLD-541 bodyweight modifier wiring (forwarded to SetRow when group is_bodyweight)
   onOpenBodyweightModifier?: (setId: string) => void;
   onClearBodyweightModifier?: (setId: string) => void;
+  // BLD-771 cable variant wiring (forwarded to SetRow; SetRow self-gates on
+  // isCableExercise(equipment) so passing for non-cable groups is a no-op).
+  onOpenVariantPicker?: (setId: string, returnFocusHandle: number | null) => void;
+  onClearVariant?: (setId: string) => void;
+  // BLD-822: bodyweight grip variant wiring (forwarded to SetRow; gated by
+  // isBodyweightGripExercise({equipment, name}); hook-local ref isolates focus
+  // state from cable variant picker per QD-10).
+  onOpenBodyweightGripPicker?: (setId: string, returnFocusHandle: number | null) => void;
+  onClearBodyweightGrip?: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
@@ -61,6 +65,8 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onUpdate, onCheck, onDelete, onAddSet, onAddWarmups, onModeChange,
   onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
+  onOpenVariantPicker, onClearVariant,
+  onOpenBodyweightGripPicker, onClearBodyweightGrip,
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
   onPrefill,
@@ -68,7 +74,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onTimerStart, onTimerStop,
 }: GroupCardProps) {
   const colors = useThemeColors();
-  const layout = useLayout();
   const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
   const linkIdx = group.link_id ? linked.findIndex((g) => g.exercise_id === group.exercise_id) : -1;
   const isFirstInLink = linkIdx === 0;
@@ -91,82 +96,34 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   const isDurationMode = group.trackingMode === "duration";
 
   const setTable = (
-    <>
-      <View style={styles.headerRow}>
-        <Text variant="caption" style={[styles.colSet, { color: colors.onSurfaceVariant }]}>SET</Text>
-        <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>PREV</Text>
-        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>
-          {group.is_bodyweight ? "LOAD" : (unit === "lb" ? "LB" : "KG")}
-        </Text>
-        <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{isDurationMode ? "DURATION" : "REPS"}</Text>
-        <View style={styles.colTrailing} />
-      </View>
-      {group.sets.map((set, idx) => {
-        const isActiveSet = timerActiveExerciseId === group.exercise_id && timerActiveSetIndex === idx;
-        return (
-          <SetRow
-            key={set.id}
-            set={set}
-            step={step}
-            unit={unit}
-            trackingMode={isDurationMode ? "duration" : "reps"}
-            equipment={group.equipment}
-            onUpdate={onUpdate}
-            onCheck={onCheck}
-            onDelete={onDelete}
-            onCycleSetType={onCycleSetType}
-            onLongPressSetType={onLongPressSetType}
-            isBodyweight={group.is_bodyweight}
-            onOpenBodyweightModifier={onOpenBodyweightModifier}
-            onClearBodyweightModifier={onClearBodyweightModifier}
-            isTimerRunning={isActiveSet && (timerIsRunning ?? false)}
-            isTimerActive={isActiveSet}
-            timerDisplaySeconds={isActiveSet ? timerDisplaySeconds : undefined}
-            onTimerStart={onTimerStart}
-            onTimerStop={onTimerStop}
-          />
-        );
-      })}
-      <View style={styles.actionRow}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => onAddSet(group.exercise_id)}
-          style={styles.addSetBtn}
-          accessibilityLabel={`Add set to ${group.name}`}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontWeight: "600" }}>Add Set</Text>
-          </View>
-        </Button>
-        {showWarmupButton && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() => onAddWarmups(group.exercise_id)}
-            style={styles.addSetBtn}
-            accessibilityLabel={`Add warmup sets for ${group.name}`}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <MaterialCommunityIcons name="fire" size={18} color={colors.tertiary ?? colors.primary} />
-              <Text style={{ color: colors.tertiary ?? colors.primary, fontWeight: "600" }}>Add Warmups</Text>
-            </View>
-          </Button>
-        )}
-      </View>
-    </>
-  );
-
-  const suggestionChip = suggestion ? (
-    <SuggestionChip
-      suggestion={suggestion}
-      sets={group.sets}
+    <ExerciseGroupSetTable
+      group={group}
       step={step}
-      onUpdate={onUpdate}
+      unit={unit}
+      isDurationMode={isDurationMode}
+      showWarmupButton={showWarmupButton}
       colors={colors}
+      onUpdate={onUpdate}
+      onCheck={onCheck}
+      onDelete={onDelete}
+      onAddSet={onAddSet}
+      onAddWarmups={onAddWarmups}
+      onCycleSetType={onCycleSetType}
+      onLongPressSetType={onLongPressSetType}
+      onOpenBodyweightModifier={onOpenBodyweightModifier}
+      onClearBodyweightModifier={onClearBodyweightModifier}
+      onOpenVariantPicker={onOpenVariantPicker}
+      onClearVariant={onClearVariant}
+      onOpenBodyweightGripPicker={onOpenBodyweightGripPicker}
+      onClearBodyweightGrip={onClearBodyweightGrip}
+      timerActiveExerciseId={timerActiveExerciseId}
+      timerActiveSetIndex={timerActiveSetIndex}
+      timerIsRunning={timerIsRunning}
+      timerDisplaySeconds={timerDisplaySeconds}
+      onTimerStart={onTimerStart}
+      onTimerStop={onTimerStop}
     />
-  ) : null;
+  );
 
   return (
     <View style={styles.group}>
@@ -194,6 +151,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           firstSet={firstSet}
           previousPerformance={group.previousSummary}
           previousPerformanceA11y={group.previousSummaryA11y}
+          suggestion={suggestion}
+          step={step}
+          onUpdate={onUpdate}
           onModeChange={onModeChange}
           onExerciseNotes={onExerciseNotes}
           onExerciseNotesDraftChange={onExerciseNotesDraftChange}
@@ -208,23 +168,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           isLast={isLastReorderable}
           showMoveButtons={showMoveButtons}
         />
-        {layout.atLeastMedium ? (
-          <View style={styles.groupWideRow}>
-            {suggestionChip && (
-              <View style={styles.groupInfoCol}>
-                {suggestionChip}
-              </View>
-            )}
-            <View style={suggestionChip ? styles.groupSetsCol : { flex: 1 }}>
-              {setTable}
-            </View>
-          </View>
-        ) : (
-          <>
-            {suggestionChip}
-            {setTable}
-          </>
-        )}
+        {/* BLD-850: removed tablet 2-col split (regression of BLD-716) — set
+            table renders full-width on every breakpoint. */}
+        {setTable}
       </View>
       <Separator style={styles.divider} />
     </View>
@@ -234,53 +180,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
 const styles = StyleSheet.create({
   group: {
     marginBottom: 8,
-  },
-  groupWideRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  groupInfoCol: {
-    flex: 2,
-    minWidth: 160,
-  },
-  groupSetsCol: {
-    flex: 3,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    minHeight: 28,
-  },
-  colSet: {
-    width: 36,
-    textAlign: "center",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  colPrev: {
-    width: 80,
-    textAlign: "center",
-  },
-  colLabel: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: fontSizes.xs,
-    marginHorizontal: 12,
-  },
-  colTrailing: {
-    width: 72,
-  },
-  addSetBtn: {
-    alignSelf: "flex-start",
-    marginTop: 4,
-  },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
   },
   divider: { marginTop: 8, marginBottom: 12 },
   linkGroupHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 6, marginBottom: 4, borderRadius: 4 },
