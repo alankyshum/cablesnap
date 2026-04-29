@@ -4,13 +4,18 @@
 // AC requirement (PLAN-BLD-768.md):
 //   "CSV import-export round-trip preserves both fields."
 //
-// Export uses `SELECT *` (lib/db/import-export.ts:287) so any new column on
+// Export uses `SELECT *` (lib/db/import-export.ts) so any new column on
 // `workout_sets` is automatically included. Import uses an explicit INSERT
-// column list (line 463) which we updated in slice 1.
+// column list which we updated in slice 1.
+//
+// After BLD-783 rebase: PR introduced V7 categorized backup shape, so
+// `backup.data.workout_history.workout_sets` is the correct path. After
+// BLD-771's training_mode column drop the workout_sets INSERT has 20
+// placeholders (not 21), so grip_type is at slot 18 and grip_width at slot 19.
 //
 // This test verifies:
 //   1. Export reads grip_type / grip_width from the DB row and emits them
-//      in the backup.
+//      in the V7 categorized backup.
 //   2. Import binds grip_type / grip_width to the workout_sets INSERT at
 //      the new positional slots.
 //   3. Round-trip: export → JSON → import preserves values byte-for-byte.
@@ -68,14 +73,15 @@ describe('import-export — bodyweight variant round-trip (BLD-768)', () => {
     });
 
     const backup = await exportAllData();
-    const sets = (backup.data as Record<string, unknown[]>).workout_sets;
+    // V7 categorized shape: workout_sets nests under "workout_history" category.
+    const sets = ((backup.data as Record<string, Record<string, unknown[]>>).workout_history?.workout_sets) ?? [];
     expect(sets).toHaveLength(1);
     const row = sets[0] as Record<string, unknown>;
     expect(row.grip_type).toBe('overhand');
     expect(row.grip_width).toBe('narrow');
   });
 
-  it('import binds grip_type at slot 19 and grip_width at slot 20 on the workout_sets INSERT', async () => {
+  it('import binds grip_type at slot 18 and grip_width at slot 19 on the workout_sets INSERT', async () => {
     const insertCalls: { sql: string; params: unknown[] }[] = [];
     mockDb.runAsync.mockImplementation(async (sql: string, params: unknown[]) => {
       insertCalls.push({ sql, params });
@@ -107,10 +113,10 @@ describe('import-export — bodyweight variant round-trip (BLD-768)', () => {
     const wsInsert = insertCalls.find((c) => c.sql.includes('INSERT OR IGNORE INTO workout_sets'));
     expect(wsInsert).toBeDefined();
     // Column list ends with: ..., attachment, mount_position, grip_type, grip_width.
-    // Param indices (0-based): 17=attachment, 18=mount_position, 19=grip_type, 20=grip_width.
-    expect(wsInsert!.params).toHaveLength(21);
-    expect(wsInsert!.params[19]).toBe('overhand');
-    expect(wsInsert!.params[20]).toBe('narrow');
+    // Param indices (0-based, post-BLD-771 column drop): 16=attachment, 17=mount_position, 18=grip_type, 19=grip_width.
+    expect(wsInsert!.params).toHaveLength(20);
+    expect(wsInsert!.params[18]).toBe('overhand');
+    expect(wsInsert!.params[19]).toBe('narrow');
   });
 
   it('import binds null for grip fields when row omits them (legacy backup compat)', async () => {
@@ -142,8 +148,8 @@ describe('import-export — bodyweight variant round-trip (BLD-768)', () => {
     await importData(data);
     const wsInsert = insertCalls.find((c) => c.sql.includes('INSERT OR IGNORE INTO workout_sets'));
     expect(wsInsert).toBeDefined();
+    expect(wsInsert!.params[18]).toBeNull();
     expect(wsInsert!.params[19]).toBeNull();
-    expect(wsInsert!.params[20]).toBeNull();
   });
 
   it('round-trip: export → re-import preserves grip_type and grip_width', async () => {
@@ -173,7 +179,7 @@ describe('import-export — bodyweight variant round-trip (BLD-768)', () => {
 
     const wsInsert = insertCalls.find((c) => c.sql.includes('INSERT OR IGNORE INTO workout_sets'));
     expect(wsInsert).toBeDefined();
-    expect(wsInsert!.params[19]).toBe('mixed');
-    expect(wsInsert!.params[20]).toBe('wide');
+    expect(wsInsert!.params[18]).toBe('mixed');
+    expect(wsInsert!.params[19]).toBe('wide');
   });
 });
