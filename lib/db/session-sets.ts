@@ -256,7 +256,7 @@ export async function addSetsBatch(
           r.link_id, r.round, r.training_mode, r.tempo, r.set_type, r.exercise_position,
           r.attachment ?? null, r.mount_position ?? null,
           // BLD-768: positional binding contract — grip_type at index 12, grip_width at index 13.
-          // Pinned by `__tests__/lib/db/add-sets-batch-bodyweight-grip.test.ts`.
+          // Pinned by `__tests__/lib/db/add-sets-batch-bodyweight-variant.test.ts`.
           r.grip_type ?? null, r.grip_width ?? null,
         ]);
       }
