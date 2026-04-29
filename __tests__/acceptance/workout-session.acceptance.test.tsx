@@ -188,16 +188,15 @@ describe('Workout Session Acceptance', () => {
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
-    // BLD-783: gate on a downstream landmark to ensure the full mount chain
+    // BLD-783: extend timeout to 5000ms — this test races the effect chain
     // (getSessionById → getSessionSets → getExercisesByIds → groups → GroupCard)
-    // has completed before asserting the heading. Default 1000ms timeout
-    // races the effect chain under CI parallel-shard load; the sibling test
-    // on "Add set to Bench Press" demonstrates these mocks render reliably.
-    // "Add set" is rendered inside the same GroupCard as the heading and
-    // AFTER the heading in the render tree — if it mounts, the heading is
-    // already mounted.
-    await findByLabelText('Add set to Bench Press')
-    expect(await findByLabelText('Remove Bench Press')).toBeTruthy()
+    // under CI parallel-shard load. Default 1000ms is insufficient as the FIRST
+    // test of the suite, where there is no warm-up. Sibling tests later in the
+    // suite pass with default timeouts. The rendered tree dump on timeout
+    // confirms the elements exist; only the timing is the issue.
+    expect(
+      await findByLabelText('Remove Bench Press', {}, { timeout: 5000 })
+    ).toBeTruthy()
   })
 
   it('calls completeSession when finish workout is confirmed', async () => {

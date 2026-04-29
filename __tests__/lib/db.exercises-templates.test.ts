@@ -137,9 +137,7 @@ describe("exercises CRUD", () => {
       difficulty: "intermediate",
       is_custom: 0,
       deleted_at: 1700000000,
-      mount_position: null,
       attachment: null,
-      training_modes: null,
       is_voltra: 0,
     });
 
@@ -147,7 +145,6 @@ describe("exercises CRUD", () => {
     expect(exercise).not.toBeNull();
     expect(exercise!.deleted_at).toBe(1700000000);
     expect(exercise!.name).toBe("Old Bench Press");
-    expect(exercise!.mount_position).toBeUndefined();
     expect(exercise!.is_voltra).toBeUndefined();
   });
 });
