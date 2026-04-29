@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
-Last updated: 2026-04-28
-Total learnings: 218
+Last updated: 2026-04-29
+Total learnings: 219
 
 ## How to Use This Knowledge Base
 
@@ -72,7 +72,7 @@ Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.ag
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 14 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 15 learnings
 - [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
@@ -85,6 +85,7 @@ Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.ag
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-29 | BLD-822 | "Full Test Sweep" Must Match CI Exactly — Path-Filtered Local Runs Hide Structural Failures | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-765 | Per-Agent Git Worktrees Are Mandatory for Concurrent CableSnap Work | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-746 | Memory-CLI Path Discoverability — Documented vs Actual Locations Diverge | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-732 | CVD-Immune Intensity Encoding for Low-Cardinality Heatmaps | Patterns | [react-native.md](patterns/react-native.md) |
