@@ -25,6 +25,7 @@ import WeeklySummary from "../../components/WeeklySummary";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { WorkoutChartCard, SessionsCard } from "./WorkoutCards";
 import { PRSummaryCard } from "./PRSummaryCard";
+import { RPETrendCard, RatingTrendCard } from "./TrendCards";
 import CalendarView from "./CalendarView";
 import StrengthLevelsCard from "./StrengthLevelsCard";
 import ActiveGoalsCard from "./ActiveGoalsCard";
@@ -213,6 +214,10 @@ export default function WorkoutSegment() {
               {volCard}
             </View>
             <View style={styles.grid}>
+              <RPETrendCard chartWidth={chartWidth} style={wideCard} />
+              <RatingTrendCard chartWidth={chartWidth} style={wideCard} />
+            </View>
+            <View style={styles.grid}>
               <PRSummaryCard
                 recentPRs={recentPRs}
                 stats={prStats}
@@ -232,6 +237,8 @@ export default function WorkoutSegment() {
             {achievementsCard}
             {freqCard}
             {volCard}
+            <RPETrendCard chartWidth={chartWidth} />
+            <RatingTrendCard chartWidth={chartWidth} />
             <PRSummaryCard
               recentPRs={recentPRs}
               stats={prStats}
