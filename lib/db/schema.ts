@@ -100,6 +100,11 @@ export const workoutSets = sqliteTable("workout_sets", {
   // NEVER auto-stamped from `exercises.attachment` default — see lib/cable-variant.ts.
   attachment: text("attachment"),
   mount_position: text("mount_position"),
+  // BLD-768: per-set bodyweight grip variant logging (grip type + grip width).
+  // Both nullable. NULL = user did not specify or pre-migration row.
+  // Gating + autofill in `lib/bodyweight-grip-variant.ts`.
+  grip_type: text("grip_type"),
+  grip_width: text("grip_width"),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),

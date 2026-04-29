@@ -109,6 +109,14 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // of row count). Idempotent via `addColumnIfMissing`.
   await addColumnIfMissing(database, "workout_sets", "attachment", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "mount_position", "TEXT DEFAULT NULL");
+  // BLD-768: per-set bodyweight grip variant logging (grip_type + grip_width).
+  // NULL = user did not specify or pre-migration row. NEVER auto-stamped from
+  // any exercise-level default — see `lib/bodyweight-grip-variant.ts` for the
+  // autofill chain. Same idempotency guarantees as the cable variant columns
+  // above (BLD-771): ALTER ADD COLUMN with default NULL is metadata-only on
+  // SQLite and `addColumnIfMissing` no-ops on second run.
+  await addColumnIfMissing(database, "workout_sets", "grip_type", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sets", "grip_width", "TEXT DEFAULT NULL");
 
   // workout_sets.set_type migration (replaces deprecated is_warmup column)
   if (!(await hasColumn(database, "workout_sets", "set_type"))) {
