@@ -118,11 +118,21 @@ jobs:
         # (node_modules/@sentry/react-native/sentry.gradle:11) that
         # wear-tests.yml uses. We're verifying build correctness +
         # GMS-presence grep, not source-map upload.
+        #
+        # BLD-736 tenth-order diagnostic round (CEO ruling 63d956ac, Option A):
+        # Run mergeExtDexRelease with --info BEFORE assembleRelease so we
+        # capture its task input set even when the downstream grep fails.
+        # Then run the full assembleRelease (which will re-use the now-up-to-date
+        # mergeExtDexRelease task without re-running it).
         env:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -euo pipefail
           cd android
+          # First: capture mergeExtDexRelease --info output for diagnostic (3).
+          # This proves whether play-services-wearable AAR participates in DEX merge.
+          ./gradlew :app:mergeExtDexRelease --info 2>&1 | tee /tmp/wearos-m0-diag/mergeExtDexRelease-info.log || true
+          # Then: full release build for the GMS-presence grep.
           ./gradlew :app:assembleRelease
           cd ..
           APK=android/app/build/outputs/apk/release/app-release.apk
@@ -137,6 +147,70 @@ jobs:
             exit 1
           fi
           echo "Play APK GMS proof OK — F-Droid (excluded) and Play (included) variants are correctly differentiated."
+
+      - name: Diagnostic — bytecode evidence for WEARABLE_API_CLASS pin
+        # BLD-736 tenth-order diagnostic round (CEO ruling 63d956ac).
+        # Hypothesis (g) was REFUTED at count=0 on aaa2433d. CEO's three
+        # sub-hypotheses for which step of the load-class pin chain broke:
+        #   (1) Kotlin DCE'd the `private val WEARABLE_API_CLASS = Wearable::class.java`
+        #       field despite @Suppress("unused"). Evidence: <clinit> in
+        #       WearOSModule.class lacks `LDC com/google/android/gms/wearable/Wearable`.
+        #   (2) AGP stripped the LDC from the bridge AAR's classes.jar.
+        #       Evidence: javap -p shows the field but <clinit> body is empty/missing.
+        #   (3) mergeExtDexRelease ignored the bytecode reference.
+        #       Evidence: javap shows LDC present AND mergeExtDexRelease.log
+        #       lacks `play-services-wearable-*.aar` in its task inputs.
+        #
+        # Always run — diagnostic value is highest precisely when assemble failed.
+        if: always()
+        run: |
+          set -euo pipefail
+          BRIDGE_AAR_CLASSES=modules/expo-wearos-bridge/android/build/intermediates/aar_main_jar/release/classes.jar
+          # Fall back to other intermediate paths if AGP version stored it elsewhere.
+          if [ ! -f "$BRIDGE_AAR_CLASSES" ]; then
+            FOUND=$(find modules/expo-wearos-bridge -path '*/intermediates/*classes*.jar' -type f 2>/dev/null | head -5 || true)
+            echo "Primary path missing. Candidate classes.jar files under bridge module:"
+            echo "$FOUND"
+            BRIDGE_AAR_CLASSES=$(echo "$FOUND" | head -1)
+          fi
+          if [ -z "$BRIDGE_AAR_CLASSES" ] || [ ! -f "$BRIDGE_AAR_CLASSES" ]; then
+            echo "::warning::Bridge AAR classes.jar not found — cannot run javap diagnostic."
+            echo "(no bridge classes.jar found at any expected intermediate path)" \
+              > /tmp/wearos-m0-diag/javap-WearOSModule.txt
+          else
+            echo "Found bridge classes.jar: $BRIDGE_AAR_CLASSES"
+            cp "$BRIDGE_AAR_CLASSES" /tmp/wearos-m0-diag/bridge-classes.jar
+            mkdir -p /tmp/wearos-m0-diag/bridge-extracted
+            (cd /tmp/wearos-m0-diag/bridge-extracted && unzip -o /tmp/wearos-m0-diag/bridge-classes.jar > /dev/null)
+            MOD_CLASS=/tmp/wearos-m0-diag/bridge-extracted/com/persoack/cablesnap/wearbridge/WearOSModule.class
+            if [ ! -f "$MOD_CLASS" ]; then
+              echo "::warning::WearOSModule.class not at expected path inside classes.jar."
+              find /tmp/wearos-m0-diag/bridge-extracted -name 'WearOSModule*.class' | head -5
+              MOD_CLASS=$(find /tmp/wearos-m0-diag/bridge-extracted -name 'WearOSModule*.class' | head -1)
+            fi
+            if [ -n "$MOD_CLASS" ] && [ -f "$MOD_CLASS" ]; then
+              echo "=== javap -c -p $MOD_CLASS (truncated to file) ==="
+              javap -c -p -v "$MOD_CLASS" > /tmp/wearos-m0-diag/javap-WearOSModule.txt 2>&1 || true
+              # Also dump the companion class — Kotlin emits the val into Companion or root,
+              # depending on JVM target. Capture both.
+              for CMP in /tmp/wearos-m0-diag/bridge-extracted/com/persoack/cablesnap/wearbridge/WearOSModule\$*.class; do
+                [ -f "$CMP" ] && javap -c -p -v "$CMP" >> /tmp/wearos-m0-diag/javap-WearOSModule.txt 2>&1 || true
+              done
+              echo "=== Quick grep: any 'wearable/Wearable' string reference in disassembly? ==="
+              grep -c 'wearable/Wearable\|WEARABLE_API_CLASS' /tmp/wearos-m0-diag/javap-WearOSModule.txt || \
+                echo "(no Wearable string references found in disassembly)"
+            else
+              echo "(WearOSModule.class not found anywhere — pin compilation chain broken upstream)" \
+                > /tmp/wearos-m0-diag/javap-WearOSModule.txt
+            fi
+          fi
+          # Capture mergeExtDexRelease task inputs — search for play-services-wearable AAR participation.
+          if [ -f /tmp/wearos-m0-diag/mergeExtDexRelease-info.log ]; then
+            echo "=== mergeExtDexRelease wearable AAR participation check ==="
+            grep -iE 'play-services-wearable|wearable.*aar|task.*mergeExtDexRelease' \
+              /tmp/wearos-m0-diag/mergeExtDexRelease-info.log | head -50 || \
+              echo "(no wearable AAR / mergeExtDexRelease task lines matched)"
+          fi
 
       - name: Upload Play APK as artifact (no release / no tag / no push)
         uses: actions/upload-artifact@v4
