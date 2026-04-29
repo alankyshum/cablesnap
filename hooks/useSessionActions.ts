@@ -31,8 +31,14 @@ import {
   getPreviousSetsBatch,
   getRecentVariantHistory,
   updateSetVariant,
+  getRecentBodyweightGripHistory,
+  updateSetBodyweightVariant,
 } from "../lib/db/session-sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
+import {
+  getLastBodyweightGripVariant,
+  isBodyweightGripExercise,
+} from "../lib/bodyweight-grip-variant";
 import {
   resolvePrefillCandidate,
   type PrefillCandidate,
@@ -494,6 +500,47 @@ export function useSessionActions({
       }
     }
 
+    // BLD-822: autofill bodyweight grip variant (grip_type + grip_width) from
+    // the user's last logged set on this exercise. Sibling of the cable
+    // variant autofill above; gated on `isBodyweightGripExercise()` (dual:
+    // equipment === "bodyweight" AND name regex). Mutual exclusion vs the
+    // cable block above is enforced by the predicates being disjoint —
+    // `isCableExercise` requires equipment.includes("cable") while
+    // `isBodyweightGripExercise` requires equipment === "bodyweight". A given
+    // set can only enter one of the two blocks.
+    //
+    // Per-attribute resolution via `getLastBodyweightGripVariant()` — if the
+    // user's last set has grip_type='overhand' but no grip_width, only
+    // grip_type autofills. NULL/NULL when no prior history (closes the QD-B2
+    // silent-default trap; there is no exercise-level default to fall back
+    // onto for grip — the column doesn't exist on `exercises`).
+    //
+    // Reviewer blocker #1 (BLD-771 PR #426) carried forward: capture into
+    // `setWithModifier` so the new SetRow renders with the correct chips
+    // immediately, without a refresh.
+    let autofilledGripType: typeof newSet.grip_type = null;
+    let autofilledGripWidth: typeof newSet.grip_width = null;
+    if (group && isBodyweightGripExercise({ equipment: group.equipment, name: group.name })) {
+      try {
+        const history = await queryClient.fetchQuery({
+          queryKey: ['bodyweight-grip-history', exerciseId],
+          queryFn: () => getRecentBodyweightGripHistory(exerciseId),
+        });
+        const last = getLastBodyweightGripVariant(history);
+        if (last.grip_type !== null || last.grip_width !== null) {
+          await updateSetBodyweightVariant(newSet.id, last.grip_type, last.grip_width);
+          autofilledGripType = last.grip_type;
+          autofilledGripWidth = last.grip_width;
+          queryClient.invalidateQueries({
+            queryKey: ['bodyweight-grip-history', exerciseId],
+          });
+        }
+      } catch {
+        // Autofill is best-effort; on any error the set is created with
+        // NULL/NULL and the user can pick via the chip → picker flow.
+      }
+    }
+
     // BLD-655 + BLD-682: prefill weight/reps (or weight/duration_seconds)
     // using the resolvePrefillCandidate helper.
     //   1. In-session prior working set (BLD-655 path).
@@ -573,6 +620,10 @@ export function useSessionActions({
       // autofill resolved to NULL or the gate (isCableExercise) was false.
       attachment: autofilledAttachment ?? newSet?.attachment ?? null,
       mount_position: autofilledMountPosition ?? newSet?.mount_position ?? null,
+      // BLD-822: same propagation pattern for bodyweight grip autofill so
+      // chips render the autofilled grip immediately without a refresh.
+      grip_type: autofilledGripType ?? newSet?.grip_type ?? null,
+      grip_width: autofilledGripWidth ?? newSet?.grip_width ?? null,
       previous: "-",
     };
     setGroups((prev) =>

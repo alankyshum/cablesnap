@@ -46,6 +46,14 @@ export type GroupCardProps = {
   // VO/TalkBack focus to the originating row on dismiss.
   onOpenVariantPicker?: (setId: string, returnFocusHandle: number | null) => void;
   onClearVariant?: (setId: string) => void;
+  // BLD-822: bodyweight grip variant wiring (forwarded to SetRow; SetRow
+  // self-gates on isBodyweightGripExercise({equipment, name}) so passing for
+  // non-matching groups is a no-op). Picker-open carries a returnFocus handle
+  // so the grip picker hook can restore VO/TalkBack focus to the originating
+  // row on dismiss. Hook-local ref ensures isolation from cable variant
+  // focus state (QD-10).
+  onOpenBodyweightGripPicker?: (setId: string, returnFocusHandle: number | null) => void;
+  onClearBodyweightGrip?: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
@@ -68,6 +76,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
   onOpenVariantPicker, onClearVariant,
+  onOpenBodyweightGripPicker, onClearBodyweightGrip,
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
   onPrefill,
@@ -128,6 +137,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
             onClearBodyweightModifier={onClearBodyweightModifier}
             onOpenVariantPicker={onOpenVariantPicker}
             onClearVariant={onClearVariant}
+            exerciseName={group.name}
+            onOpenBodyweightGripPicker={onOpenBodyweightGripPicker}
+            onClearBodyweightGrip={onClearBodyweightGrip}
             isTimerRunning={isActiveSet && (timerIsRunning ?? false)}
             isTimerActive={isActiveSet}
             timerDisplaySeconds={isActiveSet ? timerDisplaySeconds : undefined}

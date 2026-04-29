@@ -28,6 +28,8 @@ import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
 import { SetAttachmentChip } from "./SetAttachmentChip";
 import { SetMountPositionChip } from "./SetMountPositionChip";
+import { SetGripTypeChip } from "./SetGripTypeChip";
+import { SetGripWidthChip } from "./SetGripWidthChip";
 import SwipeRowAction from "../../components/SwipeRowAction";
 import { getAppSetting, setAppSetting } from "@/lib/db";
 import { radii } from "../../constants/design-tokens";
@@ -38,6 +40,7 @@ import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
 import { isCableExercise } from "../../lib/cable-variant";
+import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } from "../../lib/bodyweight-grip-variant";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
@@ -131,6 +134,21 @@ export type SetRowProps = {
   // via a ref and resolves the handle via React Native's findNodeHandle().
   onOpenVariantPicker?: (setId: string, returnFocusHandle: number | null) => void;
   onClearVariant?: (setId: string) => void;
+  // BLD-822: per-set bodyweight grip variant. Chips are display-only and tap
+  // to open the bodyweight grip picker via onOpenBodyweightGripPicker;
+  // long-press clears via onClearBodyweightGrip (writes NULL/NULL through
+  // updateSetBodyweightVariant — same write path as the picker's Clear
+  // button). Both callbacks are optional; the chips self-suppress when the
+  // exercise does not match the bodyweight-grip gate
+  // (isBodyweightGripExercise({equipment, name})), so passing these props
+  // for non-matching rows is a no-op.
+  //
+  // QD-10: SetRow captures its grip footer Pressable via a separate ref
+  // (`bodyweightGripFooterRef`) so the grip picker hook restores focus to
+  // its own row, never to the cable variant row's `variantFooterRef`.
+  exerciseName?: string;
+  onOpenBodyweightGripPicker?: (setId: string, returnFocusHandle: number | null) => void;
+  onClearBodyweightGrip?: (setId: string) => void;
   // Timer controls (duration mode only)
   isTimerRunning?: boolean;
   isTimerActive?: boolean;
@@ -147,12 +165,19 @@ export const SetRow = memo(function SetRow({
   onTimerStart, onTimerStop,
   isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
   onOpenVariantPicker, onClearVariant,
+  exerciseName, onOpenBodyweightGripPicker, onClearBodyweightGrip,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-771: ref to the variant footer Pressable so the picker hook can
   // resolve its accessibility node handle on open and restore VO/TalkBack
   // focus to it on dismiss (reviewer blocker #4, PR #426).
   const variantFooterRef = useRef<View>(null);
+  // BLD-822: separate ref for the bodyweight grip footer Pressable. MUST be
+  // distinct from variantFooterRef so the grip picker hook restores focus
+  // only to grip rows (QD-10). Tested in
+  // grip-picker-focus-isolation.test.tsx with both rows mounted in the same
+  // render tree (TL-N2).
+  const bodyweightGripFooterRef = useRef<View>(null);
   // BLD-559: synchronous confirmation feedback owned exclusively here.
   // usePRCelebration MUST NOT fire haptic/audio. Any change here requires
   // psychologist re-review per PLAN-BLD-559.
@@ -506,6 +531,14 @@ export const SetRow = memo(function SetRow({
           }}
           onLongPress={() => onClearVariant?.(set.id)}
           accessibilityRole="button"
+          // QD-8 (BLD-822): a11y composite labels diverge intentionally — cable
+          // footer is terse (legacy BLD-771): `"Set 1 cable variant"`. Grip
+          // footer (BLD-822, below) enumerates values:
+          // `"Set 1 grip variant: Overhand, Narrow"`. Per ux-designer rev-2
+          // verdict, ratchet UP via BLD-823 (enrich cable a11y to match
+          // grip's enumerated labels), never downgrade grip. Standardize when
+          // BLD-823 is implemented; do NOT diverge further without updating
+          // both sides.
           accessibilityLabel={`Set ${set.set_number} cable variant`}
           accessibilityHint="Double tap to choose attachment and pulley position; long press to clear"
           style={styles.variantFooter}
@@ -541,6 +574,129 @@ export const SetRow = memo(function SetRow({
           )}
         </Pressable>
       ) : null}
+
+      {/*
+        BLD-822: Bodyweight grip variant footer. Sibling to the cable footer
+        above — same shape (Pressable wrapping chips, opens picker on tap,
+        clears on long-press) but bound to a SEPARATE ref
+        (`bodyweightGripFooterRef`) so the grip picker hook restores focus to
+        its own row, never to the cable row's `variantFooterRef`. This
+        isolation is enforced by the QD-10 mutual-exclusion test fixture
+        (TL-N2 single-`it()` shape) in
+        `__tests__/hooks/grip-picker-focus-isolation.test.tsx`.
+
+        Mutual exclusion with the cable footer is enforced by the gating
+        predicates: `isCableExercise()` requires `equipment.includes("cable")`
+        while `isBodyweightGripExercise()` requires `equipment === "bodyweight"`.
+        The two are disjoint by construction, so no row ever renders both
+        footers. Coexistence with `BodyweightModifierChip` (in `pickerCol`) is
+        explicit: weighted pull-ups render the modifier chip in the input row
+        AND this grip footer below — independent storage, independent UI.
+
+        Two separate placeholders (per ux-designer QD-9 verdict): when only
+        one of grip_type/grip_width is set, the other shows its own
+        "Tap to set" affordance. Combining them would break the partial-state
+        UX (set has overhand grip but width unspecified — the user needs to
+        see that width is the missing axis).
+
+        QD-8: composite a11y label enumerates values, e.g.:
+          - both set:    "Set 1 grip variant: Overhand, Narrow. Double-tap to edit."
+          - only grip:   "Set 1 grip variant: Overhand, width not set. Double-tap to edit."
+          - only width:  "Set 1 grip variant: grip not set, Narrow. Double-tap to edit."
+          - both null:   "Set 1 grip variant: not set. Double-tap to choose."
+        Cable footer's terse `"Set 1 cable variant"` (above) is intentionally
+        terse for now; BLD-823 will ratchet it UP to match this format. Do
+        NOT diverge further without updating both blocks.
+      */}
+      {isBodyweightGripExercise({ equipment, name: exerciseName }) ? (() => {
+        const gt = set.grip_type ?? null;
+        const gw = set.grip_width ?? null;
+        let composite: string;
+        if (gt != null && gw != null) {
+          composite = `Set ${set.set_number} grip variant: ${formatGripTypeLabel(gt)}, ${formatGripWidthLabel(gw)}. Double-tap to edit.`;
+        } else if (gt != null) {
+          composite = `Set ${set.set_number} grip variant: ${formatGripTypeLabel(gt)}, width not set. Double-tap to edit.`;
+        } else if (gw != null) {
+          composite = `Set ${set.set_number} grip variant: grip not set, ${formatGripWidthLabel(gw)}. Double-tap to edit.`;
+        } else {
+          composite = `Set ${set.set_number} grip variant: not set. Double-tap to choose.`;
+        }
+        return (
+          <Pressable
+            ref={bodyweightGripFooterRef}
+            onPress={() => {
+              const handle = bodyweightGripFooterRef.current
+                ? findNodeHandle(bodyweightGripFooterRef.current)
+                : null;
+              onOpenBodyweightGripPicker?.(set.id, handle);
+            }}
+            onLongPress={() => onClearBodyweightGrip?.(set.id)}
+            accessibilityRole="button"
+            accessibilityLabel={composite}
+            accessibilityHint="Long press to clear grip and width"
+            style={styles.variantFooter}
+          >
+            {gt == null && gw == null ? (
+              <View
+                style={[
+                  styles.variantPlaceholder,
+                  { borderColor: colors.outline },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.variantPlaceholderLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Tap to set grip
+                </Text>
+              </View>
+            ) : (
+              <>
+                {gt != null ? (
+                  <SetGripTypeChip gripType={gt} />
+                ) : (
+                  <View
+                    style={[
+                      styles.variantPlaceholder,
+                      { borderColor: colors.outline },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.variantPlaceholderLabel,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      Tap to set grip
+                    </Text>
+                  </View>
+                )}
+                {gw != null ? (
+                  <SetGripWidthChip gripWidth={gw} />
+                ) : (
+                  <View
+                    style={[
+                      styles.variantPlaceholder,
+                      { borderColor: colors.outline },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.variantPlaceholderLabel,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      Tap to set width
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </Pressable>
+        );
+      })() : null}
 
       <PlateHint weight={set.weight} unit={unit} equipment={equipment} />
     </View>
