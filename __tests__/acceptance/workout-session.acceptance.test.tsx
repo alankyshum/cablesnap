@@ -188,14 +188,15 @@ describe('Workout Session Acceptance', () => {
 
     const { findByLabelText } = renderScreen(<ActiveSession />)
 
-    // BLD-783: query by the heading Pressable's accessibilityLabel rather than
-    // text. The heading <Text>Bench Press</Text> sits inside a <Pressable
-    // accessible={true} accessibilityLabel="Remove Bench Press"> which causes
-    // RN's accessibility tree to flatten the inner text node — RNTL's
-    // findByText cannot see "Bench Press" as host text content for this
-    // specific render path. The accessibilityLabel IS a host attribute and is
-    // uniquely tied to the rendered exercise (matches only when the heading
-    // exists).
+    // BLD-783: gate on a downstream landmark to ensure the full mount chain
+    // (getSessionById → getSessionSets → getExercisesByIds → groups → GroupCard)
+    // has completed before asserting the heading. Default 1000ms timeout
+    // races the effect chain under CI parallel-shard load; the sibling test
+    // on "Add set to Bench Press" demonstrates these mocks render reliably.
+    // "Add set" is rendered inside the same GroupCard as the heading and
+    // AFTER the heading in the render tree — if it mounts, the heading is
+    // already mounted.
+    await findByLabelText('Add set to Bench Press')
     expect(await findByLabelText('Remove Bench Press')).toBeTruthy()
   })
 
