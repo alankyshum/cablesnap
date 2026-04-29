@@ -124,9 +124,52 @@ if (muscleSet.size > 0 && !ex.primary_muscles.some(m => muscleSet.has(m))) retur
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**Verdict: APPROVE WITH CONDITIONS**
+
+**Factual corrections required:**
+1. Plan claims ~200 exercises — seed data has 56. Not a blocker but misleading for perf reasoning.
+2. `MUSCLE_GROUP_LIST` / `MUSCLE_GROUP_LABELS` don't exist. The actual exports are `MUSCLE_GROUPS_BY_REGION` and `MUSCLE_LABELS` in `lib/types.ts`. Plan must reference correct names.
+3. `EQUIPMENT_ICONS` doesn't exist in `constants/theme.ts` — this is new work, not a reference to existing code.
+
+**UX concerns (blockers):**
+- **B1 — Vertical space:** 3 chip rows (6 categories + 8 equipment + 14 muscle groups = 28 chips) will consume ~150px+ of vertical space before any exercise appears. On small phones this leaves very little list area. **Require:** collapsed-by-default for equipment and muscle rows, or a filter sheet/modal. Decide before implementation, not "v2."
+- **B2 — 14 muscle chips is too many for a horizontal row.** "full_body" and some rarely-used groups (forearms, traps) will be off-screen. Users won't discover them. Consider grouping by region (the `MUSCLE_GROUPS_BY_REGION` structure already exists) or a sectioned dropdown.
+
+**UX concerns (non-blocking, should address):**
+- **S1 — Filter state discoverability:** When equipment/muscle rows are scrolled off-screen, user has no indicator that filters are active. Add a persistent badge or summary (e.g., "3 filters active") near the search bar.
+- **S2 — AND logic surprise:** Selecting "Bodyweight" + "Biceps" yields only bodyweight biceps exercises (likely very few). The empty state helps, but consider showing the active filter count in the empty state message so users know which filter to relax.
+
+**Data integrity:**
+- `primary_muscles` is stored as JSON text in SQLite. The filter code must parse it correctly. Plan's pseudocode (`ex.primary_muscles.some(...)`) assumes it's already an array — verify the ORM/query layer deserializes it. If the raw DB row is returned, `JSON.parse` is needed.
+
+**Testing gap (blocker):**
+- **B3 — No existing filter tests.** Zero tests cover the current category filtering logic. The plan's AC says "PR passes all existing tests with no regressions" but that's a low bar when there are no filter tests. **Require:** AC must add explicit test criteria — at minimum: (1) equipment filter works, (2) muscle filter works, (3) AND cross-dimension, (4) OR within-dimension, (5) empty state, (6) clear all resets.
+
+**a11y:**
+- Plan's a11y approach is adequate. One addition: chip rows should have `accessibilityLabel` on the section header (e.g., "Equipment filters") so screen reader users understand the grouping, not just individual chips.
+
+**Risk:**
+- Low blast radius — purely additive UI, no schema changes, no data mutations. Rollback is trivial (revert the PR).
+
+**Summary:** Solid plan with correct instincts. Fix B1 (vertical space strategy), B2 (muscle group UX), and B3 (test criteria) before moving to implementation.
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: APPROVE WITH CONDITIONS**
+
+**Factual corrections:**
+1. 56 seeded exercises, not ~200. Performance is a non-issue regardless.
+2. `MUSCLE_GROUP_LIST`/`MUSCLE_GROUP_LABELS` don't exist — use `MUSCLE_GROUPS_BY_REGION` and `MUSCLE_LABELS`.
+3. `primary_muscles` deserialization is already handled by `mapRow()` in `lib/db/exercises.ts:13` — QD's concern is a false alarm.
+
+**Architecture:** Sound. Pure client-side filtering, no schema changes, no new queries. Recommend three separate state variables (`selected`, `selectedEquipment`, `selectedMuscles`) instead of extending the existing union type.
+
+**Blockers (agrees with QD):**
+- **B1 — Vertical space:** Must resolve before implementation, not v2. Recommend bottom sheet pattern (filter button next to search bar, equipment + muscle in sheet, category chips stay inline).
+- **B2 — 14 muscle chips:** Bottom sheet with `MUSCLE_GROUPS_BY_REGION` sectioned layout solves this.
+- **B3 — Test criteria:** Must add explicit filter test requirements to AC.
+
+**Non-blocking:** Add active filter badge on filter button; consider moving "Custom" to filter sheet; fix exercise count in plan.
+
+**Effort:** 2-4 hours, low risk, no dependencies.
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO
 ### CEO Decision
