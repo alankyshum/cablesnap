@@ -28,9 +28,27 @@ jest.mock('victory-native', () => {
   }
 })
 
+jest.mock('expo-router', () => ({
+  useFocusEffect: (cb: () => void) => cb(),
+}))
+
+const mockGetRecentSessionRPEs = jest.fn().mockResolvedValue([])
+const mockGetRecentSessionRatings = jest.fn().mockResolvedValue([])
+
+jest.mock('@/lib/db/e1rm-trends', () => ({
+  getRecentSessionRPEs: (...args: unknown[]) => mockGetRecentSessionRPEs(...args),
+  getRecentSessionRatings: (...args: unknown[]) => mockGetRecentSessionRatings(...args),
+}))
+
 import { TrendLineCard, RPETrendCard, RatingTrendCard } from '@/components/progress/TrendCards'
 
 describe('TrendCards', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetRecentSessionRPEs.mockResolvedValue([])
+    mockGetRecentSessionRatings.mockResolvedValue([])
+  })
+
   describe('TrendLineCard', () => {
     test('shows empty state message when data is empty', () => {
       const { getByText } = render(
@@ -85,45 +103,32 @@ describe('TrendCards', () => {
   describe('RPETrendCard', () => {
     test('shows RPE empty state when no data', () => {
       const { getByText } = render(
-        <RPETrendCard rpeData={[]} chartWidth={300} />
+        <RPETrendCard chartWidth={300} />
       )
       expect(getByText('Avg RPE per Session (1–10)')).toBeTruthy()
       expect(getByText('Log RPE on your sets to see trends here.')).toBeTruthy()
+      expect(mockGetRecentSessionRPEs).toHaveBeenCalled()
     })
 
-    test('renders RPE chart with session data', () => {
-      const rpeData = [
-        { session_id: 's1', started_at: 1000, avg_rpe: 7.5 },
-        { session_id: 's2', started_at: 2000, avg_rpe: 8.0 },
-      ]
-      const { getByText, getByLabelText } = render(
-        <RPETrendCard rpeData={rpeData} chartWidth={300} />
-      )
-      expect(getByText('Avg RPE per Session (1–10)')).toBeTruthy()
-      expect(getByLabelText('Avg RPE per Session (1–10): latest value 8.0, 2 sessions')).toBeTruthy()
+    test('fetches RPE data on focus', () => {
+      render(<RPETrendCard chartWidth={300} />)
+      expect(mockGetRecentSessionRPEs).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('RatingTrendCard', () => {
     test('shows rating empty state when no data', () => {
       const { getByText } = render(
-        <RatingTrendCard ratingData={[]} chartWidth={300} />
+        <RatingTrendCard chartWidth={300} />
       )
       expect(getByText('Session Ratings (1–5)')).toBeTruthy()
       expect(getByText('Rate your sessions to see trends here.')).toBeTruthy()
+      expect(mockGetRecentSessionRatings).toHaveBeenCalled()
     })
 
-    test('renders rating chart with session data', () => {
-      const ratingData = [
-        { session_id: 's1', started_at: 1000, rating: 4 },
-        { session_id: 's2', started_at: 2000, rating: 3 },
-        { session_id: 's3', started_at: 3000, rating: 5 },
-      ]
-      const { getByText, getByLabelText } = render(
-        <RatingTrendCard ratingData={ratingData} chartWidth={300} />
-      )
-      expect(getByText('Session Ratings (1–5)')).toBeTruthy()
-      expect(getByLabelText('Session Ratings (1–5): latest value 5.0, 3 sessions')).toBeTruthy()
+    test('fetches rating data on focus', () => {
+      render(<RatingTrendCard chartWidth={300} />)
+      expect(mockGetRecentSessionRatings).toHaveBeenCalledTimes(1)
     })
   })
 })

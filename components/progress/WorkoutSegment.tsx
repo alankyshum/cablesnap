@@ -18,11 +18,6 @@ import {
   getRecentPRsWithDelta,
   getPRStats,
 } from "../../lib/db/pr-dashboard";
-import {
-  getRecentSessionRPEs,
-  getRecentSessionRatings,
-} from "../../lib/db/e1rm-trends";
-import type { SessionRPERow, SessionRatingRow } from "../../lib/db/e1rm-trends";
 import type { RecentPR, PRStats } from "../../lib/db/pr-dashboard";
 import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
@@ -80,21 +75,17 @@ export default function WorkoutSegment() {
   const [prStats, setPRStats] = useState<PRStats>({ totalPRs: 0, prsThisMonth: 0 });
   const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [sessions, setSessions] = useState<SessionRow[]>([]);
-  const [rpeData, setRpeData] = useState<SessionRPERow[]>([]);
-  const [ratingData, setRatingData] = useState<SessionRatingRow[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [f, v, rp, ps, s, settings, rpes, ratings] = await Promise.all([
+        const [f, v, rp, ps, s, settings] = await Promise.all([
           getWeeklySessionCounts(),
           getWeeklyVolume(),
           getRecentPRsWithDelta(3),
           getPRStats(),
           getCompletedSessionsWithSetCount(),
           getBodySettings(),
-          getRecentSessionRPEs(),
-          getRecentSessionRatings(),
         ]);
         setFreq(f);
         setVol(v);
@@ -102,8 +93,6 @@ export default function WorkoutSegment() {
         setPRStats(ps);
         setSessions(s);
         setWeightUnit(settings.weight_unit as "kg" | "lb");
-        setRpeData(rpes);
-        setRatingData(ratings);
       })();
     }, []),
   );
@@ -225,8 +214,8 @@ export default function WorkoutSegment() {
               {volCard}
             </View>
             <View style={styles.grid}>
-              <RPETrendCard rpeData={rpeData} chartWidth={chartWidth} style={wideCard} />
-              <RatingTrendCard ratingData={ratingData} chartWidth={chartWidth} style={wideCard} />
+              <RPETrendCard chartWidth={chartWidth} style={wideCard} />
+              <RatingTrendCard chartWidth={chartWidth} style={wideCard} />
             </View>
             <View style={styles.grid}>
               <PRSummaryCard
@@ -248,8 +237,8 @@ export default function WorkoutSegment() {
             {achievementsCard}
             {freqCard}
             {volCard}
-            <RPETrendCard rpeData={rpeData} chartWidth={chartWidth} />
-            <RatingTrendCard ratingData={ratingData} chartWidth={chartWidth} />
+            <RPETrendCard chartWidth={chartWidth} />
+            <RatingTrendCard chartWidth={chartWidth} />
             <PRSummaryCard
               recentPRs={recentPRs}
               stats={prStats}

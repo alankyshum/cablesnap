@@ -1,8 +1,15 @@
+import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { CartesianChart, Line, Scatter } from "victory-native";
+import { useFocusEffect } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import {
+  getRecentSessionRPEs,
+  getRecentSessionRatings,
+} from "../../lib/db/e1rm-trends";
+import type { SessionRPERow, SessionRatingRow } from "../../lib/db/e1rm-trends";
 
 type TrendLineCardProps = {
   title: string;
@@ -90,28 +97,26 @@ export function TrendLineCard({
   );
 }
 
-// ─── Pre-built RPE & Rating Cards ──────────────────────────────────
-
-type SessionRPERow = {
-  session_id: string;
-  started_at: number;
-  avg_rpe: number;
-};
-
-type SessionRatingRow = {
-  session_id: string;
-  started_at: number;
-  rating: number;
-};
+// ─── Self-Fetching RPE & Rating Cards ──────────────────────────────
 
 type RPETrendCardProps = {
-  rpeData: SessionRPERow[];
   chartWidth: number;
   style?: object;
 };
 
-export function RPETrendCard({ rpeData, chartWidth, style }: RPETrendCardProps) {
+export function RPETrendCard({ chartWidth, style }: RPETrendCardProps) {
   const colors = useThemeColors();
+  const [rpeData, setRpeData] = useState<SessionRPERow[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const rows = await getRecentSessionRPEs();
+        setRpeData(rows);
+      })();
+    }, []),
+  );
+
   const data = rpeData.map((d, i) => ({ x: i, y: d.avg_rpe }));
 
   return (
@@ -128,17 +133,23 @@ export function RPETrendCard({ rpeData, chartWidth, style }: RPETrendCardProps) 
 }
 
 type RatingTrendCardProps = {
-  ratingData: SessionRatingRow[];
   chartWidth: number;
   style?: object;
 };
 
-export function RatingTrendCard({
-  ratingData,
-  chartWidth,
-  style,
-}: RatingTrendCardProps) {
+export function RatingTrendCard({ chartWidth, style }: RatingTrendCardProps) {
   const colors = useThemeColors();
+  const [ratingData, setRatingData] = useState<SessionRatingRow[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const rows = await getRecentSessionRatings();
+        setRatingData(rows);
+      })();
+    }, []),
+  );
+
   const data = ratingData.map((d, i) => ({ x: i, y: d.rating }));
 
   return (
