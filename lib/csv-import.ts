@@ -156,11 +156,12 @@ function parseWithFormat(
   // Convert grouped rows to ImportedSessions
   const sessions: ImportedSession[] = [];
   for (const { date, name, rows: sessionRows } of sessionMap.values()) {
-    // Calculate session duration from first/last row timestamps
+    // Session duration: use the max value from rows (Strong/Hevy repeat session
+    // duration on each row; taking max avoids inflating by summing duplicates)
     let durationSeconds: number | null = null;
     const durations = sessionRows.map((r) => r.durationSeconds).filter((d): d is number => d !== null);
     if (durations.length > 0) {
-      durationSeconds = durations.reduce((a, b) => a + b, 0);
+      durationSeconds = Math.max(...durations);
     }
 
     const sets: ImportedSet[] = sessionRows.map((row) => ({

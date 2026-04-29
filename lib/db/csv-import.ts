@@ -75,13 +75,11 @@ export async function importCsvSessions(
 
   for (const [lowerName, result] of matchResults.entries()) {
     if (result.bestMatch && result.bestMatch.confidence !== "low") {
-      // Use matched exercise
-      exerciseIdMap.set(lowerName, result.bestMatch.exercise.id);
-    } else if (result.bestMatch) {
-      // Low confidence — still use the best match but could be overridden by UI
+      // Use matched exercise (high or medium confidence)
       exerciseIdMap.set(lowerName, result.bestMatch.exercise.id);
     } else {
-      // No match — create new custom exercise
+      // Low confidence or no match — create new custom exercise
+      // (PR 2 UI will let users override matches before import)
       const newId = uuid();
       exerciseIdMap.set(lowerName, newId);
       newExercises.push({ id: newId, nlp: result.nlpResult, rawName: result.rawName });
