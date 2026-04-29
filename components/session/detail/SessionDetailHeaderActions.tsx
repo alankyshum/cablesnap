@@ -13,6 +13,7 @@ type Props = {
   onSave: () => void;
   onEnterEdit: () => void;
   onOpenTemplate: () => void;
+  onShare: () => void;
   colors: ThemeColors;
 };
 
@@ -20,6 +21,9 @@ type Props = {
  * BLD-690 — Detail screen header buttons. Splits the read-only and edit-mode
  * affordances. Lives in its own file to keep `SessionDetail` under the
  * complexity gate (max 15) and to keep the JSX surface tidy.
+ *
+ * BLD-891 — Added share button (share-variant-outline icon) to the read-only
+ * header row, positioned before Edit and Save-as-Template.
  */
 export function SessionDetailHeaderActions({
   editing,
@@ -31,6 +35,7 @@ export function SessionDetailHeaderActions({
   onSave,
   onEnterEdit,
   onOpenTemplate,
+  onShare,
   colors,
 }: Props) {
   if (editing) {
@@ -57,6 +62,15 @@ export function SessionDetailHeaderActions({
   if (!showEditButton) return null;
   return (
     <View style={{ flexDirection: "row", gap: 4 }}>
+      <TouchableOpacity
+        onPress={onShare}
+        accessibilityLabel="Share workout"
+        accessibilityHint="Share this workout session as text or image"
+        hitSlop={8}
+        style={{ padding: 8 }}
+      >
+        <MaterialCommunityIcons name="share-variant-outline" size={22} color={colors.onSurface} />
+      </TouchableOpacity>
       <TouchableOpacity onPress={onEnterEdit} accessibilityLabel="Edit workout" hitSlop={8} style={{ padding: 8 }}>
         <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.onSurface} />
       </TouchableOpacity>

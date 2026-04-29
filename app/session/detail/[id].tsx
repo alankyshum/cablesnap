@@ -1,21 +1,21 @@
 import { StyleSheet, View, FlatList } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import ExercisePickerSheet from "@/components/ExercisePickerSheet";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { Stack, useLocalSearchParams } from "expo-router";
 import { useLayout } from "@/lib/layout";
-import { useSessionDetail } from "@/hooks/useSessionDetail";
+import { useSessionDetail, type ExerciseGroup } from "@/hooks/useSessionDetail";
 import { useSessionEdit } from "@/hooks/useSessionEdit";
+import { useSessionShareData } from "@/hooks/useSessionShareData";
 import { SummaryCard } from "@/components/session/detail/SummaryCard";
 import { RatingNotesCard } from "@/components/session/detail/RatingNotesCard";
 import { ExerciseGroupRow } from "@/components/session/detail/ExerciseGroupRow";
-import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 import { SessionDetailHeaderActions } from "@/components/session/detail/SessionDetailHeaderActions";
 import { PRsCard } from "@/components/session/detail/PRsCard";
 import { EditableExerciseGroupRow } from "@/components/session/detail/EditableExerciseGroupRow";
 import { TemplateModal } from "@/components/session/detail/TemplateModal";
 import { EditedPill } from "@/components/session/EditedPill";
+import { SessionDetailShareOverlay } from "@/components/session/detail/SessionDetailShareOverlay";
 
 export default function SessionDetail() {
   const layout = useLayout();
@@ -38,6 +38,8 @@ export default function SessionDetail() {
     onSessionDeleted: () => router.back(),
   });
 
+  // ── Share state (BLD-891) ──
+  const share = useSessionShareData(session, groups, prs, completedSetCount);
   const renderItem = ({ item: group, index }: { item: ExerciseGroup | (typeof edit.draft)[number]; index: number }) => {
     if (edit.editing) {
       const dg = group as (typeof edit.draft)[number];
@@ -57,7 +59,6 @@ export default function SessionDetail() {
     }
     return <ExerciseGroupRow group={group as ExerciseGroup} groups={groups} linkIds={linkIds} palette={palette} colors={colors} />;
   };
-
   if (!session) {
     return (
       <>
@@ -72,7 +73,6 @@ export default function SessionDetail() {
   const showReadOnlyExtras = !edit.editing && !!session.completed_at;
   const showPRs = !edit.editing && prs.length > 0;
   const data = edit.editing ? edit.draft : groups;
-
   return (
     <>
       <Stack.Screen
@@ -89,6 +89,7 @@ export default function SessionDetail() {
               onSave={() => void edit.save()}
               onEnterEdit={edit.enterEdit}
               onOpenTemplate={openTemplateModal}
+              onShare={share.handleShareButtonPress}
               colors={colors}
             />
           ),
@@ -171,6 +172,21 @@ export default function SessionDetail() {
           </>
         }
       />
+      <SessionDetailShareOverlay
+        shareSheetRef={share.shareSheetRef}
+        onShareText={share.handleShareText}
+        imageDisabled={completedSetCount === 0}
+        sessionName={session.name ?? "Workout"}
+        shareCardDate={share.shareCardDate}
+        duration={share.duration}
+        completedSets={completedSets()}
+        volumeDisplay={share.volumeDisplay.toLocaleString()}
+        unit={share.unit}
+        rating={rating}
+        shareCardPrs={share.shareCardPrs}
+        shareCardExercises={share.shareCardExercises}
+        colors={colors}
+      />
     </>
   );
 }
@@ -178,8 +194,5 @@ export default function SessionDetail() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  prCard: { marginBottom: 20 },
   repeatButton: { marginBottom: 20 },
-  prHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  prRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 6 },
 });

@@ -39,7 +39,10 @@ jest.mock('../../lib/db', () => ({
   createTemplateFromSession: (...args: unknown[]) => mockCreateTemplateFromSession(...args),
   getActiveSession: (...args: unknown[]) => mockGetActiveSession(...args),
   startSession: (...args: unknown[]) => mockStartSession(...args),
+  getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
 }))
+
+jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn().mockResolvedValue('/tmp/mock.png') }))
 
 // Lazy import after mocks
 let SessionDetail: React.ComponentType

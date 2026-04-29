@@ -87,6 +87,7 @@ jest.mock('expo-file-system', () => ({
   Paths: { cache: '/cache' },
 }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
+jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn().mockResolvedValue('/tmp/mock.png') }))
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
@@ -109,6 +110,8 @@ jest.mock('victory-native', () => ({
 jest.mock('../../lib/format', () => ({
   formatDuration: jest.fn().mockReturnValue('30:00'),
   formatDateShort: jest.fn().mockReturnValue('Apr 15'),
+  formatTime: jest.fn().mockReturnValue('1:00:00'),
+  hexToRgb: jest.fn().mockReturnValue('0, 0, 0'),
 }))
 
 import React from 'react'
