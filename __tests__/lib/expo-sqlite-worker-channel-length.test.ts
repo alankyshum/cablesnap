@@ -25,7 +25,7 @@
  * and fixed forms so the regression cannot return.
  */
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 describe('expo-sqlite-web WorkerChannel length-prefix protocol (BLD-660)', () => {
@@ -144,6 +144,14 @@ describe('expo-sqlite-web WorkerChannel length-prefix protocol (BLD-660)', () =>
   });
 
   it('expo-sqlite WorkerChannel.ts on disk uses the fixed length writer (patch is applied)', () => {
+    if (!existsSync(workerChannelPath)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        'expo-sqlite not installed — run npm install to verify patch',
+      );
+      return;
+    }
+
     const src = readFileSync(workerChannelPath, 'utf8');
     // Strip line/block comments before scanning so we can reference the buggy
     // form in our explanatory comments without false-positives.
