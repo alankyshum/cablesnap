@@ -59,14 +59,19 @@ function formatDateKey(date: Date): string {
  * Step 0 stays on `surfaceVariant` (background tone) so an empty week is
  * visually distinct from a 1-workout week even with the increased opacity
  * floor on step 1.
+ *
+ * Opacity ramp widened (0.3/0.6/1.0 → 0.15/0.55/1.0) so that luminance
+ * alone differentiates adjacent steps under deuteranopia / protanopia CVD
+ * emulation, where the red-green hue channel collapses. Target: ≥ 1.5:1
+ * luminance contrast ratio between adjacent filled steps.
  */
 function heatmapColor(
   count: number,
   colors: { surfaceVariant: string; primary: string }
 ): string {
   if (count === 0) return colors.surfaceVariant;
-  if (count === 1) return withOpacity(colors.primary, 0.3);
-  if (count === 2) return withOpacity(colors.primary, 0.6);
+  if (count === 1) return withOpacity(colors.primary, 0.15);
+  if (count === 2) return withOpacity(colors.primary, 0.55);
   return colors.primary;
 }
 
@@ -130,8 +135,8 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
     return g;
   }, [data, weeks]);
 
-  // BLD-686: bumped from 18 to 22 to accommodate 3-letter weekday labels (Mon/Wed/Fri).
-  const labelWidth = 22;
+  // BLD-686: bumped from 18 to 22; BLD-869: bumped to 28 to prevent mid-word wrapping.
+  const labelWidth = 28;
   const gap = 2;
   const availableWidth = layout.width - layout.horizontalPadding * 2 - labelWidth - gap;
   const cellSize = Math.max(14, Math.min(24, Math.floor((availableWidth - gap * (weeks - 1)) / weeks)));
@@ -186,6 +191,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
         <View key={rowIdx} style={styles.row}>
           <Text
             variant="caption"
+            numberOfLines={1}
             style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant }]}
           >
             {DAY_LABELS[rowIdx]}
