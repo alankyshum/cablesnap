@@ -726,8 +726,6 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Start face down with forearms on the floor, elbows directly under shoulders.\n2. Lift your body off the floor, forming a straight line from head to heels.\n3. Engage your core and squeeze your glutes to maintain the position.\n4. Keep your neck neutral, looking at the floor.\n5. Hold for the target duration without letting your hips sag or pike.",
-    progression_group: "plank",
-    progression_order: 2,
   }),
   bwExercise(42, {
     name: "Dead Hang",

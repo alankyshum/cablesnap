@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   nodeLabel: {
-    fontSize: fontSizes.xxs,
+    fontSize: fontSizes.xs,
     textAlign: "center",
     marginTop: spacing.xs,
     maxWidth: 64,

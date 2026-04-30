@@ -130,6 +130,8 @@ export async function getTemplateById(
       exercise_is_voltra: exercises.is_voltra,
       exercise_start_image_uri: exercises.start_image_uri,
       exercise_end_image_uri: exercises.end_image_uri,
+      exercise_progression_group: exercises.progression_group,
+      exercise_progression_order: exercises.progression_order,
     })
     .from(templateExercises)
     .leftJoin(exercises, eq(templateExercises.exercise_id, exercises.id))
@@ -164,6 +166,8 @@ export async function getTemplateById(
           is_voltra: r.exercise_is_voltra,
           start_image_uri: r.exercise_start_image_uri,
           end_image_uri: r.exercise_end_image_uri,
+          progression_group: r.exercise_progression_group ?? null,
+          progression_order: r.exercise_progression_order ?? null,
         })
       : undefined,
   }));
