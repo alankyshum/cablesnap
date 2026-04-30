@@ -33,7 +33,13 @@ export function MacroTargetsSheet({ visible, onClose }: Props) {
       setFat(String(t.fat));
     });
     getAppSetting("nutrition_profile").then((saved) => {
-      setProfile(saved ? migrateProfile(JSON.parse(saved)) : null);
+      if (!saved) { setProfile(null); return; }
+      try {
+        setProfile(migrateProfile(JSON.parse(saved)));
+      } catch {
+        if (__DEV__) console.warn("[MacroTargetsSheet] corrupt nutrition_profile, resetting");
+        setProfile(null);
+      }
     });
   }, [visible]);
 
