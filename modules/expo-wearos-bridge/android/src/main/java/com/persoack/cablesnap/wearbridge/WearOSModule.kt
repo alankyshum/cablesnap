@@ -39,7 +39,15 @@ import expo.modules.kotlin.modules.ModuleDefinition
 class WearOSModule : Module() {
   companion object {
     @Suppress("unused")
-    private val WEARABLE_API_CLASS: Class<*> = Wearable::class.java
+    private val WEARABLE_API_CLASS: Class<*>? by lazy {
+      try {
+        Wearable::class.java
+      } catch (_: Throwable) {
+        // GMS Wearable not available — non-fatal for M0.
+        // M1 will add actual Wearable API usage with proper availability checks.
+        null
+      }
+    }
   }
 
   override fun definition() = ModuleDefinition {
