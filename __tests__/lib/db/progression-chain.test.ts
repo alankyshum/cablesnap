@@ -103,6 +103,24 @@ describe("getProgressionChain", () => {
     });
   });
 
+  it("has_been_logged query joins workout_sessions and filters by completed_at IS NOT NULL", async () => {
+    mockDb.getAllAsync
+      .mockResolvedValueOnce([{ progression_group: "push_up" }])
+      .mockResolvedValueOnce([
+        { id: "ex-1", name: "Knee Push-Up", progression_order: 1, has_been_logged: 0 },
+        { id: "ex-2", name: "Push-Up", progression_order: 2, has_been_logged: 0 },
+      ]);
+    const result = await getProgressionChain("ex-1");
+    // Verify the SQL used for the chain query joins workout_sessions
+    const chainCall = mockDb.getAllAsync.mock.calls[1];
+    const sql = chainCall[0] as string;
+    expect(sql).toContain("workout_sessions");
+    expect(sql).toContain("completed_at IS NOT NULL");
+    // Sets from incomplete sessions should not count as logged
+    expect(result[0].has_been_logged).toBe(false);
+    expect(result[1].has_been_logged).toBe(false);
+  });
+
   it("maps has_been_logged integer to boolean correctly", async () => {
     mockDb.getAllAsync
       .mockResolvedValueOnce([{ progression_group: "squat" }])

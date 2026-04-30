@@ -188,7 +188,10 @@ export async function getProgressionChain(
   }>(
     `SELECT e.id, e.name, e.progression_order,
             CASE WHEN EXISTS (
-              SELECT 1 FROM workout_sets ws WHERE ws.exercise_id = e.id
+              SELECT 1 FROM workout_sets ws
+              JOIN workout_sessions s ON s.id = ws.session_id
+              WHERE ws.exercise_id = e.id
+                AND s.completed_at IS NOT NULL
             ) THEN 1 ELSE 0 END AS has_been_logged
      FROM exercises e
      WHERE e.progression_group = ?
