@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "CableSnap",
   slug: "cablesnap",
-  version: "0.26.17",
+  version: "0.26.18",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
