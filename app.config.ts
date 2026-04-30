@@ -1,4 +1,8 @@
-import { ExpoConfig, ConfigContext } from "expo/config";
+// Node >=22 treats the transpiled app.config.js as ESM when it contains
+// `export default`; the bare `expo/config` directory import then fails with
+// ERR_UNSUPPORTED_DIR_IMPORT. Using the explicit subpath avoids this.
+import type { ExpoConfig } from "@expo/config-types";
+import type { ConfigContext } from "@expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,

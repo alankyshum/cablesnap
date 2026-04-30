@@ -49,6 +49,11 @@ BLD_480_PRE_FIX_SHA="cce2ac1f828538bf884f91c5e209ab9f6a40d87f"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Ensure devDependencies are installed — the workspace npm config may set
+# `omit=dev` globally, but the build needs babel-plugin-module-resolver
+# (devDependency) to resolve @/ path aliases during `expo export`.
+npm install --include=dev --legacy-peer-deps --silent 2>&1
+
 build_static() {
   echo "[daily-audit] building static web bundle (--dev for __DEV__ seed hook)…"
   npx expo export --platform web --dev
