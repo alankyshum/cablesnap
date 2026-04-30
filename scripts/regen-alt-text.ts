@@ -30,8 +30,15 @@ import path from "node:path";
 
 import { seedExercises } from "../lib/seed";
 import { PILOT_EXERCISE_IDS } from "../assets/exercise-illustrations/pilot-ids";
-import type { Exercise } from "../lib/types";
+import type { Exercise, MountPosition } from "../lib/types";
 import { ALT_TEXT_SYSTEM_PROMPT, altTextUserPrompt } from "./exercise-prompts";
+
+/**
+ * Seed data may still carry the legacy `mount_position` field that BLD-771
+ * removed from the canonical Exercise type. Extend locally so downstream
+ * access is type-safe without broad `Record<string, unknown>` casts.
+ */
+type SeedExercise = Exercise & { mount_position?: MountPosition | null };
 
 const ROOT = path.resolve(__dirname, "..");
 const ASSET_DIR = path.join(ROOT, "assets/exercise-illustrations");
@@ -39,7 +46,7 @@ const MANIFEST_PATH = path.join(ASSET_DIR, "manifest.generated.ts");
 
 async function describePose(
   position: "start" | "end",
-  ex: Exercise,
+  ex: SeedExercise,
   apiKey: string,
 ): Promise<string> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -58,7 +65,7 @@ async function describePose(
           content: altTextUserPrompt({
             exerciseName: ex.name,
             category: ex.category,
-            mountPosition: ((ex as Record<string, unknown>).mount_position as string | undefined) ?? "any",
+            mountPosition: ex.mount_position ?? "any",
             attachment: ex.attachment ?? "handle",
             position,
             instructions: ex.instructions,

@@ -58,7 +58,14 @@ import path from "node:path";
 
 import { seedExercises } from "../lib/seed";
 import { PILOT_EXERCISE_IDS } from "../assets/exercise-illustrations/pilot-ids";
-import type { Exercise } from "../lib/types";
+import type { Exercise, MountPosition } from "../lib/types";
+
+/**
+ * Seed data may still carry the legacy `mount_position` field that BLD-771
+ * removed from the canonical Exercise type. Extend locally so downstream
+ * access is type-safe without broad `Record<string, unknown>` casts.
+ */
+type SeedExercise = Exercise & { mount_position?: MountPosition | null };
 
 const ROOT = path.resolve(__dirname, "..");
 const ASSET_DIR = path.join(ROOT, "assets/exercise-illustrations");
@@ -266,7 +273,7 @@ function sha256(p: string): string {
 }
 
 function buildProposal(
-  ex: Exercise,
+  ex: SeedExercise,
   alt: { startAlt: string; endAlt: string },
 ): string {
   const startPath = path.join(ASSET_DIR, ex.id, "start.webp");
@@ -288,7 +295,7 @@ function buildProposal(
     `- id: ${ex.id}`,
     `- name: ${ex.name}`,
     `- category: ${ex.category}`,
-    `- mount_position: ${(ex as Record<string, unknown>).mount_position ?? "any"}`,
+    `- mount_position: ${ex.mount_position ?? "any"}`,
     `- attachment: ${ex.attachment}`,
     `- instructions: ${ex.instructions}`,
     ``,
@@ -481,7 +488,7 @@ export function gateBlocks(verdict: string, safetyClass: SafetyClass): boolean {
 }
 
 function renderSignOff(
-  ex: Exercise,
+  ex: SeedExercise,
   panelOutput: string,
   modelUsed: string,
   gates: { visual: "PASS" | "FAIL"; technique: "PASS" | "FAIL"; verdict: string },

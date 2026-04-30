@@ -29,8 +29,15 @@ import { execFileSync } from "node:child_process";
 // NOTE: tsx can resolve tsconfig paths; using relative import for safety.
 import { seedExercises } from "../lib/seed";
 import { PILOT_EXERCISE_IDS } from "../assets/exercise-illustrations/pilot-ids";
-import type { Exercise } from "../lib/types";
+import type { Exercise, MountPosition } from "../lib/types";
 import { ALT_TEXT_SYSTEM_PROMPT, altTextUserPrompt } from "./exercise-prompts";
+
+/**
+ * Seed data may still carry the legacy `mount_position` field that BLD-771
+ * removed from the canonical Exercise type. Extend locally so downstream
+ * access is type-safe without broad `Record<string, unknown>` casts.
+ */
+type SeedExercise = Exercise & { mount_position?: MountPosition | null };
 
 const ROOT = path.resolve(__dirname, "..");
 const ASSET_DIR = path.join(ROOT, "assets/exercise-illustrations");
@@ -67,7 +74,7 @@ function parseArgs(argv: string[]): Cli {
   };
 }
 
-function fingerprintInput(ex: Exercise): string {
+function fingerprintInput(ex: SeedExercise): string {
   return JSON.stringify({
     id: ex.id,
     name: ex.name,
@@ -107,7 +114,7 @@ function writeFingerprint(dir: string, fp: Fingerprint): void {
   fs.writeFileSync(path.join(dir, "fingerprint.json"), JSON.stringify(fp, null, 2) + "\n");
 }
 
-function buildPrompt(ex: Exercise, position: "start" | "end"): string {
+function buildPrompt(ex: SeedExercise, position: "start" | "end"): string {
   return PROMPT_TEMPLATE
     .replace("{NAME}", ex.name)
     .replace("{CATEGORY}", ex.category)
@@ -156,7 +163,7 @@ async function callOpenAI(prompt: string, apiKey: string): Promise<GenerationRes
   return { pngBuffer: Buffer.from(first.b64_json, "base64"), altText };
 }
 
-async function describePose(position: "start" | "end", ex: Exercise, apiKey: string): Promise<string> {
+async function describePose(position: "start" | "end", ex: SeedExercise, apiKey: string): Promise<string> {
   // Separate small text call for substantive accessibility alt-text.
   // Kept in the same script so one command produces both image and alt.
   // Prompt strings are imported from `./exercise-prompts.ts` so the
@@ -178,7 +185,7 @@ async function describePose(position: "start" | "end", ex: Exercise, apiKey: str
           content: altTextUserPrompt({
             exerciseName: ex.name,
             category: ex.category,
-            mountPosition: ((ex as Record<string, unknown>).mount_position as string | undefined) ?? "any",
+            mountPosition: ex.mount_position ?? "any",
             attachment: ex.attachment ?? "handle",
             position,
             instructions: ex.instructions,
