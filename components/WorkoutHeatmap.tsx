@@ -130,8 +130,8 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
     return g;
   }, [data, weeks]);
 
-  // BLD-686: bumped from 18 to 22 to accommodate 3-letter weekday labels (Mon/Wed/Fri).
-  const labelWidth = 22;
+  // BLD-686: bumped from 18→22; BLD-910: bumped to 28 to prevent wrapping on narrow viewports.
+  const labelWidth = 28;
   const gap = 2;
   const availableWidth = layout.width - layout.horizontalPadding * 2 - labelWidth - gap;
   const cellSize = Math.max(14, Math.min(24, Math.floor((availableWidth - gap * (weeks - 1)) / weeks)));
@@ -186,6 +186,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
         <View key={rowIdx} style={styles.row}>
           <Text
             variant="caption"
+            numberOfLines={1}
             style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant }]}
           >
             {DAY_LABELS[rowIdx]}
