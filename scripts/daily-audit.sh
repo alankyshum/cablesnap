@@ -31,6 +31,15 @@
 
 set -euo pipefail
 
+# Node 24+ has breaking ESM changes that are incompatible with Expo SDK 55.
+# Guard against running with an unsupported Node version.
+NODE_MAJOR="$(node -e 'console.log(process.versions.node.split(".")[0])')"
+if [[ "$NODE_MAJOR" -ge 24 ]]; then
+  echo "[daily-audit] ERROR: Node $NODE_MAJOR detected. Expo SDK 55 requires Node ≤22." >&2
+  echo "[daily-audit] Install Node 20 or 22 via nvm/fnm/mise, or set .node-version." >&2
+  exit 1
+fi
+
 # Pinned via `git rev-parse 6f067cc^` on 2026-04-22 — the commit immediately
 # BEFORE PR #292 ("fix: remove maxHeight crop on workout summary muscle
 # heatmap") merged. Do NOT change this constant unless the BLD-480 fix is
@@ -40,6 +49,16 @@ BLD_480_PRE_FIX_SHA="cce2ac1f828538bf884f91c5e209ab9f6a40d87f"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+build_static() {
+  echo "[daily-audit] building static web bundle (--dev for __DEV__ seed hook)…"
+  npx expo export --platform web --dev
+  if [[ ! -f dist/index.html ]]; then
+    echo "[daily-audit] ERROR: static build failed — dist/index.html not found" >&2
+    exit 1
+  fi
+  echo "[daily-audit] static bundle ready at dist/"
+}
+
 run_scenarios() {
   local label="$1"
   local commit_sha="$2"
@@ -47,7 +66,7 @@ run_scenarios() {
   echo "=========================================================="
   echo "[daily-audit] running scenarios against $label ($commit_sha)"
   echo "=========================================================="
-  COMMIT_SHA="$commit_sha" \
+  E2E_USE_STATIC=1 COMMIT_SHA="$commit_sha" \
     npx playwright test e2e/scenarios/ --project=mobile
 }
 
@@ -68,8 +87,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 1) Today's HEAD
+# 1) Today's HEAD — build static bundle with --dev so __DEV__ seed hook is active,
+# then run scenarios against it via E2E_USE_STATIC=1. This ensures COOP/COEP
+# headers are served (required for SharedArrayBuffer / expo-sqlite web worker).
 HEAD_SHA="$(git rev-parse HEAD)"
+build_static
 run_scenarios "HEAD" "$HEAD_SHA"
 
 # Move HEAD captures into a date-stamped subdir so the pre-fix run below
@@ -101,6 +123,10 @@ cp "$TMP_SPECS/test-seed.ts" lib/db/test-seed.ts
 # Skip useAppInit.ts re-patch — the pre-fix tree's init path differs, and the
 # seed hook can be driven directly from the spec's addInitScript on the
 # window object. If the pre-fix spec run needs it, copy it in manually.
+
+# Rebuild the static bundle for the pre-fix tree (with our spec/seed files
+# overlaid). The --dev flag preserves __DEV__ so the seed hook activates.
+build_static
 
 run_scenarios "BLD_480_PRE_FIX" "$BLD_480_PRE_FIX_SHA"
 cp -r "$HEAD_OUT"/* "$PINNED_OUT"/
