@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAppSetting, setAppSetting, updateMacroTargets } from "../lib/db";
 import { getBodySettings, getLatestBodyWeight, updateBodySex } from "../lib/db/body";
+import { safeParse } from "../lib/safe-parse";
 import { useToast } from "@/components/ui/bna-toast";
 import {
   calculateFromProfile,
@@ -117,7 +118,9 @@ export function useBodyProfile(
       setSex(bodySettings.sex);
 
       if (saved) {
-        const profile: NutritionProfile = migrateProfile(JSON.parse(saved));
+        const parsed = safeParse<Record<string, unknown> | null>(saved, null, "useBodyProfile.nutrition_profile");
+        if (!parsed) { setCardState("ready"); return; }
+        const profile: NutritionProfile = migrateProfile(parsed);
         setBirthYear(String(profile.birthYear));
         const displayWeight = convertWeight(
           profile.weight,

@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import { eq, sql, and, inArray, asc, desc, isNull, count } from "drizzle-orm";
 import type { CoachTemplateImportData } from "../schemas";
+import { safeParse } from "../safe-parse";
 import type { WorkoutTemplate, TemplateExercise, MuscleGroup, SetType, TemplateSource } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction } from "./helpers";
@@ -658,7 +659,7 @@ export async function getTemplatePrimaryMuscles(
   for (const row of rows) {
     if (!row.primary_muscles) continue;
     if (!result[row.template_id]) result[row.template_id] = new Set();
-    const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
+    const muscles = safeParse<MuscleGroup[]>(row.primary_muscles, [], "templates.primary_muscles");
     for (const m of muscles) {
       if (m !== "full_body") result[row.template_id].add(m);
     }

@@ -1,5 +1,6 @@
 import { eq, and, isNull, inArray } from "drizzle-orm";
 import type { Exercise } from "../types";
+import { safeParse } from "../safe-parse";
 import { uuid } from "../uuid";
 import { getDrizzle, query, withTransaction } from "./helpers";
 import { exercises, templateExercises } from "./schema";
@@ -10,8 +11,8 @@ function mapRow(row: ExerciseRow): Exercise {
     id: row.id,
     name: row.name,
     category: row.category as Exercise["category"],
-    primary_muscles: JSON.parse(row.primary_muscles) as Exercise["primary_muscles"],
-    secondary_muscles: JSON.parse(row.secondary_muscles) as Exercise["secondary_muscles"],
+    primary_muscles: safeParse(row.primary_muscles, [] as Exercise["primary_muscles"], "exercises.primary_muscles"),
+    secondary_muscles: safeParse(row.secondary_muscles, [] as Exercise["secondary_muscles"], "exercises.secondary_muscles"),
     equipment: row.equipment as Exercise["equipment"],
     instructions: row.instructions,
     difficulty: row.difficulty as Exercise["difficulty"],
