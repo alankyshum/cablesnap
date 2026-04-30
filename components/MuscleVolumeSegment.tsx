@@ -283,7 +283,6 @@ export default function MuscleVolumeSegment() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
