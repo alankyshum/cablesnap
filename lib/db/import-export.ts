@@ -572,9 +572,20 @@ async function importTable(database: any, tableName: BackupTableName, rows: unkn
 async function insertRow(database: any, tableName: BackupTableName, row: Record<string, unknown>): Promise<boolean> {
   switch (tableName) {
     case "exercises": {
+      // BLD-913: dynamic column enumeration via PRAGMA table_info to prevent
+      // silently dropping columns on restore (fixes pre-existing bug where
+      // attachment, is_voltra, start_image_uri, end_image_uri were lost).
+      const colInfo = await database.getAllAsync(
+        "PRAGMA table_info(exercises)"
+      ) as { name: string }[];
+      const tableColumns = colInfo.map((c: { name: string }) => c.name);
+      const cols = tableColumns.filter((col: string) => col in row);
+      if (cols.length === 0) return false;
+      const placeholders = cols.map(() => "?").join(", ");
+      const values = cols.map((col: string) => row[col] ?? null);
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.name, row.category, row.primary_muscles, row.secondary_muscles, row.equipment, row.instructions, row.difficulty, row.is_custom]
+        `INSERT OR IGNORE INTO exercises (${cols.join(", ")}) VALUES (${placeholders})`,
+        values
       );
       return r.changes > 0;
     }
