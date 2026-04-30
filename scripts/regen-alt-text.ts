@@ -58,7 +58,7 @@ async function describePose(
           content: altTextUserPrompt({
             exerciseName: ex.name,
             category: ex.category,
-            mountPosition: ex.mount_position ?? "any",
+            mountPosition: ((ex as Record<string, unknown>).mount_position as string | undefined) ?? "any",
             attachment: ex.attachment ?? "handle",
             position,
             instructions: ex.instructions,

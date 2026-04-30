@@ -288,7 +288,7 @@ function buildProposal(
     `- id: ${ex.id}`,
     `- name: ${ex.name}`,
     `- category: ${ex.category}`,
-    `- mount_position: ${ex.mount_position}`,
+    `- mount_position: ${(ex as Record<string, unknown>).mount_position ?? "any"}`,
     `- attachment: ${ex.attachment}`,
     `- instructions: ${ex.instructions}`,
     ``,
