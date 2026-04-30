@@ -170,8 +170,12 @@ jobs:
           git config user.name "CableSnap Release Bot"
           git config user.email "release-bot@cablesnap.app"
           git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
-          git commit -m "release: v$VERSION"
-          git push origin main
+          if git diff --cached --quiet; then
+            echo "Version files already at v$VERSION — skipping commit."
+          else
+            git commit -m "release: v$VERSION"
+            git push origin main
+          fi
 
       - name: Dry-run notice (non-main ref)
         if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref != 'refs/heads/main'
@@ -411,6 +415,7 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
+          RELEASE_NOTES: ${{ steps.release_notes.outputs.notes }}
         run: |
           # All three artifacts are attached to the same GitHub Release:
           #   cablesnap.apk          — Play-flavor phone APK (canonical)
@@ -427,5 +432,5 @@ jobs:
             cablesnap-wear.apk \
             --title "v$VERSION" \
             --target main \
-            --notes "${{ steps.release_notes.outputs.notes }}"
+            --notes "$RELEASE_NOTES"
           echo "Released v$VERSION with phone (Play + F-Droid) and Wear OS APKs attached."
