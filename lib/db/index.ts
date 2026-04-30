@@ -11,6 +11,10 @@ export {
   updateCustomExercise,
   softDeleteCustomExercise,
   getTemplatesUsingExercise,
+  getProgressionChain,
+  getProgressionSuggestion,
+  type ProgressionChainExercise,
+  type ProgressionSuggestion,
 } from "./exercises";
 
 export {

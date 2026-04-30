@@ -30,6 +30,9 @@ export const exercises = sqliteTable("exercises", {
   // BLD-561: optional user-supplied illustration URIs for custom exercises.
   start_image_uri: text("start_image_uri"),
   end_image_uri: text("end_image_uri"),
+  // BLD-913: bodyweight exercise progression paths.
+  progression_group: text("progression_group"),
+  progression_order: integer("progression_order"),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {
