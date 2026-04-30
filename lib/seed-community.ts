@@ -325,6 +325,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Start in a high plank with hands slightly wider than shoulder-width.\n2. Keep your body in a straight line from head to heels.\n3. Lower your chest toward the floor by bending your elbows.\n4. Descend until your chest is just above the ground.\n5. Push back up to full arm extension, keeping core tight throughout.",
+    progression_group: "push_up",
+    progression_order: 3,
   }),
   bwExercise(2, {
     name: "Wide Push-Up",
@@ -343,6 +345,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "intermediate",
     instructions:
       "1. Start in plank position with hands together, forming a diamond shape with thumbs and index fingers.\n2. Keep elbows close to your body.\n3. Lower your chest toward your hands.\n4. Descend until your chest touches or nearly touches your hands.\n5. Push back up, focusing on triceps and inner chest engagement.",
+    progression_group: "push_up",
+    progression_order: 4,
   }),
   bwExercise(4, {
     name: "Decline Push-Up",
@@ -361,6 +365,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Place your hands on an elevated surface like a bench, wider than shoulders.\n2. Extend your legs behind you with feet on the floor.\n3. Keep your body in a straight line.\n4. Lower your chest toward the bench by bending elbows.\n5. Push back up to full arm extension. Great for beginners building push-up strength.",
+    progression_group: "push_up",
+    progression_order: 2,
   }),
   bwExercise(6, {
     name: "Archer Push-Up",
@@ -370,6 +376,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "advanced",
     instructions:
       "1. Start in a wide push-up position, hands much wider than shoulders.\n2. Shift your weight to one side as you lower toward that hand.\n3. Keep the opposite arm nearly straight as you descend.\n4. Push back up through the working arm.\n5. Alternate sides each rep, or do all reps on one side before switching.",
+    progression_group: "push_up",
+    progression_order: 5,
   }),
   bwExercise(7, {
     name: "Chest Dip",
@@ -379,6 +387,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "intermediate",
     instructions:
       "1. Grip parallel bars and lift yourself to a support position with arms straight.\n2. Lean your torso forward at about 30 degrees.\n3. Lower your body by bending elbows until upper arms are parallel to the floor.\n4. Keep elbows slightly flared to target chest.\n5. Press back up to full arm extension, squeezing chest at the top.",
+    progression_group: "dip",
+    progression_order: 2,
   }),
 
   // ── Back ──
@@ -390,6 +400,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Set a bar at waist height on a rack or use a sturdy table edge.\n2. Lie underneath with chest below the bar, grab it with an overhand grip.\n3. Keep your body straight from head to heels, heels on the ground.\n4. Pull your chest up to the bar by squeezing shoulder blades together.\n5. Lower yourself back down with control until arms are fully extended.",
+    progression_group: "row",
+    progression_order: 2,
   }),
   bwExercise(9, {
     name: "Superman",
@@ -417,6 +429,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "intermediate",
     instructions:
       "1. Hang from a pull-up bar with an overhand grip, hands slightly wider than shoulders.\n2. Engage your core and retract your shoulder blades.\n3. Pull your body upward until your chin clears the bar.\n4. Squeeze your lats at the top of the movement.\n5. Lower yourself slowly to a dead hang with full arm extension.",
+    progression_group: "pull_up",
+    progression_order: 5,
   }),
   bwExercise(12, {
     name: "Chin-Up",
@@ -426,6 +440,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "intermediate",
     instructions:
       "1. Hang from a bar with an underhand grip, hands shoulder-width apart.\n2. Engage your core and pull your elbows down toward your ribs.\n3. Lift your body until your chin is above the bar.\n4. Focus on squeezing your biceps and lats.\n5. Lower slowly to full extension without swinging.",
+    progression_group: "pull_up",
+    progression_order: 4,
   }),
 
   // ── Shoulders ──
@@ -457,6 +473,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Sit on the edge of a bench, hands gripping the edge beside your hips.\n2. Walk your feet out and lift your hips off the bench.\n3. Lower your body by bending elbows to about 90 degrees.\n4. Keep your back close to the bench as you descend.\n5. Push back up to full arm extension, squeezing triceps at the top.",
+    progression_group: "dip",
+    progression_order: 1,
   }),
   bwExercise(16, {
     name: "Bodyweight Tricep Extension",
@@ -477,6 +495,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Start face down, then prop yourself on forearms and toes.\n2. Keep elbows directly under shoulders.\n3. Maintain a straight line from head to heels.\n4. Engage your core by drawing your belly button toward your spine.\n5. Hold the position for the target duration without letting hips sag or pike.",
+    progression_group: "plank",
+    progression_order: 2,
   }),
   bwExercise(18, {
     name: "Side Plank",
@@ -486,6 +506,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Lie on one side, propped on your forearm with elbow under your shoulder.\n2. Stack your feet or stagger them for balance.\n3. Lift your hips until your body forms a straight line.\n4. Hold without letting your hips drop.\n5. Switch sides after the target hold time. Keep breathing steadily.",
+    progression_group: "plank",
+    progression_order: 3,
   }),
   bwExercise(19, {
     name: "Crunch",
@@ -569,6 +591,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Stand with feet shoulder-width apart, toes slightly turned out.\n2. Extend arms in front for balance.\n3. Push hips back and bend knees to lower into a squat.\n4. Descend until thighs are parallel to the floor or deeper.\n5. Drive through heels to stand back up to full extension.",
+    progression_group: "squat",
+    progression_order: 1,
   }),
   bwExercise(28, {
     name: "Bulgarian Split Squat",
@@ -578,6 +602,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "intermediate",
     instructions:
       "1. Stand about two feet in front of a bench, facing away.\n2. Place the top of your rear foot on the bench behind you.\n3. Lower your body by bending the front knee until the thigh is parallel to the floor.\n4. Keep your front knee tracking over your toes.\n5. Push through the front heel to return to standing. Switch legs after completing reps.",
+    progression_group: "squat",
+    progression_order: 2,
   }),
   bwExercise(29, {
     name: "Forward Lunge",
@@ -659,6 +685,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "advanced",
     instructions:
       "1. Stand on one leg with the other leg extended straight in front of you.\n2. Extend arms forward for counterbalance.\n3. Slowly lower into a single-leg squat, going as deep as possible.\n4. Keep the extended leg off the floor throughout.\n5. Drive through the standing heel to return to full extension.",
+    progression_group: "squat",
+    progression_order: 3,
   }),
 
   // ── Full Body (categorized by primary muscle) ──
@@ -698,6 +726,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Start face down with forearms on the floor, elbows directly under shoulders.\n2. Lift your body off the floor, forming a straight line from head to heels.\n3. Engage your core and squeeze your glutes to maintain the position.\n4. Keep your neck neutral, looking at the floor.\n5. Hold for the target duration without letting your hips sag or pike.",
+    progression_group: "plank",
+    progression_order: 2,
   }),
   bwExercise(42, {
     name: "Dead Hang",
@@ -707,6 +737,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Grip a pull-up bar with an overhand grip, hands shoulder-width apart.\n2. Step off the platform or let your feet hang freely.\n3. Relax your shoulders slightly while maintaining grip.\n4. Keep your core lightly engaged to prevent excessive swinging.\n5. Hang for the target duration, then step down safely.",
+    progression_group: "pull_up",
+    progression_order: 1,
   }),
   bwExercise(43, {
     name: "Wall Sit",
@@ -725,6 +757,8 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "advanced",
     instructions:
       "1. Sit on the floor between two parallettes, dip bars, or sturdy surfaces.\n2. Place your hands on the supports and straighten your arms to lift your body.\n3. Raise your legs until they are parallel to the floor, forming an L shape.\n4. Keep your legs straight and together, toes pointed.\n5. Hold for the target duration, keeping your core tight and arms locked.",
+    progression_group: "l_sit",
+    progression_order: 3,
   }),
   bwExercise(45, {
     name: "Farmer's Carry",
@@ -734,6 +768,173 @@ const bodyweightExercises: Exercise[] = [
     difficulty: "beginner",
     instructions:
       "1. Pick up a heavy weight in each hand (dumbbells, kettlebells, or farmer's handles).\n2. Stand tall with shoulders back and down, chest up.\n3. Walk forward with controlled, even steps.\n4. Keep your core braced and avoid leaning to either side.\n5. Walk for the target duration or distance, then set the weights down carefully.",
+  }),
+
+  // ── BLD-913: Additional exercises to complete progression chains ──
+  // push_up chain: Knee Push-Up (order 1), One-Arm Push-Up (order 6)
+  bwExercise(46, {
+    name: "Knee Push-Up",
+    category: "chest",
+    primary_muscles: ["chest"],
+    secondary_muscles: ["shoulders", "triceps"],
+    difficulty: "beginner",
+    instructions:
+      "1. Start in a plank position with knees on the ground, hands shoulder-width apart.\n2. Keep your body in a straight line from head to knees.\n3. Lower your chest toward the floor by bending your elbows.\n4. Descend until your chest is just above the ground.\n5. Push back up to full arm extension. Cross ankles behind you for stability.",
+    progression_group: "push_up",
+    progression_order: 1,
+  }),
+  bwExercise(47, {
+    name: "One-Arm Push-Up",
+    category: "chest",
+    primary_muscles: ["chest"],
+    secondary_muscles: ["shoulders", "triceps", "core"],
+    difficulty: "advanced",
+    instructions:
+      "1. Start in a wide push-up position, feet wider than shoulder-width.\n2. Place one hand behind your back.\n3. Lower your chest toward the floor with the working arm.\n4. Keep your hips as level as possible throughout the descent.\n5. Push back up to full extension. Complete all reps on one side before switching.",
+    progression_group: "push_up",
+    progression_order: 6,
+  }),
+
+  // pull_up chain: Scapular Pull-Up (order 2), Negative Pull-Up (order 3)
+  bwExercise(48, {
+    name: "Scapular Pull-Up",
+    category: "back",
+    primary_muscles: ["lats", "back"],
+    secondary_muscles: ["forearms"],
+    difficulty: "beginner",
+    instructions:
+      "1. Hang from a pull-up bar with an overhand grip, arms fully extended.\n2. Without bending your elbows, retract your shoulder blades downward.\n3. Pull your body up slightly by squeezing your shoulder blades together.\n4. Hold the top position for one to two seconds.\n5. Relax your shoulder blades to return to a dead hang. Repeat.",
+    progression_group: "pull_up",
+    progression_order: 2,
+  }),
+  bwExercise(49, {
+    name: "Negative Pull-Up",
+    category: "back",
+    primary_muscles: ["lats", "back"],
+    secondary_muscles: ["biceps", "forearms"],
+    difficulty: "beginner",
+    instructions:
+      "1. Use a box or jump to get your chin above the pull-up bar.\n2. Grip the bar with an overhand grip, hands slightly wider than shoulders.\n3. Slowly lower your body over 3–5 seconds, resisting gravity.\n4. Focus on controlling the descent from top to full arm extension.\n5. Step back onto the box and repeat. Builds the strength needed for full pull-ups.",
+    progression_group: "pull_up",
+    progression_order: 3,
+  }),
+
+  // row chain: Incline Row (order 1), Elevated Feet Inverted Row (order 3), Front Lever Row (order 4)
+  bwExercise(50, {
+    name: "Incline Row",
+    category: "back",
+    primary_muscles: ["back", "lats"],
+    secondary_muscles: ["biceps", "core"],
+    difficulty: "beginner",
+    instructions:
+      "1. Set a bar at chest height on a rack.\n2. Grip the bar with an overhand grip, hands shoulder-width apart.\n3. Walk your feet forward until your body is at an angle, arms fully extended.\n4. Pull your chest up to the bar, squeezing shoulder blades together.\n5. Lower with control. The more upright your body, the easier the exercise.",
+    progression_group: "row",
+    progression_order: 1,
+  }),
+  bwExercise(51, {
+    name: "Elevated Feet Inverted Row",
+    category: "back",
+    primary_muscles: ["back", "lats"],
+    secondary_muscles: ["biceps", "core"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Set a bar at waist height and place your feet on a bench or box.\n2. Grip the bar with an overhand grip, body straight from head to heels.\n3. Pull your chest to the bar by squeezing shoulder blades together.\n4. The elevated feet increase difficulty compared to a standard inverted row.\n5. Lower with control to full arm extension and repeat.",
+    progression_group: "row",
+    progression_order: 3,
+  }),
+  bwExercise(52, {
+    name: "Front Lever Row",
+    category: "back",
+    primary_muscles: ["lats", "back"],
+    secondary_muscles: ["biceps", "core", "shoulders"],
+    difficulty: "advanced",
+    instructions:
+      "1. Hang from a bar with an overhand grip, body horizontal and parallel to the ground.\n2. Maintain a tight core and straight body position throughout.\n3. Pull your body up toward the bar while maintaining the horizontal position.\n4. Squeeze your lats at the top of the movement.\n5. Lower with control back to the horizontal hang. Requires significant lat and core strength.",
+    progression_group: "row",
+    progression_order: 4,
+  }),
+
+  // dip chain: Ring Dip (order 3)
+  bwExercise(53, {
+    name: "Ring Dip",
+    category: "chest",
+    primary_muscles: ["chest", "triceps"],
+    secondary_muscles: ["shoulders", "core"],
+    difficulty: "advanced",
+    instructions:
+      "1. Mount gymnastics rings at an appropriate height and support yourself at the top.\n2. Turn the rings outward slightly at the top for stability.\n3. Lower your body by bending elbows until upper arms are parallel to the floor.\n4. Keep the rings close to your body and control any swaying.\n5. Press back up to full arm extension. Requires more stabilization than parallel bar dips.",
+    progression_group: "dip",
+    progression_order: 3,
+  }),
+
+  // plank chain: Knee Plank (order 1), Plank with Arm Reach (order 4), Dragon Flag (order 5)
+  bwExercise(54, {
+    name: "Knee Plank",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["shoulders"],
+    difficulty: "beginner",
+    instructions:
+      "1. Start face down, then prop yourself on forearms and knees.\n2. Keep elbows directly under shoulders.\n3. Maintain a straight line from head to knees.\n4. Engage your core by drawing your belly button toward your spine.\n5. Hold the position for the target duration. Easier than a full plank — great for building core endurance.",
+    progression_group: "plank",
+    progression_order: 1,
+  }),
+  bwExercise(55, {
+    name: "Plank with Arm Reach",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["shoulders"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Start in a standard forearm plank position.\n2. Maintain a straight line from head to heels.\n3. Lift one arm and extend it straight forward, holding for two seconds.\n4. Return to plank and repeat with the other arm.\n5. Keep hips level throughout — resist the urge to rotate. Alternate arms each rep.",
+    progression_group: "plank",
+    progression_order: 4,
+  }),
+  bwExercise(56, {
+    name: "Dragon Flag",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["lats", "glutes"],
+    difficulty: "advanced",
+    instructions:
+      "1. Lie on a bench, gripping the edges behind your head for support.\n2. Raise your entire body off the bench, pivoting on your upper back and shoulders.\n3. Keep your body straight and rigid like a flag.\n4. Slowly lower your body toward the bench without letting hips sag.\n5. Stop just above the bench and raise back up. Requires exceptional core strength.",
+    progression_group: "plank",
+    progression_order: 5,
+  }),
+
+  // l_sit chain: Seated Leg Raise (order 1), Tucked L-Sit (order 2), V-Sit (order 4)
+  bwExercise(57, {
+    name: "Seated Leg Raise",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["quads"],
+    difficulty: "beginner",
+    instructions:
+      "1. Sit on the edge of a bench or between parallettes with hands gripping the surface.\n2. Keep your back straight and core engaged.\n3. Lift both legs together until they are parallel to the floor.\n4. Hold for one to two seconds at the top.\n5. Lower legs with control. Builds the hip flexor and core strength needed for L-sit.",
+    progression_group: "l_sit",
+    progression_order: 1,
+  }),
+  bwExercise(58, {
+    name: "Tucked L-Sit",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["triceps", "shoulders"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Sit between parallettes or on dip bars with hands on the supports.\n2. Straighten your arms to lift your body off the ground.\n3. Tuck your knees toward your chest, thighs parallel to the floor.\n4. Hold this tucked position for the target duration.\n5. Lower with control. Easier than a full L-sit — gradually extend legs as you get stronger.",
+    progression_group: "l_sit",
+    progression_order: 2,
+  }),
+  bwExercise(59, {
+    name: "V-Sit",
+    category: "abs_core",
+    primary_muscles: ["core"],
+    secondary_muscles: ["quads", "triceps", "shoulders"],
+    difficulty: "advanced",
+    instructions:
+      "1. Sit between parallettes or on dip bars with hands on the supports.\n2. Straighten your arms to lift your body off the ground.\n3. Raise your legs past parallel, forming a V shape with your torso.\n4. Keep legs straight and together, toes pointed.\n5. Hold for the target duration. Requires greater hip flexor flexibility and core strength than an L-sit.",
+    progression_group: "l_sit",
+    progression_order: 4,
   }),
 ];
 

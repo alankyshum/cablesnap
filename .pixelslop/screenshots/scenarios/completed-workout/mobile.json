@@ -1,0 +1,18 @@
+{
+  "scenario": "completed-workout",
+  "label": "post-workout-summary",
+  "route": "/session/summary/scenario-session-1",
+  "viewport": "mobile",
+  "viewportSize": {
+    "width": 390,
+    "height": 844
+  },
+  "commitSha": null,
+  "capturedAt": "2026-04-30T19:07:58.965Z",
+  "emulatedDeficiencies": [
+    "baseline",
+    "deuteranopia",
+    "protanopia",
+    "tritanopia"
+  ]
+}
