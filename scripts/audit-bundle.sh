@@ -13,6 +13,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Paperclip workspaces store gh config in /paperclip/.config/gh.
+# Auto-detect if the default location has no auth but Paperclip's does.
+if [[ -z "${GH_CONFIG_DIR:-}" ]] && [[ -f /paperclip/.config/gh/hosts.yml ]]; then
+  export GH_CONFIG_DIR=/paperclip/.config/gh
+fi
+
+# Pre-flight: gh CLI must be authenticated (via GITHUB_TOKEN env var or
+# `gh auth login`). Without auth, release create/upload will fail.
+if ! gh auth status >/dev/null 2>&1; then
+  echo "[audit-bundle] ERROR: gh CLI is not authenticated." >&2
+  echo "[audit-bundle] Set GITHUB_TOKEN env var or run 'gh auth login'." >&2
+  echo "[audit-bundle] In Paperclip workspaces, add GITHUB_TOKEN to the" >&2
+  echo "[audit-bundle] execution workspace secrets." >&2
+  exit 1
+fi
+
 SRC_DIR=".pixelslop/screenshots/scenarios"
 if [[ ! -d "$SRC_DIR" ]]; then
   echo "[audit-bundle] ERROR: $SRC_DIR does not exist. Run the scenario specs first." >&2
