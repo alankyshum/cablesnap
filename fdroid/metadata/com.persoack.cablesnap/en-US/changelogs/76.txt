@@ -1,0 +1,4 @@
+- Fixed Android crash on app open caused by WearOS module class-loading failure on devices without Google Play Services.
+- Replaced direct WearOS Wearable API import with Class.forName() reflection to prevent NoClassDefFoundError at startup.
+- Removed WearOSModule from Expo autolinker to prevent F-Droid build crashes.
+- Added Android emulator smoke test to CI pipeline to catch launch crashes before release.

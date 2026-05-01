@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.19",
+    "date": "2026-05-01",
+    "versionCode": 76,
+    "body": "- Fixed Android crash on app open caused by WearOS module class-loading failure on devices without Google Play Services.\n- Replaced direct WearOS Wearable API import with Class.forName() reflection to prevent NoClassDefFoundError at startup.\n- Removed WearOSModule from Expo autolinker to prevent F-Droid build crashes.\n- Added Android emulator smoke test to CI pipeline to catch launch crashes before release."
+  },
+  {
     "version": "0.26.12",
     "date": "2026-04-26",
     "versionCode": 65,
