@@ -30,9 +30,14 @@ import expo.modules.kotlin.modules.ModuleDefinition
  *     bounded native-side queue (≤200 events, drop-oldest) for cold-bundle
  *     replay. See PLAN-BLD-716.md §"Phone-side bridge concurrency model".
  *
- * This class is excluded from the `fdroidRelease` flavor by the source-set
- * guard emitted by `plugins/with-wearos-module.js`, so the F-Droid APK never
- * carries any reference to `com.google.android.gms.wearable.*`.
+ * This class is present in ALL build variants (including `releaseFdroid`)
+ * because the Expo autolinker's generated `ExpoModulesPackageList` contains
+ * a static (non-lazy) `WearOSModule::class.java` reference that would crash
+ * with `NoClassDefFoundError` if the class were absent. The GMS Wearable
+ * library itself IS excluded from `releaseFdroid` via Gradle `configurations`
+ * excludes, so the F-Droid APK carries zero `com.google.android.gms.wearable.*`
+ * classes. The [WEARABLE_API_CLASS] reference is safe: lazy + try-catch +
+ * unused in M0.
  *
  * **Wearable load-class reference:** [WEARABLE_API_CLASS] exists so the bridge
  * AAR's `classes.jar` carries a hard bytecode reference to

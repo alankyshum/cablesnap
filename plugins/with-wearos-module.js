@@ -147,18 +147,17 @@ const RELEASE_FDROID_BUILD_TYPE = `
 
 // `configurations { ... }` blocks placed at the project script level apply to
 // the whole module. The plan's AC10b is: `unzip -l app-releaseFdroid.apk |
-// grep -c 'com/google/android/gms/wearable' == 0`. We hit that by:
+// grep -c 'com/google/android/gms/wearable' == 0`. We hit that by excluding
+// the entire `com.google.android.gms` group from every releaseFdroid* config.
 //
-//   1. Excluding GMS Wearable from every releaseFdroid* config.
-//   2. Excluding the Expo Wear bridge library project (which transitively
-//      pulls in GMS Wearable) from the same configs.
+// IMPORTANT: We do NOT exclude module "expo-wearos-bridge" itself. The Expo
+// autolinker generates `ExpoModulesPackageList` with a static (non-lazy)
+// `WearOSModule::class.java` reference. Excluding the module from the APK
+// causes `NoClassDefFoundError` at startup. WearOSModule is safe to include:
+// its GMS Wearable reference is lazy + try-catch and unused in M0.
 //
 // Belt-and-suspenders across Implementation + RuntimeClasspath +
-// CompileClasspath: even if Expo's autolinker adds `implementation
-// project(':expo-wearos-bridge')` unconditionally, the runtime/compile
-// classpath under releaseFdroid never resolves it. The bridge module's own
-// `:expo-wearos-bridge` project is still configured by Gradle (cheap), but
-// no classes from it land in the F-Droid APK.
+// CompileClasspath ensures no GMS classes land in the F-Droid APK.
 const FDROID_EXCLUDES_BLOCK = `
 ${FDROID_EXCLUDES_MARKER}
 configurations {
@@ -166,17 +165,19 @@ configurations {
         // F-Droid Inclusion Criteria reject GMS — exclude the entire group
         // transitively from the F-Droid runtime + compile classpath.
         exclude group: "com.google.android.gms"
-        // Drop the Expo Wear bridge library project so its compiled
-        // .class files never reach app-releaseFdroid.apk.
-        exclude module: "expo-wearos-bridge"
+        // NOTE: We intentionally do NOT exclude module "expo-wearos-bridge".
+        // The Expo autolinker generates ExpoModulesPackageList with a static
+        // (non-lazy) reference to WearOSModule::class.java. If the class is
+        // absent from the APK, the app crashes at startup with
+        // NoClassDefFoundError. The WearOSModule class is safe to include in
+        // the F-Droid APK — its GMS Wearable reference is lazy + try-catch
+        // and never accessed in M0. Only the GMS group needs excluding.
     }
     releaseFdroidRuntimeClasspath {
         exclude group: "com.google.android.gms"
-        exclude module: "expo-wearos-bridge"
     }
     releaseFdroidCompileClasspath {
         exclude group: "com.google.android.gms"
-        exclude module: "expo-wearos-bridge"
     }
 }
 `;

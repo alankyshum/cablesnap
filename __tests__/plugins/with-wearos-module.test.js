@@ -168,22 +168,27 @@ describe("patchAppBuildGradle", () => {
     expect(releaseFdroidIdx).toBeGreaterThan(releaseInnerIdx);
   });
 
-  it("emits releaseFdroid excludes for com.google.android.gms and the bridge module", () => {
+  it("emits releaseFdroid excludes for com.google.android.gms (but NOT expo-wearos-bridge module)", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("// cablesnap:wearos:fdroid-excludes");
-    // Each of the three configurations names must carry both excludes —
+    // Each of the three configurations names must carry the GMS group exclude —
     // this is the core AC10b safeguard. Belt-and-suspenders across
     // Implementation + RuntimeClasspath + CompileClasspath.
+    // NOTE: We do NOT exclude module "expo-wearos-bridge" — the Expo autolinker
+    // generates a static reference to WearOSModule::class.java that would crash
+    // with NoClassDefFoundError if the class were absent from the APK.
     for (const cfg of [
       "releaseFdroidImplementation",
       "releaseFdroidRuntimeClasspath",
       "releaseFdroidCompileClasspath",
     ]) {
       const blockRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.android\\.gms"[\\s\\S]*?exclude module: "expo-wearos-bridge"[\\s\\S]*?\\}`,
+        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.android\\.gms"[\\s\\S]*?\\}`,
       );
       expect(out).toMatch(blockRegex);
     }
+    // Verify the module exclusion is NOT present (it causes startup crashes)
+    expect(out).not.toContain('exclude module: "expo-wearos-bridge"');
   });
 
   it("places the configurations excludes block at top level, before dependencies", () => {
