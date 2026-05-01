@@ -23,6 +23,9 @@ process.env.NODE_ENV = 'test';
 module.exports = {
   preset: 'jest-expo',
   testTimeout: 10000,
+  // BLD-918: Jest defaults to cpus−1 workers. Use all available parallelism
+  // (os.availableParallelism() already respects cgroup CPU limits).
+  maxWorkers: '100%',
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-reanimated|react-native-gesture-handler|victory-native|react-native-safe-area-context|@gorhom/bottom-sheet)'
   ],
