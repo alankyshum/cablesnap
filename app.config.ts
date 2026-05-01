@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "CableSnap",
   slug: "cablesnap",
-  version: "0.26.18",
+  version: "0.26.19",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
-    versionCode: 75,
+    versionCode: 76,
   },
   web: {
     favicon: "./assets/favicon.png",
