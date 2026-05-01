@@ -104,6 +104,9 @@ export type Exercise = {
   // these columns. Both-or-neither is enforced by `resolveExerciseImages`.
   start_image_uri?: string;
   end_image_uri?: string;
+  // BLD-913: bodyweight exercise progression paths
+  progression_group?: string | null;
+  progression_order?: number | null;
 };
 
 export const CATEGORIES: Category[] = [

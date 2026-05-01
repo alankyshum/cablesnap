@@ -28,9 +28,23 @@ import {
   type BackupV7,
 } from "../../../lib/db/import-export";
 
+// BLD-913: exercises insertRow now uses PRAGMA table_info to discover columns
+const EXERCISES_COLUMNS = [
+  { name: "id" }, { name: "name" }, { name: "category" }, { name: "primary_muscles" },
+  { name: "secondary_muscles" }, { name: "equipment" }, { name: "instructions" },
+  { name: "difficulty" }, { name: "is_custom" }, { name: "deleted_at" },
+  { name: "attachment" }, { name: "is_voltra" }, { name: "start_image_uri" },
+  { name: "end_image_uri" }, { name: "progression_group" }, { name: "progression_order" },
+];
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockDb.getAllAsync.mockResolvedValue([]);
+  mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+    if (typeof sql === "string" && sql.includes("PRAGMA table_info(exercises)")) {
+      return EXERCISES_COLUMNS;
+    }
+    return [];
+  });
   mockDb.getFirstAsync.mockResolvedValue({ cnt: 0 });
   mockDb.runAsync.mockResolvedValue({ changes: 1 });
 });
@@ -485,6 +499,7 @@ describe("importData", () => {
     };
 
     mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+      if (sql.includes("PRAGMA table_info(exercises)")) return EXERCISES_COLUMNS;
       const table = sql.replace("SELECT * FROM ", "");
       return tableRows[table] ?? [];
     });

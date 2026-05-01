@@ -10,6 +10,8 @@ import { BodyweightModifierNotice } from "./BodyweightModifierNotice";
 import { ExerciseTutorialLink } from "./ExerciseTutorialLink";
 import { ExerciseInstructionsList, parseInstructionSteps } from "./ExerciseInstructionsList";
 import { ExerciseIllustrationCards } from "./ExerciseIllustrationCards";
+import ProgressionPathCard from "@/components/exercise/ProgressionPathCard";
+import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
 
 export interface ExerciseDetailPaneProps {
@@ -21,6 +23,7 @@ export interface ExerciseDetailPaneProps {
 
 export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset }: ExerciseDetailPaneProps) {
   const steps = parseInstructionSteps(detail?.instructions);
+  const progression = useProgressionChain(detail?.id);
 
   return (
     <View style={[styles.detailPane, { borderLeftColor: colors.outlineVariant }]}>
@@ -124,6 +127,14 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                   illustration hint via the cards component. */}
               {steps.length === 0 && <ExerciseIllustrationCards exercise={detail} />}
               <ExerciseTutorialLink exerciseName={detail.name} testID="exercise-tutorial-link-pane" />
+              {/* BLD-913: Progression path card */}
+              {!progression.loading && progression.chain.length > 0 && (
+                <ProgressionPathCard
+                  exerciseId={detail.id}
+                  chain={progression.chain}
+                  suggestion={progression.suggestion}
+                />
+              )}
             </>
           }
         />

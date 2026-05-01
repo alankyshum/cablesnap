@@ -40,6 +40,8 @@ import { useBottomSheet } from "@/components/ui/bottom-sheet";
 import GoalProgressCard from "@/components/exercise/GoalProgressCard";
 import GoalSetForm from "@/components/exercise/GoalSetForm";
 import { BodyweightModifierNotice } from "@/components/exercises/BodyweightModifierNotice";
+import ProgressionPathCard from "@/components/exercise/ProgressionPathCard";
+import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
 
 function formatDateLong(ts: number): string {
@@ -80,6 +82,7 @@ export default function ExerciseDetail() {
   const strengthLevel = useStrengthLevel(d.exercise?.name, d.records?.est_1rm ?? null, d.unit);
   const goalSheet = useBottomSheet();
   const goalState = useStrengthGoal(id, d.bw);
+  const progression = useProgressionChain(id);
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
   const remove = useCallback(async () => {
@@ -139,6 +142,15 @@ export default function ExerciseDetail() {
 
       {/* BLD-541 AC-23: v1 user-trust microcopy on bodyweight exercise detail. */}
       {exercise.equipment === 'bodyweight' && <BodyweightModifierNotice colors={colors} />}
+
+      {/* BLD-913: Bodyweight exercise progression path */}
+      {!progression.loading && progression.chain.length > 0 && id && (
+        <ProgressionPathCard
+          exerciseId={id}
+          chain={progression.chain}
+          suggestion={progression.suggestion}
+        />
+      )}
 
       {/* Goal Progress Card — above Records/Chart for discoverability */}
       <GoalSection goalState={goalState} colors={colors} bw={d.bw} unit={d.unit} onOpenSheet={goalSheet.open} />

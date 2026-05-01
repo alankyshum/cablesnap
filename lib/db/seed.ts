@@ -24,8 +24,8 @@ export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   if (toInsert.length > 0) {
     await database.withTransactionAsync(async () => {
       const stmt = await database.prepareAsync(
-        `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, attachment, is_voltra)
-     VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom, $attachment, $is_voltra)`
+        `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, attachment, is_voltra, progression_group, progression_order)
+     VALUES ($id, $name, $category, $primary_muscles, $secondary_muscles, $equipment, $instructions, $difficulty, $is_custom, $attachment, $is_voltra, $progression_group, $progression_order)`
       );
       try {
         for (const ex of toInsert) {
@@ -41,6 +41,8 @@ export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
             $is_custom: ex.is_custom ? 1 : 0,
             $attachment: ex.attachment ?? "handle",
             $is_voltra: ex.is_voltra ? 1 : 0,
+            $progression_group: ex.progression_group ?? null,
+            $progression_order: ex.progression_order ?? null,
           });
         }
       } finally {
@@ -52,6 +54,11 @@ export async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
   // Backfill exercises referenced by starter templates that upgrading users
   // may be missing (e.g., community exercises added after initial install).
   await backfillStarterExercises(database, exercises);
+
+  // BLD-913: backfill progression data for existing seeded exercises that
+  // were inserted before progression columns existed. Only updates non-custom
+  // exercises where progression_group is still NULL.
+  await backfillProgressionData(database, exercises);
 
   await seedStarters(database);
 }
@@ -76,8 +83,8 @@ async function backfillStarterExercises(
     const ex = exerciseMap.get(id);
     if (!ex) continue;
     await database.runAsync(
-      `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, attachment, is_voltra)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, attachment, is_voltra, progression_group, progression_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         ex.id, ex.name, ex.category,
         JSON.stringify(ex.primary_muscles), JSON.stringify(ex.secondary_muscles),
@@ -85,6 +92,8 @@ async function backfillStarterExercises(
         ex.is_custom ? 1 : 0,
         ex.attachment ?? "handle",
         ex.is_voltra ? 1 : 0,
+        ex.progression_group ?? null,
+        ex.progression_order ?? null,
       ]
     );
   }
@@ -147,6 +156,31 @@ async function upsertPrograms(database: SQLite.SQLiteDatabase): Promise<void> {
       );
     }
   }
+}
+
+/**
+ * BLD-913: Backfill progression_group/progression_order for existing seeded
+ * exercises that were inserted before these columns existed. Only updates
+ * non-custom exercises where progression_group IS NULL (idempotent).
+ */
+async function backfillProgressionData(
+  database: SQLite.SQLiteDatabase,
+  allExercises: Exercise[]
+): Promise<void> {
+  const withProgression = allExercises.filter(
+    (e) => e.progression_group != null && e.progression_order != null
+  );
+  if (withProgression.length === 0) return;
+
+  await database.withTransactionAsync(async () => {
+    for (const ex of withProgression) {
+      await database.runAsync(
+        `UPDATE exercises SET progression_group = ?, progression_order = ?
+         WHERE id = ? AND is_custom = 0 AND progression_group IS NULL`,
+        [ex.progression_group!, ex.progression_order!, ex.id]
+      );
+    }
+  });
 }
 
 async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {

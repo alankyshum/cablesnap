@@ -22,6 +22,9 @@ function mapRow(row: ExerciseRow): Exercise {
     // BLD-561: optional user-supplied illustration URIs (custom exercises only).
     start_image_uri: row.start_image_uri ?? undefined,
     end_image_uri: row.end_image_uri ?? undefined,
+    // BLD-913: progression chain data.
+    progression_group: row.progression_group ?? undefined,
+    progression_order: row.progression_order ?? undefined,
   };
 }
 
@@ -148,4 +151,162 @@ export async function getTemplatesUsingExercise(
      WHERE te.exercise_id = ?`,
     [exerciseId]
   );
+}
+
+// ── BLD-913: Progression chain queries ────────────────────────────────────
+
+export type ProgressionChainExercise = {
+  id: string;
+  name: string;
+  progression_order: number;
+  has_been_logged: boolean;
+};
+
+/**
+ * Returns all exercises in the same progression chain as the given exercise,
+ * ordered by progression_order. Each exercise includes a flag indicating
+ * whether the user has logged at least one set for it.
+ * Returns empty array if the exercise is not in a progression group or
+ * the group has only one exercise.
+ */
+export async function getProgressionChain(
+  exerciseId: string
+): Promise<ProgressionChainExercise[]> {
+  // First get the progression_group for this exercise
+  const exercise = await query<{ progression_group: string | null }>(
+    `SELECT progression_group FROM exercises WHERE id = ? AND deleted_at IS NULL`,
+    [exerciseId]
+  );
+  const group = exercise[0]?.progression_group;
+  if (!group) return [];
+
+  const chain = await query<{
+    id: string;
+    name: string;
+    progression_order: number;
+    has_been_logged: number;
+  }>(
+    `SELECT e.id, e.name, e.progression_order,
+            CASE WHEN EXISTS (
+              SELECT 1 FROM workout_sets ws
+              JOIN workout_sessions s ON s.id = ws.session_id
+              WHERE ws.exercise_id = e.id
+                AND s.completed_at IS NOT NULL
+            ) THEN 1 ELSE 0 END AS has_been_logged
+     FROM exercises e
+     WHERE e.progression_group = ?
+       AND e.deleted_at IS NULL
+       AND e.progression_order IS NOT NULL
+     ORDER BY e.progression_order ASC`,
+    [group]
+  );
+
+  // Don't show chain if only one exercise (meaningless)
+  if (chain.length <= 1) return [];
+
+  return chain.map((r) => ({
+    id: r.id,
+    name: r.name,
+    progression_order: r.progression_order,
+    has_been_logged: r.has_been_logged === 1,
+  }));
+}
+
+export type ProgressionSuggestion = {
+  shouldSuggest: boolean;
+  nextExercise: { id: string; name: string } | null;
+  isTerminal: boolean;
+};
+
+/**
+ * Determines whether a progression suggestion should be shown for an exercise.
+ * Criteria (all must be true):
+ * 1. User has >= 3 sessions with this exercise in last 30 days
+ * 2. Most recent session: all normal completed sets had >= 12 reps
+ * 3. Next exercise exists in chain
+ * 4. User has NOT logged next exercise in last 30 days
+ */
+export async function getProgressionSuggestion(
+  exerciseId: string,
+  chain: ProgressionChainExercise[]
+): Promise<ProgressionSuggestion> {
+  const currentIdx = chain.findIndex((e) => e.id === exerciseId);
+  if (currentIdx === -1) return { shouldSuggest: false, nextExercise: null, isTerminal: false };
+
+  const isTerminal = currentIdx === chain.length - 1;
+  if (isTerminal) return { shouldSuggest: false, nextExercise: null, isTerminal: true };
+
+  const nextExercise = chain[currentIdx + 1];
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+  // Check 1: >= 3 sessions in last 30 days
+  const sessionCount = await query<{ count: number }>(
+    `SELECT COUNT(DISTINCT ws.session_id) as count
+     FROM workout_sets ws
+     JOIN workout_sessions s ON s.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND s.completed_at >= ?`,
+    [exerciseId, thirtyDaysAgo]
+  );
+  if ((sessionCount[0]?.count ?? 0) < 3) {
+    return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+  }
+
+  // Check 2: most recent session — all normal completed sets had >= 12 reps
+  const latestSession = await query<{ session_id: string }>(
+    `SELECT ws.session_id
+     FROM workout_sets ws
+     JOIN workout_sessions s ON s.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND s.completed_at IS NOT NULL
+     ORDER BY s.completed_at DESC
+     LIMIT 1`,
+    [exerciseId]
+  );
+  if (latestSession.length === 0) {
+    return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+  }
+
+  const failingSet = await query<{ count: number }>(
+    `SELECT COUNT(*) as count
+     FROM workout_sets
+     WHERE session_id = ?
+       AND exercise_id = ?
+       AND set_type = 'normal'
+       AND completed = 1
+       AND (reps IS NULL OR reps < 12)`,
+    [latestSession[0].session_id, exerciseId]
+  );
+  if ((failingSet[0]?.count ?? 1) > 0) {
+    return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+  }
+
+  // Also check there was at least one normal completed set (don't suggest on empty sessions)
+  const normalSetCount = await query<{ count: number }>(
+    `SELECT COUNT(*) as count
+     FROM workout_sets
+     WHERE session_id = ?
+       AND exercise_id = ?
+       AND set_type = 'normal'
+       AND completed = 1`,
+    [latestSession[0].session_id, exerciseId]
+  );
+  if ((normalSetCount[0]?.count ?? 0) === 0) {
+    return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+  }
+
+  // Check 4: user has NOT logged next exercise in last 30 days
+  const nextLogged = await query<{ count: number }>(
+    `SELECT COUNT(*) as count
+     FROM workout_sets ws
+     JOIN workout_sessions s ON s.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND s.completed_at >= ?`,
+    [nextExercise.id, thirtyDaysAgo]
+  );
+  if ((nextLogged[0]?.count ?? 0) > 0) {
+    return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+  }
+
+  return { shouldSuggest: true, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
 }
