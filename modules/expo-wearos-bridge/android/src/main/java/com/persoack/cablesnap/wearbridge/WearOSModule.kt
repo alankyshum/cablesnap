@@ -62,10 +62,3 @@ class WearOSModule : Module() {
     Name("WearOS")
   }
 }
-    }
-  }
-
-  override fun definition() = ModuleDefinition {
-    Name("WearOS")
-  }
-}
