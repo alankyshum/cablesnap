@@ -20,6 +20,13 @@ The `<!-- versionCode: N -->` marker is optional but required for F-Droid
 sidecar emission. The `publish-release` skill prepends a new section (with
 marker) at release time.
 
+## v0.26.19 — 2026-05-01
+<!-- versionCode: 76 -->
+- Fixed Android crash on app open caused by WearOS module class-loading failure on devices without Google Play Services.
+- Replaced direct WearOS Wearable API import with Class.forName() reflection to prevent NoClassDefFoundError at startup.
+- Removed WearOSModule from Expo autolinker to prevent F-Droid build crashes.
+- Added Android emulator smoke test to CI pipeline to catch launch crashes before release.
+
 ## Unreleased
 
 ### Added
