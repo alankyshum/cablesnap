@@ -23,6 +23,9 @@ process.env.NODE_ENV = 'test';
 module.exports = {
   preset: 'jest-expo',
   testTimeout: 10000,
+  // BLD-918: Container cgroup exposes 2 CPUs but jest auto-detects 1 worker
+  // (cpus − 1). Explicitly use both available CPUs to halve wall-clock time.
+  maxWorkers: 2,
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-reanimated|react-native-gesture-handler|victory-native|react-native-safe-area-context|@gorhom/bottom-sheet)'
   ],
