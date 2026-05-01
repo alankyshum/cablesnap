@@ -186,6 +186,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
         <View key={rowIdx} style={styles.row}>
           <Text
             variant="caption"
+            numberOfLines={1}
             style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant }]}
           >
             {DAY_LABELS[rowIdx]}
