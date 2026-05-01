@@ -7,6 +7,7 @@ import { X } from "lucide-react-native";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { useLayout } from "../lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import { useHistoryData } from "@/hooks/useHistoryData";
 import StreakAndHeatmap from "@/components/history/StreakAndHeatmap";
 import CalendarGrid from "@/components/history/CalendarGrid";
@@ -18,6 +19,7 @@ const MIN_TOUCH_TARGET = 48;
 function HistoryScreen() {
   const colors = useThemeColors();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const h = useHistoryData();
   const renderSession = useSessionRenderer({ colors });
 
@@ -29,7 +31,7 @@ function HistoryScreen() {
       keyExtractor={(item) => item.id}
       renderItem={renderSession}
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: 40 }}
+      contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight }}
       ListHeaderComponent={
         <>
           <StreakAndHeatmap
