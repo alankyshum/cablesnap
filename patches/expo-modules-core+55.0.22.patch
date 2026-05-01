@@ -1,0 +1,13 @@
+diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/ExpoModulesHelper.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/ExpoModulesHelper.kt
+index 632ac76..3510757 100644
+--- a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/ExpoModulesHelper.kt
++++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/ExpoModulesHelper.kt
+@@ -8,7 +8,7 @@ class ExpoModulesHelper {
+       try {
+         val expoModules = Class.forName("expo.modules.ExpoModulesPackageList")
+         expoModules.getConstructor().newInstance() as ModulesProvider
+-      } catch (e: Exception) {
++      } catch (e: Throwable) {
+         Log.e("ExpoModulesHelper", "Couldn't get expo modules list.", e)
+         null
+       }

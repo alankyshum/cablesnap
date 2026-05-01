@@ -1,6 +1,3 @@
 {
-  "platforms": ["android"],
-  "android": {
-    "modules": ["com.persoack.cablesnap.wearbridge.WearOSModule"]
-  }
+  "platforms": ["android"]
 }

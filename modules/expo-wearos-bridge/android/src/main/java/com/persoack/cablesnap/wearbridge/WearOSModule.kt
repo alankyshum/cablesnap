@@ -8,9 +8,17 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * CableSnap Wear OS phone-side bridge.
  *
  * **M0 status:** empty module — `Name("WearOS")` only, no functions, no
- * events. Exists so the Expo autolinker registers the module in the
- * `playRelease` build and so the JS layer in `src/index.ts` has a concrete
- * native target to wire up in M1.
+ * events. Exists so the `playRelease` build carries a hard bytecode
+ * reference to GMS Wearable (via [WEARABLE_API_CLASS]) and so the JS
+ * layer in `src/index.ts` has a concrete native target to wire up in M1.
+ *
+ * **Not autolinked.** The `expo-module.config.json` intentionally omits the
+ * `android.modules` key so the Expo autolinker does NOT generate a hard
+ * `WearOSModule::class.java` reference in `ExpoModulesPackageList`. That
+ * reference would cause a `NoClassDefFoundError` crash in the F-Droid build,
+ * where this module's classes are excluded from the APK via Gradle
+ * `configurations { releaseFdroid* { exclude module: "expo-wearos-bridge" } }`.
+ * M1 will register the module manually with a try/catch guard.
  *
  * M1 will add:
  *   - Functions: `sendTemplates`, `broadcastActiveWorkout`
