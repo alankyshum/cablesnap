@@ -60,6 +60,7 @@ jest.mock('../../lib/db', () => ({
   getExerciseChartData: jest.fn(),
   getExercise1RMChartData: jest.fn(),
   getBestSet: jest.fn(),
+  getVariantSetCount: jest.fn().mockResolvedValue(0),
   getExerciseHistory: jest.fn().mockResolvedValue([]),
   softDeleteCustomExercise: jest.fn(),
   getTemplatesUsingExercise: jest.fn().mockResolvedValue([]),

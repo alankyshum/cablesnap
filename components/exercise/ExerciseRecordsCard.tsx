@@ -19,11 +19,36 @@ type Props = {
   exerciseId: string | undefined;
   loadRecords: (id: string) => void;
   style?: object;
+  /**
+   * BLD-788: when true, the "no data" empty state shows the variant-filter-
+   * specific message and CTA instead of the generic onboarding text.
+   */
+  variantFilterActive?: boolean;
 };
 
+function RecordsEmptyState({ colors, variantFilterActive }: { colors: ThemeColors; variantFilterActive?: boolean }) {
+  if (variantFilterActive) {
+    return (
+      <View accessibilityLabel="No sets logged with this variant yet. Log this variant in your next session.">
+        <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
+          No sets logged with this variant yet
+        </Text>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+          Log this variant in your next session.
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <Text variant="body" style={{ color: colors.onSurfaceVariant }}>No workout data yet — start a session to build your history</Text>
+  );
+}
+
+// BLD-541 (pre-existing) + BLD-788 empty-state branch tip complexity over 15.
+// eslint-disable-next-line complexity
 export default function ExerciseRecordsCard({
   colors, records, recordsLoading, recordsError, best, bw, unit,
-  exerciseId, loadRecords, style,
+  exerciseId, loadRecords, style, variantFilterActive,
 }: Props) {
   const router = useRouter();
 
@@ -39,7 +64,7 @@ export default function ExerciseRecordsCard({
             <Button variant="ghost" onPress={() => exerciseId && loadRecords(exerciseId)} label="Retry" />
           </View>
         ) : records && records.total_sessions === 0 ? (
-          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>No workout data yet — start a session to build your history</Text>
+          <RecordsEmptyState colors={colors} variantFilterActive={variantFilterActive} />
         ) : records ? (
           <>
             <View style={styles.statsRow}>
