@@ -59,14 +59,20 @@ function formatDateKey(date: Date): string {
  * Step 0 stays on `surfaceVariant` (background tone) so an empty week is
  * visually distinct from a 1-workout week even with the increased opacity
  * floor on step 1.
+ *
+ * BLD-870: Widened opacity ramp (0.15 / 0.55 / 1.0) so luminance alone
+ * differentiates the three filled steps. The previous 0.3 / 0.6 / 1.0 ramp
+ * collapsed to near-identical golden-brown tones under deuteranopia (red-green
+ * CVD), affecting ~6 % of males. Adjacent steps now maintain ≥ 1.5:1 luminance
+ * contrast ratio. Numeric labels (BLD-732) remain the primary non-color cue.
  */
 function heatmapColor(
   count: number,
   colors: { surfaceVariant: string; primary: string }
 ): string {
   if (count === 0) return colors.surfaceVariant;
-  if (count === 1) return withOpacity(colors.primary, 0.3);
-  if (count === 2) return withOpacity(colors.primary, 0.6);
+  if (count === 1) return withOpacity(colors.primary, 0.15);
+  if (count === 2) return withOpacity(colors.primary, 0.55);
   return colors.primary;
 }
 

@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import { PlateCalculatorContent } from "./plates";
 import { RMCalculatorContent } from "./rm";
@@ -14,6 +14,7 @@ import { logError } from "../../lib/errors";
 export default function ToolsHub() {
   const colors = useThemeColors();
   const layout = useLayout();
+  const router = useRouter();
 
   return (
     <>
@@ -23,6 +24,13 @@ export default function ToolsHub() {
         contentContainerStyle={{ padding: layout.horizontalPadding, paddingVertical: 24, gap: 24 }}
         keyboardShouldPersistTaps="handled"
       >
+        <ToolLinkCard
+          icon="cable-data"
+          title="Cable Setup Finder"
+          description="Find exercises by mount position and attachment"
+          onPress={() => router.push("/tools/cable-finder")}
+        />
+
         <ToolCard icon="timer-outline" title="Interval Timer">
           <TimerContent />
         </ToolCard>
@@ -36,6 +44,44 @@ export default function ToolsHub() {
         </ToolCard>
       </ScrollView>
     </>
+  );
+}
+
+function ToolLinkCard({ icon, title, description, onPress }: {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  title: string;
+  description: string;
+  onPress: () => void;
+}) {
+  const colors = useThemeColors();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} accessibilityHint={description}>
+      <Card style={{ backgroundColor: colors.surface }}>
+        <CardContent>
+          <View style={styles.header}>
+            <MaterialCommunityIcons
+              name={icon}
+              size={24}
+              color={colors.primary}
+              style={styles.icon}
+            />
+            <View style={{ flex: 1 }}>
+              <Text variant="subtitle" style={{ color: colors.onSurface }}>
+                {title}
+              </Text>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                {description}
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={24}
+              color={colors.onSurfaceVariant}
+            />
+          </View>
+        </CardContent>
+      </Card>
+    </Pressable>
   );
 }
 
