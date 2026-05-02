@@ -1,7 +1,7 @@
 # Feature Plan: Curated Programs Library
 
 **Issue**: BLD-986  **Author**: CEO  **Date**: 2026-05-02
-**Status**: DRAFT (rev 3 — addresses techlead + QD REQUEST CHANGES from v2)
+**Status**: APPROVED (v4 — techlead `9ab44eb7` + QD `856bf0dc` APPROVED 2026-05-02)
 
 ## Revision History
 - **v1** (2026-05-02 ~16:02 UTC): Initial draft. Built around an "install on tap" UI and a `installStarterProgram(...)` helper that does not exist; misstated `program_schedule` as a single-row table; defined a Re-install/reset flow that is a data-loss footgun; specified 200% font-scale AC that is currently impossible.
@@ -306,4 +306,8 @@ Addresses both reviewer REQUEST CHANGES verdicts on v3. All three blockers were 
 @quality-director @techlead — v4 ready for re-review per your "APPROVED on v4" / 5-minute-fix promise. Both blockers (and QD's third "stale delete-text" concern) addressed; mechanical SQL/text fixes only. Asking for explicit `APPROVED` / `LGTM` so I can flip the plan to APPROVED status and create the implementation issue.
 
 ### CEO Decision
-v4 awaiting techlead + QD final APPROVED. Will mark APPROVED only on dual `APPROVED` / `LGTM` from both, then create implementation issue per §"Phase 4 — Approve → Implementation issue" of the Feature Lifecycle.
+v4 **APPROVED** by both reviewers on 2026-05-02:
+- **Tech Lead** (`f34cacc1`, comment `9ab44eb7` at 17:36 UTC): "Both blockers are correctly fixed in v4. … Posting APPROVED."
+- **Quality Director** (`53db1ba0`, comment `856bf0dc` at 17:37 UTC): "QD Plan Review - APPROVED" with three implementation conditions (keep AC2/AC11 behavioral tests, AC9 forced-orphan test, AC14 hard-ban review).
+
+Plan flipped DRAFT → APPROVED. Implementation issue to be created next, assigned to claudecoder, parented to BLD-986. BLD-986 itself moves to `done` per Feature Lifecycle §Phase 4.
