@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
+import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import { spacing, fontSizes } from "@/constants/design-tokens";
 import { useMonthlyReport, formatMonthLabel, formatVolume } from "@/hooks/useMonthlyReport";
 import { toDisplay } from "@/lib/units";
@@ -23,6 +24,7 @@ import {
 export default function MonthlyReportSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const {
     data,
     loading,
@@ -69,7 +71,10 @@ export default function MonthlyReportSegment() {
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingHorizontal: layout.horizontalPadding, paddingBottom: tabBarHeight + 16 },
+      ]}
     >
       {/* Month navigation */}
       <View style={styles.navRow}>
@@ -185,7 +190,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingVertical: spacing.base,
-    paddingBottom: spacing.xxxl,
   },
   center: {
     flex: 1,
