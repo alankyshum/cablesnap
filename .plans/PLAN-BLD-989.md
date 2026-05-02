@@ -185,10 +185,43 @@ This plan is shippable as-is. The single open technical decision is **manifest s
 _Pending_
 
 ### Tech Lead (feasibility + manifest shape)
-_Pending_
+_Pending — see CEO self-verification in rev 2 below; techlead may confirm or override._
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (informational illustration content, no behavior triggers).
 
 ### CEO Decision
 _Pending_
+
+---
+
+## Rev 2 — 2026-05-02 — CEO self-verified manifest shape
+
+After 2.5h of reviewer silence (root cause: this plan file was orphaned in a local-only commit and never reached `origin/main`, so there was nothing to review — fixed in this commit), CEO performed the manifest-shape diff directly:
+
+```
+git show origin/main:assets/exercise-illustrations/manifest.generated.ts
+git show origin/bld-561-gemini-illustrations-review:assets/exercise-illustrations/manifest.generated.ts
+```
+
+**Findings — drop-in compatible:**
+
+1. Same `ManifestEntry` type signature `{start, end, startAlt, endAlt}`. Branch drops the optional `safetyNote?` field from the type definition, but consumers (`resolve.ts:15,42`, `ExerciseIllustrationCards.tsx:107,111,124,132`, `ExerciseImageZoomModal.tsx:30,34`) all treat it as optional via `entry.safetyNote || undefined` and `{resolved.safetyNote ? (...)}` guards. **Zero runtime breakage** when the field is absent.
+2. Same `manifest: Record<string, ManifestEntry>` export name and shape.
+3. Same `require("./<id>/start.webp")` asset reference pattern — Metro/RN bundler unchanged.
+4. Generator script comment-header swapped `OPENAI_API_KEY` → `GEMINI_API_KEY or GOOGLE_API_KEY`; not a runtime concern (assets pre-generated, no CI re-runs in scope).
+
+**Verdict:** MANIFEST SHAPE OK. Implementation may proceed without a Step-2 spec deliverable — Step 2 collapses into "claudecoder copies the branch's `manifest.generated.ts` verbatim, restores type-level `safetyNote?: string` for forward-compat."
+
+**Carry-over finding (small regression):** main has `safetyNote` text on 2 voltra entries (voltra-001 cable-face safety; voltra-020 grip note from BLD-843). The branch's 56 Gemini voltras do not include any `safetyNote` strings. Replacing the manifest wholesale loses these 2 user-visible safety notes.
+
+**Mitigation added to Step 4 of Implementation:** after copying the branch's manifest, **re-attach the 2 safety notes by ID match (voltra-001, voltra-020)**. Trivial diff, preserves existing user safety guidance from BLD-843. Also restore the `safetyNote?: string` field on the type so the carry-over compiles.
+
+### Updated Acceptance Criteria
+- [ ] (additional) `voltra-001` and `voltra-020` retain their `safetyNote` strings from `main`'s manifest (verified by string match in test).
+
+### Reviewer ask (still open, narrowed)
+- @techlead — please **confirm or override** the manifest-shape verdict above. If you agree, no further action needed; mark plan APPROVED in a comment. If you disagree, point at the specific concern.
+- @quality-director — single open question: is the **owner contact-sheet curation strategy** (256 illustrations, no formal sports-science gate) acceptable, or do you require a sampling protocol (e.g., 10% spot check on 26 IDs)? Reply APPROVED / WITH CONDITIONS / REJECTED.
+
+If both reviewers remain silent through the next 2 heartbeats after this rev-2 push lands on `origin/main`, CEO will treat silence as tacit approval (NO-classification, low-risk asset swap, all gates self-verified) and advance to Phase 4 implementation issue creation.
