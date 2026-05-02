@@ -15,6 +15,11 @@ import {
   getSessionsByMonth,
   getTotalSessionCount,
   searchSessions,
+  getTemplatesWithSessions,
+  getMuscleGroupsWithSessions,
+  getFilteredSessions,
+  type TemplateOption,
+  type DatePreset,
 } from "@/lib/db";
 import { getSchedule, type ScheduleEntry } from "@/lib/db/settings";
 import type { WorkoutSession } from "@/lib/types";
@@ -26,6 +31,7 @@ import {
 import { duration as animDuration } from "@/constants/design-tokens";
 import { useLayout } from "@/lib/layout";
 import { View } from "react-native";
+import { useHistoryFilters, type HistoryFilterKey } from "@/hooks/useHistoryFilters";
 
 export type SessionRow = WorkoutSession & { set_count: number };
 
@@ -79,6 +85,19 @@ export function useHistoryData() {
   const [heatmapError, setHeatmapError] = useState(false);
   const [heatmapExpanded, setHeatmapExpanded] = useState(true);
 
+  // BLD-938: history filters (template / muscle group / date range)
+  const filterState = useHistoryFilters();
+  const [templateOptions, setTemplateOptions] = useState<TemplateOption[]>([]);
+  const [muscleGroupOptions, setMuscleGroupOptions] = useState<string[]>([]);
+  const [filteredRows, setFilteredRows] = useState<SessionRow[]>([]);
+  const [filteredTotal, setFilteredTotal] = useState(0);
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [filterPage, setFilterPage] = useState(0);
+  const filterFetchSeqRef = useRef(0);
+  const FILTER_PAGE_SIZE = 20;
+
+  const useFilterMode = filterState.anyActive;
+
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled().then(setScreenReaderEnabled);
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotionEnabled);
@@ -129,7 +148,93 @@ export function useHistoryData() {
     load();
     loadHeatmap();
     getSchedule().then(setSchedule).catch(() => setSchedule([]));
+    // BLD-938: cache the available filter option lists once per visit.
+    getTemplatesWithSessions().then(setTemplateOptions).catch(() => setTemplateOptions([]));
+    getMuscleGroupsWithSessions().then(setMuscleGroupOptions).catch(() => setMuscleGroupOptions([]));
   }, [load, loadHeatmap]));
+
+  // BLD-938: when any filter is active OR text search active, fetch from
+  // getFilteredSessions paged. When all filters cleared, the calendar/month
+  // path resumes via `filtered` below.
+  //
+  // Page index is intentionally captured into the dependency array so that
+  // tapping "load more" (which dispatches setFilterPage(p => p+1) — an
+  // event-time setter, lint-clean) re-runs this effect with a higher offset.
+  // The reset-to-page-zero on filter/query change is handled in the setter
+  // callbacks below (NOT a derived effect), which keeps lint happy
+  // (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    const seq = ++filterFetchSeqRef.current;
+    if (!useFilterMode && !query.trim()) {
+      // Fully unfiltered: nothing to fetch. We do NOT reset
+      // filteredRows/filteredTotal here (would be a setState-in-effect lint
+      // violation). Instead, the `filtered` memo below short-circuits to
+      // `sessions` whenever `useFilterMode` is false, so any stale
+      // filteredRows are simply ignored until the next filtered fetch
+      // overwrites them.
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- starting async fetch; loading flag flipped back via .finally
+    setFilterLoading(true);
+    const offset = filterPage * FILTER_PAGE_SIZE;
+    getFilteredSessions(filterState.filters, query, FILTER_PAGE_SIZE, offset)
+      .then((res) => {
+        // Drop stale fetches.
+        if (seq !== filterFetchSeqRef.current) return;
+        setFilteredRows((prev) => (filterPage === 0 ? res.rows : [...prev, ...res.rows]));
+        setFilteredTotal(res.total);
+      })
+      .catch(() => {
+        if (seq !== filterFetchSeqRef.current) return;
+        setFilteredRows([]);
+        setFilteredTotal(0);
+      })
+      .finally(() => {
+        if (seq !== filterFetchSeqRef.current) return;
+        setFilterLoading(false);
+      });
+  }, [useFilterMode, filterState.filters, query, filterPage]);
+
+  // BLD-938: clear calendar selection when filters become active, AND reset
+  // paging — both done in the filter setter handlers (event-time, lint-clean
+  // alternative to a derived effect). When the user clears all filters we
+  // deliberately do NOT restore the prior selection (per plan §UX — filter
+  // mode resets calendar's selection on activation).
+  const setTemplateFilter = useCallback(
+    (templateId: string | null) => {
+      if (templateId !== null) setSelected(null);
+      setFilterPage(0);
+      filterState.setTemplate(templateId);
+    },
+    [filterState],
+  );
+  const setMuscleGroupFilter = useCallback(
+    (muscleGroup: string | null) => {
+      if (muscleGroup !== null) setSelected(null);
+      setFilterPage(0);
+      filterState.setMuscleGroup(muscleGroup);
+    },
+    [filterState],
+  );
+  const setDatePresetFilter = useCallback(
+    (datePreset: DatePreset | null) => {
+      if (datePreset !== null) setSelected(null);
+      setFilterPage(0);
+      filterState.setDatePreset(datePreset);
+    },
+    [filterState],
+  );
+  const clearOneFilter = useCallback(
+    (key: HistoryFilterKey) => {
+      setFilterPage(0);
+      filterState.clearOne(key);
+    },
+    [filterState],
+  );
+  const clearAllFilters = useCallback(() => {
+    setFilterPage(0);
+    filterState.clearAll();
+  }, [filterState]);
 
   const dotMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -150,10 +255,20 @@ export function useHistoryData() {
   }, [sessions]);
 
   const filtered = useMemo(() => {
+    // BLD-938: filter mode (chips) takes precedence — uses paged filtered rows.
+    if (useFilterMode) return filteredRows;
+    // Existing text-search path
     if (results) return results;
     if (!selected) return sessions;
     return sessions.filter((s) => formatDateKey(s.started_at) === selected);
-  }, [sessions, selected, results]);
+  }, [sessions, selected, results, useFilterMode, filteredRows]);
+
+  const loadMoreFiltered = useCallback(() => {
+    if (!useFilterMode) return;
+    if (filterLoading) return;
+    if (filteredRows.length >= filteredTotal) return;
+    setFilterPage((p) => p + 1);
+  }, [useFilterMode, filterLoading, filteredRows.length, filteredTotal]);
 
   const changeMonth = useCallback((direction: -1 | 1) => {
     const animDurationMs = reducedMotion ? 0 : animDuration.normal;
@@ -174,13 +289,19 @@ export function useHistoryData() {
     [screenReaderEnabled, changeMonth]);
 
   const onSearch = (text: string) => {
-    setQuery(text); setSelected(null);
+    setQuery(text); setSelected(null); setFilterPage(0);
     if (timer.current) clearTimeout(timer.current);
     if (!text.trim()) { setResults(null); return; }
     timer.current = setTimeout(async () => { const data = await searchSessions(text.trim()); setResults(data); }, 300);
   };
 
-  const clearFilter = () => { setSelected(null); setQuery(""); setResults(null); };
+  const clearFilter = () => {
+    setSelected(null);
+    setQuery("");
+    setResults(null);
+    setFilterPage(0);
+    filterState.clearAll();
+  };
 
   const tapDay = (key: string) => {
     setQuery(""); setResults(null);
@@ -218,6 +339,7 @@ export function useHistoryData() {
   }, [selected]);
 
   const emptyMessage = () => {
+    if (useFilterMode) return "No workouts match these filters";
     if (query.trim()) return `No workouts matching "${query}"`;
     if (selected) return "Rest day!";
     if (!hasAny) return "No workouts yet. Start your first workout!";
@@ -233,5 +355,19 @@ export function useHistoryData() {
     dayDetailSessions, selectedDayScheduleEntry, isSelectedDayFuture,
     changeMonth, onSearch, clearFilter, tapDay, onHeatmapDayPress, emptyMessage,
     screenReaderEnabled, reduceMotionEnabled,
+    // BLD-938 history filters
+    filters: filterState.filters,
+    anyFilterActive: filterState.anyActive,
+    setTemplateFilter,
+    setMuscleGroupFilter,
+    setDatePresetFilter,
+    clearOneFilter,
+    clearAllFilters,
+    templateOptions,
+    muscleGroupOptions,
+    filteredTotal,
+    filterLoading,
+    loadMoreFiltered,
+    useFilterMode,
   };
 }

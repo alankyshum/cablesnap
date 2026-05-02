@@ -45,6 +45,10 @@ jest.mock('react-native-reanimated', () => {
     useSharedValue: <T,>(v: T) => ({ value: v }),
     useReducedMotion: () => false,
     withTiming: <T,>(v: T) => v,
+    // BLD-938: BottomSheet imports these; the inline mock above predates
+    // the new sheets and would otherwise crash the screen on mount.
+    withSpring: <T,>(v: T) => v,
+    runOnJS: <T,>(fn: T) => fn,
     createAnimatedComponent: <T,>(c: T) => c,
     Easing: { bezier: () => (t: number) => t },
   }
@@ -108,6 +112,11 @@ jest.mock('../../lib/db', () => ({
   getSessionCountsByDay: (...args: unknown[]) => mockGetSessionCountsByDay(...args),
   getAllCompletedSessionWeeks: (...args: unknown[]) => mockGetAllCompletedSessionWeeks(...args),
   getTotalSessionCount: (...args: unknown[]) => mockGetTotalSessionCount(...args),
+  // BLD-938: history filter queries — return empty so the screen falls
+  // through to the unfiltered (calendar/recent) path used by these tests.
+  getTemplatesWithSessions: jest.fn().mockResolvedValue([]),
+  getMuscleGroupsWithSessions: jest.fn().mockResolvedValue([]),
+  getFilteredSessions: jest.fn().mockResolvedValue({ rows: [], total: 0 }),
 }))
 
 jest.mock('../../lib/db/settings', () => ({
