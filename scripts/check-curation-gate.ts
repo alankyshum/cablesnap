@@ -46,6 +46,7 @@ type ParsedBlock = {
   round: number | null;
   verdict: string;
   safetyClass: SafetyClass | null;
+  hasSafetyNote: boolean;
 };
 
 /**
@@ -95,7 +96,7 @@ export function parseCurationBlocks(text: string): ParsedBlock[] {
       safetyClass = null;
     }
 
-    out.push({ id, round, verdict, safetyClass });
+    out.push({ id, round, verdict, safetyClass, hasSafetyNote: /-\s*safetyNote:\s*".+"/.test(part) });
   }
   return out;
 }
@@ -148,7 +149,7 @@ function main(): void {
       );
     }
     const cls = b.safetyClass ?? "N/A";
-    const blocking = gateBlocks(b.verdict, cls);
+    const blocking = gateBlocks(b.verdict, cls, { hasSafetyNote: b.hasSafetyNote });
     if (blocking) {
       failures.push(
         `${id}: gate BLOCKS (verdict=${b.verdict}, safety-class=${cls})`,

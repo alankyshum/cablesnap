@@ -476,18 +476,28 @@ function gitHead(): string {
  * and the Bundle Gate CI step run the *same* logic against the committed
  * CURATION.md — no second implementation, no drift.
  */
-export function gateBlocks(verdict: string, safetyClass: SafetyClass): boolean {
+export function gateBlocks(
+  verdict: string,
+  safetyClass: SafetyClass,
+  opts?: { hasSafetyNote?: boolean },
+): boolean {
   const v = verdict.toUpperCase().trim();
   if (v === "REJECT" || v === "NEEDS_RESEARCH" || v === "UNKNOWN") return true;
   if (v === "APPROVE_WITH_CHANGES") {
     // Severity tiering (CEO ruling 0e827b56, QD spec 50965182):
     //   - SAFETY_HIGH  → BLOCK (MEDIUM/HIGH/CRITICAL named risk)
+    //                    UNLESS a safetyNote is present in the manifest
+    //                    (BLD-843: safetyNote mitigates the concern in-UI)
     //   - SAFETY_LOW   → PASS  (LOW-rated risk or unrated keyword;
     //                            ship as-is with coaching-note follow-up)
     //   - REFINEMENT   → PASS  (no risks named, pure stylistic feedback)
     //   - N/A          → BLOCK (panel did not emit Safety Concerns section
     //                            — fail-closed; verdict not trustworthy)
-    return safetyClass === "SAFETY_HIGH" || safetyClass === "N/A";
+    if (safetyClass === "N/A") return true;
+    if (safetyClass === "SAFETY_HIGH") {
+      return !opts?.hasSafetyNote;
+    }
+    return false;
   }
   return false;
 }

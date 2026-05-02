@@ -276,6 +276,33 @@ describe("gateBlocks (severity-tiered truth table)", () => {
     expect(gateBlocks("approve_with_changes", "SAFETY_LOW")).toBe(false);
     expect(gateBlocks("approve_with_changes", "SAFETY_HIGH")).toBe(true);
   });
+
+  it("SAFETY_HIGH passes when hasSafetyNote is true (BLD-843)", () => {
+    expect(
+      gateBlocks("APPROVE_WITH_CHANGES", "SAFETY_HIGH", { hasSafetyNote: true }),
+    ).toBe(false);
+  });
+
+  it("SAFETY_HIGH still blocks when hasSafetyNote is false", () => {
+    expect(
+      gateBlocks("APPROVE_WITH_CHANGES", "SAFETY_HIGH", { hasSafetyNote: false }),
+    ).toBe(true);
+  });
+
+  it("N/A still blocks even with hasSafetyNote (fail-closed)", () => {
+    expect(
+      gateBlocks("APPROVE_WITH_CHANGES", "N/A", { hasSafetyNote: true }),
+    ).toBe(true);
+  });
+
+  it("hard verdicts still block even with hasSafetyNote", () => {
+    expect(
+      gateBlocks("REJECT", "SAFETY_HIGH", { hasSafetyNote: true }),
+    ).toBe(true);
+    expect(
+      gateBlocks("NEEDS_RESEARCH", "SAFETY_HIGH", { hasSafetyNote: true }),
+    ).toBe(true);
+  });
 });
 
 describe("parseCurationBlocks", () => {
@@ -308,18 +335,21 @@ describe("parseCurationBlocks", () => {
       round: 2,
       verdict: "APPROVE",
       safetyClass: "REFINEMENT",
+      hasSafetyNote: false,
     });
     expect(blocks[1]).toEqual({
       id: "voltra-013",
       round: 2,
       verdict: "APPROVE_WITH_CHANGES",
       safetyClass: "SAFETY_HIGH",
+      hasSafetyNote: false,
     });
     expect(blocks[2]).toEqual({
       id: "voltra-020",
       round: 2,
       verdict: "APPROVE_WITH_CHANGES",
       safetyClass: "SAFETY_LOW",
+      hasSafetyNote: false,
     });
   });
 
@@ -346,5 +376,28 @@ describe("parseCurationBlocks", () => {
     expect(blocks[0].id).toBe("voltra-999");
     expect(blocks[0].round).toBeNull();
     expect(blocks[0].safetyClass).toBeNull();
+  });
+
+  it("detects hasSafetyNote from sign-off block (BLD-843)", () => {
+    const withNote = [
+      '## voltra-042 — Test Exercise',
+      "- Round: **3**",
+      '- Curation gate: ✅ PASS (verdict=`APPROVE_WITH_CHANGES`, safety-class=`SAFETY_HIGH` — `gateBlocks()`)',
+      '- safetyNote: "Keep face clear of cable path."',
+      "",
+    ].join("\n");
+    const [b] = parseCurationBlocks(withNote);
+    expect(b.hasSafetyNote).toBe(true);
+  });
+
+  it("hasSafetyNote is false when no safetyNote line exists", () => {
+    const withoutNote = [
+      "## voltra-043 — No Note",
+      "- Round: **3**",
+      '- Curation gate: ✅ PASS (verdict=`APPROVE_WITH_CHANGES`, safety-class=`SAFETY_LOW` — `gateBlocks()`)',
+      "",
+    ].join("\n");
+    const [b] = parseCurationBlocks(withoutNote);
+    expect(b.hasSafetyNote).toBe(false);
   });
 });
