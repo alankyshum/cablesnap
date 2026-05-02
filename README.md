@@ -63,6 +63,14 @@ in `patches/` against `node_modules/`. Two install-time concerns are handled:
    instead of relying on shell `PATH`, which makes the hook robust to
    containers that strip `node_modules/.bin` from `PATH`.
 
+The repo's [`.npmrc`](./.npmrc) sets `omit=` (empty) so devDependencies are
+installed even when the inherited shell exports `NODE_ENV=production` (default
+in Paperclip agent containers and some CI runners). Without that line,
+`npm install` silently omits `cross-env`, `jest`, `typescript`, etc., and
+`npm test` / `npx tsc --noEmit` fail with "command not found" (BLD-998).
+A production-only install is still possible via `npm install --omit=dev` /
+`npm ci --omit=dev` — the explicit CLI flag overrides `.npmrc`.
+
 If you ever need to skip patches (e.g., a fast lockfile-only install), use
 `npm install --ignore-scripts`.
 
