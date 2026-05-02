@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 # daily-audit.sh — BLD-480 regression-catcher + daily visual audit driver.
 #
-# Runs the `completed-workout` and `workout-history` scenario specs against:
+# Runs the scenario specs against:
 #   1. current HEAD (the commit under test today)
-#   2. BLD_480_PRE_FIX_SHA — pinned parent of `6f067cc` (BLD-480's fix PR #292)
-#      which reproduces the MusclesWorkedCard cropping bug
+#   2. The BLD-480 pre-fix FIXTURE — a dev-only route at
+#      `/__fixtures__/bld-480-prefix` that renders `MusclesWorkedCard`
+#      wrapped in a regressed `maxHeight: 200` clamp, faithfully reproducing
+#      the cropping defect that PR #292 fixed.
+#
+# Why a fixture instead of `git checkout` of an old SHA (BLD-951):
+#   - Pre-fix tree (cce2ac1f...) targets an Expo SDK incompatible with the
+#     workspace's Node 22, so daily checkouts started failing on
+#     2026-05-01 (BLD-924) and 2026-05-02 (BLD-941, BLD-943) silently
+#     dropping the regression-catcher bundle from the audit.
+#   - The fixture lives in HEAD as normal source code, so it carries
+#     forward through every Node/Expo upgrade with the rest of the tree.
+#   - It still exercises the live ux-designer vision pipeline against a
+#     freshly rendered cropped MusclesWorkedCard, preserving QD#2 intent.
 #
 # Each scenario emits four PNGs per viewport (BLD-744):
 #   <scenario>/<viewport>.png                  ← baseline
@@ -16,26 +28,21 @@
 # The CVD captures share a single browser session per scenario, so runtime
 # stays well under 2x baseline.
 #
-# The pre-fix commit is the PERMANENT DAILY SMOKE (QD#1). If the ux-designer
-# vision pipeline silently regresses, the audit loop would produce green audits
-# indefinitely; running scenarios against this known-bad commit every day
-# catches that failure mode.
+# The pre-fix fixture is the PERMANENT DAILY SMOKE (QD#1). If the
+# ux-designer vision pipeline silently regresses, the audit loop would
+# produce green audits indefinitely; running scenarios against this
+# known-bad fixture every day catches that failure mode.
 #
 # Acceptance (QD#2): after the audit runs, ux-designer's findings for the
-# pre-fix commit MUST contain at least one finding whose description matches
-# (case-insensitive): crop | truncat | clip | maxHeight | cut off |
+# pre-fix bundle MUST contain at least one finding whose description
+# matches (case-insensitive): crop | truncat | clip | maxHeight | cut off |
 # MusclesWorkedCard | body-figure. The match-check is performed by the
 # ux-designer agent itself on intake (see AGENTS-ux-designer.md).
 #
-# Refs: BLD-494, BLD-744, TL#6, QD#1, QD#2
+# Refs: BLD-480, BLD-494, BLD-744, BLD-924, BLD-941, BLD-943, BLD-951.
+# TL#6, QD#1, QD#2.
 
 set -euo pipefail
-
-# Pinned via `git rev-parse 6f067cc^` on 2026-04-22 — the commit immediately
-# BEFORE PR #292 ("fix: remove maxHeight crop on workout summary muscle
-# heatmap") merged. Do NOT change this constant unless the BLD-480 fix is
-# reverted or the parent SHA is re-pinned.
-BLD_480_PRE_FIX_SHA="cce2ac1f828538bf884f91c5e209ab9f6a40d87f"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -43,67 +50,66 @@ cd "$ROOT"
 run_scenarios() {
   local label="$1"
   local commit_sha="$2"
+  shift 2
+  if [[ $# -eq 0 ]]; then
+    set -- "e2e/scenarios/"
+  fi
   echo ""
   echo "=========================================================="
-  echo "[daily-audit] running scenarios against $label ($commit_sha)"
+  echo "[daily-audit] running scenarios: $label ($commit_sha)"
+  echo "[daily-audit] specs: $*"
   echo "=========================================================="
   COMMIT_SHA="$commit_sha" \
-    npx playwright test e2e/scenarios/ --project=mobile
+    npx playwright test "$@" --project=mobile
 }
 
-ORIGINAL_REF="$(git rev-parse --abbrev-ref HEAD)"
-if [[ "$ORIGINAL_REF" == "HEAD" ]]; then
-  ORIGINAL_REF="$(git rev-parse HEAD)"
+HEAD_SHA="$(git rev-parse HEAD)"
+DATE_STAMP="$(date -u +%Y-%m-%d)"
+HEAD_OUT=".pixelslop/screenshots/scenarios"
+HEAD_COPY=".pixelslop/audits/${DATE_STAMP}/HEAD"
+
+# 1) Today's HEAD — run all real-screen scenarios in `e2e/scenarios/`,
+#    EXCLUDING the pre-fix fixture spec (covered in step 2 below). The
+#    spec list is built dynamically so adding new scenarios stays
+#    drop-in: any `*.spec.ts` other than the pre-fix fixture is picked up
+#    automatically.
+HEAD_SPECS=()
+while IFS= read -r -d '' spec; do
+  case "$spec" in
+    *completed-workout-prefix.spec.ts) ;; # skip — runs in step 2
+    *) HEAD_SPECS+=("$spec") ;;
+  esac
+done < <(find e2e/scenarios -maxdepth 1 -name "*.spec.ts" -print0 | sort -z)
+
+if [[ ${#HEAD_SPECS[@]} -eq 0 ]]; then
+  echo "[daily-audit] ERROR: no HEAD scenario specs found under e2e/scenarios/" >&2
+  exit 1
+fi
+run_scenarios "HEAD" "$HEAD_SHA" "${HEAD_SPECS[@]}"
+
+mkdir -p "$HEAD_COPY"
+# Copy the HEAD captures aside before the pre-fix run so the second run's
+# output (same `.pixelslop/screenshots/scenarios/` root) doesn't clobber them.
+if compgen -G "$HEAD_OUT/*" > /dev/null; then
+  cp -r "$HEAD_OUT"/* "$HEAD_COPY"/
 fi
 
-cleanup() {
-  echo "[daily-audit] restoring $ORIGINAL_REF"
-  # Discard any dirty state from the pinned-SHA section before returning to
-  # the original ref. The pre-fix section copies files (e.g. lib/db/test-seed.ts)
-  # onto an old tree that may lack them; checking out a branch that tracks
-  # those files without a reset first would fail with "would be overwritten".
-  git reset --hard --quiet || true
-  git clean -fdq || true
-  git checkout --quiet "$ORIGINAL_REF" || true
-}
-trap cleanup EXIT
-
-# 1) Today's HEAD
-HEAD_SHA="$(git rev-parse HEAD)"
-run_scenarios "HEAD" "$HEAD_SHA"
-
-# Move HEAD captures into a date-stamped subdir so the pre-fix run below
-# doesn't clobber them.
-HEAD_OUT=".pixelslop/screenshots/scenarios"
-HEAD_COPY=".pixelslop/audits/$(date -u +%Y-%m-%d)/HEAD"
-mkdir -p "$HEAD_COPY"
-cp -r "$HEAD_OUT"/* "$HEAD_COPY"/
-
-# 2) BLD-480 pre-fix regression-catcher
-# NOTE: we deliberately checkout the OLD tree so the scenario runs against
-# the buggy code. If that commit's codebase lacks the scenario spec or
-# seed hook, that's expected — the spec files from our branch persist only
-# in-memory, not in the working tree, so we need to copy them in temporarily.
-PINNED_OUT=".pixelslop/audits/$(date -u +%Y-%m-%d)/BLD_480_PRE_FIX"
+# 2) BLD-480 pre-fix FIXTURE regression-catcher. We deliberately keep the
+#    output bundle directory name `BLD_480_PRE_FIX` (not `..._FIXTURE`) so
+#    the existing audit-bundle uploader, ux-designer intake, and any
+#    historical comparisons against pre-2026-05-02 bundles continue to
+#    work without coordinated downstream changes.
+PINNED_OUT=".pixelslop/audits/${DATE_STAMP}/BLD_480_PRE_FIX"
 mkdir -p "$PINNED_OUT"
 
-TMP_SPECS="$(mktemp -d)"
-cp -r e2e/scenarios "$TMP_SPECS/"
-cp lib/db/test-seed.ts "$TMP_SPECS/"
-cp hooks/useAppInit.ts "$TMP_SPECS/useAppInit.ts.patched"
+run_scenarios "BLD_480_PRE_FIX" "$HEAD_SHA" "e2e/scenarios/completed-workout-prefix.spec.ts"
 
-git checkout --quiet "$BLD_480_PRE_FIX_SHA"
-
-# Re-apply our primitives on top of the old tree so scenarios can run.
-mkdir -p e2e/scenarios
-cp -r "$TMP_SPECS/scenarios/"* e2e/scenarios/
-cp "$TMP_SPECS/test-seed.ts" lib/db/test-seed.ts
-# Skip useAppInit.ts re-patch — the pre-fix tree's init path differs, and the
-# seed hook can be driven directly from the spec's addInitScript on the
-# window object. If the pre-fix spec run needs it, copy it in manually.
-
-run_scenarios "BLD_480_PRE_FIX" "$BLD_480_PRE_FIX_SHA"
-cp -r "$HEAD_OUT"/* "$PINNED_OUT"/
+# Copy the pre-fix fixture's scenario output into the historically-stable
+# bundle path. The scenario emits to `.pixelslop/screenshots/scenarios/bld-480-prefix/`;
+# downstream expects everything from this run nested under `BLD_480_PRE_FIX/`.
+if compgen -G "$HEAD_OUT/bld-480-prefix/*" > /dev/null; then
+  cp -r "$HEAD_OUT/bld-480-prefix" "$PINNED_OUT/"
+fi
 
 echo ""
 echo "[daily-audit] bundles ready at $HEAD_COPY and $PINNED_OUT"
