@@ -1,6 +1,6 @@
 {
-  "promptHash": "2cefd46f308ea1f6297ab85c07675470c37ca926a441ddd37806d7d3c83c5390",
-  "model": "gpt-image-1",
-  "modelVersion": "2025-09",
-  "generatedAt": "2026-04-28T15:38:13.209Z"
+  "promptHash": "5e24d6d32d144d9542b722fa88198eafe6acfd14837dd5cb155224024c55036b",
+  "model": "gemini-3-pro-image-preview",
+  "modelVersion": "preview-2026-04",
+  "generatedAt": "2026-04-27T00:44:36.366Z"
 }
