@@ -71,6 +71,9 @@ const SETTINGS_MARKER = "// cablesnap:wearos:settings-include";
 const BUILD_TYPES_MARKER = "// cablesnap:wearos:build-types";
 const FDROID_EXCLUDES_MARKER = "// cablesnap:wearos:fdroid-excludes";
 const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter";
+// Sentinel for the F-Droid manifest strip that removes FirebaseInitProvider and
+// ExpoFirebaseMessagingService — see FDROID_MANIFEST_CONTENTS below.
+const FDROID_MANIFEST_MARKER = "<!-- cablesnap:wearos:fdroid-manifest-strip -->";
 
 // Where the wear-template lives in the source tree, and where the prebuild
 // output expects to find the `:wear` subproject.
@@ -166,16 +169,33 @@ configurations {
         // F-Droid Inclusion Criteria reject GMS — exclude the entire group
         // transitively from the F-Droid runtime + compile classpath.
         exclude group: "com.google.android.gms"
+        // F-Droid also rejects Firebase (proprietary, GMS-dependent). Without
+        // this exclusion, expo-notifications' transitive dep
+        // \`com.google.firebase:firebase-messaging\` brings \`firebase-common\`
+        // into the F-Droid APK, whose \`<provider android:name="com.google.firebase.provider.FirebaseInitProvider" />\`
+        // (auto-registered by the firebase-common AAR manifest) runs at app
+        // start and references \`com.google.android.gms.common.internal.Preconditions\`
+        // — which is excluded above, producing
+        // \`NoClassDefFoundError\` → app crashes before MainActivity loads.
+        // CableSnap only uses local notifications (see \`lib/notifications.ts\`,
+        // every API wrapped in \`require()\` + try/catch), so dropping Firebase
+        // is safe: scheduled reminders + rest-complete notifications still
+        // work via expo-notifications' local-notification path which does not
+        // touch FirebaseMessaging at runtime. Push tokens (PushTokenModule)
+        // would fail, but CableSnap doesn't use them.
+        exclude group: "com.google.firebase"
         // Drop the Expo Wear bridge library project so its compiled
         // .class files never reach app-releaseFdroid.apk.
         exclude module: "expo-wearos-bridge"
     }
     releaseFdroidRuntimeClasspath {
         exclude group: "com.google.android.gms"
+        exclude group: "com.google.firebase"
         exclude module: "expo-wearos-bridge"
     }
     releaseFdroidCompileClasspath {
         exclude group: "com.google.android.gms"
+        exclude group: "com.google.firebase"
         exclude module: "expo-wearos-bridge"
     }
 }
@@ -302,6 +322,66 @@ function patchProjectBuildGradle(contents) {
 // `android/wear` already exists from a previous prebuild, we wipe it first to
 // avoid stale files (e.g. if the template renamed a file between prebuilds).
 
+// ---------------------------------------------------------------------------
+// F-Droid build-type-specific manifest — strip Firebase manifest contributors.
+// ---------------------------------------------------------------------------
+//
+// AGP merges manifests from the consumer app + every AAR/library subproject.
+// `expo-notifications` declares `<service ExpoFirebaseMessagingService>` in
+// its own manifest, and the transitively-pulled `firebase-common.aar`
+// declares `<provider FirebaseInitProvider>`. The F-Droid build excludes the
+// `com.google.firebase` group at the classpath level (see
+// FDROID_EXCLUDES_BLOCK), but AGP's manifest merger may still surface stale
+// `<provider>` / `<service>` declarations from the build cache or from
+// `expo-notifications`'s own AAR (which references the now-missing
+// `FirebaseMessagingService` parent class).
+//
+// AGP's `src/<buildType>/AndroidManifest.xml` is an *overlay* that participates
+// in manifest merging with the highest priority (AGP 8.x manifest merger
+// reference: "Build type manifests are merged AFTER product flavor manifests
+// AFTER main manifest"). The `tools:node="remove"` directive deletes a node
+// from the merged output; combined with `tools:selector` it targets a specific
+// manifest contributor. We don't need a selector here because the node-name
+// + node-attribute pair (`<provider android:name="...FirebaseInitProvider"/>`,
+// `<service android:name="...ExpoFirebaseMessagingService"/>`) uniquely
+// identifies the entries we want to remove.
+//
+// `tools:node="remove"` requires the `xmlns:tools` namespace declared on the
+// root `<manifest>` element. The `<application>` wrapper here is not actually
+// merged as new content — it exists only so `<provider>` / `<service>` are
+// nested at the correct depth for the merger.
+const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    ${FDROID_MANIFEST_MARKER}
+    <application>
+        <!-- firebase-common.aar — auto-runs at app start, calls into excluded
+             com.google.android.gms.common.internal.Preconditions. Removing
+             this provider prevents NoClassDefFoundError on F-Droid launch. -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="\${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
+
+        <!-- expo-notifications declares this service inheriting from
+             FirebaseMessagingService. With Firebase excluded the parent
+             class is missing; AGP's class verifier on Android 14+ rejects
+             the manifest entry. Strip it — push tokens (which would use it)
+             aren't reachable in F-Droid anyway. CableSnap's local-notification
+             code path (lib/notifications.ts) does not touch this service. -->
+        <service
+            android:name="expo.modules.notifications.service.ExpoFirebaseMessagingService"
+            tools:node="remove" />
+    </application>
+</manifest>
+`;
+
+function writeFdroidManifest(platformRoot) {
+  const dir = path.join(platformRoot, "app", "src", "releaseFdroid");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
+}
+
 function copyDirRecursive(srcDir, dstDir) {
   if (!fs.existsSync(srcDir)) {
     throw new Error(
@@ -360,7 +440,10 @@ const withWearOsModule = (config) => {
     return cfg;
   });
 
-  // 4. Copy wear-template → android/wear.
+  // 4. Copy wear-template → android/wear, and write the F-Droid build-type
+  //    manifest overlay that strips Firebase manifest contributors. Both
+  //    operations live in the same withDangerousMod step because they share
+  //    `platformProjectRoot` and want a single regen-cycle on prebuild.
   config = withDangerousMod(config, [
     "android",
     async (cfg) => {
@@ -372,6 +455,9 @@ const withWearOsModule = (config) => {
       // not linger. The template is the source of truth.
       rmDirRecursive(dstDir);
       copyDirRecursive(srcDir, dstDir);
+      // Write/overwrite the F-Droid manifest overlay. Idempotent — same
+      // contents every prebuild — so safe to clobber unconditionally.
+      writeFdroidManifest(platformRoot);
       return cfg;
     },
   ]);
@@ -387,5 +473,7 @@ module.exports.patchAppBuildGradle = patchAppBuildGradle;
 module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
+module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;

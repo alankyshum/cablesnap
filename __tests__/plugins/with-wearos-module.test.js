@@ -8,6 +8,8 @@ const {
   patchProjectBuildGradle,
   copyDirRecursive,
   rmDirRecursive,
+  writeFdroidManifest,
+  FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -181,6 +183,30 @@ describe("patchAppBuildGradle", () => {
     ]) {
       const blockRegex = new RegExp(
         `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.android\\.gms"[\\s\\S]*?exclude module: "expo-wearos-bridge"[\\s\\S]*?\\}`,
+      );
+      expect(out).toMatch(blockRegex);
+    }
+  });
+
+  it("emits releaseFdroid excludes for com.google.firebase across all three configurations", () => {
+    // Firebase exclusion was added 2026-05-01 after run 25243409233 surfaced
+    // a NoClassDefFoundError on F-Droid launch: expo-notifications transitively
+    // pulls com.google.firebase:firebase-messaging, whose firebase-common AAR
+    // auto-registers `<provider FirebaseInitProvider>` that calls into
+    // com.google.android.gms.common.internal.Preconditions — already excluded
+    // above. Without this Firebase exclusion the F-Droid APK ships with
+    // Firebase classes referencing missing GMS classes → crash before
+    // MainActivity. CableSnap only uses local notifications (lib/notifications.ts)
+    // so dropping FCM has no functional impact in the F-Droid build.
+    // See plugin's FDROID_EXCLUDES_BLOCK comment for full root-cause writeup.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    for (const cfg of [
+      "releaseFdroidImplementation",
+      "releaseFdroidRuntimeClasspath",
+      "releaseFdroidCompileClasspath",
+    ]) {
+      const blockRegex = new RegExp(
+        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.firebase"[\\s\\S]*?\\}`,
       );
       expect(out).toMatch(blockRegex);
     }
@@ -410,5 +436,122 @@ describe("copyDirRecursive + rmDirRecursive", () => {
     expect(() => copyDirRecursive(missing, dst)).toThrow(
       /with-wearos-module.*wear-template/,
     );
+  });
+});
+
+// ----------------------------------------------------------------------------
+// writeFdroidManifest + FDROID_MANIFEST_CONTENTS
+// ----------------------------------------------------------------------------
+//
+// The F-Droid build-type manifest overlay is AGP's standard mechanism for
+// per-buildType manifest customization. Files at
+// `android/app/src/<buildType>/AndroidManifest.xml` participate in manifest
+// merging at the highest priority and can use `tools:node="remove"` to drop
+// nodes contributed by other libraries.
+//
+// We use this to strip two manifest entries from the F-Droid APK that would
+// otherwise crash the app at launch:
+//   1. <provider FirebaseInitProvider> — auto-registered by firebase-common.aar,
+//      runs at Application init, references excluded GMS Preconditions class.
+//   2. <service ExpoFirebaseMessagingService> — declared by expo-notifications,
+//      extends FirebaseMessagingService whose parent class is now missing.
+describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
+  it("declares the tools namespace required by tools:node directives", () => {
+    // Without xmlns:tools on the root <manifest>, AGP's manifest merger
+    // logs a warning and silently ignores `tools:node="remove"` — leaving
+    // the offending nodes in place. This is the exact failure mode that
+    // would silently re-introduce the F-Droid crash.
+    expect(FDROID_MANIFEST_CONTENTS).toMatch(
+      /<manifest\b[^>]*xmlns:tools="http:\/\/schemas\.android\.com\/tools"/,
+    );
+  });
+
+  it("removes FirebaseInitProvider via tools:node='remove'", () => {
+    // Match across attribute order — AGP's tools:node attribute can appear
+    // before or after android:authorities. We assert both the provider name
+    // and the remove directive co-occur within the same <provider> element.
+    expect(FDROID_MANIFEST_CONTENTS).toMatch(
+      /<provider\b[\s\S]*?android:name="com\.google\.firebase\.provider\.FirebaseInitProvider"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+    );
+  });
+
+  it("removes ExpoFirebaseMessagingService via tools:node='remove'", () => {
+    expect(FDROID_MANIFEST_CONTENTS).toMatch(
+      /<service\b[\s\S]*?android:name="expo\.modules\.notifications\.service\.ExpoFirebaseMessagingService"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+    );
+  });
+
+  it("nests the strip directives inside <application> at the correct depth", () => {
+    // AGP's manifest merger only matches removal directives when the node
+    // appears at the same depth as the node it replaces. <provider> and
+    // <service> live inside <application> — if we accidentally placed them
+    // at the manifest root, the merger would silently no-op the removal.
+    const appOpen = FDROID_MANIFEST_CONTENTS.indexOf("<application>");
+    const appClose = FDROID_MANIFEST_CONTENTS.indexOf("</application>");
+    const providerIdx = FDROID_MANIFEST_CONTENTS.indexOf("FirebaseInitProvider");
+    const serviceIdx = FDROID_MANIFEST_CONTENTS.indexOf(
+      "ExpoFirebaseMessagingService",
+    );
+    expect(appOpen).toBeGreaterThan(-1);
+    expect(appClose).toBeGreaterThan(appOpen);
+    expect(providerIdx).toBeGreaterThan(appOpen);
+    expect(providerIdx).toBeLessThan(appClose);
+    expect(serviceIdx).toBeGreaterThan(appOpen);
+    expect(serviceIdx).toBeLessThan(appClose);
+  });
+
+  it("writeFdroidManifest creates app/src/releaseFdroid/AndroidManifest.xml at the platform root", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-manifest-"));
+    try {
+      writeFdroidManifest(tmp);
+      const manifestPath = path.join(
+        tmp,
+        "app",
+        "src",
+        "releaseFdroid",
+        "AndroidManifest.xml",
+      );
+      expect(fs.existsSync(manifestPath)).toBe(true);
+      const written = fs.readFileSync(manifestPath, "utf8");
+      expect(written).toBe(FDROID_MANIFEST_CONTENTS);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidManifest is idempotent (overwrites existing file)", () => {
+    // The withDangerousMod step that calls writeFdroidManifest runs on
+    // every prebuild; it must safely clobber any prior version of the file
+    // (e.g. from a previous prebuild that wrote a different overlay).
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-manifest-"));
+    try {
+      const dir = path.join(tmp, "app", "src", "releaseFdroid");
+      fs.mkdirSync(dir, { recursive: true });
+      const manifestPath = path.join(dir, "AndroidManifest.xml");
+      fs.writeFileSync(manifestPath, "STALE PREVIOUS PREBUILD CONTENTS", "utf8");
+
+      writeFdroidManifest(tmp);
+
+      const written = fs.readFileSync(manifestPath, "utf8");
+      expect(written).toBe(FDROID_MANIFEST_CONTENTS);
+      expect(written).not.toContain("STALE");
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidManifest creates intermediate directories if missing", () => {
+    // A fresh `expo prebuild --clean` wipes the entire android/ directory.
+    // The plugin must create app/src/releaseFdroid/ from scratch — not
+    // assume any parent directory already exists.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-manifest-"));
+    try {
+      writeFdroidManifest(tmp);
+      expect(
+        fs.existsSync(path.join(tmp, "app", "src", "releaseFdroid")),
+      ).toBe(true);
+    } finally {
+      rmDirRecursive(tmp);
+    }
   });
 });
