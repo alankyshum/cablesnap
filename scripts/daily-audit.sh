@@ -73,16 +73,30 @@ cleanup() {
 trap cleanup EXIT
 
 # 1) Today's HEAD
+# BLD-966: capture HEAD scenario exit code without aborting — the smoke
+# check (step 3) is the vision-pipeline trust anchor and MUST run even if
+# HEAD scenarios fail. We re-export the failure at the end so HEAD failures
+# still abort the audit non-zero (preserving existing behavior). Rationale:
+# a flaky HEAD spec must NOT silence the smoke alarm — that's precisely
+# when the alarm matters most.
 HEAD_SHA="$(git rev-parse HEAD)"
+set +e
 run_scenarios "HEAD" "$HEAD_SHA"
+HEAD_RC=$?
+set -e
 
 # Move HEAD captures into a date-stamped subdir so subsequent steps don't
-# clobber them.
+# clobber them. Tolerate a missing/empty HEAD_OUT when scenarios failed
+# before producing any captures — we still want to run the smoke check.
 HEAD_OUT=".pixelslop/screenshots/scenarios"
 AUDIT_DATE_DIR=".pixelslop/audits/$(date -u +%Y-%m-%d)"
 HEAD_COPY="$AUDIT_DATE_DIR/HEAD"
 mkdir -p "$HEAD_COPY"
-cp -r "$HEAD_OUT"/* "$HEAD_COPY"/
+if [[ -d "$HEAD_OUT" ]] && compgen -G "$HEAD_OUT/*" > /dev/null; then
+  cp -r "$HEAD_OUT"/* "$HEAD_COPY"/
+else
+  echo "[daily-audit] note: no HEAD captures to copy (HEAD scenarios may have failed)" >&2
+fi
 
 # 2) BLD-480 pre-fix regression-catcher — static fixture (BLD-959).
 # We copy the pinned PNG into the same directory layout the ux-designer
@@ -123,14 +137,30 @@ echo "[daily-audit] copied static fixture → $PINNED_SCENARIO_DIR/mobile.png"
 # still produces a finding matching the canonical regex. Failure here =
 # vision pipeline silent degradation = ABORT the audit (HEAD findings
 # cannot be trusted today).
+#
+# BLD-966: smoke RC dominates. Run unconditionally even if HEAD scenarios
+# failed. If smoke fails → abort with smoke RC (trust anchor takes
+# priority). If smoke passes but HEAD failed → abort with HEAD RC, log
+# that the pipeline itself is healthy (HEAD failure is a real regression).
 SMOKE_FINDINGS="$PINNED_OUT/smoke-findings.txt"
 echo ""
 echo "[daily-audit] running regression-smoke against fixture …"
-if ! FINDINGS_OUT="$SMOKE_FINDINGS" \
-       scripts/regression-smoke.sh "$BLD_480_FIXTURE_PATH"; then
-  echo "[daily-audit] 🚨 regression-smoke FAILED — aborting audit." >&2
+set +e
+FINDINGS_OUT="$SMOKE_FINDINGS" \
+  scripts/regression-smoke.sh "$BLD_480_FIXTURE_PATH"
+SMOKE_RC=$?
+set -e
+
+if [[ $SMOKE_RC -ne 0 ]]; then
+  echo "[daily-audit] 🚨 FATAL: regression-smoke FAILED (vision-pipeline trust anchor)." >&2
   echo "[daily-audit] Today's HEAD findings MUST NOT be trusted." >&2
-  exit 1
+  exit $SMOKE_RC
+fi
+
+if [[ $HEAD_RC -ne 0 ]]; then
+  echo "[daily-audit] HEAD scenarios failed (rc=$HEAD_RC) but smoke PASSED — vision pipeline is healthy, the HEAD failure is a real regression." >&2
+  echo "[daily-audit] regression-smoke: PASS (findings → $SMOKE_FINDINGS)"
+  exit $HEAD_RC
 fi
 
 echo ""
