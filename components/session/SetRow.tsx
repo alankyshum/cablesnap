@@ -39,7 +39,7 @@ import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
-import { isCableExercise } from "../../lib/cable-variant";
+import { isCableExercise, formatAttachmentLabel, formatMountPositionLabel } from "../../lib/cable-variant";
 import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } from "../../lib/bodyweight-grip-variant";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
@@ -529,16 +529,24 @@ export const SetRow = memo(function SetRow({
           }}
           onLongPress={() => onClearVariant?.(set.id)}
           accessibilityRole="button"
-          // QD-8 (BLD-822): a11y composite labels diverge intentionally — cable
-          // footer is terse (legacy BLD-771): `"Set 1 cable variant"`. Grip
-          // footer (BLD-822, below) enumerates values:
-          // `"Set 1 grip variant: Overhand, Narrow"`. Per ux-designer rev-2
-          // verdict, ratchet UP via BLD-823 (enrich cable a11y to match
-          // grip's enumerated labels), never downgrade grip. Standardize when
-          // BLD-823 is implemented; do NOT diverge further without updating
-          // both sides.
-          accessibilityLabel={`Set ${set.set_number} cable variant`}
-          accessibilityHint="Double tap to choose attachment and pulley position; long press to clear"
+          // QD-8 (BLD-822 → BLD-823): a11y composite labels now have parity
+          // between cable and grip footers. Both enumerate selected values:
+          //   cable: "Set 1 cable variant: Rope, Low. Double-tap to edit."
+          //   grip:  "Set 1 grip variant: Overhand, Narrow. Double-tap to edit."
+          // Keep both blocks in sync; do NOT diverge without updating both.
+          accessibilityLabel={(() => {
+            const att = set.attachment ?? null;
+            const mp = set.mount_position ?? null;
+            if (att != null && mp != null) {
+              return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
+            } else if (att != null) {
+              return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, position not set. Double-tap to edit.`;
+            } else if (mp != null) {
+              return `Set ${set.set_number} cable variant: attachment not set, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
+            }
+            return `Set ${set.set_number} cable variant: not set. Double-tap to choose.`;
+          })()}
+          accessibilityHint="Long press to clear attachment and position"
           style={styles.variantFooter}
         >
           {set.attachment == null && set.mount_position == null ? (
@@ -602,9 +610,9 @@ export const SetRow = memo(function SetRow({
           - only grip:   "Set 1 grip variant: Overhand, width not set. Double-tap to edit."
           - only width:  "Set 1 grip variant: grip not set, Narrow. Double-tap to edit."
           - both null:   "Set 1 grip variant: not set. Double-tap to choose."
-        Cable footer's terse `"Set 1 cable variant"` (above) is intentionally
-        terse for now; BLD-823 will ratchet it UP to match this format. Do
-        NOT diverge further without updating both blocks.
+        Both cable and grip footers now enumerate values in identical format
+        (BLD-823). Keep both blocks in sync; do NOT diverge without updating
+        both.
       */}
       {isBodyweightGripExercise({ equipment, name: exerciseName }) ? (() => {
         const gt = set.grip_type ?? null;
