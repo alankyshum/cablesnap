@@ -104,6 +104,11 @@ jest.mock("../../lib/db", () => ({
       .sort((a, b) => b - a);
   }),
   getTotalSessionCount: jest.fn(async () => mockSeedStore.filter(mockIsCompleted).length),
+  // BLD-938: history filter queries — empty so the hook stays on the
+  // unfiltered path (these tests don't activate any chip).
+  getTemplatesWithSessions: jest.fn(async () => []),
+  getMuscleGroupsWithSessions: jest.fn(async () => []),
+  getFilteredSessions: jest.fn(async () => ({ rows: [], total: 0 })),
 }));
 
 jest.mock("../../lib/db/settings", () => ({

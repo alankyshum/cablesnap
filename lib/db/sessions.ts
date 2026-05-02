@@ -58,7 +58,11 @@ export {
   getTotalSessionCount,
   getMuscleVolumeForWeek,
   getMuscleVolumeTrend,
+  getTemplatesWithSessions,
+  getMuscleGroupsWithSessions,
+  getFilteredSessions,
 } from "./session-stats";
+export type { TemplateOption, DatePreset, HistoryFilters } from "./session-stats";
 
 export { getE1RMTrends, getWeeklyE1RMTrends, getRecentSessionRPEs, getRecentSessionRatings } from "./e1rm-trends";
 export type { E1RMTrendRow, WeeklyE1RMRow, SessionRPERow, SessionRatingRow } from "./e1rm-trends";

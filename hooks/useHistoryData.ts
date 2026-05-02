@@ -14,7 +14,11 @@ import {
   getSessionCountsByDay,
   getSessionsByMonth,
   getTotalSessionCount,
-  searchSessions,
+  getTemplatesWithSessions,
+  getMuscleGroupsWithSessions,
+  getFilteredSessions,
+  type TemplateOption,
+  type DatePreset,
 } from "@/lib/db";
 import { getSchedule, type ScheduleEntry } from "@/lib/db/settings";
 import type { WorkoutSession } from "@/lib/types";
@@ -26,6 +30,7 @@ import {
 import { duration as animDuration } from "@/constants/design-tokens";
 import { useLayout } from "@/lib/layout";
 import { View } from "react-native";
+import { useHistoryFilters, type HistoryFilterKey } from "@/hooks/useHistoryFilters";
 
 export type SessionRow = WorkoutSession & { set_count: number };
 
@@ -56,9 +61,9 @@ export function useHistoryData() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SessionRow[] | null>(null);
+  // BLD-938: removed legacy `results` state — text search now renders
+  // from `filteredRows` populated by getFilteredSessions (plan §UI Hook).
   const [hasAny, setHasAny] = useState(true);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
@@ -79,12 +84,38 @@ export function useHistoryData() {
   const [heatmapError, setHeatmapError] = useState(false);
   const [heatmapExpanded, setHeatmapExpanded] = useState(true);
 
+  // BLD-938: history filters (template / muscle group / date range)
+  const filterState = useHistoryFilters();
+  const [templateOptions, setTemplateOptions] = useState<TemplateOption[]>([]);
+  const [muscleGroupOptions, setMuscleGroupOptions] = useState<string[]>([]);
+  const [filteredRows, setFilteredRows] = useState<SessionRow[]>([]);
+  const [filteredTotal, setFilteredTotal] = useState(0);
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [filterPage, setFilterPage] = useState(0);
+  const filterFetchSeqRef = useRef(0);
+  const FILTER_PAGE_SIZE = 20;
+  // BLD-938 — plan §Performance: filter changes are debounced 300ms so
+  // rapid chip/sheet taps collapse into a single query. Matches the
+  // existing search debounce in `onSearch` below.
+  const FILTER_DEBOUNCE_MS = 300;
+
+  const useFilterMode = filterState.anyActive;
+  // BLD-938 — derived predicate: are we rendering from getFilteredSessions
+  // results, vs the unfiltered calendar/month path? True for any chip
+  // filter OR a non-empty text search. This drives `filtered` rendering
+  // and the `loadMoreFiltered` gate.
+  //
+  // Distinct from `useFilterMode` which is chip-only and controls the
+  // calendar dim/disable UX (plan §65-69 — text search must NOT disable
+  // the calendar).
+  const useFilteredQueryPath = useFilterMode || query.trim().length > 0;
+
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled().then(setScreenReaderEnabled);
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotionEnabled);
     const srSub = AccessibilityInfo.addEventListener("screenReaderChanged", setScreenReaderEnabled);
     const rmSub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotionEnabled);
-    return () => { srSub.remove(); rmSub.remove(); if (timer.current) clearTimeout(timer.current); };
+    return () => { srSub.remove(); rmSub.remove(); };
   }, []);
 
   useEffect(() => {
@@ -129,7 +160,112 @@ export function useHistoryData() {
     load();
     loadHeatmap();
     getSchedule().then(setSchedule).catch(() => setSchedule([]));
+    // BLD-938: cache the available filter option lists once per visit.
+    getTemplatesWithSessions().then(setTemplateOptions).catch(() => setTemplateOptions([]));
+    getMuscleGroupsWithSessions().then(setMuscleGroupOptions).catch(() => setMuscleGroupOptions([]));
   }, [load, loadHeatmap]));
+
+  // BLD-938: when any filter is active OR text search active, fetch from
+  // getFilteredSessions paged. When all filters cleared, the calendar/month
+  // path resumes via `filtered` below.
+  //
+  // Page index is intentionally captured into the dependency array so that
+  // tapping "load more" (which dispatches setFilterPage(p => p+1) — an
+  // event-time setter, lint-clean) re-runs this effect with a higher offset.
+  // The reset-to-page-zero on filter/query change is handled in the setter
+  // callbacks below (NOT a derived effect), which keeps lint happy
+  // (react-hooks/set-state-in-effect).
+  //
+  // Debounce: rapid filter taps (chip → sheet → tap → sheet → tap) MUST
+  // collapse into a single query (plan §Performance — 300ms debounce, also
+  // explicit acceptance criteria from QD R3). Pagination requests
+  // (filterPage > 0) bypass the debounce — the user already paid the
+  // visible cost of scrolling and we never want a "load more" request
+  // dropped because a chip was tapped 100ms earlier.
+  useEffect(() => {
+    const seq = ++filterFetchSeqRef.current;
+    if (!useFilterMode && !query.trim()) {
+      // Fully unfiltered: nothing to fetch. We do NOT reset
+      // filteredRows/filteredTotal here (would be a setState-in-effect lint
+      // violation). Instead, the `filtered` memo below short-circuits to
+      // `sessions` whenever `useFilterMode` is false, so any stale
+      // filteredRows are simply ignored until the next filtered fetch
+      // overwrites them.
+      return;
+    }
+    const offset = filterPage * FILTER_PAGE_SIZE;
+    const runFetch = () => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- starting async fetch; loading flag flipped back via .finally
+      setFilterLoading(true);
+      getFilteredSessions(filterState.filters, query, FILTER_PAGE_SIZE, offset)
+        .then((res) => {
+          // Drop stale fetches.
+          if (seq !== filterFetchSeqRef.current) return;
+          setFilteredRows((prev) => (filterPage === 0 ? res.rows : [...prev, ...res.rows]));
+          setFilteredTotal(res.total);
+        })
+        .catch(() => {
+          if (seq !== filterFetchSeqRef.current) return;
+          setFilteredRows([]);
+          setFilteredTotal(0);
+        })
+        .finally(() => {
+          if (seq !== filterFetchSeqRef.current) return;
+          setFilterLoading(false);
+        });
+    };
+
+    // Pagination requests run immediately; user-driven filter/search
+    // changes are reset to page 0 by their setters and routed here for
+    // debouncing.
+    if (filterPage > 0) {
+      runFetch();
+      return;
+    }
+    const t = setTimeout(runFetch, FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [useFilterMode, filterState.filters, query, filterPage]);
+
+  // BLD-938: clear calendar selection when filters become active, AND reset
+  // paging — both done in the filter setter handlers (event-time, lint-clean
+  // alternative to a derived effect). When the user clears all filters we
+  // deliberately do NOT restore the prior selection (per plan §UX — filter
+  // mode resets calendar's selection on activation).
+  const setTemplateFilter = useCallback(
+    (templateId: string | null) => {
+      if (templateId !== null) setSelected(null);
+      setFilterPage(0);
+      filterState.setTemplate(templateId);
+    },
+    [filterState],
+  );
+  const setMuscleGroupFilter = useCallback(
+    (muscleGroup: string | null) => {
+      if (muscleGroup !== null) setSelected(null);
+      setFilterPage(0);
+      filterState.setMuscleGroup(muscleGroup);
+    },
+    [filterState],
+  );
+  const setDatePresetFilter = useCallback(
+    (datePreset: DatePreset | null) => {
+      if (datePreset !== null) setSelected(null);
+      setFilterPage(0);
+      filterState.setDatePreset(datePreset);
+    },
+    [filterState],
+  );
+  const clearOneFilter = useCallback(
+    (key: HistoryFilterKey) => {
+      setFilterPage(0);
+      filterState.clearOne(key);
+    },
+    [filterState],
+  );
+  const clearAllFilters = useCallback(() => {
+    setFilterPage(0);
+    filterState.clearAll();
+  }, [filterState]);
 
   const dotMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -150,17 +286,37 @@ export function useHistoryData() {
   }, [sessions]);
 
   const filtered = useMemo(() => {
-    if (results) return results;
+    // BLD-938 — plan §UI Hook (line 209): "When any filter is non-null OR
+    // text search active → call getFilteredSessions (paged, 20/page)."
+    // The chip-filter path AND the text-search path both render from
+    // `filteredRows`, populated by getFilteredSessions in the unified
+    // effect above. The legacy in-memory searchSessions path is gone.
+    //
+    // NOTE on UX vs SQL routing: `useFilterMode` (chip-only) still
+    // controls the calendar dim/disable + result-count caption per plan
+    // §65-69. Text-only search uses the filtered SQL path but does NOT
+    // disable the calendar — the calendar stays interactive for date
+    // navigation alongside a name search, matching the prior UX.
+    if (useFilteredQueryPath) return filteredRows;
     if (!selected) return sessions;
     return sessions.filter((s) => formatDateKey(s.started_at) === selected);
-  }, [sessions, selected, results]);
+  }, [sessions, selected, useFilteredQueryPath, filteredRows]);
+
+  const loadMoreFiltered = useCallback(() => {
+    // Pagination is available whenever we're rendering from filteredRows —
+    // text-only search OR any chip filter active.
+    if (!useFilteredQueryPath) return;
+    if (filterLoading) return;
+    if (filteredRows.length >= filteredTotal) return;
+    setFilterPage((p) => p + 1);
+  }, [useFilteredQueryPath, filterLoading, filteredRows.length, filteredTotal]);
 
   const changeMonth = useCallback((direction: -1 | 1) => {
     const animDurationMs = reducedMotion ? 0 : animDuration.normal;
     const slideDistance = layout.width * direction * -1;
     translateX.value = slideDistance;
     translateX.value = withTiming(0, { duration: animDurationMs });
-    setSelected(null); setQuery(""); setResults(null);
+    setSelected(null); setQuery("");
     if (direction === -1) { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); }
     else { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); }
   }, [month, year, layout.width, reducedMotion, translateX]);
@@ -174,16 +330,26 @@ export function useHistoryData() {
     [screenReaderEnabled, changeMonth]);
 
   const onSearch = (text: string) => {
-    setQuery(text); setSelected(null);
-    if (timer.current) clearTimeout(timer.current);
-    if (!text.trim()) { setResults(null); return; }
-    timer.current = setTimeout(async () => { const data = await searchSessions(text.trim()); setResults(data); }, 300);
+    // BLD-938 — text search now routes through the unified
+    // getFilteredSessions effect (debounced 300ms there). We just update
+    // `query`, reset paging, and clear any calendar-day selection. The
+    // legacy searchSessions in-memory call is gone — see plan §UI Hook
+    // requirement: "When any filter is non-null OR text search active →
+    // call getFilteredSessions (paged)."
+    setQuery(text);
+    setSelected(null);
+    setFilterPage(0);
   };
 
-  const clearFilter = () => { setSelected(null); setQuery(""); setResults(null); };
+  const clearFilter = () => {
+    setSelected(null);
+    setQuery("");
+    setFilterPage(0);
+    filterState.clearAll();
+  };
 
   const tapDay = (key: string) => {
-    setQuery(""); setResults(null);
+    setQuery("");
     if (!reduceMotionEnabled) {
       const { LayoutAnimation } = require("react-native");
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -194,7 +360,7 @@ export function useHistoryData() {
   const onHeatmapDayPress = (dateKey: string) => {
     const [y, m] = dateKey.split("-").map(Number);
     if (y !== year || m - 1 !== month) { setYear(y); setMonth(m - 1); }
-    setQuery(""); setResults(null); setSelected(dateKey);
+    setQuery(""); setSelected(dateKey);
   };
 
   const dayDetailSessions = useMemo(() => {
@@ -218,6 +384,7 @@ export function useHistoryData() {
   }, [selected]);
 
   const emptyMessage = () => {
+    if (useFilterMode) return "No workouts match these filters";
     if (query.trim()) return `No workouts matching "${query}"`;
     if (selected) return "Rest day!";
     if (!hasAny) return "No workouts yet. Start your first workout!";
@@ -233,5 +400,20 @@ export function useHistoryData() {
     dayDetailSessions, selectedDayScheduleEntry, isSelectedDayFuture,
     changeMonth, onSearch, clearFilter, tapDay, onHeatmapDayPress, emptyMessage,
     screenReaderEnabled, reduceMotionEnabled,
+    // BLD-938 history filters
+    filters: filterState.filters,
+    anyFilterActive: filterState.anyActive,
+    setTemplateFilter,
+    setMuscleGroupFilter,
+    setDatePresetFilter,
+    clearOneFilter,
+    clearAllFilters,
+    templateOptions,
+    muscleGroupOptions,
+    filteredTotal,
+    filterLoading,
+    loadMoreFiltered,
+    useFilterMode,
+    useFilteredQueryPath,
   };
 }
