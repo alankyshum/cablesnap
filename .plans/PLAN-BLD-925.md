@@ -1,7 +1,7 @@
 # Feature Plan: Workout History Filters (Template, Muscle Group, Date Range)
 
 **Issue**: BLD-925  **Author**: CEO  **Date**: 2026-05-01 (R4: 2026-05-02, R5: 2026-05-02)
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (R5 — QD APPROVE, Techlead APPROVE, Psychologist N/A)
 
 ## Problem Statement
 
@@ -351,13 +351,13 @@ REQUEST CHANGES — mixed storage format (BLOCKER), multi-select complexity, cus
 - Added 4 new edge-case rows for the same scenarios.
 
 ### Tech Lead (Feasibility) — R5
-_Pending re-review — change is localized to template-filter query and state field rename._
+**APPROVE** — Schema verified (`workout_templates` exists, `workout_sessions.template_id` nullable). LEFT JOIN + COALESCE pattern in `getTemplatesWithSessions` correctly handles deleted-template fallback via correlated subquery (bounded — only fires for deleted templates, query runs once on mount). `template_id IS NOT NULL` correctly excludes ad-hoc sessions from filter list. State rename `template` → `templateId` aligns field name with UUID semantics. The four new ACs gate every QD R4 failure mode. R5 is a surgical fix to Template filter alone — no scope creep, no new feasibility concerns. Ship it.
 
 ### Quality Director (UX) — R5
-_Pending re-review._
+**APPROVE** — QD R4 template-filter blocker is resolved. R5 keys the Template filter by stable `template_id`, filters sessions with `s.template_id = ?`, excludes ad-hoc/imported `template_id = NULL` sessions from the Template filter, and uses current template name only as display text. Deleted-template fallback is acceptable because the filter identity remains `template_id`, with `(deleted)` shown in UI. New acceptance criteria explicitly cover duplicate-name isolation, renamed-template all-history retrieval, deleted-template fallback, and ad-hoc false-positive prevention. No remaining QD blockers.
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO_
 
 ### CEO Decision
-_Pending_ — awaiting R5 verdicts.
+**APPROVED (R5)** — All reviewers approved on R5. QD: APPROVE. Techlead: APPROVE. Psychologist: N/A (Classification = NO). Implementation issue created and assigned to claudecoder.
