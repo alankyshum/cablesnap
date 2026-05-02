@@ -212,6 +212,45 @@ describe("patchAppBuildGradle", () => {
     }
   });
 
+  it("emits releaseFdroid excludes for com.google.mlkit + camera-mlkit-vision across all three configurations", () => {
+    // MLKit exclusion was added 2026-05-02 after run 25244727127 surfaced a
+    // SECOND NoClassDefFoundError on F-Droid launch (after the Firebase fix
+    // landed and was confirmed working): expo-camera unconditionally pulls
+    // `com.google.mlkit:barcode-scanning` for its built-in barcode scanner,
+    // which drags `com.google.mlkit:common` whose <provider MlKitInitProvider>
+    // exhibits the same auto-init-then-call-GMS-Preconditions crash pattern
+    // as FirebaseInitProvider. Functional impact: barcode scanning in food
+    // search (components/BarcodeScanner.tsx) is non-functional in F-Droid;
+    // manual entry remains. The companion `androidx.camera:camera-mlkit-vision`
+    // wrapper is also excluded as a `module` (NOT the whole `androidx.camera`
+    // group, which provides the core camera APIs we still need).
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    for (const cfg of [
+      "releaseFdroidImplementation",
+      "releaseFdroidRuntimeClasspath",
+      "releaseFdroidCompileClasspath",
+    ]) {
+      const mlkitRegex = new RegExp(
+        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.mlkit"[\\s\\S]*?\\}`,
+      );
+      const cameraMlkitRegex = new RegExp(
+        `${cfg}\\s*\\{[\\s\\S]*?exclude module: "camera-mlkit-vision"[\\s\\S]*?\\}`,
+      );
+      expect(out).toMatch(mlkitRegex);
+      expect(out).toMatch(cameraMlkitRegex);
+    }
+  });
+
+  it("does NOT exclude the entire androidx.camera group (regression guard)", () => {
+    // androidx.camera provides camera-core / camera-camera2 / camera-lifecycle
+    // / camera-view — all required for CameraView to render. A future patch
+    // that reaches for `exclude group: "androidx.camera"` would silently
+    // remove ALL camera functionality in F-Droid, not just the MLKit wrapper.
+    // Only the specific `camera-mlkit-vision` module is safe to exclude.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).not.toMatch(/exclude group:\s*"androidx\.camera"/);
+  });
+
   it("places the configurations excludes block at top level, before dependencies", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     const excludesIdx = out.indexOf("// cablesnap:wearos:fdroid-excludes");
@@ -478,6 +517,26 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
   it("removes ExpoFirebaseMessagingService via tools:node='remove'", () => {
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
       /<service\b[\s\S]*?android:name="expo\.modules\.notifications\.service\.ExpoFirebaseMessagingService"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+    );
+  });
+
+  it("removes MlKitInitProvider via tools:node='remove'", () => {
+    // Same crash pattern as FirebaseInitProvider — a content provider that
+    // auto-runs at app start and calls into excluded GMS classes. Surfaced
+    // by run 25244727127 after the Firebase fix unblocked it.
+    expect(FDROID_MANIFEST_CONTENTS).toMatch(
+      /<provider\b[\s\S]*?android:name="com\.google\.mlkit\.common\.internal\.MlKitInitProvider"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+    );
+  });
+
+  it("removes the dormant ModuleDependencies service from expo-image-picker (defence-in-depth)", () => {
+    // expo-image-picker declares <service ModuleDependencies android:enabled="false">
+    // for Google Photo Picker module-on-demand discovery. Disabled, so it
+    // does not crash on launch — but stripping it eliminates a dangling
+    // reference to an excluded GMS class, future-proofing against tighter
+    // manifest parsing in newer Android versions.
+    expect(FDROID_MANIFEST_CONTENTS).toMatch(
+      /<service\b[\s\S]*?android:name="com\.google\.android\.gms\.metadata\.ModuleDependencies"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
     );
   });
 

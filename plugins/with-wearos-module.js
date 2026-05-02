@@ -184,6 +184,26 @@ configurations {
         // touch FirebaseMessaging at runtime. Push tokens (PushTokenModule)
         // would fail, but CableSnap doesn't use them.
         exclude group: "com.google.firebase"
+        // F-Droid also rejects Google ML Kit (proprietary). \`expo-camera\`
+        // pulls in \`com.google.mlkit:barcode-scanning\` for its built-in
+        // barcode scanner; that drags \`com.google.mlkit:common\` whose
+        // \`<provider MlKitInitProvider>\` auto-runs at app start and (same
+        // pattern as Firebase) calls into the now-missing GMS Preconditions
+        // class → NoClassDefFoundError → crash. Surfaced by run 25244727127.
+        // Functional impact in F-Droid: barcode scanning in food search
+        // (components/BarcodeScanner.tsx) won't detect codes — the camera
+        // preview still renders but \`onBarcodeScanned\` never fires. Manual
+        // food entry remains fully functional. Acceptable trade-off for FOSS
+        // distribution; the alternative is shipping no F-Droid build at all.
+        exclude group: "com.google.mlkit"
+        // \`androidx.camera:camera-mlkit-vision\` is a thin wrapper around
+        // ML Kit and is non-functional once \`com.google.mlkit\` is excluded.
+        // Its classes reference the missing MLKit types and would throw at
+        // class-load time if any UI invokes the wrapper. Excluding it as a
+        // module (NOT the whole \`androidx.camera\` group, which provides
+        // core camera functionality CableSnap requires) keeps the camera
+        // preview working without the MLKit-dependent vision pipeline.
+        exclude module: "camera-mlkit-vision"
         // Drop the Expo Wear bridge library project so its compiled
         // .class files never reach app-releaseFdroid.apk.
         exclude module: "expo-wearos-bridge"
@@ -191,11 +211,15 @@ configurations {
     releaseFdroidRuntimeClasspath {
         exclude group: "com.google.android.gms"
         exclude group: "com.google.firebase"
+        exclude group: "com.google.mlkit"
+        exclude module: "camera-mlkit-vision"
         exclude module: "expo-wearos-bridge"
     }
     releaseFdroidCompileClasspath {
         exclude group: "com.google.android.gms"
         exclude group: "com.google.firebase"
+        exclude group: "com.google.mlkit"
+        exclude module: "camera-mlkit-vision"
         exclude module: "expo-wearos-bridge"
     }
 }
@@ -371,6 +395,33 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              code path (lib/notifications.ts) does not touch this service. -->
         <service
             android:name="expo.modules.notifications.service.ExpoFirebaseMessagingService"
+            tools:node="remove" />
+
+        <!-- mlkit-common.aar — same crash pattern as FirebaseInitProvider.
+             Auto-registered \`<provider MlKitInitProvider>\` runs during
+             Application init (installContentProviders frame in the stack)
+             and calls \`com.google.android.gms.common.internal.Preconditions\`
+             on its very first line. With \`com.google.mlkit\` excluded the
+             provider class itself is gone, but the manifest entry survives
+             AGP's manifest merger because AAR manifests get merged before
+             classpath resolution. tools:node="remove" deletes the entry
+             from the merged output so installProvider() never tries to
+             instantiate the missing class. Surfaced by run 25244727127. -->
+        <provider
+            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+            android:authorities="\${applicationId}.mlkitinitprovider"
+            tools:node="remove" />
+
+        <!-- expo-image-picker declares \`<service ModuleDependencies>\` for
+             Google Photo Picker module-on-demand discovery. The declaration
+             carries \`android:enabled="false"\` so the service is never
+             actually instantiated, AND \`tools:ignore="MissingClass"\` to
+             keep AGP's lint quiet. It would not crash on launch (the
+             service is dormant), but stripping it for F-Droid removes a
+             dangling reference to an excluded GMS class — defence-in-depth
+             against any future Android version that tightens its parser. -->
+        <service
+            android:name="com.google.android.gms.metadata.ModuleDependencies"
             tools:node="remove" />
     </application>
 </manifest>
