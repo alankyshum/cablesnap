@@ -1,4 +1,5 @@
 import { STARTER_TEMPLATES, STARTER_PROGRAMS } from "../../../lib/starter-templates";
+import { CURATED_TEMPLATES } from "../../../lib/curated-programs";
 import { seedExercises } from "../../../lib/seed";
 
 // ---- Data Integrity Tests ----
@@ -95,8 +96,14 @@ describe("Seed — upsertTemplates repair logic", () => {
     const totalStarterExercises = STARTER_TEMPLATES.reduce(
       (sum, tpl) => sum + tpl.exercises.length, 0
     );
+    // BLD-1000: curated templates also issue INSERT against template_exercises.
+    // The UPDATE repair, however, is gated on `is_curated=0` so curated rows
+    // do not contribute to UPDATE call count.
+    const totalCuratedExercises = CURATED_TEMPLATES.reduce(
+      (sum, tpl) => sum + tpl.exercises.length, 0
+    );
 
-    expect(insertCalls.length).toBe(totalStarterExercises);
+    expect(insertCalls.length).toBe(totalStarterExercises + totalCuratedExercises);
     expect(updateCalls.length).toBe(totalStarterExercises);
   });
 

@@ -167,3 +167,21 @@ export const CURATED_PROGRAMS: CuratedProgram[] = [
     source_name: "r/bodyweightfitness Recommended Routine",
   },
 ];
+
+/**
+ * Map of curated program id -> attribution metadata. The detail screen renders
+ * a tappable footer (CC-BY-SA 3.0) when the active program has `is_curated=1`.
+ */
+export const CURATED_ATTRIBUTION: Record<
+  string,
+  { label: string; url: string; license: string }
+> = Object.fromEntries(
+  CURATED_PROGRAMS.map((p) => [
+    p.id,
+    {
+      label: p.source_name,
+      url: p.source_url,
+      license: "CC-BY-SA 3.0",
+    },
+  ])
+);
