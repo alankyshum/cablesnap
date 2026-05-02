@@ -21,6 +21,20 @@ jest.mock("../assets/exercise-illustrations/manifest.generated", () => ({
       startAlt: "seeded start alt",
       endAlt: "",
     },
+    "voltra-with-safety": {
+      start: 3001,
+      end: 3002,
+      startAlt: "safety start alt",
+      endAlt: "safety end alt",
+      safetyNote: "Keep face clear of cable.",
+    },
+    "voltra-empty-safety": {
+      start: 4001,
+      end: 4002,
+      startAlt: "empty safety start",
+      endAlt: "empty safety end",
+      safetyNote: "",
+    },
   },
 }));
 
@@ -80,6 +94,20 @@ const cases: Case[] = [
     ex: { id: "custom-3", name: "Empty", is_custom: true },
     expectedNull: true,
   },
+  {
+    name: "seeded voltra with safetyNote → safetyNote passed through",
+    ex: { id: "voltra-with-safety", name: "WithSafety", is_custom: false },
+    expectedNull: false,
+    expectStart: 3001,
+    expectEnd: 3002,
+  },
+  {
+    name: "seeded voltra with empty safetyNote → normalized to undefined",
+    ex: { id: "voltra-empty-safety", name: "EmptySafety", is_custom: false },
+    expectedNull: false,
+    expectStart: 4001,
+    expectEnd: 4002,
+  },
 ];
 
 describe("resolveExerciseImages", () => {
@@ -98,5 +126,23 @@ describe("resolveExerciseImages", () => {
       expect(result!.startAlt).toContain(expectAltIncludes);
       expect(result!.endAlt).toContain(expectAltIncludes);
     }
+  });
+
+  it("passes through safetyNote when present", () => {
+    const result = resolveExerciseImages({ id: "voltra-with-safety", name: "WithSafety", is_custom: false });
+    expect(result).not.toBeNull();
+    expect(result!.safetyNote).toBe("Keep face clear of cable.");
+  });
+
+  it("normalizes empty safetyNote to undefined", () => {
+    const result = resolveExerciseImages({ id: "voltra-empty-safety", name: "EmptySafety", is_custom: false });
+    expect(result).not.toBeNull();
+    expect(result!.safetyNote).toBeUndefined();
+  });
+
+  it("returns undefined safetyNote when field is absent", () => {
+    const result = resolveExerciseImages({ id: "voltra-seeded-complete", name: "Complete", is_custom: false });
+    expect(result).not.toBeNull();
+    expect(result!.safetyNote).toBeUndefined();
   });
 });

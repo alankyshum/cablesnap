@@ -37,7 +37,7 @@ const ASSET_DIR = path.join(ROOT, "assets/exercise-illustrations");
 const MANIFEST_PATH = path.join(ASSET_DIR, "manifest.generated.ts");
 const CACHE_DIR = path.join(ROOT, ".cache/curate");
 
-type Manifest = Map<string, { startAlt: string; endAlt: string }>;
+type Manifest = Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>;
 
 function loadManifest(): Manifest {
   const src = fs.readFileSync(MANIFEST_PATH, "utf8");
@@ -46,9 +46,13 @@ function loadManifest(): Manifest {
     /"([^"]+)":\s*\{[^}]*?startAlt:\s*("(?:\\.|[^"\\])*")[^}]*?endAlt:\s*("(?:\\.|[^"\\])*")[^}]*?\}/gs;
   let m: RegExpExecArray | null;
   while ((m = blockRe.exec(src)) !== null) {
+    const block = m[0];
+    const safetyMatch = block.match(/safetyNote:\s*("(?:\\.|[^"\\])*")/);
+    const safetyNote = safetyMatch ? (JSON.parse(safetyMatch[1]) as string) : undefined;
     out.set(m[1], {
       startAlt: JSON.parse(m[2]) as string,
       endAlt: JSON.parse(m[3]) as string,
+      ...(safetyNote ? { safetyNote } : {}),
     });
   }
   return out;
@@ -75,16 +79,20 @@ function writeManifest(entries: Manifest): void {
     "  end: number;",
     "  startAlt: string;",
     "  endAlt: string;",
+    "  safetyNote?: string;",
     "};",
     "",
     "export const manifest: Record<string, ManifestEntry> = {",
   ];
-  for (const [id, { startAlt, endAlt }] of sorted) {
+  for (const [id, { startAlt, endAlt, safetyNote }] of sorted) {
     lines.push(`  "${id}": {`);
     lines.push(`    start: require("./${id}/start.webp"),`);
     lines.push(`    end: require("./${id}/end.webp"),`);
     lines.push(`    startAlt: ${JSON.stringify(startAlt)},`);
     lines.push(`    endAlt: ${JSON.stringify(endAlt)},`);
+    if (safetyNote) {
+      lines.push(`    safetyNote: ${JSON.stringify(safetyNote)},`);
+    }
     lines.push(`  },`);
   }
   lines.push("};", "");
@@ -211,7 +219,7 @@ async function main(): Promise<void> {
     const after = await extractRewrites(id, ex.name, cached.panel, apiKey);
     updates.push({ id, before, after, verdict });
     if (!dryRun) {
-      manifest.set(id, after);
+      manifest.set(id, { ...manifest.get(id)!, ...after });
       // Bust the curate cache for this id so next curate run re-evaluates.
       try {
         fs.unlinkSync(cachePath);

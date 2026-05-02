@@ -20,7 +20,9 @@
 
 export const PILOT_EXERCISE_IDS: readonly string[] = [
   // Popular / canonical
+  "voltra-001", // Abdominal Crunches — low mount, 2-arm (re-added via BLD-843 safetyNote)
   "voltra-013", // Bicep Curls — low mount, 2-arm (see seed)
+  "voltra-020", // Close-Grip Lat Pull-down — high mount, 2-arm (re-added via BLD-843 safetyNote)
   "voltra-029", // Chest Press — mid mount, 2-arm (see seed)
   "voltra-045", // Lat Pulldown — high mount, 2-arm (see seed)
   // Prompt-stress grid
