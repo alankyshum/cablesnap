@@ -103,13 +103,39 @@ exit 0
   fs.writeFileSync(path.join(dir, "bin", "git"), gitStub);
   fs.chmodSync(path.join(dir, "bin", "git"), 0o755);
 
-  // Stub `npx` — used by run_scenarios. Honors HEAD_EXIT_CODE.
-  // Also writes a fake capture so the cp step has something to copy.
+  // Stub `npx` — used by both \`build_static_bundle\` (BLD-902 — \`expo
+  // export\`) and \`run_scenarios\` (\`playwright test\`). The two invocations
+  // have different success contracts:
+  //
+  //   - \`expo export -p web …\`  → must always succeed in tests and produce
+  //     \`dist/index.html\`, otherwise \`build_static_bundle\` aborts the
+  //     audit before scenarios+smoke ever run (regressing the BLD-966
+  //     "smoke runs even when HEAD fails" contract for the wrong reason).
+  //
+  //   - \`playwright test …\`     → must honor HEAD_EXIT_CODE so we can
+  //     simulate HEAD scenario passes/failures independent of bundle build.
+  //
+  // The stub also writes a fake capture so the cp step in run_scenarios
+  // has something to copy.
   const npxStub = `#!/usr/bin/env bash
 echo "[npx-stub] $*" >&2
-mkdir -p .pixelslop/screenshots/scenarios/fake-scenario
-echo "fake png bytes" > .pixelslop/screenshots/scenarios/fake-scenario/mobile.png
-exit \${HEAD_EXIT_CODE:-0}
+# Detect bundle build vs scenario run by inspecting argv.
+case " $* " in
+  *" expo export "*)
+    mkdir -p dist
+    echo "<!doctype html><html><body>stub bundle</body></html>" > dist/index.html
+    exit 0
+    ;;
+  *" playwright test "*)
+    mkdir -p .pixelslop/screenshots/scenarios/fake-scenario
+    echo "fake png bytes" > .pixelslop/screenshots/scenarios/fake-scenario/mobile.png
+    exit \${HEAD_EXIT_CODE:-0}
+    ;;
+  *)
+    # Unknown npx invocation — succeed silently to avoid spurious failures.
+    exit 0
+    ;;
+esac
 `;
   fs.writeFileSync(path.join(dir, "bin", "npx"), npxStub);
   fs.chmodSync(path.join(dir, "bin", "npx"), 0o755);
