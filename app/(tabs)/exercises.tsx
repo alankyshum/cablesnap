@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  Pressable,
   StyleSheet,
   View,
   useColorScheme,
@@ -17,7 +18,9 @@ import {
   CATEGORIES,
   CATEGORY_LABELS,
   type Category,
+  type Equipment,
   type Exercise,
+  type MuscleGroup,
 } from "../../lib/types";
 import { CATEGORY_ICONS, muscle } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
@@ -26,6 +29,8 @@ import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { useProfileGender } from "../../lib/useProfileGender";
 import { ExerciseCard } from "../../components/exercises/ExerciseCard";
 import { ExerciseDetailPane } from "../../components/exercises/ExerciseDetailPane";
+import { ExerciseFilterSheet, FilterButton } from "../../components/ExerciseFilterSheet";
+import { useBottomSheet } from "../../components/ui/bottom-sheet";
 
 type FilterType = Category | "custom";
 const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
@@ -40,7 +45,10 @@ export default function Exercises() {
   const mc = isDark ? muscle.dark : muscle.light;
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<FilterType>>(new Set());
+  const [selectedEquipment, setSelectedEquipment] = useState<Set<Equipment>>(new Set());
+  const [selectedMuscles, setSelectedMuscles] = useState<Set<MuscleGroup>>(new Set());
   const [detail, setDetail] = useState<Exercise | null>(null);
+  const filterSheet = useBottomSheet();
 
   const { data: exercises = [], isLoading: loading } = useQuery({
     queryKey: ["exercises"],
@@ -59,9 +67,17 @@ export default function Exercises() {
       }
       if (customFilter && !ex.is_custom) return false;
       if (cats.size > 0 && !cats.has(ex.category)) return false;
+      // Equipment filter (OR within dimension)
+      if (selectedEquipment.size > 0 && !selectedEquipment.has(ex.equipment)) return false;
+      // Muscle group filter (OR within dimension)
+      if (
+        selectedMuscles.size > 0 &&
+        !ex.primary_muscles.some((m) => selectedMuscles.has(m))
+      )
+        return false;
       return true;
     });
-  }, [exercises, query, selected]);
+  }, [exercises, query, selected, selectedEquipment, selectedMuscles]);
 
   useEffect(() => {
     if (layout.atLeastMedium && !detail && filtered.length > 0) {
@@ -76,6 +92,20 @@ export default function Exercises() {
       else next.add(f);
       return next;
     });
+  }, []);
+
+  const handleApplyFilters = useCallback(
+    (equipment: Set<Equipment>, muscles: Set<MuscleGroup>) => {
+      setSelectedEquipment(equipment);
+      setSelectedMuscles(muscles);
+    },
+    []
+  );
+
+  const clearAllFilters = useCallback(() => {
+    setSelected(new Set());
+    setSelectedEquipment(new Set());
+    setSelectedMuscles(new Set());
   }, []);
 
   const onPress = useCallback(
@@ -104,6 +134,9 @@ export default function Exercises() {
 
   const keyExtractor = useCallback((item: Exercise) => item.id, []);
 
+  const activeFilterCount = selectedEquipment.size + selectedMuscles.size;
+  const totalActiveCount = activeFilterCount + selected.size;
+
   const empty = useCallback(
     () =>
       loading ? null : (
@@ -112,24 +145,48 @@ export default function Exercises() {
             No exercises found
           </Text>
           <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-            Try adjusting your search or filters
+            {totalActiveCount > 0
+              ? `Try adjusting your filters. (${totalActiveCount} filter${totalActiveCount !== 1 ? "s" : ""} active)`
+              : "Try adjusting your search or filters"}
           </Text>
+          {totalActiveCount > 0 && (
+            <Pressable
+              onPress={clearAllFilters}
+              style={styles.clearFiltersButton}
+              accessibilityLabel="Clear all filters"
+              accessibilityRole="button"
+            >
+              <Text variant="body" style={{ color: colors.primary, fontWeight: "600" }}>
+                Clear filters
+              </Text>
+            </Pressable>
+          )}
         </View>
       ),
-    [loading, colors]
+    [loading, colors, totalActiveCount, clearAllFilters]
   );
 
   const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : CATEGORY_LABELS[f]);
 
   const list = (
     <View style={layout.atLeastMedium ? { flex: 2 } : { flex: 1 }}>
-      <SearchBar
-        placeholder="Search exercises..."
-        value={query}
-        onChangeText={setQuery}
-        style={[styles.search, { backgroundColor: colors.surface }]}
-        accessibilityLabel="Search exercises"
-      />
+      <View style={styles.searchRow}>
+        <SearchBar
+          placeholder="Search exercises..."
+          value={query}
+          onChangeText={setQuery}
+          style={[styles.search, { backgroundColor: colors.surface, flex: 1 }]}
+          accessibilityLabel="Search exercises"
+        />
+        <FilterButton
+          activeCount={activeFilterCount}
+          onPress={filterSheet.open}
+          backgroundColor={colors.surface}
+          activeColor={colors.primary}
+          inactiveColor={colors.onSurface}
+          badgeTextColor={colors.onPrimary}
+        />
+      </View>
       <View style={styles.chips}>
         <FlatList
           horizontal
@@ -176,6 +233,13 @@ export default function Exercises() {
         ListEmptyComponent={empty}
         contentContainerStyle={{ paddingBottom: tabBarHeight }}
       />
+      <ExerciseFilterSheet
+        isVisible={filterSheet.isVisible}
+        onClose={filterSheet.close}
+        selectedEquipment={selectedEquipment}
+        selectedMuscles={selectedMuscles}
+        onApply={handleApplyFilters}
+      />
     </View>
   );
 
@@ -202,9 +266,17 @@ const styles = StyleSheet.create({
   wideRow: {
     flexDirection: "row",
   },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
+    gap: 8,
+  },
   search: {
-    margin: 12,
-    marginBottom: 4,
+    flex: 1,
+    margin: 0,
   },
   chips: {
     paddingHorizontal: 12,
@@ -213,13 +285,13 @@ const styles = StyleSheet.create({
   filterChip: {
     marginRight: 6,
   },
-
   empty: {
     alignItems: "center",
     paddingTop: 48,
   },
-  emptyList: {
-    flexGrow: 1,
+  clearFiltersButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-
 });

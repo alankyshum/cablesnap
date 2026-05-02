@@ -110,6 +110,19 @@ export const CATEGORY_ICONS: Record<string, string> = {
   shoulders: "account-arrow-up",
 };
 
+// ─── Equipment Icon Map ────────────────────────────────────────────
+
+export const EQUIPMENT_ICONS: Record<string, string> = {
+  barbell: "weight-lifter",
+  dumbbell: "dumbbell",
+  cable: "cable-data",
+  machine: "cog",
+  bodyweight: "human",
+  kettlebell: "kettlebell",
+  band: "resistor",
+  other: "dots-horizontal",
+};
+
 export function difficultyText(level: string): string {
   if (level === "intermediate") return semantic.onIntermediate;
   if (level === "advanced") return semantic.onAdvanced;

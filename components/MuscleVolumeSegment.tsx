@@ -16,7 +16,6 @@ import { getVolumeStatus } from "../lib/volume-landmarks";
 import VolumeBarChart from "./muscle-volume/VolumeBarChart";
 import VolumeTrendChart from "./muscle-volume/VolumeTrendChart";
 import VolumeLandmarksSheet from "./muscle-volume/VolumeLandmarksSheet";
-
 const MuscleRow = React.memo(function MuscleRow({
   item,
   selected,
