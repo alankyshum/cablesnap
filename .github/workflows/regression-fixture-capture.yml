@@ -1,0 +1,244 @@
+name: Regression Fixture Capture (BLD-480 pre-fix)
+
+# One-shot workflow to capture the BLD-480 known-bad screenshot from the
+# pinned pre-fix commit `cce2ac1f828538bf884f91c5e209ab9f6a40d87f` on a
+# Node 20 runner (workspace image is Node 22 and cannot build that tree).
+#
+# Why a static fixture? Pinning a SHA + rebuilding daily forces the daily
+# audit driver to keep an old Expo SDK alive. A single committed PNG keeps
+# the regression-catcher trust anchor alive without that maintenance burden
+# (BLD-959; Option 2 in techlead's BLD-941 analysis).
+#
+# Trigger: manual workflow_dispatch ONLY. Re-running this workflow is
+# expected to be exceptional — only when:
+#   - The pinned pre-fix SHA is re-pinned for a different regression
+#   - The audit prompt or scenario spec changes in a way that invalidates
+#     the captured fixture's signal
+#
+# Output: a PR adding tests/fixtures/regression-catcher/bld-480-pre-fix.png
+# plus an updated provenance README. The artifact is also uploaded to the
+# workflow run for audit-trail purposes.
+#
+# Refs: BLD-959, BLD-941, BLD-924, BLD-943.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pre_fix_sha:
+        description: "Pre-fix commit SHA to capture from (default: BLD-480 pinned SHA)"
+        required: false
+        default: "cce2ac1f828538bf884f91c5e209ab9f6a40d87f"
+      scenario:
+        description: "Scenario spec to run (currently only completed-workout is captured as the BLD-480 fixture)"
+        required: false
+        default: "completed-workout"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: regression-fixture-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Capture pre-fix fixture from ${{ github.event.inputs.pre_fix_sha }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PRE_FIX_SHA: ${{ github.event.inputs.pre_fix_sha }}
+      SCENARIO: ${{ github.event.inputs.scenario }}
+      FIXTURE_PATH: tests/fixtures/regression-catcher/bld-480-pre-fix.png
+
+    steps:
+      - name: Checkout main (for our scenario specs + tooling)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-tree
+          fetch-depth: 1
+
+      - name: Checkout pre-fix commit (the buggy tree we capture from)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PRE_FIX_SHA }}
+          path: prefix-tree
+          fetch-depth: 1
+
+      - name: Setup Node.js 20 (required by pre-fix Expo SDK)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: prefix-tree/package-lock.json
+
+      - name: Install pre-fix tree dependencies
+        working-directory: prefix-tree
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browsers in pre-fix tree
+        working-directory: prefix-tree
+        run: npx playwright install --with-deps chromium
+
+      - name: Copy current scenario specs + seed onto pre-fix tree
+        # The pre-fix tree pre-dates the scenario harness; we layer our
+        # scenario specs and seed hook on top so playwright can drive the
+        # buggy MusclesWorkedCard render.
+        run: |
+          set -euo pipefail
+          mkdir -p prefix-tree/e2e/scenarios prefix-tree/lib/db
+          cp -r main-tree/e2e/scenarios/. prefix-tree/e2e/scenarios/
+          if [ -f main-tree/lib/db/test-seed.ts ]; then
+            cp main-tree/lib/db/test-seed.ts prefix-tree/lib/db/test-seed.ts
+          fi
+          # Carry over the playwright config from main if pre-fix tree lacks one.
+          if [ ! -f prefix-tree/playwright.config.ts ] && [ -f main-tree/playwright.config.ts ]; then
+            cp main-tree/playwright.config.ts prefix-tree/playwright.config.ts
+          fi
+
+      - name: Export web bundle (dev mode — enables seed hook)
+        working-directory: prefix-tree
+        run: npx expo export -p web --dev --no-minify
+
+      - name: Run scenario capture (mobile viewport)
+        working-directory: prefix-tree
+        env:
+          CI: "true"
+          E2E_USE_STATIC: "1"
+          COMMIT_SHA: ${{ env.PRE_FIX_SHA }}
+        run: |
+          set -euo pipefail
+          npx playwright test "e2e/scenarios/${SCENARIO}.spec.ts" --project=mobile
+
+      - name: Locate captured PNG
+        id: locate
+        working-directory: prefix-tree
+        run: |
+          set -euo pipefail
+          OUT_DIR=".pixelslop/screenshots/scenarios/${SCENARIO}"
+          if [ ! -d "$OUT_DIR" ]; then
+            echo "::error::Expected output dir $OUT_DIR was not created by the scenario."
+            ls -la .pixelslop || true
+            exit 1
+          fi
+          # Prefer the baseline mobile.png; fall back to the first PNG.
+          PNG="$OUT_DIR/mobile.png"
+          if [ ! -f "$PNG" ]; then
+            PNG="$(find "$OUT_DIR" -maxdepth 1 -name '*.png' -type f | head -n1)"
+          fi
+          if [ -z "${PNG:-}" ] || [ ! -f "$PNG" ]; then
+            echo "::error::No PNG produced under $OUT_DIR"
+            ls -la "$OUT_DIR" || true
+            exit 1
+          fi
+          echo "captured_png=$PNG" >> "$GITHUB_OUTPUT"
+          echo "Captured: $PNG ($(wc -c <"$PNG") bytes)"
+
+      - name: Upload artifact (audit trail, regardless of PR step)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-fixture-${{ env.PRE_FIX_SHA }}
+          path: prefix-tree/.pixelslop/screenshots/scenarios/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Stage fixture into main-tree for PR
+        env:
+          CAPTURED_PNG: ${{ steps.locate.outputs.captured_png }}
+        run: |
+          set -euo pipefail
+          mkdir -p "main-tree/$(dirname "$FIXTURE_PATH")"
+          cp "prefix-tree/${CAPTURED_PNG}" "main-tree/${FIXTURE_PATH}"
+          echo "Staged fixture: main-tree/${FIXTURE_PATH} ($(wc -c <"main-tree/${FIXTURE_PATH}") bytes)"
+
+      - name: Update provenance README
+        working-directory: main-tree
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p tests/fixtures/regression-catcher
+          cat > tests/fixtures/regression-catcher/README.md <<EOF
+          # Regression-catcher fixtures
+
+          Static "known-bad" screenshots used by \`scripts/daily-audit.sh\` +
+          \`scripts/regression-smoke.sh\` to verify that the ux-designer
+          vision pipeline still flags previously-fixed defects (QD#1 / QD#2
+          trust anchor — see \`/skills/AGENTS-ux-designer.md#bld-480-trust-anchor\`).
+
+          Re-capture only via \`.github/workflows/regression-fixture-capture.yml\`
+          (workflow_dispatch). Do NOT hand-edit these PNGs.
+
+          ## bld-480-pre-fix.png
+
+          | Field | Value |
+          |---|---|
+          | Source SHA | \`${PRE_FIX_SHA}\` (parent of \`6f067cc\` — BLD-480 fix PR #292) |
+          | Scenario | \`${SCENARIO}\` |
+          | Viewport | mobile (Playwright \`mobile\` project) |
+          | Captured at | $(date -u +%Y-%m-%dT%H:%M:%SZ) |
+          | Capture workflow run | ${RUN_URL} |
+          | Captured by | \`.github/workflows/regression-fixture-capture.yml\` |
+
+          The image reproduces the MusclesWorkedCard \`maxHeight\` cropping
+          bug fixed in PR #292. The daily audit feeds it (alongside the
+          standard audit prompt) into the vision pipeline; if the pipeline
+          stops emitting findings matching
+          \`crop|truncat|clip|maxHeight|cut off|MusclesWorkedCard|body-figure\`
+          the audit fails and the regression-catcher alarm fires.
+          EOF
+          # Strip the leading 10-space YAML indent so the README is rendered
+          # at column 0 in the committed file.
+          sed -i 's/^          //' tests/fixtures/regression-catcher/README.md
+
+      - name: Open PR with fixture + provenance
+        working-directory: main-tree
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          BRANCH="bot/regression-fixture-${PRE_FIX_SHA:0:8}-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "${FIXTURE_PATH}" tests/fixtures/regression-catcher/README.md
+          if git diff --cached --quiet; then
+            echo "No fixture changes to commit (fixture identical to existing)."
+            exit 0
+          fi
+          COMMIT_MSG_FILE="$(mktemp)"
+          cat > "$COMMIT_MSG_FILE" <<MSG
+          chore(audit): refresh BLD-480 regression fixture from ${PRE_FIX_SHA:0:8}
+
+          Captured by .github/workflows/regression-fixture-capture.yml.
+          Run: ${RUN_URL}
+
+          Refs: BLD-959
+          MSG
+          # Strip the leading 10-space indent that bash heredoc preserves
+          # (we indent the heredoc body to keep YAML happy).
+          sed -i 's/^          //' "$COMMIT_MSG_FILE"
+          git commit -F "$COMMIT_MSG_FILE"
+          git push --no-verify origin "$BRANCH"
+          PR_BODY_FILE="$(mktemp)"
+          cat > "$PR_BODY_FILE" <<BODY
+          Auto-generated by \`regression-fixture-capture.yml\` (run: ${RUN_URL}).
+
+          Captures \`tests/fixtures/regression-catcher/bld-480-pre-fix.png\` from pre-fix commit \`${PRE_FIX_SHA}\` for use by the daily audit's regression-catcher trust anchor (BLD-959).
+
+          **Reviewer checklist:**
+          - [ ] PNG visually reproduces the MusclesWorkedCard cropping bug (open it; expect the heatmap to be visibly clipped)
+          - [ ] Provenance README updated with this run's URL
+          - [ ] No other files modified
+
+          Refs: BLD-959, BLD-480.
+          BODY
+          sed -i 's/^          //' "$PR_BODY_FILE"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(audit): refresh BLD-480 regression fixture (${PRE_FIX_SHA:0:8})" \
+            --body-file "$PR_BODY_FILE"
