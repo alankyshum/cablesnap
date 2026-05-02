@@ -833,15 +833,24 @@ export async function getFilteredSessions(
   }
 
   if (filters.datePreset) {
-    const now = Date.now();
-    const ms =
-      filters.datePreset === "7d" ? 7 * 24 * 60 * 60 * 1000 :
-      filters.datePreset === "30d" ? 30 * 24 * 60 * 60 * 1000 :
-      filters.datePreset === "90d" ? 90 * 24 * 60 * 60 * 1000 :
-      // "year"
-      365 * 24 * 60 * 60 * 1000;
+    // "7d" / "30d" / "90d" are rolling windows from now.
+    // "year" — per UI label "This year" and QD R4 spec — means the
+    // current local calendar year (Jan 1 00:00:00 local of THIS year),
+    // NOT a rolling 365-day window. A rolling window would silently
+    // include workouts from December of the prior year after Jan 1.
+    let cutoff: number;
+    if (filters.datePreset === "year") {
+      const today = new Date();
+      cutoff = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
+    } else {
+      const ms =
+        filters.datePreset === "7d" ? 7 * 24 * 60 * 60 * 1000 :
+        filters.datePreset === "30d" ? 30 * 24 * 60 * 60 * 1000 :
+        90 * 24 * 60 * 60 * 1000;
+      cutoff = Date.now() - ms;
+    }
     clauses.push("s.started_at >= ?");
-    params.push(now - ms);
+    params.push(cutoff);
   }
 
   if (textSearch.trim()) {
