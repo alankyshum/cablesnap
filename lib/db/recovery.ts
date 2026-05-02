@@ -1,4 +1,5 @@
 import type { MuscleGroup } from "../types";
+import { safeParse } from "../safe-parse";
 import { query } from "./helpers";
 
 export type RecoveryStatus = "recovered" | "partial" | "fatigued" | "no_data";
@@ -67,7 +68,7 @@ export async function getMuscleRecoveryStatus(): Promise<MuscleRecoveryStatus[]>
   const latestByMuscle = new Map<MuscleGroup, number>();
 
   for (const row of rows) {
-    const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
+    const muscles = safeParse<MuscleGroup[]>(row.primary_muscles, [], "recovery.primary_muscles");
     if (muscles.includes("full_body")) continue;
 
     for (const m of muscles) {
