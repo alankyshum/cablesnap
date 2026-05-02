@@ -55,7 +55,7 @@ jest.mock('../../components/ExercisePickerSheet', () => {
 })
 
 let mockEditSheetProps: { visible: boolean; exercise: TemplateExercise | null; onSave: (...args: unknown[]) => void; onDismiss: () => void } | null = null
-jest.mock('../../components/EditExerciseSheet', () => {
+jest.mock('../../components/EditExerciseModal', () => {
   const RealReact = require('react')
   return { __esModule: true, default: (props: { visible: boolean; exercise: TemplateExercise | null; onSave: (...args: unknown[]) => void; onDismiss: () => void }) => {
     mockEditSheetProps = props
