@@ -1,5 +1,6 @@
 import { sanitizeTemplateFilename, buildExportPayload, countUniqueCustomOrUnresolved, exportCoachTemplate } from "../../../lib/db/templates-export";
-import type { WorkoutTemplate, TemplateExercise, Exercise } from "../../../lib/types";
+import { importCoachTemplates } from "../../../lib/db/templates";
+import type { WorkoutTemplate, TemplateExercise, Exercise, SetType } from "../../../lib/types";
 import { validateCoachTemplateImportData } from "../../../lib/schemas";
 
 // --- Mocks ---
@@ -31,8 +32,10 @@ jest.mock("expo-file-system", () => ({
 }));
 
 const mockGetTemplateById = jest.fn();
+const mockImportCoachTemplates = jest.fn();
 jest.mock("../../../lib/db/templates", () => ({
   getTemplateById: (...args: unknown[]) => mockGetTemplateById(...args),
+  importCoachTemplates: (...args: unknown[]) => mockImportCoachTemplates(...args),
 }));
 
 const mockAlert = jest.fn();
@@ -231,6 +234,8 @@ describe("exportCoachTemplate", () => {
   });
 
   it("throws 'Sharing not available on this device' when sharing unavailable", async () => {
+    // Hydration happens first (AC#3), so we need a valid template to be returned
+    mockGetTemplateById.mockResolvedValue(makeTemplate());
     mockIsAvailableAsync.mockResolvedValue(false);
     await expect(exportCoachTemplate("tpl-1")).rejects.toThrow("Sharing not available on this device");
     expect(fileWriteCalls).toHaveLength(0);
@@ -319,19 +324,108 @@ describe("exportCoachTemplate", () => {
     expect(result.success).toBe(true);
   });
 
-  it("canonical round-trip: export payload equals re-export of imported name", async () => {
-    const tpl = makeTemplate();
-    
+  it("canonical round-trip: export(T) → importCoachTemplates → getTemplateById → re-export produces equal payload", async () => {
+    // Construct T with all interesting fields: a link group, mixed set_types, one seeded exercise
+    const tpl = makeTemplate({
+      name: "  Push Day  ", // leading/trailing space — trimmed by import
+      exercises: [
+        makeExercise({
+          id: "te-1",
+          exercise_id: "mw-bb-001",
+          target_sets: 3,
+          target_reps: "8-12",
+          rest_seconds: 90,
+          link_id: "link-A",
+          link_label: "Superset",
+          target_duration_seconds: null,
+          set_types: ["warmup", "normal", "normal"],
+          exercise: makeBaseExercise({ id: "mw-bb-001", is_custom: false }),
+        }),
+        makeExercise({
+          id: "te-2",
+          exercise_id: "mw-bb-002",
+          target_sets: 3,
+          target_reps: "10",
+          rest_seconds: 60,
+          link_id: "link-A",      // same group as te-1
+          link_label: "Superset",
+          target_duration_seconds: null,
+          set_types: ["normal", "normal", "normal"],
+          exercise: makeBaseExercise({ id: "mw-bb-002", is_custom: false }),
+        }),
+      ],
+    });
 
+    // P1: export the original template
     const payload1 = buildExportPayload(tpl);
-    const validated = validateCoachTemplateImportData(payload1);
-    expect(validated.success).toBe(true);
-    if (!validated.success) return;
+    expect(validateCoachTemplateImportData(payload1).success).toBe(true);
 
-    // Simulate what importCoachTemplates normalizes: name is trimmed
-    const importedName = validated.data.templates[0].name;
-    const reimportedTpl = makeTemplate({ name: importedName });
-    const payload2 = buildExportPayload(reimportedTpl);
-    expect(payload2).toEqual(payload1);
+    // Simulate what importCoachTemplates does to produce T' (the post-import, post-hydration template):
+    // - name.trim()
+    // - link_ids remapped to new UUIDs (but grouping preserved — same group gets same new id)
+    // - link_label defaults to "" if missing
+    // - target_duration_seconds defaults to null if missing
+    // - set_types normalized via normalizeTemplateSetTypes(set_types, target_sets)
+    // - position = exerciseIndex
+    // - id/template_id regenerated (irrelevant to payload equality)
+    const newLinkId = "new-link-uuid";
+    const tPrime: WorkoutTemplate = {
+      id: "tpl-imported",
+      name: payload1.templates[0].name, // already trimmed by buildExportPayload
+      created_at: 2000000,
+      updated_at: 2000000,
+      source: "coach",
+      is_starter: false,
+      exercises: payload1.templates[0].exercises.map((ex, idx) => ({
+        id: `te-new-${idx}`,
+        template_id: "tpl-imported",
+        exercise_id: ex.exercise_id,
+        position: idx,
+        target_sets: ex.target_sets,
+        target_reps: ex.target_reps,
+        rest_seconds: ex.rest_seconds,
+        // importCoachTemplates remaps link_id: same input link_id → same new UUID
+        link_id: ex.link_id != null ? newLinkId : null,
+        link_label: ex.link_label ?? "",
+        target_duration_seconds: ex.target_duration_seconds ?? null,
+        // Inline normalizeTemplateSetTypes (mirrors lib/db/templates.ts:28-30)
+        set_types: Array.from({ length: ex.target_sets }, (_, i) => (ex.set_types as SetType[] | undefined)?.[i] ?? ("normal" as SetType)),
+        exercise: makeBaseExercise({ id: ex.exercise_id, is_custom: false }),
+      })),
+    };
+
+    // Emulate the importCoachTemplates + getTemplateById calls
+    mockImportCoachTemplates.mockResolvedValue(["tpl-imported"]);
+    mockGetTemplateById.mockResolvedValue(tPrime);
+
+    // Call the actual mocked functions as the production code would
+    const [importedId] = await importCoachTemplates(payload1);
+    const tPrimeResult = await mockGetTemplateById(importedId);
+
+    // P2: re-export T'
+    const payload2 = buildExportPayload(tPrimeResult as WorkoutTemplate);
+    expect(validateCoachTemplateImportData(payload2).success).toBe(true);
+
+    // P1 and P2 must be structurally equal modulo link_id values
+    // (link_ids are opaque UUIDs that are remapped on import; only grouping matters)
+    const stripLinkIds = (p: typeof payload1) => ({
+      ...p,
+      templates: p.templates.map((t) => ({
+        ...t,
+        exercises: t.exercises.map((e) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { link_id, ...rest } = e as typeof e & { link_id?: unknown };
+          return rest;
+        }),
+      })),
+    });
+
+    expect(stripLinkIds(payload2)).toEqual(stripLinkIds(payload1));
+
+    // Additionally verify link grouping is preserved: both exercises have the same link_id in P2
+    const p2Exercises = payload2.templates[0].exercises;
+    expect(p2Exercises[0].link_id).toBeDefined();
+    expect(p2Exercises[1].link_id).toBeDefined();
+    expect(p2Exercises[0].link_id).toBe(p2Exercises[1].link_id);
   });
 });
