@@ -205,6 +205,47 @@ d("audit-bundle.sh — BLD-950 idempotent re-run", () => {
       expect(matches).toHaveLength(1);
       // Asset is still attached.
       expect(matches[0].assets).toContain(`${tag}.zip`);
+      // CRITICAL (BLD-950 QD finding): the recovered draft MUST be
+      // published, otherwise the audit bundle never appears in the
+      // "latest audit" feed despite the script exiting 0.
+      expect(matches[0].draft).toBe(false);
+      // Sanity: log line confirms the recovery code path ran.
+      expect(r.combined).toMatch(/recovered draft.*publishing/i);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it("AC1a-regression: re-run against an already-published release does NOT re-flip it to draft", () => {
+    // Guard against a future bug where the publish step is wired
+    // unconditionally (i.e., `gh release edit --draft=false` would
+    // succeed but the surrounding logic might mistakenly toggle a
+    // published release back into draft).
+    const today = new Date().toISOString().slice(0, 10);
+    const tag = `audit-${today}-deadbee`;
+    const { dir, run, readState } = buildSandbox({
+      initialState: {
+        releases: [
+          {
+            tagName: tag,
+            draft: false,
+            prerelease: true,
+            immutable: false,
+            assets: [`${tag}.zip`],
+            createdAt: "2026-05-02T11:00:00Z",
+          },
+        ],
+      },
+    });
+    try {
+      const r = run();
+      expect(r.status).toBe(0);
+      const matches = readState().releases.filter((rel) => rel.tagName === tag);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].draft).toBe(false);
+      // The recovery log line must NOT appear — release was already
+      // published, so we should not have called `release edit`.
+      expect(r.combined).not.toMatch(/recovered draft.*publishing/i);
     } finally {
       cleanup(dir);
     }

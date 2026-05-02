@@ -68,6 +68,16 @@ publish_release() {
       fi
       return 1
     fi
+    # If we recovered a partial draft from a prior run (asset uploaded but
+    # the publish step never ran), finish the publish now. Otherwise the
+    # release would silently linger as draft and never appear in the
+    # downstream "latest audit bundle" feed.
+    local is_draft
+    is_draft=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null || echo "false")
+    if [[ "$is_draft" == "true" ]]; then
+      echo "[audit-bundle] recovered draft $tag — publishing now."
+      gh release edit "$tag" --draft=false --prerelease
+    fi
   else
     echo "[audit-bundle] creating draft release $tag ..."
     gh release create "$tag" "$ZIP_PATH" \

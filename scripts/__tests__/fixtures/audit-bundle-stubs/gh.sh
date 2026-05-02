@@ -37,8 +37,44 @@ case "$action" in
       echo "release not found: $tag" >&2
       exit 1
     fi
-    if [[ "${1:-}" == "--json" ]]; then
-      echo "https://example.test/releases/$tag"
+    # Honor --json <fields> [--jq <filter>]
+    json_fields=""
+    jq_filter=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --json) shift; json_fields="$1" ;;
+        --jq)   shift; jq_filter="$1" ;;
+      esac
+      shift
+    done
+    if [[ -n "$json_fields" ]]; then
+      # Build a filtered object containing only the requested fields. We
+      # support the fields the script actually uses today: url, isDraft.
+      # The release record in $STATE doesn't carry a `url` field, so we
+      # synthesize one. `isDraft` maps to the stored `draft` flag.
+      built=$(jq -c --arg t "$tag" '
+        .releases[] | select(.tagName==$t) |
+        {
+          url: ("https://example.test/releases/" + .tagName),
+          isDraft: .draft,
+          tagName: .tagName,
+          isPrerelease: .prerelease,
+          createdAt: .createdAt
+        }
+      ' "$STATE")
+      # Project to only the requested fields (comma-separated) so the
+      # output shape matches `gh` behavior closely.
+      proj_filter=$(echo "$json_fields" | awk -F, '{
+        printf "{";
+        for (i=1; i<=NF; i++) { if (i>1) printf ","; printf "%s: .%s", $i, $i }
+        printf "}";
+      }')
+      projected=$(echo "$built" | jq -c "$proj_filter")
+      if [[ -n "$jq_filter" ]]; then
+        echo "$projected" | jq -r "$jq_filter"
+      else
+        echo "$projected"
+      fi
     fi
     exit 0
     ;;
