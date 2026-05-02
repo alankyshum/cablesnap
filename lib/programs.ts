@@ -36,14 +36,20 @@ export async function getPrograms(): Promise<Program[]> {
     description: string;
     is_active: number;
     is_starter: number;
+    is_curated: number;
     current_day_id: string | null;
     created_at: number;
     updated_at: number;
     deleted_at: number | null;
   }>(
-    "SELECT * FROM programs WHERE deleted_at IS NULL ORDER BY is_active DESC, is_starter ASC, updated_at DESC"
+    "SELECT * FROM programs WHERE deleted_at IS NULL ORDER BY is_active DESC, is_starter ASC, is_curated ASC, updated_at DESC"
   );
-  return rows.map((r) => ({ ...r, is_active: r.is_active === 1, is_starter: r.is_starter === 1 }));
+  return rows.map((r) => ({
+    ...r,
+    is_active: r.is_active === 1,
+    is_starter: r.is_starter === 1,
+    is_curated: r.is_curated === 1,
+  }));
 }
 
 export async function getProgramById(id: string): Promise<Program | null> {
@@ -54,13 +60,19 @@ export async function getProgramById(id: string): Promise<Program | null> {
     description: string;
     is_active: number;
     is_starter: number;
+    is_curated: number;
     current_day_id: string | null;
     created_at: number;
     updated_at: number;
     deleted_at: number | null;
   }>("SELECT * FROM programs WHERE id = ? AND deleted_at IS NULL", [id]);
   if (!row) return null;
-  return { ...row, is_active: row.is_active === 1, is_starter: row.is_starter === 1 };
+  return {
+    ...row,
+    is_active: row.is_active === 1,
+    is_starter: row.is_starter === 1,
+    is_curated: row.is_curated === 1,
+  };
 }
 
 export async function updateProgram(
@@ -77,13 +89,21 @@ export async function updateProgram(
 
 export async function softDeleteProgram(id: string): Promise<void> {
   const database = await getDatabase();
-  const prog = await database.getFirstAsync<{ is_starter: number }>(
-    "SELECT is_starter FROM programs WHERE id = ?",
+  // BLD-1000: extend the BLD-1 soft-delete guard to cover curated programs.
+  // Curated rows must remain present across STARTER_VERSION bumps (the
+  // re-seed path is INSERT-OR-IGNORE keyed on the static curated id, so
+  // soft-deleting then bumping would leave a tombstoned row that the seeder
+  // refuses to overwrite — and on top of that the user's edits would be
+  // permanently inaccessible). Users who do not want a curated program in
+  // their list use the `Mine` filter chip on the Programs surface to hide
+  // it. Deletable-curated semantics are parked to v2.
+  const prog = await database.getFirstAsync<{ is_starter: number; is_curated: number }>(
+    "SELECT is_starter, is_curated FROM programs WHERE id = ?",
     [id]
   );
-  if (prog?.is_starter === 1) return;
+  if (prog?.is_starter === 1 || prog?.is_curated === 1) return;
   await database.runAsync(
-    "UPDATE programs SET deleted_at = ?, is_active = 0, updated_at = ? WHERE id = ? AND is_starter = 0",
+    "UPDATE programs SET deleted_at = ?, is_active = 0, updated_at = ? WHERE id = ? AND is_starter = 0 AND COALESCE(is_curated, 0) = 0",
     [Date.now(), Date.now(), id]
   );
 }
@@ -96,13 +116,19 @@ export async function getActiveProgram(): Promise<Program | null> {
     description: string;
     is_active: number;
     is_starter: number;
+    is_curated: number;
     current_day_id: string | null;
     created_at: number;
     updated_at: number;
     deleted_at: number | null;
   }>("SELECT * FROM programs WHERE is_active = 1 AND deleted_at IS NULL LIMIT 1");
   if (!row) return null;
-  return { ...row, is_active: true, is_starter: row.is_starter === 1 };
+  return {
+    ...row,
+    is_active: true,
+    is_starter: row.is_starter === 1,
+    is_curated: row.is_curated === 1,
+  };
 }
 
 export async function activateProgram(id: string): Promise<void> {
