@@ -104,6 +104,11 @@ const mockSearchSessions = jest.fn().mockResolvedValue([])
 const mockGetSessionCountsByDay = jest.fn().mockResolvedValue([])
 const mockGetAllCompletedSessionWeeks = jest.fn().mockResolvedValue([])
 const mockGetTotalSessionCount = jest.fn().mockResolvedValue(42)
+// BLD-938: spy mocks for the filter pipeline. Hoisted so individual tests
+// can reconfigure them (e.g. simulate a paginated result set).
+const mockGetTemplatesWithSessions = jest.fn().mockResolvedValue([])
+const mockGetMuscleGroupsWithSessions = jest.fn().mockResolvedValue([])
+const mockGetFilteredSessions = jest.fn().mockResolvedValue({ rows: [], total: 0 })
 
 jest.mock('../../lib/db', () => ({
   getSessionsByMonth: (...args: unknown[]) => mockGetSessionsByMonth(...args),
@@ -112,11 +117,12 @@ jest.mock('../../lib/db', () => ({
   getSessionCountsByDay: (...args: unknown[]) => mockGetSessionCountsByDay(...args),
   getAllCompletedSessionWeeks: (...args: unknown[]) => mockGetAllCompletedSessionWeeks(...args),
   getTotalSessionCount: (...args: unknown[]) => mockGetTotalSessionCount(...args),
-  // BLD-938: history filter queries — return empty so the screen falls
-  // through to the unfiltered (calendar/recent) path used by these tests.
-  getTemplatesWithSessions: jest.fn().mockResolvedValue([]),
-  getMuscleGroupsWithSessions: jest.fn().mockResolvedValue([]),
-  getFilteredSessions: jest.fn().mockResolvedValue({ rows: [], total: 0 }),
+  // BLD-938: history filter queries — empty defaults so existing
+  // (non-filter) tests fall through to calendar/recent path. Filter tests
+  // below override these with realistic data.
+  getTemplatesWithSessions: (...args: unknown[]) => mockGetTemplatesWithSessions(...args),
+  getMuscleGroupsWithSessions: (...args: unknown[]) => mockGetMuscleGroupsWithSessions(...args),
+  getFilteredSessions: (...args: unknown[]) => mockGetFilteredSessions(...args),
 }))
 
 jest.mock('../../lib/db/settings', () => ({
@@ -135,6 +141,9 @@ describe('Workout History & Calendar Acceptance', () => {
     mockGetAllCompletedSessionWeeks.mockResolvedValue([])
     mockGetTotalSessionCount.mockResolvedValue(42)
     mockSearchSessions.mockResolvedValue([])
+    mockGetTemplatesWithSessions.mockResolvedValue([])
+    mockGetMuscleGroupsWithSessions.mockResolvedValue([])
+    mockGetFilteredSessions.mockResolvedValue({ rows: [], total: 0 })
   })
 
   describe('Calendar view', () => {
@@ -390,6 +399,138 @@ describe('Workout History & Calendar Acceptance', () => {
         const cell = screen.getByLabelText(/5.*1 workout/)
         // The cell should have minHeight >= 48
         expect(cell.props.style).toBeDefined()
+      })
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // BLD-938 — Filter UI behavioural coverage
+  //
+  // QD blocker R2: existing tests do not exercise the filter UI end-to-end.
+  // These tests open a sheet from the FilterBar, apply a selection, and
+  // assert the observable consequences:
+  //   - getFilteredSessions is called with the right shape
+  //   - the calendar block is dimmed/disabled when filters are active
+  //   - the result-count caption appears
+  //   - "Clear all" returns the screen to the unfiltered path
+  //
+  // We use the public accessibility labels published by FilterBar /
+  // DateRangeFilterSheet so the tests survive cosmetic refactors.
+  // ---------------------------------------------------------------------------
+  describe('BLD-938 filter UI flow', () => {
+    it('opens the date range sheet, applies "This year", and routes through getFilteredSessions', async () => {
+      // Seed a non-empty filter result so the result-count caption renders.
+      mockGetFilteredSessions.mockResolvedValue({
+        rows: [
+          {
+            id: 'filtered-1',
+            template_id: null,
+            name: 'Filtered Match',
+            started_at: day5,
+            completed_at: day5 + 3600000,
+            duration_seconds: 3600,
+            notes: '',
+            rating: null,
+            set_count: 10,
+          },
+        ],
+        total: 1,
+      })
+
+      jest.useFakeTimers()
+      const screen = renderScreen(<History />)
+
+      // Initial async loads.
+      await waitFor(() => {
+        expect(screen.getByTestId('history-filter-chip-date')).toBeTruthy()
+      })
+
+      // Open the date sheet.
+      fireEvent.press(screen.getByTestId('history-filter-chip-date'))
+
+      // Pick "This year". The sheet renders preset options with the
+      // accessibility label "This year" (or "This year, selected").
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^This year/)).toBeTruthy()
+      })
+      fireEvent.press(screen.getByLabelText(/^This year/))
+
+      // Advance past the 300ms filter debounce.
+      jest.advanceTimersByTime(350)
+      jest.useRealTimers()
+
+      await waitFor(() => {
+        expect(mockGetFilteredSessions).toHaveBeenCalled()
+      })
+
+      // The call must carry datePreset: "year" — full QD R4 contract.
+      const lastCall = mockGetFilteredSessions.mock.calls[mockGetFilteredSessions.mock.calls.length - 1]
+      expect(lastCall[0]).toMatchObject({ datePreset: 'year' })
+      expect(lastCall[3]).toBe(0) // page-0 offset
+
+      // Calendar must be flagged disabled while filters are active.
+      await waitFor(() => {
+        expect(
+          screen.getByLabelText('Calendar disabled while filters are active'),
+        ).toBeTruthy()
+      })
+
+      // Result-count caption appears once filtered rows are loaded.
+      await waitFor(() => {
+        expect(screen.getByLabelText('1 sessions match these filters')).toBeTruthy()
+      })
+    })
+
+    it('"Clear all filters" returns to the unfiltered calendar path', async () => {
+      mockGetFilteredSessions.mockResolvedValue({
+        rows: [
+          {
+            id: 'filtered-1',
+            template_id: null,
+            name: 'Filtered Match',
+            started_at: day5,
+            completed_at: day5 + 3600000,
+            duration_seconds: 3600,
+            notes: '',
+            rating: null,
+            set_count: 10,
+          },
+        ],
+        total: 1,
+      })
+
+      jest.useFakeTimers()
+      const screen = renderScreen(<History />)
+      await waitFor(() => {
+        expect(screen.getByTestId('history-filter-chip-date')).toBeTruthy()
+      })
+
+      // Activate a filter.
+      fireEvent.press(screen.getByTestId('history-filter-chip-date'))
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^This year/)).toBeTruthy()
+      })
+      fireEvent.press(screen.getByLabelText(/^This year/))
+      jest.advanceTimersByTime(350)
+
+      await waitFor(() => {
+        expect(
+          screen.getByLabelText('Calendar disabled while filters are active'),
+        ).toBeTruthy()
+      })
+
+      // Now clear all.
+      const clearAll = screen.getByTestId('history-filter-clear-all')
+      fireEvent.press(clearAll)
+      jest.advanceTimersByTime(350)
+      jest.useRealTimers()
+
+      // Caption disappears (filter mode false), unfiltered sessions visible.
+      await waitFor(() => {
+        expect(
+          screen.queryByLabelText('Calendar disabled while filters are active'),
+        ).toBeNull()
+        expect(screen.getByLabelText(/Push Day/)).toBeTruthy()
       })
     })
   })
