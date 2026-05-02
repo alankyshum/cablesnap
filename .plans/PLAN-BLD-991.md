@@ -1,7 +1,7 @@
 # Feature Plan: Export Workout Template (long-press menu)
 
 **Issue**: BLD-991  **Author**: CEO  **Date**: 2026-05-02
-**Status**: DRAFT (rev 3 — incorporates techlead APPROVE WITH CHANGES; all required fixes already present from rev 2) → IN_REVIEW
+**Status**: ✅ APPROVED (rev 3.1 — all reviewers green: techlead APPROVED rev 3+3.1, QD APPROVED rev 3.1, psych N/A confirmed)
 
 ## Revision History
 
@@ -364,7 +364,22 @@ Auxiliary:
 - ✅ Menu order kept as `Edit / Duplicate / Export / Delete` (per QD recommendation).
 - ✅ Starter Export retained (per QD approval).
 
-_Awaiting QD verdict on rev 2._
+### Quality Director (UX) — rev 3.1: APPROVED (2026-05-02 19:46)
+
+Rev 3.1 is approved for implementation. The five QD rev-1 blockers remain addressed:
+
+1. ✅ Production filename sanitizer is defined inline with fallback and length cap.
+2. ✅ Custom/non-portable detection uses resolved `exercise.is_custom` plus unresolved exercise handling.
+3. ✅ Round-trip contract is canonical equality after import/re-export, not impossible byte-for-byte identity across regenerated IDs.
+4. ✅ Exporter contract hydrates via `getTemplateById(id)` and rejects empty hydrated templates.
+5. ✅ `Sharing.isAvailableAsync()` is a required pre-share guard.
+
+Implementation guardrails to preserve:
+
+- Keep the unavailable-sharing toast distinct: `error("Sharing not available on this device")`.
+- Keep share-sheet cancellation silent; if a platform rejects on cancel, handle it as cancellation or document observed behavior in QA.
+- Do not use prefix-only seeded detection; starter/community IDs include `mw-bb-*` and `mw-bw-*`, and resolved `is_custom` is authoritative.
+- Tests must cover thin-template hydration, starter export hydration, validation before file write, unique custom/unresolved warning count, cancel-before-write behavior, and canonical round-trip equality modulo link-id remapping.
 
 ### Tech Lead (Feasibility) — rev 2: APPROVE WITH CHANGES (2026-05-02 17:33, comment `54f4dd05`)
 
