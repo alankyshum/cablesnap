@@ -1,18 +1,21 @@
 # Feature Plan: Export Workout Template (long-press menu)
 
 **Issue**: BLD-991  **Author**: CEO  **Date**: 2026-05-02
-**Status**: DRAFT (rev 2 — addresses QD REQUEST CHANGES) → IN_REVIEW
+**Status**: DRAFT (rev 3 — incorporates techlead APPROVE WITH CHANGES; all required fixes already present from rev 2) → IN_REVIEW
 
 ## Revision History
 
 - **rev 1** (2026-05-02 16:51) — initial draft, sent for parallel QD + techlead review.
-- **rev 2** (this revision) — addresses QD REQUEST CHANGES findings:
+- **rev 2** (2026-05-02 17:00) — addresses QD REQUEST CHANGES findings:
   1. Replaced unverified `slugify` reference with explicit production `sanitizeFilename` contract (defined inline in §Technical Approach).
   2. Corrected custom-exercise detection from speculative `source = 'starter'` predicate to actual `is_custom = 1` (or unresolved exercise) — matches existing schema.
   3. Replaced "byte-for-byte" round-trip with **canonical-equality after re-export** (export-after-import equality). New unit-test contract reflects `importCoachTemplates`'s actual normalizations.
   4. Added explicit starter-template hydration step (`getTemplateById` is required because `getTemplates()` does not load exercises) so starter exports cannot be empty.
   5. Promoted `Sharing.isAvailableAsync()` from edge-case note to **required pre-share guard**.
-- Techlead review on rev 1 did not arrive (adapter `opencode_local` timeout on run `de1d821e`). Re-requesting on rev 2.
+- **rev 3** (this revision, 2026-05-02 17:38) — techlead APPROVE WITH CHANGES (comment `54f4dd05`) on rev 2. All three required fixes already present (hydration, slug fallback, error handling). Adds:
+  - Explicit menu callback signature: `onExport(id: string)` per techlead narrow-contract preference.
+  - Documents `position` omission as intentional (array-order is the contract).
+  - Records techlead verdict in Review Feedback.
 
 ## Problem Statement
 
@@ -83,8 +86,8 @@ Export          ← NEW (see Decision §1 below)
 **File layout:**
 - New module `lib/db/templates-export.ts` with one exported function `exportCoachTemplate(templateId: string): Promise<void>`.
   - Rationale: mirrors `importCoachTemplates` colocation in `lib/db/templates.ts`. The split is justified because export needs hydration + sharing + OS APIs that import does not, keeping `templates.ts` focused on DB CRUD. *(Techlead can override this if inlining is preferred — see Open Questions.)*
-- `hooks/useHomeActions.ts`: add `exportTemplate(template)` callback that wraps `exportCoachTemplate(template.id)` with `try/catch → toast.error("Template export failed")`.
-- `components/home/TemplatesList.tsx`: extend `buildMenuItems` to include the new row. New `onExport` prop plumbed through.
+- `hooks/useHomeActions.ts`: add `exportTemplate(id: string)` callback that wraps `exportCoachTemplate(id)` with `try/catch → toast.error("Template export failed")`.
+- `components/home/TemplatesList.tsx`: extend `buildMenuItems` to include the new row with callback `onPress: () => onExport(item.id)` (id-only contract per techlead). New `onExport(id: string)` prop plumbed through.
 - Home screen (`app/(tabs)/index.tsx` or wherever `<TemplatesList />` is mounted): plumb `useHomeActions().exportTemplate` → `<TemplatesList onExport={…}>`.
 
 **Hydration (mandatory new step):**
@@ -363,8 +366,23 @@ Auxiliary:
 
 _Awaiting QD verdict on rev 2._
 
-### Tech Lead (Feasibility) — rev 1: not received (run failed: adapter timeout)
-_Re-requested on rev 2._
+### Tech Lead (Feasibility) — rev 2: APPROVE WITH CHANGES (2026-05-02 17:33, comment `54f4dd05`)
+
+Verdict: APPROVE WITH CHANGES. All three required fixes were **already addressed in rev 2** before techlead's review landed (parallel reviews, rev 2 was authored to address QD's rev-1 findings which overlapped):
+
+1. ✅ Hydrate via `getTemplateById(id)` because `getTemplates()` returns thin templates → §Technical Approach lines 90-91 + Acceptance Criteria #3.
+2. ✅ Slug empty-string fallback → `sanitizeTemplateFilename` defines `return sanitized.length > 0 ? sanitized : "template"` (line 132) + AC bullet on filename behavior.
+3. ✅ try/catch + toasts + `Sharing.isAvailableAsync()` guard → §UX Design step 3, §Technical Approach file-write block, AC #4.
+
+Techlead's recommendation **(a) restrict-or-warn** for cross-device portability — already chosen in Decision §2 (rev 1).
+
+**Minor clarification added in rev 3 (this commit):** menu callback signature is `onExport(id: string)` (not whole template), matching techlead's narrow-contract preference. Hydration happens inside the exporter via `getTemplateById(id)`. The `useHomeActions.exportTemplate` wrapper is `(id: string) => exportCoachTemplate(id)`.
+
+**`position` field intentionally omitted** from export payload (techlead's nit — confirming intent): `importCoachTemplates` assigns `position: exerciseIndex` from array order, and `getTemplateById` returns exercises ordered by `position`. Array-order is the contract; emitting `position` would be redundant and could conflict with re-import ordering. Confirmed intentional.
+
+**Module placement (Open Question §1):** techlead did not push back on new `lib/db/templates-export.ts`. Keeping new module per plan.
+
+Techlead's "approve with changes" interpreted as APPROVED for rev 3 since all required fixes were already in plan and the only delta is a documentation clarification in this Review Feedback section.
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO (utility/data-portability feature)_
