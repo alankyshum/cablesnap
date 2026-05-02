@@ -14,7 +14,6 @@ import {
   getSessionCountsByDay,
   getSessionsByMonth,
   getTotalSessionCount,
-  searchSessions,
   getTemplatesWithSessions,
   getMuscleGroupsWithSessions,
   getFilteredSessions,
@@ -62,9 +61,9 @@ export function useHistoryData() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SessionRow[] | null>(null);
+  // BLD-938: removed legacy `results` state — text search now renders
+  // from `filteredRows` populated by getFilteredSessions (plan §UI Hook).
   const [hasAny, setHasAny] = useState(true);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
@@ -101,13 +100,22 @@ export function useHistoryData() {
   const FILTER_DEBOUNCE_MS = 300;
 
   const useFilterMode = filterState.anyActive;
+  // BLD-938 — derived predicate: are we rendering from getFilteredSessions
+  // results, vs the unfiltered calendar/month path? True for any chip
+  // filter OR a non-empty text search. This drives `filtered` rendering
+  // and the `loadMoreFiltered` gate.
+  //
+  // Distinct from `useFilterMode` which is chip-only and controls the
+  // calendar dim/disable UX (plan §65-69 — text search must NOT disable
+  // the calendar).
+  const useFilteredQueryPath = useFilterMode || query.trim().length > 0;
 
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled().then(setScreenReaderEnabled);
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotionEnabled);
     const srSub = AccessibilityInfo.addEventListener("screenReaderChanged", setScreenReaderEnabled);
     const rmSub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotionEnabled);
-    return () => { srSub.remove(); rmSub.remove(); if (timer.current) clearTimeout(timer.current); };
+    return () => { srSub.remove(); rmSub.remove(); };
   }, []);
 
   useEffect(() => {
@@ -278,27 +286,37 @@ export function useHistoryData() {
   }, [sessions]);
 
   const filtered = useMemo(() => {
-    // BLD-938: filter mode (chips) takes precedence — uses paged filtered rows.
-    if (useFilterMode) return filteredRows;
-    // Existing text-search path
-    if (results) return results;
+    // BLD-938 — plan §UI Hook (line 209): "When any filter is non-null OR
+    // text search active → call getFilteredSessions (paged, 20/page)."
+    // The chip-filter path AND the text-search path both render from
+    // `filteredRows`, populated by getFilteredSessions in the unified
+    // effect above. The legacy in-memory searchSessions path is gone.
+    //
+    // NOTE on UX vs SQL routing: `useFilterMode` (chip-only) still
+    // controls the calendar dim/disable + result-count caption per plan
+    // §65-69. Text-only search uses the filtered SQL path but does NOT
+    // disable the calendar — the calendar stays interactive for date
+    // navigation alongside a name search, matching the prior UX.
+    if (useFilteredQueryPath) return filteredRows;
     if (!selected) return sessions;
     return sessions.filter((s) => formatDateKey(s.started_at) === selected);
-  }, [sessions, selected, results, useFilterMode, filteredRows]);
+  }, [sessions, selected, useFilteredQueryPath, filteredRows]);
 
   const loadMoreFiltered = useCallback(() => {
-    if (!useFilterMode) return;
+    // Pagination is available whenever we're rendering from filteredRows —
+    // text-only search OR any chip filter active.
+    if (!useFilteredQueryPath) return;
     if (filterLoading) return;
     if (filteredRows.length >= filteredTotal) return;
     setFilterPage((p) => p + 1);
-  }, [useFilterMode, filterLoading, filteredRows.length, filteredTotal]);
+  }, [useFilteredQueryPath, filterLoading, filteredRows.length, filteredTotal]);
 
   const changeMonth = useCallback((direction: -1 | 1) => {
     const animDurationMs = reducedMotion ? 0 : animDuration.normal;
     const slideDistance = layout.width * direction * -1;
     translateX.value = slideDistance;
     translateX.value = withTiming(0, { duration: animDurationMs });
-    setSelected(null); setQuery(""); setResults(null);
+    setSelected(null); setQuery("");
     if (direction === -1) { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); }
     else { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); }
   }, [month, year, layout.width, reducedMotion, translateX]);
@@ -312,22 +330,26 @@ export function useHistoryData() {
     [screenReaderEnabled, changeMonth]);
 
   const onSearch = (text: string) => {
-    setQuery(text); setSelected(null); setFilterPage(0);
-    if (timer.current) clearTimeout(timer.current);
-    if (!text.trim()) { setResults(null); return; }
-    timer.current = setTimeout(async () => { const data = await searchSessions(text.trim()); setResults(data); }, 300);
+    // BLD-938 — text search now routes through the unified
+    // getFilteredSessions effect (debounced 300ms there). We just update
+    // `query`, reset paging, and clear any calendar-day selection. The
+    // legacy searchSessions in-memory call is gone — see plan §UI Hook
+    // requirement: "When any filter is non-null OR text search active →
+    // call getFilteredSessions (paged)."
+    setQuery(text);
+    setSelected(null);
+    setFilterPage(0);
   };
 
   const clearFilter = () => {
     setSelected(null);
     setQuery("");
-    setResults(null);
     setFilterPage(0);
     filterState.clearAll();
   };
 
   const tapDay = (key: string) => {
-    setQuery(""); setResults(null);
+    setQuery("");
     if (!reduceMotionEnabled) {
       const { LayoutAnimation } = require("react-native");
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -338,7 +360,7 @@ export function useHistoryData() {
   const onHeatmapDayPress = (dateKey: string) => {
     const [y, m] = dateKey.split("-").map(Number);
     if (y !== year || m - 1 !== month) { setYear(y); setMonth(m - 1); }
-    setQuery(""); setResults(null); setSelected(dateKey);
+    setQuery(""); setSelected(dateKey);
   };
 
   const dayDetailSessions = useMemo(() => {

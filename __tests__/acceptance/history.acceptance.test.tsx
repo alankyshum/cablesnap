@@ -245,10 +245,21 @@ describe('Workout History & Calendar Acceptance', () => {
   })
 
   describe('Search', () => {
-    it('renders search bar and calls searchSessions on debounced query input', async () => {
+    it('routes text-search through getFilteredSessions (paged, 20/page) and renders the result', async () => {
+      // BLD-938 — plan §UI Hook: "When any filter is non-null OR text
+      // search active → call getFilteredSessions (paged, 20/page)."
+      // The legacy in-memory searchSessions render path is gone; text
+      // search now uses the same paged DB path as chip filters.
       jest.useFakeTimers()
-      const matchingSessions = [sessionsThisMonth[0]]
-      mockSearchSessions.mockResolvedValue(matchingSessions)
+      const matchingSession = makeSessionRow({
+        id: 'search-hit',
+        name: 'Push Day Match',
+        started_at: day5,
+      })
+      mockGetFilteredSessions.mockResolvedValue({
+        rows: [matchingSession],
+        total: 1,
+      })
 
       const screen = renderScreen(<History />)
       await waitFor(() => {
@@ -256,11 +267,55 @@ describe('Workout History & Calendar Acceptance', () => {
       })
 
       fireEvent.changeText(screen.getByLabelText('Search workout history'), 'Push')
+      // Advance past the 300ms debounce in the unified filter-fetch effect.
       jest.advanceTimersByTime(350)
 
       await waitFor(() => {
-        expect(mockSearchSessions).toHaveBeenCalledWith('Push')
+        expect(mockGetFilteredSessions).toHaveBeenCalled()
       })
+
+      // The call must carry the query, page-0 offset, and the
+      // 20-row page size — it MUST NOT route through the legacy
+      // searchSessions path.
+      const lastCall =
+        mockGetFilteredSessions.mock.calls[mockGetFilteredSessions.mock.calls.length - 1]
+      expect(lastCall[1]).toBe('Push')
+      expect(lastCall[2]).toBe(20)
+      expect(lastCall[3]).toBe(0)
+      expect(mockSearchSessions).not.toHaveBeenCalled()
+
+      // The rendered list MUST come from getFilteredSessions (the
+      // matching session above), not from the unfiltered month load.
+      await waitFor(() => {
+        expect(screen.getAllByLabelText(/Push Day Match/).length).toBeGreaterThan(0)
+      })
+
+      jest.useRealTimers()
+    })
+
+    it('text-search alone does NOT disable the calendar (only chip filters do)', async () => {
+      // Plan §65-69: calendar dim/disable applies when "any filter chip
+      // is active". Text search alone uses the filtered SQL path for
+      // results but keeps the calendar interactive.
+      jest.useFakeTimers()
+      mockGetFilteredSessions.mockResolvedValue({ rows: [], total: 0 })
+
+      const screen = renderScreen(<History />)
+      await waitFor(() => {
+        expect(screen.getByLabelText('Search workout history')).toBeTruthy()
+      })
+
+      fireEvent.changeText(screen.getByLabelText('Search workout history'), 'NoMatch')
+      jest.advanceTimersByTime(350)
+
+      await waitFor(() => {
+        expect(mockGetFilteredSessions).toHaveBeenCalled()
+      })
+
+      // Calendar disabled-caption MUST NOT appear for text-search-only.
+      expect(
+        screen.queryByLabelText('Calendar disabled while filters are active'),
+      ).toBeNull()
 
       jest.useRealTimers()
     })
@@ -532,6 +587,63 @@ describe('Workout History & Calendar Acceptance', () => {
         ).toBeNull()
         expect(screen.getByLabelText(/Push Day/)).toBeTruthy()
       })
+    })
+
+    it('combines text search WITH a chip filter into one getFilteredSessions call', async () => {
+      // QD R5 contract: text + chip composes via the same paged path.
+      // Both inputs must arrive on the SAME getFilteredSessions call so
+      // SQL composes them with AND.
+      mockGetFilteredSessions.mockResolvedValue({
+        rows: [
+          {
+            id: 'combined-1',
+            template_id: 'tmpl-upper',
+            name: 'Push Combined',
+            started_at: day5,
+            completed_at: day5 + 3600000,
+            duration_seconds: 3600,
+            notes: '',
+            rating: null,
+            set_count: 10,
+          },
+        ],
+        total: 1,
+      })
+
+      jest.useFakeTimers()
+      const screen = renderScreen(<History />)
+      await waitFor(() => {
+        expect(screen.getByLabelText('Search workout history')).toBeTruthy()
+        expect(screen.getByTestId('history-filter-chip-date')).toBeTruthy()
+      })
+
+      // Apply chip filter first.
+      fireEvent.press(screen.getByTestId('history-filter-chip-date'))
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^This year/)).toBeTruthy()
+      })
+      fireEvent.press(screen.getByLabelText(/^This year/))
+      jest.advanceTimersByTime(350)
+
+      // Then enter a text query.
+      fireEvent.changeText(screen.getByLabelText('Search workout history'), 'Push')
+      jest.advanceTimersByTime(350)
+      jest.useRealTimers()
+
+      await waitFor(() => {
+        // The most recent call must carry BOTH datePreset AND query.
+        const lastCall =
+          mockGetFilteredSessions.mock.calls[mockGetFilteredSessions.mock.calls.length - 1]
+        expect(lastCall[0]).toMatchObject({ datePreset: 'year' })
+        expect(lastCall[1]).toBe('Push')
+        expect(lastCall[2]).toBe(20)
+        expect(lastCall[3]).toBe(0)
+      })
+
+      // Calendar must remain disabled because a chip filter is active.
+      expect(
+        screen.getByLabelText('Calendar disabled while filters are active'),
+      ).toBeTruthy()
     })
   })
 })
