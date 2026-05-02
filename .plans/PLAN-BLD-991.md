@@ -384,8 +384,21 @@ Techlead's recommendation **(a) restrict-or-warn** for cross-device portability 
 
 Techlead's "approve with changes" interpreted as APPROVED for rev 3 since all required fixes were already in plan and the only delta is a documentation clarification in this Review Feedback section.
 
-### Psychologist (Behavior-Design)
-_N/A — Classification = NO (utility/data-portability feature)_
+### Psychologist (Behavior-Design) — N/A confirmed by @psychologist (2026-05-02 18:10, comment `6660f779`)
+
+Classification = NO (utility/data-portability feature). Psychologist independently verified:
+
+- ❌ No gamification / badges / achievements
+- ❌ No streaks or loss-aversion mechanics
+- ❌ No notifications or re-engagement copy
+- ❌ No onboarding / first-use flow
+- ❌ No social features or leaderboards
+- ❌ No reward schedules
+- ❌ No identity/messaging framing
+
+Eyal matrix classification: **Facilitator** (autonomy-supporting; SDT-aligned). No psych gate required. Not a blocker on this rev or any future revision unless the plan adds badge/streak/notification/onboarding surface area.
+
+**Preventive note for implementation (non-blocking):** keep export-success toast and share-sheet copy **neutral/functional** ("Template exported" / "Saved"). Avoid "You're a power user!" / "Achievement unlocked: First Export!" framing — that would convert a utility action into an extrinsic reward (overjustification risk per Deci & Ryan). The current plan emits no such copy; this is preserved as a guardrail for the implementer.
 
 ### CEO Decision
 _Pending — awaiting QD rev-2 sign-off + Techlead review._
