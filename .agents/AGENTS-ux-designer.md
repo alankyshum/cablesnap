@@ -130,28 +130,49 @@ Paperclip routine (09:00 PT, ab23d3ed-e434-4357-ab62-7ccf41159989)
 >   out of scope; note this caveat in the audit summary but do not try to
 >   compensate for it in individual findings.
 
-## Dedup Logic (QD#3)
+## Dedup Logic (QD#3 / BLD-969)
 
-Before filing a new finding issue:
+**Implementation: deterministic, code-enforced.** As of BLD-969 you MUST
+NOT call `clip.sh create-issue` directly for audit findings. Instead use
+the wrapper:
 
-1. **Compute fingerprint** (deterministic):
+```bash
+scripts/audit-create-finding.sh \
+  --fingerprint <12-hex> \
+  --title "<finding title>" \
+  --description-file <path-to-finding-md> \
+  --audit-tag audit-YYYY-MM-DD-<commit-short> \
+  --run-id "$PAPERCLIP_RUN_ID" \
+  --priority medium
+```
+
+The wrapper computes the dedup deterministically:
+
+1. **Compute fingerprint** (deterministic — same formula as before):
    ```
    fingerprint = sha256(normalize(description) + "|" + scenario + "|" + label + "|" + cvd_mode).slice(0,12)
    # normalize: lowercase, collapse whitespace, strip punctuation
    # cvd_mode ∈ {baseline, deuteranopia, protanopia, tritanopia}
    ```
-2. **Search open `ux-audit`-labeled issues** for a matching
-   `(scenario, fingerprint)` pair stored in the issue body under a
-   `Fingerprint:` line.
-3. **On match**: post `+1 recurrence (<N> days since first seen)` comment on
-   the existing issue. Do NOT file a new one. Prevents CEO-inbox DoS.
-4. **Second dedup key — `(audit-date, commit SHA)`**: if the commit SHA in
-   today's bundle is flagged in a prior comment on the audit issue as
-   "build already known-broken" (e.g. claudecoder's prior reply), skip filing
-   P0s for that SHA.
+2. **The wrapper searches** the CableSnap project for any open issue
+   (`todo` / `in_progress` / `in_review` / `backlog`) whose description
+   contains the exact, case-sensitive substring `Fingerprint: <hash>`.
+   `cancelled` and `done` issues are deliberately excluded so a
+   re-occurrence after a fix files a fresh ticket.
+3. **On match**: the wrapper posts
+   `Same finding reproduced in audit-YYYY-MM-DD-<commit> (run <id>)` on
+   the existing issue and prints `RECURRENCE <BLD-N>`. **No new issue is
+   created.** This prevents CEO-inbox DoS (BLD-952 + BLD-956 incident).
+4. **No match**: the wrapper creates the new issue and prints
+   `CREATED <BLD-N>`.
 
-If TWO audit bundles land on the same day (manual re-run), review ONLY the
-later bundle (QD observation).
+**Second dedup key — `(audit-date, commit SHA)`**: if the commit SHA in
+today's bundle is flagged in a prior comment on the audit issue as
+"build already known-broken" (e.g. claudecoder's prior reply), skip
+filing P0s for that SHA. (LLM-side check; not enforced by the wrapper.)
+
+If TWO audit bundles land on the same day (manual re-run), review ONLY
+the later bundle (QD observation).
 
 ## BLD-480 Trust Anchor (QD#1 + QD#2)
 
