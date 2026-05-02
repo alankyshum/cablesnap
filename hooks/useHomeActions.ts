@@ -5,7 +5,7 @@ import { File } from "expo-file-system";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { softDeleteProgram } from "../lib/programs";
-import { deleteTemplate, duplicateTemplate, duplicateProgram, importCoachTemplates, startSession, validateCoachTemplateImportData } from "../lib/db";
+import { deleteTemplate, duplicateTemplate, duplicateProgram, importCoachTemplates, startSession, validateCoachTemplateImportData, exportCoachTemplate } from "../lib/db";
 import type { Program, WorkoutTemplate } from "../lib/types";
 import { STARTER_TEMPLATES } from "../lib/starter-templates";
 import { bumpQueryVersion } from "../lib/query";
@@ -34,6 +34,23 @@ export function useHomeActions() {
 
   const handleDuplicateTemplate = useCallback(async (tpl: WorkoutTemplate) => { const id = await duplicateTemplate(tpl.id); bumpQueryVersion("home"); reload(); router.push(`/template/${id}`); }, [reload, router]);
   const handleDuplicateProgram = useCallback(async (prog: Program) => { const id = await duplicateProgram(prog.id); bumpQueryVersion("home"); reload(); router.push(`/program/${id}`); }, [reload, router]);
+
+  // Export a template to a JSON file and open the OS share sheet.
+  // User-cancellation (the custom-exercise Alert "Cancel" button) throws Error("cancelled")
+  // which is treated as a no-op — only real failures surface a toast.
+  const exportTemplate = useCallback(async (id: string) => {
+    try {
+      await exportCoachTemplate(id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg === "cancelled") return; // user tapped Cancel on the custom-exercise warning
+      if (msg === "Sharing not available on this device") {
+        error("Sharing not available on this device");
+      } else {
+        error("Template export failed");
+      }
+    }
+  }, [error]);
 
   const showTemplateOptions = useCallback((item: WorkoutTemplate) => {
     const meta = starterMeta(item.id);
@@ -85,5 +102,5 @@ export function useHomeActions() {
     }
   }, [error, info, reload, success]);
 
-  return { router, info, reload, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions, importTemplates };
+  return { router, info, reload, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions, importTemplates, exportTemplate };
 }
