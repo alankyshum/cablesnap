@@ -62,8 +62,14 @@ cleanup() {
   # the original ref. The pre-fix section copies files (e.g. lib/db/test-seed.ts)
   # onto an old tree that may lack them; checking out a branch that tracks
   # those files without a reset first would fail with "would be overwritten".
+  #
+  # `-e .pixelslop` (BLD-943 #1 / BLD-959): preserve the audit output dir
+  # even though it is gitignored. `git clean -fd` without the exclusion
+  # nukes `.pixelslop/` because gitignored dirs are still removed by `-fd`
+  # unless explicitly excluded — losing today's audit bundle on a partial
+  # scenario failure.
   git reset --hard --quiet || true
-  git clean -fdq || true
+  git clean -fdq -e .pixelslop || true
   git checkout --quiet "$ORIGINAL_REF" || true
 }
 trap cleanup EXIT
