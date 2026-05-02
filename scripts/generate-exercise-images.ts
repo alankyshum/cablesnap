@@ -3645,7 +3645,7 @@ async function ensurePng(imagePath: string, mimeType: string): Promise<string> {
   return pngPath;
 }
 
-function writeManifest(entries: Map<string, { startAlt: string; endAlt: string }>): void {
+function writeManifest(entries: Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>): void {
   const sorted = Array.from(entries.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   const lines: string[] = [
     "// @generated — do not edit. Regenerate via `npm run generate:exercise-images`.",
@@ -3664,16 +3664,20 @@ function writeManifest(entries: Map<string, { startAlt: string; endAlt: string }
     "  end: number;",
     "  startAlt: string;",
     "  endAlt: string;",
+    "  safetyNote?: string;",
     "};",
     "",
     "export const manifest: Record<string, ManifestEntry> = {",
   ];
-  for (const [id, { startAlt, endAlt }] of sorted) {
+  for (const [id, { startAlt, endAlt, safetyNote }] of sorted) {
     lines.push(`  "${id}": {`);
     lines.push(`    start: require("./${id}/start.webp"),`);
     lines.push(`    end: require("./${id}/end.webp"),`);
     lines.push(`    startAlt: ${JSON.stringify(startAlt)},`);
     lines.push(`    endAlt: ${JSON.stringify(endAlt)},`);
+    if (safetyNote) {
+      lines.push(`    safetyNote: ${JSON.stringify(safetyNote)},`);
+    }
     lines.push(`  },`);
   }
   lines.push("};", "");
@@ -3756,18 +3760,19 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] || c));
 }
 
-async function loadPriorManifestEntries(): Promise<Map<string, { startAlt: string; endAlt: string }>> {
+async function loadPriorManifestEntries(): Promise<Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>> {
   if (!fs.existsSync(MANIFEST_PATH)) {
     return new Map();
   }
 
   try {
-    const entries = new Map<string, { startAlt: string; endAlt: string }>();
+    const entries = new Map<string, { startAlt: string; endAlt: string; safetyNote?: string }>();
     const lines = fs.readFileSync(MANIFEST_PATH, "utf8").split(/\r?\n/);
 
     let currentId: string | null = null;
     let startAlt: string | null = null;
     let endAlt: string | null = null;
+    let safetyNote: string | undefined = undefined;
 
     for (const rawLine of lines) {
       const line = rawLine.trim();
@@ -3776,6 +3781,7 @@ async function loadPriorManifestEntries(): Promise<Map<string, { startAlt: strin
         currentId = entryStartMatch[1];
         startAlt = null;
         endAlt = null;
+        safetyNote = undefined;
         continue;
       }
 
@@ -3791,13 +3797,19 @@ async function loadPriorManifestEntries(): Promise<Map<string, { startAlt: strin
         continue;
       }
 
+      if (line.startsWith("safetyNote:")) {
+        safetyNote = JSON.parse(line.slice("safetyNote:".length).trim().replace(/,$/, "")) as string;
+        continue;
+      }
+
       if (line === "},") {
         if (startAlt && endAlt) {
-          entries.set(currentId, { startAlt, endAlt });
+          entries.set(currentId, { startAlt, endAlt, safetyNote });
         }
         currentId = null;
         startAlt = null;
         endAlt = null;
+        safetyNote = undefined;
       }
     }
 
@@ -3937,7 +3949,7 @@ async function main(): Promise<void> {
       console.log(`[gen] ${ex.id}: images are current but alt text is missing or weak — regenerating alt text only`);
       const startAlt = await describePose("start", ex, apiKey!);
       const endAlt = await describePose("end", ex, apiKey!);
-      manifestEntries.set(ex.id, { startAlt, endAlt });
+      manifestEntries.set(ex.id, { startAlt, endAlt, safetyNote: priorEntry?.safetyNote });
       continue;
     }
     if (haveFiles && existing && existing.promptHash !== promptHash && !cli.forceRegen) {
@@ -4001,7 +4013,8 @@ async function main(): Promise<void> {
       startAlt = `${ex.name} starting position`;
       endAlt = `${ex.name} ending position`;
     }
-    manifestEntries.set(ex.id, { startAlt, endAlt });
+    const priorSafetyNote = manifestEntries.get(ex.id)?.safetyNote;
+    manifestEntries.set(ex.id, { startAlt, endAlt, safetyNote: priorSafetyNote });
 
     writeFingerprint(exDir, {
       promptHash,
