@@ -72,14 +72,15 @@ Paperclip routine (09:00 PT, ab23d3ed-e434-4357-ab62-7ccf41159989)
    gh release download "$AUDIT_TAG" --dir /tmp/audit-bundle --clobber
    (cd /tmp/audit-bundle && unzip -o *.zip)
    ```
-2. **For EACH `<scenario>/<viewport>.png` + sibling `.json`**, run vision with
-   the canned prompt (§ Vision Prompt below).
+2. **For EACH `<scenario>/<viewport>{,-deuteranopia,-protanopia,-tritanopia}.png` + sibling `.json`**, run vision with the canned prompt (§ Vision Prompt below). Tag each invocation with its `cvd` mode (`baseline`, `deuteranopia`, `protanopia`, `tritanopia`) — pass it to the prompt and carry it through to the finding fingerprint.
 3. **Normalize findings**: each finding must include `{scenario, label,
    severity, description, suggested_fix}`.
 4. **Dedup before filing** (§ Dedup Logic below).
 5. **Check BLD-480 regression-catcher acceptance** (§ BLD-480 Trust Anchor below).
 6. **Update the audit issue**: post a summary comment (counts by severity),
    link the finding issues, close to `done`. If clean: `Clean audit ✅`.
+
+> **Acceptance for the CVD extension (BLD-958):** the audit must execute the vision prompt against all 4 PNGs per scenario (baseline + 3 CVD). On clean bundles, returning `[]` for all CVD passes is allowed; the requirement is that the iteration code path runs.
 
 ## Vision Prompt (canned, verbatim)
 
@@ -109,6 +110,20 @@ Paperclip routine (09:00 PT, ab23d3ed-e434-4357-ab62-7ccf41159989)
 > - **minor** — polish: small spacing inconsistencies, minor contrast,
 >   typography inconsistency.
 >
+> ### CVD pass (only when the input PNG is a CVD-emulation capture)
+>
+> When the screenshot is tagged `cvd: deuteranopia | protanopia | tritanopia`, the audit purpose CHANGES:
+>
+> - Only flag findings where a **critical-info color contrast collapses** under emulation. Examples: heatmap legend steps becoming indistinguishable, streak-state color (active vs. inactive) merging, primary CTA blending into background, success/error chip colors becoming ambiguous.
+> - Do **NOT** re-flag layout defects (truncation, overflow, alignment) that are already visible on the baseline capture — those belong to the baseline pass.
+> - If the CVD capture looks identical to baseline aside from hue shift and no information is lost, return `[]`.
+>
+> ### CVD severity sub-rubric
+>
+> - **major** — critical information is lost (user cannot distinguish a state, level, or category that the baseline conveys via color).
+> - **minor** — purely aesthetic hue shift; no information loss; visual polish only.
+> - **critical** is reserved for the baseline pass; do NOT escalate CVD findings to critical.
+>
 > ### Constraints
 >
 > - This is a WEB VIEWPORT audit — native (iOS/Android)-only layout bugs are
@@ -121,8 +136,9 @@ Before filing a new finding issue:
 
 1. **Compute fingerprint** (deterministic):
    ```
-   fingerprint = sha256(normalize(description) + "|" + scenario + "|" + label).slice(0,12)
+   fingerprint = sha256(normalize(description) + "|" + scenario + "|" + label + "|" + cvd_mode).slice(0,12)
    # normalize: lowercase, collapse whitespace, strip punctuation
+   # cvd_mode ∈ {baseline, deuteranopia, protanopia, tritanopia}
    ```
 2. **Search open `ux-audit`-labeled issues** for a matching
    `(scenario, fingerprint)` pair stored in the issue body under a
@@ -210,6 +226,7 @@ When creating the daily audit issue, use this template verbatim:
 **Scenario**: `<scenario-key>`
 **Route**: `<route>`
 **Viewport**: mobile (390×844)
+**CVD mode**: baseline | deuteranopia | protanopia | tritanopia
 **Commit audited**: `<SHA>`
 **Fingerprint**: `<12-char-hex>` ← used for dedup (QD#3)
 
