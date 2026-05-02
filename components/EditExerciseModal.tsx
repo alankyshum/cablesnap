@@ -97,7 +97,7 @@ export default function EditExerciseModal({
       onRequestClose={onDismiss}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex}
       >
         <Pressable
