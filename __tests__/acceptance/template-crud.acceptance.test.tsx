@@ -267,5 +267,106 @@ describe('Template CRUD Acceptance', () => {
 
       expect(mockRouter.back).toHaveBeenCalled()
     })
+
+    describe('Rename name field (BLD-992)', () => {
+      it('pre-fills the name input with the current template name', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        expect(input.props.value).toBe('Push Day')
+      })
+
+      it('persists the renamed value via updateTemplateName on blur (happy path)', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, 'Pull Day')
+        fireEvent(input, 'blur')
+
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-1', 'Pull Day')
+        })
+      })
+
+      it('does not call updateTemplateName when the name is unchanged on blur', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent(input, 'blur')
+
+        // Allow any pending microtask flush
+        await waitFor(() => {
+          expect(input.props.value).toBe('Push Day')
+        })
+        expect(mockUpdateName).not.toHaveBeenCalled()
+      })
+
+      it('rejects an empty/whitespace-only name with an inline error and does not persist', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText, findByText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, '   ')
+        fireEvent(input, 'blur')
+
+        expect(await findByText('Template name is required.')).toBeTruthy()
+        expect(mockUpdateName).not.toHaveBeenCalled()
+      })
+
+      it('rejects a name longer than 100 characters with an inline error and does not persist', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText, findByText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        // The Input has maxLength=100, but defensive: validate explicitly when we
+        // bypass it (e.g. paste handling differences) — drive validation via a
+        // 101-char value pushed through changeText.
+        const tooLong = 'x'.repeat(101)
+        fireEvent.changeText(input, tooLong)
+        fireEvent(input, 'blur')
+
+        expect(await findByText('Template name must be 100 characters or fewer.')).toBeTruthy()
+        expect(mockUpdateName).not.toHaveBeenCalled()
+      })
+
+      it('trims whitespace and persists the trimmed value, updating the displayed name', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, '  Leg Day  ')
+        fireEvent(input, 'blur')
+
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-1', 'Leg Day')
+        })
+        // After successful save, the field should reflect the trimmed value
+        await waitFor(() => {
+          expect(input.props.value).toBe('Leg Day')
+        })
+      })
+
+      it('does not render the name input for starter templates (read-only)', async () => {
+        mockParams = { id: 'tpl-starter' }
+        mockGetTemplateById.mockResolvedValueOnce(
+          createWorkoutTemplate({ id: 'tpl-starter', name: 'Starter Push', is_starter: true, exercises: [te1] }),
+        )
+
+        const { findByText, queryByLabelText } = renderScreen(<EditTemplate />)
+
+        // Wait for template to load
+        await findByText('Bench Press')
+        expect(queryByLabelText('Template Name')).toBeNull()
+      })
+    })
   })
 })
