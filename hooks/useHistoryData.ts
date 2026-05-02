@@ -95,6 +95,10 @@ export function useHistoryData() {
   const [filterPage, setFilterPage] = useState(0);
   const filterFetchSeqRef = useRef(0);
   const FILTER_PAGE_SIZE = 20;
+  // BLD-938 — plan §Performance: filter changes are debounced 300ms so
+  // rapid chip/sheet taps collapse into a single query. Matches the
+  // existing search debounce in `onSearch` below.
+  const FILTER_DEBOUNCE_MS = 300;
 
   const useFilterMode = filterState.anyActive;
 
@@ -163,6 +167,13 @@ export function useHistoryData() {
   // The reset-to-page-zero on filter/query change is handled in the setter
   // callbacks below (NOT a derived effect), which keeps lint happy
   // (react-hooks/set-state-in-effect).
+  //
+  // Debounce: rapid filter taps (chip → sheet → tap → sheet → tap) MUST
+  // collapse into a single query (plan §Performance — 300ms debounce, also
+  // explicit acceptance criteria from QD R3). Pagination requests
+  // (filterPage > 0) bypass the debounce — the user already paid the
+  // visible cost of scrolling and we never want a "load more" request
+  // dropped because a chip was tapped 100ms earlier.
   useEffect(() => {
     const seq = ++filterFetchSeqRef.current;
     if (!useFilterMode && !query.trim()) {
@@ -174,25 +185,37 @@ export function useHistoryData() {
       // overwrites them.
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- starting async fetch; loading flag flipped back via .finally
-    setFilterLoading(true);
     const offset = filterPage * FILTER_PAGE_SIZE;
-    getFilteredSessions(filterState.filters, query, FILTER_PAGE_SIZE, offset)
-      .then((res) => {
-        // Drop stale fetches.
-        if (seq !== filterFetchSeqRef.current) return;
-        setFilteredRows((prev) => (filterPage === 0 ? res.rows : [...prev, ...res.rows]));
-        setFilteredTotal(res.total);
-      })
-      .catch(() => {
-        if (seq !== filterFetchSeqRef.current) return;
-        setFilteredRows([]);
-        setFilteredTotal(0);
-      })
-      .finally(() => {
-        if (seq !== filterFetchSeqRef.current) return;
-        setFilterLoading(false);
-      });
+    const runFetch = () => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- starting async fetch; loading flag flipped back via .finally
+      setFilterLoading(true);
+      getFilteredSessions(filterState.filters, query, FILTER_PAGE_SIZE, offset)
+        .then((res) => {
+          // Drop stale fetches.
+          if (seq !== filterFetchSeqRef.current) return;
+          setFilteredRows((prev) => (filterPage === 0 ? res.rows : [...prev, ...res.rows]));
+          setFilteredTotal(res.total);
+        })
+        .catch(() => {
+          if (seq !== filterFetchSeqRef.current) return;
+          setFilteredRows([]);
+          setFilteredTotal(0);
+        })
+        .finally(() => {
+          if (seq !== filterFetchSeqRef.current) return;
+          setFilterLoading(false);
+        });
+    };
+
+    // Pagination requests run immediately; user-driven filter/search
+    // changes are reset to page 0 by their setters and routed here for
+    // debouncing.
+    if (filterPage > 0) {
+      runFetch();
+      return;
+    }
+    const t = setTimeout(runFetch, FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(t);
   }, [useFilterMode, filterState.filters, query, filterPage]);
 
   // BLD-938: clear calendar selection when filters become active, AND reset
