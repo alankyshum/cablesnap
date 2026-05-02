@@ -22,15 +22,18 @@ RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for 
 RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold
 # ─────────────────────────────────────────────────────────────────
 
-# Parse flags
+# Parse flags and file arguments
 SKIP_RUNTIME="${SKIP_RUNTIME:-0}"
 DETAIL=0
+CHANGED_FILES=()
 for arg in "$@"; do
   case "$arg" in
     --skip-runtime) SKIP_RUNTIME=1 ;;
     --detail)       DETAIL=1 ;;
+    *)              CHANGED_FILES+=("$arg") ;;
   esac
 done
+SCOPED=$( [ ${#CHANGED_FILES[@]} -gt 0 ] && echo 1 || echo 0 )
 
 echo "=== CableSnap Test Audit ==="
 echo ""
@@ -57,9 +60,25 @@ fi
 
 echo ""
 
+# Helper: run grep against scoped files or full TEST_DIR
+# Usage: scoped_grep [grep-flags...] PATTERN
+# When SCOPED=1, searches only CHANGED_FILES; otherwise searches TEST_DIR recursively.
+scoped_grep() {
+  if [ "$SCOPED" -eq 1 ]; then
+    grep "$@" "${CHANGED_FILES[@]}" 2>/dev/null || true
+  else
+    grep -r "$@" "$TEST_DIR" --include='*.ts' --include='*.tsx' 2>/dev/null || true
+  fi
+}
+
+SCOPE_LABEL=""
+if [ "$SCOPED" -eq 1 ]; then
+  SCOPE_LABEL=" (scoped to ${#CHANGED_FILES[@]} changed file(s))"
+fi
+
 # 2. Count tests per file (top 20)
-echo "=== Tests per file (top 20) ==="
-grep -rc "^\s*\(it\|test\)(" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
+echo "=== Tests per file (top 20)${SCOPE_LABEL} ==="
+scoped_grep -c "^\s*\(it\|test\)(" \
   | sed "s|$PROJECT_ROOT/||" \
   | sort -t: -k2 -rn \
   | head -20
@@ -67,8 +86,8 @@ grep -rc "^\s*\(it\|test\)(" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
 echo ""
 
 # 3. Find describe blocks that appear in multiple files (potential overlap)
-echo "=== Repeated describe topics (potential overlap) ==="
-grep -roh "describe(['\"][^'\"]*['\"]" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
+echo "=== Repeated describe topics (potential overlap)${SCOPE_LABEL} ==="
+scoped_grep -oh "describe(['\"][^'\"]*['\"]" \
   | sed "s/describe(['\"]//;s/['\"]$//" \
   | sort | uniq -c | sort -rn \
   | awk '$1 > 1 { print "  " $1 "x: " substr($0, index($0,$2)) }'
@@ -76,8 +95,8 @@ grep -roh "describe(['\"][^'\"]*['\"]" "$TEST_DIR" --include='*.ts' --include='*
 echo ""
 
 # 4. Find test descriptions that appear in multiple files
-echo "=== Duplicate test names (exact matches across files) ==="
-grep -roh "\(it\|test\)(['\"][^'\"]*['\"]" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
+echo "=== Duplicate test names (exact matches across files)${SCOPE_LABEL} ==="
+scoped_grep -oh "\(it\|test\)(['\"][^'\"]*['\"]" \
   | sed "s/\(it\|test\)(['\"]//;s/['\"]$//" \
   | sort | uniq -c | sort -rn \
   | awk '$1 > 1 { print "  " $1 "x: " substr($0, index($0,$2)) }' \
@@ -86,20 +105,31 @@ grep -roh "\(it\|test\)(['\"][^'\"]*['\"]" "$TEST_DIR" --include='*.ts' --includ
 echo ""
 
 # 5. Detect structural/source-reading tests (fs.readFileSync in tests)
-echo "=== Source-reading tests (fs.readFileSync in test files) ==="
-grep -rl "readFileSync" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
-  | sed "s|$PROJECT_ROOT/||" \
-  | while read -r f; do
-    count=$(grep -c "readFileSync" "$PROJECT_ROOT/$f" || true)
-    tests=$(grep -c "^\s*\(it\|test\)(" "$PROJECT_ROOT/$f" || true)
-    echo "  $f ($tests tests, $count file reads)"
+echo "=== Source-reading tests (fs.readFileSync in test files)${SCOPE_LABEL} ==="
+if [ "$SCOPED" -eq 1 ]; then
+  for f in "${CHANGED_FILES[@]}"; do
+    if grep -q "readFileSync" "$f" 2>/dev/null; then
+      count=$(grep -c "readFileSync" "$f" || true)
+      tests=$(grep -c "^\s*\(it\|test\)(" "$f" || true)
+      relf=$(echo "$f" | sed "s|$PROJECT_ROOT/||")
+      echo "  $relf ($tests tests, $count file reads)"
+    fi
   done
+else
+  grep -rl "readFileSync" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
+    | sed "s|$PROJECT_ROOT/||" \
+    | while read -r f; do
+      count=$(grep -c "readFileSync" "$PROJECT_ROOT/$f" || true)
+      tests=$(grep -c "^\s*\(it\|test\)(" "$PROJECT_ROOT/$f" || true)
+      echo "  $f ($tests tests, $count file reads)"
+    done
+fi
 
 echo ""
 
 # 6. Show beforeEach duplication (files with very similar setup)
-echo "=== beforeEach block count per file (top 15) ==="
-grep -rc "beforeEach" "$TEST_DIR" --include='*.ts' --include='*.tsx' \
+echo "=== beforeEach block count per file (top 15)${SCOPE_LABEL} ==="
+scoped_grep -c "beforeEach" \
   | sed "s|$PROJECT_ROOT/||" \
   | sort -t: -k2 -rn \
   | head -15

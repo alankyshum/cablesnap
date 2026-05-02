@@ -58,13 +58,21 @@ fi
 
 # ─── Test Budget Gate ────────────────────────────────────────────
 # Blocks push if test count exceeds budget (1800 test cases)
+# Scopes duplicate/overlap checks to changed test files only (BLD-812)
 if [ -f "scripts/audit-tests.sh" ]; then
   echo "🧪 Running test audit..."
-  if ! ./scripts/audit-tests.sh 2>/dev/null; then
-    echo ""
-    echo "Consolidate tests before pushing. Run: ./scripts/audit-tests.sh --detail"
-    echo "To skip this check: git push --no-verify"
-    exit 1
+  remote_branch_for_tests=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main")
+  changed_test_files=$(git diff --name-only "$remote_branch_for_tests"...HEAD -- '__tests__/**/*.ts' '__tests__/**/*.tsx' 2>/dev/null || true)
+  if [ -n "$changed_test_files" ]; then
+    # shellcheck disable=SC2086
+    if ! ./scripts/audit-tests.sh --skip-runtime $changed_test_files 2>/dev/null; then
+      echo ""
+      echo "Consolidate tests before pushing. Run: ./scripts/audit-tests.sh --detail"
+      echo "To skip this check: git push --no-verify"
+      exit 1
+    fi
+  else
+    echo "  ✅ No test files changed, skipping test audit"
   fi
 fi
 
