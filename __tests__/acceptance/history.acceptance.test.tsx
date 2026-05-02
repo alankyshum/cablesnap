@@ -319,6 +319,52 @@ describe('Workout History & Calendar Acceptance', () => {
 
       jest.useRealTimers()
     })
+
+    it('text-search alone paginates via onEndReached (page-1 offset = 20)', async () => {
+      // BLD-938 R6: onEndReached must fire the next page when only text
+      // search is active (no chip filters). Previously the FlatList only
+      // wired onEndReached when chip filters were active, so text-search
+      // results were stuck at the first 20 rows.
+      jest.useFakeTimers()
+      const page0 = Array.from({ length: 20 }, (_, i) =>
+        makeSessionRow({ id: `p0-${i}`, name: 'Push', started_at: day5 - i * 1000 }),
+      )
+      mockGetFilteredSessions.mockResolvedValue({ rows: page0, total: 45 })
+
+      const screen = renderScreen(<History />)
+      await waitFor(() => {
+        expect(screen.getByLabelText('Search workout history')).toBeTruthy()
+      })
+
+      fireEvent.changeText(screen.getByLabelText('Search workout history'), 'Push')
+      jest.advanceTimersByTime(350)
+
+      await waitFor(() => {
+        expect(mockGetFilteredSessions).toHaveBeenCalled()
+      })
+
+      // Trigger onEndReached on the FlatList. If the screen still gates
+      // on chip-only useFilterMode, this is a no-op and the page-1 call
+      // never happens.
+      const list = screen.getByTestId('history-list')
+      mockGetFilteredSessions.mockClear()
+      mockGetFilteredSessions.mockResolvedValue({
+        rows: [makeSessionRow({ id: 'p1-0', name: 'Push', started_at: day5 - 100000 })],
+        total: 45,
+      })
+      fireEvent(list, 'onEndReached', { distanceFromEnd: 100 })
+
+      await waitFor(() => {
+        expect(mockGetFilteredSessions).toHaveBeenCalled()
+      })
+      const lastCall =
+        mockGetFilteredSessions.mock.calls[mockGetFilteredSessions.mock.calls.length - 1]
+      expect(lastCall[1]).toBe('Push')
+      expect(lastCall[2]).toBe(20)
+      expect(lastCall[3]).toBe(20)
+
+      jest.useRealTimers()
+    })
   })
 
   describe('Streak summary', () => {

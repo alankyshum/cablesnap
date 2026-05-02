@@ -37,12 +37,13 @@ function HistoryScreen() {
   return (
     <>
       <FlatList
+        testID="history-list"
         data={h.filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderSession}
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight }}
-        onEndReached={h.useFilterMode ? h.loadMoreFiltered : undefined}
+        onEndReached={h.useFilteredQueryPath ? h.loadMoreFiltered : undefined}
         onEndReachedThreshold={0.5}
         ListHeaderComponent={
           <>

@@ -414,5 +414,6 @@ export function useHistoryData() {
     filterLoading,
     loadMoreFiltered,
     useFilterMode,
+    useFilteredQueryPath,
   };
 }
