@@ -3,6 +3,7 @@ import type { WorkoutSession, MuscleGroup } from "../types";
 import { eq, and, sql, isNotNull, ne, gt, max, count, desc, asc, gte, lt, inArray } from "drizzle-orm";
 import { query, queryOne, getDrizzle } from "./helpers";
 import { workoutSessions, workoutSets, exercises } from "./schema";
+import { parseMuscleList } from "./muscle-format";
 
 // ---- History & Calendar ----
 
@@ -706,4 +707,206 @@ export async function getSessionDurationPRs(
      ORDER BY name ASC`,
     [sessionId, sessionId]
   );
+}
+
+// ─── BLD-938: History Filters ────────────────────────────────────────────────
+
+export type TemplateOption = {
+  template_id: string;
+  template_name: string;
+  count: number;
+  is_deleted: boolean;
+};
+
+export type DatePreset = "7d" | "30d" | "90d" | "year";
+
+export type HistoryFilters = {
+  templateId: string | null;
+  muscleGroup: string | null;
+  datePreset: DatePreset | null;
+};
+
+/**
+ * Returns all templates that have at least one completed session, keyed by
+ * the stable `template_id`. Uses a LEFT JOIN to `workout_templates` so
+ * deleted templates still surface (their historical sessions remain
+ * visible) — falling back to the most recent matching session's `name` and
+ * marking the entry `is_deleted: true`.
+ *
+ * Ad-hoc / imported sessions (`template_id IS NULL`) are intentionally
+ * excluded — they are surfaced via the muscle-group / date-range filters
+ * or the unfiltered view, but not through Template filter (per QD R4).
+ *
+ * Sorted case-insensitively by current name.
+ */
+export async function getTemplatesWithSessions(): Promise<TemplateOption[]> {
+  const rows = await query<{
+    template_id: string;
+    template_name: string;
+    count: number;
+    is_deleted: number;
+  }>(
+    `SELECT
+       s.template_id AS template_id,
+       COALESCE(t.name, (
+         SELECT s2.name FROM workout_sessions s2
+         WHERE s2.template_id = s.template_id AND s2.completed_at IS NOT NULL
+         ORDER BY s2.completed_at DESC LIMIT 1
+       )) AS template_name,
+       COUNT(s.id) AS count,
+       CASE WHEN t.id IS NULL THEN 1 ELSE 0 END AS is_deleted
+     FROM workout_sessions s
+     LEFT JOIN workout_templates t ON t.id = s.template_id
+     WHERE s.completed_at IS NOT NULL AND s.template_id IS NOT NULL
+     GROUP BY s.template_id
+     ORDER BY template_name COLLATE NOCASE`
+  );
+  return rows.map((r) => ({
+    template_id: r.template_id,
+    template_name: r.template_name,
+    count: r.count,
+    is_deleted: r.is_deleted === 1,
+  }));
+}
+
+/**
+ * Returns the union of muscle groups (primary + secondary) used in
+ * exercises that appear in the user's completed sessions. Handles BOTH
+ * storage formats (JSON array, CSV) via `parseMuscleList`.
+ *
+ * Returned values are deduped and sorted alphabetically.
+ */
+export async function getMuscleGroupsWithSessions(): Promise<string[]> {
+  const rows = await query<{ primary_muscles: string; secondary_muscles: string }>(
+    `SELECT DISTINCT e.primary_muscles, e.secondary_muscles
+     FROM exercises e
+     WHERE e.id IN (
+       SELECT DISTINCT ws.exercise_id
+       FROM workout_sets ws
+       WHERE ws.session_id IN (
+         SELECT id FROM workout_sessions WHERE completed_at IS NOT NULL
+       )
+     )`
+  );
+  const all = new Set<string>();
+  for (const row of rows) {
+    for (const m of parseMuscleList(row.primary_muscles)) all.add(m);
+    for (const m of parseMuscleList(row.secondary_muscles)) all.add(m);
+  }
+  return Array.from(all).sort();
+}
+
+/**
+ * Composable filtered-sessions query. WHERE clauses are added per active
+ * filter and AND-combined with the optional text search. Returns paged
+ * rows plus the total (unpaged) count for the result-count UI.
+ *
+ * Muscle-group filter implementation
+ * ----------------------------------
+ * The exercises table stores `primary_muscles` and `secondary_muscles` in
+ * one of two opaque formats (see `lib/db/muscle-format.ts`). Rather than
+ * loading every exercise into JS, we use a 10-clause LIKE pattern on the
+ * SQL side that covers both formats × both columns × four positional CSV
+ * variants (only / start / middle / end) plus the JSON-quoted variant.
+ *
+ * PERF: see plan §"muscle group filter" — when the storage-format
+ * normalization migration ships (separate tech-debt issue), this pattern
+ * collapses to a single `EXISTS (... LIKE '%"x"%')` clause.
+ *
+ * Substring-collision safety: the JSON pattern requires surrounding `"`
+ * and the CSV patterns require comma boundaries (or full-string match), so
+ * a filter for `back` cannot match `upper_back` storage. Asserted by an
+ * integration test in `__tests__/lib/db/history-filters.test.ts`.
+ */
+export async function getFilteredSessions(
+  filters: HistoryFilters,
+  textSearch: string,
+  limit: number,
+  offset: number
+): Promise<{ rows: (WorkoutSession & { set_count: number })[]; total: number }> {
+  const clauses: string[] = ["s.completed_at IS NOT NULL"];
+  const params: (string | number)[] = [];
+
+  if (filters.templateId) {
+    clauses.push("s.template_id = ?");
+    params.push(filters.templateId);
+  }
+
+  if (filters.datePreset) {
+    const now = Date.now();
+    const ms =
+      filters.datePreset === "7d" ? 7 * 24 * 60 * 60 * 1000 :
+      filters.datePreset === "30d" ? 30 * 24 * 60 * 60 * 1000 :
+      filters.datePreset === "90d" ? 90 * 24 * 60 * 60 * 1000 :
+      // "year"
+      365 * 24 * 60 * 60 * 1000;
+    clauses.push("s.started_at >= ?");
+    params.push(now - ms);
+  }
+
+  if (textSearch.trim()) {
+    clauses.push("s.name LIKE ?");
+    params.push(`%${textSearch.trim()}%`);
+  }
+
+  if (filters.muscleGroup) {
+    // 10-clause dual-format LIKE pattern. Same parameter is bound 10
+    // times — SQLite re-uses positional `?N`, but to keep the SQL
+    // portable across drivers we push the value 10 times instead.
+    const m = filters.muscleGroup;
+    clauses.push(
+      `EXISTS (
+         SELECT 1 FROM workout_sets ws2
+         JOIN exercises e ON ws2.exercise_id = e.id
+         WHERE ws2.session_id = s.id
+           AND (
+             /* JSON format match in primary_muscles */
+             e.primary_muscles LIKE ?
+             /* CSV format match in primary_muscles (only / start / middle / end) */
+             OR e.primary_muscles = ?
+             OR e.primary_muscles LIKE ?
+             OR e.primary_muscles LIKE ?
+             OR e.primary_muscles LIKE ?
+             /* Same patterns for secondary_muscles */
+             OR e.secondary_muscles LIKE ?
+             OR e.secondary_muscles = ?
+             OR e.secondary_muscles LIKE ?
+             OR e.secondary_muscles LIKE ?
+             OR e.secondary_muscles LIKE ?
+           )
+       )`
+    );
+    params.push(`%"${m}"%`); // JSON in primary
+    params.push(m);            // CSV only in primary
+    params.push(`${m},%`);     // CSV start in primary
+    params.push(`%,${m},%`);   // CSV middle in primary
+    params.push(`%,${m}`);     // CSV end in primary
+    params.push(`%"${m}"%`); // JSON in secondary
+    params.push(m);            // CSV only in secondary
+    params.push(`${m},%`);     // CSV start in secondary
+    params.push(`%,${m},%`);   // CSV middle in secondary
+    params.push(`%,${m}`);     // CSV end in secondary
+  }
+
+  const whereClause = clauses.join(" AND ");
+
+  // Get total count first (unpaged)
+  const countRow = await queryOne<{ total: number }>(
+    `SELECT COUNT(*) AS total FROM workout_sessions s WHERE ${whereClause}`,
+    params
+  );
+  const total = countRow?.total ?? 0;
+
+  // Paged rows
+  const rows = await query<WorkoutSession & { set_count: number }>(
+    `SELECT s.*,
+            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) AS set_count
+     FROM workout_sessions s
+     WHERE ${whereClause}
+     ORDER BY s.started_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+
+  return { rows, total };
 }

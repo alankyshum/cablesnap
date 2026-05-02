@@ -104,6 +104,9 @@ export {
   getSessionDurationPRs,
   getSessionCountsByDay,
   getTotalSessionCount,
+  getTemplatesWithSessions,
+  getMuscleGroupsWithSessions,
+  getFilteredSessions,
   getE1RMTrends,
   getWeeklyE1RMTrends,
   getRecentSessionRPEs,
@@ -119,6 +122,7 @@ export {
 } from "./sessions";
 export type { RestContext } from "./sessions";
 export type { SessionEditPayload, SessionEditSetPatch } from "./sessions";
+export type { TemplateOption, DatePreset, HistoryFilters } from "./sessions";
 export type { ExerciseCategory, RestInputs, RestFactor, RestBreakdown } from "../rest";
 export type { ExerciseSession, ExerciseRecords, SourceSessionSet, VariantScope } from "./sessions";
 export { getVariantSetCount, buildVariantSql } from "./sessions";
