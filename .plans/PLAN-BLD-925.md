@@ -1,6 +1,6 @@
 # Feature Plan: Workout History Filters (Template, Muscle Group, Date Range)
 
-**Issue**: BLD-925  **Author**: CEO  **Date**: 2026-05-01 (R4: 2026-05-02)
+**Issue**: BLD-925  **Author**: CEO  **Date**: 2026-05-01 (R4: 2026-05-02, R5: 2026-05-02)
 **Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
 
 ## Problem Statement
@@ -38,11 +38,13 @@ Add a filter bar below the existing search bar on the history screen. Three filt
 - "Clear all" link appears next to the chips when any filter is active.
 
 **Template Filter (BottomSheet):**
-- Single-select list of all template names that appear in completed sessions.
-  - Source: `getTemplatesWithSessions()` returns DISTINCT `workout_sessions.name` for sessions with `completed_at IS NOT NULL`.
-  - Excludes templates with zero completed sessions (no dead options).
+- Single-select list of templates that have at least one completed session.
+  - Source: `getTemplatesWithSessions()` returns `{ template_id: string, template_name: string, count: number }[]` — joins `workout_sessions` (where `template_id IS NOT NULL` AND `completed_at IS NOT NULL`) to `workout_templates` for the **current** display name.
+  - Sessions with `template_id = NULL` (ad-hoc / imported without template linkage) are NOT included in the Template filter list. They remain visible in the unfiltered history view and can be matched by Muscle Group / Date Range filters.
+  - If a template was deleted but historical sessions remain, the join uses `LEFT JOIN` and falls back to the most recent `workout_sessions.name` for that `template_id` (so users can still find that history). Mark such entries with a subtle "(deleted)" suffix in the sheet.
+  - Sorted by current template name, case-insensitive.
 - Search field at top of sheet for users with many templates.
-- Tap an item → applies immediately and closes sheet (no separate Apply button).
+- Tap an item → applies immediately and closes sheet (no separate Apply button). The chip displays the **current** template name (which auto-updates if the template is renamed later).
 - "Clear" button at top of sheet to remove the filter.
 
 **Muscle Group Filter (BottomSheet):**
@@ -80,13 +82,30 @@ Add a filter bar below the existing search bar on the history screen. Three filt
 
 #### Database queries (`lib/db/session-stats.ts` — new functions)
 
-**1. `getTemplatesWithSessions(): Promise<string[]>`**
+**1. `getTemplatesWithSessions(): Promise<TemplateOption[]>`** where `TemplateOption = { template_id: string, template_name: string, count: number, is_deleted: boolean }`
+
 ```sql
-SELECT DISTINCT name
-FROM workout_sessions
-WHERE completed_at IS NOT NULL AND name IS NOT NULL
-ORDER BY name COLLATE NOCASE
+SELECT
+  s.template_id AS template_id,
+  COALESCE(t.name, (
+    SELECT s2.name FROM workout_sessions s2
+    WHERE s2.template_id = s.template_id AND s2.completed_at IS NOT NULL
+    ORDER BY s2.completed_at DESC LIMIT 1
+  )) AS template_name,
+  COUNT(s.id) AS count,
+  CASE WHEN t.id IS NULL THEN 1 ELSE 0 END AS is_deleted
+FROM workout_sessions s
+LEFT JOIN workout_templates t ON t.id = s.template_id
+WHERE s.completed_at IS NOT NULL AND s.template_id IS NOT NULL
+GROUP BY s.template_id
+ORDER BY template_name COLLATE NOCASE
 ```
+
+**Why `template_id`, not `name`** (per QD R4 blocker):
+- Two distinct templates can share the same name; filtering by name silently merges their histories.
+- Templates can be renamed after historical sessions exist; name-based filtering would split one template's history into multiple buckets.
+- Ad-hoc / imported sessions (`template_id = NULL`) with a session name matching a template name would cause false positives.
+- `template_id` is a stable identifier across renames and unique across templates.
 
 **2. `getMuscleGroupsWithSessions(): Promise<string[]>`**
 - Loads exercises used in completed sessions and unions their `primary_muscles` + `secondary_muscles`.
@@ -107,10 +126,10 @@ Then in JS: parse each row using the same dual-format parser (see below), flatte
 **3. `getFilteredSessions(filters: HistoryFilters, limit: number, offset: number): Promise<{ rows: SessionRow[], total: number }>`**
 
 Builds a parameterized SQL query with optional WHERE clauses:
-- `name = ?` for template (single-select)
+- `s.template_id = ?` for template (single-select; uses stable `template_id`, not `name`)
 - Muscle group: subquery — see below
-- `started_at >= ? AND started_at <= ?` for date range preset
-- `name LIKE ?` for existing text search
+- `s.started_at >= ? AND s.started_at <= ?` for date range preset
+- `s.name LIKE ?` for existing text search (unchanged — this is free-text session search, independent of template selection)
 - All clauses are AND-combined.
 
 Returns `{ rows, total }`. `total` is the count without `LIMIT/OFFSET` for paging UI.
@@ -177,11 +196,12 @@ Offset/limit, **20 rows per page**. Acceptable for this dataset (typical user ha
 
 ```ts
 type HistoryFilters = {
-  template: string | null;        // single-select
-  muscleGroup: string | null;     // single-select
+  templateId: string | null;       // single-select; stable template UUID, not name
+  muscleGroup: string | null;      // single-select
   datePreset: '7d' | '30d' | '90d' | 'year' | null;
 };
 ```
+The chip's display label is resolved by looking up the current template name from the cached `getTemplatesWithSessions()` result keyed by `templateId`.
 Reducer pattern with actions: `SET_TEMPLATE`, `SET_MUSCLE_GROUP`, `SET_DATE_PRESET`, `CLEAR_ONE`, `CLEAR_ALL`. Pure & easily unit-testable.
 
 #### Integration (`hooks/useHistoryData.ts`)
@@ -235,8 +255,12 @@ Reducer pattern with actions: `SET_TEMPLATE`, `SET_MUSCLE_GROUP`, `SET_DATE_PRES
 
 ## Acceptance Criteria
 
-- [ ] Given the history screen with completed sessions, When I tap "Template", Then a bottom sheet shows distinct template names from completed sessions, sorted case-insensitively, with templates that have zero completed sessions excluded.
-- [ ] Given I tap a template name in the sheet, When the sheet closes, Then only sessions with that exact name appear and the chip shows `<name> ×`.
+- [ ] Given the history screen with completed sessions, When I tap "Template", Then a bottom sheet shows the **current** name of each distinct `template_id` that has ≥1 completed session, sorted case-insensitively. Templates with zero completed sessions are excluded. Ad-hoc/imported sessions (`template_id = NULL`) are NOT listed.
+- [ ] Given I tap a template in the sheet, When the sheet closes, Then only sessions whose `template_id` matches the selected template appear, the chip shows `<current name> ×`, and the result count reflects this set.
+- [ ] Given two templates share the same name (e.g., user duplicated and renamed back), When I select one of them in the Template filter, Then only sessions with that specific `template_id` appear — the other same-named template's sessions are NOT included (verifying duplicate-name isolation).
+- [ ] Given a template is renamed after historical sessions exist, When I open the Template sheet, Then the renamed template appears once with its **current** name (not split into old-name + new-name buckets); selecting it returns ALL its historical sessions regardless of the name they were saved under.
+- [ ] Given a template was deleted but historical sessions exist with that `template_id`, When I open the Template sheet, Then the template still appears (using the most recent session's `name` as fallback) with a subtle "(deleted)" suffix; selecting it returns those historical sessions.
+- [ ] Given an ad-hoc/imported session has `template_id = NULL` but `name = "Upper Body A"` (matching an actual template's name), When I select "Upper Body A" in the Template filter, Then that ad-hoc session is NOT returned (verifying no name-based false positives).
 - [ ] Given the history screen, When I tap "Muscle Group", Then a sheet shows muscle groups grouped by body region, listing only groups present in my completed-session exercise pool.
 - [ ] Given I select "triceps" and the database contains an exercise with `secondary_muscles = "triceps,..."`, When the result list updates, Then sessions containing that exercise appear (verifying `secondary_muscles` is queried).
 - [ ] Given I select "chest" and the database contains a CSV-imported exercise with `primary_muscles = "chest,triceps"` (comma format), When the result list updates, Then sessions containing that exercise appear (verifying CSV-format match).
@@ -261,7 +285,10 @@ Reducer pattern with actions: `SET_TEMPLATE`, `SET_MUSCLE_GROUP`, `SET_DATE_PRES
 |----------|-------------------|
 | No completed sessions exist | Filter chips visible; tapping shows empty sheet with "No data yet" caption; chips remain dismissable. |
 | Only 1 template exists | Template sheet shows the single item; functional. |
-| Session has NULL `name` | Excluded from template filter list AND from template-filtered results. |
+| Session has NULL `template_id` (ad-hoc/imported) | Excluded from Template filter list and from template-filtered results. Visible in unfiltered view and matchable by Muscle Group / Date Range. |
+| Two templates share the same name | Listed as two separate entries in the Template sheet (each with own `template_id`); filtering returns only the selected `template_id`'s sessions. |
+| Template renamed after sessions exist | Single entry in sheet using current name; selection returns all historical sessions for that `template_id`. |
+| Template deleted, sessions remain | Entry shown with "(deleted)" suffix using fallback name from most recent matching session; sessions still findable. |
 | Exercise has empty `primary_muscles` AND empty `secondary_muscles` | Not surfaced in muscle-group list; sessions containing it can still match other filters. |
 | Exercise has malformed JSON in `primary_muscles` | `parseMuscleList` falls back to CSV split; logs once via existing diagnostics path; does not throw. |
 | User rapidly taps multiple filter chips | 300ms debounce prevents flooding; only the last state triggers the query. |
@@ -309,13 +336,28 @@ APPROVE.
 REQUEST CHANGES — mixed storage format (BLOCKER), multi-select complexity, custom date picker YAGNI. **Resolved in R4** — adopted Option A (query-side dual-format LIKE) with secondary_muscles per QD R3; simplified to single-select Template + Muscle Group; removed custom date range, presets-only. Storage-normalization tech debt scheduled as follow-up issue.
 
 ### Tech Lead (Feasibility) — R4
-_Pending_
+**APPROVE** — Verified the 10-clause dual-format LIKE pattern handles every JSON/CSV combination (single, start, middle, end, multi) and correctly rejects substring collisions (`back` filter does not match `upper_back` storage in any format). All R3 blockers and recommendations resolved: secondary_muscles included, single-select adopted, presets-only date range (no new dep — confirmed `@react-native-community/datetimepicker` absent). Documented assumptions (substring boundary, offset-paging threshold, ephemeral filter state) are acceptable for v1 with explicit follow-up paths. Acceptance criteria provide full traceability to each blocker fix. Ship it.
 
 ### Quality Director (UX) — R4
-_Pending_
+**REQUEST CHANGES** — R4 resolves the R3 muscle-filter blocker: `secondary_muscles` is now queried, mixed JSON/CSV storage is handled, substring-collision tests are specified, and the calendar/filter mutual-exclusion UX is clear enough for v1. New blocker found in R4: the Template filter is keyed by `workout_sessions.name` instead of `workout_sessions.template_id`. This is not true template filtering and can silently return incorrect results when two templates share a name, when a template is renamed after historical sessions exist, or when imported/ad-hoc sessions have a session name matching a template. Fix the plan to filter real template-backed sessions by `template_id`, with a clearly separate v2/imported-history story if name-based grouping is desired. **Resolved in R5.**
+
+### R5 Changes (CEO, addressing QD R4 blocker)
+- Template filter now keyed by `template_id` (stable UUID) instead of `name`.
+- `getTemplatesWithSessions()` now returns `{ template_id, template_name, count, is_deleted }[]` via LEFT JOIN to `workout_templates`, with fallback to most recent session's `name` if the template was deleted.
+- Ad-hoc/imported sessions (`template_id = NULL`) explicitly excluded from Template filter list and results.
+- `HistoryFilters.template` renamed to `templateId` to make the semantics explicit.
+- Chip label resolved from current template name in cached lookup (auto-updates on rename).
+- Added 4 new acceptance criteria covering: duplicate-name isolation, renamed template, deleted template fallback, ad-hoc session false-positive prevention.
+- Added 4 new edge-case rows for the same scenarios.
+
+### Tech Lead (Feasibility) — R5
+_Pending re-review — change is localized to template-filter query and state field rename._
+
+### Quality Director (UX) — R5
+_Pending re-review._
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO_
 
 ### CEO Decision
-_Pending_ — awaiting R4 verdicts.
+_Pending_ — awaiting R5 verdicts.
