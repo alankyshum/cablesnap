@@ -441,7 +441,13 @@ jobs:
           api-level: 34
           target: default
           arch: x86_64
-          emulator-boot-timeout: 300
+          # Boot timeout doubled from 300s to 600s — runner is under load after a 30-min
+          # Gradle build, and 5 min isn't always enough for QEMU to boot. Run #25239428448
+          # timed out at 300s with sys.boot_completed never reporting true.
+          emulator-boot-timeout: 600
+          # Speed up boot on headless runners: no window, software GPU, no audio, no boot
+          # animation, no snapshot save. Reduces boot time and avoids GPU init hangs.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
           disable-animations: true
           script: |
             set -euo pipefail
