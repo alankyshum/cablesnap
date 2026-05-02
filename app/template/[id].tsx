@@ -8,7 +8,7 @@ import { useLayout } from "@/lib/layout";
 import { useTemplateEditor } from "@/hooks/useTemplateEditor";
 import { TemplateExerciseRow } from "@/components/template/TemplateExerciseRow";
 import ExercisePickerSheet from "@/components/ExercisePickerSheet";
-import EditExerciseSheet from "@/components/EditExerciseSheet";
+import EditExerciseModal from "@/components/EditExerciseModal";
 import type { TemplateExercise } from "@/lib/types";
 
 export default function EditTemplate() {
@@ -116,7 +116,7 @@ export default function EditTemplate() {
         )}
       </View>
       <ExercisePickerSheet visible={pickerOpen} onDismiss={() => setPickerOpen(false)} onPick={handlePickExercise} />
-      <EditExerciseSheet visible={!!editing} exercise={editing} onSave={handleEditSave} onDismiss={() => setEditing(null)} />
+      <EditExerciseModal visible={!!editing} exercise={editing} onSave={handleEditSave} onDismiss={() => setEditing(null)} />
     </>
   );
 }

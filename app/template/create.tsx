@@ -30,7 +30,7 @@ import {
 } from "../../lib/db";
 import type { Exercise, SetType, TemplateExercise, WorkoutTemplate } from "../../lib/types";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
-import EditExerciseSheet from "../../components/EditExerciseSheet";
+import EditExerciseModal from "../../components/EditExerciseModal";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { bumpQueryVersion } from "../../lib/query";
 
@@ -229,7 +229,7 @@ export default function CreateTemplate() {
         />
       </View>
       <ExercisePickerSheet visible={pickerOpen} onDismiss={() => setPickerOpen(false)} onPick={handlePickExercise} />
-      <EditExerciseSheet visible={!!editing} exercise={editing} onSave={handleEditSave} onDismiss={() => setEditing(null)} />
+      <EditExerciseModal visible={!!editing} exercise={editing} onSave={handleEditSave} onDismiss={() => setEditing(null)} />
     </>
   );
 }

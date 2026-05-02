@@ -1,7 +1,7 @@
 import React from 'react'
 import { fireEvent } from '@testing-library/react-native'
 import { Keyboard } from 'react-native'
-import EditExerciseSheet from '../../components/EditExerciseSheet'
+import EditExerciseModal from '../../components/EditExerciseModal'
 import { renderScreen } from '../helpers/render'
 import type { TemplateExercise } from '../../lib/types'
 
@@ -22,22 +22,23 @@ const baseExercise: TemplateExercise = {
   exercise: { id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: ['triceps'], equipment: 'barbell', instructions: '', difficulty: 'intermediate', is_custom: false, deleted_at: null } as TemplateExercise['exercise'],
 }
 
-describe('EditExerciseSheet', () => {
+describe('EditExerciseModal', () => {
   const onSave = jest.fn()
   const onDismiss = jest.fn()
 
   beforeEach(() => jest.clearAllMocks())
 
-  it('renders nothing when not visible', () => {
+  it('renders nothing visible when not visible', () => {
     const { queryByText } = renderScreen(
-      <EditExerciseSheet visible={false} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={false} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
+    // RN Modal in test renderer does not mount children when visible=false
     expect(queryByText('Bench Press')).toBeNull()
   })
 
   it('renders pre-filled values when visible', () => {
     const { getByDisplayValue, getByText, getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     expect(getByText('Bench Press')).toBeTruthy()
     expect(getByDisplayValue('4')).toBeTruthy()
@@ -55,7 +56,7 @@ describe('EditExerciseSheet', () => {
       rest_seconds: null as unknown as number,
     }
     const { getByDisplayValue } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={nullExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={nullExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     expect(getByDisplayValue('3')).toBeTruthy()
     expect(getByDisplayValue('8-12')).toBeTruthy()
@@ -64,7 +65,7 @@ describe('EditExerciseSheet', () => {
 
   it('uses defaults when exercise is null', () => {
     const { getByDisplayValue } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={null} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={null} onSave={onSave} onDismiss={onDismiss} />
     )
     expect(getByDisplayValue('3')).toBeTruthy()
     expect(getByDisplayValue('8-12')).toBeTruthy()
@@ -73,7 +74,7 @@ describe('EditExerciseSheet', () => {
 
   it('calls onSave with parsed values and dismisses keyboard', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.press(getByLabelText('Save exercise settings'))
     expect(Keyboard.dismiss).toHaveBeenCalled()
@@ -82,7 +83,7 @@ describe('EditExerciseSheet', () => {
 
   it('cycles set type chips before saving', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.press(getByLabelText('Set 2 type: Normal'))
     fireEvent.press(getByLabelText('Save exercise settings'))
@@ -91,15 +92,23 @@ describe('EditExerciseSheet', () => {
 
   it('calls onDismiss when Cancel is pressed', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.press(getByLabelText('Cancel editing'))
     expect(onDismiss).toHaveBeenCalled()
   })
 
+  it('calls onDismiss when backdrop is pressed', () => {
+    const { getByLabelText } = renderScreen(
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+    )
+    fireEvent.press(getByLabelText('Close edit exercise modal'))
+    expect(onDismiss).toHaveBeenCalled()
+  })
+
   it('disables Save when sets is 0', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.changeText(getByLabelText('Target sets'), '0')
     fireEvent.press(getByLabelText('Save exercise settings'))
@@ -108,7 +117,7 @@ describe('EditExerciseSheet', () => {
 
   it('disables Save when reps is empty', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.changeText(getByLabelText('Target reps'), '')
     fireEvent.press(getByLabelText('Save exercise settings'))
@@ -117,7 +126,7 @@ describe('EditExerciseSheet', () => {
 
   it('disables Save when rest is negative', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.changeText(getByLabelText('Rest time in seconds'), '-1')
     fireEvent.press(getByLabelText('Save exercise settings'))
@@ -126,7 +135,7 @@ describe('EditExerciseSheet', () => {
 
   it('allows rest of 0 seconds', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.changeText(getByLabelText('Rest time in seconds'), '0')
     fireEvent.press(getByLabelText('Save exercise settings'))
@@ -135,19 +144,18 @@ describe('EditExerciseSheet', () => {
 
   it('allows AMRAP as reps value', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     fireEvent.changeText(getByLabelText('Target reps'), 'AMRAP')
     fireEvent.press(getByLabelText('Save exercise settings'))
     expect(onSave).toHaveBeenCalledWith(4, 'AMRAP', 120, ['warmup', 'normal', 'dropset', 'failure'])
   })
 
-  it('has accessibilityViewIsModal on the sheet', () => {
+  it('has accessibilityViewIsModal on the modal card', () => {
     const { getByLabelText } = renderScreen(
-      <EditExerciseSheet visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
     )
     const saveBtn = getByLabelText('Save exercise settings')
-    // Walk up from button to find the modal container
     let node: { props?: Record<string, unknown>; parent?: unknown } = saveBtn
     let found = false
     while (node.parent) {
@@ -158,5 +166,17 @@ describe('EditExerciseSheet', () => {
       node = node.parent as typeof node
     }
     expect(found).toBe(true)
+  })
+
+  it('renders inside a centered Modal (not bottom-anchored sheet)', () => {
+    const { UNSAFE_getByType } = renderScreen(
+      <EditExerciseModal visible={true} exercise={baseExercise} onSave={onSave} onDismiss={onDismiss} />
+    )
+    // Asserts our card uses RN Modal with onRequestClose for Android back-button support
+    const RN = require('react-native')
+    const modal = UNSAFE_getByType(RN.Modal)
+    expect(modal.props.transparent).toBe(true)
+    expect(modal.props.animationType).toBe('fade')
+    expect(typeof modal.props.onRequestClose).toBe('function')
   })
 })
