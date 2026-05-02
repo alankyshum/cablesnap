@@ -34,6 +34,8 @@ const makeCableRow = (overrides: Record<string, unknown> = {}) => ({
   is_voltra: 0,
   start_image_uri: null,
   end_image_uri: null,
+  progression_group: null,
+  progression_order: null,
   ...overrides,
 });
 

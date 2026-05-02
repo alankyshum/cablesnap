@@ -8,7 +8,16 @@ import { mapRow, type ExerciseRow } from "./exercises";
  * All queries target `equipment = 'cable'` and filter by optional mount_position
  * and/or attachment. Results are sorted by primary_muscles then name for
  * consistent SectionList grouping.
+ *
+ * Note: `mount_position` was moved from the Exercise type to per-set data
+ * (BLD-771), but the column still exists on the exercises table as a default.
+ * CableExercise extends Exercise to surface it for this finder screen.
  */
+
+/** Exercise with mount_position surfaced from the DB exercises table. */
+export type CableExercise = Exercise & {
+  mount_position?: MountPosition | null;
+};
 
 export type CableFinderFilters = {
   mountPosition: MountPosition | null;
@@ -21,14 +30,14 @@ export type CableFinderFilters = {
  */
 export async function getCableExercises(
   filters: CableFinderFilters
-): Promise<Exercise[]> {
+): Promise<CableExercise[]> {
   const { mountPosition, attachment } = filters;
 
-  const rows = await query<ExerciseRow>(
+  const rows = await query<ExerciseRow & { mount_position: string | null }>(
     `SELECT id, name, category, primary_muscles, secondary_muscles,
             equipment, instructions, difficulty, is_custom, deleted_at,
             mount_position, attachment, training_modes, is_voltra,
-            start_image_uri, end_image_uri
+            start_image_uri, end_image_uri, progression_group, progression_order
      FROM exercises
      WHERE equipment = 'cable'
        AND deleted_at IS NULL
@@ -41,7 +50,10 @@ export async function getCableExercises(
     ]
   );
 
-  return rows.map(mapRow);
+  return rows.map((row) => ({
+    ...mapRow(row as unknown as ExerciseRow),
+    mount_position: (row.mount_position as MountPosition) ?? undefined,
+  }));
 }
 
 /**

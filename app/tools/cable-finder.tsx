@@ -12,28 +12,28 @@ import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
-import type { Exercise, MountPosition, Attachment, MuscleGroup } from "@/lib/types";
+import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
 import {
   MOUNT_POSITION_LABELS,
   ATTACHMENT_LABELS,
   MUSCLE_LABELS,
 } from "@/lib/types";
+import { MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
   getAvailableAttachments,
   type CableFinderFilters,
+  type CableExercise,
 } from "@/lib/db/cable-finder";
-
-const MOUNT_POSITIONS: MountPosition[] = ["high", "mid", "low", "floor"];
 
 type Section = {
   title: string;
   count: number;
-  data: Exercise[];
+  data: CableExercise[];
 };
 
-function buildSections(exercises: Exercise[]): Section[] {
-  const groups = new Map<MuscleGroup, Exercise[]>();
+function buildSections(exercises: CableExercise[]): Section[] {
+  const groups = new Map<MuscleGroup, CableExercise[]>();
   for (const ex of exercises) {
     // primary_muscles is an array; group by first muscle
     const muscle = ex.primary_muscles[0] ?? ("other" as MuscleGroup);
@@ -61,7 +61,7 @@ export default function CableSetupFinder() {
 
   const [mountFilter, setMountFilter] = useState<MountPosition | null>(null);
   const [attachmentFilter, setAttachmentFilter] = useState<Attachment | null>(null);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<CableExercise[]>([]);
   const [availableAttachments, setAvailableAttachments] = useState<Attachment[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -123,7 +123,7 @@ export default function CableSetupFinder() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: Exercise }) => (
+    ({ item }: { item: CableExercise }) => (
       <Pressable
         style={[styles.exerciseRow, { borderBottomColor: colors.outline }]}
         onPress={() => handleExercisePress(item.id)}
@@ -155,7 +155,7 @@ export default function CableSetupFinder() {
     [colors, handleExercisePress]
   );
 
-  const keyExtractor = useCallback((item: Exercise) => item.id, []);
+  const keyExtractor = useCallback((item: CableExercise) => item.id, []);
 
   const listHeader = useMemo(
     () => (
@@ -173,7 +173,7 @@ export default function CableSetupFinder() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipRow}
           >
-            {MOUNT_POSITIONS.map((pos) => (
+            {MOUNT_POSITION_VALUES.map((pos) => (
               <Chip
                 key={pos}
                 selected={mountFilter === pos}
