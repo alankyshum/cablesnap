@@ -151,6 +151,43 @@ describe("WorkoutHeatmap", () => {
     expect(getByText("Start working out to see your consistency here!")).toBeTruthy();
   });
 
+  // BLD-955: row-label column must be wide enough for 3-letter labels at 390px
+  // (mobile baseline). Previous labelWidth=24 (from BLD-927, when labels were
+  // single letters) caused "Wed" to wrap mid-word into "We"/"d". Assert the
+  // label column is now ≥ 36px so all three visible labels render on one line.
+  it("renders 3-letter day labels without mid-word wrap (BLD-955)", () => {
+    const { getByText } = renderScreen(
+      <WorkoutHeatmap data={emptyData} />
+    );
+    const wed = getByText("Wed");
+    // Walk up to the styled Text wrapper carrying the column-width style.
+    // RNTL exposes nested host components — we search the style chain on
+    // `wed` and its ancestors for the explicit `width` we set in the
+    // component's row-label <Text>.
+    const collectStyles = (node: typeof wed | null): Record<string, unknown> => {
+      let acc: Record<string, unknown> = {};
+      let cur: typeof wed | null = node;
+      while (cur) {
+        const s = cur.props?.style;
+        const arr = Array.isArray(s) ? s : [s];
+        for (const entry of arr) {
+          if (entry && typeof entry === "object") {
+            acc = { ...acc, ...(entry as Record<string, unknown>) };
+          }
+        }
+        cur = cur.parent as typeof wed | null;
+      }
+      return acc;
+    };
+    const flat = collectStyles(wed);
+    // Column width must accommodate 3-letter labels — regression guard against
+    // re-tightening to the BLD-927 single-letter value (24).
+    expect(typeof flat.width).toBe("number");
+    expect(flat.width as number).toBeGreaterThanOrEqual(36);
+    // Sanity: "Wed" is rendered as a single text node (not split by wrapping).
+    expect(wed.children).toEqual(["Wed"]);
+  });
+
   it("does not show empty state when data has workouts (regardless of totalAllTime)", () => {
     const data = new Map([["2026-04-14", 1]]);
     const { queryByText } = renderScreen(

@@ -136,8 +136,9 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
     return g;
   }, [data, weeks]);
 
-  // BLD-686: bumped 18→22; BLD-927: bumped to 24 to prevent truncation on narrow (390px+) viewports.
-  const labelWidth = 24;
+  // BLD-686: bumped 18→22; BLD-927: bumped to 24 to prevent truncation on narrow (390px+) viewports;
+  // BLD-955: 24→36 to fit 3-letter labels ("Mon"/"Wed"/"Fri") without mid-word wrap at 390px.
+  const labelWidth = 36;
   const gap = 2;
   const availableWidth = layout.width - layout.horizontalPadding * 2 - labelWidth - gap;
   const cellSize = Math.max(14, Math.min(24, Math.floor((availableWidth - gap * (weeks - 1)) / weeks)));
