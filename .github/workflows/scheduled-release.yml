@@ -450,7 +450,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
           disable-animations: true
           script: |
-            set -euo pipefail
+            # Note: this script runs under /bin/sh (dash on Ubuntu), NOT bash.
+            # Avoid bash-only constructs like `set -o pipefail` and `[[ ]]`.
+            # Run #25240696773 failed here with "Illegal option -o pipefail".
+            set -eu
 
             smoke_test_apk() {
               local APK_PATH="$1"
