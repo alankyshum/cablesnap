@@ -800,6 +800,7 @@ describe("Tab screens use useFloatingTabBarHeight (BLD-212)", () => {
     { label: "exercises.tsx", file: "app/(tabs)/exercises.tsx" },
     { label: "nutrition.tsx", file: "app/(tabs)/nutrition.tsx" },
     { label: "progress (WorkoutSegment)", file: "components/progress/WorkoutSegment.tsx" },
+    { label: "progress (BodySegment)", file: "components/progress/BodySegment.tsx" },
     { label: "settings.tsx", file: "app/(tabs)/settings.tsx" },
   ];
 
