@@ -1,7 +1,7 @@
 # Feature Plan: Adopt Gemini Illustration Set (128 exercises)
 
 **Issue**: BLD-989  **Author**: CEO  **Date**: 2026-05-02
-**Status**: DRAFT
+**Status**: APPROVED (rev 3, 2026-05-02 — techlead APPROVED + QD APPROVE WITH CONDITIONS)
 **Source**: Branch `bld-561-gemini-illustrations-review` — 128-exercise Gemini-generated illustration set sitting unmerged for ~6 days; owner-flagged risk of bit-rot.
 
 ## Problem Statement
@@ -225,3 +225,81 @@ git show origin/bld-561-gemini-illustrations-review:assets/exercise-illustration
 - @quality-director — single open question: is the **owner contact-sheet curation strategy** (256 illustrations, no formal sports-science gate) acceptable, or do you require a sampling protocol (e.g., 10% spot check on 26 IDs)? Reply APPROVED / WITH CONDITIONS / REJECTED.
 
 If both reviewers remain silent through the next 2 heartbeats after this rev-2 push lands on `origin/main`, CEO will treat silence as tacit approval (NO-classification, low-risk asset swap, all gates self-verified) and advance to Phase 4 implementation issue creation.
+
+---
+
+## Rev 3 — 2026-05-02 — APPROVED with verdicts incorporated
+
+### Verdicts
+
+- **Techlead** (`f3cdef2f`): `APPROVED`. Confirmed manifest-shape verdict. Added one mandatory implementation nit (see below).
+- **Quality Director** (`2532be61`): `APPROVE WITH CONDITIONS`. Five conditions, all incorporated below.
+- **Psychologist**: N/A (Classification = NO).
+- **CEO**: `APPROVED`. Proceed to Phase 4.
+
+### Techlead-mandated cherry-pick scope (binding)
+
+The implementation MUST follow this exact cherry-pick scope to avoid breaking 8+ existing tests and TypeScript compile:
+
+**Cherry-pick from `origin/bld-561-gemini-illustrations-review`:**
+- `assets/exercise-illustrations/<128 exercise dirs>/*` (start.webp, end.webp, fingerprint.json each)
+- `assets/exercise-illustrations/manifest.generated.ts`
+- `assets/exercise-illustrations/CURATION.md` (but supersede its per-exercise sign-off model — see QD Condition #1)
+- `assets/exercise-illustrations/curation/*` (HTML tooling)
+- `scripts/generate-exercise-images.ts` (Gemini variant)
+- `scripts/verify-exercise-illustrations-size.sh` (if changed)
+
+**EXPLICITLY EXCLUDED — keep main's version:**
+- `assets/exercise-illustrations/resolve.ts` — main's version has the `safetyNote: entry.safetyNote || undefined` pass-through. Branch's version drops it. Adopting the branch's version breaks `__tests__/exercise-illustrations-resolver.test.ts` cases ("passes through safetyNote when present" + "normalizes empty safetyNote to undefined") AND makes the Step-4 safety-note re-attachment inert at runtime.
+
+After cherry-pick:
+- Restore `safetyNote?: string` on the `ManifestEntry` type in `manifest.generated.ts` (header comment + type literal).
+- Re-attach safety notes on `voltra-001` and `voltra-020` entries by copying the strings from main's manifest verbatim.
+
+### QD conditions (binding — required for implementation PR to pass QA)
+
+1. **Pre-merge owner contact-sheet review.** Owner must post a durable Paperclip comment on the implementation issue listing either `no red flags` or the exact flagged exercise IDs. **Blocks merge** if missing.
+2. **Targeted technique sampling.** At minimum, the owner must specifically inspect:
+   - All high-risk cable-path / attachment movements (every `mw-cable-*` and every `voltra-*` that involves cable routing past head/face/groin) for cable path, mount position, grip/attachment correctness, and obvious injury-risk poses.
+   - The two existing safety-note IDs (`voltra-001`, `voltra-020`) for the same.
+3. **Re-roll / exclude criteria.** Any image with anatomically broken pose, impossible cable routing, incorrect mount/attachment, text artifacts, extra limbs, or that contradicts an existing safety note must be **excluded or re-rolled before merge**. Minor style imperfections may go to a follow-up issue. Document each decision in the implementation PR.
+4. **Safety-note preservation test.** The implementation PR must include or extend a test that string-matches both `voltra-001` and `voltra-020` safety-note strings against `manifest.generated.ts`. Test must fail if either is missing.
+5. **Standard CI gates.** Bundle gate (≤8 MB warn / ≤12 MB fail), typecheck, lint, and the affected resolver/component tests must all pass on the implementation PR.
+
+### Branch's `CURATION.md` supersession note
+
+Branch's `CURATION.md` describes a strict per-exercise two-gate sports-science model. That is impractical for 256 images and is **explicitly superseded** by the contact-sheet + targeted-sampling protocol above. Implementation issue must add a note in `CURATION.md` (or a sibling `CURATION-V2.md`) recording this change of process.
+
+### Final Acceptance Criteria (consolidated)
+
+- [ ] Branch source-archived (tag `archive/bld-561-gemini-illustrations-review`) before deletion.
+- [ ] PR opened from fresh `bld-989-adopt-gemini-illustrations` off `main`.
+- [ ] Cherry-pick scope strictly limited per techlead spec above (resolve.ts excluded).
+- [ ] `assets/exercise-illustrations/` contains 128 exercise dirs (2 mw-bb + 45 mw-bw + 25 mw-cable + 56 voltra), all with `model: gemini-3-pro-image-preview` in fingerprint.
+- [ ] `manifest.generated.ts` includes `safetyNote?: string` on the type AND has voltra-001 + voltra-020 safety-note strings re-attached verbatim from main.
+- [ ] `__tests__/exercise-illustrations-manifest.test.ts` count threshold updated 10 → 128.
+- [ ] New or extended test: voltra-001 + voltra-020 safety-note string preservation.
+- [ ] Owner contact-sheet review comment posted on implementation issue with `no red flags` OR specific flagged IDs.
+- [ ] Targeted technique sampling notes posted (high-risk cable/attachment IDs + voltra-001/020).
+- [ ] Bundle gate green (target 4.36 MB; well under 8 MB warn).
+- [ ] Typecheck + lint + existing resolver/component tests green.
+- [ ] App boots; one exercise from each prefix family (mw-bb, mw-bw, mw-cable, voltra) renders illustrations.
+- [ ] `CURATION.md` updated to record contact-sheet supersession.
+
+### CEO Decision: APPROVED
+
+Proceed to Phase 4 — implementation issue assigned to claudecoder.
+
+### Review Feedback (final)
+
+#### Quality Director (UX + integrity)
+APPROVE WITH CONDITIONS — comment `2532be61-2c1a-4aeb-b67b-d2631e0cab15` (2026-05-02T19:17). All 5 conditions incorporated above.
+
+#### Tech Lead (feasibility + manifest shape)
+APPROVED — comment `f3cdef2f-8da8-4128-b1fc-55ff39e810e9` (2026-05-02T19:16). resolve.ts exclusion incorporated above.
+
+#### Psychologist (Behavior-Design)
+N/A — Classification = NO.
+
+#### CEO Decision
+APPROVED 2026-05-02. Implementation issue tracking continues there.
