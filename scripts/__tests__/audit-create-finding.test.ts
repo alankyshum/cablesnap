@@ -358,6 +358,84 @@ describe('audit-create-finding.sh — BLD-969 deterministic dedup', () => {
         await server.close();
       }
     });
+
+    it('PLAIN-format substring of a longer fingerprint does NOT match (regression for QD block)', async () => {
+      // QD blocked PR #488: with the original `grep -F "Fingerprint: $FP"`,
+      // a new fingerprint that is a PREFIX of an existing plain-format
+      // fingerprint would falsely dedup. The original test only covered
+      // the bold/backticked format, so the plain-format path was unguarded.
+      // Repro from QD: existing `Fingerprint: aabbccddeeff0011` (plain), new
+      // fingerprint `aabbccddeeff` returned `RECURRENCE BLD-70` instead of
+      // `CREATED BLD-...`. The fix enforces a non-hex token boundary after
+      // the hash on the plain-format match.
+      const longFp = 'aabbccddeeff0011';
+      const shortFp = 'aabbccddeeff';
+      const state: MockState = {
+        issues: [
+          {
+            identifier: 'BLD-70',
+            status: 'todo',
+            // PLAIN format — no bold, no backticks. This is the path the
+            // original grep -F mishandled.
+            description: `## prior\n\nFingerprint: ${longFp}\nMore detail.\n`,
+            title: 'long fingerprint plain',
+          },
+        ],
+        commentCalls: [],
+        createCalls: [],
+        nextId: 500,
+      };
+      const server = await startMockServer(makeMock(state));
+      const desc = writeDescFile(shortFp);
+      try {
+        const r = await runWrapper(COMMON_ARGS(desc, shortFp), server.url);
+        expect(r.status).toBe(0);
+        expect(r.stdout).toMatch(/^CREATED BLD-\d+/);
+        expect(state.createCalls).toHaveLength(1);
+        expect(state.commentCalls).toHaveLength(0);
+      } finally {
+        fs.unlinkSync(desc);
+        await server.close();
+      }
+    });
+
+    it('PLAIN-format EXACT fingerprint match still recurrence-matches', async () => {
+      // Guard the positive case for the plain format so the boundary fix
+      // doesn't accidentally regress real dedup. Description carries
+      // `Fingerprint: <hash>` followed by a newline (typical token boundary
+      // in audit descriptions).
+      const fp = 'cbe59de55e00';
+      const state: MockState = {
+        issues: [
+          {
+            identifier: 'BLD-71',
+            status: 'in_review',
+            description: `## prior finding\n\nFingerprint: ${fp}\nScenario: workout-history\n`,
+            title: 'prior finding plain',
+          },
+        ],
+        commentCalls: [],
+        createCalls: [],
+        nextId: 600,
+      };
+      const server = await startMockServer(makeMock(state));
+      const desc = writeDescFile(fp);
+      try {
+        const r = await runWrapper(COMMON_ARGS(desc, fp), server.url);
+        expect(r.status).toBe(0);
+        expect(r.stdout).toMatch(/^RECURRENCE BLD-71/);
+        expect(state.createCalls).toHaveLength(0);
+        expect(state.commentCalls).toEqual([
+          expect.objectContaining({
+            issueId: 'BLD-71',
+            body: expect.stringContaining('Same finding reproduced in audit-2026-05-02-266dbbee'),
+          }),
+        ]);
+      } finally {
+        fs.unlinkSync(desc);
+        await server.close();
+      }
+    });
   });
 
   describe('argument validation', () => {

@@ -152,11 +152,18 @@ if [[ -n "$CANDIDATES" ]]; then
                 | head -1 | sed -E 's/.*"([a-z_]+)"$/\1/')"
     is_open_status "$STATUS" || continue
 
-    # Description check — exact, case-sensitive `Fingerprint: <hash>` substring
-    # (literal hash, no regex specials in valid hex). Use plain `grep -F` so
-    # the hex is matched verbatim and is not misinterpreted as a regex.
+    # Description check — exact, case-sensitive `Fingerprint: <hash>` token
+    # (literal hash, no regex specials in valid hex). We must enforce a
+    # token boundary on the trailing side so a short fingerprint does NOT
+    # prefix-match a longer one (e.g. `Fingerprint: aabbccddeeff` must NOT
+    # match an existing description containing `Fingerprint: aabbccddeeff0011`).
+    # Both accepted formats are checked:
+    #   - plain:  `Fingerprint: <hash>`     followed by a non-hex char
+    #   - bold:   `Fingerprint**: \`<hash>\`` (backtick is the boundary)
+    # The hash is constrained to [0-9a-fA-F]+ by --fingerprint validation
+    # so it is regex-safe to inline.
     DESC="$(printf '%s' "$DETAIL" | grep -oE '"description"[[:space:]]*:[[:space:]]*"([^"\\]|\\.)*"' || true)"
-    if printf '%s' "$DESC" | grep -F -q "Fingerprint: $FINGERPRINT" \
+    if printf '%s' "$DESC" | grep -Eq "Fingerprint: ${FINGERPRINT}([^0-9a-fA-F]|\$)" \
        || printf '%s' "$DESC" | grep -F -q "Fingerprint**: \`$FINGERPRINT\`"; then
       EXISTING="$ident"
       break
