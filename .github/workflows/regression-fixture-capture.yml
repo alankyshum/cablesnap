@@ -81,21 +81,102 @@ jobs:
         working-directory: prefix-tree
         run: npx playwright install --with-deps chromium
 
-      - name: Copy current scenario specs + seed onto pre-fix tree
-        # The pre-fix tree pre-dates the scenario harness; we layer our
-        # scenario specs and seed hook on top so playwright can drive the
-        # buggy MusclesWorkedCard render.
+      - name: Layer scenario harness onto pre-fix tree
+        # The pre-fix tree pre-dates the scenario harness (BLD-481/BLD-494/
+        # BLD-744) so playwright cannot drive it as-is. We layer four pieces
+        # from `main` on top of the pre-fix checkout so the existing scenario
+        # spec can run unchanged:
+        #
+        #   1. `e2e/scenarios/`           — spec + capture-with-cvd helper.
+        #   2. `lib/db/test-seed.ts`     — seedScenario() + scenario fixtures.
+        #   3. `e2e/serve-coop-coep.json` — COOP/COEP headers for `serve -s dist`
+        #                                   so SharedArrayBuffer is available
+        #                                   to expo-sqlite (BLD-658).
+        #   4. `playwright.config.ts`     — main's static-server config
+        #                                   (`E2E_USE_STATIC=1` branch + the
+        #                                   `mobile` viewport project the
+        #                                   scenario spec targets). FORCE-
+        #                                   overwritten because the pre-fix
+        #                                   tree DOES have its own older
+        #                                   playwright.config.ts which would
+        #                                   otherwise win and run `expo start`
+        #                                   instead of serving our static
+        #                                   bundle.
+        #
+        # Plus a one-line dev-only injection into the pre-fix `useAppInit.ts`
+        # so the dynamic-imported `seedScenario()` actually fires after DB
+        # init (the seed is a no-op without that call site — guarded by
+        # `if (__DEV__)` so this surgery is idempotent and never reaches
+        # production).
         run: |
           set -euo pipefail
           mkdir -p prefix-tree/e2e/scenarios prefix-tree/lib/db
           cp -r main-tree/e2e/scenarios/. prefix-tree/e2e/scenarios/
-          if [ -f main-tree/lib/db/test-seed.ts ]; then
-            cp main-tree/lib/db/test-seed.ts prefix-tree/lib/db/test-seed.ts
+          cp main-tree/lib/db/test-seed.ts prefix-tree/lib/db/test-seed.ts
+          if [ -f main-tree/e2e/serve-coop-coep.json ]; then
+            cp main-tree/e2e/serve-coop-coep.json prefix-tree/e2e/serve-coop-coep.json
+          else
+            echo "::error::main-tree/e2e/serve-coop-coep.json missing — needed for SAB headers (BLD-658)"
+            exit 1
           fi
-          # Carry over the playwright config from main if pre-fix tree lacks one.
-          if [ ! -f prefix-tree/playwright.config.ts ] && [ -f main-tree/playwright.config.ts ]; then
-            cp main-tree/playwright.config.ts prefix-tree/playwright.config.ts
+          # Force-overwrite — pre-fix tree predates the static-server branch
+          # and points `webServer.command` at `expo start` (Metro), which is
+          # too slow for CI and ignores `expo export` output entirely.
+          cp main-tree/playwright.config.ts prefix-tree/playwright.config.ts
+
+          # Inject dev-only scenario-seed call after `setOnboarded(complete);`
+          # in the pre-fix `useAppInit.ts`. Anchor is unique in cce2ac1f8;
+          # we verify that post-patch and fail loudly if patching was a no-op.
+          HOOK="prefix-tree/hooks/useAppInit.ts"
+          if ! grep -q 'setOnboarded(complete);' "$HOOK"; then
+            echo "::error::Anchor 'setOnboarded(complete);' not found in $HOOK — pre-fix tree shape changed; update workflow."
+            exit 1
           fi
+          if grep -q 'seedScenario' "$HOOK"; then
+            echo "::error::$HOOK already contains seedScenario — refusing double-inject."
+            exit 1
+          fi
+          # awk-based insertion: append a dev-only seed block after the FIRST
+          # `setOnboarded(complete);` line. Heredoc body is the literal block
+          # the awk script substitutes in.
+          INJECT_FILE="$(mktemp)"
+          cat > "$INJECT_FILE" <<'INJECT'
+                  // BLD-959 fixture-capture only: dev-only scenario seed.
+                  // Mirrors the wiring added in main's useAppInit.ts; stripped
+                  // by Metro from production builds via `if (__DEV__)`.
+                  if (__DEV__) {
+                    try {
+                      const { seedScenario } = await import("../lib/db/test-seed");
+                      await seedScenario();
+                    } catch (err) {
+                      console.warn("[test-seed] scenario seed failed:", err);
+                    }
+                  }
+          INJECT
+          # Strip the 10-space YAML indent the heredoc preserved.
+          sed -i 's/^          //' "$INJECT_FILE"
+          awk -v inject_file="$INJECT_FILE" '
+            BEGIN {
+              while ((getline line < inject_file) > 0) inject = inject line "\n"
+              close(inject_file)
+              done = 0
+            }
+            {
+              print
+              if (!done && index($0, "setOnboarded(complete);")) {
+                printf "%s", inject
+                done = 1
+              }
+            }
+            END {
+              if (!done) { print "awk: anchor never matched" > "/dev/stderr"; exit 1 }
+            }
+          ' "$HOOK" > "$HOOK.new"
+          mv "$HOOK.new" "$HOOK"
+          # Belt-and-suspenders: confirm the injection landed.
+          grep -q 'seedScenario' "$HOOK" || {
+            echo "::error::seedScenario injection failed silently in $HOOK"; exit 1;
+          }
 
       - name: Export web bundle (dev mode — enables seed hook)
         working-directory: prefix-tree
