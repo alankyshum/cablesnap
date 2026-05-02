@@ -42,6 +42,12 @@ export const workoutTemplates = sqliteTable("workout_templates", {
   updated_at: integer("updated_at").notNull(),
   is_starter: integer("is_starter").default(0),
   source: text("source"),
+  // BLD-1000: curated programs library. is_curated=1 marks rows shipped by
+  // CableSnap (e.g., r/bodyweightfitness Recommended Routine). Distinct from
+  // is_starter — curated rows go through a separate seed path that does NOT
+  // issue the BLD-467 canonical-repair UPDATE; user edits persist across
+  // STARTER_VERSION bumps. See lib/db/seed.ts:upsertCuratedTemplates.
+  is_curated: integer("is_curated").default(0),
 });
 
 export const templateExercises = sqliteTable("template_exercises", {
@@ -220,6 +226,8 @@ export const programs = sqliteTable("programs", {
   updated_at: integer("updated_at").notNull(),
   deleted_at: integer("deleted_at"),
   is_starter: integer("is_starter").default(0),
+  // BLD-1000: curated programs library. See workoutTemplates.is_curated above.
+  is_curated: integer("is_curated").default(0),
 });
 
 export const programDays = sqliteTable("program_days", {

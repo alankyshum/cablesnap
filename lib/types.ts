@@ -469,6 +469,7 @@ export type Program = {
   description: string;
   is_active: boolean;
   is_starter?: boolean;
+  is_curated?: boolean;
   current_day_id: string | null;
   created_at: number;
   updated_at: number;
