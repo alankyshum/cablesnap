@@ -82,6 +82,7 @@ export function FilterBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
         keyboardShouldPersistTaps="handled"
+        style={styles.scroll}
       >
         <FilterChip
           label="Template"
@@ -189,6 +190,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
+  },
+  scroll: {
+    // Bound the ScrollView width so it can actually scroll horizontally
+    // instead of overflowing the row and clipping the rightmost chip
+    // (BLD-956 — Date Range chip clipped at 390px viewport).
+    flexShrink: 1,
+    flexGrow: 1,
+    minWidth: 0,
   },
   row: {
     flexDirection: "row",
