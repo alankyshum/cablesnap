@@ -57,7 +57,7 @@ if [ -f "scripts/check-curation-gate.ts" ] && [ -f "assets/exercise-illustration
 fi
 
 # ─── Test Budget Gate ────────────────────────────────────────────
-# Blocks push if test count exceeds budget (1800 test cases)
+# Blocks push if test count exceeds budget (default 2500 test cases; see scripts/audit-tests.sh)
 # Scopes duplicate/overlap checks to changed test files only (BLD-812)
 if [ -f "scripts/audit-tests.sh" ]; then
   echo "🧪 Running test audit..."

@@ -182,7 +182,7 @@ Alternatively, move non-route code out of `app/` entirely (into `components/`, `
 
 > **Runtime measurement methodology** lives in [`docs/QA-BUDGET.md`](../docs/QA-BUDGET.md) — read it before measuring per-suite wall-clock times (TL;DR: use `./scripts/measure-suite.sh` or `npm test`; never bare `npx jest`).
 
-The test suite has a **budget of 1800 test cases**. Before adding tests, agents MUST:
+The test suite has a **budget of 2500 test cases** (env-overridable via `MAX_TESTS`). Before adding tests, agents MUST:
 
 1. Run `./scripts/audit-tests.sh` to check the current count
 2. If over budget, consolidate overlapping tests before adding new ones

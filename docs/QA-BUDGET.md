@@ -5,7 +5,8 @@ use when measuring per-suite wall-clock runtime.
 
 ## Test budget policy
 
-The Jest test suite has a **hard cap of 1800 test cases**, enforced by
+The Jest test suite has a **hard cap of 2500 test cases** (env-overridable
+via `MAX_TESTS`), enforced by
 [`scripts/audit-tests.sh`](../scripts/audit-tests.sh) and the
 [`.husky/pre-push`](../.husky/pre-push) hook. Agents must run the audit before
 adding tests and consolidate overlapping coverage when over budget. Full rules
