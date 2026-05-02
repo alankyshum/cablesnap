@@ -67,16 +67,17 @@ async function doExport(tpl: WorkoutTemplate): Promise<void> {
 }
 
 export async function exportCoachTemplate(templateId: string): Promise<void> {
-  // Pre-share guard: must be first, before any file I/O
-  const sharingAvailable = await Sharing.isAvailableAsync();
-  if (!sharingAvailable) {
-    throw new Error("Sharing not available on this device");
-  }
-
-  // Mandatory hydration: getTemplates() returns thin records without exercises
+  // Mandatory hydration first: getTemplates() returns thin records without exercises.
+  // AC#3: hydration must happen before any other work (including sharing availability check).
   const tpl = await getTemplateById(templateId);
   if (!tpl) {
     throw new Error("Template not found");
+  }
+
+  // Pre-share guard: after hydration, before file I/O
+  const sharingAvailable = await Sharing.isAvailableAsync();
+  if (!sharingAvailable) {
+    throw new Error("Sharing not available on this device");
   }
 
   if (!tpl.exercises || tpl.exercises.length === 0) {
