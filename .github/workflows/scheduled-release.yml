@@ -19,6 +19,22 @@ jobs:
           fetch-tags: true
           token: ${{ secrets.GH_PAT }}
 
+      # Android builds on ubuntu-latest routinely exhaust the ~14 GB of free
+      # disk available on hosted runners (Gradle cache + node_modules +
+      # generated native project + AVD = ~20 GB). Free up space before any
+      # tooling is installed so the cleanup is maximally effective.
+      # Run #25238424655 died with "No space left on device" mid-Gradle build.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false   # keep node/java tool cache; we use them
+          android: false      # we need the Android SDK
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Verify release signing secrets are configured
         run: |
           MISSING=""
