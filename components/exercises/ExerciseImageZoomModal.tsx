@@ -17,6 +17,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { Image } from "expo-image";
 import { X } from "lucide-react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -26,10 +27,11 @@ interface Props {
   visible: boolean;
   source: Source | null;
   accessibilityLabel: string;
+  safetyNote?: string;
   onClose: () => void;
 }
 
-function ZoomContents({ source, accessibilityLabel, onClose }: { source: Source; accessibilityLabel: string; onClose: () => void }) {
+function ZoomContents({ source, accessibilityLabel, safetyNote, onClose }: { source: Source; accessibilityLabel: string; safetyNote?: string; onClose: () => void }) {
   const colors = useThemeColors();
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
@@ -115,6 +117,27 @@ function ZoomContents({ source, accessibilityLabel, onClose }: { source: Source;
             />
           </Animated.View>
         </GestureDetector>
+        {safetyNote ? (
+          <View
+            style={styles.safetyRow}
+            accessibilityRole="text"
+            accessibilityLabel={safetyNote}
+            testID="zoom-safety-note"
+          >
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color={colors.onSurfaceVariant}
+              style={styles.safetyIcon}
+            />
+            <Text
+              variant="body"
+              style={[styles.safetyText, { color: colors.onSurfaceVariant }]}
+            >
+              {safetyNote}
+            </Text>
+          </View>
+        ) : null}
         <Text
           variant="body"
           style={[styles.hint, { color: colors.onSurfaceVariant }]}
@@ -126,7 +149,7 @@ function ZoomContents({ source, accessibilityLabel, onClose }: { source: Source;
   );
 }
 
-export function ExerciseImageZoomModal({ visible, source, accessibilityLabel, onClose }: Props) {
+export function ExerciseImageZoomModal({ visible, source, accessibilityLabel, safetyNote, onClose }: Props) {
   // Only mount the gesture-heavy contents while visible so tests that don't
   // open the modal never construct gesture objects. Modal transparent scrim
   // remains cheap to render.
@@ -139,7 +162,7 @@ export function ExerciseImageZoomModal({ visible, source, accessibilityLabel, on
       accessibilityViewIsModal
     >
       {visible && source ? (
-        <ZoomContents source={source} accessibilityLabel={accessibilityLabel} onClose={onClose} />
+        <ZoomContents source={source} accessibilityLabel={accessibilityLabel} safetyNote={safetyNote} onClose={onClose} />
       ) : null}
     </Modal>
   );
@@ -175,5 +198,21 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     opacity: 0.7,
     fontSize: 12,
+  },
+  safetyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingHorizontal: 24,
+    marginTop: 12,
+    maxWidth: "90%",
+  },
+  safetyIcon: {
+    marginRight: 6,
+    marginTop: 1,
+  },
+  safetyText: {
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 18,
   },
 });

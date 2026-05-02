@@ -352,6 +352,25 @@ describe("exercise-illustrations manifest", () => {
       expect(pilotSet.has(id)).toBe(true);
     }
   });
+
+  it("safetyNote, when present, is a non-empty string", () => {
+    for (const id of Object.keys(manifest)) {
+      const entry = manifest[id];
+      if (entry.safetyNote !== undefined) {
+        expect(typeof entry.safetyNote).toBe("string");
+        expect(entry.safetyNote.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("safetyNote does not exceed 300 chars (curation guideline)", () => {
+    for (const id of Object.keys(manifest)) {
+      const entry = manifest[id];
+      if (entry.safetyNote) {
+        expect(entry.safetyNote.length).toBeLessThanOrEqual(300);
+      }
+    }
+  });
 });
 
 // ── formatDurationEstimate / formatSpokenDuration ───────────────

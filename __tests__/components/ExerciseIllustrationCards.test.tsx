@@ -20,6 +20,13 @@ jest.mock("../../assets/exercise-illustrations/manifest.generated", () => ({
       startAlt: "Supine with cable overhead",
       endAlt: "Torso curled up, abs engaged",
     },
+    "voltra-test-safety": {
+      start: 3,
+      end: 4,
+      startAlt: "Safety start alt",
+      endAlt: "Safety end alt",
+      safetyNote: "Keep face clear of cable path.",
+    },
   },
 }));
 
@@ -35,6 +42,7 @@ jest.mock("@/hooks/useThemeColors", () => ({
 
 describe("ExerciseIllustrationCards", () => {
   const voltra = { id: "voltra-test-1", name: "Test Exercise", is_custom: false };
+  const voltraSafety = { id: "voltra-test-safety", name: "Safety Exercise", is_custom: false };
   const custom = { id: "custom-1", name: "My Ex", is_custom: true };
   const customWithImages = {
     id: "custom-2",
@@ -124,5 +132,21 @@ describe("ExerciseIllustrationCards", () => {
       undefined as string | undefined
     );
     expect(flex).toBe("row");
+  });
+
+  it("renders safety note row when safetyNote is present", () => {
+    const { getByTestId } = render(
+      <ExerciseIllustrationCards exercise={voltraSafety} initialWidth={600} />
+    );
+    const safetyNote = getByTestId("exercise-safety-note");
+    expect(safetyNote).toBeTruthy();
+    expect(safetyNote.props.accessibilityLabel).toBe("Keep face clear of cable path.");
+  });
+
+  it("does not render safety note row when safetyNote is absent", () => {
+    const { queryByTestId } = render(
+      <ExerciseIllustrationCards exercise={voltra} initialWidth={600} />
+    );
+    expect(queryByTestId("exercise-safety-note")).toBeNull();
   });
 });

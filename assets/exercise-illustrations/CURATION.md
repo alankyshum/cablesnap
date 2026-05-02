@@ -907,6 +907,26 @@ With these small wording changes, a novice following only the alt text should ex
 
 ---
 
+## voltra-001 — Abdominal Crunches (Low Mount)
+- Round: **3**
+- Curation gate: ✅ PASS (verdict=`APPROVE_WITH_CHANGES`, safety-class=`SAFETY_HIGH` — `gateBlocks()` from `scripts/curate-exercise-images.ts`; safetyNote present per BLD-843)
+- Visual plausibility: ✅ claudecoder (substitute panel; CEO Option B) 2026-04-28T17:53:18.372Z (alt-text + image-pair gate via substitute panel)
+- Technique: ✅ claudecoder (substitute panel; CEO Option B) 2026-04-28T17:53:18.372Z (panel verdict: **APPROVE_WITH_CHANGES** — mitigated by safetyNote in UI)
+- Model: `gpt-image-1` (image), `gpt-4o-mini` (alt-text), `gpt-5-2025-08-07` (review panel)
+- safetyNote: "Keep your face clear of the cable path. Position yourself at least 12 inches from the low pulley to avoid contact with hardware."
+- BLD-843 re-introduction: Previously dropped in BLD-743 Ship-9 ruling due to SAFETY_HIGH (cable-path-near-face). Re-added with safetyNote field providing in-UI safety context. Original panel output preserved in `### Dropped: voltra-001` below.
+
+## voltra-020 — Close Grip Lat Pull-down (Mid Mount)
+- Round: **3**
+- Curation gate: ✅ PASS (verdict=`APPROVE_WITH_CHANGES`, safety-class=`SAFETY_HIGH` — `gateBlocks()` from `scripts/curate-exercise-images.ts`; safetyNote present per BLD-843)
+- Visual plausibility: ✅ claudecoder (substitute panel; CEO Option B) 2026-04-28T17:53:18.372Z (alt-text + image-pair gate via substitute panel)
+- Technique: ✅ claudecoder (substitute panel; CEO Option B) 2026-04-28T17:53:18.372Z (panel verdict: **APPROVE_WITH_CHANGES** — mitigated by safetyNote in UI)
+- Model: `gpt-image-1` (image), `gpt-4o-mini` (alt-text), `gpt-5-2025-08-07` (review panel)
+- safetyNote: "This exercise uses a neutral grip on a straight bar, which may feel unfamiliar. If you experience wrist discomfort, try a wider grip or use a different handle attachment."
+- BLD-843 re-introduction: Previously dropped in BLD-743 Ship-9 ruling due to grip-terminology disambiguation concern (LOW to MEDIUM). Re-added with safetyNote field providing in-UI safety context. Original panel output preserved in `### Dropped: voltra-020` below.
+
+---
+
 ## Dropped exercises (audit trail — BLD-743 Ship-9)
 
 Round-2 panel output preserved verbatim below. These exercises were dropped from the pilot per CEO Ship-9 ruling (comment 9c5812a9). They will be re-introduced via BLD-843 (`safetyNote` schema field + UI consumption story). Heading levels are demoted to `###` so `scripts/check-curation-gate.ts` (which splits on `^## (?=voltra-)`) does not pick them up as active sign-off blocks.
