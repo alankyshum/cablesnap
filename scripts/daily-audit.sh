@@ -42,6 +42,25 @@ BLD_480_FIXTURE_PATH="tests/fixtures/regression-catcher/bld-480-pre-fix.png"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+build_static_bundle() {
+  # Mirror the CI pattern (.github/workflows/ux-audit.yml): export the web
+  # bundle in dev mode so `__DEV__` is true and the `__TEST_SCENARIO__` seed
+  # hook in `lib/db/test-seed.ts` actually executes. `--no-minify` keeps the
+  # bundle readable for debugging. Static export + `E2E_USE_STATIC=1` causes
+  # `playwright.config.ts:webServer` to serve via `npx serve` with COOP/COEP
+  # headers (BLD-658), which gives the page `crossOriginIsolated === true`
+  # and unlocks SharedArrayBuffer for the expo-sqlite Web Worker. Without
+  # this, `useAppInit` short-circuits via `webNeedsUnsupportedFallback`, the
+  # DB never inits, the seed never runs, `data-test-ready` never flips, and
+  # screenshots come out blank (the original BLD-902 symptom).
+  echo "[daily-audit] building static web bundle (--dev for __DEV__ seed hook)…"
+  npx --yes expo export -p web --dev --no-minify
+  if [[ ! -f dist/index.html ]]; then
+    echo "[daily-audit] ERROR: static export produced no dist/index.html — aborting." >&2
+    exit 1
+  fi
+}
+
 run_scenarios() {
   local label="$1"
   local commit_sha="$2"
@@ -49,7 +68,7 @@ run_scenarios() {
   echo "=========================================================="
   echo "[daily-audit] running scenarios against $label ($commit_sha)"
   echo "=========================================================="
-  COMMIT_SHA="$commit_sha" \
+  E2E_USE_STATIC=1 COMMIT_SHA="$commit_sha" \
     npx playwright test e2e/scenarios/ --project=mobile
 }
 
@@ -80,6 +99,7 @@ trap cleanup EXIT
 # a flaky HEAD spec must NOT silence the smoke alarm — that's precisely
 # when the alarm matters most.
 HEAD_SHA="$(git rev-parse HEAD)"
+build_static_bundle
 set +e
 run_scenarios "HEAD" "$HEAD_SHA"
 HEAD_RC=$?
