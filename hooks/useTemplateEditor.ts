@@ -15,6 +15,7 @@ import {
   updateTemplateExercise,
   updateTemplateName,
 } from "@/lib/db";
+import { bumpQueryVersion } from "@/lib/query";
 import type { Exercise, SetType, TemplateExercise, WorkoutTemplate } from "@/lib/types";
 
 export function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
@@ -60,7 +61,8 @@ export function useTemplateEditor({ id, router }: { id: string | undefined; rout
     if (tpl) {
       setTemplate(tpl);
       setExercises(tpl.exercises ?? []);
-      setName((current) => (current === "" ? tpl.name : current));
+      setName(tpl.name);
+      setNameError(null);
     }
   }, [id]);
 
@@ -217,6 +219,7 @@ export function useTemplateEditor({ id, router }: { id: string | undefined; rout
     if (trimmed === template.name) return;
     try {
       await updateTemplateName(template.id, trimmed);
+      bumpQueryVersion("home");
       // Reflect persisted value (including trim) locally so the header title updates.
       setTemplate({ ...template, name: trimmed, updated_at: Date.now() });
       setName(trimmed);

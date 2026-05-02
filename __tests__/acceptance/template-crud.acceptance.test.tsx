@@ -34,6 +34,7 @@ jest.mock('../../components/ui/bna-toast', () => {
   }
 })
 jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, width: 375, scale: 1.0 }) }))
+jest.mock('../../lib/query', () => ({ bumpQueryVersion: jest.fn(), getQueryVersion: jest.fn().mockReturnValue(0), useFocusRefetch: jest.fn() }))
 jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest.fn().mockResolvedValue('{}'), getRecentErrors: jest.fn().mockResolvedValue([]), generateGitHubURL: jest.fn().mockReturnValue('https://github.com') }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
@@ -101,6 +102,7 @@ const mockDuplicate = jest.fn()
 const mockCreateExerciseLink = jest.fn()
 const mockUnlinkGroup = jest.fn()
 const mockUnlinkSingle = jest.fn()
+let mockBumpQueryVersion: jest.Mock
 
 jest.mock('../../lib/db', () => ({
   createTemplate: (...args: unknown[]) => mockCreateTemplate(...args),
@@ -124,6 +126,7 @@ describe('Template CRUD Acceptance', () => {
     resetIds()
     mockParams = {}
     jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+    mockBumpQueryVersion = require('../../lib/query').bumpQueryVersion
     mockCreateTemplate.mockResolvedValue(
       createWorkoutTemplate({ id: 'tpl-new', name: 'Push Day', exercises: [] }),
     )
@@ -366,6 +369,51 @@ describe('Template CRUD Acceptance', () => {
         // Wait for template to load
         await findByText('Bench Press')
         expect(queryByLabelText('Template Name')).toBeNull()
+      })
+
+      it('resets name when navigating to a different template id (Duplicate→Edit regression)', async () => {
+        // Template A is loaded first, then user navigates to template B (Duplicate flow)
+        const templateA = createWorkoutTemplate({ id: 'tpl-A', name: 'Template A', exercises: [te1] })
+        const templateB = createWorkoutTemplate({ id: 'tpl-B', name: 'Template B', exercises: [te2] })
+
+        // First mount: template A
+        mockParams = { id: 'tpl-A' }
+        mockGetTemplateById.mockResolvedValue(templateA)
+        const { findByLabelText: findA, unmount } = renderScreen(<EditTemplate />)
+        await findA('Template Name')
+        unmount()
+
+        // Second mount: template B (simulates router.replace after Duplicate)
+        mockParams = { id: 'tpl-B' }
+        mockGetTemplateById.mockResolvedValue(templateB)
+        const { findByLabelText: findB, getByLabelText } = renderScreen(<EditTemplate />)
+        await findB('Template Name')
+
+        // Name must reflect template B, not the stale template A value
+        expect(getByLabelText('Template Name').props.value).toBe('Template B')
+
+        // Blurring should write to template B
+        fireEvent.changeText(getByLabelText('Template Name'), 'Template B Renamed')
+        fireEvent(getByLabelText('Template Name'), 'blur')
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-B', 'Template B Renamed')
+        })
+        expect(mockUpdateName).not.toHaveBeenCalledWith('tpl-A', expect.anything())
+      })
+
+      it('calls bumpQueryVersion("home") after a successful rename', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, 'New Name')
+        fireEvent(input, 'blur')
+
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-1', 'New Name')
+        })
+        expect(mockBumpQueryVersion).toHaveBeenCalledWith('home')
       })
     })
   })
