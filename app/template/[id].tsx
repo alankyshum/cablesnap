@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
+import { Input } from "@/components/ui/input";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "@/lib/layout";
 import { useTemplateEditor } from "@/hooks/useTemplateEditor";
@@ -17,13 +18,14 @@ export default function EditTemplate() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const {
-    template, exercises, selecting, selected,
+    template, exercises, name, nameError, selecting, selected,
     pickerOpen, editing, linkIds, palette, colors,
     setPickerOpen, setEditing,
     startSelection, cancelSelection, confirmLink,
     move, remove, toggleSelect,
     handleUnlink, handleUnlinkSingle,
     handlePickExercise, handleEditSave, handleDuplicate,
+    handleNameChange, handleNameBlur,
   } = useTemplateEditor({ id, router });
 
   const starter = !!template?.is_starter;
@@ -67,8 +69,21 @@ export default function EditTemplate() {
 
   return (
     <>
-      <Stack.Screen options={{ title: template.name }} />
+      <Stack.Screen options={{ title: (name.trim() || template.name) }} />
       <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
+        {!starter && (
+          <Input
+            label="Name"
+            placeholder="e.g. Upper Body, Push Day"
+            value={name}
+            onChangeText={handleNameChange}
+            onBlur={handleNameBlur}
+            error={nameError ?? undefined}
+            maxLength={100}
+            containerStyle={styles.nameInput}
+            accessibilityLabel="Template Name"
+          />
+        )}
         <View style={styles.section}>
           <View style={styles.headerRow}>
             <Text variant="title" style={{ color: colors.onBackground, flexShrink: 1 }}>
@@ -127,6 +142,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 8 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   list: { flex: 1 },
+  nameInput: { marginBottom: 12 },
   addBtn: { marginTop: 8 },
   doneBtn: { marginTop: 16 },
   empty: { alignItems: "center", paddingVertical: 24 },

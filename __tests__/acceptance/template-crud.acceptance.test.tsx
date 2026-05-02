@@ -34,6 +34,7 @@ jest.mock('../../components/ui/bna-toast', () => {
   }
 })
 jest.mock('../../lib/layout', () => ({ useLayout: () => ({ wide: false, width: 375, scale: 1.0 }) }))
+jest.mock('../../lib/query', () => ({ bumpQueryVersion: jest.fn(), getQueryVersion: jest.fn().mockReturnValue(0), useFocusRefetch: jest.fn() }))
 jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest.fn().mockResolvedValue('{}'), getRecentErrors: jest.fn().mockResolvedValue([]), generateGitHubURL: jest.fn().mockReturnValue('https://github.com') }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
@@ -101,6 +102,7 @@ const mockDuplicate = jest.fn()
 const mockCreateExerciseLink = jest.fn()
 const mockUnlinkGroup = jest.fn()
 const mockUnlinkSingle = jest.fn()
+let mockBumpQueryVersion: jest.Mock
 
 jest.mock('../../lib/db', () => ({
   createTemplate: (...args: unknown[]) => mockCreateTemplate(...args),
@@ -124,6 +126,7 @@ describe('Template CRUD Acceptance', () => {
     resetIds()
     mockParams = {}
     jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+    mockBumpQueryVersion = require('../../lib/query').bumpQueryVersion
     mockCreateTemplate.mockResolvedValue(
       createWorkoutTemplate({ id: 'tpl-new', name: 'Push Day', exercises: [] }),
     )
@@ -266,6 +269,152 @@ describe('Template CRUD Acceptance', () => {
       fireEvent.press(doneBtn)
 
       expect(mockRouter.back).toHaveBeenCalled()
+    })
+
+    describe('Rename name field (BLD-992)', () => {
+      it('pre-fills the name input with the current template name', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        expect(input.props.value).toBe('Push Day')
+      })
+
+      it('persists the renamed value via updateTemplateName on blur (happy path)', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, 'Pull Day')
+        fireEvent(input, 'blur')
+
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-1', 'Pull Day')
+        })
+      })
+
+      it('does not call updateTemplateName when the name is unchanged on blur', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent(input, 'blur')
+
+        // Allow any pending microtask flush
+        await waitFor(() => {
+          expect(input.props.value).toBe('Push Day')
+        })
+        expect(mockUpdateName).not.toHaveBeenCalled()
+      })
+
+      it('rejects an empty/whitespace-only name with an inline error and does not persist', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText, findByText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, '   ')
+        fireEvent(input, 'blur')
+
+        expect(await findByText('Template name is required.')).toBeTruthy()
+        expect(mockUpdateName).not.toHaveBeenCalled()
+      })
+
+      it('rejects a name longer than 100 characters with an inline error and does not persist', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText, findByText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        // The Input has maxLength=100, but defensive: validate explicitly when we
+        // bypass it (e.g. paste handling differences) — drive validation via a
+        // 101-char value pushed through changeText.
+        const tooLong = 'x'.repeat(101)
+        fireEvent.changeText(input, tooLong)
+        fireEvent(input, 'blur')
+
+        expect(await findByText('Template name must be 100 characters or fewer.')).toBeTruthy()
+        expect(mockUpdateName).not.toHaveBeenCalled()
+      })
+
+      it('trims whitespace and persists the trimmed value, updating the displayed name', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, '  Leg Day  ')
+        fireEvent(input, 'blur')
+
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-1', 'Leg Day')
+        })
+        // After successful save, the field should reflect the trimmed value
+        await waitFor(() => {
+          expect(input.props.value).toBe('Leg Day')
+        })
+      })
+
+      it('does not render the name input for starter templates (read-only)', async () => {
+        mockParams = { id: 'tpl-starter' }
+        mockGetTemplateById.mockResolvedValueOnce(
+          createWorkoutTemplate({ id: 'tpl-starter', name: 'Starter Push', is_starter: true, exercises: [te1] }),
+        )
+
+        const { findByText, queryByLabelText } = renderScreen(<EditTemplate />)
+
+        // Wait for template to load
+        await findByText('Bench Press')
+        expect(queryByLabelText('Template Name')).toBeNull()
+      })
+
+      it('resets name when navigating to a different template id (Duplicate→Edit regression)', async () => {
+        // Template A is loaded first, then user navigates to template B (Duplicate flow)
+        const templateA = createWorkoutTemplate({ id: 'tpl-A', name: 'Template A', exercises: [te1] })
+        const templateB = createWorkoutTemplate({ id: 'tpl-B', name: 'Template B', exercises: [te2] })
+
+        // First mount: template A
+        mockParams = { id: 'tpl-A' }
+        mockGetTemplateById.mockResolvedValue(templateA)
+        const { findByLabelText: findA, unmount } = renderScreen(<EditTemplate />)
+        await findA('Template Name')
+        unmount()
+
+        // Second mount: template B (simulates router.replace after Duplicate)
+        mockParams = { id: 'tpl-B' }
+        mockGetTemplateById.mockResolvedValue(templateB)
+        const { findByLabelText: findB, getByLabelText } = renderScreen(<EditTemplate />)
+        await findB('Template Name')
+
+        // Name must reflect template B, not the stale template A value
+        expect(getByLabelText('Template Name').props.value).toBe('Template B')
+
+        // Blurring should write to template B
+        fireEvent.changeText(getByLabelText('Template Name'), 'Template B Renamed')
+        fireEvent(getByLabelText('Template Name'), 'blur')
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-B', 'Template B Renamed')
+        })
+        expect(mockUpdateName).not.toHaveBeenCalledWith('tpl-A', expect.anything())
+      })
+
+      it('calls bumpQueryVersion("home") after a successful rename', async () => {
+        mockParams = { id: 'tpl-1' }
+
+        const { findByLabelText } = renderScreen(<EditTemplate />)
+
+        const input = await findByLabelText('Template Name')
+        fireEvent.changeText(input, 'New Name')
+        fireEvent(input, 'blur')
+
+        await waitFor(() => {
+          expect(mockUpdateName).toHaveBeenCalledWith('tpl-1', 'New Name')
+        })
+        expect(mockBumpQueryVersion).toHaveBeenCalledWith('home')
+      })
     })
   })
 })

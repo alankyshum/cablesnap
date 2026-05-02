@@ -13,7 +13,9 @@ import {
   unlinkExerciseGroup,
   unlinkSingleExercise,
   updateTemplateExercise,
+  updateTemplateName,
 } from "@/lib/db";
+import { bumpQueryVersion } from "@/lib/query";
 import type { Exercise, SetType, TemplateExercise, WorkoutTemplate } from "@/lib/types";
 
 export function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
@@ -30,6 +32,8 @@ export function useTemplateEditor({ id, router }: { id: string | undefined; rout
   const colors = useThemeColors();
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
+  const [name, setName] = useState<string>("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [, setUndo] = useState<(() => Promise<void>) | null>(null);
@@ -57,6 +61,8 @@ export function useTemplateEditor({ id, router }: { id: string | undefined; rout
     if (tpl) {
       setTemplate(tpl);
       setExercises(tpl.exercises ?? []);
+      setName(tpl.name);
+      setNameError(null);
     }
   }, [id]);
 
@@ -188,9 +194,46 @@ export function useTemplateEditor({ id, router }: { id: string | undefined; rout
     router.replace(`/template/${newId}`);
   };
 
+  const validateName = useCallback((value: string): string | null => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return "Template name is required.";
+    if (trimmed.length > 100) return "Template name must be 100 characters or fewer.";
+    return null;
+  }, []);
+
+  const handleNameChange = useCallback((value: string) => {
+    setName(value);
+    // Clear error eagerly when user starts typing again
+    if (nameError) setNameError(null);
+  }, [nameError]);
+
+  const handleNameBlur = useCallback(async () => {
+    if (!template) return;
+    const trimmed = name.trim();
+    const err = validateName(name);
+    if (err) {
+      setNameError(err);
+      return;
+    }
+    setNameError(null);
+    if (trimmed === template.name) return;
+    try {
+      await updateTemplateName(template.id, trimmed);
+      bumpQueryVersion("home");
+      // Reflect persisted value (including trim) locally so the header title updates.
+      setTemplate({ ...template, name: trimmed, updated_at: Date.now() });
+      setName(trimmed);
+    } catch {
+      setNameError("Failed to save name. Please try again.");
+      showError("Failed to update template name");
+    }
+  }, [template, name, validateName, showError]);
+
   return {
     template,
     exercises,
+    name,
+    nameError,
     selecting,
     selected,
     pickerOpen,
@@ -212,5 +255,7 @@ export function useTemplateEditor({ id, router }: { id: string | undefined; rout
     handlePickExercise,
     handleEditSave,
     handleDuplicate,
+    handleNameChange,
+    handleNameBlur,
   };
 }
