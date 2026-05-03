@@ -50,7 +50,7 @@ grep -rni "shed pound|burn fat|lose weight|slim down|get shredded|get toned|look
 | File | Status | Notes |
 |------|--------|-------|
 | `components/progress/WeightLogModal.tsx` | **Modified (AC-3)** | Added neutral framing caption. Original title "Log Weight" is neutral. |
-| `components/progress/BodyCards.tsx` | ✅ Noted (no change) | "Track your visual transformation" (Progress Photos card) is borderline; refers to photo documentation of strength journey, not weight-loss before/afters. Per CEO scope, no imagery ships. Kept as-is per AC scope. Body fat % display (line 133) is user-entered data, not app-imposed goal framing — conditionally shown only when user set a body_fat_goal. |
+| `components/progress/BodyCards.tsx` | **Modified (AC-4)** | "Track your visual transformation" replaced with "Document your strength journey over time" — appearance-focused motivation removed. Body fat % display (line 133) is user-entered data, not app-imposed goal framing — conditionally shown only when user set a body_fat_goal. |
 | `components/progress/BodySegment.tsx` | ✅ Clean | Structural only. |
 | `components/progress/NutritionCards.tsx` | ✅ Clean | "Calorie Trend" is a neutral data label. No weight-loss goal framing. |
 | `components/progress/NutritionSegment.tsx` | ✅ Clean | Structural only. |
@@ -103,12 +103,22 @@ Uses `Text` component with `variant="caption"`, `colors.onSurfaceVariant`, `spac
 
 Uses `Text` component with `variant="caption"`, `colors.onSurfaceVariant`, bottom margin of 16px (consistent with existing spacing), and `accessibilityLabel` matching visible text.
 
+### AC-4 — Progress Photos neutral caption (`components/progress/BodyCards.tsx`)
+
+**Replaced appearance-focused caption:**
+
+> ~~"Track your visual transformation"~~
+
+**With strength-journey framing:**
+
+> "Document your strength journey over time"
+
 ---
 
 ## Conclusion
 
 **No diet-culture phrasing is present in CableSnap's onboarding, settings, progress, or home copy.**
 
-Macro/Goal vocabulary uses lifter-standard terms (Cut / Maintain / Bulk). Onboarding subtitle is performance-framed. Level descriptions are skill-based. The two new captions (AC-2, AC-3) add proactive positioning for the privacy-first / anti-diet-culture audience identified in the Reddit research, without removing or restructuring any existing functionality.
+Macro/Goal vocabulary uses lifter-standard terms (Cut / Maintain / Bulk). Onboarding subtitle is performance-framed. Level descriptions are skill-based. Three new/updated captions (AC-2, AC-3, AC-4) add proactive positioning for the privacy-first / anti-diet-culture audience identified in the Reddit research, without removing or restructuring any existing functionality.
 
 Future contributors: before adding copy to onboarding, settings, or body-tracking screens, check this document and the trigger phrase list above.
