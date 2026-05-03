@@ -751,35 +751,37 @@ async function cloneStarterTemplate(
   const clonedId = uuid();
   const now = Date.now();
 
-  await db.insert(workoutTemplates).values({
-    id: clonedId,
-    name: `${templateName ?? "Template"} (Copy)`,
-    created_at: now,
-    updated_at: now,
-    is_starter: 0,
-    source: null,
-  });
-
-  for (const patch of patches) {
-    await db.insert(templateExercises).values({
-      id: uuid(),
-      template_id: clonedId,
-      exercise_id: patch.exerciseId,
-      position: patch.position,
-      target_sets: patch.newTargetSets,
-      set_types: JSON.stringify(patch.newSetTypes),
-      target_reps: patch.target_reps,
-      rest_seconds: patch.rest_seconds,
-      link_id: patch.link_id,
-      link_label: patch.link_label,
-      target_duration_seconds: patch.target_duration_seconds,
+  await withTransaction(async () => {
+    await db.insert(workoutTemplates).values({
+      id: clonedId,
+      name: `${templateName ?? "Template"} (Copy)`,
+      created_at: now,
+      updated_at: now,
+      is_starter: 0,
+      source: null,
     });
-  }
 
-  await db
-    .update(workoutSessions)
-    .set({ template_id: clonedId })
-    .where(eq(workoutSessions.id, sessionId));
+    for (const patch of patches) {
+      await db.insert(templateExercises).values({
+        id: uuid(),
+        template_id: clonedId,
+        exercise_id: patch.exerciseId,
+        position: patch.position,
+        target_sets: patch.newTargetSets,
+        set_types: JSON.stringify(patch.newSetTypes),
+        target_reps: patch.target_reps,
+        rest_seconds: patch.rest_seconds,
+        link_id: patch.link_id,
+        link_label: patch.link_label,
+        target_duration_seconds: patch.target_duration_seconds,
+      });
+    }
+
+    await db
+      .update(workoutSessions)
+      .set({ template_id: clonedId })
+      .where(eq(workoutSessions.id, sessionId));
+  });
 
   return { kind: "cloned", oldTemplateId: templateId, newTemplateId: clonedId, originSessionId: sessionId };
 }
