@@ -1,20 +1,36 @@
 /**
- * BLD-966 — daily-audit.sh: regression-smoke must run even when HEAD
- * scenarios fail (set -e ordering bug).
+ * BLD-966 / BLD-1023 — daily-audit.sh: regression-smoke must run even when
+ * HEAD scenarios fail (set -e ordering bug), and must run against a
+ * freshly captured wrapper-fixture PNG (BLD-1023 migration).
  *
- * Pre-fix bug:
+ * Pre-fix bug (BLD-966):
  *   `set -euo pipefail` + `run_scenarios "HEAD"` ahead of
  *   `regression-smoke.sh` meant a single HEAD spec failure aborted the
  *   script BEFORE the smoke (vision-pipeline trust anchor) ever ran. The
  *   alarm was silenced precisely when it mattered most — when HEAD was
  *   misbehaving.
  *
- * Acceptance criteria from the issue:
- *   1. HEAD scenario fails → regression-smoke.sh STILL executes
- *   2. Smoke fails → audit aborts non-zero (preserved)
- *   3. HEAD fails AND smoke passes → audit aborts non-zero, smoke result
- *      logged (HEAD RC propagates)
- *   4. No regression on full-success path
+ * BLD-1023 update:
+ *   The script no longer reads a static PNG from
+ *   `tests/fixtures/regression-catcher/bld-480-pre-fix.png`. Instead it
+ *   runs `e2e/scenarios/completed-workout-prefix.spec.ts` against a
+ *   dev-only Expo Router route, capturing
+ *   `.pixelslop/screenshots/scenarios/bld-480-prefix/mobile.png` on
+ *   every audit run, and feeds THAT into `regression-smoke.sh`.
+ *
+ *   The `playwright test` stub below now writes the wrapper-fixture
+ *   capture into the expected scenarios subdir whenever it sees the
+ *   prefix spec on its argv.
+ *
+ * Acceptance criteria:
+ *   AC1. HEAD scenario fails → regression-smoke.sh STILL executes
+ *   AC2. Smoke fails → audit aborts non-zero with smoke RC (preserved)
+ *   AC3. HEAD fails AND smoke fails → smoke RC dominates
+ *   AC4. Full success → exit 0, no regression
+ *   AC5 (BLD-1023). When the prefix-fixture spec fails AND no capture
+ *        was produced, audit aborts with the prefix-spec RC (smoke can't
+ *        run without a capture) — the script must NOT silently fall back
+ *        to a stale PNG.
  *
  * Strategy: drive `scripts/daily-audit.sh` end-to-end against a temp
  * worktree-shaped sandbox where `npx`, `git`, and `scripts/regression-smoke.sh`
@@ -42,23 +58,26 @@ interface RunResult {
  * Build a sandbox containing:
  *   - scripts/daily-audit.sh         (copy of the real one — script under test)
  *   - scripts/regression-smoke.sh    (stub honoring SMOKE_EXIT_CODE)
- *   - tests/fixtures/regression-catcher/bld-480-pre-fix.png  (empty, just exists)
+ *   - e2e/scenarios/                 (placeholder + prefix spec so `find`
+ *                                     in daily-audit.sh discovers them)
  *   - bin/npx, bin/git               (stubs)
  *   - .pixelslop/                    (writable output dir)
  *
- * Returns the sandbox dir and a runner.
+ * Returns the sandbox dir and a runner. Optional `dropPrefixCapture`
+ * makes the npx stub skip writing the wrapper-fixture capture so we can
+ * exercise AC5 (capture missing → audit aborts before smoke).
  */
 function buildSandbox(opts: {
   headExitCode: number;
+  prefixExitCode?: number;
   smokeExitCode: number;
+  dropPrefixCapture?: boolean;
 }): { dir: string; run: () => RunResult } {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-966-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-1023-"));
 
   // Layout
   fs.mkdirSync(path.join(dir, "scripts"), { recursive: true });
-  fs.mkdirSync(path.join(dir, "tests", "fixtures", "regression-catcher"), {
-    recursive: true,
-  });
+  fs.mkdirSync(path.join(dir, "e2e", "scenarios"), { recursive: true });
   fs.mkdirSync(path.join(dir, "bin"), { recursive: true });
   fs.mkdirSync(path.join(dir, ".pixelslop", "screenshots", "scenarios"), {
     recursive: true,
@@ -84,42 +103,44 @@ exit \${SMOKE_EXIT_CODE:-0}
   fs.writeFileSync(path.join(dir, "scripts", "regression-smoke.sh"), smokeStub);
   fs.chmodSync(path.join(dir, "scripts", "regression-smoke.sh"), 0o755);
 
-  // Static fixture (empty file is fine — script only checks existence)
+  // Placeholder HEAD specs + the BLD-480 prefix spec, so daily-audit's
+  // `find e2e/scenarios -name "*.spec.ts"` discovers both buckets and the
+  // exclusion logic actually has something to exclude.
   fs.writeFileSync(
-    path.join(dir, "tests", "fixtures", "regression-catcher", "bld-480-pre-fix.png"),
-    "",
+    path.join(dir, "e2e", "scenarios", "completed-workout.spec.ts"),
+    "// placeholder for sandbox\n",
+  );
+  fs.writeFileSync(
+    path.join(dir, "e2e", "scenarios", "completed-workout-prefix.spec.ts"),
+    "// placeholder for sandbox\n",
   );
 
   // Stub `git` — only the calls daily-audit.sh actually makes:
-  //   rev-parse HEAD, rev-parse --abbrev-ref HEAD, reset --hard, clean -fdq, checkout
+  //   rev-parse HEAD (cleanup logic was removed in BLD-1023, so no more
+  //   reset/clean/checkout).
   const gitStub = `#!/usr/bin/env bash
 case "$1 \${2:-}" in
   "rev-parse HEAD")            echo "deadbeefcafebabe1234567890abcdef00000000" ;;
   "rev-parse --abbrev-ref")    echo "test-branch" ;;
-  *)                           : ;;  # success no-op for reset/clean/checkout
+  *)                           : ;;  # success no-op
 esac
 exit 0
 `;
   fs.writeFileSync(path.join(dir, "bin", "git"), gitStub);
   fs.chmodSync(path.join(dir, "bin", "git"), 0o755);
 
-  // Stub `npx` — used by both \`build_static_bundle\` (BLD-902 — \`expo
-  // export\`) and \`run_scenarios\` (\`playwright test\`). The two invocations
-  // have different success contracts:
-  //
-  //   - \`expo export -p web …\`  → must always succeed in tests and produce
-  //     \`dist/index.html\`, otherwise \`build_static_bundle\` aborts the
-  //     audit before scenarios+smoke ever run (regressing the BLD-966
-  //     "smoke runs even when HEAD fails" contract for the wrong reason).
-  //
-  //   - \`playwright test …\`     → must honor HEAD_EXIT_CODE so we can
-  //     simulate HEAD scenario passes/failures independent of bundle build.
-  //
-  // The stub also writes a fake capture so the cp step in run_scenarios
-  // has something to copy.
+  // Stub `npx` — used by both \`build_static_bundle\` (\`expo export\`)
+  // and \`run_scenarios\` (\`playwright test\`). Behaviour:
+  //   - \`expo export -p web …\` → must always succeed and produce
+  //     \`dist/index.html\`, otherwise build_static_bundle aborts before
+  //     scenarios + smoke run (regressing the BLD-966 contract).
+  //   - \`playwright test … completed-workout-prefix.spec.ts …\` (BLD-1023)
+  //     honors PREFIX_EXIT_CODE, and (unless DROP_PREFIX_CAPTURE=1) writes
+  //     the wrapper-fixture capture so the smoke step has something to feed.
+  //   - \`playwright test …\` (any other invocation) honors HEAD_EXIT_CODE
+  //     and writes a placeholder HEAD capture.
   const npxStub = `#!/usr/bin/env bash
 echo "[npx-stub] $*" >&2
-# Detect bundle build vs scenario run by inspecting argv.
 case " $* " in
   *" expo export "*)
     mkdir -p dist
@@ -127,12 +148,18 @@ case " $* " in
     exit 0
     ;;
   *" playwright test "*)
+    if printf '%s\\n' "$@" | grep -q completed-workout-prefix.spec.ts; then
+      if [[ "\${DROP_PREFIX_CAPTURE:-0}" != "1" ]]; then
+        mkdir -p .pixelslop/screenshots/scenarios/bld-480-prefix
+        echo "fake prefix capture" > .pixelslop/screenshots/scenarios/bld-480-prefix/mobile.png
+      fi
+      exit \${PREFIX_EXIT_CODE:-0}
+    fi
     mkdir -p .pixelslop/screenshots/scenarios/fake-scenario
     echo "fake png bytes" > .pixelslop/screenshots/scenarios/fake-scenario/mobile.png
     exit \${HEAD_EXIT_CODE:-0}
     ;;
   *)
-    # Unknown npx invocation — succeed silently to avoid spurious failures.
     exit 0
     ;;
 esac
@@ -141,11 +168,13 @@ esac
   fs.chmodSync(path.join(dir, "bin", "npx"), 0o755);
 
   const run = (): RunResult => {
-    const env = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       PATH: `${path.join(dir, "bin")}:${process.env.PATH}`,
       HEAD_EXIT_CODE: String(opts.headExitCode),
+      PREFIX_EXIT_CODE: String(opts.prefixExitCode ?? 0),
       SMOKE_EXIT_CODE: String(opts.smokeExitCode),
+      DROP_PREFIX_CAPTURE: opts.dropPrefixCapture ? "1" : "0",
     };
     const proc = spawnSync("bash", [path.join(dir, "scripts", "daily-audit.sh")], {
       cwd: dir,
@@ -172,7 +201,7 @@ function cleanup(dir: string) {
   }
 }
 
-describe("daily-audit.sh — BLD-966 set -e ordering", () => {
+describe("daily-audit.sh — BLD-966 set -e ordering + BLD-1023 wrapper-fixture", () => {
   // Sanity: real script syntax is valid (catch refactor mistakes).
   it("real script passes bash -n syntax check", () => {
     expect(() =>
@@ -231,6 +260,51 @@ describe("daily-audit.sh — BLD-966 set -e ordering", () => {
       expect(r.combined).toContain("regression-smoke: PASS");
       // Sanity: smoke stub was invoked.
       expect(r.combined).toContain("[smoke-stub] called with:");
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it("AC5 (BLD-1023): prefix-fixture spec fails AND no capture → audit aborts with prefix RC, smoke skipped", () => {
+    const { dir, run } = buildSandbox({
+      headExitCode: 0,
+      prefixExitCode: 5,
+      smokeExitCode: 0,
+      dropPrefixCapture: true,
+    });
+    try {
+      const r = run();
+      // Prefix RC propagates — the script can't run smoke without a capture.
+      expect(r.status).toBe(5);
+      // Operator-readable diagnostic must mention the missing capture.
+      expect(r.combined).toMatch(/pre-fix fixture capture missing/);
+      // Smoke MUST NOT have been invoked (no capture to feed it).
+      expect(r.combined).not.toContain("[smoke-stub] called with:");
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it("AC1+AC5 boundary: prefix spec FAILED but capture written → smoke still runs", () => {
+    // If Playwright reports failure but produced a capture (e.g. one of the
+    // CVD variants flaked but baseline succeeded), the smoke trust-anchor
+    // can still run on the baseline — that matches the BLD-966 spirit
+    // (don't silence the alarm just because a non-trust-anchor spec
+    // misbehaved).
+    const { dir, run } = buildSandbox({
+      headExitCode: 0,
+      prefixExitCode: 1,
+      smokeExitCode: 0,
+      dropPrefixCapture: false,
+    });
+    try {
+      const r = run();
+      // Prefix RC propagates because smoke passed but prefix failed.
+      expect(r.status).toBe(1);
+      // Smoke must have been invoked.
+      expect(r.combined).toContain("[smoke-stub] called with:");
+      // Diagnostic message about prefix-failed-but-smoke-passed.
+      expect(r.combined).toMatch(/pre-fix fixture spec failed.*smoke PASSED/);
     } finally {
       cleanup(dir);
     }
