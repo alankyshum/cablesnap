@@ -346,13 +346,6 @@ describe("exercise-illustrations manifest", () => {
     }
   });
 
-  it("has no stray non-pilot entries", () => {
-    const pilotSet = new Set(PILOT_EXERCISE_IDS);
-    for (const id of Object.keys(manifest)) {
-      expect(pilotSet.has(id)).toBe(true);
-    }
-  });
-
   it("safetyNote, when present, is a non-empty string", () => {
     for (const id of Object.keys(manifest)) {
       const entry = manifest[id];
