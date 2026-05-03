@@ -40,12 +40,38 @@ Persist short, user-authored notes on the **Exercise** entity so they appear aut
 
 **In:**
 
-1. New column `notes TEXT` on `exercises` (and migration). Single string, soft cap ~500 chars.
-2. Live-session display: when an exercise group becomes active in a session, surface the pinned note in `GroupCardHeader` as a non-blocking, dismissible chip/inline block (always visible, never intrusive).
-3. Live-session edit: a pencil affordance next to the pinned note opens an inline edit (bottom-sheet or inline TextInput) that writes back to `exercises.notes`. **No need to leave the workout.**
-4. Backfill UX: if `exercises.notes` is empty but `workout_sets.notes` has been used historically for that exercise (within last 5 sessions), offer a one-tap "Pin to exercise" prompt the first time the new UI is seen for that exercise. (Cheap, addresses Reddit comment about losing prior context.)
-5. Preserve existing per-set `notes` on `workout_sets` — that field is for **session-specific** observations ("felt heavy today"), distinct from pinned exercise context. Two separate UI surfaces.
-6. Export coverage: include `exercises.notes` in `exportAllData()` (`lib/db/import-export.ts`) and the JSON backup. CSV export of exercises already exposes the row; ensure the new column is in the column list.
+1. New columns on `exercises` (and migration via `addColumnIfMissing` in `lib/db/migrations.ts` — schema-only changes do NOT migrate live user DBs):
+   - `notes TEXT` — user-authored pinned note, nullable. Hard cap 500 chars (`maxLength={500}` on input + defensive `substring(0,500)` on the write path).
+   - `notes_updated_at INTEGER` (timestamp_ms) — last user edit of `notes`.
+   - `notes_backfill_dismissed_at INTEGER` (timestamp_ms) — set when user dismisses the backfill prompt, so we don't conflate "user said no thanks" with "user authored an empty string". (Per techlead feedback — keeps `notes_updated_at` semantically clean.)
+2. **Two distinct, explicitly relabeled UI surfaces** (per QD blocker — current code in `GroupCardHeader.tsx:95-199` and `useSessionActions.ts:641-647` writes the existing "Exercise Notes" field to `workout_sets.notes` of the first set, which is ambiguous):
+   - **"📌 Pinned note for {exerciseName}"** — NEW. Reads/writes `exercises.notes`. Persists across sessions. Visible in `GroupCardHeader` (read), editable inline via pencil affordance, also editable from `app/exercise/[id].tsx`. Empty state shows "+ Add pinned note" affordance (discoverable).
+   - **"Note for this session"** — EXISTING per-set field, **relabeled** in UI + a11y labels. Wiring untouched (still writes `workout_sets.notes` of first set; preserves BLD-621/673/885 behavior).
+   - Both surfaces have explicit `accessibilityLabel`s including the exercise name (e.g. `"Edit pinned note for Lat Pulldown"`).
+3. Live-session edit: pencil affordance opens an inline TextInput. Save behavior must satisfy the **"never lose user input"** acceptance criterion via ALL of:
+   - Debounced save (500–800ms) during typing.
+   - `onBlur` flush.
+   - `AppState` listener: flush pending text on `background`/`inactive` (reuse existing `AppState` pattern in repo — no new dependency).
+   - Flush on session unmount / navigation away.
+   - Flush in the existing "Finish Workout" handler (drain any pending pinned-note draft, not just per-set drafts).
+4. Backfill UX (preview, not auto-pin): if `exercises.notes` is NULL AND `notes_backfill_dismissed_at` is NULL AND a recent `workout_sets.notes` exists for that exercise (last completed session, see SQL below), surface a `BackfillNoteSuggestion` chip showing the candidate text + source date. **One tap copies + dismisses; one tap dismisses without copy.** Either action sets `notes_backfill_dismissed_at` so the prompt never re-shows.
+   ```sql
+   SELECT ws.notes
+   FROM workout_sets ws
+   JOIN workout_sessions s ON s.id = ws.session_id
+   WHERE ws.exercise_id = ?
+     AND TRIM(COALESCE(ws.notes, '')) <> ''
+     AND s.completed_at IS NOT NULL
+   ORDER BY s.completed_at DESC
+   LIMIT 1;
+   ```
+5. Preserve existing per-set `notes` on `workout_sets` — wiring unchanged (only the label changes per item 2).
+6. **Export coverage — JSON backup ONLY for v1** (per QD blocker; CSV export does NOT currently include exercises — verified: `lib/db/csv.ts` + `lib/csv-format.ts` + settings export card cover only workouts/nutrition/body metrics):
+   - JSON `exportAllData()` automatically includes new columns via `SELECT * FROM exercises` (`lib/db/import-export.ts:485`). ✅
+   - JSON `importAllData()` automatically rebuilds INSERT via `PRAGMA table_info(exercises)` (line 579). ✅
+   - **Required tasks:** verify `BackupFile.version` (currently 7, line 496) — bump to 8 only if version-branching tests require it; for additive nullable cols, usually no bump needed.
+   - **Required audits:** test fixtures in `tests/fixtures/`, any `__tests__/` JSON snapshots that hand-write an `exercises` row payload, regression-catcher snapshots (`scripts/check-curation-gate.ts` etc.).
+   - **Adding a CSV exercises export is OUT OF SCOPE for v1** — defer to a separate ticket if requested.
 
 **Out (defer):**
 
@@ -59,13 +85,20 @@ Persist short, user-authored notes on the **Exercise** entity so they appear aut
 
 ```ts
 // lib/db/schema.ts — exercises table additions
-notes: text("notes"),               // user-authored pinned note, nullable
+notes: text("notes"),               // user-authored pinned note, nullable, ≤500 chars
 notes_updated_at: integer("notes_updated_at", { mode: "timestamp_ms" }),
+notes_backfill_dismissed_at: integer("notes_backfill_dismissed_at", { mode: "timestamp_ms" }),
 ```
 
-Keep `notes_updated_at` so the optional "Pin to exercise" backfill prompt can decide whether the user has already curated the field.
+```ts
+// lib/db/migrations.ts — MANDATORY for live user DBs (schema.ts alone is not enough).
+// Follows existing pattern from BLD-561 (start_image_uri/end_image_uri), BLD-913 (progression_*).
+addColumnIfMissing(database, "exercises", "notes", "TEXT DEFAULT NULL");
+addColumnIfMissing(database, "exercises", "notes_updated_at", "INTEGER DEFAULT NULL");
+addColumnIfMissing(database, "exercises", "notes_backfill_dismissed_at", "INTEGER DEFAULT NULL");
+```
 
-Migration: additive only, no data movement. Existing per-set notes remain untouched.
+Migration is additive only, no data movement, no FKs into `exercises`, no indexes affected (verified by techlead schema audit). Existing per-set notes remain untouched. Idempotency required and tested (run `migrate()` twice on a fresh DB; assert no error and no duplicate columns).
 
 ## UI Touch Points
 
@@ -77,7 +110,14 @@ Migration: additive only, no data movement. Existing per-set notes remain untouc
 ## Telemetry / Quality bar
 
 - No analytics. Pure local feature.
-- Tests: schema migration test, hook test for read/write of `exercises.notes`, snapshot of `GroupCardHeader` with and without note, e2e test (Maestro) for: type a note in a session, finish session, start same exercise next session, see note auto-displayed.
+- **Required tests** (must all be present before QD approval of the implementation PR):
+  1. **Migration / schema test** — fresh DB AND upgraded DB both get `notes`, `notes_updated_at`, `notes_backfill_dismissed_at` idempotently. Run `migrate()` twice; no error, no duplicate columns.
+  2. **Behavioral isolation test** — editing the pinned exercise note does NOT mutate `workout_sets.notes` or active set state. Editing the per-set "Note for this session" does NOT touch `exercises.notes`.
+  3. **Backup roundtrip test** — JSON `exportAllData()` → `importAllData()` preserves `exercises.notes` and timestamps.
+  4. **UI label test** — both surfaces render with correct labels and a11y labels ("Pinned note for {exerciseName}" + "Note for this session"); both states (set note exists / pinned note exists / both / neither) covered.
+  5. **Backfill prompt test** — given a recent `workout_sets.notes` and empty `exercises.notes`, prompt appears with candidate text + date; copy-tap writes through; dismiss-tap sets `notes_backfill_dismissed_at`; prompt never re-shows in either case.
+  6. **"Never lose user input" test** — mount editor, type, immediately emit `AppState.change → background` (no debounce wait), assert DB write fired. Repeat for `onBlur`, navigation, and "Finish Workout" handler.
+  7. **e2e (Maestro)** — type a pinned note in session A, finish session, start same exercise in session B, see note auto-displayed inline.
 
 ## Risks & Mitigations
 
@@ -97,14 +137,42 @@ Migration: additive only, no data movement. Existing per-set notes remain untouc
 ## Acceptance Criteria
 
 - Adding a pinned note to "Lat Pulldown" in session A makes that note auto-visible in session B without any extra navigation.
-- Editing the note from inside an active session never interrupts the timer, never loses set state, and saves on debounce.
-- Existing per-set note workflow is unchanged (BLD-621, BLD-673, BLD-885 et al. still work).
-- JSON backup roundtrip preserves the field.
+- Editing the note from inside an active session never interrupts the timer, never loses set state, and saves on debounce **AND** on `onBlur`, `AppState→background`, navigation away, and "Finish Workout".
+- Pinned-note edits do NOT mutate `workout_sets.notes`. Per-set note edits do NOT mutate `exercises.notes`. Both surfaces have distinct labels and a11y labels including the exercise name.
+- Existing per-set note workflow is unchanged (BLD-621, BLD-673, BLD-885 et al. still work) — only the user-facing label changes.
+- JSON backup `exportAllData()` → `importAllData()` roundtrip preserves `notes`, `notes_updated_at`, `notes_backfill_dismissed_at`. **CSV exercises export is out of scope for v1.**
+- Migration runs idempotently (twice on fresh DB → no error, no duplicate columns).
+- Note input enforces 500-char `maxLength` AND defensive `substring(0,500)` on the write path.
 - No new permissions, no new network calls, no new dependencies.
+
+## Review Feedback
+
+### Tech Lead (Feasibility) — APPROVE WITH MINOR ADDITIONS (2026-05-03)
+Verdict: **APPROVE**. All five tightening items folded into Scope/Data Model/Acceptance above:
+1. Column over side-table — confirmed.
+2. Backfill SQL specified verbatim; backfill is preview-not-auto-pin; added `notes_backfill_dismissed_at` to keep `notes_updated_at` semantically clean.
+3. Migration via `addColumnIfMissing` in `lib/db/migrations.ts` — explicit; idempotency test required.
+4. Debounced save augmented with `onBlur` + `AppState` + unmount + Finish-Workout flush; "never lose input" test required.
+5. Export covered — JSON automatic via `SELECT *` / `PRAGMA table_info`; CSV explicitly out of scope; fixtures + regression-catcher snapshots audited.
+
+Plus: 500-char hard cap (input + write path), a11y label on pencil, "+ Add pinned note" empty-state affordance.
+
+### Quality Director (UX) — REQUEST CHANGES → ADDRESSED (2026-05-03)
+Two blockers raised, both resolved in this revision:
+1. **Two-note UX ambiguity** — RESOLVED. Both surfaces explicitly relabeled in plan: "📌 Pinned note for {exerciseName}" (new, persistent) vs "Note for this session" (existing per-set, label updated). A11y labels include the exercise name. Distinct visual surfaces; existing per-set wiring untouched (preserves BLD-621/673/885 behavior).
+2. **Export scope inconsistency** — RESOLVED. CSV exercises export does NOT exist today (verified `lib/db/csv.ts`, `lib/csv-format.ts`, settings export card). v1 is JSON backup roundtrip only. Adding a CSV exercises export is explicitly OUT of scope.
+
+All 5 required test additions captured in the Telemetry / Quality bar section above (migration idempotency, behavioral isolation, backup roundtrip, UI label coverage, backfill prompt). Re-requesting QD verdict.
+
+### Psychologist (Behavior-Design)
+N/A — Classification = NO. No gamification, no streaks, no notifications, no rewards. User-authored utility text.
+
+### CEO Decision
+_Pending QD re-approval._
 
 ## Estimated Effort
 
-Small. ~1 PR. Schema + migration + 2 UI components + 1 hook + tests. Estimated 3–5 hours of focused implementation including e2e Maestro flow.
+Small-to-medium. ~1 PR. Schema + migration + 2 UI components + 1 hook + 7 tests (migration, behavioral isolation, backup roundtrip, UI labels, backfill prompt, "never lose input" via AppState/blur/unmount/finish, e2e Maestro). Estimated 5–7 hours of focused implementation including the rigor above (techlead's revised estimate).
 
 ## Why Now
 
