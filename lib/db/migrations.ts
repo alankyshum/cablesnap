@@ -37,9 +37,13 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");
   await addColumnIfMissing(database, "workout_templates", "source", "TEXT DEFAULT NULL");
+  // BLD-1000: curated programs library — additive migration. See schema.ts.
+  await addColumnIfMissing(database, "workout_templates", "is_curated", "INTEGER DEFAULT 0");
 
   // programs table
   await addColumnIfMissing(database, "programs", "is_starter", "INTEGER DEFAULT 0");
+  // BLD-1000: curated programs library.
+  await addColumnIfMissing(database, "programs", "is_curated", "INTEGER DEFAULT 0");
 
   // template_exercises table
   await addColumnIfMissing(database, "template_exercises", "link_id", "TEXT DEFAULT NULL");

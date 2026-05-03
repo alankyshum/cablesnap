@@ -54,10 +54,13 @@ export function buildMenuItems(
   onDelete: (t: WorkoutTemplate) => void,
   onExport: (id: string) => void
 ): FlowCardMenuItem[] {
+  // Starters can be duplicated and exported but not edited/deleted.
   if (isStarter) return [
     { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
     { label: "Export", icon: "export-variant", onPress: () => onExport(item.id) },
   ];
+  // BLD-1000: curated templates (is_curated=1) are non-deletable/non-editable like starters.
+  if (item.is_curated) return [{ label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) }];
   return [
     { label: "Edit", icon: "pencil", onPress: () => onEdit(item.id) },
     { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },

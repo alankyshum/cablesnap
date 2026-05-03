@@ -13,6 +13,13 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useProgramDetail, dayName } from "@/hooks/useProgramDetail";
 import { WeeklySchedule } from "@/components/program/WeeklySchedule";
 import { ProgramHistory } from "@/components/program/ProgramHistory";
+import {
+  CuratedChip,
+  CuratedCaption,
+  AttributionFooter,
+  useCuratedCaption,
+} from "@/components/program/CuratedExtras";
+import { CURATED_ATTRIBUTION } from "../../lib/curated-programs";
 
 export default function ProgramDetail() {
   const colors = useThemeColors();
@@ -33,6 +40,8 @@ export default function ProgramDetail() {
     }, [load])
   );
 
+  const { visible: captionVisible, dismiss: dismissCaption } = useCuratedCaption();
+
   if (!program) {
     return (
       <>
@@ -46,6 +55,13 @@ export default function ProgramDetail() {
 
   const currentIdx = days.findIndex((d) => d.id === program.current_day_id);
   const starter = !!program.is_starter;
+  const curated = !!program.is_curated;
+  // BLD-1000: curated programs are user-editable in place — they get the
+  // same action set as a custom program (Set Active / Edit). They are NOT
+  // user-deletable in v1: `softDeleteProgram` rejects curated rows so the
+  // delete icon is suppressed below. Attribution footer is rendered when
+  // `curated` is true. The first-launch caption lives in ProgramsList.
+  const attribution = curated ? CURATED_ATTRIBUTION[program.id] : undefined;
 
   return (
     <>
@@ -65,6 +81,16 @@ export default function ProgramDetail() {
               >
                 STARTER
               </Chip>
+            )}
+            {curated && <CuratedChip />}
+            {curated && (
+              <CuratedCaption
+                visible={captionVisible}
+                onDismiss={dismissCaption}
+                surface={colors.surface}
+                outline={colors.outline}
+                onSurfaceVariant={colors.onSurfaceVariant}
+              />
             )}
 
             {program.description ? (
@@ -108,6 +134,27 @@ export default function ProgramDetail() {
                   style={styles.actionBtn}
                   accessibilityLabel="Duplicate to edit"
                   label="Duplicate to Edit"
+                />
+              </View>
+            ) : curated ? (
+              // BLD-1000: curated programs are editable in place but not
+              // user-deletable in v1. Same actions as custom minus delete.
+              <View style={styles.actions}>
+                <Button
+                  variant={program.is_active ? "outline" : "default"}
+                  onPress={toggle}
+                  disabled={loading}
+                  style={styles.actionBtn}
+                  accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
+                >
+                  {program.is_active ? "Deactivate" : "Set Active"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onPress={() => router.push(`/program/create?programId=${program.id}`)}
+                  style={styles.actionBtn}
+                  accessibilityLabel="Edit program"
+                  label="Edit"
                 />
               </View>
             ) : (
@@ -221,6 +268,11 @@ export default function ProgramDetail() {
               schedEntry={schedEntry}
             />
             <ProgramHistory history={history} colors={colors} router={router} />
+            <AttributionFooter
+              attribution={attribution}
+              primary={colors.primary}
+              onSurfaceVariant={colors.onSurfaceVariant}
+            />
           </>
         }
       />

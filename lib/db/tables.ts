@@ -88,7 +88,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       is_starter INTEGER DEFAULT 0,
-      source TEXT
+      source TEXT,
+      is_curated INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS template_exercises (
@@ -228,7 +229,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       deleted_at INTEGER DEFAULT NULL,
-      is_starter INTEGER DEFAULT 0
+      is_starter INTEGER DEFAULT 0,
+      is_curated INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS program_days (
