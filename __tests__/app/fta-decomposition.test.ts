@@ -227,7 +227,9 @@ describe("FTA decomposition structural tests", () => {
     // BLD-541: session main file bumped from 350 → 400 to fit bodyweight
     // modifier sheet orchestration (ref, 3 handlers, useMemo, 1 sheet JSX).
     // Per-set orchestration logic extracted to hooks/useBodyweightModifierSheet.
-    ["app/session/[id].tsx", 400, "session main file"],
+    // BLD-1028: bumped 400 → 410 for pinned-note props (5 new prop wires,
+    // onBackfillCopy inline lambda, pinnedNoteDraft in useMemo dep array).
+    ["app/session/[id].tsx", 410, "session main file"],
     ["components/SubstitutionSheet.tsx", 260, "substitution sheet main file"],
     ["app/progress/achievements.tsx", 200, "achievements main file"],
     ["components/ShareCard.tsx", 200, "share card main file"],

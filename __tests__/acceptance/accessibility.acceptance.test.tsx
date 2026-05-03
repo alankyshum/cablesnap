@@ -58,6 +58,7 @@ jest.mock('react-native-reanimated', () => {
     FadeIn: chainable(),
     FadeInDown: chainable(),
     useAnimatedStyle: () => ({}),
+    useAnimatedProps: (fn: () => unknown) => fn(),
     useSharedValue: <T,>(v: T) => ({ value: v }),
     useReducedMotion: () => false,
     withTiming: <T,>(v: T, _cfg?: unknown, cb?: (f: boolean) => void) => { if (cb) cb(true); return v },
@@ -237,6 +238,11 @@ jest.mock('../../lib/db', () => ({
   validateBackupFileSize: jest.fn().mockReturnValue(true),
   validateBackupData: jest.fn().mockReturnValue({ valid: true }),
   deleteAppSetting: jest.fn().mockResolvedValue(undefined),
+  // BLD-1028: pinned per-exercise notes
+  getExerciseNotesBatch: jest.fn().mockResolvedValue({}),
+  updateExerciseNote: jest.fn().mockResolvedValue(undefined),
+  getExerciseBackfillCandidate: jest.fn().mockResolvedValue(null),
+  dismissExerciseBackfill: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/db/pr-dashboard', () => ({

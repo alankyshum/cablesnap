@@ -171,6 +171,9 @@ export async function getTemplateById(
           end_image_uri: r.exercise_end_image_uri,
           progression_group: r.exercise_progression_group ?? null,
           progression_order: r.exercise_progression_order ?? null,
+          notes: null,
+          notes_updated_at: null,
+          notes_backfill_dismissed_at: null,
         })
       : undefined,
   }));

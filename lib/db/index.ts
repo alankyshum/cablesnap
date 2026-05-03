@@ -15,6 +15,11 @@ export {
   getProgressionSuggestion,
   type ProgressionChainExercise,
   type ProgressionSuggestion,
+  updateExerciseNote,
+  dismissExerciseBackfill,
+  getExerciseBackfillCandidate,
+  getExerciseNotesBatch,
+  type BackfillCandidate,
 } from "./exercises";
 
 export {

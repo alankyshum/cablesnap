@@ -32,4 +32,8 @@ export type ExerciseGroup = {
   previousSets?: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>;
   progressionSuggested?: boolean;
   exerciseCategory?: string | null;
+  // BLD-1028: pinned per-exercise note loaded at session start.
+  pinnedNote?: string | null;
+  /** Backfill candidate from workout_sets.notes; null when dismissed or absent. */
+  pinnedNoteBackfill?: { text: string; date: number } | null;
 };

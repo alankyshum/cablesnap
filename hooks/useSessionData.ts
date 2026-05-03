@@ -17,6 +17,7 @@ import {
   getExercisesByIds,
   updateSetsBatch,
   updateExercisePositions,
+  getExerciseNotesBatch,
 } from "../lib/db";
 import { parseTemplateTargetReps } from "../lib/db/templates";
 import type { WorkoutSession, Exercise } from "../lib/types";
@@ -98,10 +99,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
 
-    const [prevCache, exerciseMeta, recentByExercise] = await Promise.all([
+    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes] = await Promise.all([
       getPreviousSetsBatch(exerciseIds, id),
       getExercisesByIds(exerciseIds),
       getRecentExerciseSetsBatch(exerciseIds, 2),
+      getExerciseNotesBatch(exerciseIds),
     ]);
 
     const key = exerciseIds.sort().join(",");
@@ -127,6 +129,10 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           equipment: ex?.equipment ?? "other",
           exercise_position: s.exercise_position ?? 0,
           exerciseCategory: ex?.category ?? null,
+          pinnedNote: exerciseNotes[s.exercise_id]?.notes ?? null,
+          // If this exercise was already dismissed, initialize as null (never show backfill).
+          // Otherwise use undefined so the header lazy-loads the candidate on mount.
+          pinnedNoteBackfill: exerciseNotes[s.exercise_id]?.dismissed ? null : undefined,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(

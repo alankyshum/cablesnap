@@ -33,6 +33,10 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // BLD-913: bodyweight exercise progression paths — links exercises into ordered chains.
   await addColumnIfMissing(database, "exercises", "progression_group", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "exercises", "progression_order", "INTEGER DEFAULT NULL");
+  // BLD-1028: pinned per-exercise notes — persists across sessions.
+  await addColumnIfMissing(database, "exercises", "notes", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "exercises", "notes_updated_at", "INTEGER DEFAULT NULL");
+  await addColumnIfMissing(database, "exercises", "notes_backfill_dismissed_at", "INTEGER DEFAULT NULL");
 
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");

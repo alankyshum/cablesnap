@@ -26,6 +26,10 @@ function mapRow(row: ExerciseRow): Exercise {
     // BLD-913: progression chain data.
     progression_group: row.progression_group ?? undefined,
     progression_order: row.progression_order ?? undefined,
+    // BLD-1028: pinned per-exercise notes.
+    notes: row.notes ?? undefined,
+    notes_updated_at: row.notes_updated_at ?? undefined,
+    notes_backfill_dismissed_at: row.notes_backfill_dismissed_at ?? undefined,
   };
 }
 
@@ -310,4 +314,80 @@ export async function getProgressionSuggestion(
   }
 
   return { shouldSuggest: true, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+}
+
+// ── BLD-1028: Pinned per-exercise notes ───────────────────────────────────
+
+/**
+ * Saves a pinned note to the exercises table. Truncates at 500 chars on the
+ * write path as a defensive guard against malformed imports.
+ */
+export async function updateExerciseNote(
+  exerciseId: string,
+  text: string,
+): Promise<void> {
+  const db = await getDrizzle();
+  const clamped = text.substring(0, 500);
+  await db.update(exercises)
+    .set({ notes: clamped || null, notes_updated_at: clamped ? Date.now() : null })
+    .where(eq(exercises.id, exerciseId));
+}
+
+/**
+ * Marks the backfill suggestion as dismissed (sets notes_backfill_dismissed_at).
+ * Called on both "Copy" and "Dismiss" taps so the prompt never re-shows.
+ */
+export async function dismissExerciseBackfill(exerciseId: string): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(exercises)
+    .set({ notes_backfill_dismissed_at: Date.now() })
+    .where(eq(exercises.id, exerciseId));
+}
+
+export type BackfillCandidate = { text: string; date: number };
+
+/**
+ * Returns the most recent workout_sets.notes for the given exercise, if any,
+ * suitable for the backfill prompt. Returns null when no candidate exists.
+ */
+export async function getExerciseBackfillCandidate(
+  exerciseId: string,
+): Promise<BackfillCandidate | null> {
+  const rows = await query<{ notes: string; completed_at: number }>(
+    `SELECT ws.notes, s.completed_at
+     FROM workout_sets ws
+     JOIN workout_sessions s ON s.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND TRIM(COALESCE(ws.notes, '')) <> ''
+       AND s.completed_at IS NOT NULL
+     ORDER BY s.completed_at DESC
+     LIMIT 1`,
+    [exerciseId],
+  );
+  if (!rows[0]?.notes) return null;
+  return { text: rows[0].notes, date: rows[0].completed_at };
+}
+
+/**
+ * Returns { notes, notes_backfill_dismissed_at } for a batch of exercise IDs.
+ */
+export async function getExerciseNotesBatch(
+  exerciseIds: string[],
+): Promise<Record<string, { notes: string | null; dismissed: boolean }>> {
+  if (exerciseIds.length === 0) return {};
+  const rows = await query<{
+    id: string;
+    notes: string | null;
+    notes_backfill_dismissed_at: number | null;
+  }>(
+    `SELECT id, notes, notes_backfill_dismissed_at
+     FROM exercises
+     WHERE id IN (${exerciseIds.map(() => "?").join(",")})`,
+    exerciseIds,
+  );
+  const result: Record<string, { notes: string | null; dismissed: boolean }> = {};
+  for (const r of rows) {
+    result[r.id] = { notes: r.notes, dismissed: r.notes_backfill_dismissed_at != null };
+  }
+  return result;
 }
