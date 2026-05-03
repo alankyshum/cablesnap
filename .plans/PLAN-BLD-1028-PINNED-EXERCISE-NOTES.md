@@ -1,5 +1,7 @@
 # PLAN: Pinned Per-Exercise Notes (form cues, machine settings, safety-pin positions)
 
+**Status:** APPROVED — 2026-05-03 (techlead RE-CONFIRM 20:05Z, QD APPROVE 20:06Z, rev2.1 stale-wording nits cleaned up).
+
 **Source:** [BLD-1028 Daily Product Research & Ideation](/BLD/issues/BLD-1028) — Reddit research run 2026-05-03.
 **Classification:** NO gamification. Pure utility / friction-removal feature.
 **Psychologist review:** Not required (no behavior-design or loss-framing). Sports-science review **suggested but optional** — see "Open questions" below.
@@ -105,7 +107,7 @@ Migration is additive only, no data movement, no FKs into `exercises`, no indexe
 1. **`components/session/GroupCardHeader.tsx`** — render pinned note inline (read) + edit pencil. Do not collapse/hide; the whole point is that the user sees it without action.
 2. **New `components/session/PinnedExerciseNoteEditor.tsx`** — inline editor with debounced save to `exercises.notes`. Closes via Done / outside tap.
 3. **`app/exercise/[id].tsx` (exercise detail screen)** — show + edit the same field for off-session curation.
-4. **Backfill prompt**: small `BackfillNoteSuggestion` component that appears on the GroupCardHeader the first time the user opens a session for an exercise whose `notes` is empty AND a recent `workout_sets.notes` exists for that exercise. One tap copies it up; one tap dismisses (sets `notes_updated_at` so the prompt never shows again).
+4. **Backfill prompt**: small `BackfillNoteSuggestion` component that appears on the GroupCardHeader the first time the user opens a session for an exercise whose `notes` is empty AND a recent `workout_sets.notes` exists for that exercise. One tap copies it up; one tap dismisses. **Either action sets `notes_backfill_dismissed_at` (NOT `notes_updated_at`)** so the prompt never re-shows and `notes_updated_at` remains semantically "last user edit of `notes`".
 
 ## Telemetry / Quality bar
 
@@ -123,7 +125,7 @@ Migration is additive only, no data movement, no FKs into `exercises`, no indexe
 
 | Risk | Mitigation |
 |---|---|
-| Two notes fields (set-level + exercise-level) confuse users | Distinct labels: "Notes for this set" vs "Pinned note (this exercise)". Backfill prompt teaches the model. |
+| Two notes fields (set-level + exercise-level) confuse users | Distinct canonical labels (must match §Scope verbatim): "📌 Pinned note for {exerciseName}" (writes `exercises.notes`) vs "Note for this session" (writes `workout_sets.notes` of first set). Distinct visual surfaces in `GroupCardHeader` and a11y labels including the exercise name. Backfill prompt teaches the model. |
 | Long pinned notes clutter session screen | Soft cap 500 chars + show first 2 lines, expand-on-tap. |
 | Migration on large local DBs | Column is nullable, no defaults to compute — instant migration. |
 | Sync (future) — what if we ever add cloud sync | The field already lives on a synced table (`exercises`); per-user override would need a join then, not now. |
@@ -168,7 +170,7 @@ All 5 required test additions captured in the Telemetry / Quality bar section ab
 N/A — Classification = NO. No gamification, no streaks, no notifications, no rewards. User-authored utility text.
 
 ### CEO Decision
-_Pending QD re-approval._
+**APPROVED** 2026-05-03 20:10Z. Both reviewer blockers resolved in rev2; rev2.1 cleans up two stale-wording nits (UI Touch Points dismiss-action wiring + Risks table labels) flagged by techlead and QD. Proceeding to Phase 4: implementation issue assigned to claudecoder.
 
 ## Estimated Effort
 
