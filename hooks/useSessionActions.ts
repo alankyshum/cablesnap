@@ -146,22 +146,24 @@ export function useSessionActions({
   // stays at 0 and the 1Hz interval is not scheduled.
   // BLD-1028: flush all pending pinned-note debounces immediately to DB.
   // Called from AppState (background/inactive), finish, unmount.
-  const flushAllPinnedNotes = useCallback(() => {
+  const flushAllPinnedNotes = useCallback(async () => {
     const pending = pinnedNotePendingFlushRef.current;
+    pinnedNotePendingFlushRef.current = {};
+    const writes: Promise<void>[] = [];
     for (const [exerciseId, text] of Object.entries(pending)) {
       const debounce = pinnedNoteDebounceRef.current[exerciseId];
       if (debounce) {
         clearTimeout(debounce);
         delete pinnedNoteDebounceRef.current[exerciseId];
       }
-      void updateExerciseNote(exerciseId, text);
+      writes.push(updateExerciseNote(exerciseId, text));
     }
-    pinnedNotePendingFlushRef.current = {};
+    await Promise.all(writes);
   }, []);
 
   // Cleanup: flush any pending pinned-note drafts on unmount.
   useEffect(() => {
-    return () => { flushAllPinnedNotes(); };
+    return () => { void flushAllPinnedNotes(); };
   }, [flushAllPinnedNotes]);
 
   // BLD-553 battery fix: pause setInterval when app is backgrounded. On some
@@ -211,11 +213,11 @@ export function useSessionActions({
         sessionBreadcrumb("session.appstate.background");
         stop();
         // BLD-1028: flush any pending pinned-note drafts on background.
-        flushAllPinnedNotes();
+        void flushAllPinnedNotes();
       } else if (next === "inactive") {
         sessionBreadcrumb("session.appstate.inactive");
         stop();
-        flushAllPinnedNotes();
+        void flushAllPinnedNotes();
       } else {
         stop();
       }
@@ -886,7 +888,7 @@ export function useSessionActions({
       `Duration: ${formatTime(elapsed)}`,
       async () => {
         // BLD-1028: flush any pending pinned-note drafts before completing.
-        flushAllPinnedNotes();
+        await flushAllPinnedNotes();
         await completeSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });

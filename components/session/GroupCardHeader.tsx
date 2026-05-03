@@ -292,7 +292,6 @@ function GroupCardHeaderInner({
           candidateDate={group.pinnedNoteBackfill.date}
           onCopy={(exId, text) => {
             onBackfillCopy(exId, text);
-            onPinnedNoteSave(exId, text);
             setPinnedNoteOpen(false);
           }}
           onDismiss={onBackfillDismiss}

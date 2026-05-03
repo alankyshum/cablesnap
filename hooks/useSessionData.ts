@@ -131,10 +131,9 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           exercise_position: s.exercise_position ?? 0,
           exerciseCategory: ex?.category ?? null,
           pinnedNote: exerciseNotes[s.exercise_id]?.notes ?? null,
-          // Backfill candidate is lazy-loaded when the header mounts (see
-          // useSessionActions.handleLoadBackfill), not here — avoids an
-          // extra DB query per exercise on every session reload.
-          pinnedNoteBackfill: undefined,
+          // If this exercise was already dismissed, initialize as null (never show backfill).
+          // Otherwise use undefined so the header lazy-loads the candidate on mount.
+          pinnedNoteBackfill: exerciseNotes[s.exercise_id]?.dismissed ? null : undefined,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(

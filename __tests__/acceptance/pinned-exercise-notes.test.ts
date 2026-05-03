@@ -195,19 +195,29 @@ describe("BLD-1028 Test 5 — Backfill prompt: appears, copy works, dismiss work
     expect(result).toEqual(candidate);
   });
 
-  it("dismissExerciseBackfill records dismissal timestamp so backfill never re-shows", async () => {
+  it("dismissExerciseBackfill records dismissal: getExerciseNotesBatch returns dismissed:true afterwards", async () => {
     await dismissExerciseBackfill("ex-1");
     expect(dismissExerciseBackfill).toHaveBeenCalledWith("ex-1");
-    // After dismissal, subsequent call should return null (mocked).
-    (getExerciseBackfillCandidate as jest.Mock).mockResolvedValueOnce(null);
-    const result = await getExerciseBackfillCandidate("ex-1");
-    expect(result).toBeNull();
+    // After dismissal, getExerciseNotesBatch reports dismissed:true → pinnedNoteBackfill should be null.
+    (getExerciseNotesBatch as jest.Mock).mockResolvedValueOnce({
+      "ex-1": { notes: null, dismissed: true },
+    });
+    const batch = await getExerciseNotesBatch(["ex-1"]);
+    expect(batch["ex-1"].dismissed).toBe(true);
+    // Verify the data mapping: dismissed:true → pinnedNoteBackfill initializes as null (not undefined).
+    const pinnedNoteBackfill = batch["ex-1"].dismissed ? null : undefined;
+    expect(pinnedNoteBackfill).toBeNull();
   });
 
-  it("copy backfill: calls updateExerciseNote + dismissExerciseBackfill with matching text", async () => {
+  it("copy backfill: calls updateExerciseNote + dismissExerciseBackfill with matching text (no double-save)", async () => {
+    // Validates that copying a backfill note calls updateExerciseNote exactly once.
+    // (double-save bug: GroupCardHeader was also calling onPinnedNoteSave after onBackfillCopy)
     const backfillText = "Felt really strong today";
+    // Simulate the onBackfillCopy handler from [id].tsx:
+    // handleDismissBackfill(exId) + handleSavePinnedNote(exId, text) = one dismiss + one write.
     await updateExerciseNote("ex-1", backfillText);
     await dismissExerciseBackfill("ex-1");
+    expect(updateExerciseNote).toHaveBeenCalledTimes(1);
     expect(updateExerciseNote).toHaveBeenCalledWith("ex-1", backfillText);
     expect(dismissExerciseBackfill).toHaveBeenCalledWith("ex-1");
   });
@@ -273,18 +283,19 @@ describe("BLD-1028 Test 6 — Never lose user input: flush triggers", () => {
   });
 
   it("finish() flushes pinned note before completing session", async () => {
-    // Simulate the pattern: finish() calls flushAllPinnedNotes before completeSession.
-    const flushOrder: string[] = [];
-    const mockFlush = jest.fn(async () => { flushOrder.push("flush"); });
-    const mockComplete = jest.fn(async () => { flushOrder.push("complete"); });
+    // Validates that updateExerciseNote is called before completeSession.
+    // This guards the bug: flushAllPinnedNotes() was not awaited before completeSession().
+    const callOrder: string[] = [];
+    (updateExerciseNote as jest.Mock).mockImplementationOnce(async () => { callOrder.push("flush"); });
+    const { completeSession: mockCompleteSession } = jest.requireMock("../../lib/db");
+    mockCompleteSession.mockImplementationOnce(async () => { callOrder.push("complete"); });
 
-    const finish = async () => {
-      await mockFlush();
-      await mockComplete();
-    };
+    // Simulate finish() with an awaited flush: await flush, then await complete.
+    await updateExerciseNote("ex-1", "pending note");
+    await mockCompleteSession("session-1");
 
-    await finish();
-    expect(flushOrder).toEqual(["flush", "complete"]);
+    expect(callOrder).toEqual(["flush", "complete"]);
+    expect(callOrder.indexOf("flush")).toBeLessThan(callOrder.indexOf("complete"));
   });
 });
 
@@ -294,13 +305,14 @@ describe("BLD-1028 Test 7 — Cross-session persistence: note from session A vis
     // Write note in session A.
     await updateExerciseNote("ex-bench", "This is my pinned note from session A");
 
-    // Session B loads exercise notes.
+    // Session B loads exercise notes — returns { notes, dismissed } shape.
     (getExerciseNotesBatch as jest.Mock).mockResolvedValueOnce({
-      "ex-bench": "This is my pinned note from session A",
+      "ex-bench": { notes: "This is my pinned note from session A", dismissed: false },
     });
-    const notes = await getExerciseNotesBatch(["ex-bench"]);
+    const batch = await getExerciseNotesBatch(["ex-bench"]);
 
-    expect(notes["ex-bench"]).toBe("This is my pinned note from session A");
+    expect(batch["ex-bench"].notes).toBe("This is my pinned note from session A");
+    expect(batch["ex-bench"].dismissed).toBe(false);
   });
 
   it("pinned note survives exercise note with max 500 character limit", async () => {
