@@ -944,7 +944,11 @@ export async function syncTemplateFromSession(
 /**
  * Undo the template writeback performed by syncTemplateFromSession.
  *
- * For kind="updated": restores each changed template exercise to its pre-sync state.
+ * For kind="updated": re-reads each changed exercise row and verifies it still
+ *   matches the newTargetSets/newSetTypes snapshot from the sync. If any row has
+ *   since been updated (another session synced on top), returns { blocked: true }
+ *   and performs no writes. Otherwise rolls back all rows atomically in a single
+ *   transaction.
  * For kind="cloned": deletes the clone (if no other sessions reference it) and
  *   restores the session's template_id to the original starter. Returns
  *   { blocked: true } if another session already uses the clone.
@@ -956,16 +960,40 @@ export async function undoTemplateSyncFromSession(
   const db = await getDrizzle();
 
   if (result.kind === "updated") {
+    // Pre-rollback check: read current values for every changed exercise row and
+    // verify they still match the newTargetSets/newSetTypes we recorded at sync
+    // time. Any mismatch means a newer edit landed on top → abort all-or-nothing.
     for (const change of result.changes) {
-      await db
-        .update(templateExercises)
-        .set({ target_sets: change.oldTargetSets, set_types: JSON.stringify(change.oldSetTypes) })
-        .where(eq(templateExercises.id, change.templateExerciseId));
+      const current = await db
+        .select({ target_sets: templateExercises.target_sets, set_types: templateExercises.set_types })
+        .from(templateExercises)
+        .where(eq(templateExercises.id, change.templateExerciseId))
+        .get();
+
+      if (!current) return { blocked: true };
+      const currentSets = current.target_sets ?? 0;
+      const currentTypes = current.set_types ?? "[]";
+      if (
+        currentSets !== change.newTargetSets ||
+        currentTypes !== JSON.stringify(change.newSetTypes)
+      ) {
+        return { blocked: true };
+      }
     }
-    await db
-      .update(workoutTemplates)
-      .set({ updated_at: Date.now() })
-      .where(eq(workoutTemplates.id, result.templateId));
+
+    // All rows still match — roll back atomically
+    await withTransaction(async () => {
+      for (const change of result.changes) {
+        await db
+          .update(templateExercises)
+          .set({ target_sets: change.oldTargetSets, set_types: JSON.stringify(change.oldSetTypes) })
+          .where(eq(templateExercises.id, change.templateExerciseId));
+      }
+      await db
+        .update(workoutTemplates)
+        .set({ updated_at: Date.now() })
+        .where(eq(workoutTemplates.id, result.templateId));
+    });
     return;
   }
 

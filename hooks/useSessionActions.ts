@@ -818,10 +818,14 @@ export function useSessionActions({
                   try {
                     const undoResult = await undoTemplateSyncFromSession(syncResult);
                     if (undoResult?.blocked) {
-                      showToast("Can't undo — template already in use");
+                      const blockedMsg =
+                        syncResult.kind === "updated"
+                          ? "Can't undo — template was edited again"
+                          : "Can't undo — template already in use";
+                      showToast(blockedMsg, { duration: 4000 });
                     }
                   } catch {
-                    // Undo failure is non-blocking
+                    showError("Could not undo template update");
                   }
                 },
               },

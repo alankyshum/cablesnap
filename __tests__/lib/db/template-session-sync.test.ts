@@ -372,12 +372,86 @@ describe("undoTemplateSyncFromSession", () => {
         },
       ],
     };
+    // Queue the pre-check read — matches newTargetSets/newSetTypes (no concurrent edit)
+    queueGet({ target_sets: 4, set_types: JSON.stringify(["normal", "normal", "normal", "normal"]) });
     await undoTemplateSyncFromSession(syncResult);
     const calls = updateCalls();
     // update called twice: once for the exercise row, once for the template timestamp
     expect(calls.length).toBe(2);
     expect(calls[0].vals.target_sets).toBe(3);
     expect(JSON.parse(calls[0].vals.set_types)).toEqual(["normal", "normal", "normal"]);
+  });
+
+  it("undo updated: blocked when target_sets has drifted (concurrent edit)", async () => {
+    const syncResult = {
+      kind: "updated" as const,
+      templateId: "tpl-1",
+      changes: [
+        {
+          templateExerciseId: "te1",
+          oldTargetSets: 3,
+          oldSetTypes: ["normal", "normal", "normal"],
+          newTargetSets: 4,
+          newSetTypes: ["normal", "normal", "normal", "normal"],
+        },
+      ],
+    };
+    // Queue a drifted value — target_sets is now 5 (another session synced)
+    queueGet({ target_sets: 5, set_types: JSON.stringify(["normal", "normal", "normal", "normal", "normal"]) });
+    const undoResult = await undoTemplateSyncFromSession(syncResult);
+    expect(undoResult).toEqual({ blocked: true });
+    expect(updateCalls().length).toBe(0);
+  });
+
+  it("undo updated: blocked when set_types has drifted (target_sets unchanged)", async () => {
+    const syncResult = {
+      kind: "updated" as const,
+      templateId: "tpl-1",
+      changes: [
+        {
+          templateExerciseId: "te1",
+          oldTargetSets: 3,
+          oldSetTypes: ["normal", "normal", "normal"],
+          newTargetSets: 4,
+          newSetTypes: ["normal", "normal", "normal", "normal"],
+        },
+      ],
+    };
+    // Queue: target_sets still 4, but set_types changed to warmup+normal+normal+normal
+    queueGet({ target_sets: 4, set_types: JSON.stringify(["warmup", "normal", "normal", "normal"]) });
+    const undoResult = await undoTemplateSyncFromSession(syncResult);
+    expect(undoResult).toEqual({ blocked: true });
+    expect(updateCalls().length).toBe(0);
+  });
+
+  it("undo updated: all-or-nothing — first exercise clean but second drifted → blocked, no writes", async () => {
+    const syncResult = {
+      kind: "updated" as const,
+      templateId: "tpl-1",
+      changes: [
+        {
+          templateExerciseId: "te1",
+          oldTargetSets: 3,
+          oldSetTypes: ["normal", "normal", "normal"],
+          newTargetSets: 4,
+          newSetTypes: ["normal", "normal", "normal", "normal"],
+        },
+        {
+          templateExerciseId: "te2",
+          oldTargetSets: 2,
+          oldSetTypes: ["normal", "normal"],
+          newTargetSets: 3,
+          newSetTypes: ["normal", "normal", "normal"],
+        },
+      ],
+    };
+    // First exercise: matches (clean)
+    queueGet({ target_sets: 4, set_types: JSON.stringify(["normal", "normal", "normal", "normal"]) });
+    // Second exercise: drifted (another session wrote 4 sets instead of 3)
+    queueGet({ target_sets: 4, set_types: JSON.stringify(["normal", "normal", "normal", "normal"]) });
+    const undoResult = await undoTemplateSyncFromSession(syncResult);
+    expect(undoResult).toEqual({ blocked: true });
+    expect(updateCalls().length).toBe(0);
   });
 
   it("undo cloned: deletes clone and restores session template_id", async () => {
