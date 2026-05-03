@@ -9,3 +9,4 @@ module.exports = {
   clearSharedPayloads: jest.fn(),
   useIncomingShare: jest.fn(() => ({ isLoading: false, data: null })),
 };
+
