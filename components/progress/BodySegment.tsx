@@ -13,7 +13,6 @@ import type { BodyWeight } from "../../lib/types";
 import { toDisplay } from "../../lib/units";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import { useBodyMetrics } from "@/hooks/useBodyMetrics";
 import WeightLogModal from "./WeightLogModal";
 import {
@@ -109,7 +108,6 @@ function BodyModal({
 
 export default function BodySegment() {
   const colors = useThemeColors();
-  const tabBarHeight = useFloatingTabBarHeight();
 
   const {
     settings,
@@ -204,7 +202,6 @@ export default function BodySegment() {
         renderItem={renderEntry}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
         ListHeaderComponent={
           <>
             {latest && (
@@ -249,7 +246,7 @@ export default function BodySegment() {
       <FAB
         icon="plus"
         onPress={() => setModal(true)}
-        style={[styles.fab, { backgroundColor: colors.primary, bottom: tabBarHeight + 16 }]}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
         color={colors.onPrimary}
         accessibilityLabel="Log body weight"
       />
