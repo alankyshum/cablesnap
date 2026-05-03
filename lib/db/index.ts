@@ -42,6 +42,8 @@ export {
   importCoachTemplates,
 } from "./templates";
 
+export { exportCoachTemplate } from "./templates-export";
+
 export {
   startSession,
   getTemplateDurationEstimates,

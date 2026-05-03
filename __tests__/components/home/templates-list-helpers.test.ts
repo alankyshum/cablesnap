@@ -64,47 +64,69 @@ describe("buildMenuItems", () => {
 
   const noop = () => {};
 
-  it("returns only Duplicate for starter templates", () => {
-    const items = buildMenuItems(true, mockTemplate, noop, noop, noop);
-    expect(items).toHaveLength(1);
+  // --- Starter templates ---
+
+  it("returns Duplicate + Export for starter templates", () => {
+    const items = buildMenuItems(true, mockTemplate, noop, noop, noop, noop);
+    expect(items).toHaveLength(2);
     expect(items[0].label).toBe("Duplicate");
     expect(items[0].icon).toBe("content-copy");
+    expect(items[1].label).toBe("Export");
+    expect(items[1].icon).toBe("export-variant");
   });
 
-  it("returns Edit + Duplicate + Delete for user templates", () => {
-    const items = buildMenuItems(false, mockTemplate, noop, noop, noop);
-    expect(items).toHaveLength(3);
+  it("calls onOptions with template when Duplicate is pressed (starter)", () => {
+    const onOptions = jest.fn();
+    const items = buildMenuItems(true, mockTemplate, onOptions, noop, noop, noop);
+    items[0].onPress();
+    expect(onOptions).toHaveBeenCalledWith(mockTemplate);
+  });
+
+  it("calls onExport with template id when Export is pressed (starter)", () => {
+    const onExport = jest.fn();
+    const items = buildMenuItems(true, mockTemplate, noop, noop, noop, onExport);
+    items[1].onPress();
+    expect(onExport).toHaveBeenCalledWith("tpl-1");
+  });
+
+  // --- User (non-starter) templates ---
+
+  it("returns Edit + Duplicate + Export + Delete for user templates", () => {
+    const items = buildMenuItems(false, mockTemplate, noop, noop, noop, noop);
+    expect(items).toHaveLength(4);
     expect(items[0].label).toBe("Edit");
     expect(items[1].label).toBe("Duplicate");
-    expect(items[2].label).toBe("Delete");
-    expect(items[2].destructive).toBe(true);
+    expect(items[2].label).toBe("Export");
+    expect(items[2].icon).toBe("export-variant");
+    expect(items[3].label).toBe("Delete");
+    expect(items[3].destructive).toBe(true);
   });
 
   it("calls onEdit with template id when Edit is pressed", () => {
     const onEdit = jest.fn();
-    const items = buildMenuItems(false, mockTemplate, noop, onEdit, noop);
+    const items = buildMenuItems(false, mockTemplate, noop, onEdit, noop, noop);
     items[0].onPress();
     expect(onEdit).toHaveBeenCalledWith("tpl-1");
   });
 
   it("calls onOptions with template when Duplicate is pressed (user template)", () => {
     const onOptions = jest.fn();
-    const items = buildMenuItems(false, mockTemplate, onOptions, noop, noop);
+    const items = buildMenuItems(false, mockTemplate, onOptions, noop, noop, noop);
     items[1].onPress();
     expect(onOptions).toHaveBeenCalledWith(mockTemplate);
   });
 
-  it("calls onDelete with template when Delete is pressed", () => {
-    const onDelete = jest.fn();
-    const items = buildMenuItems(false, mockTemplate, noop, noop, onDelete);
+  it("calls onExport with template id when Export is pressed (user template)", () => {
+    const onExport = jest.fn();
+    const items = buildMenuItems(false, mockTemplate, noop, noop, noop, onExport);
     items[2].onPress();
-    expect(onDelete).toHaveBeenCalledWith(mockTemplate);
+    expect(onExport).toHaveBeenCalledWith("tpl-1");
   });
 
-  it("calls onOptions with template when Duplicate is pressed (starter)", () => {
-    const onOptions = jest.fn();
-    const items = buildMenuItems(true, mockTemplate, onOptions, noop, noop);
-    items[0].onPress();
-    expect(onOptions).toHaveBeenCalledWith(mockTemplate);
+  it("calls onDelete with template when Delete is pressed", () => {
+    const onDelete = jest.fn();
+    const items = buildMenuItems(false, mockTemplate, noop, noop, onDelete, noop);
+    items[3].onPress();
+    expect(onDelete).toHaveBeenCalledWith(mockTemplate);
   });
 });

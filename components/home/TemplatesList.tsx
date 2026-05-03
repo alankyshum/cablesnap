@@ -26,6 +26,7 @@ type Props = {
   onOptions: (t: WorkoutTemplate) => void;
   onEdit: (id: string) => void;
   onImport: () => void;
+  onExport: (id: string) => void;
 };
 
 export function buildMetaBadges(
@@ -50,17 +51,22 @@ export function buildMenuItems(
   item: WorkoutTemplate,
   onOptions: (t: WorkoutTemplate) => void,
   onEdit: (id: string) => void,
-  onDelete: (t: WorkoutTemplate) => void
+  onDelete: (t: WorkoutTemplate) => void,
+  onExport: (id: string) => void
 ): FlowCardMenuItem[] {
-  if (isStarter) return [{ label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) }];
+  if (isStarter) return [
+    { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
+    { label: "Export", icon: "export-variant", onPress: () => onExport(item.id) },
+  ];
   return [
     { label: "Edit", icon: "pencil", onPress: () => onEdit(item.id) },
     { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
+    { label: "Export", icon: "export-variant", onPress: () => onExport(item.id) },
     { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
   ];
 }
 
-export function TemplatesList({ colors, templates, counts, durationEstimates, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit, onImport }: Props) {
+export function TemplatesList({ colors, templates, counts, durationEstimates, starterMeta, templateReadiness, showReadiness, onStart, onDelete, onOptions, onEdit, onImport, onExport }: Props) {
   const router = useRouter();
   return (
     <View style={styles.section}>
@@ -91,7 +97,7 @@ export function TemplatesList({ colors, templates, counts, durationEstimates, st
             if (meta?.recommended) badges.push({ label: "RECOMMENDED", type: "recommended" });
             const readiness = !isStarter && showReadiness ? (templateReadiness[item.id]?.badge ?? null) : null;
             const displayName = meta?.name || item.name;
-            const menuItems = buildMenuItems(isStarter, item, onOptions, onEdit, onDelete);
+            const menuItems = buildMenuItems(isStarter, item, onOptions, onEdit, onDelete, onExport);
             const durationEst = !meta ? durationEstimates[item.id] : null;
             const spokenDuration = durationEst != null ? `, ${formatSpokenDuration(durationEst)}` : "";
             return (
