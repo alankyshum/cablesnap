@@ -97,7 +97,7 @@ jobs:
       # clear notice — same pattern as the "no new commits" exit above. The
       # only escape hatch is to either curate the section or cancel the run.
       - name: Gate on CHANGELOG.md `## Unreleased` section
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true'
         id: changelog_gate
         run: |
           set -euo pipefail
