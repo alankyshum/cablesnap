@@ -17,7 +17,18 @@ jest.mock("expo-sqlite", () => ({
       getAllAsync: jest.fn().mockResolvedValue([]),
       getFirstAsync: jest.fn().mockResolvedValue({ count: 10 }),
       runAsync: jest.fn().mockResolvedValue({ changes: 1 }),
-      withTransactionAsync: jest.fn(async (cb) => cb()),
+      withTransactionAsync: jest.fn(async (cb) => {
+        const g = globalThis as any;
+        g.__mockTransactionCallCount = (g.__mockTransactionCallCount || 0) + 1;
+        // Track which get/update indices happen inside this transaction
+        const getsBefore = (g.__mockGetQueue || []).length;
+        const updatesBefore = (g.__mockUpdateCalls || []).length;
+        await cb();
+        const getsConsumedInTx = getsBefore - (g.__mockGetQueue || []).length;
+        const updatesInTx = (g.__mockUpdateCalls || []).length - updatesBefore;
+        g.__mockLastTxGetCount = getsConsumedInTx;
+        g.__mockLastTxUpdateCount = updatesInTx;
+      }),
       prepareAsync: jest.fn().mockResolvedValue({
         executeAsync: jest.fn().mockResolvedValue(undefined),
         finalizeAsync: jest.fn().mockResolvedValue(undefined),
@@ -98,6 +109,9 @@ beforeEach(async () => {
   (globalThis as any).__mockUpdateCalls = [];
   (globalThis as any).__mockInsertCalls = [];
   (globalThis as any).__mockDeleteCalls = [];
+  (globalThis as any).__mockTransactionCallCount = 0;
+  (globalThis as any).__mockLastTxGetCount = 0;
+  (globalThis as any).__mockLastTxUpdateCount = 0;
   await initDb();
 });
 
@@ -133,6 +147,20 @@ function insertCalls(): any[] {
 
 function deleteCalls(): any[] {
   return (globalThis as any).__mockDeleteCalls || [];
+}
+
+function transactionCallCount(): number {
+  return (globalThis as any).__mockTransactionCallCount || 0;
+}
+
+/** Number of .get() calls consumed inside the last withTransactionAsync callback */
+function lastTxGetCount(): number {
+  return (globalThis as any).__mockLastTxGetCount || 0;
+}
+
+/** Number of update calls recorded inside the last withTransactionAsync callback */
+function lastTxUpdateCount(): number {
+  return (globalThis as any).__mockLastTxUpdateCount || 0;
 }
 
 // ---- Tests ----
@@ -451,6 +479,61 @@ describe("undoTemplateSyncFromSession", () => {
     queueGet({ target_sets: 4, set_types: JSON.stringify(["normal", "normal", "normal", "normal"]) });
     const undoResult = await undoTemplateSyncFromSession(syncResult);
     expect(undoResult).toEqual({ blocked: true });
+    expect(updateCalls().length).toBe(0);
+  });
+
+  it("undo updated: pre-check reads and rollback writes run inside the same transaction (atomicity)", async () => {
+    // This test would fail if reads were outside withTransaction (lastTxGetCount would be 0)
+    const syncResult = {
+      kind: "updated" as const,
+      templateId: "tpl-1",
+      changes: [
+        {
+          templateExerciseId: "te1",
+          oldTargetSets: 3,
+          oldSetTypes: ["normal", "normal", "normal"],
+          newTargetSets: 4,
+          newSetTypes: ["normal", "normal", "normal", "normal"],
+        },
+      ],
+    };
+    // Matches — happy path so writes proceed
+    queueGet({ target_sets: 4, set_types: JSON.stringify(["normal", "normal", "normal", "normal"]) });
+    await undoTemplateSyncFromSession(syncResult);
+
+    // Exactly one withTransactionAsync call for kind=updated
+    expect(transactionCallCount()).toBe(1);
+    // The pre-check GET (1) was consumed inside that transaction
+    expect(lastTxGetCount()).toBe(1);
+    // The rollback writes (exercise + template timestamp = 2) were also inside that transaction
+    expect(lastTxUpdateCount()).toBe(2);
+  });
+
+  it("undo updated: pre-check reads run inside transaction even when blocked (no writes)", async () => {
+    const syncResult = {
+      kind: "updated" as const,
+      templateId: "tpl-1",
+      changes: [
+        {
+          templateExerciseId: "te1",
+          oldTargetSets: 3,
+          oldSetTypes: ["normal", "normal", "normal"],
+          newTargetSets: 4,
+          newSetTypes: ["normal", "normal", "normal", "normal"],
+        },
+      ],
+    };
+    // Drifted — undo must be blocked
+    queueGet({ target_sets: 5, set_types: JSON.stringify(["normal", "normal", "normal", "normal", "normal"]) });
+    const undoResult = await undoTemplateSyncFromSession(syncResult);
+
+    expect(undoResult).toEqual({ blocked: true });
+    // Still called withTransactionAsync (reads were inside it)
+    expect(transactionCallCount()).toBe(1);
+    // GET was consumed inside the transaction
+    expect(lastTxGetCount()).toBe(1);
+    // No writes issued
+    expect(lastTxUpdateCount()).toBe(0);
     expect(updateCalls().length).toBe(0);
   });
 

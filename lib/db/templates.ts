@@ -960,29 +960,33 @@ export async function undoTemplateSyncFromSession(
   const db = await getDrizzle();
 
   if (result.kind === "updated") {
-    // Pre-rollback check: read current values for every changed exercise row and
-    // verify they still match the newTargetSets/newSetTypes we recorded at sync
-    // time. Any mismatch means a newer edit landed on top → abort all-or-nothing.
-    for (const change of result.changes) {
-      const current = await db
-        .select({ target_sets: templateExercises.target_sets, set_types: templateExercises.set_types })
-        .from(templateExercises)
-        .where(eq(templateExercises.id, change.templateExerciseId))
-        .get();
-
-      if (!current) return { blocked: true };
-      const currentSets = current.target_sets ?? 0;
-      const currentTypes = current.set_types ?? "[]";
-      if (
-        currentSets !== change.newTargetSets ||
-        currentTypes !== JSON.stringify(change.newSetTypes)
-      ) {
-        return { blocked: true };
-      }
-    }
-
-    // All rows still match — roll back atomically
+    // Run the pre-check reads and the rollback writes inside a single transaction
+    // so no concurrent session can slip a write between our snapshot comparison
+    // and our rollback. If any row has drifted we abort without writing anything
+    // (all-or-nothing).
+    let blocked = false;
     await withTransaction(async () => {
+      // Phase 1 — verify every changed row still matches the sync snapshot.
+      for (const change of result.changes) {
+        const current = await db
+          .select({ target_sets: templateExercises.target_sets, set_types: templateExercises.set_types })
+          .from(templateExercises)
+          .where(eq(templateExercises.id, change.templateExerciseId))
+          .get();
+
+        const currentSets = current?.target_sets ?? 0;
+        const currentTypes = current?.set_types ?? "[]";
+        if (
+          !current ||
+          currentSets !== change.newTargetSets ||
+          currentTypes !== JSON.stringify(change.newSetTypes)
+        ) {
+          blocked = true;
+          return; // exit callback — transaction commits empty (no writes)
+        }
+      }
+
+      // Phase 2 — all rows match; roll back to old values.
       for (const change of result.changes) {
         await db
           .update(templateExercises)
@@ -994,6 +998,7 @@ export async function undoTemplateSyncFromSession(
         .set({ updated_at: Date.now() })
         .where(eq(workoutTemplates.id, result.templateId));
     });
+    if (blocked) return { blocked: true };
     return;
   }
 
