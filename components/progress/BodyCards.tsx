@@ -315,7 +315,7 @@ export function ProgressPhotosCard() {
         </Text>
       </View>
       <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-        Track your visual transformation
+        Document your strength journey over time
       </Text>
     </Pressable>
   );

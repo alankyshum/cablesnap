@@ -47,9 +47,16 @@ export default function WeightLogModal({
         <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <Text
             variant="title"
-            style={{ color: colors.onSurface, marginBottom: 16 }}
+            style={{ color: colors.onSurface, marginBottom: 8 }}
           >
             Log Weight
+          </Text>
+          <Text
+            variant="caption"
+            style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}
+            accessibilityLabel="Optional. Use this for strength-relative-to-bodyweight tracking — never as a goal."
+          >
+            Optional. Use this for strength-relative-to-bodyweight tracking — never as a goal.
           </Text>
 
           <Input
