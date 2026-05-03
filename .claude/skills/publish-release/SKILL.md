@@ -376,6 +376,32 @@ gh auth switch --user kshum_LinkedIn
 
 Update this table after each release.
 
+## Scheduled Release CI Troubleshooting (BLD-981)
+
+The scheduled release workflow builds Play, F-Droid, and Wear APKs on GitHub
+Actions before publishing. Keep these CI-specific release lessons in mind when
+changing `.github/workflows/scheduled-release.yml`:
+
+- **Free disk immediately after checkout.** Hosted Ubuntu runners do not have
+  enough free space for `node_modules`, Gradle caches, generated native
+  projects, and Android emulator artifacts unless `jlumbroso/free-disk-space`
+  runs before installs/builds. Keep the Android SDK and tool cache; prune
+  dotnet, Haskell, large packages, Docker images, and swap.
+- **Keep emulator smoke-test logic in a standalone bash script.**
+  `reactivecircus/android-emulator-runner` executes each `script:` line through
+  `/bin/sh -c`, so multi-line functions, heredocs, shell blocks, and bash-only
+  `set -o pipefail` fail in surprising ways. Put complex checks in
+  `scripts/smoke-test-emulator.sh` and invoke it as one line.
+- **Use hard launch signals for release gating.** Android API 34 changed
+  `dumpsys activity activities` output enough that `state=RESUMED` may be
+  absent even when the app is running. Treat `pidof <package>` missing or
+  `logcat` containing `FATAL EXCEPTION` as failures; treat missing RESUMED
+  parsing as a warning after checking `mResumedActivity`.
+- **Retry pushes with rebase on fast-moving `main`.** Scheduled releases commit
+  version/changelog artifacts back to `main`; other agents can merge while the
+  build is running. Use a bounded push loop that rebases on non-fast-forward
+  rejections and sleeps with small jitter before retrying.
+
 ## Troubleshooting
 
 ### "Tag already exists"
