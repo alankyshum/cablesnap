@@ -1,0 +1,1 @@
+- Internal/CI: regression-catcher fixture migrated to wrapper-fixture pattern (BLD-1023).

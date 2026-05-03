@@ -85,8 +85,54 @@ jobs:
           echo "No new commits since ${{ steps.latest_tag.outputs.tag }}. Skipping release."
           exit 0
 
-      - name: Compute next version
+      # BLD-1027: CHANGELOG.md gate. The `publish-release` skill marks
+      # CHANGELOG.md as the *single source of truth* for release notes (in-app
+      # What's New, GitHub Release body, F-Droid sidecars). Before BLD-1027
+      # this workflow happily bumped versionCode every 12h without touching
+      # CHANGELOG.md, so v0.26.20–v0.26.22 escaped the gate with raw `git log`
+      # release notes and no F-Droid sidecars (see BLD-1026 diagnosis).
+      #
+      # Now: a populated `## Unreleased` section is *required* for the
+      # workflow to ship. If it's missing or empty, no-op the release with a
+      # clear notice — same pattern as the "no new commits" exit above. The
+      # only escape hatch is to either curate the section or cancel the run.
+      - name: Gate on CHANGELOG.md `## Unreleased` section
         if: steps.check_commits.outputs.has_new_commits == 'true'
+        id: changelog_gate
+        run: |
+          set -euo pipefail
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::CHANGELOG.md is missing — cannot release without curated notes."
+            exit 1
+          fi
+          # Extract body of the `## Unreleased` section: everything between
+          # `## Unreleased` and the next `## ` header. macOS/BSD-safe awk.
+          BODY=$(awk '
+            /^##[[:space:]]+Unreleased[[:space:]]*$/ { in_u = 1; next }
+            in_u && /^## / { exit }
+            in_u { print }
+          ' CHANGELOG.md)
+          # Strip whitespace + the placeholder sentinel used between releases.
+          STRIPPED=$(printf '%s\n' "$BODY" \
+            | sed -E 's/_No user-facing changes yet\._//I' \
+            | tr -d '[:space:]')
+          if [ -z "$STRIPPED" ]; then
+            echo "::notice::CHANGELOG.md has no curated '## Unreleased' content — skipping scheduled release."
+            echo "::notice::Add bullets to the '## Unreleased' section in CHANGELOG.md to ship the next version."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Curated '## Unreleased' content found — proceeding with release."
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+
+      - name: Stop here if CHANGELOG gate said skip
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release != 'true'
+        run: |
+          echo "CHANGELOG gate said skip. Exiting workflow successfully (no-op)."
+          exit 0
+
+      - name: Compute next version
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: next_version
         run: |
           TAG="${{ steps.latest_tag.outputs.tag }}"
@@ -110,7 +156,7 @@ jobs:
           echo "Next version: $NEXT"
 
       - name: Compute next version code
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: next_vcode
         run: |
           CURRENT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.persoack.cablesnap.yml | awk '{print $2}')
@@ -119,7 +165,7 @@ jobs:
           echo "Next version code: $NEXT"
 
       - name: Bump version in package.json
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           node -e "
@@ -130,7 +176,7 @@ jobs:
           "
 
       - name: Bump version in app.config.ts
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           VCODE="${{ steps.next_vcode.outputs.version_code }}"
@@ -138,28 +184,101 @@ jobs:
           sed -i "s/versionCode: [0-9]*/versionCode: $VCODE/" app.config.ts
 
       - name: Bump version in F-Droid metadata
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           VCODE="${{ steps.next_vcode.outputs.version_code }}"
           sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
           sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
 
+      # BLD-1027: Promote `## Unreleased` → `## vX.Y.Z — DATE` with the
+      # `<!-- versionCode: N -->` marker. This keeps CHANGELOG.md in sync
+      # with the version bumped above and recreates a fresh placeholder
+      # `## Unreleased` for the next cycle. macOS/BSD-safe awk.
+      - name: Promote `## Unreleased` to versioned section in CHANGELOG.md
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.next_version.outputs.version }}"
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
+          DATE=$(date -u +%Y-%m-%d)
+          NEW_HEADER="## v$VERSION — $DATE"
+          MARKER="<!-- versionCode: $VCODE -->"
+          PLACEHOLDER=$'## Unreleased\n\n_No user-facing changes yet._\n'
+
+          awk -v new_header="$NEW_HEADER" \
+              -v marker="$MARKER" \
+              -v placeholder="$PLACEHOLDER" '
+            BEGIN { promoted = 0 }
+            /^##[[:space:]]+Unreleased[[:space:]]*$/ && promoted == 0 {
+              printf "%s\n", placeholder
+              print new_header
+              print marker
+              promoted = 1
+              next
+            }
+            { print }
+          ' CHANGELOG.md > CHANGELOG.md.tmp
+          mv CHANGELOG.md.tmp CHANGELOG.md
+          echo "Promoted '## Unreleased' to '$NEW_HEADER' (versionCode $VCODE)"
+          # Sanity: top `## v<semver>` header must now match.
+          TOP=$(awk '/^## v[0-9]+\.[0-9]+\.[0-9]+/ { print; exit }' CHANGELOG.md)
+          echo "Top entry: $TOP"
+
+      # Setup Node + deps before changelog regen *and* the Android build —
+      # `npm run changelog:gen` (BLD-571) needs tsx, the Android build needs
+      # node_modules for `expo prebuild`. Keeping these here means we can
+      # commit the regenerated artifacts atomically with the version bump.
+      - name: Set up Node.js
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: npm ci
+
+      - name: Regenerate changelog artifacts (lib/changelog.generated.ts + F-Droid sidecars)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          npm run changelog:gen
+          # Sanity: the new versionCode sidecar must exist.
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
+          SIDECAR="fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/${VCODE}.txt"
+          if [ ! -s "$SIDECAR" ]; then
+            echo "::error::Expected F-Droid sidecar $SIDECAR to be written by changelog:gen but it is missing or empty."
+            exit 1
+          fi
+          echo "Wrote $SIDECAR ($(wc -c < "$SIDECAR") bytes)"
+
       - name: Generate release notes
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: release_notes
         run: |
-          TAG="${{ steps.latest_tag.outputs.tag }}"
+          # BLD-1027: read release-notes body from CHANGELOG.md (single source
+          # of truth — see publish-release SKILL Step 7). Replaces the
+          # synthesised `git log` output that shipped in v0.26.20–v0.26.22.
+          # macOS/BSD-safe awk: extract from the first `## v$VERSION` header
+          # up to (but not including) the next `## ` header.
+          set -euo pipefail
           VERSION="${{ steps.next_version.outputs.version }}"
+          BODY=$(awk -v v="$VERSION" '
+            $0 ~ "^## v"v"([^0-9]|$)" { in_section=1; next }
+            in_section && /^## / { exit }
+            in_section { print }
+          ' CHANGELOG.md)
+          if [ -z "$(printf '%s' "$BODY" | tr -d '[:space:]')" ]; then
+            echo "::error::CHANGELOG.md has an empty body for v$VERSION — refusing to ship."
+            exit 1
+          fi
           {
             echo 'notes<<NOTES_EOF'
             echo "## What's New"
             echo ""
-            if [ -z "$TAG" ]; then
-              git log --oneline | head -20
-            else
-              git log --oneline "$TAG"..HEAD
-            fi
+            echo "$BODY"
             echo ""
             echo "## Install"
             echo ""
@@ -180,12 +299,15 @@ jobs:
       # fingerprint verification — still run, so the signing path can be
       # exercised and independently verified before merge.
       - name: Commit and push
-        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref == 'refs/heads/main'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           git config user.name "CableSnap Release Bot"
           git config user.email "release-bot@cablesnap.app"
-          git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
+          git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
+            CHANGELOG.md \
+            lib/changelog.generated.ts \
+            fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
           if git diff --cached --quiet; then
             echo "Version files already at v$VERSION — skipping commit."
           else
@@ -214,7 +336,7 @@ jobs:
           fi
 
       - name: Dry-run notice (non-main ref)
-        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref != 'refs/heads/main'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref != 'refs/heads/main'
         run: |
           echo "::notice::Dry-run mode — ref is ${{ github.ref }}, not refs/heads/main."
           echo "::notice::Skipping 'Commit and push' and 'Create GitHub Release'; signed APK will be uploaded as a workflow artifact for review."
@@ -222,29 +344,22 @@ jobs:
       # --- Build APK BEFORE creating release (immutable releases block later uploads) ---
 
       - name: Set up JDK 17
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Android SDK
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         uses: android-actions/setup-android@v3
 
-      - name: Set up Node.js
-        if: steps.check_commits.outputs.has_new_commits == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        if: steps.check_commits.outputs.has_new_commits == 'true'
-        run: npm ci
+      # Node.js + npm install already happened earlier (before changelog
+      # promotion + regen). The cached node_modules are reused here for
+      # `expo prebuild` and the Android build.
 
       - name: Generate native project
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
           # Sentry Expo config plugin reads these at prebuild time to generate
           # android/sentry.properties. Missing values are handled gracefully
@@ -256,7 +371,7 @@ jobs:
         run: npx expo prebuild --clean --platform android
 
       - name: Boost Gradle JVM heap
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
           # expo prebuild --clean regenerates android/gradle.properties with
           # org.gradle.jvmargs=-Xmx2048m, which is borderline for
@@ -273,7 +388,7 @@ jobs:
           grep '^org.gradle.jvmargs=' "$PROPS"
 
       - name: Decode release keystore and write keystore.properties
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -296,7 +411,7 @@ jobs:
           echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
 
       - name: Build APK
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
           # Sentry Android Gradle plugin reads these to upload debug symbols +
           # source maps during assembleRelease. Missing SENTRY_AUTH_TOKEN is
@@ -337,7 +452,7 @@ jobs:
           ls -lh cablesnap.apk cablesnap-fdroid.apk cablesnap-wear.apk
 
       - name: AC10b — verify F-Droid APK contains zero GMS Wearable classes
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
           # Plan AC10b: the F-Droid flavor APK MUST NOT carry any
           # com/google/android/gms/wearable/* classes. We verify by listing
@@ -365,7 +480,7 @@ jobs:
           echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
 
       - name: Verify APK signature matches committed fingerprint
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
           set -euo pipefail
           BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/*/ 2>/dev/null | sort -V | tail -1)
@@ -435,7 +550,7 @@ jobs:
       # --- Emulator smoke test: verify APK launches without crashing ---
 
       - name: Android emulator smoke test
-        if: steps.check_commits.outputs.has_new_commits == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
         with:
           api-level: 34
@@ -455,7 +570,7 @@ jobs:
       # --- Create release WITH APK attached atomically ---
 
       - name: Upload dry-run signed APK + apksigner log (non-main ref)
-        if: always() && steps.check_commits.outputs.has_new_commits == 'true' && github.ref != 'refs/heads/main'
+        if: always() && steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref != 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: dry-run-signed-apk
@@ -468,7 +583,7 @@ jobs:
           retention-days: 14
 
       - name: Create GitHub Release with APK
-        if: steps.check_commits.outputs.has_new_commits == 'true' && github.ref == 'refs/heads/main'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           RELEASE_NOTES: ${{ steps.release_notes.outputs.notes }}

@@ -10,6 +10,24 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.22",
+    "date": "2026-05-03",
+    "versionCode": 92,
+    "body": "- Internal/CI: regression-catcher fixture migrated to wrapper-fixture pattern (BLD-1023)."
+  },
+  {
+    "version": "0.26.21",
+    "date": "2026-05-03",
+    "versionCode": 91,
+    "body": "- Internal/CI: routine release — no user-facing changes."
+  },
+  {
+    "version": "0.26.20",
+    "date": "2026-05-02",
+    "versionCode": 90,
+    "body": "### Added\n- Hydration tracking — log water in ml or fl oz from the Nutrition tab; configurable daily goal and preset volumes in Settings.\n- Workout templates now remember the training mode you pick per Voltra exercise; sessions started from the template open in the saved mode automatically.\n\n### Changed\n- Workout duration now starts when you log your first completed set, not the moment you tap Start (BLD-630).\n\n### Removed\n- Removed the **Eccentric** training mode chip and tempo tracking. Existing eccentric sets in your history are preserved as standard sets; other Voltra modes (Band, Damper, Isokinetic, Isometric, Custom, Rowing) are unchanged.\n\n### Internal/CI\n- Merge gate: comment-fallback approvals for lenient branch protection."
+  },
+  {
     "version": "0.26.19",
     "date": "2026-05-01",
     "versionCode": 76,
