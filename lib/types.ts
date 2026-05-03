@@ -224,6 +224,8 @@ export type WorkoutTemplate = {
   created_at: number;
   updated_at: number;
   is_starter?: boolean;
+  /** BLD-1000: true for curated-library templates shipped by the app. */
+  is_curated?: boolean;
   source?: TemplateSource;
   exercises?: TemplateExercise[];
 };

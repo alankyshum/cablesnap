@@ -90,7 +90,7 @@ export async function getTemplates(): Promise<WorkoutTemplate[]> {
     .select()
     .from(workoutTemplates)
     .orderBy(asc(workoutTemplates.is_starter), desc(workoutTemplates.created_at));
-  return rows.map((r) => ({ ...r, is_starter: r.is_starter === 1, source: (r.source ?? null) as TemplateSource }));
+  return rows.map((r) => ({ ...r, is_starter: r.is_starter === 1, is_curated: r.is_curated === 1, source: (r.source ?? null) as TemplateSource }));
 }
 
 export async function getTemplateById(
@@ -103,7 +103,7 @@ export async function getTemplateById(
     .where(eq(workoutTemplates.id, id))
     .get();
   if (!raw) return null;
-  const tpl: WorkoutTemplate = { ...raw, is_starter: raw.is_starter === 1, source: (raw.source ?? null) as TemplateSource };
+  const tpl: WorkoutTemplate = { ...raw, is_starter: raw.is_starter === 1, is_curated: raw.is_curated === 1, source: (raw.source ?? null) as TemplateSource };
 
   const rows = await db
     .select({
@@ -299,6 +299,15 @@ export async function duplicateProgram(id: string): Promise<string> {
     }
   }
 
+  // BLD-1000: fetch schedule rows so we can copy them into the new program.
+  const scheduleRows = await db
+    .select({
+      day_of_week: programSchedule.day_of_week,
+      template_id: programSchedule.template_id,
+    })
+    .from(programSchedule)
+    .where(eq(programSchedule.program_id, id));
+
   await withTransaction(async () => {
     await db.insert(programs).values({
       id: newId,
@@ -319,6 +328,16 @@ export async function duplicateProgram(id: string): Promise<string> {
         template_id: tplId,
         position: day.position,
         label: day.label,
+      });
+    }
+
+    // BLD-1000: copy weekly schedule, remapping template_id through templateCopies.
+    for (const row of scheduleRows) {
+      const tplId = templateCopies.get(row.template_id) ?? row.template_id;
+      await db.insert(programSchedule).values({
+        program_id: newId,
+        day_of_week: row.day_of_week,
+        template_id: tplId,
       });
     }
   });
