@@ -807,12 +807,19 @@ export function useSessionActions({
         try {
           const syncResult = await syncTemplateFromSession(id!);
           if (syncResult) {
-            showToast("Template updated from this session", {
+            const toastMsg =
+              syncResult.kind === "cloned"
+                ? "Saved as your template — Starter unchanged"
+                : "Template updated from this session";
+            showToast(toastMsg, {
               action: {
                 label: "Undo",
                 onPress: async () => {
                   try {
-                    await undoTemplateSyncFromSession(syncResult);
+                    const undoResult = await undoTemplateSyncFromSession(syncResult);
+                    if (undoResult?.blocked) {
+                      showToast("Can't undo — template already in use");
+                    }
                   } catch {
                     // Undo failure is non-blocking
                   }
