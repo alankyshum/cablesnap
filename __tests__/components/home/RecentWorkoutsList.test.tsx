@@ -25,25 +25,29 @@ const mockColors: Partial<ThemeColors> = {
 const shortSession: WorkoutSession = {
   id: "s1",
   name: "Push",
-  started_at: "2026-05-01T10:00:00Z",
+  started_at: 1746352800000,
+  clock_started_at: null,
+  completed_at: 1746356400000,
   duration_seconds: 3600,
   template_id: null,
-  notes: null,
-  rpe: null,
-  mood: null,
-  body_weight_kg: null,
+  notes: "",
+  rating: null,
+  edited_at: null,
+  import_batch_id: null,
 };
 
 const longNameSession: WorkoutSession = {
   id: "s2",
   name: "Full Body Hypertrophy — Upper Lower Split Day A",
-  started_at: "2026-05-02T10:00:00Z",
+  started_at: 1746439200000,
+  clock_started_at: null,
+  completed_at: 1746444600000,
   duration_seconds: 5400,
   template_id: null,
-  notes: null,
-  rpe: null,
-  mood: null,
-  body_weight_kg: null,
+  notes: "",
+  rating: null,
+  edited_at: null,
+  import_batch_id: null,
 };
 
 describe("RecentWorkoutsList", () => {
