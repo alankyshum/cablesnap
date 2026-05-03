@@ -90,6 +90,15 @@ jobs:
         # The pre-fix tree pre-dates the scenario harness; we layer our
         # scenario specs and seed hook on top so playwright can drive the
         # buggy MusclesWorkedCard render.
+        #
+        # We FORCE-OVERWRITE playwright.config.ts and copy serve-coop-coep.json
+        # because the pre-fix config (cce2ac1f) uses `expo start --web` with
+        # no COOP/COEP headers — that means no SharedArrayBuffer in the
+        # browser, expo-sqlite's WASM Web Worker throws, getDatabase()
+        # rejects, and our injected seedScenario() never runs (BLD-658
+        # context). Main's config uses `serve -s dist -c serve-coop-coep.json`
+        # under E2E_USE_STATIC=1, which is exactly what we want for fixture
+        # capture.
         run: |
           set -euo pipefail
           mkdir -p prefix-tree/e2e/scenarios prefix-tree/lib/db
@@ -97,9 +106,16 @@ jobs:
           if [ -f main-tree/lib/db/test-seed.ts ]; then
             cp main-tree/lib/db/test-seed.ts prefix-tree/lib/db/test-seed.ts
           fi
-          # Carry over the playwright config from main if pre-fix tree lacks one.
-          if [ ! -f prefix-tree/playwright.config.ts ] && [ -f main-tree/playwright.config.ts ]; then
+          # Always overwrite playwright.config.ts so we get the static-serve
+          # + COOP/COEP webServer (BLD-658). The pre-fix config's
+          # `expo start --web` path produces a broken SAB-less page.
+          if [ -f main-tree/playwright.config.ts ]; then
             cp main-tree/playwright.config.ts prefix-tree/playwright.config.ts
+          fi
+          # Copy the COOP/COEP serve config the playwright webServer command
+          # references (path.resolve(__dirname, "e2e/serve-coop-coep.json")).
+          if [ -f main-tree/e2e/serve-coop-coep.json ]; then
+            cp main-tree/e2e/serve-coop-coep.json prefix-tree/e2e/serve-coop-coep.json
           fi
 
       - name: Wire seedScenario() into pre-fix useAppInit.ts (BLD-1022)

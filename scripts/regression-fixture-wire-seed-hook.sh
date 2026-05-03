@@ -55,13 +55,28 @@ cat >"$INJECT" <<'INJECTION'
         // is appended by scripts/regression-fixture-wire-seed-hook.sh on
         // a throwaway pre-fix checkout — it never lands in main.
         if (Platform.OS === "web" && typeof window !== "undefined" && (window as any).__TEST_SCENARIO__) {
+          // eslint-disable-next-line no-console
+          console.log("[fixture-capture] seedScenario starting:", (window as any).__TEST_SCENARIO__);
           try {
             const mod = await import("../lib/db/test-seed");
             await mod.seedScenario();
+            // eslint-disable-next-line no-console
+            console.log("[fixture-capture] seedScenario completed");
           } catch (e) {
             // eslint-disable-next-line no-console
             console.error("[fixture-capture] seedScenario failed:", e);
+            // Surface failure as a body attribute so the playwright trace
+            // shows which path went wrong (vs. silent timeout on the gate).
+            if (typeof document !== "undefined" && document.body) {
+              document.body.dataset.fixtureCaptureError =
+                e instanceof Error ? e.message : String(e);
+            }
           }
+        } else if (Platform.OS === "web" && typeof window !== "undefined") {
+          // eslint-disable-next-line no-console
+          console.log(
+            "[fixture-capture] no __TEST_SCENARIO__ on window — guard skipped.",
+          );
         }
 INJECTION
 
