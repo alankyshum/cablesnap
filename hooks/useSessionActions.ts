@@ -23,6 +23,8 @@ import {
   getGoalForExercise,
   achieveGoal,
   getCurrentBestWeight,
+  syncTemplateFromSession,
+  undoTemplateSyncFromSession,
 } from "../lib/db";
 import {
   getLastBodyweightModifier,
@@ -82,7 +84,7 @@ type Params = {
   startRestWithDuration: (secs: number) => void;
   startRestWithBreakdown: (breakdown: RestBreakdown) => void;
   session: { started_at: number; clock_started_at?: number | null; name: string } | null;
-  showToast: (msg: string) => void;
+  showToast: (msg: string, opts?: { action?: { label: string; onPress: () => void | Promise<void> }; duration?: number }) => void;
   showError: (msg: string) => void;
   triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
   unit?: "kg" | "lb";
@@ -800,6 +802,39 @@ export function useSessionActions({
         await completeSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
+
+        // Sync session edits (set count + set types) back to originating template (BLD-1038)
+        try {
+          const syncResult = await syncTemplateFromSession(id!);
+          if (syncResult) {
+            const toastMsg =
+              syncResult.kind === "cloned"
+                ? "Saved as your template — Starter unchanged"
+                : "Template updated from this session";
+            showToast(toastMsg, {
+              action: {
+                label: "Undo",
+                onPress: async () => {
+                  try {
+                    const undoResult = await undoTemplateSyncFromSession(syncResult);
+                    if (undoResult?.blocked) {
+                      const blockedMsg =
+                        syncResult.kind === "updated"
+                          ? "Can't undo — template was edited again"
+                          : "Can't undo — template already in use";
+                      showToast(blockedMsg, { duration: 4000 });
+                    }
+                  } catch {
+                    showError("Could not undo template update");
+                  }
+                },
+              },
+              duration: 6000,
+            });
+          }
+        } catch {
+          // Template sync failure must never block workout completion
+        }
 
         // Strava sync (non-blocking — never prevents workout completion)
         try {

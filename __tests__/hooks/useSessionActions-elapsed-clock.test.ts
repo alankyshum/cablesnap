@@ -107,6 +107,16 @@ jest.mock("react-native", () => {
   };
 });
 
+jest.mock("@/components/ui/bna-toast", () => ({
+  useToast: () => ({
+    warning: jest.fn(),
+    success: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+  }),
+}));
+
+
 import { renderHook, act } from "@testing-library/react-native";
 import { useSessionActions } from "../../hooks/useSessionActions";
 

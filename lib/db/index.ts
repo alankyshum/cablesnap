@@ -40,6 +40,10 @@ export {
   buildInitialSetsFromTemplate,
   parseTemplateTargetReps,
   importCoachTemplates,
+  syncTemplateFromSession,
+  undoTemplateSyncFromSession,
+  type TemplateSyncResult,
+  type TemplateSyncChange,
 } from "./templates";
 
 export { exportCoachTemplate } from "./templates-export";

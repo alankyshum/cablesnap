@@ -15,6 +15,16 @@
 //   6. The persist write is gated on `last.attachment !== null || last.mount_position !== null`
 //      so a no-history exercise creates a NULL/NULL set without a redundant
 //      DB write.
+jest.mock("@/components/ui/bna-toast", () => ({
+  useToast: () => ({
+    warning: jest.fn(),
+    success: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+  }),
+}));
+
+
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 

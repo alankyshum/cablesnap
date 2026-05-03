@@ -70,7 +70,7 @@ export default function ActiveSession() {
     templateId?: string;
     sourceSessionId?: string;
   }>();
-  const { info: showToast, error: showError } = useToast();
+  const { success: showToast, error: showError } = useToast();
 
   // Load timer sound setting + preload audio players so the first
   // set-complete tap is not the audio load trigger (BLD-559 TL-T3).
