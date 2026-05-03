@@ -107,7 +107,6 @@ describe("sets CRUD", () => {
   it.each([
     { name: "updateSet", run: () => ctx.db.updateSet("set1", 100, 8), expectMethod: "update" as const },
     { name: "completeSet (also fires session-anchor run)", run: () => ctx.db.completeSet("set1"), expectMethod: "update" as const, alsoRun: true },
-    { name: "deleteSet", run: () => ctx.db.deleteSet("set1"), expectMethod: "delete" as const },
     { name: "updateSetRPE", run: () => ctx.db.updateSetRPE("set1", 8.5), expectMethod: "update" as const },
     { name: "updateSetNotes", run: () => ctx.db.updateSetNotes("set1", "felt strong"), expectMethod: "update" as const },
   ])("$name fires the expected Drizzle call", async ({ run, expectMethod, alsoRun }) => {
@@ -119,6 +118,17 @@ describe("sets CRUD", () => {
       expect(mockDrizzleDb.run).toHaveBeenCalled();
       jest.restoreAllMocks();
     }
+  });
+
+  // BLD-1044: deleteSet now uses raw SQL via withTransaction (not Drizzle delete).
+  it("deleteSet fires a raw SQL DELETE inside a transaction", async () => {
+    await ctx.initDb();
+    await ctx.db.deleteSet("set1");
+    expect(mockDb.withTransactionAsync).toHaveBeenCalled();
+    expect(mockDb.runAsync).toHaveBeenCalledWith(
+      expect.stringMatching(/^DELETE FROM workout_sets/i),
+      expect.arrayContaining(["set1"])
+    );
   });
 });
 

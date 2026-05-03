@@ -68,7 +68,6 @@ jest.mock('drizzle-orm/expo-sqlite', () => ({
 import {
   swapExerciseInSession,
   undoSwapInSession,
-  deleteSet,
   deleteSetsBatch,
 } from '../../../lib/db/sessions';
 
@@ -129,33 +128,16 @@ describe('undoSwapInSession', () => {
 });
 
 // ---- Delete Sets ----
-
-describe('deleteSet', () => {
-  it('deletes a single set by id', async () => {
-    await expect(deleteSet('set-1')).resolves.toBeUndefined();
-    expect(mockDrizzleInstance.delete).toHaveBeenCalled();
-    expect(mockDeleteWhere).toHaveBeenCalled();
-  });
-});
+// NOTE (BLD-1044): deleteSet and deleteSetsBatch are now covered by
+// __tests__/lib/db/session-sets-renumber.test.ts which tests the new
+// withTransaction + renumber behaviour. The broad "calls Drizzle delete"
+// assertions below are removed; the no-op guard for empty batch remains.
 
 describe('deleteSetsBatch', () => {
-  it('deletes multiple sets via Drizzle', async () => {
-    await deleteSetsBatch(['set-1', 'set-2', 'set-3']);
-
-    expect(mockDrizzleInstance.delete).toHaveBeenCalled();
-    expect(mockDeleteWhere).toHaveBeenCalled();
-  });
-
   it('does nothing for empty array', async () => {
     await deleteSetsBatch([]);
 
-    expect(mockDrizzleInstance.delete).not.toHaveBeenCalled();
-  });
-
-  it('handles single item', async () => {
-    await deleteSetsBatch(['set-1']);
-
-    expect(mockDrizzleInstance.delete).toHaveBeenCalled();
-    expect(mockDeleteWhere).toHaveBeenCalled();
+    // The function returns early before opening a transaction.
+    expect(mockDb.withTransactionAsync).not.toHaveBeenCalled();
   });
 });

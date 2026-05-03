@@ -163,4 +163,19 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await dropColumnIfExists(database, "template_exercises", "training_mode");
   await dropColumnIfExists(database, "exercises", "mount_position");
   await dropColumnIfExists(database, "exercises", "training_modes");
+
+  // BLD-1044: backfill — renumber any (session_id, exercise_id) groups left
+  // non-contiguous by historical deleteSet() calls. Idempotent: groups that
+  // are already 1..N stay at 1..N (ROW_NUMBER returns the same values and the
+  // WHERE rn != set_number guard skips the UPDATE write).
+  await database.execAsync(`
+    WITH renumbered AS (
+      SELECT id,
+             ROW_NUMBER() OVER (PARTITION BY session_id, exercise_id ORDER BY set_number ASC, id ASC) AS rn
+      FROM workout_sets
+    )
+    UPDATE workout_sets
+    SET set_number = (SELECT rn FROM renumbered WHERE renumbered.id = workout_sets.id)
+    WHERE id IN (SELECT id FROM renumbered WHERE rn != workout_sets.set_number)
+  `);
 }
