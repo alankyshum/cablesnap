@@ -119,6 +119,9 @@ jobs:
           set -euo pipefail
           bash main-tree/scripts/regression-fixture-wire-seed-hook.sh \
             prefix-tree/hooks/useAppInit.ts
+          echo "::group::Patched useAppInit.ts (post-wire proof)"
+          cat prefix-tree/hooks/useAppInit.ts
+          echo "::endgroup::"
 
       - name: Export web bundle (dev mode — enables seed hook)
         working-directory: prefix-tree
@@ -163,9 +166,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: regression-fixture-${{ env.PRE_FIX_SHA }}
-          path: prefix-tree/.pixelslop/screenshots/scenarios/
+          path: |
+            prefix-tree/.pixelslop/screenshots/scenarios/
+            prefix-tree/test-results/
+            prefix-tree/playwright-report/
           retention-days: 90
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Stage fixture into main-tree for PR
         env:
