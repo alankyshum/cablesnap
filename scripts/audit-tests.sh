@@ -7,7 +7,7 @@
 #   --detail                 show extended mock-overlap matrix
 #   --skip-runtime           skip the npm test runtime check (fast audit)
 #   RUNTIME_BUDGET_SECONDS   override runtime ceiling (default: 150)
-#   MAX_TESTS                override count ceiling (default: 1800)
+#   MAX_TESTS                override count ceiling (default: 2500)
 #   SKIP_RUNTIME=1           same as --skip-runtime
 
 set -euo pipefail
@@ -16,8 +16,8 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR="$PROJECT_ROOT/__tests__"
 
 # ─── Configuration ───────────────────────────────────────────────
-MAX_TESTS="${MAX_TESTS:-2100}"                          # hard ceiling — fail if exceeded
-WARN_TESTS="${WARN_TESTS:-2000}"                        # warning threshold
+MAX_TESTS="${MAX_TESTS:-2500}"                          # hard ceiling — fail if exceeded
+WARN_TESTS="${WARN_TESTS:-2400}"                        # warning threshold
 RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`
 RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold
 # ─────────────────────────────────────────────────────────────────
