@@ -23,6 +23,13 @@ export default function Welcome() {
         <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant, paddingTop: spacing.md }]}>
           Your free workout tracker, optimized for cable machines
         </Text>
+        <Text
+          variant="caption"
+          style={[styles.privacyCaption, { color: colors.onSurfaceVariant, paddingTop: spacing.md }]}
+          accessibilityLabel="Local-only. We don't track your body composition or share your data. Log only what helps you."
+        >
+          Local-only. We don&apos;t track your body composition or share your data. Log only what helps you.
+        </Text>
       </View>
       <View style={styles.footer}>
         <Button
@@ -57,6 +64,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
+    textAlign: "center",
+  },
+  privacyCaption: {
     textAlign: "center",
   },
   footer: {
