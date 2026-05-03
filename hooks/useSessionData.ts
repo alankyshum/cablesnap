@@ -18,7 +18,6 @@ import {
   updateSetsBatch,
   updateExercisePositions,
   getExerciseNotesBatch,
-  getExerciseBackfillCandidate,
 } from "../lib/db";
 import { parseTemplateTargetReps } from "../lib/db/templates";
 import type { WorkoutSession, Exercise } from "../lib/types";
