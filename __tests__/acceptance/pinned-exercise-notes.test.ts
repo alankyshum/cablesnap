@@ -61,7 +61,7 @@ jest.mock("../../lib/query", () => ({
 }));
 
 jest.mock("../../lib/db/migrations", () => ({
-  runMigrations: jest.fn().mockResolvedValue(undefined),
+  migrate: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("react-native/Libraries/AppState/AppState", () => {
