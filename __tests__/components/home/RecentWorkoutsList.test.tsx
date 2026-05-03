@@ -86,19 +86,19 @@ describe("RecentWorkoutsList", () => {
     );
 
     // Walk the JSON tree looking for a node with alignSelf: 'flex-start'
-    type JsonNode = { props?: { style?: unknown }; children?: JsonNode[] | null };
-    function hasAlignSelfFlexStart(node: JsonNode | null): boolean {
-      if (!node) return false;
+    type JsonNode = { props?: { style?: unknown }; children?: JsonNode[] | string[] | null };
+    function hasAlignSelfFlexStart(node: JsonNode | string | null): boolean {
+      if (!node || typeof node === "string") return false;
       if (node.props?.style) {
         const flat = StyleSheet.flatten(node.props.style);
         if (flat?.alignSelf === "flex-start") return true;
       }
       if (Array.isArray(node.children)) {
-        return node.children.some((child) => hasAlignSelfFlexStart(child));
+        return (node.children as Array<JsonNode | string>).some((child) => hasAlignSelfFlexStart(child));
       }
       return false;
     }
 
-    expect(hasAlignSelfFlexStart(toJSON() as JsonNode)).toBe(true);
+    expect(hasAlignSelfFlexStart(toJSON() as JsonNode | string | null)).toBe(true);
   });
 });
