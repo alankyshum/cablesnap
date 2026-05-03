@@ -285,7 +285,7 @@ describe('Session UX Acceptance', () => {
       setupSession()
       const { findByText, findByLabelText } = renderScreen(<ActiveSession />)
       await findByText('Squat')
-      const notesBtn = await findByLabelText('Squat notes')
+      const notesBtn = await findByLabelText('Note for this session — Squat')
       expect(notesBtn).toBeTruthy()
     })
 
