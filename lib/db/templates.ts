@@ -12,6 +12,8 @@ import {
   programSchedule,
   programDays,
   programs,
+  workoutSessions,
+  workoutSets,
 } from "./schema";
 import { mapRow } from "./exercises";
 
@@ -685,4 +687,172 @@ export async function updateLinkLabel(
     .update(templateExercises)
     .set({ link_label: label })
     .where(eq(templateExercises.link_id, linkId));
+}
+
+/** One changed template exercise — carries old + new values for undo. */
+export type TemplateSyncChange = {
+  templateExerciseId: string;
+  oldTargetSets: number;
+  oldSetTypes: SetType[];
+  newTargetSets: number;
+  newSetTypes: SetType[];
+};
+
+/** Returned by syncTemplateFromSession; null when no template or no changes. */
+export type TemplateSyncResult = {
+  templateId: string;
+  changes: TemplateSyncChange[];
+} | null;
+
+/**
+ * Option A writeback: after a session is completed, sync the actual set count
+ * and per-set types (warmup/failure/dropset/normal) from the session back to
+ * the originating template's exercises.
+ *
+ * Only exercises that exist in both the session and the template (matched by
+ * exercise_id + position) are updated. Exercises the user swapped out, or sets
+ * added to an exercise not in the original template, are ignored.
+ *
+ * Starter/seeded templates are never modified.
+ *
+ * Returns a TemplateSyncResult describing every changed row (for undo), or
+ * null if the session has no template_id or nothing changed.
+ */
+export async function syncTemplateFromSession(
+  sessionId: string
+): Promise<TemplateSyncResult> {
+  const db = await getDrizzle();
+
+  const session = await db
+    .select({ template_id: workoutSessions.template_id })
+    .from(workoutSessions)
+    .where(eq(workoutSessions.id, sessionId))
+    .get();
+
+  if (!session?.template_id) return null;
+  const templateId = session.template_id;
+
+  // Never mutate starter/seeded templates — skip silently
+  const tpl = await db
+    .select({ is_starter: workoutTemplates.is_starter })
+    .from(workoutTemplates)
+    .where(eq(workoutTemplates.id, templateId))
+    .get();
+  if (tpl?.is_starter === 1) return null;
+
+  // Load all sets for the session (set_number, exercise_id, exercise_position, set_type)
+  const sets = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      exercise_position: workoutSets.exercise_position,
+      set_number: workoutSets.set_number,
+      set_type: workoutSets.set_type,
+    })
+    .from(workoutSets)
+    .where(eq(workoutSets.session_id, sessionId))
+    .orderBy(asc(workoutSets.exercise_position), asc(workoutSets.set_number));
+
+  if (sets.length === 0) return null;
+
+  // Group session sets by (exercise_id, exercise_position) key
+  type SessionGroup = { exerciseId: string; position: number; setTypes: SetType[] };
+  const sessionGroups = new Map<string, SessionGroup>();
+  for (const s of sets) {
+    const key = `${s.exercise_id}::${s.exercise_position ?? 0}`;
+    if (!sessionGroups.has(key)) {
+      sessionGroups.set(key, {
+        exerciseId: s.exercise_id,
+        position: s.exercise_position ?? 0,
+        setTypes: [],
+      });
+    }
+    const group = sessionGroups.get(key)!;
+    // insert at correct index (set_number is 1-based)
+    const idx = s.set_number - 1;
+    group.setTypes[idx] = (s.set_type as SetType) ?? "normal";
+  }
+
+  // Load current template exercises
+  const tplExercises = await db
+    .select({
+      id: templateExercises.id,
+      exercise_id: templateExercises.exercise_id,
+      position: templateExercises.position,
+      target_sets: templateExercises.target_sets,
+      set_types: templateExercises.set_types,
+    })
+    .from(templateExercises)
+    .where(eq(templateExercises.template_id, templateId));
+
+  const changes: TemplateSyncChange[] = [];
+
+  await withTransaction(async () => {
+    for (const te of tplExercises) {
+      const key = `${te.exercise_id}::${te.position}`;
+      const sessionGroup = sessionGroups.get(key);
+      if (!sessionGroup) continue;
+
+      const newTargetSets = sessionGroup.setTypes.length;
+      const newSetTypes = normalizeTemplateSetTypes(sessionGroup.setTypes, newTargetSets);
+      const oldTargetSets = te.target_sets ?? 3;
+      const oldSetTypes = parseTemplateSetTypes(te.set_types, oldTargetSets);
+
+      // Skip update if nothing changed
+      const setsChanged = newTargetSets !== oldTargetSets;
+      const typesChanged = newSetTypes.some((t, i) => t !== oldSetTypes[i]) || newSetTypes.length !== oldSetTypes.length;
+      if (!setsChanged && !typesChanged) continue;
+
+      await db
+        .update(templateExercises)
+        .set({
+          target_sets: newTargetSets,
+          set_types: JSON.stringify(newSetTypes),
+        })
+        .where(eq(templateExercises.id, te.id));
+
+      changes.push({
+        templateExerciseId: te.id,
+        oldTargetSets,
+        oldSetTypes,
+        newTargetSets,
+        newSetTypes,
+      });
+    }
+
+    if (changes.length > 0) {
+      await db
+        .update(workoutTemplates)
+        .set({ updated_at: Date.now() })
+        .where(eq(workoutTemplates.id, templateId));
+    }
+  });
+
+  if (changes.length === 0) return null;
+  return { templateId, changes };
+}
+
+/**
+ * Undo the template writeback performed by syncTemplateFromSession.
+ * Restores each changed template exercise to its pre-sync state.
+ */
+export async function undoTemplateSyncFromSession(
+  result: TemplateSyncResult
+): Promise<void> {
+  if (!result) return;
+  const db = await getDrizzle();
+  await withTransaction(async () => {
+    for (const change of result.changes) {
+      await db
+        .update(templateExercises)
+        .set({
+          target_sets: change.oldTargetSets,
+          set_types: JSON.stringify(change.oldSetTypes),
+        })
+        .where(eq(templateExercises.id, change.templateExerciseId));
+    }
+    await db
+      .update(workoutTemplates)
+      .set({ updated_at: Date.now() })
+      .where(eq(workoutTemplates.id, result.templateId));
+  });
 }

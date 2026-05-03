@@ -23,6 +23,8 @@ import {
   getGoalForExercise,
   achieveGoal,
   getCurrentBestWeight,
+  syncTemplateFromSession,
+  undoTemplateSyncFromSession,
 } from "../lib/db";
 import {
   getLastBodyweightModifier,
@@ -53,6 +55,7 @@ import { formatTime, computePrefillSets } from "../lib/format";
 import { confirmAction } from "../lib/confirm";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
+import { useToast } from "@/components/ui/bna-toast";
 
 /** Check if completing a set achieves a strength goal. Non-throwing. */
 async function checkGoalAchievement(exerciseId: string): Promise<boolean> {
@@ -103,6 +106,7 @@ export function useSessionActions({
   unit,
 }: Params) {
   const router = useRouter();
+  const { success: successToast } = useToast();
 
   // --- local state ---
   const [elapsed, setElapsed] = useState(0);
@@ -800,6 +804,28 @@ export function useSessionActions({
         await completeSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
+
+        // Sync session edits (set count + set types) back to originating template (BLD-1038)
+        try {
+          const syncResult = await syncTemplateFromSession(id!);
+          if (syncResult) {
+            successToast("Template updated from this session", {
+              action: {
+                label: "Undo",
+                onPress: async () => {
+                  try {
+                    await undoTemplateSyncFromSession(syncResult);
+                  } catch {
+                    // Undo failure is non-blocking
+                  }
+                },
+              },
+              duration: 6000,
+            });
+          }
+        } catch {
+          // Template sync failure must never block workout completion
+        }
 
         // Strava sync (non-blocking — never prevents workout completion)
         try {
