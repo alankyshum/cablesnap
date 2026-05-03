@@ -156,11 +156,11 @@ export const CURATED_PROGRAMS: CuratedProgram[] = [
       { id: "curated-rr-day-3", label: "Day C", template_id: RR_TEMPLATE_ID },
     ],
     schedule: [
-      // Mon / Wed / Fri default placement. Day-of-week index follows JS
-      // Date.getDay() — 1=Mon, 3=Wed, 5=Fri.
-      { day_of_week: 1, template_id: RR_TEMPLATE_ID },
-      { day_of_week: 3, template_id: RR_TEMPLATE_ID },
-      { day_of_week: 5, template_id: RR_TEMPLATE_ID },
+      // Mon / Wed / Fri default placement. App convention: 0=Mon…6=Sun
+      // (see lib/notifications.ts — "our day_of_week: 0=Mon..6=Sun").
+      { day_of_week: 0, template_id: RR_TEMPLATE_ID },
+      { day_of_week: 2, template_id: RR_TEMPLATE_ID },
+      { day_of_week: 4, template_id: RR_TEMPLATE_ID },
     ],
     source_url:
       "https://www.reddit.com/r/bodyweightfitness/wiki/kb/recommended_routine",

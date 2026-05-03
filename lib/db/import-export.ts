@@ -591,15 +591,15 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "workout_templates": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter, source) VALUES (?, ?, ?, ?, ?, ?)",
-        [row.id, row.name, row.created_at, row.updated_at, row.is_starter ?? 0, row.source ?? null]
+        "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter, is_curated, source) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.created_at, row.updated_at, row.is_starter ?? 0, row.is_curated ?? 0, row.source ?? null]
       );
       return r.changes > 0;
     }
     case "programs": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, deleted_at, is_starter) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.name, row.description ?? "", row.is_active ?? 0, row.current_day_id ?? null, row.created_at, row.updated_at, row.deleted_at ?? null, row.is_starter ?? 0]
+        "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, deleted_at, is_starter, is_curated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.description ?? "", row.is_active ?? 0, row.current_day_id ?? null, row.created_at, row.updated_at, row.deleted_at ?? null, row.is_starter ?? 0, row.is_curated ?? 0]
       );
       return r.changes > 0;
     }

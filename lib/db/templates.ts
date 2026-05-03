@@ -188,11 +188,12 @@ export async function updateTemplateName(
 export async function deleteTemplate(id: string): Promise<void> {
   const db = await getDrizzle();
   const tpl = await db
-    .select({ is_starter: workoutTemplates.is_starter })
+    .select({ is_starter: workoutTemplates.is_starter, is_curated: workoutTemplates.is_curated })
     .from(workoutTemplates)
     .where(eq(workoutTemplates.id, id))
     .get();
-  if (tpl?.is_starter === 1) return;
+  // BLD-1000: guard both starter AND curated templates from deletion.
+  if (tpl?.is_starter === 1 || tpl?.is_curated === 1) return;
 
   await withTransaction(async () => {
     await db.delete(programSchedule).where(eq(programSchedule.template_id, id));
@@ -287,11 +288,12 @@ export async function duplicateProgram(id: string): Promise<string> {
   for (const day of days) {
     if (day.template_id && !templateCopies.has(day.template_id)) {
       const tpl = await db
-        .select({ is_starter: workoutTemplates.is_starter })
+        .select({ is_starter: workoutTemplates.is_starter, is_curated: workoutTemplates.is_curated })
         .from(workoutTemplates)
         .where(eq(workoutTemplates.id, day.template_id))
         .get();
-      if (tpl?.is_starter === 1) {
+      // BLD-1000: also copy curated templates so the duplicate is independent.
+      if (tpl?.is_starter === 1 || tpl?.is_curated === 1) {
         templateCopies.set(day.template_id, await duplicateTemplate(day.template_id));
       }
     }
