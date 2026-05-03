@@ -97,6 +97,62 @@ jobs:
             cp main-tree/playwright.config.ts prefix-tree/playwright.config.ts
           fi
 
+      - name: Wire seedScenario() into pre-fix useAppInit.ts
+        # The pre-fix tree's useAppInit.ts (cce2ac1f) has no knowledge of
+        # the scenario harness — the seed module is dead code unless we
+        # explicitly invoke it after getDatabase() resolves. Without this
+        # wiring, document.body.dataset.testReady is never flipped and the
+        # scenario spec times out waiting for body[data-test-ready='true'].
+        #
+        # We append a dynamic import inside the existing `.then(async () => {`
+        # block so the seed runs after the production init finishes (the
+        # ordering required by lib/db/test-seed.ts comment "TL#2 option b").
+        run: |
+          set -euo pipefail
+          TARGET="prefix-tree/hooks/useAppInit.ts"
+          if [ ! -f "$TARGET" ]; then
+            echo "::error::Expected $TARGET in pre-fix tree; aborting."
+            exit 1
+          fi
+          if grep -q "seedScenario" "$TARGET"; then
+            echo "useAppInit.ts already wired (idempotent re-run)."
+          else
+            # Insert the import + invocation right after the first
+            # `getDatabase()` resolution. Use an anchor line that exists
+            # verbatim in the pre-fix file: `if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);`
+            python3 <<'PY'
+import io, sys
+path = "prefix-tree/hooks/useAppInit.ts"
+with io.open(path, "r", encoding="utf-8") as f:
+    src = f.read()
+anchor = 'if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);'
+if anchor not in src:
+    sys.stderr.write(f"::error::Anchor not found in {path}\n")
+    sys.exit(1)
+injection = (
+    anchor
+    + "\n"
+    + '        // [BLD-959 fixture-capture only] invoke scenario seed hook so\n'
+    + '        // <body data-test-ready="true"> flips for playwright.\n'
+    + '        if (Platform.OS === "web" && typeof window !== "undefined" && (window as any).__TEST_SCENARIO__) {\n'
+    + '          try {\n'
+    + '            const mod = await import("../lib/db/test-seed");\n'
+    + '            await mod.seedScenario();\n'
+    + '          } catch (e) {\n'
+    + '            // eslint-disable-next-line no-console\n'
+    + '            console.error("[fixture-capture] seedScenario failed:", e);\n'
+    + '          }\n'
+    + '        }'
+)
+src = src.replace(anchor, injection, 1)
+with io.open(path, "w", encoding="utf-8") as f:
+    f.write(src)
+print("Patched", path)
+PY
+            echo "--- patched useAppInit.ts (relevant excerpt) ---"
+            grep -n "seedScenario\|isMemoryFallback" "$TARGET" || true
+          fi
+
       - name: Export web bundle (dev mode — enables seed hook)
         working-directory: prefix-tree
         run: npx expo export -p web --dev --no-minify
