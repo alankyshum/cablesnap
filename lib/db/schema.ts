@@ -35,8 +35,8 @@ export const exercises = sqliteTable("exercises", {
   progression_order: integer("progression_order"),
   // BLD-1028: pinned per-exercise notes — persists across sessions.
   notes: text("notes"),
-  notes_updated_at: integer("notes_updated_at", { mode: "timestamp_ms" }),
-  notes_backfill_dismissed_at: integer("notes_backfill_dismissed_at", { mode: "timestamp_ms" }),
+  notes_updated_at: integer("notes_updated_at"),
+  notes_backfill_dismissed_at: integer("notes_backfill_dismissed_at"),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {

@@ -69,6 +69,13 @@ const baseProps = {
   onShowDetail: jest.fn(),
   onSwap: jest.fn(),
   onDeleteExercise: jest.fn(),
+  // BLD-1028: pinned per-exercise notes
+  pinnedNoteDraft: undefined,
+  onPinnedNoteDraftChange: jest.fn(),
+  onPinnedNoteSave: jest.fn(),
+  onBackfillCopy: jest.fn(),
+  onBackfillDismiss: jest.fn(),
+  onLoadBackfill: jest.fn(),
 };
 
 describe("GroupCardHeader — previous-performance wrap (BLD-656 / BLD-850)", () => {

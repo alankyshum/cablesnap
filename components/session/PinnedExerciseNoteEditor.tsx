@@ -59,5 +59,5 @@ export function PinnedExerciseNoteEditor({
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4 },
-  input: { fontSize: fontSizes.md, lineHeight: 22, minHeight: 100 },
+  input: { fontSize: fontSizes.base, lineHeight: 22, minHeight: 100 },
 });

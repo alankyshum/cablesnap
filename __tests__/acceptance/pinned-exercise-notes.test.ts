@@ -79,7 +79,7 @@ jest.mock("react-native/Libraries/AppState/AppState", () => {
   };
 });
 
-import { runMigrations } from "../../lib/db/migrations";
+import { migrate as runMigrations } from "../../lib/db/migrations";
 import { updateExerciseNote, getExerciseNotesBatch, getExerciseBackfillCandidate, dismissExerciseBackfill, updateSetNotes } from "../../lib/db";
 import { PinnedExerciseNoteEditor } from "../../components/session/PinnedExerciseNoteEditor";
 import { BackfillNoteSuggestion } from "../../components/session/BackfillNoteSuggestion";
@@ -138,7 +138,7 @@ describe("BLD-1028 Test 3 — Backup roundtrip: export→import preserves pinned
     const exercise: Exercise = {
       id: "ex-2",
       name: "Squat",
-      category: "legs",
+      category: "legs_glutes",
       primary_muscles: ["quads"],
       secondary_muscles: [],
       equipment: "barbell",
