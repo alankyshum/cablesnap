@@ -26,6 +26,22 @@ if [ -f "scripts/check-license.sh" ]; then
   fi
 fi
 
+# ─── CHANGELOG ↔ app.config.ts parity gate (BLD-1027) ──────────
+# Blocks push if the top `## v<X.Y.Z>` header in CHANGELOG.md (or its
+# `<!-- versionCode: N -->` marker) doesn't match `version` /
+# `android.versionCode` in app.config.ts. Same drift class that let
+# v0.26.20–v0.26.22 ship without CHANGELOG entries (BLD-1026).
+if [ -f "scripts/check-changelog-parity.sh" ]; then
+  echo "📝 Verifying CHANGELOG ↔ app.config.ts parity..."
+  if ! bash scripts/check-changelog-parity.sh; then
+    echo ""
+    echo "Update CHANGELOG.md (top '## vX.Y.Z' header + '<!-- versionCode: N -->' marker)"
+    echo "to match app.config.ts before pushing."
+    echo "To skip this check (governance escape hatch only): git push --no-verify"
+    exit 1
+  fi
+fi
+
 # ─── Exercise Illustration Bundle Gate (BLD-561) ────────────────
 # Blocks push if assets/exercise-illustrations/**/*.webp exceeds the hard-fail
 # bundle budget (R2 plan: target ≤8MB, hard fail >12MB).
