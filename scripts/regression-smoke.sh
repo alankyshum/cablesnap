@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # regression-smoke.sh — vision-pipeline trust-anchor smoke for BLD-480.
 #
-# Feeds a static "known-bad" PNG (the BLD-480 pre-fix MusclesWorkedCard
-# cropping fixture) plus the daily audit prompt into the vision API, then
-# asserts that the model's response contains at least one term from the
-# canonical regex defined in /skills/AGENTS-ux-designer.md (QD#2):
+# Feeds a "known-bad" PNG (the BLD-480 pre-fix MusclesWorkedCard cropping
+# capture) plus the daily audit prompt into the vision API, then asserts
+# that the model's response contains at least one term from the canonical
+# regex defined in /skills/AGENTS-ux-designer.md (QD#2):
 #
 #   crop | truncat | clip | maxHeight | cut off | MusclesWorkedCard | body-figure
 #
@@ -18,11 +18,17 @@
 # model regression silently degrades the pipeline, this smoke is what
 # catches it. See:
 #   - BLD-959 (this script)
+#   - BLD-1023 (capture source: live wrapper-fixture route, not static PNG)
 #   - BLD-941 / BLD-924 (daily audit operations)
 #   - /skills/AGENTS-ux-designer.md § BLD-480 Trust Anchor (QD#1 + QD#2)
 #
 # Usage:
-#   scripts/regression-smoke.sh [<fixture-png>]
+#   scripts/regression-smoke.sh <fixture-png>
+#
+# `<fixture-png>` is normally produced by `scripts/daily-audit.sh` running
+# the `completed-workout-prefix.spec.ts` Playwright spec against the
+# dev-only fixture route at `/__fixtures__/bld-480-prefix` (BLD-1023). It
+# can also be any standalone PNG when invoked manually for self-tests.
 #
 # Env overrides (advanced):
 #   AUDIT_PROMPT       Override the audit prompt fed to the model. Default
@@ -41,7 +47,15 @@ set -euo pipefail
 ##############################################################################
 # Args + defaults
 ##############################################################################
-FIXTURE="${1:-tests/fixtures/regression-catcher/bld-480-pre-fix.png}"
+if [[ $# -lt 1 ]]; then
+  echo "[regression-smoke] CONFIG ERROR: missing <fixture-png> argument." >&2
+  echo "[regression-smoke] Usage: scripts/regression-smoke.sh <fixture-png>" >&2
+  echo "[regression-smoke] Normally invoked by scripts/daily-audit.sh after" >&2
+  echo "[regression-smoke] the completed-workout-prefix Playwright spec captures" >&2
+  echo "[regression-smoke] the BLD-480 wrapper-fixture (BLD-1023)." >&2
+  exit 3
+fi
+FIXTURE="$1"
 
 AUDIT_PROMPT_DEFAULT='You are a senior product designer reviewing a mobile fitness app screenshot. Identify ALL visual UX defects: cropping, truncation, clipping, overflow, contrast issues, alignment problems, missing elements. For each defect, state: (a) which UI element, (b) what is wrong, (c) severity (critical|major|minor). Be concrete and exhaustive — do not gloss over visual artifacts.'
 AUDIT_PROMPT="${AUDIT_PROMPT:-$AUDIT_PROMPT_DEFAULT}"
@@ -54,8 +68,9 @@ REGRESSION_REGEX="${REGRESSION_REGEX:-$REGRESSION_REGEX_DEFAULT}"
 ##############################################################################
 if [[ ! -f "$FIXTURE" ]]; then
   echo "[regression-smoke] CONFIG ERROR: fixture not found: $FIXTURE" >&2
-  echo "[regression-smoke] Run .github/workflows/regression-fixture-capture.yml" >&2
-  echo "[regression-smoke] (workflow_dispatch) to (re)generate it." >&2
+  echo "[regression-smoke] Expected a PNG produced by scripts/daily-audit.sh" >&2
+  echo "[regression-smoke] running e2e/scenarios/completed-workout-prefix.spec.ts" >&2
+  echo "[regression-smoke] (BLD-1023 wrapper-fixture flow)." >&2
   exit 3
 fi
 

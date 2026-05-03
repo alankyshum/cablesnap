@@ -57,7 +57,7 @@ Paperclip routine (09:00 PT, ab23d3ed-e434-4357-ab62-7ccf41159989)
   │   └─ or you resume a pending audit (if claudecoder already uploaded a bundle)
   ├─▶ claudecoder runs scripts/daily-audit.sh + scripts/audit-bundle.sh
   │   ├─ scenarios: completed-workout, workout-history
-  │   ├─ commits audited: current HEAD AND BLD_480_PRE_FIX_SHA (QD#1 trust anchor)
+  │   ├─ scenarios audited: HEAD scenarios + BLD-480 wrapper-fixture (QD#1 trust anchor)
   │   └─ comments bundle URL on the audit issue
   └─▶ ux-designer (you) on next heartbeat: gh release download → vision review
       ├─ file finding-issues (labeled `ux-audit`)
@@ -176,16 +176,34 @@ the later bundle (QD observation).
 
 ## BLD-480 Trust Anchor (QD#1 + QD#2)
 
-Every daily audit runs the `completed-workout` scenario against TWO commits:
+Every daily audit captures TWO scenario buckets against today's HEAD:
 
-1. **Current HEAD** (today's code)
-2. **`BLD_480_PRE_FIX_SHA`** — pinned to `cce2ac1f828538bf884f91c5e209ab9f6a40d87f`
-   (the commit immediately BEFORE `6f067cc fix: remove maxHeight crop on
-   workout summary muscle heatmap (#292)` merged). Pinning SHA maintained in
-   `scripts/daily-audit.sh`.
+1. **HEAD scenarios** — `completed-workout`, `workout-history`, etc. (the
+   real-screen captures we audit for new defects).
+2. **BLD-480 wrapper-fixture** — a dev-only Expo Router route at
+   `/__fixtures__/bld-480-prefix` that renders `MusclesWorkedCard` wrapped
+   in a regressed `maxHeight: 200` clamp, faithfully reproducing the
+   cropping defect that PR #292 fixed (BLD-480). Captured by the
+   `completed-workout-prefix.spec.ts` Playwright spec into the
+   `BLD_480_PRE_FIX/` bundle directory.
 
-**Tightened acceptance (QD#2)**: after reviewing the pre-fix bundle, at
-least one finding's `description` (case-insensitive) MUST contain one of:
+The wrapper-fixture is the regression-catcher: a known-bad rendering that
+the vision pipeline must continue to flag every audit run. It replaced
+the previous `BLD_480_PRE_FIX_SHA` checkout-of-old-commit flow (BLD-1023)
+because the pre-fix Expo SDK no longer builds in the modern Node 20 +
+Playwright Chromium environment.
+
+Wiring (for orientation; you do not need to run these by hand):
+
+- Wrapper component: `components/session/summary/__fixtures__/MusclesWorkedCardPreFix.tsx`
+- Fixture route: `app/__fixtures__/bld-480-prefix.tsx`
+- Capture spec: `e2e/scenarios/completed-workout-prefix.spec.ts`
+- Audit driver: `scripts/daily-audit.sh`
+- Trust-anchor smoke: `scripts/regression-smoke.sh`
+
+**Tightened acceptance (QD#2)**: after reviewing the `BLD_480_PRE_FIX/`
+bundle, at least one finding's `description` (case-insensitive) MUST
+contain one of:
 
 - `crop`
 - `truncat`
@@ -200,13 +218,17 @@ degraded. Post a **P0 comment on the audit issue**:
 
 ```
 🚨 REGRESSION-CATCHER TRIPPED — vision pipeline silently degraded.
-Pre-fix SHA cce2ac1 should reproduce MusclesWorkedCard cropping, but zero
-findings matched [crop|truncat|clip|maxHeight|cut off|MusclesWorkedCard|body-figure].
+The BLD-480 wrapper-fixture should reproduce MusclesWorkedCard cropping,
+but zero findings matched [crop|truncat|clip|maxHeight|cut off|MusclesWorkedCard|body-figure].
 Do NOT trust today's HEAD audit. Paging @techlead @quality-director.
 ```
 
 This is the primary trust-anchor of the whole loop — without it, a broken
-vision pipeline produces green audits indefinitely.
+vision pipeline produces green audits indefinitely. `scripts/daily-audit.sh`
+also runs `scripts/regression-smoke.sh` against the freshly captured
+fixture PNG immediately after capture, so this trust anchor fires twice:
+once at audit driver-time (hard exit) and once at ux-designer review-time
+(P0 comment).
 
 ## Audit Issue Body Template (TL#7)
 
@@ -216,7 +238,7 @@ When creating the daily audit issue, use this template verbatim:
 ## AUDIT: Daily visual UX audit — YYYY-MM-DD
 
 **Commit under test**: `<HEAD_SHA>` (`git log -1 --oneline HEAD`)
-**Regression-catcher commit**: `BLD_480_PRE_FIX_SHA = cce2ac1f8...` (pinned)
+**Regression-catcher**: BLD-480 wrapper-fixture (`/__fixtures__/bld-480-prefix`, BLD-1023)
 **Viewports**: mobile only (v1)
 **Scenarios**:
 - [ ] completed-workout
