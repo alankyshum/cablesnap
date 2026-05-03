@@ -82,6 +82,33 @@ jobs:
         working-directory: prefix-tree
         run: npm ci --legacy-peer-deps
 
+      - name: Align react-dom with react (BLD-1022 fix)
+        # `npm ci --legacy-peer-deps` against the pre-fix lockfile resolves
+        # `react` to 19.2.0 (lockfile-pinned) but allows transitive peers to
+        # hoist `react-dom` to a newer 19.2.x patch (e.g. 19.2.5). At runtime
+        # react-dom asserts `react.version === reactDOM.version` and throws
+        # "Incompatible React versions" before useAppInit's effect runs, so
+        # our injected seedScenario() never fires and `data-test-ready` is
+        # never flipped (15s timeout). Force react-dom to the exact `react`
+        # version so the bundle boots and our seed hook runs.
+        # Refs: BLD-1022 (run 25271030378 trace).
+        working-directory: prefix-tree
+        run: |
+          set -euo pipefail
+          REACT_VERSION="$(node -p "require('./node_modules/react/package.json').version")"
+          REACT_DOM_VERSION="$(node -p "require('./node_modules/react-dom/package.json').version")"
+          echo "Detected react=$REACT_VERSION react-dom=$REACT_DOM_VERSION"
+          if [ "$REACT_VERSION" != "$REACT_DOM_VERSION" ]; then
+            echo "Pinning react-dom to $REACT_VERSION to match react…"
+            npm install --no-save --legacy-peer-deps "react-dom@${REACT_VERSION}"
+            NEW_REACT_DOM="$(node -p "require('./node_modules/react-dom/package.json').version")"
+            echo "After pin: react=$REACT_VERSION react-dom=$NEW_REACT_DOM"
+            if [ "$REACT_VERSION" != "$NEW_REACT_DOM" ]; then
+              echo "::error::Failed to align react-dom with react (still $NEW_REACT_DOM)"
+              exit 1
+            fi
+          fi
+
       - name: Install Playwright browsers in pre-fix tree
         working-directory: prefix-tree
         run: npx playwright install --with-deps chromium
