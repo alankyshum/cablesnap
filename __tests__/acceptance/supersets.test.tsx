@@ -42,6 +42,11 @@ jest.mock('../../lib/db', () => ({
   swapExerciseInSession: jest.fn().mockResolvedValue([]),
   undoSwapInSession: jest.fn().mockResolvedValue(undefined),
   updateExercisePositions: jest.fn().mockResolvedValue(undefined),
+  // BLD-1028: pinned per-exercise notes
+  getExerciseNotesBatch: jest.fn().mockResolvedValue({}),
+  updateExerciseNote: jest.fn().mockResolvedValue(undefined),
+  getExerciseBackfillCandidate: jest.fn().mockResolvedValue(null),
+  dismissExerciseBackfill: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

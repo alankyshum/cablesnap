@@ -36,6 +36,11 @@ jest.mock('../../lib/db', () => ({
   getAllExercises: jest.fn().mockResolvedValue([]),
   swapExerciseInSession: jest.fn().mockResolvedValue([]),
   undoSwapInSession: jest.fn().mockResolvedValue(undefined),
+  // BLD-1028: pinned per-exercise notes
+  getExerciseNotesBatch: jest.fn().mockResolvedValue({}),
+  updateExerciseNote: jest.fn().mockResolvedValue(undefined),
+  getExerciseBackfillCandidate: jest.fn().mockResolvedValue(null),
+  dismissExerciseBackfill: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({
@@ -225,13 +230,13 @@ describe('Notes Field in Active Session', () => {
 
   it('renders exercise-level notes button with a11y label', async () => {
     const { findAllByLabelText } = renderScreen(<ActiveSession />)
-    const noteButtons = await findAllByLabelText('Bench Press notes')
+    const noteButtons = await findAllByLabelText('Note for this session — Bench Press')
     expect(noteButtons.length).toBeGreaterThan(0)
   })
 
   it('pressing notes button shows notes input', async () => {
     const { findAllByLabelText, getByPlaceholderText } = renderScreen(<ActiveSession />)
-    const noteButtons = await findAllByLabelText('Bench Press notes')
+    const noteButtons = await findAllByLabelText('Note for this session — Bench Press')
     fireEvent.press(noteButtons[0])
 
     await waitFor(() => {
@@ -241,7 +246,7 @@ describe('Notes Field in Active Session', () => {
 
   it('typing in notes field and blurring calls updateSetNotes', async () => {
     const { findAllByLabelText, getByPlaceholderText } = renderScreen(<ActiveSession />)
-    const noteButtons = await findAllByLabelText('Bench Press notes')
+    const noteButtons = await findAllByLabelText('Note for this session — Bench Press')
     fireEvent.press(noteButtons[0])
 
     const input = await waitFor(() => getByPlaceholderText('Add exercise notes...'))
