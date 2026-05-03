@@ -55,7 +55,6 @@ import { formatTime, computePrefillSets } from "../lib/format";
 import { confirmAction } from "../lib/confirm";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
-import { useToast } from "@/components/ui/bna-toast";
 
 /** Check if completing a set achieves a strength goal. Non-throwing. */
 async function checkGoalAchievement(exerciseId: string): Promise<boolean> {
@@ -85,7 +84,7 @@ type Params = {
   startRestWithDuration: (secs: number) => void;
   startRestWithBreakdown: (breakdown: RestBreakdown) => void;
   session: { started_at: number; clock_started_at?: number | null; name: string } | null;
-  showToast: (msg: string) => void;
+  showToast: (msg: string, opts?: { action?: { label: string; onPress: () => void | Promise<void> }; duration?: number }) => void;
   showError: (msg: string) => void;
   triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
   unit?: "kg" | "lb";
@@ -106,7 +105,6 @@ export function useSessionActions({
   unit,
 }: Params) {
   const router = useRouter();
-  const { success: successToast } = useToast();
 
   // --- local state ---
   const [elapsed, setElapsed] = useState(0);
@@ -809,7 +807,7 @@ export function useSessionActions({
         try {
           const syncResult = await syncTemplateFromSession(id!);
           if (syncResult) {
-            successToast("Template updated from this session", {
+            showToast("Template updated from this session", {
               action: {
                 label: "Undo",
                 onPress: async () => {
