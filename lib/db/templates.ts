@@ -829,8 +829,10 @@ export type TemplateSyncResult =
  * the user's edits to the clone, updates the session to point at the clone, and
  * returns kind: "cloned" so undo can delete the clone if desired.
  *
- * Sets are grouped by pushing sequentially from DB rows ordered by set_number —
- * this avoids sparse-array holes when deleteSet() removes a row without renumbering.
+ * Sets are grouped by pushing sequentially from DB rows ordered by set_number.
+ * As of BLD-1044, deleteSet() renumbers survivors so set_number is contiguous, but
+ * we keep the sequential-push as defense-in-depth for any path that bypasses the
+ * renumber (e.g., import-export round-trips, raw SQL repairs).
  *
  * Returns null if the session has no template_id, has no sets, or nothing changed.
  */
@@ -873,7 +875,9 @@ export async function syncTemplateFromSession(
   if (sets.length === 0) return null;
 
   // Group session sets by (exercise_id, exercise_position) key.
-  // Push sequentially to avoid sparse-array holes caused by deleteSet() not renumbering rows.
+  // Push sequentially from rows ordered by set_number (defense-in-depth:
+  // BLD-1044 guarantees contiguous set_number after deleteSet, but we keep
+  // sequential-push for paths that bypass the renumber, e.g. import-export).
   type SessionGroup = { exerciseId: string; position: number; setTypes: SetType[] };
   const sessionGroups = new Map<string, SessionGroup>();
   for (const s of sets) {

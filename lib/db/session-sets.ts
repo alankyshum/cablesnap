@@ -48,6 +48,7 @@ export async function getSessionSets(
     .where(eq(workoutSets.session_id, sessionId))
     .orderBy(asc(workoutSets.exercise_position), asc(workoutSets.exercise_id), asc(workoutSets.set_number))
     .all();
+  // eslint-disable-next-line complexity
   return rows.map((r) => ({
     id: r.id,
     session_id: r.session_id,
@@ -436,15 +437,75 @@ export async function uncompleteSet(id: string): Promise<void> {
     .where(eq(workoutSets.id, id));
 }
 
+/**
+ * Renumber all surviving rows for a given (session_id, exercise_id) group so
+ * set_number is contiguous 1..N.  Runs inside an existing transaction (receives
+ * the raw SQLite db handle, NOT the Drizzle instance).
+ *
+ * Uses a single ROW_NUMBER() CTE UPDATE — one round-trip, atomic with the
+ * DELETE that called it, O(N) in group size.  The `id` tiebreaker on the
+ * ORDER BY guarantees deterministic output when two rows share a set_number
+ * (shouldn't happen after this fix lands, but cheap insurance).
+ */
+async function renumberExerciseGroup(
+  db: import("expo-sqlite").SQLiteDatabase,
+  sessionId: string,
+  exerciseId: string
+): Promise<void> {
+  await db.runAsync(
+    `WITH renumbered AS (
+       SELECT id,
+              ROW_NUMBER() OVER (ORDER BY set_number ASC, id ASC) AS rn
+       FROM workout_sets
+       WHERE session_id = ? AND exercise_id = ?
+     )
+     UPDATE workout_sets
+     SET set_number = (SELECT rn FROM renumbered WHERE renumbered.id = workout_sets.id)
+     WHERE id IN (SELECT id FROM renumbered)`,
+    [sessionId, exerciseId]
+  );
+}
+
 export async function deleteSet(id: string): Promise<void> {
-  const db = await getDrizzle();
-  await db.delete(workoutSets).where(eq(workoutSets.id, id));
+  await withTransaction(async (db) => {
+    // Capture (session_id, exercise_id) BEFORE deleting so we know which
+    // group to renumber.
+    const target = await db.getFirstAsync<{ session_id: string; exercise_id: string }>(
+      "SELECT session_id, exercise_id FROM workout_sets WHERE id = ?",
+      [id]
+    );
+    if (!target) return; // Already gone — no-op (matches prior contract).
+
+    await db.runAsync("DELETE FROM workout_sets WHERE id = ?", [id]);
+    await renumberExerciseGroup(db, target.session_id, target.exercise_id);
+  });
 }
 
 export async function deleteSetsBatch(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const db = await getDrizzle();
-  await db.delete(workoutSets).where(inArray(workoutSets.id, ids));
+  await withTransaction(async (db) => {
+    // Collect all affected (session_id, exercise_id) groups BEFORE the delete.
+    const placeholders = ids.map(() => "?").join(", ");
+    const targets = await db.getAllAsync<{ session_id: string; exercise_id: string }>(
+      `SELECT session_id, exercise_id FROM workout_sets WHERE id IN (${placeholders})`,
+      ids
+    );
+    if (targets.length === 0) return;
+
+    await db.runAsync(
+      `DELETE FROM workout_sets WHERE id IN (${placeholders})`,
+      ids
+    );
+
+    // Dedup groups so we renumber each at most once.
+    const groups = new Map<string, { session_id: string; exercise_id: string }>();
+    for (const t of targets) {
+      groups.set(`${t.session_id}::${t.exercise_id}`, t);
+    }
+    for (const g of groups.values()) {
+      await renumberExerciseGroup(db, g.session_id, g.exercise_id);
+    }
+  });
 }
 
 export async function updateSetRPE(id: string, rpe: number | null): Promise<void> {
