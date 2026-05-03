@@ -60,29 +60,54 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Latest tag: $TAG"
 
-      - name: Check for new commits since last tag
+      # BLD-1025: a release ships only when BOTH conditions hold:
+      #   1. there are new commits since the last tag, AND
+      #   2. CHANGELOG.md `## Unreleased` has at least one user-facing bullet.
+      # Without (2) the cron will keep shipping versionCode bumps every 12
+      # hours whenever any commit (infra/CI/audit churn) lands on main —
+      # which then ships F-Droid updates with no user-facing changelog.
+      - name: Check release gate (commits + CHANGELOG)
         id: check_commits
         run: |
+          set -euo pipefail
           TAG="${{ steps.latest_tag.outputs.tag }}"
           if [ -z "$TAG" ]; then
             echo "No existing tags — will create initial release"
-            echo "has_new_commits=true" >> "$GITHUB_OUTPUT"
-            echo "commit_count=initial" >> "$GITHUB_OUTPUT"
+            COUNT="initial"
+            HAS_COMMITS="true"
           else
             COUNT=$(git rev-list "$TAG"..HEAD --count)
             echo "Commits since $TAG: $COUNT"
-            echo "commit_count=$COUNT" >> "$GITHUB_OUTPUT"
             if [ "$COUNT" -gt 0 ]; then
-              echo "has_new_commits=true" >> "$GITHUB_OUTPUT"
+              HAS_COMMITS="true"
             else
-              echo "has_new_commits=false" >> "$GITHUB_OUTPUT"
+              HAS_COMMITS="false"
+            fi
+          fi
+          echo "commit_count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          # Always run the gate so we can surface both signals in logs.
+          eval "$(./scripts/check-changelog-gate.sh CHANGELOG.md)"
+          echo "Gate verdict: HAS_COMMITS=$HAS_COMMITS, SHOULD_RELEASE=$SHOULD_RELEASE (unreleased line count: $UNRELEASED_LINE_COUNT)"
+
+          if [ "$HAS_COMMITS" = "true" ] && [ "$SHOULD_RELEASE" = "true" ]; then
+            echo "has_new_commits=true" >> "$GITHUB_OUTPUT"
+            echo "unreleased_body_file=$UNRELEASED_BODY_FILE" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_new_commits=false" >> "$GITHUB_OUTPUT"
+            if [ "$HAS_COMMITS" != "true" ]; then
+              echo "::notice::No new commits since $TAG — skipping release."
+            fi
+            if [ "$SHOULD_RELEASE" != "true" ]; then
+              echo "::notice::CHANGELOG.md '## Unreleased' has no user-facing entries — skipping release per BLD-1025."
+              echo "::notice::Add a bullet under '## Unreleased' in CHANGELOG.md to ship a release on the next cron tick."
             fi
           fi
 
-      - name: Exit if no new commits
+      - name: Exit if release gate is closed
         if: steps.check_commits.outputs.has_new_commits != 'true'
         run: |
-          echo "No new commits since ${{ steps.latest_tag.outputs.tag }}. Skipping release."
+          echo "Release gate closed — see prior step's notices for the reason."
           exit 0
 
       - name: Compute next version
@@ -145,21 +170,74 @@ jobs:
           sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
           sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
 
+      # BLD-1025: Promote `## Unreleased` → `## vX.Y.Z — YYYY-MM-DD <!-- versionCode: N -->`
+      # in CHANGELOG.md so the in-app *What's New* modal, GitHub Release body,
+      # and F-Droid `<versionCode>.txt` sidecar all reflect this release.
+      - name: Promote CHANGELOG Unreleased section
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          VERSION="${{ steps.next_version.outputs.version }}"
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
+          ./scripts/promote-unreleased.sh "$VERSION" "$VCODE" CHANGELOG.md
+          echo "----- CHANGELOG.md head after promotion -----"
+          head -40 CHANGELOG.md
+
+      # Node + npm install must happen BEFORE the release commit so we can
+      # regenerate `lib/changelog.generated.ts` and the F-Droid sidecar in
+      # the same commit that bumps the version (BLD-1025). The full build
+      # (Gradle, EAS) reuses the same cached install later.
+      - name: Set up Node.js (early — for changelog regen)
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies (early — for changelog regen)
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: npm ci
+
+      - name: Regenerate changelog artifacts
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          npm run changelog:gen
+          echo "----- generated artifacts -----"
+          ls -la lib/changelog.generated.ts fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+
+      # BLD-1025: Release notes come from CHANGELOG.md (single source of
+      # truth — see publish-release skill Step 7). The previous version of
+      # this step shelled out to `git log --oneline`, which was the root
+      # cause of release notes including infra/CI/audit churn instead of
+      # user-facing changes.
       - name: Generate release notes
         if: steps.check_commits.outputs.has_new_commits == 'true'
         id: release_notes
         run: |
-          TAG="${{ steps.latest_tag.outputs.tag }}"
+          set -euo pipefail
           VERSION="${{ steps.next_version.outputs.version }}"
+          # macOS/BSD-compatible awk — matches the manual extractor in the
+          # publish-release skill so dry-runs on a maintainer's Mac and the
+          # cron runner produce identical notes.
+          awk -v v="$VERSION" '
+            $0 ~ "^## v"v"([^0-9]|$)" { in_section=1; next }
+            in_section && /^## / { exit }
+            in_section { print }
+          ' CHANGELOG.md > /tmp/release-notes-body.md
+
+          if [ ! -s /tmp/release-notes-body.md ]; then
+            echo "::error::Release notes for v$VERSION are empty — CHANGELOG.md promotion did not produce a body. Aborting release."
+            exit 1
+          fi
+
+          # Strip the `<!-- versionCode: N -->` marker line from the body so
+          # it doesn't show up in the public release notes.
+          sed -i '/^<!--[[:space:]]*versionCode:.*-->/d' /tmp/release-notes-body.md
+
           {
             echo 'notes<<NOTES_EOF'
             echo "## What's New"
             echo ""
-            if [ -z "$TAG" ]; then
-              git log --oneline | head -20
-            else
-              git log --oneline "$TAG"..HEAD
-            fi
+            cat /tmp/release-notes-body.md
             echo ""
             echo "## Install"
             echo ""
@@ -185,7 +263,16 @@ jobs:
           VERSION="${{ steps.next_version.outputs.version }}"
           git config user.name "CableSnap Release Bot"
           git config user.email "release-bot@cablesnap.app"
-          git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml
+          # BLD-1025: also commit the CHANGELOG promotion + regenerated
+          # artifacts so `lib/changelog.generated.ts` and the F-Droid
+          # `<versionCode>.txt` sidecar always travel with the version bump.
+          git add \
+            package.json \
+            app.config.ts \
+            fdroid/metadata/com.persoack.cablesnap.yml \
+            CHANGELOG.md \
+            lib/changelog.generated.ts \
+            fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
           if git diff --cached --quiet; then
             echo "Version files already at v$VERSION — skipping commit."
           else
@@ -232,16 +319,8 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true'
         uses: android-actions/setup-android@v3
 
-      - name: Set up Node.js
-        if: steps.check_commits.outputs.has_new_commits == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        if: steps.check_commits.outputs.has_new_commits == 'true'
-        run: npm ci
+      # Node + npm ci already ran earlier (before the release commit) for the
+      # changelog regen — see the "Set up Node.js (early …)" step above.
 
       - name: Generate native project
         if: steps.check_commits.outputs.has_new_commits == 'true'

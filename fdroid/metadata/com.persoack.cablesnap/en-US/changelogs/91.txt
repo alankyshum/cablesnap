@@ -1,0 +1,1 @@
+- Internal release — no user-facing changes since v0.26.20. (Backfilled retroactively under BLD-1025.)

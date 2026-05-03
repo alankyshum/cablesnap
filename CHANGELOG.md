@@ -16,19 +16,31 @@ Format:
 - Another bullet.
 ```
 
-The `<!-- versionCode: N -->` marker is optional but required for F-Droid
-sidecar emission. The `publish-release` skill prepends a new section (with
-marker) at release time.
-
-## v0.26.19 — 2026-05-01
-<!-- versionCode: 76 -->
-- Fixed Android crash on app open caused by WearOS module class-loading failure on devices without Google Play Services.
-- Replaced direct WearOS Wearable API import with Class.forName() reflection to prevent NoClassDefFoundError at startup.
-- Removed WearOSModule from Expo autolinker to prevent F-Droid build crashes.
-- Added Android emulator smoke test to CI pipeline to catch launch crashes before release.
+The `<!-- versionCode: N -->` marker is required for F-Droid sidecar
+emission and MUST match the `versionCode` in `app.config.ts` and
+`fdroid/metadata/com.persoack.cablesnap.yml`. The release pipeline
+(`.github/workflows/scheduled-release.yml`, BLD-1025) promotes the
+`## Unreleased` section to a real `## vX.Y.Z` section automatically; the
+cron release is gated on this section being non-empty so we never ship a
+versionCode bump without user-facing changes.
 
 ## Unreleased
 
+<!--
+Drop user-facing changes here. The release pipeline will only cut a new
+release when this section has at least one non-empty, non-heading line.
+-->
+
+## v0.26.22 — 2026-05-03
+<!-- versionCode: 92 -->
+- Internal release — no further user-facing changes since v0.26.20. (Cron release pipeline shipped a versionCode bump before BLD-1025 added the changelog gate; this entry exists so F-Droid clients see something other than the v0.26.19 sidecar.)
+
+## v0.26.21 — 2026-05-03
+<!-- versionCode: 91 -->
+- Internal release — no user-facing changes since v0.26.20. (Backfilled retroactively under BLD-1025.)
+
+## v0.26.20 — 2026-05-02
+<!-- versionCode: 90 -->
 ### Added
 - Hydration tracking — log water in ml or fl oz from the Nutrition tab; configurable daily goal and preset volumes in Settings.
 - Workout templates now remember the training mode you pick per Voltra exercise; sessions started from the template open in the saved mode automatically.
@@ -38,6 +50,13 @@ marker) at release time.
 
 ### Removed
 - Removed the **Eccentric** training mode chip and tempo tracking. Existing eccentric sets in your history are preserved as standard sets; other Voltra modes (Band, Damper, Isokinetic, Isometric, Custom, Rowing) are unchanged.
+
+## v0.26.19 — 2026-05-01
+<!-- versionCode: 89 -->
+- Fixed Android crash on app open caused by WearOS module class-loading failure on devices without Google Play Services.
+- Replaced direct WearOS Wearable API import with Class.forName() reflection to prevent NoClassDefFoundError at startup.
+- Removed WearOSModule from Expo autolinker to prevent F-Droid build crashes.
+- Added Android emulator smoke test to CI pipeline to catch launch crashes before release.
 
 ## v0.26.12 — 2026-04-26
 <!-- versionCode: 65 -->

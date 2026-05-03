@@ -71,6 +71,32 @@ If you truly must rotate:
 5. Consider bumping the major version or the Android `package` name so the
    break is explicit.
 
+## Automated Cron Releases (BLD-1025)
+
+The 12-hour cron in `.github/workflows/scheduled-release.yml` follows the
+same contract as this skill but applies it programmatically:
+
+1. **Gate** on `CHANGELOG.md` `## Unreleased` content
+   (`scripts/check-changelog-gate.sh`). If the section is empty (only
+   headings/HTML comments/blank lines), the cron exits cleanly and ships
+   nothing — so a versionCode bump never goes out without a user-facing
+   changelog. To intentionally ship a release, append a bullet under
+   `## Unreleased` and merge to main; the next cron tick (or a manual
+   `workflow_dispatch`) picks it up.
+2. **Promote** the `## Unreleased` section to `## vX.Y.Z — YYYY-MM-DD`
+   with the matching `<!-- versionCode: N -->` marker
+   (`scripts/promote-unreleased.sh`).
+3. **Regenerate** `lib/changelog.generated.ts` and the F-Droid sidecar
+   (`npm run changelog:gen`) and include them in the release commit.
+4. **Extract release notes** from `CHANGELOG.md` using the same
+   macOS/BSD-compatible `awk` extractor used in Step 7 below — never
+   from raw `git log`.
+
+When you publish manually using the steps below, you are doing the
+same work the cron does. Keep the two flows in sync; if you change the
+promotion semantics, update both `scripts/promote-unreleased.sh` and the
+manual Step 2 description here in the same PR.
+
 ## Pre-Flight Checks
 
 Before publishing, verify:

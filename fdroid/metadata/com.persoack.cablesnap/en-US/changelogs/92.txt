@@ -1,0 +1,1 @@
+- Internal release — no further user-facing changes since v0.26.20. (Cron release pipeline shipped a versionCode bump before BLD-1025 added the changelog gate; this entry exists so F-Droid clients see something other than the v0.26.19 sidecar.)
