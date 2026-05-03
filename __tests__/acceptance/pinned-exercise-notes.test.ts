@@ -103,11 +103,17 @@ describe("BLD-1028 Test 2 — Behavioral isolation: pinned note and per-set note
     expect(updateSetNotes).not.toHaveBeenCalled();
   });
 
-  it("getExerciseNotesBatch returns per-exercise pinned notes, not set notes", async () => {
-    const mockBatch = { "ex-1": "My pinned note", "ex-2": null };
+  it("getExerciseNotesBatch returns per-exercise pinned notes with { notes, dismissed } shape", async () => {
+    // Return type is Record<string, { notes: string | null; dismissed: boolean }>
+    const mockBatch = {
+      "ex-1": { notes: "My pinned note", dismissed: false },
+      "ex-2": { notes: null, dismissed: false },
+    };
     (getExerciseNotesBatch as jest.Mock).mockResolvedValueOnce(mockBatch);
     const result = await getExerciseNotesBatch(["ex-1", "ex-2"]);
-    expect(result).toEqual(mockBatch);
+    expect(result["ex-1"].notes).toBe("My pinned note");
+    expect(result["ex-1"].dismissed).toBe(false);
+    expect(result["ex-2"].notes).toBeNull();
   });
 });
 
