@@ -107,6 +107,10 @@ export type Exercise = {
   // BLD-913: bodyweight exercise progression paths
   progression_group?: string | null;
   progression_order?: number | null;
+  // BLD-1028: pinned per-exercise notes — persists across sessions.
+  notes?: string | null;
+  notes_updated_at?: number | null;
+  notes_backfill_dismissed_at?: number | null;
 };
 
 export const CATEGORIES: Category[] = [

@@ -123,10 +123,11 @@ export default function ActiveSession() {
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
 
   const {
-    elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, nextHint, hintTimer,
+    elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, nextHint, hintTimer,
     handleUpdate, handleCheck, handleAddSet,
     handleDelete,
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
+    handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill,
     handleMoveUp, handleMoveDown, handlePrefillFromPrevious, finish, cancel,
   } = useSessionActions({
     id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, session, showToast, showError, triggerPR, unit,
@@ -231,6 +232,7 @@ export default function ActiveSession() {
       suggestions={suggestions}
       exerciseNotesOpen={!!exerciseNotesOpen[group.exercise_id]}
       exerciseNotesDraft={exerciseNotesDraft[group.exercise_id]}
+      pinnedNoteDraft={pinnedNoteDraft[group.exercise_id]}
       linkIds={linkIds}
       groups={groups}
       palette={palette}
@@ -242,6 +244,11 @@ export default function ActiveSession() {
       onExerciseNotes={handleExerciseNotes}
       onExerciseNotesDraftChange={handleExerciseNotesDraftChange}
       onToggleExerciseNotes={toggleExerciseNotes}
+      onPinnedNoteDraftChange={handlePinnedNoteDraftChange}
+      onPinnedNoteSave={handleSavePinnedNote}
+      onBackfillCopy={(exId, text) => { handleDismissBackfill(exId); handleSavePinnedNote(exId, text); }}
+      onBackfillDismiss={handleDismissBackfill}
+      onLoadBackfill={handleLoadBackfill}
       onCycleSetType={handleCycleSetType}
       onLongPressSetType={handleLongPressSetType}
       onOpenBodyweightModifier={handleOpenBodyweightModifier}
@@ -262,7 +269,7 @@ export default function ActiveSession() {
       onTimerStop={handleTimerStop}
     />
     );
-  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} colors={colors} />

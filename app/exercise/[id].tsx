@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   softDeleteCustomExercise,
   getTemplatesUsingExercise,
+  updateExerciseNote,
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
@@ -43,6 +44,7 @@ import GoalProgressCard from "@/components/exercise/GoalProgressCard";
 import GoalSetForm from "@/components/exercise/GoalSetForm";
 import { BodyweightModifierNotice } from "@/components/exercises/BodyweightModifierNotice";
 import ProgressionPathCard from "@/components/exercise/ProgressionPathCard";
+import { PinnedExerciseNoteEditor } from "@/components/session/PinnedExerciseNoteEditor";
 import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -87,6 +89,14 @@ export default function ExerciseDetail() {
   const progression = useProgressionChain(id);
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
+  // BLD-1028: local draft for off-session pinned note edit.
+  const [pinnedNoteDraft, setPinnedNoteDraft] = useState<string | undefined>(undefined);
+  const savePinnedNote = useCallback(async (exerciseId: string, text: string) => {
+    await updateExerciseNote(exerciseId, text);
+    setPinnedNoteDraft(undefined);
+    // Refresh exercise so the read surface reflects the saved note.
+    bumpQueryVersion("exercises");
+  }, []);
   const remove = useCallback(async () => {
     if (!id || !d.exercise) return;
     const templates = await getTemplatesUsingExercise(id);
@@ -152,6 +162,41 @@ export default function ExerciseDetail() {
           chain={progression.chain}
           suggestion={progression.suggestion}
         />
+      )}
+
+      {/* BLD-1028: Pinned per-exercise note — off-session edit surface */}
+      {id && (
+        <View style={styles.section}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>📌 Pinned Note for this exercise</Text>
+          {pinnedNoteDraft !== undefined ? (
+            <PinnedExerciseNoteEditor
+              exerciseId={id}
+              exerciseName={exercise.name}
+              value={pinnedNoteDraft}
+              onDraftChange={(_exId, text) => setPinnedNoteDraft(text)}
+              onSave={(exId, text) => { void savePinnedNote(exId, text); }}
+            />
+          ) : exercise.notes ? (
+            <Pressable
+              onPress={() => setPinnedNoteDraft(exercise.notes ?? "")}
+              accessibilityLabel={`Edit pinned note for ${exercise.name}`}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.pinnedNoteText, { color: colors.onSurface, borderColor: colors.outlineVariant }]}>
+                {exercise.notes}
+              </Text>
+            </Pressable>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => setPinnedNoteDraft("")}
+              accessibilityLabel={`Add pinned note for ${exercise.name}`}
+              label="+ Add pinned note"
+              style={{ alignSelf: "flex-start", marginTop: 4 }}
+            />
+          )}
+        </View>
       )}
 
       {/* Goal Progress Card — above Records/Chart for discoverability */}
@@ -276,4 +321,5 @@ const styles = StyleSheet.create({
   historyLeft: { flex: 1 },
   historyRight: { marginLeft: 12, alignItems: "flex-end" },
   rpeBadge: { borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, marginTop: 4 },
+  pinnedNoteText: { marginTop: 6, padding: 10, borderWidth: 1, borderRadius: 8, lineHeight: 20, fontSize: fontSizes.base },
 });

@@ -1,11 +1,13 @@
 /* eslint-disable max-lines-per-function */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { ExerciseNotesPanel } from "./ExerciseNotesPanel";
+import { PinnedExerciseNoteEditor } from "./PinnedExerciseNoteEditor";
+import { BackfillNoteSuggestion } from "./BackfillNoteSuggestion";
 import { LastNextRow } from "./LastNextRow";
 import { SuggestionExplainerModal } from "./SuggestionExplainerModal";
 import type { SetWithMeta, ExerciseGroup } from "./types";
@@ -32,6 +34,8 @@ export type GroupCardHeaderProps = {
   currentMode?: TrainingMode | undefined;
   exerciseNotesOpen: boolean;
   exerciseNotesDraft: string | undefined;
+  /** BLD-1028: current draft of the pinned note (or undefined if not editing). */
+  pinnedNoteDraft?: string;
   firstSet: SetWithMeta | undefined;
   previousPerformance?: string | null;
   previousPerformanceA11y?: string | null;
@@ -45,6 +49,12 @@ export type GroupCardHeaderProps = {
   onExerciseNotes: (exerciseId: string, text: string) => void;
   onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
   onToggleExerciseNotes: (exerciseId: string) => void;
+  /** BLD-1028 */
+  onPinnedNoteDraftChange: (exerciseId: string, text: string) => void;
+  onPinnedNoteSave: (exerciseId: string, text: string) => void;
+  onBackfillCopy: (exerciseId: string, text: string) => void;
+  onBackfillDismiss: (exerciseId: string) => void;
+  onLoadBackfill: (exerciseId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
@@ -65,6 +75,7 @@ function GroupCardHeaderInner({
   currentMode: _currentMode,
   exerciseNotesOpen,
   exerciseNotesDraft,
+  pinnedNoteDraft,
   firstSet,
   previousPerformance,
   previousPerformanceA11y,
@@ -74,6 +85,11 @@ function GroupCardHeaderInner({
   onExerciseNotes,
   onExerciseNotesDraftChange,
   onToggleExerciseNotes,
+  onPinnedNoteDraftChange,
+  onPinnedNoteSave,
+  onBackfillCopy,
+  onBackfillDismiss,
+  onLoadBackfill,
   onShowDetail,
   onSwap,
   onDeleteExercise,
@@ -95,6 +111,15 @@ function GroupCardHeaderInner({
   const notesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
   const eid = group.exercise_id;
   const [explainerVisible, setExplainerVisible] = useState(false);
+  // BLD-1028: local state for whether the pinned note editor is open.
+  const [pinnedNoteOpen, setPinnedNoteOpen] = useState(false);
+  const pinnedNoteValue = pinnedNoteDraft ?? group.pinnedNote ?? "";
+
+  // Lazy-load backfill candidate once on mount (avoids per-exercise upfront cost).
+  useEffect(() => {
+    onLoadBackfill(eid);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eid]);
 
   // Defensive: LastNextRow needs a numeric step + onUpdate. We default both to
   // safe no-ops so the header still renders if a parent (or test) hasn't
@@ -188,9 +213,23 @@ function GroupCardHeaderInner({
                 color={colors.onSurfaceVariant}
               />
             </Pressable>
+            {/* BLD-1028: pinned note pencil icon */}
+            <Pressable
+              onPress={() => setPinnedNoteOpen((o) => !o)}
+              accessibilityLabel={`Edit pinned note for ${group.name}`}
+              hitSlop={8}
+              style={styles.iconBtn}
+            >
+              <MaterialCommunityIcons
+                name={group.pinnedNote ? "pin" : "pin-outline"}
+                size={24}
+                color={group.pinnedNote ? colors.primary : colors.onSurfaceVariant}
+              />
+            </Pressable>
+            {/* Per-set session note toggle (relabeled: "Note for this session") */}
             <Pressable
               onPress={() => onToggleExerciseNotes(eid)}
-              accessibilityLabel={`${group.name} notes`}
+              accessibilityLabel={`Note for this session — ${group.name}`}
               hitSlop={8}
               style={styles.iconBtn}
             >
@@ -217,11 +256,62 @@ function GroupCardHeaderInner({
             exerciseName={group.name}
           />
         )}
+        {/* BLD-1028: pinned note read surface — always visible when a note exists */}
+        {!pinnedNoteOpen && group.pinnedNote ? (
+          <Pressable
+            onPress={() => setPinnedNoteOpen(true)}
+            accessibilityLabel={`📌 Pinned note for ${group.name}: ${group.pinnedNote}`}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.pinnedNotePreview, { color: colors.onSurfaceVariant, borderColor: colors.outlineVariant }]}>
+              📌 {group.pinnedNote}
+            </Text>
+          </Pressable>
+        ) : !pinnedNoteOpen && !group.pinnedNote ? (
+          <Pressable
+            onPress={() => setPinnedNoteOpen(true)}
+            accessibilityLabel={`Add pinned note for ${group.name}`}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.pinnedNoteEmpty, { color: colors.primary }]}>
+              + Add pinned note
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
       <SuggestionExplainerModal
         visible={explainerVisible}
         onClose={() => setExplainerVisible(false)}
       />
+      {/* BLD-1028: backfill suggestion chip */}
+      {group.pinnedNoteBackfill && !group.pinnedNote && (
+        <BackfillNoteSuggestion
+          exerciseId={eid}
+          exerciseName={group.name}
+          candidateText={group.pinnedNoteBackfill.text}
+          candidateDate={group.pinnedNoteBackfill.date}
+          onCopy={(exId, text) => {
+            onBackfillCopy(exId, text);
+            onPinnedNoteSave(exId, text);
+            setPinnedNoteOpen(false);
+          }}
+          onDismiss={onBackfillDismiss}
+        />
+      )}
+      {/* BLD-1028: inline pinned note editor */}
+      {pinnedNoteOpen && (
+        <PinnedExerciseNoteEditor
+          exerciseId={eid}
+          exerciseName={group.name}
+          value={pinnedNoteValue}
+          onDraftChange={onPinnedNoteDraftChange}
+          onSave={(exId, text) => {
+            onPinnedNoteSave(exId, text);
+            setPinnedNoteOpen(false);
+          }}
+        />
+      )}
+      {/* Per-set session note panel (relabeled for clarity) */}
       {exerciseNotesOpen && (
         <ExerciseNotesPanel
           exerciseId={eid}
@@ -250,6 +340,16 @@ const styles = StyleSheet.create({
   iconBtn: { padding: 8 },
   moveBtn: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   moveBtnDisabled: { opacity: 0.4 },
+  // BLD-1028: pinned note
+  pinnedNotePreview: {
+    fontSize: 13,
+    lineHeight: 18,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  pinnedNoteEmpty: { fontSize: 13, fontWeight: "600", paddingVertical: 2 },
 });
 
 /**

@@ -25,6 +25,9 @@ import {
   getCurrentBestWeight,
   syncTemplateFromSession,
   undoTemplateSyncFromSession,
+  updateExerciseNote,
+  dismissExerciseBackfill,
+  getExerciseBackfillCandidate,
 } from "../lib/db";
 import {
   getLastBodyweightModifier,
@@ -125,6 +128,11 @@ export function useSessionActions({
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
   const [exerciseNotesDraft, setExerciseNotesDraft] = useState<Record<string, string>>({});
+  // BLD-1028: per-exercise pinned note draft. Separate from exerciseNotesDraft
+  // which drives workout_sets.notes (per-set, per-session).
+  const [pinnedNoteDraft, setPinnedNoteDraft] = useState<Record<string, string>>({});
+  const pinnedNoteDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const pinnedNotePendingFlushRef = useRef<Record<string, string>>({});
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // BLD-541: per-session rate-limiter for weighted-BW PR celebrations.
@@ -136,6 +144,26 @@ export function useSessionActions({
   // BLD-630: the clock is now anchored to the first completed set, not the
   // moment the user tapped Start. While `clockStartedAt` is null, elapsed
   // stays at 0 and the 1Hz interval is not scheduled.
+  // BLD-1028: flush all pending pinned-note debounces immediately to DB.
+  // Called from AppState (background/inactive), finish, unmount.
+  const flushAllPinnedNotes = useCallback(() => {
+    const pending = pinnedNotePendingFlushRef.current;
+    for (const [exerciseId, text] of Object.entries(pending)) {
+      const debounce = pinnedNoteDebounceRef.current[exerciseId];
+      if (debounce) {
+        clearTimeout(debounce);
+        delete pinnedNoteDebounceRef.current[exerciseId];
+      }
+      void updateExerciseNote(exerciseId, text);
+    }
+    pinnedNotePendingFlushRef.current = {};
+  }, []);
+
+  // Cleanup: flush any pending pinned-note drafts on unmount.
+  useEffect(() => {
+    return () => { flushAllPinnedNotes(); };
+  }, [flushAllPinnedNotes]);
+
   // BLD-553 battery fix: pause setInterval when app is backgrounded. On some
   // RN runtimes setInterval continues to schedule wake-ups with the screen
   // off, and if it doesn't, React still triggers a render-burst as Date.now()
@@ -182,9 +210,12 @@ export function useSessionActions({
       } else if (next === "background") {
         sessionBreadcrumb("session.appstate.background");
         stop();
+        // BLD-1028: flush any pending pinned-note drafts on background.
+        flushAllPinnedNotes();
       } else if (next === "inactive") {
         sessionBreadcrumb("session.appstate.inactive");
         stop();
+        flushAllPinnedNotes();
       } else {
         stop();
       }
@@ -657,6 +688,61 @@ export function useSessionActions({
     setExerciseNotesOpen((prev) => ({ ...prev, [exerciseId]: !prev[exerciseId] }));
   }, []);
 
+  // BLD-1028: Pinned per-exercise note handlers.
+
+  /** Called on every keystroke; debounces DB write at 600ms. */
+  const handlePinnedNoteDraftChange = useCallback((exerciseId: string, text: string) => {
+    setPinnedNoteDraft((prev) => ({ ...prev, [exerciseId]: text }));
+    pinnedNotePendingFlushRef.current[exerciseId] = text;
+    // Clear existing debounce and restart.
+    const existing = pinnedNoteDebounceRef.current[exerciseId];
+    if (existing) clearTimeout(existing);
+    pinnedNoteDebounceRef.current[exerciseId] = setTimeout(() => {
+      delete pinnedNoteDebounceRef.current[exerciseId];
+      delete pinnedNotePendingFlushRef.current[exerciseId];
+      void updateExerciseNote(exerciseId, text);
+      // Mirror back to group state so re-navigation reflects the latest note.
+      setGroups((prev) => prev.map((g) =>
+        g.exercise_id === exerciseId ? { ...g, pinnedNote: text || null } : g
+      ));
+    }, 600);
+  }, [setGroups]);
+
+  /** Called on onBlur / explicit save — flushes immediately. */
+  const handleSavePinnedNote = useCallback((exerciseId: string, text: string) => {
+    const existing = pinnedNoteDebounceRef.current[exerciseId];
+    if (existing) clearTimeout(existing);
+    delete pinnedNoteDebounceRef.current[exerciseId];
+    delete pinnedNotePendingFlushRef.current[exerciseId];
+    setPinnedNoteDraft((prev) => { const n = { ...prev }; delete n[exerciseId]; return n; });
+    void updateExerciseNote(exerciseId, text);
+    setGroups((prev) => prev.map((g) =>
+      g.exercise_id === exerciseId ? { ...g, pinnedNote: text || null } : g
+    ));
+  }, [setGroups]);
+
+  /** Dismisses the backfill prompt (both "Copy" and "Dismiss" taps). */
+  const handleDismissBackfill = useCallback((exerciseId: string) => {
+    void dismissExerciseBackfill(exerciseId);
+    setGroups((prev) => prev.map((g) =>
+      g.exercise_id === exerciseId ? { ...g, pinnedNoteBackfill: null } : g
+    ));
+  }, [setGroups]);
+
+  /**
+   * Lazy-loads the backfill candidate for an exercise. Called by the header
+   * on first mount so we don't pay the query cost for all exercises upfront.
+   */
+  const handleLoadBackfill = useCallback(async (exerciseId: string) => {
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    // Only query if: no pinned note, not yet dismissed, not already loaded.
+    if (!group || group.pinnedNote || group.pinnedNoteBackfill !== undefined) return;
+    const candidate = await getExerciseBackfillCandidate(exerciseId);
+    setGroups((prev) => prev.map((g) =>
+      g.exercise_id === exerciseId ? { ...g, pinnedNoteBackfill: candidate } : g
+    ));
+  }, [groups, setGroups]);
+
   const handleMoveExercise = useCallback(async (exerciseId: string, direction: "up" | "down") => {
     if (!id) return;
     Keyboard.dismiss();
@@ -799,6 +885,8 @@ export function useSessionActions({
       "Complete Workout?",
       `Duration: ${formatTime(elapsed)}`,
       async () => {
+        // BLD-1028: flush any pending pinned-note drafts before completing.
+        flushAllPinnedNotes();
         await completeSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
@@ -925,6 +1013,7 @@ export function useSessionActions({
     clockStartedAt,
     exerciseNotesOpen,
     exerciseNotesDraft,
+    pinnedNoteDraft,
     nextHint,
     hintTimer,
     handleUpdate,
@@ -934,6 +1023,10 @@ export function useSessionActions({
     handleExerciseNotes,
     handleExerciseNotesDraftChange,
     toggleExerciseNotes,
+    handlePinnedNoteDraftChange,
+    handleSavePinnedNote,
+    handleDismissBackfill,
+    handleLoadBackfill,
     handleMoveUp,
     handleMoveDown,
     handlePrefillFromPrevious,

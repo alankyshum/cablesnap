@@ -16,6 +16,8 @@ export type GroupCardProps = {
   suggestions: Record<string, Suggestion | null>;
   exerciseNotesOpen: boolean;
   exerciseNotesDraft: string | undefined;
+  /** BLD-1028 */
+  pinnedNoteDraft?: string;
   linkIds: string[];
   groups: ExerciseGroup[];
   palette: string[];
@@ -27,6 +29,12 @@ export type GroupCardProps = {
   onExerciseNotes: (exerciseId: string, text: string) => void;
   onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
   onToggleExerciseNotes: (exerciseId: string) => void;
+  /** BLD-1028 */
+  onPinnedNoteDraftChange: (exerciseId: string, text: string) => void;
+  onPinnedNoteSave: (exerciseId: string, text: string) => void;
+  onBackfillCopy: (exerciseId: string, text: string) => void;
+  onBackfillDismiss: (exerciseId: string) => void;
+  onLoadBackfill: (exerciseId: string) => void;
   onCycleSetType: (setId: string) => void;
   onLongPressSetType: (setId: string) => void;
   // BLD-541 bodyweight modifier wiring (forwarded to SetRow when group is_bodyweight)
@@ -58,9 +66,11 @@ export type GroupCardProps = {
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   group, step, unit, suggestions,
-  exerciseNotesOpen, exerciseNotesDraft, linkIds, groups, palette,
+  exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onAddWarmups,
-  onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
+  onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes,
+  onPinnedNoteDraftChange, onPinnedNoteSave, onBackfillCopy, onBackfillDismiss, onLoadBackfill,
+  onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
   onOpenVariantPicker, onClearVariant,
   onOpenBodyweightGripPicker, onClearBodyweightGrip,
@@ -144,6 +154,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           group={group}
           exerciseNotesOpen={exerciseNotesOpen}
           exerciseNotesDraft={exerciseNotesDraft}
+          pinnedNoteDraft={pinnedNoteDraft}
           firstSet={firstSet}
           previousPerformance={group.previousSummary}
           previousPerformanceA11y={group.previousSummaryA11y}
@@ -153,6 +164,11 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onExerciseNotes={onExerciseNotes}
           onExerciseNotesDraftChange={onExerciseNotesDraftChange}
           onToggleExerciseNotes={onToggleExerciseNotes}
+          onPinnedNoteDraftChange={onPinnedNoteDraftChange}
+          onPinnedNoteSave={onPinnedNoteSave}
+          onBackfillCopy={onBackfillCopy}
+          onBackfillDismiss={onBackfillDismiss}
+          onLoadBackfill={onLoadBackfill}
           onShowDetail={onShowDetail}
           onSwap={onSwap}
           onDeleteExercise={onDeleteExercise}

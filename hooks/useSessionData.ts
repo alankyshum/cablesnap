@@ -17,6 +17,8 @@ import {
   getExercisesByIds,
   updateSetsBatch,
   updateExercisePositions,
+  getExerciseNotesBatch,
+  getExerciseBackfillCandidate,
 } from "../lib/db";
 import { parseTemplateTargetReps } from "../lib/db/templates";
 import type { WorkoutSession, Exercise } from "../lib/types";
@@ -98,10 +100,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
 
-    const [prevCache, exerciseMeta, recentByExercise] = await Promise.all([
+    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes] = await Promise.all([
       getPreviousSetsBatch(exerciseIds, id),
       getExercisesByIds(exerciseIds),
       getRecentExerciseSetsBatch(exerciseIds, 2),
+      getExerciseNotesBatch(exerciseIds),
     ]);
 
     const key = exerciseIds.sort().join(",");
@@ -127,6 +130,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           equipment: ex?.equipment ?? "other",
           exercise_position: s.exercise_position ?? 0,
           exerciseCategory: ex?.category ?? null,
+          pinnedNote: exerciseNotes[s.exercise_id]?.notes ?? null,
+          // Backfill candidate is lazy-loaded when the header mounts (see
+          // useSessionActions.handleLoadBackfill), not here — avoids an
+          // extra DB query per exercise on every session reload.
+          pinnedNoteBackfill: undefined,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
