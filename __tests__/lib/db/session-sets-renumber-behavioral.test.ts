@@ -125,6 +125,7 @@ jest.mock("drizzle-orm/expo-sqlite", () => ({
 
 import { deleteSet, deleteSetsBatch, addSet } from "../../../lib/db/session-sets";
 import { syncTemplateFromSession } from "../../../lib/db/templates";
+import { getDrizzle } from "../../../lib/db/helpers";
 
 // Pre-warm DB to consume seed() transactions before tests reset state.
 beforeAll(async () => {
@@ -287,11 +288,32 @@ describe("deleteSetsBatch — behavioral (row-level assertions)", () => {
 });
 
 describe("delete + sync-back-to-template regression (BLD-1038 tourniquet)", () => {
+  const TPL_ID = "tpl-sync";
+  const TE_ID = "te-sync";
+
+  // Restore drizzle select/update to default no-ops after each test in this block,
+  // so any per-test overrides don't bleed into other describe blocks.
+  afterEach(async () => {
+    const drizzleDb = await getDrizzle() as any;
+    drizzleDb.select.mockImplementation(() => ({
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      get: jest.fn(() => undefined),
+      all: jest.fn(() => []),
+      then: (r: any, rj: any) => Promise.resolve([]).then(r, rj),
+    }));
+    drizzleDb.update.mockImplementation(() => ({
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      then: (r: any) => Promise.resolve().then(r),
+    }));
+  });
+
   /**
-   * After deleteSet(A2), syncTemplateFromSession must produce a dense
-   * setTypes array with no undefined holes. This pins the BLD-1038 invariant:
-   * even though syncTemplateFromSession pushes sequentially (defense-in-depth),
-   * the DB rows must already be contiguous for any consumer that reads by index.
+   * Row-level: After deleteSet(A2), survivors must have set_number {1, 2}.
+   * This is the pre-condition for the syncTemplateFromSession integration test below.
    */
   it("after deleteSet(middle), rows are contiguous for consumers that read by set_number", async () => {
     seedRows([
@@ -302,9 +324,6 @@ describe("delete + sync-back-to-template regression (BLD-1038 tourniquet)", () =
 
     await deleteSet("A2");
 
-    // After delete, rows have set_number {1, 3} pre-renumber → {1, 2} post-renumber.
-    // A consumer that reads rows ordered by set_number and accesses by 1-based index
-    // should find: index 0 → set_number 1, index 1 → set_number 2 (no gap at 3).
     const finalRows = rows
       .filter((r) => r.exercise_id === A)
       .sort((a, b) => a.set_number - b.set_number);
@@ -312,22 +331,114 @@ describe("delete + sync-back-to-template regression (BLD-1038 tourniquet)", () =
     expect(finalRows).toHaveLength(2);
     expect(finalRows[0].set_number).toBe(1);
     expect(finalRows[1].set_number).toBe(2);
-    // No undefined holes when accessed by index
     expect(finalRows[0].id).toBe("A1");
     expect(finalRows[1].id).toBe("A3");
 
-    // set_types array built by sequential push matches the survivors, dense
+    // set_types array built by sequential push is dense — no undefined holes
     const setTypes = finalRows.map((r) => r.set_type);
     expect(setTypes).toEqual(["normal", "normal"]);
     expect(setTypes).not.toContain(undefined);
   });
 
-  it("syncTemplateFromSession is called within the mock env without throwing", async () => {
-    // syncTemplateFromSession calls getDrizzle() which uses the mocked db.
-    // It needs a session + template query that returns null to short-circuit.
-    // The mock drizzle's select chain returns undefined from .get(), so
-    // syncTemplateFromSession returns null (no template_id on session) — which
-    // is the correct no-op path. The key assertion is: no error is thrown.
-    await expect(syncTemplateFromSession(S)).resolves.toBeNull();
+  /**
+   * Integration: deleteSet(middle) → syncTemplateFromSession reads the renumbered rows
+   * and updates the template with 2 dense sets (no warmup hole).
+   *
+   * Before BLD-1044 the DB would have set_number {1, 3} after a middle delete.
+   * syncTemplateFromSession pushes sequentially from ordered rows so it still produced
+   * 2 setTypes — but any consumer relying on set_number as a 1-based index would find a gap.
+   * BLD-1044 fixes this at the source; this test pins that the renumber actually fires
+   * before syncTemplateFromSession reads the rows.
+   */
+  it("after deleteSet(middle), syncTemplateFromSession reads contiguous rows and writes dense setTypes to template", async () => {
+    seedRows([
+      { id: "A1", session_id: S, exercise_id: A, set_number: 1, set_type: "normal" },
+      { id: "A2", session_id: S, exercise_id: A, set_number: 2, set_type: "warmup" },
+      { id: "A3", session_id: S, exercise_id: A, set_number: 3, set_type: "normal" },
+    ]);
+
+    // Step 1: delete the warmup (middle set) — triggers in-transaction renumber
+    await deleteSet("A2");
+    expect(setNumbersFor(S, A)).toEqual([1, 2]);
+
+    // Step 2: wire the cached Drizzle mock to return realistic data for the
+    // four Drizzle select calls that syncTemplateFromSession makes, in order:
+    //   0. select().from(workoutSessions)…get()    → { template_id }
+    //   1. select().from(workoutTemplates)…get()   → { is_starter: 0 }
+    //   2. select().from(workoutSets)…orderBy()    → current rows (post-renumber)
+    //   3. select().from(templateExercises)…where  → original 3-set exercise
+    const drizzleDb = await getDrizzle() as any;
+    let selectCallIdx = 0;
+
+    const makeSyncChain = (resolveTo: unknown, useGet: boolean) => {
+      const chain: any = {
+        from: jest.fn().mockImplementation(function(this: any) { return this; }),
+        where: jest.fn().mockImplementation(function(this: any) { return this; }),
+        orderBy: jest.fn().mockImplementation(function(this: any) { return this; }),
+        leftJoin: jest.fn().mockImplementation(function(this: any) { return this; }),
+        get: jest.fn(() => (useGet ? resolveTo : undefined)),
+        all: jest.fn(() => (!useGet ? resolveTo : [])),
+        then: (r: any, rj: any) => Promise.resolve(resolveTo).then(r, rj),
+      };
+      return chain;
+    };
+
+    drizzleDb.select.mockImplementation(() => {
+      const idx = selectCallIdx++;
+      // Call 0: workoutSessions — session has a template_id
+      if (idx === 0) return makeSyncChain({ template_id: TPL_ID }, true);
+      // Call 1: workoutTemplates — user-owned (not starter)
+      if (idx === 1) return makeSyncChain({ is_starter: 0, name: "Test Template", source: null }, true);
+      // Call 2: workoutSets — return the renumbered in-memory rows
+      if (idx === 2) {
+        const setsData = rows
+          .filter((r) => r.session_id === S)
+          .map((r) => ({
+            exercise_id: r.exercise_id,
+            exercise_position: 0,
+            set_number: r.set_number,
+            set_type: r.set_type ?? "normal",
+          }))
+          .sort((a, b) => a.set_number - b.set_number);
+        return makeSyncChain(setsData, false);
+      }
+      // Call 3: templateExercises — original template had 3 sets including warmup
+      if (idx === 3) {
+        return makeSyncChain(
+          [{ id: TE_ID, exercise_id: A, position: 0, target_sets: 3, set_types: JSON.stringify(["normal", "warmup", "normal"]) }],
+          false
+        );
+      }
+      return makeSyncChain(undefined, true);
+    });
+
+    // Capture what update(…).set(…) receives across both update calls in syncTemplateFromSession
+    // (call 0: templateExercises update; call 1: workoutTemplates timestamp update)
+    const capturedUpdates: any[] = [];
+    const updateChain: any = {
+      set: jest.fn((args: any) => { capturedUpdates.push(args); return updateChain; }),
+      where: jest.fn(() => updateChain),
+      then: (r: any) => Promise.resolve().then(r),
+    };
+    drizzleDb.update.mockImplementation(() => updateChain);
+
+    // Step 3: call syncTemplateFromSession — it must see 2 contiguous rows and diff them
+    const result = await syncTemplateFromSession(S);
+
+    // Result should be "updated" (not null, not "cloned")
+    expect(result).not.toBeNull();
+    expect(result?.kind).toBe("updated");
+    if (result?.kind === "updated") {
+      expect(result.changes).toHaveLength(1);
+      expect(result.changes[0].newTargetSets).toBe(2); // 2 survivors, not 3
+      expect(result.changes[0].newSetTypes).toEqual(["normal", "normal"]); // no warmup hole
+    }
+
+    // The template exercise row was updated with the correct, dense set data
+    // capturedUpdates[0] = templateExercises.set({target_sets, set_types})
+    // capturedUpdates[1] = workoutTemplates.set({updated_at})  ← second update call
+    expect(capturedUpdates.length).toBeGreaterThanOrEqual(1);
+    expect(capturedUpdates[0].target_sets).toBe(2);
+    expect(JSON.parse(capturedUpdates[0].set_types as string)).toEqual(["normal", "normal"]);
   });
 });
