@@ -52,10 +52,15 @@ jobs:
       FIXTURE_PATH: tests/fixtures/regression-catcher/bld-480-pre-fix.png
 
     steps:
-      - name: Checkout main (for our scenario specs + tooling)
+      - name: Checkout workflow ref (for our scenario specs + tooling)
+        # Use the dispatched ref (defaults to `main` after merge) instead of
+        # hardcoding `main`, so a workflow_dispatch from the BLD-1022 fix
+        # branch can pick up scripts/regression-fixture-wire-seed-hook.sh
+        # before that script lands on main. Path stays `main-tree` to avoid
+        # touching every downstream step.
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref }}
           path: main-tree
           fetch-depth: 1
 
