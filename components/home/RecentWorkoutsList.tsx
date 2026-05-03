@@ -37,7 +37,7 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
             const rpe = avgRPEs[item.id];
             const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
             return (
-              <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(300)}>
+              <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(300)} style={styles.animatedCard}>
                 <Pressable
                   style={[styles.flowCard, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]}
                   onPress={() => router.push(`/session/detail/${item.id}`)}
@@ -68,8 +68,9 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
 const styles = StyleSheet.create({
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  flowList: { flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-start" },
-  flowCard: { marginBottom: 8, ...flowCardStyle, flexGrow: 0 },
+  flowList: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  animatedCard: { ...flowCardStyle, alignSelf: "flex-start" },
+  flowCard: { marginBottom: 8 },
   empty: { alignItems: "center", paddingVertical: 16 },
   recentRow: { flexDirection: "row", alignItems: "center" },
   rpeTag: { borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 },
