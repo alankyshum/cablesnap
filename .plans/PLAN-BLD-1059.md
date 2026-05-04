@@ -185,7 +185,18 @@ stack_calibrations
 ### Quality Director (UX)
 _Pending_
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: APPROVED WITH MINOR CONDITIONS** (2026-05-04, run 99500b7a). Feasibility, complexity realism, dependency risk ("none new" verified), and migration safety all confirmed. Composite index `(gym_id, started_at)` is correctly ordered. Snapshot-weight-on-set-row invariant is the right call. Full review on issue thread (comment 2026-05-04T16:14:24Z).
+
+Six required precision items (no architecture impact — enforceable at implementation time):
+
+1. **Drizzle dual-source-of-truth (BLD-369).** Every new table/column must land in BOTH `lib/db/schema.ts` AND `lib/db/migrations.ts` in the same commit. Add explicit checklist item to In Scope.
+2. **Manual row-mapping audit (BLD-82).** `lib/db/import-export.ts:665` (sessions) and `:680` (sets) use positional column lists that DO NOT include the new columns — CSV round-trip acceptance criterion #7 will fail silently without an audit. Extend ALL manual row mappers (`import-export.ts`, `csv-import.ts`, `sessions.ts`, any selectors with hand-listed columns) and add a round-trip regression test.
+3. **`is_default` uniqueness at DB layer.** Wrap the flip-default-gym operation in `withTransactionAsync` (BLD-13 pattern) — two sequential UPDATEs from UI is not atomic. Optional partial unique index `WHERE is_default = 1` (precedent: `idx_strength_goals_one_active` in migrations.ts:134).
+4. **cable_stacks soft-delete semantics.** Add `deleted_at` to `cable_stacks` (symmetric with `gym_profiles.deleted_at`) so single-stack delete preserves badge attribution; gym soft-delete cascades by UI joining `WHERE gp.deleted_at IS NULL`.
+5. **Snapshot stack unit on the set row.** Pick one: (a) add `stack_unit_at_log TEXT NULL` to `workout_sets`, or (b) explicitly state weight is converted to user-pref-unit at log time and stack unit is informational only post-log. Pin the choice before coding.
+6. **e1RM trend index branching.** Emit two separate query strings (gym-scoped vs all-gyms) rather than a single `WHERE (? IS NULL OR gym_id = ?)` predicate — SQLite often refuses to use a leading-equality index when the predicate is `IS NULL`.
+
+Nice-to-haves (non-blocking): rollback test in migration test; ensure new MarkerPickerSheet is a NEW component (not an overload of VariantPickerSheet); centralize Gym Mix suppression via `getActiveGymCount(sinceDays=90)`.
 ### Psychologist (Behavior-Design scoping check)
 **Verdict: APPROVED WITH MINOR CONDITIONS** (2026-05-04, run 102fc20d). Classification confirmed NO. All five gates pass. Eyal Facilitator. Scores: Autonomy 9 / Friction 9 / Resilience 10 / Mastery 8.
 
