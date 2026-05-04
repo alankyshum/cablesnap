@@ -138,6 +138,9 @@ jest.mock('../../lib/db', () => ({
   deleteBodyWeight: jest.fn().mockResolvedValue(undefined),
   updateBodySettings: jest.fn().mockResolvedValue(undefined),
   getWeeklySummary: jest.fn().mockResolvedValue(mockSummaryData),
+  getActiveGymCount: jest.fn().mockResolvedValue(0),
+  getGymProfiles: jest.fn().mockResolvedValue([]),
+  getSessionsByGym: jest.fn().mockResolvedValue([]),
 }))
 
 jest.mock('../../lib/db/pr-dashboard', () => ({

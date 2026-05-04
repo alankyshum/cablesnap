@@ -101,20 +101,21 @@ export function TrendLineCard({
 
 type RPETrendCardProps = {
   chartWidth: number;
+  gymId?: string | null;
   style?: object;
 };
 
-export function RPETrendCard({ chartWidth, style }: RPETrendCardProps) {
+export function RPETrendCard({ chartWidth, gymId, style }: RPETrendCardProps) {
   const colors = useThemeColors();
   const [rpeData, setRpeData] = useState<SessionRPERow[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const rows = await getRecentSessionRPEs();
+        const rows = await getRecentSessionRPEs(Date.now(), gymId);
         setRpeData(rows);
       })();
-    }, []),
+    }, [gymId]),
   );
 
   const data = rpeData.map((d, i) => ({ x: i, y: d.avg_rpe }));
@@ -134,20 +135,21 @@ export function RPETrendCard({ chartWidth, style }: RPETrendCardProps) {
 
 type RatingTrendCardProps = {
   chartWidth: number;
+  gymId?: string | null;
   style?: object;
 };
 
-export function RatingTrendCard({ chartWidth, style }: RatingTrendCardProps) {
+export function RatingTrendCard({ chartWidth, gymId, style }: RatingTrendCardProps) {
   const colors = useThemeColors();
   const [ratingData, setRatingData] = useState<SessionRatingRow[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const rows = await getRecentSessionRatings();
+        const rows = await getRecentSessionRatings(Date.now(), gymId);
         setRatingData(rows);
       })();
-    }, []),
+    }, [gymId]),
   );
 
   const data = ratingData.map((d, i) => ({ x: i, y: d.rating }));

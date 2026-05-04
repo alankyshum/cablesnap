@@ -140,6 +140,39 @@ export { getVariantSetCount, buildVariantSql } from "./sessions";
 export type { E1RMTrendRow, WeeklyE1RMRow, SessionRPERow, SessionRatingRow } from "./sessions";
 
 export {
+  getGymProfiles,
+  listGymProfiles,
+  getGymProfile,
+  createGymProfile,
+  setDefaultGym,
+  updateGymProfile,
+  deleteGymProfile,
+  softDeleteGymProfile,
+  getCableStacksForGym,
+  listCableStacks,
+  getCableStack,
+  createCableStack,
+  updateCableStack,
+  deleteCableStack,
+  softDeleteCableStack,
+  getCalibrationsByStack,
+  listCalibrations,
+  upsertCalibration,
+  deleteCalibration,
+  getDefaultGym,
+  getActiveGymCount,
+  getSessionsByGym,
+} from "./gym-profiles";
+export type {
+  GymProfileRow,
+  CableStackRow,
+  StackCalibrationRow,
+  GymProfile,
+  CableStack,
+  StackCalibration,
+} from "./gym-profiles";
+
+export {
   addFoodEntry,
   getFoodEntries,
   getFavoriteFoods,

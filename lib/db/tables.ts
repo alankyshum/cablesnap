@@ -11,6 +11,7 @@ const VALID_TABLES = new Set([
   "strava_connection", "strava_sync_log", "health_connect_sync_log",
   "meal_templates", "meal_template_items", "app_settings",
   "program_schedule", "strength_goals", "water_logs",
+  "gym_profiles", "cable_stacks", "stack_calibrations",
 ]);
 
 function assertValidTable(table: string): void {
@@ -116,7 +117,11 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       duration_seconds INTEGER,
       notes TEXT DEFAULT '',
       program_day_id TEXT DEFAULT NULL,
-      rating INTEGER DEFAULT NULL
+      rating INTEGER DEFAULT NULL,
+      edited_at INTEGER DEFAULT NULL,
+      import_batch_id TEXT DEFAULT NULL,
+      gym_id TEXT DEFAULT NULL,
+      gym_name_at_log TEXT DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_sets (
@@ -139,7 +144,13 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       exercise_position INTEGER DEFAULT 0,
       bodyweight_modifier_kg REAL DEFAULT NULL,
       attachment TEXT DEFAULT NULL,
-      mount_position TEXT DEFAULT NULL
+      mount_position TEXT DEFAULT NULL,
+      grip_type TEXT DEFAULT NULL,
+      grip_width TEXT DEFAULT NULL,
+      stack_id TEXT DEFAULT NULL,
+      stack_marker INTEGER DEFAULT NULL,
+      stack_unit_at_log TEXT DEFAULT NULL,
+      stack_name_at_log TEXT DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS food_entries (
@@ -351,6 +362,42 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       logged_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_water_logs_date_key ON water_logs(date_key);
+
+    -- BLD-1059: per-gym cable stack calibration
+    CREATE TABLE IF NOT EXISTS gym_profiles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      notes TEXT DEFAULT '',
+      is_default INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_gym_profiles_one_default ON gym_profiles(is_default) WHERE is_default = 1;
+
+    CREATE TABLE IF NOT EXISTS cable_stacks (
+      id TEXT PRIMARY KEY,
+      gym_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      unit TEXT NOT NULL DEFAULT 'kg',
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER,
+      FOREIGN KEY (gym_id) REFERENCES gym_profiles(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS stack_calibrations (
+      id TEXT PRIMARY KEY,
+      stack_id TEXT NOT NULL,
+      marker INTEGER NOT NULL,
+      true_weight REAL NOT NULL,
+      UNIQUE(stack_id, marker),
+      FOREIGN KEY (stack_id) REFERENCES cable_stacks(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cable_stacks_gym ON cable_stacks(gym_id);
+    CREATE INDEX IF NOT EXISTS idx_stack_calibrations_stack ON stack_calibrations(stack_id);
+    CREATE INDEX IF NOT EXISTS idx_workout_sessions_gym_started_at ON workout_sessions(gym_id, started_at);
   `);
 }
 

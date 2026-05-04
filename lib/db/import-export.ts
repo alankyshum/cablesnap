@@ -29,6 +29,9 @@ export type BackupTableName =
   | "app_settings"
   | "achievements_earned"
   | "template_exercises"
+  | "gym_profiles"
+  | "cable_stacks"
+  | "stack_calibrations"
   | "workout_sessions"
   | "program_days"
   | "workout_sets"
@@ -50,6 +53,9 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   app_settings: "App Settings",
   achievements_earned: "Achievements",
   template_exercises: "Template Exercises",
+  gym_profiles: "Gym Profiles",
+  cable_stacks: "Cable Stacks",
+  stack_calibrations: "Stack Calibrations",
   workout_sessions: "Workout Sessions",
   program_days: "Program Days",
   workout_sets: "Workout Sets",
@@ -61,6 +67,7 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
 };
 
 // FK-dependency order for import — parents before children
+// gym_profiles → cable_stacks → stack_calibrations must come before workout_sessions
 export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "exercises",
   "workout_templates",
@@ -73,6 +80,9 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "app_settings",
   "achievements_earned",
   "template_exercises",
+  "gym_profiles",
+  "cable_stacks",
+  "stack_calibrations",
   "workout_sessions",
   "program_days",
   "workout_sets",
@@ -148,7 +158,7 @@ export const BACKUP_CATEGORY_LABELS: Record<BackupCategoryName, string> = {
 
 export const BACKUP_CATEGORY_TABLES: Record<BackupCategoryName, BackupTableName[]> = {
   workout_templates: ["workout_templates", "template_exercises"],
-  workout_history: ["workout_sessions", "workout_sets"],
+  workout_history: ["gym_profiles", "cable_stacks", "stack_calibrations", "workout_sessions", "workout_sets"],
   exercises: ["exercises"],
   nutrition: ["food_entries", "daily_log", "macro_targets", "meal_templates", "meal_template_items"],
   body_metrics: ["body_weight", "body_measurements", "body_settings"],
@@ -659,10 +669,31 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       );
       return r.changes > 0;
     }
+    case "gym_profiles": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO gym_profiles (id, name, notes, is_default, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.notes ?? null, row.is_default ?? 0, row.created_at, row.updated_at, row.deleted_at ?? null]
+      );
+      return r.changes > 0;
+    }
+    case "cable_stacks": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO cable_stacks (id, gym_id, name, unit, position, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.gym_id, row.name, row.unit ?? "kg", row.position ?? 0, row.created_at, row.updated_at, row.deleted_at ?? null]
+      );
+      return r.changes > 0;
+    }
+    case "stack_calibrations": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES (?, ?, ?, ?)",
+        [row.id, row.stack_id, row.marker, row.true_weight]
+      );
+      return r.changes > 0;
+    }
     case "workout_sessions": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes, program_day_id, rating, import_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.template_id, row.name, row.started_at, row.completed_at, row.duration_seconds, row.notes, row.program_day_id ?? null, row.rating ?? null, row.import_batch_id ?? null]
+        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes, program_day_id, rating, import_batch_id, gym_id, gym_name_at_log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.name, row.started_at, row.completed_at, row.duration_seconds, row.notes, row.program_day_id ?? null, row.rating ?? null, row.import_batch_id ?? null, row.gym_id ?? null, row.gym_name_at_log ?? null]
       );
       return r.changes > 0;
     }
@@ -676,9 +707,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     case "workout_sets": {
       const setType = row.set_type ?? (row.is_warmup ? "warmup" : "normal");
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, tempo, set_type, duration_seconds, bodyweight_modifier_kg, attachment, mount_position, grip_type, grip_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null, row.bodyweight_modifier_kg ?? null, row.attachment ?? null, row.mount_position ?? null, row.grip_type ?? null, row.grip_width ?? null]
-
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, tempo, set_type, duration_seconds, bodyweight_modifier_kg, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null, row.bodyweight_modifier_kg ?? null, row.attachment ?? null, row.mount_position ?? null, row.grip_type ?? null, row.grip_width ?? null, row.stack_id ?? null, row.stack_marker ?? null, row.stack_unit_at_log ?? null, row.stack_name_at_log ?? null]
       );
       return r.changes > 0;
     }

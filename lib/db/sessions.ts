@@ -2,6 +2,7 @@ import { eq, sql, desc, isNotNull, and, asc, inArray } from "drizzle-orm";
 import type { WorkoutSession } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, query, withTransaction } from "./helpers";
+import { getDefaultGym } from "./gym-profiles";
 import { workoutSessions, workoutSets, workoutTemplates, templateExercises } from "./schema";
 
 // Re-export from split modules for backward compatibility
@@ -137,6 +138,7 @@ export async function startSession(
 ): Promise<WorkoutSession> {
   const id = uuid();
   const now = Date.now();
+  const defaultGym = await getDefaultGym();
   const db = await getDrizzle();
   await db.insert(workoutSessions).values({
     id,
@@ -145,6 +147,8 @@ export async function startSession(
     started_at: now,
     notes: "",
     program_day_id: programDayId ?? null,
+    gym_id: defaultGym?.id ?? null,
+    gym_name_at_log: defaultGym?.name ?? null,
   });
   return {
     id,
@@ -160,6 +164,8 @@ export async function startSession(
     rating: null,
     edited_at: null,
     import_batch_id: null,
+    gym_id: defaultGym?.id ?? null,
+    gym_name_at_log: defaultGym?.name ?? null,
   };
 }
 

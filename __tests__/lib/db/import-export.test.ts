@@ -71,6 +71,9 @@ describe("exportAllData", () => {
       template_exercises: [],
     });
     expect(result.data.workout_history).toEqual({
+      gym_profiles: [],
+      cable_stacks: [],
+      stack_calibrations: [],
       workout_sessions: [],
       workout_sets: [],
     });

@@ -92,6 +92,12 @@ type SessionsCardProps = {
   style?: object;
 };
 
+type SessionsByGymRow = {
+  gymId: string;
+  gymName: string;
+  count: number;
+};
+
 export function SessionsCard({ sessions, style }: SessionsCardProps) {
   const colors = useThemeColors();
 
@@ -113,6 +119,31 @@ export function SessionsCard({ sessions, style }: SessionsCardProps) {
           {i < sessions.length - 1 && (
             <Separator style={{ marginVertical: 6 }} />
           )}
+        </View>
+      ))}
+    </Card>
+  );
+}
+
+export function SessionsByGymCard({ rows, style }: { rows: SessionsByGymRow[]; style?: object }) {
+  const colors = useThemeColors();
+
+  return (
+    <Card style={[styles.card, style]}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
+        Sessions by gym
+      </Text>
+      {rows.map((row, index) => (
+        <View key={row.gymId}>
+          <View style={styles.sessionRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.onSurface }}>{row.gymName}</Text>
+            </View>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant, fontWeight: "600" }}>
+              {row.count}
+            </Text>
+          </View>
+          {index < rows.length - 1 ? <Separator style={{ marginVertical: 6 }} /> : null}
         </View>
       ))}
     </Card>
