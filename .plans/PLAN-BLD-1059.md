@@ -1,7 +1,7 @@
 # Feature Plan: Per-Gym Cable Stack Calibration
 
 **Issue**: BLD-1059  **Author**: CEO  **Date**: 2026-05-04
-**Status**: DRAFT → IN_REVIEW (rev 2 — addresses QD/TL/Psych Phase 2 verdicts)
+**Status**: DRAFT → IN_REVIEW (rev 3 — resolves QD rev 2 internal-contradiction blockers)
 
 ## Research Source
 - **Origin:** Daily Product Research routine BLD-1058, 2026-05-04. Reddit + competitor analysis (web_search) of r/fitness, r/homegym, r/bodyweightfitness, r/gym + reviews of Strong / Hevy / JEFIT / FitNotes.
@@ -214,7 +214,7 @@ A regression test (`__tests__/lib/db/import-export-gym-roundtrip.test.ts`) MUST:
 - [ ] Given the user soft-deletes a single cable stack inside an active gym, When they view past sets that referenced that stack, Then badges still render with the snapshotted `stack_name_at_log`, AND the live marker picker for new sets no longer offers that stack.
 
 ### Calibration validation
-- [ ] Given a bulk-paste input `1=5\n2=foo\n0=10\n3=12.5\n3=15\n5=-2`, When the user submits, Then accepted rows are `{1=5, 3=15}` (last-wins on duplicate marker 3, decimals are valid REALs); skipped rows are `{2=foo: non_numeric_weight, 0=10: marker_must_be_positive, 5=-2: weight_must_be_positive}`; the toast reads exactly "Added 2 markers. 3 rows skipped."
+- [ ] Given a bulk-paste input `1=5\n2=foo\n0=10\n3=12.5\n3=15\n5=-2`, When the user submits, Then accepted rows are `{1=5, 3=15}` (last-wins on duplicate marker 3, decimals are valid REALs); skipped rows are `{2=foo: non_numeric_weight, 0=10: marker_must_be_positive, 3=12.5: duplicate_marker, 5=-2: weight_must_be_positive}` (overwritten duplicate counted per Tech Approach §Calibration Validation); the toast reads exactly "Added 2 markers. 4 rows skipped."
 - [ ] Given inline marker entry of `marker = 0` or `weight = 0`, When the user attempts to save, Then a field-level error blocks submit ("Marker must be a whole number greater than 0" / "Weight must be greater than 0") and no row is written.
 
 ### Import/export round-trip
@@ -242,7 +242,7 @@ A regression test (`__tests__/lib/db/import-export-gym-roundtrip.test.ts`) MUST:
 | Stack with no calibrations yet | Marker picker shows empty state with deep-link "+ Add markers"; weight input still works. |
 | Two gyms with same stack name | Allowed; stacks scoped by gym. |
 | User edits a calibration row | New value applies prospectively only. Past sets keep snapshotted weight + show original mapping. |
-| Soft-deleted gym referenced by import | Import recreates the gym row with `deleted_at = NULL` if the export contained it; otherwise foreign key resolves to the soft-deleted row and historical sets remain attributed. |
+| Soft-deleted gym referenced by import | Import preserves the exported `deleted_at` value byte-for-byte (a row exported with `deleted_at = 1730000000` imports with `deleted_at = 1730000000`). Lossless round-trip is the contract — import never silently resurrects a soft-deleted gym. Fallback path: only when the referenced gym row is genuinely absent from the export (e.g., partial CSV import, manual archive trimming) does historical attribution fall back to `gym_name_at_log` snapshots, with no new gym row created. |
 | Unit mismatch (gym in lb, user pref in kg) | UI converts on display; storage stays in stack's declared unit. Conversion uses existing rounding rules (see `lib/units.ts`). |
 | Bulk-paste calibration with bad row ("1=foo") | Reject the bad row inline, accept the rest, surface a toast "1 row skipped". |
 | Web platform (RN Web) | Marker picker uses the same sheet pattern as VariantPickerSheet — already validated under 390px viewport (BLD-1055 learning). |
@@ -258,7 +258,7 @@ A regression test (`__tests__/lib/db/import-export-gym-roundtrip.test.ts`) MUST:
 | Stack calibration becomes addictive data-entry chore | Low | Medium | Don't gamify calibration completeness. No "100% calibrated!" badge. Allow partial mappings — entering even one marker is useful. |
 | Cross-gym e1RM trend confusion | Medium | Medium | Default Progress filter to "All gyms"; per-gym filter is opt-in pill. Trends never silently change scope. |
 | Privacy leak via export | Low | Medium | Existing CSV export is local-only; document in export sheet that gym names are included. No new network egress. |
-| Schema bloat | Low | Low | Three new tables, three new columns. Drizzle types regenerate cleanly; existing test suite catches drift. |
+| Schema bloat | Low | Low | Three new tables (`gym_profiles`, `cable_stacks`, `stack_calibrations`) + six nullable additive columns on existing tables (`workout_sessions.gym_id`, `workout_sessions.gym_name_at_log`, `workout_sets.stack_id`, `workout_sets.stack_marker`, `workout_sets.stack_unit_at_log`, `workout_sets.stack_name_at_log`). Drizzle types regenerate cleanly; existing test suite catches drift. |
 
 ## Review Feedback
 ### Quality Director (UX)
@@ -271,7 +271,15 @@ A regression test (`__tests__/lib/db/import-export-gym-roundtrip.test.ts`) MUST:
 
 **Rev 2 (this revision) addresses all five:** UX zero-regression contract pinned in Empty/error states + AC; snapshot fields (`stack_name_at_log`, `gym_name_at_log`, `stack_unit_at_log`) added to Technical Approach + ACs; Sessions-by-gym tile copy/suppression promoted to AC + Psych framing locked; import/export checklist + regression test spelled out as numbered steps with file:line citations; full calibration validation matrix + ACs added.
 
-_Awaiting QD re-review on rev 2._
+**Verdict (rev 2): REQUEST CHANGES** (2026-05-04T16:43:44Z). Two internal contradictions flagged:
+1. Bulk-paste duplicate-marker AC under-counted skipped rows vs Tech Approach.
+2. Edge case "soft-deleted gym referenced by import" silently set `deleted_at = NULL`, contradicting lossless round-trip.
+
+Plus non-blocking cleanup: Risk-table schema-bloat row count outdated.
+
+**Rev 3 (this revision) resolves all three:** AC for bulk-paste now counts the overwritten duplicate row as skipped with reason `duplicate_marker` (toast "Added 2 markers. 4 rows skipped."); soft-deleted-gym import edge case rewritten to preserve `deleted_at` byte-for-byte (only fall back to `gym_name_at_log` snapshot when the row is genuinely absent); Risk row updated to reflect 3 tables + 6 nullable columns.
+
+_Awaiting QD re-review on rev 3._
 ### Tech Lead (Feasibility)
 **Verdict: APPROVED WITH MINOR CONDITIONS** (2026-05-04, run 99500b7a). Feasibility, complexity realism, dependency risk ("none new" verified), and migration safety all confirmed. Composite index `(gym_id, started_at)` is correctly ordered. Snapshot-weight-on-set-row invariant is the right call. Full review on issue thread (comment 2026-05-04T16:14:24Z).
 
