@@ -176,7 +176,7 @@ describe("FilterBar — BLD-956 overflow regression", () => {
     const flatChip = Array.isArray(chip.props.style)
       ? Object.assign({}, ...chip.props.style.filter(Boolean))
       : (chip.props.style ?? {});
-    expect(flatChip.paddingHorizontal).toBeLessThanOrEqual(8);
+    expect(flatChip.paddingHorizontal).toBeLessThanOrEqual(4);
     expect(flatChip.gap).toBeLessThanOrEqual(4);
   });
 });

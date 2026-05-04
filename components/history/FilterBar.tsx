@@ -230,11 +230,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     // BLD-1055: tightened intra-chip gap (6→4) and horizontal padding
-    // (12→6) so the row fits at 390px without horizontal scroll. Caret
+    // (12→4) so the row fits at 390px without horizontal scroll. The
+    // first follow-up at paddingHorizontal:6 left the rightmost chip's
+    // outer pill clipping by ~5.5px past the wrapper right edge. Caret
     // size also reduced 14→12 in the JSX above. Visual verification is
     // mandatory before merge — see PR description.
     gap: 4,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
