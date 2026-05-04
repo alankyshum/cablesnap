@@ -212,10 +212,6 @@ export default function Settings() {
           hcSdkStatus={hcSdkStatus}
         />
         <AutoBackupSection colors={colors} toast={toast} />
-        <Pressable onPress={() => router.push('/settings/gym-profiles')} style={styles.settingsRow}>
-          <Text style={[styles.settingsRowLabel, { color: colors.onSurface }]}>Gym Profiles</Text>
-          <ChevronRight size={16} color={colors.onSurfaceVariant} />
-        </Pressable>
         <DataManagementCard
           colors={colors}
           loading={loading}

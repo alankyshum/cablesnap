@@ -243,6 +243,9 @@ jest.mock('../../lib/db', () => ({
   updateExerciseNote: jest.fn().mockResolvedValue(undefined),
   getExerciseBackfillCandidate: jest.fn().mockResolvedValue(null),
   dismissExerciseBackfill: jest.fn().mockResolvedValue(undefined),
+  getActiveGymCount: jest.fn().mockResolvedValue(0),
+  getGymProfiles: jest.fn().mockResolvedValue([]),
+  getSessionsByGym: jest.fn().mockResolvedValue([]),
 }))
 
 jest.mock('../../lib/db/pr-dashboard', () => ({

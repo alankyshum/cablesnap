@@ -129,6 +129,9 @@ jest.mock('../../../lib/db', () => ({
     prs: [], nutrition: null, body: null, streak: 0,
   }),
   getMonthlyReport: jest.fn().mockResolvedValue(mockMonthlyData),
+  getActiveGymCount: jest.fn().mockResolvedValue(0),
+  getGymProfiles: jest.fn().mockResolvedValue([]),
+  getSessionsByGym: jest.fn().mockResolvedValue([]),
 }))
 
 jest.mock('../../../lib/units', () => ({
