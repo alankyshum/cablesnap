@@ -83,4 +83,52 @@ describe("import-export gym round-trip", () => {
     expect(setInsert?.params?.[22]).toBe("kg");
     expect(setInsert?.params?.[23]).toBe("Dual Pulley");
   });
+
+  it("round-trips soft-deleted rows with non-null deleted_at (plan §245 binding contract)", async () => {
+    // Plan line 245: "a row exported with deleted_at = 1730000000 imports
+    // with deleted_at = 1730000000". Verifies the INSERT OR IGNORE path
+    // preserves non-null deleted_at byte-for-byte.
+    mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+      if (sql.includes("gym_profiles")) {
+        return [
+          { id: "g-live", name: "Active Gym", notes: "", is_default: 1, created_at: 1, updated_at: 1, deleted_at: null },
+          { id: "g-del", name: "Closed Gym", notes: "", is_default: 0, created_at: 2, updated_at: 3, deleted_at: 1730000000 },
+        ];
+      }
+      if (sql.includes("cable_stacks")) {
+        return [
+          { id: "stack-live", gym_id: "g-live", name: "Active Stack", unit: "kg", position: 1, created_at: 4, updated_at: 4, deleted_at: null },
+          { id: "stack-del", gym_id: "g-del", name: "Old Stack", unit: "lb", position: 1, created_at: 5, updated_at: 6, deleted_at: 1730000000 },
+        ];
+      }
+      if (sql.includes("stack_calibrations")) return [];
+      if (sql.includes("workout_sessions")) return [];
+      if (sql.includes("workout_sets")) return [];
+      return [];
+    });
+
+    const backup = await exportAllData();
+    const history = (backup.data as Record<string, Record<string, any[]>>).workout_history;
+
+    // Backup must preserve the non-null deleted_at
+    expect(history.gym_profiles.find((r: any) => r.id === "g-del")?.deleted_at).toBe(1730000000);
+    expect(history.cable_stacks.find((r: any) => r.id === "stack-del")?.deleted_at).toBe(1730000000);
+
+    const insertCalls: Array<{ sql: string; params: unknown[] }> = [];
+    mockDb.runAsync.mockImplementation(async (sql: string, params: unknown[]) => {
+      insertCalls.push({ sql, params });
+      return { changes: 1 };
+    });
+
+    await importData(backup as unknown as Record<string, unknown>);
+
+    // INSERT OR IGNORE must pass deleted_at: 1730000000 for the soft-deleted rows
+    const gymInserts = insertCalls.filter((c) => c.sql.includes("INSERT OR IGNORE INTO gym_profiles"));
+    const deletedGymInsert = gymInserts.find((c) => (c.params as unknown[]).includes("g-del"));
+    expect(deletedGymInsert?.params).toContain(1730000000);
+
+    const stackInserts = insertCalls.filter((c) => c.sql.includes("INSERT OR IGNORE INTO cable_stacks"));
+    const deletedStackInsert = stackInserts.find((c) => (c.params as unknown[]).includes("stack-del"));
+    expect(deletedStackInsert?.params).toContain(1730000000);
+  });
 });

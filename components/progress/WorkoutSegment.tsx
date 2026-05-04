@@ -146,11 +146,11 @@ export default function WorkoutSegment() {
   );
 
   const gymFilter = showGymUI ? (
-    <View style={styles.filterRow}>
+    <View style={styles.filterRow} testID="workout-gym-filter-row">
       <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
         Filter:
       </Text>
-      <View style={styles.filterPills}>
+      <View style={styles.filterPills} testID="workout-gym-filter-pills">
         {[{ id: "all", name: "All gyms" }, ...gymOptions].map((option) => {
           const selected = selectedGymId === option.id;
           return (
