@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   stackChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: radii.full,
+    borderRadius: radii.pill,
     borderWidth: 1,
   },
   stackChipText: { fontSize: fontSizes.sm },

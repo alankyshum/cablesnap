@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     width: 56,
     height: 56,
-    borderRadius: radii.full,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
     elevation: 4,
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: radii.full,
+    borderRadius: radii.pill,
   },
   expandedSection: { marginTop: 12 },
   sectionHeader: { marginTop: 18, marginBottom: 10 },
