@@ -67,7 +67,7 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // BLD-890: CSV import batch ID — groups imported sessions for undo/bulk-delete.
   // NULL for sessions created organically (not imported).
   await addColumnIfMissing(database, "workout_sessions", "import_batch_id", "TEXT DEFAULT NULL");
-  // BLD-1060: per-gym cable stack calibration
+  // BLD-1059: per-gym cable stack calibration
   await addColumnIfMissing(database, "workout_sessions", "gym_id", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sessions", "gym_name_at_log", "TEXT DEFAULT NULL");
 
@@ -96,7 +96,7 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // SQLite and `addColumnIfMissing` no-ops on second run.
   await addColumnIfMissing(database, "workout_sets", "grip_type", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "grip_width", "TEXT DEFAULT NULL");
-  // BLD-1060: per-gym cable stack calibration
+  // BLD-1059: per-gym cable stack calibration
   await addColumnIfMissing(database, "workout_sets", "stack_id", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "stack_marker", "INTEGER DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "stack_unit_at_log", "TEXT DEFAULT NULL");
@@ -120,7 +120,7 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
 
-  // BLD-1060: per-gym cable stack calibration — new tables
+  // BLD-1059: per-gym cable stack calibration — new tables
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS gym_profiles (
       id TEXT PRIMARY KEY,

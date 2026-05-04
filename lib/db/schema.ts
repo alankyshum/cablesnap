@@ -384,7 +384,7 @@ export const waterLogs = sqliteTable("water_logs", {
   index("idx_water_logs_date_key").on(table.date_key),
 ]);
 
-// ─── Gym Profiles (BLD-1060) ─────────────────────────────────────────────────
+// ─── Gym Profiles (BLD-1059) ─────────────────────────────────────────────────
 
 export const gymProfiles = sqliteTable("gym_profiles", {
   id: text("id").primaryKey(),

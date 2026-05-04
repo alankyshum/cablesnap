@@ -363,7 +363,7 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
     );
     CREATE INDEX IF NOT EXISTS idx_water_logs_date_key ON water_logs(date_key);
 
-    -- BLD-1060: per-gym cable stack calibration
+    -- BLD-1059: per-gym cable stack calibration
     CREATE TABLE IF NOT EXISTS gym_profiles (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -371,8 +371,9 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       is_default INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      deleted_at INTEGER DEFAULT NULL
+      deleted_at INTEGER
     );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_gym_profiles_one_default ON gym_profiles(is_default) WHERE is_default = 1;
 
     CREATE TABLE IF NOT EXISTS cable_stacks (
       id TEXT PRIMARY KEY,
@@ -382,7 +383,8 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       position INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      deleted_at INTEGER DEFAULT NULL
+      deleted_at INTEGER,
+      FOREIGN KEY (gym_id) REFERENCES gym_profiles(id)
     );
 
     CREATE TABLE IF NOT EXISTS stack_calibrations (
@@ -390,9 +392,9 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       stack_id TEXT NOT NULL,
       marker INTEGER NOT NULL,
       true_weight REAL NOT NULL,
-      UNIQUE(stack_id, marker)
+      UNIQUE(stack_id, marker),
+      FOREIGN KEY (stack_id) REFERENCES cable_stacks(id)
     );
-
     CREATE INDEX IF NOT EXISTS idx_cable_stacks_gym ON cable_stacks(gym_id);
     CREATE INDEX IF NOT EXISTS idx_stack_calibrations_stack ON stack_calibrations(stack_id);
     CREATE INDEX IF NOT EXISTS idx_workout_sessions_gym_started_at ON workout_sessions(gym_id, started_at);
