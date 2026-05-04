@@ -150,7 +150,8 @@ export async function checkSetBodyweightModifierPR(
 // ---- Progress Queries ----
 
 export async function getWeeklySessionCounts(
-  weeks = 8
+  weeks = 8,
+  gymId?: string | null
 ): Promise<{ week: string; count: number }[]> {
   const cutoff = Date.now() - weeks * 7 * 24 * 60 * 60 * 1000;
   const weekStart = sql<number>`(${workoutSessions.started_at} / 604800000) * 604800000`;
@@ -161,7 +162,8 @@ export async function getWeeklySessionCounts(
     .where(
       and(
         isNotNull(workoutSessions.completed_at),
-        gte(workoutSessions.started_at, cutoff)
+        gte(workoutSessions.started_at, cutoff),
+        gymId ? eq(workoutSessions.gym_id, gymId) : undefined
       )
     )
     .groupBy(weekStart)
@@ -176,7 +178,8 @@ export async function getWeeklySessionCounts(
 }
 
 export async function getWeeklyVolume(
-  weeks = 8
+  weeks = 8,
+  gymId?: string | null
 ): Promise<{ week: string; volume: number }[]> {
   const cutoff = Date.now() - weeks * 7 * 24 * 60 * 60 * 1000;
   const weekStart = sql<number>`(${workoutSessions.started_at} / 604800000) * 604800000`;
@@ -191,7 +194,8 @@ export async function getWeeklyVolume(
         eq(workoutSets.completed, 1),
         ne(workoutSets.set_type, 'warmup'),
         isNotNull(workoutSessions.completed_at),
-        gte(workoutSessions.started_at, cutoff)
+        gte(workoutSessions.started_at, cutoff),
+        gymId ? eq(workoutSessions.gym_id, gymId) : undefined
       )
     )
     .groupBy(weekStart)
@@ -234,16 +238,17 @@ export async function getPersonalRecords(): Promise<
 }
 
 export async function getCompletedSessionsWithSetCount(
-  limit = 10
+  limit = 10,
+  gymId?: string | null
 ): Promise<(WorkoutSession & { set_count: number })[]> {
   return query<WorkoutSession & { set_count: number }>(
     `SELECT wss.*,
             (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
      FROM workout_sessions wss
-     WHERE wss.completed_at IS NOT NULL
+     WHERE wss.completed_at IS NOT NULL${gymId ? " AND wss.gym_id = ?" : ""}
      ORDER BY wss.started_at DESC
      LIMIT ?`,
-    [limit]
+    gymId ? [gymId, limit] : [limit]
   );
 }
 

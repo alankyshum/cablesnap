@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
@@ -13,6 +14,9 @@ import {
   getWeeklyVolume,
   getCompletedSessionsWithSetCount,
   getBodySettings,
+  getActiveGymCount,
+  getGymProfiles,
+  getSessionsByGym,
 } from "../../lib/db";
 import {
   getRecentPRsWithDelta,
@@ -23,7 +27,7 @@ import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import WeeklySummary from "../../components/WeeklySummary";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { WorkoutChartCard, SessionsCard } from "./WorkoutCards";
+import { WorkoutChartCard, SessionsByGymCard, SessionsCard } from "./WorkoutCards";
 import { PRSummaryCard } from "./PRSummaryCard";
 import { RPETrendCard, RatingTrendCard } from "./TrendCards";
 import CalendarView from "./CalendarView";
@@ -60,6 +64,11 @@ type SessionRow = {
   set_count: number;
 };
 
+type GymFilterOption = {
+  id: string;
+  name: string;
+};
+
 export default function WorkoutSegment() {
   const colors = useThemeColors();
   const layout = useLayout();
@@ -75,17 +84,24 @@ export default function WorkoutSegment() {
   const [prStats, setPRStats] = useState<PRStats>({ totalPRs: 0, prsThisMonth: 0 });
   const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [activeGymCount, setActiveGymCount] = useState(0);
+  const [gymOptions, setGymOptions] = useState<GymFilterOption[]>([]);
+  const [sessionsByGym, setSessionsByGym] = useState<Array<{ gymId: string; gymName: string; count: number }>>([]);
+  const [selectedGymId, setSelectedGymId] = useState<string>("all");
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [f, v, rp, ps, s, settings] = await Promise.all([
-          getWeeklySessionCounts(),
-          getWeeklyVolume(),
+        const [f, v, rp, ps, s, settings, liveGymCount, gyms, gymRows] = await Promise.all([
+          getWeeklySessionCounts(8, selectedGymId === "all" ? null : selectedGymId),
+          getWeeklyVolume(8, selectedGymId === "all" ? null : selectedGymId),
           getRecentPRsWithDelta(3),
           getPRStats(),
-          getCompletedSessionsWithSetCount(),
+          getCompletedSessionsWithSetCount(10, selectedGymId === "all" ? null : selectedGymId),
           getBodySettings(),
+          getActiveGymCount(),
+          getGymProfiles(),
+          getSessionsByGym(),
         ]);
         setFreq(f);
         setVol(v);
@@ -93,8 +109,18 @@ export default function WorkoutSegment() {
         setPRStats(ps);
         setSessions(s);
         setWeightUnit(settings.weight_unit as "kg" | "lb");
+        setActiveGymCount(liveGymCount);
+        const liveGymIds = new Set(gyms.map((gym) => gym.id));
+        const options = gymRows
+          .filter((row) => liveGymIds.has(row.gymId))
+          .map((row) => ({ id: row.gymId, name: row.gymName }));
+        setGymOptions(options);
+        setSessionsByGym(gymRows);
+        if (selectedGymId !== "all" && !options.some((option) => option.id === selectedGymId)) {
+          setSelectedGymId("all");
+        }
       })();
-    }, []),
+    }, [selectedGymId]),
   );
 
   const chartWidth = layout.atLeastMedium
@@ -102,6 +128,7 @@ export default function WorkoutSegment() {
     : screenWidth - 48;
 
   const empty = sessions.length === 0 && freq.length === 0;
+  const showGymUI = activeGymCount >= 2;
 
   const toggleButton = (
     <Pressable
@@ -118,10 +145,44 @@ export default function WorkoutSegment() {
     </Pressable>
   );
 
+  const gymFilter = showGymUI ? (
+    <View style={styles.filterRow}>
+      <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+        Filter:
+      </Text>
+      <View style={styles.filterPills}>
+        {[{ id: "all", name: "All gyms" }, ...gymOptions].map((option) => {
+          const selected = selectedGymId === option.id;
+          return (
+            <Pressable
+              key={option.id}
+              onPress={() => setSelectedGymId(option.id)}
+              style={[
+                styles.filterPill,
+                {
+                  backgroundColor: selected ? colors.primary : colors.surface,
+                  borderColor: colors.outlineVariant,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter workouts by ${option.name}`}
+              accessibilityState={{ selected }}
+            >
+              <Text style={{ color: selected ? colors.onPrimary : colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+                {option.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  ) : null;
+
   if (viewMode === "calendar") {
     return (
       <View style={{ flex: 1 }}>
         <View style={styles.toggleRow}>{toggleButton}</View>
+        {gymFilter}
         <CalendarView weekStartDay={weekStartDay} />
       </View>
     );
@@ -131,6 +192,7 @@ export default function WorkoutSegment() {
     return (
       <View style={{ flex: 1 }}>
         <View style={styles.toggleRow}>{toggleButton}</View>
+        {gymFilter}
         <View style={{ padding: 16 }}>
           <WeeklySummary />
         </View>
@@ -194,6 +256,9 @@ export default function WorkoutSegment() {
       />
     ) : null;
 
+  const sessionsByGymCard =
+    showGymUI && sessionsByGym.length > 0 ? <SessionsByGymCard rows={sessionsByGym} style={wideCard} /> : null;
+
   return (
     <FlatList
       data={[]}
@@ -207,6 +272,7 @@ export default function WorkoutSegment() {
         layout.atLeastMedium ? (
           <>
             <View style={styles.toggleRow}>{toggleButton}</View>
+            {gymFilter}
             <WeeklySummary />
             {achievementsCard}
             <View style={styles.grid}>
@@ -214,8 +280,8 @@ export default function WorkoutSegment() {
               {volCard}
             </View>
             <View style={styles.grid}>
-              <RPETrendCard chartWidth={chartWidth} style={wideCard} />
-              <RatingTrendCard chartWidth={chartWidth} style={wideCard} />
+              <RPETrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} style={wideCard} />
+              <RatingTrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} style={wideCard} />
             </View>
             <View style={styles.grid}>
               <PRSummaryCard
@@ -227,18 +293,20 @@ export default function WorkoutSegment() {
               />
               <SessionsCard sessions={sessions} style={wideCard} />
             </View>
+            {sessionsByGymCard ? <View style={styles.grid}>{sessionsByGymCard}</View> : null}
             <ActiveGoalsCard />
             <StrengthLevelsCard />
           </>
         ) : (
           <>
             <View style={styles.toggleRow}>{toggleButton}</View>
+            {gymFilter}
             <WeeklySummary />
             {achievementsCard}
             {freqCard}
             {volCard}
-            <RPETrendCard chartWidth={chartWidth} />
-            <RatingTrendCard chartWidth={chartWidth} />
+            <RPETrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} />
+            <RatingTrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} />
             <PRSummaryCard
               recentPRs={recentPRs}
               stats={prStats}
@@ -246,6 +314,7 @@ export default function WorkoutSegment() {
               onSeeAll={() => router.push("/progress/records")}
             />
             <SessionsCard sessions={sessions} />
+            {sessionsByGymCard}
             <ActiveGoalsCard />
             <StrengthLevelsCard />
           </>
@@ -276,6 +345,23 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     paddingHorizontal: 16,
     paddingTop: 8,
+  },
+  filterRow: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  filterPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  filterPill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   toggleButton: {
     borderWidth: 1,

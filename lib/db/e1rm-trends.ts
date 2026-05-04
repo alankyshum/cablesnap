@@ -62,8 +62,31 @@ export type SessionRPERow = {
  * Average RPE per completed session over last 6 weeks.
  * Only includes sessions that have at least 1 set with RPE recorded.
  */
-export async function getRecentSessionRPEs(now: number = Date.now()): Promise<SessionRPERow[]> {
+export async function getRecentSessionRPEs(
+  now: number = Date.now(),
+  gymId?: string | null
+): Promise<SessionRPERow[]> {
   const sixWeeksAgo = now - 6 * 7 * 24 * 60 * 60 * 1000;
+
+  if (gymId) {
+    return query<SessionRPERow>(
+      `SELECT
+         wss.id AS session_id,
+         wss.started_at,
+         AVG(ws.rpe) AS avg_rpe
+       FROM workout_sessions wss
+       JOIN workout_sets ws ON ws.session_id = wss.id
+       WHERE wss.completed_at IS NOT NULL
+         AND wss.started_at >= ?
+         AND wss.gym_id = ?
+         AND ws.completed = 1
+         AND ws.rpe IS NOT NULL
+         AND ws.rpe > 0
+       GROUP BY wss.id
+       ORDER BY wss.started_at`,
+      [sixWeeksAgo, gymId]
+    );
+  }
 
   return query<SessionRPERow>(
     `SELECT
@@ -95,8 +118,28 @@ export type SessionRatingRow = {
  * Session ratings over last 6 weeks.
  * Only includes completed sessions with a non-null rating.
  */
-export async function getRecentSessionRatings(now: number = Date.now()): Promise<SessionRatingRow[]> {
+export async function getRecentSessionRatings(
+  now: number = Date.now(),
+  gymId?: string | null
+): Promise<SessionRatingRow[]> {
   const sixWeeksAgo = now - 6 * 7 * 24 * 60 * 60 * 1000;
+
+  if (gymId) {
+    return query<SessionRatingRow>(
+      `SELECT
+         wss.id AS session_id,
+         wss.started_at,
+         wss.rating
+       FROM workout_sessions wss
+       WHERE wss.completed_at IS NOT NULL
+         AND wss.started_at >= ?
+         AND wss.gym_id = ?
+         AND wss.rating IS NOT NULL
+         AND wss.rating > 0
+       ORDER BY wss.started_at`,
+      [sixWeeksAgo, gymId]
+    );
+  }
 
   return query<SessionRatingRow>(
     `SELECT
@@ -117,11 +160,63 @@ export async function getRecentSessionRatings(now: number = Date.now()): Promise
  * Top-5 most-trained exercises with positive e1RM trend.
  * Compares max estimated 1RM from the last 30 days vs the previous 30 days.
  * Only includes exercises with 3+ completed sessions in the recent window.
+ *
+ * Branches internally between the all-gyms path (idx_workout_sessions_started_at)
+ * and the gym-scoped path (idx_workout_sessions_gym_started_at).
+ * Do NOT use "OR ? IS NULL" — SQLite often refuses to use the leading-equality
+ * index when the equality predicate is IS NULL (TL Required Change #6, BLD-1059).
  */
-export async function getE1RMTrends(): Promise<E1RMTrendRow[]> {
+export async function getE1RMTrends(gymId?: string | null): Promise<E1RMTrendRow[]> {
   const now = Date.now();
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
   const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
+
+  if (gymId) {
+    return query<E1RMTrendRow>(
+      `SELECT
+         cur.exercise_id,
+         COALESCE(e.name, 'Deleted Exercise') AS name,
+         cur.e1rm AS current_e1rm,
+         prev.e1rm AS previous_e1rm
+       FROM (
+         SELECT ws.exercise_id,
+                MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm,
+                COUNT(DISTINCT wss.id) AS session_count
+         FROM workout_sets ws
+         JOIN workout_sessions wss ON ws.session_id = wss.id
+         WHERE ws.completed = 1
+           AND ws.set_type != 'warmup'
+           AND ws.weight > 0
+           AND ws.reps > 0
+           AND ws.reps <= 12
+           AND wss.completed_at IS NOT NULL
+           AND wss.gym_id = ?
+           AND wss.started_at >= ?
+         GROUP BY ws.exercise_id
+         HAVING session_count >= 3
+       ) cur
+       JOIN (
+         SELECT ws.exercise_id,
+                MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm
+         FROM workout_sets ws
+         JOIN workout_sessions wss ON ws.session_id = wss.id
+         WHERE ws.completed = 1
+           AND ws.set_type != 'warmup'
+           AND ws.weight > 0
+           AND ws.reps > 0
+           AND ws.reps <= 12
+           AND wss.completed_at IS NOT NULL
+           AND wss.gym_id = ?
+           AND wss.started_at >= ? AND wss.started_at < ?
+         GROUP BY ws.exercise_id
+       ) prev ON cur.exercise_id = prev.exercise_id
+       LEFT JOIN exercises e ON cur.exercise_id = e.id
+       WHERE cur.e1rm > prev.e1rm
+       ORDER BY (cur.e1rm - prev.e1rm) DESC
+       LIMIT 5`,
+      [gymId, thirtyDaysAgo, gymId, sixtyDaysAgo, thirtyDaysAgo]
+    );
+  }
 
   return query<E1RMTrendRow>(
     `SELECT
@@ -164,5 +259,62 @@ export async function getE1RMTrends(): Promise<E1RMTrendRow[]> {
      ORDER BY (cur.e1rm - prev.e1rm) DESC
      LIMIT 5`,
     [thirtyDaysAgo, sixtyDaysAgo, thirtyDaysAgo]
+  );
+}
+
+/**
+ * Gym-scoped variant of getE1RMTrends().
+ *
+ * Uses a SEPARATE query string (not OR ? IS NULL) with explicit gym_id filter
+ * so SQLite uses idx_workout_sessions_gym_started_at (BLD-1060 TL Required Change #6).
+ */
+export async function getE1RMTrendsByGym(gymId: string): Promise<E1RMTrendRow[]> {
+  const now = Date.now();
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+  const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
+
+  return query<E1RMTrendRow>(
+    `SELECT
+       cur.exercise_id,
+       COALESCE(e.name, 'Deleted Exercise') AS name,
+       cur.e1rm AS current_e1rm,
+       prev.e1rm AS previous_e1rm
+     FROM (
+       SELECT ws.exercise_id,
+              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm,
+              COUNT(DISTINCT wss.id) AS session_count
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.completed = 1
+         AND ws.set_type != 'warmup'
+         AND ws.weight > 0
+         AND ws.reps > 0
+         AND ws.reps <= 12
+         AND wss.completed_at IS NOT NULL
+         AND wss.gym_id = ?
+         AND wss.started_at >= ?
+       GROUP BY ws.exercise_id
+       HAVING session_count >= 3
+     ) cur
+     JOIN (
+       SELECT ws.exercise_id,
+              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.completed = 1
+         AND ws.set_type != 'warmup'
+         AND ws.weight > 0
+         AND ws.reps > 0
+         AND ws.reps <= 12
+         AND wss.completed_at IS NOT NULL
+         AND wss.gym_id = ?
+         AND wss.started_at >= ? AND wss.started_at < ?
+       GROUP BY ws.exercise_id
+     ) prev ON cur.exercise_id = prev.exercise_id
+     LEFT JOIN exercises e ON cur.exercise_id = e.id
+     WHERE cur.e1rm > prev.e1rm
+     ORDER BY (cur.e1rm - prev.e1rm) DESC
+     LIMIT 5`,
+    [gymId, thirtyDaysAgo, gymId, sixtyDaysAgo, thirtyDaysAgo]
   );
 }
