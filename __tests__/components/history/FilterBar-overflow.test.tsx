@@ -1,17 +1,17 @@
 /**
- * BLD-956 — Regression test: FilterBar must not clip the rightmost chip.
+ * BLD-956 / BLD-1055 — Regression tests: FilterBar must not clip the rightmost chip.
  *
- * The audit (2026-05-02, fingerprint cbe59de55e00) caught the third filter
- * chip ("Date Range") visually clipped at a 390px viewport because the
- * ScrollView wrapping the chip row had no width constraint — it overflowed
- * its parent flex row instead of scrolling.
+ * BLD-956 (2026-05-02): The third filter chip ("Date Range") was visually
+ * clipped at 390px because the ScrollView had no width constraint. The fix
+ * added flexShrink/flexGrow/minWidth:0 on the ScrollView.
  *
- * The fix bounds the ScrollView with `flex: 1` (flexShrink/flexGrow + minWidth:0)
- * so it constrains to the parent width and scrolls horizontally when needed.
+ * BLD-1055 (2026-05-04): The regression persisted because the *container*
+ * View lacked flex:1. On RN Web a row container without an explicit width
+ * grows with its children, so the ScrollView's flex constraints resolved
+ * against an oversized parent and scrolling never kicked in. The fix adds
+ * flex:1 to the container.
  *
- * This test asserts the structural invariant: the ScrollView wrapping the
- * chips is horizontal, hides its scrollbar, and has the layout style that
- * lets it bound to the parent (the property the bug fix introduces).
+ * This test asserts both structural invariants so neither regresses again.
  */
 import React from "react";
 import { render } from "@testing-library/react-native";
@@ -92,6 +92,40 @@ describe("FilterBar — BLD-956 overflow regression", () => {
     expect(bounded).toBe(true);
   });
 
+  it("container View has flex:1 so it takes available parent width on RN Web (BLD-1055)", () => {
+    // BLD-1055: The container must have flex:1 so it takes the parent row's
+    // full width. Without this, on RN Web the container grows to fit its
+    // children and the ScrollView's flex constraints resolve against an
+    // oversized parent — clipping the rightmost chip instead of scrolling.
+    const { getByTestId } = renderBar();
+    const container = getByTestId("history-filter-bar");
+
+    const rawStyle = container.props.style;
+    const flattened = Array.isArray(rawStyle)
+      ? Object.assign({}, ...rawStyle.filter(Boolean))
+      : (rawStyle ?? {});
+
+    expect(flattened.flex).toBe(1);
+  });
+
+  it("scrollWrap View has overflow:hidden and is flex:1 to hard-bound the ScrollView on RN Web (BLD-1055)", () => {
+    // The scrollWrap View acts as the width anchor: flex:1 takes the
+    // container width, overflow:hidden prevents any bleed, and the inner
+    // ScrollView fills it. Without this layer RN Web ignores flexShrink/
+    // flexGrow on the ScrollView when the parent has no explicit width.
+    const { getByTestId } = renderBar();
+    const scrollWrap = getByTestId("history-filter-scroll-wrap");
+
+    const rawStyle = scrollWrap.props.style;
+    const flattened = Array.isArray(rawStyle)
+      ? Object.assign({}, ...rawStyle.filter(Boolean))
+      : (rawStyle ?? {});
+
+    expect(flattened.flex).toBe(1);
+    expect(flattened.overflow).toBe("hidden");
+    expect(flattened.minWidth).toBe(0);
+  });
+
   it("renders chip row even when no filters are active (the bug-reproducing scenario)", () => {
     // The audited screenshot had no active filters — the row was three
     // unselected chips, and the third was still clipped. Make sure all
@@ -101,5 +135,29 @@ describe("FilterBar — BLD-956 overflow regression", () => {
     expect(getByTestId("history-filter-chip-template")).toBeTruthy();
     expect(getByTestId("history-filter-chip-muscle")).toBeTruthy();
     expect(getByTestId("history-filter-chip-date")).toBeTruthy();
+  });
+
+  it("container View has flex:1 so the ScrollView width-constraint resolves against the actual viewport (BLD-1055)", () => {
+    // Root cause of BLD-1055: the container View had no width definition, so
+    // on RN Web it grew with its children. The inner ScrollView's
+    // flexShrink/flexGrow then resolved against an already-oversized parent
+    // and the rightmost chip clipped instead of scrolling into view.
+    //
+    // Fix: container must have flex:1 (or width:'100%') so the ScrollView
+    // receives a bounded reference width from the layout engine.
+    const { getByTestId } = renderBar();
+    const container = getByTestId("history-filter-bar");
+
+    const containerStyles = Array.isArray(container.props.style)
+      ? Object.assign({}, ...container.props.style.filter(Boolean))
+      : (container.props.style ?? {});
+
+    // Must have a width-bounding property so the ScrollView can work
+    const widthBounded =
+      containerStyles.flex === 1 ||
+      containerStyles.width === "100%" ||
+      containerStyles.flexBasis === 0;
+
+    expect(widthBounded).toBe(true);
   });
 });

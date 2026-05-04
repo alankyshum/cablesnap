@@ -77,6 +77,10 @@ export function FilterBar({
 
   return (
     <View style={styles.container} testID="history-filter-bar">
+      {/* Bounding wrapper: flex: 1 + minWidth: 0 + overflow: hidden gives RN Web
+          an explicit upper-width anchor so the inner ScrollView actually clips
+          to the parent row width instead of growing to fit its children (BLD-1055). */}
+      <View style={styles.scrollWrap} testID="history-filter-scroll-wrap">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -109,6 +113,7 @@ export function FilterBar({
           testID="history-filter-chip-date"
         />
       </ScrollView>
+      </View>
       {anyActive && (
         <Pressable
           onPress={onClearAll}
@@ -190,6 +195,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
+    // BLD-1055: without flex:1 the container grows with its children on
+    // RN Web, so the inner ScrollView's flexShrink/flexGrow resolves
+    // against an oversized parent and the rightmost chip clips instead
+    // of scrolling into view.
+    flex: 1,
+  },
+  scrollWrap: {
+    // Hard-bound the ScrollView on RN Web: the wrapper takes flex:1 so its
+    // width is anchored to the parent container, then overflow:hidden clips
+    // any overrun. Without this intermediate View, RN Web lets the ScrollView
+    // grow to fit its content and the flex constraints resolve incorrectly.
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
   },
   scroll: {
     // Bound the ScrollView width so it can actually scroll horizontally
