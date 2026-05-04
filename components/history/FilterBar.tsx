@@ -77,6 +77,10 @@ export function FilterBar({
 
   return (
     <View style={styles.container} testID="history-filter-bar">
+      {/* Bounding wrapper: flex: 1 + minWidth: 0 + overflow: hidden gives RN Web
+          an explicit upper-width anchor so the inner ScrollView actually clips
+          to the parent row width instead of growing to fit its children (BLD-1055). */}
+      <View style={styles.scrollWrap} testID="history-filter-scroll-wrap">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -109,6 +113,7 @@ export function FilterBar({
           testID="history-filter-chip-date"
         />
       </ScrollView>
+      </View>
       {anyActive && (
         <Pressable
           onPress={onClearAll}
@@ -178,7 +183,7 @@ function FilterChip({ label, selectedLabel, onPress, onClear, colors, testID }: 
           <Icon name={X} size={14} />
         </Pressable>
       ) : (
-        <Icon name={ChevronDown} size={14} />
+        <Icon name={ChevronDown} size={12} />
       )}
     </Pressable>
   );
@@ -190,6 +195,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
+    // BLD-1055: without flex:1 the container grows with its children on
+    // RN Web, so the inner ScrollView's flexShrink/flexGrow resolves
+    // against an oversized parent and the rightmost chip clips instead
+    // of scrolling into view.
+    flex: 1,
+  },
+  scrollWrap: {
+    // Hard-bound the ScrollView on RN Web: the wrapper takes flex:1 so its
+    // width is anchored to the parent container, then overflow:hidden clips
+    // any overrun. Without this intermediate View, RN Web lets the ScrollView
+    // grow to fit its content and the flex constraints resolve incorrectly.
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
   },
   scroll: {
     // Bound the ScrollView width so it can actually scroll horizontally
@@ -201,14 +220,23 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    gap: 8,
-    paddingRight: 8,
+    // BLD-1055: tightened gap (8→4) and removed paddingRight (8→0) so the
+    // three chips fit inside the 358px row at 390px viewport. Combined with
+    // the chip-level padding tightening below this clears the overflow that
+    // QD measured (Date Range chip extending to right=435.5 at viewport=390).
+    gap: 4,
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
+    // BLD-1055: tightened intra-chip gap (6→4) and horizontal padding
+    // (12→4) so the row fits at 390px without horizontal scroll. The
+    // first follow-up at paddingHorizontal:6 left the rightmost chip's
+    // outer pill clipping by ~5.5px past the wrapper right edge. Caret
+    // size also reduced 14→12 in the JSX above. Visual verification is
+    // mandatory before merge — see PR description.
+    gap: 4,
+    paddingHorizontal: 4,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
