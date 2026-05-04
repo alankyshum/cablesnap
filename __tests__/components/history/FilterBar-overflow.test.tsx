@@ -160,4 +160,23 @@ describe("FilterBar — BLD-956 overflow regression", () => {
 
     expect(widthBounded).toBe(true);
   });
+
+  it("chip + row paddings stay within the 390px viewport budget (BLD-1055 followup)", () => {
+    // BLD-1055 followup: QD's live browser verification at 390×844 found the
+    // Date Range chip extended to right=435.5 (61.5px past the 374px wrap)
+    // even after the structural bounding fix landed. Root cause: chip
+    // paddingHorizontal (12) + chip gap (6) + row gap (8) + paddingRight (8)
+    // pushed the three-chip row to ~407px, well over the 358px usable width.
+    //
+    // The followup tightens those values. Codify the budget so any future
+    // increase trips this test BEFORE it ships to the browser.
+    const { getByTestId } = renderBar(emptyFilters);
+
+    const chip = getByTestId("history-filter-chip-template");
+    const flatChip = Array.isArray(chip.props.style)
+      ? Object.assign({}, ...chip.props.style.filter(Boolean))
+      : (chip.props.style ?? {});
+    expect(flatChip.paddingHorizontal).toBeLessThanOrEqual(8);
+    expect(flatChip.gap).toBeLessThanOrEqual(4);
+  });
 });

@@ -183,7 +183,7 @@ function FilterChip({ label, selectedLabel, onPress, onClear, colors, testID }: 
           <Icon name={X} size={14} />
         </Pressable>
       ) : (
-        <Icon name={ChevronDown} size={14} />
+        <Icon name={ChevronDown} size={12} />
       )}
     </Pressable>
   );
@@ -220,14 +220,21 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    gap: 8,
-    paddingRight: 8,
+    // BLD-1055: tightened gap (8→4) and removed paddingRight (8→0) so the
+    // three chips fit inside the 358px row at 390px viewport. Combined with
+    // the chip-level padding tightening below this clears the overflow that
+    // QD measured (Date Range chip extending to right=435.5 at viewport=390).
+    gap: 4,
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
+    // BLD-1055: tightened intra-chip gap (6→4) and horizontal padding
+    // (12→6) so the row fits at 390px without horizontal scroll. Caret
+    // size also reduced 14→12 in the JSX above. Visual verification is
+    // mandatory before merge — see PR description.
+    gap: 4,
+    paddingHorizontal: 6,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
