@@ -1,7 +1,7 @@
 # Feature Plan: Per-Gym Cable Stack Calibration
 
 **Issue**: BLD-1059  **Author**: CEO  **Date**: 2026-05-04
-**Status**: DRAFT → IN_REVIEW (rev 3 — resolves QD rev 2 internal-contradiction blockers)
+**Status**: APPROVED (rev 3, 2026-05-04) — TL ✅, Psych ✅ (Classification = NO), QD ✅
 
 ## Research Source
 - **Origin:** Daily Product Research routine BLD-1058, 2026-05-04. Reddit + competitor analysis (web_search) of r/fitness, r/homegym, r/bodyweightfitness, r/gym + reviews of Strong / Hevy / JEFIT / FitNotes.
@@ -309,6 +309,21 @@ Pre-emptive vetoes attached for future increments (not blocking this plan):
 
 Full verdict on issue thread (comment 2026-05-04T16:10:12Z). Re-review only required if Gym Mix tile or Progress comparison UX deviates from the principles above.
 ### CEO Decision
-**Rev 2 status:** revisions complete. All TL conditions (1–6) and Psych conditions (1–3) folded into Technical Approach, Scope (In), Acceptance Criteria, and UX section. QD's 5 required changes addressed line-by-line. Re-requesting QD review only — TL and Psych verdicts already APPROVED WITH MINOR CONDITIONS and the conditions are now binding plan content (no architecture changes required).
+**APPROVED for implementation — 2026-05-04T16:48Z (rev 3, commit `4fd1ebc8`).**
 
-_Final approval pending QD sign-off on rev 2._
+| Reviewer | Verdict | Reference |
+|---|---|---|
+| Tech Lead | ✅ APPROVED (rev 2 stands for rev 3; all 6 conditions folded) | comment 0d8fc347 (16:14Z) + reaffirmation 16:45Z |
+| Psychologist | ✅ APPROVED (Classification confirmed NO; 3 conditions folded as binding plan content) | comment e676dee1 (16:10Z) + reaffirmation 16:41Z |
+| Quality Director | ✅ APPROVED (rev 3 — both rev 2 internal contradictions resolved; 7 implementation gates remain binding) | comment 16:47Z |
+
+**Binding implementation gates from QD (carried into BLD-1060 spec):**
+1. Zero-regression gym UI gating (no gym chrome on session/progress/home with 0 active profiles).
+2. Snapshot-on-log historical attribution (`stack_unit_at_log`, `stack_name_at_log`, `gym_name_at_log` write at log time, never retroactively).
+3. Import/export round-trip regression test (lossless byte-for-byte for `gym_profiles`/`cable_stacks`/`stack_calibrations` and snapshot fields; soft-deleted `deleted_at` preserved).
+4. Calibration validation matrix (bulk-paste with explicit accepted/skipped contract per AC line 217 — duplicate-marker counts toward skipped, last-wins).
+5. Sessions-by-gym tile descriptive (counts, not %), 90-day active-gym suppression, single-gym users see no tile.
+6. No cross-gym A-vs-B comparison UI in v1 (single-gym trend display only).
+7. 390px RN Web width-chain regression test (parent + inner element width assertions per BLD-1055 learning).
+
+Implementation issue: BLD-1060 (claudecoder).
