@@ -83,9 +83,13 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   rating: integer("rating"),
   edited_at: integer("edited_at"),
   import_batch_id: text("import_batch_id"),
+  // BLD-1060: per-gym cable stack calibration
+  gym_id: text("gym_id"),
+  gym_name_at_log: text("gym_name_at_log"),
 }, (table) => [
   index("idx_workout_sessions_completed").on(table.completed_at),
   index("idx_workout_sessions_started_at").on(table.started_at),
+  index("idx_workout_sessions_gym_started_at").on(table.gym_id, table.started_at),
 ]);
 
 export const workoutSets = sqliteTable("workout_sets", {
@@ -117,6 +121,11 @@ export const workoutSets = sqliteTable("workout_sets", {
   // Gating + autofill in `lib/bodyweight-grip-variant.ts`.
   grip_type: text("grip_type"),
   grip_width: text("grip_width"),
+  // BLD-1060: per-gym cable stack calibration
+  stack_id: text("stack_id"),
+  stack_marker: integer("stack_marker"),
+  stack_unit_at_log: text("stack_unit_at_log"),
+  stack_name_at_log: text("stack_name_at_log"),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),
@@ -375,6 +384,40 @@ export const waterLogs = sqliteTable("water_logs", {
   index("idx_water_logs_date_key").on(table.date_key),
 ]);
 
+// ─── Gym Profiles (BLD-1060) ─────────────────────────────────────────────────
+
+export const gymProfiles = sqliteTable("gym_profiles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  notes: text("notes").default(""),
+  is_default: integer("is_default").default(0),
+  created_at: integer("created_at").notNull(),
+  updated_at: integer("updated_at").notNull(),
+  deleted_at: integer("deleted_at"),
+});
+
+export const cableStacks = sqliteTable("cable_stacks", {
+  id: text("id").primaryKey(),
+  gym_id: text("gym_id").notNull(),
+  name: text("name").notNull(),
+  unit: text("unit").notNull().default("kg"),
+  position: integer("position").notNull().default(0),
+  created_at: integer("created_at").notNull(),
+  updated_at: integer("updated_at").notNull(),
+  deleted_at: integer("deleted_at"),
+}, (table) => [
+  index("idx_cable_stacks_gym").on(table.gym_id),
+]);
+
+export const stackCalibrations = sqliteTable("stack_calibrations", {
+  id: text("id").primaryKey(),
+  stack_id: text("stack_id").notNull(),
+  marker: integer("marker").notNull(),
+  true_weight: real("true_weight").notNull(),
+}, (table) => [
+  index("idx_stack_calibrations_stack").on(table.stack_id),
+]);
+
 // ─── Inferred Select Types ─────────────────────────────────────────────────
 // Use these instead of manually-defined Row types.
 
@@ -405,3 +448,6 @@ export type StravaSyncLogRow = typeof stravaSyncLog.$inferSelect;
 export type HealthConnectSyncLogRow = typeof healthConnectSyncLog.$inferSelect;
 export type StrengthGoalRow = typeof strengthGoals.$inferSelect;
 export type WaterLogRow = typeof waterLogs.$inferSelect;
+export type GymProfileRow = typeof gymProfiles.$inferSelect;
+export type CableStackRow = typeof cableStacks.$inferSelect;
+export type StackCalibrationRow = typeof stackCalibrations.$inferSelect;

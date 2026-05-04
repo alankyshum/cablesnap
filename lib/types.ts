@@ -278,6 +278,8 @@ export type WorkoutSession = {
    * enabling bulk undo/delete. NULL for organically created sessions.
    */
   import_batch_id: string | null;
+  gym_id?: string | null;
+  gym_name_at_log?: string | null;
 };
 
 export type SetType = "normal" | "warmup" | "dropset" | "failure";
@@ -318,6 +320,10 @@ export type WorkoutSet = {
   // see `lib/bodyweight-grip-variant.ts` for autofill chain.
   grip_type?: GripType | null;
   grip_width?: GripWidth | null;
+  stack_id?: string | null;
+  stack_marker?: number | null;
+  stack_unit_at_log?: string | null;
+  stack_name_at_log?: string | null;
 };
 
 export type LinkedGroup = {

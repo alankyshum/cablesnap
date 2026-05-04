@@ -67,6 +67,9 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // BLD-890: CSV import batch ID — groups imported sessions for undo/bulk-delete.
   // NULL for sessions created organically (not imported).
   await addColumnIfMissing(database, "workout_sessions", "import_batch_id", "TEXT DEFAULT NULL");
+  // BLD-1060: per-gym cable stack calibration
+  await addColumnIfMissing(database, "workout_sessions", "gym_id", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sessions", "gym_name_at_log", "TEXT DEFAULT NULL");
 
   // workout_sets table
   await addColumnIfMissing(database, "workout_sets", "rpe", "REAL DEFAULT NULL");
@@ -93,6 +96,11 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // SQLite and `addColumnIfMissing` no-ops on second run.
   await addColumnIfMissing(database, "workout_sets", "grip_type", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "grip_width", "TEXT DEFAULT NULL");
+  // BLD-1060: per-gym cable stack calibration
+  await addColumnIfMissing(database, "workout_sets", "stack_id", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sets", "stack_marker", "INTEGER DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sets", "stack_unit_at_log", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sets", "stack_name_at_log", "TEXT DEFAULT NULL");
 
   // workout_sets.set_type migration (replaces deprecated is_warmup column)
   if (!(await hasColumn(database, "workout_sets", "set_type"))) {
@@ -111,6 +119,46 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
 
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
+
+  // BLD-1060: per-gym cable stack calibration — new tables
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS gym_profiles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      notes TEXT DEFAULT '',
+      is_default INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER DEFAULT NULL
+    );
+    CREATE TABLE IF NOT EXISTS cable_stacks (
+      id TEXT PRIMARY KEY,
+      gym_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      unit TEXT NOT NULL DEFAULT 'kg',
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER DEFAULT NULL
+    );
+    CREATE TABLE IF NOT EXISTS stack_calibrations (
+      id TEXT PRIMARY KEY,
+      stack_id TEXT NOT NULL,
+      marker INTEGER NOT NULL,
+      true_weight REAL NOT NULL,
+      UNIQUE(stack_id, marker)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cable_stacks_gym ON cable_stacks(gym_id);
+    CREATE INDEX IF NOT EXISTS idx_stack_calibrations_stack ON stack_calibrations(stack_id);
+    CREATE INDEX IF NOT EXISTS idx_workout_sessions_gym_started_at ON workout_sessions(gym_id, started_at);
+  `);
+  try {
+    await database.execAsync(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_gym_profiles_one_default ON gym_profiles(is_default) WHERE is_default = 1`
+    );
+  } catch {
+    // Partial indexes not supported on all platforms — constraint enforced at app level
+  }
 
   // Phase 66: strength goals table
   await database.execAsync(`
