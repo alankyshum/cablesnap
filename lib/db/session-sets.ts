@@ -38,6 +38,10 @@ export async function getSessionSets(
       mount_position: workoutSets.mount_position,
       grip_type: workoutSets.grip_type,
       grip_width: workoutSets.grip_width,
+      stack_id: workoutSets.stack_id,
+      stack_marker: workoutSets.stack_marker,
+      stack_unit_at_log: workoutSets.stack_unit_at_log,
+      stack_name_at_log: workoutSets.stack_name_at_log,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -75,6 +79,10 @@ export async function getSessionSets(
     // wherever they re-enter the system (CSV import, future analytics filter).
     grip_type: (r.grip_type as GripType | null) ?? null,
     grip_width: (r.grip_width as GripWidth | null) ?? null,
+    stack_id: r.stack_id ?? null,
+    stack_marker: r.stack_marker ?? null,
+    stack_unit_at_log: r.stack_unit_at_log ?? null,
+    stack_name_at_log: r.stack_name_at_log ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -144,7 +152,11 @@ export async function addSet(
   // BLD-768: per-set bodyweight grip variant. Same no-silent-default rule as
   // cable variants — both NULL when user has no prior grip on this exercise.
   gripType?: GripType | null,
-  gripWidth?: GripWidth | null
+  gripWidth?: GripWidth | null,
+  stackId?: string | null,
+  stackMarker?: number | null,
+  stackUnitAtLog?: string | null,
+  stackNameAtLog?: string | null
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
@@ -163,6 +175,10 @@ export async function addSet(
     mount_position: mountPosition ?? null,
     grip_type: gripType ?? null,
     grip_width: gripWidth ?? null,
+    stack_id: stackId ?? null,
+    stack_marker: stackMarker ?? null,
+    stack_unit_at_log: stackUnitAtLog ?? null,
+    stack_name_at_log: stackNameAtLog ?? null,
   });
   return {
     id,
@@ -186,6 +202,10 @@ export async function addSet(
     mount_position: mountPosition ?? null,
     grip_type: gripType ?? null,
     grip_width: gripWidth ?? null,
+    stack_id: stackId ?? null,
+    stack_marker: stackMarker ?? null,
+    stack_unit_at_log: stackUnitAtLog ?? null,
+    stack_name_at_log: stackNameAtLog ?? null,
   };
 }
 
@@ -206,6 +226,10 @@ export async function addSetsBatch(
     // BLD-768: per-set bodyweight grip variant (autofilled by caller from history).
     gripType?: GripType | null;
     gripWidth?: GripWidth | null;
+    stackId?: string | null;
+    stackMarker?: number | null;
+    stackUnitAtLog?: string | null;
+    stackNameAtLog?: string | null;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
@@ -232,12 +256,16 @@ export async function addSetsBatch(
       mount_position: s.mountPosition ?? null,
       grip_type: s.gripType ?? null,
       grip_width: s.gripWidth ?? null,
+      stack_id: s.stackId ?? null,
+      stack_marker: s.stackMarker ?? null,
+      stack_unit_at_log: s.stackUnitAtLog ?? null,
+      stack_name_at_log: s.stackNameAtLog ?? null,
     };
   });
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
@@ -248,6 +276,7 @@ export async function addSetsBatch(
           // BLD-768: positional binding contract — grip_type at index 12, grip_width at index 13.
           // Pinned by `__tests__/lib/db/add-sets-batch-bodyweight-variant.test.ts`.
           r.grip_type ?? null, r.grip_width ?? null,
+          r.stack_id ?? null, r.stack_marker ?? null, r.stack_unit_at_log ?? null, r.stack_name_at_log ?? null,
         ]);
       }
     } finally {

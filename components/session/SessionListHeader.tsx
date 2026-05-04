@@ -5,12 +5,20 @@ import type { ThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   nextHint: string | null;
+  gymName?: string | null;
   colors: ThemeColors;
 };
 
-export function SessionListHeader({ nextHint, colors }: Props) {
+export function SessionListHeader({ nextHint, gymName, colors }: Props) {
   return (
     <>
+      {gymName ? (
+        <View style={[styles.gymChip, { backgroundColor: colors.secondaryContainer }]}>
+          <Text variant="caption" style={{ color: colors.onSecondaryContainer, fontWeight: "700" }}>
+            {gymName}
+          </Text>
+        </View>
+      ) : null}
       {nextHint && (
         <View style={[styles.nextBanner, { backgroundColor: colors.secondaryContainer }]} accessibilityLiveRegion="polite">
           <Text variant="subtitle" style={{ color: colors.onSecondaryContainer, fontWeight: "700" }}>
@@ -23,6 +31,13 @@ export function SessionListHeader({ nextHint, colors }: Props) {
 }
 
 const styles = StyleSheet.create({
+  gymChip: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginBottom: 12,
+  },
   nextBanner: {
     alignItems: "center",
     padding: 12,
