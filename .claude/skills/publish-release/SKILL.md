@@ -71,6 +71,36 @@ If you truly must rotate:
 5. Consider bumping the major version or the Android `package` name so the
    break is explicit.
 
+## Scheduled Release CI Guardrails
+
+The scheduled release workflow is intentionally conservative after the v0.26.19
+debugging arc. Preserve these guardrails when editing
+`.github/workflows/scheduled-release.yml`:
+
+- **Free disk before Android setup.** Keep `jlumbroso/free-disk-space@main`
+  immediately after checkout. Ubuntu-hosted runners start with roughly 14 GB
+  free, while a full Expo/RN Android release build plus AVD needs roughly
+  25-30 GB. Keep the Android SDK and tool cache; drop dotnet, haskell, large
+  packages, docker images, and swap.
+- **Do not inline complex smoke-test shell in
+  `reactivecircus/android-emulator-runner`.** The action executes each
+  `script:` line as its own `/bin/sh -c` command, so multi-line functions,
+  heredocs, and `if/then/fi` blocks split apart and fail with misleading
+  syntax errors. Keep the workflow script to a single command:
+  `bash scripts/smoke-test-emulator.sh`.
+- **Treat API 34 activity state as a soft signal.** Android API 34 activity
+  dumps no longer reliably expose `state=RESUMED`; the smoke script checks
+  `mResumedActivity:` first and falls back to older `state=*` output. If no
+  resumed marker is found, warn but do not fail.
+- **Smoke-test pass criteria are process alive + no fatal exception.** Hard
+  failures are `pidof com.persoack.cablesnap` returning empty or logcat
+  containing `FATAL EXCEPTION`. Dumpsys formatting drift is not release-blocking.
+- **API 34 emulator needs explicit headless settings.** Keep
+  `emulator-boot-timeout: 600` and the headless options
+  `-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+  -no-snapshot-save -camera-back none`; the default 300s timeout is too tight
+  after a long Android build.
+
 ## Pre-Flight Checks
 
 Before publishing, verify:
