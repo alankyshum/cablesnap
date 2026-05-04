@@ -151,6 +151,24 @@ export default function Settings() {
           fatGoal={fatGoal}
         />
         <AppearanceCard colors={colors} />
+        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+          <CardContent>
+            <Pressable
+              onPress={() => router.push('/settings/gym-profiles')}
+              accessibilityRole="button"
+              accessibilityLabel="Open gym profiles settings"
+              style={styles.settingsLinkRow}
+            >
+              <View style={styles.settingsLinkMeta}>
+                <Text variant="body" style={[styles.settingsLinkTitle, { color: colors.onSurface }]}>Gym Profiles</Text>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                  Manage gyms, cable stacks, and marker calibrations.
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.onSurfaceVariant} />
+            </Pressable>
+          </CardContent>
+        </Card>
         <BodyProfileCard weightUnit={weightUnit} heightUnit={measureUnit} />
         <FrequencyGoalPicker
           colors={colors}
@@ -194,6 +212,10 @@ export default function Settings() {
           hcSdkStatus={hcSdkStatus}
         />
         <AutoBackupSection colors={colors} toast={toast} />
+        <Pressable onPress={() => router.push('/settings/gym-profiles')} style={styles.settingsRow}>
+          <Text style={[styles.settingsRowLabel, { color: colors.onSurface }]}>Gym Profiles</Text>
+          <ChevronRight size={16} color={colors.onSurfaceVariant} />
+        </Pressable>
         <DataManagementCard
           colors={colors}
           loading={loading}
@@ -314,6 +336,18 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingTop: 16, paddingBottom: 48 },
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.md },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+  },
+  settingsRowLabel: {
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+  },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,5 +361,18 @@ const styles = StyleSheet.create({
   },
   aboutBlock: {
     marginTop: 4,
+  },
+  settingsLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  settingsLinkMeta: {
+    flex: 1,
+    marginRight: 12,
+  },
+  settingsLinkTitle: {
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
   },
 });
