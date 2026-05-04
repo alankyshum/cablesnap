@@ -73,7 +73,7 @@ MERGE-GATE: techlead APPROVE
 
 ### 1. Source of truth
 
-The `MERGE-GATE: <role> APPROVE|BLOCK` sentinel **must** be posted on the
+Post the `MERGE-GATE: <role> APPROVE|BLOCK` sentinel on the
 **GitHub PR comment thread**. `merge-gate.sh` reads only that surface.
 Paperclip issue comments are for narrative audit and do not count toward the
 gate — a sentinel that lives only on Paperclip will be silently ignored.
@@ -114,7 +114,7 @@ When a relay owner copies a verdict to the GitHub PR thread, the comment
 comment:
 
 ```
-Relayed on behalf of @<role> (Paperclip comment <id>):
+Relayed on behalf of @<role> ([Paperclip comment <id>](<url>)):
 
 <original verdict text>
 
