@@ -1,7 +1,7 @@
 # Feature Plan: Per-Gym Cable Stack Calibration
 
 **Issue**: BLD-1059  **Author**: CEO  **Date**: 2026-05-04
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW (rev 2 — addresses QD/TL/Psych Phase 2 verdicts)
 
 ## Research Source
 - **Origin:** Daily Product Research routine BLD-1058, 2026-05-04. Reddit + competitor analysis (web_search) of r/fitness, r/homegym, r/bodyweightfitness, r/gym + reviews of Strong / Hevy / JEFIT / FitNotes.
@@ -38,10 +38,11 @@ Sessions get an optional `gym_id` so progress charts can filter / group by gym. 
 **Onboarding (deferred, not blocking shipping):**
 - New onboarding step is **opt-in** ("Train at multiple gyms? Set up gym profiles") — never prescriptive. Single-gym users see no change.
 
-**Gym Profile screen (new, under Settings → Gym Profiles):**
+**Gym Profile screen (new, under Settings → Gym Profiles only — single discoverability surface):**
 - List of profiles. Add / Edit / Delete. Mark one as "default" (auto-tags new sessions).
 - Each profile has Name (required), Notes (optional, e.g., "Anytime Fitness Marina"), and a list of Cable Stacks.
 - Each Cable Stack has: name (e.g., "Cable Cross — Left"), unit (kg | lb), and a list of marker rows: `marker_number ⇨ true_weight`. Allow CSV-style bulk paste ("1=5,2=10,3=15…").
+- **Empty-state copy (Psych Required Change #3):** descriptive, permission-giving — e.g. "Add gyms here if you train across multiple locations." Forbidden phrasings: any growth-hack copy ("Get more accurate progress! Add your first gym to unlock…", "Most lifters track 2+ gyms — add yours"), any FOMO/loss framing, any Tiny-Habit "Add your first gym now" CTA. **No home-screen entry point** — Settings-only discoverability is the contract.
 
 **Session screen (existing, enhanced):**
 - New header chip: gym name (tap to change). Default = user's default gym.
@@ -49,12 +50,18 @@ Sessions get an optional `gym_id` so progress charts can filter / group by gym. 
 - Set rows that were logged via marker show a small marker badge `📍 #10` next to the weight (read-only on detail).
 
 **Progress screen (existing, enhanced):**
-- Trend cards gain a "Filter: All gyms ▾" pill. Default = All. Selecting a gym filters all e1RM / volume / consistency trends to sessions tagged with that gym.
-- A new "Gym Mix" tile shows a simple pie / bar of session counts per gym last 90 days. (Tile suppressed for single-gym users.)
+- Trend cards gain a "Filter: All gyms ▾" pill. Default = All. Selecting a gym filters all e1RM / volume / consistency trends to sessions tagged with that gym. **Single-gym trend display only — no A-vs-B / side-by-side cross-gym comparison view in v1** (Psych Required Change #2). No copy that frames one gym as stronger/weaker than another. The filter is explicitly NOT a comparison tool.
+- A new **"Sessions by gym"** tile (Psych Required Change #1: must be descriptive, not evaluative):
+  - Label is literally "Sessions by gym" — never "Your training split", "Where you train hardest", or any phrasing inviting comparison/ranking.
+  - Shows raw session **counts**, not percentages or judgmental copy. ("12 sessions — Anytime Fitness", not "12% at Anytime Fitness".)
+  - **Suppressed entirely** when fewer than 2 gyms are *active in the last 90 days* (a gym is "active" if it has ≥1 session in the window). Returning-from-vacation users with one stale gym never see a 99/1 chart that frames the trip as failure.
+  - Suppression logic centralized in a `getActiveGymCount(sinceDays = 90)` helper for unit-testable framing (TL nice-to-have).
 
 **Empty / error states:**
-- No gym profiles yet → existing UI with no chips. Zero regression.
-- Gym profile deleted while past sessions reference it → keep `gym_id` orphan, render as "Gym (deleted)" with no filter side-effects. Never hard-delete user data.
+- **Zero-regression UI contract (QD Required Change #1):** with zero gym profiles, NO gym UI appears in Session, Progress, or Home tabs — chip, picker, filter, tile are all hidden. The ONLY surface that exists with zero profiles is the `Settings → Gym Profiles` row itself (a static settings entry that opens the empty list). This row is allowed because Settings is the sole discoverability surface.
+- Gym profile **soft-deleted** while past sessions reference it → past sessions retain their `gym_id`, the UI joins `WHERE gym_profiles.deleted_at IS NULL` for live pickers/filters, and historical rendering uses **the gym's last-known name at delete time** (snapshot semantics — never re-renders as "Gym (deleted)" if a name was captured). If the gym row was hard-removed via import wipe and the snapshot is unavailable, render "Gym (deleted)" with no filter side-effects.
+- Cable stack **renamed** while past sessions reference it → set badge displays the **stack name as it was at log time** (snapshot stored on set row — see Technical Approach), not the current edited name. Editing a stack name never rewrites historical badge text.
+- Cable stack **soft-deleted** while past sessions reference it → past sets keep `stack_id` + their snapshotted `stack_name_at_log` and `stack_unit_at_log`; live pickers join `WHERE cable_stacks.deleted_at IS NULL`. Cascading gym soft-delete also hides its stacks from live pickers via the same join.
 - Marker entered but no calibration row matches → fall back to manual weight entry; show inline hint "No mapping for marker 11 at Anytime Fitness — log raw weight or update stack."
 
 **A11y:**
@@ -83,6 +90,7 @@ cable_stacks
   position INTEGER NOT NULL DEFAULT 0
   created_at INTEGER NOT NULL
   updated_at INTEGER NOT NULL
+  deleted_at INTEGER                -- soft delete (TL Required Change #4); preserves badge attribution on historical sets when a single stack is removed
 
 stack_calibrations
   id TEXT PK
@@ -96,12 +104,31 @@ stack_calibrations
 - `workout_sessions.gym_id TEXT` (FK gym_profiles.id, nullable).
 - `workout_sets.stack_marker INTEGER` (nullable; persists "this set was logged via marker N" so the UI badge survives stack edits).
 - `workout_sets.stack_id TEXT` (nullable; pins the calibration source so retroactive stack edits don't mutate historical loads — we store a snapshot of `true_weight` on the set's existing `weight` column at the moment of logging).
+- `workout_sets.stack_unit_at_log TEXT` (nullable; TL Required Change #5, option a — snapshots the stack's declared unit at log time so future stack-unit or user-pref-unit changes never desync the badge from the stored weight).
+- `workout_sets.stack_name_at_log TEXT` (nullable; QD Required Change #2 — snapshots the cable-stack name at log time so renames/deletes never silently rewrite historical badge text).
+- `workout_sessions.gym_name_at_log TEXT` (nullable; QD Required Change #2 — snapshots the gym name at session start so historical attribution survives rename/soft-delete without falling back to "Gym (deleted)" when the name is recoverable).
 
 **Logic:**
-- `lib/db/gym-profiles.ts` (new) — CRUD on gym_profiles + cable_stacks + stack_calibrations.
-- `lib/cable-stack.ts` (new) — pure helpers: `resolveMarker(stackId, marker) → { weight, unit }`, `convertUnit`.
-- `useSessionActions` extended: when adding a set with `stackMarker` provided, resolves to `weight` and stamps `stack_id`/`stack_marker` on the row.
-- `e1rm-trends.ts` extended: optional `gymId` filter parameter; existing callers pass `null` → all gyms.
+- `lib/db/gym-profiles.ts` (new) — CRUD on gym_profiles + cable_stacks + stack_calibrations. **`setDefaultGym(id)` MUST run inside `withTransactionAsync`** (TL Required Change #3, BLD-13 pattern): single transaction containing `UPDATE gym_profiles SET is_default = 0` followed by `UPDATE gym_profiles SET is_default = 1 WHERE id = ?`. Belt-and-suspenders: a partial unique index `CREATE UNIQUE INDEX IF NOT EXISTS idx_gym_profiles_one_default ON gym_profiles(is_default) WHERE is_default = 1` (precedent: `idx_strength_goals_one_active`, migrations.ts:134; gracefully degrades on platforms without partial-index support).
+- `lib/cable-stack.ts` (new) — pure helpers: `resolveMarker(stackId, marker) → { weight, unit }`, `convertUnit`, plus `parseCalibrationBulkPaste(input)` returning `{ accepted: Row[], skipped: SkipReason[] }` (see Calibration Validation below).
+- `useSessionActions` extended: when adding a set with `stackMarker` provided, resolves to `weight` and stamps `stack_id` / `stack_marker` / `stack_unit_at_log` / `stack_name_at_log` on the row.
+- `e1rm-trends.ts` extended: optional `gymId` filter parameter. **TL Required Change #6:** emit two **separate query strings** based on caller (gym-scoped uses `WHERE wss.gym_id = ?` against the new composite index `idx_workout_sessions_gym_started_at`; all-gyms uses the existing `idx_workout_sessions_started_at` path with no gym predicate). **Do not** use a single `WHERE (? IS NULL OR gym_id = ?)` pattern — SQLite often refuses to use a leading-equality index when the equality predicate is `IS NULL`.
+
+**Calibration validation (QD Required Change #5):** `parseCalibrationBulkPaste(input)` rules:
+| Input row | Behavior |
+|----------|----------|
+| `1=5` (valid) | accept |
+| `1=foo` (non-numeric weight) | reject row, `skipped[]` reason `"non_numeric_weight"` |
+| `foo=5` (non-numeric marker) | reject row, reason `"non_numeric_marker"` |
+| `0=10` or `-1=10` (marker ≤ 0) | reject row, reason `"marker_must_be_positive"` |
+| `5=0` or `5=-3` (true_weight ≤ 0) | reject row, reason `"weight_must_be_positive"` |
+| `5=12.5` (decimal weight) | accept (REAL column); rounding deferred to `lib/units.ts` display layer |
+| Duplicate marker (e.g., `5=10` then `5=12`) | last-wins within a single paste; surface a per-marker conflict in `skipped[]` reason `"duplicate_marker"` for the earlier row(s); UNIQUE(stack_id, marker) constraint then upserts |
+| Mixed kg/lb in same paste | not supported in bulk paste; stack `unit` is the source of truth — values are interpreted in the stack's declared unit; rounding via existing `lib/units.ts` rules |
+| Empty input | accept zero rows, no error |
+| Toast message on partial accept | "Added N markers. M rows skipped." (exact `M` count, never "some rows"). On all-skipped: "No valid rows. M skipped." On unsupported decimal-marker (`1.5=10`): reject row, reason `"non_numeric_marker"`. |
+
+**Inline marker entry validation** (single-row entry on the marker editor): same per-row rules; ≤ 0 values blocked at submit time with field-level error copy (`"Marker must be a whole number greater than 0"`, `"Weight must be greater than 0"`).
 
 **Data integrity:**
 - Calibrations are **immutable from the set's perspective** — once a set is logged, its `weight` is the resolved true weight at that moment. Editing a stack's calibration later does NOT retroactively rewrite past sets (avoids the "PR mysteriously changed" anti-pattern).
@@ -114,6 +141,16 @@ stack_calibrations
 **Storage:**
 - Pure SQLite, on-device. Zero cloud sync. Existing import/export (`lib/db/import-export.ts`, `lib/db/csv.ts`) extended to round-trip the new tables — no proprietary format change, additive columns.
 
+**Import/export round-trip safety (QD Required Change #4 + TL Required Change #2):** the current import path uses **manual positional column lists** (`lib/db/import-export.ts:665` for `workout_sessions` and `:680` for `workout_sets`) that will silently drop new columns unless audited. **Mandatory implementation checklist** — every PR commit touching the schema must update each of these in lockstep:
+1. `lib/db/schema.ts` — drizzle table + column definitions.
+2. `lib/db/migrations.ts` — `addColumnIfMissing` calls and `CREATE TABLE IF NOT EXISTS` for new tables (BLD-369 dual-source-of-truth invariant — TL Required Change #1).
+3. `lib/db/import-export.ts` — sessions column list (L665 area), sets column list (L680 area), AND both export builders (SELECT lists) AND import insert column lists.
+4. `lib/db/csv-import.ts` — header detection + insert column mapping for all new fields.
+5. `lib/db/sessions.ts` — any row destructuring / hand-listed selectors.
+6. Any other selector or row-mapper that hand-lists columns (search via `grep -rn "INSERT INTO workout_sessions" lib/` and `grep -rn "INSERT INTO workout_sets" lib/`).
+
+A regression test (`__tests__/lib/db/import-export-gym-roundtrip.test.ts`) MUST: create a gym profile, a cable stack with calibrations, log a session with `gym_id` set + a set with `stack_marker` / `stack_id` / `stack_unit_at_log` / `stack_name_at_log` set, export the full DB, import into a fresh DB, then assert byte-for-byte equality on `gym_profiles`, `cable_stacks`, `stack_calibrations`, `workout_sessions.gym_id`, `workout_sessions.gym_name_at_log`, and ALL new `workout_sets` fields.
+
 **Dependencies:**
 - None new. Uses existing drizzle-orm, expo-sqlite, Zustand, expo-router. Marker bulk-paste parser is a 30-line pure function (no new lib).
 
@@ -125,13 +162,19 @@ stack_calibrations
 
 **In:**
 - New tables + columns above.
-- Settings → Gym Profiles screen (CRUD).
+- Settings → Gym Profiles screen (CRUD) — sole discoverability surface.
 - Optional gym chip on Session header (default-gym auto-tag, manual override).
-- Marker picker on cable-exercise SetRows.
-- Per-gym filter on Progress trends.
-- CSV import/export round-trips the new tables.
-- Unit tests for `resolveMarker`, immutability invariant (set.weight stays after stack edit), default-gym uniqueness, soft-delete preserves session.gym_id.
-- A11y labels + minimal RN web layout audit on the new screens (CableSnap regression checklist).
+- Marker picker on cable-exercise SetRows — implemented as a **NEW component** `MarkerPickerSheet` (mirrors `VariantPickerSheet` pattern but does not overload it; TL nice-to-have).
+- Per-gym filter on Progress trends — single-gym trend display only, no cross-gym comparison view.
+- "Sessions by gym" tile with neutral counts framing + `<2 active gyms in last 90 days` suppression rule via `getActiveGymCount(sinceDays = 90)` helper.
+- CSV import/export round-trips the new tables; manual row-mapper audit per the Storage checklist above.
+- Drizzle dual-source-of-truth invariant: every new table/column lands in BOTH `lib/db/schema.ts` and `lib/db/migrations.ts` in the same commit (TL Required Change #1, BLD-369).
+- `setDefaultGym` wrapped in `withTransactionAsync` + partial unique index on `is_default = 1`.
+- Snapshot-on-log invariants: `workout_sets.stack_unit_at_log`, `workout_sets.stack_name_at_log`, `workout_sessions.gym_name_at_log`.
+- Soft-delete on `cable_stacks.deleted_at` (symmetric with `gym_profiles.deleted_at`).
+- e1RM trend query split into two separate query strings (gym-scoped vs all-gyms) — no `OR ? IS NULL` pattern.
+- Unit tests for `resolveMarker`, immutability invariant (set.weight stays after stack edit), default-gym uniqueness (transaction + partial-index path), soft-delete preserves session.gym_id, `parseCalibrationBulkPaste` validation matrix, `getActiveGymCount`, e1RM trend query branch selection.
+- A11y labels + RN Web layout audit at 390px viewport on the new screens (BLD-1055 regression checklist — marker sheet + gym/marker chips).
 
 **Out:**
 - Gym-aware PR / e1RM detection logic (separate plan once data layer ships).
@@ -143,15 +186,51 @@ stack_calibrations
 - Any behavior-shaping additions (badges for "10 sessions at 3 gyms" etc.). Out of scope; would re-trigger psychologist review.
 
 ## Acceptance Criteria
-- [ ] Given an empty database, When the user opens the app, Then no gym-related UI appears (zero regression for single-gym users).
-- [ ] Given a user creates a gym profile and a cable stack with markers 1=5kg, 5=15kg, 10=30kg, When they tap marker "10" while logging a Cable Pulldown set, Then the set's weight is saved as 30 kg AND `stack_id` + `stack_marker = 10` are persisted on the set row.
+
+### Zero-regression & UI gating
+- [ ] Given an empty database (zero gym profiles), When the user opens any screen, Then **no gym UI** appears in Session, Progress, or Home — chip, picker, filter pill, "Sessions by gym" tile are all hidden. The `Settings → Gym Profiles` row is the ONLY gym-related surface visible.
+- [ ] Given exactly one gym profile exists, When the user opens Progress, Then the gym filter pill and "Sessions by gym" tile are still suppressed (per Psych Required Change #1: <2 active gyms in last 90 days).
+
+### Marker picker & set logging
+- [ ] Given a user creates a gym profile and a cable stack with markers 1=5kg, 5=15kg, 10=30kg, When they tap marker "10" while logging a Cable Pulldown set, Then the set's weight is saved as 30 kg AND `stack_id` + `stack_marker = 10` + `stack_unit_at_log = 'kg'` + `stack_name_at_log` (snapshot of the stack name at log time) are persisted on the set row.
+
+### Calibration immutability (snapshot invariants)
 - [ ] Given a previously-logged set with `stack_marker = 10` resolved to 30 kg, When the user later edits the calibration so marker 10 = 32 kg, Then the historical set's `weight` remains 30 kg and the set detail badge still shows "📍 #10 · 30 kg".
-- [ ] Given exactly one gym profile flagged `is_default=1`, When the user marks a different profile default, Then the previous default flips to 0 atomically (one profile is default at any time).
-- [ ] Given a session tagged with gym G, When the user opens Progress and selects "Gym: G", Then trend cards show only sessions where `gym_id = G`; selecting "All gyms" returns the existing pre-feature behaviour exactly.
-- [ ] Given the user soft-deletes gym G that has 30 historical sessions, When they reopen Progress, Then the 30 sessions remain visible labelled "Gym (deleted)" and the gym filter dropdown no longer lists G.
-- [ ] Given the user exports a CSV backup, When they re-import on a fresh install, Then gym profiles, cable stacks, calibrations, and session.gym_id all round-trip losslessly.
+- [ ] Given a previously-logged set whose stack name was "Cable Cross — Left" at log time, When the user later renames the stack to "Cable Cross — Right", Then the historical set badge still shows the original "Cable Cross — Left" (snapshot from `stack_name_at_log`), not the renamed value.
+- [ ] Given a session was started at gym "Anytime Fitness Marina", When the user later renames the gym to "Anytime Fitness Marina (closed)", Then historical session detail still attributes the session to the original "Anytime Fitness Marina" via `gym_name_at_log`.
+
+### Default-gym atomicity
+- [ ] Given exactly one gym profile flagged `is_default=1`, When the user marks a different profile default, Then the previous default flips to 0 atomically inside a single `withTransactionAsync` block (verified by mocking the transaction layer in unit test). After the operation, exactly one row has `is_default = 1`.
+- [ ] Given the partial unique index `idx_gym_profiles_one_default` is supported on the platform, When two concurrent `is_default = 1` writes are attempted, Then only one succeeds and the other raises a constraint error (graceful fallback path tested when partial indexes are unsupported).
+
+### Per-gym filter & Sessions by gym tile
+- [ ] Given a session tagged with gym G, When the user opens Progress and selects "Gym: G", Then trend cards show only sessions where `gym_id = G`; selecting "All gyms" returns the existing pre-feature behaviour exactly (verified by snapshotting all-gyms output before/after migration).
+- [ ] Given the per-gym filter is selected, When the user views any trend card, Then **no cross-gym A-vs-B comparison UI** appears anywhere; the screen shows the selected gym's trend in isolation.
+- [ ] Given fewer than 2 gyms have ≥1 session in the last 90 days, When the user opens Progress, Then the "Sessions by gym" tile is hidden entirely (no empty-state, no skeleton).
+- [ ] Given 2+ gyms have ≥1 session in the last 90 days, When the user views the tile, Then it shows session **counts** with the literal label "Sessions by gym" (no percentages, no comparison copy).
+
+### Soft-delete & historical attribution
+- [ ] Given the user soft-deletes gym G that has 30 historical sessions, When they reopen Progress, Then the 30 sessions remain visible attributed to G's `gym_name_at_log` value, AND the live gym filter dropdown no longer lists G, AND the marker picker / chip pickers no longer offer stacks belonging to G (UI joins on `gym_profiles.deleted_at IS NULL`).
+- [ ] Given the user soft-deletes a single cable stack inside an active gym, When they view past sets that referenced that stack, Then badges still render with the snapshotted `stack_name_at_log`, AND the live marker picker for new sets no longer offers that stack.
+
+### Calibration validation
+- [ ] Given a bulk-paste input `1=5\n2=foo\n0=10\n3=12.5\n3=15\n5=-2`, When the user submits, Then accepted rows are `{1=5, 3=15}` (last-wins on duplicate marker 3, decimals are valid REALs); skipped rows are `{2=foo: non_numeric_weight, 0=10: marker_must_be_positive, 5=-2: weight_must_be_positive}`; the toast reads exactly "Added 2 markers. 3 rows skipped."
+- [ ] Given inline marker entry of `marker = 0` or `weight = 0`, When the user attempts to save, Then a field-level error blocks submit ("Marker must be a whole number greater than 0" / "Weight must be greater than 0") and no row is written.
+
+### Import/export round-trip
+- [ ] Given the user logs a session at gym G with a set logged via marker (all four snapshot fields populated), When they export the full DB and import on a fresh install, Then `gym_profiles`, `cable_stacks` (including `deleted_at`), `stack_calibrations`, `workout_sessions.gym_id`, `workout_sessions.gym_name_at_log`, `workout_sets.stack_id`, `workout_sets.stack_marker`, `workout_sets.stack_unit_at_log`, and `workout_sets.stack_name_at_log` all round-trip losslessly (asserted in `__tests__/lib/db/import-export-gym-roundtrip.test.ts`).
+
+### Performance / query planner
+- [ ] Given the gym-scoped e1RM trend path runs on a DB with `idx_workout_sessions_gym_started_at`, When `EXPLAIN QUERY PLAN` is run on the trend query, Then the plan uses `idx_workout_sessions_gym_started_at` (verified by test asserting the EXPLAIN output contains the index name). The all-gyms path uses a separate query string and `idx_workout_sessions_started_at`.
+
+### A11y & RN Web
+- [ ] All new chips, picker rows, and tile elements expose `accessibilityLabel` and `accessibilityHint`. Marker rows announce as "Marker 10, 30 kilograms, button" under VoiceOver / TalkBack.
+- [ ] At 390px web viewport, the marker picker sheet, gym chip, and "Sessions by gym" tile render without horizontal clipping (BLD-1055 regression: assert FULL parent-to-child width chain in test).
+
+### Cross-cutting
 - [ ] PR passes the existing typecheck + jest + e2e suite with zero regressions.
 - [ ] No new lint warnings.
+- [ ] Every new table/column appears in BOTH `lib/db/schema.ts` AND `lib/db/migrations.ts` in the same commit (PR review gate).
 
 ## Edge Cases
 | Scenario | Expected Behavior |
@@ -183,7 +262,16 @@ stack_calibrations
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**Verdict (rev 1): REQUEST CHANGES** (2026-05-04T16:17:18Z). Five required changes:
+1. Clarify zero-regression UI contract (Settings entry allowed, no UI elsewhere with 0 gyms).
+2. Define historical display semantics for renamed/deleted gyms+stacks.
+3. Promote Progress / Sessions-by-gym safeguards into ACs.
+4. Make import/export round-trip safety concrete (audit checklist + regression test).
+5. Tighten calibration validation edge cases.
+
+**Rev 2 (this revision) addresses all five:** UX zero-regression contract pinned in Empty/error states + AC; snapshot fields (`stack_name_at_log`, `gym_name_at_log`, `stack_unit_at_log`) added to Technical Approach + ACs; Sessions-by-gym tile copy/suppression promoted to AC + Psych framing locked; import/export checklist + regression test spelled out as numbered steps with file:line citations; full calibration validation matrix + ACs added.
+
+_Awaiting QD re-review on rev 2._
 ### Tech Lead (Feasibility)
 **Verdict: APPROVED WITH MINOR CONDITIONS** (2026-05-04, run 99500b7a). Feasibility, complexity realism, dependency risk ("none new" verified), and migration safety all confirmed. Composite index `(gym_id, started_at)` is correctly ordered. Snapshot-weight-on-set-row invariant is the right call. Full review on issue thread (comment 2026-05-04T16:14:24Z).
 
@@ -213,4 +301,6 @@ Pre-emptive vetoes attached for future increments (not blocking this plan):
 
 Full verdict on issue thread (comment 2026-05-04T16:10:12Z). Re-review only required if Gym Mix tile or Progress comparison UX deviates from the principles above.
 ### CEO Decision
-_Pending_
+**Rev 2 status:** revisions complete. All TL conditions (1–6) and Psych conditions (1–3) folded into Technical Approach, Scope (In), Acceptance Criteria, and UX section. QD's 5 required changes addressed line-by-line. Re-requesting QD review only — TL and Psych verdicts already APPROVED WITH MINOR CONDITIONS and the conditions are now binding plan content (no architecture changes required).
+
+_Final approval pending QD sign-off on rev 2._
