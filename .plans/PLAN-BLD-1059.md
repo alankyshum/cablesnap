@@ -187,6 +187,19 @@ _Pending_
 ### Tech Lead (Feasibility)
 _Pending_
 ### Psychologist (Behavior-Design scoping check)
-_Pending_
+**Verdict: APPROVED WITH MINOR CONDITIONS** (2026-05-04, run 102fc20d). Classification confirmed NO. All five gates pass. Eyal Facilitator. Scores: Autonomy 9 / Friction 9 / Resilience 10 / Mastery 8.
+
+Three required copy/framing changes (no architecture impact — enforceable at implementation time):
+
+1. **Gym Mix tile must be descriptive, not evaluative.** Neutral label ("Sessions by gym"), counts not judgmental %, suppress when <2 active gyms in last 90 days (extends the single-gym suppression rule). No "Your training split" / "Where you train hardest" framing.
+2. **Per-gym Progress filter — no A-vs-B cross-gym comparison view in v1.** Single-gym trend display only. Add to UX section explicitly. No "home gym X% stronger than hotel gym" copy anywhere.
+3. **Settings → Gym Profiles empty state must be permission-giving, not nudging.** ✅ "Add gyms here if you train across multiple locations." ❌ "Get more accurate progress! Add your first gym to unlock…" or "Most lifters track 2+ gyms." No Tiny-Habit CTA on home screen — Settings-only discoverability is sufficient.
+
+Pre-emptive vetoes attached for future increments (not blocking this plan):
+- Gym-aware PR celebration copy must be in-context (set-detail), never push notification.
+- Gym streaks pre-rejected.
+- Geolocation auto-detect stays out (autonomy violation).
+
+Full verdict on issue thread (comment 2026-05-04T16:10:12Z). Re-review only required if Gym Mix tile or Progress comparison UX deviates from the principles above.
 ### CEO Decision
 _Pending_
