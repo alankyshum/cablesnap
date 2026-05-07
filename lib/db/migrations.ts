@@ -226,4 +226,16 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     SET set_number = (SELECT rn FROM renumbered WHERE renumbered.id = workout_sets.id)
     WHERE id IN (SELECT id FROM renumbered WHERE rn != workout_sets.set_number)
   `);
+
+  // BLD-1086 Phase 0b: Composite index for per-variant PR aggregation.
+  // Covers (exercise_id, attachment, mount_position, grip_type, completed_at)
+  // so the GROUP BY query in bestPerVariant uses the index rather than scanning
+  // the full table. `stack_unit_at_log` is intentionally omitted — cardinality
+  // is ~1-2 per user; the index covers the high-cost variant fan-out first.
+  // CREATE INDEX IF NOT EXISTS is idempotent (safe on every boot).
+  await database.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_workout_sets_variant_pr
+      ON workout_sets (exercise_id, attachment, mount_position, grip_type, completed_at)
+  `);
 }
+
