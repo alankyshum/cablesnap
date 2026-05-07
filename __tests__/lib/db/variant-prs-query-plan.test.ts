@@ -129,37 +129,75 @@ describe("BLD-1086 — bestPerVariant query plan", () => {
   });
 
   test('GROUP BY variant query uses idx_workout_sets_variant_pr (not SCAN TABLE)', () => {
-    // This is the exact SQL shape from bestPerVariant in lib/db/pr-dashboard.ts
+    // This SQL shape mirrors the SHIPPING bestPerVariant query in
+    // lib/db/pr-dashboard.ts:127-184 (LEFT JOIN ROW_NUMBER() form). If that
+    // production query changes shape, this test must be updated in lock-step
+    // so the AC "EXPLAIN QUERY PLAN confirms idx_workout_sets_variant_pr is
+    // used by the new variant aggregation query" is checked against what
+    // actually ships, not a stale draft.
     const planRows = db.prepare(`
       EXPLAIN QUERY PLAN
       SELECT
-        ws.attachment,
-        ws.mount_position,
-        ws.grip_type,
-        ws.stack_unit_at_log,
-        MAX(ws.weight)          AS max_weight,
-        ws.reps                 AS best_reps,
-        MAX(wss.completed_at)   AS achieved_at,
-        COUNT(DISTINCT ws.session_id) AS session_count
-      FROM workout_sets ws
-      INNER JOIN workout_sessions wss ON ws.session_id = wss.id
-      WHERE ws.exercise_id = ?
-        AND ws.completed = 1
-        AND ws.weight IS NOT NULL AND ws.weight > 0
-        AND ws.set_type != 'warmup'
-        AND wss.completed_at IS NOT NULL
-      GROUP BY ws.exercise_id,
-               ws.attachment,
-               ws.mount_position,
-               ws.grip_type,
-               ws.stack_unit_at_log
-      ORDER BY achieved_at DESC
-    `).all('cable-triceps-pushdown') as { detail: string }[];
+         ws.attachment,
+         ws.mount_position,
+         ws.grip_type,
+         ws.stack_unit_at_log,
+         MAX(ws.weight)                                   AS max_weight,
+         best.reps                                        AS best_reps,
+         best.completed_at                                AS achieved_at,
+         COUNT(DISTINCT ws.session_id)                    AS session_count
+       FROM workout_sets ws
+       INNER JOIN workout_sessions wss ON ws.session_id = wss.id
+       LEFT JOIN (
+         SELECT
+           ws_b.exercise_id,
+           ws_b.attachment,
+           ws_b.mount_position,
+           ws_b.grip_type,
+           ws_b.stack_unit_at_log,
+           ws_b.reps,
+           ws_b.completed_at,
+           ROW_NUMBER() OVER (
+             PARTITION BY ws_b.exercise_id,
+                          ws_b.attachment,
+                          ws_b.mount_position,
+                          ws_b.grip_type,
+                          ws_b.stack_unit_at_log
+             ORDER BY ws_b.weight DESC, ws_b.completed_at DESC
+           ) AS rn
+         FROM workout_sets ws_b
+         INNER JOIN workout_sessions wss_b ON ws_b.session_id = wss_b.id
+         WHERE ws_b.exercise_id = ?
+           AND ws_b.completed = 1
+           AND ws_b.weight IS NOT NULL AND ws_b.weight > 0
+           AND ws_b.set_type != 'warmup'
+           AND wss_b.completed_at IS NOT NULL
+       ) best ON best.rn = 1
+             AND best.exercise_id = ws.exercise_id
+             AND best.attachment IS ws.attachment
+             AND best.mount_position IS ws.mount_position
+             AND best.grip_type IS ws.grip_type
+             AND best.stack_unit_at_log IS ws.stack_unit_at_log
+       WHERE ws.exercise_id = ?
+         AND ws.completed = 1
+         AND ws.weight IS NOT NULL AND ws.weight > 0
+         AND ws.set_type != 'warmup'
+         AND wss.completed_at IS NOT NULL
+       GROUP BY ws.exercise_id,
+                ws.attachment,
+                ws.mount_position,
+                ws.grip_type,
+                ws.stack_unit_at_log
+       ORDER BY best.completed_at DESC
+    `).all('cable-triceps-pushdown', 'cable-triceps-pushdown') as { detail: string }[];
 
     const planText = planRows.map((r) => r.detail ?? JSON.stringify(r)).join('\n');
 
-    // Must use the variant PR composite index, NOT a full table scan
+    // Both the outer aggregation over `ws` AND the inner ROW_NUMBER() scan over
+    // `ws_b` must use idx_workout_sets_variant_pr (its leading column is
+    // exercise_id, matching both equality filters).
     expect(planText).toMatch(/idx_workout_sets_variant_pr/i);
+    expect(planText).not.toMatch(/SCAN workout_sets(?! USING)/i);
     expect(planText).not.toMatch(/SCAN TABLE workout_sets(?! USING)/i);
   });
 
