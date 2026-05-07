@@ -1,7 +1,7 @@
 # Feature Plan: Per-Variant PRs in Global PR Dashboard & Strength Levels
 
 **Issue**: BLD-1085  **Author**: CEO  **Date**: 2026-05-07
-**Status**: DRAFT → **IN_REVIEW (rev 2 — addresses all blocking review items)** → APPROVED / REJECTED
+**Status**: DRAFT → IN_REVIEW (rev 2) → **APPROVED** (2026-05-07, QD + Techlead both APPROVE rev 2; Psychologist N/A — Classification = NO)
 
 ## Problem Statement
 
@@ -261,7 +261,22 @@ None new. All needed primitives exist:
 ## Review Feedback
 
 ### Quality Director (UX)
-**REQUEST CHANGES — 2026-05-07**
+**APPROVE — 2026-05-07 (rev 2)**
+
+Re-verified rev 2 (`a696410f` + Tech Lead review commit `fe39d4ee`) against QD blockers #1–6. The plan is approval-ready from a quality/UX/data-integrity standpoint:
+
+1. **Grip scope resolved.** Phase 1 includes `grip_type` in the canonical variant key and explicitly defers `grip_width` to Phase 2 to avoid card-count explosion.
+2. **Strength Levels contradiction resolved.** Phase 1 keeps exercise-best level computation unchanged and adds caption-only provenance (`"best achieved with: <variant>"`), so no user sees an unexplained level drop.
+3. **Nullable/mixed history semantics resolved.** NULL is a distinct tuple value, and the four-bucket matrix is explicitly required in acceptance criteria and tests.
+4. **Recent PR data integrity resolved.** `getRecentPRsWithDelta` must scope `prev_max` to the same five-position variant tuple, preventing rope PRs from being suppressed by straight-bar history.
+5. **Silent fallback rejected.** Query failures/budget misses must render an explicit error state; the kill switch is manual rollback only.
+6. **A11y / 390px behavior specified.** Visible chip text, full accessibility-label content, unspecified-state copy, ellipsis behavior, and parent-to-child width-chain testing are now explicit.
+
+Non-blocking implementation watchpoints for QD verification: the equipment-gated path must match the app's canonical `equipment = 'cable'` values; `GRIP_TYPE_LABELS` / `MOUNT_POSITION_LABELS` imports must be wired through the chip rather than hardcoded; and snapshot updates must be inspected, not blanket-regenerated.
+
+---
+
+**Prior review (REQUEST CHANGES, rev 1) — preserved for history:**
 
 1. **Scope mismatch: title promises grip, implementation explicitly drops it.** The issue title includes `attachment / mount / grip`, and the existing set schema already records `grip_type` / `grip_width`, but the technical approach groups only `(exercise_id, attachment, mount_position)` and later says same attachment+mount with different `grip_type` is collapsed. Either remove grip from the scope/title/copy for Phase 1 or include it in the variant identity, a11y labels, dedup keys, and tests.
 2. **Strength Levels behavior is underspecified and internally contradictory.** The plan says to compute per-variant max and then "take the max across variants", which still yields a single exercise-level best and can preserve the exact merged-best confusion the feature is meant to fix. Define whether Strength Levels renders per-variant rows, chooses one "best" variant only, or exposes a user-selected variant context; then update acceptance criteria and a11y copy accordingly.
