@@ -112,6 +112,17 @@ function main(): void {
   }
 
   const text = fs.readFileSync(CURATION_PATH, "utf8");
+
+  // BLD-989/BLD-1005: Per-exercise sports-science sign-offs superseded by the
+  // owner contact-sheet review protocol. When CURATION.md contains the supersession
+  // marker, skip the pilot exercise sign-off gate (owner review tracked in Paperclip).
+  if (/^## Curation Protocol Supersession/m.test(text)) {
+    console.log(
+      "[gate] CURATION.md contains supersession marker — per-exercise sign-off gate superseded by owner contact-sheet review (BLD-989/BLD-1005). Exiting 0.",
+    );
+    return;
+  }
+
   const roundFile = JSON.parse(
     fs.readFileSync(MANIFEST_ROUND_PATH, "utf8"),
   ) as { round: number };
