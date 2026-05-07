@@ -1,7 +1,7 @@
 # Feature Plan: Per-Variant PRs in Global PR Dashboard & Strength Levels
 
 **Issue**: BLD-1085  **Author**: CEO  **Date**: 2026-05-07
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: DRAFT → **IN_REVIEW (rev 2 — addresses all blocking review items)** → APPROVED / REJECTED
 
 ## Problem Statement
 
@@ -41,60 +41,101 @@ What's missing is exposing this dimension in the **global** progress surfaces �
 - As a user, I do **not** want to be forced to clone exercises to track different attachments separately.
 - As a user with no attachment data on a set, I want sensible fallback (legacy/unspecified rows aggregate into a "(no attachment)" or default record so I'm not punished for old data).
 
-## Proposed Solution
+## Proposed Solution (rev 2 — addresses QD #1–6 + Techlead T1–T8)
+
+### Variant Identity (CANONICAL — referenced everywhere below)
+
+The variant tuple for Phase 1 is exactly:
+
+```
+(exercise_id, attachment, mount_position, grip_type, stack_unit_at_log)
+```
+
+- `grip_type` is **included** (resolves QD #1, Techlead T13). `grip_width` is **deferred** to a Phase 2 follow-up — most users don't differentiate widths and including it over-segments cards.
+- `stack_unit_at_log` is **part of the key** (Techlead T4 option b). A user with two gyms — both with "Rope" but one calibrated in `kg` and one in `plate-marker` — will see them as separate cards, never cross-contaminate.
+- NULL is a real, distinct value at every position. The four buckets `(rope, high, neutral, kg)`, `(rope, null, neutral, kg)`, `(null, high, neutral, kg)`, `(null, null, null, kg)` are FOUR rows, never collapsed (resolves QD #3, Techlead T12).
 
 ### Overview
 
-Extend the same variant-aware aggregation already used on the per-exercise screen (`exercise-history.ts` `VariantScope`) into the **global** record/strength queries, then surface variant-tagged PR cards in the existing PR Dashboard UI without inventing new screens.
+Extend the variant-aware aggregation already used on the per-exercise screen (`exercise-history.ts` `VariantScope`) into the **global PR Dashboard** queries — and **only** the PR Dashboard. Strength Levels card is intentionally **out of scope** for per-variant rows (see "Strength Levels" below). All work is read-side; one Phase 0 schema migration adds a covering index.
 
-### UX Design
+### Phase 0 — Refactor + Migration (PRECEDES feature work, separate commits)
 
-#### All-Time Bests / Recent PRs cards (records page)
+**Commit 0a — Refactor (no behavior change):** Move `buildVariantSql` (currently `lib/db/exercise-history.ts:111`) and its Drizzle counterpart `variantDrizzleConditions` (line 140) into a new file `lib/db/variant-scope.ts`. Update `VariantScope` shape to include `gripType` and `stackUnitAtLog`. Fix all imports. **No SQL semantic change yet** — existing call sites pass `gripType: undefined, stackUnitAtLog: undefined` so behavior is identical. Verified by all existing tests passing (resolves Techlead T2).
 
-- A cable exercise that has logged sets across **multiple distinct (attachment[, mount_position]) tuples in the last N days** renders one PR card per tuple, ordered by most recent PR.
-- Card title: `Cable Triceps Pushdown` with a small **variant chip** below: `Rope · Single-handle · No mount`. Existing typography, no new card style.
-- Non-cable exercises and cable exercises with only one logged variant render exactly as today (no behavior change).
-- An info row at the top of the records page surfaces a one-line note when variants are present: "Cable exercises now show per-attachment records. [Why?](info popover)" — copy is neutral, not motivational.
+**Commit 0b — Migration `0026_variant_prs_index.sql`:** Add composite index
+```sql
+CREATE INDEX IF NOT EXISTS idx_workout_sets_variant_pr
+  ON workout_sets (exercise_id, attachment, mount_position, grip_type, completed_at);
+```
+Acceptance: `EXPLAIN QUERY PLAN` for the new aggregation query (Phase 1 below) reports `USING INDEX idx_workout_sets_variant_pr`, NOT `SCAN TABLE workout_sets`. Bench fixture: 5,000 sets across 80 exercises, ~30 distinct variant tuples (resolves Techlead T1).
 
-#### Strength Levels card
+### Phase 1 — Feature
 
-- Compute the strength level from the **best matched variant** per exercise (i.e. apply per-variant best to threshold tables) — not from the merged best.
-- If the user has no variant data for a cable exercise (legacy logs), fall back to the merged best, with a small "(unspecified)" caption so the discrepancy is explainable.
+#### 1. Equipment-gated PR aggregation (`lib/db/pr-dashboard.ts`)
 
-#### Empty / Edge states
+- Detect cable exercises by joining `exercises.equipment IN ('cable')`. Non-cable exercises continue using the existing exercise-keyed query (no GROUP BY widening, no perf cost). Cable exercises take a new variant-keyed branch (resolves Techlead T5).
+- New helper `bestPerVariant(exerciseId)` returns
+  ```ts
+  type VariantBest = {
+    attachment: string | null;
+    mountPosition: string | null;
+    gripType: string | null;
+    stackUnitAtLog: string | null;
+    weight: number;
+    reps: number;
+    e1rm: number;
+    achievedAt: number;        // session.completed_at
+    sessionCount: number;      // count of distinct sessions for this variant
+  };
+  ```
+  Computed via `GROUP BY exercise_id, attachment, mount_position, grip_type, stack_unit_at_log` over completed work sets.
+- `loadPRDashboard()` keeps its current return shape; each `RecentPR` / `AllTimeBest` gains an optional `variants?: VariantBest[]` field. **Type-additive, non-breaking** for the no-touch consumers (resolves Techlead T10):
+  - **Will not be touched:** `components/share/ShareCard*`, `components/progress/MonthlyReportSegment.tsx`, `components/progress/WeeklySummary*`, `lib/export/*`. They read `RecentPR.weight/reps/e1rm` only and ignore the optional new field.
 
-- A user with 0 cable sets sees an unchanged dashboard — no UI regression.
-- A user with cable sets but only one variant per exercise (e.g. always rope) sees one card per exercise, indistinguishable from today except for the small variant chip — net-zero noise.
-- A user mid-migration (some sets variant-tagged, some null) sees a "Variants partially logged — older sets aggregated under (unspecified)" caption on affected cards. No data is hidden.
+#### 2. Recent PRs are variant-aware (`getRecentPRsWithDelta`)
 
-#### A11y
+- The previous-best correlated subquery in `lib/db/pr-dashboard.ts` (lines 174–200, 219–243) is rewritten so `prev_max` is scoped to the **same variant tuple** as the candidate row. Concretely, the subquery's WHERE clause grows to match all five tuple positions (with `IS NOT DISTINCT FROM`-style NULL-safe comparisons).
+- Effect: a 32.5 kg rope PR after a 40 kg straight-bar session is correctly surfaced as a NEW PR with delta vs the previous rope best, not suppressed against the unrelated bar (resolves QD #4).
 
-- Variant chip must include an `accessibilityLabel` like `"Variant: Rope, no mount position"` so screen readers disambiguate.
-- Per-variant cards must each have a unique `accessibilityLabel` containing both exercise name and variant.
+#### 3. Strength Levels card — STAYS exercise-best (Techlead T3 option A)
 
-### Technical Approach
+- **Per-variant rows are EXPLICITLY OUT OF SCOPE.** The threshold table (`lib/db/strength-overview.ts` + `lib/data/strength-levels.ts`) is exercise-keyed against typical-use lifts. Feeding rope-only e1RM into a `Cable Triceps Pushdown` Intermediate threshold compares apples to oranges; the threshold author assumed straight-bar-typical use.
+- Behavior change for cable exercises only: the card adds a small caption — `"best achieved with: Rope · High mount"` — sourced from the variant tuple of the single best set that determined the level. No level recalculation. No level drops. No banner needed (resolves Techlead T3, T11; QD #2).
+- Per-variant strength-level thresholds are filed as a Phase 2 follow-up issue (will require a fully rebuilt thresholds dataset).
 
-1. **Extend `pr-dashboard.ts`** with a variant-aware mode:
-   - New helper `bestPerVariant(exerciseId)` that returns `{ attachment, mount_position, weight, reps, e1rm, achievedAt }[]` ordered by achievedAt DESC, computed from `workout_sets` grouped by `(exercise_id, attachment, mount_position)`.
-   - Existing `loadPRDashboard()` keeps its current shape but appends a `variants?: VariantBest[]` field per record so existing consumers ignore it harmlessly (additive, non-breaking).
-   - Use the SAME `buildVariantSqlFragment` helper from `exercise-history.ts` (factor it out into a shared `lib/db/variant-scope.ts` if not already shared) to avoid duplicate logic.
+#### 4. Records UI (`components/progress/records/*`)
 
-2. **Strength levels (`lib/db/strength-overview.ts`)**: extend the per-exercise best lookup to compute per-variant max, then take the max across variants for the threshold check. Keep a `bestVariantTuple` field for UI display so the card can caption which variant achieved the level.
+- New `<VariantChip variant={tuple} />` micro-component. Renders inside the existing card, BELOW the exercise name. Uses `ATTACHMENT_LABELS` / `MOUNT_LABELS` / `GRIP_LABELS` from `lib/cable-variant.ts` (extend if `grip_type` labels missing).
+- Card-rendering rule for cable exercises:
+  - `record.variants?.length === 0 || undefined` → unchanged single card (legacy/no-data path).
+  - `record.variants.length === 1` → single card with chip.
+  - `record.variants.length > 1` → one card per element of `variants`, ordered by `achievedAt` DESC for Recent PRs, by `e1rm` DESC for All-Time Bests.
+- `AllTimeBestsSection.tsx`, `RecentPRList.tsx`: only modification points. ShareCard etc. untouched.
 
-3. **Records UI (`components/progress/records/AllTimeBestsSection.tsx`, `RecentPRList.tsx`)**:
-   - When `record.variants?.length > 1`, render one card per variant.
-   - When `record.variants?.length <= 1`, render today's single card.
-   - Add a `<VariantChip />` micro-component (reuse `ATTACHMENT_LABELS` / `MOUNT_LABELS` from `lib/cable-variant.ts`).
+#### 5. Variant chip + label rules (concrete a11y / 390px spec — resolves QD #6)
 
-4. **No new tables, no migration.** Pure read-side feature on existing data.
+- **Visible chip text** (max 1 line, ellipsizes at viewport-relative width):
+  - All four positions present: `"Rope · High · Neutral · kg"`
+  - One null: `"Rope · — · Neutral · kg"` (em-dash for null position)
+  - All four null: chip omitted; card caption reads `"(unspecified)"`.
+- **`accessibilityLabel`** (full sentence, never ellipsizes):
+  ```
+  "Variant: Rope attachment, high mount, neutral grip, kilograms.
+   Best 32.5 kilograms for 8 reps, achieved 2026-05-04."
+  ```
+  Includes exercise name + variant tuple + value + reps + delta/achievedAt + unspecified state when applicable.
+- **390px web viewport:** chip wraps to its own line below the exercise name; max 28 characters before ellipsizing the middle. Card vertical height grows by ~16px when chip is present. Tested in `__tests__/components/progress/records-overflow.test.tsx` with explicit width assertions on the inner Text node AND its wrapper container (per repo memory: assert the FULL parent-to-child width chain, not just the leaf).
 
-5. **Performance**: PR dashboard is loaded once per visit. Per-variant grouping adds at most ~5–10 extra rows per cable exercise; aggregate query stays under the existing index on `workout_sets(exercise_id, completed_at)`. Add a benchmark in `__tests__/db/pr-dashboard.bench.ts` to confirm <30 ms for a 5,000-set fixture.
+#### 6. Kill-switch flag — manual rollback hatch ONLY (resolves QD #5, Techlead T8)
 
-6. **Settings flag (low-friction kill switch)**: `settings.show_variant_prs` defaults `true`. Hidden in dev settings only — not surfaced in the main settings UI. Lets QD or a future bug-fix PR disable the new behavior without code revert if a regression slips.
+- `settings.show_variant_prs` (boolean, default `true`). Hidden in dev settings only.
+- **What it IS:** a manual rollback we can flip via the `settings` table or a `dev menu` if the feature ships broken — disables the variant-aware code path so cable exercises render as merged-best (pre-feature behavior).
+- **What it IS NOT:** an auto-fallback when the variant query exceeds time budget. If the variant query throws or exceeds budget, the cable section renders an explicit error state (`"Couldn't load per-variant records — try again or report this."`) and a Sentry breadcrumb. **No silent merged-best fallback** — that would reintroduce the exact data-integrity bug we are fixing.
 
 ### Storage / data
 
-No schema change. All logic is read-side aggregation over existing columns.
+One Phase 0 migration (composite index above). No table changes. All feature logic is read-side aggregation over existing columns.
 
 ### Dependencies
 
@@ -105,30 +146,74 @@ None new. All needed primitives exist:
 
 ## Scope
 
-**In:**
-- Per-variant PR cards on the global PR Dashboard for cable exercises.
-- Per-variant strength-level computation on the Strength Levels card.
-- Variant chip micro-component reused across both surfaces.
-- One info popover/help link.
-- Tests for: aggregation correctness, fallback for null-attachment legacy rows, single-variant exercises rendering unchanged, perf regression bench.
+**In (Phase 0 + Phase 1):**
+- Phase 0: refactor `buildVariantSql` → `lib/db/variant-scope.ts` (separate commit, no behavior change).
+- Phase 0: composite index migration `0026_variant_prs_index.sql`.
+- Phase 1: per-variant PR cards on the global PR Dashboard (`AllTimeBestsSection`, `RecentPRList`) for cable exercises only — gated by `exercises.equipment IN ('cable')`.
+- Phase 1: variant-aware `getRecentPRsWithDelta` (per-variant prev_max scoping).
+- Phase 1: Strength Levels card adds `"best achieved with: <variant>"` caption — NO per-variant rows, NO level recalculation.
+- Phase 1: `<VariantChip />` micro-component (attachment + mount + grip_type + stack_unit_at_log).
+- Phase 1: one neutral info popover/help link on the records page header.
+- Phase 1: kill-switch `settings.show_variant_prs` (manual rollback only).
+- Tests: aggregation correctness across the four-bucket NULL matrix; non-cable equipment unchanged; single-variant exercises render unchanged; recent-PR variant-scoped delta correct; index used per `EXPLAIN QUERY PLAN`; perf bench under budget.
 
-**Out:**
-- Sharing the variant breakdown to other surfaces (home screen StatsRow, weekly summary). Defer to follow-up.
-- New analytics/charts beyond what records.tsx already shows.
-- Cloning or splitting exercises in the catalog (not needed — variants are dimensions, not exercises).
-- Editing variant data on existing sets retroactively (separate feature).
-- Bodyweight grip width as a PR dimension (defer; bodyweight has its own modifier_kg axis).
+**Out (deferred / explicit non-goals):**
+- Per-variant Strength Levels rows or thresholds — Phase 2 follow-up issue.
+- `grip_width` as a variant dimension — Phase 2 follow-up.
+- Sharing the variant breakdown via ShareCard / WeeklySummary / MonthlyReportSegment / exports — explicit no-touch list.
+- New analytics/charts beyond the records page.
+- Cloning or splitting exercises in the catalog (variants are dimensions, not exercises).
+- Retroactive variant editing on existing sets.
+- Bodyweight grip-width PR dimension (bodyweight has its own modifier_kg axis).
+- Auto-fallback to merged best on perf timeout (explicitly rejected — see Technical Approach §6).
 
 ## Acceptance Criteria
 
-- [ ] **Given** a user has logged Cable Triceps Pushdown with rope (max 30 kg) and straight bar (max 40 kg), **When** they open Progress → Records, **Then** they see exactly two PR cards for that exercise, each labeled with its variant chip and showing the correct max for that variant.
-- [ ] **Given** a user has logged Cable Triceps Pushdown only with the rope, **When** they open Progress → Records, **Then** they see exactly one PR card (variant chip optional but allowed), and the card looks visually identical to a non-cable single-record card aside from the chip.
-- [ ] **Given** a user has only legacy (null-attachment) cable sets, **When** they open Progress → Records, **Then** they see one card labeled "(unspecified)" with a one-line caption explaining variant tagging.
-- [ ] **Given** a user with no cable sets at all, **When** they open Progress → Records, **Then** the rendered output byte-matches the pre-change snapshot (no regression).
-- [ ] Strength Levels card shows the correct level for a user whose rope-only progression would land them in `Intermediate` even though their straight-bar number would push them to `Advanced` — the level is the **per-variant** best, not the merged best, and the card captions which variant achieved it.
-- [ ] PR aggregation query for a 5,000-set fixture completes in <30 ms on the slowest supported device (Pixel 4a equivalent).
+### PR Dashboard — All-Time Bests
+
+- [ ] **Given** a user has logged Cable Triceps Pushdown with rope (max 30 kg) and straight bar (max 40 kg), **When** they open Progress → Records, **Then** they see exactly two All-Time Bests cards for that exercise, each with the correct variant chip and the variant-correct max.
+- [ ] **Given** the user has only logged rope, **Then** exactly one card renders with a rope chip; visually identical to today's card aside from the chip.
+- [ ] **Given** the user has only legacy (all-null variant) cable sets, **Then** exactly one card renders with caption `"(unspecified)"` and no chip.
+- [ ] **Given** the four-bucket matrix `(rope,high)`, `(rope,null)`, `(null,high)`, `(null,null)` each has at least one logged set, **Then** four distinct cards render (the GROUP BY does not collapse NULL with non-NULL).
+- [ ] **Given** the user has logged "Rope" sets at Gym A in `kg` and at Gym B in `plate-marker`, **Then** two distinct cards render (one per `stack_unit_at_log`), never cross-contaminating weight numbers.
+
+### Recent PRs (variant-aware delta)
+
+- [ ] **Given** the user logs 32.5 kg rope after a 40 kg straight-bar session, **When** they open Recent PRs, **Then** the rope PR is shown as a NEW PR with `+2.5 kg` delta vs the previous rope best (not suppressed by the unrelated straight-bar number).
+- [ ] **Given** the user logs a new rope PR with no prior rope history, **Then** delta is shown as the value itself, marked as a first PR.
+
+### Strength Levels card (caption-only behavior)
+
+- [ ] **Given** a user has cable PRs split across rope and bar, **Then** the Strength Levels card shows the SAME level it shows today (no level drops), with an added caption `"best achieved with: <variant>"` sourced from the variant tuple of the best set.
+- [ ] **Given** a user has only legacy null-variant data, **Then** the caption is omitted and the card matches today's render byte-for-byte.
+
+### No-touch surfaces
+
+- [ ] ShareCard, MonthlyReportSegment, WeeklySummary, and CSV/JSON exports render byte-identically before and after the change for users with cable PRs (snapshot tests confirm).
+
+### Kill-switch / error state
+
+- [ ] **Given** `settings.show_variant_prs = false`, **Then** cable cards render as merged-best (pre-feature behavior).
+- [ ] **Given** the variant query throws or exceeds the test-runner budget, **Then** the cable section renders an explicit error state (`"Couldn't load per-variant records…"`); merged-best is **not** silently substituted.
+
+### Empty / regression
+
+- [ ] **Given** a user with zero cable sets, **Then** the entire records page renders byte-identically to pre-change snapshots.
 - [ ] No new lint warnings, no new TS errors, all existing tests pass.
-- [ ] Web build at 390px viewport renders the records page without overflow.
+- [ ] Web build at 390px viewport renders the records page without horizontal overflow; chip wraps below name; full parent-to-child width chain asserted in `records-overflow.test.tsx`.
+
+### Performance
+
+- [ ] `EXPLAIN QUERY PLAN` for the new variant aggregation reports `USING INDEX idx_workout_sets_variant_pr` (NOT `SCAN TABLE workout_sets`).
+- [ ] Bench `__tests__/db/pr-dashboard.bench.ts` — 5,000 sets / 80 exercises / 30 distinct variant tuples — completes in **<30 ms p95 over 50 runs on the `better-sqlite3` test backend**. (Restated from prior "Pixel 4a" wording.)
+- [ ] A separate Maestro/EAS device-farm wall-clock smoke check on Pixel 4a (or equivalent CI slot) records `loadPRDashboard()` end-to-end in <120 ms p95 for the same fixture. Failure does not block this PR but opens an immediate follow-up perf ticket.
+
+### Snapshot inspection (no blanket regen)
+
+- [ ] These exact files are inspected commit-by-commit, not blanket-regenerated:
+      `__tests__/components/progress/records.test.tsx`,
+      `__tests__/components/progress/accessibility.acceptance.test.tsx`,
+      `__tests__/components/progress/body-progress.acceptance.test.tsx`.
 
 ## Edge Cases
 
@@ -141,20 +226,29 @@ None new. All needed primitives exist:
 | 5,000+ sets across many exercises | Aggregation completes <30 ms; UI virtualizes if list >40 cards. |
 | Web 390px viewport | Cards reflow; variant chip wraps below name, no horizontal overflow. |
 | Variant deleted later | Treat null-on-future-write as "(unspecified)" — never delete history. |
-| Same `(attachment, mount)` but different `grip_type` | Phase 1: collapse on (attachment, mount) only — grip is a finer dimension we'll address later if user feedback demands it. Document this explicitly. |
-| Imported (CSV) sets without variant data | Same as legacy — "(unspecified)". |
-| Strength level threshold table indexed by exercise — no per-variant thresholds exist | We use the SAME thresholds; variant-aware logic only changes which best lift we feed in. No threshold table changes needed. |
+| Same `(attachment, mount)` but different `grip_type` | Phase 1: TREAT AS DISTINCT — `grip_type` is part of the variant key. |
+| Same `(attachment, mount, grip_type)` but different `grip_width` | Phase 1: collapse — `grip_width` is NOT in the variant key (deferred to Phase 2). Documented in Out of Scope. |
+| Same `(attachment, mount, grip_type)` logged at two gyms with different `stack_unit_at_log` (kg vs plate-marker) | TREAT AS DISTINCT — `stack_unit_at_log` is part of the variant key. Prevents cross-unit weight contamination. |
+| Imported (CSV) sets without variant data | Same as legacy — `(null, null, null, null)` bucket → "(unspecified)" card. |
+| Strength level threshold table indexed by exercise — no per-variant thresholds exist | Phase 1 intentionally does NOT change Strength Level computation. Card caption only. Per-variant thresholds = Phase 2 follow-up. |
+| Variant query throws / exceeds budget | Render error state in cable section. Never fall back to merged-best. |
+| `settings.show_variant_prs = false` | Render merged-best (pre-feature behavior). Manual rollback hatch only — never auto-flipped. |
+| Four-bucket NULL matrix — `(rope,high)`, `(rope,null)`, `(null,high)`, `(null,null)` | All FOUR distinct cards. GROUP BY uses NULL-safe equality (`IS NOT DISTINCT FROM` semantics). Explicit unit test required. |
 
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Users perceive "more cards" as more clutter, not more accuracy | Medium | Medium | Single-variant exercises don't multiply; chip is small; one-time info popover explains the change. Settings kill switch (`show_variant_prs`) lets us roll back. |
-| Some users have inconsistent attachment tagging → confusing "(unspecified)" cards | Medium | Low | Caption explains why, pointing to the per-set variant editor we already ship. |
-| Strength level *drops* for some users when computed per-variant | Low | Medium | Add release-notes copy explaining the correction; user-facing comms emphasize "more accurate" not "downgrade". |
-| Aggregate query slowdown on large datasets | Low | Medium | Bench gate at 30 ms; existing index covers grouping; fall back to merged best if query exceeds budget. |
-| Snapshot/screenshot tests break on records page | High (expected) | Low | Update snapshots in same PR; QD verifies visual regression. |
-| Variant vocabulary expansion (e.g., new attachment) requires UI updates | Low | Low | Already abstracted in `lib/cable-variant.ts`. |
+| Users perceive "more cards" as more clutter, not more accuracy | Medium | Medium | Single-variant exercises don't multiply; chip is small; one-time info popover explains the change. Manual `show_variant_prs` rollback if widely disliked. |
+| Inconsistent attachment tagging → "(unspecified)" cards confuse users | Medium | Low | Caption explains why; in-card link to the per-set variant editor we already ship. |
+| Strength level drops for some users | Eliminated | n/a | Strength Levels card stays exercise-best in Phase 1 — only adds a caption. No level recalculation. |
+| Aggregate query slowdown on large datasets | Low | High | Phase 0 composite index `idx_workout_sets_variant_pr` covers the GROUP BY; `EXPLAIN QUERY PLAN` gates merge; bench gate at 30 ms p95 on `better-sqlite3`. **No silent fallback** — if exceeded, error state surfaces and we revert with the kill-switch. |
+| Cross-unit weight contamination (same "Rope" at two gyms in different units) | Medium (multi-gym users) | High (data integrity) | `stack_unit_at_log` included in variant key (per BLD-1060) — units never mix. |
+| Recent-PR delta still suppressed by unrelated variant | Eliminated | n/a | Subquery prev_max is variant-tuple-scoped (Phase 1.2). |
+| Snapshot tests break on records page | High (expected) | Low | Inspect listed snapshot files commit-by-commit; QD verifies visual diff. No blanket regen. |
+| Refactor (Phase 0a) breaks an unexpected import | Low | Medium | Refactor is a separate commit; CI typecheck + tests must pass before Phase 0b lands. |
+| Composite index migration fails on user device with very large `workout_sets` | Low | Medium | Index creation is `IF NOT EXISTS`; on-device migration runs in expo-sqlite background thread; release notes flag possible cold-open delay on huge histories. |
+| Variant vocabulary expansion (new attachment / grip_type) requires UI updates | Low | Low | Already abstracted in `lib/cable-variant.ts`; chip falls back to raw enum string if label missing. |
 
 ## Out of Scope (explicit)
 
@@ -206,4 +300,25 @@ Architecture direction is sound (read-side aggregation over existing columns, re
 _N/A — Classification = NO_
 
 ### CEO Decision
-_Pending_
+
+**Rev 2 — 2026-05-07 — Resolution of blocking review items**
+
+| Reviewer item | Resolution |
+|---------------|------------|
+| QD #1 / Techlead T13 — grip in/out | **IN.** `grip_type` added to variant key. `grip_width` deferred to Phase 2. |
+| QD #2 / Techlead T3 — Strength Levels behavior | **Option A.** Strength Levels card stays exercise-best. Adds `"best achieved with: <variant>"` caption. NO level recalculation. NO per-variant rows. Per-variant thresholds = Phase 2 follow-up. |
+| QD #3 / Techlead T12 — NULL grouping semantics | **NULL-safe equality.** Four-bucket matrix tested. NULL is a distinct value at every position. |
+| QD #4 — Recent PR variant-aware | **Implemented.** `prev_max` subquery scoped to same variant tuple. AC defined. |
+| QD #5 / Techlead T8 — silent fallback | **Eliminated.** Kill-switch is manual rollback only. Query budget exceeded → explicit error state + Sentry breadcrumb. Never silent merged-best. |
+| QD #6 — A11y / 390px concrete spec | **Specified.** Visible chip rules, full `accessibilityLabel` template, 28-char ellipsis, parent-to-child width-chain test. |
+| Techlead T1 — index claim false | **Fixed.** Phase 0 migration `0026_variant_prs_index.sql` adds `idx_workout_sets_variant_pr (exercise_id, attachment, mount_position, grip_type, completed_at)`. `EXPLAIN QUERY PLAN` gate added to AC. |
+| Techlead T2 — refactor bundling | **Fixed.** Phase 0a is a refactor-only commit moving `buildVariantSql` + `variantDrizzleConditions` to `lib/db/variant-scope.ts` with no behavior change. |
+| Techlead T4 — stack calibration unit-mixing | **Option (b).** `stack_unit_at_log` added to variant key. Cross-unit cards never mix. |
+| Techlead T5 — non-cable cost | **Equipment-gated.** Variant-aware SQL only runs for `exercises.equipment IN ('cable')`. Non-cable retains existing query. |
+| Techlead T6 — subquery cost | **Tied to T1 index** above. AC includes the EXPLAIN gate. |
+| Techlead T7 — Pixel 4a AC unverifiable | **Restated.** `<30 ms p95 on better-sqlite3 test backend` for 5k-set fixture. Added separate Maestro/EAS device-farm wall-clock smoke at <120 ms p95 (non-blocking, opens follow-up if breached). |
+| Techlead T9 — list snapshot files | **Done.** Three exact files enumerated in AC ("Snapshot inspection"). |
+| Techlead T10 — no-touch list | **Documented.** ShareCard, MonthlyReportSegment, WeeklySummary, exports — explicit no-touch + byte-identity AC. |
+| Techlead T11 — level drop UX | **Moot.** Strength Levels stays exercise-best in Phase 1; no levels drop. |
+
+**Re-review requested** from `@quality-director` and `@techlead` against rev 2.
