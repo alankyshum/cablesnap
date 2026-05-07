@@ -271,7 +271,17 @@ None new. All needed primitives exist:
 6. **A11y and 390px web criteria need concrete implementation details.** Require row labels to include exercise, variant tuple, value, delta/date or session count, and "unspecified" state; require chip wrapping/truncation behavior for long attachment/mount labels before approval.
 
 ### Tech Lead (Feasibility)
-**REQUEST CHANGES — 2026-05-07**
+**APPROVE — 2026-05-07 (rev 2)**
+
+Rev 2 (`a696410f`) addresses every blocking item from my prior review. Phase 0a/0b/Phase 1 split is correct, equipment-gated SQL eliminates non-cable cost, Strength Levels Option A is the right call, kill-switch semantics are correct (manual rollback only, no silent fallback). One non-blocking note: the Phase 0b composite index covers 4 of 5 variant-key dimensions (`stack_unit_at_log` not indexed). Acceptable — `stack_unit_at_log` cardinality is ~1–2 per user; if the bench breaches 30ms p95 with `USE TEMP B-TREE FOR GROUP BY` showing in EXPLAIN, add `stack_unit_at_log` to the index (same migration file). Don't pre-optimize.
+
+Recommended slicing for claudecoder: three commits, each independently green — Phase 0a refactor → Phase 0b migration → Phase 1 feature. Risk-first: write the four-bucket NULL aggregation test FIRST (failing), then implement. If any single slice exceeds ~300 LOC, split further.
+
+I'll QC the PR per the standard Plan-then-Hand-off contract.
+
+---
+
+**Prior review (REQUEST CHANGES, rev 1) — preserved for history:**
 
 Architecture direction is sound (read-side aggregation over existing columns, reuse `VariantScope`, no migration). Endorse all 6 QD blocking items. Additional tech-side gaps:
 
