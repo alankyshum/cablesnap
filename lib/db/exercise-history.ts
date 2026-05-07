@@ -2,25 +2,13 @@ import { eq, ne, and, sql, desc, asc, isNotNull, isNull, inArray, max, sum, coun
 import { query, queryOne, getDrizzle } from "./helpers";
 import { workoutSets, workoutSessions, exercises } from "./schema";
 import { mapRow } from "./exercises";
-import type { Exercise, Attachment, MountPosition } from "../types";
-
-/**
- * BLD-788: variant scope for analytics queries.
- *
- * Each field is independent:
- *   - `attachment === undefined` → no constraint on attachment dimension.
- *   - `attachment === null`      → match rows where attachment IS NULL.
- *   - `attachment === <value>`   → match rows where attachment = <value>.
- *
- * Same shape for `mount_position`. The default ("All variants") passes an
- * empty object — both fields undefined.
- *
- * Read-only filter; never mutates `workout_sets`.
- */
-export type VariantScope = {
-  attachment?: Attachment | null;
-  mount_position?: MountPosition | null;
-};
+import type { Exercise } from "../types";
+// BLD-1086 Phase 0a: VariantScope + helpers moved to variant-scope.ts.
+// Re-export for backward compatibility with all existing call-sites.
+export type { VariantScope } from "./variant-scope";
+export { buildVariantSql, variantDrizzleConditions } from "./variant-scope";
+import type { VariantScope } from "./variant-scope";
+import { buildVariantSql, variantDrizzleConditions } from "./variant-scope";
 
 export type ExerciseSession = {
   session_id: string;
@@ -97,60 +85,6 @@ export async function getExerciseHistory(
     avg_rpe: r.avg_rpe != null ? Number(r.avg_rpe) : null,
     max_modifier: r.max_modifier != null ? Number(r.max_modifier) : null,
   }));
-}
-
-/**
- * BLD-788: build the variant SQL fragment for raw queries.
- *
- * Returns `{ sql: " AND ws.attachment = ? AND ws.mount_position IS NULL", params: [...] }`.
- * Empty fragment (`""`, `[]`) when `scope` is undefined or has no dimensions set.
- *
- * Caller is responsible for placing the fragment in a position where the
- * `ws` alias is bound to `workout_sets`.
- */
-export function buildVariantSql(scope?: VariantScope): { sql: string; params: (string | null)[] } {
-  if (!scope) return { sql: "", params: [] };
-  const parts: string[] = [];
-  const params: (string | null)[] = [];
-
-  if (scope.attachment !== undefined) {
-    if (scope.attachment === null) {
-      parts.push("ws.attachment IS NULL");
-    } else {
-      parts.push("ws.attachment = ?");
-      params.push(scope.attachment);
-    }
-  }
-  if (scope.mount_position !== undefined) {
-    if (scope.mount_position === null) {
-      parts.push("ws.mount_position IS NULL");
-    } else {
-      parts.push("ws.mount_position = ?");
-      params.push(scope.mount_position);
-    }
-  }
-  if (parts.length === 0) return { sql: "", params: [] };
-  return { sql: " AND " + parts.join(" AND "), params };
-}
-
-/**
- * BLD-788: Drizzle-flavored variant predicate. Returns SQL fragments to AND
- * into a Drizzle `where()` chain. Returns `[]` when scope is empty.
- */
-function variantDrizzleConditions(scope?: VariantScope) {
-  const conds: ReturnType<typeof eq | typeof isNull>[] = [];
-  if (!scope) return conds;
-  if (scope.attachment !== undefined) {
-    conds.push(scope.attachment === null
-      ? isNull(workoutSets.attachment)
-      : eq(workoutSets.attachment, scope.attachment));
-  }
-  if (scope.mount_position !== undefined) {
-    conds.push(scope.mount_position === null
-      ? isNull(workoutSets.mount_position)
-      : eq(workoutSets.mount_position, scope.mount_position));
-  }
-  return conds;
 }
 
 /**

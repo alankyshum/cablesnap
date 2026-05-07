@@ -5,7 +5,13 @@ import { Separator } from "@/components/ui/separator";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatDateShort } from "@/lib/format";
 import { toDisplay } from "@/lib/units";
-import type { RecentPR } from "@/lib/db/pr-dashboard";
+import VariantChip from "./VariantChip";
+import type { RecentPR, VariantBest } from "@/lib/db/pr-dashboard";
+
+function isAllNull(v: VariantBest): boolean {
+  return v.attachment === null && v.mountPosition === null &&
+    v.gripType === null && v.stackUnitAtLog === null;
+}
 
 type Props = {
   prs: RecentPR[];
@@ -35,47 +41,83 @@ function formatValue(pr: RecentPR, unit: "kg" | "lb"): string {
   return "-";
 }
 
-export default function RecentPRList({ prs, weightUnit, onPressExercise }: Props) {
-  const colors = useThemeColors();
+type PrRowProps = {
+  pr: RecentPR;
+  showSeparator: boolean;
+  weightUnit: "kg" | "lb";
+  onPress: () => void;
+};
 
+function PrRow({ pr, showSeparator, weightUnit, onPress }: PrRowProps) {
+  const colors = useThemeColors();
+  const variant = pr.variants?.[0];
+  const isUnspecified = variant ? isAllNull(variant) : false;
+  const value = formatValue(pr, weightUnit);
+  const delta = formatDelta(pr, weightUnit);
+  const variantLabel = variant && !isUnspecified
+    ? `, variant: ${variant.attachment ?? "unspecified"}`
+    : "";
+  const a11yLabel = `${pr.name}${variantLabel}: ${value}, ${delta}, ${formatDateShort(pr.date)}`;
+
+  return (
+    <React.Fragment>
+      <Pressable
+        style={styles.prRow}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+      >
+        <View style={[styles.nameCol, { overflow: "hidden" }]}>
+          <Text style={{ color: colors.onSurface }}>{pr.name}</Text>
+          {variant ? (
+            isUnspecified ? (
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                (unspecified)
+              </Text>
+            ) : (
+              <VariantChip variant={variant} />
+            )
+          ) : null}
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+            {formatDateShort(pr.date)}
+          </Text>
+        </View>
+        <View style={styles.valueCol}>
+          <Text style={{ color: colors.onSurface, fontWeight: "600" }}>
+            {value}
+          </Text>
+          {delta ? (
+            <Text variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+              {delta}
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
+      {showSeparator && <Separator style={{ marginVertical: 2 }} />}
+    </React.Fragment>
+  );
+}
+
+export default function RecentPRList({ prs, weightUnit, onPressExercise }: Props) {
   if (prs.length === 0) return null;
 
   return (
     <View style={styles.container}>
       <Text
         variant="subtitle"
-        style={[styles.sectionTitle, { color: colors.onSurface }]}
+        style={[styles.sectionTitle]}
         accessibilityRole="header"
       >
         Recent PRs
       </Text>
       {prs.map((pr, i) => (
-        <React.Fragment key={`${pr.exercise_id}-${pr.date}`}>
-          <Pressable
-            style={styles.prRow}
-            onPress={() => onPressExercise(pr.exercise_id)}
-            accessibilityRole="button"
-            accessibilityLabel={`${pr.name}: ${formatValue(pr, weightUnit)}, ${formatDelta(pr, weightUnit)}, ${formatDateShort(pr.date)}`}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.onSurface }}>{pr.name}</Text>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                {formatDateShort(pr.date)}
-              </Text>
-            </View>
-            <View style={styles.valueCol}>
-              <Text style={{ color: colors.onSurface, fontWeight: "600" }}>
-                {formatValue(pr, weightUnit)}
-              </Text>
-              {formatDelta(pr, weightUnit) ? (
-                <Text variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-                  {formatDelta(pr, weightUnit)}
-                </Text>
-              ) : null}
-            </View>
-          </Pressable>
-          {i < prs.length - 1 && <Separator style={{ marginVertical: 2 }} />}
-        </React.Fragment>
+        <PrRow
+          key={`${pr.exercise_id}-${pr.date}-${pr.variants?.[0]?.attachment ?? ""}`}
+          pr={pr}
+          showSeparator={i < prs.length - 1}
+          weightUnit={weightUnit}
+          onPress={() => onPressExercise(pr.exercise_id)}
+        />
       ))}
     </View>
   );
@@ -93,6 +135,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     minHeight: 48,
+  },
+  nameCol: {
+    flex: 1,
   },
   valueCol: {
     alignItems: "flex-end",

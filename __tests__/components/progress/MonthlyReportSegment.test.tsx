@@ -92,6 +92,25 @@ const mockMonthlyData = {
   nutrition: { daysTracked: 26, daysOnTarget: 18 },
 }
 
+// BLD-1086: pr-dashboard now calls getAppSetting (showVariantPrs kill-switch).
+// WorkoutSegment imports directly from lib/db/pr-dashboard, bypassing the lib/db
+// barrel mock, so we must mock lib/db/settings to avoid hitting the real SQLite
+// sync path (prepareSync) which is not available in the test environment.
+jest.mock('../../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
+  isOnboardingComplete: jest.fn().mockResolvedValue(true),
+  getSchedule: jest.fn().mockResolvedValue([]),
+  getTodaySchedule: jest.fn().mockResolvedValue(null),
+  isTodayCompleted: jest.fn().mockResolvedValue(false),
+  getWeekAdherence: jest.fn().mockResolvedValue([]),
+  getWeeklyCompletedCount: jest.fn().mockResolvedValue(0),
+  insertInteraction: jest.fn().mockResolvedValue(undefined),
+  getInteractions: jest.fn().mockResolvedValue([]),
+  clearInteractions: jest.fn().mockResolvedValue(undefined),
+}))
+
 jest.mock('../../../lib/db/body', () => ({
   getBodySettings: jest.fn().mockResolvedValue({ unit: 'kg', height_cm: 175 }),
   getLatestBodyWeight: jest.fn().mockResolvedValue(null),

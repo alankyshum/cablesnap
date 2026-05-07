@@ -11,6 +11,11 @@ jest.mock('../../../lib/db/helpers', () => ({
   queryOne: jest.fn(),
 }))
 
+// BLD-1086: showVariantPrs() calls getAppSetting which uses getDrizzle — mock to return "0" (variant off) by default
+jest.mock('../../../lib/db/settings', () => ({
+  getAppSetting: jest.fn().mockResolvedValue('0'),
+}))
+
 const helpers = require('../../../lib/db/helpers') as {
   getDrizzle: jest.Mock
   query: jest.Mock
@@ -234,5 +239,131 @@ describe('PR Dashboard Data Layer', () => {
 
     const result = await getAllTimeBests()
     expect(result).toEqual([])
+  })
+})
+
+// ── BLD-1086: Variant PR tests ──────────────────────────────────────────────
+
+describe('BLD-1086 Variant PRs', () => {
+  const settingsMock = require('../../../lib/db/settings') as { getAppSetting: jest.Mock }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    helpers.query.mockResolvedValue([])
+    // Enable variant PRs by default in this suite
+    settingsMock.getAppSetting.mockResolvedValue(null)
+  })
+
+  test('getRecentPRsWithDelta: kill-switch (show_variant_prs=0) falls back to exercise-level queries only', async () => {
+    settingsMock.getAppSetting.mockResolvedValue('0')
+
+    const now = Date.now()
+    helpers.query
+      .mockResolvedValueOnce([
+        { exercise_id: 'ex1', name: 'Cable Fly', category: 'Push', weight: 50, previous_best: 45, date: now },
+      ])
+      .mockResolvedValueOnce([])
+
+    const result = await getRecentPRsWithDelta(20)
+    // Should make only 2 queries (weighted + rep), no cable variant query
+    expect(helpers.query).toHaveBeenCalledTimes(2)
+    expect(result).toHaveLength(1)
+    expect(result[0].exercise_id).toBe('ex1')
+    // No variants on kill-switch path
+    expect(result[0].variants).toBeUndefined()
+  })
+
+  test('getRecentPRsWithDelta: variant mode makes 3 queries (non-cable weight, cable variant, rep)', async () => {
+    const now = Date.now()
+    helpers.query
+      .mockResolvedValueOnce([
+        // Non-cable weight PR
+        { exercise_id: 'ex-bench', name: 'Bench Press', category: 'Push', weight: 100, previous_best: 95, date: now },
+      ])
+      .mockResolvedValueOnce([
+        // Cable variant PR (2nd query)
+        {
+          exercise_id: 'ex-cable',
+          name: 'Cable Fly',
+          category: 'Push',
+          weight: 50,
+          previous_best: 45,
+          date: now - 1000,
+          attachment: 'rope',
+          mount_position: 'high',
+          grip_type: null,
+          stack_unit_at_log: null,
+        },
+      ])
+      .mockResolvedValueOnce([])  // rep PRs
+
+    const result = await getRecentPRsWithDelta(20)
+    expect(helpers.query).toHaveBeenCalledTimes(3)
+    expect(result).toHaveLength(2)
+    // Cable variant PR is second (older)
+    const cablePR = result.find((r) => r.exercise_id === 'ex-cable')
+    expect(cablePR).toBeDefined()
+    expect(cablePR?.variants).toBeDefined()
+    expect(cablePR?.variants).toHaveLength(1)
+    expect(cablePR?.variants?.[0].attachment).toBe('rope')
+    expect(cablePR?.variants?.[0].mountPosition).toBe('high')
+  })
+
+  test('getRecentPRsWithDelta: cable PR with all-null variant has variants array with null fields', async () => {
+    const now = Date.now()
+    helpers.query
+      .mockResolvedValueOnce([])  // non-cable weight
+      .mockResolvedValueOnce([
+        {
+          exercise_id: 'ex-cable',
+          name: 'Cable Row',
+          category: 'Pull',
+          weight: 80,
+          previous_best: 75,
+          date: now,
+          attachment: null,
+          mount_position: null,
+          grip_type: null,
+          stack_unit_at_log: null,
+        },
+      ])
+      .mockResolvedValueOnce([])  // rep PRs
+
+    const result = await getRecentPRsWithDelta(20)
+    expect(result).toHaveLength(1)
+    const v = result[0].variants?.[0]
+    expect(v?.attachment).toBeNull()
+    expect(v?.mountPosition).toBeNull()
+    expect(v?.gripType).toBeNull()
+    expect(v?.stackUnitAtLog).toBeNull()
+  })
+
+  test('getAllTimeBests: cable exercises get variants attached when variant mode enabled', async () => {
+    const benchId = 'ex-bench'
+    const cableId = 'ex-cable'
+
+    helpers.query
+      .mockResolvedValueOnce([
+        { exercise_id: benchId, name: 'Bench Press', category: 'Push', max_weight: 100, best_set_weight: 100, best_set_reps: 5, session_count: 10 },
+        { exercise_id: cableId, name: 'Cable Fly', category: 'Push', max_weight: 50, best_set_weight: 50, best_set_reps: 12, session_count: 5 },
+      ])
+      .mockResolvedValueOnce([])  // bodyweight
+      .mockResolvedValueOnce([])  // getWeightedBodyweightPRs
+      .mockResolvedValueOnce([{ id: cableId }])  // getCableExerciseIds returns cable exercise (rows with {id})
+      .mockResolvedValueOnce([
+        // bestPerVariant results for cable exercise
+        { attachment: 'rope', mount_position: 'high', grip_type: null, stack_unit_at_log: null, max_weight: 50, best_reps: 12, achieved_at: 1700000000000, session_count: 3 },
+        { attachment: 'bar', mount_position: 'low', grip_type: null, stack_unit_at_log: null, max_weight: 45, best_reps: 15, achieved_at: 1699999999000, session_count: 2 },
+      ])
+
+    const result = await getAllTimeBests()
+    const cable = result.find((r) => r.exercise_id === cableId)
+    expect(cable?.variants).toBeDefined()
+    expect(cable?.variants).toHaveLength(2)
+    expect(cable?.variants?.[0].attachment).toBe('rope')
+
+    // Non-cable exercise should have no variants
+    const bench = result.find((r) => r.exercise_id === benchId)
+    expect(bench?.variants).toBeUndefined()
   })
 })

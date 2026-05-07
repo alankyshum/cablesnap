@@ -8,9 +8,15 @@
  * where the max weight (or max reps for bodyweight exercises) exceeds the prior historical best.
  *
  * Duration/isometric PRs are out of scope for V1.
+ *
+ * BLD-1086: Cable exercises now expose per-variant breakdowns via `variants` on
+ * RecentPR/AllTimeBest. Non-cable exercises are unaffected. The variant-aware
+ * code path is gated behind `settings.show_variant_prs` (default true) — a
+ * manual rollback hatch only, NOT an auto-fallback on perf timeout.
  */
 
 import { query } from "./helpers";
+import { getAppSetting } from "./settings";
 import { epley } from "../rm";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -18,6 +24,23 @@ import { epley } from "../rm";
 export type PRStats = {
   totalPRs: number;
   prsThisMonth: number;
+};
+
+/**
+ * BLD-1086: per-variant best for a single cable exercise variant tuple.
+ * attachment/mountPosition/gripType/stackUnitAtLog are the four variant key
+ * dimensions (each can be null = user did not specify).
+ */
+export type VariantBest = {
+  attachment: string | null;
+  mountPosition: string | null;
+  gripType: string | null;
+  stackUnitAtLog: string | null;
+  weight: number;
+  reps: number;
+  e1rm: number;
+  achievedAt: number;
+  sessionCount: number;
 };
 
 export type RecentPR = {
@@ -29,6 +52,8 @@ export type RecentPR = {
   previous_best: number | null;
   date: number;
   is_weighted: boolean;
+  // BLD-1086: only set for cable exercises when show_variant_prs=true.
+  variants?: VariantBest[];
 };
 
 export type AllTimeBest = {
@@ -46,7 +71,10 @@ export type AllTimeBest = {
   // with at least one non-null modifier recorded).
   best_added_kg: number | null;
   best_assisted_kg: number | null;
+  // BLD-1086: only set for cable exercises when show_variant_prs=true.
+  variants?: VariantBest[];
 };
+
 
 /**
  * Weighted-bodyweight PR aggregate per exercise (BLD-541).
@@ -59,6 +87,135 @@ export type WeightedBodyweightPR = {
   best_added_kg: number | null;   // max positive modifier (best = most added)
   best_assisted_kg: number | null; // max negative modifier (best = least negative, closest to 0)
 };
+
+// ─── BLD-1086: Variant PR helpers ───────────────────────────────────────────
+
+/**
+ * Returns true when the per-variant display is enabled (kill-switch not flipped).
+ * Default: true. Manual rollback: set app setting show_variant_prs=0.
+ * NEVER auto-fallback to merged-best on perf timeout — callers must surface an
+ * explicit error state instead.
+ */
+export async function showVariantPrs(): Promise<boolean> {
+  const val = await getAppSetting("show_variant_prs");
+  return val !== "0";
+}
+
+/**
+ * BLD-1086: Per-variant best aggregation for a single cable exercise.
+ *
+ * Groups completed non-warmup sets by the full five-position variant key:
+ *   (exercise_id, attachment, mount_position, grip_type, stack_unit_at_log)
+ *
+ * NULL is a DISTINCT value at every position — four combinations of
+ * (rope, high), (rope, null), (null, high), (null, null) produce four rows.
+ * Caller must provide a cableExerciseId from an exercise WHERE equipment = 'cable'.
+ *
+ * Returns rows ordered by achievedAt DESC (most recent first).
+ */
+export async function bestPerVariant(exerciseId: string): Promise<VariantBest[]> {
+  const rows = await query<{
+    attachment: string | null;
+    mount_position: string | null;
+    grip_type: string | null;
+    stack_unit_at_log: string | null;
+    max_weight: number;
+    best_reps: number;
+    achieved_at: number;
+    session_count: number;
+  }>(
+    // BLD-1086 fix: bare-column-from-MAX/MIN-row association ONLY works with
+    // EXACTLY ONE max()/min() in the SELECT. With two MAX() calls (weight +
+    // completed_at), SQLite selects bare columns (reps) arbitrarily.
+    // Use ROW_NUMBER() subquery to pin reps + completed_at to the max-weight row.
+    `SELECT
+       ws.attachment,
+       ws.mount_position,
+       ws.grip_type,
+       ws.stack_unit_at_log,
+       MAX(ws.weight)                                   AS max_weight,
+       best.reps                                        AS best_reps,
+       best.completed_at                                AS achieved_at,
+       COUNT(DISTINCT ws.session_id)                    AS session_count
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON ws.session_id = wss.id
+     LEFT JOIN (
+       SELECT
+         ws_b.exercise_id,
+         ws_b.attachment,
+         ws_b.mount_position,
+         ws_b.grip_type,
+         ws_b.stack_unit_at_log,
+         ws_b.reps,
+         ws_b.completed_at,
+         ROW_NUMBER() OVER (
+           PARTITION BY ws_b.exercise_id,
+                        ws_b.attachment,
+                        ws_b.mount_position,
+                        ws_b.grip_type,
+                        ws_b.stack_unit_at_log
+           ORDER BY ws_b.weight DESC, ws_b.completed_at DESC
+         ) AS rn
+       FROM workout_sets ws_b
+       INNER JOIN workout_sessions wss_b ON ws_b.session_id = wss_b.id
+       WHERE ws_b.exercise_id = ?
+         AND ws_b.completed = 1
+         AND ws_b.weight IS NOT NULL AND ws_b.weight > 0
+         AND ws_b.set_type != 'warmup'
+         AND wss_b.completed_at IS NOT NULL
+     ) best ON best.rn = 1
+           AND best.exercise_id = ws.exercise_id
+           AND best.attachment IS ws.attachment
+           AND best.mount_position IS ws.mount_position
+           AND best.grip_type IS ws.grip_type
+           AND best.stack_unit_at_log IS ws.stack_unit_at_log
+     WHERE ws.exercise_id = ?
+       AND ws.completed = 1
+       AND ws.weight IS NOT NULL AND ws.weight > 0
+       AND ws.set_type != 'warmup'
+       AND wss.completed_at IS NOT NULL
+     GROUP BY ws.exercise_id,
+              ws.attachment,
+              ws.mount_position,
+              ws.grip_type,
+              ws.stack_unit_at_log
+     ORDER BY best.completed_at DESC`,
+    [exerciseId, exerciseId]
+  );
+
+  return rows.map((r) => {
+    const e1rm =
+      r.max_weight > 0 && r.best_reps > 0
+        ? Math.round(epley(r.max_weight, r.best_reps) * 10) / 10
+        : 0;
+    return {
+      attachment: r.attachment ?? null,
+      mountPosition: r.mount_position ?? null,
+      gripType: r.grip_type ?? null,
+      stackUnitAtLog: r.stack_unit_at_log ?? null,
+      weight: r.max_weight,
+      reps: r.best_reps,
+      e1rm,
+      achievedAt: r.achieved_at,
+      sessionCount: r.session_count,
+    };
+  });
+}
+
+/**
+ * BLD-1086: IDs of cable exercises (equipment = 'cable') that appear in the
+ * given exercise ID set. Used to gate variant-aware paths without per-exercise N+1.
+ */
+async function getCableExerciseIds(exerciseIds: string[]): Promise<Set<string>> {
+  if (exerciseIds.length === 0) return new Set();
+  const placeholders = exerciseIds.map(() => "?").join(", ");
+  const rows = await query<{ id: string }>(
+    `SELECT id FROM exercises WHERE id IN (${placeholders}) AND equipment = 'cable'`,
+    exerciseIds
+  );
+  return new Set(rows.map((r) => r.id));
+}
+
 
 // ─── Queries ────────────────────────────────────────────────────────────────
 
@@ -151,11 +308,23 @@ export async function getPRStats(): Promise<PRStats> {
 /**
  * Recent PRs with improvement delta.
  * Returns weight PRs and rep PRs (bodyweight) ordered by date descending.
+ *
+ * BLD-1086: When show_variant_prs=true, cable exercises (equipment='cable')
+ * are handled by a separate variant-aware query where the prev_max subquery
+ * is scoped to the SAME variant tuple (NULL-safe IS equality). This correctly
+ * surfaces a rope PR even after a heavier straight-bar session in the same period.
+ * Cable exercises are excluded from the exercise-level query when variant mode
+ * is active, preventing double-counting.
  */
 export async function getRecentPRsWithDelta(
   limit: number = 20
 ): Promise<RecentPR[]> {
-  // Weight PRs
+  const variantEnabled = await showVariantPrs();
+
+  // Weight PRs — non-cable exercises (or all weighted when variant mode is off)
+  const nonCableFilter = variantEnabled
+    ? "AND (ex.equipment IS NULL OR ex.equipment NOT IN ('cable'))"
+    : "";
   const weightPRs = await query<{
     exercise_id: string;
     name: string;
@@ -187,10 +356,12 @@ export async function getRecentPRsWithDelta(
               ) as prev_max
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
+       LEFT JOIN exercises ex ON ws.exercise_id = ex.id
        WHERE ws.completed = 1
          AND ws.weight IS NOT NULL AND ws.weight > 0
          AND ws.set_type != 'warmup'
          AND wss.completed_at IS NOT NULL
+         ${nonCableFilter}
        GROUP BY ws.exercise_id, ws.session_id
        HAVING session_max > prev_max
      ) sub
@@ -200,7 +371,76 @@ export async function getRecentPRsWithDelta(
     [limit]
   );
 
-  // Rep PRs for bodyweight exercises
+  // BLD-1086: Cable variant-aware weight PRs — prev_max scoped to same variant tuple.
+  // Each group (exercise × session × variant_tuple) is its own PR event.
+  const cableVariantPRs: Array<{
+    exercise_id: string;
+    name: string;
+    category: string;
+    weight: number;
+    previous_best: number;
+    date: number;
+    attachment: string | null;
+    mount_position: string | null;
+    grip_type: string | null;
+    stack_unit_at_log: string | null;
+  }> = variantEnabled
+    ? await query(
+        `SELECT
+           sub.exercise_id,
+           COALESCE(e.name, 'Deleted Exercise') as name,
+           COALESCE(e.category, 'Other') as category,
+           sub.session_max as weight,
+           sub.prev_max as previous_best,
+           sub.date,
+           sub.attachment,
+           sub.mount_position,
+           sub.grip_type,
+           sub.stack_unit_at_log
+         FROM (
+           SELECT ws.exercise_id, ws.session_id,
+                  wss.started_at as date,
+                  ws.attachment,
+                  ws.mount_position,
+                  ws.grip_type,
+                  ws.stack_unit_at_log,
+                  MAX(ws.weight) as session_max,
+                  (SELECT COALESCE(MAX(ws2.weight), 0)
+                   FROM workout_sets ws2
+                   JOIN workout_sessions wss2 ON ws2.session_id = wss2.id
+                   WHERE ws2.exercise_id = ws.exercise_id
+                     AND ws2.session_id != ws.session_id
+                     AND ws2.completed = 1
+                     AND ws2.weight IS NOT NULL AND ws2.weight > 0
+                     AND ws2.set_type != 'warmup'
+                     AND wss2.completed_at IS NOT NULL
+                     AND wss2.started_at < wss.started_at
+                     AND ws2.attachment IS ws.attachment
+                     AND ws2.mount_position IS ws.mount_position
+                     AND ws2.grip_type IS ws.grip_type
+                     AND ws2.stack_unit_at_log IS ws.stack_unit_at_log
+                  ) as prev_max
+           FROM workout_sets ws
+           JOIN workout_sessions wss ON ws.session_id = wss.id
+           JOIN exercises ex_cable ON ws.exercise_id = ex_cable.id
+             AND ex_cable.equipment = 'cable'
+           WHERE ws.completed = 1
+             AND ws.weight IS NOT NULL AND ws.weight > 0
+             AND ws.set_type != 'warmup'
+             AND wss.completed_at IS NOT NULL
+           GROUP BY ws.exercise_id, ws.session_id,
+                    ws.attachment, ws.mount_position,
+                    ws.grip_type, ws.stack_unit_at_log
+           HAVING session_max > prev_max
+         ) sub
+         LEFT JOIN exercises e ON sub.exercise_id = e.id
+         ORDER BY sub.date DESC
+         LIMIT ?`,
+        [limit]
+      )
+    : [];
+
+  // Rep PRs for bodyweight exercises (unchanged)
   const repPRs = await query<{
     exercise_id: string;
     name: string;
@@ -258,6 +498,28 @@ export async function getRecentPRsWithDelta(
       previous_best: p.previous_best,
       date: p.date,
       is_weighted: true,
+    })),
+    ...cableVariantPRs.map((p) => ({
+      exercise_id: p.exercise_id,
+      name: p.name,
+      category: p.category,
+      weight: p.weight,
+      reps: null as number | null,
+      previous_best: p.previous_best,
+      date: p.date,
+      is_weighted: true,
+      // Each cable variant PR carries exactly one variant tuple — the one that set the PR.
+      variants: [{
+        attachment: p.attachment,
+        mountPosition: p.mount_position,
+        gripType: p.grip_type,
+        stackUnitAtLog: p.stack_unit_at_log,
+        weight: p.weight,
+        reps: 0,
+        e1rm: 0,
+        achievedAt: p.date,
+        sessionCount: 1,
+      }] as VariantBest[],
     })),
     ...repPRs.map((p) => ({
       exercise_id: p.exercise_id,
@@ -439,6 +701,22 @@ export async function getAllTimeBests(): Promise<AllTimeBest[]> {
     if (catCmp !== 0) return catCmp;
     return a.name.localeCompare(b.name);
   });
+
+  // BLD-1086: attach per-variant breakdowns for cable exercises
+  const variantEnabled = await showVariantPrs();
+  if (variantEnabled && results.length > 0) {
+    const weightedIds = results.filter((r) => r.is_weighted).map((r) => r.exercise_id);
+    const cableIds = await getCableExerciseIds([...new Set(weightedIds)]);
+    if (cableIds.size > 0) {
+      await Promise.all(
+        results.map(async (best) => {
+          if (best.is_weighted && cableIds.has(best.exercise_id)) {
+            best.variants = await bestPerVariant(best.exercise_id);
+          }
+        })
+      );
+    }
+  }
 
   return results;
 }

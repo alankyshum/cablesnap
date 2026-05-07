@@ -4,7 +4,8 @@ import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { toDisplay } from "@/lib/units";
-import type { AllTimeBest } from "@/lib/db/pr-dashboard";
+import VariantChip from "./VariantChip";
+import type { AllTimeBest, VariantBest } from "@/lib/db/pr-dashboard";
 
 type Props = {
   bests: AllTimeBest[];
@@ -20,6 +21,137 @@ function groupByCategory(bests: AllTimeBest[]): { category: string; data: AllTim
     else map.set(b.category, [b]);
   }
   return Array.from(map.entries()).map(([category, data]) => ({ category, data }));
+}
+
+type BestRowItem = {
+  key: string;
+  item: AllTimeBest;
+  variant?: VariantBest;
+};
+
+/** Expand a single AllTimeBest into one-per-variant rows for cable exercises. */
+function expandRows(best: AllTimeBest): BestRowItem[] {
+  if (best.variants && best.variants.length > 0) {
+    // Sort by e1rm DESC for All-Time Bests
+    const sorted = [...best.variants].sort((a, b) => b.e1rm - a.e1rm);
+    return sorted.map((v, i) => ({
+      key: `${best.exercise_id}-v${i}`,
+      item: best,
+      variant: v,
+    }));
+  }
+  return [{ key: best.exercise_id, item: best }];
+}
+
+function isAllNull(v: VariantBest): boolean {
+  return v.attachment === null && v.mountPosition === null &&
+    v.gripType === null && v.stackUnitAtLog === null;
+}
+
+type BestRowProps = {
+  row: BestRowItem;
+  showSeparator: boolean;
+  weightUnit: "kg" | "lb";
+  onPress: () => void;
+};
+
+function buildBestRowA11y(
+  item: AllTimeBest,
+  variant: VariantBest | undefined,
+  displayWeight: number | null,
+  displayE1rm: number | null,
+  displayReps: number | null,
+  sessionCount: number,
+  isUnspecified: boolean,
+  weightUnit: "kg" | "lb",
+): string {
+  if (!item.is_weighted) return `${item.name}: ${displayReps ?? 0} reps, ${sessionCount} sessions`;
+  const variantPart = variant
+    ? (isUnspecified ? "(unspecified variant)" : `variant: ${variant.attachment ?? "–"} ${variant.mountPosition ?? "–"}`)
+    : "";
+  const weightPart = displayWeight != null ? `${toDisplay(displayWeight, weightUnit)} ${weightUnit}` : "";
+  const e1rmPart = displayE1rm ? `estimated one rep max ${Math.round(toDisplay(displayE1rm, weightUnit))} ${weightUnit}` : "";
+  const sessionPart = `${sessionCount} session${sessionCount !== 1 ? "s" : ""}`;
+  return [item.name, variantPart, weightPart, e1rmPart, sessionPart].filter(Boolean).join(", ");
+}
+
+function BestRowValueDisplay({ item, displayWeight, displayE1rm, displayReps, weightUnit, colors }: {
+  item: AllTimeBest;
+  displayWeight: number | null;
+  displayE1rm: number | null;
+  displayReps: number | null;
+  weightUnit: "kg" | "lb";
+  colors: ReturnType<typeof useThemeColors>;
+}) {
+  if (!item.is_weighted) {
+    return (
+      <Text style={{ color: colors.onSurface, fontWeight: "600" }}>
+        {displayReps} reps
+      </Text>
+    );
+  }
+  return (
+    <>
+      <Text style={{ color: colors.onSurface, fontWeight: "600" }}>
+        {displayWeight != null ? toDisplay(displayWeight, weightUnit) : "-"} {weightUnit}
+      </Text>
+      {displayE1rm != null ? (
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+          e1RM: {Math.round(toDisplay(displayE1rm, weightUnit))} {weightUnit}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
+function BestRow({ row, showSeparator, weightUnit, onPress }: BestRowProps) {
+  const colors = useThemeColors();
+  const { item, variant } = row;
+  const displayWeight = variant ? variant.weight : item.max_weight;
+  const displayE1rm = variant ? variant.e1rm : item.est_1rm;
+  const displayReps = variant ? null : item.max_reps;
+  const sessionCount = variant ? variant.sessionCount : item.session_count;
+  const isUnspecified = variant ? isAllNull(variant) : false;
+
+  const a11yLabel = buildBestRowA11y(item, variant, displayWeight, displayE1rm, displayReps, sessionCount, isUnspecified, weightUnit);
+
+  return (
+    <React.Fragment>
+      <Pressable
+        style={styles.bestRow}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+      >
+        <View style={{ flex: 1, overflow: "hidden" }}>
+          <Text style={{ color: colors.onSurface }}>{item.name}</Text>
+          {variant ? (
+            isUnspecified ? (
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                (unspecified)
+              </Text>
+            ) : (
+              <VariantChip variant={variant} />
+            )
+          ) : null}
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+            {sessionCount} session{sessionCount !== 1 ? "s" : ""}
+          </Text>
+        </View>
+        <View style={styles.valueCol}>
+          <BestRowValueDisplay
+            item={item}
+            displayWeight={displayWeight}
+            displayE1rm={displayE1rm}
+            displayReps={displayReps}
+            weightUnit={weightUnit}
+            colors={colors}
+          />
+        </View>
+      </Pressable>
+      {showSeparator && <Separator style={{ marginVertical: 2 }} />}
+    </React.Fragment>
+  );
 }
 
 export default function AllTimeBestsSection({ bests, weightUnit, onPressExercise }: Props) {
@@ -47,47 +179,14 @@ export default function AllTimeBestsSection({ bests, weightUnit, onPressExercise
           >
             {section.category}
           </Text>
-          {section.data.map((item, i) => (
-            <React.Fragment key={item.exercise_id}>
-              <Pressable
-                style={styles.bestRow}
-                onPress={() => onPressExercise(item.exercise_id)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  item.is_weighted
-                    ? `${item.name}: ${item.max_weight != null ? toDisplay(item.max_weight, weightUnit) : '-'} ${weightUnit}${item.est_1rm ? `, estimated one rep max ${Math.round(toDisplay(item.est_1rm, weightUnit))} ${weightUnit}` : ''}, ${item.session_count} sessions`
-                    : `${item.name}: ${item.max_reps} reps, ${item.session_count} sessions`
-                }
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.onSurface }}>{item.name}</Text>
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                    {item.session_count} session{item.session_count !== 1 ? "s" : ""}
-                  </Text>
-                </View>
-                <View style={styles.valueCol}>
-                  {item.is_weighted ? (
-                    <>
-                      <Text style={{ color: colors.onSurface, fontWeight: "600" }}>
-                        {item.max_weight != null ? toDisplay(item.max_weight, weightUnit) : "-"} {weightUnit}
-                      </Text>
-                      {item.est_1rm != null ? (
-                        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                          e1RM: {Math.round(toDisplay(item.est_1rm, weightUnit))} {weightUnit}
-                        </Text>
-                      ) : null}
-                    </>
-                  ) : (
-                    <Text style={{ color: colors.onSurface, fontWeight: "600" }}>
-                      {item.max_reps} reps
-                    </Text>
-                  )}
-                </View>
-              </Pressable>
-              {i < section.data.length - 1 && (
-                <Separator style={{ marginVertical: 2 }} />
-              )}
-            </React.Fragment>
+          {section.data.flatMap((item) => expandRows(item)).map((row, i, arr) => (
+            <BestRow
+              key={row.key}
+              row={row}
+              showSeparator={i < arr.length - 1}
+              weightUnit={weightUnit}
+              onPress={() => onPressExercise(row.item.exercise_id)}
+            />
           ))}
         </View>
       ))}
@@ -121,3 +220,4 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
 });
+
