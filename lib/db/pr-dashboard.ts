@@ -124,17 +124,51 @@ export async function bestPerVariant(exerciseId: string): Promise<VariantBest[]>
     achieved_at: number;
     session_count: number;
   }>(
+    // BLD-1086 fix: bare-column-from-MAX/MIN-row association ONLY works with
+    // EXACTLY ONE max()/min() in the SELECT. With two MAX() calls (weight +
+    // completed_at), SQLite selects bare columns (reps) arbitrarily.
+    // Use ROW_NUMBER() subquery to pin reps + completed_at to the max-weight row.
     `SELECT
        ws.attachment,
        ws.mount_position,
        ws.grip_type,
        ws.stack_unit_at_log,
        MAX(ws.weight)                                   AS max_weight,
-       ws.reps                                          AS best_reps,
-       MAX(ws.completed_at)                             AS achieved_at,
+       best.reps                                        AS best_reps,
+       best.completed_at                                AS achieved_at,
        COUNT(DISTINCT ws.session_id)                    AS session_count
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON ws.session_id = wss.id
+     LEFT JOIN (
+       SELECT
+         ws_b.exercise_id,
+         ws_b.attachment,
+         ws_b.mount_position,
+         ws_b.grip_type,
+         ws_b.stack_unit_at_log,
+         ws_b.reps,
+         ws_b.completed_at,
+         ROW_NUMBER() OVER (
+           PARTITION BY ws_b.exercise_id,
+                        ws_b.attachment,
+                        ws_b.mount_position,
+                        ws_b.grip_type,
+                        ws_b.stack_unit_at_log
+           ORDER BY ws_b.weight DESC, ws_b.completed_at DESC
+         ) AS rn
+       FROM workout_sets ws_b
+       INNER JOIN workout_sessions wss_b ON ws_b.session_id = wss_b.id
+       WHERE ws_b.exercise_id = ?
+         AND ws_b.completed = 1
+         AND ws_b.weight IS NOT NULL AND ws_b.weight > 0
+         AND ws_b.set_type != 'warmup'
+         AND wss_b.completed_at IS NOT NULL
+     ) best ON best.rn = 1
+           AND best.exercise_id = ws.exercise_id
+           AND best.attachment IS ws.attachment
+           AND best.mount_position IS ws.mount_position
+           AND best.grip_type IS ws.grip_type
+           AND best.stack_unit_at_log IS ws.stack_unit_at_log
      WHERE ws.exercise_id = ?
        AND ws.completed = 1
        AND ws.weight IS NOT NULL AND ws.weight > 0
@@ -145,8 +179,8 @@ export async function bestPerVariant(exerciseId: string): Promise<VariantBest[]>
               ws.mount_position,
               ws.grip_type,
               ws.stack_unit_at_log
-     ORDER BY achieved_at DESC`,
-    [exerciseId]
+     ORDER BY best.completed_at DESC`,
+    [exerciseId, exerciseId]
   );
 
   return rows.map((r) => {
