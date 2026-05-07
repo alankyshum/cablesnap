@@ -38,6 +38,7 @@ jest.mock("@/components/ui/text", () => {
   const { Text } = require("react-native");
   return {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Text: ({ children, style, numberOfLines, ellipsizeMode, variant: _variant, ...rest }: {
       children: React.ReactNode;
       style?: object;
@@ -50,7 +51,6 @@ jest.mock("@/components/ui/text", () => {
         style={style}
         numberOfLines={numberOfLines}
         ellipsizeMode={ellipsizeMode}
-        {...rest}
       >
         {children}
       </Text>

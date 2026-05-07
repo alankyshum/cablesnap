@@ -6,7 +6,12 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatDateShort } from "@/lib/format";
 import { toDisplay } from "@/lib/units";
 import VariantChip from "./VariantChip";
-import type { RecentPR } from "@/lib/db/pr-dashboard";
+import type { RecentPR, VariantBest } from "@/lib/db/pr-dashboard";
+
+function isAllNull(v: VariantBest): boolean {
+  return v.attachment === null && v.mountPosition === null &&
+    v.gripType === null && v.stackUnitAtLog === null;
+}
 
 type Props = {
   prs: RecentPR[];
@@ -46,10 +51,7 @@ type PrRowProps = {
 function PrRow({ pr, showSeparator, weightUnit, onPress }: PrRowProps) {
   const colors = useThemeColors();
   const variant = pr.variants?.[0];
-  const isUnspecified = variant
-    ? (variant.attachment === null && variant.mountPosition === null &&
-       variant.gripType === null && variant.stackUnitAtLog === null)
-    : false;
+  const isUnspecified = variant ? isAllNull(variant) : false;
   const value = formatValue(pr, weightUnit);
   const delta = formatDelta(pr, weightUnit);
   const variantLabel = variant && !isUnspecified
@@ -67,17 +69,14 @@ function PrRow({ pr, showSeparator, weightUnit, onPress }: PrRowProps) {
       >
         <View style={[styles.nameCol, { overflow: "hidden" }]}>
           <Text style={{ color: colors.onSurface }}>{pr.name}</Text>
-          {variant && !isUnspecified ? (
-            <VariantChip variant={{
-              attachment: variant.attachment,
-              mountPosition: variant.mountPosition,
-              gripType: variant.gripType,
-              stackUnitAtLog: variant.stackUnitAtLog,
-            }} />
-          ) : variant && isUnspecified ? (
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              (unspecified)
-            </Text>
+          {variant ? (
+            isUnspecified ? (
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                (unspecified)
+              </Text>
+            ) : (
+              <VariantChip variant={variant} />
+            )
           ) : null}
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {formatDateShort(pr.date)}
