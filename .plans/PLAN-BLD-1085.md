@@ -167,10 +167,40 @@ None new. All needed primitives exist:
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**REQUEST CHANGES — 2026-05-07**
+
+1. **Scope mismatch: title promises grip, implementation explicitly drops it.** The issue title includes `attachment / mount / grip`, and the existing set schema already records `grip_type` / `grip_width`, but the technical approach groups only `(exercise_id, attachment, mount_position)` and later says same attachment+mount with different `grip_type` is collapsed. Either remove grip from the scope/title/copy for Phase 1 or include it in the variant identity, a11y labels, dedup keys, and tests.
+2. **Strength Levels behavior is underspecified and internally contradictory.** The plan says to compute per-variant max and then "take the max across variants", which still yields a single exercise-level best and can preserve the exact merged-best confusion the feature is meant to fix. Define whether Strength Levels renders per-variant rows, chooses one "best" variant only, or exposes a user-selected variant context; then update acceptance criteria and a11y copy accordingly.
+3. **Mixed nullable variant history needs deterministic grouping rules.** "Unspecified" is mentioned, but the plan needs exact grouping semantics for `(attachment=null, mount_position=value)`, `(attachment=value, mount_position=null)`, and fully null legacy rows so partial history does not duplicate, disappear, or get mislabeled.
+4. **Recent PR logic must be variant-aware, not only all-time aggregation.** Existing `getRecentPRsWithDelta()` computes previous best by `exercise_id` only, so a rope PR after a heavier straight-bar session would not appear unless the previous-best subqueries are scoped to the same variant tuple.
+5. **Do not silently fall back to merged best on performance timeout.** That reintroduces the "app is lying" data-integrity bug under load. If the variant query misses the budget, block/disable the new display with an explicit error or kill switch; never show merged values as if they are variant-correct.
+6. **A11y and 390px web criteria need concrete implementation details.** Require row labels to include exercise, variant tuple, value, delta/date or session count, and "unspecified" state; require chip wrapping/truncation behavior for long attachment/mount labels before approval.
 
 ### Tech Lead (Feasibility)
-_Pending_
+**REQUEST CHANGES — 2026-05-07**
+
+Architecture direction is sound (read-side aggregation over existing columns, reuse `VariantScope`, no migration). Endorse all 6 QD blocking items. Additional tech-side gaps:
+
+🚨 **Blocking — Tech**
+
+1. **T1. Index claim is FALSE.** Plan asserts "stays under the existing index on `workout_sets(exercise_id, completed_at)`." That index does not exist (`lib/db/schema.ts:130-132` = only `idx_workout_sets_exercise`, `_session`, `_session_exercise`). New GROUP BY `(exercise_id, attachment, mount_position)` will scan and group in memory. Action: run `EXPLAIN QUERY PLAN` on a 5k fixture; either prove existing indexes suffice, or propose composite index `(exercise_id, attachment, mount_position, completed_at)` as Phase 0 migration.
+2. **T2. `buildVariantSql` already exists and is exported** at `lib/db/exercise-history.ts:111`, with Drizzle counterpart `variantDrizzleConditions:140`. Plan must explicitly call out: rename/move both to `lib/db/variant-scope.ts` in a separate refactor commit, not bundled with feature code.
+3. **T3. Strength Levels architecture is wrong, not just contradictory.** Threshold tables are exercise-keyed against typical-use lifts; feeding rope-only e1RM into "Cable Triceps Pushdown" thresholds compares apples to oranges. Pick one of: **(A)** Strength Levels stays exercise-best with caption "best achieved with: Rope" (recommended); **(B)** per-variant rows + new per-variant thresholds (out of Phase 1); **(C)** drop Strength Levels work entirely. Reject the current proposal (compute per-variant max then take cross-variant max — net no-op).
+4. **T4. Cable-stack calibration unit-mixing.** `workout_sets.stack_id`, `stack_marker`, `stack_unit_at_log` (BLD-1060) are ignored by the variant key. Cross-gym "Rope" PRs in different units will mix. Pick: (a) accept and document, (b) add `stack_unit_at_log` to variant key, (c) gate per-variant display to `stack_unit_at_log='kg'`.
+5. **T5. Cost is paid by every PR query, not just cable.** Non-cable exercises pay the wider GROUP BY for nothing. Mitigation: either branch SQL by `exercises.equipment IN ('cable')`, or prove via bench the unified path doesn't regress.
+6. **T6. Recent PRs correlated subquery cost compounds.** `getRecentPRsWithDelta` (lines 174-200, 219-243) variant-aware rewrite doubles predicate count in the inner subquery. Tied to T1 — bench gates.
+7. **T7. AC "<30 ms on Pixel 4a" is unverifiable.** Restate as bench under `better-sqlite3` test backend with a defined seed, OR add Maestro/EAS device-farm wall-clock measurement. Don't leave implied.
+8. **T8. `show_variant_prs` flag** — agreeing with QD #5: it is a manual rollback hatch only, NOT a perf auto-fallback. If query exceeds budget, throw/render error state. Update Technical Approach §6 and Risk row 4 accordingly.
+
+⚠️ **Should-fix — Tech**
+
+9. **T9. List exact snapshot files** that will need inspection: `__tests__/components/progress/records.test.tsx`, `accessibility.acceptance.test.tsx`, `body-progress.acceptance.test.tsx`. No blanket regeneration.
+10. **T10. Document type-additivity no-touch list:** ShareCard, MonthlyReportSegment, WeeklySummary, exports. (`RecentPR`/`AllTimeBest` consumers verified: `app/progress/records.tsx`, `usePRDashboard.ts`, 4 components.)
+11. **T11. Strength-level drop UX:** "release-notes copy" is insufficient — CableSnap has no release-notes surface users read. Either add a one-time informational records-page banner (Classification=NO permits this), or accept silent recalibration with help-popover-only.
+12. **T12. Edge-case unit tests** for the four-bucket grouping: `(rope, high)`, `(rope, null)`, `(null, high)`, `(null, null)`. Prove they don't collapse.
+13. **T13. Grip Phase-1 decision:** if grip is included (recommended given title), include `grip_type` only. Defer `grip_width` (over-segments cards for precise users).
+
+**Verdict:** REQUEST CHANGES. Land T1, T3, T4, T5, T8 + QD's 6 items, then re-review. Shape is right; details need to land before claudecoder picks it up.
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO_
