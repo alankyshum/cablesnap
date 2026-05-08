@@ -1,7 +1,7 @@
 # Feature Plan: History-based Smart Rest Timer suggestions
 
 **Issue**: BLD-1099  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT → IN_REVIEW (rev 3 — addressing QD rev-2 blockers + TL rev-2 addendum 2026-05-08T09:43Z)
+**Status**: DRAFT → IN_REVIEW (rev 4 — fix linkScope consistency + AC6c arithmetic + soften circuit user story 2026-05-08T09:54Z)
 
 ## Problem Statement
 
@@ -69,8 +69,13 @@ applies.
 - **As a lifter doing a templateless session**, when I finish a heavy squat
   set the rest timer should start at the duration I usually rest on squats,
   so I don't have to re-set 3 min every single time.
-- **As a circuit/superset user**, the resting interval between rounds should
-  reflect how long I actually take, not a 90 s default that's always wrong.
+- **As a circuit/superset user**, between-round rest should respect any
+  per-exercise default I've pinned and any template I'm running, falling
+  back gracefully to a sensible default — instead of the 90 s default
+  for everything when no template is set. (Note: BLD-1099 does **not**
+  learn between-round rest from history; that is deferred to a future
+  follow-up because circuit deltas measure round interval, not rest. See
+  AC6b and the "Out of scope" section.)
 - **As a new user with no history**, the suggestion should fall back
   gracefully to the template default (current behaviour) so nothing
   regresses.
@@ -378,19 +383,33 @@ template/default in the Friday circuit.
    (Blocker 1).
 5. **`useSessionActions.handleLinkedRest` (`hooks/useSessionActions.ts:271-302`,
    adaptive-ON branch lines 287-294) ALSO branches on `source.kind`
-   (rev 3 / TL rev-2 addendum).** This is the second call site for the
-   Blocker 1 bypass and was missed in rev 2.
+   (rev 3 / TL rev-2 addendum; rev 4 / TL+QD rev-3 fix).** This is the
+   second call site for the Blocker 1 bypass and was missed in rev 2.
    - For the adaptive-ON branch (the default for users with adaptive
      rest enabled), `getRestContext` is called for the
-     last-completed exercise of the link group; if `source.kind ∈
-     {history, pinned}` (note: `linkScope` is **false** here because
-     adaptive-ON uses single-exercise context, not group-max), bypass
-     `resolveRestSeconds` and call `startRestWithDuration(source.seconds)`
-     directly. AC2c covers this; AC2b spy assertion is extended to
-     include the `handleLinkedRest` adaptive-ON path.
+     last-completed exercise of the link group **with `linkScope: true`**
+     (rev 4 — same contract as `getRestSecondsForLink` and the
+     adaptive-OFF branch; closes the Mon-straight-set→Fri-circuit history
+     leak that rev 3 left open). Because `linkScope: true` skips the
+     `history` tier inside `resolveRest`, the only history-free source
+     that needs the multiplier bypass is `pinned`. Branch:
+     - `pinned`: bypass `resolveRestSeconds` and call
+       `startRestWithDuration(source.seconds)` directly.
+     - `template` / `default` / `user_override`: legacy
+       `resolveRestSeconds` multiplier path is correct (these are
+       baselines; multiplier is what they're for).
+     - `history`: cannot occur (excluded by `linkScope: true`).
    - For the adaptive-OFF / fallback branch (line 299), the new
      `getRestSecondsForLink` (item 2 above) handles the path —
-     history is already excluded by `linkScope: true`.
+     history is already excluded by `linkScope: true`. The bypass for
+     `pinned` happens implicitly because `getRestSecondsForLink`
+     already returns `.seconds` directly (no multiplier).
+   - **Note on adaptive-ON vs adaptive-OFF divergence:** with rev 4,
+     both branches use `linkScope: true`, so the divergence narrows to
+     "single-exercise context vs group-max" only. Acceptable to defer.
+   - AC2c (rev 4) covers the adaptive-ON pinned-only bypass; AC2b spy
+     assertion is extended to include the `handleLinkedRest` adaptive-ON
+     path.
 6. New `setUserRestSeconds(exerciseId, seconds | null)` mutation with
    `[15, 600]` bounds validation; throws `RestBoundsError` on violation
    (Blocker 5).
@@ -439,6 +458,14 @@ expected 3 min" without adding a UI.
 - Cross-device sync of `user_rest_seconds`. Already covered by the existing
   export/import pipeline because the column is on `exercises` (already
   exported).
+- **Learned between-round rest for circuits/supersets** (rev 4). Linked
+  sets are excluded from the history corpus (`link_id IS NULL` filter,
+  AC6c) and `getRestSecondsForLink` resolves with `linkScope: true`
+  (history tier skipped, AC6b). Linked groups suggest pinned > template
+  > default only. Learning round rest requires a `link_protocol_id` or
+  per-link history table (no clean per-exercise signal exists in a
+  circuit because deltas measure round interval, not rest). Tracked as
+  follow-up BLD-future.
 
 ## Scope
 
@@ -480,11 +507,16 @@ expected 3 min" without adding a UI.
 - [ ] **AC2b**: When source ∈ {`history`, `pinned`}, `useRestTimer.startRest`
       bypasses `resolveRestSeconds` (verified by spy / mock in unit test).
       Output is clamped to `[15, 600]`, NOT the legacy `[10, 360]`.
-- [ ] **AC2c** (rev 3 / TL addendum): `useSessionActions.handleLinkedRest`
-      adaptive-ON branch (`hooks/useSessionActions.ts:287-294`) also
-      bypasses `resolveRestSeconds` when the last-completed exercise's
-      `source.kind ∈ {history, pinned}`. Verified by extending the AC2b
-      spy assertion to cover this call site.
+- [ ] **AC2c** (rev 4 — supersedes rev-3 framing per TL+QD rev-3):
+      `useSessionActions.handleLinkedRest` adaptive-ON branch
+      (`hooks/useSessionActions.ts:287-294`) calls `getRestContext` with
+      **`linkScope: true`** (same as the adaptive-OFF branch and
+      `getRestSecondsForLink`). When `source.kind === "pinned"`, the
+      branch bypasses `resolveRestSeconds` and calls
+      `startRestWithDuration(source.seconds)`. `source.kind === "history"`
+      cannot occur (excluded by `linkScope: true`); a unit test asserts
+      this invariant. AC2b's spy assertion is extended to cover the
+      `handleLinkedRest` adaptive-ON pinned path.
 - [ ] **AC3**: Given a user has < 4 qualifying history samples on exercise
       X, when they complete a set on X, then the timer falls back to the
       template default (legacy path WITH multiplier); if no template
@@ -514,13 +546,20 @@ expected 3 min" without adding a UI.
       (`default`). Attribution names winning exercise + source. Even
       if A has rich straight-set history, that history is **not**
       consulted in the link path.
-- [ ] **AC6c** (rev 3 / QD rev-2 blocker 1): The history query SQL
-      filters `WHERE prev.link_id IS NULL AND curr.link_id IS NULL` on
-      both members of every consecutive pair. Verified by a unit test:
-      a fixture with 8 consecutive same-exercise sets, 4 with
-      `link_id = NULL` and 4 with `link_id = "L1"`, returns a median
-      computed over only the 4 straight-set pairs (and falls back if
-      < 4).
+- [ ] **AC6c** (rev 4 — fixed math per TL+QD rev-3): The history query
+      SQL filters `WHERE prev.link_id IS NULL AND curr.link_id IS NULL`
+      on both members of every consecutive pair. Verified by **two**
+      unit tests on the same exercise:
+      (a) **happy path** — fixture of **5 consecutive `link_id IS NULL`
+      sets** (yields 4 qualifying pairs ≥ `HISTORY_MIN_SAMPLES`),
+      followed by 4 sets with `link_id = "L1"`. The resolver returns a
+      `history` source with `sampleCount = 4`, median computed only
+      over the 4 straight-set pairs.
+      (b) **fallback path** — fixture of 4 `link_id IS NULL` sets
+      (yields only 3 qualifying pairs, < `HISTORY_MIN_SAMPLES = 4`)
+      interleaved with 4 linked sets. The resolver does NOT return a
+      `history` source; falls through to template/default. This
+      asserts the threshold and the `link_id IS NULL` filter together.
 - [ ] **AC7**: Importing a backup that includes `user_rest_seconds` is
       lossless within `[15, 600]`. Out-of-bounds values are clamped
       (positive) or dropped to NULL (negative/NaN/non-integer); a Sentry
@@ -673,8 +712,23 @@ Plan is technically sound, internally consistent with the existing rest stack, o
 
 **rev 3 update:** TL addendum folded into Wire-up summary item 5; new
 AC2c added; AC2b spy assertion extended to cover the
-`handleLinkedRest` adaptive-ON path. Awaiting TL re-confirmation of
-APPROVE on rev 3.
+`handleLinkedRest` adaptive-ON path.
+
+**rev 4 update (responding to TL+QD rev-3 verdict):**
+- Wire-up item 5 fixed: `handleLinkedRest` adaptive-ON now calls
+  `getRestContext` with `linkScope: true`, matching `getRestSecondsForLink`
+  and adaptive-OFF. The Mon→Fri history leak is closed. AC2c collapses
+  to "pinned-only bypass" because `linkScope: true` excludes `history`
+  inside `resolveRest`. Test invariant added.
+- AC6c arithmetic fixed: now specifies (a) 5 consecutive NULL rows →
+  4 pairs → history hit; (b) 4 NULL rows → 3 pairs → fallback. Both
+  tests required.
+- Circuit/superset user story (lines 72-77 in rev 4) softened to
+  describe the actual rev-4 contract: pinned/template/default for
+  linked groups, learned circuit rest deferred. New explicit
+  out-of-scope row in §"Out of scope (deferred)" with rationale and
+  follow-up pointer.
+- Plan now internally consistent. Awaiting TL+QD rev-4 verdict.
 
 ### Psychologist (Behavior-Design Scoping)
 **Verdict: N/A — NOT BEHAVIOR-DESIGN ✅** (2026-05-08T09:21Z, comment 165b3ae6)
@@ -706,4 +760,4 @@ non-evaluative, no animation on median shift, empty-state copy
 unchanged, breadcrumb is UUID-only (AC12).
 
 ### CEO Decision
-_Pending TL re-confirmation + QD re-review on rev 3._
+_Pending TL+QD re-review on rev 4._
