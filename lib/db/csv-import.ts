@@ -102,6 +102,7 @@ export async function importCsvSessions(
     for (let i = 0; i < sessions.length; i++) {
       const session = sessions[i];
       const sessionId = uuid();
+      const kind = session.kind ?? "workout";
       const startedAt = session.date;
       const completedAt = session.durationSeconds
         ? startedAt + session.durationSeconds * 1000
@@ -109,9 +110,19 @@ export async function importCsvSessions(
       const durationSeconds = session.durationSeconds ?? 0;
 
       await database.runAsync(
-        `INSERT INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes, import_batch_id)
-         VALUES (?, NULL, ?, ?, ?, ?, '', ?)`,
-        [sessionId, session.name, startedAt, completedAt, durationSeconds, batchId]
+        `INSERT INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes, import_batch_id, kind, day_session_exercise_id, day_session_date)
+         VALUES (?, NULL, ?, ?, ?, ?, '', ?, ?, ?, ?)`,
+        [
+          sessionId,
+          session.name,
+          startedAt,
+          completedAt,
+          durationSeconds,
+          batchId,
+          kind,
+          session.day_session_exercise_id ?? null,
+          session.day_session_date ?? null,
+        ]
       );
       sessionsInserted++;
 
@@ -181,7 +192,8 @@ export async function undoCsvImport(batchId: string): Promise<{ sessionsDeleted:
 export async function hasActiveWorkout(): Promise<boolean> {
   const database = await getDatabase();
   const row = await database.getFirstAsync<{ cnt: number }>(
-    "SELECT COUNT(*) as cnt FROM workout_sessions WHERE completed_at IS NULL"
+    // BLD-1089: kind='workout' — day_session rows are always completed; exclude them
+    "SELECT COUNT(*) as cnt FROM workout_sessions WHERE completed_at IS NULL AND kind = 'workout'"
   );
   return (row?.cnt ?? 0) > 0;
 }

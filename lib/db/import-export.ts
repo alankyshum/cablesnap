@@ -692,8 +692,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "workout_sessions": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes, program_day_id, rating, import_batch_id, gym_id, gym_name_at_log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.template_id, row.name, row.started_at, row.completed_at, row.duration_seconds, row.notes, row.program_day_id ?? null, row.rating ?? null, row.import_batch_id ?? null, row.gym_id ?? null, row.gym_name_at_log ?? null]
+        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes, program_day_id, rating, import_batch_id, gym_id, gym_name_at_log, kind, day_session_exercise_id, day_session_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.name, row.started_at, row.completed_at, row.duration_seconds, row.notes, row.program_day_id ?? null, row.rating ?? null, row.import_batch_id ?? null, row.gym_id ?? null, row.gym_name_at_log ?? null, row.kind ?? "workout", row.day_session_exercise_id ?? null, row.day_session_date ?? null]
       );
       return r.changes > 0;
     }

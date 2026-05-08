@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { startSession, setAppSetting } from "../../lib/db";
+import { getTodayQuickAddSummary } from "../../lib/db/day-session";
 import { serializeDismissalState } from "../../lib/overreaching";
 import { useFocusRefetch } from "../../lib/query";
 import { useLayout } from "../../lib/layout";
@@ -25,6 +26,10 @@ import { loadHomeData } from "../../components/home/loadHomeData";
 import type { WeeklyGoalProgress } from "../../components/home/loadHomeData";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useHomeActions } from "@/hooks/useHomeActions";
+import QuickAddFab from "../../components/home/QuickAddFab";
+import QuickAddSheet from "../../components/home/QuickAddSheet";
+import TodaysGtgCard from "../../components/home/TodaysGtgCard";
+import { useRouter } from "expo-router";
 
 const defaultProgress: WeeklyGoalProgress = { mode: "hidden", slots: [], completedCount: 0, targetCount: 0 };
 
@@ -33,14 +38,20 @@ export default function Workouts() {
   const colors = useThemeColors();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
+  const router = useRouter();
   const [userSegment, setUserSegment] = useState<string | null>(null);
   const [insightDismissed, setInsightDismissed] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const { data } = useQuery({ queryKey: ["home"], queryFn: loadHomeData });
-  useFocusRefetch(["home"]);
+  const { data: gtgRows } = useQuery({
+    queryKey: ["gtg-today"],
+    queryFn: () => getTodayQuickAddSummary(),
+  });
+  useFocusRefetch(["home", "gtg-today"]);
   const queryClient = useQueryClient();
-  const { router, info, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions, importTemplates, exportTemplate } = useHomeActions();
+  const { info, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions, importTemplates, exportTemplate } = useHomeActions();
 
   const templates = useMemo(() => data?.templates ?? [], [data?.templates]);
   const programs = useMemo(() => data?.programs ?? [], [data?.programs]);
@@ -85,48 +96,76 @@ export default function Workouts() {
 
   return (
     // bounded list — ScrollView is intentional: renders fixed sub-components (stats, banners, templates/programs), not unbounded .map()
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}>
-      <StatsRow colors={colors} streak={data?.streak ?? 0} progress={progress} prCount={(data?.recentPRs ?? []).length} />
-      <ErrorBoundary>
-        {showDeloadNudge ? (
-          <DeloadNudgeCard colors={colors} result={overreachingResult!} onDismiss={dismissDeloadNudge} />
-        ) : (
-          insight && !insightDismissed && (
-            <InsightCard colors={colors} insight={insight} onPress={() => { if ((insight.type === "strength" || insight.type === "goal_progress") && insight.exerciseId) router.push(`/exercise/${insight.exerciseId}`); }} onDismiss={() => setInsightDismissed(true)} />
-          )
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 80 }}>
+        <StatsRow colors={colors} streak={data?.streak ?? 0} progress={progress} prCount={(data?.recentPRs ?? []).length} />
+        <ErrorBoundary>
+          {showDeloadNudge ? (
+            <DeloadNudgeCard colors={colors} result={overreachingResult!} onDismiss={dismissDeloadNudge} />
+          ) : (
+            insight && !insightDismissed && (
+              <InsightCard colors={colors} insight={insight} onPress={() => { if ((insight.type === "strength" || insight.type === "goal_progress") && insight.exerciseId) router.push(`/exercise/${insight.exerciseId}`); }} onDismiss={() => setInsightDismissed(true)} />
+            )
+          )}
+        </ErrorBoundary>
+        <HomeBanners colors={colors} active={data?.active ?? null} todaySchedule={todaySchedule} todayDone={data?.todayDone ?? false} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
+        <AdherenceBar colors={colors} progress={progress} />
+        <WeeklySummaryCard
+          colors={colors}
+          totalVolume={data?.weeklyWorkouts?.totalVolume ?? 0}
+          previousWeekVolume={data?.weeklyWorkouts?.previousWeekVolume ?? null}
+          totalDurationSeconds={data?.weeklyWorkouts?.totalDurationSeconds ?? 0}
+          sessionCount={data?.weeklyWorkouts?.sessionCount ?? 0}
+          unitSystem={data?.unitSystem ?? "kg"}
+        />
+        {/* BLD-1089: Today's GTG card — AC4 */}
+        {(gtgRows?.length ?? 0) > 0 && (
+          <TodaysGtgCard
+            colors={colors}
+            rows={gtgRows ?? []}
+            onRowPress={(id) => router.push(`/day-session/${id}`)}
+          />
         )}
-      </ErrorBoundary>
-      <HomeBanners colors={colors} active={data?.active ?? null} todaySchedule={todaySchedule} todayDone={data?.todayDone ?? false} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
-      <AdherenceBar colors={colors} progress={progress} />
-      <WeeklySummaryCard
-        colors={colors}
-        totalVolume={data?.weeklyWorkouts?.totalVolume ?? 0}
-        previousWeekVolume={data?.weeklyWorkouts?.previousWeekVolume ?? null}
-        totalDurationSeconds={data?.weeklyWorkouts?.totalDurationSeconds ?? 0}
-        sessionCount={data?.weeklyWorkouts?.sessionCount ?? 0}
-        unitSystem={data?.unitSystem ?? "kg"}
+        <RecoveryHeatmap recoveryStatus={data?.recoveryStatus ?? []} colors={colors} />
+
+        <View style={styles.actionRow}>
+          <Button variant="default" onPress={quickStart} accessibilityLabel="Quick start workout">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <MaterialCommunityIcons name="flash" size={18} color={colors.onPrimary} />
+              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Quick Start</Text>
+            </View>
+          </Button>
+        </View>
+
+        <SegmentedControl value={segment} onValueChange={(v) => setUserSegment(v)} buttons={[{ value: "templates", label: "Templates", accessibilityLabel: "Templates tab" }, { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" }]} style={styles.segmented} />
+
+        {segment === "templates" ? (
+          <TemplatesList colors={colors} templates={allTemplates} counts={data?.counts ?? {}} durationEstimates={data?.durationEstimates ?? {}} starterMeta={starterMeta} templateReadiness={data?.templateReadiness ?? {}} showReadiness={data?.showReadiness ?? false} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} onImport={() => void importTemplates()} onExport={(id) => void exportTemplate(id)} />
+        ) : (
+          <ProgramsList colors={colors} programs={allPrograms} dayCounts={data?.dayCounts ?? {}} onPress={(id) => router.push(`/program/${id}`)} onDelete={confirmDeleteProgram} onOptions={showProgramOptions} />
+        )}
+
+        <RecentWorkoutsList colors={colors} sessions={data?.sessions ?? []} setCounts={data?.setCounts ?? {}} avgRPEs={data?.avgRPEs ?? {}} />
+      </ScrollView>
+
+      {/* BLD-1089: Quick Add FAB — AC1 */}
+      <QuickAddFab
+        bottomOffset={tabBarHeight}
+        onPress={() => setQuickAddVisible(true)}
       />
-      <RecoveryHeatmap recoveryStatus={data?.recoveryStatus ?? []} colors={colors} />
 
-      <View style={styles.actionRow}>
-        <Button variant="default" onPress={quickStart} accessibilityLabel="Quick start workout">
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <MaterialCommunityIcons name="flash" size={18} color={colors.onPrimary} />
-            <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Quick Start</Text>
-          </View>
-        </Button>
-      </View>
-
-      <SegmentedControl value={segment} onValueChange={(v) => setUserSegment(v)} buttons={[{ value: "templates", label: "Templates", accessibilityLabel: "Templates tab" }, { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" }]} style={styles.segmented} />
-
-      {segment === "templates" ? (
-        <TemplatesList colors={colors} templates={allTemplates} counts={data?.counts ?? {}} durationEstimates={data?.durationEstimates ?? {}} starterMeta={starterMeta} templateReadiness={data?.templateReadiness ?? {}} showReadiness={data?.showReadiness ?? false} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} onImport={() => void importTemplates()} onExport={(id) => void exportTemplate(id)} />
-      ) : (
-        <ProgramsList colors={colors} programs={allPrograms} dayCounts={data?.dayCounts ?? {}} onPress={(id) => router.push(`/program/${id}`)} onDelete={confirmDeleteProgram} onOptions={showProgramOptions} />
-      )}
-
-      <RecentWorkoutsList colors={colors} sessions={data?.sessions ?? []} setCounts={data?.setCounts ?? {}} avgRPEs={data?.avgRPEs ?? {}} />
-    </ScrollView>
+      <QuickAddSheet
+        visible={quickAddVisible}
+        onDismiss={() => setQuickAddVisible(false)}
+        onSetLogged={() => {
+          queryClient.invalidateQueries({ queryKey: ["gtg-today"] });
+        }}
+        onOpenActiveSession={(id) => {
+          setQuickAddVisible(false);
+          router.push(`/session/${id}`);
+        }}
+      />
+    </View>
   );
 }
 

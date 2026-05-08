@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Grease-the-Groove mode**: Log scattered sets throughout the day without starting a workout — tap the floating Quick Add button, pick an exercise, confirm reps/weight, and get a 4-second undo toast. Daily GTG totals appear as a summary card on the home screen and a light-fill dot on the calendar.
 
 ## v0.26.23 — 2026-05-08
 <!-- versionCode: 93 -->

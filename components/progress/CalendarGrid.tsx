@@ -13,6 +13,7 @@ type Props = {
   month: number;
   weekStartDay: number;
   workoutDates: Set<string>;
+  gtgOnlyDates: Set<string>;
   selectedDate: string | null;
   todayStr: string;
   onSelectDate: (dateStr: string, day: number) => void;
@@ -23,6 +24,7 @@ export default function CalendarGrid({
   month,
   weekStartDay,
   workoutDates,
+  gtgOnlyDates,
   selectedDate,
   todayStr,
   onSelectDate,
@@ -46,6 +48,19 @@ export default function CalendarGrid({
     if (isFutureDay(day)) return;
     const dateStr = dateToISO(year, month, day);
     onSelectDate(dateStr, day);
+  };
+
+  const getDayAccessLabel = (
+    day: number,
+    isFuture: boolean,
+    hasWorkout: boolean,
+    isGtgOnly: boolean
+  ) => {
+    const prefix = `${monthName(month)} ${day}`;
+    if (isFuture) return `${prefix}, future date`;
+    if (hasWorkout) return `${prefix}, workout completed`;
+    if (isGtgOnly) return `${prefix}, GTG sets logged`;
+    return `${prefix}, no workout`;
   };
 
   return (
@@ -83,13 +98,9 @@ export default function CalendarGrid({
           const isToday = dateStr === todayStr;
           const isSelected = dateStr === selectedDate;
           const hasWorkout = workoutDates.has(dateStr);
+          const isGtgOnly = !hasWorkout && gtgOnlyDates.has(dateStr);
           const isFuture = isFutureDay(day);
-
-          const accessLabel = isFuture
-            ? `${monthName(month)} ${day}, future date`
-            : hasWorkout
-              ? `${monthName(month)} ${day}, workout completed`
-              : `${monthName(month)} ${day}, no workout`;
+          const accessLabel = getDayAccessLabel(day, isFuture, hasWorkout, isGtgOnly);
 
           return (
             <Pressable
@@ -137,6 +148,16 @@ export default function CalendarGrid({
                   ]}
                 />
               )}
+              {isGtgOnly && !isFuture && (
+                <View
+                  style={[
+                    styles.dot,
+                    styles.dotGtgOnly,
+                    { borderColor: colors.primary },
+                    isSelected && { borderColor: colors.onPrimaryContainer },
+                  ]}
+                />
+              )}
             </Pressable>
           );
         })}
@@ -180,5 +201,9 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     marginTop: 2,
+  },
+  dotGtgOnly: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
   },
 });

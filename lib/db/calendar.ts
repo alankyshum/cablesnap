@@ -29,6 +29,8 @@ export async function getMonthlyWorkoutDates(
   const end = new Date(year, month + 1, 1).getTime();
 
   const db = await getDrizzle();
+  // BLD-1089: filter to kind='workout' only — day_session rows are not "workouts"
+  // for calendar dot purposes (they get their own GTG-only dot style).
   const rows = await db
     .select({
       workout_date: sql<string>`date(${workoutSessions.started_at} / 1000, 'unixepoch', 'localtime')`,
@@ -39,6 +41,7 @@ export async function getMonthlyWorkoutDates(
     .where(
       and(
         isNotNull(workoutSessions.completed_at),
+        sql`${workoutSessions.kind} = 'workout'`,
         gte(workoutSessions.started_at, start),
         lt(workoutSessions.started_at, end)
       )
@@ -46,6 +49,38 @@ export async function getMonthlyWorkoutDates(
     .groupBy(sql`workout_date`);
 
   return rows as unknown as WorkoutDay[];
+}
+
+/**
+ * BLD-1089: dates in a month that have ONLY GTG (day_session) sets.
+ * Excludes any date that also has a completed kind='workout' row — those
+ * days render the normal solid dot, not the GTG-only light-fill dot (AC21).
+ */
+export async function getMonthlyGtgOnlyDates(
+  year: number,
+  month: number
+): Promise<string[]> {
+  const start = new Date(year, month, 1).getTime();
+  const end = new Date(year, month + 1, 1).getTime();
+
+  const rows = await query<{ workout_date: string }>(
+    `SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS workout_date
+     FROM workout_sessions
+     WHERE completed_at IS NOT NULL
+       AND kind = 'day_session'
+       AND started_at >= ?
+       AND started_at < ?
+       AND NOT EXISTS (
+         SELECT 1 FROM workout_sessions w2
+         WHERE w2.completed_at IS NOT NULL
+           AND w2.kind = 'workout'
+           AND date(w2.started_at / 1000, 'unixepoch', 'localtime')
+               = date(workout_sessions.started_at / 1000, 'unixepoch', 'localtime')
+       )`,
+    [start, end]
+  );
+
+  return rows.map((r) => r.workout_date);
 }
 
 // --- Day detail: sessions for a specific date (KEEP RAW — correlated subqueries) ---
@@ -59,6 +94,7 @@ export async function getDaySessionDetails(
             (SELECT COUNT(DISTINCT ws.exercise_id) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) as exercise_count
      FROM workout_sessions s
      WHERE s.completed_at IS NOT NULL
+       AND s.kind = 'workout'
        AND date(s.started_at / 1000, 'unixepoch', 'localtime') = ?
      ORDER BY s.started_at ASC`,
     [dateStr]
@@ -110,6 +146,7 @@ export async function getWorkoutDatesForStreak(): Promise<string[]> {
     .where(
       and(
         isNotNull(workoutSessions.completed_at),
+        sql`${workoutSessions.kind} = 'workout'`,
         gte(workoutSessions.started_at, cutoff)
       )
     )

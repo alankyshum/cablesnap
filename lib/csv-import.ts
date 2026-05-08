@@ -1,5 +1,5 @@
 /**
- * CSV import pipeline — parse competitor CSV files into normalized sessions.
+ * CSV import pipeline — parse competitor and CableSnap workout CSV files into normalized sessions.
  * BLD-890
  */
 import Papa from "papaparse";
@@ -24,6 +24,10 @@ export type ImportedSession = {
   name: string;
   durationSeconds: number | null;
   sets: ImportedSet[];
+  /** BLD-1089: optional session subtype for CableSnap CSV re-imports. */
+  kind?: string | null;
+  day_session_exercise_id?: string | null;
+  day_session_date?: string | null;
 };
 
 export type CsvParseResult = {
@@ -115,6 +119,40 @@ export function parseCsvExport(
   return parseWithFormat(parsed.data, format, headers);
 }
 
+function buildSession({
+  date,
+  name,
+  rows: sessionRows,
+}: {
+  date: number;
+  name: string;
+  rows: ParsedCsvRow[];
+}): ImportedSession {
+  const durations = sessionRows.map((r) => r.durationSeconds).filter((d): d is number => d !== null);
+  const durationSeconds = durations.length > 0 ? Math.max(...durations) : null;
+  const sets: ImportedSet[] = sessionRows.map((row) => ({
+    exerciseRawName: row.exerciseName,
+    matchedExerciseId: null,
+    matchConfidence: null,
+    weight: row.weight !== null ? Math.max(0, row.weight) : null,
+    reps: row.reps !== null ? Math.max(0, row.reps) : null,
+    setNumber: row.setNumber,
+    rpe: row.rpe,
+    durationSeconds: row.durationSeconds,
+    notes: row.notes,
+  }));
+  const firstRow = sessionRows[0];
+  return {
+    date,
+    name,
+    durationSeconds,
+    sets,
+    kind: firstRow?.kind ?? "workout",
+    day_session_exercise_id: firstRow?.daySessionExerciseId ?? null,
+    day_session_date: firstRow?.daySessionDate ?? null,
+  };
+}
+
 function parseWithFormat(
   rows: Record<string, string>[],
   format: FormatDefinition,
@@ -133,7 +171,7 @@ function parseWithFormat(
     }
   }
 
-  // Group rows into sessions by date + workout name
+  // Group rows into sessions by date + workout name + optional GTG metadata.
   const sessionMap = new Map<string, { date: number; name: string; rows: ParsedCsvRow[] }>();
 
   for (const row of parsedRows) {
@@ -142,9 +180,14 @@ function parseWithFormat(
       skippedRows++;
       continue;
     }
-    // Use date (day-level) + workout name as key for grouping
     const dayKey = new Date(dateMs).toISOString().split("T")[0];
-    const key = `${dayKey}|${row.workoutName}`;
+    const key = [
+      dayKey,
+      row.workoutName,
+      row.kind ?? "workout",
+      row.daySessionExerciseId ?? "",
+      row.daySessionDate ?? "",
+    ].join("|");
     const existing = sessionMap.get(key);
     if (existing) {
       existing.rows.push(row);
@@ -154,30 +197,7 @@ function parseWithFormat(
   }
 
   // Convert grouped rows to ImportedSessions
-  const sessions: ImportedSession[] = [];
-  for (const { date, name, rows: sessionRows } of sessionMap.values()) {
-    // Session duration: use the max value from rows (Strong/Hevy repeat session
-    // duration on each row; taking max avoids inflating by summing duplicates)
-    let durationSeconds: number | null = null;
-    const durations = sessionRows.map((r) => r.durationSeconds).filter((d): d is number => d !== null);
-    if (durations.length > 0) {
-      durationSeconds = Math.max(...durations);
-    }
-
-    const sets: ImportedSet[] = sessionRows.map((row) => ({
-      exerciseRawName: row.exerciseName,
-      matchedExerciseId: null,
-      matchConfidence: null,
-      weight: row.weight !== null ? Math.max(0, row.weight) : null,
-      reps: row.reps !== null ? Math.max(0, row.reps) : null,
-      setNumber: row.setNumber,
-      rpe: row.rpe,
-      durationSeconds: row.durationSeconds,
-      notes: row.notes,
-    }));
-
-    sessions.push({ date, name, durationSeconds, sets });
-  }
+  const sessions: ImportedSession[] = Array.from(sessionMap.values()).map(buildSession);
 
   // Sort sessions by date
   sessions.sort((a, b) => a.date - b.date);

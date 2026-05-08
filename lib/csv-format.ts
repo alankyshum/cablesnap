@@ -8,7 +8,7 @@ import type {
 
 export function workoutCSV(rows: WorkoutCSVRow[]): string {
   const header =
-    "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg";
+    "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,kind,day_session_exercise_id,day_session_date";
   const lines: string[] = [];
   for (const r of rows) {
     lines.push(
@@ -24,6 +24,9 @@ export function workoutCSV(rows: WorkoutCSVRow[]): string {
         csvEscape(r.set_notes),
         csvEscape(r.link_id),
         csvEscape(r.bodyweight_modifier_kg),
+        csvEscape(r.kind),
+        csvEscape(r.day_session_exercise_id),
+        csvEscape(r.day_session_date),
       ].join(",")
     );
   }

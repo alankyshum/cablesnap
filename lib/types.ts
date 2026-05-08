@@ -280,6 +280,12 @@ export type WorkoutSession = {
   import_batch_id: string | null;
   gym_id?: string | null;
   gym_name_at_log?: string | null;
+  /** BLD-1089: 'workout' (default) or 'day_session' (Grease-the-Groove). NULL treated as 'workout'. */
+  kind?: string | null;
+  /** BLD-1089: exercise ID this day_session row belongs to. */
+  day_session_exercise_id?: string | null;
+  /** BLD-1089: YYYY-MM-DD date key for the day_session row. */
+  day_session_date?: string | null;
 };
 
 export type SetType = "normal" | "warmup" | "dropset" | "failure";

@@ -1,12 +1,12 @@
 /**
- * CSV import format definitions for Strong, Hevy, and FitNotes.
+ * CSV import format definitions for Strong, Hevy, FitNotes, and CableSnap workout CSV.
  * Each format defines required headers, row parsing, and unit handling.
  * BLD-890
  */
 
 // ---- Types ----
 
-export type CsvFormat = "strong" | "hevy" | "fitnotes";
+export type CsvFormat = "strong" | "hevy" | "fitnotes" | "cablesnap";
 
 export type WeightUnit = "kg" | "lbs";
 
@@ -21,6 +21,10 @@ export type ParsedCsvRow = {
   rpe: number | null;
   durationSeconds: number | null;
   notes: string;
+  // BLD-1089: optional metadata for CableSnap CSV re-imports.
+  kind?: string | null;
+  daySessionExerciseId?: string | null;
+  daySessionDate?: string | null;
 };
 
 export type FormatDefinition = {
@@ -172,9 +176,43 @@ const fitnotes: FormatDefinition = {
   },
 };
 
+// ---- Format: CableSnap workout CSV ----
+
+const CABLESNAP_REQUIRED = ["date", "exercise", "set_number", "set_rpe", "set_notes", "link_id"];
+
+const cablesnap: FormatDefinition = {
+  name: "cablesnap",
+  label: "CableSnap",
+  requiredHeaders: CABLESNAP_REQUIRED,
+  parseRow(row) {
+    const exerciseName = row["exercise"]?.trim();
+    if (!exerciseName) return null;
+    const kind = row["kind"]?.trim() || "workout";
+    const daySessionExerciseId = row["day_session_exercise_id"]?.trim() || null;
+    const daySessionDate = row["day_session_date"]?.trim() || null;
+    return {
+      date: daySessionDate || row["date"] || "",
+      workoutName: kind === "day_session" ? `GTG: ${exerciseName}` : "Imported Workout",
+      exerciseName,
+      setNumber: parseInt_(row["set_number"]) ?? 1,
+      weight: parseFloat_(row["weight"]),
+      reps: parseInt_(row["reps"]),
+      rpe: parseFloat_(row["set_rpe"]),
+      durationSeconds: parseInt_(row["duration_seconds"]),
+      notes: row["set_notes"]?.trim() ?? row["notes"]?.trim() ?? "",
+      kind,
+      daySessionExerciseId,
+      daySessionDate,
+    };
+  },
+  detectWeightUnit() {
+    return "kg";
+  },
+};
+
 // ---- Registry ----
 
-export const CSV_FORMATS: FormatDefinition[] = [strong, hevy, fitnotes];
+export const CSV_FORMATS: FormatDefinition[] = [cablesnap, strong, hevy, fitnotes];
 
 /**
  * Detect which CSV format matches the given headers.

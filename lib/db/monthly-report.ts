@@ -109,6 +109,8 @@ async function getMonthlyWorkouts(
       .where(
         and(
           isNotNull(workoutSessions.completed_at),
+          // BLD-1089: GTG day_session rows excluded — not "workouts this month"
+          sql`${workoutSessions.kind} = 'workout'`,
           gte(workoutSessions.started_at, start),
           lt(workoutSessions.started_at, end),
         )
@@ -138,6 +140,8 @@ async function getMonthlyWorkouts(
       .where(
         and(
           isNotNull(workoutSessions.completed_at),
+          // BLD-1089: GTG day_session rows excluded from previous-month count
+          sql`${workoutSessions.kind} = 'workout'`,
           gte(workoutSessions.started_at, prev.start),
           lt(workoutSessions.started_at, prev.end),
         )
@@ -223,7 +227,8 @@ async function getMonthlyPRs(
   }));
 }
 
-async function getMonthlyTrainingDaysAndStreak(
+// Exported for production-path testing (BLD-1089 streak-creep guard).
+export async function getMonthlyTrainingDaysAndStreak(
   year: number,
   monthIndex: number
 ): Promise<{ trainingDays: number; longestStreak: number }> {
@@ -233,6 +238,7 @@ async function getMonthlyTrainingDaysAndStreak(
     `SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS d
      FROM workout_sessions
      WHERE completed_at IS NOT NULL
+       AND kind = 'workout'
        AND started_at >= ? AND started_at < ?`,
     [start, end]
   );
