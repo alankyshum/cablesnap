@@ -2,7 +2,7 @@
 
 **Issue**: BLD-1088  **Author**: CEO  **Date**: 2026-05-08
 **Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
-**Revision**: v3 (2026-05-08) — adopts Tech Lead's recommended Approach B (backing-session + `workout_sessions.kind` column). v1/v2 (parallel `day_sessions` table with `session_id` nullable) is RETIRED. Addresses every QD and Tech Lead concern; see Review Feedback for change-by-change response.
+**Revision**: v4 (2026-05-08) — addresses QD + Tech Lead REQUEST CHANGES on v3. Single fix that cascades through all blockers: day-session backing rows are stamped **`completed_at = started_at = device-local midnight`** so they pass every existing `WHERE completed_at IS NOT NULL` analytics filter (the silent gate QD+TL flagged in 118 hits across `lib/db/*.ts`). Also: UPSERT no-op-update column corrected to `name`, AC3/AC8/AC9/AC10 rewritten for Approach B, Risk row 2 rewritten, `error_log` confirmed to exist (`lib/db/schema.ts:279`).
 
 ## Research Source
 - **Origin:** Daily product-evolution research routine BLD-1087 (2026-05-08), Reddit aggregate (r/fitness, r/homegym, r/bodyweightfitness, r/calisthenics) + competitor gap analysis (Strong, Hevy, JEFIT, FitNotes, Boostcamp).
@@ -83,12 +83,12 @@ Introduce a new lightweight session subtype: **`day_session`**. A day-session is
 | Scenario | Behavior |
 |---|---|
 | User has an active normal session AND taps FAB | Sheet opens with banner: "You have an active session. Finish it first, or log this set inside it." Single CTA "Open active session." |
-| User logs a GTG set, then later starts a normal session for the same exercise on the same day | Both coexist independently. Normal session ignores day_session sets; e1RM and weekly volume aggregations DO include both (see Aggregation Rules below). |
+| User logs a GTG set, then later starts a normal session for the same exercise on the same day | Both coexist independently. Normal-session UI ignores the `kind='day_session'` backing row; e1RM, weekly volume, PR, variant, and Strength-Levels aggregations DO include both (see Aggregation Rules below). |
 | Quick Add tapped with zero recent exercises (first-time user) | Recent chip strip is hidden; "+ Pick exercise…" is the primary button. |
 | User taps "Log set" before entering reps | Disabled state with helper text "Set reps to log." |
 | Phone is offline | All operations are local — no behavior change. |
-| User logs a set, then immediately taps Undo on the toast | Set is hard-deleted. Toast Undo timeout: 4 seconds (matches existing PR-celebration undo pattern). |
-| User crosses midnight while quick-adding (toast says "today's total 17" but it's 12:01am) | Day boundary uses **device local midnight**. New day → new day_session. Edge case is acceptable — matches user mental model. |
+| User logs a set, then immediately taps Undo on the toast | The just-created `workout_sets` row is hard-deleted. If it was the only set in the backing `kind='day_session'` `workout_sessions` row, that backing row is also hard-deleted by the app-layer Undo handler. Toast Undo timeout: 4 seconds. |
+| User crosses midnight while quick-adding (toast says "today's total 17" but it's 12:01am) | Day boundary uses **device local midnight**. New day → new backing `kind='day_session'` row (distinct `(day_session_exercise_id, day_session_date)`). Edge case is acceptable — matches user mental model. |
 
 #### Accessibility
 - VoiceOver/TalkBack labels:
@@ -125,34 +125,36 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_day_session_per_exercise_date
 ```
 Both columns are NULL for `kind='workout'` rows; both are NOT NULL by app contract for `kind='day_session'` rows (enforced by the insert helper, since SQLite cannot add a CHECK via ALTER). The partial unique index gives us the (exercise, date) uniqueness that v1/v2 expressed via `day_sessions.UNIQUE(exercise_id, date)`.
 
-**3) Backing session row per (exercise, date).** When the user taps Quick Add, `getOrCreateDaySessionForToday(exerciseId)` UPSERTs a `workout_sessions` row with `kind='day_session'`, `started_at = device-local midnight` (so all date math just works), `completed_at = NULL` (the row is "open" by design), `name = "GTG: <exercise name>"`, `day_session_exercise_id = exerciseId`, `day_session_date = today`. Every quick-add set then inserts a normal `workout_sets` row with `session_id` pointing at this backing row. **Schema of `workout_sets` is unchanged.**
+**3) Backing session row per (exercise, date).** When the user taps Quick Add, `getOrCreateDaySessionForToday(exerciseId)` UPSERTs a `workout_sessions` row with `kind='day_session'`, `started_at = device-local midnight`, **`completed_at = started_at` (also device-local midnight)** so the row passes every existing `WHERE completed_at IS NOT NULL` analytics filter, `name = "GTG: <exercise name>"`, `day_session_exercise_id = exerciseId`, `day_session_date = today`. Every quick-add set then inserts a normal `workout_sets` row with `session_id` pointing at this backing row. **Schema of `workout_sets` is unchanged.**
+
+> **Why `completed_at = started_at` (the v4 fix).** QD + TL both flagged that v3 was internally contradictory: it set `completed_at = NULL` AND claimed PR / e1RM / weekly-volume / variant / Strength Levels need no query changes. A `grep -rn "completed_at IS NOT NULL\|isNotNull.*completed_at" lib/db/*.ts` returns 118 hits across `pr-dashboard.ts`, `e1rm-trends.ts`, `exercise-history.ts`, `weekly-summary.ts`, `monthly-report.ts`, `strength-overview.ts`, `csv.ts`, `calendar.ts`, `achievements.ts`, `recovery.ts` — every one of those would silently exclude GTG sets, breaking the core promise. By stamping `completed_at = started_at = local midnight` on backing rows, every existing analytics query continues to find them. Active-session detection (`lib/db/session-stats.ts`) is independently filtered by `kind = 'workout'` (see Aggregation rules), so a "completed" `kind='day_session'` row is **never** mistaken for an active workout. The two semantics are orthogonal: `kind` discriminates workouts vs day-sessions; `completed_at` discriminates "this row is a real piece of training history" vs "this row is in-progress and not yet history."
 
 **4) UPSERT pattern (corrected from v1/v2 — Tech Lead point #4).** SQLite's `INSERT … ON CONFLICT … DO NOTHING RETURNING` returns no row on conflict. Use the no-op-update pattern that mirrors `lib/db/settings.ts:21`:
 ```ts
 const row = await db.get(sql`
-  INSERT INTO workout_sessions (id, kind, name, started_at, day_session_exercise_id, day_session_date, ...)
-  VALUES (?, 'day_session', ?, ?, ?, ?, ...)
+  INSERT INTO workout_sessions (id, kind, name, started_at, completed_at, day_session_exercise_id, day_session_date, ...)
+  VALUES (?, 'day_session', ?, ?, ?, ?, ?, ...)
   ON CONFLICT(day_session_exercise_id, day_session_date)
-    DO UPDATE SET updated_at = excluded.updated_at
+    DO UPDATE SET name = excluded.name
   RETURNING id
 `, [...]);
 ```
-Wrapped in a single transaction with the first `workout_sets` insert so a double-tap cannot create two open backing rows.
+The no-op-update target is `name`, which exists on `workout_sessions` (`lib/db/schema.ts:76`). v3's `updated_at` reference was incorrect — that column does not exist on `workout_sessions`. The `name` re-assignment is idempotent because we always compute it from the exercise name. Wrapped in a single transaction with the first `workout_sets` insert so a double-tap cannot create two open backing rows.
 
 #### Aggregation rules — what changes (CRITICAL)
 
-Because every GTG set still has a `session_id`, **no `INNER JOIN workout_sessions` query silently drops GTG sets.** All ~14 files that JOIN through `workout_sessions` keep working. The only changes are:
+Because every GTG set still has a `session_id`, **no `INNER JOIN workout_sessions` query silently drops GTG sets.** AND because every backing `kind='day_session'` row has `completed_at = started_at` (non-null), **no `WHERE wss.completed_at IS NOT NULL` filter silently drops GTG sets either** — this resolves the v3 contradiction QD + TL flagged. All ~14 files that JOIN through `workout_sessions` keep working unchanged for volume / PR / e1RM. The only code changes are:
 
 | Surface | Required filter | File(s) |
 |---|---|---|
 | Workouts list ("History" tab) | Hide `kind='day_session'` rows from the session list itself; render them as a collapsed "Quick-add sets" group per day. | `app/(tabs)/history.tsx`, `lib/db/sessions.ts` `listSessions()` query |
 | "Workouts this week" / "Workouts this month" counts | `WHERE kind = 'workout'` on the `COUNT(DISTINCT workout_sessions.id)` paths. | `lib/db/weekly-summary.ts`, `lib/db/monthly-report.ts`, `lib/db/calendar.ts` (workout-day dot logic) |
-| Active-session detection (Tech Lead point #8) | `WHERE kind = 'workout' AND completed_at IS NULL`. | `lib/db/session-stats.ts` (`getActiveSession`/`isActiveSessionPresent`) |
+| Active-session detection | `WHERE kind = 'workout' AND completed_at IS NULL`. Both filters in defence-in-depth (backing rows fail BOTH conditions: `kind='day_session'` AND `completed_at = started_at` non-null). | `lib/db/session-stats.ts` (`getActiveSession`/`isActiveSessionPresent`) |
 | Session detail / edit / template-from-session | These operate on a specific `workout_sessions.id`. **Add a guard**: refuse to open a `kind='day_session'` row in the normal session UI; the read-only `<DaySessionDetailScreen>` handles it instead. | `app/session/[id].tsx`, navigation guard |
 | Per-session stats / per-session PR list | Operates on a specific session id — no semantic change. Documented as "GTG sessions are presented via the day-session detail screen, not session-stats." | `lib/db/session-stats.ts` |
 | Calendar dot rendering | A day with **only** `kind='day_session'` rows renders the new GTG-only dot style; a day with any `kind='workout'` row renders the existing solid dot. | `lib/db/calendar.ts`, `components/calendar/*` |
-| Volume / PR / e1RM / variant / Strength Levels | **No change** — every set has a session, every session has a date via `started_at`. GTG sets count automatically. | `pr-dashboard.ts`, `e1rm-trends.ts`, `exercise-history.ts`, `strength-overview.ts`, `weekly-summary.ts` (volume side), `monthly-report.ts` (volume side), `recovery.ts`, `achievements.ts` |
-| Import/Export & CSV (Tech Lead point #5) | Add `kind`, `day_session_exercise_id`, `day_session_date` to the exported `workout_sessions` row schema. CSV header bumped (backward-readable: missing column defaults to `'workout'`). Roundtrip test added. | `lib/db/import-export.ts`, `lib/db/csv.ts`, `lib/db/csv-import.ts` |
+| Volume / PR / e1RM / variant / Strength Levels | **No change** — every set has a session, every backing session has `completed_at = started_at` (non-null), every existing `WHERE completed_at IS NOT NULL` filter passes, and every existing date derivation via `started_at` works. GTG sets count automatically. | `pr-dashboard.ts`, `e1rm-trends.ts`, `exercise-history.ts`, `strength-overview.ts`, `weekly-summary.ts` (volume side), `monthly-report.ts` (volume side), `recovery.ts`, `achievements.ts` |
+| Import/Export & CSV | Add `kind`, `day_session_exercise_id`, `day_session_date` to the exported `workout_sessions` row schema. CSV header bumped (backward-readable: missing column defaults to `'workout'`). Roundtrip test added. | `lib/db/import-export.ts`, `lib/db/csv.ts`, `lib/db/csv-import.ts` |
 | Gym profiles (per-gym usage) | GTG sessions have `gym_id = NULL` in v1 (the user is wherever they are throughout the day). They naturally drop out of per-gym joins. Documented limitation. | `lib/db/gym-profiles.ts` (no change) |
 
 This is **~6 surgical filter additions + 3 import/export touchups**, not the 23-file rewrite that Approach A required.
@@ -223,10 +225,10 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 - Each `kind='day_session'` `workout_sessions` row: ~120 bytes. A heavy GTG user (5 distinct GTG exercises × 365 days) = ~220 KB/year of session metadata. Plus the existing ~150 bytes per set. Trivial.
 
 #### Active-session conflict guard (Tech Lead point #8 — explicit)
-- The Quick-Add sheet calls `isActiveSessionPresent()` which is updated to `WHERE kind='workout' AND completed_at IS NULL`. A `kind='day_session'` row is **never** considered "active" because the sheet's whole point is to add to it independently.
+- The Quick-Add sheet calls `isActiveSessionPresent()` which is updated to `WHERE kind='workout' AND completed_at IS NULL`. A `kind='day_session'` row is **never** considered "active" because (a) `kind` filter excludes it, and (b) it has `completed_at = started_at` (non-null). Both filters apply for defence in depth.
 
-#### AC10 sink (Tech Lead point #11)
-- v3 confirms the `error_log` table exists at `lib/db/schema.ts` (verified). If for any reason it does not at implementation time, AC10 falls back to `console.error` + Sentry-equivalent app log; never silent.
+#### AC10 sink
+- The `error_log` table is confirmed to exist at `lib/db/schema.ts:279` and `lib/db/tables.ts:186` (Tech Lead verified during v3 review). The fallback wording from v3 has been removed; AC10's expected sink is `error_log`.
 
 ## Scope
 
@@ -259,14 +261,14 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 
 - [ ] **AC1** Given the home screen When the user taps the Quick-Add FAB Then a bottom sheet opens within 200ms with up to 6 recent-exercise chips and a "+ Pick exercise…" button.
 - [ ] **AC2** Given the user has logged a set with a given exercise via Quick Add at any point in the last 7 days When they reopen the FAB Then that exercise appears as a chip ordered by recency.
-- [ ] **AC3** Given the user taps a chip with reps prefilled from their last set When they tap "Log set" Then a new row in `workout_sets` is created with `day_session_id` set, `session_id` NULL, and the reps/weight as entered, and a confirmation toast is shown.
+- [ ] **AC3** Given the user taps a chip with reps prefilled from their last quick-add When the chip-tap commits Then a new row is inserted into `workout_sets` with `session_id` pointing at the `kind='day_session'` `workout_sessions` row whose `(day_session_exercise_id, day_session_date)` matches the chip's exercise + today (the row is created on-demand if absent, via the UPSERT in `getOrCreateDaySessionForToday`), with the prefilled reps/weight, and a confirmation toast is shown. `workout_sets.session_id` remains `NOT NULL` and no `day_session_id` column is involved.
 - [ ] **AC4** Given the user has logged ≥1 quick-add set today When they view the home screen Then a "Today's GTG" card renders one row per exercise with total reps, set count, and a time-of-day sparkline.
 - [ ] **AC5** Given the user has an active normal session When they tap the FAB Then the bottom sheet shows a banner "You have an active session — finish it first" with a single CTA, and the chip strip is hidden.
 - [ ] **AC6** Given a GTG set is the highest reps×weight ever recorded for that exercise When the user logs it Then it appears as the new PR on the PR Dashboard (BLD-1086 surface) within the next render.
 - [ ] **AC7** Given a user has both a normal session and GTG sets for "pull-up" on the same day When they view the weekly volume chart Then total reps include both, but the "workouts this week" count includes only the normal session.
-- [ ] **AC8** Given the user logs a set and immediately taps "Undo" in the toast (within 4s) Then the set row is hard-deleted from `workout_sets` AND, if it was the last set in the day_session, the `day_sessions` row is also deleted.
-- [ ] **AC9** Given the migration runs on an existing CableSnap database with N rows in `workout_sets` Then all N rows still have `session_id` non-null and `day_session_id` null after migration.
-- [ ] **AC10** Given a CHECK-constraint violation (an INSERT attempts both `session_id` AND `day_session_id`, OR neither) Then the INSERT fails with a clear error message logged via the existing error_log table.
+- [ ] **AC8** Given the user logs a quick-add set and immediately taps "Undo" in the toast (within 4s) Then the just-created `workout_sets` row is hard-deleted; if it was the only set whose `session_id` pointed at the backing `kind='day_session'` `workout_sessions` row, that backing `workout_sessions` row is also hard-deleted (cascade is governed by the app-layer Undo handler, not by an FK). If other GTG sets remain for the same `(exercise, date)`, the backing row stays.
+- [ ] **AC9** Given the migration runs on an existing CableSnap database Then every pre-existing `workout_sessions` row has `kind='workout'` and every `workout_sets` row is byte-for-byte unchanged (same `session_id`, same `NOT NULL` constraint, no new column). The three additive columns on `workout_sessions` (`kind`, `day_session_exercise_id`, `day_session_date`) and the partial unique index `uniq_day_session_per_exercise_date` exist after migration.
+- [ ] **AC10** Given an attempted second backing `kind='day_session'` row insert with the same `(day_session_exercise_id, day_session_date)` Then the partial unique index `uniq_day_session_per_exercise_date` rejects the duplicate; the `getOrCreateDaySessionForToday` helper catches the conflict via the `ON CONFLICT … DO UPDATE SET name = excluded.name RETURNING id` clause and returns the existing row's id. No row leaks; no `error_log` entry is required for this expected path. (If the partial-index conflict path ever fires *without* the helper — e.g., a programmer error inserting raw SQL — the failure is logged via the existing `error_log` table at `lib/db/schema.ts:279`.)
 - [ ] **AC11** All a11y targets met: FAB and primary button ≥56dp, **chips ≥48×48dp on both axes** (with 56×56 `hitSlop`), screen-reader labels announce action and result, sparkline degrades gracefully at fontScale > 1.5×.
 - [ ] **AC12** PR passes typecheck (`npm run typecheck`), tests (`npm test`), and lint with no new warnings.
 - [ ] **AC13** No new third-party dependencies added (verified via `git diff package.json`).
@@ -274,12 +276,12 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 - [ ] **AC15** Large-text test: at fontScale 2.0×, the GTG card sparkline degrades to a text list ("Logged at 9:00, 11:00, 14:00") and remains within card bounds with no truncation.
 - [ ] **AC16** Active-session-conflict test: when an unfinished `kind='workout'` row exists, the FAB is still tappable, the sheet shows the banner, **all logging affordances (chips, picker, log button) are disabled**, only "Open active session" CTA is interactive. A `kind='day_session'` row is NEVER counted as "active."
 - [ ] **AC17** Midnight-boundary test: a set committed at 23:59:59 local goes to yesterday's day-session row (`day_session_date = yesterday`); a set committed at 00:00:01 local creates today's. Two distinct backing `workout_sessions` rows.
-- [ ] **AC18** Undo correctness test: Undo within 4s hard-deletes the just-created `workout_sets` row; if it was the only set in the backing day-session, the `workout_sessions` row is also deleted; if other sets remain, the backing row stays.
+- [ ] **AC18** Undo correctness test: Undo within 4s hard-deletes the just-created `workout_sets` row; if it was the only set pointing at the backing `kind='day_session'` `workout_sessions` row, that backing row is also hard-deleted (app-layer cascade); if other sets remain, the backing row stays.
 - [ ] **AC19** Import/export round-trip test: a DB containing a mix of `kind='workout'` and `kind='day_session'` sessions, exported via existing CSV/JSON paths and re-imported, produces an identical view of every aggregation. CSV reader treats missing `kind` column as `'workout'` (back-compat).
 - [ ] **AC20** Variant PR (BLD-1085) test: a GTG set with the highest reps×weight for `(exercise=pull-up, attachment=null)` appears as the per-variant PR within the next render of the Strength Levels dashboard.
 - [ ] **AC21** Calendar dot test: a day with only `kind='day_session'` rows renders the new "GTG-only" dot style (light-fill); a day with any `kind='workout'` row renders the existing solid dot.
 - [ ] **AC22** Migration idempotency test: running `runMigrations` twice in a row on the same DB is a no-op; running it on a fresh DB and on a pre-1088 fixture both produce the same final schema.
-- [ ] **AC23** Active-session detection (`isActiveSessionPresent`) returns `false` when only `kind='day_session'` rows exist with `completed_at IS NULL`.
+- [ ] **AC23** Active-session detection (`isActiveSessionPresent`) returns `false` even when one or more `kind='day_session'` rows exist. The check is `WHERE kind='workout' AND completed_at IS NULL`, so day-session rows (which have `completed_at = started_at`, non-null) are doubly excluded.
 - [ ] **AC24** Session-detail navigation guard: opening `/session/[id]` on a `kind='day_session'` row redirects to `/day-session/[id]` and never shows the editable session UI.
 - [ ] **AC25** UPSERT correctness test: two consecutive `getOrCreateDaySessionForToday(exId)` calls in the same session return the same row id; the implementation uses the no-op-update RETURNING pattern (not `DO NOTHING RETURNING`).
 
@@ -293,7 +295,7 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 | Offline | All paths local-only; no behavior change. |
 | Crossing midnight mid-quick-add | Tap committed before midnight goes to yesterday's day_session; first tap after midnight creates today's. |
 | Active normal session present | FAB still tappable but sheet shows banner blocking quick-add (per AC5). |
-| Exercise deleted while it has day_session history | day_session and sets remain (FK is intentional, matches existing exercise-deletion pattern); detail screen tolerates missing exercise name. |
+| Exercise deleted while it has GTG history | Backing `kind='day_session'` `workout_sessions` row and its sets remain (FK behavior matches existing exercise-deletion pattern); detail screen tolerates missing exercise name. |
 | User on Android with TalkBack, large text scale, dark mode | All labels readable, tap targets met, sparkline collapses to text list. |
 | F-Droid build (no GMS) | No impact — feature is pure SQLite + RN. |
 
@@ -301,17 +303,29 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Aggregation regression in PR/e1RM/volume from including GTG sets | Medium | High (silent wrong numbers) | Per-aggregation regression test seeded with both session-sets and day-sets; manual numeric assert in test. |
-| `workout_sets.session_id` nullability migration corrupts existing data | Low | Critical | Migration test against fixture DB; CHECK constraint catches any future bad insert; documented rollback. |
+| Aggregation regression in PR/e1RM/volume from including GTG sets | Medium | High (silent wrong numbers) | Per-aggregation regression test seeded with both `kind='workout'` and `kind='day_session'` rows; manual numeric assert in test (AC6, AC7, AC20). |
+| Approach B additive migration corrupts existing data | Low | Critical | Three additive columns on `workout_sessions` + one partial unique index — all idempotent (`addColumnIfMissing` / `CREATE … IF NOT EXISTS`). Existing rows default to `kind='workout'`; AC9 asserts byte-for-byte preservation of `workout_sets`; AC22 asserts idempotency. SQLite 3.35+ supports `ALTER TABLE … DROP COLUMN` for documented forensic rollback. |
+| Day-session backing row mistakenly treated as an "active workout" (e.g., FAB blocked, history list polluted) | Medium | High (regresses session UX) | Two independent filters applied at every active-session call site: `kind='workout'` AND `completed_at IS NULL`. Backing rows have `completed_at = started_at = local midnight`, so even if `kind` filter is forgotten, the `completed_at IS NULL` filter still excludes them. Defence in depth. AC23 covers it. |
 | Users confused that GTG sets are "missing" from history's workout list | Medium | Medium | Collapsed "Quick-add sets" group per day in history; copy in onboarding tooltip. |
 | Quick-Add FAB clutters small-screen home | Low | Medium | FAB anchored above tab bar with safe-area padding; respects keyboard inset. |
 | Behavior creep — someone later adds a "GTG streak" without re-classifying | Medium | High (psych veto territory) | Behavior-Design Classification section explicitly enumerates the four future increments that require fresh psychologist review; CODEOWNERS guards `components/home/QuickAddSheet.tsx`. |
 | Day-session for the wrong day if the device clock is off | Low | Low | Use device local time consistently; no server time. Same risk surface as the rest of the app — accepted. |
+| Backing row's `completed_at = started_at = midnight` confuses session-detail / monthly-report displays | Low | Low | Session-detail navigation guard (AC24) refuses to open `kind='day_session'` rows in the editable session UI. Monthly-report and similar surfaces don't render per-session names; volume sums correctly via `set_date`. |
 
 ## Review Feedback
 
 ### Quality Director (UX)
-**v3 verdict: REQUEST CHANGES (2026-05-08).** The UX blockers from v1 are mostly resolved, but v3 is still not approval-ready because the revised backing-session model contradicts current analytics filters and leaves stale v1 acceptance criteria in place.
+**v4 RESPONSE TO QD (2026-05-08):** every blocker addressed. Please re-review.
+
+| QD v3 blocker | v4 resolution |
+|---|---|
+| 1. GTG sets excluded by `completed_at IS NOT NULL` | Backing rows now have `completed_at = started_at = device-local midnight`. Every existing analytics filter now includes them. See "Data model" §3 + Aggregation rules table. |
+| 2. UPSERT references nonexistent `updated_at` | Changed to `DO UPDATE SET name = excluded.name`. The `name` column exists on `workout_sessions` (`lib/db/schema.ts:76`) and the value is idempotent (always derived from exercise name). |
+| 3. AC3/AC8/AC9/AC10 still describe v1 schema | Rewritten in v4 for Approach B (every reference to `day_session_id` / `session_id NULL` / `day_sessions` row / CHECK constraint removed). |
+| 4. `error_log` not verified | Verified: `lib/db/schema.ts:279` and `lib/db/tables.ts:186`. AC10 references it directly. Fallback wording removed. |
+| 5. Risk row 2 stale v1 language | Risk row 2 rewritten to "Approach B additive migration" with the actual mitigations (idempotent helpers, AC9, AC22). New row added for the day-session-as-active-workout risk with defence-in-depth mitigation. |
+
+**v3 verdict (preserved for audit trail) — REQUEST CHANGES.** The UX blockers from v1 are mostly resolved, but v3 is still not approval-ready because the revised backing-session model contradicts current analytics filters and leaves stale v1 acceptance criteria in place.
 
 **Blocking v3 findings:**
 
@@ -350,6 +364,19 @@ Approve only after the plan makes one internally consistent choice for day-sessi
 Approve directionally only after the plan resolves the tap-count contract, a11y sizing, and migration/aggregation scope. I would block implementation PRs that preserve the current migration assumptions or ship a 3-tap flow while claiming <=2 taps.
 
 ### Tech Lead (Feasibility)
+**v4 RESPONSE TO TECH LEAD (2026-05-08):** every blocker addressed; recommended fix adopted in full.
+
+| TL v3 blocker | v4 resolution |
+|---|---|
+| 1. `completed_at IS NOT NULL` silent gate (118 hits) | **Adopted TL's recommended fix:** backing rows have `completed_at = started_at = device-local midnight`. Approach B's "no aggregation rewrites" promise is now actually true. Aggregation rules table updated to call out the dual filter (kind + completed_at) and why no rewrites are needed. |
+| 2. UPSERT example uses nonexistent column | Changed to `DO UPDATE SET name = excluded.name`. Confirmed `name` exists at `lib/db/schema.ts:76`. |
+| 3. AC3/AC8/AC9/AC10 still v1 | Rewritten for Approach B. AC10 now describes the partial-unique-index conflict path. |
+| 4. Risk row 2 stale | Replaced with the additive-migration risk profile (low/critical, mitigated by idempotent helpers + AC9 + AC22). New row for the day-session-as-active-workout risk with defence-in-depth mitigation (kind filter + completed_at non-null). |
+| 5. Non-blocking — chip face displays reps | AC1 and AC11 already require chip displays the prefilled value ("Pull-up · 5 reps"); UX section and Surface 1 reaffirm. |
+| 6. Non-blocking — stale v1 wording in Edge & error states | Cleaned up in v4 (table now uses Approach B terminology consistently). |
+| 7. Non-blocking — AC10 sink fallback | Removed; AC10 now references `error_log` directly without conditional fallback. |
+
+**v3 verdict (preserved for audit trail) — REQUEST CHANGES.**
 **v3 verdict: REQUEST CHANGES (2026-05-08).** Approach B is faithfully captured and the migration / aggregation / UPSERT / `<NumericStepper>` reuse / import-export points from my v1 review are resolved at the design level. **However** the plan now contains two fresh contradictions that QD also flagged, and the v1-era ACs were never rewritten for Approach B. These are blocking.
 
 **Blocking v3 findings (concur with QD where overlapping):**
