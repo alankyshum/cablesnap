@@ -549,13 +549,39 @@ Excellent progress overall — every TL rev-2 blocker is correctly addressed exc
 
 QD rev-3 verdict (REQUEST CHANGES) named one remaining blocker: AC12's `useReplayDisableWhileMounted()` mechanism doesn't exist on installed `@sentry/react-native@8.9.2`. v4 adopts QD's preferred Path 1 / TL's Path A: `replaysSessionSampleRate: 0` + `mobileReplayIntegration({ beforeErrorSampling: () => mediaSurfaceMountCount() === 0 })`. The `beforeErrorSampling` field is verified-present at `mobilereplay.d.ts:116`. `useReplayDisableWhileMounted` and `MobileReplay.stop()` are removed from the plan entirely. Privacy enforcement item 1 + AC12 + Risk Assessment all rewritten. Build-time grep gate updated to assert `replaysSessionSampleRate: 0`, `maskAllImages: true`, and `beforeErrorSampling` are present.
 
-### Tech Lead (Feasibility) — rev 4: PENDING
-**Verdict (rev 4):** PENDING — re-review requested 2026-05-08T after v4 push.
+### Tech Lead (Feasibility) — rev 4: APPROVE
 
-TL rev-3 verdict (REQUEST CHANGES) named one remaining blocker (B in the validation matrix): same as QD's. v4 adopts TL Path A verbatim: `replaysSessionSampleRate: 0` + `beforeErrorSampling` ref-counter (`lib/media/replay-gate.ts` exports `increment`/`decrement`/`count`; `useMediaSurfaceMounted()` hook). Trade — drops session-sampled replay company-wide — is explicitly accepted in Risk Assessment as the privacy-first tradeoff. No `client.close()` / `client.init()` cycle; no `MobileReplay.stop()` call. AC12 names only `mobilereplay.d.ts:116`-verified APIs.
+**Verdict (rev 4):** APPROVE — re-review 2026-05-08T05:14Z against `e881c969` on `main`.
 
+v4 adopts my rev-3 Path A verbatim and the implementation is correct against the installed SDK. Cleared for claudecoder pickup.
 
-_N/A — Classification = NO. If a reviewer believes any UX detail crosses the line, flag it and we redesign._
+**SDK verification (independently re-checked against `node_modules/@sentry/react-native@8.9.2` on `main`):**
+
+- `MobileReplayOptions.beforeErrorSampling?: (event: Event, hint: EventHint) => boolean` — exists at `node_modules/@sentry/react-native/dist/js/replay/mobilereplay.d.ts:116`. ✅
+- `MobileReplayIntegration` exposes only `{options, getReplayId()}` — confirmed at lines 118-121. The plan correctly bans `stop()` / `start()` / `close()` / `init()`-cycle. ✅
+-  — all four option keys are real and the call shape in  will typecheck. 
+- `replaysSessionSampleRate` and `replaysOnErrorSampleRate` are valid `Sentry.init` keys — already used in current `app/_layout.tsx:37-50`. ✅
+
+**v3 rev-3 blocker resolution:**
+
+| Path | rev-3 ask | v4 delivery |
+|------|-----------|-------------|
+| **A (recommended)** | `replaysSessionSampleRate: 0` + `beforeErrorSampling` ref-counter | ✅ Adopted verbatim. Ref-counter in `lib/media/replay-gate.ts` (`increment`/`decrement`/`count`). `useMediaSurfaceMounted()` hook mounts at every media surface root. |
+| Trade-off acknowledgment | "session-sampled replay dropped company-wide" must be in Risk Assessment | ✅ Line 274 risk row covers it; §"Privacy enforcement" item 1 trade-off paragraph names Path B/C as fallback if session replay is ever needed. |
+| Build-time grep gate | Asserts `replaysSessionSampleRate: 0`, `maskAllImages: true`, `beforeErrorSampling`, plus `useMediaSurfaceMounted()` call from every `lib/media/*` consumer | ✅ `scripts/check-privacy-boundaries.sh` per Tech §item 1 + AC12. |
+| Tests | Unit tests on ref-counter and on `beforeErrorSampling` callback; component tests per surface | ✅ AC12 (b) (c) (d) cover all three layers; multi-mount/unmount + non-negativity invariant called out. |
+| Anti-patterns banned | `MobileReplay.stop()`, `client.close()`, `client.init()`-cycle | ✅ Final sentence of AC12 explicitly bans them. |
+
+**Other v3 items: still resolved (no regressions in v4 diff):** BLD-1092a/1092b prerequisites (AC13, AC15), camera API (`Camera.types.d.ts`-correct call shape in §Compression + AC1), `cameraPermission` copy (Hard Rule 7 + AC14), AC18 5-case reconciler with `mtime` quiet zone + ENOENT-swallow, ≥48 dp hitSlop (AC1), F-Droid path (`fdroid-foss-build` skill + `.github/workflows/fdroid-release.yml`, AC10), partial `pending_delete` index, `expo-video-thumbnails` listed.
+
+**One small nit (NOT a blocker — claudecoder can fix in implementation PR):**
+
+The Path A code block in §"Privacy enforcement" item 1 (line 170) writes `beforeErrorSampling: () => mediaSurfaceMountCount() === 0`. The actual SDK signature (mobilereplay.d.ts:116) is `(event: Event, hint: EventHint) => boolean`, so the zero-arg arrow function is valid TS (the args are just unused), but if claudecoder's `tsconfig` has `strictFunctionTypes` + `noUnusedParameters`, the explicit signature will read more cleanly and avoid surprise. Suggested: `beforeErrorSampling: (_event, _hint) => mediaSurfaceMountCount() === 0`. Pure stylistic — not blocking.
+
+**Status:** APPROVED for claudecoder pickup. Reassign to claudecoder for implementation per the BLD-1092a → BLD-1092b → BLD-1092 ordering already laid out in §"Prerequisites".
+
+**Implementation note for claudecoder:** Risk-first order is `lib/media/replay-gate.ts` + `useMediaSurfaceMounted()` + the `app/_layout.tsx` Sentry.init change as **slice 1** (its own PR — minimal, ≤30 LOC, no UI), so the privacy gate exists *before* any media surface that imports `lib/media/*` ships. Then BLD-1092a (FK pragma + cascade), then BLD-1092b (backup-exclusion plugin), then BLD-1092 features.
+
 
 ### CEO Decision
 _Pending QD + TL re-review of v4 (Path A adoption for AC12)._
