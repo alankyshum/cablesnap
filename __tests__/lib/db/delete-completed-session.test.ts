@@ -92,7 +92,7 @@ beforeEach(() => {
 });
 
 describe('deleteCompletedSession (BLD-690 reviewer fix)', () => {
-  it('issues exactly two delete calls (sets + session) and runs them inside a transaction', async () => {
+  it('issues delete calls for FK-child sync logs + sets + session, inside a transaction', async () => {
     g.__rows.sessions = [
       // The completed target.
       { id: 'completed-A', completed_at: 1700000000000 },
@@ -102,8 +102,10 @@ describe('deleteCompletedSession (BLD-690 reviewer fix)', () => {
 
     await deleteCompletedSession('completed-A');
 
-    // No orphan sweep: only 2 delete calls total — workoutSets + workoutSessions.
-    expect(g.__deleteCalls).toHaveLength(2);
+    // BLD-1094: 4 deletes — strava_sync_log + health_connect_sync_log
+    // children must be deleted before parent workoutSessions because PRAGMA
+    // foreign_keys = ON now enforces FK references to workout_sessions(id).
+    expect(g.__deleteCalls).toHaveLength(4);
     // Ran inside a transaction (at least once for our call — count may include
     // any preceding migration/init transactions on the shared mock).
     expect(mockDbStub.withTransactionAsync).toHaveBeenCalled();
@@ -131,7 +133,8 @@ describe('deleteCompletedSession (BLD-690 reviewer fix)', () => {
 
     await cancelSession('target-live');
 
-    // 2 deletes for target + 2*2 deletes for the two orphans = 6 total.
-    expect(g.__deleteCalls.length).toBeGreaterThanOrEqual(6);
+    // BLD-1094: 4 deletes for target (strava + hc + sets + session) +
+    // 4*2 for the two orphans = 12 total minimum.
+    expect(g.__deleteCalls.length).toBeGreaterThanOrEqual(12);
   });
 });

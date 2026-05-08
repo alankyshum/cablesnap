@@ -167,11 +167,20 @@ describe("Strava Integration — Session & Startup", () => {
     expect(finishFn.indexOf("completeSession(id!)")).toBeLessThan(finishFn.indexOf("syncSessionToStrava"));
     expect(finishFn).toContain("Strava sync failed");
     expect(sessionSrc).toContain("Synced to Strava");
-    // DB function should not reference Strava
+    // DB function should not reference Strava SDK / business logic.
+    // BLD-1094: lib/db/sessions.ts is now allowed to import the
+    // stravaSyncLog / healthConnectSyncLog schema tables so that
+    // deleteCompletedSession / cancelSession can cascade-delete the
+    // FK child rows (strava_sync_log → workout_sessions, no ON DELETE
+    // CASCADE in tables.ts) under PRAGMA foreign_keys = ON. The boundary
+    // we still enforce is "no Strava business logic" — no syncSessionToStrava
+    // calls, no Strava OAuth/refresh, no toast messages, no fetch().
     const sessionDbSrc = fs.readFileSync(
       path.resolve(__dirname, "../../lib/db/sessions.ts"), "utf-8"
     );
-    expect(sessionDbSrc).not.toContain("strava");
+    expect(sessionDbSrc).not.toContain("syncSessionToStrava");
+    expect(sessionDbSrc).not.toContain("strava.com");
+    expect(sessionDbSrc).not.toMatch(/Strava sync failed|Synced to Strava/);
   });
 
   it("reconciles queue on native startup with error handling", () => {
