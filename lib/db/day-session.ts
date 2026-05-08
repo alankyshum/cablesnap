@@ -328,3 +328,41 @@ export async function listDaySessionsForDate(dateKey: string): Promise<{
     [dateKey]
   );
 }
+
+export type DaySessionEntry = {
+  id: string;
+  exercise_id: string;
+  exercise_name: string;
+  total_reps: number;
+  set_count: number;
+  date_key: string;
+};
+
+/**
+ * List recent GTG day sessions grouped by date, for the last N days.
+ * Used by history tab to render "Quick-add sets" groups.
+ */
+export async function listRecentDaySessions(
+  days = 30,
+  now: Date = new Date()
+): Promise<DaySessionEntry[]> {
+  const since = localMidnightMs(new Date(now.getTime() - days * 24 * 60 * 60 * 1000));
+  const db = await getDatabase();
+  return db.getAllAsync<DaySessionEntry>(
+    `SELECT
+       wss.id,
+       wss.day_session_exercise_id AS exercise_id,
+       COALESCE(e.name, 'Deleted Exercise') AS exercise_name,
+       COALESCE(SUM(ws.reps), 0) AS total_reps,
+       COUNT(ws.id) AS set_count,
+       wss.day_session_date AS date_key
+     FROM workout_sessions wss
+     LEFT JOIN workout_sets ws ON ws.session_id = wss.id AND ws.completed = 1
+     LEFT JOIN exercises e ON e.id = wss.day_session_exercise_id
+     WHERE wss.kind = 'day_session'
+       AND wss.started_at >= ?
+     GROUP BY wss.id
+     ORDER BY wss.started_at DESC`,
+    [since]
+  );
+}

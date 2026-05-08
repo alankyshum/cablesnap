@@ -404,3 +404,25 @@ export {
   getDailyTotalMl,
 } from "./hydration";
 export type { WaterLog } from "./hydration";
+
+export {
+  addQuickAddSet,
+  removeQuickAddSet,
+  getTodayQuickAddSummary,
+  listRecentQuickAddExercises,
+  listDaySessionsForDate,
+  listRecentDaySessions,
+  localMidnightMs,
+  todayDateKey,
+} from "./day-session";
+export type {
+  QuickAddExerciseChip,
+  TodayGtgSummaryRow,
+  AddQuickAddSetParams,
+  AddQuickAddSetResult,
+  DaySessionEntry,
+} from "./day-session";
+
+export {
+  getMonthlyGtgOnlyDates,
+} from "./calendar";

@@ -109,6 +109,8 @@ async function getMonthlyWorkouts(
       .where(
         and(
           isNotNull(workoutSessions.completed_at),
+          // BLD-1089: GTG day_session rows excluded — not "workouts this month"
+          sql`${workoutSessions.kind} = 'workout'`,
           gte(workoutSessions.started_at, start),
           lt(workoutSessions.started_at, end),
         )
@@ -138,6 +140,8 @@ async function getMonthlyWorkouts(
       .where(
         and(
           isNotNull(workoutSessions.completed_at),
+          // BLD-1089: GTG day_session rows excluded from previous-month count
+          sql`${workoutSessions.kind} = 'workout'`,
           gte(workoutSessions.started_at, prev.start),
           lt(workoutSessions.started_at, prev.end),
         )

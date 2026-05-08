@@ -85,6 +85,13 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     if (!sess) return;
     setSession(sess);
 
+    // BLD-1089: day_session rows must never open in the editable session UI.
+    // Redirect to the read-only day-session detail screen (AC24).
+    if (sess.kind === "day_session") {
+      router.replace(`/day-session/${id}`);
+      return;
+    }
+
     if (sess.completed_at) {
       router.replace(`/session/detail/${id}`);
       return;

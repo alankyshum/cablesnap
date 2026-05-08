@@ -29,6 +29,8 @@ export async function getMonthlyWorkoutDates(
   const end = new Date(year, month + 1, 1).getTime();
 
   const db = await getDrizzle();
+  // BLD-1089: filter to kind='workout' only — day_session rows are not "workouts"
+  // for calendar dot purposes (they get their own GTG-only dot style).
   const rows = await db
     .select({
       workout_date: sql<string>`date(${workoutSessions.started_at} / 1000, 'unixepoch', 'localtime')`,
@@ -39,6 +41,7 @@ export async function getMonthlyWorkoutDates(
     .where(
       and(
         isNotNull(workoutSessions.completed_at),
+        sql`${workoutSessions.kind} = 'workout'`,
         gte(workoutSessions.started_at, start),
         lt(workoutSessions.started_at, end)
       )
@@ -46,6 +49,36 @@ export async function getMonthlyWorkoutDates(
     .groupBy(sql`workout_date`);
 
   return rows as unknown as WorkoutDay[];
+}
+
+/**
+ * BLD-1089: dates in a month that have ONLY GTG (day_session) sets.
+ * Used to render the light-fill GTG-only dot on calendar days.
+ */
+export async function getMonthlyGtgOnlyDates(
+  year: number,
+  month: number
+): Promise<string[]> {
+  const start = new Date(year, month, 1).getTime();
+  const end = new Date(year, month + 1, 1).getTime();
+
+  const db = await getDrizzle();
+  const rows = await db
+    .select({
+      workout_date: sql<string>`date(${workoutSessions.started_at} / 1000, 'unixepoch', 'localtime')`,
+    })
+    .from(workoutSessions)
+    .where(
+      and(
+        isNotNull(workoutSessions.completed_at),
+        sql`${workoutSessions.kind} = 'day_session'`,
+        gte(workoutSessions.started_at, start),
+        lt(workoutSessions.started_at, end)
+      )
+    )
+    .groupBy(sql`workout_date`) as unknown as { workout_date: string }[];
+
+  return rows.map((r) => r.workout_date);
 }
 
 // --- Day detail: sessions for a specific date (KEEP RAW — correlated subqueries) ---
@@ -59,6 +92,7 @@ export async function getDaySessionDetails(
             (SELECT COUNT(DISTINCT ws.exercise_id) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) as exercise_count
      FROM workout_sessions s
      WHERE s.completed_at IS NOT NULL
+       AND s.kind = 'workout'
        AND date(s.started_at / 1000, 'unixepoch', 'localtime') = ?
      ORDER BY s.started_at ASC`,
     [dateStr]

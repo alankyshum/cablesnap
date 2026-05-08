@@ -1,5 +1,5 @@
 import { StyleSheet, View, FlatList, Pressable } from "react-native";
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
 import { Icon } from "@/components/ui/icon";
@@ -18,13 +18,25 @@ import { FilterBar } from "@/components/history/FilterBar";
 import { TemplateFilterSheet } from "@/components/history/TemplateFilterSheet";
 import { MuscleGroupFilterSheet } from "@/components/history/MuscleGroupFilterSheet";
 import { DateRangeFilterSheet } from "@/components/history/DateRangeFilterSheet";
+import { GtgDayGroup } from "@/components/history/GtgDayGroup";
+import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { useFocusRefetch } from "@/lib/query";
+import { listRecentDaySessions } from "@/lib/db/day-session";
+import type { DaySessionEntry } from "@/lib/db/day-session";
+import type { SessionRow } from "@/hooks/useHistoryData";
 
 const MIN_TOUCH_TARGET = 48;
+
+type WorkoutItem = { type: "workout" } & SessionRow;
+type GtgItem = { type: "gtg"; dateKey: string; dateLabel: string; entries: DaySessionEntry[] };
+type HistoryItem = WorkoutItem | GtgItem;
 
 function HistoryScreen() {
   const colors = useThemeColors();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
+  const router = useRouter();
   const h = useHistoryData();
   const renderSession = useSessionRenderer({ colors });
 
@@ -32,15 +44,73 @@ function HistoryScreen() {
   const [muscleSheetOpen, setMuscleSheetOpen] = useState(false);
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
 
+  const { data: recentGtg } = useQuery({
+    queryKey: ["gtg-history"],
+    queryFn: () => listRecentDaySessions(30),
+  });
+  useFocusRefetch(["gtg-history"]);
+
+  // Group GTG entries by date_key
+  const gtgByDate = useMemo(() => {
+    const map = new Map<string, DaySessionEntry[]>();
+    for (const entry of recentGtg ?? []) {
+      const arr = map.get(entry.date_key) ?? [];
+      arr.push(entry);
+      map.set(entry.date_key, arr);
+    }
+    return map;
+  }, [recentGtg]);
+
+  // Build merged list: workout sessions + GTG day groups, sorted by date descending.
+  // Only shown when not in filter mode (filters apply to workouts, not GTG).
+  const mergedData = useMemo((): HistoryItem[] => {
+    if (h.useFilterMode) {
+      return (h.filtered as SessionRow[]).map((s) => ({ type: "workout" as const, ...s }));
+    }
+
+    const workoutItems: WorkoutItem[] = (h.filtered as SessionRow[]).map((s) => ({ type: "workout" as const, ...s }));
+
+    // Build date label from YYYY-MM-DD
+    const gtgItems: GtgItem[] = Array.from(gtgByDate.entries()).map(([dateKey, entries]) => {
+      const [y, m, d] = dateKey.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      const dateLabel = date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      return { type: "gtg" as const, dateKey, dateLabel, entries };
+    });
+
+    // Merge: interleave by date. Workout items use started_at; GTG use midnight of date_key.
+    const allItems: HistoryItem[] = [...workoutItems, ...gtgItems];
+    allItems.sort((a, b) => {
+      const aTime = a.type === "workout" ? a.started_at : new Date(a.dateKey).getTime();
+      const bTime = b.type === "workout" ? b.started_at : new Date(b.dateKey).getTime();
+      return bTime - aTime;
+    });
+    return allItems;
+  }, [h.filtered, h.useFilterMode, gtgByDate]);
+
+  const renderItem = useCallback(({ item }: { item: HistoryItem }) => {
+    if (item.type === "gtg") {
+      return (
+        <GtgDayGroup
+          dateLabel={item.dateLabel}
+          entries={item.entries}
+          colors={colors}
+          onEntryPress={(sessionId) => router.push(`/day-session/${sessionId}`)}
+        />
+      );
+    }
+    return renderSession({ item: item as unknown as SessionRow });
+  }, [colors, renderSession, router]);
+
   const cellSize = Math.max(MIN_TOUCH_TARGET, Math.floor((layout.width - layout.horizontalPadding * 2) / 7));
 
   return (
     <>
       <FlatList
         testID="history-list"
-        data={h.filtered}
-        keyExtractor={(item) => item.id}
-        renderItem={renderSession}
+        data={mergedData}
+        keyExtractor={(item) => item.type === "gtg" ? `gtg-${item.dateKey}` : item.id}
+        renderItem={renderItem}
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight }}
         onEndReached={h.useFilteredQueryPath ? h.loadMoreFiltered : undefined}

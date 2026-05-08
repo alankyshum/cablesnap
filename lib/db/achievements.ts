@@ -19,12 +19,14 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
     bodyMeasurementCountRow,
   ] = await Promise.all([
     queryOne<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM workout_sessions WHERE completed_at IS NOT NULL"
+      // BLD-1089: kind='workout' excludes day_session backing rows
+      "SELECT COUNT(*) AS count FROM workout_sessions WHERE completed_at IS NOT NULL AND kind = 'workout'"
     ),
     query<{ date: string }>(
+      // BLD-1089: kind='workout' — GTG days don't count toward workout-date achievements
       `SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS date
        FROM workout_sessions
-       WHERE completed_at IS NOT NULL
+       WHERE completed_at IS NOT NULL AND kind = 'workout'
        ORDER BY date ASC`
     ),
     queryOne<{ count: number }>(
