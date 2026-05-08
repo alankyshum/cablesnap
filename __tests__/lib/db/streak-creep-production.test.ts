@@ -56,7 +56,8 @@ function createSchema(db: DatabaseSync) {
  * patch does not touch the WHERE clause being tested.
  */
 function makeDrizzleProxy(db: DatabaseSync) {
-  return drizzle(async (sqlStr: string, params: unknown[], method: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return drizzle(async (sqlStr: string, params: any[], method: string) => {
     const fixedSql = sqlStr.replace(
       /^(select DISTINCT )(.+?)( from )/i,
       (_, pre, expr, post) => `${pre}${expr} AS "d"${post}`
@@ -100,7 +101,8 @@ beforeEach(() => {
   createSchema(nodeDb);
   (helpers.getDrizzle as jest.Mock).mockResolvedValue(makeDrizzleProxy(nodeDb));
   (helpers.query as jest.Mock).mockImplementation(
-    async (sqlStr: string, params: unknown[]) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (sqlStr: string, params: any[]) =>
       nodeDb.prepare(sqlStr).all(...(params ?? []))
   );
   (helpers.queryOne as jest.Mock).mockResolvedValue(null);

@@ -46,7 +46,8 @@ function useQueryDb(db: InstanceType<typeof DatabaseSync>) {
  */
 function useDrizzleDb(db: InstanceType<typeof DatabaseSync>) {
   const proxyDb = proxyDrizzle(
-    async (sql: string, params: unknown[], method: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (sql: string, params: any[], method: string) => {
       // Add missing alias: `DISTINCT date(...)` → `DISTINCT date(...) AS "d"`
       const fixedSql = sql.replace(
         /(select\s+DISTINCT\s+date\([^)]+\))(\s+from)/i,
@@ -491,6 +492,7 @@ describe("Streak-creep guard — GTG days excluded from streak/training-day quer
 
   beforeEach(() => {
     helpers.getDrizzle.mockReset();
+    helpers.query.mockReset();
   });
 
   it("getWorkoutDatesForStreak excludes days with only GTG (day_session) rows", async () => {
@@ -522,7 +524,8 @@ describe("Streak-creep guard — GTG days excluded from streak/training-day quer
 
   it("getMonthlyTrainingDaysAndStreak excludes GTG-only days from training day count", async () => {
     const db = makeDb();
-    useDrizzleDb(db);
+    // getMonthlyTrainingDaysAndStreak uses query() (raw SQL), not getDrizzle
+    useQueryDb(db);
     const YEAR = 2026, MONTH = 4; // May (0-indexed)
 
     const gtgMs = midnightMs("2026-05-07");
@@ -539,9 +542,7 @@ describe("Streak-creep guard — GTG days excluded from streak/training-day quer
     ).run("s-wo", workoutMs, workoutMs + 3600_000);
 
     const result = await getMonthlyTrainingDaysAndStreak(YEAR, MONTH);
-    const dates = result.trainingDays ?? result.dates ?? [];
-    expect(dates).toContain("2026-05-08");
-    expect(dates).not.toContain("2026-05-07");
-    expect(dates).toHaveLength(1);
+    // GTG day must not inflate trainingDays — only the real workout should count
+    expect(result.trainingDays).toBe(1);
   });
 });
