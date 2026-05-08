@@ -80,6 +80,29 @@ module.exports = {
         complexity: "off",
       },
     },
+    {
+      // AC17: lib/media/* must not be imported from sync, CSV/export, API, or worker code.
+      files: [
+        "lib/sync/**",
+        "lib/db/csv-export.ts",
+        "lib/db/import-export.ts",
+        "app/api/**",
+        "workers/**",
+      ],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            patterns: [
+              {
+                group: ["**/lib/media*", "@/lib/media*"],
+                message: "lib/media/* must not be imported from sync, CSV export, API, or worker paths (AC17).",
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
   ignorePatterns: ["node_modules/", ".expo/", "dist/", "web-build/"],
 };

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { SetRow } from "./SetRow";
 import type { SetWithMeta, ExerciseGroup } from "./types";
-import type { TrainingMode } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 
 export type ExerciseGroupSetTableProps = {
@@ -39,6 +38,9 @@ export type ExerciseGroupSetTableProps = {
   timerDisplaySeconds?: number;
   onTimerStart?: (setId: string) => void;
   onTimerStop?: (setId: string) => void;
+  // BLD-1092: form-check video glyph
+  hasClipMap?: Record<string, boolean>;
+  onVideoGlyph?: (setId: string) => void;
 };
 
 export function ExerciseGroupSetTable({
@@ -50,6 +52,7 @@ export function ExerciseGroupSetTable({
   onOpenBodyweightGripPicker, onClearBodyweightGrip,
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
+  hasClipMap, onVideoGlyph,
 }: ExerciseGroupSetTableProps) {
   return (
     <>
@@ -90,6 +93,8 @@ export function ExerciseGroupSetTable({
             timerDisplaySeconds={isActiveSet ? timerDisplaySeconds : undefined}
             onTimerStart={onTimerStart}
             onTimerStop={onTimerStop}
+            hasClip={hasClipMap?.[set.id] ?? false}
+            onVideoGlyph={onVideoGlyph}
           />
         );
       })}

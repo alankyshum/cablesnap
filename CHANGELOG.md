@@ -22,6 +22,10 @@ marker) at release time.
 
 ## Unreleased
 
+- **Form Check Videos**: Record short video clips (up to 15 s) on each completed working set to review technique over time. Clips are stored locally only — never uploaded, never backed up to iCloud/Google (BLD-1092).
+- **Form Library**: "Form clips" tab in the exercise detail drawer shows all clips for an exercise reverse-chronologically with date, weight, and reps overlay (BLD-1092).
+- **Side-by-side comparison**: Compare any two form clips from your library in a split-screen view (BLD-1092).
+- **Storage panel**: Settings → Storage shows total clip size and count with a "Manage" shortcut (BLD-1092).
 - **Privacy**: form-clips/ directory excluded from iOS iCloud and Android Auto Backup via Expo config plugin — form-check videos stay on-device only (BLD-1095).
 - **Database integrity**: Enabled SQLite foreign-key enforcement on every connection so historic delete paths (workout history, CSV import undo, in-progress cancel) now correctly clean up Strava and Health Connect sync-log entries instead of leaving orphan rows.
 - **Grease-the-Groove mode**: Log scattered sets throughout the day without starting a workout — tap the floating Quick Add button, pick an exercise, confirm reps/weight, and get a 4-second undo toast. Daily GTG totals appear as a summary card on the home screen and a light-fill dot on the calendar.

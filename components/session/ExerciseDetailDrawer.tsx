@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import React, { useState } from "react";
+import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { Text } from "@/components/ui/text";
 import { MuscleMap } from "../../components/MuscleMap";
@@ -12,6 +12,7 @@ import { ExerciseDrawerStats } from "./ExerciseDrawerStats";
 import { ExerciseTutorialLink } from "../exercises/ExerciseTutorialLink";
 import { ExerciseInstructionsList } from "../exercises/ExerciseInstructionsList";
 import { ExerciseIllustrationCards } from "../exercises/ExerciseIllustrationCards";
+import { FormLibraryTab } from "./FormLibraryTab";
 import type { Exercise } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -20,11 +21,17 @@ type Props = {
   unit?: "kg" | "lb";
 };
 
+type Tab = "details" | "clips";
+
 export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
   const colors = useThemeColors();
   const layout = useLayout();
   const profileGender = useProfileGender();
   const { width: screenWidth } = useWindowDimensions();
+  const [activeTab, setActiveTab] = useState<Tab>("details");
+
+  // Hide Form Clips tab on web (AC16).
+  const showClipsTab = Platform.OS !== "web";
 
   const musclesAndMeta = (
     <>
@@ -117,52 +124,100 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
   );
 
   return (
-    <BottomSheetFlatList
-      data={[]}
-      renderItem={null}
-      style={styles.detailBody}
-      contentContainerStyle={{ paddingBottom: 32 }}
-      ListHeaderComponent={
-        <>
-          {unit && (
-            <ExerciseDrawerStats exerciseId={exercise.id} unit={unit} />
-          )}
-          {layout.atLeastMedium ? (
+    <View style={{ flex: 1 }}>
+      {/* Tab bar */}
+      {showClipsTab && (
+        <View style={[styles.tabBar, { borderBottomColor: colors.outline }]}>
+          <Pressable
+            style={[styles.tab, activeTab === "details" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+            onPress={() => setActiveTab("details")}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === "details" }}
+          >
+            <Text style={[styles.tabLabel, { color: activeTab === "details" ? colors.primary : colors.onSurfaceVariant }]}>
+              Details
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tab, activeTab === "clips" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+            onPress={() => setActiveTab("clips")}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === "clips" }}
+          >
+            <Text style={[styles.tabLabel, { color: activeTab === "clips" ? colors.primary : colors.onSurfaceVariant }]}>
+              Form clips
+            </Text>
+          </Pressable>
+        </View>
+      )}
+      {/* Tab contents */}
+      {activeTab === "clips" && showClipsTab ? (
+        <FormLibraryTab exerciseId={exercise.id} unit={unit} />
+      ) : (
+        <BottomSheetFlatList
+          data={[]}
+          renderItem={null}
+          style={styles.detailBody}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          ListHeaderComponent={
             <>
-              <View style={styles.detailRow}>
-                <View style={styles.detailColLeft}>
+              {unit && (
+                <ExerciseDrawerStats exerciseId={exercise.id} unit={unit} />
+              )}
+              {layout.atLeastMedium ? (
+                <>
+                  <View style={styles.detailRow}>
+                    <View style={styles.detailColLeft}>
+                      {musclesAndMeta}
+                    </View>
+                    <View style={styles.detailColRight}>
+                      {instructions}
+                      <ExerciseTutorialLink
+                        exerciseName={exercise.name}
+                        testID="exercise-tutorial-link-drawer-wide"
+                      />
+                    </View>
+                  </View>
+                  {muscleMap}
+                </>
+              ) : (
+                <>
                   {musclesAndMeta}
-                </View>
-                <View style={styles.detailColRight}>
+                  <View style={styles.detailMuscleMapNarrow}>
+                    {muscleMap}
+                  </View>
                   {instructions}
                   <ExerciseTutorialLink
                     exerciseName={exercise.name}
-                    testID="exercise-tutorial-link-drawer-wide"
+                    testID="exercise-tutorial-link-drawer"
                   />
-                </View>
-              </View>
-              {muscleMap}
+                </>
+              )}
             </>
-          ) : (
-            <>
-              {musclesAndMeta}
-              <View style={styles.detailMuscleMapNarrow}>
-                {muscleMap}
-              </View>
-              {instructions}
-              <ExerciseTutorialLink
-                exerciseName={exercise.name}
-                testID="exercise-tutorial-link-drawer"
-              />
-            </>
-          )}
-        </>
-      }
-    />
+          }
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: "row",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabLabel: {
+    fontSize: fontSizes.sm,
+    fontWeight: "600",
+  },
   detailBody: {
     paddingHorizontal: 16,
   },

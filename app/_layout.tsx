@@ -34,6 +34,7 @@ import { LayoutBanners } from "../components/LayoutBanners";
 import { WebUnsupportedScreen } from "../components/WebUnsupportedScreen";
 import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
+import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 
 Sentry.init({
   dsn: 'https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312',
@@ -45,10 +46,21 @@ Sentry.init({
   // Enable Logs
   enableLogs: true,
 
-  // Configure Session Replay
-  replaysSessionSampleRate: 0.1,
+  // AC12 (BLD-1092): replaysSessionSampleRate set to 0 — no random session
+  // replays. Error replays remain (gated below). Trade-off: session-sampled
+  // replay is dropped company-wide; the privacy-first guarantee for form-check
+  // video surfaces is the accepted reason. See PLAN-BLD-1092.md §Privacy.
+  replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration()],
+  integrations: [Sentry.mobileReplayIntegration({
+    maskAllImages: true,
+    maskAllVectors: true,
+    // Skip error-replay attachment while any media surface (FormVideoSheet,
+    // FormClipsPlayer, FormLibraryTab thumbnails, CompareView) is mounted.
+    // MobileReplayIntegration@8.9.2 exposes no stop()/start() — this is the
+    // only SDK-verified gate. See lib/media/replay-gate.ts.
+    beforeErrorSampling: (_event, _hint) => mediaSurfaceMountCount() === 0,
+  })],
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: __DEV__,

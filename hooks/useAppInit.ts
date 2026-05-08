@@ -74,6 +74,13 @@ export function useAppInit() {
             .catch((err) => console.error("Health Connect queue reconciliation failed:", err));
         }
 
+        // Form-clips orphan reconciliation on startup (non-blocking, iOS + Android).
+        if (Platform.OS !== "web") {
+          import("../lib/media/form-clips")
+            .then(({ reconcileOrphans }) => reconcileOrphans())
+            .catch((err) => console.error("Form-clips orphan reconciliation failed:", err));
+        }
+
         setReady(true);
         SplashScreen.hideAsync();
       })
