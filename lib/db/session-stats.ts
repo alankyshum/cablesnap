@@ -18,6 +18,7 @@ export async function getSessionsByMonth(
             (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
      FROM workout_sessions wss
      WHERE wss.completed_at IS NOT NULL
+       AND wss.kind = 'workout'
        AND wss.started_at >= ? AND wss.started_at < ?
      ORDER BY wss.started_at DESC`,
     [start, end]
@@ -32,7 +33,7 @@ export async function searchSessions(
     `SELECT wss.*,
             (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
      FROM workout_sessions wss
-     WHERE wss.completed_at IS NOT NULL AND wss.name LIKE ?
+     WHERE wss.completed_at IS NOT NULL AND wss.kind = 'workout' AND wss.name LIKE ?
      ORDER BY wss.started_at DESC
      LIMIT ?`,
     [`%${q}%`, limit]
@@ -829,7 +830,9 @@ export async function getFilteredSessions(
   limit: number,
   offset: number
 ): Promise<{ rows: (WorkoutSession & { set_count: number })[]; total: number }> {
-  const clauses: string[] = ["s.completed_at IS NOT NULL"];
+  // BLD-1089: history tab shows only kind='workout' rows — day_session rows
+  // have their own "Quick-add sets" group rendered separately.
+  const clauses: string[] = ["s.completed_at IS NOT NULL", "s.kind = 'workout'"];
   const params: (string | number)[] = [];
 
   if (filters.templateId) {

@@ -237,5 +237,24 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_workout_sets_variant_pr
       ON workout_sets (exercise_id, attachment, mount_position, grip_type, completed_at)
   `);
+
+  // BLD-1089: Grease-the-Groove Day Mode — additive migration on workout_sessions.
+  // Three columns + one partial unique index. All idempotent.
+  // SQLite 3.35+ supports ALTER TABLE ... DROP COLUMN for documented rollback.
+  await addColumnIfMissing(database, "workout_sessions", "kind",
+    "TEXT NOT NULL DEFAULT 'workout'");
+  await addColumnIfMissing(database, "workout_sessions", "day_session_exercise_id",
+    "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sessions", "day_session_date",
+    "TEXT DEFAULT NULL");
+  try {
+    await database.execAsync(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_day_session_per_exercise_date
+        ON workout_sessions (day_session_exercise_id, day_session_date)
+        WHERE kind = 'day_session'
+    `);
+  } catch {
+    // Partial indexes not supported on all platforms — uniqueness enforced by UPSERT
+  }
 }
 

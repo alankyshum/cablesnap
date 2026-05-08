@@ -249,7 +249,8 @@ export async function getRecentSessions(
   const db = await getDrizzle();
   return db.select()
     .from(workoutSessions)
-    .where(isNotNull(workoutSessions.completed_at))
+    // BLD-1089: exclude day_session rows from the recent sessions list
+    .where(and(isNotNull(workoutSessions.completed_at), sql`${workoutSessions.kind} = 'workout'`))
     .orderBy(desc(workoutSessions.started_at))
     .limit(limit) as unknown as Promise<WorkoutSession[]>;
 }
@@ -269,7 +270,9 @@ export async function getActiveSession(): Promise<WorkoutSession | null> {
   const db = await getDrizzle();
   const row = await db.select()
     .from(workoutSessions)
-    .where(sql`${workoutSessions.completed_at} IS NULL`)
+    // BLD-1089: defence-in-depth — kind='workout' excludes day_session rows;
+    // completed_at IS NULL is the primary active-session predicate.
+    .where(and(sql`${workoutSessions.kind} = 'workout'`, sql`${workoutSessions.completed_at} IS NULL`))
     .orderBy(desc(workoutSessions.started_at))
     .limit(1)
     .get();

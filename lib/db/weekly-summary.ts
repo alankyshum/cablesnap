@@ -109,6 +109,8 @@ export async function getWeeklyWorkouts(
         .where(
           and(
             isNotNull(workoutSessions.completed_at),
+            // BLD-1089: GTG day_session rows excluded — they don't count as "workouts this week"
+            sql`${workoutSessions.kind} = 'workout'`,
             gte(workoutSessions.started_at, start),
             lt(workoutSessions.started_at, end),
           )
@@ -138,6 +140,8 @@ export async function getWeeklyWorkouts(
         .where(
           and(
             isNotNull(workoutSessions.completed_at),
+            // BLD-1089: GTG day_session rows excluded from previous-week count
+            sql`${workoutSessions.kind} = 'workout'`,
             gte(workoutSessions.started_at, prevStart),
             lt(workoutSessions.started_at, start),
           )

@@ -86,6 +86,16 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   // BLD-1060: per-gym cable stack calibration
   gym_id: text("gym_id"),
   gym_name_at_log: text("gym_name_at_log"),
+  // BLD-1089: Grease-the-Groove Day Mode — session subtype discriminator.
+  // 'workout' (default) = normal session; 'day_session' = GTG backing row.
+  // day_session rows have completed_at = started_at = device-local midnight
+  // so every existing WHERE completed_at IS NOT NULL analytics filter passes.
+  kind: text("kind").default("workout"),
+  // day_session_exercise_id + day_session_date together form the partial unique
+  // key enforced by uniq_day_session_per_exercise_date WHERE kind='day_session'.
+  // Both are NULL for kind='workout' rows.
+  day_session_exercise_id: text("day_session_exercise_id"),
+  day_session_date: text("day_session_date"),
 }, (table) => [
   index("idx_workout_sessions_completed").on(table.completed_at),
   index("idx_workout_sessions_started_at").on(table.started_at),
