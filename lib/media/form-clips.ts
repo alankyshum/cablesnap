@@ -24,6 +24,8 @@ import {
   hardDeleteClip as dbHardDeleteClip,
   getAllSetMediaRows,
   getSetMediaStats as dbGetSetMediaStats,
+  deleteClipsForSet as dbDeleteClipsForSet,
+  deleteSetMediaForSession as dbDeleteSetMediaForSession,
 } from "../db/form-clips";
 import { setExcludedFromBackup } from "./backup-exclusion";
 import type { SetMediaRow } from "../db/form-clips";
@@ -115,13 +117,11 @@ export async function recordClip(params: RecordClipParams): Promise<SetMediaRow>
   sourceFile.move(destFile);
 
   // iOS: exclude from iCloud Backup immediately after write.
-  // Android: covered by manifest XML from with-form-clips-backup plugin.
+  // This is a hard precondition — if exclusion fails the clip is not inserted
+  // (privacy invariant: we must not silently persist a clip that could be backed
+  // up). Android is covered by manifest XML from with-form-clips-backup plugin.
   if (Platform.OS === "ios") {
-    try {
-      await setExcludedFromBackup(destFile.uri);
-    } catch {
-      // Non-fatal: log to breadcrumb in caller (app layer) if needed.
-    }
+    await setExcludedFromBackup(destFile.uri);
   }
 
   const relPath = toRelPath(destFile.uri);
@@ -193,6 +193,64 @@ export async function deleteClip(id: string, relPath: string): Promise<void> {
     }
   } catch {
     // ENOENT / permission errors are non-fatal.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cascade delete — called by DB service layer on parent-set/session removal
+// ---------------------------------------------------------------------------
+
+/**
+ * Delete all clips (files + DB rows) for the given set IDs.
+ *
+ * Must be called BEFORE the corresponding workout_sets rows are deleted so
+ * rel_path data is still available for file cleanup.
+ *
+ * File-unlink errors (ENOENT, permission) are swallowed — the DB row is
+ * removed regardless so ghost rows do not accumulate.
+ */
+export async function cascadeDeleteClipsForSets(setIds: string[]): Promise<void> {
+  if (Platform.OS === "web" || setIds.length === 0) return;
+  const rows = await getAllSetMediaRows();
+  const targets = rows.filter((r) => setIds.includes(r.set_id));
+  for (const row of targets) {
+    await deleteClip(row.id, row.rel_path);
+  }
+  // Belt-and-braces: remove any DB rows whose files may already be gone
+  // (deleteClip already deletes the DB row via dbHardDeleteClip, but call
+  // dbDeleteClipsForSet to cover rows missed by the in-memory filter).
+  for (const setId of setIds) {
+    await dbDeleteClipsForSet(setId);
+  }
+}
+
+/**
+ * Cascade-delete all clips for a workout session.
+ *
+ * Resolves set IDs from workout_sets internally — the caller does NOT need to
+ * pre-select them.  File unlinks happen before the DB delete so ENOENT is
+ * swallowed idempotently.  Must be called BEFORE the workout_sets rows are
+ * deleted (file cleanup uses rel_path stored on set_media).
+ */
+export async function cascadeDeleteClipsForSession(sessionId: string): Promise<void> {
+  if (Platform.OS === "web") return;
+  const rows = await dbDeleteSetMediaForSession(sessionId);
+  for (const row of rows) {
+    try {
+      const f = new File(Paths.document, row.rel_path);
+      if (f.exists) f.delete();
+      // Also remove thumbnail if present.
+      const parts = row.rel_path.split("/");
+      const filename = parts[parts.length - 1];
+      const clipId = filename.replace(/\.mp4$/, "");
+      const exerciseId = parts[parts.length - 2];
+      if (clipId && exerciseId) {
+        const thumb = thumbFile(exerciseId, clipId);
+        if (thumb.exists) thumb.delete();
+      }
+    } catch {
+      // ENOENT / permission errors are non-fatal.
+    }
   }
 }
 

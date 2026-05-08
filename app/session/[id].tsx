@@ -157,6 +157,8 @@ export default function ActiveSession() {
   // BLD-1092: form-check video state (iOS/Android only; web guarded in components)
   const [formVideoSetId, setFormVideoSetId] = useState<string | null>(null);
   const [playerSetId, setPlayerSetId] = useState<string | null>(null);
+  // Actual SetMediaRow for the set being played (null when no player open).
+  const [playerClip, setPlayerClip] = useState<import("../../lib/media/form-clips").SetMediaRow | null>(null);
   // Map of setId → hasClip, populated after set completion check.
   const [hasClipMap, setHasClipMap] = useState<Record<string, boolean>>({});
 
@@ -172,6 +174,12 @@ export default function ActiveSession() {
   const handleVideoGlyph = useCallback((setId: string) => {
     if (hasClipMap[setId]) {
       setPlayerSetId(setId);
+      // Fetch the actual clip row so FormClipsPlayer can render the video.
+      if (Platform.OS !== "web") {
+        import("../../lib/db/form-clips").then(({ getClipForSet }) => {
+          getClipForSet(setId).then((clip) => setPlayerClip(clip)).catch(() => {});
+        }).catch(() => {});
+      }
     } else {
       setFormVideoSetId(setId);
     }
@@ -460,11 +468,11 @@ export default function ActiveSession() {
         const playerSet = playerSetInfo?.set ?? null;
         return (
           <FormClipsPlayer
-            isVisible={!!playerSetId}
-            clip={null}
+            isVisible={!!playerSetId && !!playerClip}
+            clip={playerClip}
             weightLabel={playerSet ? `${playerSet.weight ?? ""} ${unit}`.trim() : undefined}
             reps={playerSet?.reps ?? null}
-            onClose={() => setPlayerSetId(null)}
+            onClose={() => { setPlayerSetId(null); setPlayerClip(null); }}
           />
         );
       })()}

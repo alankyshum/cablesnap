@@ -7,9 +7,9 @@
  * File I/O is handled exclusively in lib/media/form-clips.ts — this
  * file never touches the filesystem.
  */
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { getDrizzle } from "./helpers";
-import { setMedia } from "./schema";
+import { setMedia, workoutSets } from "./schema";
 import type { SetMediaRow } from "./schema";
 
 export type { SetMediaRow };
@@ -110,4 +110,23 @@ export async function getSetMediaStats(): Promise<{ count: number; totalBytes: n
 export async function deleteClipsForSet(setId: string): Promise<void> {
   const db = await getDrizzle();
   await db.delete(setMedia).where(eq(setMedia.set_id, setId));
+}
+
+/**
+ * Delete all set_media rows for a given session and return them for file cleanup.
+ *
+ * Resolves set IDs via a sub-query on workout_sets, then deletes matching
+ * set_media rows in one pass.  Returns the deleted rows so the caller can
+ * unlink files from the filesystem.
+ */
+export async function deleteSetMediaForSession(sessionId: string): Promise<SetMediaRow[]> {
+  const db = await getDrizzle();
+  const sets = await db.select({ id: workoutSets.id }).from(workoutSets).where(eq(workoutSets.session_id, sessionId));
+  if (sets.length === 0) return [];
+  const setIds = sets.map((s) => s.id);
+  const rows = await db.select().from(setMedia).where(inArray(setMedia.set_id, setIds));
+  if (rows.length > 0) {
+    await db.delete(setMedia).where(inArray(setMedia.set_id, setIds));
+  }
+  return rows;
 }
