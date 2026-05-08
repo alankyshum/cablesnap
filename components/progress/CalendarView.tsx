@@ -12,6 +12,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import {
   getMonthlyWorkoutDates,
+  getMonthlyGtgOnlyDates,
   getWorkoutDatesForStreak,
   calculateStreaks,
   formatMonthYear,
@@ -36,6 +37,7 @@ export default function CalendarView({ weekStartDay }: Props) {
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([]);
+  const [gtgOnlyDates, setGtgOnlyDates] = useState<Set<string>>(new Set());
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -57,11 +59,13 @@ export default function CalendarView({ weekStartDay }: Props) {
     setLoading(true);
     setError(false);
     try {
-      const [days, streakDates] = await Promise.all([
+      const [days, streakDates, gtgDates] = await Promise.all([
         getMonthlyWorkoutDates(y, m),
         getWorkoutDatesForStreak(),
+        getMonthlyGtgOnlyDates(y, m),
       ]);
       setWorkoutDays(days);
+      setGtgOnlyDates(new Set(gtgDates));
       const { currentStreak: cs, longestStreak: ls } =
         calculateStreaks(streakDates);
       setCurrentStreak(cs);
@@ -213,6 +217,7 @@ export default function CalendarView({ weekStartDay }: Props) {
         month={month}
         weekStartDay={weekStartDay}
         workoutDates={workoutDateSet}
+        gtgOnlyDates={gtgOnlyDates}
         selectedDate={selectedDate}
         todayStr={todayStr}
         onSelectDate={handleSelectDate}
