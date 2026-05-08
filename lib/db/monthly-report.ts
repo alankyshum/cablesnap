@@ -227,7 +227,8 @@ async function getMonthlyPRs(
   }));
 }
 
-async function getMonthlyTrainingDaysAndStreak(
+// Exported for production-path testing (BLD-1089 streak-creep guard).
+export async function getMonthlyTrainingDaysAndStreak(
   year: number,
   monthIndex: number
 ): Promise<{ trainingDays: number; longestStreak: number }> {

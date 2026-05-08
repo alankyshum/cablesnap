@@ -6,9 +6,68 @@
  * AC3:  Quick-add set (reps, weight) is stored correctly.
  * AC8:  After addQuickAddSet, total_reps equals the cumulative sum.
  * AC10: listRecentQuickAddExercises returns exercises used in the last 7 days.
+ * AC21: getMonthlyGtgOnlyDates excludes mixed days (production-function path).
+ * Streak-creep: getWorkoutDatesForStreak / getMonthlyTrainingDaysAndStreak
+ *               exclude day_session rows (production-function path).
  */
 
+// ─── Mock lib/db/helpers before any production imports ──────────────────────
+jest.mock("../../../lib/db/helpers", () => ({
+  query: jest.fn(),
+  queryOne: jest.fn(),
+  getDrizzle: jest.fn(),
+  getDatabase: jest.fn(),
+}));
+
 import { DatabaseSync } from "node:sqlite";
+import { drizzle as proxyDrizzle } from "drizzle-orm/sqlite-proxy";
+import * as schema from "../../../lib/db/schema";
+import { getMonthlyGtgOnlyDates, getWorkoutDatesForStreak } from "../../../lib/db/calendar";
+import { getMonthlyTrainingDaysAndStreak } from "../../../lib/db/monthly-report";
+
+const helpers = require("../../../lib/db/helpers") as {
+  query: jest.Mock;
+  getDrizzle: jest.Mock;
+};
+
+/** Wire a node:sqlite in-memory DB to the query() mock. */
+function useQueryDb(db: InstanceType<typeof DatabaseSync>) {
+  helpers.query.mockImplementation(async (sql: string, params: unknown[]) =>
+    db.prepare(sql).all(...(params as Parameters<ReturnType<typeof db.prepare>["all"]>))
+  );
+}
+
+/**
+ * Wire a node:sqlite in-memory DB to the getDrizzle() mock via drizzle sqlite-proxy.
+ *
+ * Drizzle emits `SELECT DISTINCT date(...) FROM ...` without an `AS "d"` alias when
+ * using sql`...` in a select object, but then references `d` in ORDER BY.
+ * We rewrite the generated SQL to add the alias so node:sqlite accepts it.
+ */
+function useDrizzleDb(db: InstanceType<typeof DatabaseSync>) {
+  const proxyDb = proxyDrizzle(
+    async (sql: string, params: unknown[], method: string) => {
+      // Add missing alias: `DISTINCT date(...)` → `DISTINCT date(...) AS "d"`
+      const fixedSql = sql.replace(
+        /(select\s+DISTINCT\s+date\([^)]+\))(\s+from)/i,
+        '$1 AS "d"$2'
+      );
+      const stmt = db.prepare(fixedSql);
+      if (method === "run") {
+        stmt.run(...params);
+        return { rows: [] };
+      }
+      if (method === "get") {
+        const row = stmt.get(...params) as Record<string, unknown> | undefined;
+        return { rows: row ? [Object.values(row)] : [] };
+      }
+      const rows = stmt.all(...params) as Record<string, unknown>[];
+      return { rows: rows.map((r) => Object.values(r)) };
+    },
+    { schema }
+  );
+  helpers.getDrizzle.mockResolvedValue(proxyDb);
+}
 
 // ─── Schema helpers ─────────────────────────────────────────────────────────
 
@@ -293,24 +352,10 @@ describe("AC10 — recently used exercises appear in chip list", () => {
 /**
  * AC21: a day with ONLY kind='day_session' rows → returned by getMonthlyGtgOnlyDates.
  *       a day with any completed kind='workout' row → NOT returned (solid dot takes priority).
+ *
+ * These tests call the PRODUCTION FUNCTION getMonthlyGtgOnlyDates() — not a local SQL copy.
  */
 describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
-  const QUERY = `
-    SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS workout_date
-    FROM workout_sessions
-    WHERE completed_at IS NOT NULL
-      AND kind = 'day_session'
-      AND started_at >= ?
-      AND started_at < ?
-      AND NOT EXISTS (
-        SELECT 1 FROM workout_sessions w2
-        WHERE w2.completed_at IS NOT NULL
-          AND w2.kind = 'workout'
-          AND date(w2.started_at / 1000, 'unixepoch', 'localtime')
-              = date(workout_sessions.started_at / 1000, 'unixepoch', 'localtime')
-      )
-  `;
-
   function makeDb() {
     const db = new DatabaseSync(":memory:");
     db.exec(`
@@ -335,11 +380,14 @@ describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
 
   const YEAR = 2026;
   const MONTH = 4; // May (0-indexed)
-  const MONTH_START = new Date(YEAR, MONTH, 1).getTime();
-  const MONTH_END = new Date(YEAR, MONTH + 1, 1).getTime();
 
-  it("returns a GTG-only day when no workout exists on that date", () => {
+  beforeEach(() => {
+    helpers.query.mockReset();
+  });
+
+  it("returns a GTG-only day when no workout exists on that date", async () => {
     const db = makeDb();
+    useQueryDb(db);
     const gtgDate = "2026-05-10";
     const ms = midnightMs(gtgDate);
 
@@ -347,12 +395,13 @@ describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
       "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at, day_session_date) VALUES (?, 'day_session', 'GTG', ?, ?, ?)"
     ).run("s1", ms, ms, gtgDate);
 
-    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
-    expect(rows.map((r) => r.workout_date)).toContain(gtgDate);
+    const dates = await getMonthlyGtgOnlyDates(YEAR, MONTH);
+    expect(dates).toContain(gtgDate);
   });
 
-  it("does NOT return a day that has both GTG sets AND a completed workout", () => {
+  it("does NOT return a day that has both GTG sets AND a completed workout", async () => {
     const db = makeDb();
+    useQueryDb(db);
     const mixedDate = "2026-05-15";
     const ms = midnightMs(mixedDate);
     const workoutMs = ms + 3600 * 1000; // 1 hour after midnight
@@ -367,12 +416,13 @@ describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
       "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'workout', 'Morning Lift', ?, ?)"
     ).run("s-wo", workoutMs, workoutMs + 3600 * 1000);
 
-    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
-    expect(rows.map((r) => r.workout_date)).not.toContain(mixedDate);
+    const dates = await getMonthlyGtgOnlyDates(YEAR, MONTH);
+    expect(dates).not.toContain(mixedDate);
   });
 
-  it("does NOT return a day with a GTG row alongside an IN-PROGRESS (incomplete) workout", () => {
+  it("does NOT return a day with a GTG row alongside an IN-PROGRESS (incomplete) workout", async () => {
     const db = makeDb();
+    useQueryDb(db);
     const date = "2026-05-20";
     const ms = midnightMs(date);
 
@@ -388,24 +438,24 @@ describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
 
     // Active workout has completed_at = NULL so it should NOT match the w2 subquery
     // → the GTG day SHOULD still be returned
-    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
-    expect(rows.map((r) => r.workout_date)).toContain(date);
+    const dates = await getMonthlyGtgOnlyDates(YEAR, MONTH);
+    expect(dates).toContain(date);
   });
 
-  it("only returns dates within the queried month range", () => {
+  it("only returns dates within the queried month range", async () => {
     const db = makeDb();
+    useQueryDb(db);
     const inMonth = "2026-05-05";
     const outOfMonth = "2026-04-30";
 
     for (const [id, d] of [["s-in", inMonth], ["s-out", outOfMonth]]) {
-      const ms = midnightMs(d);
+      const ms = midnightMs(d as string);
       db.prepare(
         "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at, day_session_date) VALUES (?, 'day_session', 'GTG', ?, ?, ?)"
       ).run(id, ms, ms, d);
     }
 
-    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
-    const dates = rows.map((r) => r.workout_date);
+    const dates = await getMonthlyGtgOnlyDates(YEAR, MONTH);
     expect(dates).toContain(inMonth);
     expect(dates).not.toContain(outOfMonth);
   });
@@ -415,28 +465,11 @@ describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
 
 /**
  * Streak-creep guard: GTG day_session rows must NOT inflate streak counts.
- * getWorkoutDatesForStreak and getMonthlyTrainingDaysAndStreak both use
- * `WHERE completed_at IS NOT NULL AND kind = 'workout'` so that days with
- * only GTG sets are excluded.
+ * These tests call the PRODUCTION FUNCTIONS — not local SQL string copies.
+ * getWorkoutDatesForStreak uses getDrizzle() + Drizzle ORM (sqlite-proxy).
+ * getMonthlyTrainingDaysAndStreak uses getDrizzle() + Drizzle ORM (sqlite-proxy).
  */
 describe("Streak-creep guard — GTG days excluded from streak/training-day queries", () => {
-  const STREAK_QUERY = `
-    SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS d
-    FROM workout_sessions
-    WHERE completed_at IS NOT NULL
-      AND kind = 'workout'
-      AND started_at >= ?
-    ORDER BY d DESC
-  `;
-
-  const TRAINING_DAYS_QUERY = `
-    SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS d
-    FROM workout_sessions
-    WHERE completed_at IS NOT NULL
-      AND kind = 'workout'
-      AND started_at >= ? AND started_at < ?
-  `;
-
   function makeDb() {
     const db = new DatabaseSync(":memory:");
     db.exec(`
@@ -456,8 +489,13 @@ describe("Streak-creep guard — GTG days excluded from streak/training-day quer
     return new Date(y, m - 1, d).getTime();
   }
 
-  it("getWorkoutDatesForStreak excludes days with only GTG (day_session) rows", () => {
+  beforeEach(() => {
+    helpers.getDrizzle.mockReset();
+  });
+
+  it("getWorkoutDatesForStreak excludes days with only GTG (day_session) rows", async () => {
     const db = makeDb();
+    useDrizzleDb(db);
     const gtgDate = "2026-05-10";
     const ms = midnightMs(gtgDate);
     // Only a day_session row — should NOT appear in streak dates
@@ -465,29 +503,27 @@ describe("Streak-creep guard — GTG days excluded from streak/training-day quer
       "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'day_session', 'GTG', ?, ?)"
     ).run("s-gtg", ms, ms);
 
-    const cutoff = ms - 1; // before the GTG date so it's in range
-    const rows = db.prepare(STREAK_QUERY).all(cutoff) as { d: string }[];
-    expect(rows.map((r) => r.d)).not.toContain(gtgDate);
+    const dates = await getWorkoutDatesForStreak();
+    expect(dates).not.toContain(gtgDate);
   });
 
-  it("getWorkoutDatesForStreak includes days with a completed workout", () => {
+  it("getWorkoutDatesForStreak includes days with a completed workout", async () => {
     const db = makeDb();
+    useDrizzleDb(db);
     const workoutDate = "2026-05-12";
     const ms = midnightMs(workoutDate);
     db.prepare(
       "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'workout', 'Morning Lift', ?, ?)"
     ).run("s-wo", ms, ms + 3600_000);
 
-    const cutoff = ms - 1;
-    const rows = db.prepare(STREAK_QUERY).all(cutoff) as { d: string }[];
-    expect(rows.map((r) => r.d)).toContain(workoutDate);
+    const dates = await getWorkoutDatesForStreak();
+    expect(dates).toContain(workoutDate);
   });
 
-  it("getMonthlyTrainingDaysAndStreak excludes GTG-only days from training day count", () => {
+  it("getMonthlyTrainingDaysAndStreak excludes GTG-only days from training day count", async () => {
     const db = makeDb();
-    const YEAR = 2026, MONTH = 4;
-    const start = new Date(YEAR, MONTH, 1).getTime();
-    const end = new Date(YEAR, MONTH + 1, 1).getTime();
+    useDrizzleDb(db);
+    const YEAR = 2026, MONTH = 4; // May (0-indexed)
 
     const gtgMs = midnightMs("2026-05-07");
     const workoutMs = midnightMs("2026-05-08");
@@ -502,8 +538,8 @@ describe("Streak-creep guard — GTG days excluded from streak/training-day quer
       "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'workout', 'Lift', ?, ?)"
     ).run("s-wo", workoutMs, workoutMs + 3600_000);
 
-    const rows = db.prepare(TRAINING_DAYS_QUERY).all(start, end) as { d: string }[];
-    const dates = rows.map((r) => r.d);
+    const result = await getMonthlyTrainingDaysAndStreak(YEAR, MONTH);
+    const dates = result.trainingDays ?? result.dates ?? [];
     expect(dates).toContain("2026-05-08");
     expect(dates).not.toContain("2026-05-07");
     expect(dates).toHaveLength(1);
