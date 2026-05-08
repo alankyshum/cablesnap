@@ -77,6 +77,11 @@ jest.mock('drizzle-orm/expo-sqlite', () => ({
   }),
 }));
 
+jest.mock('../../../lib/media/form-clips', () => ({
+  cascadeDeleteClipsForSets: jest.fn().mockResolvedValue(undefined),
+  cascadeDeleteClipsForSession: jest.fn().mockResolvedValue(undefined),
+}));
+
 import {
   cancelSession,
   deleteCompletedSession,
@@ -105,6 +110,8 @@ describe('deleteCompletedSession (BLD-690 reviewer fix)', () => {
     // BLD-1094: 4 deletes — strava_sync_log + health_connect_sync_log
     // children must be deleted before parent workoutSessions because PRAGMA
     // foreign_keys = ON now enforces FK references to workout_sessions(id).
+    // Media cascade (BLD-1092) is handled by the mocked cascadeDeleteClipsForSession
+    // before these 4 DB deletes; it does not add to deleteCalls here.
     expect(g.__deleteCalls).toHaveLength(4);
     // Ran inside a transaction (at least once for our call — count may include
     // any preceding migration/init transactions on the shared mock).
@@ -120,7 +127,8 @@ describe('deleteCompletedSession (BLD-690 reviewer fix)', () => {
     g.__selectCalls = [];
     await deleteCompletedSession('completed-A');
     // The orphan-cleanup loop does .select({id}).from(sessions).where(IS NULL).
-    // deleteCompletedSession must NOT issue any select call.
+    // deleteCompletedSession must NOT issue any select call (no orphan sweep).
+    // Media cascade (BLD-1092) is a no-op here (mocked), so no extra selects.
     expect(g.__selectCalls.length).toBe(0);
   });
 

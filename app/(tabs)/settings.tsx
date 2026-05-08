@@ -25,6 +25,7 @@ import AppearanceCard from '../../components/settings/AppearanceCard';
 import UnitsCard from '../../components/settings/UnitsCard';
 import DataManagementCard from '../../components/settings/DataManagementCard';
 import AutoBackupSection from '../../components/settings/AutoBackupSection';
+import { FormClipsStorageRow } from '../../components/settings/FormClipsStorageRow';
 import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
@@ -212,6 +213,7 @@ export default function Settings() {
           hcSdkStatus={hcSdkStatus}
         />
         <AutoBackupSection colors={colors} toast={toast} />
+        <FormClipsStorageRow />
         <DataManagementCard
           colors={colors}
           loading={loading}

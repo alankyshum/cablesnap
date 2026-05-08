@@ -258,5 +258,41 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     // Log so a missing index is diagnosable in device/CI logs.
     console.warn("[migrations] uniq_day_session_per_exercise_date partial index not created:", err);
   }
+
+  // BLD-1092: Form Check Videos — set_media table + indexes.
+  // Stores one video clip per completed working set (one-clip-per-set
+  // enforced by the unique index on set_id).
+  // pending_delete is a two-phase soft-delete tombstone (0 = live, 1 = queued
+  // for unlink by reconcileOrphans).
+  // Partial index on pending_delete=1 (highly skewed — almost all rows = 0).
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS set_media (
+      id TEXT PRIMARY KEY,
+      set_id TEXT NOT NULL,
+      exercise_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      rel_path TEXT NOT NULL,
+      duration_ms INTEGER,
+      size_bytes INTEGER,
+      width INTEGER,
+      height INTEGER,
+      pending_delete INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_set_media_set_id
+      ON set_media (set_id);
+    CREATE INDEX IF NOT EXISTS idx_set_media_exercise_created
+      ON set_media (exercise_id, created_at);
+  `);
+  try {
+    await database.execAsync(
+      `CREATE INDEX IF NOT EXISTS idx_set_media_pending_delete_partial
+         ON set_media (pending_delete)
+         WHERE pending_delete = 1`
+    );
+  } catch {
+    // Partial indexes not supported on all platforms — reconciler scans full table.
+  }
 }
+
 

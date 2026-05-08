@@ -62,6 +62,9 @@ export type GroupCardProps = {
   timerDisplaySeconds?: number;
   onTimerStart?: (setId: string) => void;
   onTimerStop?: (setId: string) => void;
+  // BLD-1092: form-check video glyph
+  hasClipMap?: Record<string, boolean>;
+  onVideoGlyph?: (setId: string) => void;
 };
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
@@ -79,6 +82,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onPrefill,
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
+  hasClipMap, onVideoGlyph,
 }: GroupCardProps) {
   const colors = useThemeColors();
   const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
@@ -129,6 +133,8 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       timerDisplaySeconds={timerDisplaySeconds}
       onTimerStart={onTimerStart}
       onTimerStop={onTimerStop}
+      hasClipMap={hasClipMap}
+      onVideoGlyph={onVideoGlyph}
     />
   );
 

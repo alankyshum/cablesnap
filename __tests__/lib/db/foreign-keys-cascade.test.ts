@@ -181,6 +181,20 @@ function createFkDb(): InstanceType<typeof DatabaseSync> {
     CREATE TABLE strava_connection (id INTEGER PRIMARY KEY DEFAULT 1, athlete_id INTEGER NOT NULL, athlete_name TEXT NOT NULL, connected_at INTEGER NOT NULL);
     CREATE TABLE progress_photos (id TEXT PRIMARY KEY, file_path TEXT NOT NULL, capture_date TEXT NOT NULL, display_date TEXT NOT NULL, deleted_at TEXT, created_at TEXT NOT NULL);
     CREATE TABLE daily_log (id TEXT PRIMARY KEY, food_entry_id TEXT NOT NULL, date TEXT NOT NULL, meal TEXT NOT NULL DEFAULT 'snack', servings REAL DEFAULT 1, logged_at INTEGER NOT NULL);
+
+    CREATE TABLE set_media (
+      id TEXT PRIMARY KEY,
+      set_id TEXT NOT NULL,
+      exercise_id TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'video',
+      rel_path TEXT NOT NULL,
+      duration_ms INTEGER,
+      size_bytes INTEGER,
+      width INTEGER,
+      height INTEGER,
+      created_at INTEGER NOT NULL,
+      pending_delete INTEGER NOT NULL DEFAULT 0
+    );
   `);
   return db;
 }
@@ -522,5 +536,78 @@ describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK er
     expect(() => db.prepare("DELETE FROM strength_goals WHERE id = ?").run("g1")).not.toThrow();
     expect(count(db, "strength_goals")).toBe(0);
     expect(count(db, "exercises", "id='ex1'")).toBe(1);
+  });
+
+  // ── AC13 / BLD-1092 — set_media cascade on parent-set/session delete ──
+
+  it("AC13 — deleteCompletedSession: set_media rows are deleted before workout_sets (service-layer cascade pattern)", () => {
+    const db = createFkDb();
+    db.prepare("INSERT INTO exercises (id, name) VALUES ('ex1', 'Bench')").run();
+    insertSession(db, "s1");
+    insertSet(db, "set1", "s1", "ex1");
+    // Insert a set_media row linked to set1.
+    db.prepare(
+      `INSERT INTO set_media (id, set_id, exercise_id, kind, rel_path, created_at, pending_delete)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run("clip1", "set1", "ex1", "video", "form-clips/ex1/clip1.mp4", 9000, 0);
+
+    // Mirror cascadeDeleteClipsForSets + deleteCompletedSession DB pattern:
+    //   1. delete set_media rows for each set in the session
+    //   2. delete sync-log children
+    //   3. delete workout_sets
+    //   4. delete workout_session
+    expect(() => {
+      db.prepare("DELETE FROM set_media WHERE set_id = ?").run("set1");
+      db.prepare("DELETE FROM strava_sync_log WHERE session_id = ?").run("s1");
+      db.prepare("DELETE FROM health_connect_sync_log WHERE session_id = ?").run("s1");
+      db.prepare("DELETE FROM workout_sets WHERE session_id = ?").run("s1");
+      db.prepare("DELETE FROM workout_sessions WHERE id = ? AND completed_at IS NOT NULL").run("s1");
+    }).not.toThrow();
+
+    expect(count(db, "set_media", "set_id='set1'")).toBe(0);
+    expect(count(db, "workout_sets", "session_id='s1'")).toBe(0);
+    expect(count(db, "workout_sessions", "id='s1'")).toBe(0);
+  });
+
+  it("AC13 — deleteSet: set_media row deleted before workout_sets row", () => {
+    const db = createFkDb();
+    db.prepare("INSERT INTO exercises (id, name) VALUES ('ex1', 'Squat')").run();
+    insertSession(db, "s2");
+    insertSet(db, "set2", "s2", "ex1");
+    db.prepare(
+      `INSERT INTO set_media (id, set_id, exercise_id, kind, rel_path, created_at, pending_delete)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run("clip2", "set2", "ex1", "video", "form-clips/ex1/clip2.mp4", 9001, 0);
+
+    expect(() => {
+      db.prepare("DELETE FROM set_media WHERE set_id = ?").run("set2");
+      db.prepare("DELETE FROM workout_sets WHERE id = ?").run("set2");
+    }).not.toThrow();
+
+    expect(count(db, "set_media", "set_id='set2'")).toBe(0);
+    expect(count(db, "workout_sets", "id='set2'")).toBe(0);
+    expect(count(db, "workout_sessions", "id='s2'")).toBe(1);
+  });
+
+  it("AC13 — deleteSetsBatch: set_media rows deleted before workout_sets batch", () => {
+    const db = createFkDb();
+    db.prepare("INSERT INTO exercises (id, name) VALUES ('ex1', 'Deadlift')").run();
+    insertSession(db, "s3");
+    insertSet(db, "set3a", "s3", "ex1");
+    insertSet(db, "set3b", "s3", "ex1");
+    db.prepare(
+      `INSERT INTO set_media (id, set_id, exercise_id, kind, rel_path, created_at, pending_delete) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run("clip3a", "set3a", "ex1", "video", "form-clips/ex1/clip3a.mp4", 9002, 0);
+    db.prepare(
+      `INSERT INTO set_media (id, set_id, exercise_id, kind, rel_path, created_at, pending_delete) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run("clip3b", "set3b", "ex1", "video", "form-clips/ex1/clip3b.mp4", 9003, 0);
+
+    expect(() => {
+      db.prepare("DELETE FROM set_media WHERE set_id IN (?, ?)").run("set3a", "set3b");
+      db.prepare("DELETE FROM workout_sets WHERE id IN (?, ?)").run("set3a", "set3b");
+    }).not.toThrow();
+
+    expect(count(db, "set_media")).toBe(0);
+    expect(count(db, "workout_sets")).toBe(0);
   });
 });

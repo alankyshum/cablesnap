@@ -9,7 +9,8 @@
  *   import { exercises, workoutSets } from "./schema";
  *   type ExerciseRow = typeof exercises.$inferSelect;
  */
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 // ─── Core Tables ────────────────────────────────────────────────────────────
 
@@ -140,6 +141,32 @@ export const workoutSets = sqliteTable("workout_sets", {
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),
   index("idx_workout_sets_session_exercise").on(table.session_id, table.exercise_id),
+]);
+
+// ─── Form Check Videos (BLD-1092) ─────────────────────────────────────────
+// One video clip per completed working set (uniqueness enforced by uq_set_media_set_id).
+// rel_path is relative to documentDirectory so iOS sandbox UUID churn after
+// restore-from-backup does not orphan rows.
+// Backup exclusion is handled at the OS level by the with-form-clips-backup
+// plugin (BLD-1095) on both iOS (NSURLIsExcludedFromBackupKey) and Android
+// (data_extraction_rules.xml).
+
+export const setMedia = sqliteTable("set_media", {
+  id: text("id").primaryKey(),                            // ULID
+  set_id: text("set_id").notNull(),                       // FK → workout_sets.id (cascade enforced in service layer; PRAGMA foreign_keys=ON from BLD-1094)
+  exercise_id: text("exercise_id").notNull(),             // denormalized for fast Form Library queries
+  kind: text("kind").notNull(),                           // "video" only in v1; no default — every INSERT must specify
+  rel_path: text("rel_path").notNull(),                   // relative to documentDirectory
+  duration_ms: integer("duration_ms"),
+  size_bytes: integer("size_bytes"),
+  width: integer("width"),
+  height: integer("height"),
+  pending_delete: integer("pending_delete").notNull().default(0), // tombstone for two-phase delete
+  created_at: integer("created_at").notNull(),
+}, (t) => [
+  uniqueIndex("uq_set_media_set_id").on(t.set_id),                                                // one-clip-per-set invariant
+  index("idx_set_media_exercise_created").on(t.exercise_id, t.created_at),
+  index("idx_set_media_pending_delete_partial").on(t.pending_delete).where(sql`${t.pending_delete} = 1`),
 ]);
 
 // ─── Nutrition Tables ───────────────────────────────────────────────────────
@@ -461,3 +488,4 @@ export type WaterLogRow = typeof waterLogs.$inferSelect;
 export type GymProfileRow = typeof gymProfiles.$inferSelect;
 export type CableStackRow = typeof cableStacks.$inferSelect;
 export type StackCalibrationRow = typeof stackCalibrations.$inferSelect;
+export type SetMediaRow = typeof setMedia.$inferSelect;

@@ -23,10 +23,10 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
 import { setupHandler } from "../lib/notifications";
-import { excludeFormClipsFromBackup } from "../lib/media/backup-exclusion";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
+import { FormClipsContext } from "../lib/form-clips-context";
 import { useAppInit } from "../hooks/useAppInit";
 import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
@@ -34,6 +34,7 @@ import { LayoutBanners } from "../components/LayoutBanners";
 import { WebUnsupportedScreen } from "../components/WebUnsupportedScreen";
 import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
+import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 
 Sentry.init({
   dsn: 'https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312',
@@ -45,10 +46,21 @@ Sentry.init({
   // Enable Logs
   enableLogs: true,
 
-  // Configure Session Replay
-  replaysSessionSampleRate: 0.1,
+  // AC12 (BLD-1092): replaysSessionSampleRate set to 0 — no random session
+  // replays. Error replays remain (gated below). Trade-off: session-sampled
+  // replay is dropped company-wide; the privacy-first guarantee for form-check
+  // video surfaces is the accepted reason. See PLAN-BLD-1092.md §Privacy.
+  replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration()],
+  integrations: [Sentry.mobileReplayIntegration({
+    maskAllImages: true,
+    maskAllVectors: true,
+    // Skip error-replay attachment while any media surface (FormVideoSheet,
+    // FormClipsPlayer, FormLibraryTab thumbnails, CompareView) is mounted.
+    // MobileReplayIntegration@8.9.2 exposes no stop()/start() — this is the
+    // only SDK-verified gate. See lib/media/replay-gate.ts.
+    beforeErrorSampling: () => mediaSurfaceMountCount() === 0,
+  })],
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: __DEV__,
@@ -57,26 +69,15 @@ Sentry.init({
 SplashScreen.preventAutoHideAsync();
 setupHandler();
 setupConsoleLogBuffer();
-// Ensure form-clips/ is excluded from iCloud/Auto Backup on first boot.
-// Fire-and-forget: failure is non-fatal and is captured as a Sentry breadcrumb.
-excludeFormClipsFromBackup()
-  .then(({ ok }) => {
-    Sentry.addBreadcrumb({
-      category: "privacy",
-      message: "form_clips_backup_exclusion_set",
-      data: { ok },
-      level: "info",
-    });
-  })
-  .catch((err: unknown) => {
-    Sentry.captureException(err, { tags: { source: "backup_exclusion_boot" } });
-  });
+// BLD-1092: excludeFormClipsFromBackup() is now called inside useAppInit()
+// so the result can be tracked in React state and passed to FormVideoSheet
+// via FormClipsContext to gate the strong privacy banner.
 
 export default Sentry.wrap(function RootLayout() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const themeColors = isDark ? Colors.dark : Colors.light;
-  const { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported } = useAppInit();
+  const { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported, backupExclusionOk } = useAppInit();
   const pathname = usePathname();
   const prev = useRef(pathname);
 
@@ -93,6 +94,7 @@ export default Sentry.wrap(function RootLayout() {
     () => ({ completeOnboarding }),
     [completeOnboarding]
   );
+  const formClipsCtx = useMemo(() => ({ backupExclusionOk }), [backupExclusionOk]);
 
   if (!ready) return null;
 
@@ -118,6 +120,7 @@ export default Sentry.wrap(function RootLayout() {
     <ErrorBoundary>
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
+      <FormClipsContext.Provider value={formClipsCtx}>
       <ThemePreferenceProvider>
       <BNAThemeProvider>
         <ToastProvider>
@@ -149,6 +152,7 @@ export default Sentry.wrap(function RootLayout() {
         </ToastProvider>
       </BNAThemeProvider>
       </ThemePreferenceProvider>
+      </FormClipsContext.Provider>
       </OnboardingContext.Provider>
       </QueryProvider>
     </ErrorBoundary>

@@ -40,7 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-camera",
       {
         cameraPermission:
-          "CableSnap needs camera access to scan food barcodes for quick nutrition logging.",
+          "CableSnap uses your camera to scan food barcodes for nutrition logging and to record short form-check clips that stay on this device.",
       },
     ],
     "expo-web-browser",

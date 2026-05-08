@@ -19,6 +19,10 @@ jest.mock("../../../lib/db/helpers", () => ({
   withTransaction: jest.fn(),
   getDatabase: jest.fn(),
 }));
+jest.mock("../../../lib/media/form-clips", () => ({
+  cascadeDeleteClipsForSets: jest.fn().mockResolvedValue(undefined),
+  cascadeDeleteClipsForSession: jest.fn().mockResolvedValue(undefined),
+}));
 
 import { withTransaction } from "../../../lib/db/helpers";
 import { deleteSet, deleteSetsBatch } from "../../../lib/db/session-sets";

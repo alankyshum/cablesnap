@@ -38,6 +38,8 @@ import { PRCelebration } from "../../components/session/PRCelebration";
 import { BodyweightModifierSheet } from "../../components/session/BodyweightModifierSheet";
 import { VariantPickerSheet } from "../../components/session/VariantPickerSheet";
 import { BodyweightGripPickerSheet } from "../../components/session/BodyweightGripPickerSheet";
+import { FormVideoSheet } from "../../components/session/FormVideoSheet";
+import { FormClipsPlayer } from "../../components/session/FormClipsPlayer";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -151,6 +153,58 @@ export default function ActiveSession() {
   const bodyweightGrip = useBodyweightGripPickerSheet({ groups, updateGroupSet, showError });
   const [restSettingsRequested, setRestSettingsRequested] = useState(false);
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
+
+  // BLD-1092: form-check video state (iOS/Android only; web guarded in components)
+  const [formVideoSetId, setFormVideoSetId] = useState<string | null>(null);
+  const [playerSetId, setPlayerSetId] = useState<string | null>(null);
+  // Actual SetMediaRow for the set being played (null when no player open).
+  const [playerClip, setPlayerClip] = useState<import("../../lib/media/form-clips").SetMediaRow | null>(null);
+  // Map of setId → hasClip, populated after set completion check.
+  const [hasClipMap, setHasClipMap] = useState<Record<string, boolean>>({});
+
+  // Lookup helper: find the group set for a given setId.
+  const findSetById = useCallback((setId: string) => {
+    for (const g of groups) {
+      const s = g.sets.find((s) => s.id === setId);
+      if (s) return { set: s, exerciseId: g.exercise_id };
+    }
+    return null;
+  }, [groups]);
+
+  const handleVideoGlyph = useCallback((setId: string) => {
+    if (hasClipMap[setId]) {
+      setPlayerSetId(setId);
+      // Fetch the actual clip row so FormClipsPlayer can render the video.
+      if (Platform.OS !== "web") {
+        import("../../lib/db/form-clips").then(({ getClipForSet }) => {
+          getClipForSet(setId).then((clip) => setPlayerClip(clip)).catch(() => {});
+        }).catch(() => {});
+      }
+    } else {
+      setFormVideoSetId(setId);
+    }
+  }, [hasClipMap]);
+
+  const handleClipSaved = useCallback((setId: string, clipId: string) => {
+    setFormVideoSetId(null);
+    setHasClipMap((prev) => ({ ...prev, [setId]: true }));
+    void clipId;
+  }, []);
+
+  // Refresh hasClipMap when sets change (non-blocking fire-and-forget).
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    import("../../lib/db/form-clips").then(({ getClipForSet }) => {
+      const completedSetIds = groups.flatMap((g) => g.sets.filter((s) => s.completed).map((s) => s.id));
+      if (completedSetIds.length === 0) return;
+      Promise.all(completedSetIds.map((sid) => getClipForSet(sid).then((clip) => [sid, !!clip] as const)))
+        .then((pairs) => {
+          setHasClipMap(Object.fromEntries(pairs));
+        })
+        .catch(() => {});
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups]);
 
   // Fetch estimated duration from template history (Phase 70)
   useEffect(() => {
@@ -267,9 +321,11 @@ export default function ActiveSession() {
       timerDisplaySeconds={timerDisplaySeconds}
       onTimerStart={handleTimerStart}
       onTimerStop={handleTimerStop}
+      hasClipMap={hasClipMap}
+      onVideoGlyph={handleVideoGlyph}
     />
     );
-  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop]);
+  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />
@@ -393,6 +449,33 @@ export default function ActiveSession() {
       <BodyweightModifierSheet sheetRef={bwModifierSheetRef} initialModifierKg={bwModifierInitial} unit={unit} onDone={handleSaveBodyweightModifier} onDismiss={handleDismissBodyweightModifier} />
       <VariantPickerSheet isVisible={variant.isVisible} onClose={variant.handleClose} onConfirm={variant.handleConfirm} {...variant.initialValues} />
       <BodyweightGripPickerSheet isVisible={bodyweightGrip.isVisible} onClose={bodyweightGrip.handleClose} onConfirm={bodyweightGrip.handleConfirm} {...bodyweightGrip.initialValues} />
+      {/* BLD-1092: form-check video modals (no-ops on web — components guard with Platform.OS) */}
+      {Platform.OS !== "web" && (() => {
+        const formSetInfo = formVideoSetId ? findSetById(formVideoSetId) : null;
+        return formSetInfo ? (
+          <FormVideoSheet
+            isVisible={!!formVideoSetId}
+            setId={formVideoSetId!}
+            exerciseId={formSetInfo.exerciseId}
+            setNumber={formSetInfo.set.set_number}
+            onClose={() => setFormVideoSetId(null)}
+            onClipSaved={(clipId) => handleClipSaved(formVideoSetId!, clipId)}
+          />
+        ) : null;
+      })()}
+      {Platform.OS !== "web" && (() => {
+        const playerSetInfo = playerSetId ? findSetById(playerSetId) : null;
+        const playerSet = playerSetInfo?.set ?? null;
+        return (
+          <FormClipsPlayer
+            isVisible={!!playerSetId && !!playerClip}
+            clip={playerClip}
+            weightLabel={playerSet ? `${playerSet.weight ?? ""} ${unit}`.trim() : undefined}
+            reps={playerSet?.reps ?? null}
+            onClose={() => { setPlayerSetId(null); setPlayerClip(null); }}
+          />
+        );
+      })()}
     </>
   );
 }

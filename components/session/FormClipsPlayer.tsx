@@ -1,0 +1,136 @@
+/**
+ * FormClipsPlayer.tsx
+ *
+ * Bottom-sheet player for a single form-check video clip.
+ * Renders meta (date, weight, reps) above the player.
+ *
+ * useMediaSurfaceMounted() is called at the root (AC12 Sentry gate).
+ */
+import React from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { VideoView, useVideoPlayer } from "expo-video";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { Text } from "@/components/ui/text";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { useMediaSurfaceMounted } from "@/hooks/useMediaSurfaceMounted";
+import { toAbsPath } from "@/lib/media/form-clips";
+import type { SetMediaRow } from "@/lib/db/form-clips";
+
+type Props = {
+  isVisible: boolean;
+  clip: SetMediaRow | null;
+  /** Weight displayed in the meta row (formatted string, e.g. "100 kg"). */
+  weightLabel?: string;
+  /** Reps to display. */
+  reps?: number | null;
+  onClose: () => void;
+  onDelete?: (clip: SetMediaRow) => void;
+};
+
+export function FormClipsPlayer({ isVisible, clip, weightLabel, reps, onClose, onDelete }: Props) {
+  if (!isVisible || !clip) return null;
+  return (
+    <BottomSheet isVisible={isVisible} onClose={onClose}>
+      <PlayerBody
+        clip={clip}
+        weightLabel={weightLabel}
+        reps={reps}
+        onDelete={onDelete}
+      />
+    </BottomSheet>
+  );
+}
+
+type BodyProps = Pick<Props, "clip" | "weightLabel" | "reps" | "onDelete">;
+
+function PlayerBody({ clip, weightLabel, reps, onDelete }: BodyProps) {
+  const colors = useThemeColors();
+
+  // AC12: increment replay-gate counter while this player surface is mounted.
+  useMediaSurfaceMounted();
+
+  const absPath = toAbsPath(clip!.rel_path);
+  const player = useVideoPlayer({ uri: absPath }, (p) => {
+    p.loop = true;
+    p.play();
+  });
+
+  const dateStr = new Date(clip!.created_at).toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const durationStr = clip!.duration_ms
+    ? `${Math.round(clip!.duration_ms / 1000)}s`
+    : null;
+
+  return (
+    <View style={styles.container}>
+      <Sentry_Mask>
+        <VideoView
+          player={player}
+          style={styles.video}
+          nativeControls
+          accessibilityLabel={
+            `Form clip from ${dateStr}` +
+            (weightLabel ? `, ${weightLabel}` : "") +
+            (reps ? `, ${reps} reps` : "") +
+            (durationStr ? `, ${durationStr}` : "")
+          }
+        />
+      </Sentry_Mask>
+      <View style={[styles.meta, { backgroundColor: colors.surfaceVariant }]}>
+        <Text style={[styles.metaDate, { color: colors.onSurfaceVariant }]}>{dateStr}</Text>
+        {weightLabel && <Text style={[styles.metaVal, { color: colors.onSurface }]}>{weightLabel}</Text>}
+        {reps != null && <Text style={[styles.metaVal, { color: colors.onSurface }]}>{reps} reps</Text>}
+        {durationStr && <Text style={[styles.metaVal, { color: colors.onSurfaceVariant }]}>{durationStr}</Text>}
+      </View>
+      {onDelete && (
+        <Pressable
+          style={[styles.deleteBtn, { borderColor: colors.error }]}
+          onPress={() => onDelete(clip!)}
+          accessibilityRole="button"
+          accessibilityLabel="Delete this clip"
+        >
+          <Text style={{ color: colors.error, fontWeight: "600" }}>Delete clip</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+/** Sentry.Mask wrapper — masks this element in Mobile Replay (defense-in-depth). */
+function Sentry_Mask({ children }: { children: React.ReactNode }) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require("@sentry/react-native") as typeof import("@sentry/react-native");
+    // eslint-disable-next-line react-hooks/error-boundaries
+    return <Sentry.Mask>{children}</Sentry.Mask>;
+  } catch {
+    return <>{children}</>;
+  }
+}
+
+const styles = StyleSheet.create({
+  container: { paddingBottom: 24 },
+  video: { width: "100%", aspectRatio: 9 / 16, borderRadius: 8 },
+  meta: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  metaDate: { fontSize: 13 },
+  metaVal: { fontSize: 13, fontWeight: "600" },
+  deleteBtn: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginHorizontal: 4,
+  },
+});

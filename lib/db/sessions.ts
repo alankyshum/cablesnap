@@ -11,6 +11,7 @@ import {
   stravaSyncLog,
   healthConnectSyncLog,
 } from "./schema";
+import { cascadeDeleteClipsForSession } from "../media/form-clips";
 
 // Re-export from split modules for backward compatibility
 export {
@@ -200,6 +201,8 @@ export async function completeSession(
 
 export async function cancelSession(id: string): Promise<void> {
   const db = await getDrizzle();
+  // Cascade-delete form clips for the target session BEFORE workout_sets delete.
+  await cascadeDeleteClipsForSession(id);
   await withTransaction(async () => {
     // BLD-1094: PRAGMA foreign_keys = ON now enforces strava_sync_log /
     // health_connect_sync_log → workout_sessions FK; delete sync-log child
@@ -218,6 +221,7 @@ export async function cancelSession(id: string): Promise<void> {
       .from(workoutSessions)
       .where(sql`${workoutSessions.completed_at} IS NULL`);
     for (const o of orphans) {
+      await cascadeDeleteClipsForSession(o.id);
       await db.delete(stravaSyncLog).where(eq(stravaSyncLog.session_id, o.id));
       await db.delete(healthConnectSyncLog).where(eq(healthConnectSyncLog.session_id, o.id));
       await db.delete(workoutSets).where(eq(workoutSets.session_id, o.id));
@@ -246,6 +250,8 @@ export async function cancelSession(id: string): Promise<void> {
  */
 export async function deleteCompletedSession(id: string): Promise<void> {
   const db = await getDrizzle();
+  // Cascade-delete form clips for the session BEFORE workout_sets delete.
+  await cascadeDeleteClipsForSession(id);
   await withTransaction(async () => {
     // BLD-1094: delete strava_sync_log + health_connect_sync_log children
     // first — both declare FK → workout_sessions(id) (no cascade) in tables.ts,

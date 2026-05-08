@@ -20,7 +20,7 @@
  * wire any extra prop for it.
  */
 import React, { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
-import { findNodeHandle, I18nManager, Pressable, StyleSheet, View } from "react-native";
+import { findNodeHandle, I18nManager, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Check, Trash2 } from "lucide-react-native";
@@ -155,6 +155,11 @@ export type SetRowProps = {
   timerDisplaySeconds?: number;
   onTimerStart?: (setId: string) => void;
   onTimerStop?: (setId: string) => void;
+  // BLD-1092: Form Check Video glyph (video-outline / video-check).
+  // Only rendered on completed sets. onVideoGlyph opens the capture sheet
+  // (no clip) or the player sheet (clip exists).
+  hasClip?: boolean;
+  onVideoGlyph?: (setId: string) => void;
 };
 
 export const SetRow = memo(function SetRow({
@@ -166,6 +171,7 @@ export const SetRow = memo(function SetRow({
   isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
   onOpenVariantPicker, onClearVariant,
   exerciseName, onOpenBodyweightGripPicker, onClearBodyweightGrip,
+  hasClip, onVideoGlyph,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-771: ref to the variant footer Pressable so the picker hook can
@@ -468,6 +474,29 @@ export const SetRow = memo(function SetRow({
               <MaterialCommunityIcons name="check" size={18} color={colors.onPrimary} />
             )}
           </Pressable>
+          {/* BLD-1092: Form Check Video glyph. Only rendered on completed sets.
+              Visual size 24 dp; effective touch target ≥48×48 dp via hitSlop.
+              hitSlop left:6 right:6 avoids overlap with check circle (right:0
+              hitSlop) and delete button. */}
+          {set.completed && Platform.OS !== "web" && (
+            <Pressable
+              onPress={() => onVideoGlyph?.(set.id)}
+              hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+              style={styles.videoGlyphBtn}
+              accessibilityRole="button"
+              accessibilityLabel={
+                hasClip
+                  ? `View form clip for set ${set.set_number}`
+                  : `Record form clip for set ${set.set_number}`
+              }
+            >
+              <MaterialCommunityIcons
+                name={hasClip ? "video-check" : "video-outline"}
+                size={22}
+                color={hasClip ? colors.primary : colors.onSurfaceVariant}
+              />
+            </Pressable>
+          )}
           <Pressable
             // Sighted: swipe is the primary delete path; single-tap is a
             // no-op (no onPress) so sweaty/gloved fingers cannot misfire.
@@ -793,6 +822,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoGlyphBtn: {
+    width: 36,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -8,6 +8,7 @@ import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
 import { workoutSets, exercises, workoutSessions, templateExercises } from "./schema";
+import { cascadeDeleteClipsForSets } from "../media/form-clips";
 
 export async function getSessionSets(
   sessionId: string
@@ -496,6 +497,8 @@ async function renumberExerciseGroup(
 }
 
 export async function deleteSet(id: string): Promise<void> {
+  // Cascade-delete form clips BEFORE the workout_sets row is removed.
+  await cascadeDeleteClipsForSets([id]);
   await withTransaction(async (db) => {
     // Capture (session_id, exercise_id) BEFORE deleting so we know which
     // group to renumber.
@@ -512,6 +515,8 @@ export async function deleteSet(id: string): Promise<void> {
 
 export async function deleteSetsBatch(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
+  // Cascade-delete form clips BEFORE the workout_sets rows are removed.
+  await cascadeDeleteClipsForSets(ids);
   await withTransaction(async (db) => {
     // Collect all affected (session_id, exercise_id) groups BEFORE the delete.
     const placeholders = ids.map(() => "?").join(", ");
