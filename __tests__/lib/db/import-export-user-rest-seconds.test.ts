@@ -161,3 +161,33 @@ describe("importData — user_rest_seconds sanitization (AC7)", () => {
     expect(getInsertedRestSeconds()).toBeNull();
   });
 });
+
+// ─── Privacy regression: breadcrumb inputValue must never contain user-controlled content ───
+
+import * as Sentry from "../../../__mocks__/@sentry/react-native";
+
+describe("importData — user_rest_seconds breadcrumb privacy (AC12)", () => {
+  const maliciousInputs: Array<[string, unknown]> = [
+    ["XSS string", "<script>alert(1)</script>"],
+    ["string 'NaN'", "NaN"],
+    ["evil object", { evil: true }],
+    ["undefined", undefined],
+  ];
+
+  it.each(maliciousInputs)(
+    "breadcrumb inputValue for %s is null or number — never raw content",
+    async (_label, raw) => {
+      await importExerciseWith(raw);
+      const calls = (Sentry.addBreadcrumb as jest.Mock).mock.calls;
+      for (const [breadcrumb] of calls) {
+        if (breadcrumb?.category === "rest-resolver" && breadcrumb?.data) {
+          const { inputValue } = breadcrumb.data;
+          expect(inputValue === null || typeof inputValue === "number").toBe(true);
+          // Confirm serialized data contains no injected content
+          const serialized = JSON.stringify(breadcrumb.data);
+          expect(serialized).not.toMatch(/<script>|alert|evil/);
+        }
+      }
+    },
+  );
+});

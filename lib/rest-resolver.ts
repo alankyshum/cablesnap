@@ -46,7 +46,10 @@ export type RestResolverBreadcrumbPayload = {
 /** Sanitization event emitted by import-export when clamping or dropping user_rest_seconds. */
 export type RestSanitizeBreadcrumbPayload = {
   kind: "import_clamp" | "import_drop";
-  inputValue: number | null | unknown;
+  /** Sanitized to number|null before logging — never raw user-controlled content. */
+  inputValue: number | null;
+  /** typeof of the original raw field, for diagnostics without leaking content. */
+  inputType?: "number" | "string" | "boolean" | "object" | "null" | "undefined" | "bigint" | "symbol" | "function";
   outputValue: number | null;
   exerciseId: string;
 };

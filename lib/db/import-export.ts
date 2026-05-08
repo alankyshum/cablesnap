@@ -14,7 +14,7 @@ import type {
   MealTemplateItem,
 } from "../types";
 import { getDatabase, withTransaction } from "./helpers";
-import { restSanitizeBreadcrumb, HISTORY_FLOOR_SECONDS, HISTORY_CEILING_SECONDS } from "../rest-resolver";
+import { restSanitizeBreadcrumb, RestSanitizeBreadcrumbPayload, HISTORY_FLOOR_SECONDS, HISTORY_CEILING_SECONDS } from "../rest-resolver";
 
 // --------------- Backup Format Types ---------------
 
@@ -599,17 +599,20 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
         const raw = sanitizedRow.user_rest_seconds;
         const n = typeof raw === "number" ? raw : (typeof raw === "string" ? parseInt(raw, 10) : NaN);
         const exerciseId = String(row.id ?? "");
+        // Sanitize inputValue: only log a numeric value or null — never raw user-controlled content.
+        const safeInput = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+        const inputType = raw === null ? "null" : (typeof raw as RestSanitizeBreadcrumbPayload["inputType"]);
         if (!Number.isInteger(n) || n <= 0) {
           // Drop non-integer, negative, zero, and NaN values.
           sanitizedRow.user_rest_seconds = null;
-          restSanitizeBreadcrumb({ kind: "import_drop", inputValue: raw, outputValue: null, exerciseId });
+          restSanitizeBreadcrumb({ kind: "import_drop", inputValue: safeInput, inputType, outputValue: null, exerciseId });
         } else if (n < HISTORY_FLOOR_SECONDS) {
           // Clamp below-floor positive integers up to floor (plan §11 / AC7).
           sanitizedRow.user_rest_seconds = HISTORY_FLOOR_SECONDS;
-          restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: n, outputValue: HISTORY_FLOOR_SECONDS, exerciseId });
+          restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: safeInput, inputType, outputValue: HISTORY_FLOOR_SECONDS, exerciseId });
         } else if (n > HISTORY_CEILING_SECONDS) {
           sanitizedRow.user_rest_seconds = HISTORY_CEILING_SECONDS;
-          restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: n, outputValue: HISTORY_CEILING_SECONDS, exerciseId });
+          restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: safeInput, inputType, outputValue: HISTORY_CEILING_SECONDS, exerciseId });
         } else {
           // Coerce string to integer when value is valid (e.g. from JSON parse).
           sanitizedRow.user_rest_seconds = n;
