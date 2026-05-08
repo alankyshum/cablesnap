@@ -207,7 +207,79 @@ The concept is strong and aligned with CableSnap's offline-first, privacy-first 
 - Permission-denied copy should avoid guilt or motivation language; keep it functional: "Camera access is needed to record a form clip. CableSnap stores clips on this device."
 
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: REQUEST CHANGES**
+
+The architectural shape is sound (sandbox files + denormalized `set_media` table + dedicated `lib/media/*` module), but four feasibility blockers and several spec gaps must be fixed in the plan before claudecoder picks this up. I second every QD blocker; the ones below are **additional** technical objections.
+
+**Blockers (technical):**
+
+1. **Sentry Mobile Replay is the actual privacy hole — and the fix is concrete code, not a one-liner AC.** `app/_layout.tsx:37-50` initializes `Sentry.mobileReplayIntegration()` with `replaysSessionSampleRate: 0.1` and `replaysOnErrorSampleRate: 1`. That ships rendered screen frames to `o4511267124215808.ingest.us.sentry.io`. `mobileReplayIntegration` defaults mask text but **does not mask `<Image>`/`<Video>`/`expo-camera` previews unless `maskAllImages: true` is set** — and even then `expo-camera` and any custom view are not native `Image` components and may render through. Plan must:
+   - Set `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true })` globally (one-time fix, ~5 LOC).
+   - Wrap every clip surface (`FormVideoSheet`, bottom-sheet player, Form Library thumbnails, compare view) in `<Sentry.Mask>` (or pass `sentry-mask` testID; verify the SDK API for SDK 8.x).
+   - Add an integration test that mounts each surface and asserts its rendered tree does not contain an unmasked native `Image`/`Video` node.
+   - Add a build-time grep gate: "if `lib/media/*` ships, then `mobileReplayIntegration` config object must contain `maskAllImages: true`" — fails the build otherwise. Cheaper than relying on humans.
+   This deserves its own AC (e.g., AC12 below) and should not be folded into AC2's `fetch` mock.
+
+2. **Compression strategy as written is impossible.** Plan §"Save" says: "if larger, re-encode at 720p / 30 fps using expo's ImageManipulator-equivalent for video — see Open Question 2". **There is no such thing.** `expo-image-manipulator` does not handle video. The only realistic post-capture transcoders in Expo land are `react-native-ffmpeg-kit` / `react-native-video-processing` — both are large native deps, GPL/LGPL-tinged, and a real F-Droid headache. Decision required in the plan, not deferred:
+   - **Pick A (recommended for v1):** Cap capture at 720p via `CameraView.recordAsync({ maxDuration: 15, codec: 'H264' })` and the existing `quality` prop, accept the resulting size (typically 4–10 MB / 15 s), and document that `size_bytes` is informational only. Drop the "if larger, re-encode" branch entirely.
+   - **Pick B:** Cap at 480p for storage savings; visual quality acceptable for form review. Mention as a setting later.
+   - **Do NOT** ship plan B-with-ffmpeg — it doubles bundle size, introduces F-Droid licensing risk, and is too much for v1.
+   Plan must commit to A or B and remove the "compress to ≤ 20 MB" target (or reframe it as a *display warning* threshold, not a transcoding requirement). AC must be revised accordingly.
+
+3. **`ON DELETE CASCADE` is a no-op on this codebase right now.** `lib/db/helpers.ts:42-55` opens the main DB connection and sets `PRAGMA journal_mode = WAL` but **never sets `PRAGMA foreign_keys = ON`**. SQLite defaults to OFF. The only place that pragma is enabled is `lib/db/import-export.ts:530` (CSV import path). That means:
+   - Drizzle's `references(() => workoutSets.id, { onDelete: "cascade" })` is silently a no-op for runtime app deletes today.
+   - `workoutSets` itself has zero FKs (I verified `lib/db/schema.ts:95-133`). Adding a single FK from `set_media` while leaving the rest unenforced is fine in isolation, but only IF the pragma is on.
+   Plan must add an explicit task: enable `PRAGMA foreign_keys = ON` in `lib/db/helpers.ts` immediately after the journal-mode pragma, with a regression test that asserts the pragma value at runtime. Do this in a **separate commit** (it changes the behavior of every existing nullable FK column across the schema — there could be latent bugs where dangling rows currently survive deletes; QA must regression-test the full delete-session/delete-set/delete-exercise paths). Without this commit, item #4 below cannot be solved at the DB layer.
+
+4. **Filesystem deletion ≠ DB deletion ≠ atomic.** I agree with QD: "single try/catch with rollback" is wishful thinking. SQLite + `expo-file-system` are not transactional together. Required design:
+   - Order: **DB row first, then file**. If the row delete commits and the file unlink fails, the orphan is a tombstone the reconciler can clean up. If you delete the file first and the DB row delete fails, you have a 404 row that crashes the player.
+   - Add a `pending_delete` column (or a tombstone table) — every clip with `pending_delete = 1` is hidden from the UI and reconciled on app start.
+   - Add `reconcileOrphans()` to `lib/media/form-clips.ts`: on app boot (or first Form Library open), scan `form-clips/` and the DB and resolve mismatches both directions.
+   - Tests: DB-row-missing/file-present (orphan file → reconciler unlinks), DB-row-present/file-missing (placeholder thumbnail + "remove?" CTA), parent-set-deleted-but-clip-survives (cascade misfire).
+
+**High-priority spec gaps (must be fixed in plan, not implementation):**
+
+5. **`expo-video` SDK 55 maturity (Open Q1):** No spike needed. expo-video has been stable since SDK 52 and is the official replacement for the deprecated `expo-av` Video component. SDK 55.0.x is fine; we already have `expo-camera ~55.0.15` in `package.json` so the toolchain is consistent. Recommendation: **drop the spike** and proceed. If a playback bug surfaces later, fall back to `react-native-video` is a 1-day swap. Update plan §Risk Assessment accordingly.
+
+6. **Capture entry point doesn't exist (QD blocker #2 mirrored):** I verified `components/session/SetRow.tsx` has no kebab — the row uses swipe + long-press for delete and accessibility actions. Plan's "kebab menu (alongside notes, swap, delete)" is fiction. Either:
+   - Add an explicit set-level affordance design (e.g., a small inline `▶/+` glyph at row right edge for completed sets only, ~32 dp hit-target with hitSlop), with a separate UX subticket for QD/UX-designer to approve, **or**
+   - Defer the entry-point UX to a real design iteration before implementation. Either way, "kebab" must be removed from the plan.
+
+7. **No-audio capture (QD blocker #2):** Concrete tech: `expo-camera`'s `CameraView.recordAsync({ mute: true })` exists in v15+. Verify on `expo-camera ~55.0.15` and add an AC: "Saved clip files contain zero audio tracks (verify via `ffprobe` in QA, or via an in-app metadata check on save)." Also: do **not** request `MICROPHONE` permission. Only request `CAMERA`. Update `app.config.ts` permissions list accordingly and add an AC checking the manifest.
+
+8. **iOS/Android backup exclusion (QD blocker #1):** `expo-file-system` exposes `setBackupBehaviorAsync` (or the equivalent `excludeFromBackup` flag depending on minor version). Spec: every file written to `form-clips/` must be flagged excluded **immediately after `writeAsStringAsync`/move**, before the DB row is INSERTed (so a crash mid-save can't leak a backed-up orphan). On Android, add `<no-backup>` rule via `android/app/src/main/res/xml/data_extraction_rules.xml` (or equivalent in `app.config.ts` plugin) to exclude `form-clips/` from Auto Backup. Add a unit test that reads the FS attribute and asserts the file is excluded. Without this, the privacy banner copy is false.
+
+9. **`set_media.kind` default of `"video"` is wrong for v1.** With photo support out of scope, the column should be `text("kind").notNull()` with NO default — every INSERT must explicitly state `"video"`. Defaulting risks silent stub rows from other code paths.
+
+10. **One-clip-per-set invariant must be enforced at the schema level.** Plan says "at most one short video clip" but `set_media.set_id` has only an index, not a unique constraint. Add `unique("uq_set_media_set_id").on(t.set_id)` (or use `set_id` as the primary key with an additional `id` ULID column for auditability). This also makes the future "more than 1 clip per set" extension explicit (drop the unique constraint then).
+
+11. **Privacy enforcement test scope (QD blocker #5 reinforced):**
+    - A grep for `rel_path` is too narrow. Use **module-boundary enforcement**: ESLint `no-restricted-imports` or `eslint-plugin-boundaries` to forbid `lib/media/*` from being imported by `lib/sync*`, `lib/db/csv-export.ts`, `lib/db/import-export.ts`, anything under `app/api/` (if Vercel functions exist), and any Sentry shim.
+    - Add network-mock test using `nock` or jest's `global.fetch = jest.fn()` PLUS `global.XMLHttpRequest = MockXHR` PLUS WebSocket — assert zero requests with any URL containing `form-clips/` or `.mp4` during the full capture→view→delete flow.
+    - Snapshot test on `csv-export` output asserting no `set_media` columns / no `rel_path` substrings.
+
+12. **Bundle-size delta on F-Droid (Open Q5):** `expo-video` adds ExoPlayer (~1.5–2 MB AAB on Android, similar on iOS via AVKit which is already in the platform). `expo-camera` is already shipping. Ballpark delta: **~2–3 MB AAB / ~1 MB IPA**. Well under AC10's 5 MB ceiling. F-Droid risk: ExoPlayer is Apache-2.0, FOSS-clean, no concern. Plan can keep AC10 but tighten the verification: "F-Droid build under `scripts/build-fdroid.sh` (or whatever exists) completes successfully and the resulting APK size delta is reported in the QD merge comment."
+
+13. **Web target (Open Q6 + plan §Edge Cases): contradiction must be removed.** Plan currently says "Form Library renders thumbnails read-only if any clips were transferred via export" — but v1 has **no export mechanism** (out-of-scope). Strip that sentence. Web should fully hide capture surfaces *and* the Form Library tab. `Platform.OS === 'web'` early-return at the entry-point and at `getClipsForExercise` (return `[]`). Add an AC.
+
+14. **`rel_path` durability (good as written, one tweak):** Storing relative paths is correct — iOS sandbox UUID changes after restore-from-backup are real. But the plan should also commit to a stable directory layout that survives schema migrations. Pin: `${documentDirectory}form-clips/<exercise_id>/<clip_id>.mp4` and `${documentDirectory}form-clips/<exercise_id>/.thumbs/<clip_id>.jpg`. Document in `lib/media/README.md` that these paths are part of the public migration contract.
+
+15. **Performance/threading:** Plan says "do not chain encoding on UI thread." Since we're dropping post-capture transcoding (per blocker #2), this risk is moot. Drop from plan. The remaining perf concern is thumbnail generation on first Form Library view: do this off-thread via `expo-video`'s `generateThumbnailsAsync` (or equivalent) and queue thumbnails sequentially — never parallel-N — to avoid ANRs on low-end Android.
+
+**New Acceptance Criteria to add (renumber as appropriate):**
+- AC12: Sentry Mobile Replay payloads contain zero pixels from `FormVideoSheet`, the bottom-sheet player, Form Library thumbnails, and the compare view. Verified by (a) `mobileReplayIntegration({ maskAllImages: true })` configured, (b) `<Sentry.Mask>` wrappers present on every media surface (asserted by component tests), (c) build-time grep gate.
+- AC13: `PRAGMA foreign_keys = ON` is set on every `getDatabase()` connection (asserted by a runtime test). Cascade chain `workout_sessions → workout_sets → set_media` is verified by an integration test that creates a session/set/clip, deletes the session, and asserts both the row and the file are gone after `reconcileOrphans()` runs.
+- AC14: No microphone permission is requested. Saved clip files contain no audio track (verified via metadata read on save, or by `ffprobe` in QA).
+- AC15: All clip + thumbnail files are excluded from iOS backup (`NSURLIsExcludedFromBackupKey == 1`) and from Android Auto Backup (manifest rule present).
+- AC16: Web build hides every Form-Clips entry point; `getClipsForExercise` returns `[]` on `Platform.OS === 'web'`.
+
+**Approval condition:** When the plan is updated to remove the kebab fiction, drop the impossible compression branch (commit to Pick A or B), add the four QD blockers + my 1–4, add AC12–AC16, and confirm the FK-pragma prerequisite is its own commit, I will re-review and approve. Estimated: 1 plan-author iteration + ~30 min re-review.
+
+**Open-Question answers from Tech Lead:**
+- Q1 (expo-video maturity): **No spike needed.** Stable on SDK 55. Drop the spike from §Risk Assessment.
+- Q2 (compression v1): **Ship 720p raw.** Do not add ffmpeg in v1. Defer compression entirely to v2 (or never — clip storage panel + bulk delete is sufficient).
+- Q5 (F-Droid bundle): **~2–3 MB AAB delta**, FOSS-clean, no F-Droid blocker. Verify in QD merge.
+- Q7 (one-time consent dialog): **Inline banner is enough.** Adding a consent wall is anti-fluent-UX (goal §1). Stick with inline copy + the saved-clip glyph.
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. If a reviewer believes any UX detail crosses the line, flag it and we redesign._
