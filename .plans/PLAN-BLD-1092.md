@@ -422,21 +422,44 @@ Validation of v2 vs my rev-1 list:
 | 4 | FS+DB delete ordering | **Resolved** (modulo two AC18 cases above) |
 | 5–15 | Spec gaps | **All resolved** |
 
-### Quality Director (UX) — rev 3: PENDING
+### Quality Director (UX) — rev 3: REQUEST CHANGES
 
-**Verdict (rev 3):** PENDING — re-review requested 2026-05-08T after v3 push.
+**Verdict (rev 3):** REQUEST CHANGES (2026-05-08T05:06Z re-review against `3f0657ed` on `main`; plan verdict committed by QD).
 
-**v2 blockers (QD rev-2) and how v3 addresses each:**
+v3 resolves four of the five QD rev-2 blockers. The remaining blocker is still privacy-critical: AC12's new replay-disable mechanism is not executable against the installed `@sentry/react-native` SDK.
 
-| # | QD rev-2 Blocker | v3 Resolution |
-|---|------------------|---------------|
-| 1 | `expo-file-system` has no backup-exclusion API (AC15 was aspirational) | Hard Rule 4 + new Tech Approach §"BLD-1092b — Backup-exclusion config plugin" — explicit prerequisite PR ships a custom Expo config plugin with iOS Swift module (`setExcludedFromBackup`/`readBackupExclusion`) and Android `data_extraction_rules.xml`. AC15 rewritten to test the plugin's actual deliverables. **Banner copy gated** (Hard Rule 2): until 1092b merges, banner says "Saved on this device only" — no "never uploaded" claim. |
-| 2 | Camera API mismatch (`mute` is a prop, `'H264'` invalid codec) | Hard Rule 5 + UX §"Capture entry point" §step 1 + Tech §"Compression strategy" all rewritten with verified SDK-55 API: `<CameraView mode="video" mute videoQuality="720p" />` + `recordAsync({ maxDuration: 15, codec: Platform.OS === 'ios' ? 'avc1' : undefined })`. AC1 + AC14 updated. |
-| 3 | `cameraPermission` copy is barcode-only — misleading prompt | New Hard Rule 7 requires updating `app.config.ts:42-43` to cover both barcode + form clips, no microphone wording. AC14 extended with assertion against `app.config.ts` source and prebuilt `Info.plist` / Android string resource. |
-| 4 | SetRow glyph 32 dp < WCAG 48 dp floor; possible overlap with check/delete | UX §"Capture entry point" rewritten: visual icon 24–32 dp, **effective hitSlop ≥ 48×48 dp**, non-overlapping with checkbox/delete hit regions. Verified by layout test in compact, large-text, and landscape densities. AC1 amended. |
-| 5 | Sentry replay component-tree masking insufficient for native preview surface | Tech §"Privacy enforcement" item 1 rewritten to **replay-disable-while-mounted** as primary mechanism (`useReplayDisableWhileMounted()` hook on every media surface, ref-counted for concurrent mounts, hedges across SDK 8.x API drift); component-tree masking demoted to defense-in-depth. AC12 rewritten accordingly + extended grep gate. |
+**v2 blockers (QD rev-2) and v3 status:**
 
-**Re-review requested:** v3 commit on `main`.
+| # | QD rev-2 Blocker | v3 status |
+|---|------------------|-----------|
+| 1 | `expo-file-system` has no backup-exclusion API (AC15 was aspirational) | ✅ **Resolved.** Hard Rule 4 + prerequisite **BLD-1092b** now name the real implementation path: custom Expo config plugin, iOS Swift helper (`setExcludedFromBackup`/`readBackupExclusion`), Android backup XML rules, and banner-copy gating until 1092b merges. |
+| 2 | Camera API mismatch (`mute` is a prop, `'H264'` invalid codec) | ✅ **Resolved.** AC1/AC14 now use SDK-55-valid boundaries: `<CameraView mode="video" mute videoQuality="720p" />` and `recordAsync({ maxDuration: 15, codec: Platform.OS === 'ios' ? 'avc1' : undefined })`. |
+| 3 | `cameraPermission` copy is barcode-only — misleading prompt | ✅ **Resolved.** Hard Rule 7 + AC14 require updating `app.config.ts` source and prebuilt iOS/Android permission strings to cover barcode + local form clips without microphone wording. |
+| 4 | SetRow glyph 32 dp < WCAG/Material floor; possible overlap with check/delete | ✅ **Resolved.** AC1 now requires a 24-32 dp visual glyph with effective hitSlop ≥ 48×48 dp, non-overlap with existing checkbox/delete regions, and compact + large-text + landscape layout tests. |
+| 5 | Sentry replay component-tree masking insufficient for native preview/player surfaces | ❌ **Not resolved.** v3 correctly elevates replay-disable-while-mounted as the primary mechanism, but the named SDK control surface does not exist. |
+
+**Remaining blocker (must fix before implementation): AC12 calls non-existent Sentry Mobile Replay APIs.**
+
+Verified installed package: `@sentry/react-native` 8.9.2. The actual mobile replay integration type exposes only:
+
+```ts
+type MobileReplayIntegration = Integration & {
+  options: MobileReplayOptions;
+  getReplayId: () => string | null;
+};
+```
+
+There is no mobile replay `stop()`, `start()`, `pause()`, or `resume()` method on the integration returned by `mobileReplayIntegration()`. The plan's `stop?.()` / `start?.()` feature-detection would silently no-op, while the fallback `client.close()` + `client.init()` on media-surface mount/unmount is too destructive for runtime UX and observability: it tears down the whole Sentry client, risks dropping in-flight error events/breadcrumbs/user context, and creates churn every time a clip preview/player/thumbnail surface appears.
+
+**Required AC12 rewrite:** choose one implementable, deterministic privacy path using verified SDK 8.9.2 APIs only:
+
+1. **Preferred:** set `replaysSessionSampleRate: 0` globally and use `mobileReplayIntegration({ beforeErrorSampling })` with a media-surface ref-counter so error-triggered replay is skipped whenever camera/player/thumbnail/compare surfaces are mounted. Keep `maskAllImages` / `<Sentry.Mask>` as defense-in-depth, not the primary proof.
+2. **Strongest privacy stance:** remove `mobileReplayIntegration()` entirely while form clips ship. Keep Sentry errors/performance, but eliminate replay's media-pixel blast surface.
+3. **If keeping session replay outside media surfaces is mandatory:** require actual replay-artifact verification on physical iOS + Android devices for camera preview, player, thumbnails, and compare view. Component-tree tests are not enough for native `expo-camera` / `expo-video` surfaces.
+
+Until AC12 is rewritten around one of those paths, the plan still cannot support the "zero media pixels leave the device" guarantee.
+
+**Behavior-design classification:** still **NO**, provided comparison remains informational and no scoring/streak/reward/callout language is added.
 
 ### Tech Lead (Feasibility) — rev 3: REQUEST CHANGES
 
