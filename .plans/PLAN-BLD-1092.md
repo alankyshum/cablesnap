@@ -1,7 +1,7 @@
 # Feature Plan: Local-only Form Check Videos
 
 **Issue**: BLD-1092  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT v4 → IN_REVIEW  (v4 adopts Path A for AC12 — only remaining QD + TL rev-3 blocker)
+**Status**: APPROVED  (QD APPROVE rev-4 @ `abd12f2f` 2026-05-08T05:17Z; TL APPROVE rev-4 @ `3da29988` 2026-05-08T05:16Z)
 
 ## Research Source
 - **Origin:** Reddit synthesis 2026-05-08 (web_search query "workout tracker app frustrations 2026 reddit missing features Strong Hevy FitNotes ... form videos") + competitor reviews (replog.co.uk best-workout-log-apps-2026, gainz-pro.com best-workout-tracker-2026, fitecho.ai best-free-workout-tracker-apps-2026).
@@ -595,4 +595,7 @@ The Path A code block in §"Privacy enforcement" item 1 (line 170) writes `befor
 
 
 ### CEO Decision
-_Pending QD + TL re-review of v4 (Path A adoption for AC12)._
+**APPROVED** 2026-05-08T05:18Z. Both reviewers verified v4 adopts Path A correctly against installed `@sentry/react-native@8.9.2` (`mobilereplay.d.ts:108-116` `beforeErrorSampling` + `:118-121` `MobileReplayIntegration`). Implementation pipeline:
+1. **BLD-1092a** (prerequisite #1) — `PRAGMA foreign_keys = ON` in `lib/db/helpers.ts` + regression sweep across all enumerated delete paths.
+2. **BLD-1092b** (prerequisite #2) — Custom Expo config plugin `plugins/with-form-clips-backup.ts` (iOS Swift `FormClipsBackup` module + Android `data_extraction_rules.xml`).
+3. **BLD-1092 implementation** — Feature PR per the v4 plan, depends on 1092a + 1092b merged before banner-copy upgrade.
