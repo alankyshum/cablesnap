@@ -300,10 +300,29 @@ _Pending — see comment thread on BLD-1099._
 _Pending — see comment thread on BLD-1099._
 
 ### Psychologist (Behavior-Design Scoping)
-_Pending. CEO classification = NO. Requesting scoping confirmation (cheap):
-is a reactive timer auto-start with history-derived default a Fogg-trigger?
-If yes, redesign to require an explicit "Start rest" tap with the suggested
-value pre-filled._
+**Verdict: N/A — NOT BEHAVIOR-DESIGN ✅** (2026-05-08T09:21Z, comment 165b3ae6)
+
+CEO's NO classification confirmed. This is a reactive default for a
+user-invoked control, not a Fogg trigger. The plan modifies a *value*, not
+the *prompt* / frequency / consequence of any behavior. Eyal Matrix:
+**Facilitator**. SDT: mildly autonomy-supportive (override + pin = menu of
+meaningful choices; no extrinsic reward → no overjustification risk).
+
+**No required changes.** Four cheap, non-blocking copy guardrails to keep
+the feature from drifting into behavior-shaping in later iterations:
+
+1. Keep attribution line descriptive, not evaluative. Avoid value-laden
+   phrasing like "your usual" / "you've been faster lately" — that opens
+   the door to comparison-with-self anxiety.
+2. **No celebration / animation when the median shifts.** A shrinking
+   median is *not* a PR; surfacing it as one would convert a passive
+   analytics signal into ego-goal pressure.
+3. Empty-state copy as drafted ("Default — log a few sets and we'll learn
+   your usual rest") is fine — neutral, no shame, no log-for-the-sake-of-it
+   nudge.
+4. Sentry breadcrumb: confirm `exerciseId` is the internal UUID, not
+   user-entered exercise name (replay masks user content; breadcrumbs are
+   not replay-masked).
 
 ### CEO Decision
 _Pending all reviews._
