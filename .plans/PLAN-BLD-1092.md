@@ -438,28 +438,69 @@ Validation of v2 vs my rev-1 list:
 
 **Re-review requested:** v3 commit on `main`.
 
-### Tech Lead (Feasibility) — rev 3: PENDING
+### Tech Lead (Feasibility) — rev 3: REQUEST CHANGES
 
-**Verdict (rev 3):** PENDING — re-review requested 2026-05-08T after v3 push.
+**Verdict (rev 3):** REQUEST CHANGES — re-review 2026-05-08T05:05Z against `3f0657ed` on `main`.
 
-**v2 blockers (TL rev-2) and how v3 addresses each:**
+Excellent progress overall — every TL rev-2 blocker is correctly addressed except one. BLD-1092a/1092b prerequisite split is sound, the camera API is now type-correct, AC18 has the right test surface, F-Droid path is real, and the partial index is fixed. **One remaining blocker:** the primary AC12 mechanism does not match the installed Sentry SDK and is unimplementable as written.
 
-| # | TL rev-2 Blocker | v3 Resolution |
-|---|------------------|---------------|
-| 1 | No `expo-file-system` backup-exclusion API exists | TL Pick A adopted: new prerequisite PR **BLD-1092b** ships custom config plugin (iOS Swift + Android XML rules + TS shim). Banner copy gated on 1092b merge (Hard Rule 2 + Hard Rule 4). AC15 references the actual deliverables. |
-| 2 | Camera recording API does not match SDK 55 types | All call-sites rewritten with verified `Camera.types.d.ts` shape: `mute`/`videoQuality` as `CameraView` props; `recordAsync` options limited to `maxDuration` + iOS-only `codec: 'avc1'`. (Hard Rule 5 + UX §step 1 + Tech §Compression + AC1.) |
-| 3 | `cameraPermission` is barcode-only | Hard Rule 7 + AC14 require update to `app.config.ts:42-43` covering barcode + form clips, no microphone wording. |
-| A (validation) | BLD-1092a regression sweep enumeration | §"BLD-1092a" prerequisite expanded to enumerate `deleteSet`, `deleteSession`, `softDeleteCustomExercise`, `deleteTemplate`, `removeExerciseFromTemplate`, `program_*` cascades, plus full `grep -rn` enumeration. |
-| B (validation) | AC12 floor: replay-disable-while-mounted | Tech §"Privacy enforcement" item 1 rewritten to make replay-disable the primary mechanism via `useReplayDisableWhileMounted()` hook with ref-counted concurrent mounts and SDK-8.x API hedging. Component-tree masking + grep gate retained as defense-in-depth. AC12 rewritten. |
-| C (validation) | AC18 needs concurrent-write + idempotent-unlink cases | AC18 expanded from 3 → 5 cases: (d) concurrent-write race (snapshot-DB-rows-before-FS-enumeration + 30 s `mtime` quiet zone); (e) idempotent `unlinkAsync` ENOENT swallowed. Reconciler implementation in §"New module" updated. |
-| 4 (polish) | SetRow glyph 32 dp < 48 dp floor | UX §"Capture entry point" rewritten: ≥ 48×48 dp effective hitSlop, non-overlapping. AC1 amended. |
-| 5 (polish) | F-Droid path names nonexistent script | Tech §"F-Droid" + AC10 reference `fdroid-foss-build` skill / `.github/workflows/fdroid-release.yml` instead of `scripts/build-fdroid.sh`. |
-| 6 (polish) | `idx_set_media_pending_delete` low-cardinality counterproductive | Schema replaced with **partial index** `WHERE pending_delete = 1`. |
+**Blocker (rev 3):**
 
-**Plus (claudecoder readiness review):** `expo-video-thumbnails` listed as separate dependency (not bundled with `expo-video`) in §"New dependencies" + §"Performance".
+1. **`useReplayDisableWhileMounted()` cannot work — `MobileReplayIntegration` has no `stop()`/`start()` API.** Verified `node_modules/@sentry/react-native/dist/js/replay/mobilereplay.d.ts` lines 118–121 (the actually installed SDK):
+   ```ts
+   type MobileReplayIntegration = Integration & {
+     options: MobileReplayOptions;
+     getReplayId: () => string | null;
+   };
+   ```
+   The integration object exposes **only** `options` and `getReplayId()`. There is no `stop`, `start`, `pause`, or `resume`. The plan's hedged feature-detection (`MobileReplay.stop?.()`) will silently no-op (since `stop` is `undefined`), and the documented fallback (`client.close()` + `client.init()` cycle) is destructive — it tears down the entire Sentry client, drops in-flight error events, breadcrumbs, and user context, and creates churn on every media-surface mount/unmount. That is not a viable runtime control surface.
 
-**Re-review requested:** v3 commit on `main`.
+   The v2→v3 escalation correctly identified that JS-tree masking is insufficient for native `expo-camera` / `expo-video` preview surfaces. But the chosen replacement isn't supported by the SDK. Three implementable paths exist; the plan must commit to one:
 
+   **Path A (recommended): Drop `replaysSessionSampleRate` to 0 globally and use `beforeErrorSampling` with a media-surface ref-counter.**
+   ```ts
+   // app/_layout.tsx
+   import { mediaSurfaceMountCount } from '@/lib/media/replay-guard';
+   Sentry.init({
+     // ... existing config ...
+     replaysSessionSampleRate: 0,         // was 0.1 — eliminates always-recording session replay
+     replaysOnErrorSampleRate: 1,
+     integrations: [Sentry.mobileReplayIntegration({
+       maskAllImages: true,
+       maskAllVectors: true,
+       beforeErrorSampling: (event, hint) => {
+         // Skip replay attachment to error events while any media surface is mounted.
+         return mediaSurfaceMountCount() === 0;
+       },
+     })],
+   });
+   ```
+   Pros: only legitimate API surface; ref-counter is a tiny module; clearly defensible privacy semantics. Cons: loses session-sampled replay company-wide. For a privacy-first app this is the right tradeoff. **My recommendation.**
+
+   **Path B (surgical, iOS-strong / Android-uncertain):** Use `excludedViewClasses` (iOS, lines 81–94 of `mobilereplay.d.ts`) to exclude `expo-camera`'s and `expo-video`'s native view classes from replay subtree traversal entirely. On Android, set `screenshotStrategy: 'canvas'` (which the SDK doc says "always masks text and images and does not support masking options" — but does NOT explicitly state what it does with `SurfaceView` / `TextureView` overlays from `expo-camera` / `expo-video`, which composite at a separate layer). To pick this path, the plan must require a verified test on a physical Android device that captures an actual replay artifact during camera preview AND player playback, decodes it, and confirms the camera/player regions are blanked. Without that verification, Path B doesn't actually deliver the AC12 promise.
+
+   **Path C (most defensible for a privacy-first app):** Remove `mobileReplayIntegration()` entirely from `Sentry.init`. Keep the rest of Sentry (errors, breadcrumbs, performance) — which is the original Sentry value prop anyway. Replay is the new add-on; for an open-source privacy-first app, dropping it is consistent with brand identity and removes the entire blast surface in one stroke. This is the Fix Placement Framework "fix at the source" answer.
+
+   AC12 must be rewritten to (a) commit to one of A / B / C, (b) name only verified-installed Sentry SDK 8.x functions, and (c) replace "feature-detection across SDK 8.x patch releases" with a single deterministic mechanism. The grep gate stays as defense-in-depth. The `useReplayDisableWhileMounted()` hook can stay if Path A's ref-counter is what's needed for `beforeErrorSampling`, but its implementation must NOT call `stop()` / `client.close()`.
+
+**Validation of v3 against my rev-2 list (everything except the above is resolved):**
+
+| # | Rev-2 item | v3 status |
+|---|-----------|-----------|
+| 1 | `expo-file-system` no backup-exclusion API | ✅ **Resolved** — BLD-1092b prerequisite + Hard Rule 4 + AC15 reference real deliverables. Banner copy gating (Hard Rule 2) is the right move. |
+| 2 | Camera API mismatch | ✅ **Resolved** — `<CameraView mute videoQuality="720p">` + `recordAsync({ maxDuration: 15, codec: Platform.OS === 'ios' ? 'avc1' : undefined })` matches `Camera.types.d.ts:178-198, 338, 494`. |
+| 3 | `cameraPermission` barcode-only copy | ✅ **Resolved** — Hard Rule 7 + AC14 cover update to `app.config.ts:42-43`. |
+| A | BLD-1092a regression sweep enumeration | ✅ **Resolved** — explicit list + `grep -rn` enumeration. |
+| B | AC12 floor: replay-disable-while-mounted | ❌ **Not resolved** — see blocker above. |
+| C | AC18 concurrent-write + idempotent-unlink | ✅ **Resolved** — 5-case AC18 + reconciler snapshots DB rows before FS enumeration with 30 s `mtime` quiet zone, swallows ENOENT. |
+| 4 | SetRow ≥ 48 dp hitSlop | ✅ **Resolved** — AC1 amended with compact + large-text + landscape verification. |
+| 5 | F-Droid path | ✅ **Resolved** — `fdroid-foss-build` skill + `.github/workflows/fdroid-release.yml` (both verified to exist; `.github/workflows/auto-fdroid.yml` also present). |
+| 6 | Partial `pending_delete` index | ✅ **Resolved** — `WHERE pending_delete = 1`. |
+| claudecoder readiness | `expo-video-thumbnails` listed | ✅ **Resolved**. |
+
+**Approval condition:** Rewrite AC12 + Tech §"Privacy enforcement" item 1 around one of Paths A / B / C above, calling only verified-installed Sentry SDK 8.x functions. No "feature-detection across patch releases" hedging — pick a path that works against `node_modules/@sentry/react-native/dist/js/replay/mobilereplay.d.ts` as it ships today. Once that lands I will APPROVE without another round.
+
+**One additional ask:** the Risk Assessment should mention that Path A trades away session-sampled replay company-wide. If the team prefers to keep session replay outside `lib/media/*` surfaces, Path B is the only fit — and the manual physical-device verification it requires must be acknowledged as a v1 release-gate.
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. If a reviewer believes any UX detail crosses the line, flag it and we redesign._
 
