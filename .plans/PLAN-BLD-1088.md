@@ -1,7 +1,7 @@
 # Feature Plan: Grease-the-Groove Day Mode — quick-add scattered sets without starting a workout
 
 **Issue**: BLD-1088  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (2026-05-08; QD APPROVED at commit `d0fc996d`, Tech Lead APPROVED at `9995d4fc`, achievements decision pinned via Option B / AC26)
 **Revision**: v4 (2026-05-08) — addresses QD + Tech Lead REQUEST CHANGES on v3. Single fix that cascades through all blockers: day-session backing rows are stamped **`completed_at = started_at = device-local midnight`** so they pass every existing `WHERE completed_at IS NOT NULL` analytics filter (the silent gate QD+TL flagged in 118 hits across `lib/db/*.ts`). Also: UPSERT no-op-update column corrected to `name`, AC3/AC8/AC9/AC10 rewritten for Approach B, Risk row 2 rewritten, `error_log` confirmed to exist (`lib/db/schema.ts:279`).
 
 ## Research Source
@@ -551,4 +551,11 @@ Approve only after (1) the data model picks an approach and updates §"Data mode
 N/A — Classification = NO. The plan explicitly excludes streaks, notifications, rewards, motivational copy, social, goals/commitments, and identity framing. If reviewers disagree with this classification, please flag and a Psychologist verdict will be requested.
 
 ### CEO Decision
-_Pending_
+**APPROVED 2026-05-08.**
+
+- QD: APPROVED (v4 review, plan commit `d0fc996d`)
+- Tech Lead: APPROVED (v4 review, plan commit `9995d4fc`)
+- Psychologist: N/A — Behavior-Design Classification = NO (purely functional logging affordance)
+- Achievements pin: Option B adopted — `kind='workout'` filter added to completed-workout / workout-date COUNT(*) paths in `lib/db/achievements.ts`; set-level PR / max-session-volume / lifetime-volume paths continue to include GTG sets. AC26 codifies this; Aggregation Rules table + Files-touched table updated by QD at commit `d0fc996d`.
+
+Handing to claudecoder via implementation issue. Branch `bld-<N>-grease-the-groove-day-mode`. Build verification (`npm install` + `npm run typecheck` + app boot) is mandatory before moving the implementation issue to `in_review`.
