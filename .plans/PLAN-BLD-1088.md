@@ -148,12 +148,12 @@ Because every GTG set still has a `session_id`, **no `INNER JOIN workout_session
 | Surface | Required filter | File(s) |
 |---|---|---|
 | Workouts list ("History" tab) | Hide `kind='day_session'` rows from the session list itself; render them as a collapsed "Quick-add sets" group per day. | `app/(tabs)/history.tsx`, `lib/db/sessions.ts` `listSessions()` query |
-| "Workouts this week" / "Workouts this month" counts | `WHERE kind = 'workout'` on the `COUNT(DISTINCT workout_sessions.id)` paths. | `lib/db/weekly-summary.ts`, `lib/db/monthly-report.ts`, `lib/db/calendar.ts` (workout-day dot logic) |
+| "Workouts this week" / "Workouts this month" / completed-workout achievement counts | `WHERE kind = 'workout'` on the `COUNT(DISTINCT workout_sessions.id)` / `COUNT(*) FROM workout_sessions` paths. GTG days do NOT count toward "completed workout" achievements; they still count toward set-level PR/volume achievements. | `lib/db/weekly-summary.ts`, `lib/db/monthly-report.ts`, `lib/db/calendar.ts` (workout-day dot logic), `lib/db/achievements.ts` (session-count paths only) |
 | Active-session detection | `WHERE kind = 'workout' AND completed_at IS NULL`. Both filters in defence-in-depth (backing rows fail BOTH conditions: `kind='day_session'` AND `completed_at = started_at` non-null). | `lib/db/session-stats.ts` (`getActiveSession`/`isActiveSessionPresent`) |
 | Session detail / edit / template-from-session | These operate on a specific `workout_sessions.id`. **Add a guard**: refuse to open a `kind='day_session'` row in the normal session UI; the read-only `<DaySessionDetailScreen>` handles it instead. | `app/session/[id].tsx`, navigation guard |
 | Per-session stats / per-session PR list | Operates on a specific session id — no semantic change. Documented as "GTG sessions are presented via the day-session detail screen, not session-stats." | `lib/db/session-stats.ts` |
 | Calendar dot rendering | A day with **only** `kind='day_session'` rows renders the new GTG-only dot style; a day with any `kind='workout'` row renders the existing solid dot. | `lib/db/calendar.ts`, `components/calendar/*` |
-| Volume / PR / e1RM / variant / Strength Levels | **No change** — every set has a session, every backing session has `completed_at = started_at` (non-null), every existing `WHERE completed_at IS NOT NULL` filter passes, and every existing date derivation via `started_at` works. GTG sets count automatically. | `pr-dashboard.ts`, `e1rm-trends.ts`, `exercise-history.ts`, `strength-overview.ts`, `weekly-summary.ts` (volume side), `monthly-report.ts` (volume side), `recovery.ts`, `achievements.ts` |
+| Volume / PR / e1RM / variant / Strength Levels / set-level achievements | **No change** — every set has a session, every backing session has `completed_at = started_at` (non-null), every existing `WHERE completed_at IS NOT NULL` filter passes, and every existing date derivation via `started_at` works. GTG sets count automatically. | `pr-dashboard.ts`, `e1rm-trends.ts`, `exercise-history.ts`, `strength-overview.ts`, `weekly-summary.ts` (volume side), `monthly-report.ts` (volume side), `recovery.ts`, `achievements.ts` (set-level PR/volume paths only) |
 | Import/Export & CSV | Add `kind`, `day_session_exercise_id`, `day_session_date` to the exported `workout_sessions` row schema. CSV header bumped (backward-readable: missing column defaults to `'workout'`). Roundtrip test added. | `lib/db/import-export.ts`, `lib/db/csv.ts`, `lib/db/csv-import.ts` |
 | Gym profiles (per-gym usage) | GTG sessions have `gym_id = NULL` in v1 (the user is wherever they are throughout the day). They naturally drop out of per-gym joins. Documented limitation. | `lib/db/gym-profiles.ts` (no change) |
 
@@ -172,6 +172,7 @@ This is **~6 surgical filter additions + 3 import/export touchups**, not the 23-
 | `lib/db/weekly-summary.ts` | "Workouts this week" count adds `kind='workout'` filter. Volume/PR queries unchanged. |
 | `lib/db/monthly-report.ts` | "Workouts this month" count adds `kind='workout'` filter. |
 | `lib/db/calendar.ts` | Day classification: `'workout'` if any `kind='workout'`, else `'gtg-only'` if any `kind='day_session'`, else `'rest'`. |
+| `lib/db/achievements.ts` | Completed-workout and workout-date count paths add `kind='workout'`; PR / max-session-volume / lifetime-volume achievement paths continue to include GTG sets. |
 | `lib/db/import-export.ts` + `lib/db/csv.ts` + `lib/db/csv-import.ts` | Serialize/deserialize the three new columns. CSV reader treats missing `kind` column as `'workout'` for back-compat. |
 | `app/session/[id].tsx` | Refuse-to-open guard for `kind='day_session'` rows; redirects to the day-session detail screen. |
 | `components/home/QuickAddFab.tsx` | NEW. |
@@ -284,6 +285,7 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 - [ ] **AC23** Active-session detection (`isActiveSessionPresent`) returns `false` even when one or more `kind='day_session'` rows exist. The check is `WHERE kind='workout' AND completed_at IS NULL`, so day-session rows (which have `completed_at = started_at`, non-null) are doubly excluded.
 - [ ] **AC24** Session-detail navigation guard: opening `/session/[id]` on a `kind='day_session'` row redirects to `/day-session/[id]` and never shows the editable session UI.
 - [ ] **AC25** UPSERT correctness test: two consecutive `getOrCreateDaySessionForToday(exId)` calls in the same session return the same row id; the implementation uses the no-op-update RETURNING pattern (not `DO NOTHING RETURNING`).
+- [ ] **AC26** Achievement semantics test: `kind='day_session'` rows do not increment completed-workout / workout-date achievements, while GTG sets do count for set-level PR, max-session-volume, and lifetime-volume achievement calculations.
 
 ## Edge Cases
 
@@ -315,6 +317,8 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 ## Review Feedback
 
 ### Quality Director (UX)
+**v4 verdict: APPROVE (2026-05-08).** The v3 blockers are resolved: backing rows now use `completed_at = started_at` so current analytics filters include GTG sets, UPSERT uses the real `name` column, AC3/AC8/AC9/AC10 are Approach-B native, `error_log` is verified, and the stale migration-risk row is gone. I also pinned Tech Lead's achievements note in this plan: GTG days do not count toward completed-workout achievements, but GTG sets do count toward set-level PR/volume achievements (AC26).
+
 **v4 RESPONSE TO QD (2026-05-08):** every blocker addressed. Please re-review.
 
 | QD v3 blocker | v4 resolution |
