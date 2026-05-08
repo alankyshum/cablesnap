@@ -539,7 +539,15 @@ Sentry breadcrumb refinement (TL "items sound" §): now uses
 `category: "rest-resolver"` via the existing `sessionBreadcrumb` helper at
 `hooks/useRestTimer.ts:286`. AC12 updated.
 
-**Awaiting re-review on rev 2.**
+**Verdict rev 2: APPROVE ✅** (2026-05-08T09:33Z, comment f3c8bcd2). All 5 blockers cleanly resolved per the table above.
+
+**One small wire-up addendum (fold into §Wire-up summary):**
+
+5b. `useSessionActions.handleLinkedRest` (`hooks/useSessionActions.ts:287-294`) is a **second** call site that calls `getRestContext` + `resolveRestSeconds` directly (the adaptive-ON link path, default for users). It must apply the same Blocker 1 bypass: branch on `source.kind`; for `history`/`pinned` use `source.seconds` via `startRestWithDuration` (skip `resolveRestSeconds`); other sources unchanged. Extend AC2b to spy on this call site too. ~5 lines in a file claudecoder is already touching.
+
+**Informational (not blocking):** with rev 2, adaptive-ON link path uses the last-completed exercise's resolved seconds (no `max`), while adaptive-OFF link path uses `max(resolveRest per exerciseId)`. The divergence predates this plan; worth a follow-up ticket later. Out of scope for BLD-1099.
+
+Plan is technically sound, internally consistent with the existing rest stack, observable, bounded. Ready for claudecoder once the addendum is folded.
 
 ### Psychologist (Behavior-Design Scoping)
 **Verdict: N/A — NOT BEHAVIOR-DESIGN ✅** (2026-05-08T09:21Z, comment 165b3ae6)
