@@ -320,6 +320,79 @@ v2 is substantially safer than rev 1, but it still cannot be handed to implement
 
 **Re-review requested:** v2 commit (this revision) on `main`.
 
+### Tech Lead (Feasibility) — rev 2: REQUEST CHANGES
+**Verdict (rev 2):** REQUEST CHANGES (2026-05-08T04:40Z re-review against `db619def` on `main`).
+
+The four rev-1 technical blockers (Sentry replay, compression, FK pragma, FS+DB ordering) are correctly resolved at the architecture level. **However**, three new technical blockers surfaced on close re-read of v2 against the actual installed SDK 55 surface. Two of these were also caught by QD rev 2 (#1, #2); I am seconding them with verified evidence and adding one of my own.
+
+**New blockers (rev 2):**
+
+1. **(Seconds QD rev-2 #1) `expo-file-system ~55.0.17` does not expose any backup-exclusion API.** Verified by grep: zero `Backup` / `excludeFromBackup` / `setBackupBehaviorAsync` / `NSURLIsExcludedFromBackup` matches in `node_modules/expo-file-system/build/**` or `node_modules/expo-file-system/ios/**`. The Swift module exposes File/Directory primitives only. AC15 as written cannot be implemented with the installed dependencies. Required fix in plan:
+   - **Pick A (recommended):** Add a tiny **config plugin / native module** (~30 LOC of Swift + Kotlin + a TS shim) that calls `(try url.setResourceValue(true, forKey: .isExcludedFromBackupKey))` on iOS and adds the `<exclude>` rule on Android. This is in-scope for the feature (or split into a sibling prerequisite PR `BLD-1092b` alongside `1092a`).
+   - **Pick B:** If a native module is too much for v1, **gate the privacy banner copy** behind the guarantee. The current "Saved on this device only — never uploaded." copy must NOT ship until backup exclusion is verified. Either move the feature behind a documented caveat ("clips may be included in OS backups") or ship without the absolute-privacy promise.
+   - **Pick C (worst, but valid):** Use `LocalAuthentication`-keychain or `expo-secure-store` for a flag, while documenting that file-level backup exclusion is deferred to v1.1.
+   Plan must commit to A, B, or C — not leave AC15 referencing a function that does not exist. Update §"Privacy enforcement" item 5 with the chosen path and the actual verification steps for that path.
+
+2. **(Seconds QD rev-2 #2) Camera recording API in plan does not match SDK 55 types.** Verified `node_modules/expo-camera/build/Camera.types.d.ts`:
+   - `CameraRecordingOptions` (line 178-198) supports `maxDuration`, `maxFileSize`, `mirror` (deprecated), and `codec` ONLY. There is **no** `mute` field.
+   - `mute` is a **`CameraView` prop** (line 338, 494), not a `recordAsync` option.
+   - `VideoCodec` (line 31) accepts `'avc1' | 'hvc1' | 'jpeg' | 'apcn' | 'ap4h'`. **`'H264'` is not a valid value** and will fail typecheck.
+   - `codec` is `@platform ios` only — Android ignores it.
+   - `videoQuality` is a `CameraView` prop (`'2160p' | '1080p' | '720p' | '480p' | '4:3'`), not a `recordAsync` option.
+   Plan §"Compression strategy: Pick A" must be rewritten:
+   ```tsx
+   <CameraView
+     mode="video"
+     mute               // <— mute is a prop on the view, not on recordAsync
+     videoQuality="720p"
+     ref={cameraRef}
+   />
+   // …
+   await cameraRef.current?.recordAsync({
+     maxDuration: 15,
+     codec: Platform.OS === 'ios' ? 'avc1' : undefined,  // iOS only; Android ignores
+   });
+   ```
+   AC1 and AC14 must be edited to match the actual prop/option boundaries, otherwise a literal-reading implementer ships code that fails typecheck.
+
+3. **(NEW) Camera permission copy is currently barcode-only.** Verified `app.config.ts:42-43`:
+   > `cameraPermission: "CableSnap needs camera access to scan food barcodes for quick nutrition logging."`
+   When `FormVideoSheet` triggers a camera permission prompt, the OS shows that string — which is misleading and arguably anti-consent. Plan must add an explicit task: update `cameraPermission` to cover both barcode scanning *and* local form clips, **without** mentioning microphone (since `mute` ensures we never request that). Suggested copy:
+   > "CableSnap needs camera access to scan food barcodes and to record optional form-check clips that stay on this device."
+   Add an AC: prebuilt iOS `Info.plist` `NSCameraUsageDescription` and Android string resource match the new copy. (QD rev-2 #3 also catches this.)
+
+**Validation of CEO-specific asks:**
+
+A. **`BLD-1092a` prerequisite framing — APPROVED as scoped.** The separate-PR + regression-sweep approach is correct. `lib/db/helpers.ts:42-55` is the single open site for the main connection (verified again). One small refinement to the plan: the regression sweep should include `softDeleteCustomExercise`, `deleteTemplate`, `removeExerciseFromTemplate`, and the cascade chain through `program_*` tables (the goal calls them deprecated, but they still exist) — flipping `foreign_keys = ON` may surface dangling rows on legacy data. The 1092a PR description must enumerate every table that today *could* hold orphans and have QA verify each. Add a one-liner to §"Prerequisite commit" noting this enumeration is required.
+
+B. **AC12 verification approach — INSUFFICIENT, agrees with QD rev-2 #5.** Component-tree tests prove the React tree contains `<Sentry.Mask>` wrappers and that no native `Image`/`Video` escapes the wrapper *in JS-land*. They do **not** prove the native Sentry SDK's replay frame-capture pipeline honors those masks for `expo-camera`'s native preview surface (which is a `SurfaceView`/`AVCaptureVideoPreviewLayer`, not a React Native `Image`). The verification must include at least one of:
+   - **(Recommended) Replay-disable-while-mounted:** when any `lib/media/*` surface is mounted, programmatically disable Sentry replay (`Sentry.getClient()?.getIntegrationByName('MobileReplay')?.stop?.()` or equivalent SDK-8.x API) and re-enable on unmount. Single mechanism, easy to verify, hard to break. Best fits the "zero pixels" promise. Add as primary AC12 mechanism.
+   - **OR Native instrumentation test:** force a Sentry replay artifact during a manual QA pass on a physical device with each surface visible, decode the artifact, and visually confirm the camera/player/thumbnail regions are redacted. This is QA-runtime verification, hard to automate, but proves the actual on-device behavior. If chosen, must be in QD's manual checklist for every Form-Clips surface.
+   - The current "component tests + grep gate" alone is necessary but **not sufficient**. Pick the disable-while-mounted approach as the AC12 floor; the build-time grep gate stays as defense-in-depth.
+
+C. **AC18 reconciler test cases — MOSTLY GOOD, two gaps.** The three cases listed (file-missing/row-present, file-present/no-row, cascade-delete-correctness) are correct. Add:
+   - **(c.i) Concurrent-write race:** record clip A while reconciler is mid-scan. Reconciler must not unlink A's freshly-written file because the DB row was inserted between the directory enumeration and the row-set lookup. Easiest fix: take a snapshot of `set_media.rel_path` BEFORE enumerating the FS, then only consider files present at enumeration time but absent from the snapshot AND older than a small grace window (e.g., 30 s `mtime`). Add as AC18(d).
+   - **(c.ii) `pending_delete = 1` row whose file vanished separately:** reconciler must still drop the row (idempotent), not crash on `unlinkAsync` of a missing file. Add as AC18(e).
+   Without these, the reconciler can either delete the user's freshly-recorded clip (data loss) or wedge on the first orphan. Both have happened in shipped apps.
+
+**Spec polish (non-blocking, but easy to fix in this round):**
+
+4. AC1 + plan UX section: glyph touch-target should be specified as ≥48×48 dp **with non-overlapping hitSlop relative to the existing check / delete tap regions**. v2 says "~32 dp hit-target" — that's below WCAG 2.5.5 AA (44×44 CSS px) and Material Android guidelines (48 dp). QD rev-2 #4 calls this out; I second.
+5. AC10 verification path is named "F-Droid build (`scripts/build-fdroid.sh` or current equivalent)" — confirm the script name. Repo has a `fdroid/` directory with metadata only, and the F-Droid build today appears to flow through the F-Droid skill (per stored memory, not via a local script). Plan should say "F-Droid skill build completes successfully and reports APK size delta in the merge comment" rather than name a non-existent script.
+6. The `pending_delete` index `idx_set_media_pending_delete` will be very low-cardinality (almost all rows will have `pending_delete = 0`). It is unnecessary and slightly counterproductive on SQLite. Consider replacing with a partial index: `WHERE pending_delete = 1` — or drop it; the reconciler scans on app boot, doesn't need a fast index.
+
+**Approval condition:** Resolve blockers 1–3 in the plan (commit to a backup-exclusion path, fix the camera API code sample, update permission copy). Update AC12 to require replay-disable-while-mounted (or a comparable "actual replay artifact" test). Update AC18 with the two new race/idempotency cases. Once those land, I will APPROVE without another round.
+
+Validation of v2 vs my rev-1 list:
+
+| # | Rev-1 item | v2 status |
+|---|-----------|-----------|
+| 1 | Sentry replay masking | Architecturally addressed; needs AC12 strengthened (see C above) — **partial** |
+| 2 | Compression Pick A | **Resolved** (modulo API code sample fix in blocker #2 above) |
+| 3 | FK pragma prerequisite | **Resolved** + 1092a regression sweep enumerated |
+| 4 | FS+DB delete ordering | **Resolved** (modulo two AC18 cases above) |
+| 5–15 | Spec gaps | **All resolved** |
+
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. If a reviewer believes any UX detail crosses the line, flag it and we redesign._
 
