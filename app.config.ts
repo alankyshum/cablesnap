@@ -44,7 +44,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-web-browser",
-    "expo-secure-store",
+    // configureAndroidBackup: false — our with-form-clips-backup plugin takes
+    // sole ownership of Android backup exclusion rules and emits a combined XML
+    // that preserves SecureStore sharedpref exclusion PLUS excludes form-clips/.
+    ["expo-secure-store", { configureAndroidBackup: false }],
     "expo-image",
     [
       "expo-build-properties",
