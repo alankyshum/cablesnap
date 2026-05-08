@@ -544,10 +544,21 @@ Excellent progress overall — every TL rev-2 blocker is correctly addressed exc
 **Approval condition:** Rewrite AC12 + Tech §"Privacy enforcement" item 1 around one of Paths A / B / C above, calling only verified-installed Sentry SDK 8.x functions. No "feature-detection across patch releases" hedging — pick a path that works against `node_modules/@sentry/react-native/dist/js/replay/mobilereplay.d.ts` as it ships today. Once that lands I will APPROVE without another round.
 
 **One additional ask:** the Risk Assessment should mention that Path A trades away session-sampled replay company-wide. If the team prefers to keep session replay outside `lib/media/*` surfaces, Path B is the only fit — and the manual physical-device verification it requires must be acknowledged as a v1 release-gate.
-### Quality Director (UX) — rev 4: PENDING
-**Verdict (rev 4):** PENDING — re-review requested 2026-05-08T after v4 push.
+### Quality Director (UX) — rev 4: APPROVE
+**Verdict (rev 4):** APPROVE — re-review 2026-05-08T05:16Z against `e881c969` on `main`.
 
-QD rev-3 verdict (REQUEST CHANGES) named one remaining blocker: AC12's `useReplayDisableWhileMounted()` mechanism doesn't exist on installed `@sentry/react-native@8.9.2`. v4 adopts QD's preferred Path 1 / TL's Path A: `replaysSessionSampleRate: 0` + `mobileReplayIntegration({ beforeErrorSampling: () => mediaSurfaceMountCount() === 0 })`. The `beforeErrorSampling` field is verified-present at `mobilereplay.d.ts:116`. `useReplayDisableWhileMounted` and `MobileReplay.stop()` are removed from the plan entirely. Privacy enforcement item 1 + AC12 + Risk Assessment all rewritten. Build-time grep gate updated to assert `replaysSessionSampleRate: 0`, `maskAllImages: true`, and `beforeErrorSampling` are present.
+QD rev-3 named one remaining blocker: AC12's replay-disable-while-mounted mechanism referenced non-existent `@sentry/react-native@8.9.2` Mobile Replay `stop()` / `start()` APIs and an unacceptable `client.close()` / `client.init()` fallback. v4 resolves that blocker with the requested deterministic Path A:
+
+- `replaysSessionSampleRate: 0` removes random session-sampled replay globally.
+- `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true, beforeErrorSampling })` uses an SDK-verified option. `beforeErrorSampling?: (event: Event, hint: EventHint) => boolean` exists at `node_modules/@sentry/react-native/dist/js/replay/mobilereplay.d.ts:116`, and the implementation skips replay capture when it returns `false`.
+- `mediaSurfaceMountCount()` / `useMediaSurfaceMounted()` provide the media-surface ref-counter so error replay is skipped while camera preview, player, thumbnail grid, or compare surfaces are mounted.
+- AC12 explicitly bans `MobileReplay.stop()`, `client.close()`, and `client.init()` for this feature.
+- Risk Assessment now accepts the company-wide loss of session-sampled replay as the privacy trade-off, with error replay retained only when no media surface is mounted.
+- Build/test gates require the source snapshot, ref-counter unit tests, beforeErrorSampling unit test, component mount/unmount tests, and grep gate for `replaysSessionSampleRate: 0`, `maskAllImages: true`, `beforeErrorSampling`, and `useMediaSurfaceMounted()`.
+
+All earlier QD blockers remain resolved: BLD-1092b provides an executable backup-exclusion path with banner-copy gating, camera API usage matches SDK 55, camera permission copy is in scope, SetRow hit target is >=48x48 dp effective with non-overlap tests, and comparison remains informational. **Behavior-design classification remains NO** provided implementation does not add scoring, streaks, rewards, or judgmental form language.
+
+**Status:** approved for implementation planning. QD will still require the prerequisite order and evidence at QA time: BLD-1092a foreign-key regression sweep, BLD-1092b backup-exclusion plugin verification, then the feature PR with AC12 privacy gates passing before any media surface ships.
 
 ### Tech Lead (Feasibility) — rev 4: APPROVE
 
