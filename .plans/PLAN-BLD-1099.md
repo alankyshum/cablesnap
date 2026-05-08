@@ -297,7 +297,53 @@ expected 3 min" without adding a UI.
 _Pending — see comment thread on BLD-1099._
 
 ### Tech Lead (Feasibility)
-_Pending — see comment thread on BLD-1099._
+**Verdict: REQUEST CHANGES ❌** (2026-05-08T09:22Z, see BLD-1099 comment thread for full review).
+
+5 blockers verified against head tree on `main`:
+
+1. **🔴 History median double-counts adaptation through `resolveRestSeconds`.**
+   `lib/rest.ts:117-131` multiplies `baseRestSeconds × setType × rpe × category`
+   and clamps to `MAX_REST_SECONDS = 360` (`lib/rest.ts:34`). Substituting a
+   history median (which already embodies the user's typical RPE/setType mix)
+   and re-multiplying produces wrong values; e.g., `240 s × 1.3 × 1.3 = 405 →
+   clamp 360 s`, silently worse than the legacy path. **Fix:** when source ∈
+   {`history`, `pinned`}, bypass `resolveRestSeconds` entirely and render an
+   alternate breakdown ("From your history, no further adjustment applied").
+   Plumb `RestSource` through the new `getRestContext` return shape so
+   `useRestTimer.startRest` (`hooks/useRestTimer.ts:244-256`) can branch.
+2. **🔴 Inter-set delta is `rest + work_of_next_set`, not rest.**
+   `workout_sets` has `completed_at` but no `started_at` (`lib/db/schema.ts:106-144`).
+   Median is biased upward by 20–60 s/set systematically. **Fix:** define rest as
+   `(completed_at_{N+1} − duration_seconds_{N+1}) − completed_at_N`, falling back
+   to a documented working-set estimate (e.g., `2 s × reps`) when
+   `duration_seconds` is null. (Or add `workout_sets.started_at` — larger scope.)
+3. **🔴 Claimed `(exercise_id, completed_at)` index DOES NOT EXIST.**
+   Only `idx_workout_sets_exercise(exercise_id)` and `idx_workout_sets_variant_pr`
+   (5-column composite, completed_at as 5th key — unusable for the planned query).
+   **Fix:** add partial index `idx_workout_sets_exercise_completed_at ON
+   workout_sets (exercise_id, completed_at) WHERE completed_at IS NOT NULL`.
+   Add EXPLAIN QUERY PLAN assertion to `scripts/perf-bench-rest-resolver.ts`.
+4. **🟡 Superset / link path unspecified.** `getRestSecondsForLink`
+   (`lib/db/session-sets.ts:802-814`) is template-only; templateless supersets
+   regress to 90 s, violating AC1. **Fix:** add explicit AC for supersets;
+   recommend `max(history_per_exerciseId)` to preserve "longest rest wins"
+   semantics.
+5. **🟡 `user_rest_seconds` bounds + import validation unspecified.** Add
+   setter validation (`[15, 600]`), import-path clamp/drop in
+   `lib/db/import-export.ts`, and a regression test for negative + huge values.
+
+CEO question answers: (1) ordering sound, composition broken — Blocker 1;
+(2) index claim false — Blocker 3; (3) link path silently broken — Blocker 4;
+(4) migration race safe (additive `addColumnIfMissing`, resolver null-safe);
+(5) breadcrumb privacy-clean given UUID-only scope — add `category:
+"rest-resolver"` and reuse `sessionBreadcrumb` helper for replay-mask contract.
+
+**Items sound:** resolver tier ordering, `addColumnIfMissing` migration pattern,
+breadcrumb privacy intent, perf budget shape, exercise-cascade safety.
+
+**Verdict: recoverable in 1 revision.** Blockers 1/2/3 are non-negotiable
+correctness fixes. 4 and 5 are scope completeness. Will re-review immediately
+on revision.
 
 ### Psychologist (Behavior-Design Scoping)
 **Verdict: N/A — NOT BEHAVIOR-DESIGN ✅** (2026-05-08T09:21Z, comment 165b3ae6)
