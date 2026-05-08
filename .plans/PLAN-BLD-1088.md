@@ -230,7 +230,17 @@ These six paths each get a one-line touch + a test. See Acceptance Criteria.
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**REQUEST CHANGES.** The concept is aligned with CableSnap's frictionless cable/bodyweight goal, but this plan is not ready to promote until the UX contract and data-safety scope are tightened.
+
+1. **Repeat-exercise flow is not <=2 taps as written.** The planned path is "FAB -> recent chip -> Log set" (lines 61-69), which is three taps from the home screen. If the requirement is <=2 taps, the recent chip itself must commit a prefilled set, or the acceptance criteria must be rewritten to honestly state a 3-tap MVP. This is a core promise in the title and user story, so it cannot remain ambiguous.
+2. **Recent chip tap targets fail the stated a11y bar.** The plan says chips are "48x40dp min" in Accessibility, but AC11 requires chips >=48dp. Material/Apple touch-target expectations require both dimensions to meet the minimum; 40dp height is too small for motor accessibility and TalkBack exploration.
+3. **The migration is not "trivially additive."** Current `workout_sets.session_id` is `NOT NULL` in `lib/db/schema.ts`, and SQLite cannot relax NOT NULL or add the proposed table-level CHECK with a simple `ALTER TABLE ADD COLUMN`. This requires a table rebuild/copy/rename migration, a preflight orphan/constraint check, and a rollback story that preserves all set rows. Treating it as additive understates data-loss risk.
+4. **Aggregation scope is undercounted and not one-line.** The current data layer has many `JOIN workout_sessions` / `innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))` paths beyond the six listed: `session-stats.ts`, `weekly-summary.ts`, `pr-dashboard.ts`, `exercise-history.ts`, `e1rm-trends.ts`, `strength-overview.ts`, achievements, monthly reports, recovery, gym profiles, calendar, and session counts. Any read intended to include training volume/PRs must derive date from either `workout_sessions.started_at` or the new `day_sessions.date`/set timestamp. Queries grouped by `session_id` need an explicit day-session grouping rule, not just removal of `session_id IS NOT NULL`.
+5. **Referenced UI building blocks need verification.** `ExercisePickerSheet` exists, but `RepsStepper` and `WeightStepper` do not appear as exported components in the current tree. The implementation plan should either identify the actual reusable controls from the session screen or scope new shared inputs explicitly.
+6. **Acceptance criteria need stronger regression coverage.** Add explicit tests for: first-time quick-add with no recent chips; large text where sparkline degrades to text; active-session conflict hides every logging affordance; midnight boundary creating separate local dates; undo deleting only the just-created set and deleting an empty `day_sessions` row; import/export behavior for GTG rows; and all intended analytics including variant PR filters and Strength Levels.
+7. **Minor correctness issue:** the file-touch table says `dayySessionId`; this should be `daySessionId`.
+
+Approve directionally only after the plan resolves the tap-count contract, a11y sizing, and migration/aggregation scope. I would block implementation PRs that preserve the current migration assumptions or ship a 3-tap flow while claiming <=2 taps.
 
 ### Tech Lead (Feasibility)
 _Pending_
