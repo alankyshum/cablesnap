@@ -48,6 +48,8 @@ import {
   type PrefillCandidate,
 } from "./resolvePrefillCandidate";
 import { resolveRestSeconds, type RestBreakdown } from "../lib/rest";
+import { restResolverBreadcrumb } from "../lib/rest-resolver";
+import * as Sentry from "@sentry/react-native";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
   getSessionProgramDayId,
@@ -299,8 +301,10 @@ export function useSessionActions({
           const breakdown = resolveRestSeconds(ctx);
           startRestWithBreakdown(breakdown);
           return;
-        } catch {
-          // Fall through to legacy path on any error.
+        } catch (e) {
+          // Resolver error — log to Sentry for observability, then fall through to legacy path.
+          Sentry.captureException(e, { tags: { feature: "rest-resolver" } });
+          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: set.exercise_id, level: "error" });
         }
       }
       const secs = await getRestSecondsForLink(id!, set.link_id!);

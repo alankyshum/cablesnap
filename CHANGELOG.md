@@ -22,11 +22,10 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Smart Rest Timer**: Rest suggestions now adapt to each exercise based on your actual median rest over the last 30 days. Pin a custom default per exercise, or let the timer learn automatically — templates and 90 s fallback remain for new users (BLD-1100).
 
 ## v0.26.24 — 2026-05-08
 <!-- versionCode: 94 -->
-
 - **Form Check Videos**: Record short video clips (up to 15 s) on each completed working set to review technique over time. Clips are stored locally only — never uploaded, never backed up to iCloud/Google (BLD-1092).
 - **Form Library**: "Form clips" tab in the exercise detail drawer shows all clips for an exercise reverse-chronologically with date, weight, and reps overlay (BLD-1092).
 - **Side-by-side comparison**: Compare any two form clips from your library in a split-screen view (BLD-1092).

@@ -1,0 +1,23 @@
+{
+  "scenario": "bld-480-prefix",
+  "label": "bld-480-prefix-musclesworkedcard-crop",
+  "route": "/__fixtures__/bld-480-prefix",
+  "viewport": "mobile",
+  "viewportSize": {
+    "width": 390,
+    "height": 844
+  },
+  "commitSha": "3c5f9d737eb87bd16b3d57a0e69a15438c7c96a2",
+  "capturedAt": "2026-05-05T05:03:05.516Z",
+  "fixture": {
+    "origin": "BLD-951",
+    "reproduces": "BLD-480",
+    "mechanism": "maxHeight:200 clamp re-imposed via wrapper"
+  },
+  "emulatedDeficiencies": [
+    "baseline",
+    "deuteranopia",
+    "protanopia",
+    "tritanopia"
+  ]
+}

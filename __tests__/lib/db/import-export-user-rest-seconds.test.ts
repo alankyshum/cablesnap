@@ -136,9 +136,9 @@ describe("importData — user_rest_seconds sanitization (AC7)", () => {
     expect(getInsertedRestSeconds()).toBeNull();
   });
 
-  it("value below floor (14) is dropped to null", async () => {
+  it("value below floor (14) is clamped to 15", async () => {
     await importExerciseWith(14);
-    expect(getInsertedRestSeconds()).toBeNull();
+    expect(getInsertedRestSeconds()).toBe(15);
   });
 
   it("value above ceiling (100000) is clamped to 600", async () => {

@@ -25,7 +25,8 @@ import {
   type RestBreakdown,
 } from "../lib/rest";
 import type { RestSource } from "../lib/rest-resolver";
-import { setUserRestSeconds } from "../lib/rest-resolver";
+import { setUserRestSeconds, restResolverBreadcrumb } from "../lib/rest-resolver";
+import * as Sentry from "@sentry/react-native";
 import {
   isAvailable,
   requestPermission,
@@ -265,8 +266,10 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           const br = resolveRestSeconds(inputs);
           runTimer(br.totalSeconds, br);
           return;
-        } catch {
-          // Fall through to legacy on error.
+        } catch (e) {
+          // Resolver error — log to Sentry for observability, then fall through to legacy path.
+          Sentry.captureException(e, { tags: { feature: "rest-resolver" } });
+          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: ctx.exerciseId, level: "error" });
         }
       }
 

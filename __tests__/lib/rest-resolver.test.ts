@@ -34,6 +34,7 @@ import {
   resolveRest,
   setUserRestSeconds,
   restResolverBreadcrumb,
+  restSanitizeBreadcrumb,
   RestBoundsError,
   HISTORY_MIN_SAMPLES,
   HISTORY_FLOOR_SECONDS,
@@ -96,6 +97,52 @@ describe("restResolverBreadcrumb", () => {
     (Sentry.addBreadcrumb as jest.Mock).mockImplementationOnce(() => { throw new Error("Sentry down"); });
     expect(() =>
       restResolverBreadcrumb({ source: "default", seconds: 90, exerciseId: "u2" })
+    ).not.toThrow();
+  });
+
+  it("respects optional level field — emits 'warning' level when specified (AC12/TL-4)", () => {
+    restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: "u3", level: "warning" });
+    const call = (Sentry.addBreadcrumb as jest.Mock).mock.calls[0][0];
+    expect(call.level).toBe("warning");
+  });
+
+  it("defaults to 'info' level when level is not specified", () => {
+    restResolverBreadcrumb({ source: "history", seconds: 120, exerciseId: "u4" });
+    const call = (Sentry.addBreadcrumb as jest.Mock).mock.calls[0][0];
+    expect(call.level).toBe("info");
+  });
+});
+
+// ─── AC12: restSanitizeBreadcrumb ─────────────────────────────────────────────
+
+describe("restSanitizeBreadcrumb (AC12/TL-5)", () => {
+  it("emits category='rest-resolver' with level='warning'", () => {
+    restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: 700, outputValue: 600, exerciseId: "u5" });
+    const call = (Sentry.addBreadcrumb as jest.Mock).mock.calls[0][0];
+    expect(call.category).toBe("rest-resolver");
+    expect(call.level).toBe("warning");
+  });
+
+  it("emits import_clamp kind with input/output values", () => {
+    restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: 700, outputValue: 600, exerciseId: "e-uuid" });
+    const call = (Sentry.addBreadcrumb as jest.Mock).mock.calls[0][0];
+    expect(call.data.kind).toBe("import_clamp");
+    expect(call.data.inputValue).toBe(700);
+    expect(call.data.outputValue).toBe(600);
+    expect(call.data.exerciseId).toBe("e-uuid");
+  });
+
+  it("emits import_drop kind with null outputValue", () => {
+    restSanitizeBreadcrumb({ kind: "import_drop", inputValue: -5, outputValue: null, exerciseId: "e-uuid2" });
+    const call = (Sentry.addBreadcrumb as jest.Mock).mock.calls[0][0];
+    expect(call.data.kind).toBe("import_drop");
+    expect(call.data.outputValue).toBeNull();
+  });
+
+  it("does not throw when Sentry throws internally", () => {
+    (Sentry.addBreadcrumb as jest.Mock).mockImplementationOnce(() => { throw new Error("Sentry down"); });
+    expect(() =>
+      restSanitizeBreadcrumb({ kind: "import_drop", inputValue: null, outputValue: null, exerciseId: "u6" })
     ).not.toThrow();
   });
 });

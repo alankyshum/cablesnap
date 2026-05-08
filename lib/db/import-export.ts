@@ -14,7 +14,7 @@ import type {
   MealTemplateItem,
 } from "../types";
 import { getDatabase, withTransaction } from "./helpers";
-import { restResolverBreadcrumb, HISTORY_FLOOR_SECONDS, HISTORY_CEILING_SECONDS } from "../rest-resolver";
+import { restSanitizeBreadcrumb, HISTORY_FLOOR_SECONDS, HISTORY_CEILING_SECONDS } from "../rest-resolver";
 
 // --------------- Backup Format Types ---------------
 
@@ -598,16 +598,18 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       if ("user_rest_seconds" in sanitizedRow) {
         const raw = sanitizedRow.user_rest_seconds;
         const n = typeof raw === "number" ? raw : (typeof raw === "string" ? parseInt(raw, 10) : NaN);
+        const exerciseId = String(row.id ?? "");
         if (!Number.isInteger(n) || n <= 0) {
           // Drop non-integer, negative, zero, and NaN values.
           sanitizedRow.user_rest_seconds = null;
-          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: String(row.id ?? ""), sampleCount: undefined });
+          restSanitizeBreadcrumb({ kind: "import_drop", inputValue: raw, outputValue: null, exerciseId });
         } else if (n < HISTORY_FLOOR_SECONDS) {
-          sanitizedRow.user_rest_seconds = null;
-          restResolverBreadcrumb({ source: "default", seconds: n, exerciseId: String(row.id ?? "") });
+          // Clamp below-floor positive integers up to floor (plan §11 / AC7).
+          sanitizedRow.user_rest_seconds = HISTORY_FLOOR_SECONDS;
+          restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: n, outputValue: HISTORY_FLOOR_SECONDS, exerciseId });
         } else if (n > HISTORY_CEILING_SECONDS) {
           sanitizedRow.user_rest_seconds = HISTORY_CEILING_SECONDS;
-          restResolverBreadcrumb({ source: "pinned", seconds: n, exerciseId: String(row.id ?? "") });
+          restSanitizeBreadcrumb({ kind: "import_clamp", inputValue: n, outputValue: HISTORY_CEILING_SECONDS, exerciseId });
         } else {
           // Coerce string to integer when value is valid (e.g. from JSON parse).
           sanitizedRow.user_rest_seconds = n;

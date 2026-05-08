@@ -39,6 +39,16 @@ export type RestResolverBreadcrumbPayload = {
   seconds: number;
   exerciseId: string;
   sampleCount?: number;
+  /** Optional Sentry severity override. Defaults to "info". Use "warning" for data-quality events. */
+  level?: "info" | "warning" | "error";
+};
+
+/** Sanitization event emitted by import-export when clamping or dropping user_rest_seconds. */
+export type RestSanitizeBreadcrumbPayload = {
+  kind: "import_clamp" | "import_drop";
+  inputValue: number | null | unknown;
+  outputValue: number | null;
+  exerciseId: string;
 };
 
 export type ResolveRestOptions = {
@@ -66,9 +76,29 @@ export class RestBoundsError extends Error {
  */
 export function restResolverBreadcrumb(payload: RestResolverBreadcrumbPayload): void {
   try {
+    const { level = "info", ...data } = payload;
     Sentry.addBreadcrumb({
       category: "rest-resolver",
-      level: "info",
+      level,
+      data,
+    });
+  } catch {
+    // Sentry not initialised — breadcrumbs are observability glue, never critical path.
+  }
+}
+
+/**
+ * Emit a Sentry breadcrumb for an import sanitization event (clamp or drop).
+ *
+ * Separate shape from restResolverBreadcrumb to keep resolver decisions and
+ * data-quality events queryable independently in Sentry
+ * (category:rest-resolver kind:import_clamp vs source:pinned, etc.).
+ */
+export function restSanitizeBreadcrumb(payload: RestSanitizeBreadcrumbPayload): void {
+  try {
+    Sentry.addBreadcrumb({
+      category: "rest-resolver",
+      level: "warning",
       data: payload,
     });
   } catch {
