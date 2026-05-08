@@ -14,6 +14,7 @@ import type {
   MealTemplateItem,
 } from "../types";
 import { getDatabase, withTransaction } from "./helpers";
+import { restResolverBreadcrumb, HISTORY_FLOOR_SECONDS, HISTORY_CEILING_SECONDS } from "../rest-resolver";
 
 // --------------- Backup Format Types ---------------
 
@@ -591,8 +592,30 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       const tableColumns = colInfo.map((c: { name: string }) => c.name);
       const cols = tableColumns.filter((col: string) => col in row);
       if (cols.length === 0) return false;
+
+      // BLD-1100: sanitize user_rest_seconds before insertion (AC7).
+      const sanitizedRow = { ...row };
+      if ("user_rest_seconds" in sanitizedRow) {
+        const raw = sanitizedRow.user_rest_seconds;
+        const n = typeof raw === "number" ? raw : (typeof raw === "string" ? parseInt(raw, 10) : NaN);
+        if (!Number.isInteger(n) || n <= 0) {
+          // Drop non-integer, negative, zero, and NaN values.
+          sanitizedRow.user_rest_seconds = null;
+          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: String(row.id ?? ""), sampleCount: undefined });
+        } else if (n < HISTORY_FLOOR_SECONDS) {
+          sanitizedRow.user_rest_seconds = null;
+          restResolverBreadcrumb({ source: "default", seconds: n, exerciseId: String(row.id ?? "") });
+        } else if (n > HISTORY_CEILING_SECONDS) {
+          sanitizedRow.user_rest_seconds = HISTORY_CEILING_SECONDS;
+          restResolverBreadcrumb({ source: "pinned", seconds: n, exerciseId: String(row.id ?? "") });
+        } else {
+          // Coerce string to integer when value is valid (e.g. from JSON parse).
+          sanitizedRow.user_rest_seconds = n;
+        }
+      }
+
       const placeholders = cols.map(() => "?").join(", ");
-      const values = cols.map((col: string) => row[col] ?? null);
+      const values = cols.map((col: string) => sanitizedRow[col] ?? null);
       const r = await database.runAsync(
         `INSERT OR IGNORE INTO exercises (${cols.join(", ")}) VALUES (${placeholders})`,
         values
