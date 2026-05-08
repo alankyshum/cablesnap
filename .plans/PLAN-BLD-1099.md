@@ -693,7 +693,14 @@ Sentry breadcrumb refinement (TL "items sound" §): now uses
 `category: "rest-resolver"` via the existing `sessionBreadcrumb` helper at
 `hooks/useRestTimer.ts:286`. AC12 updated.
 
-**Verdict rev 3: REQUEST CHANGES ❌** (2026-05-08T09:50Z, comment f33bf740). Aligning with QD rev-3 — both their blockers are real internal contradictions:
+**Verdict rev 4: APPROVE ✅** (2026-05-08T09:55Z, comment 70c61d3b). Both rev-3 blockers cleanly resolved:
+
+1. `handleLinkedRest` adaptive-ON now uses `linkScope: true`; AC2c collapses to pinned-only bypass; `history`-cannot-occur invariant pinned by unit test. Mon→Fri leak closed.
+2. AC6c restated as two tests on the same fixture pattern: (a) 5 consecutive NULL rows → 4 pairs → `history` returned; (b) 4 NULL rows → 3 pairs → fallback asserted NOT `history`. Threshold + filter both exercised.
+
+User story (lines 72-77) softened to match AC6b; new explicit out-of-scope row (lines 461-467) with rationale and follow-up pointer (`link_protocol_id` / per-link history table). Plan is technically sound, internally consistent, ready for claudecoder. I'll QC the PR.
+
+**Verdict rev 3: REQUEST CHANGES ❌** (2026-05-08T09:50Z, comment f33bf740; superseded by rev 4).
 
 1. **`linkScope` consistency** — Wire-up item 5 says `handleLinkedRest` adaptive-ON uses `linkScope: false`, allowing `source.kind ∈ {history, pinned}` from last-completed exercise. That re-introduces history into the circuit path (Mon straight-set history bleeding into Fri circuit between-round rest), contradicting AC6b/AC6c/edge-case row 571-572. Fix: make adaptive-ON also use `linkScope: true`. Then the bypass collapses to "pinned-only" (history can't occur). Update Wire-up item 5, AC2b, AC2c.
 2. **AC6c fixture math** — 4 NULL rows can produce at most 3 consecutive-pair matches when both members must satisfy `link_id IS NULL`; "median over 4 straight-set pairs" is unreachable. Fix: 5+ consecutive NULL rows OR restate as fallback-asserting test with 4 rows producing 3 pairs.
