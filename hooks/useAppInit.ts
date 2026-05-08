@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { getDatabase, isMemoryFallback, isOnboardingComplete } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
 import { detectWebSharedMemorySupport, WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
+import { excludeFormClipsFromBackup } from "../lib/media/backup-exclusion";
 
 // BLD-565: On web, drizzle-orm/expo-sqlite calls prepareSync/executeSync
 // which internally uses `new SharedArrayBuffer(…)`.  Without a
@@ -29,6 +30,8 @@ export function useAppInit() {
   );
   const [ready, setReady] = useState<boolean>(() => unsupportedWeb);
   const [onboarded, setOnboarded] = useState(true);
+  // BLD-1092: null = pending, true = excluded, false = exclusion failed
+  const [backupExclusionOk, setBackupExclusionOk] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (unsupportedWeb) {
@@ -81,6 +84,17 @@ export function useAppInit() {
             .catch((err) => console.error("Form-clips orphan reconciliation failed:", err));
         }
 
+        // BLD-1092: Ensure form-clips/ is excluded from iCloud/Auto Backup.
+        // Result is stored in state so FormVideoSheet can gate the strong privacy banner.
+        if (Platform.OS !== "web") {
+          excludeFormClipsFromBackup()
+            .then(({ ok }) => setBackupExclusionOk(ok))
+            .catch(() => setBackupExclusionOk(false));
+        } else {
+          // Web: form clips not supported — treat as ok=true (no backup concern).
+          setBackupExclusionOk(true);
+        }
+
         setReady(true);
         SplashScreen.hideAsync();
       })
@@ -93,5 +107,5 @@ export function useAppInit() {
     setupGlobalHandler();
   }, [unsupportedWeb]);
 
-  return { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported: unsupportedWeb };
+  return { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported: unsupportedWeb, backupExclusionOk };
 }

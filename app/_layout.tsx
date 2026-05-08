@@ -23,10 +23,10 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
 import { setupHandler } from "../lib/notifications";
-import { excludeFormClipsFromBackup } from "../lib/media/backup-exclusion";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
+import { FormClipsContext } from "../lib/form-clips-context";
 import { useAppInit } from "../hooks/useAppInit";
 import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
@@ -69,26 +69,15 @@ Sentry.init({
 SplashScreen.preventAutoHideAsync();
 setupHandler();
 setupConsoleLogBuffer();
-// Ensure form-clips/ is excluded from iCloud/Auto Backup on first boot.
-// Fire-and-forget: failure is non-fatal and is captured as a Sentry breadcrumb.
-excludeFormClipsFromBackup()
-  .then(({ ok }) => {
-    Sentry.addBreadcrumb({
-      category: "privacy",
-      message: "form_clips_backup_exclusion_set",
-      data: { ok },
-      level: "info",
-    });
-  })
-  .catch((err: unknown) => {
-    Sentry.captureException(err, { tags: { source: "backup_exclusion_boot" } });
-  });
+// BLD-1092: excludeFormClipsFromBackup() is now called inside useAppInit()
+// so the result can be tracked in React state and passed to FormVideoSheet
+// via FormClipsContext to gate the strong privacy banner.
 
 export default Sentry.wrap(function RootLayout() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const themeColors = isDark ? Colors.dark : Colors.light;
-  const { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported } = useAppInit();
+  const { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported, backupExclusionOk } = useAppInit();
   const pathname = usePathname();
   const prev = useRef(pathname);
 
@@ -105,6 +94,7 @@ export default Sentry.wrap(function RootLayout() {
     () => ({ completeOnboarding }),
     [completeOnboarding]
   );
+  const formClipsCtx = useMemo(() => ({ backupExclusionOk }), [backupExclusionOk]);
 
   if (!ready) return null;
 
@@ -130,6 +120,7 @@ export default Sentry.wrap(function RootLayout() {
     <ErrorBoundary>
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
+      <FormClipsContext.Provider value={formClipsCtx}>
       <ThemePreferenceProvider>
       <BNAThemeProvider>
         <ToastProvider>
@@ -161,6 +152,7 @@ export default Sentry.wrap(function RootLayout() {
         </ToastProvider>
       </BNAThemeProvider>
       </ThemePreferenceProvider>
+      </FormClipsContext.Provider>
       </OnboardingContext.Provider>
       </QueryProvider>
     </ErrorBoundary>

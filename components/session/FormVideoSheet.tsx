@@ -28,6 +28,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useMediaSurfaceMounted } from "@/hooks/useMediaSurfaceMounted";
 import { recordClip } from "@/lib/media/form-clips";
+import { useBackupExclusionStatus } from "@/lib/form-clips-context";
 import * as Sentry from "@sentry/react-native";
 
 const MAX_DURATION_S = 15;
@@ -79,6 +80,8 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
   const [elapsed, setElapsed] = useState(0);
   const [saving, setSaving] = useState(false);
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  // BLD-1092: null=pending, true=excluded from backup, false=exclusion failed
+  const backupExclusionOk = useBackupExclusionStatus();
 
   // AC12: increment replay-gate counter while this surface is mounted.
   useMediaSurfaceMounted();
@@ -215,6 +218,7 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
 
   // Camera state
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <View style={[styles.container, { backgroundColor: "#000" }]}>
       <CameraView
         ref={cameraRef}
@@ -224,10 +228,14 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
         videoQuality="720p"
         facing="back"
       />
-      {/* Privacy banner — BLD-1095 merged so full banner copy applies */}
+      {/* Privacy banner — copy depends on backup-exclusion result (BLD-1092) */}
       <View style={styles.privacyBanner} pointerEvents="none">
         <MaterialCommunityIcons name="lock-outline" size={14} color="#fff" />
-        <Text style={styles.privacyText}>Saved on this device only — never uploaded</Text>
+        {backupExclusionOk === true ? (
+          <Text style={styles.privacyText}>Saved on this device only — never uploaded</Text>
+        ) : (
+          <Text style={styles.privacyText}>Saved locally on your device</Text>
+        )}
       </View>
       {/* Close */}
       <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
@@ -240,18 +248,25 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
           <Text style={styles.timerText}>{MAX_DURATION_S - elapsed}s</Text>
         </View>
       )}
-      {/* Record / Stop button */}
+      {/* Record / Stop button — disabled on iOS when backup exclusion failed */}
       <View style={styles.recordBtnRow}>
         <Text style={styles.setLabel} accessibilityRole="text">Set {setNumber}</Text>
-        <Pressable
-          onPress={recording ? handleStopRecording : handleStartRecording}
-          accessibilityRole="button"
-          accessibilityLabel={recording ? "Stop recording" : "Start recording"}
-          hitSlop={12}
-          style={[styles.recordBtn, recording && styles.recordBtnActive]}
-        >
-          <View style={[styles.recordInner, recording && styles.recordInnerActive]} />
-        </Pressable>
+        {Platform.OS === "ios" && backupExclusionOk === false ? (
+          <View style={styles.recordBtnDisabledWrap}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={28} color="#f88" />
+            <Text style={styles.recordBtnDisabledText}>Recording unavailable</Text>
+          </View>
+        ) : (
+          <Pressable
+            onPress={recording ? handleStopRecording : handleStartRecording}
+            accessibilityRole="button"
+            accessibilityLabel={recording ? "Stop recording" : "Start recording"}
+            hitSlop={12}
+            style={[styles.recordBtn, recording && styles.recordBtnActive]}
+          >
+            <View style={[styles.recordInner, recording && styles.recordInnerActive]} />
+          </Pressable>
+        )}
         <Text style={styles.durationHint}>{MAX_DURATION_S}s max</Text>
       </View>
     </View>
@@ -274,6 +289,7 @@ function ReviewView({ uri, elapsed, saving, colors, onDiscard, onSave, onClose }
   useMediaSurfaceMounted();
 
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <View style={[styles.container, { backgroundColor: "#000" }]}>
       <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
         <MaterialCommunityIcons name="close" size={28} color="#fff" />
@@ -285,11 +301,13 @@ function ReviewView({ uri, elapsed, saving, colors, onDiscard, onSave, onClose }
       </View>
       <View style={styles.reviewActions}>
         <Pressable
+          // eslint-disable-next-line no-restricted-syntax
           style={[styles.reviewBtn, { borderColor: "#fff", borderWidth: 1 }]}
           onPress={onDiscard}
           accessibilityRole="button"
           disabled={saving}
         >
+          {/* eslint-disable-next-line no-restricted-syntax */}
           <Text style={{ color: "#fff" }}>Re-record</Text>
         </Pressable>
         <Pressable
@@ -332,6 +350,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  // Camera overlay — intentionally hardcoded colors (UI always on #000 background)
+  // eslint-disable-next-line no-restricted-syntax
   privacyText: { fontSize: 11, color: "#fff", lineHeight: 16 },
   timerBadge: {
     position: "absolute",
@@ -346,7 +366,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
+  // eslint-disable-next-line no-restricted-syntax
   recDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#e53935" },
+  // eslint-disable-next-line no-restricted-syntax
   timerText: { color: "#fff", fontSize: 16, fontWeight: "700", fontVariant: ["tabular-nums"] },
   recordBtnRow: {
     position: "absolute",
@@ -363,22 +385,35 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 36,
     borderWidth: 4,
+    // eslint-disable-next-line no-restricted-syntax
     borderColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
   },
+  // eslint-disable-next-line no-restricted-syntax
   recordBtnActive: { borderColor: "#e53935" },
   recordInner: {
     width: 52,
     height: 52,
     borderRadius: 26,
+    // eslint-disable-next-line no-restricted-syntax
     backgroundColor: "#e53935",
   },
   recordInnerActive: {
     width: 28,
     height: 28,
     borderRadius: 6,
+    // eslint-disable-next-line no-restricted-syntax
     backgroundColor: "#e53935",
+  },
+  recordBtnDisabledWrap: {
+    alignItems: "center",
+    gap: 6,
+  },
+  recordBtnDisabledText: {
+    // eslint-disable-next-line no-restricted-syntax
+    color: "#f88",
+    fontSize: 12,
   },
   permissionContent: {
     flex: 1,
@@ -396,6 +431,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   reviewCenter: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
+  // eslint-disable-next-line no-restricted-syntax
   reviewTitle: { color: "#fff", fontSize: 22, fontWeight: "700" },
   reviewSub: { color: "rgba(255,255,255,0.7)", fontSize: 14 },
   reviewActions: {
