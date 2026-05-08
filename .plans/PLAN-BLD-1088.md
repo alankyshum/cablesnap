@@ -350,7 +350,42 @@ Approve only after the plan makes one internally consistent choice for day-sessi
 Approve directionally only after the plan resolves the tap-count contract, a11y sizing, and migration/aggregation scope. I would block implementation PRs that preserve the current migration assumptions or ship a 3-tap flow while claiming <=2 taps.
 
 ### Tech Lead (Feasibility)
-**v3 RESPONSE TO TECH LEAD (2026-05-08):** every point addressed; please re-review.
+**v3 verdict: REQUEST CHANGES (2026-05-08).** Approach B is faithfully captured and the migration / aggregation / UPSERT / `<NumericStepper>` reuse / import-export points from my v1 review are resolved at the design level. **However** the plan now contains two fresh contradictions that QD also flagged, and the v1-era ACs were never rewritten for Approach B. These are blocking.
+
+**Blocking v3 findings (concur with QD where overlapping):**
+
+1. **`completed_at IS NOT NULL` is the silent gate that breaks the analytics promise.** I ran `grep -rn "completed_at IS NOT NULL\|isNotNull.*completed_at" lib/db/*.ts` → **118 hits** across `pr-dashboard.ts`, `e1rm-trends.ts`, `exercise-history.ts`, `weekly-summary.ts`, `monthly-report.ts`, `strength-overview.ts`, `csv.ts`, `calendar.ts`, `achievements.ts`, `recovery.ts`. The plan declares `kind='day_session'` rows have `completed_at = NULL` AND that PR / e1RM / volume / Strength Levels need "no change." Both cannot be true. The simplest fix that preserves Approach B's "no aggregation rewrites" pledge is **set `completed_at = started_at` (i.e., device-local midnight timestamp) on day-session backing rows** so they pass every existing `completed_at IS NOT NULL` filter. Active-session detection — which already needs the `kind='workout'` filter — then independently excludes day-sessions, so the dual semantics don't conflict. Update §"Data model" point 3 and "Aggregation rules" + AC23 wording accordingly. (Alternative: add `kind='day_session'` to every analytics query — but that's the ~14-file rewrite Approach B was supposed to avoid. Don't do it.)
+
+2. **UPSERT references a column that doesn't exist.** Confirmed by reading `lib/db/schema.ts:73-92`: `workout_sessions` has no `updated_at`. The example `DO UPDATE SET updated_at = excluded.updated_at` will fail at parse-time. Pick one:
+   - Use an existing harmless column: `DO UPDATE SET name = excluded.name` (idempotent if the row's `name` already matches `"GTG: <exercise>"`).
+   - Or use the `INSERT OR IGNORE` + follow-up `SELECT id WHERE day_session_exercise_id=? AND day_session_date=?` pattern from `lib/db/strava.ts:58`. Slightly more verbose but doesn't depend on column choice.
+   - Or add `updated_at INTEGER NOT NULL DEFAULT 0` as a fourth additive column with explicit migration + import/export coverage. Heaviest; only worth it if other features want it.
+
+3. **AC3, AC8, AC9, AC10 still describe the retired v1/v2 `day_sessions` table schema** (`day_session_id`, `session_id NULL`, deleting `day_sessions` rows, CHECK constraint violations). These contradict Approach B and would mislead claudecoder. Rewrite as:
+   - **AC3**: a new `workout_sets` row with `session_id` pointing at a `kind='day_session'` `workout_sessions` row whose `day_session_exercise_id`/`day_session_date` match the chip's exercise + today.
+   - **AC8**: Undo hard-deletes the just-created `workout_sets` row; if it was the only set in the backing `kind='day_session'` row, that backing `workout_sessions` row is also deleted (cascade governed by app code, not FK).
+   - **AC9**: every pre-existing `workout_sessions` row has `kind='workout'` after migration; every `workout_sets` row is byte-for-byte unchanged; `session_id` remains `NOT NULL`.
+   - **AC10**: replace with "Given an attempted second backing `kind='day_session'` row with the same `(day_session_exercise_id, day_session_date)`, the partial unique index `uniq_day_session_per_exercise_date` rejects it; the app catches the conflict and returns the existing row." (This is the integrity contract for Approach B; CHECK constraints are not part of v3.)
+
+4. **Risk Assessment row 2 is stale.** It still names `workout_sets.session_id` nullability + CHECK migration as the critical risk. Replace with: "Additive `workout_sessions` columns (`kind`, `day_session_exercise_id`, `day_session_date`) + partial unique index. Risk: low. Existing rows default to `kind='workout'`. Mitigated by AC22 (idempotency) and AC9 (byte-for-byte preservation)."
+
+5. **`error_log` correctness** (one place v3 is right and QD is wrong): I verified `lib/db/schema.ts:279` and `lib/db/tables.ts:186` — `error_log` table **does exist**. The fallback clause in §"AC10 sink" is therefore unnecessary and can be removed once AC10 is rewritten per #3 above (it stops referencing the table). Either way: no blocker here, but tighten the language.
+
+**Non-blocking but please fix:**
+
+6. The 2-tap claim now hinges on the chip exposing the prefilled value pre-tap so the user can decide before committing. Make sure AC11 / AC1 explicitly require the chip face to display reps (and weight if non-bodyweight) so the immediate-commit semantics are not a foot-gun.
+7. Stale v1 references in §"Edge & error states" still mention `day_session` records as separate row entities; harmless but worth a pass for consistency.
+8. AC8 currently says "the `day_sessions` row is also deleted" — same v1 wording.
+
+**What's resolved from my v1 review** (so claudecoder doesn't re-litigate): migration toolchain ✓, no-table-rebuild ✓, aggregation file count ✓ pending #1, UPSERT pattern ✓ pending #2, import/export in scope ✓, NumericStepper reuse ✓, active-session filter ✓, atomic transaction ✓.
+
+**Approve only after** (a) the day-session completion semantics resolve to a single internally consistent rule (recommended: `completed_at = started_at = local midnight`), (b) the UPSERT no-op-update column is real, (c) AC3/AC8/AC9/AC10 are rewritten for Approach B, (d) the Risk row 2 is rewritten. These are mechanical edits to the plan — no architectural rethink needed.
+
+The architectural direction is right. The unresolved items are wording-level but functionally critical: ship the plan as written and the core promise ("GTG sets count in PR/e1RM/volume") silently fails the moment a query includes `WHERE completed_at IS NOT NULL`.
+
+---
+
+#### v3 RESPONSE matrix (preserved for audit)
 
 | TL point | v3 resolution |
 |---|---|
