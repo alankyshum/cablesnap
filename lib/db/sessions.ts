@@ -3,7 +3,14 @@ import type { WorkoutSession } from "../types";
 import { uuid } from "../uuid";
 import { getDrizzle, query, withTransaction } from "./helpers";
 import { getDefaultGym } from "./gym-profiles";
-import { workoutSessions, workoutSets, workoutTemplates, templateExercises } from "./schema";
+import {
+  workoutSessions,
+  workoutSets,
+  workoutTemplates,
+  templateExercises,
+  stravaSyncLog,
+  healthConnectSyncLog,
+} from "./schema";
 
 // Re-export from split modules for backward compatibility
 export {
@@ -193,22 +200,30 @@ export async function completeSession(
 
 export async function cancelSession(id: string): Promise<void> {
   const db = await getDrizzle();
-  // Delete the requested session
-  await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
-  await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
-  // Clean up any other orphan sessions (completed_at IS NULL).
-  // NOTE: This sweep is intentional for the LIVE in-progress cancel flow only —
-  // it discards stale unfinished sessions left over from prior crashes/exits.
-  // Do NOT call cancelSession() to delete a completed (history) session: a
-  // concurrently in-progress workout would be silently destroyed. Use
-  // deleteCompletedSession() for targeted history deletes (BLD-690).
-  const orphans = await db.select({ id: workoutSessions.id })
-    .from(workoutSessions)
-    .where(sql`${workoutSessions.completed_at} IS NULL`);
-  for (const o of orphans) {
-    await db.delete(workoutSets).where(eq(workoutSets.session_id, o.id));
-    await db.delete(workoutSessions).where(eq(workoutSessions.id, o.id));
-  }
+  await withTransaction(async () => {
+    // BLD-1094: PRAGMA foreign_keys = ON now enforces strava_sync_log /
+    // health_connect_sync_log → workout_sessions FK; delete sync-log child
+    // rows before the parent session row to avoid FK violations.
+    await db.delete(stravaSyncLog).where(eq(stravaSyncLog.session_id, id));
+    await db.delete(healthConnectSyncLog).where(eq(healthConnectSyncLog.session_id, id));
+    await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
+    await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
+    // Clean up any other orphan sessions (completed_at IS NULL).
+    // NOTE: This sweep is intentional for the LIVE in-progress cancel flow only —
+    // it discards stale unfinished sessions left over from prior crashes/exits.
+    // Do NOT call cancelSession() to delete a completed (history) session: a
+    // concurrently in-progress workout would be silently destroyed. Use
+    // deleteCompletedSession() for targeted history deletes (BLD-690).
+    const orphans = await db.select({ id: workoutSessions.id })
+      .from(workoutSessions)
+      .where(sql`${workoutSessions.completed_at} IS NULL`);
+    for (const o of orphans) {
+      await db.delete(stravaSyncLog).where(eq(stravaSyncLog.session_id, o.id));
+      await db.delete(healthConnectSyncLog).where(eq(healthConnectSyncLog.session_id, o.id));
+      await db.delete(workoutSets).where(eq(workoutSets.session_id, o.id));
+      await db.delete(workoutSessions).where(eq(workoutSessions.id, o.id));
+    }
+  });
 }
 
 /**
@@ -232,6 +247,11 @@ export async function cancelSession(id: string): Promise<void> {
 export async function deleteCompletedSession(id: string): Promise<void> {
   const db = await getDrizzle();
   await withTransaction(async () => {
+    // BLD-1094: delete strava_sync_log + health_connect_sync_log children
+    // first — both declare FK → workout_sessions(id) (no cascade) in tables.ts,
+    // and PRAGMA foreign_keys = ON now enforces them.
+    await db.delete(stravaSyncLog).where(eq(stravaSyncLog.session_id, id));
+    await db.delete(healthConnectSyncLog).where(eq(healthConnectSyncLog.session_id, id));
     // Sets first — only ones owned by this session (always safe regardless
     // of whether the session row qualifies for deletion below).
     await db.delete(workoutSets).where(eq(workoutSets.session_id, id));

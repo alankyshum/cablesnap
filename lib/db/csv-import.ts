@@ -177,6 +177,10 @@ export async function undoCsvImport(batchId: string): Promise<{ sessionsDeleted:
 
   await withTransaction(async (db) => {
     for (const { id } of sessions) {
+      // BLD-1094: delete strava/health-connect sync log children first —
+      // both FK → workout_sessions(id), enforced by PRAGMA foreign_keys = ON.
+      await db.runAsync("DELETE FROM strava_sync_log WHERE session_id = ?", [id]);
+      await db.runAsync("DELETE FROM health_connect_sync_log WHERE session_id = ?", [id]);
       await db.runAsync("DELETE FROM workout_sets WHERE session_id = ?", [id]);
     }
     await db.runAsync("DELETE FROM workout_sessions WHERE import_batch_id = ?", [batchId]);
