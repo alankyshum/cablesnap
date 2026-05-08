@@ -1,4 +1,4 @@
-/* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps, complexity */
+/* eslint-disable max-lines-per-function, max-lines, react-hooks/exhaustive-deps, complexity */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, AppState, Keyboard, Platform } from "react-native";
 import { useRouter } from "expo-router";
@@ -48,6 +48,8 @@ import {
   type PrefillCandidate,
 } from "./resolvePrefillCandidate";
 import { resolveRestSeconds, type RestBreakdown } from "../lib/rest";
+import { restResolverBreadcrumb } from "../lib/rest-resolver";
+import * as Sentry from "@sentry/react-native";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
   getSessionProgramDayId,
@@ -285,15 +287,24 @@ export function useSessionActions({
       const adaptiveSetting = await getAppSetting("rest_adaptive_enabled");
       if (adaptiveSetting !== "false" && id) {
         try {
+          // AC2c: linkScope: true so history tier is never consulted for linked groups.
+          // Only bypass needed is for pinned (history cannot occur here).
           const ctx = await getRestContext(id, set.exercise_id, {
             set_type: set.set_type,
             rpe: set.rpe,
-          });
+          }, { linkScope: true });
+          if (ctx.source.kind === "pinned") {
+            const secs = Math.min(600, Math.max(15, ctx.source.seconds));
+            startRestWithDuration(secs);
+            return;
+          }
           const breakdown = resolveRestSeconds(ctx);
           startRestWithBreakdown(breakdown);
           return;
-        } catch {
-          // Fall through to legacy path on any error.
+        } catch (e) {
+          // Resolver error — log to Sentry for observability, then fall through to legacy path.
+          Sentry.captureException(e, { tags: { feature: "rest-resolver" } });
+          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: set.exercise_id, level: "error" });
         }
       }
       const secs = await getRestSecondsForLink(id!, set.link_id!);

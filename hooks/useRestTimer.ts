@@ -24,6 +24,9 @@ import {
   defaultBreakdown,
   type RestBreakdown,
 } from "../lib/rest";
+import type { RestSource } from "../lib/rest-resolver";
+import { setUserRestSeconds, restResolverBreadcrumb } from "../lib/rest-resolver";
+import * as Sentry from "@sentry/react-native";
 import {
   isAvailable,
   requestPermission,
@@ -89,6 +92,9 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   // Breakdown lives in useState (per plan) so the breakdown sheet re-renders when
   // a new timer starts. Ref-based storage caused stale reads (TL blocker #7).
   const [breakdown, setBreakdown] = useState<RestBreakdown>(() => defaultBreakdown(0));
+  // BLD-1100: current resolver source + active exercise ID for attribution + Pin toggle.
+  const [restSource, setRestSource] = useState<RestSource | null>(null);
+  const [restExerciseId, setRestExerciseId] = useState<string | null>(null);
   const [persistedDurationSeconds, setPersistedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
   const [selectedDurationSeconds, setSelectedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
   const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -247,14 +253,28 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
             set_type: ctx.setType,
             rpe: ctx.rpe,
           });
+          setRestSource(inputs.source);
+          setRestExerciseId(ctx.exerciseId);
+          // AC2b: bypass resolveRestSeconds for history/pinned — their seconds are
+          // already the user's actual rest value; re-multiplying is double-counting.
+          // Clamp to [15, 600] (resolver-side bounds), NOT legacy [10, 360].
+          if (inputs.source.kind === "history" || inputs.source.kind === "pinned") {
+            const secs = Math.min(600, Math.max(15, inputs.source.seconds));
+            runTimer(secs, defaultBreakdown(secs));
+            return;
+          }
           const br = resolveRestSeconds(inputs);
           runTimer(br.totalSeconds, br);
           return;
-        } catch {
-          // Fall through to legacy on error.
+        } catch (e) {
+          // Resolver error — log to Sentry for observability, then fall through to legacy path.
+          Sentry.captureException(e, { tags: { feature: "rest-resolver" } });
+          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: ctx.exerciseId, level: "error" });
         }
       }
 
+      setRestSource(null);
+      setRestExerciseId(exerciseId);
       const secs = await getRestSecondsForExercise(sessionId, exerciseId);
       runTimer(secs, defaultBreakdown(secs));
     },
@@ -439,9 +459,17 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     };
   }, [stopRestInterval]);
 
+  // BLD-1100: Pin/unpin per-exercise rest default from the breakdown sheet.
+  const handlePinChange = useCallback((exerciseId: string, pinned: boolean, seconds: number) => {
+    setUserRestSeconds(exerciseId, pinned ? seconds : null).catch(() => {});
+  }, []);
+
   return {
     rest,
     breakdown,
+    restSource,
+    restExerciseId,
+    handlePinChange,
     persistedDurationSeconds,
     selectedDurationSeconds,
     restFlashStyle,

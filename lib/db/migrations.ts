@@ -255,6 +255,27 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     console.warn("[migrations] uniq_day_session_per_exercise_date partial index not created:", err);
   }
 
+  // BLD-1100: history-based smart rest timer — pinned per-exercise rest default.
+  // Logically constrained to [15, 600]; enforcement is in setUserRestSeconds
+  // (RestBoundsError) and the import path (clamp/drop). ALTER ADD COLUMN with
+  // DEFAULT NULL is metadata-only on SQLite (O(1) regardless of row count).
+  await addColumnIfMissing(database, "exercises", "user_rest_seconds", "INTEGER DEFAULT NULL");
+
+  // BLD-1100: partial index for the history-median query.
+  // Mirrors the idx_set_media_pending_delete_partial precedent (line 289).
+  // EXPLAIN QUERY PLAN assertion in scripts/perf-bench-rest-resolver.ts verifies
+  // this index is picked by the planner (AC8 enforcement).
+  try {
+    await database.execAsync(
+      `CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise_completed_at
+         ON workout_sets (exercise_id, completed_at)
+         WHERE completed_at IS NOT NULL`
+    );
+  } catch {
+    // Partial indexes not supported on all platforms — resolver falls back to full scan.
+    console.warn("[migrations] idx_workout_sets_exercise_completed_at partial index not created");
+  }
+
   // BLD-1092: Form Check Videos — set_media table + indexes.
   // Stores one video clip per completed working set (one-clip-per-set
   // enforced by the unique index on set_id).

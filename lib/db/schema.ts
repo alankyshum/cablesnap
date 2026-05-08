@@ -38,6 +38,11 @@ export const exercises = sqliteTable("exercises", {
   notes: text("notes"),
   notes_updated_at: integer("notes_updated_at"),
   notes_backfill_dismissed_at: integer("notes_backfill_dismissed_at"),
+  // BLD-1100: pinned per-exercise rest default. Logically constrained to [15, 600]
+  // but SQLite cannot enforce CHECK on existing schema without a table rebuild.
+  // Validation lives in setUserRestSeconds (throws RestBoundsError) and the
+  // import-export path (clamps/drops on ingest).
+  user_rest_seconds: integer("user_rest_seconds"),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {

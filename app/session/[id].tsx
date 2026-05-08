@@ -92,8 +92,7 @@ export default function ActiveSession() {
   } = useSessionData({ id, templateId, sourceSessionId });
 
   const {
-    rest,
-    breakdown,
+    rest, breakdown, restSource, restExerciseId, handlePinChange,
     persistedDurationSeconds,
     selectedDurationSeconds,
     restFlashStyle,
@@ -371,6 +370,8 @@ export default function ActiveSession() {
               onOpenToolbox={handleToolboxOpen}
               pickerRequested={restSettingsRequested}
               onPickerDismissed={handleRestSettingsDismissed}
+              restSource={restSource} restExerciseId={restExerciseId}
+              onPinChange={handlePinChange}
             />
           ),
         }}
