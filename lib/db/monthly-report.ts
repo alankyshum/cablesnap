@@ -237,6 +237,7 @@ async function getMonthlyTrainingDaysAndStreak(
     `SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS d
      FROM workout_sessions
      WHERE completed_at IS NOT NULL
+       AND kind = 'workout'
        AND started_at >= ? AND started_at < ?`,
     [start, end]
   );

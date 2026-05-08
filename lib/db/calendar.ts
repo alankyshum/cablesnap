@@ -146,6 +146,7 @@ export async function getWorkoutDatesForStreak(): Promise<string[]> {
     .where(
       and(
         isNotNull(workoutSessions.completed_at),
+        sql`${workoutSessions.kind} = 'workout'`,
         gte(workoutSessions.started_at, cutoff)
       )
     )

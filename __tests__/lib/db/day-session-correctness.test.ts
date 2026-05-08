@@ -410,3 +410,102 @@ describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
     expect(dates).not.toContain(outOfMonth);
   });
 });
+
+// ─── Streak-creep: getWorkoutDatesForStreak and getMonthlyTrainingDays ────────
+
+/**
+ * Streak-creep guard: GTG day_session rows must NOT inflate streak counts.
+ * getWorkoutDatesForStreak and getMonthlyTrainingDaysAndStreak both use
+ * `WHERE completed_at IS NOT NULL AND kind = 'workout'` so that days with
+ * only GTG sets are excluded.
+ */
+describe("Streak-creep guard — GTG days excluded from streak/training-day queries", () => {
+  const STREAK_QUERY = `
+    SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS d
+    FROM workout_sessions
+    WHERE completed_at IS NOT NULL
+      AND kind = 'workout'
+      AND started_at >= ?
+    ORDER BY d DESC
+  `;
+
+  const TRAINING_DAYS_QUERY = `
+    SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS d
+    FROM workout_sessions
+    WHERE completed_at IS NOT NULL
+      AND kind = 'workout'
+      AND started_at >= ? AND started_at < ?
+  `;
+
+  function makeDb() {
+    const db = new DatabaseSync(":memory:");
+    db.exec(`
+      CREATE TABLE workout_sessions (
+        id TEXT PRIMARY KEY,
+        kind TEXT DEFAULT 'workout',
+        name TEXT NOT NULL DEFAULT '',
+        started_at INTEGER NOT NULL,
+        completed_at INTEGER DEFAULT NULL
+      );
+    `);
+    return db;
+  }
+
+  function midnightMs(dateStr: string): number {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d).getTime();
+  }
+
+  it("getWorkoutDatesForStreak excludes days with only GTG (day_session) rows", () => {
+    const db = makeDb();
+    const gtgDate = "2026-05-10";
+    const ms = midnightMs(gtgDate);
+    // Only a day_session row — should NOT appear in streak dates
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'day_session', 'GTG', ?, ?)"
+    ).run("s-gtg", ms, ms);
+
+    const cutoff = ms - 1; // before the GTG date so it's in range
+    const rows = db.prepare(STREAK_QUERY).all(cutoff) as { d: string }[];
+    expect(rows.map((r) => r.d)).not.toContain(gtgDate);
+  });
+
+  it("getWorkoutDatesForStreak includes days with a completed workout", () => {
+    const db = makeDb();
+    const workoutDate = "2026-05-12";
+    const ms = midnightMs(workoutDate);
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'workout', 'Morning Lift', ?, ?)"
+    ).run("s-wo", ms, ms + 3600_000);
+
+    const cutoff = ms - 1;
+    const rows = db.prepare(STREAK_QUERY).all(cutoff) as { d: string }[];
+    expect(rows.map((r) => r.d)).toContain(workoutDate);
+  });
+
+  it("getMonthlyTrainingDaysAndStreak excludes GTG-only days from training day count", () => {
+    const db = makeDb();
+    const YEAR = 2026, MONTH = 4;
+    const start = new Date(YEAR, MONTH, 1).getTime();
+    const end = new Date(YEAR, MONTH + 1, 1).getTime();
+
+    const gtgMs = midnightMs("2026-05-07");
+    const workoutMs = midnightMs("2026-05-08");
+
+    // GTG day — should NOT count
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'day_session', 'GTG', ?, ?)"
+    ).run("s-gtg", gtgMs, gtgMs);
+
+    // Real workout day — should count
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'workout', 'Lift', ?, ?)"
+    ).run("s-wo", workoutMs, workoutMs + 3600_000);
+
+    const rows = db.prepare(TRAINING_DAYS_QUERY).all(start, end) as { d: string }[];
+    const dates = rows.map((r) => r.d);
+    expect(dates).toContain("2026-05-08");
+    expect(dates).not.toContain("2026-05-07");
+    expect(dates).toHaveLength(1);
+  });
+});
