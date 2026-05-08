@@ -1,7 +1,7 @@
 # Feature Plan: Local-only Form Check Videos
 
 **Issue**: BLD-1092  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT v2 → IN_REVIEW  (v2 addresses all QD + TL blockers from rev 1)
+**Status**: DRAFT v3 → IN_REVIEW  (v3 addresses all QD + TL rev-2 blockers; v2 addressed rev-1)
 
 ## Research Source
 - **Origin:** Reddit synthesis 2026-05-08 (web_search query "workout tracker app frustrations 2026 reddit missing features Strong Hevy FitNotes ... form videos") + competitor reviews (replog.co.uk best-workout-log-apps-2026, gainz-pro.com best-workout-tracker-2026, fitecho.ai best-free-workout-tracker-apps-2026).
@@ -33,25 +33,26 @@ If a reviewer believes any UX detail crosses into behavior-shaping (e.g. "PR cli
 ## Proposed Solution
 
 ### Overview
-Each completed working set may have **at most one short video clip** attached (≤ 15 s, captured at 720p H.264, video-only, no audio track). Clips are stored in `${FileSystem.documentDirectory}form-clips/<exercise_id>/<clip_id>.mp4` — inside the app's sandbox so they're auto-removed on uninstall, **and explicitly excluded from iOS backup and Android Auto Backup**. A new `set_media` table tracks the relationship, with a `unique` constraint on `set_id` (one-clip-per-set invariant) and a `pending_delete` tombstone column. A "Form Library" tab on the existing exercise detail drawer lets the user browse all clips for that exercise across time, with an explicit "Select" / "Compare" mode.
+Each completed working set may have **at most one short video clip** attached (≤ 15 s, captured at 720p / `avc1` on iOS, video-only, no audio track). Clips are stored in `${FileSystem.documentDirectory}form-clips/<exercise_id>/<clip_id>.mp4` — inside the app's sandbox so they're auto-removed on uninstall, **and explicitly excluded from iOS backup and Android Auto Backup via the BLD-1092b config plugin** (see Hard Rule 4). A new `set_media` table tracks the relationship, with a `unique` constraint on `set_id` (one-clip-per-set invariant) and a `pending_delete` tombstone column. A "Form Library" tab on the existing exercise detail drawer lets the user browse all clips for that exercise across time, with an explicit "Select" / "Compare" mode.
 
 **Hard rules — non-negotiable, enforced in code, copy, AND tests:**
-1. Clips never enter any network call. The clip path and bytes are excluded from CSV export, sync (none today, but defensive), Sentry crash attachments, **and Sentry Mobile Replay** (replay must mask all media surfaces — see Privacy section below). Enforced via ESLint module boundaries + network-mock integration tests covering `fetch`, `XMLHttpRequest`, and WebSocket.
-2. The capture sheet shows a one-line privacy banner: "Saved on this device only — never uploaded." (Matches verified runtime behavior, not aspiration.)
+1. Clips never enter any network call. The clip path and bytes are excluded from CSV export, sync (none today, but defensive), Sentry crash attachments, **and Sentry Mobile Replay** (replay must be programmatically *disabled while a media surface is mounted* — see Privacy section below; component-tree masking alone is insufficient for native preview surfaces). Enforced via ESLint module boundaries + network-mock integration tests covering `fetch`, `XMLHttpRequest`, and WebSocket.
+2. **Privacy banner is gated on backup-exclusion delivery.** Until BLD-1092b (the backup-exclusion config plugin) merges, the capture-sheet banner reads `"Saved on this device only."` (no "never uploaded" claim). After BLD-1092b lands and is verified, the banner is upgraded to `"Saved on this device only — never uploaded."` Banner copy must match verified runtime, never aspiration.
 3. Uninstalling the app removes all clips (sandbox guarantee on iOS + Android — verify in QA on physical device).
-4. **iOS backup exclusion** via `expo-file-system`'s backup-behavior API set immediately after the file write and **before** the DB row INSERT. **Android Auto Backup exclusion** via `data_extraction_rules.xml` (and `full_backup_content.xml` for legacy SDK) generated through an `app.config.ts` plugin or static asset.
-5. **No microphone permission requested** — capture is video-only. `CameraView.recordAsync({ mute: true })` plus `AndroidManifest.xml` lacking `RECORD_AUDIO`. Saved files contain zero audio tracks (verified by metadata read on save).
+4. **Backup exclusion is delivered by BLD-1092b** (a sibling prerequisite PR): a tiny custom Expo config plugin `plugins/with-form-clips-backup.ts` that on **iOS** bundles a small Swift module setting `URLResourceKey.isExcludedFromBackupKey = true` on each clip path immediately after write (and exposing a read-back helper for tests), and on **Android** writes `android/app/src/main/res/xml/data_extraction_rules.xml` (plus `full_backup_content.xml` for SDK ≤ 30) excluding `files/form-clips/` from Auto Backup. Required because `expo-file-system ~55.0.17` exposes **no** backup-exclusion JS API (verified via grep of `node_modules/expo-file-system/build/**` — zero matches). The feature PR depends on 1092b for the strong banner copy.
+5. **No microphone permission requested** — capture is video-only. `mute` is set as a **`<CameraView>` prop** (verified per `expo-camera` SDK 55 types: `Camera.types.d.ts:338,494`) — *not* a `recordAsync()` option. `app.config.ts` does not add `microphonePermission`/`recordAudioAndroid`; prebuilt `AndroidManifest.xml` lacks `RECORD_AUDIO`; `Info.plist` lacks `NSMicrophoneUsageDescription`. Saved files contain zero audio tracks (metadata read on save).
 6. Sharing ("Send to coach") is **out of scope v1**. v1 ships **without** any export affordance to preserve the privacy-first promise as the default. A guarded share flow can be designed separately later.
+7. **OS camera permission copy must cover form clips.** `app.config.ts:42-43` currently scopes `cameraPermission` to barcode scanning only ("CableSnap needs camera access to scan food barcodes for quick nutrition logging."). The feature PR updates it to also cover form-check recording, **without** mentioning microphone. Suggested: `"CableSnap uses your camera to scan food barcodes for nutrition logging and to record short form-check clips that stay on this device."` Verified by manifest/Info.plist snapshot test.
 
 ### UX Design
 
 **Capture entry point** (during a workout, on a completed working set):
 
-> Note (v2): Existing `components/session/SetRow.tsx` does **not** have a kebab — it uses swipe + long-press for delete and accessibility actions (verified). v1 introduces a small inline glyph at the row's right edge for **completed sets only**, ~32 dp hit-target with `hitSlop`, using a `MaterialCommunityIcons` `video-outline` icon (matches existing icon system: `note-text-outline`, `swap-horizontal`, etc.). When a clip already exists, the icon switches to `video-check` (filled). Exact pixel spec and a11y label is delegated to a UX-designer subticket created at implementation time.
+> Note (v3): Existing `components/session/SetRow.tsx` does **not** have a kebab — it uses swipe + long-press for delete and accessibility actions (verified). v1 introduces a small inline glyph at the row's right edge for **completed sets only**, with **visual icon size 24–32 dp** but a **≥48×48 dp effective touch target via `hitSlop`** (WCAG 2.5.5 AA + Material Android floor; QD/TL rev-2 spec polish #4). The hitSlop must **not overlap** the existing checkbox / delete swipe-action hit regions; this is verified by a layout test under both compact and large-text row densities and in landscape orientation. Icon: `MaterialCommunityIcons` `video-outline`, switching to `video-check` (filled) when a clip exists. Exact pixel spec and a11y label is delegated to a UX-designer subticket created at implementation time.
 
-1. Tap glyph on a completed SetRow → `FormVideoSheet` (full-screen modal) opens `expo-camera` in video mode, defaulting to back camera, 720p, max 15 s, with a visible countdown. `mute: true` on the recorder.
+1. Tap glyph on a completed SetRow → `FormVideoSheet` (full-screen modal) opens `expo-camera` in video mode using the **SDK-55-correct** surface: `<CameraView mode="video" mute videoQuality="720p" facing="back" />` (the `mute` prop and `videoQuality` prop both belong on the view, not on `recordAsync` — verified `Camera.types.d.ts:338,494`). Recording is started with `cameraRef.current?.recordAsync({ maxDuration: 15, codec: Platform.OS === 'ios' ? 'avc1' : undefined })` (codec is iOS-only; valid `VideoCodec` values are `'avc1' | 'hvc1' | 'jpeg' | 'apcn' | 'ap4h'` — `'H264'` is **not** valid). A visible countdown shows time remaining.
 2. After capture, single-screen review: play / re-record / save / cancel. No filters, no editing.
-3. Save: write to sandbox, **flag the file as backup-excluded**, then INSERT into `set_media`. Order is critical so a crash mid-save can't leak a backed-up orphan.
+3. Save: write to sandbox, **call BLD-1092b's `backupExclusion.setExcludedFromBackup(uri)` helper** (iOS only — Android coverage comes from the manifest rule), then INSERT into `set_media`. Order is critical so a crash mid-save can't leak a backed-up orphan.
 4. Once saved, the SetRow's glyph state changes to "clip exists".
 
 **Review flow** (during or after a session):
@@ -77,12 +78,22 @@ Each completed working set may have **at most one short video clip** attached (�
 
 ### Technical Approach
 
-**Prerequisite commit (separate from feature commit, must merge first):**
+**Prerequisite PRs (both must merge before the feature PR):**
 
-> **`PRAGMA foreign_keys = ON` in `lib/db/helpers.ts`.**
+> **BLD-1092a — `PRAGMA foreign_keys = ON` in `lib/db/helpers.ts`.**
 > Verified: today the main DB connection (lib/db/helpers.ts:42-55) sets `journal_mode = WAL` but never `foreign_keys = ON`. The pragma is only enabled in `lib/db/import-export.ts:530` (CSV import path). Therefore Drizzle's `references(..., { onDelete: "cascade" })` is currently a runtime no-op on app deletes. Without this commit, the cascade chain `workout_sessions → workout_sets → set_media` cannot be solved at the DB layer.
 >
-> Plan: a standalone PR (call it BLD-1092a) that adds `database.execAsync("PRAGMA foreign_keys = ON")` immediately after the journal-mode pragma, plus a runtime test asserting the value, plus QA regression of every existing delete path (delete-set, delete-session, delete-exercise, delete-template, etc.) because it changes the runtime behavior of every nullable FK in the schema. Land this **before** the feature PR. If QA finds latent dangling-row bugs they're scoped to BLD-1092a, not 1092.
+> Plan: a standalone PR that adds `database.execAsync("PRAGMA foreign_keys = ON")` immediately after the journal-mode pragma, plus a runtime test asserting the value, plus a QA regression sweep across **every** existing delete path. **Per TL rev-2 §A**, the 1092a PR description must enumerate at minimum: `deleteSet`, `deleteSession`, `softDeleteCustomExercise`, `deleteTemplate`, `removeExerciseFromTemplate`, `program_*` table cleanups, plus any other delete entry-point that a `grep -rn "delete\|softDelete" lib/db/` enumeration surfaces. Land this **before** the feature PR. If QA finds latent dangling-row bugs they're scoped to BLD-1092a, not 1092.
+
+> **BLD-1092b — Backup-exclusion config plugin.**
+> Verified blocker (TL+QD rev-2): `expo-file-system ~55.0.17` exposes **no** backup-exclusion JS API. We need a small custom Expo config plugin (`plugins/with-form-clips-backup.ts`, ~30 LOC TS + ~10 LOC native each side) that:
+> - **iOS:** patches the prebuilt project so a `FormClipsBackup` Swift module exposes `setExcludedFromBackup(uri: string): Promise<void>` (calls `(URL).setResourceValues([.isExcludedFromBackupKey: true])`) and `readBackupExclusion(uri: string): Promise<bool>` for the read-back test.
+> - **Android:** writes `android/app/src/main/res/xml/data_extraction_rules.xml` (and `full_backup_content.xml` for SDK ≤ 30) excluding `files/form-clips/` from Auto Backup, and patches `AndroidManifest.xml` `<application>` to reference both rules files.
+> - Both: a TS shim `lib/media/backup-exclusion.ts` that wraps the native module on iOS and is a no-op on Android (manifest covers Android entirely).
+>
+> The 1092b PR ships with: a runtime test that creates a temp file, calls `setExcludedFromBackup`, calls `readBackupExclusion`, asserts `true`; a manifest snapshot test asserting the Android XML rules are present after prebuild; QA verification of `bmgr` Android backup output excluding `form-clips/`.
+>
+> **Banner copy is gated on 1092b.** Until 1092b merges, the feature PR's privacy banner says "Saved on this device only" without "never uploaded". After 1092b merges, banner upgrades. Eliminates the false-promise risk.
 
 **New schema** (Drizzle migration, in feature PR):
 ```ts
@@ -102,7 +113,8 @@ export const setMedia = sqliteTable("set_media", {
 }, (t) => [
   uniqueIndex("uq_set_media_set_id").on(t.set_id),              // one-clip-per-set invariant
   index("idx_set_media_exercise_created").on(t.exercise_id, t.created_at),
-  index("idx_set_media_pending_delete").on(t.pending_delete),
+  // Partial index — pending_delete is highly skewed (almost all rows = 0); a normal index is counterproductive on SQLite.
+  index("idx_set_media_pending_delete_partial").on(t.pending_delete).where(sql`${t.pending_delete} = 1`),
 ]);
 ```
 - `rel_path` (not absolute) so iOS sandbox UUID changes after restore-from-backup don't orphan rows.
@@ -111,28 +123,44 @@ export const setMedia = sqliteTable("set_media", {
   - thumbnails: `${documentDirectory}form-clips/<exercise_id>/.thumbs/<clip_id>.jpg`
 
 **New module** `lib/media/form-clips.ts`:
-- `recordClip(setId, exerciseId)` → opens camera (video-only, mute), writes file, flags backup-excluded, INSERTs `set_media` row, returns `SetMediaRow`.
+- `recordClip(setId, exerciseId)` → opens camera with `<CameraView mute>` (video-only), writes file via `expo-file-system`, calls `backupExclusion.setExcludedFromBackup(uri)` (BLD-1092b shim), then INSERTs `set_media` row, returns `SetMediaRow`.
 - `getClipsForExercise(exerciseId)` → reverse-chron list, filtered `WHERE pending_delete = 0`. **Returns `[]` on `Platform.OS === 'web'`.**
 - `softDeleteClip(id)` → sets `pending_delete = 1`, hides from UI immediately. Reconciler unlinks the file later.
-- `deleteClip(id)` (used by reconciler / explicit "delete now"): **DB row delete first, then `unlinkAsync`**. If the row delete commits and the file unlink fails, the orphan file is a tombstone the next reconciler pass cleans. If the file delete were first and the row delete failed, you get a 404 row that crashes the player.
-- `reconcileOrphans()` runs on app boot **and** on first Form Library open after launch:
-  - For every row with `pending_delete = 1`: unlink file, delete row.
-  - For every file under `form-clips/` not referenced by any row: unlink it (orphan file from a crashed save).
-  - For every row with no file: leave row in place but flag `rel_path` as missing for the UI placeholder.
+- `deleteClip(id)` (used by reconciler / explicit "delete now"): **DB row delete first, then `unlinkAsync`**. `unlinkAsync` ENOENT is swallowed idempotently (TL rev-2 C(e)) — file may already be gone.
+- `reconcileOrphans()` runs on app boot **and** on first Form Library open after launch. To avoid the **concurrent-write race** (TL rev-2 C(d)):
+  1. **Snapshot the DB row set first** — `SELECT id, rel_path FROM set_media`.
+  2. Enumerate filesystem under `form-clips/`.
+  3. Only consider a file "orphan" if it is BOTH absent from the DB snapshot AND its `mtime` is older than `Date.now() - 30_000` (30-second quiet-zone). This protects clips written between snapshot and enumeration from being erroneously unlinked.
+  4. For every row with `pending_delete = 1`: attempt `unlinkAsync`; **swallow ENOENT idempotently**; then DELETE the row regardless.
+  5. For every row with no file (and `pending_delete = 0`): leave row in place but flag `rel_path` as missing for the UI placeholder.
 - `getStorageStats()` → total bytes + clip count from FS, cross-checked with DB.
 - All functions strictly synchronous-with-DB, async only for FS / camera. `getClipsForExercise` is web-no-op.
 
-**New dependency**: `expo-video` (≥ 2.x for SDK 55) for playback. Stable since SDK 52, official replacement for deprecated `expo-av` Video. **No spike needed**; if a playback bug surfaces post-merge, fall back to `react-native-video` is a 1-day swap. Capture uses existing `expo-camera ~55.0.15` (verified in `package.json`). **No `expo-image-manipulator`-for-video-like dependency** — no post-capture transcoding in v1.
+**New dependencies:**
+- `expo-video` (≥ 2.x for SDK 55) — playback. Stable since SDK 52, official replacement for deprecated `expo-av` Video. **No spike needed**; fall back to `react-native-video` is a 1-day swap if needed.
+- `expo-video-thumbnails` — thumbnail generation API. Per claudecoder readiness review: not bundled with `expo-video`; explicit dependency required. Apache-2.0, FOSS-clean, no F-Droid concern.
+- Capture continues using existing `expo-camera ~55.0.15` (verified in `package.json`). **No `expo-image-manipulator`-for-video-like dependency** — no post-capture transcoding in v1.
 
-**Compression strategy: Pick A — ship 720p raw.** Cap capture at 720p H.264 via `CameraView.recordAsync({ maxDuration: 15, codec: 'H264', mute: true })` and the existing `quality` prop. Accept the resulting size (typically 4–10 MB / 15 s). `set_media.size_bytes` is informational only — no transcoding. The earlier v1 plan's "if larger, re-encode at 720p / 30 fps using expo's ImageManipulator-equivalent for video" was incorrect — `expo-image-manipulator` does not handle video, and the only realistic Expo video transcoders (`react-native-ffmpeg-kit`, `react-native-video-processing`) are large native deps with GPL/LGPL licensing concerns and an F-Droid headache. Defer compression entirely to v2 (or never — clip storage panel + bulk delete in v1 is sufficient).
+**Compression strategy: Pick A — ship 720p raw, SDK-correct API.** Use the verified SDK-55 surface:
+
+```tsx
+<CameraView ref={cameraRef} mode="video" mute videoQuality="720p" facing="back" />
+// …
+await cameraRef.current?.recordAsync({
+  maxDuration: 15,
+  codec: Platform.OS === 'ios' ? 'avc1' : undefined, // iOS-only; Android ignores
+});
+```
+
+`mute` and `videoQuality` are **`CameraView` props** (verified `Camera.types.d.ts:338,494,494`). `codec` is the only `recordAsync` option that affects compression on iOS, and the valid `VideoCodec` union is `'avc1' | 'hvc1' | 'jpeg' | 'apcn' | 'ap4h'` — `'H264'` would fail typecheck. Accept the resulting size (typically 4–10 MB / 15 s). `set_media.size_bytes` is informational only. No transcoding. Earlier "ImageManipulator-equivalent for video" was wrong — `expo-image-manipulator` does not handle video, and realistic transcoders (`react-native-ffmpeg-kit`, `react-native-video-processing`) carry GPL/LGPL + F-Droid headaches. Compression deferred to v2.
 
 **Privacy enforcement (must be tested):**
 
-1. **Sentry Mobile Replay masking (the highest-stakes item).** Verified: `app/_layout.tsx:50` initializes `Sentry.mobileReplayIntegration()` with `replaysSessionSampleRate: 0.1` and `replaysOnErrorSampleRate: 1`, and `sendDefaultPii: true`. By default, replay masks text but does **not** mask `<Image>` / `<Video>` / `expo-camera` previews unless explicitly configured. Plan:
-   - Globally set `Sentry.mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true })` in `app/_layout.tsx` (one-time, ~5 LOC, lands with the feature PR).
-   - Wrap every clip surface — `FormVideoSheet`'s camera preview, the bottom-sheet player, Form Library thumbnails, the compare view's two video panes — in `<Sentry.Mask>` (verify SDK 8.x API; if the named component is `Sentry.MaskView` or via `sentry-mask` testID, use whichever the installed SDK exposes).
-   - Component test per surface that mounts it and asserts no unmasked native `Image` / `Video` node escapes the mask boundary.
-   - Build-time grep gate (added to `scripts/check-privacy-boundaries.sh`, called from CI / pre-push hook): if `lib/media/*` exists in the tree, then `app/_layout.tsx` must contain `maskAllImages: true`. Fails the build otherwise.
+1. **Sentry Mobile Replay disable-while-mounted (highest-stakes; v3 strengthens v2's masking-only approach per TL rev-2 §B).** Verified: `app/_layout.tsx:50` initializes `Sentry.mobileReplayIntegration()` with `replaysSessionSampleRate: 0.1`, `replaysOnErrorSampleRate: 1`, `sendDefaultPii: true`. JS `<Sentry.Mask>` wrappers prove component-tree masking but do **NOT** prove the **native** Sentry SDK replay-capture pipeline honors masks for `expo-camera`'s native preview surface (a `SurfaceView` on Android / `AVCaptureVideoPreviewLayer` on iOS), nor for `expo-video`'s native player. v3 approach:
+   - **Primary mechanism: replay-disable-while-mounted.** A `useReplayDisableWhileMounted()` hook is mounted at the root of every media surface (`FormVideoSheet`, bottom-sheet player, Form Library thumbnails grid, compare view). On mount it calls the SDK-8 equivalent of `Sentry.getClient()?.getIntegrationByName('MobileReplay')?.stop?.()`; on unmount it calls `start()`. Concurrent-mount safety: a small ref-counter ensures replay only restarts when the **last** media surface unmounts. The exact API name may vary across Sentry SDK 8.x patch releases — the hook hedges with feature-detection (`stop?.()`) and falls back to `client.close()`/`client.init()` cycle if `stop` is unavailable.
+   - **Secondary (defense-in-depth):** keep `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true })` globally + `<Sentry.Mask>` per surface. These won't help with native preview but cover thumbnail JPGs rendered through `<Image>`.
+   - **Component test per surface** that mounts it, asserts the replay integration is in stopped state via the integration's introspection API (or test double of the integration), and asserts restart on unmount + after concurrent mount/unmount cycles.
+   - **Build-time grep gate** (`scripts/check-privacy-boundaries.sh`, called from CI): if `lib/media/*` exists, then (a) `app/_layout.tsx` must contain `maskAllImages: true`, AND (b) every component that imports from `lib/media/*` and renders a media surface must contain a call to `useReplayDisableWhileMounted()`. Fails the build otherwise.
 2. **Module boundary enforcement.** ESLint `no-restricted-imports` (or `eslint-plugin-boundaries` if already present) forbids `lib/media/*` from being imported by:
    - `lib/sync/**` (none today; defensive),
    - `lib/db/csv-export.ts`, `lib/db/import-export.ts`,
@@ -142,12 +170,12 @@ export const setMedia = sqliteTable("set_media", {
    - Mock `global.fetch`, `global.XMLHttpRequest`, and any WebSocket / `EventSource`.
    - Assert zero requests with any URL or body containing `form-clips/`, `.mp4`, or any clip's `rel_path`.
 4. **CSV export snapshot test**: assert no `set_media` columns and no `rel_path` substrings in the exported file when clips exist.
-5. **Backup attribute test**: after `recordClip` resolves, read the FS attribute (iOS `NSURLIsExcludedFromBackupKey`, or whatever `expo-file-system` exposes for read-back) and assert `true`. Manifest test for `data_extraction_rules.xml` containing the `<exclude>` rule for `form-clips/`.
-6. **No-microphone-permission test**: read `app.config.ts` permissions list and `AndroidManifest.xml` after prebuild; assert `RECORD_AUDIO` is absent. Saved-clip metadata read asserts `audio_track == null`.
+5. **Backup attribute test (delivered by BLD-1092b plugin):** after `recordClip` resolves, call BLD-1092b's `backupExclusion.readBackupExclusion(uri)` helper and assert `true` (iOS). Manifest snapshot test asserts `data_extraction_rules.xml` contains the exclude rule for `files/form-clips/` after prebuild (Android).
+6. **No-microphone-permission test**: read `app.config.ts` permissions list and the prebuilt `AndroidManifest.xml` + iOS `Info.plist`; assert `RECORD_AUDIO` and `NSMicrophoneUsageDescription` are absent. Also assert `app.config.ts` `cameraPermission` text covers form clips (per Hard Rule 7). Saved-clip metadata read asserts `audio_track == null`.
 
 **Performance:**
 - Form Library tab paginates 20 thumbnails at a time (FlashList).
-- Thumbnails are generated **lazily on first view**, off the UI thread via `expo-video`'s thumbnail API (or equivalent), and cached to `.thumbs/`. Thumbnails are queued sequentially — never parallel-N — to avoid ANRs on low-end Android.
+- Thumbnails are generated **lazily on first view**, off the UI thread via `expo-video-thumbnails` (separate package — see Dependencies), and cached to `.thumbs/`. Thumbnails are queued sequentially — never parallel-N — to avoid ANRs on low-end Android.
 - Use **middle-frame** as default thumbnail; fall back to first frame if generation fails. No user-chosen thumbnails in v1.
 - Player uses on-demand load — no pre-warming.
 - (No post-capture transcoding in v1, so the "encoding on UI thread" concern is moot.)
@@ -156,7 +184,8 @@ export const setMedia = sqliteTable("set_media", {
 - 38 working sets/week × 1 clip each × ~7 MB avg ≈ 1.4 GB/year worst case for a power user. Surfaced in Settings; no auto-delete.
 
 **F-Droid / bundle size:**
-- `expo-video` adds ExoPlayer (~1.5–2 MB AAB on Android, similar on iOS via AVKit which is already in the platform). `expo-camera` is already shipping. Estimated delta: ~2–3 MB AAB / ~1 MB IPA. Well under the 5 MB AC ceiling. ExoPlayer is Apache-2.0, FOSS-clean, **no F-Droid blocker**. F-Droid build (`scripts/build-fdroid.sh` or current equivalent) must complete successfully and the resulting APK size delta is reported in the QD merge comment.
+- `expo-video` adds ExoPlayer (~1.5–2 MB AAB on Android, similar on iOS via AVKit which is already in the platform). `expo-video-thumbnails` adds ~200 KB. `expo-camera` is already shipping. Estimated delta: ~2–3 MB AAB / ~1 MB IPA. Well under the 5 MB AC ceiling. ExoPlayer is Apache-2.0, FOSS-clean, **no F-Droid blocker**.
+- F-Droid verification path (TL rev-2 spec polish #5): the repo does **not** have `scripts/build-fdroid.sh`. F-Droid metadata lives under `fdroid/` and the build flows through `.github/workflows/fdroid-release.yml` plus the `fdroid-foss-build` skill. The QD merge comment must report the APK delta as measured by the `fdroid-foss-build` skill output, not a local script.
 
 ### Scope
 **In v1:**
@@ -181,7 +210,7 @@ export const setMedia = sqliteTable("set_media", {
 - Web capture (web hides every entry-point — see AC16).
 
 ## Acceptance Criteria
-- [ ] AC1: Given a completed working set When the user taps the inline `video-outline` glyph on the SetRow Then the camera opens in video mode and records up to 15 s with `mute: true`. Saving creates one `set_media` row and one file under `form-clips/<exercise_id>/`. The glyph state changes to `video-check`.
+- [ ] AC1: Given a completed working set When the user taps the inline `video-outline` glyph on the SetRow (visual size 24–32 dp; effective hitSlop ≥ 48×48 dp; non-overlapping with checkbox/delete hit regions; verified by layout test in compact + large-text + landscape) Then the camera opens in video mode using `<CameraView mode="video" mute videoQuality="720p" facing="back" />` (mute is a CameraView prop, not a recordAsync option) and records up to 15 s via `recordAsync({ maxDuration: 15, codec: Platform.OS === 'ios' ? 'avc1' : undefined })`. Saving creates one `set_media` row and one file under `form-clips/<exercise_id>/`. The glyph state changes to `video-check`.
 - [ ] AC2: Given a set with an attached clip When the user taps the clip-exists glyph on the SetRow Then a bottom-sheet player plays the clip without any network request (verify via test that mocks `fetch` + `XMLHttpRequest` + WebSocket and asserts zero calls referencing the clip).
 - [ ] AC3: Given an exercise with ≥ 2 clips When the user opens the "Form clips" tab in `ExerciseDetailDrawer` Then the tab shows a count badge and thumbnails render reverse-chronologically with date+weight overlay. Empty state is visible when count is 0.
 - [ ] AC4: Given the user enters Select mode and selects two thumbnails When they tap "Compare" Then a 1×1 vertical-split view loads both clips with independent play/pause controls. Long-press also enters Select mode (power-user shortcut).
@@ -190,15 +219,15 @@ export const setMedia = sqliteTable("set_media", {
 - [ ] AC7: Given the user denies camera permission When the FormVideoSheet opens Then a non-blocking dialog explains why and offers a deep-link to OS settings; no clip is created. Copy is functional, no guilt language.
 - [ ] AC8: Given storage usage of N clips When the user opens Settings → Storage Then total MB and per-exercise breakdown match `du -sh` of the form-clips directory ± 1 MB.
 - [ ] AC9: PR passes typecheck (`npm run typecheck`), all tests, no new lint warnings.
-- [ ] AC10: Bundle size delta ≤ 5 MB (verified by F-Droid build and reported in QD merge comment as APK size before/after).
+- [ ] AC10: Bundle size delta ≤ 5 MB, verified by the **`fdroid-foss-build` skill** (or the `.github/workflows/fdroid-release.yml` workflow output). QD merge comment reports APK size before/after as measured by that skill — **not** a non-existent `scripts/build-fdroid.sh`.
 - [ ] AC11: All clip files include `NSFileProtectionCompleteUntilFirstUserAuthentication` (or platform equivalent) — clips are not accessible to other apps.
-- [ ] AC12: **Sentry Mobile Replay** payloads contain zero pixels from `FormVideoSheet`, the bottom-sheet player, Form Library thumbnails, and the compare view. Verified by (a) `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true })` configured in `app/_layout.tsx`, (b) `<Sentry.Mask>` wrappers (or SDK-equivalent API) present on every media surface — asserted by component tests, (c) build-time grep gate that fails the build if `lib/media/*` exists without `maskAllImages: true` set.
+- [ ] AC12: **Sentry Mobile Replay is disabled while any media surface is mounted** (TL rev-2 §B floor). Verified by (a) every component under `lib/media/*` and any consumer that renders a media surface calls `useReplayDisableWhileMounted()` — asserted by build-time grep gate in `scripts/check-privacy-boundaries.sh`; (b) hook test asserts `MobileReplay.stop()` is called on mount, `start()` on unmount, ref-counter handles concurrent mount/unmount; (c) defense-in-depth: `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true })` in `app/_layout.tsx` + `<Sentry.Mask>` wrappers per surface, asserted by component tests; (d) grep gate also fails the build if `lib/media/*` exists without `maskAllImages: true` set.
 - [ ] AC13: **`PRAGMA foreign_keys = ON`** is set on every `getDatabase()` connection (asserted by a runtime test). Cascade chain `workout_sessions → workout_sets → set_media` is verified by an integration test that creates a session/set/clip, deletes the session, and asserts both the DB row and the FS file are gone after `reconcileOrphans()` runs. *(Implemented in pre-requisite PR BLD-1092a; verified in BLD-1092 integration test.)*
-- [ ] AC14: **No microphone permission** is requested. `app.config.ts` permissions list and prebuilt `AndroidManifest.xml` lack `RECORD_AUDIO`. iOS `Info.plist` lacks `NSMicrophoneUsageDescription`. Saved clip files contain no audio track (verified via metadata read on save, or by `ffprobe` in QA).
-- [ ] AC15: **Backup exclusion.** All clip + thumbnail files are flagged excluded from iOS backup (`NSURLIsExcludedFromBackupKey == 1` verified by reading the attribute back) and from Android Auto Backup (`data_extraction_rules.xml` contains an exclude rule for `form-clips/`, manifest test asserts this).
+- [ ] AC14: **No microphone permission** is requested. `app.config.ts` does not set `microphonePermission` or `recordAudioAndroid`. Prebuilt `AndroidManifest.xml` lacks `RECORD_AUDIO`. iOS `Info.plist` lacks `NSMicrophoneUsageDescription`. **AND `app.config.ts` `cameraPermission` text matches the new copy** ("…to scan food barcodes…and to record short form-check clips that stay on this device.") — assertion runs against both `app.config.ts` source and the prebuilt `Info.plist` `NSCameraUsageDescription` + Android string resource. Saved clip files contain no audio track (metadata read on save, or `ffprobe` in QA).
+- [ ] AC15: **Backup exclusion (delivered by BLD-1092b prerequisite).** iOS: `recordClip` calls the BLD-1092b Swift helper `setExcludedFromBackup(uri)`, and a runtime test asserts `readBackupExclusion(uri) === true` for each clip + thumbnail. Android: a manifest snapshot test asserts `android/app/src/main/res/xml/data_extraction_rules.xml` (and `full_backup_content.xml` for SDK ≤ 30) contains an exclude rule for `files/form-clips/` after prebuild, and that `AndroidManifest.xml <application>` references both rules files. Until BLD-1092b merges, the feature PR's banner copy must NOT include "never uploaded" (Hard Rule 2).
 - [ ] AC16: **Web target** hides every Form-Clips entry point: SetRow glyph not rendered on `Platform.OS === 'web'`, "Form clips" tab not rendered, Settings → Storage row not rendered. `getClipsForExercise` returns `[]` on web. Verified by web-build smoke test.
 - [ ] AC17: **Module-boundary enforcement.** ESLint config forbids imports of `lib/media/*` from `lib/sync/**`, `lib/db/csv-export.ts`, `lib/db/import-export.ts`, `app/api/**`, `workers/**`, and any Sentry wrapper. Lint passes with the rule active.
-- [ ] AC18: **Reconciler correctness.** Three integration tests pass: (a) DB-row-present + file-missing → placeholder thumbnail rendered, no crash; (b) file-present + no-DB-row → reconciler unlinks the file on next boot/Form-Library-open; (c) parent-set deleted via cascade → both row and file gone after `reconcileOrphans()`.
+- [ ] AC18: **Reconciler correctness.** Five integration tests pass: (a) DB-row-present + file-missing → placeholder thumbnail rendered, no crash; (b) file-present + no-DB-row + `mtime > 30s` → reconciler unlinks the file on next boot/Form-Library-open; (c) parent-set deleted via cascade → both row and file gone after `reconcileOrphans()`; **(d) concurrent-write race (TL rev-2 §C(d))**: while `reconcileOrphans()` is mid-scan, a `recordClip` writes file X and inserts row X. The reconciler must NOT unlink file X — verified by snapshot-DB-rows-before-FS-enumeration plus the `mtime > 30s` quiet zone; **(e) idempotent unlink (TL rev-2 §C(e))**: a `pending_delete = 1` row whose file vanished separately must still be DELETEd cleanly — `unlinkAsync` ENOENT is swallowed.
 
 ## Edge Cases
 | Scenario | Expected Behavior |
@@ -393,8 +422,46 @@ Validation of v2 vs my rev-1 list:
 | 4 | FS+DB delete ordering | **Resolved** (modulo two AC18 cases above) |
 | 5–15 | Spec gaps | **All resolved** |
 
+### Quality Director (UX) — rev 3: PENDING
+
+**Verdict (rev 3):** PENDING — re-review requested 2026-05-08T after v3 push.
+
+**v2 blockers (QD rev-2) and how v3 addresses each:**
+
+| # | QD rev-2 Blocker | v3 Resolution |
+|---|------------------|---------------|
+| 1 | `expo-file-system` has no backup-exclusion API (AC15 was aspirational) | Hard Rule 4 + new Tech Approach §"BLD-1092b — Backup-exclusion config plugin" — explicit prerequisite PR ships a custom Expo config plugin with iOS Swift module (`setExcludedFromBackup`/`readBackupExclusion`) and Android `data_extraction_rules.xml`. AC15 rewritten to test the plugin's actual deliverables. **Banner copy gated** (Hard Rule 2): until 1092b merges, banner says "Saved on this device only" — no "never uploaded" claim. |
+| 2 | Camera API mismatch (`mute` is a prop, `'H264'` invalid codec) | Hard Rule 5 + UX §"Capture entry point" §step 1 + Tech §"Compression strategy" all rewritten with verified SDK-55 API: `<CameraView mode="video" mute videoQuality="720p" />` + `recordAsync({ maxDuration: 15, codec: Platform.OS === 'ios' ? 'avc1' : undefined })`. AC1 + AC14 updated. |
+| 3 | `cameraPermission` copy is barcode-only — misleading prompt | New Hard Rule 7 requires updating `app.config.ts:42-43` to cover both barcode + form clips, no microphone wording. AC14 extended with assertion against `app.config.ts` source and prebuilt `Info.plist` / Android string resource. |
+| 4 | SetRow glyph 32 dp < WCAG 48 dp floor; possible overlap with check/delete | UX §"Capture entry point" rewritten: visual icon 24–32 dp, **effective hitSlop ≥ 48×48 dp**, non-overlapping with checkbox/delete hit regions. Verified by layout test in compact, large-text, and landscape densities. AC1 amended. |
+| 5 | Sentry replay component-tree masking insufficient for native preview surface | Tech §"Privacy enforcement" item 1 rewritten to **replay-disable-while-mounted** as primary mechanism (`useReplayDisableWhileMounted()` hook on every media surface, ref-counted for concurrent mounts, hedges across SDK 8.x API drift); component-tree masking demoted to defense-in-depth. AC12 rewritten accordingly + extended grep gate. |
+
+**Re-review requested:** v3 commit on `main`.
+
+### Tech Lead (Feasibility) — rev 3: PENDING
+
+**Verdict (rev 3):** PENDING — re-review requested 2026-05-08T after v3 push.
+
+**v2 blockers (TL rev-2) and how v3 addresses each:**
+
+| # | TL rev-2 Blocker | v3 Resolution |
+|---|------------------|---------------|
+| 1 | No `expo-file-system` backup-exclusion API exists | TL Pick A adopted: new prerequisite PR **BLD-1092b** ships custom config plugin (iOS Swift + Android XML rules + TS shim). Banner copy gated on 1092b merge (Hard Rule 2 + Hard Rule 4). AC15 references the actual deliverables. |
+| 2 | Camera recording API does not match SDK 55 types | All call-sites rewritten with verified `Camera.types.d.ts` shape: `mute`/`videoQuality` as `CameraView` props; `recordAsync` options limited to `maxDuration` + iOS-only `codec: 'avc1'`. (Hard Rule 5 + UX §step 1 + Tech §Compression + AC1.) |
+| 3 | `cameraPermission` is barcode-only | Hard Rule 7 + AC14 require update to `app.config.ts:42-43` covering barcode + form clips, no microphone wording. |
+| A (validation) | BLD-1092a regression sweep enumeration | §"BLD-1092a" prerequisite expanded to enumerate `deleteSet`, `deleteSession`, `softDeleteCustomExercise`, `deleteTemplate`, `removeExerciseFromTemplate`, `program_*` cascades, plus full `grep -rn` enumeration. |
+| B (validation) | AC12 floor: replay-disable-while-mounted | Tech §"Privacy enforcement" item 1 rewritten to make replay-disable the primary mechanism via `useReplayDisableWhileMounted()` hook with ref-counted concurrent mounts and SDK-8.x API hedging. Component-tree masking + grep gate retained as defense-in-depth. AC12 rewritten. |
+| C (validation) | AC18 needs concurrent-write + idempotent-unlink cases | AC18 expanded from 3 → 5 cases: (d) concurrent-write race (snapshot-DB-rows-before-FS-enumeration + 30 s `mtime` quiet zone); (e) idempotent `unlinkAsync` ENOENT swallowed. Reconciler implementation in §"New module" updated. |
+| 4 (polish) | SetRow glyph 32 dp < 48 dp floor | UX §"Capture entry point" rewritten: ≥ 48×48 dp effective hitSlop, non-overlapping. AC1 amended. |
+| 5 (polish) | F-Droid path names nonexistent script | Tech §"F-Droid" + AC10 reference `fdroid-foss-build` skill / `.github/workflows/fdroid-release.yml` instead of `scripts/build-fdroid.sh`. |
+| 6 (polish) | `idx_set_media_pending_delete` low-cardinality counterproductive | Schema replaced with **partial index** `WHERE pending_delete = 1`. |
+
+**Plus (claudecoder readiness review):** `expo-video-thumbnails` listed as separate dependency (not bundled with `expo-video`) in §"New dependencies" + §"Performance".
+
+**Re-review requested:** v3 commit on `main`.
+
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. If a reviewer believes any UX detail crosses the line, flag it and we redesign._
 
 ### CEO Decision
-_Pending QD + TL re-review of v2._
+_Pending QD + TL re-review of v3._
