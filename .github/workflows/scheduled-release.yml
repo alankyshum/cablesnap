@@ -4,6 +4,17 @@ on:
   schedule:
     - cron: '0 */12 * * *'
   workflow_dispatch:
+    inputs:
+      republish_current:
+        description: >-
+          Re-publish the current version already committed to main without
+          bumping. Use for hotfix re-runs after a prior scheduled release
+          built the wrong APK or failed mid-pipeline (e.g. lintVitalRelease
+          regression). Reads version from package.json + versionCode from
+          fdroid metadata and skips all bump/promote/commit steps. The
+          release tag for that version MUST NOT already exist.
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -101,6 +112,14 @@ jobs:
         id: changelog_gate
         run: |
           set -euo pipefail
+          # Republish mode (BLD-1101): skip the gate entirely. The CHANGELOG
+          # has already been promoted in a prior run; we are only re-running
+          # the build/release steps for the existing version.
+          if [ "${{ inputs.republish_current }}" = "true" ]; then
+            echo "::notice::Republish mode — bypassing CHANGELOG '## Unreleased' gate."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ ! -f CHANGELOG.md ]; then
             echo "::error::CHANGELOG.md is missing — cannot release without curated notes."
             exit 1
@@ -135,6 +154,19 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: next_version
         run: |
+          # Republish mode (BLD-1101): use the version already committed in
+          # package.json. The bump/promote steps below are skipped, and the
+          # tag must not yet exist.
+          if [ "${{ inputs.republish_current }}" = "true" ]; then
+            NEXT=$(node -p "require('./package.json').version")
+            if git rev-parse -q --verify "refs/tags/v$NEXT" >/dev/null; then
+              echo "::error::Republish mode requested but tag v$NEXT already exists. Use the bump path instead."
+              exit 1
+            fi
+            echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+            echo "Republish version (from package.json): $NEXT"
+            exit 0
+          fi
           TAG="${{ steps.latest_tag.outputs.tag }}"
           if [ -z "$TAG" ]; then
             NEXT="0.1.0"
@@ -159,13 +191,21 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: next_vcode
         run: |
+          # Republish mode (BLD-1101): use the versionCode already committed
+          # in fdroid metadata (no +1 increment).
+          if [ "${{ inputs.republish_current }}" = "true" ]; then
+            NEXT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.persoack.cablesnap.yml | awk '{print $2}')
+            echo "version_code=$NEXT" >> "$GITHUB_OUTPUT"
+            echo "Republish version code (from fdroid metadata): $NEXT"
+            exit 0
+          fi
           CURRENT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.persoack.cablesnap.yml | awk '{print $2}')
           NEXT=$((CURRENT + 1))
           echo "version_code=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Next version code: $NEXT"
 
       - name: Bump version in package.json
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           node -e "
@@ -176,7 +216,7 @@ jobs:
           "
 
       - name: Bump version in app.config.ts
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           VCODE="${{ steps.next_vcode.outputs.version_code }}"
@@ -184,7 +224,7 @@ jobs:
           sed -i "s/versionCode: [0-9]*/versionCode: $VCODE/" app.config.ts
 
       - name: Bump version in F-Droid metadata
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           VCODE="${{ steps.next_vcode.outputs.version_code }}"
@@ -196,7 +236,7 @@ jobs:
       # with the version bumped above and recreates a fresh placeholder
       # `## Unreleased` for the next cycle. macOS/BSD-safe awk.
       - name: Promote `## Unreleased` to versioned section in CHANGELOG.md
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
         run: |
           set -euo pipefail
           VERSION="${{ steps.next_version.outputs.version }}"
@@ -299,7 +339,7 @@ jobs:
       # fingerprint verification — still run, so the signing path can be
       # exercised and independently verified before merge.
       - name: Commit and push
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main' && inputs.republish_current != true
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
           git config user.name "CableSnap Release Bot"
