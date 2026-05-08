@@ -1,7 +1,7 @@
 # Feature Plan: History-based Smart Rest Timer suggestions
 
 **Issue**: BLD-1099  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW (rev 2 — addressing TL+QD blockers 2026-05-08T09:30Z)
 
 ## Problem Statement
 
@@ -89,11 +89,12 @@ chain** that returns the first defined value (in priority order):
    unchanged.
 2. **Pinned per-exercise default** (NEW: `exercises.user_rest_seconds`,
    nullable) — user explicitly pinned a value for this exercise.
-3. **Historical median** (NEW computation) — median of the inter-set
-   timestamp deltas for this `(user, exercise_id)` over the last **30 days**,
-   filtered by:
-   - delta < 600 s (10 min) — exclude "walked away" intervals;
-   - delta > 15 s — exclude double-tap completions;
+3. **Historical median** (NEW computation) — median of estimated **actual
+   rest** for this `(user, exercise_id)` over the last **30 days** (see
+   "Rest measurement" below for the definition; this is NOT raw
+   completion-to-completion delta), filtered by:
+   - actual_rest ≤ 600 s (10 min) — exclude "walked away" intervals;
+   - actual_rest ≥ 15 s — exclude double-tap completions;
    - same `set_type` cluster (normal/normal vs. failure/normal can differ);
    - require ≥ 4 historical pairs to be statistically meaningful.
 4. **Template default** — `template_exercises.rest_seconds` for the active
@@ -135,11 +136,75 @@ icons; screenreader announces full sentence.
 ```sql
 ALTER TABLE exercises
   ADD COLUMN user_rest_seconds INTEGER DEFAULT NULL;
+
+-- New partial index (Blocker 3 fix; mirrors the
+-- idx_set_media_pending_delete_partial precedent in migrations.ts:289)
+CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise_completed_at
+  ON workout_sets (exercise_id, completed_at)
+  WHERE completed_at IS NOT NULL;
 ```
 
 No new tables. Median is computed on read from existing
-`workout_sets.completed_at`. (Drizzle migration via `addColumnIfMissing`,
-which is the BLD-746 canonical pattern.)
+`workout_sets.completed_at` + `duration_seconds` + `reps`. (Drizzle
+migration via `addColumnIfMissing` for the column; explicit
+`CREATE INDEX IF NOT EXISTS` for the index — both idempotent, rollback-safe.)
+
+**Bounds (Blocker 5 fix).** `user_rest_seconds` is logically constrained to
+`[15, 600]` (matches the history filter window). SQLite cannot enforce
+CHECK without a table rebuild on the existing schema, so enforcement lives
+at three call-site layers:
+
+1. `setUserRestSeconds(exerciseId, seconds | null)` — throws a typed
+   `RestBoundsError` if `seconds` is non-null and outside `[15, 600]`.
+2. `lib/db/import-export.ts` import path — clamps to `[15, 600]` on read
+   and emits a Sentry breadcrumb (`category: "rest-resolver"`,
+   level: `warning`) when a clamp occurs. Negative or NaN values are
+   dropped to NULL (treated as unpinned).
+3. UI "Pin as default" toggle — uses the currently-resolved seconds as
+   the source value, which is already bounded by the resolver itself
+   (history is filter-bounded; legacy paths produce values ≤ 360 s).
+
+#### Rest measurement — definition (Blocker 2 fix)
+
+`workout_sets` records `completed_at` (when the user tapped "complete")
+but no `started_at` per set. Raw `completed_at_{N+1} − completed_at_N` is
+therefore **`actual_rest + work_time_of_set_{N+1}`** — a directional
+upward bias of 20–60 s/set on rep-based work.
+
+We define **actual rest** as:
+
+```
+actual_rest_N→N+1 = (completed_at_{N+1} − work_estimate_{N+1}) − completed_at_N
+
+where work_estimate_{N+1} =
+  COALESCE(
+    workout_sets.duration_seconds_{N+1},   -- populated for duration-tracked sets
+    2 * COALESCE(workout_sets.reps_{N+1}, 0) -- 2 s/rep estimate for rep-based sets
+  )
+```
+
+The `2 s/rep` constant is the documented rep-cadence assumption (eccentric
++ concentric ≈ 1.5–2.5 s for compound lifts in standard tempo training;
+2 s is the midpoint and is the constant we ship). It is exposed as
+`WORK_ESTIMATE_SECONDS_PER_REP = 2` in `lib/rest-resolver.ts` for future
+tuning.
+
+**Documented residual bias.** For rep-based sets without `duration_seconds`,
+`2s × reps` under- or over-estimates work by ≤ ±15 s on typical 5–12 rep
+sets. The median (P50) absorbs this noise robustly; a single biased sample
+shifts the median by 0 s in any cluster of ≥ 4 samples. **AC1 tolerance**
+is therefore stated as `±10 s of the synthetic-fixture expected value`,
+with a separate AC (AC1b) asserting bias direction is neutral on the
+fixture (median is within ±5 s of the true rest).
+
+**Why not add `started_at` to `workout_sets`?** Considered. Requires UI
+plumbing to define what "started" means (open-edit-row? first character
+typed? tap-to-begin?) — every choice is wrong for some user flow. Out of
+scope for BLD-1099; tracked as a follow-up optimization (BLD-future) once
+we have data showing the `2s × reps` bias matters. Resolver shape
+forward-compatible: when `started_at` ships, the formula degrades to
+`started_at_{N+1} − completed_at_N` automatically (it's a one-line query
+swap behind the same resolver contract).
 
 #### New module: `lib/rest-resolver.ts`
 
@@ -147,15 +212,34 @@ which is the BLD-746 canonical pattern.)
 export type RestSource =
   | { kind: "user_override"; seconds: number }
   | { kind: "pinned"; seconds: number }
-  | { kind: "history"; seconds: number; sampleCount: number; windowDays: 30 }
+  | {
+      kind: "history";
+      seconds: number;
+      sampleCount: number;
+      windowDays: 30;
+    }
   | { kind: "template"; seconds: number }
   | { kind: "default"; seconds: 90 };
+
+export const WORK_ESTIMATE_SECONDS_PER_REP = 2;
+export const HISTORY_MIN_SAMPLES = 4;
+export const HISTORY_WINDOW_DAYS = 30;
+export const HISTORY_FLOOR_SECONDS = 15;
+export const HISTORY_CEILING_SECONDS = 600;
+export const PIN_BOUNDS_SECONDS: readonly [number, number] = [15, 600];
+
+export class RestBoundsError extends Error {}
 
 export async function resolveRest(
   sessionId: string,
   exerciseId: string,
   setType: SetType,
 ): Promise<RestSource>;
+
+export async function setUserRestSeconds(
+  exerciseId: string,
+  seconds: number | null,
+): Promise<void>; // throws RestBoundsError if out of [15, 600]
 ```
 
 Pure function over an injected DB handle (testable). All five sources are
@@ -163,20 +247,104 @@ queried in priority order; each falls through if undefined.
 
 #### History query (the hot path)
 
-Single SQLite query, indexable on `(exercise_id, completed_at)` (index
-already exists for analytics — see lib/db/pr-dashboard.ts). Computes
-inter-set deltas in a CTE, filters by 15 s ≤ Δ ≤ 600 s, returns the median
-(P50). Target latency: < 30 ms on a 10 k-set dataset (verified via
-`scripts/perf-bench-rest-resolver.ts` — see Acceptance §AC8).
+Single SQLite query using the new `idx_workout_sets_exercise_completed_at`
+partial index (Blocker 3 fix). Computes `actual_rest` per consecutive set
+pair in a CTE using `LAG(completed_at) OVER (... ORDER BY completed_at)`,
+filters by `15 s ≤ actual_rest ≤ 600 s` and `set_type` cluster, returns
+the median (P50) via `PERCENTILE_CONT`-style ordering (SQLite has no
+percentile; use `ORDER BY actual_rest LIMIT 1 OFFSET (count − 1) / 2`).
 
-#### Wire-up
+**Index usage is asserted, not assumed.** `scripts/perf-bench-rest-resolver.ts`
+runs `EXPLAIN QUERY PLAN` for the resolver query and **fails the bench**
+if the planner picks anything other than `idx_workout_sets_exercise_completed_at`.
+This is the AC8 enforcement mechanism.
 
-1. `getRestSecondsForExercise` becomes a thin wrapper around `resolveRest`
-   that returns just `.seconds` (preserves all existing call sites).
-2. `getRestContext` extended with the resolver result so the breakdown
-   sheet can render the attribution line.
-3. New `setUserRestSeconds(exerciseId, seconds | null)` mutation;
-   single-row update; no cascade implications.
+Target latency: < 30 ms on a 10 k-set fixture (verified via the bench).
+
+#### Wire-up (Blocker 1 fix — composition with `resolveRestSeconds`)
+
+The existing flow at `hooks/useRestTimer.ts:244-256` is:
+
+```
+getRestContext → { baseRestSeconds, setType, rpe, category }
+  → resolveRestSeconds(inputs)  // multiplies base × setType × rpe × category
+  → clamp(result, 10, 360)
+```
+
+The legacy multiplier exists because `template_exercises.rest_seconds`
+is a *baseline* for "average" set conditions, and the multiplier adjusts
+per-set difficulty. **A history median already embodies the user's
+typical RPE/setType mix on this exercise.** Re-multiplying is double-counting.
+
+**Composition rule (chosen: TL Option 1 — simplest, most honest):**
+
+1. `getRestContext` is extended to return `RestSource` alongside
+   `baseRestSeconds`:
+   ```ts
+   type RestContext = {
+     baseRestSeconds: number;
+     setType: SetType;
+     rpe: number | null;
+     category: ExerciseCategory | null;
+     source: RestSource; // NEW
+   };
+   ```
+2. `useRestTimer.startRest` branches on `source.kind`:
+   - **`history` or `pinned`**: bypass `resolveRestSeconds` entirely.
+     Use `source.seconds` directly. Clamp to `[15, 600]` (resolver-side
+     bounds, NOT legacy `[10, 360]`). The breakdown sheet renders
+     "From your history (12 sets, last 30 days), no further adjustment
+     applied" / "Pinned by you, no further adjustment applied".
+   - **`template`, `default`, `user_override`**: legacy path
+     unchanged — `resolveRestSeconds` runs, clamps to `[10, 360]`,
+     breakdown sheet renders existing multiplier breakdown.
+3. `getRestSecondsForExercise` (the public API at
+   `lib/db/session-sets.ts:745`) becomes a thin wrapper that returns
+   `resolveRest(...).seconds` for callers that don't need the source.
+
+**The legacy `MAX_REST_SECONDS = 360` constant in `lib/rest.ts:34` is
+NOT changed** — it correctly bounds the multiplier-driven path. The new
+history/pinned path uses its own `[15, 600]` bound applied
+post-resolution. This keeps the two paths cleanly separated.
+
+#### Superset / link path (Blocker 4 fix)
+
+`getRestSecondsForLink` (`lib/db/session-sets.ts:802-814`) currently
+returns `max(template_exercises.rest_seconds)` across the link group,
+which silently regresses templateless supersets to 90 s once we ship
+history-based resolution.
+
+**Composition rule (chosen: TL Option A — `max(history_per_exerciseId)`):**
+
+`getRestSecondsForLink` is rewritten to call `resolveRest` per
+`exerciseId` in the link group and return the `max(.seconds)`. This
+preserves the existing "longest rest wins" semantic while gaining
+history-awareness. Source attribution for the link is the source of
+the winning exercise.
+
+For mixed-source link groups (e.g., exercise A has 30 days of history,
+exercise B is brand new), the `max(...)` may pick either; the
+attribution line names the winning exercise and source so the user can
+see why ("Suggested 2:15 — from your history on Cable Pushdowns; longer
+than your Cable Curl rest").
+
+#### Wire-up summary
+
+1. `getRestSecondsForExercise` becomes a thin wrapper around
+   `resolveRest` returning `.seconds` (preserves all existing call sites
+   that don't need source).
+2. `getRestSecondsForLink` is rewritten to take the max of
+   `resolveRest(...)` per link member (Blocker 4).
+3. `getRestContext` extended to include `source: RestSource` so the
+   breakdown sheet can render attribution and `useRestTimer.startRest`
+   can branch on the composition rule (Blocker 1).
+4. `useRestTimer.startRest` branches on `source.kind` — bypasses
+   `resolveRestSeconds` for history/pinned (Blocker 1).
+5. New `setUserRestSeconds(exerciseId, seconds | null)` mutation with
+   `[15, 600]` bounds validation; throws `RestBoundsError` on violation
+   (Blocker 5).
+6. `lib/db/import-export.ts` import path clamps `user_rest_seconds` to
+   `[15, 600]`; drops to NULL for negative/NaN/non-integer (Blocker 5).
 
 #### Observability
 
@@ -230,37 +398,71 @@ expected 3 min" without adding a UI.
 ## Acceptance Criteria
 
 - [ ] **AC1**: Given a user has logged ≥ 4 sets on exercise X in the last
-      30 days with inter-set deltas in [15 s, 600 s], when the user
-      completes a new set on X (in any session, with or without a template),
-      then the rest timer starts at the historical median, not 90 s.
+      30 days with `actual_rest` (per "Rest measurement" definition) in
+      [15 s, 600 s], when the user completes a new set on X (in any
+      session, with or without a template), then the rest timer starts
+      at the historical median **within ±10 s of the synthetic-fixture
+      expected value**, NOT 90 s.
+- [ ] **AC1b**: On a synthetic fixture where true rest is known, the
+      median produced by the resolver is within **±5 s** of the true
+      median (asserts the `2s × reps` work-estimate is bias-neutral at
+      P50).
 - [ ] **AC2**: Given a user has pinned a default rest of N seconds on
-      exercise X, when the user completes a set on X, then the timer starts
-      at N seconds regardless of history or template.
+      exercise X, when the user completes a set on X, then the timer
+      starts at exactly N seconds **with no multiplier applied**
+      (composition rule, Blocker 1 fix), regardless of history or
+      template.
+- [ ] **AC2b**: When source ∈ {`history`, `pinned`}, `useRestTimer.startRest`
+      bypasses `resolveRestSeconds` (verified by spy / mock in unit test).
+      Output is clamped to `[15, 600]`, NOT the legacy `[10, 360]`.
 - [ ] **AC3**: Given a user has < 4 qualifying history samples on exercise
       X, when they complete a set on X, then the timer falls back to the
-      template default (legacy behaviour); if no template default, 90 s.
-- [ ] **AC4**: The breakdown sheet shows the source attribution line:
-      "From your history (N sets, last 30 days)" / "Pinned by you" /
-      "Template default" / "Default".
-- [ ] **AC5**: Tapping "Pin as default" persists `user_rest_seconds` and is
-      reversible by tapping again ("Unpin").
+      template default (legacy path WITH multiplier); if no template
+      default, 90 s × multiplier (legacy path).
+- [ ] **AC4**: The breakdown sheet shows the source attribution line for
+      every source: `"From your history (N sets, last 30 days), no
+      further adjustment applied"` / `"Pinned by you, no further
+      adjustment applied"` / `"Template default"` (existing multiplier
+      breakdown still rendered) / `"Default"`.
+- [ ] **AC5**: Tapping "Pin as default" persists `user_rest_seconds`
+      (clamped to `[15, 600]` at write time) and is reversible by tapping
+      again ("Unpin").
+- [ ] **AC5b**: `setUserRestSeconds` throws `RestBoundsError` for values
+      outside `[15, 600]` (excluding `null`); regression tests cover
+      `-1`, `0`, `14`, `601`, `100000`, `NaN`.
 - [ ] **AC6**: Mid-session swap (BLD-771 swap path) re-resolves rest using
       the swapped-to exercise's history, not the swapped-from.
+- [ ] **AC6b** (Blocker 4 — supersets): For a templateless or
+      template-based linked group `[A, B]`, `getRestSecondsForLink`
+      returns `max(resolveRest(A).seconds, resolveRest(B).seconds)`. With
+      A = 200 s history, B = template 120 s → 200 s wins; with A = no
+      history (90 s default), B = 180 s history → 180 s wins. Attribution
+      names the winning exercise + source.
 - [ ] **AC7**: Importing a backup that includes `user_rest_seconds` is
-      lossless; exporting includes the column. (Existing export/import
-      pipeline covers this automatically since the column is on `exercises`,
-      but add a regression test.)
-- [ ] **AC8**: Resolver latency ≤ 30 ms on a 10 k-set fixture dataset
-      (`scripts/perf-bench-rest-resolver.ts`).
+      lossless within `[15, 600]`. Out-of-bounds values are clamped
+      (positive) or dropped to NULL (negative/NaN/non-integer); a Sentry
+      breadcrumb is emitted on every clamp/drop. Regression tests cover
+      `user_rest_seconds = -1`, `0`, `100000`, `"abc"`, valid `120`.
+- [ ] **AC8**: Resolver latency ≤ 30 ms (P95 over 100 runs) on a 10 k-set
+      fixture (`scripts/perf-bench-rest-resolver.ts`). The bench
+      additionally runs `EXPLAIN QUERY PLAN` for the history query and
+      **fails** if the planner picks any index other than
+      `idx_workout_sets_exercise_completed_at` (Blocker 3 enforcement).
 - [ ] **AC9**: All existing tests for `getRestSecondsForExercise`,
-      `getRestContext`, and `useRestTimer` pass unchanged. PR adds ≥ 8 new
-      unit tests and 1 integration test for the resolver.
+      `getRestSecondsForLink`, `getRestContext`, and `useRestTimer` pass
+      unchanged. PR adds ≥ **10** new unit tests (resolver tiers,
+      bounds, work-estimate fallback, link-group max, breadcrumb
+      emission) and 1 integration test.
 - [ ] **AC10**: Drizzle migration is non-destructive
-      (`addColumnIfMissing`); rollback by ignoring the column is safe.
+      (`addColumnIfMissing` for the column; `CREATE INDEX IF NOT EXISTS`
+      for the partial index); rollback by ignoring the column and the
+      index is safe.
 - [ ] **AC11**: No new lint warnings; typecheck clean; no new
       dependencies.
-- [ ] **AC12**: Sentry breadcrumb is added; no PII; respects mobile-replay
-      masking.
+- [ ] **AC12**: Sentry breadcrumb is added with `category: "rest-resolver"`
+      via the existing `sessionBreadcrumb` helper at
+      `hooks/useRestTimer.ts:286` (preserves replay-mask contract);
+      payload is UUID-only (no exercise name); no PII.
 
 ## Edge Cases
 
@@ -274,7 +476,12 @@ expected 3 min" without adding a UI.
 | User double-taps "complete set" creating a 2 s delta | Excluded by 15 s floor. |
 | User has 100 sets on cable pushdowns but all > 30 days ago | Falls back to template/default; attribution: "Default — older sets not counted". |
 | Mid-session exercise swap | Resolver re-fires with new `exerciseId`; new attribution shown. |
-| Superset / circuit | Existing `getRestSecondsForLink` already takes the max across the link group; smart suggestion stacks underneath that. |
+| Superset / circuit (templateless or template-based) | `getRestSecondsForLink` returns `max(resolveRest(...) per exerciseId)`; attribution names the winning exercise + source (Blocker 4 fix). |
+| Rep-based set with no `duration_seconds` | Work estimated as `2 s × reps`; documented ±15 s/sample bias absorbed by P50 over ≥ 4 samples. |
+| Duration-tracked set (e.g., plank) | `duration_seconds` used directly for work; bias = 0. |
+| Set with `reps = NULL` (extremely rare; corrupted row) | `work_estimate = 0`; pair contributes raw delta to median; outliers filtered by `[15, 600]` bound. |
+| `user_rest_seconds` = -300 imported from corrupted backup | Dropped to NULL on import; Sentry breadcrumb emitted; resolver falls through to history/template/default (Blocker 5 fix). |
+| `user_rest_seconds` = 100000 imported from corrupted backup | Clamped to 600; Sentry breadcrumb emitted; resolver returns `pinned 600 s` (Blocker 5 fix). |
 | User pins a default, then unpins | Falls back to history → template → default. |
 | Backup restore | `user_rest_seconds` round-trips via existing export/import. |
 | Exercise deleted with `user_rest_seconds` set | Cascade-safe — column dies with the row (CableSnap uses service-layer cascade per memory "cascade deletes"). |
@@ -284,7 +491,9 @@ expected 3 min" without adding a UI.
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Median query becomes slow as `workout_sets` grows | Low | Medium | Existing index on `(exercise_id, completed_at)`; AC8 perf bench at 10 k sets; defer caching. |
+| Median query becomes slow as `workout_sets` grows | Low | Medium | New partial index `idx_workout_sets_exercise_completed_at`; AC8 perf bench at 10 k sets with EXPLAIN QUERY PLAN assertion (fail if planner picks wrong index); defer caching. |
+| `2s × reps` work-estimate is wrong for a user's tempo | Medium | Low | P50 absorbs noise; AC1b asserts ±5 s bias-neutrality on synthetic fixture; documented as residual; forward-compatible with future `started_at` column. |
+| User imports corrupted backup with bogus `user_rest_seconds` | Low | Medium | Import-path clamp/drop with breadcrumb; setter validation; AC7 regression test. |
 | User confused by "my timer changed" without explanation | Medium | Medium | Attribution line on first interaction; breadcrumb in Sentry for support; "Default — we'll learn your rest" copy on first session. |
 | Psychologist re-classifies as behavior-shaping | Low | High | Request scoping in parallel; if YES, redesign without auto-start (require explicit tap to start timer at suggested value). |
 | Pinned default conflicts with template default | Low | Low | Resolver order is deterministic and documented; breakdown sheet shows which won. |
@@ -294,56 +503,43 @@ expected 3 min" without adding a UI.
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending — see comment thread on BLD-1099._
+**Verdict: REQUEST CHANGES** (2026-05-08T09:19Z, comment 0db388d7)
+
+4 blockers, all overlapping with TL's findings:
+1. Historical rest uses completion-to-completion deltas (= rest + work
+   of next set); plan must define actual-rest measurement/partitioning.
+2. Existing adaptive resolver clamps at 360 s and multiplies
+   history/pinned values, conflicting with AC1 and the 600 s history
+   window.
+3. Claimed `(exercise_id, completed_at)` index does not exist; add and
+   prove an index.
+4. Validate `user_rest_seconds` bounds in UI, DB update, and import.
+
+Note: Perplexity research supports individualized rest defaults; Gemini
+panel could not run because `GOOGLE_API_KEY` is unset (orthogonal to
+plan content).
+
+**CEO response (rev 2):** All 4 addressed — see Tech Lead resolution
+table below; QD blockers map 1:1 to TL Blockers 2/1/3/5.
 
 ### Tech Lead (Feasibility)
-**Verdict: REQUEST CHANGES ❌** (2026-05-08T09:22Z, see BLD-1099 comment thread for full review).
+**Verdict rev 1: REQUEST CHANGES ❌** (2026-05-08T09:22Z, comment e1b5be9e).
 
-5 blockers verified against head tree on `main`:
+5 blockers verified against head tree on `main`. Summary:
 
-1. **🔴 History median double-counts adaptation through `resolveRestSeconds`.**
-   `lib/rest.ts:117-131` multiplies `baseRestSeconds × setType × rpe × category`
-   and clamps to `MAX_REST_SECONDS = 360` (`lib/rest.ts:34`). Substituting a
-   history median (which already embodies the user's typical RPE/setType mix)
-   and re-multiplying produces wrong values; e.g., `240 s × 1.3 × 1.3 = 405 →
-   clamp 360 s`, silently worse than the legacy path. **Fix:** when source ∈
-   {`history`, `pinned`}, bypass `resolveRestSeconds` entirely and render an
-   alternate breakdown ("From your history, no further adjustment applied").
-   Plumb `RestSource` through the new `getRestContext` return shape so
-   `useRestTimer.startRest` (`hooks/useRestTimer.ts:244-256`) can branch.
-2. **🔴 Inter-set delta is `rest + work_of_next_set`, not rest.**
-   `workout_sets` has `completed_at` but no `started_at` (`lib/db/schema.ts:106-144`).
-   Median is biased upward by 20–60 s/set systematically. **Fix:** define rest as
-   `(completed_at_{N+1} − duration_seconds_{N+1}) − completed_at_N`, falling back
-   to a documented working-set estimate (e.g., `2 s × reps`) when
-   `duration_seconds` is null. (Or add `workout_sets.started_at` — larger scope.)
-3. **🔴 Claimed `(exercise_id, completed_at)` index DOES NOT EXIST.**
-   Only `idx_workout_sets_exercise(exercise_id)` and `idx_workout_sets_variant_pr`
-   (5-column composite, completed_at as 5th key — unusable for the planned query).
-   **Fix:** add partial index `idx_workout_sets_exercise_completed_at ON
-   workout_sets (exercise_id, completed_at) WHERE completed_at IS NOT NULL`.
-   Add EXPLAIN QUERY PLAN assertion to `scripts/perf-bench-rest-resolver.ts`.
-4. **🟡 Superset / link path unspecified.** `getRestSecondsForLink`
-   (`lib/db/session-sets.ts:802-814`) is template-only; templateless supersets
-   regress to 90 s, violating AC1. **Fix:** add explicit AC for supersets;
-   recommend `max(history_per_exerciseId)` to preserve "longest rest wins"
-   semantics.
-5. **🟡 `user_rest_seconds` bounds + import validation unspecified.** Add
-   setter validation (`[15, 600]`), import-path clamp/drop in
-   `lib/db/import-export.ts`, and a regression test for negative + huge values.
+| # | Blocker | rev 2 resolution |
+|---|---------|------------------|
+| 1 🔴 | History median double-counts adaptation through `resolveRestSeconds` (`lib/rest.ts:117-131` clamps to 360 s); silently produces wrong values | **TL Option 1** — bypass `resolveRestSeconds` entirely when source ∈ {`history`, `pinned`}. `getRestContext` extended with `source: RestSource`; `useRestTimer.startRest` branches; history/pinned path uses its own `[15, 600]` bound. Legacy `MAX_REST_SECONDS = 360` unchanged. See "Wire-up (Blocker 1 fix)" + AC2 + AC2b. |
+| 2 🔴 | Inter-set delta is `rest + work_of_next_set`, not rest; biased upward 20–60 s/set | **TL Option 2** — `actual_rest = (completed_at_{N+1} − work_estimate_{N+1}) − completed_at_N`, where `work_estimate = COALESCE(duration_seconds, 2 × reps)`. `WORK_ESTIMATE_SECONDS_PER_REP = 2` exposed for tuning. `started_at` column deferred. See "Rest measurement" + AC1 + AC1b. |
+| 3 🔴 | Claimed `(exercise_id, completed_at)` index does not exist | New partial index `idx_workout_sets_exercise_completed_at ON workout_sets (exercise_id, completed_at) WHERE completed_at IS NOT NULL`. AC8 adds `EXPLAIN QUERY PLAN` assertion that fails the bench if planner picks any other index. See "Data model" + AC8. |
+| 4 🟡 | Superset / link path unspecified; templateless supersets regress to 90 s | **TL Option A** — `getRestSecondsForLink` rewritten to call `resolveRest` per `exerciseId` and return `max(.seconds)`. Attribution names winning exercise + source. See "Superset / link path" + AC6b. |
+| 5 🟡 | `user_rest_seconds` bounds + import validation unspecified | Three-layer enforcement: `setUserRestSeconds` throws `RestBoundsError` outside `[15, 600]`; `lib/db/import-export.ts` clamps positive out-of-bounds, drops negative/NaN, emits breadcrumb; UI uses already-bounded resolved seconds as source for pin. See "Bounds (Blocker 5 fix)" + AC5b + AC7. |
 
-CEO question answers: (1) ordering sound, composition broken — Blocker 1;
-(2) index claim false — Blocker 3; (3) link path silently broken — Blocker 4;
-(4) migration race safe (additive `addColumnIfMissing`, resolver null-safe);
-(5) breadcrumb privacy-clean given UUID-only scope — add `category:
-"rest-resolver"` and reuse `sessionBreadcrumb` helper for replay-mask contract.
+Sentry breadcrumb refinement (TL "items sound" §): now uses
+`category: "rest-resolver"` via the existing `sessionBreadcrumb` helper at
+`hooks/useRestTimer.ts:286`. AC12 updated.
 
-**Items sound:** resolver tier ordering, `addColumnIfMissing` migration pattern,
-breadcrumb privacy intent, perf budget shape, exercise-cascade safety.
-
-**Verdict: recoverable in 1 revision.** Blockers 1/2/3 are non-negotiable
-correctness fixes. 4 and 5 are scope completeness. Will re-review immediately
-on revision.
+**Awaiting re-review on rev 2.**
 
 ### Psychologist (Behavior-Design Scoping)
 **Verdict: N/A — NOT BEHAVIOR-DESIGN ✅** (2026-05-08T09:21Z, comment 165b3ae6)
@@ -370,5 +566,9 @@ the feature from drifting into behavior-shaping in later iterations:
    user-entered exercise name (replay masks user content; breadcrumbs are
    not replay-masked).
 
+CEO note: rev 2 honors all 4 — attribution copy is descriptive and
+non-evaluative, no animation on median shift, empty-state copy
+unchanged, breadcrumb is UUID-only (AC12).
+
 ### CEO Decision
-_Pending all reviews._
+_Pending TL/QD re-review on rev 2._
