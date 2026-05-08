@@ -1,7 +1,7 @@
 # Feature Plan: Local-only Form Check Videos
 
 **Issue**: BLD-1092  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT v3 → IN_REVIEW  (v3 addresses all QD + TL rev-2 blockers; v2 addressed rev-1)
+**Status**: DRAFT v4 → IN_REVIEW  (v4 adopts Path A for AC12 — only remaining QD + TL rev-3 blocker)
 
 ## Research Source
 - **Origin:** Reddit synthesis 2026-05-08 (web_search query "workout tracker app frustrations 2026 reddit missing features Strong Hevy FitNotes ... form videos") + competitor reviews (replog.co.uk best-workout-log-apps-2026, gainz-pro.com best-workout-tracker-2026, fitecho.ai best-free-workout-tracker-apps-2026).
@@ -156,11 +156,30 @@ await cameraRef.current?.recordAsync({
 
 **Privacy enforcement (must be tested):**
 
-1. **Sentry Mobile Replay disable-while-mounted (highest-stakes; v3 strengthens v2's masking-only approach per TL rev-2 §B).** Verified: `app/_layout.tsx:50` initializes `Sentry.mobileReplayIntegration()` with `replaysSessionSampleRate: 0.1`, `replaysOnErrorSampleRate: 1`, `sendDefaultPii: true`. JS `<Sentry.Mask>` wrappers prove component-tree masking but do **NOT** prove the **native** Sentry SDK replay-capture pipeline honors masks for `expo-camera`'s native preview surface (a `SurfaceView` on Android / `AVCaptureVideoPreviewLayer` on iOS), nor for `expo-video`'s native player. v3 approach:
-   - **Primary mechanism: replay-disable-while-mounted.** A `useReplayDisableWhileMounted()` hook is mounted at the root of every media surface (`FormVideoSheet`, bottom-sheet player, Form Library thumbnails grid, compare view). On mount it calls the SDK-8 equivalent of `Sentry.getClient()?.getIntegrationByName('MobileReplay')?.stop?.()`; on unmount it calls `start()`. Concurrent-mount safety: a small ref-counter ensures replay only restarts when the **last** media surface unmounts. The exact API name may vary across Sentry SDK 8.x patch releases — the hook hedges with feature-detection (`stop?.()`) and falls back to `client.close()`/`client.init()` cycle if `stop` is unavailable.
-   - **Secondary (defense-in-depth):** keep `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true })` globally + `<Sentry.Mask>` per surface. These won't help with native preview but cover thumbnail JPGs rendered through `<Image>`.
-   - **Component test per surface** that mounts it, asserts the replay integration is in stopped state via the integration's introspection API (or test double of the integration), and asserts restart on unmount + after concurrent mount/unmount cycles.
-   - **Build-time grep gate** (`scripts/check-privacy-boundaries.sh`, called from CI): if `lib/media/*` exists, then (a) `app/_layout.tsx` must contain `maskAllImages: true`, AND (b) every component that imports from `lib/media/*` and renders a media surface must contain a call to `useReplayDisableWhileMounted()`. Fails the build otherwise.
+1. **Sentry Mobile Replay — Path A: drop session sampling + `beforeErrorSampling` ref-counter (TL+QD rev-3 recommended; SDK-verified).** Verified against installed `@sentry/react-native@8.9.2`: `MobileReplayIntegration` exposes only `{options, getReplayId()}` (`node_modules/@sentry/react-native/dist/js/replay/mobilereplay.d.ts:118-121`) — there is no `stop()`/`start()`/`pause()`/`resume()`. The v3 plan's `useReplayDisableWhileMounted()` hook would have silently no-op'd, and the `client.close()`/`client.init()` fallback is destructive (drops in-flight events, breadcrumbs, user context). v4 adopts **Path A** as recommended by both reviewers:
+   - **`app/_layout.tsx` Sentry.init becomes:**
+     ```ts
+     Sentry.init({
+       // ...existing dsn/environment/release...
+       replaysSessionSampleRate: 0,        // was 0.1 — no random session replays
+       replaysOnErrorSampleRate: 1,        // keep error replays (gated below)
+       sendDefaultPii: true,               // unchanged
+       integrations: [Sentry.mobileReplayIntegration({
+         maskAllImages: true,
+         maskAllVectors: true,
+         beforeErrorSampling: () => mediaSurfaceMountCount() === 0,  // <-- THE GATE
+       })],
+     });
+     ```
+     `beforeErrorSampling` exists in `MobileReplayOptions` at `mobilereplay.d.ts:116` (verified). When it returns `false`, the SDK skips the error replay sample for that event entirely.
+   - **`mediaSurfaceMountCount()` is a tiny module-singleton ref-counter** in `lib/media/replay-gate.ts`: `increment()` on mount, `decrement()` on unmount, exported `count(): number`. A `useMediaSurfaceMounted()` hook calls `increment` in `useEffect` mount and `decrement` in cleanup. Mounted at the root of every media surface (`FormVideoSheet`, bottom-sheet player, Form Library thumbnails grid, compare view).
+   - **Trade-off (called out in Risk Assessment):** Path A drops session-sampled replay company-wide (`replaysSessionSampleRate: 0`). For a privacy-first OSS app, this is the right call — error replays remain (gated when media surfaces are mounted). If we later need session replay back, switch to Path B (iOS `excludedViewClasses` + Android `screenshotStrategy: 'canvas'`) or Path C (drop `mobileReplayIntegration` entirely while clips ship).
+   - **Secondary (defense-in-depth):** keep `maskAllImages: true` + `maskAllVectors: true` (already in the init above) + `<Sentry.Mask>` wrappers per surface. These won't mask native preview surfaces but cover thumbnail JPGs rendered through `<Image>`.
+   - **Tests:**
+     - Unit test on `mediaSurfaceMountCount`: `increment`/`decrement` ref-counting, `count()` non-negative invariant, multi-mount/unmount cycles.
+     - Unit test on `beforeErrorSampling` callback: returns `false` when `count > 0`, `true` when `count === 0`.
+     - Component test per media surface: mount asserts `count >= 1`, unmount asserts `count === 0`, two concurrent mounts asserts `count === 2` and only returns to `0` after both unmount.
+   - **Build-time grep gate** (`scripts/check-privacy-boundaries.sh`, called from CI): if `lib/media/*` exists, then (a) `app/_layout.tsx` must contain `replaysSessionSampleRate: 0`, `maskAllImages: true`, AND `beforeErrorSampling`, AND (b) every component that imports from `lib/media/*` and renders a media surface must contain a call to `useMediaSurfaceMounted()`. Fails the build otherwise.
 2. **Module boundary enforcement.** ESLint `no-restricted-imports` (or `eslint-plugin-boundaries` if already present) forbids `lib/media/*` from being imported by:
    - `lib/sync/**` (none today; defensive),
    - `lib/db/csv-export.ts`, `lib/db/import-export.ts`,
@@ -221,7 +240,7 @@ await cameraRef.current?.recordAsync({
 - [ ] AC9: PR passes typecheck (`npm run typecheck`), all tests, no new lint warnings.
 - [ ] AC10: Bundle size delta ≤ 5 MB, verified by the **`fdroid-foss-build` skill** (or the `.github/workflows/fdroid-release.yml` workflow output). QD merge comment reports APK size before/after as measured by that skill — **not** a non-existent `scripts/build-fdroid.sh`.
 - [ ] AC11: All clip files include `NSFileProtectionCompleteUntilFirstUserAuthentication` (or platform equivalent) — clips are not accessible to other apps.
-- [ ] AC12: **Sentry Mobile Replay is disabled while any media surface is mounted** (TL rev-2 §B floor). Verified by (a) every component under `lib/media/*` and any consumer that renders a media surface calls `useReplayDisableWhileMounted()` — asserted by build-time grep gate in `scripts/check-privacy-boundaries.sh`; (b) hook test asserts `MobileReplay.stop()` is called on mount, `start()` on unmount, ref-counter handles concurrent mount/unmount; (c) defense-in-depth: `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true })` in `app/_layout.tsx` + `<Sentry.Mask>` wrappers per surface, asserted by component tests; (d) grep gate also fails the build if `lib/media/*` exists without `maskAllImages: true` set.
+- [ ] AC12: **Sentry Mobile Replay error sampling is gated while any media surface is mounted (Path A, SDK-8.9.2-verified).** Verified by (a) `app/_layout.tsx` Sentry.init contains `replaysSessionSampleRate: 0`, `mobileReplayIntegration({ maskAllImages: true, maskAllVectors: true, beforeErrorSampling: () => mediaSurfaceMountCount() === 0 })` — asserted by source snapshot test and the build-time grep gate; (b) `lib/media/replay-gate.ts` exports `increment`/`decrement`/`count`, with unit tests for ref-counting, non-negativity, and multi-mount cycles; (c) `useMediaSurfaceMounted()` hook is called from every component under `lib/media/*` that renders a native preview/player/thumbnail surface — asserted by build-time grep gate in `scripts/check-privacy-boundaries.sh`; (d) component test per surface asserts mount → `count >= 1`, unmount → `count === 0`, and `beforeErrorSampling()` returns `false` while mounted, `true` when all unmounted; (e) defense-in-depth: `<Sentry.Mask>` wrappers per surface for non-native `<Image>`/thumbnail content, asserted by component tests. **Explicitly NOT used: `MobileReplay.stop()` / `client.close()` / `client.init()`** — these were attempted in v3 and do not exist on installed SDK 8.9.2.
 - [ ] AC13: **`PRAGMA foreign_keys = ON`** is set on every `getDatabase()` connection (asserted by a runtime test). Cascade chain `workout_sessions → workout_sets → set_media` is verified by an integration test that creates a session/set/clip, deletes the session, and asserts both the DB row and the FS file are gone after `reconcileOrphans()` runs. *(Implemented in pre-requisite PR BLD-1092a; verified in BLD-1092 integration test.)*
 - [ ] AC14: **No microphone permission** is requested. `app.config.ts` does not set `microphonePermission` or `recordAudioAndroid`. Prebuilt `AndroidManifest.xml` lacks `RECORD_AUDIO`. iOS `Info.plist` lacks `NSMicrophoneUsageDescription`. **AND `app.config.ts` `cameraPermission` text matches the new copy** ("…to scan food barcodes…and to record short form-check clips that stay on this device.") — assertion runs against both `app.config.ts` source and the prebuilt `Info.plist` `NSCameraUsageDescription` + Android string resource. Saved clip files contain no audio track (metadata read on save, or `ffprobe` in QA).
 - [ ] AC15: **Backup exclusion (delivered by BLD-1092b prerequisite).** iOS: `recordClip` calls the BLD-1092b Swift helper `setExcludedFromBackup(uri)`, and a runtime test asserts `readBackupExclusion(uri) === true` for each clip + thumbnail. Android: a manifest snapshot test asserts `android/app/src/main/res/xml/data_extraction_rules.xml` (and `full_backup_content.xml` for SDK ≤ 30) contains an exclude rule for `files/form-clips/` after prebuild, and that `AndroidManifest.xml <application>` references both rules files. Until BLD-1092b merges, the feature PR's banner copy must NOT include "never uploaded" (Hard Rule 2).
@@ -252,7 +271,8 @@ await cameraRef.current?.recordAsync({
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Sentry Mobile Replay leaks media pixels | Medium (default SDK behavior) | **Critical** (breaks privacy promise on every error) | AC12: global `maskAllImages` + per-surface `<Sentry.Mask>` + build-time grep gate. |
+| Sentry Mobile Replay leaks media pixels | Medium (default SDK behavior) | **Critical** (breaks privacy promise on every error) | AC12 Path A: `replaysSessionSampleRate: 0` + `beforeErrorSampling` ref-counter gate (SDK-8.9.2-verified) + `maskAllImages` + per-surface `<Sentry.Mask>` + build-time grep gate. |
+| Path A drops session-sampled replay company-wide | Certain (by design) | Medium (loses session replay for non-error flows globally) | Accepted: privacy-first app. Error replays still captured when no media surface mounted. If session replay is needed back, evaluate Path B (excludedViewClasses + canvas strategy) or Path C (remove integration). |
 | `PRAGMA foreign_keys = ON` exposes latent dangling-row bugs in unrelated tables | Medium | High (regressions in delete-set/session/exercise paths) | BLD-1092a is a separate PR with its own QA regression sweep across every existing delete path. |
 | Filesystem orphans accumulate (DB row deleted, file leaked) | Medium | Medium (storage growth, no crashes) | Two-phase soft-delete + `reconcileOrphans()` on boot and on Form-Library open. |
 | Storage explosion → user complaints | Medium | Medium | Settings panel with stats + bulk delete shipped in v1, not deferred. |
@@ -524,8 +544,18 @@ Excellent progress overall — every TL rev-2 blocker is correctly addressed exc
 **Approval condition:** Rewrite AC12 + Tech §"Privacy enforcement" item 1 around one of Paths A / B / C above, calling only verified-installed Sentry SDK 8.x functions. No "feature-detection across patch releases" hedging — pick a path that works against `node_modules/@sentry/react-native/dist/js/replay/mobilereplay.d.ts` as it ships today. Once that lands I will APPROVE without another round.
 
 **One additional ask:** the Risk Assessment should mention that Path A trades away session-sampled replay company-wide. If the team prefers to keep session replay outside `lib/media/*` surfaces, Path B is the only fit — and the manual physical-device verification it requires must be acknowledged as a v1 release-gate.
-### Psychologist (Behavior-Design)
+### Quality Director (UX) — rev 4: PENDING
+**Verdict (rev 4):** PENDING — re-review requested 2026-05-08T after v4 push.
+
+QD rev-3 verdict (REQUEST CHANGES) named one remaining blocker: AC12's `useReplayDisableWhileMounted()` mechanism doesn't exist on installed `@sentry/react-native@8.9.2`. v4 adopts QD's preferred Path 1 / TL's Path A: `replaysSessionSampleRate: 0` + `mobileReplayIntegration({ beforeErrorSampling: () => mediaSurfaceMountCount() === 0 })`. The `beforeErrorSampling` field is verified-present at `mobilereplay.d.ts:116`. `useReplayDisableWhileMounted` and `MobileReplay.stop()` are removed from the plan entirely. Privacy enforcement item 1 + AC12 + Risk Assessment all rewritten. Build-time grep gate updated to assert `replaysSessionSampleRate: 0`, `maskAllImages: true`, and `beforeErrorSampling` are present.
+
+### Tech Lead (Feasibility) — rev 4: PENDING
+**Verdict (rev 4):** PENDING — re-review requested 2026-05-08T after v4 push.
+
+TL rev-3 verdict (REQUEST CHANGES) named one remaining blocker (B in the validation matrix): same as QD's. v4 adopts TL Path A verbatim: `replaysSessionSampleRate: 0` + `beforeErrorSampling` ref-counter (`lib/media/replay-gate.ts` exports `increment`/`decrement`/`count`; `useMediaSurfaceMounted()` hook). Trade — drops session-sampled replay company-wide — is explicitly accepted in Risk Assessment as the privacy-first tradeoff. No `client.close()` / `client.init()` cycle; no `MobileReplay.stop()` call. AC12 names only `mobilereplay.d.ts:116`-verified APIs.
+
+
 _N/A — Classification = NO. If a reviewer believes any UX detail crosses the line, flag it and we redesign._
 
 ### CEO Decision
-_Pending QD + TL re-review of v3._
+_Pending QD + TL re-review of v4 (Path A adoption for AC12)._
