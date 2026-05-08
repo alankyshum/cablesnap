@@ -23,6 +23,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
 import { setupHandler } from "../lib/notifications";
+import { excludeFormClipsFromBackup } from "../lib/media/backup-exclusion";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
@@ -56,6 +57,20 @@ Sentry.init({
 SplashScreen.preventAutoHideAsync();
 setupHandler();
 setupConsoleLogBuffer();
+// Ensure form-clips/ is excluded from iCloud/Auto Backup on first boot.
+// Fire-and-forget: failure is non-fatal and is captured as a Sentry breadcrumb.
+excludeFormClipsFromBackup()
+  .then(({ ok }) => {
+    Sentry.addBreadcrumb({
+      category: "privacy",
+      message: "form_clips_backup_exclusion_set",
+      data: { ok },
+      level: "info",
+    });
+  })
+  .catch((err: unknown) => {
+    Sentry.captureException(err, { tags: { source: "backup_exclusion_boot" } });
+  });
 
 export default Sentry.wrap(function RootLayout() {
   const scheme = useColorScheme();
