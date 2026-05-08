@@ -19,6 +19,7 @@ import { getAppSetting, setAppSetting } from "../../lib/db";
 import { fontSizes } from "@/constants/design-tokens";
 import { truncateChipLabel, type RestBreakdown } from "../../lib/rest";
 import { RestBreakdownSheet } from "./RestBreakdownSheet";
+import type { RestSource } from "../../lib/rest-resolver";
 
 const REST_PRESETS = [30, 60, 90, 120] as const;
 const DEFAULT_REST_SECONDS = 30;
@@ -65,6 +66,12 @@ type Props = {
    * Optional — when omitted, the chip renders without background tint.
    */
   flashStyle?: AnimatedStyle;
+  /** BLD-1100: current resolver source for attribution line in breakdown sheet */
+  restSource?: RestSource | null;
+  /** BLD-1100: exercise ID for Pin toggle in breakdown sheet */
+  restExerciseId?: string | null;
+  /** BLD-1100: callback when user pins/unpins an exercise default */
+  onPinChange?: (exerciseId: string, pinned: boolean, seconds: number) => void;
 };
 
 function SessionHeaderToolbarInner({
@@ -82,6 +89,9 @@ function SessionHeaderToolbarInner({
   onPickerDismissed,
   showBreakdownChip: showBreakdownChipProp,
   flashStyle,
+  restSource,
+  restExerciseId,
+  onPinChange,
 }: Props) {
   const colors = useThemeColors();
   const { width: viewportWidth } = useWindowDimensions();
@@ -342,6 +352,9 @@ function SessionHeaderToolbarInner({
           onCutShort={handleBreakdownCut}
           onDismiss={handleBreakdownDismiss}
           onEditRules={handleEditAdaptiveRules}
+          restSource={restSource}
+          exerciseId={restExerciseId}
+          onPinChange={onPinChange}
         />
       ) : null}
     </>

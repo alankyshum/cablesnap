@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Switch, View } from "react-native";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -11,6 +11,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 import { getAppSetting, setAppSetting } from "../../lib/db";
 import type { RestBreakdown } from "../../lib/rest";
+import type { RestSource } from "../../lib/rest-resolver";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheetModal | null>;
@@ -20,6 +21,12 @@ type Props = {
   onCutShort: () => void;
   onEditRules?: () => void;
   onDismiss?: () => void;
+  /** BLD-1100: resolver source for attribution line */
+  restSource?: RestSource | null;
+  /** BLD-1100: exercise ID for Pin toggle */
+  exerciseId?: string | null;
+  /** BLD-1100: callback to persist/clear pin */
+  onPinChange?: (exerciseId: string, pinned: boolean, seconds: number) => void;
 };
 
 function formatMMSS(secs: number): string {
@@ -33,6 +40,24 @@ function formatDelta(delta: number): string {
   return `${delta}s`;
 }
 
+function getAttribution(source: RestSource | null | undefined): string {
+  if (!source) return "";
+  switch (source.kind) {
+    case "history":
+      return `From your history (${source.sampleCount} sets, last 30 days), no further adjustment applied`;
+    case "pinned":
+      return "Pinned by you, no further adjustment applied";
+    case "template":
+      return "Template default";
+    case "default":
+      return "Default — log a few sets and we'll learn your usual rest";
+    case "user_override":
+      return "";
+    default:
+      return "";
+  }
+}
+
 export function RestBreakdownSheet({
   sheetRef,
   breakdown,
@@ -41,11 +66,23 @@ export function RestBreakdownSheet({
   onCutShort,
   onEditRules,
   onDismiss,
+  restSource,
+  exerciseId,
+  onPinChange,
 }: Props) {
   const colors = useThemeColors();
   const snapPoints = useMemo(() => ["50%"], []);
   const [showExplainer, setShowExplainer] = useState(false);
   const explainerPersistedRef = useRef(false);
+
+  // Derived pin state: tracks user toggle override per restSource identity.
+  // When restSource changes identity (new timer start), reset to the resolver value.
+  const [pinState, setPinState] = useState<{ sourceRef: RestSource | null | undefined; value: boolean }>(() => ({
+    sourceRef: restSource,
+    value: restSource?.kind === "pinned" ?? false,
+  }));
+  const isPinned = pinState.sourceRef === restSource ? pinState.value : (restSource?.kind === "pinned" ?? false);
+  const setIsPinned = (value: boolean) => setPinState({ sourceRef: restSource, value });
 
   // First-open explainer is gated by rest_adaptive_sheet_seen (default "false").
   const handleChange = useCallback(async (index: number) => {
@@ -109,6 +146,35 @@ export function RestBreakdownSheet({
           >
             {breakdown.reasonAccessible}
           </Text>
+        ) : null}
+
+        {/* BLD-1100: resolver source attribution */}
+        {getAttribution(restSource) ? (
+          <Text
+            variant="caption"
+            style={{ color: colors.onSurfaceVariant, marginBottom: 8, fontSize: fontSizes.sm }}
+            accessibilityRole="text"
+          >
+            {getAttribution(restSource)}
+          </Text>
+        ) : null}
+
+        {/* BLD-1100: Pin as default toggle — shown for history/template/default sources */}
+        {exerciseId && onPinChange && restSource &&
+          (restSource.kind === "history" || restSource.kind === "template" || restSource.kind === "default" || restSource.kind === "pinned") ? (
+          <View style={styles.pinRow} accessibilityRole="none">
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+              Pin as default for this exercise
+            </Text>
+            <Switch
+              value={isPinned}
+              onValueChange={(val) => {
+                setIsPinned(val);
+                onPinChange(exerciseId, val, breakdown.totalSeconds);
+              }}
+              accessibilityLabel={isPinned ? "Unpin default rest for this exercise" : "Pin current rest as default for this exercise"}
+            />
+          </View>
         ) : null}
 
         {showExplainer ? (
@@ -281,5 +347,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginBottom: 12,
+  },
+  pinRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    marginBottom: 8,
   },
 });
