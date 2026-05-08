@@ -1,0 +1,160 @@
+name: Changelog Gate
+
+# PR-level enforcement that user-facing PRs add a bullet to the
+# `## Unreleased` section of CHANGELOG.md.
+#
+# Background: `scheduled-release.yml` (BLD-1027) gates the auto-release on a
+# *populated* `## Unreleased` section. Several user-facing PRs landed on main
+# between v0.26.22 and v0.26.23 without touching CHANGELOG.md, so the
+# scheduled releaser silently no-op'd for ~a week and F-Droid clients went
+# stale. This workflow closes that loophole at PR review time instead of
+# discovering it post-merge.
+#
+# Logic:
+#   1. Diff the PR against its base branch.
+#   2. Decide whether the PR touches user-facing code (app source, screens,
+#      components, lib/, native config). Pure-internal PRs (.github/, plan/,
+#      docs/, scripts/, tests, lockfile-only, etc.) are exempt.
+#   3. If user-facing, require that CHANGELOG.md was modified AND that the
+#      `## Unreleased` section grew at least one bullet (`-` line).
+#   4. Allow opt-out via the `skip-changelog` label for things like
+#      reverts, internal refactors with no user impact, or test-only fixes
+#      that the heuristic misclassifies.
+#
+# This is a soft, content-aware gate — not a path filter — because the
+# release pipeline is the one that ultimately enforces it. Goal here is to
+# fail-fast at PR review, not to be cryptographically airtight.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: changelog-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changelog-gate:
+    name: Require `## Unreleased` bullet for user-facing PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout (full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Honor `skip-changelog` label
+        id: skip_label
+        run: |
+          set -euo pipefail
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          if printf '%s' "$LABELS" | grep -q '"skip-changelog"'; then
+            echo "::notice::PR is labeled \`skip-changelog\` — bypassing CHANGELOG gate."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute changed files
+        if: steps.skip_label.outputs.skip != 'true'
+        id: changed
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          # Ensure both SHAs are reachable.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null || true
+          git fetch --no-tags --depth=1 origin "$HEAD_SHA" 2>/dev/null || true
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          {
+            echo 'files<<FILES_EOF'
+            echo "$CHANGED"
+            echo 'FILES_EOF'
+          } >> "$GITHUB_OUTPUT"
+          echo "Changed file count: $(printf '%s\n' "$CHANGED" | grep -c . || true)"
+
+      - name: Classify PR (user-facing vs internal)
+        if: steps.skip_label.outputs.skip != 'true'
+        id: classify
+        run: |
+          set -euo pipefail
+          FILES='${{ steps.changed.outputs.files }}'
+          # User-facing trigger paths. Anything in these directories implies a
+          # potential user-visible change and demands a CHANGELOG entry unless
+          # explicitly opted out via the `skip-changelog` label.
+          USER_FACING_REGEX='^(app/|app\.config\.ts$|components/|screens/|lib/|hooks/|assets/exercise-illustrations/|fdroid/metadata/com\.persoack\.cablesnap\.yml$|android/app/src/main/AndroidManifest\.xml$|package\.json$|plugins/)'
+          # Files that, even if matched above, do NOT imply a user-facing
+          # change (tests, generated artifacts, internal-only modules).
+          INTERNAL_OVERRIDE_REGEX='(__tests__/|\.test\.(ts|tsx|js|jsx)$|\.spec\.(ts|tsx|js|jsx)$|^lib/changelog\.generated\.ts$|^lib/.*/__fixtures__/|^e2e/)'
+
+          USER_FACING_HITS=$(printf '%s\n' "$FILES" \
+            | grep -E "$USER_FACING_REGEX" \
+            | grep -vE "$INTERNAL_OVERRIDE_REGEX" \
+            || true)
+
+          if [ -z "$USER_FACING_HITS" ]; then
+            echo "::notice::No user-facing files changed — CHANGELOG entry not required."
+            echo "user_facing=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "User-facing files changed:"
+            printf '  %s\n' $USER_FACING_HITS
+            echo "user_facing=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require CHANGELOG `## Unreleased` bullet
+        if: steps.skip_label.outputs.skip != 'true' && steps.classify.outputs.user_facing == 'true'
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          if ! git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qx 'CHANGELOG.md'; then
+            cat <<'MSG'
+          ::error::This PR touches user-facing code but does not modify CHANGELOG.md.
+
+          Add a bullet describing the user-visible change to the `## Unreleased`
+          section of CHANGELOG.md. The auto-releaser (`scheduled-release.yml`)
+          gates on a populated `## Unreleased` section, so PRs that skip this
+          step block the next scheduled release silently.
+
+          If this PR is genuinely internal-only (refactor with no user impact,
+          test-only fix, lockfile bump, etc.), apply the `skip-changelog` label
+          to bypass this gate.
+          MSG
+            exit 1
+          fi
+
+          # Extract the `## Unreleased` body in BOTH base and head, count
+          # bullet lines, and require head > base (i.e. the PR added at least
+          # one bullet — replacing a bullet still counts as +0, but in
+          # practice user-facing PRs append).
+          extract_unreleased_bullets () {
+            git show "$1:CHANGELOG.md" 2>/dev/null | awk '
+              /^##[[:space:]]+Unreleased[[:space:]]*$/ { in_u = 1; next }
+              in_u && /^## / { exit }
+              in_u && /^[[:space:]]*-[[:space:]]/ { print }
+            ' | wc -l | tr -d '[:space:]'
+          }
+
+          BASE_BULLETS=$(extract_unreleased_bullets "$BASE_SHA")
+          HEAD_BULLETS=$(extract_unreleased_bullets "$HEAD_SHA")
+          echo "Unreleased bullets: base=$BASE_BULLETS head=$HEAD_BULLETS"
+
+          if [ "$HEAD_BULLETS" -le "$BASE_BULLETS" ]; then
+            cat <<MSG
+          ::error::CHANGELOG.md was modified, but the \`## Unreleased\` section
+          did not gain any new bullet (\`-\` lines): base=$BASE_BULLETS head=$HEAD_BULLETS.
+
+          Add at least one bullet under \`## Unreleased\` describing the
+          user-visible change introduced by this PR. If the PR is genuinely
+          internal-only, apply the \`skip-changelog\` label.
+          MSG
+            exit 1
+          fi
+
+          echo "Changelog gate passed: \`## Unreleased\` gained $((HEAD_BULLETS - BASE_BULLETS)) bullet(s)."
