@@ -79,9 +79,9 @@ export function RestBreakdownSheet({
   // When restSource changes identity (new timer start), reset to the resolver value.
   const [pinState, setPinState] = useState<{ sourceRef: RestSource | null | undefined; value: boolean }>(() => ({
     sourceRef: restSource,
-    value: restSource?.kind === "pinned" ?? false,
+    value: restSource?.kind === "pinned",
   }));
-  const isPinned = pinState.sourceRef === restSource ? pinState.value : (restSource?.kind === "pinned" ?? false);
+  const isPinned = pinState.sourceRef === restSource ? pinState.value : restSource?.kind === "pinned";
   const setIsPinned = (value: boolean) => setPinState({ sourceRef: restSource, value });
 
   // First-open explainer is gated by rest_adaptive_sheet_seen (default "false").
