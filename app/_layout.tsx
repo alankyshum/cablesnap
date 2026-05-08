@@ -59,7 +59,7 @@ Sentry.init({
     // FormClipsPlayer, FormLibraryTab thumbnails, CompareView) is mounted.
     // MobileReplayIntegration@8.9.2 exposes no stop()/start() — this is the
     // only SDK-verified gate. See lib/media/replay-gate.ts.
-    beforeErrorSampling: (_event, _hint) => mediaSurfaceMountCount() === 0,
+    beforeErrorSampling: () => mediaSurfaceMountCount() === 0,
   })],
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)

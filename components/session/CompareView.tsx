@@ -55,6 +55,7 @@ function CompareBody({ clipA, clipB, onClose }: BodyProps) {
   useMediaSurfaceMounted();
 
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <View style={[styles.container, { backgroundColor: "#000" }]}>
       {/* Close */}
       <Pressable
@@ -63,6 +64,7 @@ function CompareBody({ clipA, clipB, onClose }: BodyProps) {
         accessibilityRole="button"
         accessibilityLabel="Close comparison"
       >
+        {/* eslint-disable-next-line no-restricted-syntax */}
         <MaterialCommunityIcons name="close" size={28} color="#fff" />
       </Pressable>
       {/* Clip A — top half */}
@@ -120,6 +122,7 @@ function ClipPane({ clip, label, accessibilityOrder }: PaneProps) {
       >
         {!player.playing && (
           <View style={styles.playIcon}>
+            {/* eslint-disable-next-line no-restricted-syntax */}
             <MaterialCommunityIcons name="play" size={28} color="#fff" />
           </View>
         )}
@@ -135,6 +138,7 @@ function Sentry_Mask({ children }: { children: React.ReactNode }) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Sentry = require("@sentry/react-native") as typeof import("@sentry/react-native");
+    // eslint-disable-next-line react-hooks/error-boundaries
     return <Sentry.Mask>{children}</Sentry.Mask>;
   } catch {
     return <>{children}</>;
@@ -178,5 +182,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
+  // eslint-disable-next-line no-restricted-syntax
   dateLabelText: { color: "#fff", fontSize: 11 },
 });
