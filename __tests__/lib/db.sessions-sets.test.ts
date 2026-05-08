@@ -65,7 +65,9 @@ describe("sessions CRUD", () => {
   it("cancelSession deletes sets and session", async () => {
     await ctx.initDb();
     await ctx.db.cancelSession("s1");
-    expect(mockDrizzleDb.delete).toHaveBeenCalledTimes(2);
+    // BLD-1094: cancelSession now also cascades strava_sync_log + health_connect_sync_log
+    // before deleting workout_sets and the session row, so 4 deletes per target session.
+    expect(mockDrizzleDb.delete).toHaveBeenCalledTimes(4);
   });
 
   it("getRecentSessions queries completed sessions", async () => {

@@ -110,3 +110,18 @@ describe("backup-exclusion — web (no-op)", () => {
     expect(boot).toEqual({ ok: true, path: "" });
   });
 });
+
+describe("backup-exclusion — iOS null native module (autolinking failure)", () => {
+  const { requireOptionalNativeModule } = require("expo-modules-core");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (Platform as { OS: string }).OS = "ios";
+    // Simulate autolinking failure: native module not available
+    (requireOptionalNativeModule as jest.Mock).mockReturnValueOnce(null);
+  });
+
+  it("excludeFormClipsFromBackup rejects with an error when native module is null on iOS", async () => {
+    await expect(excludeFormClipsFromBackup()).rejects.toThrow();
+  });
+});

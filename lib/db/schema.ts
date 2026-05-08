@@ -90,7 +90,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   // 'workout' (default) = normal session; 'day_session' = GTG backing row.
   // day_session rows have completed_at = started_at = device-local midnight
   // so every existing WHERE completed_at IS NOT NULL analytics filter passes.
-  kind: text("kind").default("workout"),
+  kind: text("kind").default("workout").notNull(),
   // day_session_exercise_id + day_session_date together form the partial unique
   // key enforced by uniq_day_session_per_exercise_date WHERE kind='day_session'.
   // Both are NULL for kind='workout' rows.

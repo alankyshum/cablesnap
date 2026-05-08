@@ -48,6 +48,14 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       try {
         const instance = await SQLite.openDatabaseAsync(DB_NAME);
         await instance.execAsync("PRAGMA journal_mode = WAL");
+        // BLD-1094: enable foreign-key enforcement on every connection so
+        // the FK declarations in lib/db/tables.ts (strava_sync_log,
+        // health_connect_sync_log, strength_goals, cable_stacks,
+        // stack_calibrations, program_schedule) actually run, and the
+        // service-layer cascades in deleteCompletedSession / cancelSession /
+        // undoCsvImport prevent dangling rows. Prerequisite for BLD-1092
+        // ON DELETE CASCADE on workout_sessions → workout_sets → set_media.
+        await instance.execAsync("PRAGMA foreign_keys = ON");
         await migrate(instance);
         await seed(instance);
         setDb(instance);
@@ -57,6 +65,8 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         if (Platform.OS === "web") {
           try {
             const instance = await SQLite.openDatabaseAsync(":memory:");
+            // BLD-1094: same pragma on the web in-memory fallback.
+            await instance.execAsync("PRAGMA foreign_keys = ON");
             await migrate(instance);
             await seed(instance);
             memoryFallback = true;
