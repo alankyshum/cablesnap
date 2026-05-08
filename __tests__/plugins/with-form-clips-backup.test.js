@@ -79,6 +79,11 @@ describe("with-form-clips-backup plugin — Android XML files", () => {
       const cloudBackupSection = content.slice(cloudBackupStart, cloudBackupEnd);
       expect(cloudBackupSection).toContain('domain="sharedpref" path="SecureStore"');
       expect(cloudBackupSection).toContain('domain="file" path="form-clips/"');
+      // Android lint [FullBackupContent] requires every <exclude> to have a
+      // sibling <include> for the same domain. Without these, lintVitalRelease
+      // fails the release build (BLD-1101 regression guard).
+      expect(cloudBackupSection).toContain('<include domain="sharedpref" path="."/>');
+      expect(cloudBackupSection).toContain('<include domain="file" path="."/>');
     });
 
     it("device-transfer section contains BOTH SecureStore AND form-clips excludes", () => {
@@ -92,6 +97,9 @@ describe("with-form-clips-backup plugin — Android XML files", () => {
       const dtSection = content.slice(dtStart, dtEnd);
       expect(dtSection).toContain('domain="sharedpref" path="SecureStore"');
       expect(dtSection).toContain('domain="file" path="form-clips/"');
+      // Same lint sibling-include requirement (BLD-1101).
+      expect(dtSection).toContain('<include domain="sharedpref" path="."/>');
+      expect(dtSection).toContain('<include domain="file" path="."/>');
     });
 
     it("writes form_clips_backup_rules.xml (API < 31) with SecureStore AND form-clips excludes", () => {
@@ -104,6 +112,13 @@ describe("with-form-clips-backup plugin — Android XML files", () => {
       expect(content).toContain('domain="file" path="form-clips/"');
       expect(content).toContain("<full-backup-content>");
       expect(content).toContain('<?xml version="1.0" encoding="utf-8"?>');
+      // full-backup-content also needs sibling <include> for each domain
+      // referenced by <exclude> to satisfy lint [FullBackupContent] (BLD-1101).
+      const fbStart = content.indexOf("<full-backup-content>");
+      const fbEnd = content.indexOf("</full-backup-content>") + "</full-backup-content>".length;
+      const fbSection = content.slice(fbStart, fbEnd);
+      expect(fbSection).toContain('<include domain="sharedpref" path="."/>');
+      expect(fbSection).toContain('<include domain="file" path="."/>');
     });
 
     it("COMBINED_DATA_EXTRACTION_RULES_XML constant has valid structure with both exclusions", () => {
