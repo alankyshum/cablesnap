@@ -1,0 +1,6 @@
+# CODEOWNERS
+# Behaviour-sensitive UI components that require explicit CEO review before
+# adding new features or changing interaction flows.
+# See PLAN-BLD-1088.md §Risk Assessment row 5.
+
+components/home/QuickAddSheet.tsx @ceo
