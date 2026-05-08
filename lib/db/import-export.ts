@@ -597,7 +597,7 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       const sanitizedRow = { ...row };
       if ("user_rest_seconds" in sanitizedRow) {
         const raw = sanitizedRow.user_rest_seconds;
-        const n = typeof raw === "number" ? raw : (typeof raw === "string" ? parseInt(raw, 10) : NaN);
+        const n = typeof raw === "number" ? raw : (typeof raw === "string" && /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : NaN);
         const exerciseId = String(row.id ?? "");
         // Sanitize inputValue: only log a numeric value or null — never raw user-controlled content.
         const safeInput = typeof raw === "number" && Number.isFinite(raw) ? raw : null;

@@ -160,6 +160,36 @@ describe("importData — user_rest_seconds sanitization (AC7)", () => {
     await importExerciseWith(90.5);
     expect(getInsertedRestSeconds()).toBeNull();
   });
+
+  it("string '90.5' (decimal string) is dropped to null", async () => {
+    await importExerciseWith("90.5");
+    expect(getInsertedRestSeconds()).toBeNull();
+  });
+
+  it("string '120abc' (partial integer string) is dropped to null", async () => {
+    await importExerciseWith("120abc");
+    expect(getInsertedRestSeconds()).toBeNull();
+  });
+
+  it("string '+120' (leading sign) is dropped to null", async () => {
+    await importExerciseWith("+120");
+    expect(getInsertedRestSeconds()).toBeNull();
+  });
+
+  it("string '-1' (negative string) is dropped to null", async () => {
+    await importExerciseWith("-1");
+    expect(getInsertedRestSeconds()).toBeNull();
+  });
+
+  it("string ' 120 ' (whitespace-padded) is treated as 120", async () => {
+    await importExerciseWith(" 120 ");
+    expect(getInsertedRestSeconds()).toBe(120);
+  });
+
+  it("string '601' (above ceiling) is clamped to 600", async () => {
+    await importExerciseWith("601");
+    expect(getInsertedRestSeconds()).toBe(600);
+  });
 });
 
 // ─── Privacy regression: breadcrumb inputValue must never contain user-controlled content ───
