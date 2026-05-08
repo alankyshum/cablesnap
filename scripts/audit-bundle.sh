@@ -113,7 +113,16 @@ fi
 echo "[audit-bundle] pruning audit-* releases older than 14 ..."
 # List audit-* releases sorted newest-first, drop the first 14, delete the rest.
 # --per-page 100 (TL#5) ensures we see old tags that would otherwise be paginated out.
-mapfile -t OLD < <(gh release list --limit 100 --json tagName,createdAt \
+#
+# Use a portable `while read` loop instead of `mapfile -t` because macOS ships
+# bash 3.2 (mapfile is bash 4+). The Jest harness for BLD-950 runs the script
+# under whatever `bash` is on PATH; on developer macOS that's 3.2 and `mapfile`
+# would exit 127. CI Linux has bash 5+ so either works, but portability wins.
+OLD=()
+while IFS= read -r tag; do
+  [[ -z "$tag" ]] && continue
+  OLD+=("$tag")
+done < <(gh release list --limit 100 --json tagName,createdAt \
   --jq '[.[] | select(.tagName | startswith("audit-"))] | sort_by(.createdAt) | reverse | .[14:] | .[].tagName')
 
 for tag in "${OLD[@]:-}"; do
