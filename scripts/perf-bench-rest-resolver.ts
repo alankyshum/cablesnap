@@ -21,7 +21,6 @@
  */
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 
-// @ts-expect-error — node:sqlite available in Node 22+; typedefs may lag toolchain
 import { DatabaseSync } from "node:sqlite";
 
 // ─── Constants (must stay in sync with lib/rest-resolver.ts) ─────────────────
@@ -62,22 +61,32 @@ function seedFixture(db: any, exerciseId: string): void {
   db.exec("DELETE FROM exercises");
   db.prepare("INSERT OR IGNORE INTO exercises (id, user_rest_seconds) VALUES (?, NULL)").run(exerciseId);
 
-  const now = Math.floor(Date.now() / 1000);
-  const windowStart = now - HISTORY_WINDOW_DAYS * 86_400;
+  const now = Date.now(); // milliseconds — matches production completed_at storage
+  const windowStart = Math.floor(now / 1000) - HISTORY_WINDOW_DAYS * 86_400; // seconds
+  const windowStartMs = windowStart * 1000; // ms equivalent for seeding
   const stmt = db.prepare(
     "INSERT INTO workout_sets (id, session_id, exercise_id, completed_at, reps, duration_seconds, link_id, set_type) VALUES (?, ?, ?, ?, ?, NULL, NULL, 'normal')"
   );
 
   db.exec("BEGIN");
   for (let i = 0; i < FIXTURE_SETS / 2; i++) {
-    const ts = windowStart + Math.floor((i / (FIXTURE_SETS / 2)) * HISTORY_WINDOW_DAYS * 86_400);
+    // Seed with 13-digit ms timestamps — production reality.
+    const ts = windowStartMs + Math.floor((i / (FIXTURE_SETS / 2)) * HISTORY_WINDOW_DAYS * 86_400 * 1000);
     stmt.run(`tgt-${i}`, "sess1", exerciseId, ts, 10);
   }
   for (let i = 0; i < FIXTURE_SETS / 2; i++) {
-    const ts = windowStart + Math.floor((i / (FIXTURE_SETS / 2)) * HISTORY_WINDOW_DAYS * 86_400);
+    const ts = windowStartMs + Math.floor((i / (FIXTURE_SETS / 2)) * HISTORY_WINDOW_DAYS * 86_400 * 1000);
     stmt.run(`oth-${i}`, "sess1", `other-exercise-${i % 100}`, ts, 10);
   }
   db.exec("COMMIT");
+
+  // Regression guard: verify fixture contains 13-digit ms timestamps.
+  const sampleTs = (db.prepare("SELECT completed_at FROM workout_sets WHERE exercise_id = ? LIMIT 1").get(exerciseId) as { completed_at: number } | undefined)?.completed_at;
+  if (!sampleTs || String(sampleTs).length < 13) {
+    console.error(`\n❌ FAIL: Fixture timestamps appear to be seconds, not ms (got ${sampleTs}). AC1 would silently fail in production.`);
+    process.exit(1);
+  }
+  console.log(`✅ Fixture uses ms timestamps (sample: ${sampleTs}, ${String(sampleTs).length} digits).`);
 }
 
 // ─── History query (mirrors lib/rest-resolver.ts queryHistoryMedian) ──────────
@@ -86,8 +95,8 @@ function seedFixture(db: any, exerciseId: string): void {
 const HISTORY_QUERY = `
   WITH pairs AS (
     SELECT
-      completed_at AS curr_at,
-      LAG(completed_at) OVER w AS prev_at,
+      completed_at / 1000 AS curr_at,
+      LAG(completed_at / 1000) OVER w AS prev_at,
       COALESCE(duration_seconds, ${WORK_ESTIMATE_SECONDS_PER_REP} * COALESCE(reps, 0)) AS work_est,
       link_id AS curr_link_id,
       LAG(link_id) OVER w AS prev_link_id,
@@ -95,7 +104,7 @@ const HISTORY_QUERY = `
     FROM workout_sets
     WHERE exercise_id = ?
       AND completed_at IS NOT NULL
-      AND completed_at >= ?
+      AND completed_at >= ? * 1000
     WINDOW w AS (ORDER BY completed_at ASC)
   )
   SELECT (curr_at - work_est - prev_at) AS actual_rest

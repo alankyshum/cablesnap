@@ -186,18 +186,29 @@ async function queryHistoryMedian(
   exerciseId: string,
   setType: SetType,
 ): Promise<HistoryResult | null> {
+  // windowStart in seconds (10-digit epoch).  The WHERE clause multiplies by 1000
+  // to match the ms-stored completed_at column so the partial index range scan fires.
   const windowStart = Math.floor(Date.now() / 1000) - HISTORY_WINDOW_DAYS * 86400;
 
-  // Consecutive-pair CTE using LAG. Both prev and curr must have link_id IS NULL
+  // Consecutive-pair CTE using LAG.  Both prev and curr must have link_id IS NULL
   // (straight sets only) and completed_at in the window.
-  // actual_rest = (completed_at_curr - work_estimate_curr) - completed_at_prev
-  //   where work_estimate = COALESCE(duration_seconds, 2 * COALESCE(reps, 0))
+  //
+  // completed_at is stored in MILLISECONDS (Date.now()).  Normalise to seconds
+  // inside the CTE (Option A: / 1000) so actual_rest and the bounds check
+  // (>= 15, <= 600) operate in seconds, exactly as the plan specifies.
+  //
+  // The WHERE filter uses `completed_at >= ? * 1000` (not the divided value) so
+  // that SQLite can still use idx_workout_sets_exercise_completed_at for the
+  // range scan (it operates on the raw column).
+  //
+  // work_est is in seconds (duration_seconds or 2 * reps) — no conversion needed.
+  //
   // Index used: idx_workout_sets_exercise_completed_at (EXPLAIN-asserted in AC8 bench).
   const rows = await database.getAllAsync<{ actual_rest: number }>(
     `WITH pairs AS (
        SELECT
-         completed_at AS curr_at,
-         LAG(completed_at) OVER w AS prev_at,
+         completed_at / 1000 AS curr_at,
+         LAG(completed_at / 1000) OVER w AS prev_at,
          COALESCE(duration_seconds, ${WORK_ESTIMATE_SECONDS_PER_REP} * COALESCE(reps, 0)) AS work_est,
          link_id AS curr_link_id,
          LAG(link_id) OVER w AS prev_link_id,
@@ -205,7 +216,7 @@ async function queryHistoryMedian(
        FROM workout_sets
        WHERE exercise_id = ?
          AND completed_at IS NOT NULL
-         AND completed_at >= ?
+         AND completed_at >= ? * 1000
        WINDOW w AS (ORDER BY completed_at ASC)
      )
      SELECT (curr_at - work_est - prev_at) AS actual_rest

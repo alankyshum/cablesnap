@@ -394,6 +394,29 @@ describe("setUserRestSeconds (AC5b)", () => {
   });
 });
 
+// ─── Regression: ms/seconds timestamp unit (AC1 guard) ───────────────────────
+
+describe("queryHistoryMedian — timestamp unit regression", () => {
+  it("passes windowStart in seconds (10-digit) and SQL receives * 1000 range value", async () => {
+    // Simulate history rows so the resolver reaches getAllAsync.
+    mockGetFirstAsync.mockResolvedValueOnce({ user_rest_seconds: null });
+    mockGetAllAsync.mockResolvedValueOnce(makeHistoryRows([100, 110, 120, 130]));
+
+    await resolveRest("s1", "e1", "normal");
+
+    expect(mockGetAllAsync).toHaveBeenCalled();
+    const [_sql, args] = mockGetAllAsync.mock.calls[0];
+    const windowStart: number = args[1]; // second positional arg is windowStart
+
+    // windowStart must be in SECONDS (~10-digit epoch), NOT milliseconds (~13-digit).
+    // 2020-01-01 in seconds = 1577836800 (10 digits).
+    // 2020-01-01 in ms      = 1577836800000 (13 digits).
+    // A seconds value must be < 1e12 and >= 1e9.
+    expect(windowStart).toBeGreaterThanOrEqual(1e9);
+    expect(windowStart).toBeLessThan(1e12);
+  });
+});
+
 // ─── Constants sanity check ───────────────────────────────────────────────────
 
 describe("exported constants", () => {
