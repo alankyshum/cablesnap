@@ -5,6 +5,20 @@ import { Platform } from "react-native";
 import { migrate } from "./migrations";
 import { seed } from "./seed";
 import * as schema from "./schema";
+import * as Sentry from "@sentry/react-native";
+
+// Safe Sentry wrappers — swallow if SDK is not initialized (tests, web fallback).
+function dbBreadcrumb(message: string, data?: Record<string, unknown>): void {
+  try {
+    Sentry.addBreadcrumb({ category: "db", type: "info", level: "info", message, data });
+  } catch { /* Sentry not ready */ }
+}
+
+function dbCaptureException(err: unknown, context: Record<string, unknown>): void {
+  try {
+    Sentry.captureException(err, { extra: context });
+  } catch { /* Sentry not ready */ }
+}
 
 // BLD-560: dev-only query counter — use dynamic require so Metro strips the
 // module reference in prod (matches the test-seed hook pattern; see
@@ -45,6 +59,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   let pending = getInit();
   if (!pending) {
     pending = (async () => {
+      dbBreadcrumb("init_start", { db_name: DB_NAME });
       try {
         const instance = await SQLite.openDatabaseAsync(DB_NAME);
         await instance.execAsync("PRAGMA journal_mode = WAL");
@@ -56,8 +71,32 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         // undoCsvImport prevent dangling rows. Prerequisite for BLD-1092
         // ON DELETE CASCADE on workout_sessions → workout_sets → set_media.
         await instance.execAsync("PRAGMA foreign_keys = ON");
-        await migrate(instance);
-        await seed(instance);
+        dbBreadcrumb("pre_migrate", { db_name: DB_NAME });
+        try {
+          await migrate(instance);
+        } catch (migrateErr) {
+          const error = migrateErr instanceof Error ? migrateErr : new Error(String(migrateErr));
+          dbCaptureException(error, {
+            phase: "migrate",
+            db_name: DB_NAME,
+            error_message: error.message,
+            error_stack: error.stack,
+          });
+          throw error;
+        }
+        dbBreadcrumb("post_migrate", { db_name: DB_NAME });
+        try {
+          await seed(instance);
+        } catch (seedErr) {
+          const error = seedErr instanceof Error ? seedErr : new Error(String(seedErr));
+          dbCaptureException(error, {
+            phase: "seed",
+            db_name: DB_NAME,
+            error_message: error.message,
+            error_stack: error.stack,
+          });
+          throw error;
+        }
         setDb(instance);
         setDrizzleDb(drizzle(instance, { schema }));
         return instance;
@@ -67,8 +106,32 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
             const instance = await SQLite.openDatabaseAsync(":memory:");
             // BLD-1094: same pragma on the web in-memory fallback.
             await instance.execAsync("PRAGMA foreign_keys = ON");
-            await migrate(instance);
-            await seed(instance);
+            dbBreadcrumb("pre_migrate", { db_name: ":memory:" });
+            try {
+              await migrate(instance);
+            } catch (migrateErr) {
+              const error = migrateErr instanceof Error ? migrateErr : new Error(String(migrateErr));
+              dbCaptureException(error, {
+                phase: "migrate",
+                db_name: ":memory:",
+                error_message: error.message,
+                error_stack: error.stack,
+              });
+              throw error;
+            }
+            dbBreadcrumb("post_migrate", { db_name: ":memory:" });
+            try {
+              await seed(instance);
+            } catch (seedErr) {
+              const error = seedErr instanceof Error ? seedErr : new Error(String(seedErr));
+              dbCaptureException(error, {
+                phase: "seed",
+                db_name: ":memory:",
+                error_message: error.message,
+                error_stack: error.stack,
+              });
+              throw error;
+            }
             memoryFallback = true;
             setDb(instance);
             setDrizzleDb(drizzle(instance, { schema }));
