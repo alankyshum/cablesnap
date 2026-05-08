@@ -32,6 +32,7 @@ import { getActiveSession } from "@/lib/db/sessions";
 import type { QuickAddExerciseChip } from "@/lib/db/day-session";
 import type { Exercise } from "@/lib/types";
 import * as Haptics from "expo-haptics";
+import { radii } from "@/constants/design-tokens";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ export default function QuickAddSheet({
   onOpenActiveSession,
 }: Props) {
   const colors = useThemeColors();
-  const { success: showSuccess } = useToast();
+  const { success: showSuccess, error: showError } = useToast();
 
   const sheetRef = useRef<BottomSheet>(null);
 
@@ -86,9 +87,11 @@ export default function QuickAddSheet({
         setChips(recentChips);
         setActiveSessionId(activeSession?.id ?? null);
       })
-      .catch(() => {})
+      .catch(() => {
+        showError("Failed to load exercises. Please try again.");
+      })
       .finally(() => setLoading(false));
-  }, [visible]);
+  }, [visible, showError]);
 
   useEffect(() => {
     if (visible) {
@@ -103,7 +106,9 @@ export default function QuickAddSheet({
       if (committing) return;
       setCommitting(true);
       try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        // Haptics are best-effort — do not let failure block the DB write
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
         const result = await addQuickAddSet({ exerciseId, reps, weight });
         setEditState(null);
         onDismiss();
@@ -121,12 +126,12 @@ export default function QuickAddSheet({
           duration: 4000,
         });
       } catch {
-        // Silently ignore — user can retry
+        showError("Failed to log set. Please try again.");
       } finally {
         setCommitting(false);
       }
     },
-    [committing, onDismiss, onSetLogged, showSuccess]
+    [committing, onDismiss, onSetLogged, showSuccess, showError]
   );
 
   // 2-tap path: chip tap immediately commits prefilled reps/weight (AC3, AC11)
@@ -417,7 +422,7 @@ const styles = StyleSheet.create({
   },
   logBtn: {
     minHeight: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     marginBottom: 12,
   },
   cancelBtn: {

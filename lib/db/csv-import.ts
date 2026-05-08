@@ -192,7 +192,8 @@ export async function undoCsvImport(batchId: string): Promise<{ sessionsDeleted:
 export async function hasActiveWorkout(): Promise<boolean> {
   const database = await getDatabase();
   const row = await database.getFirstAsync<{ cnt: number }>(
-    "SELECT COUNT(*) as cnt FROM workout_sessions WHERE completed_at IS NULL"
+    // BLD-1089: kind='workout' — day_session rows are always completed; exclude them
+    "SELECT COUNT(*) as cnt FROM workout_sessions WHERE completed_at IS NULL AND kind = 'workout'"
   );
   return (row?.cnt ?? 0) > 0;
 }
