@@ -253,8 +253,10 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
         ON workout_sessions (day_session_exercise_id, day_session_date)
         WHERE kind = 'day_session'
     `);
-  } catch {
-    // Partial indexes not supported on all platforms — uniqueness enforced by UPSERT
+  } catch (err) {
+    // Partial indexes not supported on all platforms — uniqueness enforced by UPSERT.
+    // Log so a missing index is diagnosable in device/CI logs.
+    console.warn("[migrations] uniq_day_session_per_exercise_date partial index not created:", err);
   }
 }
 
