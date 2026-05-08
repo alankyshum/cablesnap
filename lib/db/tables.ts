@@ -397,7 +397,13 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
     );
     CREATE INDEX IF NOT EXISTS idx_cable_stacks_gym ON cable_stacks(gym_id);
     CREATE INDEX IF NOT EXISTS idx_stack_calibrations_stack ON stack_calibrations(stack_id);
-    CREATE INDEX IF NOT EXISTS idx_workout_sessions_gym_started_at ON workout_sessions(gym_id, started_at);
+    -- NOTE: idx_workout_sessions_gym_started_at is intentionally NOT created here.
+    -- It depends on workout_sessions.gym_id, which is added by addColumnIfMissing()
+    -- in migrate() AFTER createExtensionTables() runs. Creating the index here
+    -- on an upgrading DB (where workout_sessions exists from a pre-BLD-1059
+    -- version without gym_id) raises "no such column: gym_id" and aborts the
+    -- entire migration. The index is created in migrations.ts Phase 3 (after
+    -- addColumnIfMissing in Phase 2 guarantees the column exists).
   `);
 }
 

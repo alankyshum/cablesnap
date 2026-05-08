@@ -1,6 +1,16 @@
 import * as SQLite from "expo-sqlite";
 import { createCoreTables, createExtensionTables, addColumnIfMissing, hasColumn, dropColumnIfExists } from "./tables";
 import { createScheduleAndIndexes } from "./table-migrations";
+import * as Sentry from "@sentry/react-native";
+
+// Safe breadcrumb — swallow if Sentry SDK is not initialized (tests, web).
+function migrateBreadcrumb(message: string, data?: Record<string, unknown>): void {
+  try {
+    Sentry.addBreadcrumb({ category: "db.migrate", type: "info", level: "info", message, data });
+  } catch {
+    if (__DEV__) console.warn("[migrations] migrateBreadcrumb failed:", message);
+  }
+}
 
 async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(`
@@ -14,12 +24,53 @@ async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<v
   `);
 }
 
+/**
+ * migrate() uses a strict four-phase ordering to prevent the class of crash
+ * seen in BLD-1094 ("no such column: gym_id"), where a CREATE INDEX in
+ * createExtensionTables() referenced workout_sessions.gym_id — a column that
+ * only existed AFTER the addColumnIfMissing calls further down. The index was
+ * removed from createExtensionTables as an immediate fix; this phased structure
+ * is the structural guard ensuring it can never recur:
+ *
+ *   PHASE 1 — Core table creation (CREATE TABLE IF NOT EXISTS only).
+ *             Safe: these helpers create columns as part of table definitions,
+ *             no cross-table column references.
+ *
+ *   PHASE 2 — ALL addColumnIfMissing calls, grouped together.
+ *             Guarantees every column referenced in Phase 3 already exists.
+ *             The set_type block (add column + backfill UPDATEs) lives here
+ *             because the UPDATEs only reference set_type and is_warmup, both
+ *             of which exist after the ADD COLUMN.
+ *
+ *   PHASE 3 — CREATE INDEX, CREATE TABLE for new feature tables, partial
+ *             indexes, and UPDATE/backfill statements. Every column they
+ *             reference is guaranteed to exist from Phase 1 or Phase 2.
+ *
+ *   PHASE 4 — dropColumnIfExists (last — after all reads/writes that might
+ *             still reference legacy columns).
+ */
 export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
-  await createCoreTables(database);
-  await createScheduleAndIndexes(database);
-  await createExtensionTables(database);
-  await addPerformanceIndexes(database);
-  // ── Column migrations for users upgrading from older database versions ──
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1: Core table creation (CREATE TABLE IF NOT EXISTS only).
+  // No indexes that depend on columns added later by addColumnIfMissing.
+  // ─────────────────────────────────────────────────────────────────────────
+  migrateBreadcrumb("phase_1_start");
+  try {
+    await createCoreTables(database);
+    await createScheduleAndIndexes(database);
+    await createExtensionTables(database);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration phase 1 failed: ${msg}`, { cause: err });
+  }
+  migrateBreadcrumb("phase_1_complete");
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 2: ALL addColumnIfMissing calls — ensures every column the rest of
+  // the migration depends on exists before any DDL or DML references it.
+  // ─────────────────────────────────────────────────────────────────────────
+  migrateBreadcrumb("phase_2_start");
+  try {
   // These were removed in 4b0add8 under "0 users" assumption; restored for BLD-461.
   // addColumnIfMissing is idempotent — safe to run on fresh and upgraded databases.
 
@@ -37,7 +88,6 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "exercises", "notes", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "exercises", "notes_updated_at", "INTEGER DEFAULT NULL");
   await addColumnIfMissing(database, "exercises", "notes_backfill_dismissed_at", "INTEGER DEFAULT NULL");
-
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");
   await addColumnIfMissing(database, "workout_templates", "source", "TEXT DEFAULT NULL");
@@ -70,6 +120,15 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // BLD-1059: per-gym cable stack calibration
   await addColumnIfMissing(database, "workout_sessions", "gym_id", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sessions", "gym_name_at_log", "TEXT DEFAULT NULL");
+  // BLD-1089: Grease-the-Groove Day Mode — additive migration on workout_sessions.
+  // Three columns + one partial unique index (index created in Phase 3). All idempotent.
+  // SQLite 3.35+ supports ALTER TABLE ... DROP COLUMN for documented rollback.
+  await addColumnIfMissing(database, "workout_sessions", "kind",
+    "TEXT NOT NULL DEFAULT 'workout'");
+  await addColumnIfMissing(database, "workout_sessions", "day_session_exercise_id",
+    "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sessions", "day_session_date",
+    "TEXT DEFAULT NULL");
 
   // workout_sets table
   await addColumnIfMissing(database, "workout_sets", "rpe", "REAL DEFAULT NULL");
@@ -102,7 +161,9 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "workout_sets", "stack_unit_at_log", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "stack_name_at_log", "TEXT DEFAULT NULL");
 
-  // workout_sets.set_type migration (replaces deprecated is_warmup column)
+  // workout_sets.set_type migration (replaces deprecated is_warmup column).
+  // Kept as a single block: the UPDATEs only reference set_type (just added)
+  // and is_warmup (pre-existing), so this is safe inside Phase 2.
   if (!(await hasColumn(database, "workout_sets", "set_type"))) {
     await database.execAsync(
       "ALTER TABLE workout_sets ADD COLUMN set_type TEXT DEFAULT 'normal'"
@@ -119,98 +180,40 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
 
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration phase 2 failed: ${msg}`, { cause: err });
+  }
+  migrateBreadcrumb("phase_2_complete");
 
-  // BLD-1059: per-gym cable stack calibration — new tables
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS gym_profiles (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      notes TEXT DEFAULT '',
-      is_default INTEGER DEFAULT 0,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      deleted_at INTEGER DEFAULT NULL
-    );
-    CREATE TABLE IF NOT EXISTS cable_stacks (
-      id TEXT PRIMARY KEY,
-      gym_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      unit TEXT NOT NULL DEFAULT 'kg',
-      position INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      deleted_at INTEGER DEFAULT NULL
-    );
-    CREATE TABLE IF NOT EXISTS stack_calibrations (
-      id TEXT PRIMARY KEY,
-      stack_id TEXT NOT NULL,
-      marker INTEGER NOT NULL,
-      true_weight REAL NOT NULL,
-      UNIQUE(stack_id, marker)
-    );
-    CREATE INDEX IF NOT EXISTS idx_cable_stacks_gym ON cable_stacks(gym_id);
-    CREATE INDEX IF NOT EXISTS idx_stack_calibrations_stack ON stack_calibrations(stack_id);
-    CREATE INDEX IF NOT EXISTS idx_workout_sessions_gym_started_at ON workout_sessions(gym_id, started_at);
-  `);
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 3: CREATE INDEX, CREATE TABLE for new feature tables, partial
+  // indexes, and UPDATE/backfill statements. All columns referenced here are
+  // guaranteed to exist from Phase 1 (table creation) or Phase 2 (addColumn).
+  // ─────────────────────────────────────────────────────────────────────────
+  migrateBreadcrumb("phase_3_start");
+
+  await addPerformanceIndexes(database);
+
+  // BLD-1059: gym_profiles, cable_stacks, stack_calibrations tables and their
+  // non-gym_id indexes (idx_cable_stacks_gym, idx_stack_calibrations_stack)
+  // moved to tables.ts createExtensionTables — see BLD-1059.
+  // Partial index idx_gym_profiles_one_default also moved to tables.ts (execAsync block).
+  //
+  // KEPT HERE: idx_workout_sessions_gym_started_at — depends on workout_sessions.gym_id
+  // which is only guaranteed to exist after Phase 2 addColumnIfMissing.
   try {
-    await database.execAsync(
-      `CREATE UNIQUE INDEX IF NOT EXISTS idx_gym_profiles_one_default ON gym_profiles(is_default) WHERE is_default = 1`
-    );
-  } catch {
-    // Partial indexes not supported on all platforms — constraint enforced at app level
+    await database.execAsync(`
+      CREATE INDEX IF NOT EXISTS idx_workout_sessions_gym_started_at ON workout_sessions(gym_id, started_at);
+    `);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration: creating idx_workout_sessions_gym_started_at failed: ${msg}`, { cause: err });
   }
 
-  // Phase 66: strength goals table
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS strength_goals (
-      id TEXT PRIMARY KEY,
-      exercise_id TEXT NOT NULL,
-      target_weight REAL,
-      target_reps INTEGER,
-      deadline TEXT,
-      achieved_at TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (exercise_id) REFERENCES exercises(id)
-    );
-    CREATE INDEX IF NOT EXISTS idx_strength_goals_exercise ON strength_goals(exercise_id);
-    CREATE INDEX IF NOT EXISTS idx_strength_goals_active ON strength_goals(achieved_at);
-  `);
-  // Partial unique index for one-active-goal-per-exercise constraint
-  try {
-    await database.execAsync(
-      `CREATE UNIQUE INDEX IF NOT EXISTS idx_strength_goals_one_active ON strength_goals(exercise_id) WHERE achieved_at IS NULL`
-    );
-  } catch {
-    // SQLite on some platforms doesn't support partial indexes — constraint enforced at app level
-  }
-
-  // ── Destructive cleanup of legacy F12/F13 columns (BLD-773) ──
-  // F12 (Training Mode) and F13 (Mount Position) were removed from app
-  // reads/writes earlier in this PR, but the physical SQLite columns still
-  // exist on already-upgraded user databases. Fresh installs are unaffected
-  // because `createCoreTables` no longer declares them. Drop them here so
-  // upgraded DBs converge with the canonical schema in `lib/db/schema.ts`.
-  //
-  // BLD-783 rebase note: the original BLD-773 drop set included
-  // `workout_sets.mount_position`, but BLD-771 (per-set cable variant
-  // logging) — landed on main while this PR was in review — reclaims that
-  // exact column name with new semantics (cable pulley position, autofilled
-  // from history). Dropping it here would destroy live BLD-771 data on
-  // every boot. The legacy F13 mount_position lived on `exercises` (a
-  // per-exercise default), which we still drop. Surviving values on
-  // workout_sets.mount_position from F13-era rows are safe to leave in
-  // place — BLD-771 readers gate through `isMountPosition()` and treat
-  // unknown strings as null.
-  //
-  // `dropColumnIfExists` is idempotent (no-op when the column is absent),
-  // so this block is safe on every boot regardless of starting schema state.
-  // SQLite ≥ 3.35 supports native `ALTER TABLE ... DROP COLUMN`; Expo SQLite
-  // 55 ships >= 3.45 so no table rebuild is needed.
-  await dropColumnIfExists(database, "workout_sets", "training_mode");
-  await dropColumnIfExists(database, "template_exercises", "training_mode");
-  await dropColumnIfExists(database, "exercises", "mount_position");
-  await dropColumnIfExists(database, "exercises", "training_modes");
+  // strength_goals table and non-partial indexes (idx_strength_goals_exercise,
+  // idx_strength_goals_active) moved to tables.ts createExtensionTables — see BLD-1059/strength-goals.
+  // Partial index idx_strength_goals_one_active also moved to tables.ts (execAsync block).
 
   // BLD-1044: backfill — renumber any (session_id, exercise_id) groups left
   // non-contiguous by historical deleteSet() calls. Idempotent: groups that
@@ -238,15 +241,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       ON workout_sets (exercise_id, attachment, mount_position, grip_type, completed_at)
   `);
 
-  // BLD-1089: Grease-the-Groove Day Mode — additive migration on workout_sessions.
-  // Three columns + one partial unique index. All idempotent.
-  // SQLite 3.35+ supports ALTER TABLE ... DROP COLUMN for documented rollback.
-  await addColumnIfMissing(database, "workout_sessions", "kind",
-    "TEXT NOT NULL DEFAULT 'workout'");
-  await addColumnIfMissing(database, "workout_sessions", "day_session_exercise_id",
-    "TEXT DEFAULT NULL");
-  await addColumnIfMissing(database, "workout_sessions", "day_session_date",
-    "TEXT DEFAULT NULL");
+  // BLD-1089: Grease-the-Groove Day Mode — partial unique index.
+  // Columns (kind, day_session_exercise_id, day_session_date) were added in Phase 2.
   try {
     await database.execAsync(`
       CREATE UNIQUE INDEX IF NOT EXISTS uniq_day_session_per_exercise_date
@@ -265,7 +261,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // pending_delete is a two-phase soft-delete tombstone (0 = live, 1 = queued
   // for unlink by reconcileOrphans).
   // Partial index on pending_delete=1 (highly skewed — almost all rows = 0).
-  await database.execAsync(`
+  try {
+    await database.execAsync(`
     CREATE TABLE IF NOT EXISTS set_media (
       id TEXT PRIMARY KEY,
       set_id TEXT NOT NULL,
@@ -284,6 +281,10 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_set_media_exercise_created
       ON set_media (exercise_id, created_at);
   `);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration: creating set_media tables failed: ${msg}`, { cause: err });
+  }
   try {
     await database.execAsync(
       `CREATE INDEX IF NOT EXISTS idx_set_media_pending_delete_partial
@@ -293,6 +294,39 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   } catch {
     // Partial indexes not supported on all platforms — reconciler scans full table.
   }
+  migrateBreadcrumb("phase_3_complete");
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 4: dropColumnIfExists — after all reads/writes that might reference
+  // legacy columns. Safe to run last.
+  // ─────────────────────────────────────────────────────────────────────────
+  migrateBreadcrumb("phase_4_start");
+
+  // ── Destructive cleanup of legacy F12/F13 columns (BLD-773) ──
+  // F12 (Training Mode) and F13 (Mount Position) were removed from app
+  // reads/writes earlier in this PR, but the physical SQLite columns still
+  // exist on already-upgraded user databases. Fresh installs are unaffected
+  // because `createCoreTables` no longer declares them. Drop them here so
+  // upgraded DBs converge with the canonical schema in `lib/db/schema.ts`.
+  //
+  // BLD-783 rebase note: the original BLD-773 drop set included
+  // `workout_sets.mount_position`, but BLD-771 (per-set cable variant
+  // logging) — landed on main while this PR was in review — reclaims that
+  // exact column name with new semantics (cable pulley position, autofilled
+  // from history). Dropping it here would destroy live BLD-771 data on
+  // every boot. The legacy F13 mount_position lived on `exercises` (a
+  // per-exercise default), which we still drop. Surviving values on
+  // workout_sets.mount_position from F13-era rows are safe to leave in
+  // place — BLD-771 readers gate through `isMountPosition()` and treat
+  // unknown strings as null.
+  //
+  // `dropColumnIfExists` is idempotent (no-op when the column is absent),
+  // so this block is safe on every boot regardless of starting schema state.
+  // SQLite ≥ 3.35 supports native `ALTER TABLE ... DROP COLUMN`; Expo SQLite
+  // 55 ships >= 3.45 so no table rebuild is needed.
+  await dropColumnIfExists(database, "workout_sets", "training_mode");
+  await dropColumnIfExists(database, "template_exercises", "training_mode");
+  await dropColumnIfExists(database, "exercises", "mount_position");
+  await dropColumnIfExists(database, "exercises", "training_modes");
+  migrateBreadcrumb("phase_4_complete");
 }
-
-
