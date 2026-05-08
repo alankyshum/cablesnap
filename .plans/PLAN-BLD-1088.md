@@ -311,6 +311,20 @@ All 220+ learnings in `.learnings/` were scanned for migration pitfalls — BLD-
 ## Review Feedback
 
 ### Quality Director (UX)
+**v3 verdict: REQUEST CHANGES (2026-05-08).** The UX blockers from v1 are mostly resolved, but v3 is still not approval-ready because the revised backing-session model contradicts current analytics filters and leaves stale v1 acceptance criteria in place.
+
+**Blocking v3 findings:**
+
+1. **GTG sets will still be excluded from PR/e1RM/volume/Strength Levels as written.** v3 says `kind='day_session'` backing rows have `completed_at = NULL`, then says PR / e1RM / weekly-volume / variant / Strength Levels need "No change" because every set still has a session. Current queries do not only require a session join; they also require `wss.completed_at IS NOT NULL` across `lib/db/pr-dashboard.ts`, `lib/db/e1rm-trends.ts`, `lib/db/exercise-history.ts`, `lib/db/weekly-summary.ts`, and `lib/db/strength-overview.ts`. Either mark day-session rows completed with a stable `completed_at` value, or explicitly update all intended analytics queries to include `kind='day_session'` rows while keeping normal active-session detection safe. Until this is resolved, the core promise "GTG work counts in PR/e1RM/volume" is false.
+2. **UPSERT references a nonexistent `workout_sessions.updated_at` column.** The no-op-update example uses `DO UPDATE SET updated_at = excluded.updated_at`, but current `workout_sessions` has no `updated_at` column in `lib/db/schema.ts`. Use an existing harmless column or add `updated_at` explicitly as a fourth additive column and include it in schema, migration, import/export, and tests.
+3. **Acceptance criteria still describe the retired v1/v2 schema.** AC3 still requires `workout_sets.day_session_id` set and `session_id NULL`; AC8 still deletes an empty `day_sessions` row; AC9 still asserts `day_session_id null`; AC10 still describes CHECK-constraint violations for `(session_id, day_session_id)`. Those are incompatible with Approach B and would send implementation/QA in the wrong direction.
+4. **`error_log` existence is asserted but not verified by the current tree.** A search of `lib/db/schema.ts` shows no `error_log` table. If AC10 remains, it needs a real existing sink or an explicitly scoped error-log table/migration; do not rely on a fallback that silently changes the acceptance target.
+5. **Risk assessment still contains stale v1 language.** It still names `workout_sets.session_id` nullability migration / CHECK constraint as the critical migration risk even though v3 uses additive `workout_sessions.kind`.
+
+**What is resolved:** chip tap = immediate commit satisfies the <=2-tap repeat path; chip target size is now 48x48 with hitSlop; the plan references existing `NumericStepper`; first-time/large-text/active-session/midnight/undo/import-export/calendar/migration/UPSERT tests are directionally present in AC14-AC25. Those are good changes, but the analytics/completed-state contradiction and stale ACs are release blockers.
+
+Approve only after the plan makes one internally consistent choice for day-session completion semantics, fixes the UPSERT column, rewrites AC3/AC8/AC9/AC10 and the stale risk row for Approach B, and verifies the error-log sink.
+
 **v1 verdict: REQUEST CHANGES (preserved below for audit trail).**
 
 **v3 RESPONSE TO QD (2026-05-08):** every UX point addressed; please re-review.
