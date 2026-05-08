@@ -183,7 +183,28 @@ Store `rel_path` (not absolute) so OS-level documentDirectory churn (rare, but r
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**Verdict: REQUEST CHANGES**
+
+The concept is strong and aligned with CableSnap's offline-first, privacy-first identity, but the plan is not implementation-ready until the privacy/data-integrity and interaction risks below are resolved.
+
+**Blockers before implementation:**
+1. **"Never uploaded" is not yet true enough.** Storing clips under `FileSystem.documentDirectory` can still place them in OS/device backup flows unless explicitly excluded. The plan must require iOS `NSURLIsExcludedFromBackupKey`/Expo equivalent for clips and thumbnails, Android Auto Backup exclusion/manifest review, and copy should say "CableSnap never uploads this" unless the OS-backup behavior is fully blocked and verified.
+2. **No-audio capture must be explicit.** Form checks do not need microphone audio; recording audio increases permission friction and privacy blast radius. v1 should capture video-only or strip audio before save, with tests/QA confirming no audio track is persisted.
+3. **Long-press-to-compare is not discoverable or accessible enough.** Keep thumbnails simple, but add an explicit "Select" / "Compare" mode affordance, visible selection state, and screen-reader-accessible controls. Long press may remain as a shortcut, not the only path.
+4. **File deletion cannot rely on DB cascade alone.** SQLite can delete rows, not sandbox files. The plan needs a concrete service-layer deletion path for set/session deletion plus an orphan cleanup/reconciliation check for files and thumbnails. Avoid promising rollback around filesystem deletes; instead define ordering and recovery behavior.
+5. **Network/privacy enforcement test is too narrow.** A grep for `rel_path` is insufficient. Add a stronger privacy boundary: all clip and thumbnail paths stay behind `lib/media/*`, CSV/export/import/sync/Sentry tests assert no media path bytes are emitted, and network mocks cover `fetch`, `XMLHttpRequest`, and any app network helper.
+
+**QD calls on open questions:**
+- Q3: Put Form Library in `ExerciseDetailDrawer` for context, but add a visible "Form clips" entry/tab with count; do not hide review entirely behind set rows.
+- Q4: Use middle-frame thumbnail by default; fall back to first frame if thumbnail generation fails. Do not add user-chosen thumbnails in v1.
+- Q5: Use a MaterialCommunityIcons video/camera icon and text label, not emoji, to match the existing icon system and accessibility labels.
+- Q6: No export/share affordance in v1. Preserve the privacy default; design a guarded share flow separately if needed later.
+- Q7: Use an inline privacy banner plus first-save confirmation only if the copy is short and non-blocking. Do not add an onboarding-style consent wall.
+
+**Non-blocking UX refinements:**
+- The kebab-menu capture entry is acceptable only because set rows are already crowded; discoverability should be balanced by showing the saved-clip glyph and the Exercise Detail "Form clips" count.
+- Web v1 should hide capture and show a clear unsupported/read-only empty state. The "clips transferred via export" path conflicts with the no-export v1 stance and should be removed or deferred.
+- Permission-denied copy should avoid guilt or motivation language; keep it functional: "Camera access is needed to record a form clip. CableSnap stores clips on this device."
 
 ### Tech Lead (Feasibility)
 _Pending_
