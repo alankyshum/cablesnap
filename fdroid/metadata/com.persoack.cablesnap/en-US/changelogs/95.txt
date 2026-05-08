@@ -1,0 +1,1 @@
+- **Database upgrade fix**: Resolved a crash on first launch ("Database error: no such column: gym_id") that affected users upgrading from a much older install. Migration ordering is now phased to prevent this class of bug from recurring.

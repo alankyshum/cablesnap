@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.25",
+    "date": "2026-05-08",
+    "versionCode": 95,
+    "body": "- **Database upgrade fix**: Resolved a crash on first launch (\"Database error: no such column: gym_id\") that affected users upgrading from a much older install. Migration ordering is now phased to prevent this class of bug from recurring."
+  },
+  {
     "version": "0.26.24",
     "date": "2026-05-08",
     "versionCode": 94,
