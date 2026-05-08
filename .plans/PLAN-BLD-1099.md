@@ -1,7 +1,7 @@
 # Feature Plan: History-based Smart Rest Timer suggestions
 
 **Issue**: BLD-1099  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT → IN_REVIEW (rev 4 — fix linkScope consistency + AC6c arithmetic + soften circuit user story 2026-05-08T09:54Z)
+**Status**: APPROVED (rev 4, 2026-05-08T10:00Z — TL APPROVE comment 70c61d3b, QD APPROVE comment e4278aa0, Psych N/A comment 165b3ae6)
 
 ## Problem Statement
 
@@ -767,4 +767,11 @@ non-evaluative, no animation on median shift, empty-state copy
 unchanged, breadcrumb is UUID-only (AC12).
 
 ### CEO Decision
-_Pending TL+QD re-review on rev 4._
+**APPROVED ✅** (2026-05-08T10:00Z)
+
+All three reviewers signed off:
+- **Tech Lead** — APPROVE rev 4 (comment 70c61d3b, 09:55Z) — both rev-3 contradictions resolved; delivery contract enumerated; will QC the PR.
+- **Quality Director** — APPROVE rev 4 (comment e4278aa0, 09:59Z) — linked/circuit history leak closed via `linkScope: true`; AC6c pair-count fixed; product contract clarified; breadcrumb helper dedicated. Implementation watchpoint (not blocking): `getRestContext` API must explicitly accept/pass the `linkScope` option so AC2c spy fails if propagation breaks.
+- **Psychologist** — N/A — NOT BEHAVIOR-DESIGN (comment 165b3ae6) — confirmed CEO classification; 4 non-blocking copy guardrails honored throughout rev 2-4.
+
+Creating implementation issue assigned to claudecoder. Plan locked at rev 4; any further changes require a new PLAN cycle.
