@@ -267,6 +267,25 @@ export const setMedia = sqliteTable("set_media", {
 
 **Re-review requested:** v2 commit (this revision) on `main`.
 
+### Quality Director (UX) — rev 2: REQUEST CHANGES
+**Verdict (rev 2):** REQUEST CHANGES (2026-05-08T04:32Z re-review).
+
+v2 is substantially safer than rev 1, but it still cannot be handed to implementation because several privacy and accessibility guarantees rely on APIs or UI contracts that do not match the current tree.
+
+**Blockers before implementation:**
+
+1. **Backup exclusion is still not implementable as written.** The plan references an `expo-file-system` backup-behavior API / `setBackupBehaviorAsync` and a read-back of `NSURLIsExcludedFromBackupKey`, but Expo SDK 55's installed `expo-file-system` types expose `File`, `Directory`, `info`, write/delete/move/copy, etc. and do not expose any backup-exclusion setter or read-back field. The plan must name the real implementation path: either a native config plugin / tiny native module that sets and verifies `NSURLIsExcludedFromBackupKey`, or remove the "Saved on this device only — never uploaded" copy until that guarantee is real. AC15 must be executable, not aspirational.
+
+2. **Camera recording API details are incorrect for SDK 55.** `CameraRecordingOptions` supports `maxDuration`, `maxFileSize`, `mirror`, and iOS-only `codec` values (`avc1`, `hvc1`, etc.); `mute` is a `CameraView` prop, not a `recordAsync` option, and `codec: 'H264'` is not a valid type. The plan must specify `CameraView mode="video" mute videoQuality="720p"` (or the exact SDK-valid equivalent), then `recordAsync({ maxDuration: 15, codec: 'avc1' /* iOS only if needed */ })`. AC1/AC14 currently direct implementers toward code that will fail typecheck or silently miss the no-audio guarantee.
+
+3. **The OS camera permission copy is currently wrong for this feature.** `app.config.ts` says "CableSnap needs camera access to scan food barcodes for quick nutrition logging." If form clips use the same camera permission, users will see a barcode-only OS prompt while recording workout videos. The plan must require updating `cameraPermission` to cover both barcode scanning and local form clips, while still omitting microphone permission/copy.
+
+4. **SetRow capture affordance underspecifies the accessibility floor.** v2 says an inline glyph at the row's right edge with "~32 dp hit-target with hitSlop"; the existing SetRow right edge already contains the complete checkbox and delete affordance. The plan must hard-require an effective >=48x48 dp touch target, no overlap with check/delete hit regions, and a large-text/landscape row-density test. Visual icon size can be 24-32 dp; touch target cannot be.
+
+5. **Sentry Replay proof is still too weak for a critical privacy promise.** Component tests that inspect React trees do not prove native replay payloads contain zero camera/video pixels. AC12 must require either (a) replay is disabled while any media surface is mounted, or (b) an instrumented/native verification that captures an actual replay artifact and confirms the camera/player/thumbnail regions are redacted. `maskAllImages` + wrapper presence is necessary but not sufficient evidence for the "zero pixels" claim.
+
+**Behavior-design classification:** still **NO**, provided comparison remains informational and no scoring/streak/reward/callout language is added.
+
 ### Tech Lead (Feasibility) — rev 1: REQUEST CHANGES
 **Verdict (rev 1):** REQUEST CHANGES (2026-05-08T04:13–04:17Z, comments c5bc6731 / a7c49b44).
 
