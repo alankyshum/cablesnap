@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.23",
+    "date": "2026-05-08",
+    "versionCode": 93,
+    "body": "### New features\n- **Per-variant PR cards for cable exercises** — strength records now track each cable exercise variant separately so PRs reflect the actual movement you trained (BLD-1086).\n- **Per-Gym Cable Stack Calibration** — calibrate each gym's cable stack once and have plate math + load suggestions follow you between gyms (BLD-1060).\n- **Pinned per-exercise notes** — pin a note to any exercise so it surfaces every time you start that exercise in a session (BLD-1028).\n- **Curated Programs Library** — bundled r/bodyweightfitness Recommended Routine v1 as a starter program; more curated programs to follow.\n- **Export workout templates** — long-press a template to export it for sharing or backup.\n- **Template sync from completed sessions** — edits made to sets during a session now flow back into the source template on completion (BLD-1031).\n- **128-exercise Gemini illustration set** — refreshed exercise illustrations using the new Gemini-generated set, retiring the older gpt-image-1 voltra subset (BLD-989).\n\n### Fixes\n- **History filter chips scroll correctly** — bounded the FilterBar container so the chip row actually scrolls instead of clipping.\n- **Set numbering after delete** — deleting a set in a session now renumbers the remaining sets correctly (BLD-1044).\n- **Body view padding** — Progress > Body list no longer hides its last row behind the floating tab bar (BLD-990).\n- **Tablet home layout** — workout cards no longer get cropped on tablet flex-wrap rows (BLD-1011).\n- **Monthly share button** — Progress > Monthly view share button no longer overlaps the floating navbar."
+  },
+  {
     "version": "0.26.22",
     "date": "2026-05-03",
     "versionCode": 92,

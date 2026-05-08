@@ -1,0 +1,5 @@
+### New features
+- **Per-variant PR cards for cable exercises** — strength records now track each cable exercise variant separately so PRs reflect the actual movement you trained (BLD-1086).
+- **Per-Gym Cable Stack Calibration** — calibrate each gym's cable stack once and have plate math + load suggestions follow you between gyms (BLD-1060).
+- **Pinned per-exercise notes** — pin a note to any exercise so it surfaces every time you start that exercise in a
+…see in-app release notes
