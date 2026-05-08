@@ -364,6 +364,41 @@ Approve only after the plan makes one internally consistent choice for day-sessi
 Approve directionally only after the plan resolves the tap-count contract, a11y sizing, and migration/aggregation scope. I would block implementation PRs that preserve the current migration assumptions or ship a 3-tap flow while claiming <=2 taps.
 
 ### Tech Lead (Feasibility)
+**v4 verdict: APPROVE WITH ONE NON-BLOCKING NOTE (2026-05-08).** All four v3 blockers are mechanically resolved. The `completed_at = started_at = local midnight` fix cleanly threads Approach B through every analytics filter without a single architectural compromise — backing rows pass `WHERE completed_at IS NOT NULL` (the 118-hit silent gate), while active-session detection's `kind='workout' AND completed_at IS NULL` pair still excludes them with defence in depth. UPSERT is repaired (`name = excluded.name` is real and stable per `schema.ts:76`). AC3/AC8/AC9/AC10 are now Approach-B native. Risk row 2 is honest. `error_log` confirmed. v4 is ready for handoff to claudecoder.
+
+#### One non-blocking observation — please pin before claudecoder ships
+
+`lib/db/achievements.ts:22` does `SELECT COUNT(*) FROM workout_sessions WHERE completed_at IS NOT NULL`, with similar COUNT(*) patterns at lines 27, 31, 65, 77. Under v4 these will **include backing `kind='day_session'` rows in the count**, so a "Completed N workouts" achievement could fire from N days of GTG-only training even if the user never started a normal session.
+
+The plan's Aggregation Rules table currently lists `achievements.ts` under the "No change" bucket — correct for set-level aggregations, but session-count achievements are session-level. Pin one of:
+
+- **(A)** Decide GTG days **do** count toward "workouts completed" achievements (defensible: the user trained), OR
+- **(B)** Add `kind='workout'` filter to the COUNT(*) paths in `achievements.ts` for parity with weekly-summary / monthly-report / calendar.
+
+I recommend **(B)** for consistency with the existing per-week / per-month / calendar treatment (those already have a `kind='workout'` filter). One-line change in 4 places. Not a blocker — but explicit is better than implicit; pin the decision in the plan, don't decide it in code review.
+
+#### Approve checklist (v4)
+
+- ✅ Migration toolchain — `addColumnIfMissing` only, matches BLD-1060 / BLD-1028 / BLD-913 patterns
+- ✅ No table rebuild, no NOT NULL relaxation, no CHECK gymnastics
+- ✅ Aggregation file count — honest under Approach B; defended by `completed_at = started_at` invariant
+- ✅ UPSERT — `DO UPDATE SET name = excluded.name RETURNING id` against a real, stable column (`schema.ts:76`)
+- ✅ Atomic UPSERT + first-set transaction
+- ✅ Import/Export + CSV roundtrip in scope; CSV reader treats missing `kind` as `'workout'` for back-compat
+- ✅ Reuses existing `<NumericStepper>`; no fictional `RepsStepper`/`WeightStepper` references
+- ✅ Active-session detection — defence in depth (`kind='workout'` AND `completed_at IS NULL`)
+- ✅ Session-detail navigation guard for `kind='day_session'` rows
+- ✅ AC3/AC8/AC9/AC10 rewritten for Approach B
+- ✅ AC22 idempotency, AC23 active-session correctness, AC25 UPSERT correctness
+- ✅ Risk Assessment row 2 honest about Approach B
+- ✅ `error_log` table existence verified (`schema.ts:279`, `tables.ts:186`); fallback wording removed
+- ⚠️ `achievements.ts` session-count behavior under GTG-only days — please pin (recommend `kind='workout'` filter parity, option B above)
+
+Behavior-Design Classification (NO) remains correct. Plan is **APPROVED** for handoff to claudecoder once the achievements decision is pinned (a one-line plan edit; no architectural change needed).
+
+---
+
+#### v4 RESPONSE TO TECH LEAD (preserved for audit trail)
 **v4 RESPONSE TO TECH LEAD (2026-05-08):** every blocker addressed; recommended fix adopted in full.
 
 | TL v3 blocker | v4 resolution |
