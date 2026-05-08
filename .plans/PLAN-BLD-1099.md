@@ -1,7 +1,7 @@
 # Feature Plan: History-based Smart Rest Timer suggestions
 
 **Issue**: BLD-1099  **Author**: CEO  **Date**: 2026-05-08
-**Status**: DRAFT → IN_REVIEW (rev 2 — addressing TL+QD blockers 2026-05-08T09:30Z)
+**Status**: DRAFT → IN_REVIEW (rev 3 — addressing QD rev-2 blockers + TL rev-2 addendum 2026-05-08T09:43Z)
 
 ## Problem Statement
 
@@ -96,6 +96,10 @@ chain** that returns the first defined value (in priority order):
    - actual_rest ≤ 600 s (10 min) — exclude "walked away" intervals;
    - actual_rest ≥ 15 s — exclude double-tap completions;
    - same `set_type` cluster (normal/normal vs. failure/normal can differ);
+   - **`link_id IS NULL` on BOTH pair members** — exclude
+     superset/circuit rounds entirely from history learning (rev 3 /
+     QD blocker 1 fix; circuit deltas measure round interval, not rest,
+     so they cannot contribute to history median in any meaningful way);
    - require ≥ 4 historical pairs to be statistically meaningful.
 4. **Template default** — `template_exercises.rest_seconds` for the active
    session's `template_id` (legacy path).
@@ -234,6 +238,7 @@ export async function resolveRest(
   sessionId: string,
   exerciseId: string,
   setType: SetType,
+  options?: { linkScope?: boolean }, // rev 3: skip history tier when true
 ): Promise<RestSource>;
 
 export async function setUserRestSeconds(
@@ -307,26 +312,55 @@ NOT changed** — it correctly bounds the multiplier-driven path. The new
 history/pinned path uses its own `[15, 600]` bound applied
 post-resolution. This keeps the two paths cleanly separated.
 
-#### Superset / link path (Blocker 4 fix)
+#### Superset / link path (Blocker 4 fix; refined rev 3 per QD blocker 1)
 
 `getRestSecondsForLink` (`lib/db/session-sets.ts:802-814`) currently
 returns `max(template_exercises.rest_seconds)` across the link group,
 which silently regresses templateless supersets to 90 s once we ship
-history-based resolution.
+history-based resolution for straight sets.
 
-**Composition rule (chosen: TL Option A — `max(history_per_exerciseId)`):**
+**QD rev-2 observation (correct):** even the rev 2 design
+`max(resolveRest per exerciseId)` is wrong inside a circuit because
+inter-A-to-A (or B-to-B) deltas in a circuit measure
+*round interval = (A work + B work + post-round rest)*, not rest. Per-
+exercise history learning therefore **MUST NOT** include circuit/superset
+sets — handled by the `link_id IS NULL` filter on the history query
+(see "Historical median" above).
 
-`getRestSecondsForLink` is rewritten to call `resolveRest` per
-`exerciseId` in the link group and return the `max(.seconds)`. This
-preserves the existing "longest rest wins" semantic while gaining
-history-awareness. Source attribution for the link is the source of
-the winning exercise.
+**Composition rule (rev 3, chosen: scope circuit history learning OUT):**
 
-For mixed-source link groups (e.g., exercise A has 30 days of history,
-exercise B is brand new), the `max(...)` may pick either; the
-attribution line names the winning exercise and source so the user can
-see why ("Suggested 2:15 — from your history on Cable Pushdowns; longer
-than your Cable Curl rest").
+`getRestSecondsForLink(linkId)` calls a new
+`resolveRest({ exerciseId, linkScope: true })` per exercise in the link
+group. The `linkScope: true` flag instructs the resolver to **skip the
+`history` tier entirely** — it considers only:
+
+1. user_override (per-set; doesn't usually apply at link entry)
+2. pinned (`exercises.user_rest_seconds`)
+3. template (`template_exercises.rest_seconds`)
+4. default (90 s)
+
+`getRestSecondsForLink` then returns
+`max(resolveRest({ ..., linkScope: true }).seconds)` across the group,
+preserving the "longest rest wins" semantic but **without** any history
+contribution for the link case. Attribution names the winning exercise +
+source (will be `pinned`, `template`, or `default` — never `history`).
+
+**Why this is the right call:** circuit/superset rest is a property of
+the *protocol*, not the *exercise*. CableSnap doesn't yet have a
+data model for "round of which protocol" (and adding one is far out
+of scope for BLD-1099). Honest fallback: pinned > template > default.
+Users who want personalized circuit rest can pin per-exercise defaults
+that dominate the resolver chain.
+
+A future follow-up issue (BLD-future) can introduce a `link_protocol_id`
+or per-link history table to learn round rest. Out of scope here.
+
+**Edge case: straight-set history of an exercise that ALSO appears in
+circuits.** Straight-set history is preserved untouched — only the
+linked sets are filtered out by `link_id IS NULL`. So a user who does
+straight squats on Mondays and circuit squats on Fridays gets clean
+straight-set history for the Monday session and falls back to
+template/default in the Friday circuit.
 
 #### Wire-up summary
 
@@ -334,17 +368,48 @@ than your Cable Curl rest").
    `resolveRest` returning `.seconds` (preserves all existing call sites
    that don't need source).
 2. `getRestSecondsForLink` is rewritten to take the max of
-   `resolveRest(...)` per link member (Blocker 4).
+   `resolveRest({ ..., linkScope: true })` per link member — history
+   tier skipped (Blocker 4 + rev 3 QD blocker 1).
 3. `getRestContext` extended to include `source: RestSource` so the
    breakdown sheet can render attribution and `useRestTimer.startRest`
    can branch on the composition rule (Blocker 1).
-4. `useRestTimer.startRest` branches on `source.kind` — bypasses
-   `resolveRestSeconds` for history/pinned (Blocker 1).
-5. New `setUserRestSeconds(exerciseId, seconds | null)` mutation with
+4. `useRestTimer.startRest` (`hooks/useRestTimer.ts:244-256`) branches
+   on `source.kind` — bypasses `resolveRestSeconds` for history/pinned
+   (Blocker 1).
+5. **`useSessionActions.handleLinkedRest` (`hooks/useSessionActions.ts:271-302`,
+   adaptive-ON branch lines 287-294) ALSO branches on `source.kind`
+   (rev 3 / TL rev-2 addendum).** This is the second call site for the
+   Blocker 1 bypass and was missed in rev 2.
+   - For the adaptive-ON branch (the default for users with adaptive
+     rest enabled), `getRestContext` is called for the
+     last-completed exercise of the link group; if `source.kind ∈
+     {history, pinned}` (note: `linkScope` is **false** here because
+     adaptive-ON uses single-exercise context, not group-max), bypass
+     `resolveRestSeconds` and call `startRestWithDuration(source.seconds)`
+     directly. AC2c covers this; AC2b spy assertion is extended to
+     include the `handleLinkedRest` adaptive-ON path.
+   - For the adaptive-OFF / fallback branch (line 299), the new
+     `getRestSecondsForLink` (item 2 above) handles the path —
+     history is already excluded by `linkScope: true`.
+6. New `setUserRestSeconds(exerciseId, seconds | null)` mutation with
    `[15, 600]` bounds validation; throws `RestBoundsError` on violation
    (Blocker 5).
-6. `lib/db/import-export.ts` import path clamps `user_rest_seconds` to
+7. `lib/db/import-export.ts` import path clamps `user_rest_seconds` to
    `[15, 600]`; drops to NULL for negative/NaN/non-integer (Blocker 5).
+8. **Sentry breadcrumb helper (rev 3 / QD rev-2 blocker 2 fix).** A
+   new dedicated helper `restResolverBreadcrumb(payload)` exported from
+   `lib/rest-resolver.ts` calls `Sentry.addBreadcrumb({ category:
+   "rest-resolver", level: "info", data: { source, seconds, exerciseId,
+   sampleCount? } })` directly. The existing `sessionBreadcrumb` helper
+   at `lib/session-breadcrumbs.ts:33-44` is **not** modified (its
+   `category: "session"` and `SessionEvent` union are correctly scoped
+   and would not implement cleanly). The new helper is a thin wrapper
+   over `Sentry.addBreadcrumb` and is unit-tested for payload shape and
+   PII-cleanliness (UUID-only, no exercise name, no user content).
+   Replay-mask contract is preserved because Sentry breadcrumbs are not
+   replay-masked by design — the contract is "no PII in breadcrumbs",
+   which is enforced by the helper's typed payload (no string fields
+   that could carry user content).
 
 #### Observability
 
@@ -415,6 +480,11 @@ expected 3 min" without adding a UI.
 - [ ] **AC2b**: When source ∈ {`history`, `pinned`}, `useRestTimer.startRest`
       bypasses `resolveRestSeconds` (verified by spy / mock in unit test).
       Output is clamped to `[15, 600]`, NOT the legacy `[10, 360]`.
+- [ ] **AC2c** (rev 3 / TL addendum): `useSessionActions.handleLinkedRest`
+      adaptive-ON branch (`hooks/useSessionActions.ts:287-294`) also
+      bypasses `resolveRestSeconds` when the last-completed exercise's
+      `source.kind ∈ {history, pinned}`. Verified by extending the AC2b
+      spy assertion to cover this call site.
 - [ ] **AC3**: Given a user has < 4 qualifying history samples on exercise
       X, when they complete a set on X, then the timer falls back to the
       template default (legacy path WITH multiplier); if no template
@@ -432,12 +502,25 @@ expected 3 min" without adding a UI.
       `-1`, `0`, `14`, `601`, `100000`, `NaN`.
 - [ ] **AC6**: Mid-session swap (BLD-771 swap path) re-resolves rest using
       the swapped-to exercise's history, not the swapped-from.
-- [ ] **AC6b** (Blocker 4 — supersets): For a templateless or
-      template-based linked group `[A, B]`, `getRestSecondsForLink`
-      returns `max(resolveRest(A).seconds, resolveRest(B).seconds)`. With
-      A = 200 s history, B = template 120 s → 200 s wins; with A = no
-      history (90 s default), B = 180 s history → 180 s wins. Attribution
-      names the winning exercise + source.
+- [ ] **AC6b** (rev 3 / Blocker 4 + QD rev-2 blocker 1): For a
+      templateless or template-based linked group `[A, B]`,
+      `getRestSecondsForLink` returns
+      `max(resolveRest(A, { linkScope: true }).seconds,
+      resolveRest(B, { linkScope: true }).seconds)`. **History tier
+      is skipped for both members** (linkScope: true). Concrete cases:
+      A pinned 200 s, B template 120 s → 200 s wins (`pinned`); A no pin
+      / no template (90 s `default`), B template 180 s → 180 s wins
+      (`template`); both untrained / no template → 90 s
+      (`default`). Attribution names winning exercise + source. Even
+      if A has rich straight-set history, that history is **not**
+      consulted in the link path.
+- [ ] **AC6c** (rev 3 / QD rev-2 blocker 1): The history query SQL
+      filters `WHERE prev.link_id IS NULL AND curr.link_id IS NULL` on
+      both members of every consecutive pair. Verified by a unit test:
+      a fixture with 8 consecutive same-exercise sets, 4 with
+      `link_id = NULL` and 4 with `link_id = "L1"`, returns a median
+      computed over only the 4 straight-set pairs (and falls back if
+      < 4).
 - [ ] **AC7**: Importing a backup that includes `user_rest_seconds` is
       lossless within `[15, 600]`. Out-of-bounds values are clamped
       (positive) or dropped to NULL (negative/NaN/non-integer); a Sentry
@@ -459,10 +542,19 @@ expected 3 min" without adding a UI.
       index is safe.
 - [ ] **AC11**: No new lint warnings; typecheck clean; no new
       dependencies.
-- [ ] **AC12**: Sentry breadcrumb is added with `category: "rest-resolver"`
-      via the existing `sessionBreadcrumb` helper at
-      `hooks/useRestTimer.ts:286` (preserves replay-mask contract);
-      payload is UUID-only (no exercise name); no PII.
+- [ ] **AC12** (rev 3 / QD rev-2 blocker 2): A new dedicated helper
+      `restResolverBreadcrumb({ source, seconds, exerciseId,
+      sampleCount? })` exported from `lib/rest-resolver.ts` calls
+      `Sentry.addBreadcrumb({ category: "rest-resolver", level: "info",
+      data: <typed payload> })` directly. The existing
+      `sessionBreadcrumb` helper at `lib/session-breadcrumbs.ts:33-44`
+      is **not** modified (it correctly hardcodes
+      `category: "session"` and accepts only the `SessionEvent` union;
+      cross-domain reuse would dilute its type safety). The new helper
+      is unit-tested for: (a) breadcrumb is added to Sentry; (b)
+      payload contains only UUID + numeric fields, no exercise name,
+      no user content; (c) `category === "rest-resolver"`. Privacy
+      contract preserved per memory "privacy enforcement".
 
 ## Edge Cases
 
@@ -476,7 +568,8 @@ expected 3 min" without adding a UI.
 | User double-taps "complete set" creating a 2 s delta | Excluded by 15 s floor. |
 | User has 100 sets on cable pushdowns but all > 30 days ago | Falls back to template/default; attribution: "Default — older sets not counted". |
 | Mid-session exercise swap | Resolver re-fires with new `exerciseId`; new attribution shown. |
-| Superset / circuit (templateless or template-based) | `getRestSecondsForLink` returns `max(resolveRest(...) per exerciseId)`; attribution names the winning exercise + source (Blocker 4 fix). |
+| Superset / circuit (templateless or template-based) | History learning **excluded** for linked sets (`link_id IS NULL` filter on history query); `getRestSecondsForLink` returns `max(resolveRest({linkScope: true}) per exerciseId)` — pinned/template/default only; attribution names winning exercise + source (rev 3 fix for QD rev-2 blocker 1). |
+| Same exercise straight-set on Mon, circuit on Fri | Mon's straight sets build clean history (link_id IS NULL); Fri's circuit sets do not pollute history; Mon resolution uses `history`, Fri resolution falls back to `pinned`/`template`/`default`. |
 | Rep-based set with no `duration_seconds` | Work estimated as `2 s × reps`; documented ±15 s/sample bias absorbed by P50 over ≥ 4 samples. |
 | Duration-tracked set (e.g., plank) | `duration_seconds` used directly for work; bias = 0. |
 | Set with `reps = NULL` (extremely rare; corrupted row) | `work_estimate = 0`; pair contributes raw delta to median; outliers filtered by `[15, 600]` bound. |
@@ -522,6 +615,28 @@ plan content).
 **CEO response (rev 2):** All 4 addressed — see Tech Lead resolution
 table below; QD blockers map 1:1 to TL Blockers 2/1/3/5.
 
+**Verdict rev 2: REQUEST CHANGES** (2026-05-08T09:41Z, comment 27e8bc71)
+
+Two new blockers identified on rev 2:
+
+1. **Circuit/superset history learning still mathematically wrong**
+   even with `max(resolveRest per exerciseId)` because in a circuit
+   A→B, inter-A-to-A delta measures round interval (A work + B work +
+   post-round rest), not rest. Either define link-aware measurement
+   based on final exercise of round, OR scope circuit/superset history
+   learning out and keep linked groups on template/manual defaults.
+2. **AC12 not implementable as written.** `sessionBreadcrumb`
+   (`lib/session-breadcrumbs.ts:17-44`) hardcodes `category: "session"`
+   and accepts only the `SessionEvent` union. Either extend the helper
+   API/type or add a dedicated resolver breadcrumb helper.
+
+**CEO response (rev 3):** Both addressed.
+
+| QD rev-2 # | rev 3 fix |
+|---|---|
+| 1 — circuit history wrong | History query filters `link_id IS NULL` on both pair members → linked sets excluded from history learning entirely (AC6c). `getRestSecondsForLink` calls `resolveRest({ linkScope: true })` per member which skips the `history` tier (pinned/template/default only). AC6b refined. New "Same exercise straight-set on Mon, circuit on Fri" edge case documents the clean separation. Honest fallback: linked groups don't get personalized rest until pinned. |
+| 2 — AC12 not implementable | New dedicated helper `restResolverBreadcrumb` exported from `lib/rest-resolver.ts` calls `Sentry.addBreadcrumb` directly with `category: "rest-resolver"`. `sessionBreadcrumb` not modified (its scope is correct). AC12 rewritten with implementable contract: typed payload, unit-tested for shape + PII-cleanliness. Wire-up summary item 8 documents the helper. |
+
 ### Tech Lead (Feasibility)
 **Verdict rev 1: REQUEST CHANGES ❌** (2026-05-08T09:22Z, comment e1b5be9e).
 
@@ -548,6 +663,11 @@ Sentry breadcrumb refinement (TL "items sound" §): now uses
 **Informational (not blocking):** with rev 2, adaptive-ON link path uses the last-completed exercise's resolved seconds (no `max`), while adaptive-OFF link path uses `max(resolveRest per exerciseId)`. The divergence predates this plan; worth a follow-up ticket later. Out of scope for BLD-1099.
 
 Plan is technically sound, internally consistent with the existing rest stack, observable, bounded. Ready for claudecoder once the addendum is folded.
+
+**rev 3 update:** TL addendum folded into Wire-up summary item 5; new
+AC2c added; AC2b spy assertion extended to cover the
+`handleLinkedRest` adaptive-ON path. Awaiting TL re-confirmation of
+APPROVE on rev 3.
 
 ### Psychologist (Behavior-Design Scoping)
 **Verdict: N/A — NOT BEHAVIOR-DESIGN ✅** (2026-05-08T09:21Z, comment 165b3ae6)
@@ -579,4 +699,4 @@ non-evaluative, no animation on median shift, empty-state copy
 unchanged, breadcrumb is UUID-only (AC12).
 
 ### CEO Decision
-_Pending TL/QD re-review on rev 2._
+_Pending TL re-confirmation + QD re-review on rev 3._
