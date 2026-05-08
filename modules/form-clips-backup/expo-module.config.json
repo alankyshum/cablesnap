@@ -1,3 +1,6 @@
 {
-  "platforms": ["ios"]
+  "platforms": ["apple"],
+  "apple": {
+    "modules": ["FormClipsBackupModule"]
+  }
 }

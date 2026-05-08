@@ -1,25 +1,36 @@
-import {
-  ConfigPlugin,
-  withDangerousMod,
-  withAndroidManifest,
-  AndroidConfig,
-} from "expo/config-plugins";
-import type { ExpoConfig } from "expo/config";
-import * as fs from "fs";
-import * as path from "path";
+/* eslint-disable */
+/**
+ * Expo config plugin: with-form-clips-backup
+ *
+ * Excludes the `form-clips/` directory from iCloud backup (iOS) and
+ * Android Auto Backup. Required by BLD-1092 Hard Rule 4.
+ *
+ * iOS: The FormClipsBackup Swift module in modules/form-clips-backup/ is
+ * automatically included by Expo's autolinking via expo-module.config.json.
+ * No additional prebuild patching is required on the iOS side — autolinking
+ * handles CocoaPods pod inclusion and JSI bridging.
+ *
+ * Android:
+ *   - Writes data_extraction_rules.xml (API >= 31) and
+ *     full_backup_content.xml (API < 31) to res/xml/.
+ *   - Patches AndroidManifest.xml <application> with
+ *     android:dataExtractionRules and android:fullBackupContent.
+ *
+ * This plugin is idempotent — safe to re-run on every `expo prebuild`.
+ * Existing in-repo plugins (with-release-signing.js, with-wearos-module.js)
+ * use the same CJS pattern; see those files for additional context.
+ */
 
-// ---------------------------------------------------------------------------
-// Sentinel markers — kept for future use if patching strategy changes.
-// ---------------------------------------------------------------------------
+const fs = require("fs");
+const path = require("path");
+const { withDangerousMod, withAndroidManifest } = require("expo/config-plugins");
+const { getMainApplicationOrThrow } = require("@expo/config-plugins/build/android/Manifest");
 
 // ---------------------------------------------------------------------------
 // Android XML file contents
 // ---------------------------------------------------------------------------
 
-/**
- * data_extraction_rules.xml — used on Android API >= 31.
- * Excludes form-clips/ from both cloud backup and device transfer.
- */
+/** data_extraction_rules.xml — used on Android API >= 31. */
 const DATA_EXTRACTION_RULES_XML = `<?xml version="1.0" encoding="utf-8"?>
 <!--
   Managed by the with-form-clips-backup Expo config plugin.
@@ -37,10 +48,7 @@ const DATA_EXTRACTION_RULES_XML = `<?xml version="1.0" encoding="utf-8"?>
 </data-extraction-rules>
 `;
 
-/**
- * full_backup_content.xml (backup_rules.xml) — used on Android API < 31.
- * Excludes form-clips/ from Auto Backup on older SDKs.
- */
+/** full_backup_content.xml — used on Android API < 31. */
 const FULL_BACKUP_CONTENT_XML = `<?xml version="1.0" encoding="utf-8"?>
 <!--
   Managed by the with-form-clips-backup Expo config plugin.
@@ -56,7 +64,10 @@ const FULL_BACKUP_CONTENT_XML = `<?xml version="1.0" encoding="utf-8"?>
 // Android — write XML resource files
 // ---------------------------------------------------------------------------
 
-function writeAndroidXmlFiles(projectRoot: string): void {
+/**
+ * @param {string} projectRoot
+ */
+function writeAndroidXmlFiles(projectRoot) {
   const xmlDir = path.join(
     projectRoot,
     "android",
@@ -93,10 +104,12 @@ function writeAndroidXmlFiles(projectRoot: string): void {
 // Android — patch AndroidManifest.xml <application> element
 // ---------------------------------------------------------------------------
 
-function applyAndroidManifestMod(
-  androidManifest: AndroidConfig.Manifest.AndroidManifest
-): AndroidConfig.Manifest.AndroidManifest {
-  const app = AndroidConfig.Manifest.getMainApplicationOrThrow(androidManifest);
+/**
+ * @param {import("@expo/config-plugins/build/android/Manifest").AndroidManifest} androidManifest
+ * @returns {import("@expo/config-plugins/build/android/Manifest").AndroidManifest}
+ */
+function applyAndroidManifestMod(androidManifest) {
+  const app = getMainApplicationOrThrow(androidManifest);
 
   // Set android:dataExtractionRules (API >= 31)
   if (!app.$["android:dataExtractionRules"]) {
@@ -116,7 +129,11 @@ function applyAndroidManifestMod(
 // Plugin entry point
 // ---------------------------------------------------------------------------
 
-const withFormClipsBackup: ConfigPlugin = (config: ExpoConfig) => {
+/**
+ * @param {import("expo/config").ExpoConfig} config
+ * @returns {import("expo/config").ExpoConfig}
+ */
+const withFormClipsBackup = (config) => {
   // Step 1: Write Android XML resource files via withDangerousMod
   config = withDangerousMod(config, [
     "android",
@@ -132,14 +149,16 @@ const withFormClipsBackup: ConfigPlugin = (config: ExpoConfig) => {
     return cfg;
   });
 
-  // iOS: The FormClipsBackup Swift module in modules/form-clips-backup/ is
-  // automatically included by Expo's autolinking via expo-module.config.json.
-  // No additional prebuild patching is required for iOS.
+  // iOS: FormClipsBackup Swift module is automatically linked by Expo's
+  // CocoaPods autolinking via modules/form-clips-backup/expo-module.config.json.
+  // No additional prebuild patching needed here.
 
   return config;
 };
 
-export default withFormClipsBackup;
+module.exports = withFormClipsBackup;
 
 // Export helpers for unit testing
-export { writeAndroidXmlFiles, DATA_EXTRACTION_RULES_XML, FULL_BACKUP_CONTENT_XML };
+module.exports.writeAndroidXmlFiles = writeAndroidXmlFiles;
+module.exports.DATA_EXTRACTION_RULES_XML = DATA_EXTRACTION_RULES_XML;
+module.exports.FULL_BACKUP_CONTENT_XML = FULL_BACKUP_CONTENT_XML;

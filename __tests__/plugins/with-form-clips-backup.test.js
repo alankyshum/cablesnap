@@ -9,17 +9,19 @@
  *  4. Is idempotent (safe to run on every expo prebuild).
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
-import {
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const {
   writeAndroidXmlFiles,
   DATA_EXTRACTION_RULES_XML,
   FULL_BACKUP_CONTENT_XML,
-} from "../../plugins/with-form-clips-backup";
+} = require("../../plugins/with-form-clips-backup");
 
 describe("with-form-clips-backup plugin — Android XML files", () => {
-  let tmpDir: string;
+  let tmpDir;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cablesnap-plugin-test-"));

@@ -60,11 +60,11 @@ setupConsoleLogBuffer();
 // Ensure form-clips/ is excluded from iCloud/Auto Backup on first boot.
 // Fire-and-forget: failure is non-fatal and is captured as a Sentry breadcrumb.
 excludeFormClipsFromBackup()
-  .then(({ ok, path: p }) => {
+  .then(({ ok }) => {
     Sentry.addBreadcrumb({
       category: "privacy",
       message: "form_clips_backup_exclusion_set",
-      data: { ok, path: p },
+      data: { ok },
       level: "info",
     });
   })
