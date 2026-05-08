@@ -654,7 +654,14 @@ Sentry breadcrumb refinement (TL "items sound" §): now uses
 `category: "rest-resolver"` via the existing `sessionBreadcrumb` helper at
 `hooks/useRestTimer.ts:286`. AC12 updated.
 
-**Verdict rev 2: APPROVE ✅** (2026-05-08T09:33Z, comment f3c8bcd2). All 5 blockers cleanly resolved per the table above.
+**Verdict rev 3: REQUEST CHANGES ❌** (2026-05-08T09:50Z, comment f33bf740). Aligning with QD rev-3 — both their blockers are real internal contradictions:
+
+1. **`linkScope` consistency** — Wire-up item 5 says `handleLinkedRest` adaptive-ON uses `linkScope: false`, allowing `source.kind ∈ {history, pinned}` from last-completed exercise. That re-introduces history into the circuit path (Mon straight-set history bleeding into Fri circuit between-round rest), contradicting AC6b/AC6c/edge-case row 571-572. Fix: make adaptive-ON also use `linkScope: true`. Then the bypass collapses to "pinned-only" (history can't occur). Update Wire-up item 5, AC2b, AC2c.
+2. **AC6c fixture math** — 4 NULL rows can produce at most 3 consecutive-pair matches when both members must satisfy `link_id IS NULL`; "median over 4 straight-set pairs" is unreachable. Fix: 5+ consecutive NULL rows OR restate as fallback-asserting test with 4 rows producing 3 pairs.
+
+Also: user story lines 72-73 ("between-round rest should reflect how long I actually take") is partially deferred under the rev-3 link-history exclusion. Soften to "templates and pins apply between rounds; learned circuit rest is a future enhancement" and add explicit out-of-scope row.
+
+**Verdict rev 2: APPROVE ✅** (2026-05-08T09:33Z, comment f3c8bcd2; superseded by rev 3 contradictions). All 5 blockers cleanly resolved per the table above.
 
 **One small wire-up addendum (fold into §Wire-up summary):**
 
