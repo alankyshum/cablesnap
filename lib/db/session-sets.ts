@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { eq, ne, sql, and, inArray, isNotNull, avg, count, max, asc, desc } from "drizzle-orm";
+import { eq, ne, sql, and, inArray, isNotNull, avg, count, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { isAttachment, isMountPosition } from "../cable-variant";
@@ -7,7 +7,7 @@ import { isGripType, isGripWidth } from "../bodyweight-grip-variant";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
-import { workoutSets, exercises, workoutSessions, templateExercises } from "./schema";
+import { workoutSets, exercises, workoutSessions } from "./schema";
 import { cascadeDeleteClipsForSets } from "../media/form-clips";
 
 export async function getSessionSets(
@@ -746,17 +746,9 @@ export async function getRestSecondsForExercise(
   sessionId: string,
   exerciseId: string
 ): Promise<number> {
-  const db = await getDrizzle();
-  const row = await db
-    .select({ rest_seconds: templateExercises.rest_seconds })
-    .from(workoutSessions)
-    .innerJoin(templateExercises, and(
-      eq(templateExercises.template_id, workoutSessions.template_id),
-      eq(templateExercises.exercise_id, exerciseId)
-    ))
-    .where(eq(workoutSessions.id, sessionId))
-    .get();
-  return row?.rest_seconds ?? 90;
+  const { resolveRest } = await import("../rest-resolver");
+  const source = await resolveRest(sessionId, exerciseId, "normal");
+  return source.seconds;
 }
 
 export type RestContext = {
@@ -764,6 +756,7 @@ export type RestContext = {
   category: ExerciseCategory;
   setType: SetType;
   rpe: number | null;
+  source: import("../rest-resolver").RestSource;
 };
 
 /**
@@ -774,28 +767,28 @@ export async function getRestContext(
   sessionId: string,
   exerciseId: string,
   set: { set_type: SetType; rpe: number | null },
+  options?: { linkScope?: boolean },
 ): Promise<RestContext> {
+  const { resolveRest } = await import("../rest-resolver");
   const db = await getDrizzle();
   const row = await db
     .select({
-      rest_seconds: templateExercises.rest_seconds,
       equipment: exercises.equipment,
     })
-    .from(workoutSessions)
-    .innerJoin(exercises, eq(exercises.id, exerciseId))
-    .leftJoin(templateExercises, and(
-      eq(templateExercises.template_id, workoutSessions.template_id),
-      eq(templateExercises.exercise_id, exerciseId),
-    ))
-    .where(eq(workoutSessions.id, sessionId))
+    .from(exercises)
+    .where(eq(exercises.id, exerciseId))
     .get();
-  const baseRestSeconds = row?.rest_seconds ?? 90;
   const equipment = row?.equipment ?? "";
+
+  const source = await resolveRest(sessionId, exerciseId, set.set_type, options);
+  const baseRestSeconds = source.seconds;
+
   return {
     baseRestSeconds,
     category: categorize(equipment),
     setType: set.set_type,
     rpe: set.rpe,
+    source,
   };
 }
 
@@ -803,14 +796,26 @@ export async function getRestSecondsForLink(
   sessionId: string,
   linkId: string
 ): Promise<number> {
-  const db = await getDrizzle();
-  const row = await db
-    .select({ rest: max(templateExercises.rest_seconds) })
-    .from(workoutSessions)
-    .innerJoin(templateExercises, eq(templateExercises.template_id, workoutSessions.template_id))
-    .where(and(eq(workoutSessions.id, sessionId), eq(templateExercises.link_id, linkId)))
-    .get();
-  return row?.rest != null ? Number(row.rest) : 90;
+  const { resolveRest } = await import("../rest-resolver");
+  const database = await getDatabase();
+
+  // Get all exercise IDs in this link group.
+  const memberRows = await database.getAllAsync<{ exercise_id: string }>(
+    `SELECT DISTINCT exercise_id
+       FROM workout_sets
+      WHERE session_id = ? AND link_id = ?`,
+    [sessionId, linkId],
+  );
+  if (memberRows.length === 0) return 90;
+
+  // Resolve with linkScope: true (history tier skipped) for each member.
+  // Return max(.seconds) — "longest rest wins" for linked groups (AC6b).
+  const resolved = await Promise.all(
+    memberRows.map((r) =>
+      resolveRest(sessionId, r.exercise_id, "normal", { linkScope: true })
+    ),
+  );
+  return resolved.reduce((acc, src) => Math.max(acc, src.seconds), 0) || 90;
 }
 
 export async function updateExercisePositions(
