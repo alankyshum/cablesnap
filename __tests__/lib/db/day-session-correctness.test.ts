@@ -287,3 +287,126 @@ describe("AC10 — recently used exercises appear in chip list", () => {
     expect(rows.length).toBe(0);
   });
 });
+
+// ─── AC21: getMonthlyGtgOnlyDates excludes days that also have workouts ──────
+
+/**
+ * AC21: a day with ONLY kind='day_session' rows → returned by getMonthlyGtgOnlyDates.
+ *       a day with any completed kind='workout' row → NOT returned (solid dot takes priority).
+ */
+describe("AC21 — getMonthlyGtgOnlyDates excludes mixed days", () => {
+  const QUERY = `
+    SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS workout_date
+    FROM workout_sessions
+    WHERE completed_at IS NOT NULL
+      AND kind = 'day_session'
+      AND started_at >= ?
+      AND started_at < ?
+      AND NOT EXISTS (
+        SELECT 1 FROM workout_sessions w2
+        WHERE w2.completed_at IS NOT NULL
+          AND w2.kind = 'workout'
+          AND date(w2.started_at / 1000, 'unixepoch', 'localtime')
+              = date(workout_sessions.started_at / 1000, 'unixepoch', 'localtime')
+      )
+  `;
+
+  function makeDb() {
+    const db = new DatabaseSync(":memory:");
+    db.exec(`
+      CREATE TABLE workout_sessions (
+        id TEXT PRIMARY KEY,
+        kind TEXT DEFAULT 'workout',
+        name TEXT NOT NULL DEFAULT '',
+        started_at INTEGER NOT NULL,
+        completed_at INTEGER DEFAULT NULL,
+        day_session_exercise_id TEXT DEFAULT NULL,
+        day_session_date TEXT DEFAULT NULL
+      );
+    `);
+    return db;
+  }
+
+  function midnightMs(dateStr: string): number {
+    // Parse "YYYY-MM-DD" as local midnight
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d).getTime();
+  }
+
+  const YEAR = 2026;
+  const MONTH = 4; // May (0-indexed)
+  const MONTH_START = new Date(YEAR, MONTH, 1).getTime();
+  const MONTH_END = new Date(YEAR, MONTH + 1, 1).getTime();
+
+  it("returns a GTG-only day when no workout exists on that date", () => {
+    const db = makeDb();
+    const gtgDate = "2026-05-10";
+    const ms = midnightMs(gtgDate);
+
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at, day_session_date) VALUES (?, 'day_session', 'GTG', ?, ?, ?)"
+    ).run("s1", ms, ms, gtgDate);
+
+    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
+    expect(rows.map((r) => r.workout_date)).toContain(gtgDate);
+  });
+
+  it("does NOT return a day that has both GTG sets AND a completed workout", () => {
+    const db = makeDb();
+    const mixedDate = "2026-05-15";
+    const ms = midnightMs(mixedDate);
+    const workoutMs = ms + 3600 * 1000; // 1 hour after midnight
+
+    // GTG row
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at, day_session_date) VALUES (?, 'day_session', 'GTG', ?, ?, ?)"
+    ).run("s-gtg", ms, ms, mixedDate);
+
+    // Completed workout row on the same calendar date
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at) VALUES (?, 'workout', 'Morning Lift', ?, ?)"
+    ).run("s-wo", workoutMs, workoutMs + 3600 * 1000);
+
+    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
+    expect(rows.map((r) => r.workout_date)).not.toContain(mixedDate);
+  });
+
+  it("does NOT return a day with a GTG row alongside an IN-PROGRESS (incomplete) workout", () => {
+    const db = makeDb();
+    const date = "2026-05-20";
+    const ms = midnightMs(date);
+
+    // GTG row
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at, day_session_date) VALUES (?, 'day_session', 'GTG', ?, ?, ?)"
+    ).run("s-gtg2", ms, ms, date);
+
+    // Active (incomplete) workout — completed_at IS NULL
+    db.prepare(
+      "INSERT INTO workout_sessions (id, kind, name, started_at) VALUES (?, 'workout', 'Active Lift', ?)"
+    ).run("s-wo2", ms + 1000);
+
+    // Active workout has completed_at = NULL so it should NOT match the w2 subquery
+    // → the GTG day SHOULD still be returned
+    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
+    expect(rows.map((r) => r.workout_date)).toContain(date);
+  });
+
+  it("only returns dates within the queried month range", () => {
+    const db = makeDb();
+    const inMonth = "2026-05-05";
+    const outOfMonth = "2026-04-30";
+
+    for (const [id, d] of [["s-in", inMonth], ["s-out", outOfMonth]]) {
+      const ms = midnightMs(d);
+      db.prepare(
+        "INSERT INTO workout_sessions (id, kind, name, started_at, completed_at, day_session_date) VALUES (?, 'day_session', 'GTG', ?, ?, ?)"
+      ).run(id, ms, ms, d);
+    }
+
+    const rows = db.prepare(QUERY).all(MONTH_START, MONTH_END) as { workout_date: string }[];
+    const dates = rows.map((r) => r.workout_date);
+    expect(dates).toContain(inMonth);
+    expect(dates).not.toContain(outOfMonth);
+  });
+});

@@ -53,7 +53,8 @@ export async function getMonthlyWorkoutDates(
 
 /**
  * BLD-1089: dates in a month that have ONLY GTG (day_session) sets.
- * Used to render the light-fill GTG-only dot on calendar days.
+ * Excludes any date that also has a completed kind='workout' row — those
+ * days render the normal solid dot, not the GTG-only light-fill dot (AC21).
  */
 export async function getMonthlyGtgOnlyDates(
   year: number,
@@ -62,21 +63,22 @@ export async function getMonthlyGtgOnlyDates(
   const start = new Date(year, month, 1).getTime();
   const end = new Date(year, month + 1, 1).getTime();
 
-  const db = await getDrizzle();
-  const rows = await db
-    .select({
-      workout_date: sql<string>`date(${workoutSessions.started_at} / 1000, 'unixepoch', 'localtime')`,
-    })
-    .from(workoutSessions)
-    .where(
-      and(
-        isNotNull(workoutSessions.completed_at),
-        sql`${workoutSessions.kind} = 'day_session'`,
-        gte(workoutSessions.started_at, start),
-        lt(workoutSessions.started_at, end)
-      )
-    )
-    .groupBy(sql`workout_date`) as unknown as { workout_date: string }[];
+  const rows = await query<{ workout_date: string }>(
+    `SELECT DISTINCT date(started_at / 1000, 'unixepoch', 'localtime') AS workout_date
+     FROM workout_sessions
+     WHERE completed_at IS NOT NULL
+       AND kind = 'day_session'
+       AND started_at >= ?
+       AND started_at < ?
+       AND NOT EXISTS (
+         SELECT 1 FROM workout_sessions w2
+         WHERE w2.completed_at IS NOT NULL
+           AND w2.kind = 'workout'
+           AND date(w2.started_at / 1000, 'unixepoch', 'localtime')
+               = date(workout_sessions.started_at / 1000, 'unixepoch', 'localtime')
+       )`,
+    [start, end]
+  );
 
   return rows.map((r) => r.workout_date);
 }
