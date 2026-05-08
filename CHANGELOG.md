@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Database integrity**: Enabled SQLite foreign-key enforcement on every connection so historic delete paths (workout history, CSV import undo, in-progress cancel) now correctly clean up Strava and Health Connect sync-log entries instead of leaving orphan rows.
 - **Grease-the-Groove mode**: Log scattered sets throughout the day without starting a workout — tap the floating Quick Add button, pick an exercise, confirm reps/weight, and get a 4-second undo toast. Daily GTG totals appear as a summary card on the home screen and a light-fill dot on the calendar.
 
 ## v0.26.23 — 2026-05-08
