@@ -22,9 +22,11 @@ import { fontSizes } from "../../constants/design-tokens";
 export type SuggestionExplainerModalProps = {
   visible: boolean;
   onClose: () => void;
+  /** BLD-1122: when true, adds a plateau-mode paragraph at the bottom. */
+  plateauMode?: boolean;
 };
 
-export function SuggestionExplainerModal({ visible, onClose }: SuggestionExplainerModalProps) {
+export function SuggestionExplainerModal({ visible, onClose, plateauMode }: SuggestionExplainerModalProps) {
   const colors = useThemeColors();
   return (
     <Modal
@@ -104,6 +106,12 @@ export function SuggestionExplainerModal({ visible, onClose }: SuggestionExplain
               Tap &ldquo;Next&rdquo; to fill empty sets with the suggested values (we&rsquo;ll
               ask first).
             </Text>
+
+            {plateauMode && (
+              <Text variant="body" style={[styles.plateauNote, { color: colors.onSurfaceVariant }]}>
+                Plateau detected: same top-set {"\u00b4"}weight × reps{"\u00b4"} for multiple sessions running. Consider this break-through plan.
+              </Text>
+            )}
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -171,4 +179,5 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
   sectionBody: { fontSize: fontSizes.sm, lineHeight: 20, marginLeft: 26 },
   footer: { marginTop: 8, fontSize: fontSizes.xs, lineHeight: 16 },
+  plateauNote: { marginTop: 12, fontSize: fontSizes.sm, lineHeight: 20, fontStyle: "italic" },
 });

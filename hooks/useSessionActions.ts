@@ -38,6 +38,7 @@ import {
   updateSetVariant,
   getRecentBodyweightGripHistory,
   updateSetBodyweightVariant,
+  updateSetsBatch,
 } from "../lib/db/session-sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import {
@@ -268,6 +269,8 @@ export function useSessionActions({
       updateGroupSet(setId, { reps: rounded });
       await updateSet(setId, resolvedSet.weight, rounded);
     }
+    // BLD-1122 AC17: weight/reps changes affect plateau window
+    queryClient.invalidateQueries({ queryKey: ["plateau"] });
   }, [updateGroupSet]);
 
   /** Handle superset next-hint or rest timer for linked exercises. */
@@ -327,6 +330,8 @@ export function useSessionActions({
           queryKey: ['bw-modifier-default', set.exercise_id],
         });
       }
+      // BLD-1122 AC17: set completion status affects plateau window
+      queryClient.invalidateQueries({ queryKey: ["plateau"] });
       return;
     }
 
@@ -381,6 +386,8 @@ export function useSessionActions({
     // update inside `completeSet` is authoritative for persistence/export.
     setClockStartedAt((prev) => (prev == null ? now : prev));
     await completeSet(set.id);
+    // BLD-1122 AC17: completing a set changes the plateau window
+    queryClient.invalidateQueries({ queryKey: ["plateau"] });
 
     // BLD-541 R2: invalidate the smart-default cache so the next add-set
     // for this bodyweight exercise reflects the just-completed modifier
@@ -684,6 +691,8 @@ export function useSessionActions({
       })).filter((g) => g.sets.length > 0)
     );
     await deleteSet(setId);
+    // BLD-1122 AC17: set deletion changes the plateau window
+    queryClient.invalidateQueries({ queryKey: ["plateau"] });
   }, []);
 
   const handleExerciseNotes = useCallback(async (exerciseId: string, text: string) => {
@@ -909,6 +918,8 @@ export function useSessionActions({
         await completeSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
+        // BLD-1122 AC17: completing a session finalizes the plateau window
+        queryClient.invalidateQueries({ queryKey: ["plateau"] });
 
         // Sync session edits (set count + set types) back to originating template (BLD-1038)
         try {
@@ -1018,11 +1029,66 @@ export function useSessionActions({
         await cancelSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
+        // BLD-1122 AC17: cancelled session removes sets from plateau window
+        queryClient.invalidateQueries({ queryKey: ["plateau"] });
         router.back();
       },
       true
     );
   };
+
+  /** BLD-1122: Atomically apply break-through fill updates to a set of rows.
+   * Writes via updateSetsBatch (single transaction), then invalidates plateau queries. */
+  const handleApplyBreakThrough = useCallback(
+    async (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => {
+      if (updates.length === 0) return;
+      // Capture pre-update snapshot for rollback fidelity (AC9)
+      const preUpdateSnapshot = new Map<string, { weight: number | null; reps: number | null }>();
+      setGroups((prev) => {
+        for (const g of prev) {
+          if (g.exercise_id !== exerciseId) continue;
+          for (const s of g.sets) {
+            const upd = updates.find((u) => u.id === s.id);
+            if (upd) preUpdateSnapshot.set(s.id, { weight: s.weight, reps: s.reps });
+          }
+        }
+        return prev.map((g) => {
+          if (g.exercise_id !== exerciseId) return g;
+          return {
+            ...g,
+            sets: g.sets.map((s) => {
+              const upd = updates.find((u) => u.id === s.id);
+              if (!upd) return s;
+              return { ...s, weight: upd.weight, reps: upd.reps };
+            }),
+          };
+        });
+      });
+      try {
+        await updateSetsBatch(updates);
+        queryClient.invalidateQueries({ queryKey: ["plateau"] });
+      } catch (err) {
+        // Rollback to snapshot values (not blanket null — preserves 0 vs null distinction)
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.exercise_id !== exerciseId) return g;
+            return {
+              ...g,
+              sets: g.sets.map((s) => {
+                const snap = preUpdateSnapshot.get(s.id);
+                if (!snap) return s;
+                return { ...s, weight: snap.weight, reps: snap.reps };
+              }),
+            };
+          })
+        );
+        showError("Failed to apply break-through suggestion");
+        // eslint-disable-next-line no-console
+        console.warn("[handleApplyBreakThrough] persist failed:", err);
+      }
+    },
+    [setGroups, showError]
+  );
 
   return {
     elapsed,
@@ -1049,6 +1115,7 @@ export function useSessionActions({
     handleMoveUp,
     handleMoveDown,
     handlePrefillFromPrevious,
+    handleApplyBreakThrough,
     finish,
     cancel,
   };

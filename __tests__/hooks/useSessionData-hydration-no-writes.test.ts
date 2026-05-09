@@ -111,6 +111,23 @@ jest.mock("@/hooks/useThemeColors", () => ({
   }),
 }));
 
+// BLD-1122: mock plateau-related DB calls so tests don't hit real SQLite
+jest.mock("../../lib/db/exercise-history", () => ({
+  getPlateauWindowBatch: jest.fn().mockResolvedValue(new Map()),
+  getPlateauWindow: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock("../../lib/db/settings", () => ({
+  getPlateauState: jest.fn().mockResolvedValue({ dismissals: {}, pending: {} }),
+  savePlateauState: jest.fn().mockResolvedValue(undefined),
+  dismissPlateau: jest.fn().mockResolvedValue(undefined),
+  queuePlateauPending: jest.fn().mockResolvedValue(undefined),
+  consumePlateauPending: jest.fn().mockResolvedValue(null),
+  clearPlateauEntries: jest.fn().mockResolvedValue(undefined),
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { renderHook, act } from "@testing-library/react-native";
 import { useSessionData } from "../../hooks/useSessionData";
 

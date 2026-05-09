@@ -8,6 +8,7 @@ import { GroupCardHeader } from "./GroupCardHeader";
 import { ExerciseGroupSetTable } from "./ExerciseGroupSetTable";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { Suggestion } from "../../lib/rm";
+import type { BreakThroughSuggestion } from "../../lib/plateau";
 
 export type GroupCardProps = {
   group: ExerciseGroup;
@@ -55,6 +56,10 @@ export type GroupCardProps = {
   onMoveUp?: (exerciseId: string) => void;
   onMoveDown?: (exerciseId: string) => void;
   onPrefill?: (exerciseId: string) => void;
+  /** BLD-1122: per-exercise plateau break-through hints */
+  plateauHints?: Record<string, BreakThroughSuggestion | null>;
+  /** BLD-1122: atomic apply callback */
+  onApplyBreakThrough?: (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => Promise<void>;
   // Timer
   timerActiveExerciseId?: string | null;
   timerActiveSetIndex?: number | null;
@@ -87,7 +92,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onOpenBodyweightGripPicker, onClearBodyweightGrip,
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
-  onPrefill,
+  onPrefill, plateauHints, onApplyBreakThrough,
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
   hasClipMap, onVideoGlyph,
@@ -199,6 +204,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           onPrefill={onPrefill}
+          plateauHint={plateauHints?.[group.exercise_id]}
+          onApplyBreakThrough={onApplyBreakThrough}
+          unit={unit}
           isFirst={isFirstReorderable}
           isLast={isLastReorderable}
           showMoveButtons={showMoveButtons}

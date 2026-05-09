@@ -92,7 +92,7 @@ export default function ActiveSession() {
 
   const {
     session, groups, setGroups, step, unit, suggestions,
-    allExercises, linkIds, palette, updateGroupSet, load,
+    allExercises, linkIds, palette, updateGroupSet, load, plateauHints,
   } = useSessionData({ id, templateId, sourceSessionId });
 
   const {
@@ -134,10 +134,8 @@ export default function ActiveSession() {
     handleDelete,
     handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
     handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill,
-    handleMoveUp, handleMoveDown, handlePrefillFromPrevious, finish, cancel,
-  } = useSessionActions({
-    id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, session, showToast, showError, triggerPR, unit,
-  });
+    handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, finish, cancel,
+  } = useSessionActions({ id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, session, showToast, showError, triggerPR, unit });
 
   const {
     activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex,
@@ -430,6 +428,7 @@ export default function ActiveSession() {
       onMoveUp={handleMoveUp}
       onMoveDown={handleMoveDown}
       onPrefill={handlePrefillFromPrevious}
+      plateauHints={plateauHints} onApplyBreakThrough={handleApplyBreakThrough}
       timerActiveExerciseId={timerExerciseId}
       timerActiveSetIndex={timerSetIndex}
       timerIsRunning={timerIsRunning}
@@ -447,7 +446,7 @@ export default function ActiveSession() {
       showPulleyPin={pulleyPinTrackingEnabled}
     />
     );
-  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled]);
+  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />

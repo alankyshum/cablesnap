@@ -22,6 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
+- **Plateau detection & break-through suggestions**: When an exercise stalls for 4+ sessions without weight or rep improvement, a suggestion card surfaces on the exercise detail screen with a context-aware action — deload to break a loaded stall, push for +2 reps at current weight, or check form if effort has been creeping up (BLD-1122).
+
 - **Track pulley pin position**: Tap the new pin chip next to any cable set to record which pulley pin you used (1 through your machine's max). Stored per set so your exact stack position is always in the history export (BLD-1114).
 - **Setup photo per set**: Tap the camera icon on any completed cable set to snap a quick photo of the cable path, attachment, and pin — a visual reference so you can replicate the exact setup next time (BLD-1114).
 - **RPE capture nudge**: Exercise detail now shows a one-time banner for users who have logged RPE before but haven't enabled live capture — tap "Turn on" to enable in one step, or "Not now" to dismiss forever (BLD-1117).

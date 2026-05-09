@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/bna-toast";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import ExerciseForm from "../../../components/ExerciseForm";
 import { getExerciseById, updateCustomExercise } from "../../../lib/db";
-import { bumpQueryVersion } from "../../../lib/query";
+import { bumpQueryVersion, queryClient } from "../../../lib/query";
 import type { Exercise } from "../../../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -32,6 +32,8 @@ export default function EditExercise() {
       await updateCustomExercise(id, data);
       bumpQueryVersion("exercises");
       bumpQueryVersion("session");
+      // BLD-1122 AC17: exercise rename/edit may change plateau window display
+      queryClient.invalidateQueries({ queryKey: ["plateau"] });
       success("Exercise updated");
       timer.current = setTimeout(() => router.back(), 400);
     },

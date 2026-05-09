@@ -13,6 +13,7 @@ import { SuggestionExplainerModal } from "./SuggestionExplainerModal";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
 import type { Suggestion } from "../../lib/rm";
+import type { BreakThroughSuggestion } from "../../lib/plateau";
 
 export type GroupCardHeaderProps = {
   group: ExerciseGroup;
@@ -65,8 +66,15 @@ export type GroupCardHeaderProps = {
   isFirst?: boolean;
   isLast?: boolean;
   showMoveButtons?: boolean;
+  /** BLD-1122: per-exercise plateau break-through hint */
+  plateauHint?: BreakThroughSuggestion | null;
+  /** BLD-1122: atomic apply callback for plateau break-through */
+  onApplyBreakThrough?: (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => Promise<void>;
+  /** BLD-1122: weight unit for break-through confirmation labels */
+  unit?: "kg" | "lb";
 };
 
+// eslint-disable-next-line complexity
 function GroupCardHeaderInner({
   group,
   // currentMode is intentionally accepted but unused after BLD-850 (mode
@@ -101,6 +109,9 @@ function GroupCardHeaderInner({
   isFirst,
   isLast,
   showMoveButtons,
+  plateauHint,
+  onApplyBreakThrough,
+  unit,
 }: GroupCardHeaderProps) {
   // BLD-560: dev-only render counter for memoization regression detection.
   // Metro strips the require + call-site in prod via __DEV__ DCE (matches the
@@ -257,6 +268,13 @@ function GroupCardHeaderInner({
             onUpdate={(setId, field, val) => safeOnUpdate(setId, field, val)}
             onOpenExplainer={() => setExplainerVisible(true)}
             exerciseName={group.name}
+            plateauHint={plateauHint}
+            unit={unit}
+            onApplyBreakThrough={
+              onApplyBreakThrough
+                ? (updates) => onApplyBreakThrough(eid, updates)
+                : undefined
+            }
           />
         )}
         {/* BLD-1028: pinned note read surface — always visible when a note exists */}
@@ -285,6 +303,7 @@ function GroupCardHeaderInner({
       <SuggestionExplainerModal
         visible={explainerVisible}
         onClose={() => setExplainerVisible(false)}
+        plateauMode={plateauHint != null}
       />
       {/* BLD-1028: backfill suggestion chip */}
       {group.pinnedNoteBackfill && !group.pinnedNote && (
