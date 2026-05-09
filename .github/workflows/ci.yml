@@ -84,8 +84,8 @@ jobs:
         # usage predictable on the GitHub-hosted runner.
         run: npm test -- --ci --runInBand
 
-  android-lint:
-    name: Android Lint (backup XML)
+  backup-xml-validation:
+    name: Backup XML validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # BLD-1114: Verify backup XML rules (set-media/ include/exclude) are valid
