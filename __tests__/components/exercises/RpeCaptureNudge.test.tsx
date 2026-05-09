@@ -243,6 +243,6 @@ describe("RpeCaptureNudge", () => {
       expect(queryByTestId("rpe-capture-nudge")).toBeNull();
     });
     expect(onDismiss).toHaveBeenCalled();
-    expect(mockToastError).toHaveBeenCalledWith("Saved your dismissal but couldn't enable capture — open Settings to retry");
+    expect(mockToastError).toHaveBeenCalledWith("Saved — couldn't enable capture. Try Settings");
   });
 });

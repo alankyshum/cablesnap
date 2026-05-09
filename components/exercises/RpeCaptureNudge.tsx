@@ -74,7 +74,7 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
       bumpQueryVersion("preferences");
     } catch {
       // nudgeShown already written — banner will never show again
-      toast.error("Saved your dismissal but couldn't enable capture — open Settings to retry");
+      toast.error("Saved — couldn't enable capture. Try Settings");
     }
     setEligible(false);
     onDismiss?.();
