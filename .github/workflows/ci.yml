@@ -114,16 +114,18 @@ jobs:
       - name: Validate backup XML (set-media rules)
         run: |
           # The with-form-clips-backup.js plugin generates two XML files:
-          #   data_extraction_rules.xml  — Android API >= 31 (cloud + device-transfer)
-          #   backup_rules.xml           — Android API < 31  (full backup)
+          #   form_clips_data_extraction_rules.xml  — Android API >= 31
+          #   form_clips_backup_rules.xml           — Android API < 31
           # Both must be well-formed XML and contain set-media/ exclusion rules.
 
-          DATA_XML=android/app/src/main/res/xml/data_extraction_rules.xml
-          BACKUP_XML=android/app/src/main/res/xml/backup_rules.xml
+          DATA_XML=android/app/src/main/res/xml/form_clips_data_extraction_rules.xml
+          BACKUP_XML=android/app/src/main/res/xml/form_clips_backup_rules.xml
 
           for f in "$DATA_XML" "$BACKUP_XML"; do
             if [ ! -f "$f" ]; then
               echo "::error::Missing backup XML: $f"
+              echo "Files found in android/app/src/main/res/xml/:"
+              ls android/app/src/main/res/xml/ 2>/dev/null || echo "(directory missing)"
               exit 1
             fi
             # Validate XML syntax
