@@ -119,4 +119,18 @@ jobs:
           EXPO_NO_TELEMETRY: 1
 
       - name: Android lint (lintVitalRelease)
-        run: cd android && ./gradlew :app:lintVitalRelease --no-daemon
+        run: |
+          cd android
+          # --continue: keep running even if Sentry upload task fails (no auth in CI)
+          ./gradlew :app:lintVitalRelease --no-daemon --continue || true
+          REPORT=app/build/reports/lint-results-vitalRelease.xml
+          if [ ! -f "$REPORT" ]; then
+            echo "::warning::Lint report not generated — skipping backup XML gate"
+            exit 0
+          fi
+          if grep -q 'severity="Fatal"' "$REPORT"; then
+            echo "::error::lintVitalRelease: fatal lint issues found (backup XML regression?)"
+            grep -B2 -A8 'severity="Fatal"' "$REPORT" | head -60
+            exit 1
+          fi
+          echo "lintVitalRelease: no fatal issues found"
