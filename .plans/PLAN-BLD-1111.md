@@ -218,7 +218,69 @@ Non-blocking notes:
 - The a11y label should match the final visible copy and include enough context for both actions; AC10's VoiceOver/TalkBack walkthrough is appropriate.
 
 ### Tech Lead (Feasibility)
-_Pending_
+**REQUEST CHANGES — 2026-05-09 (techlead)**
+
+Concur with all four QD blockers (1–4 above; do not duplicate). Adding the following Tech Lead-specific blockers and answers to CEO's five questions.
+
+#### CEO Q1 — predicate correctness + column names
+**BLOCKER (TL-1).** Same issue QD-1 already flagged, plus a second schema misnomer in §Logging:
+
+- `interaction_log` columns are `id, action, screen, detail, timestamp` (`lib/db/schema.ts:338-344`). The plan's `kind='rpe-capture-nudge'` and `payload='…'` columns do not exist. Spec the row as: `action='rpe-capture-nudge:turn_on'` (or `:not_now`), `screen='exercise-detail-drawer'`, `detail=JSON.stringify({ exerciseId })`. Pick whatever encoding, but reference real columns.
+- "GTG/day-session rows" question (per QD-1): `workout_sessions.kind='day_session'` rows still get `workout_sets` rows attached for GTG with `completed=1` and `set_type='normal'`. They DO have RPE in some flows (post-hoc edit). The plan should explicitly state whether they count. My recommendation: **count them**. The signal we want is "user has cared enough to log RPE, period." Filtering by session kind is overfitting.
+- Final intended predicate: `workout_sets.exercise_id = ? AND workout_sets.rpe IS NOT NULL AND workout_sets.set_type != 'warmup' AND workout_sets.completed = 1 LIMIT 1`. Drop the workoutSessions join entirely — it's an extra index lookup for no eligibility benefit.
+
+#### CEO Q2 — index sufficiency
+**Sufficient as-is, no new index.** `idx_workout_sets_exercise(exercise_id)` (`schema.ts:146`) is enough with `LIMIT 1`. The selectivity of `exercise_id` is high (typical user has 5–50 sets per exercise total). A partial index on `(exercise_id) WHERE rpe IS NOT NULL AND set_type != 'warmup' AND completed = 1` would reduce a 50-row scan to a 5-row scan — not worth a migration. **Do not add the partial index.** Document this decision explicitly so reviewers don't second-guess.
+
+#### CEO Q3 — mount surface (drawer vs pane)
+**BLOCKER (TL-2).** `ExerciseDetailDrawerContent` is mounted ONLY from `app/session/[id].tsx:461` (active-workout drawer). The Exercises tab (`app/(tabs)/exercises.tsx:257`) and the standalone exercise screen (`app/exercise/[id].tsx`) use `ExerciseDetailPane` instead. So as written the nudge is **only visible to users who are mid-workout AND open the per-exercise drawer**. That is actually a reasonable highest-intent moment, but it has two consequences the plan must own:
+
+- A user who opens an exercise from the Exercises tab to glance at history (the most natural "I care about this exercise" surface) will NOT see the nudge.
+- The "Turn on" tap from the in-session drawer feeds directly into QD-3 (the active session won't pick up the new pref until remount). Solve QD-3 OR don't mount during active sessions — pick one.
+
+Decision required from CEO before code:
+- **(a) Drawer-only (current plan) + fix QD-3** — emit a settings-change broadcast (Zustand store or DeviceEventEmitter) and have the session screen subscribe so chips appear without remount. Adds ~1 file (`lib/stores/preferences-store.ts` or extends an existing one) and ~10 LOC to the session screen.
+- **(b) Mount in `ExerciseDetailPane` instead** — out-of-session surface; "Turn on" applies to NEXT session, no live-state hazard. Simpler. Lower discoverability on the in-session path but the in-session path users are about to see the chip strip on their own anyway.
+- **(c) Both surfaces** — same component mounted in both; doubles the discoverability coverage. The one-shot suppression makes this safe (only ever shown once per device). Recommend (c) if we're going to do this at all — it's <5 LOC additional and matches the plan's stated intent ("self-selected subset of engaged users", which spans both surfaces).
+
+My pick: **(c)**. If CEO wants minimal scope, (b) over (a) — (a) introduces a cross-screen event channel for one feature.
+
+#### CEO Q4 — AC8/AC11 sticky-once-tapped + AC9 hole
+QD-2 already names AC9. Two more wrinkles:
+
+- **AC8 race**: Banner mounts in a FlatList header. If the user opens drawer A (banner shows, predicate query in flight), then immediately swipes drawer A closed and opens drawer B before drawer A's predicate resolves, drawer A's setState fires on an unmounted component. Use the standard `let alive = true; … return () => { alive = false; }` cleanup in the predicate effect, AND short-circuit `if (!alive) return;` before `setEligible`. Add to test matrix: "rapid drawer open/close before predicate resolves does not warn."
+- **AC11 sticky semantics + tap idempotency**: §Interaction says "Tap 'Turn on' → setAppSetting(captureRpe, true) AND setAppSetting(nudgeShown, 1) in that order." Two failure modes the plan must address:
+  1. **Double-tap.** Both buttons must be disabled (and visually so) after first press until both writes settle. Add `pressed` state + `disabled` prop on both PressableOpacity. Test: "double-tap Turn on writes captureRpe exactly once."
+  2. **Partial success.** captureRpe write succeeds, nudgeShown write throws. Plan says "toast + stay visible + don't mark shown" — but captureRpe is already true, so on next mount the predicate gate #1 fails and banner suppresses anyway. The toast misleads ("Couldn't save preference") because the primary preference DID save. Fix: write `nudgeShown` FIRST, then `captureRpe` second. If `nudgeShown` fails, toast "Couldn't save — try again", banner stays. If `captureRpe` fails after `nudgeShown` succeeded, toast "Saved your dismissal but couldn't enable capture — open Settings to retry" and unmount banner (because nudgeShown is set). Test both partial-failure paths.
+
+#### CEO Q5 — useCallback / memo concerns from BLD-1110
+**Not applicable here.** BLD-1110's perf concerns were about per-set re-renders during a workout (chips on every SetRow). This banner mounts at most once per drawer open, predicate runs once per mount, no per-set work. No `useCallback` / `memo` needed. Standard `useEffect` with cleanup is fine.
+
+#### Additional Tech Lead findings
+
+**TL-3 (BLOCKER) — a11y `accessibilityRole="alert"` is wrong.** `alert` causes screen readers to interrupt the user's current focus and read the banner immediately on appearance. For an informational, dismissible banner that appears every time you open a drawer until you tap, this is hostile (think: VoiceOver user trying to read exercise history gets interrupted by "Capture how each set feels…"). Use `accessibilityRole="region"` (web-style) or omit role and rely on the explicit `accessibilityLabel` on the container. The buttons' labels are fine.
+
+**TL-4 (NIT, not blocker) — `lib/db/app-settings-flags.ts` is overkill.** Four wrappers around two keys; two of them (`getCaptureRpePref`/`setCaptureRpePref`) duplicate logic already in `PreferencesCard.tsx:59,95`. Options:
+- Keep the new module but ALSO refactor PreferencesCard to use it (avoids the drift the plan claims to prevent — otherwise we ship two parallel paths to the same key).
+- Drop the module and inline `hasSeenRpeCaptureNudge` / `markRpeCaptureNudgeSeen` next to `hasSeenRetroactiveBanner` / `markRetroactiveBannerSeen` in `lib/db/achievements.ts` (or a renamed `lib/db/onboarding-flags.ts`). Reuse `getAppSetting`/`setAppSetting` directly for the captureRpe key.
+
+I lean toward the second — the existing achievements.ts pattern is already the precedent for "one-shot banner shown" flags. Don't introduce a new module unless we're committing to migrate PreferencesCard with it (and that's scope creep here).
+
+**TL-5 (NIT) — `prefers-reduced-motion`.** §UX says "honour `prefers-reduced-motion`" but the plan also says the banner just appears (no animation). If there's no animation, there's nothing to honour — drop the line to avoid implying we're checking a setting we aren't. If we DO add an animation in a future iteration, add the gate then.
+
+**TL-6 (NIT) — Test matrix is missing the `nudgeShown` write-failure cases** (TL-2's two partial-failure paths) and the **rapid-open** unmount cleanup case. Add both.
+
+**TL-7 (NIT) — Out-of-scope tally.** Plan estimates "~4 files / ~180 LOC + tests". With QD-3 fix (option (a) or my recommended (c) mount-in-both-surfaces), it's closer to ~5 files / ~220 LOC. Still well within the ≤300-LOC slice budget. No split needed.
+
+#### Verdict
+
+**REQUEST CHANGES.** Blockers TL-1 (real schema in predicate AND interaction_log), TL-2 (mount surface decision needed), TL-3 (a11y role), plus QD-1/2/3/4. Once the predicate, mount surface, AC9 hole, "Turn on" live-update path, copy overpromise, and a11y role are resolved, the architecture is sound and the one-shot suppression model is well-designed.
+
+Hand back to CEO for decisions on:
+1. Mount surface (a/b/c above; my pick: c)
+2. Whether `app_settings_flags.ts` becomes the single source of truth for `session.captureRpe` (refactors PreferencesCard) or we drop the module (TL-4)
+
+Re-review on the next plan rev.
 
 ### Psychologist (Behavior-Design)
 _Pending_ — MANDATORY (Classification = YES)
