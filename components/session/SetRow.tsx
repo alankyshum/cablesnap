@@ -20,7 +20,7 @@
  * wire any extra prop for it.
  */
 import React, { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
-import { findNodeHandle, I18nManager, Platform, Pressable, StyleSheet, View } from "react-native";
+import { findNodeHandle, I18nManager, Image, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Check, Trash2 } from "lucide-react-native";
@@ -166,6 +166,7 @@ export type SetRowProps = {
   onOpenPulleyPinPicker?: (setId: string) => void;
   showPulleyPin?: boolean;
   hasSetupPhoto?: boolean;
+  setupPhotoUri?: string;
   onSetupPhotoGlyph?: (setId: string) => void;
   // BLD-1110: Live RPE capture. captureRpe enables the 4-chip strip under
   // completed sets. onRpeChange writes to DB + emits breadcrumb in parent.
@@ -183,7 +184,7 @@ export const SetRow = memo(function SetRow({
   onOpenVariantPicker, onClearVariant,
   exerciseName, onOpenBodyweightGripPicker, onClearBodyweightGrip,
   hasClip, onVideoGlyph,
-  pulleyPin, onOpenPulleyPinPicker, showPulleyPin, hasSetupPhoto, onSetupPhotoGlyph,
+  pulleyPin, onOpenPulleyPinPicker, showPulleyPin, hasSetupPhoto, setupPhotoUri, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
 }: SetRowProps) {
   const colors = useThemeColors();
@@ -534,11 +535,21 @@ export const SetRow = memo(function SetRow({
                   : `Take setup photo for set ${set.set_number}`
               }
             >
-              <MaterialCommunityIcons
-                name={hasSetupPhoto ? "camera-plus" : "camera-plus-outline"}
-                size={22}
-                color={hasSetupPhoto ? colors.primary : colors.onSurfaceVariant}
-              />
+              {setupPhotoUri ? (
+                <Image
+                  source={{ uri: setupPhotoUri }}
+                  style={styles.setupPhotoThumb}
+                  resizeMode="cover"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
+              ) : (
+                <MaterialCommunityIcons
+                  name={hasSetupPhoto ? "camera-plus" : "camera-plus-outline"}
+                  size={22}
+                  color={hasSetupPhoto ? colors.primary : colors.onSurfaceVariant}
+                />
+              )}
             </Pressable>
           )}
           <Pressable
@@ -909,6 +920,11 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+  },
+  setupPhotoThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
   },
   durationCol: {
     flex: 1,

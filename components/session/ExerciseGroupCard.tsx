@@ -68,6 +68,7 @@ export type GroupCardProps = {
   onOpenPulleyPinPicker?: (setId: string) => void;
   showPulleyPin?: boolean;
   hasSetupPhotoMap?: Record<string, boolean>;
+  setupPhotoUriMap?: Record<string, string>;
   onSetupPhotoGlyph?: (setId: string) => void;
   // BLD-1110: live RPE capture
   captureRpe?: boolean;
@@ -90,7 +91,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
   hasClipMap, onVideoGlyph,
-  onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, onSetupPhotoGlyph,
+  onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
 }: GroupCardProps) {
   const colors = useThemeColors();
@@ -147,6 +148,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       onOpenPulleyPinPicker={onOpenPulleyPinPicker}
       showPulleyPin={showPulleyPin}
       hasSetupPhotoMap={hasSetupPhotoMap}
+      setupPhotoUriMap={setupPhotoUriMap}
       onSetupPhotoGlyph={onSetupPhotoGlyph}
       captureRpe={captureRpe}
       onRpeChange={onRpeChange}
@@ -179,6 +181,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           firstSet={firstSet}
           previousPerformance={group.previousSummary}
           previousPerformanceA11y={group.previousSummaryA11y}
+          previousSetupPhotoUri={group.previousSetupPhotoUri}
           suggestion={suggestion}
           step={step}
           onUpdate={onUpdate}

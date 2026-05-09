@@ -34,7 +34,7 @@ export function PulleyPinPickerSheet({ visible, currentPin, maxPins = 12, onSele
   const handleConfirmMax = useCallback(() => {
     const parsed = parseInt(maxInput, 10);
     if (isNaN(parsed) || parsed < 1 || parsed > 30) {
-      Alert.alert("Invalid value", "Please enter a number between 1 and 30.");
+      Alert.alert("Invalid value", "Max 30 pins supported");
       return;
     }
     onSetMaxPins?.(parsed);

@@ -39,6 +39,7 @@ export type GroupCardHeaderProps = {
   firstSet: SetWithMeta | undefined;
   previousPerformance?: string | null;
   previousPerformanceA11y?: string | null;
+  previousSetupPhotoUri?: string | null;
   /** BLD-850: suggestion + step + onUpdate are now owned by the header so it
    *  can render the inline Last/Next row. They were previously routed through
    *  the standalone SuggestionChip rendered by `ExerciseGroupCard`. */
@@ -79,6 +80,7 @@ function GroupCardHeaderInner({
   firstSet,
   previousPerformance,
   previousPerformanceA11y,
+  previousSetupPhotoUri,
   suggestion,
   step,
   onUpdate,
@@ -247,6 +249,7 @@ function GroupCardHeaderInner({
           <LastNextRow
             previousPerformance={previousPerformance}
             previousPerformanceA11y={previousPerformanceA11y}
+            previousSetupPhotoUri={previousSetupPhotoUri}
             suggestion={suggestion ?? null}
             sets={group.sets}
             step={safeStep}

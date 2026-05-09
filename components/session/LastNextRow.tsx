@@ -21,8 +21,8 @@
  * visual mismatch with the design system is reported, swap for the
  * existing in-app dialog pattern — the functional contract here stays.
  */
-import React from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, Image, Modal, Pressable, StyleSheet, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
@@ -50,6 +50,8 @@ export type LastNextRowProps = {
    * an additional escape hatch but is not currently exercised by tests.
    */
   alertImpl?: typeof Alert.alert;
+  /** BLD-1114: Previous session setup photo URI (16x16 thumbnail in Last half). */
+  previousSetupPhotoUri?: string | null;
 };
 
 function formatNextLabel(s: Suggestion): string {
@@ -115,9 +117,11 @@ export function LastNextRow({
   onOpenExplainer,
   exerciseName,
   alertImpl,
+  previousSetupPhotoUri,
 }: LastNextRowProps) {
   const colors = useThemeColors();
   const alertFn = alertImpl ?? Alert.alert;
+  const [photoPreviewVisible, setPhotoPreviewVisible] = useState(false);
 
   const hasLast = previousPerformance != null && previousPerformance !== "";
   const hasNext = suggestion != null;
@@ -190,8 +194,47 @@ export function LastNextRow({
             <Text style={[styles.labelTag, { color: colors.onSurfaceVariant }]}>Last:</Text>{" "}
             {previousPerformance}
           </Text>
+          {previousSetupPhotoUri ? (
+            <Pressable
+              onLongPress={() => setPhotoPreviewVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              accessibilityRole="imagebutton"
+              accessibilityLabel="Previous session setup photo - long press to preview"
+            >
+              <Image
+                source={{ uri: previousSetupPhotoUri }}
+                style={styles.setupPhotoThumb}
+                resizeMode="cover"
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+            </Pressable>
+          ) : null}
         </Pressable>
       )}
+
+      {previousSetupPhotoUri ? (
+        <Modal
+          visible={photoPreviewVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPhotoPreviewVisible(false)}
+          accessibilityViewIsModal
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setPhotoPreviewVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close setup photo preview"
+          >
+            <Image
+              source={{ uri: previousSetupPhotoUri }}
+              style={styles.modalImage}
+              resizeMode="contain"
+            />
+          </Pressable>
+        </Modal>
+      ) : null}
 
       {showDivider && (
         <View
@@ -289,5 +332,21 @@ const styles = StyleSheet.create({
   },
   infoBtn: {
     padding: 4,
+  },
+  setupPhotoThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    flexShrink: 0,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalImage: {
+    width: "90%",
+    height: "70%",
   },
 });

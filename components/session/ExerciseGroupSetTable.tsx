@@ -44,6 +44,7 @@ export type ExerciseGroupSetTableProps = {
   onOpenPulleyPinPicker?: (setId: string) => void;
   showPulleyPin?: boolean;
   hasSetupPhotoMap?: Record<string, boolean>;
+  setupPhotoUriMap?: Record<string, string>;
   onSetupPhotoGlyph?: (setId: string) => void;
   // BLD-1110: live RPE capture
   captureRpe?: boolean;
@@ -60,7 +61,7 @@ export function ExerciseGroupSetTable({
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
   hasClipMap, onVideoGlyph,
-  onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, onSetupPhotoGlyph,
+  onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
 }: ExerciseGroupSetTableProps) {
   return (
@@ -108,6 +109,7 @@ export function ExerciseGroupSetTable({
             onOpenPulleyPinPicker={onOpenPulleyPinPicker}
             showPulleyPin={showPulleyPin}
             hasSetupPhoto={hasSetupPhotoMap?.[set.id] ?? false}
+            setupPhotoUri={setupPhotoUriMap?.[set.id]}
             onSetupPhotoGlyph={onSetupPhotoGlyph}
             captureRpe={captureRpe}
             onRpeChange={onRpeChange}

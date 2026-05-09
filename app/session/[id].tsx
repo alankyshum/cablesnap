@@ -43,6 +43,7 @@ import { FormClipsPlayer } from "../../components/session/FormClipsPlayer";
 import { PulleyPinPickerSheet } from "../../components/session/PulleyPinPickerSheet";
 import { SetupPhotoSheet } from "../../components/session/SetupPhotoSheet";
 import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
+import { toAbsPath } from "../../lib/media/form-clips";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -171,6 +172,7 @@ export default function ActiveSession() {
   const [setupPhotoSetId, setSetupPhotoSetId] = useState<string | null>(null);
   const [setupPhotoRow, setSetupPhotoRow] = useState<import("../../lib/media/setup-photos").SetMediaRow | null>(null);
   const [hasSetupPhotoMap, setHasSetupPhotoMap] = useState<Record<string, boolean>>({});
+  const [setupPhotoUriMap, setSetupPhotoUriMap] = useState<Record<string, string>>({});
 
   // BLD-1110: Live RPE capture preference
   const [captureRpe, setCaptureRpe] = useState(false);
@@ -306,11 +308,16 @@ export default function ActiveSession() {
       }
       Promise.all([
         Promise.all(completedSetIds.map((sid) => getClipForSet(sid).then((clip) => [sid, !!clip] as const))),
-        Promise.all(completedSetIds.map((sid) => getSetupPhotoForSet(sid).then((photo) => [sid, !!photo] as const))),
+        Promise.all(completedSetIds.map((sid) => getSetupPhotoForSet(sid).then((photo) => [sid, photo] as const))),
       ])
         .then(([clipPairs, photoPairs]) => {
           setHasClipMap(Object.fromEntries(clipPairs));
-          setHasSetupPhotoMap(Object.fromEntries(photoPairs));
+          const boolPairs = photoPairs.map(([sid, photo]) => [sid, !!photo] as const);
+          setHasSetupPhotoMap(Object.fromEntries(boolPairs));
+          const uriPairs = photoPairs
+            .filter(([, photo]) => photo != null)
+            .map(([sid, photo]) => [sid, toAbsPath(photo!.rel_path)] as const);
+          setSetupPhotoUriMap(Object.fromEntries(uriPairs));
         })
         .catch(() => {});
     }).catch(() => {});
@@ -436,13 +443,14 @@ export default function ActiveSession() {
       onVideoGlyph={handleVideoGlyph}
       onOpenPulleyPinPicker={handleOpenPulleyPinPicker}
       hasSetupPhotoMap={hasSetupPhotoMap}
+      setupPhotoUriMap={setupPhotoUriMap}
       onSetupPhotoGlyph={handleSetupPhotoGlyph}
       captureRpe={captureRpe}
       onRpeChange={handleRpeChange}
       showPulleyPin={pulleyPinTrackingEnabled}
     />
     );
-  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled]);
+  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />

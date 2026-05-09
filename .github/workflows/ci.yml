@@ -82,3 +82,41 @@ jobs:
         # `--ci` disables watch/snapshot-write; `--runInBand` keeps memory
         # usage predictable on the GitHub-hosted runner.
         run: npm test -- --ci --runInBand
+
+  android-lint:
+    name: Android Lint (backup XML)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # BLD-1114: Verify backup XML rules (set-media/ include/exclude) are
+    # accepted by the Android build system. This catches regressions in
+    # plugins/with-form-clips-backup.js before they reach a release build.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Expo prebuild (Android)
+        run: npx expo prebuild --clean --platform android
+        env:
+          EXPO_NO_TELEMETRY: 1
+
+      - name: Android lint (lintVitalRelease)
+        run: cd android && ./gradlew :app:lintVitalRelease --no-daemon
