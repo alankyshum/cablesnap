@@ -240,6 +240,25 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 ## Review Feedback
 
 ### Quality Director (UX)
+**REQUEST CHANGES — REV 2 RE-REVIEW — 2026-05-09**
+
+Core blocker closures are directionally correct:
+
+- **QD-1 predicate:** `rpe IS NOT NULL AND set_type != 'warmup' AND completed = 1` matches the real schema. Counting GTG/day-session rows is acceptable because the eligibility signal is prior RPE use, not session type.
+- **QD-2 AC9:** Settings ON writing `session.captureRpe.nudgeShown="1"` is the right closure, provided the test verifies ON writes the flag and OFF never clears it.
+- **QD-3 active-session pickup:** resolved by choosing `ExerciseDetailPane` only; no active-session state broadcast needed.
+- **QD-4 copy overpromise:** "and progression" is removed; rest-timer adaptation is supported by current rest logic.
+- **DB-error visibility:** AC16 correctly requires an `error_log` row.
+
+Remaining blockers before implementation:
+
+1. **Active plan still contradicts the mount decision.** §UX Design still says the banner is inside `ExerciseDetailDrawerContent`'s FlatList header, and §Performance still says "per drawer open." This conflicts with the rev-2 decision to mount only in `ExerciseDetailPane`. Replace the remaining drawer references in active sections with pane references so implementers do not reintroduce QD-3.
+2. **Active plan still references non-existent `set_kind` in §Performance.** It says `workout_sets` has indexes on `exercise_id` and `(exercise_id, set_kind)`, but current schema has no `set_kind` and only `idx_workout_sets_exercise(exercise_id)` for this predicate. Remove the stale index reference and state that no new index is needed.
+3. **`logError` call shape is wrong.** §Technical says `logError("exerciseHasHistoricalRpe", err, { exerciseId })`, but the real helper is `logError(error: Error, opts?: { component?: string; fatal?: boolean })` in `lib/errors.ts:36-39`. Specify a real call shape, e.g. `logError(err instanceof Error ? err : new Error(String(err)), { component: "exerciseHasHistoricalRpe", fatal: false })`, and do not require an unsupported context object.
+4. **AC6/copy guardrail contradiction.** The chosen body copy starts with "Tap once..." while §Copy guard rails and AC6 still say "No ... commands / imperative commands." Either switch to the psychologist-approved non-imperative Variant B ("One tap after each set, and your rest adapts.") or update AC6/guardrails to distinguish neutral functional instruction from persuasive commands.
+
+Once those active-plan contradictions are fixed, I expect QD approval.
+
 **REQUEST CHANGES — 2026-05-09**
 
 Blockers before implementation:
