@@ -299,6 +299,33 @@ Non-blocking notes:
 - The a11y label should match the final visible copy and include enough context for both actions; AC10's VoiceOver/TalkBack walkthrough is appropriate.
 
 ### Tech Lead (Feasibility)
+**APPROVED — REV 3 RE-REVIEW — 2026-05-09 (techlead)**
+
+All four TL-rev2 blockers and all four TL-rev2 nits are resolved in rev 3:
+
+| Item | Resolution | Verified |
+|---|---|---|
+| TL-rev2-1 (stale drawer refs in active sections) | §UX line 55 → pane; §A11y line 85 → pane; §Empty/error 93 → pane; §Performance 161-162 → pane; §Risk Assessment 240 → pane | ✅ (one residual row noted below — QD-rev3 already driving) |
+| TL-rev2-2 (`set_kind` index typo in §Performance) | Line 161-162 rewritten with real index `idx_workout_sets_exercise` + "No new index required." | ✅ matches `schema.ts:146-148` |
+| TL-rev2-3 (`logError` call shape) | Lines 115-124 spec the real signature with `exerciseId` embedded in Error message; matches `lib/errors.ts:36-39` exactly | ✅ |
+| TL-rev2-4 (Variant A imperative vs AC6) | Switched to **Variant B** "One tap after each set, and your rest adapts." Non-imperative noun phrase. AC6 + a11y label updated to match verbatim. | ✅ |
+| TL-rev2-5 (pre-existing opt-in cohort) | §Edge Cases line 232 explicitly accepts and documents the cohort; "no bootstrap migration"; one-shot caps damage | ✅ |
+| TL-rev2-6 (AC5 GTG ambiguity) | AC5 now reads "`workout_sessions.kind='day_session'` (GTG) sets DO count if they meet the predicate (intentional per TL-1; predicate test (f))" | ✅ |
+| TL-rev2-7 (Reduced-motion edge-case row) | Row 227 now reads "N/A — banner has no animation; nothing to gate." | ✅ |
+| TL-rev2-8 (§UX line 94 vs §Interaction partial-failure model) | Line 94 now points to "§Interaction table (partial-failure rows) and AC15 for the two distinct toast paths" | ✅ |
+
+#### Note (NOT a TL blocker — QD-rev3 already driving)
+
+§Edge Cases line 222 ("Drawer opened from session screen vs. exercise picker vs. recent exercises | Same banner, same predicate — entry point doesn't matter") is the lone residual stale-drawer reference and contradicts both the mount decision and line 231. QD-rev3 has already opened a blocker on it (their §Quality Director rev 3 #1). This is the same class as my TL-rev2-1 and I'd ordinarily flag it; but since QD is independently driving it and the fix is one-row text reconciliation that doesn't touch architecture, code, tests, or any TL-axis concern, I'm not gating my approval on it. It WILL be cleaned up in rev 4 alongside QD-rev3 #1; the next plan revision should resolve it. Implementer must read §Scope-Out + AC1 + line 231 (which all correctly say drawer mount is OUT) and ignore line 222 if rev 4 hasn't landed yet.
+
+#### Verdict
+
+**APPROVED** on the Tech Lead (Feasibility) axis. No further architectural concerns. Architecture, file boundaries, predicate, indexing decision, error-handling shape, write ordering, race cleanup, partial-failure UX, tap idempotency, a11y semantics, scope sizing — all sound and internally consistent (modulo the single QD-flagged row above which is a text nit, not a logic gap).
+
+Plan is implementation-ready from a TL perspective. Once QD-rev3 #1 (line 222) and QD-rev3 cleanup (line 264 — `setAppSetting` row pointing to AC15) are reconciled in rev 4, plan can proceed to handoff. Psychologist already APPROVED WITH MODIFICATIONS on rev 2 and all PSY modifications are incorporated.
+
+#### Prior reviews retained for history
+
 **REQUEST CHANGES — REV 2 RE-REVIEW — 2026-05-09 (techlead)**
 
 All four rev-1 TL blockers are correctly addressed at the decision level (TL-1 schema/interaction_log columns, TL-2 mount = (b), TL-3 a11y role = `none`, TL-4 module dropped, TL-5 reduced-motion line dropped, TL-6 tests added, TL-7 scope accepted, TL Q4 #2 write order). However, the rev-2 plan is **internally inconsistent** — the decisions are recorded in §CEO Decision but several active sections still carry rev-1 wording that contradicts them. An implementer reading top-down would build the wrong thing.
