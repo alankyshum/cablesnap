@@ -3,7 +3,7 @@
 **Issue**: BLD-1110
 **Author**: CEO
 **Date**: 2026-05-09
-**Status**: DRAFT → IN_REVIEW (rev 2 — addressing QD + Tech Lead blockers)
+**Status**: DRAFT → IN_REVIEW (rev 3 — address rev-2 blockers: bucket spec, density, test updates)
 
 ## Research Source
 - **Origin**: Reddit/community gap analysis (r/fitness, r/weightlifting, r/naturalbodybuilding) + 2025-2026 third-party reviews of Hevy / Strong / Boostcamp (Dr. Muscle, RepReturn, StrengthLab360, GymGod).
@@ -14,7 +14,7 @@
 CableSnap **already** has RPE wired through the data layer, the rest-timer adaptation (`lib/rest.ts:122`), the progression suggestion (`lib/rm.ts:97`), the avg-RPE history chart, and the post-session edit screen. But **the live session screen — the most-used surface in the app — has no way to capture RPE**. The only way to log it is to finish the workout, navigate into Session Detail, tap Edit, and type a number per row.
 
 Result:
-1. Adoption of RPE is near-zero, so all the downstream RPE-aware features (smart rest timer, deload suggestions) silently fall back to defaults for the vast majority of sets.
+1. Adoption of RPE is near-zero, so all the downstream RPE-aware features (smart rest timer, maintain-load suggestion at high RPE) silently fall back to defaults for the vast majority of sets. (Note: `lib/rm.ts` returns `type: "maintain"` at high RPE, NOT a deload — see AC6.)
 2. We give Reddit/Hevy refugees the exact reason they cite for switching ("only a logbook") even though we already have the underlying smarts — they just can't feed them.
 3. The friction (open detail → edit → tap field → keyboard → number) is so high that even motivated users skip it.
 
@@ -31,7 +31,7 @@ This is the single highest-leverage UX gap we have: a tiny live-capture chip fli
 - **As an RPE/RIR-fluent lifter**, I want to long-press the chip row to enter a precise RPE (6.0–10.0 in 0.5 steps).
 - **As a lifter who doesn't care about RPE**, I want to ignore the chips entirely and have my workout work exactly as today.
 - **As a lifter using the smart rest timer**, I want my just-tapped chip to immediately adjust the rest countdown.
-- **As a lifter checking the "Next" suggestion**, I want my recent RPE values to inform whether the suggestion is "increase weight," "hold," or "deload."
+- **As a lifter checking the "Next" suggestion**, I want my recent RPE values to inform whether the suggestion is "increase weight" or "maintain load" (per existing `lib/rm.ts` semantics — no new deload behaviour added in this PR).
 
 ## Proposed Solution
 
@@ -66,10 +66,14 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
 - `accessibilityRole="radiogroup"` on the strip; each chip `accessibilityRole="radio"` with `accessibilityState={{ selected }}`.
 - `accessibilityLabel` per chip: "RPE 6, easy" / "RPE 7.5, moderate" / "RPE 9, hard" / "RPE 10, max effort".
 - `accessibilityHint`: "Long press to enter a precise value."
-- Touch target ≥ 32 dp tall, 56 dp wide. **Strip height hard-capped at 32 dp.** Set-row total height MUST NOT exceed 88 dp on any supported device after rev-2 changes.
+- Touch target ≥ 32 dp tall, 56 dp wide. **Strip height hard-capped at 32 dp.** Total set-row height per row type (rev 3, footer-merge model): cable row ≤ 96 dp, bodyweight-grip row ≤ 96 dp, plain row ≤ 96 dp (see Tech "Components" §3 for the topology breakdown). The original ≤ 88 dp target is replaced with this measured per-row-type budget.
 - **Manual a11y verification required in PR**: VoiceOver (iOS) AND TalkBack (Android) walk-throughs documented with screen recordings or transcripts. Don't ship on the React-Native radiogroup contract alone — verify per platform. (QD #5 resolution.)
 - Honour `prefers-reduced-motion` via new `hooks/useReducedMotion.ts` (Tech N3 — check first if a hook already exists; reuse if so) — no slide animation when reduced motion is on; chips just appear.
-- **Density verification (QD #1)**: PR MUST include screenshots on (a) iPhone SE (smallest supported phone), (b) Z Fold6 unfolded (per recent #533 regression), (c) iPhone 16 Pro Max. Each screenshot shows a session with at least 4 completed sets all with chip strips visible AND the next active set's complete tap-target unobstructed.
+- **Density verification (QD #1, rev 3)**: PR MUST include screenshots on (a) iPhone SE (smallest supported phone), (b) Z Fold6 unfolded (per recent #533 regression), (c) iPhone 16 Pro Max, with **at minimum these three row-type cases visible per device**:
+  - Case A: cable row with variant footer + RPE chips merged
+  - Case B: bodyweight-grip row with grip footer + RPE chips merged
+  - Case C: plain row (e.g. dumbbell) with standalone RPE strip
+  Each screenshot also shows the next active set's complete tap-target unobstructed. Measured row heights documented in PR description per row type per device, ≤ 96 dp each.
 
 **Settings**
 - New `Capture set RPE during workouts` toggle in `components/settings/PreferencesCard.tsx`. Default **OFF** (preserves current zero-friction default for users who don't want it).
@@ -90,7 +94,15 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
    - Bottom sheet **patterned on `BodyweightModifierSheet`** (Tech N4 — closest analogue: discrete-value select with current-value highlight + Cancel + Clear). NOT MarkerPickerSheet.
    - Background-tap dismisses (matches BodyweightModifierSheet behaviour — consistency over novelty).
    - 9 steps (6.0, 6.5 … 10.0); active step highlighted.
-3. Wire into `components/session/SetRow.tsx` — append `<RpeChipStrip />` under the row when `set.completed && prefs.captureRpe`. Uniform render under every completed set (Tech B7 resolution; rest-timer side-effect is gated separately inside `useRestTimer`, not inside SetRow).
+3. Wire into `components/session/SetRow.tsx` — render RPE chips in the **same footer row** as the existing cable variant footer (`SetRow.tsx:530-610`) or bodyweight-grip footer (`SetRow.tsx:613-734`) when one is present, sharing that row's vertical space (right-aligned, flex layout). When NO existing footer is present (e.g. dumbbell exercises with no variant/grip), render a standalone 32 dp RPE row below the main row instead. `PlateHint` (`SetRow.tsx:736`) continues to render after all footers, unchanged.
+
+   This resolves QD rev-2 density blocker by reusing already-allocated footer vertical space for cable + bodyweight-grip rows (the dominant CableSnap use cases) instead of stacking a new row beneath them. Layout topology per row type:
+   - **Cable row (with variant footer)**: main(48) + variant-footer-with-RPE-chips(28-32) + PlateHint(~14) = **≤ 96 dp**
+   - **Bodyweight-grip row (with grip footer)**: main(48) + grip-footer-with-RPE-chips(28-32) + PlateHint(~14) = **≤ 96 dp**
+   - **Plain row (no variant/grip footer, e.g. dumbbell)**: main(48) + standalone-RPE-row(32) + PlateHint(~14) = **≤ 96 dp**
+   - All ≤ 96 dp, modestly above the original 88 dp budget but bounded and measured. AC11 enforces this per row type.
+
+   Gating: `set.completed && prefs.captureRpe` — uniform across all row types. Most-recent-completed gating for `recomputeActiveRest` is enforced inside `useRestTimer`, not here.
 
 **Service / data**
 1. **Enhance the EXISTING `updateSetRPE`** at `lib/db/session-sets.ts:545` (Tech B3 resolution — uppercase RPE, do NOT introduce parallel `updateSetRpe`). Existing 11+ test mocks reference `updateSetRPE` and must continue to work.
@@ -113,12 +125,25 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
    - Emits `restResolverBreadcrumb` showing `rpeBucket` change (this is what AC5's verification hook reads).
    - Wired from `RpeChipStrip.onChange` via the parent's `maybeRecomputeActiveRest` callback in SetRow.
 
-**Buckets / multipliers**
+**Buckets / multipliers** (rev 3 — fix B-rev2-1 contiguity + B-rev2-2 cable-reason decision)
 - **Add a new `moderate` bucket to `lib/rest.ts`** (Tech B2 resolution — option (a)):
-  - Bucket boundaries (rev): low `rpe ≤ 6`, **moderate `7 ≤ rpe < 8.5` (NEW)**, midOrNull `6 < rpe < 7 OR rpe == null` (collapsed to handle "user hasn't tapped" + edge values 6.5), high `8.5 ≤ rpe < 9.5`, veryHigh `rpe ≥ 9.5`.
-  - Add `REST_MULTIPLIERS.rpe.moderate` (initial value: 1.10 — between midOrNull 1.0 and high 1.20; tech-lead may tune in code review).
-  - Update `pickReason / rpeLabelShort / rpeLabelAccessible` in lib/rest.ts to recognise the new bucket. Existing tests for low/mid/high/veryHigh continue to pass; new tests cover the moderate bucket explicitly.
-  - **No backward-compat issue**: existing data with `rpe = 7` or `7.5` will simply use the new multiplier going forward — there is no historical rest-target stored in the DB.
+  - Bucket boundaries (rev 3, contiguous, no dead-zone for any value chip OR precise-picker can write):
+    - `rpeBucket(null) → "midOrNull"` (short-circuit at top of function — null is the only value that maps to midOrNull now)
+    - `rpe ≤ 6` → `"low"`
+    - `rpe > 6 AND rpe < 8.5` → `"moderate"` (NEW — covers 6.5, 7, 7.5, 8)
+    - `8.5 ≤ rpe < 9.5` → `"high"`
+    - `rpe ≥ 9.5` → `"veryHigh"`
+  - Add `REST_MULTIPLIERS.rpe.moderate = 1.10` (between mid 1.0 and high 1.15, per Tech S1 — keeps perceptual delta small).
+  - Update `pickReason / rpeLabelShort / rpeLabelAccessible` (Tech S2 spec):
+    - `rpeLabelShort("moderate", rpe) → "Moderate · RPE ${rpe}"` (distinguishes from existing `"RPE 9"` for high)
+    - `rpeLabelAccessible("moderate", rpe) → "Moderate effort, RPE ${rpe}"`
+    - `pickReason` for `bucket === "moderate"` returns the moderate RPE label (option **(a)** per Tech B-rev2-2#1 — RPE always wins over category once recorded; product-coherent with the "RPE powers smart features" narrative).
+  - **Behaviour change acknowledged (rev 3)**: For users with historical cable+RPE 7-8 data, the rest chip will flip from "Cable" → "Moderate · RPE 7" the next time the resolver runs, AND rest target shifts +10s (90 × 0.8 × 1.10 = 80s vs prior 70s). This is intentional — see Risk row.
+  - **Required existing-test updates (rev 3, in scope, mechanical):**
+    1. `__tests__/lib/rest.test.ts:97-102` — assertion updated: `normal, RPE 7, cable, base 90` now expects `80s` and reason `"Moderate · RPE 7"` (not `"Cable"`). Test name updated from "single cable bucket, no double-count" to reflect new RPE-wins semantic.
+    2. `__tests__/lib/rest.test.ts:212-235` — local `refResolveTotal` reference function (lines 15-30) extended with a `moderate` arm: `if (i.rpe > 6 && i.rpe < 8.5) return REST_MULTIPLIERS.rpe.moderate;` placed between the high and low arms.
+    3. `__tests__/lib/small-lib-batch.test.ts:130-138` — `toMatchInlineSnapshot` for `REST_MULTIPLIERS.rpe` updated to include `moderate: 1.10` alongside `{high, low, midOrNull, veryHigh}`.
+  - **No backward-compat issue for the multiplier add itself** — the `moderate` key is additive to the object shape. The semantic change is the cable+moderate `pickReason` flip described above; that is a deliberate product call, not a regression.
 
 **Preferences**
 - **Use existing `app_settings` (key, value TEXT) table** via `getAppSetting` / `setAppSetting` (Tech B5 resolution — NOT a new prefs table).
@@ -153,11 +178,15 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
 - New `hooks/useReducedMotion.ts` (or reuse if already present)
 - New `session.captureRpe` key in `app_settings` + Settings toggle in `PreferencesCard`
 - Tests:
-  - `__tests__/lib/rest.bucket-moderate.test.ts` — new moderate bucket boundaries + multiplier
+  - `__tests__/lib/rest.bucket-moderate.test.ts` — new moderate bucket boundaries (null/6/6.5/7/8/8.49/8.5) + multiplier (1.10) + label assertions ("Moderate · RPE x" / "Moderate effort, RPE x")
   - `__tests__/components/session/RpeChipStrip.test.tsx` — render, a11y radiogroup contract, value/onChange
   - `__tests__/components/session/RpeChipStrip.gestures.test.tsx` — long-press chip does NOT cycle setType / trigger swipe-complete / clear variant / clear BW grip / clear BW modifier; tap chip does NOT toggle set completion (Tech N1 regression contract)
   - `__tests__/hooks/useRestTimer-recompute.test.ts` — recompute math (delta + max(0)), no-op for history/pinned, no-op for non-most-recent set, debounce, breadcrumb emitted
   - `__tests__/lib/db/session-sets.updateSetRPE-validation.test.ts` — clamp + round behaviour
+  - **Existing test updates (rev 3, in scope, mechanical):**
+    - `__tests__/lib/rest.test.ts:97-102` — cable+RPE 7 assertion updated: 80s + reason "Moderate · RPE 7" (per pickReason option (a))
+    - `__tests__/lib/rest.test.ts:212-235` — local `refResolveTotal` extended with moderate arm
+    - `__tests__/lib/small-lib-batch.test.ts:130-138` — `REST_MULTIPLIERS.rpe` snapshot updated to include `moderate: 1.10`
 - Manual a11y verification: VoiceOver + TalkBack walkthroughs documented in PR
 - Manual density verification: iPhone SE + Z Fold6 + iPhone 16 Pro Max screenshots in PR
 
@@ -183,7 +212,11 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
 9. **AC8 — Reduced motion**: With reduced motion ON (verified via `useReducedMotion`), no slide-in animation; chips appear immediately.
 10. **AC9 — Gesture isolation (regression)**: Long-pressing a chip does NOT cycle setType, does NOT trigger swipe-complete, does NOT clear variant, does NOT clear BW grip, does NOT clear BW modifier. Tapping a chip does NOT toggle set completion. Verified via RNTL `userEvent.longPress` / `userEvent.press` on the chip with no calls to parent gesture handlers (Tech N1).
 11. **AC10 — No regressions**: All existing tests pass; lint clean; typecheck clean. Existing 11+ test mocks of `updateSetRPE` continue to work without renaming.
-12. **AC11 — Density verification**: PR includes screenshots on (a) iPhone SE, (b) Z Fold6 unfolded, (c) iPhone 16 Pro Max — each showing a session with at least 4 completed sets with chip strips visible AND the next active set's complete tap-target unobstructed AND total set-row height ≤ 88 dp on every device.
+12. **AC11 — Density verification per row type**: PR includes screenshots on (a) iPhone SE, (b) Z Fold6 unfolded, (c) iPhone 16 Pro Max — each device showing all three row-type cases:
+    - **Case A (cable + variant footer + RPE merged)**: total row height ≤ 96 dp, RPE chips visible alongside variant indicator, next active set's complete tap-target unobstructed.
+    - **Case B (bodyweight + grip footer + RPE merged)**: total row height ≤ 96 dp, RPE chips visible alongside grip indicator, next active set's complete tap-target unobstructed.
+    - **Case C (plain row, no variant/grip, standalone RPE strip)**: total row height ≤ 96 dp, RPE strip visible below main row, next active set's complete tap-target unobstructed.
+    Measured heights documented in PR description per case per device.
 13. **AC12 — Validation**: `updateSetRPE(id, 11)` clamps to `10`. `updateSetRPE(id, -2)` clamps to `0`. `updateSetRPE(id, 7.3)` rounds to `7.5`. `updateSetRPE(id, NaN)` clamps to `null` (no throw). `updateSetRPE(id, null)` clears the field. Verified via unit test.
 
 ## Edge Cases
@@ -220,7 +253,8 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
 | Rest timer recomputes too aggressively → flicker | Low | Medium | 250 ms debounce in `recomputeActiveRest`; only most-recent-completed set triggers; history/pinned no-op |
 | Long-press conflicts with existing 5 row gestures (swipe-complete, setType cycle, variant clear, BW grip clear, BW modifier clear) | Low | Medium | RN Pressable doesn't bubble; AC9 + dedicated test asserts none of the 5 parent handlers fire from chip interactions |
 | `recomputeActiveRest` double-counts multipliers when source is history/pinned | Medium without guard | High (silent rest-time errors) | Explicit no-op for `source.kind ∈ {history, pinned}` per Tech B1 spec; covered by AC5b unit test |
-| Adding `moderate` bucket changes existing rest-times for users with `rpe ∈ [7, 8.5)` | Certain | Low | No historical rest-target stored; new multiplier applies prospectively only. Tech-lead reviews multiplier value (initial 1.10) at code-review time. |
+| Adding `moderate` bucket changes existing `pickReason` semantics for cable+RPE 7-8 historical data | Certain (intentional) | Low–Medium (chip-text change + ~10s rest delta) | **Acknowledged design call (Tech B-rev2-2#1 option a)** — RPE always wins over category once recorded, consistent with the "RPE powers smart features" narrative. Existing test `__tests__/lib/rest.test.ts:97-102` updated to assert new total (80s) + reason ("Moderate · RPE 7"). Documented in CHANGELOG entry on the implementation PR. No silent regression — change is bounded and only affects users who already have RPE in their history. |
+| `moderate` bucket boundary still leaves a dead-zone at RPE 6.5 | Resolved (rev 3) | — | Bucket boundaries made strictly contiguous: midOrNull is null-only; moderate covers (6, 8.5) including 6.5/7/7.5/8. Verified by extended `refResolveTotal` reference in `__tests__/lib/rest.test.ts:212-235`. |
 | Memo regression on FlatList scroll if `onChange` is recreated each render | Medium | Medium (perf) | Tech N2 contract enforced — `useCallback((v) => ..., [set.id])` keyed on `set.id` only; verified by code review |
 | `app_settings` write race with concurrent toggle | Low | Low | Existing `setAppSetting` already handles single-key writes serially via SQLite |
 
@@ -228,43 +262,33 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
 
 ### Quality Director (UX)
 
-**Verdict: REQUEST CHANGES** (rev 1, 2026-05-09 by quality-director). 6 blockers / non-blocking guidance. Full review in BLD-1110 comment thread.
+**Verdict rev 1: REQUEST CHANGES** (2026-05-09). Resolved in rev 2.
+**Verdict rev 2: REQUEST CHANGES** (2026-05-09 by quality-director) — density blocker: variant/grip footers + standalone RPE row would exceed 88 dp budget for cable + bodyweight-grip rows (the dominant CableSnap use cases). Plus minor wording cleanup.
 
-**Resolutions in rev 2:**
-- **#1 Row density**: Resolved via uniform render under EVERY completed set (no most-recent-only conditional — Tech B7 alignment), 32 dp hard-cap on strip height, AC11 expanded to require iPhone SE + Z Fold6 + iPhone 16 Pro Max screenshots with explicit ≤ 88 dp row-height assertion.
-- **#2 Moderate dead-zone**: Resolved via Tech B2(a) — adding new `moderate` bucket [7, 8.5) to `lib/rest.ts` with own multiplier. Each chip now lands in a distinct, non-no-op bucket.
-- **#3 AC6 wrong**: Fixed — AC6 now asserts the `maintain` branch with reason containing "RPE ≥ 9.5" (matches `rm.ts:98-100`).
-- **#4 Mid-rest recompute UX**: Fully specced in Tech B1 — `recomputeActiveRest`, `remaining = max(0, remaining + delta)`, elapsed preserved, history/pinned no-op (no double-count), 250 ms debounce, existing natural-expiry path on `remaining ≤ 0`. AC5 + AC5b explicit.
-- **#5 A11y wording**: AC7 now requires VoiceOver AND TalkBack walkthrough recordings/transcripts in PR (no relying on RN contract alone). AC9 + dedicated gesture-isolation test asserts no collision with the 5 existing onLongPress handlers.
-- **#6 Nudge split**: Resolved — moved to BLD-1111 follow-up. AC9 (old, nudge) removed; new AC9 covers gesture isolation.
+**Resolutions in rev 3:**
+- **Density blocker**: Adopted "combine into existing footer" model (option from QD's list). RPE chips now render INSIDE the existing variant footer (`SetRow.tsx:530-610`) or grip footer (`SetRow.tsx:613-734`) when present, sharing that row's vertical space. Standalone 32 dp RPE row only when no variant/grip footer (e.g. dumbbell). Per-row-type budget revised to ≤ 96 dp (measured rationale documented in Tech "Components" §3 — cable+variant+RPE = 48+32+14 ≈ 94 dp, comfortably under 96 dp). AC11 updated to require all three row-type cases (Case A cable+variant, Case B BW+grip, Case C plain) screenshotted on iPhone SE + Z Fold6 + iPhone 16 Pro Max.
+- **Wording cleanup**: "deload suggestions" → "maintain-load suggestion at high RPE" in Problem Statement; user story #5 ("hold/deload") → "increase weight or maintain load" with explicit note that no new deload behaviour is added in this PR.
 
-Re-pinging QD for re-review on rev 2.
+Re-pinging QD for rev-3 re-review.
 
 ### Tech Lead (Feasibility)
 
-**Verdict: REQUEST CHANGES** (rev 1, 2026-05-09 by techlead) — 8 BLOCKING / 5 NIT. Full review in BLD-1110 comment thread.
+**Verdict rev 1: REQUEST CHANGES** (2026-05-09). Resolved in rev 2.
+**Verdict rev 2: APPROVE WITH ONE BLOCKER** (2026-05-09 by techlead) — `recomputeActiveRest` and B3-B8/N1-N5 cleanly resolved. One blocker on the bucket spec being non-contiguous (re-creating a dead-zone at RPE 6.5), plus three concrete existing-test updates the plan needed to acknowledge.
 
-**Resolutions in rev 2 (all blockers + all nits adopted):**
-- **B1 (recompute path)**: Adopted verbatim — see Tech "Service / data" §2 and AC5/AC5b. New `recomputeActiveRest(setId, newRpe)` exported from `useRestTimer` with all four no-op guards (no active timer / wrong exercise / not most-recent / history-or-pinned source), `remaining = max(0, remaining + delta)`, elapsed preserved, 250 ms debounce, natural-expiry path reused.
-- **B2 (Moderate dead-zone)**: Picked option **(a)** — new `moderate` bucket [7, 8.5) with own multiplier (initial 1.10, tech-lead may tune in code review). Updates to `pickReason / rpeLabelShort / rpeLabelAccessible` included. New test file `__tests__/lib/rest.bucket-moderate.test.ts` added to "In Scope".
-- **B3 (don't duplicate updateSetRPE)**: Adopted — enhancing existing `updateSetRPE` (uppercase) at `lib/db/session-sets.ts:545` in-place. Existing 11+ test mocks continue to work. Plan no longer mentions a parallel `updateSetRpe`.
-- **B4 (drop withTransaction)**: Adopted — `updateSetRPE` uses plain `db.update(...)` matching sibling helpers.
-- **B5 (use app_settings)**: Adopted — key `session.captureRpe`, `value === "true"` semantic, no migration. Migration risk row dropped.
-- **B6 (AC6 wording)**: Fixed — AC6 now asserts `{ type: "maintain", reason: contains "RPE ≥ 9.5" }`. Out-of-scope clause added to call out that any actual deload (load decrease) is a separate ticket.
-- **B7 (most-recent-only contradiction)**: Resolved per recommendation (a) — chip strip renders under every completed set; only most-recent-completed triggers `recomputeActiveRest`. Out clause about "live screen only edits most-recent" removed.
-- **B8 (split nudge)**: Adopted — nudge split to **BLD-1111**. AC9 (old) removed. PR scope back within ~9 files / ~450 LOC + tests.
+**Resolutions in rev 3:**
+- **B-rev2-1 (bucket contiguity)**: Adopted recommended fix — `midOrNull` is now strictly `rpe == null` (short-circuit at top of function), `moderate` covers `rpe > 6 AND rpe < 8.5` (inclusive of 6.5, 7, 7.5, 8). No dead-zone for any value the chip strip OR the precise picker can write.
+- **B-rev2-2 (existing test updates)**: All three test updates added to "In Scope" as mechanical changes:
+  1. `rest.test.ts:97-102` — picked option **(a)** (RPE always wins over category in `pickReason`); test now asserts cable+RPE 7 → 80s + reason "Moderate · RPE 7". Behaviour change documented in Risk row + acknowledged as intentional product call.
+  2. `rest.test.ts:212-235` — `refResolveTotal` reference function extended with moderate arm.
+  3. `small-lib-batch.test.ts:130-138` — `REST_MULTIPLIERS.rpe` snapshot updated to include `moderate: 1.10`.
+- **S1 (multiplier value 1.10)**: Locked in at 1.10 as suggested. Tech-lead-tunable in code review.
+- **S2 (labels)**: Specced — `rpeLabelShort("moderate", rpe) → "Moderate · RPE ${rpe}"`, `rpeLabelAccessible("moderate", rpe) → "Moderate effort, RPE ${rpe}"`. `pickReason` for cable+moderate returns the moderate RPE label (option (a)).
 
-**Nits — all adopted:**
-- **N1 (gesture regression test)**: New AC9 + dedicated test file `RpeChipStrip.gestures.test.tsx` enumerates all 5 parent gesture handlers + completion toggle.
-- **N2 (memo callback contract)**: Documented in Tech "Components" §1 — `useCallback((v) => ..., [set.id])` keyed on `set.id` only.
-- **N3 (useReducedMotion)**: New `hooks/useReducedMotion.ts` (≤20 LOC), check for existing first.
-- **N4 (sheet template)**: Picked `BodyweightModifierSheet` as the template. Background-tap dismisses.
-- **N5 (breadcrumb)**: Renamed to `rpe-capture` category, payload `{ setId, oldRpe, newRpe, source: "chip" | "sheet" }`, dedicated `rpeBreadcrumb` helper alongside `restResolverBreadcrumb`.
-
-**File boundaries adopted as suggested.** Re-pinging Tech Lead for re-review on rev 2.
+Re-pinging Tech Lead for rev-3 re-review.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. (No streaks, notifications, gamification, motivational copy, leaderboards, identity framing, or re-engagement loops. RPE is a self-reported informational data point feeding existing algorithms. The discoverability nudge that QD #6 / Tech B8 flagged for behavioural risk has been split to BLD-1111 — when implemented, that ticket will require psychologist review per §3.2 since it touches re-engagement of inactive feature users.)
 
 ### CEO Decision
-Pending rev-2 reviewer verdicts.
+Pending rev-3 reviewer verdicts.
