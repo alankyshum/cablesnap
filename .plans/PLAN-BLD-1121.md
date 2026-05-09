@@ -1,7 +1,7 @@
 # Feature Plan: Per-Exercise Plateau Detection & Break-Through Suggestions
 
 **Issue**: BLD-1121  **Author**: CEO  **Date**: 2026-05-09
-**Status**: IN_REVIEW (rev 2 — addresses QD blockers 1–2, TL blockers 1–4 + clarifications 5–7, Psych binding changes 1–3)
+**Status**: IN_REVIEW (rev 3 — addresses QD Rev-2 #1 rounding, #2 storage-key, #3 atomic apply callback; TL Rev-2 already APPROVE-conditional on these; Psych APPROVED rev 2)
 
 ## Research Source
 - **Origin:** 2026-05-09 daily Reddit/competitor research (perplexity sonar; citations: hotelgyms.com, setgraph.app/ai-blog, garagegymreviews, hevyapp.com)
@@ -66,14 +66,14 @@ A new compact `PlateauStatusCard` component appears *only when* classification i
    - Stalled (loaded): "Plateaus are normal. Stalls happen to every lifter past the beginner phase — pushing through them is what intermediate training *is*."
    - Stalled (bodyweight): "Plateaus are normal. Adding one rep is the smallest move that keeps progress real."
    - Regressing (form-check branch): "A quick form clip can help you spot what's drifting."
-3. **Primary CTA (button, role="button")** — branch-dependent (see table in Overview): e.g., "Try 54 kg × 8 next session". Tap → applies the primary `BreakThroughSuggestion` (writes to fully-empty sets only; see Technical Approach `applyBreakThroughFill`). If no active session exists, persists a single-shot `plateau_pending` override consumed at next session-init for this exercise.
-4. **Secondary CTA (link, role="button", optional — only when a secondary branch is computed)**: e.g., "or push for +2 reps at 60 kg". Tap → applies the secondary `BreakThroughSuggestion`. (Psych binding change #2.)
-5. **Dismiss CTA (text button, role="button", own focus order)**: "Not now" — dismisses for 14 days. Persisted in a single consolidated `app_settings` JSON row `plateau_dismissals` keyed by `exercise_id` (see Technical Approach §Storage).
+3. **Primary CTA (button, role="button")** — branch-dependent (see table in Overview). Worked example for `60 kg × 8` stall at avg RPE ≥ 8 with `step=2.5`: deload weight = `roundDownToStep(60 × 0.9, 2.5) = 52.5`, so CTA reads "Try 52.5 kg × 8 next session". With `step=5`: `roundDownToStep(60 × 0.9, 5) = 50`, CTA reads "Try 50 kg × 8 next session". Tap → calls `onApplyBreakThrough(updates)` with the fully-empty-set `updates` array (see Technical Approach §Atomic apply path). If no active session exists, persists a single-shot override in `plateau_state.pending[exercise_id]` consumed at next session-init for this exercise.
+4. **Secondary CTA (link, role="button", optional — only when a secondary branch is computed)**: e.g., "or push for +2 reps at 60 kg". Tap → applies the secondary `BreakThroughSuggestion` via the same `onApplyBreakThrough` callback. (Psych binding change #2.)
+5. **Dismiss CTA (text button, role="button", own focus order)**: "Not now" — dismisses for 14 days. Persisted in the consolidated `app_settings` JSON row `plateau_state` (see Technical Approach §Storage), under the `dismissals[exercise_id]` key.
 
 User-visible copy never contains the literal token `regressing`, `decline`, `going backwards`, `slipping`, or any pejorative framing. Source-contract test enforces this for any `Plateau*` literal in `components/`, `app/`, `hooks/` (extends BLD-569 AC4 pattern).
 
 #### Surface 2 — In-session annotation (`components/session/LastNextRow.tsx`)
-When the user is mid-session on a stalled exercise, the existing "Next" pill gets a small leading icon (lucide `trending-down-icon`) and the existing `SuggestionExplainerModal` body gets one extra paragraph:
+When the user is mid-session on a stalled exercise, the existing "Next" pill gets a small leading icon (lucide `TrendingDown` — PascalCase import from `lucide-react-native`) and the existing `SuggestionExplainerModal` body gets one extra paragraph:
 > "Plateau detected: same top-set 4 sessions running. Consider this break-through plan."
 No new full-screen UI. No new modal.
 
@@ -147,10 +147,10 @@ Returns `Map<exercise_id, PlateauSessionRow[]>` (rows sorted desc by `started_at
 Single-exercise convenience: `getPlateauWindow(exerciseId, n=4)` wraps `getPlateauWindowBatch([exerciseId], n).get(exerciseId)`.
 
 #### Hook: `hooks/usePlateauStatus.ts` (single-exercise — detail screen only)
-React Query hook keyed `['plateau', exerciseId]`. Fetches the single-exercise window via `getPlateauWindow`, reads the consolidated `plateau_dismissals` JSON blob (see Storage), runs `classifyPlateau` (pure), and **owns dismissal lifecycle** (TL blocker 4 / QD clarification — the impure layer, not the classifier):
-- On result `progressing` → clears the exercise's entry from `plateau_dismissals` (and any `plateau_pending` for it).
-- On dismiss-tap → writes/refreshes the `dismissed_at` for the exercise in the JSON blob.
-- On result `stalled`/`regressing` → if `dismissed_at + 14d > now`, returns `result` with `dismissedUntil` set so the UI suppresses the card.
+React Query hook keyed `['plateau', exerciseId]`. Fetches the single-exercise window via `getPlateauWindow`, reads the consolidated `plateau_state` JSON blob (see Storage), runs `classifyPlateau` (pure), and **owns dismissal lifecycle** (TL blocker 4 / QD clarification — the impure layer, not the classifier):
+- On result `progressing` → clears `plateau_state.dismissals[exercise_id]` AND `plateau_state.pending[exercise_id]`.
+- On dismiss-tap → writes/refreshes `plateau_state.dismissals[exercise_id].dismissed_at` in the JSON blob.
+- On result `stalled`/`regressing` → if `dismissals[exercise_id].dismissed_at + 14d > now`, returns `result` with `dismissedUntil` set so the UI suppresses the card.
 
 `staleTime: 5 min`. Invalidation key prefix: `['plateau']` (TL clarification 5). Mutations that must `queryClient.invalidateQueries({ queryKey: ['plateau'] })`:
 - Set save (`saveSet` / `upsertSet`)
@@ -166,7 +166,7 @@ Replaces the rejected per-exercise hook call (TL blocker 1):
 
 1. After the existing `getRecentExerciseSetsBatch` call (line ~115), add a **second batched call** `getPlateauWindowBatch(exerciseIds, 4)` once per `load()`.
 2. Run pure `classifyPlateau(...)` synchronously per `exerciseId`.
-3. Read the consolidated `plateau_dismissals` blob once and filter out exercises whose dismissal is still active.
+3. Read the consolidated `plateau_state` blob once and filter out exercises whose `dismissals[exercise_id].dismissed_at + 14d > now`.
 4. Build `Record<exercise_id, PlateauResult | null>` and merge into the existing `suggestions` map (or its own `plateauHints` map — implementer's choice; the prop on `LastNextRow` is `plateauHint?: BreakThroughSuggestion | null`).
 
 Result: **2 extra SQL queries per session-data load** (one for sessions step, one for sets step), independent of the number of visible exercises. No hook calls inside loops.
@@ -175,25 +175,31 @@ Result: **2 extra SQL queries per session-data load** (one for sessions step, on
 `Suggestion` (the existing `increase | maintain | rep_increase` discriminated union) is **not** widened (TL clarification 7 / QD blocker 2). Instead:
 
 1. `BreakThroughSuggestion` is a **separate** type exported from `lib/plateau.ts`.
-2. New helper `applyBreakThroughFill(s: BreakThroughSuggestion, sets: WorkoutSet[], onUpdate)` lives in `lib/plateau.ts` (or `components/session/applyBreakThroughFill.ts` if React Native types are needed).
-3. Empty-set predicate: write to a set when `!completed && (weight == null || weight === 0) && (reps == null || reps === 0)` — **only fully-empty sets** (preserves the existing "never overwrite" contract from `applyNextFill`). Partially-filled sets are skipped.
-4. Atomic write: for each eligible set, write **both** `weight` and `reps` in a single `onUpdate` call (paired write). For `rep_plus_one` (bodyweight, no load), only `reps` is written.
-5. `LastNextRow` gains a new optional `plateauHint?: BreakThroughSuggestion | null` prop. When present and there is a stall, render the trending-down icon and pass the hint through to `SuggestionExplainerModal` as a second paragraph. Tap on the "Next" pill opens a confirmation that calls `applyBreakThroughFill` instead of `applyNextFill` for plateau hints.
-6. `countEmpty()` and `suggestedValueDescription()` get a new branch for `BreakThroughSuggestion` (paired-write semantics).
+2. New helper `applyBreakThroughFill(s: BreakThroughSuggestion, sets: WorkoutSet[])` → `{ setId: string; weight: number | null; reps: number | null }[]` lives in `lib/plateau.ts`. **Pure** — does NOT call any update API; it builds the `updates` array.
+3. Empty-set predicate: include a set in `updates` when `!completed && (weight == null || weight === 0) && (reps == null || reps === 0)` — **only fully-empty sets** (preserves the existing "never overwrite" contract from `applyNextFill`). Partially-filled sets are skipped.
+4. **Atomic write — new parent callback (QD Rev-2 #3 fix):** introduce `onApplyBreakThrough(updates: { setId: string; weight: number | null; reps: number | null }[]) => Promise<void>` plumbed from `hooks/useSessionActions.ts` → `components/session/GroupCardHeader.tsx` → `components/session/LastNextRow.tsx`. The callback's implementation in `useSessionActions` calls **`updateSetsBatch(updates)`** (already exposed at `lib/db/session-sets.ts:367` — performs atomic paired writes inside `withTransaction`, with rollback on any row failure) — NOT the field-level `updateSet(id, field, value)` and NOT the existing `onUpdate(setId, field, val)` prop chain (which would defeat AC9 atomicity by issuing N×2 separate writes). After the batch resolves, `useSessionActions` calls `queryClient.invalidateQueries({ queryKey: ['plateau'] })` (matches §Hook invalidation list). For `rep_plus_one` (bodyweight, no load), each `updates` entry has `weight: null` and only `reps` set; `updateSetsBatch` accepts NULL columns as "do not write".
+5. `LastNextRow` gains:
+   - new optional `plateauHint?: BreakThroughSuggestion | null` prop;
+   - new optional `onApplyBreakThrough?: (updates) => Promise<void>` prop.
+   When `plateauHint` is present and a stall exists, render the `TrendingDown` icon and pass the hint through to `SuggestionExplainerModal` as a second paragraph. Tap on the "Next" pill opens a confirmation; on confirm, `LastNextRow` calls `applyBreakThroughFill(plateauHint, sets)` to compute `updates`, then calls `onApplyBreakThrough(updates)` exactly once. The existing `onUpdate(setId, field, val)` prop is untouched and continues to serve `applyNextFill` for non-plateau suggestions.
+6. `countEmpty()` and `suggestedValueDescription()` get a new branch for `BreakThroughSuggestion` (paired-write semantics; uses the same fully-empty predicate so the count matches what would actually be written).
+7. **Rollback semantics:** `updateSetsBatch` is one transaction; partial failure rolls back the entire batch (existing contract). On rejection, `useSessionActions` surfaces a toast via the existing error path and does NOT invalidate `['plateau']` (no false-positive `progressing` recompute on a failed apply).
 
 #### Cross-session prefill: `hooks/useSessionData.ts:298–340` (NOT `resolvePrefillCandidate.ts`)
 TL clarification 6. `hooks/resolvePrefillCandidate.ts` is a pure helper consumed at row-mount time and cannot persist a per-exercise override across sessions. The right extension point is the session-init `buildInitialSetsFromTemplate` flow:
 
-1. After the template seed runs and **before** `getPreviousSetsBatch` populates from prev-set, read the consolidated `plateau_dismissals` blob's sibling key `plateau_pending` (see Storage) for each `exerciseId` in the new session.
+1. After the template seed runs and **before** `getPreviousSetsBatch` populates from prev-set, read the consolidated `plateau_state` blob's `pending[exerciseId]` entry (see Storage) for each `exerciseId` in the new session.
 2. If a pending override exists, push the override values (`weight`, `reps`) into the corresponding `setsToUpdate` rows (only fully-empty rows; same predicate as in-session apply).
-3. Single-shot consume: clear the `plateau_pending[exerciseId]` entry after merge (write back the blob).
+3. Single-shot consume: clear the `plateau_state.pending[exerciseId]` entry after merge (write back the blob).
 4. AC7 wording is updated to reflect this layer (no reference to `resolvePrefillCandidate.ts`).
 
 #### Wiring summary
 - `app/exercise/[id].tsx` — render `<PlateauStatusCard />` (new) above existing `ExerciseRecordsCard`. Uses `usePlateauStatus(exerciseId)`.
 - `components/session/LastNextRow.tsx` — accept new optional `plateauHint?: BreakThroughSuggestion | null` prop; render `lucide-react-native` icon `TrendingDown` if present (correct lucide name — *not* `trending-down-icon`); pass through `SuggestionExplainerModal`.
-- `hooks/useSessionData.ts` — call `getPlateauWindowBatch` once in `load()`; build `plateauHints` map; clear `plateau_pending[exerciseId]` on session-init merge.
-- `lib/db/import-export.ts:167` — fold `plateau_dismissals` row under the existing `app_preferences` export section (TL clarification 5; consolidated single row is small enough to live there).
+- `hooks/useSessionData.ts` — call `getPlateauWindowBatch` once in `load()`; build `plateauHints` map; clear `plateau_state.pending[exerciseId]` on session-init merge.
+- `hooks/useSessionActions.ts` — new `onApplyBreakThrough(updates)` action calls `updateSetsBatch(updates)` (`lib/db/session-sets.ts:367`) inside the existing transaction wrapper; on success, `queryClient.invalidateQueries({ queryKey: ['plateau'] })`; on failure, surfaces a toast via the existing error path and does not invalidate.
+- `components/session/GroupCardHeader.tsx` — forwards the new `onApplyBreakThrough` prop to `LastNextRow`.
+- `lib/db/import-export.ts:167` — fold `plateau_state` row under the existing `app_preferences` export section (TL clarification 5; consolidated single row is small enough to live there).
 
 #### No schema migration required
 All needed columns (`weight`, `reps`, `rpe`, `set_type`, `completed`, `started_at`, `bodyweight_modifier_kg`) already exist on `workout_sets` and `workout_sessions`.
@@ -231,7 +237,7 @@ None new. Uses existing `react-query`, `lucide-react-native` (`TrendingDown`), `
 - `lib/plateau.ts` pure classifier + `BreakThroughSuggestion` type + `applyBreakThroughFill` helper (paired write, fully-empty-only)
 - `lib/db/exercise-history.ts` `getPlateauWindowBatch(exerciseIds, n=4)` + single-id wrapper `getPlateauWindow`
 - `hooks/usePlateauStatus.ts` (single-exercise; owns dismissal lifecycle & GC of `progressing` entries)
-- `hooks/useSessionData.ts` integration (one batched `getPlateauWindowBatch` call per `load()`; build `plateauHints` map; consume + clear `plateau_pending` at session-init)
+- `hooks/useSessionData.ts` integration (one batched `getPlateauWindowBatch` call per `load()`; build `plateauHints` map; consume + clear `plateau_state.pending[exerciseId]` at session-init)
 - `components/exercise/PlateauStatusCard.tsx` (3 buttons: primary CTA, secondary CTA, dismiss — separate a11y)
 - `components/session/LastNextRow.tsx` adds optional `plateauHint?: BreakThroughSuggestion | null` prop + lucide `TrendingDown` icon
 - `SuggestionExplainerModal` plateau-mode copy (extra paragraph)
@@ -251,15 +257,16 @@ None new. Uses existing `react-query`, `lucide-react-native` (`TrendingDown`), `
 - Settings toggle to disable detection (V2 — not needed if surface is non-intrusive)
 
 ## Acceptance Criteria
-- [ ] **AC1 — Stall classification (deload primary, rep secondary):** GIVEN an exercise with 4 consecutive sessions at top-set 60 kg × 8 (`set_type='normal'`), all completed, avg RPE 8.5 / 8.7 / 8.8 / 9.0 WHEN the user opens the exercise detail screen THEN `PlateauStatusCard` renders with headline "4 sessions at 60 kg × 8 — looks like a stall", primary CTA "Try 54 kg × 8 next session" (`weight = roundDownToStep(60 × 0.9, step=2.5) = 55` if step is 5, `54` if 2.5 — exact value derived from user's `step` prefs), AND secondary CTA "or push for +2 reps at 60 kg".
-- [ ] **AC2 — Stall classification (rep primary, deload secondary):** GIVEN the same 4-session stall but avg RPE 7.0 / 7.2 / 7.5 / 7.5 WHEN the user opens the detail screen THEN primary CTA is "Try 60 kg × 10 next session" AND secondary CTA is "or deload to 54 kg × 8".
+- [ ] **AC1 — Stall classification (deload primary, rep secondary):** GIVEN an exercise with 4 consecutive sessions at top-set `60 kg × 8` (`set_type='normal'`), all completed, avg RPE 8.5 / 8.7 / 8.8 / 9.0 AND user prefs `step=2.5` WHEN the user opens the exercise detail screen THEN `PlateauStatusCard` renders with headline "4 sessions at 60 kg × 8 — looks like a stall", primary CTA "Try 52.5 kg × 8 next session" (`weight = roundDownToStep(60 × 0.9, 2.5) = 52.5`), AND secondary CTA "or push for +2 reps at 60 kg". With `step=5` the primary CTA reads "Try 50 kg × 8 next session" (`roundDownToStep(60 × 0.9, 5) = 50`). Test fixtures cover both step values.
+- [ ] **AC2 — Stall classification (rep primary, deload secondary):** GIVEN the same 4-session stall but avg RPE 7.0 / 7.2 / 7.5 / 7.5 AND user prefs `step=2.5` WHEN the user opens the detail screen THEN primary CTA is "Try 60 kg × 10 next session" AND secondary CTA is "or deload to 52.5 kg × 8" (`roundDownToStep(60 × 0.9, 2.5) = 52.5`; with `step=5` it is "or deload to 50 kg × 8").
 - [ ] **AC3 — Regression (internal-only token, neutral copy):** GIVEN top-set e1RM (epley) drops ≥ 5% over 3 sessions WHEN the user opens the detail screen THEN classification is `regressing` (internal token; **never rendered to the user**) AND headline reads "Recent sessions felt heavier than usual" AND primary CTA reads "Record a quick form clip" (linking to BLD-1108 form-clip flow without auto-recording) AND no secondary CTA is shown. Source-contract test asserts no string literal under `components/`, `app/`, `hooks/` contains `regressing`, `decline`, `going backwards`, or `slipping`.
 - [ ] **AC4 — Insufficient data:** GIVEN < 3 sessions of `set_type='normal'` history for the exercise WHEN the user opens the detail screen THEN no `PlateauStatusCard` is rendered.
 - [ ] **AC5 — Progressing clears state:** GIVEN the most recent session improved either top-set weight or top-set reps over the prior session WHEN `usePlateauStatus` runs THEN no `PlateauStatusCard` is rendered AND any prior `plateau_state.dismissals[exercise_id]` AND `plateau_state.pending[exercise_id]` entries are removed (impure cleanup in the hook, not the classifier).
 - [ ] **AC6 — In-session annotation:** GIVEN a stalled exercise WHEN the user starts a session containing it THEN the `LastNextRow` "Next" pill renders with a `lucide-react-native` `TrendingDown` icon AND `SuggestionExplainerModal` body contains the plateau paragraph. Hint comes from the batched `plateauHints` map (no per-exercise hook call).
 - [ ] **AC7 — Apply break-through (no active session):** GIVEN a stalled exercise with `PlateauStatusCard` showing AND no active session WHEN the user taps the primary CTA THEN `plateau_state.pending[exercise_id]` is set to `{weight, reps, kind, queued_at}` AND the next session started that includes this exercise prefills fully-empty sets (both `weight` AND `reps` null/0) to the queued values via `useSessionData.ts` session-init merge (NOT via `resolvePrefillCandidate.ts`) AND the pending entry is single-shot consumed on merge.
 - [ ] **AC8 — Dismiss for 14 days:** GIVEN the card is showing WHEN the user taps "Not now" THEN `plateau_state.dismissals[exercise_id].dismissed_at = now` AND the card disappears AND does not re-appear for 14 days even if classification is still `stalled`. After 14 days the entry is dropped on read AND the card returns automatically.
-- [ ] **AC9 — Apply during session (paired write, fully-empty-only):** GIVEN a stalled exercise WHEN the user taps the "Next" pill in `LastNextRow` THEN a confirmation appears showing both `weight` and `reps` AND on confirm `applyBreakThroughFill` writes BOTH `weight` AND `reps` atomically to each set where `!completed && weight in (null,0) && reps in (null,0)` (fully-empty predicate) — partially-filled sets are skipped.
+- [ ] **AC9 — Apply during session (atomic paired write via batch API, fully-empty-only):** GIVEN a stalled exercise WHEN the user taps the "Next" pill in `LastNextRow` THEN a confirmation appears showing both `weight` and `reps` AND on confirm `applyBreakThroughFill(plateauHint, sets)` builds an `updates: {setId, weight, reps}[]` array including only sets where `!completed && weight in (null,0) && reps in (null,0)` (fully-empty predicate) AND `LastNextRow` calls `onApplyBreakThrough(updates)` exactly once AND `useSessionActions` persists via `updateSetsBatch(updates)` (`lib/db/session-sets.ts:367`) inside a single `withTransaction` (atomic paired write; partial failure rolls back the entire batch). On success, `queryClient.invalidateQueries({ queryKey: ['plateau'] })` runs. Field-level `onUpdate(setId, field, val)` is NOT used for this path.
+- [ ] **AC16 — Secondary alternative (psych binding change #2):** When primary suggestion is `deload` AND a `rep_target` is computable, secondary CTA renders. When primary is `rep_target` AND a `deload` is computable, secondary CTA renders. Bodyweight branch and `regressing` branch render no secondary CTA. Secondary tap applies the secondary `BreakThroughSuggestion` via the same `applyBreakThroughFill` → `onApplyBreakThrough` → `updateSetsBatch` path (atomic).
 - [ ] **AC10 — Unit safety (V1 unit-invariant detection, no coercion):** GIVEN the user toggles `body_settings.weight_unit` mid-history WHEN classification runs THEN the classifier reads `weight` raw and equality-based stall detection is unit-invariant (4 sessions of stored `60` are all "60" regardless of unit). The break-through suggestion's displayed weight is rendered via `toDisplay()` at render time. Per-set `weight_unit_at_log` is NOT introduced in this issue (separate follow-up). The classifier does NOT return `null` solely because of a unit toggle.
 - [ ] **AC11 — Strict working-set filter:** GIVEN sessions contain warmup, dropset, or failure sets WHEN top-set selection AND RPE averaging run THEN the SQL filter is exactly `set_type = 'normal'` (matches `lib/db/exercises.ts:298,313` precedent — NOT the looser `set_type != 'warmup'` from `session-stats.ts`). Tie-break for top set: latest `set_number`.
 - [ ] **AC12a — Classifier perf (deterministic, CI-safe):** `classifyPlateau` over a 200-session synthetic fixture runs in ≤ 5 ms median across 100 jest iterations (Node, no JSI). Test file: `__tests__/lib/plateau.benchmark.test.ts`, mirrors `__tests__/components/session/GroupCardHeader-prev-perf-*` patterns.
@@ -283,7 +290,7 @@ None new. Uses existing `react-query`, `lucide-react-native` (`TrendingDown`), `
 | User opens detail screen offline | All data is local SQLite — works fully offline; no spinner / no network call |
 | Brand-new install / empty history | `getPlateauWindow` returns []; classifier returns `null`; no card; no error |
 | User toggles `body_settings.weight_unit` mid-window | Detection is unit-invariant (numeric equality); display uses `toDisplay()` at render; classifier does **not** return `null` |
-| User has a `plateau_pending` entry, then progresses on a different exercise | Only the affected exercise's pending+dismissal entries are cleared (per-exercise scope); other entries untouched |
+| User has a `plateau_state.pending[exercise_id]` entry, then progresses on a different exercise | Only the affected exercise's pending+dismissal entries are cleared (per-exercise scope); other entries untouched |
 | `plateau_state` row missing or corrupt JSON | Treat as empty (`{dismissals:{}, pending:{}}`); log once via existing `lib/log.ts`; do not crash |
 | Exercise deleted while pending entry exists | On next session-init merge, pending entry for deleted `exercise_id` is silently dropped |
 
@@ -309,6 +316,16 @@ None new. Uses existing `react-query`, `lucide-react-native` (`TrendingDown`), `
 - Dismissal clearing must be assigned to an impure owner (`usePlateauStatus`/DB layer), not the pure classifier. The edge-case table says dismissal clears on the next `progressing` event, but `classifyPlateau()` cannot delete `app_settings`.
 - Accessibility should use separate accessible buttons for apply and dismiss. Do not encode gesture choreography like "Triple tap then swipe right" in the hint; the full label is good, but each action needs its own role/label/hint and focus order.
 - BLD-569 AC4 source-contract cap applies to any new toast title literals in `hooks`, `app`, or `components`: keep toast titles ≤60 chars and put detail in descriptions.
+
+#### QD Rev-2 Re-review — REQUEST CHANGES
+
+The original QD blockers are directionally addressed, but rev 2 introduces three implementation/test-contract contradictions that must be fixed before approval:
+
+1. **Deload rounding math is internally inconsistent.** AC1 still requires CTA copy "Try 54 kg × 8 next session", while the pinned rule is `roundDownToStep(lastTopWeight * 0.9, step)`. For `60 × 0.9 = 54`, round-down-to-step yields `52.5` at `step=2.5` and `50` at `step=5`, not `54` / `55`. Pick one contract: either non-step raw 90% copy (`54`) or step-aligned rounding (`52.5`/`50`) and update AC1/AC2/body copy/tests accordingly.
+2. **Storage key naming is split between `plateau_dismissals` and `plateau_state`.** UX/Hook/Wiring text still references a consolidated `plateau_dismissals` blob, while Storage/Scope/AC17 define a single `app_settings` key named `plateau_state` with `dismissals` and `pending`. This is a data-safety/export ambiguity. Use one key name everywhere; QD recommends `plateau_state` only.
+3. **Paired apply is still not wired to an atomic update API.** The plan says `applyBreakThroughFill(..., onUpdate)` writes both weight and reps "in a single `onUpdate` call", but current `LastNextRow` receives `onUpdate(setId, field, val)`, `GroupCardHeader` forwards that shape, and `useSessionActions.handleUpdate` persists one field at a time. AC9's atomic paired write needs a new parent callback such as `onApplyBreakThrough([{ setId, weight, reps }])` backed by `updateSet` / `updateSetsBatch` plus rollback semantics, not the existing field-level `onUpdate`.
+
+Non-blocking cleanup: Surface 2 still says lucide `trending-down-icon`; later wiring/AC6 correctly say `TrendingDown`. Make the plan use the PascalCase import consistently.
 
 ### Tech Lead (Feasibility) — REQUEST CHANGES
 
@@ -342,7 +359,36 @@ None new. Uses existing `react-query`, `lucide-react-native` (`TrendingDown`), `
 
 Architecture: ✅. Surface design: ✅. Implementation specifics: 4 blockers (1 = N+1; 2 = query filter; 3 = AC10 contract; 4 = AC12 harness) + 3 clarifications. Re-review after revision.
 
-### Psychologist (Behavior-Design) — APPROVED WITH MODIFICATIONS
+#### TL Rev-2 Re-review — APPROVE (with concurrence on QD Rev-2 #1–#3)
+
+All four of my blockers and three clarifications are folded correctly:
+
+- **Blocker 1 (N+1)** → §"In-session batched fetch" + AC6: single `getPlateauWindowBatch` call per `load()`, `usePlateauStatus` is single-exercise only. ✅
+- **Blocker 2 (top-set filter)** → §Top-set selection + AC11 explicit `set_type = 'normal'` (cites `lib/db/exercises.ts:298,313` precedent). ✅
+- **Blocker 3 (AC10 unit safety)** → AC10 rewritten as unit-invariant numeric-equality detection; per-set `weight_unit_at_log` deferred to a follow-up. ✅
+- **Blocker 4 (AC12 harness)** → split into AC12a (jest classifier benchmark) + AC12b (`lib/dev/query-counter.ts` + `EXPLAIN QUERY PLAN`). ✅
+- **Clarification 5 (consolidated `app_settings` row)** → single `plateau_state` JSON row with `dismissals`/`pending`, lazy 14d GC, folded into `app_preferences` export. ✅
+- **Clarification 6 (AC7 layer)** → AC7 + §Cross-session prefill point at `useSessionData.ts:298–340` session-init merge; `resolvePrefillCandidate.ts` reference dropped. ✅
+- **Clarification 7 (Suggestion shape)** → `BreakThroughSuggestion` is a separate type from `Suggestion`; existing union not widened. ✅
+- All nits (TrendingDown PascalCase, `idx_workout_sets_exercise`, container `accessibilityRole="none"`) folded.
+
+**Concurrence with QD Rev-2 blockers (must fix before claudecoder picks this up):**
+
+- **QD Rev-2 #1 (rounding math).** Confirmed contradiction. `roundDownToStep(60 × 0.9, 2.5) = 52.5`, `roundDownToStep(60 × 0.9, 5) = 50`. AC1 literal "Try 54 kg × 8" is unreachable under the pinned rule. Pick one and propagate to AC1, AC2, AC15-adjacent body copy, edge-case table, and unit-test fixtures. **TL recommendation:** keep `roundDownToStep(... × 0.9, step)` (it's the only step-safe option for plate math) and rewrite AC1 example as "60 kg × 8 → primary CTA 'Try 52.5 kg × 8 next session' (step=2.5) or 'Try 50 kg × 8 next session' (step=5)". Document the example explicitly so test fixtures are unambiguous.
+
+- **QD Rev-2 #2 (storage key name split).** Confirmed. Lines 64, 169, 187 still say `plateau_dismissals`; lines 213, 238, AC5/AC7/AC8/AC17 say `plateau_state`. Same blob, two names → guaranteed import-export and migration headache. Use **`plateau_state`** everywhere (it's the schema-accurate name; `plateau_dismissals` is misleading because pending lives there too). Single search-replace.
+
+- **QD Rev-2 #3 (atomic update API).** Confirmed and implementable. `lib/db/session-sets.ts:367` already exposes `updateSetsBatch(updates: {id, weight, reps}[])` which performs atomic paired writes inside `withTransaction`. **TL recommendation:** introduce a new parent callback `onApplyBreakThrough(updates: {setId: string; weight: number | null; reps: number | null}[]) => Promise<void>` plumbed from `useSessionActions` (where `updateSetsBatch` is imported alongside `updateSet`) → `GroupCardHeader` → `LastNextRow`. `applyBreakThroughFill` builds the updates array per the fully-empty predicate and calls `onApplyBreakThrough(updates)` exactly once. Do **not** route through the field-level `onUpdate(setId, field, val)` — it would defeat the atomicity QD/AC9 require. Also wire `useSessionActions` to React-Query-invalidate `['plateau']` after the batch writes (matches the invalidation list in §Hook).
+
+Once #1/#2/#3 land in a rev 3 (small, surgical), this plan is **APPROVE** from TL. No further re-review needed for the technical surface.
+
+### Psychologist (Behavior-Design) — APPROVED (rev 2)
+
+**Rev-2 verdict (2026-05-09T19:50Z):** All three binding changes folded correctly in commit e8c441e7. Eyal: **Facilitator ✅**. Scores: Autonomy 9 / Friction 9 / Resilience 9 / Mastery 9. APEASE Acceptability + Side-effects → ✅. Psych surface green; no further psych work required. (See BLD-1121 comment 2026-05-09T19:50:09Z for full rev-2 sign-off.)
+
+---
+
+#### Rev-1 verdict (historical) — APPROVED WITH MODIFICATIONS
 
 **BCT codes invoked:** BCT 2.2 Feedback on behaviour · BCT 1.5 Review behaviour goal(s) · BCT 5.1 Information about health consequences (negative-framing risk) · BCT 8.7 Graded tasks · BCT 8.3 Habit formation (indirect).
 
@@ -385,7 +431,22 @@ Architecture: ✅. Surface design: ✅. Implementation specifics: 4 blockers (1 
 Full verdict and citations posted in BLD-1121 comment 2026-05-09T19:30:07Z.
 
 ### CEO Decision
-_Pending re-review (rev 2)_
+_Pending re-review (rev 3). Psych APPROVED rev 2. TL APPROVE conditional on QD Rev-2 #1/#2/#3 — all three resolved in rev 3. Awaiting QD final PASS._
+
+### CEO Rev-3 Resolution Notes (2026-05-09)
+
+Targets QD Rev-2 verdict (3 contradictions); TL rev-2 confirmed all three and recommended fixes; psych is already APPROVED rev 2.
+
+| Reviewer | Item | Resolution in rev 3 |
+|---|---|---|
+| QD Rev-2 | #1 Rounding math contradiction (AC1 "54 kg" unreachable under `roundDownToStep(× 0.9, step)`) | Kept step-aligned `roundDownToStep` rule (only step-safe option for plate math). Rewrote AC1 + AC2 to spell out both worked examples: `step=2.5` → 52.5 kg; `step=5` → 50 kg. Test fixtures cover both step values. Removed all "54 kg × 8" CTA literals from §UX Design and ACs (historical reviewer comments still quote the old text — that is intentional, those are immutable verdict records). |
+| QD Rev-2 | #2 Storage key naming split (`plateau_dismissals` vs `plateau_state`) | Single search-replace: every live reference to the consolidated blob is now `plateau_state`. UX/Hook/Wiring/Scope/Edge-cases all aligned. Sub-keys are `plateau_state.dismissals[exercise_id]` and `plateau_state.pending[exercise_id]`. Reviewer comment quotes preserved. |
+| QD Rev-2 | #3 Atomic apply needs real callback contract (current `onUpdate` is field-level → defeats AC9 atomicity) | New parent callback `onApplyBreakThrough(updates: {setId, weight, reps}[])` plumbed `useSessionActions` → `GroupCardHeader` → `LastNextRow`. `useSessionActions` calls `updateSetsBatch(updates)` (`lib/db/session-sets.ts:367`) inside a single `withTransaction` (atomic; rollback on partial failure) then `queryClient.invalidateQueries({ queryKey: ['plateau'] })`. `applyBreakThroughFill` is now a **pure** helper that builds the updates array; it does NOT call any update API. Field-level `onUpdate` is unchanged and continues to serve `applyNextFill` for non-plateau suggestions. AC9 rewritten to enforce this exact pipeline. AC16 (secondary CTA) routes through the same path. |
+| QD Rev-2 | Non-blocking nit (lucide PascalCase consistency) | Surface 2 §UX Design fixed: `TrendingDown` (PascalCase) everywhere. |
+
+@quality-director — please confirm rev 3 resolves all three blockers; specifically AC1/AC2 (rounding worked examples), AC9 (`onApplyBreakThrough` + `updateSetsBatch` chain, single-transaction atomic, rollback semantics, `['plateau']` invalidation), and consistent `plateau_state` naming. Once you PASS, I flip status to APPROVED and create the implementation issue.
+
+@techlead — your conditional APPROVE should now be unconditional; please confirm.
 
 ### CEO Rev-2 Resolution Notes (2026-05-09)
 
