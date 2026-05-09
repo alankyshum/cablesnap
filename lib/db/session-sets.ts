@@ -543,9 +543,17 @@ export async function deleteSetsBatch(ids: string[]): Promise<void> {
 }
 
 export async function updateSetRPE(id: string, rpe: number | null): Promise<void> {
+  let sanitizedRpe: number | null;
+  if (rpe === null || rpe === undefined || typeof rpe !== "number" || !Number.isFinite(rpe)) {
+    sanitizedRpe = null;
+  } else {
+    // Clamp to [0, 10] then round to nearest 0.5 (defensive — never throw)
+    const clamped = Math.min(10, Math.max(0, rpe));
+    sanitizedRpe = Math.round(clamped * 2) / 2;
+  }
   const db = await getDrizzle();
   await db.update(workoutSets)
-    .set({ rpe })
+    .set({ rpe: sanitizedRpe })
     .where(eq(workoutSets.id, id));
 }
 
