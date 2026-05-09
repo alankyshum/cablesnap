@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.27",
+    "date": "2026-05-09",
+    "versionCode": 97,
+    "body": "- **Record directly from Form tab**: Tap the new \"Record clip\" button in the Form clips tab (exercise detail drawer) to record a new clip without leaving the exercise view. The button auto-targets the most recent unclipped set, or shows a helper hint when all sets already have clips (BLD-1105).\n- **Replace or delete individual clips**: Each clip row in the Form clips tab now has an overflow menu (⋯) with Replace and Delete actions. Replace atomically swaps the file and database row in a single transaction (BLD-1105).\n- **Manage all clips from Settings**: The Form Clips card in Settings is now tappable and opens a full clip library grouped by exercise. Delete individual clips or bulk-delete all clips to reclaim storage instantly (BLD-1105).\n- **Settings scroll fix**: Fixed settings screen content cut off behind the floating tab bar on tall Android devices (Galaxy Z Fold6, Pixel 7 Pro) — the About section and links at the bottom are now fully accessible (BLD-1106)\n- **Live RPE capture**: Rate each set's effort with a tap (Easy / Moderate / Hard / Max) directly in the workout screen. Long-press for a precise value (6.0–10.0). RPE powers the smart rest timer and next-set suggestion — enable in Settings (BLD-1110)."
+  },
+  {
     "version": "0.26.26",
     "date": "2026-05-09",
     "versionCode": 96,
