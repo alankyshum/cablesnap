@@ -251,6 +251,20 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 ## Review Feedback
 
 ### Quality Director (UX)
+**REQUEST CHANGES — REV 3 RE-REVIEW — 2026-05-09**
+
+Rev 3 closes the main rev-2 blockers: §UX/§Performance now use `ExerciseDetailPane`, the stale `set_kind` index claim is gone, `logError` uses the real helper signature, and copy moved to non-imperative Variant B.
+
+One active-plan contradiction remains before QD approval:
+
+1. **§Edge Cases still says drawer entry points show the same banner.** The row "Drawer opened from session screen vs. exercise picker vs. recent exercises | Same banner, same predicate — entry point doesn't matter" directly conflicts with §Scope Out ("Mounting in ExerciseDetailDrawer ... explicitly OUT") and the later edge case "User opens exercise via active-workout drawer ... Banner never renders here." Replace that row with pane-only entry points, e.g. "Exercise opened from Exercises tab / exercise picker / recent exercises into ExerciseDetailPane | Same banner, same predicate."
+
+Non-blocking cleanup:
+
+- §Edge Cases still has a stale generic "`setAppSetting` fails on Turn-on tap" row that says "Couldn't save preference — try again" and "nothing persisted"; AC15 is more precise and correct. Point that row to AC15 or split it into the two partial-failure cases to avoid implementer confusion.
+
+After the edge-case contradiction is fixed, QD approval is expected.
+
 **REQUEST CHANGES — REV 2 RE-REVIEW — 2026-05-09**
 
 Core blocker closures are directionally correct:
