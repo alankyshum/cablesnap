@@ -135,7 +135,8 @@ jest.mock('../../lib/strava', () => ({
   disconnect: jest.fn().mockResolvedValue(undefined),
 }))
 
-import Settings from '../../app/(tabs)/settings'
+import Settings, { SETTINGS_SCROLL_EXTRA_BOTTOM } from '../../app/(tabs)/settings'
+import { FLOATING_TAB_BAR_HEIGHT } from '../../components/FloatingTabBar'
 
 const { setEnabled: mockSetAudioEnabled } = require('../../lib/audio')
 const { requestPermission, scheduleReminders, cancelAll } = require('../../lib/notifications')
@@ -421,5 +422,18 @@ describe('Settings Screen Acceptance', () => {
     expect(remindersToggle.props.accessibilityRole).toBe('switch')
     expect(timerSound.props.accessibilityHint).toBeTruthy()
     expect(remindersToggle.props.accessibilityHint).toBeTruthy()
+  })
+
+  // ── Scroll padding regression (BLD-1106) ──────────────────────────────────
+
+  it('ScrollView contentContainerStyle is a flat object with paddingBottom === FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM', () => {
+    const { getByTestId } = renderScreen(<Settings />)
+    const scroll = getByTestId('settings-scroll-view')
+    // contentContainerStyle must be a single flat object — no style-array merge ambiguity.
+    // useSafeAreaInsets returns { bottom: 0 } in test env, so tabBarHeight = FLOATING_TAB_BAR_HEIGHT.
+    // SETTINGS_SCROLL_EXTRA_BOTTOM > 16 ensures clearance beyond what main had, fixing Fold6 cutoff.
+    const style = scroll.props.contentContainerStyle
+    expect(style).not.toBeInstanceOf(Array)
+    expect(style.paddingBottom).toBe(FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM)
   })
 })
