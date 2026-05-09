@@ -44,6 +44,14 @@ import {
 } from '@/lib/db';
 import { useQueryClient } from '@tanstack/react-query';
 
+/**
+ * Extra bottom clearance beyond the floating tab bar zone.
+ * On wide/foldable screens the FlowContainer produces a multi-column layout
+ * that reduces total content height; this extra padding ensures the About
+ * card (with badge images) is always comfortably scrollable into view.
+ */
+export const SETTINGS_SCROLL_EXTRA_BOTTOM = 48;
+
 export default function Settings() {
   const colors = useThemeColors();
   const router = useRouter();
@@ -139,7 +147,7 @@ export default function Settings() {
       contentContainerStyle={{
         paddingTop: 16,
         paddingHorizontal: layout.horizontalPadding,
-        paddingBottom: tabBarHeight + 16,
+        paddingBottom: tabBarHeight + SETTINGS_SCROLL_EXTRA_BOTTOM,
       }}
     >
       <FlowContainer gap={16}>
