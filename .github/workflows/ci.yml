@@ -122,16 +122,16 @@ jobs:
       - name: Android lint (lintVitalRelease)
         run: |
           cd android
-          # --continue: keep running even if Sentry upload task fails (no auth in CI).
-          # Capture exit code manually so we can distinguish Sentry-only failures
-          # (non-zero gradle exit, clean report) from actual lint regressions.
-          set +e
-          ./gradlew :app:lintVitalRelease --no-daemon --continue
-          GRADLE_EXIT=$?
-          set -e
+          # Exclude createBundleReleaseJsAndAssets to skip the React Native JS bundler
+          # (and the Sentry upload task hooked into it). lintVitalRelease only needs
+          # compiled Kotlin/Java + Android resources — not the JS bundle. Without this
+          # exclusion, Sentry fails (no auth in CI) and Gradle exits 1 before writing
+          # the lint report.
+          ./gradlew :app:lintVitalRelease --no-daemon \
+            -x :app:createBundleReleaseJsAndAssets
           REPORT=app/build/reports/lint-results-vitalRelease.xml
           if [ ! -f "$REPORT" ]; then
-            echo "::error::Lint report not generated (gradle exit=$GRADLE_EXIT) — gate cannot verify backup XML rules"
+            echo "::error::Lint report not generated — gate cannot verify backup XML rules"
             exit 1
           fi
           if grep -q 'severity="Fatal"' "$REPORT"; then
@@ -139,5 +139,4 @@ jobs:
             grep -B2 -A8 'severity="Fatal"' "$REPORT" | head -60
             exit 1
           fi
-          # Report clean. Non-zero gradle exit (if any) is from Sentry/other non-lint tasks.
-          echo "lintVitalRelease: no fatal issues found (gradle exit=$GRADLE_EXIT)"
+          echo "lintVitalRelease: no fatal issues found"
