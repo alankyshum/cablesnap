@@ -230,7 +230,9 @@ describe("FTA decomposition structural tests", () => {
     // BLD-1028: bumped 400 → 410 for pinned-note props (5 new prop wires,
     // onBackfillCopy inline lambda, pinnedNoteDraft in useMemo dep array).
     // BLD-1092: bumped 410 → 490 for form-check video modals + state wiring.
-    ["app/session/[id].tsx", 490, "session main file"],
+    // BLD-1110: bumped 490 → 520 for RPE capture pref state + handleRpeChange
+    // + recomputeActiveRest wiring (captureRpe useEffect + callback + JSX props).
+    ["app/session/[id].tsx", 520, "session main file"],
     ["components/SubstitutionSheet.tsx", 260, "substitution sheet main file"],
     ["app/progress/achievements.tsx", 200, "achievements main file"],
     ["components/ShareCard.tsx", 200, "share card main file"],

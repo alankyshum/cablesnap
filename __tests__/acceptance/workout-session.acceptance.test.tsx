@@ -120,6 +120,14 @@ jest.mock('../../lib/audio')
 jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native')
+  const makeAnim = (): Record<string, () => unknown> => {
+    const a: Record<string, () => unknown> = {};
+    const chain = () => a;
+    a.duration = chain; a.delay = chain; a.springify = chain;
+    a.damping = chain; a.stiffness = chain; a.withInitialValues = chain;
+    a.withCallback = chain; a.randomDelay = chain; a.build = chain;
+    return a;
+  };
   return {
     __esModule: true,
     default: { View, createAnimatedComponent: (c: unknown) => c },
@@ -133,6 +141,11 @@ jest.mock('react-native-reanimated', () => {
     withDelay: (_d: unknown, v: unknown) => v,
     runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
     Easing: { bezier: () => (t: number) => t },
+    // Layout animations — used by RpeChipStrip FadeIn.duration()
+    FadeIn: makeAnim(), FadeOut: makeAnim(), FadeInDown: makeAnim(),
+    FadeInUp: makeAnim(), FadeOutDown: makeAnim(), FadeOutUp: makeAnim(),
+    SlideInRight: makeAnim(), SlideOutRight: makeAnim(),
+    ZoomIn: makeAnim(), ZoomOut: makeAnim(), Layout: makeAnim(),
   }
 })
 

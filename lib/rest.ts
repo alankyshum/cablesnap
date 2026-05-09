@@ -46,8 +46,9 @@ export const REST_MULTIPLIERS = {
   // RPE buckets: keyed by ceiling comparisons (see resolveRpeFactor).
   rpe: {
     low: 0.8, // rpe <= 6
-    midOrNull: 1.0, // rpe null or 7–8
-    high: 1.15, // 8.5 <= rpe <= 9 (strict < 9.5)
+    midOrNull: 1.0, // rpe null only
+    moderate: 1.10, // rpe > 6 AND rpe < 8.5 (covers 6.5/7/7.5/8)
+    high: 1.15, // 8.5 <= rpe < 9.5
     veryHigh: 1.3, // rpe >= 9.5
   },
   category: {
@@ -71,19 +72,23 @@ function clamp(value: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, value));
 }
 
-type RpeBucket = "low" | "midOrNull" | "high" | "veryHigh";
+export type RpeBucket = "low" | "midOrNull" | "moderate" | "high" | "veryHigh";
 
-function rpeBucket(rpe: number | null): RpeBucket {
+export function rpeBucket(rpe: number | null): RpeBucket {
+  // null short-circuits to midOrNull — the only value that maps to midOrNull now.
   if (rpe == null) return "midOrNull";
   if (rpe <= 6) return "low";
   if (rpe >= 9.5) return "veryHigh";
   if (rpe >= 8.5) return "high";
+  // rpe > 6 AND rpe < 8.5 → moderate (covers 6.5, 7, 7.5, 8)
+  if (rpe > 6 && rpe < 8.5) return "moderate";
   return "midOrNull";
 }
 
 function rpeLabelShort(bucket: RpeBucket, rpe: number | null): string {
   if (bucket === "veryHigh") return "Heavy · RPE 9";
   if (bucket === "high") return "RPE 9";
+  if (bucket === "moderate") return `Moderate · RPE ${rpe ?? ""}`;
   if (bucket === "low") return `RPE ${Math.min(6, Math.round(rpe ?? 6))}`;
   return "";
 }
@@ -91,6 +96,7 @@ function rpeLabelShort(bucket: RpeBucket, rpe: number | null): string {
 function rpeLabelAccessible(bucket: RpeBucket, rpe: number | null): string {
   if (bucket === "veryHigh") return "Heavy set, RPE 9";
   if (bucket === "high") return "RPE 9";
+  if (bucket === "moderate") return `Moderate effort, RPE ${rpe ?? ""}`;
   if (bucket === "low") return `RPE ${Math.min(6, Math.round(rpe ?? 6))}`;
   return "";
 }
@@ -106,6 +112,8 @@ function pickReason(
   if (setType === "dropset") return { short: "Drop-set", accessible: "Drop-set" };
   if (setType === "warmup") return { short: "Warmup", accessible: "Warmup set" };
   if (setType === "failure") return { short: "Failure", accessible: "Failure set" };
+  // RPE always wins over category once an RPE value is recorded.
+  // moderate bucket (rpe > 6, < 8.5) gets explicit RPE label — not "Cable"/"Bodyweight".
   if (bucket !== "midOrNull") {
     return { short: rpeLabelShort(bucket, rpe), accessible: rpeLabelAccessible(bucket, rpe) };
   }

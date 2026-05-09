@@ -41,6 +41,7 @@ import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
 import { isCableExercise, formatAttachmentLabel, formatMountPositionLabel } from "../../lib/cable-variant";
 import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } from "../../lib/bodyweight-grip-variant";
+import { RpeChipStrip } from "./RpeChipStrip";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
@@ -160,6 +161,10 @@ export type SetRowProps = {
   // (no clip) or the player sheet (clip exists).
   hasClip?: boolean;
   onVideoGlyph?: (setId: string) => void;
+  // BLD-1110: Live RPE capture. captureRpe enables the 4-chip strip under
+  // completed sets. onRpeChange writes to DB + emits breadcrumb in parent.
+  captureRpe?: boolean;
+  onRpeChange?: (setId: string, rpe: number | null) => void;
 };
 
 export const SetRow = memo(function SetRow({
@@ -172,6 +177,7 @@ export const SetRow = memo(function SetRow({
   onOpenVariantPicker, onClearVariant,
   exerciseName, onOpenBodyweightGripPicker, onClearBodyweightGrip,
   hasClip, onVideoGlyph,
+  captureRpe, onRpeChange,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-771: ref to the variant footer Pressable so the picker hook can
@@ -263,6 +269,18 @@ export const SetRow = memo(function SetRow({
     },
     [handleCheckPress],
   );
+
+  // BLD-1110: stable callback keyed on set.id only per Tech N2 spec.
+  // This keeps React.memo effective — parent re-renders don't create new fn refs.
+  const handleRpeChange = useCallback(
+    (rpe: number | null) => onRpeChange?.(set.id, rpe),
+    [set.id, onRpeChange],
+  );
+
+  // BLD-1110: RPE chip strip element, shared across Case A/B/C footer topologies.
+  const rpeStrip = set.completed && captureRpe
+    ? <RpeChipStrip value={set.rpe ?? null} onChange={handleRpeChange} setId={set.id} />
+    : null;
 
   return (
     <View testID={`set-${set.id}-row`}>
@@ -535,79 +553,82 @@ export const SetRow = memo(function SetRow({
         equipment values to the union (lib/cable-variant.ts) makes them
         appear here automatically.
 
+        BLD-1110: When captureRpe is ON and the set is completed, the RPE
+        chip strip is merged into this same footer row (right-aligned). This
+        keeps the combined height ≤ 96 dp (Case A topology: main 48 +
+        variant-footer-with-RPE 28-32 + PlateHint ~14 = ≤ 96 dp).
+
         Tap → onOpenVariantPicker (parent owns picker visibility state and
         routes through the `updateSetVariant` write path).
         Long-press → onClearVariant (writes NULL/NULL — same write path).
-
-        Each chip self-suppresses on null/undefined (BLD-771 plan: chips are
-        visible-when-set, picker-tap-target-when-empty); the wrapping
-        Pressable below keeps a tap target available even when both chips
-        are null, so users can open the picker on a fresh cable set.
       */}
       {isCableExercise({ equipment }) ? (
-        <Pressable
-          ref={variantFooterRef}
-          onPress={() => {
-            // Reviewer blocker #4 (PR #426): pass the originating row's
-            // accessibility handle to the picker hook so VO/TalkBack focus
-            // can be restored to this same Pressable on dismiss.
-            const handle = variantFooterRef.current
-              ? findNodeHandle(variantFooterRef.current)
-              : null;
-            onOpenVariantPicker?.(set.id, handle);
-          }}
-          onLongPress={() => onClearVariant?.(set.id)}
-          accessibilityRole="button"
-          // QD-8 (BLD-822 → BLD-823): a11y composite labels now have parity
-          // between cable and grip footers. Both enumerate selected values:
-          //   cable: "Set 1 cable variant: Rope, Low. Double-tap to edit."
-          //   grip:  "Set 1 grip variant: Overhand, Narrow. Double-tap to edit."
-          // Keep both blocks in sync; do NOT diverge without updating both.
-          accessibilityLabel={(() => {
-            const att = set.attachment ?? null;
-            const mp = set.mount_position ?? null;
-            if (att != null && mp != null) {
-              return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
-            } else if (att != null) {
-              return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, position not set. Double-tap to edit.`;
-            } else if (mp != null) {
-              return `Set ${set.set_number} cable variant: attachment not set, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
-            }
-            return `Set ${set.set_number} cable variant: not set. Double-tap to choose.`;
-          })()}
-          accessibilityHint="Long press to clear attachment and position"
-          style={styles.variantFooter}
-        >
-          {set.attachment == null && set.mount_position == null ? (
-            // Reviewer blocker #3 (PR #426): when both fields are null the
-            // chips self-suppress, leaving a zero-height Pressable with no
-            // visible tap-target. Render an explicit "Tap to set variant"
-            // placeholder so the affordance is discoverable on first-time
-            // sets (no autofill history) and after long-press clear. Styled
-            // as a dashed-outline pill so it reads as "empty / tap to fill"
-            // rather than as a value.
-            <View
-              style={[
-                styles.variantPlaceholder,
-                { borderColor: colors.outline },
-              ]}
-            >
-              <Text
+        <View style={styles.footerWithRpe}>
+          <Pressable
+            ref={variantFooterRef}
+            onPress={() => {
+              // Reviewer blocker #4 (PR #426): pass the originating row's
+              // accessibility handle to the picker hook so VO/TalkBack focus
+              // can be restored to this same Pressable on dismiss.
+              const handle = variantFooterRef.current
+                ? findNodeHandle(variantFooterRef.current)
+                : null;
+              onOpenVariantPicker?.(set.id, handle);
+            }}
+            onLongPress={() => onClearVariant?.(set.id)}
+            accessibilityRole="button"
+            // QD-8 (BLD-822 → BLD-823): a11y composite labels now have parity
+            // between cable and grip footers. Both enumerate selected values:
+            //   cable: "Set 1 cable variant: Rope, Low. Double-tap to edit."
+            //   grip:  "Set 1 grip variant: Overhand, Narrow. Double-tap to edit."
+            // Keep both blocks in sync; do NOT diverge without updating both.
+            accessibilityLabel={(() => {
+              const att = set.attachment ?? null;
+              const mp = set.mount_position ?? null;
+              if (att != null && mp != null) {
+                return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
+              } else if (att != null) {
+                return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, position not set. Double-tap to edit.`;
+              } else if (mp != null) {
+                return `Set ${set.set_number} cable variant: attachment not set, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
+              }
+              return `Set ${set.set_number} cable variant: not set. Double-tap to choose.`;
+            })()}
+            accessibilityHint="Long press to clear attachment and position"
+            style={[styles.variantFooter, styles.footerFlex]}
+          >
+            {set.attachment == null && set.mount_position == null ? (
+              // Reviewer blocker #3 (PR #426): when both fields are null the
+              // chips self-suppress, leaving a zero-height Pressable with no
+              // visible tap-target. Render an explicit "Tap to set variant"
+              // placeholder so the affordance is discoverable on first-time
+              // sets (no autofill history) and after long-press clear. Styled
+              // as a dashed-outline pill so it reads as "empty / tap to fill"
+              // rather than as a value.
+              <View
                 style={[
-                  styles.variantPlaceholderLabel,
-                  { color: colors.onSurfaceVariant },
+                  styles.variantPlaceholder,
+                  { borderColor: colors.outline },
                 ]}
               >
-                Tap to set variant
-              </Text>
-            </View>
-          ) : (
-            <>
-              <SetAttachmentChip attachment={set.attachment ?? null} />
-              <SetMountPositionChip mount={set.mount_position ?? null} />
-            </>
-          )}
-        </Pressable>
+                <Text
+                  style={[
+                    styles.variantPlaceholderLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Tap to set variant
+                </Text>
+              </View>
+            ) : (
+              <>
+                <SetAttachmentChip attachment={set.attachment ?? null} />
+                <SetMountPositionChip mount={set.mount_position ?? null} />
+              </>
+            )}
+          </Pressable>
+          {rpeStrip}
+        </View>
       ) : null}
 
       {/*
@@ -657,81 +678,94 @@ export const SetRow = memo(function SetRow({
           composite = `Set ${set.set_number} grip variant: not set. Double-tap to choose.`;
         }
         return (
-          <Pressable
-            ref={bodyweightGripFooterRef}
-            onPress={() => {
-              const handle = bodyweightGripFooterRef.current
-                ? findNodeHandle(bodyweightGripFooterRef.current)
-                : null;
-              onOpenBodyweightGripPicker?.(set.id, handle);
-            }}
-            onLongPress={() => onClearBodyweightGrip?.(set.id)}
-            accessibilityRole="button"
-            accessibilityLabel={composite}
-            accessibilityHint="Long press to clear grip and width"
-            style={styles.variantFooter}
-          >
-            {gt == null && gw == null ? (
-              <View
-                style={[
-                  styles.variantPlaceholder,
-                  { borderColor: colors.outline },
-                ]}
-              >
-                <Text
+          <View style={styles.footerWithRpe}>
+            <Pressable
+              ref={bodyweightGripFooterRef}
+              onPress={() => {
+                const handle = bodyweightGripFooterRef.current
+                  ? findNodeHandle(bodyweightGripFooterRef.current)
+                  : null;
+                onOpenBodyweightGripPicker?.(set.id, handle);
+              }}
+              onLongPress={() => onClearBodyweightGrip?.(set.id)}
+              accessibilityRole="button"
+              accessibilityLabel={composite}
+              accessibilityHint="Long press to clear grip and width"
+              style={[styles.variantFooter, styles.footerFlex]}
+            >
+              {gt == null && gw == null ? (
+                <View
                   style={[
-                    styles.variantPlaceholderLabel,
-                    { color: colors.onSurfaceVariant },
+                    styles.variantPlaceholder,
+                    { borderColor: colors.outline },
                   ]}
                 >
-                  Tap to set grip
-                </Text>
-              </View>
-            ) : (
-              <>
-                {gt != null ? (
-                  <SetGripTypeChip gripType={gt} />
-                ) : (
-                  <View
+                  <Text
                     style={[
-                      styles.variantPlaceholder,
-                      { borderColor: colors.outline },
+                      styles.variantPlaceholderLabel,
+                      { color: colors.onSurfaceVariant },
                     ]}
                   >
-                    <Text
+                    Tap to set grip
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  {gt != null ? (
+                    <SetGripTypeChip gripType={gt} />
+                  ) : (
+                    <View
                       style={[
-                        styles.variantPlaceholderLabel,
-                        { color: colors.onSurfaceVariant },
+                        styles.variantPlaceholder,
+                        { borderColor: colors.outline },
                       ]}
                     >
-                      Tap to set grip
-                    </Text>
-                  </View>
-                )}
-                {gw != null ? (
-                  <SetGripWidthChip gripWidth={gw} />
-                ) : (
-                  <View
-                    style={[
-                      styles.variantPlaceholder,
-                      { borderColor: colors.outline },
-                    ]}
-                  >
-                    <Text
+                      <Text
+                        style={[
+                          styles.variantPlaceholderLabel,
+                          { color: colors.onSurfaceVariant },
+                        ]}
+                      >
+                        Tap to set grip
+                      </Text>
+                    </View>
+                  )}
+                  {gw != null ? (
+                    <SetGripWidthChip gripWidth={gw} />
+                  ) : (
+                    <View
                       style={[
-                        styles.variantPlaceholderLabel,
-                        { color: colors.onSurfaceVariant },
+                        styles.variantPlaceholder,
+                        { borderColor: colors.outline },
                       ]}
                     >
-                      Tap to set width
-                    </Text>
-                  </View>
-                )}
-              </>
-            )}
-          </Pressable>
+                      <Text
+                        style={[
+                          styles.variantPlaceholderLabel,
+                          { color: colors.onSurfaceVariant },
+                        ]}
+                      >
+                        Tap to set width
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </Pressable>
+            {rpeStrip}
+          </View>
         );
       })() : null}
+
+      {/*
+        BLD-1110: Standalone RPE row for plain rows (no cable variant footer
+        and no bodyweight-grip footer). Case C topology: main(48) +
+        standalone-RPE-row(32) + PlateHint(~14) = ≤ 96 dp.
+      */}
+      {rpeStrip && !isCableExercise({ equipment })
+        && !isBodyweightGripExercise({ equipment, name: exerciseName }) ? (
+        <View style={styles.standaloneRpe}>{rpeStrip}</View>
+      ) : null}
 
       <PlateHint weight={displayedWeight} unit={unit} equipment={equipment} />
     </View>
@@ -760,6 +794,22 @@ const styles = StyleSheet.create({
     paddingLeft: 36,
     paddingTop: 2,
     paddingBottom: 2,
+  },
+  // BLD-1110: outer wrapper that places variant/grip footer and RPE chips
+  // side-by-side in a single row (footer-merge topology).
+  footerWithRpe: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  // BLD-1110: variant/grip footer takes flex so RPE chips stay right-aligned.
+  footerFlex: {
+    flex: 1,
+  },
+  // BLD-1110: standalone RPE row for plain rows (no variant/grip footer).
+  standaloneRpe: {
+    paddingLeft: 36,
+    height: 32,
+    justifyContent: "center",
   },
   // BLD-771: empty-state placeholder pill rendered when both attachment
   // and mount_position are null. Dashed outline reads as "tap to fill"

@@ -35,6 +35,9 @@ export default function PreferencesCard({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [restAfterWarmup, setRestAfterWarmup] = useState(false);
 
+  // BLD-1110: Live RPE capture — default OFF (opt-in via Settings).
+  const [captureRpe, setCaptureRpeState] = useState(false);
+
   // BLD-559: set-completion confirmation feedback — haptic default ON,
   // audio default OFF.
   const [setCompleteHaptic, setSetCompleteHapticState] = useState(true);
@@ -53,13 +56,15 @@ export default function PreferencesCard({
       getAppSetting("rest_adaptive_enabled"),
       getAppSetting("rest_show_breakdown"),
       getAppSetting("rest_after_warmup_enabled"),
+      getAppSetting("session.captureRpe"),
       getAppSetting("feedback.setComplete.haptic"),
       getAppSetting("feedback.setComplete.audio"),
-    ]).then(([adaptive, show, warmup, scHaptic, scAudio]) => {
+    ]).then(([adaptive, show, warmup, captureRpeSetting, scHaptic, scAudio]) => {
       if (cancelled) return;
       setAdaptiveRest(adaptive !== "false");
       setShowBreakdown(show === "true");
       setRestAfterWarmup(warmup === "true");
+      setCaptureRpeState(captureRpeSetting === "true");
       setSetCompleteHapticState(scHaptic !== "false");
       setSetCompleteAudioState(scAudio === "true");
       setAudioEverInteracted(scAudio != null);
@@ -83,6 +88,12 @@ export default function PreferencesCard({
     setRestAfterWarmup(val);
     try { await setAppSetting("rest_after_warmup_enabled", val ? "true" : "false"); }
     catch { toast.error("Failed to save warmup rest setting"); }
+  };
+
+  const updateCaptureRpe = async (val: boolean) => {
+    setCaptureRpeState(val);
+    try { await setAppSetting("session.captureRpe", val ? "true" : "false"); }
+    catch { toast.error("Failed to save RPE capture setting"); }
   };
 
   const updateSetCompleteHaptic = async (val: boolean) => {
@@ -175,6 +186,25 @@ export default function PreferencesCard({
             accessibilityLabel="Rest after warmup sets"
             accessibilityRole="switch"
             accessibilityHint="Start a short rest timer after warmup sets"
+          />
+        </View>
+
+        {/* BLD-559: Set-completion confirmation feedback */}
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
+              Capture set RPE during workouts
+            </Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs, marginTop: 2, lineHeight: 16 }}>
+              Tap a chip after each set to log how it felt. Powers the smart rest timer and progression suggestions.
+            </Text>
+          </View>
+          <Switch
+            value={captureRpe}
+            onValueChange={updateCaptureRpe}
+            accessibilityLabel="Capture set RPE during workouts"
+            accessibilityRole="switch"
+            accessibilityHint="Shows effort chips after each set you complete"
           />
         </View>
 

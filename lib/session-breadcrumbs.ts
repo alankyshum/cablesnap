@@ -47,3 +47,32 @@ export function sessionBreadcrumb(
     // critical path. Swallow.
   }
 }
+
+export type RpeCaptureSource = "chip" | "sheet";
+
+export type RpeBreadcrumbPayload = {
+  /** UUID of the workout_sets row being updated */
+  setId: string;
+  oldRpe: number | null;
+  newRpe: number | null;
+  source: RpeCaptureSource;
+};
+
+/**
+ * Emit a Sentry breadcrumb for an RPE capture event (BLD-1110).
+ *
+ * Privacy contract: payload contains only UUID (setId) + numeric fields +
+ * literal source string. No exercise name, no user-entered text.
+ * Category "rpe-capture" is separate from "session" and "rest-resolver".
+ */
+export function rpeBreadcrumb(payload: RpeBreadcrumbPayload): void {
+  try {
+    Sentry.addBreadcrumb({
+      category: "rpe-capture",
+      level: "info",
+      data: payload,
+    });
+  } catch {
+    // Sentry not initialized — breadcrumbs are observability glue, never critical path.
+  }
+}

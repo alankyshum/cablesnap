@@ -543,9 +543,22 @@ export async function deleteSetsBatch(ids: string[]): Promise<void> {
 }
 
 export async function updateSetRPE(id: string, rpe: number | null): Promise<void> {
+  let sanitizedRpe: number | null;
+  if (rpe === null || rpe === undefined || typeof rpe !== "number" || !Number.isFinite(rpe)) {
+    sanitizedRpe = null;
+  } else {
+    // Live-capture domain is [6, 10] in 0.5 steps. Values outside this range
+    // are out-of-domain for this entry path — normalize to null rather than
+    // storing a value the rest-timer / suggestion logic would misinterpret.
+    if (rpe < 6 || rpe > 10) {
+      sanitizedRpe = null;
+    } else {
+      sanitizedRpe = Math.round(rpe * 2) / 2;
+    }
+  }
   const db = await getDrizzle();
   await db.update(workoutSets)
-    .set({ rpe })
+    .set({ rpe: sanitizedRpe })
     .where(eq(workoutSets.id, id));
 }
 

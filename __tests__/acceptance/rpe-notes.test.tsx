@@ -185,6 +185,8 @@ beforeEach(() => {
 })
 
 // --- BLD-615: RPE prompt removed from active session ---
+// BLD-1110: New opt-in RPE chip strip replaces the old always-on prompt.
+// The tests below verify the default-OFF behavior (session.captureRpe missing = chips hidden).
 
 describe('RPE Prompt Removed from Active Session (BLD-615)', () => {
   const session = createSession({ id: 'sess-rpe', name: 'Push Day', started_at: Date.now() - 60000 })
@@ -192,14 +194,19 @@ describe('RPE Prompt Removed from Active Session (BLD-615)', () => {
   beforeEach(() => {
     mockParams.id = 'sess-rpe'
     mockDb.getSessionById.mockResolvedValue(session)
-    // Pre-complete first set so any historical RPE-prompt UI would render.
+    // Pre-complete first set so any RPE-prompt UI would render.
     const sets = makeSessionSets('sess-rpe')
     sets[0].completed = true
     sets[0].completed_at = Date.now()
     mockDb.getSessionSets.mockResolvedValue(sets)
+    // BLD-1110: ensure captureRpe pref is OFF (default) so the new chip strip
+    // is NOT rendered. Other settings (adaptive rest etc.) continue returning 'true'.
+    mockDb.getAppSetting.mockImplementation((key: string) =>
+      key === 'session.captureRpe' ? Promise.resolve(null) : Promise.resolve('true')
+    )
   })
 
-  it('does not render RPE chips for completed sets', async () => {
+  it('does not render RPE chips for completed sets when captureRpe is OFF (default)', async () => {
     const { findByText, queryByLabelText } = renderScreen(<ActiveSession />)
     // Wait for screen to mount
     await findByText('Bench Press')

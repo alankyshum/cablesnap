@@ -8,8 +8,8 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "../../lib/audio";
-import { getAppSetting, addWarmupSets } from "../../lib/db";
-import { sessionBreadcrumb } from "../../lib/session-breadcrumbs";
+import { getAppSetting, addWarmupSets, updateSetRPE } from "../../lib/db";
+import { sessionBreadcrumb, rpeBreadcrumb } from "../../lib/session-breadcrumbs";
 import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
 import { useVariantPickerSheet } from "../../hooks/useVariantPickerSheet";
 import { useBodyweightGripPickerSheet } from "../../hooks/useBodyweightGripPickerSheet";
@@ -101,6 +101,7 @@ export default function ActiveSession() {
     startRestWithBreakdown,
     dismissRest,
     restRef,
+    recomputeActiveRest,
   } = useRestTimer({ sessionId: id, colors });
 
   const {
@@ -161,6 +162,14 @@ export default function ActiveSession() {
   // Map of setId → hasClip, populated after set completion check.
   const [hasClipMap, setHasClipMap] = useState<Record<string, boolean>>({});
 
+  // BLD-1110: Live RPE capture preference
+  const [captureRpe, setCaptureRpe] = useState(false);
+  useEffect(() => {
+    getAppSetting("session.captureRpe").then((val) => {
+      setCaptureRpe(val === "true");
+    }).catch(() => {});
+  }, []);
+
   // Lookup helper: find the group set for a given setId.
   const findSetById = useCallback((setId: string) => {
     for (const g of groups) {
@@ -189,6 +198,22 @@ export default function ActiveSession() {
     setHasClipMap((prev) => ({ ...prev, [setId]: true }));
     void clipId;
   }, []);
+
+  // BLD-1110: RPE chip tap handler — optimistic update, persist, breadcrumb, recompute rest.
+  const handleRpeChange = useCallback((setId: string, rpe: number | null) => {
+    const found = findSetById(setId);
+    const oldRpe = found?.set.rpe ?? null;
+    // Optimistic in-memory update so the chip reflects the new value immediately.
+    updateGroupSet(setId, { rpe });
+    updateSetRPE(setId, rpe).catch(() => {
+      // Rollback on persistence failure.
+      updateGroupSet(setId, { rpe: oldRpe });
+    });
+    rpeBreadcrumb({ setId, oldRpe, newRpe: rpe, source: "chip" });
+    if (found) {
+      recomputeActiveRest(setId, found.exerciseId, rpe);
+    }
+  }, [findSetById, recomputeActiveRest, updateGroupSet]);
 
   // Refresh hasClipMap when sets change (non-blocking fire-and-forget).
   useEffect(() => {
@@ -322,9 +347,11 @@ export default function ActiveSession() {
       onTimerStop={handleTimerStop}
       hasClipMap={hasClipMap}
       onVideoGlyph={handleVideoGlyph}
+      captureRpe={captureRpe}
+      onRpeChange={handleRpeChange}
     />
     );
-  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph]);
+  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, captureRpe, handleRpeChange]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />
