@@ -15,7 +15,7 @@ import {
   hasSeenRpeCaptureNudge,
   markRpeCaptureNudgeSeen,
 } from "@/lib/db/achievements";
-import { setAppSetting } from "@/lib/db";
+import { getAppSetting, setAppSetting } from "@/lib/db";
 import { bumpQueryVersion } from "@/lib/query";
 import { useToast } from "@/components/ui/bna-toast";
 
@@ -31,7 +31,7 @@ interface Props {
 export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
   const colors = useThemeColors();
   const { toast } = useToast();
-  const [eligible, setEligible] = useState(false);
+  const [eligible, setEligible] = useState<boolean | null>(null);
   const [writeInFlight, setWriteInFlight] = useState(false);
   const alive = useRef(true);
 
@@ -39,14 +39,16 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
     alive.current = true;
     async function check() {
       try {
-        const [seen, hasRpe] = await Promise.all([
+        const [seen, hasRpe, captureRpePref] = await Promise.all([
           hasSeenRpeCaptureNudge(),
           exerciseHasHistoricalRpe(exerciseId),
+          getAppSetting("session.captureRpe"),
         ]);
         if (!alive.current) return;
-        if (!seen && hasRpe) setEligible(true);
+        setEligible(!seen && hasRpe && captureRpePref !== "true");
       } catch {
         // predicate failure → silently skip banner (safe degradation)
+        if (alive.current) setEligible(false);
       }
     }
     check();

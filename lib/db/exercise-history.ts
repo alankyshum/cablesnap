@@ -1,8 +1,9 @@
 import { eq, ne, and, sql, desc, asc, isNotNull, isNull, inArray, max, sum, count } from "drizzle-orm";
-import { query, queryOne, getDrizzle } from "./helpers";
+import { query, queryOne, getDrizzle, getDatabase } from "./helpers";
 import { workoutSets, workoutSessions, exercises } from "./schema";
 import { mapRow } from "./exercises";
 import type { Exercise } from "../types";
+import { uuid } from "../uuid";
 // BLD-1086 Phase 0a: VariantScope + helpers moved to variant-scope.ts.
 // Re-export for backward compatibility with all existing call-sites.
 export type { VariantScope } from "./variant-scope";
@@ -651,12 +652,23 @@ export async function exerciseHasHistoricalRpe(exerciseId: string): Promise<bool
       .get();
     return row !== undefined;
   } catch (err) {
-    console.error(
-      "[exerciseHasHistoricalRpe]",
-      err instanceof Error
-        ? `failed for ${exerciseId}: ${err.message}`
-        : `failed for ${exerciseId}: ${String(err)}`
-    );
+    try {
+      const db = await getDatabase();
+      await db.runAsync(
+        `INSERT INTO error_log (id, message, component, fatal, timestamp) VALUES (?, ?, ?, ?, ?)`,
+        [
+          uuid(),
+          err instanceof Error
+            ? `exerciseHasHistoricalRpe failed for ${exerciseId}: ${err.message}`
+            : `exerciseHasHistoricalRpe failed for ${exerciseId}: ${String(err)}`,
+          "exerciseHasHistoricalRpe",
+          0,
+          Date.now(),
+        ]
+      );
+    } catch {
+      // ignore logging errors
+    }
     return false;
   }
 }
