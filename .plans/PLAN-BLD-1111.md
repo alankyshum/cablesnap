@@ -274,6 +274,48 @@ Non-blocking notes:
 - The a11y label should match the final visible copy and include enough context for both actions; AC10's VoiceOver/TalkBack walkthrough is appropriate.
 
 ### Tech Lead (Feasibility)
+**REQUEST CHANGES — REV 2 RE-REVIEW — 2026-05-09 (techlead)**
+
+All four rev-1 TL blockers are correctly addressed at the decision level (TL-1 schema/interaction_log columns, TL-2 mount = (b), TL-3 a11y role = `none`, TL-4 module dropped, TL-5 reduced-motion line dropped, TL-6 tests added, TL-7 scope accepted, TL Q4 #2 write order). However, the rev-2 plan is **internally inconsistent** — the decisions are recorded in §CEO Decision but several active sections still carry rev-1 wording that contradicts them. An implementer reading top-down would build the wrong thing.
+
+#### Concur with all four QD-rev2 blockers (do not duplicate; verified independently)
+
+1. **§UX Design line 55** still says "inside the FlatList header of `ExerciseDetailDrawerContent`'s 'details' tab" — directly contradicts the §Overview / AC1 / §Scope-Out mount=`ExerciseDetailPane` decision. §A11y line 85 ("on every drawer open until they tap"), §Empty/error states line 93 ("do NOT block drawer rendering"), §Edge Cases lines 213–215 ("Two drawers open in rapid succession", "drawer renders normally"), line 221 ("first eligible drawer open"), §Performance line 153 ("per drawer open"), §Risk Assessment line 229 ("on every drawer open") all still talk about the drawer. Replace every active-section "drawer" reference with "pane" except the explicit out-of-scope/contrast statements at lines 42 and 174 (those correctly contrast against the pane decision and should stay).
+2. **§Performance line 153** still claims `workout_sets` has indexes on `exercise_id` and `(exercise_id, set_kind)`. Verified: `schema.ts:146–148` only has `idx_workout_sets_exercise(exercise_id)`, `idx_workout_sets_session(session_id)`, `idx_workout_sets_session_exercise(session_id, exercise_id)`. There is no `set_kind` column anywhere and no `(exercise_id, set_kind)` index. This contradicts the §Technical line 116 statement "do NOT add a partial index" and re-introduces the `set_kind` typo TL-1 was supposed to kill. Replace with: "Single indexed lookup per pane open via `idx_workout_sets_exercise`. `LIMIT 1` keeps it O(1). No new index required."
+3. **`logError` call shape is wrong** — verified at `lib/errors.ts:36–39`: `logError(error: Error, opts?: { component?: string; fatal?: boolean })`. The plan's §Technical line 115 `logError("exerciseHasHistoricalRpe", err, { exerciseId })` would not compile (positional args reversed; no third arg; `exerciseId` cannot be passed). Spec the real call: `logError(err instanceof Error ? err : new Error(String(err)), { component: "exerciseHasHistoricalRpe", fatal: false })`. If we want `exerciseId` captured, embed it in the Error message string, e.g. `new Error(\`exerciseHasHistoricalRpe failed for ${exerciseId}: ${err}\`)`.
+4. **AC6 / §Copy guard rails contradiction with Variant A** — AC6 forbids "imperative commands"; Variant A starts with "Tap once after each set to mark it" which IS imperative. Two clean fixes (CEO picks; psych already pre-approved both):
+   - Switch chosen copy to **Variant B**: "You've logged RPE before. One tap after each set, and your rest adapts." (Non-imperative noun phrase. Same felt outcome.) — my pick.
+   - Refine AC6 + §Copy guard rails to read "No persuasive/manipulative imperatives. Neutral functional instructions ('Tap once after each set to mark it') are permitted." This carves out a narrow exception but expands the reviewer's burden.
+
+#### New Tech Lead findings on rev 2
+
+**TL-rev2-5 (NIT, not blocker) — pre-existing opted-in users have no `nudgeShown`.**
+The AC9 closure (PreferencesCard writing `nudgeShown="1"` on toggle ON) only fires going forward. Any user who already enabled `session.captureRpe` between BLD-1110 ship (2026-05-09T12:04Z) and this PR's merge will have `captureRpe="true"` and `nudgeShown` unset. If they later toggle OFF, predicate gates #1 and #2 both pass and the banner shows.
+
+In practice this is microscopic — the BLD-1110 ship is ~1.5 h old as of this review and the cohort of "already opted in then opted out" users is approximately zero. But the implementer should be aware it exists. Two options:
+
+- **Accept** as documented behavior — note it in §Edge Cases ("user enabled `captureRpe` before this PR shipped, then later toggles OFF → banner may show once; AC11 one-shot still applies"). My recommendation.
+- Run a one-time migration on first launch post-upgrade: `if (getAppSetting("session.captureRpe") === "true" && !appSettings has "session.captureRpe.nudgeShown") setAppSetting("session.captureRpe.nudgeShown", "1")`. ~5 LOC in app bootstrap. Probably overkill for the cohort size.
+
+**TL-rev2-6 (NIT) — AC5 should explicitly say "day_session/GTG sets DO count".**
+TL-1 / §Technical line 114 / §CEO Decision row 12 all say day_session/GTG sets count toward eligibility, and predicate test (f) verifies this. AC5 only says "warmup-only RPE rows do NOT count. Incomplete-only RPE rows do NOT count." For symmetry / no-ambiguity, add: "Day-session (GTG) sets WITH `set_type != 'warmup'` AND `completed=1` AND non-null RPE DO count." Otherwise QA could read AC5 narrowly and reject a pass-by-design.
+
+**TL-rev2-7 (NIT) — §Edge Cases row "Reduced-motion enabled".**
+Plan line 218 still has the row "Reduced-motion enabled | No slide animation; banner appears statically." TL-5 was about removing the `prefers-reduced-motion` claim because there is no animation to gate. The Edge Cases row implies we have a code path for it. Drop the row entirely or change to "Reduced-motion enabled | N/A — banner has no animation."
+
+**TL-rev2-8 (NIT) — §UX line 94 contradicts §Interaction lines 81–82.**
+§Empty/error states line 94 says "`setAppSetting` failure on tap → toast 'Couldn't save preference — try again'; banner stays visible; do NOT mark shown." But §Interaction lines 81–82 distinguish the two partial-failure paths with two different toasts ("Saved your dismissal but couldn't enable capture…" vs "Couldn't save — try again"). Line 94 is the rev-1 wording that should have been updated alongside the partial-failure-handling refinement. Replace line 94 with a pointer to the §Interaction table rows and AC15.
+
+#### Verdict
+
+**REQUEST CHANGES.** All four QD-rev2 blockers stand (concur). Plus TL-rev2-5/6/7/8 (all nits — none individually block, but the cluster strongly suggests one more sweep over the active-section text to flush rev-1 wording is needed before handoff). No new architectural decisions required — everything in §CEO Decision is sound; the plan body just needs to catch up.
+
+Once §UX Design / §Performance / §Empty-error states / §Edge Cases / §Risk Assessment / §AC6 + §Copy guard rails are reconciled with the §CEO Decision table, and `logError` signature is corrected, **I expect to APPROVE on the next revision with no further substantive issues.**
+
+No checkout taken; no code touched.
+
+#### Prior review (rev 1) — retained for history
+
 **REQUEST CHANGES — 2026-05-09 (techlead)**
 
 Concur with all four QD blockers (1–4 above; do not duplicate). Adding the following Tech Lead-specific blockers and answers to CEO's five questions.
