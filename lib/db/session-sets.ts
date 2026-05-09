@@ -646,9 +646,9 @@ export async function getPreviousSets(
 export async function getPreviousSetsBatch(
   exerciseIds: string[],
   currentSessionId: string
-): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null }[]>> {
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null; pulley_pin: number | null }[]>> {
   if (exerciseIds.length === 0) return {};
-  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null }[]> = {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null; pulley_pin: number | null }[]> = {};
   const db = await getDrizzle();
   // Step 1: Find all completed sessions per exercise, ordered by most recent
   const sessionRows = await db
@@ -675,7 +675,7 @@ export async function getPreviousSetsBatch(
     }
   }
   const sessionIds = [...new Set(Object.values(sessionMap))];
-  // Step 2: Fetch ALL sets from those sessions (not just completed) with completed/rpe fields
+  // Step 2: Fetch ALL sets from those sessions (not just completed) with completed/rpe/pulley_pin fields
   const rows = await db
     .select({
       exercise_id: workoutSets.exercise_id,
@@ -687,6 +687,7 @@ export async function getPreviousSetsBatch(
       set_type: workoutSets.set_type,
       completed: workoutSets.completed,
       rpe: workoutSets.rpe,
+      pulley_pin: workoutSets.pulley_pin,
     })
     .from(workoutSets)
     .where(and(
@@ -700,7 +701,7 @@ export async function getPreviousSetsBatch(
     const correctSession = sessionMap[row.exercise_id];
     if (!correctSession || row.session_id !== correctSession) continue;
     if (!result[row.exercise_id]) result[row.exercise_id] = [];
-    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: row.set_type, completed: row.completed === 1, rpe: row.rpe ?? null });
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: row.set_type, completed: row.completed === 1, rpe: row.rpe ?? null, pulley_pin: row.pulley_pin ?? null });
   }
   return result;
 }

@@ -66,6 +66,7 @@ export type GroupCardProps = {
   hasClipMap?: Record<string, boolean>;
   onVideoGlyph?: (setId: string) => void;
   onOpenPulleyPinPicker?: (setId: string) => void;
+  showPulleyPin?: boolean;
   hasSetupPhotoMap?: Record<string, boolean>;
   onSetupPhotoGlyph?: (setId: string) => void;
   // BLD-1110: live RPE capture
@@ -89,7 +90,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
   onTimerStart, onTimerStop,
   hasClipMap, onVideoGlyph,
-  onOpenPulleyPinPicker, hasSetupPhotoMap, onSetupPhotoGlyph,
+  onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
 }: GroupCardProps) {
   const colors = useThemeColors();
@@ -144,6 +145,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       hasClipMap={hasClipMap}
       onVideoGlyph={onVideoGlyph}
       onOpenPulleyPinPicker={onOpenPulleyPinPicker}
+      showPulleyPin={showPulleyPin}
       hasSetupPhotoMap={hasSetupPhotoMap}
       onSetupPhotoGlyph={onSetupPhotoGlyph}
       captureRpe={captureRpe}

@@ -38,6 +38,9 @@ export default function PreferencesCard({
   // BLD-1110: Live RPE capture — default OFF (opt-in via Settings).
   const [captureRpe, setCaptureRpeState] = useState(false);
 
+  // BLD-1114: Pulley pin tracking — default ON (opt-out via Settings).
+  const [pulleyPinTracking, setPulleyPinTrackingState] = useState(true);
+
   // BLD-559: set-completion confirmation feedback — haptic default ON,
   // audio default OFF.
   const [setCompleteHaptic, setSetCompleteHapticState] = useState(true);
@@ -59,7 +62,8 @@ export default function PreferencesCard({
       getAppSetting("session.captureRpe"),
       getAppSetting("feedback.setComplete.haptic"),
       getAppSetting("feedback.setComplete.audio"),
-    ]).then(([adaptive, show, warmup, captureRpeSetting, scHaptic, scAudio]) => {
+      getAppSetting("session.pulleyPinTracking"),
+    ]).then(([adaptive, show, warmup, captureRpeSetting, scHaptic, scAudio, pulleyPin]) => {
       if (cancelled) return;
       setAdaptiveRest(adaptive !== "false");
       setShowBreakdown(show === "true");
@@ -68,6 +72,7 @@ export default function PreferencesCard({
       setSetCompleteHapticState(scHaptic !== "false");
       setSetCompleteAudioState(scAudio === "true");
       setAudioEverInteracted(scAudio != null);
+      setPulleyPinTrackingState(pulleyPin !== "false");
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -110,6 +115,12 @@ export default function PreferencesCard({
     setAudioEverInteracted(true);
     try { await setSetCompletionAudio(val); }
     catch { toast.error("Failed to save set-complete sound setting"); }
+  };
+
+  const updatePulleyPinTracking = async (val: boolean) => {
+    setPulleyPinTrackingState(val);
+    try { await setAppSetting("session.pulleyPinTracking", val ? "true" : "false"); }
+    catch { toast.error("Failed to save pulley pin tracking setting"); }
   };
 
   return (
@@ -205,6 +216,25 @@ export default function PreferencesCard({
             accessibilityLabel="Capture set RPE during workouts"
             accessibilityRole="switch"
             accessibilityHint="Shows effort chips after each set you complete"
+          />
+        </View>
+
+        {/* BLD-1114: Pulley pin tracking */}
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
+              Track pulley pin position
+            </Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs, marginTop: 2, lineHeight: 16 }}>
+              Show a pin-number chip on cable sets to log which pulley pin you used.
+            </Text>
+          </View>
+          <Switch
+            value={pulleyPinTracking}
+            onValueChange={updatePulleyPinTracking}
+            accessibilityLabel="Track pulley pin position"
+            accessibilityRole="switch"
+            accessibilityHint="Show or hide the pulley pin chip on cable exercise sets"
           />
         </View>
 

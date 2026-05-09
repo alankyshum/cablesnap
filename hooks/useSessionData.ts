@@ -233,6 +233,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
         weight: s.weight,
         reps: s.reps,
         duration_seconds: s.duration_seconds ?? null,
+        pulley_pin: s.pulley_pin ?? null,
       }));
     }
 

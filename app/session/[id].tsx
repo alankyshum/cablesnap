@@ -8,7 +8,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "../../lib/audio";
-import { getAppSetting, addWarmupSets, updateSetRPE, updatePulleyPin, getMaxPulleyPins } from "../../lib/db";
+import { getAppSetting, addWarmupSets, updateSetRPE, updatePulleyPin, getMaxPulleyPins, updateMaxPulleyPins } from "../../lib/db";
 import { sessionBreadcrumb, rpeBreadcrumb } from "../../lib/session-breadcrumbs";
 import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
 import { useVariantPickerSheet } from "../../hooks/useVariantPickerSheet";
@@ -165,6 +165,7 @@ export default function ActiveSession() {
   // Map of setId → hasClip, populated after set completion check.
   const [hasClipMap, setHasClipMap] = useState<Record<string, boolean>>({});
   const [pulleyPinSetId, setPulleyPinSetId] = useState<string | null>(null);
+  const [pulleyPinExerciseId, setPulleyPinExerciseId] = useState<string | null>(null);
   const [pulleyPinCurrent, setPulleyPinCurrent] = useState<number | null>(null);
   const [pulleyPinMax, setPulleyPinMax] = useState<number>(12);
   const [setupPhotoSetId, setSetupPhotoSetId] = useState<string | null>(null);
@@ -176,6 +177,14 @@ export default function ActiveSession() {
   useEffect(() => {
     getAppSetting("session.captureRpe").then((val) => {
       setCaptureRpe(val === "true");
+    }).catch(() => {});
+  }, []);
+
+  // BLD-1114: Pulley pin tracking enabled preference (default on)
+  const [pulleyPinTrackingEnabled, setPulleyPinTrackingEnabled] = useState(true);
+  useEffect(() => {
+    getAppSetting("session.pulleyPinTracking").then((val) => {
+      setPulleyPinTrackingEnabled(val !== "false");
     }).catch(() => {});
   }, []);
 
@@ -212,6 +221,7 @@ export default function ActiveSession() {
     const found = findSetById(setId);
     if (!found) return;
     setPulleyPinSetId(setId);
+    setPulleyPinExerciseId(found.exerciseId);
     setPulleyPinCurrent(found.set.pulley_pin ?? null);
     getMaxPulleyPins(found.exerciseId).then((maxPins) => {
       setPulleyPinMax(maxPins ?? 12);
@@ -232,9 +242,23 @@ export default function ActiveSession() {
     });
   }, [pulleyPinCurrent, pulleyPinSetId, showError, updateGroupSet]);
 
-  const handleSetupPhotoGlyph = useCallback((setId: string) => {
+  const handleSetMaxPulleyPins = useCallback((newMax: number) => {
+    if (!pulleyPinExerciseId) return;
+    setPulleyPinMax(newMax);
+    updateMaxPulleyPins(pulleyPinExerciseId, newMax).catch(() => {
+      showError("Could not save max pins");
+    });
+  }, [pulleyPinExerciseId, showError]);
+
+  const handleSetupPhotoGlyph = useCallback(async (setId: string) => {
+    let row: import("../../lib/media/setup-photos").SetMediaRow | null = null;
+    try {
+      row = await getSetupPhotoForSet(setId);
+    } catch {
+      row = null;
+    }
+    setSetupPhotoRow(row);
     setSetupPhotoSetId(setId);
-    getSetupPhotoForSet(setId).then((row) => setSetupPhotoRow(row)).catch(() => setSetupPhotoRow(null));
   }, []);
 
   const handleSetupPhotoSaved = useCallback((row: import("../../lib/media/setup-photos").SetMediaRow) => {
@@ -415,9 +439,10 @@ export default function ActiveSession() {
       onSetupPhotoGlyph={handleSetupPhotoGlyph}
       captureRpe={captureRpe}
       onRpeChange={handleRpeChange}
+      showPulleyPin={pulleyPinTrackingEnabled}
     />
     );
-  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange]);
+  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />
@@ -548,6 +573,7 @@ export default function ActiveSession() {
         currentPin={pulleyPinCurrent}
         maxPins={pulleyPinMax}
         onSelect={handleSelectPulleyPin}
+        onSetMaxPins={handleSetMaxPulleyPins}
         onClose={() => {
           setPulleyPinSetId(null);
         }}

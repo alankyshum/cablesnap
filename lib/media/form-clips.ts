@@ -370,28 +370,28 @@ export async function reconcileOrphans(): Promise<void> {
   // Step 2: sweep pending_delete rows.
   await sweepPendingDeletes(allRows);
 
-  // Step 3: enumerate filesystem.
+  // Step 3: enumerate filesystem — form-clips directory.
   const root = clipsRootDir();
-  if (!root.exists) return;
-
-  const nowMs = Date.now();
-  const exerciseEntries = root.list();
-
-  for (const entry of exerciseEntries) {
-    if (!(entry instanceof Directory)) continue;
-    let files: (File | Directory)[];
-    try {
-      files = entry.list();
-    } catch {
-      continue;
-    }
-    for (const fileEntry of files) {
-      if (fileEntry instanceof File) {
-        maybeUnlinkOrphan(fileEntry, liveRelPaths, nowMs);
+  if (root.exists) {
+    const nowMs = Date.now();
+    const exerciseEntries = root.list();
+    for (const entry of exerciseEntries) {
+      if (!(entry instanceof Directory)) continue;
+      let files: (File | Directory)[];
+      try {
+        files = entry.list();
+      } catch {
+        continue;
+      }
+      for (const fileEntry of files) {
+        if (fileEntry instanceof File) {
+          maybeUnlinkOrphan(fileEntry, liveRelPaths, nowMs);
+        }
       }
     }
   }
 
+  const nowMs = Date.now();
   const setupRoot = new Directory(Paths.document, "set-media");
   if (!setupRoot.exists) return;
   for (const entry of setupRoot.list()) {

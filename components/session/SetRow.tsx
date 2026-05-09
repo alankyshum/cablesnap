@@ -164,6 +164,7 @@ export type SetRowProps = {
   onVideoGlyph?: (setId: string) => void;
   pulleyPin?: number | null;
   onOpenPulleyPinPicker?: (setId: string) => void;
+  showPulleyPin?: boolean;
   hasSetupPhoto?: boolean;
   onSetupPhotoGlyph?: (setId: string) => void;
   // BLD-1110: Live RPE capture. captureRpe enables the 4-chip strip under
@@ -182,7 +183,7 @@ export const SetRow = memo(function SetRow({
   onOpenVariantPicker, onClearVariant,
   exerciseName, onOpenBodyweightGripPicker, onClearBodyweightGrip,
   hasClip, onVideoGlyph,
-  pulleyPin, onOpenPulleyPinPicker, hasSetupPhoto, onSetupPhotoGlyph,
+  pulleyPin, onOpenPulleyPinPicker, showPulleyPin, hasSetupPhoto, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
 }: SetRowProps) {
   const colors = useThemeColors();
@@ -638,7 +639,7 @@ export const SetRow = memo(function SetRow({
                 </>
               )}
             </Pressable>
-            {pulleyPin !== undefined ? (
+            {(showPulleyPin !== false) && pulleyPin !== undefined ? (
               <Pressable
                 onPress={() => onOpenPulleyPinPicker?.(set.id)}
                 hitSlop={8}

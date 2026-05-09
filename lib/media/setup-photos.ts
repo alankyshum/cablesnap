@@ -69,6 +69,9 @@ export async function persistSetupPhotoFileOnly(
   const sourceFile = new File(uri);
   sourceFile.move(destFile);
 
+  // Read the actual file size after the move so size_bytes is always populated.
+  const readSize = destFile.size ?? sizeBytes ?? null;
+
   await excludeFromBackup(destFile.uri);
 
   return {
@@ -77,7 +80,7 @@ export async function persistSetupPhotoFileOnly(
     exercise_id: exerciseId,
     kind: "setup_photo",
     rel_path: toRelPath(destFile.uri),
-    size_bytes: sizeBytes,
+    size_bytes: readSize,
     width,
     height,
     created_at: Date.now(),
@@ -86,7 +89,12 @@ export async function persistSetupPhotoFileOnly(
 
 export async function captureSetupPhoto(params: CaptureSetupPhotoParams): Promise<SetMediaRow> {
   const meta = await persistSetupPhotoFileOnly(params);
-  return await insertSetMedia(meta);
+  try {
+    return await insertSetMedia(meta);
+  } catch (err) {
+    try { await unlinkSetupPhotoFiles(meta.rel_path); } catch { /* best-effort cleanup */ }
+    throw err;
+  }
 }
 
 export async function unlinkSetupPhotoFiles(relPath: string): Promise<void> {
