@@ -18,7 +18,7 @@ export interface InsertSetMediaParams {
   id: string;
   set_id: string;
   exercise_id: string;
-  kind: "video";
+  kind: "video" | "setup_photo";
   rel_path: string;
   duration_ms?: number | null;
   size_bytes?: number | null;
@@ -53,7 +53,7 @@ export async function getClipForSet(setId: string): Promise<SetMediaRow | null> 
   const rows = await db
     .select()
     .from(setMedia)
-    .where(and(eq(setMedia.set_id, setId), eq(setMedia.pending_delete, 0)))
+    .where(and(eq(setMedia.set_id, setId), eq(setMedia.kind, "video"), eq(setMedia.pending_delete, 0)))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -64,7 +64,7 @@ export async function getClipsForExercise(exerciseId: string): Promise<SetMediaR
   return db
     .select()
     .from(setMedia)
-    .where(and(eq(setMedia.exercise_id, exerciseId), eq(setMedia.pending_delete, 0)))
+    .where(and(eq(setMedia.exercise_id, exerciseId), eq(setMedia.kind, "video"), eq(setMedia.pending_delete, 0)))
     .orderBy(desc(setMedia.created_at));
 }
 
@@ -101,12 +101,15 @@ export async function getSetMediaStats(): Promise<{ count: number; totalBytes: n
       totalBytes: sql<number>`coalesce(sum(size_bytes), 0)`,
     })
     .from(setMedia)
-    .where(eq(setMedia.pending_delete, 0));
+    .where(and(eq(setMedia.kind, "video"), eq(setMedia.pending_delete, 0)));
   const row = result[0];
   return { count: Number(row?.count ?? 0), totalBytes: Number(row?.totalBytes ?? 0) };
 }
 
-/** Delete set_media rows for a given set_id (service-layer cascade helper). */
+/**
+ * Delete set_media rows for a given set_id (service-layer cascade helper).
+ * Kind-agnostic: sweeps both video and setup_photo rows.
+ */
 export async function deleteClipsForSet(setId: string): Promise<void> {
   const db = await getDrizzle();
   await db.delete(setMedia).where(eq(setMedia.set_id, setId));
@@ -156,6 +159,6 @@ export async function getAllLiveSetMediaWithExerciseName(): Promise<
     })
     .from(setMedia)
     .leftJoin(exercises, eq(setMedia.exercise_id, exercises.id))
-    .where(eq(setMedia.pending_delete, 0))
+    .where(and(eq(setMedia.kind, "video"), eq(setMedia.pending_delete, 0)))
     .orderBy(desc(setMedia.created_at));
 }

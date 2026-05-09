@@ -29,18 +29,20 @@ import {
   deleteSetMediaForSession as dbDeleteSetMediaForSession,
 } from "../db/form-clips";
 import { withTransaction } from "../db/helpers";
-import { setExcludedFromBackup } from "./backup-exclusion";
 import type { SetMediaRow } from "../db/form-clips";
+import {
+  FORM_CLIPS_DIR,
+  ensureDir,
+  excludeFromBackup,
+  toAbsPath,
+  toRelPath,
+} from "./set-media-common";
+import { unlinkSetupPhotoFiles } from "./setup-photos";
 
 export type { SetMediaRow };
 
-const FORM_CLIPS_DIR = "form-clips";
 const THUMBS_DIR = ".thumbs";
 const ORPHAN_GRACE_MS = 30_000;
-
-// ---------------------------------------------------------------------------
-// Path helpers
-// ---------------------------------------------------------------------------
 
 /** Directory object for root form-clips directory. */
 function clipsRootDir(): Directory {
@@ -57,26 +59,7 @@ function thumbFile(exerciseId: string, clipId: string): File {
   return new File(Paths.document, `${FORM_CLIPS_DIR}/${exerciseId}/${THUMBS_DIR}/${clipId}.jpg`);
 }
 
-/** Convert an absolute file URI to the rel_path stored in set_media. */
-export function toRelPath(absUri: string): string {
-  const base = Paths.document.uri;
-  return absUri.startsWith(base) ? absUri.slice(base.length) : absUri;
-}
-
-/** Convert a rel_path back to an absolute file URI. */
-export function toAbsPath(relPath: string): string {
-  return new File(Paths.document, relPath).uri;
-}
-
-// ---------------------------------------------------------------------------
-// Ensure directory exists
-// ---------------------------------------------------------------------------
-
-function ensureDir(dir: Directory): void {
-  if (!dir.exists) {
-    dir.create({ intermediates: true });
-  }
-}
+export { toAbsPath, toRelPath };
 
 // ---------------------------------------------------------------------------
 // recordClip
@@ -132,9 +115,7 @@ export async function persistRecordedClipFileOnly(
   const sourceFile = new File(uri);
   sourceFile.move(destFile);
 
-  if (Platform.OS === "ios") {
-    await setExcludedFromBackup(destFile.uri);
-  }
+  await excludeFromBackup(destFile.uri);
 
   return {
     id: clipId,
@@ -295,7 +276,12 @@ export async function cascadeDeleteClipsForSets(setIds: string[]): Promise<void>
   const rows = await getAllSetMediaRows();
   const targets = rows.filter((r) => setIds.includes(r.set_id));
   for (const row of targets) {
-    await deleteClip(row.id, row.rel_path);
+    if (row.kind === "setup_photo") {
+      await dbHardDeleteClip(row.id);
+      await unlinkSetupPhotoFiles(row.rel_path);
+    } else {
+      await deleteClip(row.id, row.rel_path);
+    }
   }
   // Belt-and-braces: remove any DB rows whose files may already be gone
   // (deleteClip already deletes the DB row via dbHardDeleteClip, but call
@@ -317,20 +303,10 @@ export async function cascadeDeleteClipsForSession(sessionId: string): Promise<v
   if (Platform.OS === "web") return;
   const rows = await dbDeleteSetMediaForSession(sessionId);
   for (const row of rows) {
-    try {
-      const f = new File(Paths.document, row.rel_path);
-      if (f.exists) f.delete();
-      // Also remove thumbnail if present.
-      const parts = row.rel_path.split("/");
-      const filename = parts[parts.length - 1];
-      const clipId = filename.replace(/\.mp4$/, "");
-      const exerciseId = parts[parts.length - 2];
-      if (clipId && exerciseId) {
-        const thumb = thumbFile(exerciseId, clipId);
-        if (thumb.exists) thumb.delete();
-      }
-    } catch {
-      // ENOENT / permission errors are non-fatal.
+    if (row.kind === "setup_photo") {
+      await unlinkSetupPhotoFiles(row.rel_path);
+    } else {
+      await unlinkClipFiles(row.rel_path);
     }
   }
 }
@@ -357,8 +333,8 @@ async function sweepPendingDeletes(rows: Awaited<ReturnType<typeof getAllSetMedi
  * Step 4: For a single file entry, unlink if it is an orphan (absent from
  * liveRelPaths and older than ORPHAN_GRACE_MS).
  */
-function maybeUnlinkOrphan(fileEntry: File, liveRelPaths: Set<string>, nowMs: number): void {
-  if (!fileEntry.uri.endsWith(".mp4")) return;
+function maybeUnlinkOrphan(fileEntry: File, liveRelPaths: Set<string>, nowMs: number, allowedExt = ".mp4"): void {
+  if (!fileEntry.uri.endsWith(allowedExt)) return;
   const relPath = toRelPath(fileEntry.uri);
   if (liveRelPaths.has(relPath)) return;
   try {
@@ -413,6 +389,14 @@ export async function reconcileOrphans(): Promise<void> {
       if (fileEntry instanceof File) {
         maybeUnlinkOrphan(fileEntry, liveRelPaths, nowMs);
       }
+    }
+  }
+
+  const setupRoot = new Directory(Paths.document, "set-media");
+  if (!setupRoot.exists) return;
+  for (const entry of setupRoot.list()) {
+    if (entry instanceof File) {
+      maybeUnlinkOrphan(entry, liveRelPaths, nowMs, ".jpg");
     }
   }
 }

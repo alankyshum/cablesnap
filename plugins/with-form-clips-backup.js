@@ -64,12 +64,14 @@ const COMBINED_DATA_EXTRACTION_RULES_XML = `<?xml version="1.0" encoding="utf-8"
     <exclude domain="sharedpref" path="SecureStore"/>
     <include domain="file" path="."/>
     <exclude domain="file" path="form-clips/"/>
+    <exclude domain="file" path="set-media/"/>
   </cloud-backup>
   <device-transfer>
     <include domain="sharedpref" path="."/>
     <exclude domain="sharedpref" path="SecureStore"/>
     <include domain="file" path="."/>
     <exclude domain="file" path="form-clips/"/>
+    <exclude domain="file" path="set-media/"/>
   </device-transfer>
 </data-extraction-rules>
 `;
@@ -92,6 +94,7 @@ const COMBINED_FULL_BACKUP_CONTENT_XML = `<?xml version="1.0" encoding="utf-8"?>
   <exclude domain="sharedpref" path="SecureStore"/>
   <include domain="file" path="."/>
   <exclude domain="file" path="form-clips/"/>
+  <exclude domain="file" path="set-media/"/>
 </full-backup-content>
 `;
 

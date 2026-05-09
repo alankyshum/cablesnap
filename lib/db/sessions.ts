@@ -27,6 +27,7 @@ export {
   deleteSet,
   deleteSetsBatch,
   updateSetRPE,
+  updatePulleyPin,
   updateSetNotes,
   updateSetTempo,
   updateSetWarmup,

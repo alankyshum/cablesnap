@@ -8,7 +8,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { setEnabled as setAudioCategoryEnabled, preload as preloadAudio } from "../../lib/audio";
-import { getAppSetting, addWarmupSets, updateSetRPE } from "../../lib/db";
+import { getAppSetting, addWarmupSets, updateSetRPE, updatePulleyPin, getMaxPulleyPins } from "../../lib/db";
 import { sessionBreadcrumb, rpeBreadcrumb } from "../../lib/session-breadcrumbs";
 import { useBodyweightModifierSheet } from "../../hooks/useBodyweightModifierSheet";
 import { useVariantPickerSheet } from "../../hooks/useVariantPickerSheet";
@@ -40,6 +40,9 @@ import { VariantPickerSheet } from "../../components/session/VariantPickerSheet"
 import { BodyweightGripPickerSheet } from "../../components/session/BodyweightGripPickerSheet";
 import { FormVideoSheet } from "../../components/session/FormVideoSheet";
 import { FormClipsPlayer } from "../../components/session/FormClipsPlayer";
+import { PulleyPinPickerSheet } from "../../components/session/PulleyPinPickerSheet";
+import { SetupPhotoSheet } from "../../components/session/SetupPhotoSheet";
+import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -161,6 +164,12 @@ export default function ActiveSession() {
   const [playerClip, setPlayerClip] = useState<import("../../lib/media/form-clips").SetMediaRow | null>(null);
   // Map of setId → hasClip, populated after set completion check.
   const [hasClipMap, setHasClipMap] = useState<Record<string, boolean>>({});
+  const [pulleyPinSetId, setPulleyPinSetId] = useState<string | null>(null);
+  const [pulleyPinCurrent, setPulleyPinCurrent] = useState<number | null>(null);
+  const [pulleyPinMax, setPulleyPinMax] = useState<number>(12);
+  const [setupPhotoSetId, setSetupPhotoSetId] = useState<string | null>(null);
+  const [setupPhotoRow, setSetupPhotoRow] = useState<import("../../lib/media/setup-photos").SetMediaRow | null>(null);
+  const [hasSetupPhotoMap, setHasSetupPhotoMap] = useState<Record<string, boolean>>({});
 
   // BLD-1110: Live RPE capture preference
   const [captureRpe, setCaptureRpe] = useState(false);
@@ -199,6 +208,52 @@ export default function ActiveSession() {
     void clipId;
   }, []);
 
+  const handleOpenPulleyPinPicker = useCallback((setId: string) => {
+    const found = findSetById(setId);
+    if (!found) return;
+    setPulleyPinSetId(setId);
+    setPulleyPinCurrent(found.set.pulley_pin ?? null);
+    getMaxPulleyPins(found.exerciseId).then((maxPins) => {
+      setPulleyPinMax(maxPins ?? 12);
+    }).catch(() => {
+      setPulleyPinMax(12);
+    });
+  }, [findSetById]);
+
+  const handleSelectPulleyPin = useCallback((pin: number | null) => {
+    if (!pulleyPinSetId) return;
+    const previous = pulleyPinCurrent;
+    updateGroupSet(pulleyPinSetId, { pulley_pin: pin });
+    setPulleyPinCurrent(pin);
+    updatePulleyPin(pulleyPinSetId, pin).catch(() => {
+      updateGroupSet(pulleyPinSetId, { pulley_pin: previous });
+      setPulleyPinCurrent(previous);
+      showError("Could not save pulley pin");
+    });
+  }, [pulleyPinCurrent, pulleyPinSetId, showError, updateGroupSet]);
+
+  const handleSetupPhotoGlyph = useCallback((setId: string) => {
+    setSetupPhotoSetId(setId);
+    getSetupPhotoForSet(setId).then((row) => setSetupPhotoRow(row)).catch(() => setSetupPhotoRow(null));
+  }, []);
+
+  const handleSetupPhotoSaved = useCallback((row: import("../../lib/media/setup-photos").SetMediaRow) => {
+    setSetupPhotoSetId(null);
+    setSetupPhotoRow(row);
+    setHasSetupPhotoMap((prev) => ({ ...prev, [row.set_id]: true }));
+  }, []);
+
+  const handleSetupPhotoDeleted = useCallback(() => {
+    if (!setupPhotoRow) return;
+    const { id: photoId, rel_path, set_id } = setupPhotoRow;
+    deleteSetupPhoto(photoId, rel_path)
+      .then(() => {
+        setHasSetupPhotoMap((prev) => ({ ...prev, [set_id]: false }));
+        setSetupPhotoRow(null);
+      })
+      .catch(() => showError("Could not delete setup photo"));
+  }, [setupPhotoRow, showError]);
+
   // BLD-1110: RPE chip tap handler — optimistic update, persist, breadcrumb, recompute rest.
   const handleRpeChange = useCallback((setId: string, rpe: number | null) => {
     const found = findSetById(setId);
@@ -215,15 +270,23 @@ export default function ActiveSession() {
     }
   }, [findSetById, recomputeActiveRest, updateGroupSet]);
 
-  // Refresh hasClipMap when sets change (non-blocking fire-and-forget).
+  // Refresh media maps when sets change (non-blocking fire-and-forget).
   useEffect(() => {
     if (Platform.OS === "web") return;
     import("../../lib/db/form-clips").then(({ getClipForSet }) => {
       const completedSetIds = groups.flatMap((g) => g.sets.filter((s) => s.completed).map((s) => s.id));
-      if (completedSetIds.length === 0) return;
-      Promise.all(completedSetIds.map((sid) => getClipForSet(sid).then((clip) => [sid, !!clip] as const)))
-        .then((pairs) => {
-          setHasClipMap(Object.fromEntries(pairs));
+      if (completedSetIds.length === 0) {
+        setHasClipMap({});
+        setHasSetupPhotoMap({});
+        return;
+      }
+      Promise.all([
+        Promise.all(completedSetIds.map((sid) => getClipForSet(sid).then((clip) => [sid, !!clip] as const))),
+        Promise.all(completedSetIds.map((sid) => getSetupPhotoForSet(sid).then((photo) => [sid, !!photo] as const))),
+      ])
+        .then(([clipPairs, photoPairs]) => {
+          setHasClipMap(Object.fromEntries(clipPairs));
+          setHasSetupPhotoMap(Object.fromEntries(photoPairs));
         })
         .catch(() => {});
     }).catch(() => {});
@@ -347,11 +410,14 @@ export default function ActiveSession() {
       onTimerStop={handleTimerStop}
       hasClipMap={hasClipMap}
       onVideoGlyph={handleVideoGlyph}
+      onOpenPulleyPinPicker={handleOpenPulleyPinPicker}
+      hasSetupPhotoMap={hasSetupPhotoMap}
+      onSetupPhotoGlyph={handleSetupPhotoGlyph}
       captureRpe={captureRpe}
       onRpeChange={handleRpeChange}
     />
     );
-  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, captureRpe, handleRpeChange]);
+  }, [step, unit, suggestions, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />
@@ -477,6 +543,15 @@ export default function ActiveSession() {
       <BodyweightModifierSheet sheetRef={bwModifierSheetRef} initialModifierKg={bwModifierInitial} unit={unit} onDone={handleSaveBodyweightModifier} onDismiss={handleDismissBodyweightModifier} />
       <VariantPickerSheet isVisible={variant.isVisible} onClose={variant.handleClose} onConfirm={variant.handleConfirm} {...variant.initialValues} />
       <BodyweightGripPickerSheet isVisible={bodyweightGrip.isVisible} onClose={bodyweightGrip.handleClose} onConfirm={bodyweightGrip.handleConfirm} {...bodyweightGrip.initialValues} />
+      <PulleyPinPickerSheet
+        visible={!!pulleyPinSetId}
+        currentPin={pulleyPinCurrent}
+        maxPins={pulleyPinMax}
+        onSelect={handleSelectPulleyPin}
+        onClose={() => {
+          setPulleyPinSetId(null);
+        }}
+      />
       {/* BLD-1092: form-check video modals (no-ops on web — components guard with Platform.OS) */}
       {Platform.OS !== "web" && (() => {
         const formSetInfo = formVideoSetId ? findSetById(formVideoSetId) : null;
@@ -503,6 +578,23 @@ export default function ActiveSession() {
             onClose={() => { setPlayerSetId(null); setPlayerClip(null); }}
           />
         );
+      })()}
+      {Platform.OS !== "web" && (() => {
+        const setupSetInfo = setupPhotoSetId ? findSetById(setupPhotoSetId) : null;
+        return setupSetInfo ? (
+          <SetupPhotoSheet
+            visible={!!setupPhotoSetId}
+            setId={setupPhotoSetId!}
+            exerciseId={setupSetInfo.exerciseId}
+            existingPhoto={setupPhotoRow}
+            onSaved={handleSetupPhotoSaved}
+            onDeleted={handleSetupPhotoDeleted}
+            onClose={() => {
+              setSetupPhotoSetId(null);
+              setSetupPhotoRow(null);
+            }}
+          />
+        ) : null;
       })()}
     </>
   );

@@ -43,6 +43,8 @@ export const exercises = sqliteTable("exercises", {
   // Validation lives in setUserRestSeconds (throws RestBoundsError) and the
   // import-export path (clamps/drops on ingest).
   user_rest_seconds: integer("user_rest_seconds"),
+  // BLD-1114: per-exercise pulley pin override. NULL = use global default (12).
+  max_pulley_pins: integer("max_pulley_pins"),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {
@@ -142,6 +144,8 @@ export const workoutSets = sqliteTable("workout_sets", {
   stack_marker: integer("stack_marker"),
   stack_unit_at_log: text("stack_unit_at_log"),
   stack_name_at_log: text("stack_name_at_log"),
+  // BLD-1114: per-set cable pulley pin. NULL = unset.
+  pulley_pin: integer("pulley_pin"),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),
@@ -160,7 +164,7 @@ export const setMedia = sqliteTable("set_media", {
   id: text("id").primaryKey(),                            // ULID
   set_id: text("set_id").notNull(),                       // FK → workout_sets.id (cascade enforced in service layer; PRAGMA foreign_keys=ON from BLD-1094)
   exercise_id: text("exercise_id").notNull(),             // denormalized for fast Form Library queries
-  kind: text("kind").notNull(),                           // "video" only in v1; no default — every INSERT must specify
+  kind: text("kind").notNull(),                           // "video" | "setup_photo"; no default — every INSERT must specify
   rel_path: text("rel_path").notNull(),                   // relative to documentDirectory
   duration_ms: integer("duration_ms"),
   size_bytes: integer("size_bytes"),
@@ -169,7 +173,7 @@ export const setMedia = sqliteTable("set_media", {
   pending_delete: integer("pending_delete").notNull().default(0), // tombstone for two-phase delete
   created_at: integer("created_at").notNull(),
 }, (t) => [
-  uniqueIndex("uq_set_media_set_id").on(t.set_id),                                                // one-clip-per-set invariant
+  uniqueIndex("uq_set_media_set_id").on(t.set_id, t.kind),                                        // one row per kind per set
   index("idx_set_media_exercise_created").on(t.exercise_id, t.created_at),
   index("idx_set_media_pending_delete_partial").on(t.pending_delete).where(sql`${t.pending_delete} = 1`),
 ]);

@@ -1,4 +1,4 @@
-/* eslint-disable complexity, max-lines-per-function */
+/* eslint-disable complexity, max-lines-per-function, max-lines */
 /**
  * SetRow — Hard Exclusions (Behavior-Design Classification: NO).
  * This file MUST NOT introduce any of the following. If any of these is
@@ -28,6 +28,7 @@ import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
 import { SetAttachmentChip } from "./SetAttachmentChip";
 import { SetMountPositionChip } from "./SetMountPositionChip";
+import { SetPulleyPinChip } from "./SetPulleyPinChip";
 import { SetGripTypeChip } from "./SetGripTypeChip";
 import { SetGripWidthChip } from "./SetGripWidthChip";
 import SwipeRowAction from "../../components/SwipeRowAction";
@@ -161,6 +162,10 @@ export type SetRowProps = {
   // (no clip) or the player sheet (clip exists).
   hasClip?: boolean;
   onVideoGlyph?: (setId: string) => void;
+  pulleyPin?: number | null;
+  onOpenPulleyPinPicker?: (setId: string) => void;
+  hasSetupPhoto?: boolean;
+  onSetupPhotoGlyph?: (setId: string) => void;
   // BLD-1110: Live RPE capture. captureRpe enables the 4-chip strip under
   // completed sets. onRpeChange writes to DB + emits breadcrumb in parent.
   captureRpe?: boolean;
@@ -177,6 +182,7 @@ export const SetRow = memo(function SetRow({
   onOpenVariantPicker, onClearVariant,
   exerciseName, onOpenBodyweightGripPicker, onClearBodyweightGrip,
   hasClip, onVideoGlyph,
+  pulleyPin, onOpenPulleyPinPicker, hasSetupPhoto, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
 }: SetRowProps) {
   const colors = useThemeColors();
@@ -515,6 +521,25 @@ export const SetRow = memo(function SetRow({
               />
             </Pressable>
           )}
+          {set.completed && Platform.OS !== "web" && isCableExercise({ equipment }) && (
+            <Pressable
+              onPress={() => onSetupPhotoGlyph?.(set.id)}
+              hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+              style={styles.videoGlyphBtn}
+              accessibilityRole="button"
+              accessibilityLabel={
+                hasSetupPhoto
+                  ? `View setup photo for set ${set.set_number}`
+                  : `Take setup photo for set ${set.set_number}`
+              }
+            >
+              <MaterialCommunityIcons
+                name={hasSetupPhoto ? "camera-plus" : "camera-plus-outline"}
+                size={22}
+                color={hasSetupPhoto ? colors.primary : colors.onSurfaceVariant}
+              />
+            </Pressable>
+          )}
           <Pressable
             // Sighted: swipe is the primary delete path; single-tap is a
             // no-op (no onPress) so sweaty/gloved fingers cannot misfire.
@@ -564,69 +589,66 @@ export const SetRow = memo(function SetRow({
       */}
       {isCableExercise({ equipment }) ? (
         <View style={styles.footerWithRpe}>
-          <Pressable
-            ref={variantFooterRef}
-            onPress={() => {
-              // Reviewer blocker #4 (PR #426): pass the originating row's
-              // accessibility handle to the picker hook so VO/TalkBack focus
-              // can be restored to this same Pressable on dismiss.
-              const handle = variantFooterRef.current
-                ? findNodeHandle(variantFooterRef.current)
-                : null;
-              onOpenVariantPicker?.(set.id, handle);
-            }}
-            onLongPress={() => onClearVariant?.(set.id)}
-            accessibilityRole="button"
-            // QD-8 (BLD-822 → BLD-823): a11y composite labels now have parity
-            // between cable and grip footers. Both enumerate selected values:
-            //   cable: "Set 1 cable variant: Rope, Low. Double-tap to edit."
-            //   grip:  "Set 1 grip variant: Overhand, Narrow. Double-tap to edit."
-            // Keep both blocks in sync; do NOT diverge without updating both.
-            accessibilityLabel={(() => {
-              const att = set.attachment ?? null;
-              const mp = set.mount_position ?? null;
-              if (att != null && mp != null) {
-                return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
-              } else if (att != null) {
-                return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, position not set. Double-tap to edit.`;
-              } else if (mp != null) {
-                return `Set ${set.set_number} cable variant: attachment not set, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
-              }
-              return `Set ${set.set_number} cable variant: not set. Double-tap to choose.`;
-            })()}
-            accessibilityHint="Long press to clear attachment and position"
-            style={[styles.variantFooter, styles.footerFlex]}
-          >
-            {set.attachment == null && set.mount_position == null ? (
-              // Reviewer blocker #3 (PR #426): when both fields are null the
-              // chips self-suppress, leaving a zero-height Pressable with no
-              // visible tap-target. Render an explicit "Tap to set variant"
-              // placeholder so the affordance is discoverable on first-time
-              // sets (no autofill history) and after long-press clear. Styled
-              // as a dashed-outline pill so it reads as "empty / tap to fill"
-              // rather than as a value.
-              <View
-                style={[
-                  styles.variantPlaceholder,
-                  { borderColor: colors.outline },
-                ]}
-              >
-                <Text
+          <View style={[styles.variantFooter, styles.footerFlex]}>
+            <Pressable
+              ref={variantFooterRef}
+              onPress={() => {
+                const handle = variantFooterRef.current
+                  ? findNodeHandle(variantFooterRef.current)
+                  : null;
+                onOpenVariantPicker?.(set.id, handle);
+              }}
+              onLongPress={() => onClearVariant?.(set.id)}
+              accessibilityRole="button"
+              accessibilityLabel={(() => {
+                const att = set.attachment ?? null;
+                const mp = set.mount_position ?? null;
+                if (att != null && mp != null) {
+                  return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
+                } else if (att != null) {
+                  return `Set ${set.set_number} cable variant: ${formatAttachmentLabel(att)}, position not set. Double-tap to edit.`;
+                } else if (mp != null) {
+                  return `Set ${set.set_number} cable variant: attachment not set, ${formatMountPositionLabel(mp)}. Double-tap to edit.`;
+                }
+                return `Set ${set.set_number} cable variant: not set. Double-tap to choose.`;
+              })()}
+              accessibilityHint="Long press to clear attachment and position"
+              style={styles.footerChipGroup}
+            >
+              {set.attachment == null && set.mount_position == null ? (
+                <View
                   style={[
-                    styles.variantPlaceholderLabel,
-                    { color: colors.onSurfaceVariant },
+                    styles.variantPlaceholder,
+                    { borderColor: colors.outline },
                   ]}
                 >
-                  Tap to set variant
-                </Text>
-              </View>
-            ) : (
-              <>
-                <SetAttachmentChip attachment={set.attachment ?? null} />
-                <SetMountPositionChip mount={set.mount_position ?? null} />
-              </>
-            )}
-          </Pressable>
+                  <Text
+                    style={[
+                      styles.variantPlaceholderLabel,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Tap to set variant
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <SetAttachmentChip attachment={set.attachment ?? null} />
+                  <SetMountPositionChip mount={set.mount_position ?? null} />
+                </>
+              )}
+            </Pressable>
+            {pulleyPin !== undefined ? (
+              <Pressable
+                onPress={() => onOpenPulleyPinPicker?.(set.id)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={pulleyPin != null ? `Pulley pin ${pulleyPin}, tap to change` : "Pulley pin not set, tap to set"}
+              >
+                <SetPulleyPinChip pin={pulleyPin} />
+              </Pressable>
+            ) : null}
+          </View>
           {rpeStrip}
         </View>
       ) : null}
@@ -804,6 +826,12 @@ const styles = StyleSheet.create({
   // BLD-1110: variant/grip footer takes flex so RPE chips stay right-aligned.
   footerFlex: {
     flex: 1,
+  },
+  footerChipGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
   },
   // BLD-1110: standalone RPE row for plain rows (no variant/grip footer).
   standaloneRpe: {

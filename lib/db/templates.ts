@@ -175,6 +175,7 @@ export async function getTemplateById(
           notes_updated_at: null,
           notes_backfill_dismissed_at: null,
           user_rest_seconds: null,
+          max_pulley_pins: null,
         })
       : undefined,
   }));

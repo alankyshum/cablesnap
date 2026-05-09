@@ -255,6 +255,7 @@ describe("workoutCSV — bodyweight_modifier_kg column (BLD-541)", () => {
     kind: null,
     day_session_exercise_id: null,
     day_session_date: null,
+    pulley_pin: null,
   };
 
   it.each([
@@ -267,11 +268,11 @@ describe("workoutCSV — bodyweight_modifier_kg column (BLD-541)", () => {
     const out = workoutCSV([row]);
     const [header, data] = out.split("\n");
     expect(header).toBe(
-      "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,kind,day_session_exercise_id,day_session_date"
+      "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date"
     );
     const cells = data.split(",");
-    // bodyweight_modifier_kg is 3 columns before the end (kind, dseid, dsdate follow)
-    expect(cells[cells.length - 4]).toBe(expected);
+    // bodyweight_modifier_kg is 4 columns before the end (pulley_pin, kind, dseid, dsdate follow)
+    expect(cells[cells.length - 5]).toBe(expected);
   });
 });
 

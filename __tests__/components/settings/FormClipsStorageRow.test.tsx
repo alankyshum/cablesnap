@@ -43,6 +43,10 @@ jest.mock("../../../lib/media/form-clips", () => ({
   softDeleteClip: jest.fn(async () => {}),
 }));
 
+jest.mock("../../../lib/media/setup-photos", () => ({
+  getSetupPhotoStats: jest.fn(async () => ({ count: 0, totalBytes: 0 })),
+}));
+
 // Mock the manage sheet to render a sentinel and capture onClose.
 let capturedOnClose: (() => void) | undefined;
 jest.mock("../../../components/settings/FormClipsManageSheet", () => ({
