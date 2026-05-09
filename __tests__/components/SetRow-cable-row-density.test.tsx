@@ -161,6 +161,40 @@ describe("SetRow — setup photo glyph (BLD-1114)", () => {
   });
 });
 
+describe("SetRow — setup photo thumbnail (BLD-1114)", () => {
+  it("renders Image thumbnail instead of camera icon when setupPhotoUri is provided", () => {
+    const { queryByText, getByLabelText } = render(
+      <SetRow
+        {...baseProps({
+          set: makeSet({ completed: true }),
+          onSetupPhotoGlyph: jest.fn(),
+          hasSetupPhoto: true,
+          setupPhotoUri: "file:///photos/setup.jpg",
+        })}
+      />
+    );
+    // camera icon must NOT appear when we have a URI to render
+    expect(queryByText("camera-plus")).toBeNull();
+    expect(queryByText("camera-plus-outline")).toBeNull();
+    // The glyph button a11y label is still present (view accessor)
+    expect(getByLabelText("View setup photo for set 1")).toBeTruthy();
+  });
+
+  it("falls back to camera icon when setupPhotoUri is undefined", () => {
+    const { getByText } = render(
+      <SetRow
+        {...baseProps({
+          set: makeSet({ completed: true }),
+          onSetupPhotoGlyph: jest.fn(),
+          hasSetupPhoto: false,
+          setupPhotoUri: undefined,
+        })}
+      />
+    );
+    expect(getByText("camera-plus-outline")).toBeTruthy();
+  });
+});
+
 describe("SetRow — pulley pin chip (BLD-1114)", () => {
   it("shows 'Pin 7' chip when pulleyPin=7", () => {
     const { getByText } = render(

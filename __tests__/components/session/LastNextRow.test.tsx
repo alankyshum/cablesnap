@@ -563,6 +563,75 @@ describe("LastNextRow (BLD-850)", () => {
     });
   });
 
+  describe("setup photo thumbnail (BLD-1114)", () => {
+    const baseWithPhoto = {
+      previousPerformance: "3×10 @ 25 lb",
+      previousPerformanceA11y: null,
+      suggestion: null,
+      sets: [mkSet()],
+      step: 2.5,
+      onPrefillLast: () => {},
+      onUpdate: () => {},
+      onOpenExplainer: () => {},
+      exerciseName: "Cable Row",
+    };
+
+    it("renders thumbnail button when previousSetupPhotoUri is provided", () => {
+      const { getByLabelText } = render(
+        <LastNextRow
+          {...baseWithPhoto}
+          previousSetupPhotoUri="file:///photos/cable.jpg"
+        />,
+      );
+      expect(
+        getByLabelText("Previous session setup photo - long press to preview"),
+      ).toBeTruthy();
+    });
+
+    it("does NOT render thumbnail button when previousSetupPhotoUri is absent", () => {
+      const { queryByLabelText } = render(
+        <LastNextRow {...baseWithPhoto} previousSetupPhotoUri={null} />,
+      );
+      expect(
+        queryByLabelText("Previous session setup photo - long press to preview"),
+      ).toBeNull();
+    });
+
+    it("long-press on thumbnail makes the full-screen modal visible", () => {
+      const { getByLabelText } = render(
+        <LastNextRow
+          {...baseWithPhoto}
+          previousSetupPhotoUri="file:///photos/cable.jpg"
+        />,
+      );
+      const thumb = getByLabelText(
+        "Previous session setup photo - long press to preview",
+      );
+      fireEvent(thumb, "longPress");
+      // After long-press the dismiss button for the modal backdrop should appear
+      expect(getByLabelText("Close setup photo preview")).toBeTruthy();
+    });
+
+    it("pressing modal backdrop closes the modal", () => {
+      const { getByLabelText, queryByLabelText } = render(
+        <LastNextRow
+          {...baseWithPhoto}
+          previousSetupPhotoUri="file:///photos/cable.jpg"
+        />,
+      );
+      fireEvent(
+        getByLabelText("Previous session setup photo - long press to preview"),
+        "longPress",
+      );
+      // Confirm modal is open
+      const backdrop = getByLabelText("Close setup photo preview");
+      expect(backdrop).toBeTruthy();
+      fireEvent.press(backdrop);
+      // After dismiss the backdrop should no longer be accessible
+      expect(queryByLabelText("Close setup photo preview")).toBeNull();
+    });
+  });
+
   describe("a11y", () => {
     it("uses previousPerformanceA11y when provided, else falls back to a Last:-prefixed label", () => {
       const { getByTestId, rerender } = render(
