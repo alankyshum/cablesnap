@@ -1,11 +1,11 @@
 /**
- * BLD-1110 — updateSetRPE validation / clamp / round behaviour.
+ * BLD-1110 — updateSetRPE validation / domain / round behaviour.
  *
  * Contract:
  *   - null passes through as null (explicit clear)
- *   - NaN / undefined / out-of-domain → null
- *   - Values outside [0, 10] are clamped then rounded to nearest 0.5
- *   - Values inside [0, 10] are rounded to nearest 0.5
+ *   - NaN / undefined → null
+ *   - Values outside [6, 10] are out-of-domain → normalized to null
+ *   - Values inside [6, 10] are rounded to nearest 0.5
  *   - Never throws — silently produces null for bad input
  */
 const mockSet = jest.fn().mockReturnThis();
@@ -39,7 +39,7 @@ beforeEach(() => {
   mockSet.mockImplementation(() => ({ where: mockWhere }));
 });
 
-describe('updateSetRPE — validation / clamp / round (BLD-1110)', () => {
+describe('updateSetRPE — validation / domain / round (BLD-1110)', () => {
   it('passes null through as null (explicit clear)', async () => {
     await updateSetRPE('set-1', null);
     expect(mockSet).toHaveBeenCalledWith({ rpe: null });
@@ -70,19 +70,29 @@ describe('updateSetRPE — validation / clamp / round (BLD-1110)', () => {
     expect(mockSet).toHaveBeenCalledWith({ rpe: 10 });
   });
 
-  it('rounds 0.0 → 0 (min boundary)', async () => {
+  it('rounds 6.0 → 6 (min boundary)', async () => {
+    await updateSetRPE('set-1', 6);
+    expect(mockSet).toHaveBeenCalledWith({ rpe: 6 });
+  });
+
+  it('out-of-domain 0.0 → null (below live-capture range [6,10])', async () => {
     await updateSetRPE('set-1', 0);
-    expect(mockSet).toHaveBeenCalledWith({ rpe: 0 });
+    expect(mockSet).toHaveBeenCalledWith({ rpe: null });
   });
 
-  it('clamps 11 → 10 then rounds', async () => {
+  it('out-of-domain 5.9 → null (just below live-capture range)', async () => {
+    await updateSetRPE('set-1', 5.9);
+    expect(mockSet).toHaveBeenCalledWith({ rpe: null });
+  });
+
+  it('out-of-domain 11 → null (above live-capture range)', async () => {
     await updateSetRPE('set-1', 11);
-    expect(mockSet).toHaveBeenCalledWith({ rpe: 10 });
+    expect(mockSet).toHaveBeenCalledWith({ rpe: null });
   });
 
-  it('clamps -1 → 0 then rounds', async () => {
+  it('out-of-domain -1 → null', async () => {
     await updateSetRPE('set-1', -1);
-    expect(mockSet).toHaveBeenCalledWith({ rpe: 0 });
+    expect(mockSet).toHaveBeenCalledWith({ rpe: null });
   });
 
   it('NaN → null (never throws)', async () => {

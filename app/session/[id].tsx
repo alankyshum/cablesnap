@@ -199,16 +199,21 @@ export default function ActiveSession() {
     void clipId;
   }, []);
 
-  // BLD-1110: RPE chip tap handler — persist, breadcrumb, recompute rest.
+  // BLD-1110: RPE chip tap handler — optimistic update, persist, breadcrumb, recompute rest.
   const handleRpeChange = useCallback((setId: string, rpe: number | null) => {
     const found = findSetById(setId);
     const oldRpe = found?.set.rpe ?? null;
-    void updateSetRPE(setId, rpe);
+    // Optimistic in-memory update so the chip reflects the new value immediately.
+    updateGroupSet(setId, { rpe });
+    updateSetRPE(setId, rpe).catch(() => {
+      // Rollback on persistence failure.
+      updateGroupSet(setId, { rpe: oldRpe });
+    });
     rpeBreadcrumb({ setId, oldRpe, newRpe: rpe, source: "chip" });
     if (found) {
       recomputeActiveRest(setId, found.exerciseId, rpe);
     }
-  }, [findSetById, recomputeActiveRest]);
+  }, [findSetById, recomputeActiveRest, updateGroupSet]);
 
   // Refresh hasClipMap when sets change (non-blocking fire-and-forget).
   useEffect(() => {

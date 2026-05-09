@@ -547,9 +547,14 @@ export async function updateSetRPE(id: string, rpe: number | null): Promise<void
   if (rpe === null || rpe === undefined || typeof rpe !== "number" || !Number.isFinite(rpe)) {
     sanitizedRpe = null;
   } else {
-    // Clamp to [0, 10] then round to nearest 0.5 (defensive — never throw)
-    const clamped = Math.min(10, Math.max(0, rpe));
-    sanitizedRpe = Math.round(clamped * 2) / 2;
+    // Live-capture domain is [6, 10] in 0.5 steps. Values outside this range
+    // are out-of-domain for this entry path — normalize to null rather than
+    // storing a value the rest-timer / suggestion logic would misinterpret.
+    if (rpe < 6 || rpe > 10) {
+      sanitizedRpe = null;
+    } else {
+      sanitizedRpe = Math.round(rpe * 2) / 2;
+    }
   }
   const db = await getDrizzle();
   await db.update(workoutSets)

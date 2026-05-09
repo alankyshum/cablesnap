@@ -347,6 +347,10 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           set_type: restSetTypeRef.current,
           rpe: newRpe,
         }).then((inputs) => {
+          // In-callback guard: timer may have expired or been dismissed while
+          // the async resolver was pending.
+          if (endAtRef.current == null) return;
+
           // Double-check source hasn't changed to history/pinned between the
           // debounce delay and now.
           if (inputs.source.kind === "history" || inputs.source.kind === "pinned") return;
@@ -376,15 +380,21 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           }
 
           // Adjust endAt and update state (elapsed preserved — endAt extends/contracts).
-          endAtRef.current = Date.now() + newRemaining * 1000;
+          const newEndTimestamp = Date.now() + newRemaining * 1000;
+          endAtRef.current = newEndTimestamp;
           setRest(newRemaining);
           setBreakdown(newBreakdown);
+
+          // Cancel the stale notification and reschedule with the updated
+          // remaining seconds so backgrounded users get the correct alert.
+          cancelNotification();
+          void scheduleNotification(newRemaining, newEndTimestamp, newBreakdown);
         }).catch(() => {
           // Resolver error on recompute — silently skip; timer continues with old value.
         });
       }, 250);
     },
-    [restExerciseId, restSource, sessionId, breakdown],
+    [restExerciseId, restSource, sessionId, breakdown, cancelNotification, scheduleNotification],
   );
 
   const dismissRest = useCallback(() => {
@@ -546,6 +556,12 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       restHapticTimers.current.forEach((t) => clearTimeout(t));
       restHapticTimers.current = [];
       stopRestInterval();
+      // Clear any pending recompute debounce on unmount to prevent post-unmount
+      // state updates.
+      if (recomputeDebounceRef.current) {
+        clearTimeout(recomputeDebounceRef.current);
+        recomputeDebounceRef.current = null;
+      }
     };
   }, [stopRestInterval]);
 
