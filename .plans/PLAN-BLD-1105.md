@@ -161,8 +161,35 @@ The new clip attaches to the user's most recent completed set for that exercise 
 ### Quality Director (UX)
 _Pending_
 
-### Tech Lead (Feasibility)
-_Pending_
+### Tech Lead (Feasibility) — REQUEST CHANGES (2026-05-09)
+
+Verdict: option (d) is the right architectural call but two data-layer blockers must be resolved before implementation.
+
+**BLOCKER 1 — Replace flow violates UNIQUE(set_id)**
+`lib/db/schema.ts:172` declares `uniqueIndex("uq_set_media_set_id").on(t.set_id)` with **no partial `WHERE pending_delete=0`**. `softDeleteClip` only sets the tombstone (`lib/db/form-clips.ts:71-75`); the row keeps the unique slot until `reconcileOrphans()` runs (next app boot or first Form Library open per `lib/media/form-clips.ts:304` + `hooks/useAppInit.ts:83`).
+
+AC3 as written ("softDeleteClip then opens recorder" → save → `insertSetMedia` for the same `set_id`) will throw `SQLITE_CONSTRAINT_UNIQUE`. User loses BOTH the old clip AND the new recording.
+
+Recommended mitigation: hard-delete inside the Replace flow. Order: record → write file → drizzle transaction { `hardDeleteClip(oldId)` + `insertSetMedia(newRow)` } → `onClipSaved`. Use `deleteClip(id, rel_path)` from `lib/media/form-clips.ts:180` so the prior file + thumbnail are unlinked. Document in AC3 that this bypasses the soft-delete crash-recovery window for the prior clip — acceptable because the user explicitly opted in.
+
+Add unit test `__tests__/lib/media/form-clips-replace.test.ts`: existing clip + record-and-save → no UNIQUE error, exactly one row, prior file unlinked.
+
+(Alternatives considered: partial unique index — requires migration, violates AC12; or `await reconcileOrphans()` between soft-delete and recorder open — slow FS sweep on every replace.)
+
+**BLOCKER 2 — Delete-All won't reclaim space**
+Plan §Performance/storage says `deleteAllClips()` is a `softDeleteClip` loop. AC7 promises "Settings card returns to 0 MB across 0 clips" — which `getSetMediaStats` (`lib/db/form-clips.ts:96-107`) will satisfy because it filters `pending_delete=0` — but the bytes stay on disk until the next reconciler tick. A privacy-conscious user "reclaiming space" will be surprised when device storage doesn't budge.
+
+Fix: either (a) use `deleteClip(id, rel_path)` (hard delete + unlink, already swallows ENOENT and removes thumbnail) inside the loop, or (b) `softDeleteClip` loop **followed by** `await reconcileOrphans()` for batched FS work. Either is fine — write the chosen path into AC7 + `__tests__/lib/media/form-clips-bulk.test.ts`. For the soft-delete path, prefer a single `db.update(setMedia).set({pending_delete: 1})` over N round-trips.
+
+**Non-blocking nits**
+3. BLD-1094/1095 cascade & backup-exclusion are NOT re-triggered. New rows still land under `documentDirectory/form-clips/<exercise_id>/<id>.mp4` covered by `plugins/with-form-clips-backup.js` and `NSURLIsExcludedFromBackupKey`. ✅
+4. Drop the `FormClipsStorageRow → FormClipsManageCard` rename. Pure churn — the existing component already has the `Platform.OS==='web'` guard. Just make its outer view a `Pressable`, add chevron, open the new sheet. Saves a codemod-grep and a one-release alias deprecation window with no functional benefit.
+5. `getMostRecentCompletedSetForExercise` return type MUST include `set_number` — `components/session/FormVideoSheet.tsx:36-43,253` consumes it (matches QD blocker #3).
+6. AC5/AC7 must specify the stats refresh trigger: pass an `onClipsChanged` callback from the sheet to the card, or reload on dismiss via `useFocusEffect`. Currently `getStorageStats` is called once on mount.
+7. Option (a) nullable `set_id` — agree to defer. Migration cost is real (FK cascade rules in `lib/db/sessions.ts`, `set_media` cascade in `lib/db/form-clips.ts:109-110`, BLD-1095 backup invariants). Revisit only if the disabled-CTA state is hit often in telemetry.
+8. Add a Risk row: read-once race on "most recent set" resolution — an in-flight session completing a new set won't be picked up until the user re-enters the screen. Low likelihood, low impact, worth one line.
+
+Approve criteria for next pass: AC3 + AC7 rewritten with the chosen data path, one new replace-flow test, one bulk-delete test, nits 5 & 6 absorbed.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Re-trigger only if reviewers flag a missed behavior trigger.
