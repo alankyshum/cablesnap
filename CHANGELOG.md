@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Track pulley pin position**: Tap the new pin chip next to any cable set to record which pulley pin you used (1 through your machine's max). Stored per set so your exact stack position is always in the history export (BLD-1114).
+- **Setup photo per set**: Tap the camera icon on any completed cable set to snap a quick photo of the cable path, attachment, and pin — a visual reference so you can replicate the exact setup next time (BLD-1114).
 
 ## v0.26.27 — 2026-05-09
 <!-- versionCode: 97 -->
