@@ -136,10 +136,11 @@ export default function Settings() {
     <ScrollView
       testID="settings-scroll-view"
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[
-        styles.content,
-        { paddingHorizontal: layout.horizontalPadding, paddingBottom: tabBarHeight + 16 },
-      ]}
+      contentContainerStyle={{
+        paddingTop: 16,
+        paddingHorizontal: layout.horizontalPadding,
+        paddingBottom: tabBarHeight + 16,
+      }}
     >
       <FlowContainer gap={16}>
         <UnitsCard
@@ -333,7 +334,6 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingTop: 16 },
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.md },
   settingsRow: {
     flexDirection: 'row',
