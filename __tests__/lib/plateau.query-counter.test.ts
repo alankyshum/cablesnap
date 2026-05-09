@@ -1,12 +1,13 @@
 /**
  * BLD-1122: Query-budget behavioral and structural tests for getPlateauWindowBatch.
  *
- * (a) Mock-based behavioral: counts exactly 2 .select() calls via getDrizzle mock.
+ * (a) Mock-based behavioral: getDrizzle called exactly once (not N+1) — verified
+ *     using lib/dev/query-counter (countQuery/resetQueryCounts/dumpQueryCounts).
  * (b) EXPLAIN QUERY PLAN: verifies idx_workout_sets_exercise is used.
- * (c) Row-budget assertion: each Map entry has ≤32 rows.
+ * (c) Row-budget assertion: each Map entry has ≤ n aggregated session rows.
  */
 
-/* ── (a) Mock-based behavioral test ───────────────────────────────────── */
+/* ── (a) Mock-based behavioral test with lib/dev/query-counter ─────────── */
 
 jest.mock("../../lib/db/helpers", () => ({
   getDrizzle: jest.fn(),
@@ -19,17 +20,18 @@ jest.mock("../../lib/db/helpers", () => ({
 const helpers = require("../../lib/db/helpers") as { getDrizzle: jest.Mock };
 
 import { getPlateauWindowBatch } from "../../lib/db/exercise-history";
+import { resetQueryCounts, dumpQueryCounts, countQuery } from "../../lib/dev/query-counter";
 import { DatabaseSync } from "node:sqlite";
 
-/** Build a minimal Drizzle-like chained mock that resolves `rows` for .all(). */
+/** Build a drizzle-like chain mock. Each getDrizzle call in the mock increments
+ *  query-counter "drizzle" kind, simulating the real helpers.ts devCountQuery("drizzle") call.
+ */
 function makeMockDb(step1Rows: Record<string, unknown>[], step2Rows: Record<string, unknown>[]) {
   let callCount = 0;
 
   const selectSpy = jest.fn().mockImplementation(() => {
     callCount++;
     const rows = callCount === 1 ? step1Rows : step2Rows;
-    // Drizzle queries are both awaitable (the terminal chain is a Promise) AND have .all()
-    // We make a chain where every method returns the same chainable Promise-like object.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const chain: any = new Promise((resolve) => resolve(rows));
     const methods = ["from", "innerJoin", "leftJoin", "where", "groupBy", "orderBy", "limit", "offset"];
@@ -41,18 +43,18 @@ function makeMockDb(step1Rows: Record<string, unknown>[], step2Rows: Record<stri
     return chain;
   });
 
-  return { selectSpy, getCallCount: () => callCount };
+  return { selectSpy, getSelectCallCount: () => callCount };
 }
 
-describe("getPlateauWindowBatch — (a) behavioral query count", () => {
+describe("getPlateauWindowBatch — (a) behavioral query count via query-counter", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetQueryCounts();
   });
 
-  it("makes exactly 2 db.select() calls for 8 exercises (not N+1)", async () => {
+  it("calls getDrizzle exactly once (not N+1 per exercise) for 8 exercises", async () => {
     const exerciseIds = Array.from({ length: 8 }, (_, i) => `eid-${i}`);
 
-    // Step 1 returns 8 sessions per exercise (2 exercises × 4 sessions each for brevity)
     const step1Rows = exerciseIds.flatMap((eid, i) =>
       Array.from({ length: 4 }, (_, j) => ({
         session_id: `sess-${i}-${j}`,
@@ -60,20 +62,26 @@ describe("getPlateauWindowBatch — (a) behavioral query count", () => {
         exercise_id: eid,
       }))
     );
-
-    // Step 2 returns 2 working sets per session
     const sessionIds = [...new Set(step1Rows.map((r) => r.session_id as string))];
     const step2Rows = sessionIds.flatMap((sid) => [
-      { session_id: sid, exercise_id: step1Rows.find((r) => r.session_id === sid)!.exercise_id, weight: 80, reps: 5, set_number: 1, set_type: "working", completed: 1, rpe: null },
-      { session_id: sid, exercise_id: step1Rows.find((r) => r.session_id === sid)!.exercise_id, weight: 80, reps: 5, set_number: 2, set_type: "working", completed: 1, rpe: null },
+      { session_id: sid, exercise_id: step1Rows.find((r) => r.session_id === sid)!.exercise_id, weight: 80, reps: 5, set_number: 1, set_type: "normal", completed: 1, rpe: null, bodyweight_modifier_kg: null },
     ]);
 
-    const { selectSpy, getCallCount } = makeMockDb(step1Rows, step2Rows);
-    helpers.getDrizzle.mockResolvedValue({ select: selectSpy });
+    const { selectSpy } = makeMockDb(step1Rows, step2Rows);
+    helpers.getDrizzle.mockImplementation(async () => {
+      // Simulate what helpers.ts:155 does: devCountQuery("drizzle")
+      countQuery("drizzle");
+      return { select: selectSpy };
+    });
 
     await getPlateauWindowBatch(exerciseIds, 4);
 
-    expect(getCallCount()).toBe(2);
+    const counts = dumpQueryCounts();
+    const drizzleCount = counts.find((r) => r.kind === "drizzle")?.count ?? 0;
+    // getDrizzle must be called exactly once — not once per exercise
+    expect(drizzleCount).toBe(1);
+    // And exactly 2 select() calls on the drizzle instance (step 1 + step 2)
+    expect(selectSpy).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -100,7 +108,7 @@ describe("getPlateauWindowBatch — (b) EXPLAIN QUERY PLAN", () => {
         weight REAL,
         reps INTEGER,
         completed INTEGER DEFAULT 0,
-        set_type TEXT DEFAULT 'working',
+        set_type TEXT DEFAULT 'normal',
         rpe REAL,
         FOREIGN KEY (session_id) REFERENCES workout_sessions(id)
       );
@@ -109,21 +117,20 @@ describe("getPlateauWindowBatch — (b) EXPLAIN QUERY PLAN", () => {
       CREATE INDEX idx_workout_sets_exercise ON workout_sets(exercise_id);
     `);
 
-    // Seed 100 rows per exercise across 5 exercises
     const insertSession = db.prepare(
       "INSERT INTO workout_sessions(id, started_at, completed_at) VALUES (?,?,?)"
     );
     const insertSet = db.prepare(
       "INSERT INTO workout_sets(id, session_id, exercise_id, weight, reps, set_number, set_type, completed) VALUES (?,?,?,?,?,?,?,?)"
     );
-    let sessionCounter = 0;
+    let counter = 0;
     const exerciseIds = ["e1", "e2", "e3", "e4", "e5"];
     for (const eid of exerciseIds) {
       for (let s = 0; s < 20; s++) {
         const sid = `sess-${eid}-${s}`;
         insertSession.run(sid, 1700000000000 - s * 86400000, 1700000000000 - s * 86400000 + 3600000);
-        for (let r = 0; r < 5; r++) {
-          insertSet.run(`set-${sessionCounter++}`, sid, eid, 80, 5, r + 1, "working", 1);
+        for (let r = 0; r < 4; r++) {
+          insertSet.run(`set-${counter++}`, sid, eid, 80, 5, r + 1, "normal", 1);
         }
       }
     }
@@ -143,22 +150,23 @@ describe("getPlateauWindowBatch — (b) EXPLAIN QUERY PLAN", () => {
     ).all() as { detail: string }[];
 
     const planStr = plan.map((r) => r.detail).join("\n");
-    // Must use the index, not a full scan
     expect(planStr).toMatch(/idx_workout_sets_exercise/i);
   });
 });
 
-/* ── (c) Row-budget per exercise ≤32 ──────────────────────────────────── */
+/* (c) Row-budget: result has <= n sessions per exercise */
 
-describe("getPlateauWindowBatch — (c) row budget ≤32 per exercise", () => {
+describe("getPlateauWindowBatch — (c) row budget ≤ n sessions per exercise", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetQueryCounts();
   });
 
-  it("each Map entry has ≤32 session rows for n=4 with 8 exercises", async () => {
+  it("each Map entry has ≤ n=4 PlateauSessionRows even when more sessions exist", async () => {
     const exerciseIds = Array.from({ length: 8 }, (_, i) => `eid-${i}`);
+    const n = 4;
 
-    // Provide 8 sessions each (more than n=4) to confirm JS-level capping
+    // Step 1 returns 8 sessions per exercise (more than n=4)
     const step1Rows = exerciseIds.flatMap((eid, i) =>
       Array.from({ length: 8 }, (_, j) => ({
         session_id: `sess-${i}-${j}`,
@@ -167,28 +175,36 @@ describe("getPlateauWindowBatch — (c) row budget ≤32 per exercise", () => {
       }))
     );
 
-    const sessionIds = [...new Set(step1Rows.map((r) => r.session_id as string))];
-    const step2Rows = sessionIds.flatMap((sid) => {
+    // buildSessionsMap caps to n=4 sessions per exercise → step 2 only sees capped sessions
+    const cappedSessionIds = exerciseIds.flatMap((_, i) =>
+      Array.from({ length: n }, (__, j) => `sess-${i}-${j}`)
+    );
+    const step2Rows = cappedSessionIds.flatMap((sid) => {
       const eid = step1Rows.find((r) => r.session_id === sid)!.exercise_id;
-      return Array.from({ length: 4 }, (_, r) => ({
+      return Array.from({ length: 4 }, (__, r) => ({
         session_id: sid,
         exercise_id: eid,
         weight: 80,
         reps: 5,
         set_number: r + 1,
-        set_type: "working",
+        set_type: "normal",
         completed: 1,
         rpe: null,
+        bodyweight_modifier_kg: null,
       }));
     });
 
     const { selectSpy } = makeMockDb(step1Rows, step2Rows);
-    helpers.getDrizzle.mockResolvedValue({ select: selectSpy });
+    helpers.getDrizzle.mockImplementation(async () => {
+      countQuery("drizzle");
+      return { select: selectSpy };
+    });
 
-    const result = await getPlateauWindowBatch(exerciseIds, 4);
+    const result = await getPlateauWindowBatch(exerciseIds, n);
 
     for (const [, rows] of result.entries()) {
-      expect(rows.length).toBeLessThanOrEqual(32);
+      // Each exercise gets at most n aggregated session rows
+      expect(rows.length).toBeLessThanOrEqual(n);
     }
   });
 });

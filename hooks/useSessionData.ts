@@ -369,14 +369,26 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           }
           await updateSetsBatch(setsToUpdate);
 
-          // BLD-1122: consume pending plateau prefill for exercises with no prev-session data
+          // BLD-1122: consume pending plateau prefill for exercises with no prev-session data.
+          // Must read ONCE per exercise (consumePlateauPending deletes on read), then apply
+          // to ALL fully-empty sets for that exercise before consuming.
           const updatedIds = new Set(setsToUpdate.map((u) => u.id));
-          const pendingUpdates: { id: string; weight: number | null; reps: number | null }[] = [];
+          // Group created sets by exercise_id — only consider sets not already seeded
+          const unseededByExercise = new Map<string, typeof created>();
           for (const s of created) {
-            if (updatedIds.has(s.id)) continue; // already seeded from prev session
-            const pending = await consumePlateauPending(s.exercise_id);
-            if (pending && !s.completed && (s.weight == null || s.weight === 0) && (s.reps == null || s.reps === 0)) {
-              pendingUpdates.push({ id: s.id, weight: pending.weight, reps: pending.reps });
+            if (updatedIds.has(s.id)) continue;
+            if (!unseededByExercise.has(s.exercise_id)) unseededByExercise.set(s.exercise_id, []);
+            unseededByExercise.get(s.exercise_id)!.push(s);
+          }
+          // For each exercise, read pending once, apply to all fully-empty sets, then consume
+          const pendingUpdates: { id: string; weight: number | null; reps: number | null }[] = [];
+          for (const [eid, sets] of unseededByExercise) {
+            const pending = await consumePlateauPending(eid);
+            if (!pending) continue;
+            for (const s of sets) {
+              if (!s.completed && (s.weight == null || s.weight === 0) && (s.reps == null || s.reps === 0)) {
+                pendingUpdates.push({ id: s.id, weight: pending.weight, reps: pending.reps });
+              }
             }
           }
           if (pendingUpdates.length > 0) await updateSetsBatch(pendingUpdates);
@@ -435,14 +447,23 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           }
           await updateSetsBatch(setsToUpdate);
 
-          // BLD-1122: consume pending plateau prefill for empty sets with no source data
+          // BLD-1122: consume pending plateau prefill for empty sets with no source data.
+          // Read ONCE per exercise, apply to ALL fully-empty sets, then consume atomically.
           const updatedIds2 = new Set(setsToUpdate.map((u) => u.id));
-          const pendingUpdates2: { id: string; weight: number | null; reps: number | null }[] = [];
+          const unseededByExercise2 = new Map<string, typeof created>();
           for (const s of created) {
             if (updatedIds2.has(s.id)) continue;
-            const pending = await consumePlateauPending(s.exercise_id);
-            if (pending && !s.completed && (s.weight == null || s.weight === 0) && (s.reps == null || s.reps === 0)) {
-              pendingUpdates2.push({ id: s.id, weight: pending.weight, reps: pending.reps });
+            if (!unseededByExercise2.has(s.exercise_id)) unseededByExercise2.set(s.exercise_id, []);
+            unseededByExercise2.get(s.exercise_id)!.push(s);
+          }
+          const pendingUpdates2: { id: string; weight: number | null; reps: number | null }[] = [];
+          for (const [eid, sets] of unseededByExercise2) {
+            const pending = await consumePlateauPending(eid);
+            if (!pending) continue;
+            for (const s of sets) {
+              if (!s.completed && (s.weight == null || s.weight === 0) && (s.reps == null || s.reps === 0)) {
+                pendingUpdates2.push({ id: s.id, weight: pending.weight, reps: pending.reps });
+              }
             }
           }
           if (pendingUpdates2.length > 0) await updateSetsBatch(pendingUpdates2);

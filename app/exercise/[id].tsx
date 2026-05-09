@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   TouchableOpacity,
@@ -37,6 +38,8 @@ import ExerciseChartCard from "@/components/exercise/ExerciseChartCard";
 import ExerciseVariantFilter from "@/components/exercise/ExerciseVariantFilter";
 import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
 import { usePlateauStatus } from "@/hooks/usePlateauStatus";
+import { FormVideoSheet } from "@/components/session/FormVideoSheet";
+import { getMostRecentCompletedSetForExercise } from "@/lib/db/session-sets";
 import { isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
@@ -91,6 +94,25 @@ export default function ExerciseDetail() {
   const progression = useProgressionChain(id);
   // BLD-1122: plateau detection for exercise detail screen
   const plateauStatus = usePlateauStatus(id);
+
+  // BLD-1122 AC3: form-clip recording sheet triggered by plateau form_check CTA
+  const [formClipSetId, setFormClipSetId] = useState<string | null>(null);
+  const [formClipSetNumber, setFormClipSetNumber] = useState<number>(1);
+  const handleNavigateToFormClip = useCallback(async () => {
+    if (!id || Platform.OS === "web") return;
+    try {
+      const freeSet = await getMostRecentCompletedSetForExercise(id, { mustHaveNoClip: true });
+      const anySet = freeSet ?? await getMostRecentCompletedSetForExercise(id);
+      if (anySet) {
+        setFormClipSetNumber(anySet.set_number);
+        setFormClipSetId(anySet.id);
+      } else {
+        showToast({ title: "No completed sets yet — record a set first" });
+      }
+    } catch {
+      // non-fatal
+    }
+  }, [id, showToast]);
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
   // BLD-1028: local draft for off-session pinned note edit.
@@ -215,7 +237,7 @@ export default function ExerciseDetail() {
             unit={d.unit}
             onDismiss={plateauStatus.onDismiss}
             onQueuePending={plateauStatus.onQueuePending}
-            onNavigateToFormClip={() => router.push("/(tabs)")}
+            onNavigateToFormClip={handleNavigateToFormClip}
           />
         )}
         <ExerciseRecordsCard colors={colors} records={d.records} recordsLoading={d.recordsLoading} recordsError={d.recordsError}
@@ -311,6 +333,17 @@ export default function ExerciseDetail() {
           existingGoal={goalState.goal}
           onCreate={goalState.createGoal}
           onUpdate={goalState.updateGoal}
+        />
+      )}
+      {/* BLD-1122 AC3: form-clip recording sheet for plateau form_check CTA */}
+      {id != null && formClipSetId != null && (
+        <FormVideoSheet
+          isVisible={formClipSetId != null}
+          setId={formClipSetId}
+          exerciseId={id}
+          setNumber={formClipSetNumber}
+          onClose={() => setFormClipSetId(null)}
+          onClipSaved={() => setFormClipSetId(null)}
         />
       )}
     </>
