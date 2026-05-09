@@ -90,7 +90,8 @@ jobs:
     # BLD-1114: Verify backup XML rules (set-media/ include/exclude) are
     # accepted by the Android build system. This catches regressions in
     # plugins/with-form-clips-backup.js before they reach a release build.
-    continue-on-error: true
+    # NOTE: continue-on-error is intentionally absent — this IS a blocking gate.
+    # The Sentry upload failure is handled at step level (--continue || true).
     steps:
       - name: Checkout
         uses: actions/checkout@v4
