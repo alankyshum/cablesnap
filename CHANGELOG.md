@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Settings scroll fix**: Fixed settings screen content cut off behind the floating tab bar on tall Android devices (Galaxy Z Fold6, Pixel 7 Pro) — the About section and links at the bottom are now fully accessible (BLD-1106)
 
 ## v0.26.26 — 2026-05-09
 <!-- versionCode: 96 -->
