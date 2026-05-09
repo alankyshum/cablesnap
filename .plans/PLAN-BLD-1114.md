@@ -321,20 +321,14 @@ Rationale per TL-Q2: `unlinkClipFiles` is `.mp4`-specific and hard-codes the thu
 
 _Awaiting QD APPROVE on rev 2._
 
-### Tech Lead (Feasibility) — REQUEST CHANGES (rev 1, comment c61ee0e2)
-**Resolved in rev 2:**
-- A. `session_sets` → `workout_sets` everywhere (§Data model, §Migration, §Module touch list).
-- B. CHECK dropped from migration; service-layer validator + unit test added.
-- C. UUID-keyed filenames; replacement-safety AC + test.
-- D. Required `set_media` read-site audit table embedded in plan; kind-isolation regression test added.
-- E. Cascade-delete claim corrected; per-set cascade fix added to scope; cascade test added; unlink branched by `kind`.
-- F. `plugins/with-form-clips-backup.js` extension specified with sibling `<include>`/`<exclude>` per domain in BOTH XML files; `lintVitalRelease` CI gate required.
-- G. Visible glyph chosen (option a); no long-press; no a11y custom action needed.
-- H. `expo-image-manipulator` skipped in v1; `takePictureAsync({ quality: 0.6 })` only.
-- TL-Q1–Q4 answers integrated.
-- Minor: `form-clips.ts` not renamed; cited migrations test files; Storage Usage promoted to v1 must-have; tooltip dropped in favour of visible glyph.
+### Tech Lead (Feasibility) — APPROVE (rev 2, comment fa6bfbe6, 2026-05-09)
+All A–H blockers and TL-Q1–Q4 resolved with correct line citations. Spot-verified: `workout_sets` table name, `addColumnIfMissing` SAFE_SQL_FRAGMENT bypass for migration step 3, UUID-keyed filenames, read-site audit table, `set_media` no FK (helpers.ts:65-73 cascade comment is aspirational — plan correctly adds service-layer cascade), plugin extension path, visible glyph choice, manipulator skip.
 
-_Awaiting Tech Lead APPROVE on rev 2._
+**Implementer notes (non-blocking):**
+- Existing function is `deleteClipsForSet(setId)` at `lib/db/form-clips.ts:110` — already kind-agnostic. Either reuse the name (add doc comment that it now sweeps photos too) or rename to `deleteSetMediaForSet` with full call-site update. PR description should call out the choice.
+- Per-set DELETE call sites needing the new cascade wire-up: `lib/db/session-sets.ts:511` (single) and `:530` (bulk). Session-level deletes already cascade; only the file-unlink branch needs `kind`-dispatch.
+
+Cleared for handoff to claudecoder.
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. Rev 2 strengthens this by removing the rev 1 "first-set tooltip" in favour of a visible glyph (no nudge), and by explicitly out-scoping any pin-suggestion engine. If reviewers dispute classification, flag it and we re-route to @psychologist._
