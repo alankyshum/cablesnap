@@ -1,7 +1,7 @@
 # Feature Plan: Inline form-clip recording + Settings manage UX
 
 **Issue**: BLD-1105  **Author**: CEO  **Date**: 2026-05-09
-**Status**: DRAFT (rev-4) → IN_REVIEW → APPROVED / REJECTED
+**Status**: DRAFT (rev-5) → IN_REVIEW → APPROVED / REJECTED
 **Source**: GitHub #534 (alankyshum, product owner)
 
 ## Research Source
@@ -100,6 +100,8 @@ Replace is a separate, **explicit per-clip** action (overflow menu on each clip 
 > **rev-3 — `recordClip` refactor required (QD blocker on rev-2).** The current `recordClip` at `lib/media/form-clips.ts:94-139` is a single function that does (a) move temp file → final path, (b) set `NSURLIsExcludedFromBackupKey`, AND (c) `insertSetMedia` for the target `set_id`. Calling `recordClip` then a separate Replace transaction would INSERT for the same `set_id` BEFORE the old row is deleted, throwing `SQLITE_CONSTRAINT_UNIQUE` at the INSERT statement. We therefore split `recordClip` into a file-only primitive plus a save primitive, then expose two save modes through `FormVideoSheet`.
 >
 > **rev-4 — string IDs + `recordClip` return type preserved + `onClipSaved` payload preserved (QD blocker on rev-3).** All ID fields in the codebase are `text` (ULID strings), not `number`. Evidence: `workout_sets.id` (`lib/db/schema.ts:112`), `set_media.id` and `set_id` (`lib/db/schema.ts:159-162`), `InsertSetMediaParams.id/set_id` (`lib/db/form-clips.ts:17-27`), `FormVideoSheetProps.setId` (`components/session/FormVideoSheet.tsx:36-43`). Earlier revs incorrectly typed `oldId` / new helper return / `replaceTarget.id` as `number`. All such fields below are now `string`. Additionally, `recordClip`'s **return type stays `Promise<SetMediaRow>`** (today's contract per `lib/media/form-clips.ts:103`); only the new file-only primitive returns `ClipFileMetadata`. `FormVideoSheetProps.onClipSaved` stays `(clipId: string) => void` — the new replace branch passes `newRow.id` (string), not the metadata object.
+>
+> **rev-5 — `withTransaction` is `Promise<void>` (QD blocker on rev-4).** The repo helper `withTransaction(fn: (db) => Promise<void>): Promise<void>` (`lib/db/helpers.ts:187-195`) is intentionally side-effect-only — it does NOT propagate a return value from the callback. Existing call sites use it for side effects only (`lib/db/sessions.ts:206-212`, `lib/db/sessions.ts:255-262`). Earlier revs incorrectly modeled `await withTransaction(async () => { ...; return await insertSetMedia(newMeta); })` as resolving to a `SetMediaRow`. rev-5 keeps the same atomic ordering (DELETE → INSERT) but captures the inserted row via an outer `let` closed over by the callback, then asserts non-null after `withTransaction` resolves. The helper contract is NOT changed.
 
 **Refactor:** extract `persistRecordedClipFileOnly(args) → ClipFileMetadata` from `recordClip`. The new primitive performs ONLY:
 1. Move temp file → `documentDirectory/form-clips/<exercise_id>/<newId>.mp4`
@@ -123,11 +125,13 @@ export async function saveReplacementClip(args: {
   newClipArgs: RecordClipParams;
 }): Promise<SetMediaRow> {
   const newMeta = await persistRecordedClipFileOnly(args.newClipArgs);   // file only
-  let newRow: SetMediaRow;
+  // withTransaction is Promise<void>; capture the inserted row via outer let
+  // closed over by the callback (helper contract unchanged — rev-5).
+  let newRow: SetMediaRow | null = null;
   try {
-    newRow = await withTransaction(async () => {                         // shared connection tx
+    await withTransaction(async () => {                                  // shared connection tx; side-effect-only
       await hardDeleteClip(args.oldId);                                  // DELETE old row
-      return await insertSetMedia(newMeta);                              // INSERT new row, same set_id
+      newRow = await insertSetMedia(newMeta);                            // INSERT new row, same set_id; assign outer
     });
   } catch (err) {
     // Tx rollback already restored the prior row. Eagerly unlink the
@@ -135,6 +139,13 @@ export async function saveReplacementClip(args: {
     // of the session waiting on reconcileOrphans (TL rev-3 nit).
     try { await unlinkClipFiles(newMeta.rel_path); } catch { /* swallow */ }
     throw err;
+  }
+  if (newRow === null) {
+    // Defensive: withTransaction resolved without callback completing the assign.
+    // Should be unreachable if insertSetMedia is awaited last in the callback,
+    // but treat as a hard error so callers don't silently see a null clip.
+    try { await unlinkClipFiles(newMeta.rel_path); } catch { /* swallow */ }
+    throw new Error("saveReplacementClip: insert did not produce a row");
   }
   try { await unlinkClipFiles(args.oldRelPath); } catch { /* swallow; reconciler will sweep */ }
   return newRow;
@@ -176,7 +187,7 @@ for (const row of rows) {
 - `lib/media/form-clips.ts` — refactor + add:
   - **REFACTOR `recordClip`** internals only — its **external signature stays `(params: RecordClipParams) => Promise<SetMediaRow>`** (today's contract per `lib/media/form-clips.ts:103`). Internals become `persistRecordedClipFileOnly(params)` (file move + backup-exclusion + metadata; NO DB write) followed by `insertSetMedia(meta)` (returns `SetMediaRow`). Existing call sites and tests need zero edits.
   - **NEW** `persistRecordedClipFileOnly(params: RecordClipParams): Promise<ClipFileMetadata>` where `ClipFileMetadata` is structurally compatible with `InsertSetMediaParams` (`lib/db/form-clips.ts:17-27`): `{ id: string, set_id: string, exercise_id: string, kind: 'video', rel_path: string, duration_ms: number, size_bytes: number, width?: number | null, height?: number | null, created_at: number }`.
-  - **NEW** `saveReplacementClip({ oldId: string, oldRelPath: string, newClipArgs: RecordClipParams }): Promise<SetMediaRow>` — file persist → `withTransaction(() => { hardDeleteClip(oldId); return insertSetMedia(newMeta); })` → on tx throw, eager `unlinkClipFiles(newMeta.rel_path)` (best-effort) then re-throw → on tx success, post-commit `unlinkClipFiles(oldRelPath)`. Returns the new `SetMediaRow` for the caller to surface via `onClipSaved(newRow.id)`.
+  - **NEW** `saveReplacementClip({ oldId: string, oldRelPath: string, newClipArgs: RecordClipParams }): Promise<SetMediaRow>` — file persist → `withTransaction(async () => { await hardDeleteClip(oldId); newRow = await insertSetMedia(newMeta); })` (side-effect-only; the inserted row is captured via an outer `let newRow: SetMediaRow | null` closed over by the callback, since `withTransaction` is `Promise<void>` per `lib/db/helpers.ts:187-195`) → after tx resolves, assert `newRow !== null` (else cleanup the new file and throw) → on tx throw, eager `unlinkClipFiles(newMeta.rel_path)` (best-effort) then re-throw → on tx success, post-commit `unlinkClipFiles(oldRelPath)`. Returns the captured `SetMediaRow` for the caller to surface via `onClipSaved(newRow.id)`.
   - **NEW** `unlinkClipFiles(rel_path: string)` — extracted file-cleanup half of existing `deleteClip` (unlink video + thumbnail, ENOENT-tolerant) so Replace + Delete-All callers can reuse without re-touching the DB.
   - **NEW** `listAllClipsGroupedByExercise(): Promise<Array<{ exerciseId: string, exerciseName: string, clips: SetMediaRow[] }>>`
   - **NEW** `deleteAllClips(): Promise<{ deleted: number }>` — hard delete + unlink loop using existing `deleteClip(id, rel_path)`.
@@ -231,7 +242,7 @@ for (const row of rows) {
 - [ ] **AC1** Given an exercise with at least one completed `kind='workout'` set that has no live clip, When the user opens Exercise Details → Form clips, Then a primary "Record clip" button is visible and enabled in the header; tapping it opens FormVideoSheet bound to that most-recent-without-clip set (resolved via `getMostRecentCompletedSetForExercise(id, { mustHaveNoClip: true })`, which returns `{ id: string, set_number: number, completed_at: number } | null`).
 - [ ] **AC2a** Given an exercise with zero completed `kind='workout'` sets, When the user opens the Form clips tab, Then the Record CTA is rendered in disabled state with helper copy "Log a workout set first to attach a form clip."
 - [ ] **AC2b** Given an exercise where all completed sets already have clips, When the user opens the Form clips tab, Then the Record CTA is rendered in disabled state with helper copy "Replace or delete an existing clip below to record a new one."
-- [ ] **AC3** Given a clip row in FormLibraryTab, When the user taps the row's overflow menu and selects Replace, Then FormVideoSheet opens in `mode='replace'` with `replaceTarget: { id: string, rel_path: string }` (where `id` is the `set_media.id` ULID); on successful Save the FormVideoSheet calls `saveReplacementClip({ oldId, oldRelPath, newClipArgs })` which (i) persists the new file via `persistRecordedClipFileOnly`, (ii) runs `withTransaction(() => { hardDeleteClip(oldId); return insertSetMedia(newMeta); })` returning a `SetMediaRow`, (iii) best-effort `unlinkClipFiles(oldRelPath)` post-commit. FormVideoSheet then calls `onClipSaved(newRow.id)` (string) — the existing `onClipSaved: (clipId: string) => void` contract is preserved. No `SQLITE_CONSTRAINT_UNIQUE` error occurs. If the INSERT fails, the transaction rolls back (in-tx DELETE undone), the catch handler eagerly `unlinkClipFiles(newMeta.rel_path)` (best-effort) so the new file does not orphan, and the prior clip remains intact.
+- [ ] **AC3** Given a clip row in FormLibraryTab, When the user taps the row's overflow menu and selects Replace, Then FormVideoSheet opens in `mode='replace'` with `replaceTarget: { id: string, rel_path: string }` (where `id` is the `set_media.id` ULID); on successful Save the FormVideoSheet calls `saveReplacementClip({ oldId, oldRelPath, newClipArgs })` which (i) persists the new file via `persistRecordedClipFileOnly`, (ii) runs `withTransaction(async () => { await hardDeleteClip(oldId); newRow = await insertSetMedia(newMeta); })` as the atomic side-effect boundary — the inserted `SetMediaRow` is captured via an outer `let newRow: SetMediaRow | null` closed over by the callback (since `withTransaction` is `Promise<void>` per `lib/db/helpers.ts:187-195`) — and asserts `newRow !== null` after the tx resolves, (iii) best-effort `unlinkClipFiles(oldRelPath)` post-commit. FormVideoSheet then calls `onClipSaved(newRow.id)` (string) — the existing `onClipSaved: (clipId: string) => void` contract is preserved. No `SQLITE_CONSTRAINT_UNIQUE` error occurs. If the INSERT fails, the transaction rolls back (in-tx DELETE undone), the catch handler eagerly `unlinkClipFiles(newMeta.rel_path)` (best-effort) so the new file does not orphan, and the prior clip remains intact.
 - [ ] **AC3b** Given a Replace flow where recording fails or is cancelled before Save, Then no DB mutation and no file unlink occurs; the prior clip is preserved verbatim.
 - [ ] **AC4** Given a saved new or replaced clip, When recording completes, Then the FormLibraryTab grid refreshes (the new clip appears at top; replaced clips swap in place) and `onClipsChanged` fires.
 - [ ] **AC5** Given any number of clips, When the user opens Settings, Then the Form clips card is tappable, has a chevron, and tapping it opens FormClipsManageSheet. After the sheet dismisses, the card's stats refresh via `onClipsChanged` (count + bytes reflect any deletions).
@@ -275,6 +286,7 @@ for (const row of rows) {
 | Wrong ID type used for set/clip identifiers (rev-3 typo: `number` instead of `string`) | N/A | N/A | rev-4 corrected: all `set_media.id`, `set_media.set_id`, `workout_sets.id`, helper return `id`, `replaceTarget.id`, `saveReplacementClip.oldId` are typed `string` (ULID) per `lib/db/schema.ts:112,159-162` and `lib/db/form-clips.ts:17-27`. |
 | `recordClip` return-type drift (rev-3: implied `Promise<ClipFileMetadata>`) | N/A | N/A | rev-4 corrected: `recordClip(params)` keeps its existing `Promise<SetMediaRow>` return type (`lib/media/form-clips.ts:103`); only the new file-only primitive returns `ClipFileMetadata`. |
 | `onClipSaved` payload drift (rev-3: implied metadata object) | N/A | N/A | rev-4 corrected: `onClipSaved: (clipId: string) => void` is preserved verbatim. Both Add and Replace branches resolve to a `SetMediaRow` and call `onClipSaved(row.id)`. No call sites need to change. |
+| `withTransaction` contract drift (rev-4: modeled as value-returning) | N/A | N/A | rev-5 corrected: `withTransaction` is `Promise<void>` per `lib/db/helpers.ts:187-195` (existing usage in `lib/db/sessions.ts:206-212,255-262` is side-effect-only). `saveReplacementClip` captures the inserted `SetMediaRow` via an outer `let newRow: SetMediaRow \| null` closed over by the callback, then asserts non-null after the tx resolves. The helper contract is NOT changed. |
 | User assumes inline record uploads to cloud | Low | Medium (privacy expectation) | Reuse existing privacy strip "Saved on this device only — never uploaded" verbatim from FormVideoSheet:235. |
 | Confusion between soft-delete (per-row) and hard-delete (Delete all) — same bytes-on-disk behavior expected? | Medium | Low | Footer Delete-all copy explicitly says "permanently removes them from this device"; per-row delete copy stays generic ("Delete this clip?") since reconcile cleans it shortly. |
 
