@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { eq, ne, sql, and, inArray, isNotNull, avg, count, asc, desc } from "drizzle-orm";
+import { eq, ne, sql, and, inArray, isNotNull, isNull, avg, count, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { isAttachment, isMountPosition } from "../cable-variant";
@@ -7,7 +7,7 @@ import { isGripType, isGripWidth } from "../bodyweight-grip-variant";
 import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
-import { workoutSets, exercises, workoutSessions } from "./schema";
+import { workoutSets, exercises, workoutSessions, setMedia } from "./schema";
 import { cascadeDeleteClipsForSets } from "../media/form-clips";
 
 export async function getSessionSets(
@@ -1035,4 +1035,72 @@ export async function getRecentBodyweightGripHistory(
     grip_type: isGripType(row.grip_type) ? row.grip_type : null,
     grip_width: isGripWidth(row.grip_width) ? row.grip_width : null,
   }));
+}
+
+/**
+ * BLD-1105: Find the most recent completed kind='workout' set for an exercise.
+ *
+ * When mustHaveNoClip=true, only returns a set that has no live (non-tombstoned)
+ * set_media row — i.e. a "free slot" for inline recording.
+ *
+ * Returns null if no eligible set exists.
+ */
+export async function getMostRecentCompletedSetForExercise(
+  exerciseId: string,
+  opts?: { mustHaveNoClip?: boolean }
+): Promise<{ id: string; set_number: number; completed_at: number } | null> {
+  const db = await getDrizzle();
+  const query = db
+    .select({
+      id: workoutSets.id,
+      set_number: workoutSets.set_number,
+      completed_at: workoutSets.completed_at,
+    })
+    .from(workoutSets)
+    .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        eq(workoutSets.exercise_id, exerciseId),
+        eq(workoutSets.completed, 1),
+        isNotNull(workoutSets.completed_at),
+        eq(workoutSessions.kind, "workout")
+      )
+    )
+    .orderBy(desc(workoutSets.completed_at))
+    .limit(1);
+
+  if (opts?.mustHaveNoClip) {
+    // LEFT JOIN set_media; require no live (pending_delete=0) row.
+    const rows = await db
+      .select({
+        id: workoutSets.id,
+        set_number: workoutSets.set_number,
+        completed_at: workoutSets.completed_at,
+      })
+      .from(workoutSets)
+      .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
+      .leftJoin(
+        setMedia,
+        and(eq(setMedia.set_id, workoutSets.id), eq(setMedia.pending_delete, 0))
+      )
+      .where(
+        and(
+          eq(workoutSets.exercise_id, exerciseId),
+          eq(workoutSets.completed, 1),
+          isNotNull(workoutSets.completed_at),
+          eq(workoutSessions.kind, "workout"),
+          isNull(setMedia.id)
+        )
+      )
+      .orderBy(desc(workoutSets.completed_at))
+      .limit(1);
+    const row = rows[0];
+    if (!row || row.completed_at === null || row.completed_at === undefined) return null;
+    return { id: row.id, set_number: row.set_number, completed_at: row.completed_at };
+  }
+
+  const rows = await query;
+  const row = rows[0];
+  if (!row || row.completed_at === null || row.completed_at === undefined) return null;
+  return { id: row.id, set_number: row.set_number, completed_at: row.completed_at };
 }

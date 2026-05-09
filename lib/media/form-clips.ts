@@ -23,10 +23,12 @@ import {
   softDeleteClip as dbSoftDeleteClip,
   hardDeleteClip as dbHardDeleteClip,
   getAllSetMediaRows,
+  getAllLiveSetMediaWithExerciseName,
   getSetMediaStats as dbGetSetMediaStats,
   deleteClipsForSet as dbDeleteClipsForSet,
   deleteSetMediaForSession as dbDeleteSetMediaForSession,
 } from "../db/form-clips";
+import { withTransaction } from "../db/helpers";
 import { setExcludedFromBackup } from "./backup-exclusion";
 import type { SetMediaRow } from "../db/form-clips";
 
@@ -91,16 +93,31 @@ export interface RecordClipParams {
   height?: number | null;
 }
 
+// ---------------------------------------------------------------------------
+// recordClip (public type for metadata returned by file-only primitive)
+// ---------------------------------------------------------------------------
+
+export interface ClipFileMetadata {
+  id: string;
+  set_id: string;
+  exercise_id: string;
+  kind: "video";
+  rel_path: string;
+  duration_ms?: number | null;
+  size_bytes?: number | null;
+  width?: number | null;
+  height?: number | null;
+  created_at: number;
+}
+
 /**
- * Save a recorded clip for a set.
- *
- * Order: write file → exclude from backup (iOS) → INSERT set_media row.
- * A crash before INSERT leaves an orphaned file; reconcileOrphans() cleans it.
- * A crash after INSERT but before backup-exclusion is non-fatal (privacy
- * defense-in-depth: the manifest XML covers Android; iOS is best-effort on
- * this code path).
+ * BLD-1105: File-only half of recordClip.
+ * Moves the temp recording to the permanent location and sets iOS backup-exclusion.
+ * Does NOT write to the database — returns metadata for the caller to INSERT.
  */
-export async function recordClip(params: RecordClipParams): Promise<SetMediaRow> {
+export async function persistRecordedClipFileOnly(
+  params: RecordClipParams
+): Promise<ClipFileMetadata> {
   if (Platform.OS === "web") {
     throw new Error("Form clips are not supported on web");
   }
@@ -112,33 +129,97 @@ export async function recordClip(params: RecordClipParams): Promise<SetMediaRow>
 
   ensureDir(destDir);
 
-  // Move the temp recording into the permanent location.
   const sourceFile = new File(uri);
   sourceFile.move(destFile);
 
-  // iOS: exclude from iCloud Backup immediately after write.
-  // This is a hard precondition — if exclusion fails the clip is not inserted
-  // (privacy invariant: we must not silently persist a clip that could be backed
-  // up). Android is covered by manifest XML from with-form-clips-backup plugin.
   if (Platform.OS === "ios") {
     await setExcludedFromBackup(destFile.uri);
   }
 
-  const relPath = toRelPath(destFile.uri);
-  const row = await insertSetMedia({
+  return {
     id: clipId,
     set_id: setId,
     exercise_id: exerciseId,
     kind: "video",
-    rel_path: relPath,
+    rel_path: toRelPath(destFile.uri),
     duration_ms: durationMs,
     size_bytes: sizeBytes,
     width,
     height,
     created_at: Date.now(),
-  });
+  };
+}
 
-  return row;
+/**
+ * Save a recorded clip for a set.
+ *
+ * Preserved external contract: (params: RecordClipParams) => Promise<SetMediaRow>.
+ * Internals delegate to persistRecordedClipFileOnly + insertSetMedia.
+ *
+ * Order: write file → exclude from backup (iOS) → INSERT set_media row.
+ * A crash before INSERT leaves an orphaned file; reconcileOrphans() cleans it.
+ */
+export async function recordClip(params: RecordClipParams): Promise<SetMediaRow> {
+  const meta = await persistRecordedClipFileOnly(params);
+  return await insertSetMedia(meta);
+}
+
+/**
+ * BLD-1105: Unlink a clip's video + thumbnail files from disk (ENOENT-tolerant).
+ * Extracted from deleteClip so Replace and Delete-All callers can reuse it
+ * without touching the DB.
+ */
+export async function unlinkClipFiles(relPath: string): Promise<void> {
+  try {
+    const f = new File(Paths.document, relPath);
+    if (f.exists) f.delete();
+    const parts = relPath.split("/");
+    const filename = parts[parts.length - 1];
+    const clipId = filename.replace(/\.mp4$/, "");
+    const exerciseId = parts[parts.length - 2];
+    if (clipId && exerciseId) {
+      const thumb = thumbFile(exerciseId, clipId);
+      if (thumb.exists) thumb.delete();
+    }
+  } catch {
+    // ENOENT / permission errors are non-fatal.
+  }
+}
+
+/**
+ * BLD-1105: UNIQUE-safe replace flow.
+ *
+ * File-persist → withTransaction { hardDeleteClip(old) + insertSetMedia(new) }
+ * → post-commit unlink old file.
+ *
+ * The inserted row is captured via an outer let since withTransaction is Promise<void>.
+ * If the transaction fails, eagerly unlinks the new file (best-effort) before re-throwing.
+ */
+export async function saveReplacementClip(args: {
+  oldId: string;
+  oldRelPath: string;
+  newClipArgs: RecordClipParams;
+}): Promise<SetMediaRow> {
+  const newMeta = await persistRecordedClipFileOnly(args.newClipArgs);
+  let newRow: SetMediaRow | null = null;
+  try {
+    await withTransaction(async () => {
+      await dbHardDeleteClip(args.oldId);
+      newRow = await insertSetMedia(newMeta);
+    });
+  } catch (err) {
+    try { await unlinkClipFiles(newMeta.rel_path); } catch { /* swallow */ }
+    throw err;
+  }
+  if (newRow === null) {
+    // CRITICAL: covers the real failure mode where withTransaction swallows
+    // "cannot rollback" errors (lib/db/helpers.ts:202-205) and resolves void.
+    // Without this guard, onClipSaved(newRow.id) would crash on a falsy row.
+    try { await unlinkClipFiles(newMeta.rel_path); } catch { /* swallow */ }
+    throw new Error("saveReplacementClip: insert did not produce a row");
+  }
+  try { await unlinkClipFiles(args.oldRelPath); } catch { /* swallow; reconciler will sweep */ }
+  return newRow;
 }
 
 // ---------------------------------------------------------------------------
@@ -352,4 +433,54 @@ export async function getStorageStats(): Promise<StorageStats> {
   if (Platform.OS === "web") return { totalBytes: 0, count: 0 };
   const stats = await dbGetSetMediaStats();
   return { totalBytes: stats.totalBytes, count: stats.count };
+}
+
+// ---------------------------------------------------------------------------
+// Manage sheet helpers (BLD-1105)
+// ---------------------------------------------------------------------------
+
+export interface ClipGroupedByExercise {
+  exerciseId: string;
+  exerciseName: string;
+  clips: SetMediaRow[];
+}
+
+/**
+ * BLD-1105: Get all live clips grouped by exercise, for FormClipsManageSheet.
+ * Exercise name falls back to exerciseId if not found in exercises table.
+ */
+export async function listAllClipsGroupedByExercise(): Promise<ClipGroupedByExercise[]> {
+  if (Platform.OS === "web") return [];
+  const rows = await getAllLiveSetMediaWithExerciseName();
+  const map = new Map<string, ClipGroupedByExercise>();
+  for (const row of rows) {
+    const group = map.get(row.exercise_id);
+    const exerciseName = row.exercise_name ?? row.exercise_id;
+    if (group) {
+      group.clips.push(row);
+    } else {
+      map.set(row.exercise_id, {
+        exerciseId: row.exercise_id,
+        exerciseName,
+        clips: [row],
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
+/**
+ * BLD-1105: Hard-delete all live clips — DB rows AND files.
+ * Uses existing deleteClip (hard delete + unlink, ENOENT-tolerant) so
+ * getStorageStats() returns {count:0, bytes:0} immediately after.
+ */
+export async function deleteAllClips(): Promise<{ deleted: number }> {
+  if (Platform.OS === "web") return { deleted: 0 };
+  const rows = await getAllLiveSetMediaWithExerciseName();
+  let deleted = 0;
+  for (const row of rows) {
+    await deleteClip(row.id, row.rel_path);
+    deleted++;
+  }
+  return { deleted };
 }

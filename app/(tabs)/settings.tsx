@@ -213,7 +213,7 @@ export default function Settings() {
           hcSdkStatus={hcSdkStatus}
         />
         <AutoBackupSection colors={colors} toast={toast} />
-        <FormClipsStorageRow />
+        <FormClipsStorageRow onClipsChanged={() => {}} />
         <DataManagementCard
           colors={colors}
           loading={loading}
