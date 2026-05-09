@@ -3,7 +3,6 @@ import { query, queryOne, getDrizzle } from "./helpers";
 import { workoutSets, workoutSessions, exercises } from "./schema";
 import { mapRow } from "./exercises";
 import type { Exercise } from "../types";
-import { logError } from "../errors";
 // BLD-1086 Phase 0a: VariantScope + helpers moved to variant-scope.ts.
 // Re-export for backward compatibility with all existing call-sites.
 export type { VariantScope } from "./variant-scope";
@@ -652,11 +651,11 @@ export async function exerciseHasHistoricalRpe(exerciseId: string): Promise<bool
       .get();
     return row !== undefined;
   } catch (err) {
-    await logError(
+    console.error(
+      "[exerciseHasHistoricalRpe]",
       err instanceof Error
-        ? new Error(`exerciseHasHistoricalRpe failed for ${exerciseId}: ${err.message}`)
-        : new Error(`exerciseHasHistoricalRpe failed for ${exerciseId}: ${String(err)}`),
-      { component: "exerciseHasHistoricalRpe", fatal: false }
+        ? `failed for ${exerciseId}: ${err.message}`
+        : `failed for ${exerciseId}: ${String(err)}`
     );
     return false;
   }

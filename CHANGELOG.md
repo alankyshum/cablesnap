@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **RPE capture nudge**: Exercise detail now shows a one-time banner for users who have logged RPE before but haven't enabled live capture — tap "Turn on" to enable in one step, or "Not now" to dismiss forever (BLD-1117).
 
 ## v0.26.27 — 2026-05-09
 <!-- versionCode: 97 -->

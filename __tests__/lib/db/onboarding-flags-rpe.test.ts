@@ -39,7 +39,8 @@ function useDrizzleDb(db: InstanceType<typeof DatabaseSync>) {
         // drizzle sqlite-proxy mapGetResult checks `!rows` to detect "no row";
         // `![]` is false (empty array is truthy), which causes a false `{value:undefined}`
         // object to be returned instead of `undefined`.
-        return { rows: row ? Object.values(row) : undefined };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { rows: (row ? Object.values(row) : null) as unknown as any[] };
       }
       const rows = stmt.all(...params) as Record<string, unknown>[];
       return { rows: rows.map((r) => Object.values(r)) };

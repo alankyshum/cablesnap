@@ -10,7 +10,7 @@
  * (d) Returns false for an exercise with no sets.
  * (e) Returns false when all sets have rpe=null.
  * (f) Returns true for a day_session/GTG row with non-null rpe.
- * (g) DB error → returns false AND calls logError.
+ * (g) DB error → returns false AND logs to console.error.
  */
 
 jest.mock("../../../lib/db/helpers", () => ({
@@ -20,12 +20,7 @@ jest.mock("../../../lib/db/helpers", () => ({
   getDatabase: jest.fn(),
 }));
 
-jest.mock("../../../lib/errors", () => ({
-  logError: jest.fn().mockResolvedValue(undefined),
-}));
-
 import { exerciseHasHistoricalRpe } from "../../../lib/db/exercise-history";
-import { logError } from "../../../lib/errors";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const helpers = require("../../../lib/db/helpers") as { getDrizzle: jest.Mock };
@@ -75,15 +70,15 @@ describe("exerciseHasHistoricalRpe", () => {
     expect(await exerciseHasHistoricalRpe("ex-1")).toBe(true);
   });
 
-  it("(g) returns false and calls logError when DB throws", async () => {
+  it("(g) returns false and logs to console.error when DB throws", async () => {
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     helpers.getDrizzle.mockRejectedValue(new Error("DB connection failure"));
     const result = await exerciseHasHistoricalRpe("ex-1");
     expect(result).toBe(false);
-    expect(logError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining("exerciseHasHistoricalRpe failed for ex-1"),
-      }),
-      expect.objectContaining({ component: "exerciseHasHistoricalRpe", fatal: false })
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[exerciseHasHistoricalRpe]",
+      expect.stringContaining("failed for ex-1")
     );
+    consoleSpy.mockRestore();
   });
 });
