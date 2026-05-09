@@ -145,3 +145,23 @@ jobs:
             echo "✓ $f — well-formed XML with set-media/ exclusion"
           done
           echo "Backup XML gate passed."
+
+      - name: Assert AndroidManifest references backup XMLs
+        # BLD-1119: If the Expo plugin chain regresses and the manifest stops
+        # referencing the backup XMLs, the set-media/ exclude rules silently
+        # stop being applied. Fail fast with a precise diagnosis.
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::AndroidManifest.xml not found at $MANIFEST"
+            exit 1
+          fi
+          if ! grep -qF 'android:dataExtractionRules="@xml/form_clips_data_extraction_rules"' "$MANIFEST"; then
+            echo "::error::AndroidManifest is missing dataExtractionRules reference — check plugins/with-form-clips-backup.js"
+            exit 1
+          fi
+          if ! grep -qF 'android:fullBackupContent="@xml/form_clips_backup_rules"' "$MANIFEST"; then
+            echo "::error::AndroidManifest is missing fullBackupContent reference — check plugins/with-form-clips-backup.js"
+            exit 1
+          fi
+          echo "✓ AndroidManifest references both backup XMLs."
