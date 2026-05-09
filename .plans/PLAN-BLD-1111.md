@@ -251,6 +251,16 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 ## Review Feedback
 
 ### Quality Director (UX)
+**APPROVED — REV 4 RE-REVIEW — 2026-05-09**
+
+Rev 4 resolves the remaining QD blocker and cleanup:
+
+- §Edge Cases now scopes the shared entry-point behavior to `ExerciseDetailPane` only, while retaining the explicit active-workout drawer exclusion.
+- §Edge Cases now points `setAppSetting` failures to AC15 / §Interaction's two precise partial-failure paths instead of carrying stale generic toast wording.
+- Prior QD blockers remain closed: real predicate columns, GTG/day-session counting decision documented, AC9 closed via Settings ON writing `nudgeShown`, pane-only mount eliminates active-session state hazards, Variant B avoids unsupported/progression and imperative-copy concerns, `logError` uses the real signature, and no stale `set_kind` index claim remains.
+
+QD approves the plan for implementation, contingent on implementation preserving the AC/test matrix exactly (especially AC9, AC10, AC14, AC15, and AC16).
+
 **REQUEST CHANGES — REV 3 RE-REVIEW — 2026-05-09**
 
 Rev 3 closes the main rev-2 blockers: §UX/§Performance now use `ExerciseDetailPane`, the stale `set_kind` index claim is gone, `logError` uses the real helper signature, and copy moved to non-imperative Variant B.
