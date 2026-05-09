@@ -32,15 +32,26 @@ const OUT_DIR = path.resolve(
 );
 
 test.describe("@scenario settings", () => {
+  // BLD-1124 AC1 requires Z Fold6, Pixel 6a, iPhone 14, iPhone SE 3rd gen.
+  // mobile        (390×844)  ≈ iPhone 14
+  // mobile-narrow (320×640)  ≈ iPhone SE 3rd gen
+  // store-pixel9  (412×924)  ≈ Pixel 6a
+  // store-fold7   (712×853)  ≈ Z Fold6 inner screen
+  const ALLOWED_PROJECTS = new Set([
+    "mobile",
+    "mobile-narrow",
+    "store-pixel9",
+    "store-fold7",
+  ]);
   // eslint-disable-next-line no-empty-pattern -- Playwright 1.59 requires destructured fixtures arg
   test.beforeAll(({}, testInfo) => {
     test.skip(
-      testInfo.project.name !== "mobile",
-      "v1: mobile viewport only (TL#4)",
+      !ALLOWED_PROJECTS.has(testInfo.project.name),
+      "BLD-1124 AC1: only run on SE3 / iPhone 14 / Pixel 6a / Fold6 viewports",
     );
   });
 
-  test("captures settings top (title + first cards)", async ({ page }) => {
+  test("captures settings top (title + first cards)", async ({ page }, testInfo) => {
     await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -50,12 +61,13 @@ test.describe("@scenario settings", () => {
     await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(500);
 
-    const screenshotPath = path.join(OUT_DIR, "settings-top.png");
+    const viewport = testInfo.project.name;
+    const screenshotPath = path.join(OUT_DIR, `settings-top-${viewport}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: false });
     expect(screenshotPath).toBeTruthy();
   });
 
-  test("captures settings bottom — BMC/About cards above floating tab bar", async ({ page }) => {
+  test("captures settings bottom — BMC/About cards above floating tab bar", async ({ page }, testInfo) => {
     await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -65,11 +77,20 @@ test.describe("@scenario settings", () => {
     await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(500);
 
-    // Scroll to the very bottom so the About / BMC badges are visible.
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    // Scroll the inner React Native ScrollView (not the document) to the bottom
+    // so the About / BMC badges are in frame. window.scrollTo() does not move
+    // RN's own scroll container — scroll the testID element directly.
+    const scrollEl = page.getByTestId("settings-scroll-view");
+    await scrollEl.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await page.waitForTimeout(300);
 
-    const viewport = "mobile";
+    // Assert a known bottom-of-settings element is visible before capturing,
+    // so the spec detects the exact cutoff regression this ticket was filed for.
+    await expect(
+      page.getByText(/about|buy me a coffee|thanks\.dev/i).first(),
+    ).toBeInViewport({ timeout: 5_000 });
+
+    const viewport = testInfo.project.name;
     await captureWithCvd({
       page,
       outDir: OUT_DIR,

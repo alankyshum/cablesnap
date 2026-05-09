@@ -89,8 +89,7 @@ jobs:
           E2E_USE_STATIC: '1'
         run: |
           npx playwright test \
-            e2e/scenarios/completed-workout.spec.ts \
-            e2e/scenarios/workout-history.spec.ts \
+            'e2e/scenarios/[^_]*.spec.ts' \
             --project=mobile
 
       - name: Write empty-bundle marker if no screenshots produced
