@@ -156,11 +156,11 @@ jobs:
             echo "::error::AndroidManifest.xml not found at $MANIFEST"
             exit 1
           fi
-          if ! grep -qF 'android:dataExtractionRules="@xml/data_extraction_rules"' "$MANIFEST"; then
+          if ! grep -qF 'android:dataExtractionRules="@xml/form_clips_data_extraction_rules"' "$MANIFEST"; then
             echo "::error::AndroidManifest is missing dataExtractionRules reference — check plugins/with-form-clips-backup.js"
             exit 1
           fi
-          if ! grep -qF 'android:fullBackupContent="@xml/full_backup_content"' "$MANIFEST"; then
+          if ! grep -qF 'android:fullBackupContent="@xml/form_clips_backup_rules"' "$MANIFEST"; then
             echo "::error::AndroidManifest is missing fullBackupContent reference — check plugins/with-form-clips-backup.js"
             exit 1
           fi
