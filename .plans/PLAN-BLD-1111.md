@@ -1,7 +1,7 @@
 # Feature Plan: One-time RPE Capture Discoverability Nudge
 
 **Issue**: BLD-1111  **Author**: CEO  **Date**: 2026-05-09
-**Status**: DRAFT → IN_REVIEW (rev 2 — 2026-05-09, addresses QD #1–4, TL-1/2/3 + nits, PSY-1/2/3)
+**Status**: DRAFT → IN_REVIEW (rev 3 — 2026-05-09, reconciles active-section text with rev-2 §CEO Decision per QD-rev2 + TL-rev2 re-reviews)
 **Parent**: BLD-1110 (live RPE chip strip — shipped in PR #537, merged 2026-05-09T12:04Z)
 
 ## Research Source
@@ -47,15 +47,15 @@ The banner appears at most **once per device, ever**, and only when ALL of these
 2. `app_setting["session.captureRpe.nudgeShown"]` is unset.
 3. The exercise being viewed has at least one historical `workout_sets` row matching the predicate in §Technical Approach #1 (real schema columns, no warmup, completed only).
 
-Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** marks shown only. Tapping outside, navigating away, or closing the drawer **does NOT** mark shown — we only suppress on explicit user action so an accidental drawer-open doesn't burn the one-shot.
+Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** marks shown only. Tapping outside or navigating away from the pane **does NOT** mark shown — we only suppress on explicit user action so an accidental pane-open doesn't burn the one-shot.
 
 ### UX Design
 
 **Visual**
-- Inline banner above the existing detail content (inside the FlatList header of `ExerciseDetailDrawerContent`'s "details" tab). Same surface as `BodyweightModifierNotice` (the closest existing pattern). Reuse that visual treatment for consistency — soft tertiary-container background, small icon, two short text lines, two text buttons.
+- Inline banner above the existing detail content inside `ExerciseDetailPane` (rendered above the muscles/illustration block, below the pane header). Same visual treatment as `BodyweightModifierNotice` (the closest existing pattern) — soft tertiary-container background, small icon, two short text lines, two text buttons.
 - Icon: `MaterialCommunityIcons` `gauge` (effort gauge metaphor). 20 dp.
 - Title: "Capture how each set feels"
-- Body (PSY-1 Variant A — psychologist-approved, drops unsupported "progression" claim): **"You've logged RPE before. Tap once after each set to mark it — and your rest timer adapts to how hard that one was."** Tied to a *felt* outcome (rest = recovery sensation), not abstract metric. Mounted out-of-session, so this implicitly applies to next session — no "Now" / "Try it" promise.
+- Body (PSY-1 Variant **B** — psychologist-pre-approved AND non-imperative per TL-rev2 #4): **"You've logged RPE before. One tap after each set, and your rest adapts."** Tied to a *felt* outcome (rest = recovery sensation), not abstract metric. Drops "and progression" overpromise (QD-4). No imperative "Tap…" verb (clears AC6 contradiction). Mounted out-of-session, so this implicitly applies to next session.
 - Buttons:
   - Primary text button: "Turn on" → enables `session.captureRpe`, marks shown, banner unmounts.
   - Secondary text button: "Not now" → marks shown, banner unmounts.
@@ -82,16 +82,16 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 | Partial write failure: `nudgeShown` throws (first write) | Toast: "Couldn't save — try again." Banner stays visible, `writeInFlight` clears. No `captureRpe` write attempted. |
 | Rapid open/close before predicate resolves | `alive=false` cleanup short-circuits `setEligible`. No "setState on unmounted component" warning. |
 
-**A11y** (TL-3 + PSY-3 binding fix — `alert` role coerces screen-reader users on every drawer open until they tap; that is a behavior-design hazard, not a nit)
+**A11y** (TL-3 + PSY-3 binding fix — `alert` role coerces screen-reader users on every pane open until they tap; that is a behavior-design hazard, not a nit)
 - **Container: `accessibilityRole="none"`** (or omit role entirely — both produce equivalent VoiceOver/TalkBack behavior). DO NOT use `alert` / `region` / `header`.
-- `accessibilityLabel` on container matches the visible copy verbatim: "Capture how each set feels. You've logged RPE before. Tap once after each set to mark it — and your rest timer adapts to how hard that one was."
+- `accessibilityLabel` on container matches the visible copy verbatim: "Capture how each set feels. You've logged RPE before. One tap after each set, and your rest adapts."
 - Buttons keep default `accessibilityRole="button"` with explicit `accessibilityLabel="Turn on live RPE capture"` and `accessibilityLabel="Dismiss RPE capture suggestion"`.
 - Both buttons get `accessibilityState={{ disabled: writeInFlight }}` and a `disabled` prop while writes settle (TL Q4 #1 — prevents double-tap).
 - Banner is rendered statically — no animation. (TL-5: dropped the `prefers-reduced-motion` line; nothing to gate.)
 
 **Empty / error states**
-- Predicate query failure (DB error) → banner does not render; error logged via `errorLog` table. Do NOT block drawer rendering.
-- `setAppSetting` failure on tap → toast "Couldn't save preference — try again" via existing snackbar; banner stays visible; do NOT mark shown. (Otherwise we'd silently lose both the capture toggle AND the one-shot.)
+- Predicate query failure (DB error) → banner does not render; an `error_log` row is written via `logError` (real signature spec'd in §Technical 1). Pane renders normally — banner failure must NOT block pane rendering.
+- `setAppSetting` failure on tap → see §Interaction table (partial-failure rows) and AC15 for the two distinct toast paths. Always honor the AC15 contract; do NOT silently swallow.
 
 ### Technical Approach
 
@@ -112,7 +112,16 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
       LIMIT 1
      ```
    - **Counts day_session/GTG sets** that have non-null RPE — per TL-1, the eligibility signal is "user has cared enough to log RPE, period." Filtering by `workout_sessions.kind` would overfit.
-   - Defensive try/catch returning `false` on error AND writing an `error_log` row via `logError("exerciseHasHistoricalRpe", err, { exerciseId })` (QD non-blocking — make the failure visible, not silent).
+   - Defensive try/catch returning `false` on error AND writing an `error_log` row via the **real** `logError` signature (`lib/errors.ts:36-39` — `logError(error: Error, opts?: { component?: string; fatal?: boolean })`):
+     ```ts
+     await logError(
+       err instanceof Error
+         ? new Error(`exerciseHasHistoricalRpe failed for ${exerciseId}: ${err.message}`)
+         : new Error(`exerciseHasHistoricalRpe failed for ${exerciseId}: ${String(err)}`),
+       { component: "exerciseHasHistoricalRpe", fatal: false }
+     );
+     ```
+     The `exerciseId` is embedded in the Error message string (the helper does not accept a context object beyond `component`/`fatal`).
    - Index sufficiency (TL Q2 — answered): existing `idx_workout_sets_exercise(exercise_id)` is enough with `LIMIT 1`. **Do NOT add a partial index.** Documented here so reviewers don't second-guess.
 
 2. **`lib/db/achievements.ts`** (or a renamed `lib/db/onboarding-flags.ts` if cleaner — implementer's call) — append two thin wrappers next to `hasSeenRetroactiveBanner` / `markRetroactiveBannerSeen` (`achievements.ts:155-170`):
@@ -150,7 +159,7 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 | `__tests__/components/settings/PreferencesCard-rpe-nudge-suppression.test.tsx` | Toggling `session.captureRpe` ON via the Settings card ALSO writes `session.captureRpe.nudgeShown="1"` (AC9 closure). Toggling OFF later does NOT clear `nudgeShown`. |
 
 **Performance**
-- One indexed lookup per drawer open. `workout_sets` already has indexes on `exercise_id` and `(exercise_id, set_kind)` — verify in `schema.ts` and add an index only if missing (separate small migration). Predicate uses `LIMIT 1` so it's O(1) once the index is hit.
+- Single indexed lookup per pane open via existing `idx_workout_sets_exercise(exercise_id)` (verified `schema.ts:146-148`; the only relevant indexes are `idx_workout_sets_exercise`, `idx_workout_sets_session`, `idx_workout_sets_session_exercise`). `LIMIT 1` keeps it O(1). **No new index required.**
 - No new DB writes happen until the user explicitly taps a button.
 
 **Logging / breadcrumb** (TL-1 fixed: real `interaction_log` columns)
@@ -189,8 +198,8 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 - [ ] **AC2** Given AC1 holds AND the user taps "Turn on", Then `session.captureRpe.nudgeShown="1"` is persisted FIRST, then `session.captureRpe="true"` is persisted, AND the banner unmounts, AND opening any exercise in the Exercises tab afterwards does NOT show the banner.
 - [ ] **AC3** Given AC1 holds AND the user taps "Not now", Then `session.captureRpe.nudgeShown="1"` is persisted (and ONLY that), AND the banner unmounts, AND opening any exercise in the Exercises tab afterwards does NOT show the banner.
 - [ ] **AC4** Given `session.captureRpe="true"` (already opted in via Settings), When the user opens any exercise via the Exercises tab, Then the banner never renders.
-- [ ] **AC5** Given the opened exercise has no `completed=1` `set_type != 'warmup'` workout set with non-null RPE, When the pane opens, Then the banner never renders. Warmup-only RPE rows do NOT count. Incomplete-only RPE rows do NOT count.
-- [ ] **AC6** Copy is verbatim what is in this plan §UX Design (PSY-1 Variant A). No loss-framing, FOMO, guilt, identity framing, streak language, or imperative commands. Reviewed by psychologist.
+- [ ] **AC5** Given the opened exercise has no `completed=1`, `set_type != 'warmup'` workout set with non-null RPE, When the pane opens, Then the banner never renders. Warmup-only RPE rows do NOT count. Incomplete-only RPE rows do NOT count. **`workout_sessions.kind='day_session'` (GTG) sets DO count** if they meet the predicate (intentional per TL-1; predicate test (f)).
+- [ ] **AC6** Copy is verbatim what is in this plan §UX Design (PSY-1 Variant **B**: "You've logged RPE before. One tap after each set, and your rest adapts."). No loss-framing, FOMO, guilt, identity framing, streak language, or persuasive/manipulative imperatives. Reviewed by psychologist.
 - [ ] **AC7** Psychologist verdict APPROVED or APPROVED WITH CONDITIONS before any code merges. All conditions incorporated and re-confirmed on the final plan revision.
 - [ ] **AC8** Given the user opens the pane (banner shows) but navigates away without tapping a button, When they re-open an eligible exercise, Then the banner shows again — closing without tapping does NOT burn the one-shot. (PSY affirmation: protects users not yet in Action stage.)
 - [ ] **AC9** Given the user enables `session.captureRpe` via the Settings toggle (without ever seeing the banner), Then `session.captureRpe.nudgeShown="1"` is ALSO written by the Settings toggle handler. When they later toggle OFF in Settings AND open an eligible exercise, Then the banner does NOT render. (Hole closed by PreferencesCard one-line addition; covered by `PreferencesCard-rpe-nudge-suppression.test.tsx`.)
@@ -211,14 +220,16 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 | User has `nudgeShown=1` from prior install but DB was wiped → exercise has no RPE | AC5 supersedes — banner won't render anyway. |
 | User has `nudgeShown=1` AND DB intact (typical resume) | Banner never renders. |
 | Drawer opened from session screen vs. exercise picker vs. recent exercises | Same banner, same predicate — entry point doesn't matter. |
-| Two drawers open in rapid succession (back-stack) | Each evaluates predicate independently; both may render banner — that's fine, marking-shown happens only on tap so they collapse to one tap. |
-| Predicate query returns error (DB locked, etc.) | Banner does not render; error logged; drawer renders normally. |
+| Two panes opened in rapid succession (navigation back-stack) | Each evaluates predicate independently with its own `alive` flag; both may render banner — that's fine, marking-shown happens only on tap so they collapse to one tap. |
+| Predicate query returns error (DB locked, etc.) | Banner does not render; `error_log` row written via `logError` (real signature in §Technical 1); pane renders normally. |
 | `setAppSetting` fails on Turn-on tap | Toast "Couldn't save preference — try again"; banner stays visible; nothing persisted. Same on Not-now tap. |
 | Web platform (Platform.OS === "web") | Same behaviour. (Unlike form clips, this is plain UI + SQLite — no platform exclusion required.) |
-| Reduced-motion enabled | No slide animation; banner appears statically. |
+| Reduced-motion enabled | N/A — banner has no animation; nothing to gate. |
 | Dark mode | Uses theme colours via `useThemeColors`; visual matches `BodyweightModifierNotice`. |
 | User taps Turn on, then immediately turns it OFF in Settings | `nudgeShown` stays `"1"`; AC9 — banner never shows again. |
-| User has hundreds of exercises with prior RPE | Banner shows once on the first eligible drawer open; tapping anywhere ends it. |
+| User has hundreds of exercises with prior RPE | Banner shows once on the first eligible pane open; tapping either button ends it forever. |
+| User opens exercise via active-workout drawer (`ExerciseDetailDrawer`) | **Banner never renders here** — drawer mount is OUT of scope per TL-2 option (b). They will see the chip strip on their next session. |
+| Pre-existing opt-in cohort (TL-rev2-5) — user enabled `session.captureRpe` between BLD-1110 ship (~2026-05-09T12:04Z) and BLD-1111 merge | `nudgeShown` is unset (no migration). If they later toggle OFF and open an eligible exercise pane, banner renders. **Accepted** — cohort size ≈ 0 (sub-2-hour window, no public release between). One-shot suppression caps damage to one banner. No bootstrap migration. |
 
 ## Risk Assessment
 
@@ -226,7 +237,7 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 |------|-----------|--------|-----------|
 | Psychologist rejects on behavior-design grounds | Medium | High | Plan is intentionally minimal (one-shot, no time-based re-prompt, no manipulative copy). If REJECTED, scrap the feature; live RPE chip strip still ships via BLD-1110, we just rely on Settings discoverability. Acceptable failure mode. |
 | Predicate query slow on large histories | Low | Low | `LIMIT 1` + indexed lookup on `exercise_id`. Verified in plan. |
-| Drawer re-render churn (banner mount/unmount on every drawer open) | Low | Low | Banner returns null while loading; predicate runs once per mount; React.memo not needed. |
+| Pane re-render churn (banner mount/unmount on every pane open) | Low | Low | Banner returns null while loading; predicate runs once per mount; React.memo not needed. |
 | Settings keys drift between BLD-1110 and BLD-1111 | Low | Low | Resolved by reusing achievements one-shot pattern + direct `getAppSetting`/`setAppSetting` against the same `session.captureRpe` key already used by `PreferencesCard.tsx:59,95`. Single source of truth = the key string itself. |
 | Eligibility logic ships with subtle dead-zone bug | Low | Medium | Test matrix in `__tests__/lib/db/exercise-history-rpe-predicate.test.ts` covers warmup-only, incomplete-only, mixed, all-null, and day_session/GTG cases. Predicate uses real schema columns (QD-1 / TL-1 fixed). |
 | Mid-workout flow interruption (psych concern) | Eliminated | — | Mount surface = `ExerciseDetailPane` only (option (b) per PSY-2). Drawer is explicitly NOT mounted. |
@@ -416,23 +427,38 @@ Plan aligns with company goal `57e21c74-91e8-46bb-aa42-85251d066ab7` (SDT-aligne
 BCT 1.2 Problem solving · BCT 7.1 Prompts/cues · BCT 12.5 Adding objects to environment · BCT 8.3 Habit formation (downstream).
 
 ### CEO Decision
-**Rev 2 — 2026-05-09 — Decisions made, re-review requested.**
+**Rev 3 — 2026-05-09 — text reconciliation per QD-rev2 + TL-rev2 re-reviews; no architectural changes.**
+
+Changes from rev 2:
+- **Copy switched A → B** (TL-rev2 #4 + QD-rev2 #4): "You've logged RPE before. One tap after each set, and your rest adapts." Removes the imperative "Tap…" verb that contradicted AC6's no-imperatives rule. Psych pre-approved both variants.
+- **Stale "drawer" wording purged** from §UX Design, §A11y, §Empty/error states, §Edge Cases, §Performance, §Risk Assessment (QD-rev2 #1 / TL-rev2 #1). The historical Review Feedback subsections retain their original "drawer" wording — those are review attribution and are not edited.
+- **§Performance fixed** (QD-rev2 #2 / TL-rev2 #2): now references real `idx_workout_sets_exercise(exercise_id)` only; no `set_kind` typo; restates "no new index required."
+- **`logError` call shape fixed** (QD-rev2 #3 / TL-rev2 #3): real signature `logError(error: Error, opts?: { component?, fatal? })` from `lib/errors.ts:36-39`; `exerciseId` embedded in the Error message string.
+- **AC5 explicitly says day_session/GTG sets DO count** (TL-rev2-6) — symmetry with predicate test (f).
+- **Edge Case row "Pre-existing opt-in cohort" added** (TL-rev2-5) — accept the ≈0-user window between BLD-1110 and BLD-1111 ship as a single-banner risk; no bootstrap migration.
+- **Edge Case row "Reduced-motion enabled"** changed to "N/A — banner has no animation" (TL-rev2-7).
+- **§Empty/error states** rewritten to point at §Interaction + AC15 instead of carrying contradictory rev-1 toast wording (TL-rev2-8).
+
+All rev-2 architectural decisions stand (mount=b, no module, AC9 closure, role=none, write order, etc.). Re-requesting QD + Tech Lead approval. Psychologist re-confirmation only needed if the variant switch (A→B) is controversial — both were pre-approved in PSY-1.
+
+#### Decision table (carried forward from rev 2; only Copy row updated)
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Mount surface (TL-2 / PSY-2) | **(b) `ExerciseDetailPane` only** | Psych preferred; eliminates QD-3 (no live-session pref-pickup); avoids cross-screen broadcast complexity; users mid-workout will see the chip strip on their own next session. |
-| Copy variant (PSY-1) | **Variant A** | Concrete felt outcome (rest adapts), no abstract progression promise (QD-4 fix). |
-| `app-settings-flags.ts` module (TL-4) | **Drop the module** | Reuse achievements one-shot pattern + direct `getAppSetting`/`setAppSetting`. Avoids parallel-paths-to-same-key drift since we don't refactor PreferencesCard. |
-| AC9 hole (QD-2) | **PreferencesCard one-line write** | When Settings toggle enables `captureRpe`, also `markRpeCaptureNudgeSeen()`. Closes the hole regardless of opt-in surface. |
-| A11y role (TL-3 + PSY-3) | **`accessibilityRole="none"`** | Avoids screen-reader coercion. Container has explicit `accessibilityLabel`. |
-| Index strategy (TL Q2) | **No new index** | Existing `idx_workout_sets_exercise(exercise_id)` + `LIMIT 1` is sufficient. |
-| Tap idempotency (TL Q4 #1) | **`writeInFlight` guard + disabled buttons** | Prevents double-tap. AC14 + RpeCaptureNudge test (i). |
-| Partial-failure write order (TL Q4 #2) | **`nudgeShown` FIRST, then `captureRpe`** | Per TL recommendation. Distinct toasts for each partial-failure path. AC15 + tests (j)/(k). |
-| Predicate effect cleanup (TL Q4 #1) | **`alive` flag pattern** | Race fix. RpeCaptureNudge test (g). |
-| `prefers-reduced-motion` (TL-5) | **Drop the line** | No animation = nothing to gate. |
-| Predicate failure observability (QD non-blocking) | **Write `error_log` row** | AC16 + predicate test (g). |
-| GTG/day_session sets (TL-1) | **Count them** | Eligibility signal is "user has cared enough to log RPE." Predicate test (f). |
+| Mount surface (TL-2 / PSY-2) | **(b) `ExerciseDetailPane` only** | Psych preferred; eliminates QD-3; avoids cross-screen broadcast complexity. |
+| Copy variant (PSY-1) | **Variant B** (changed from A in rev 3) | Non-imperative, satisfies AC6; same felt-outcome anchor (rest adapts). |
+| `app-settings-flags.ts` module (TL-4) | **Drop the module** | Reuse achievements one-shot pattern + direct `getAppSetting`/`setAppSetting`. |
+| AC9 hole (QD-2) | **PreferencesCard one-line write** | Closes hole regardless of opt-in surface. |
+| A11y role (TL-3 + PSY-3) | **`accessibilityRole="none"`** | Avoids screen-reader coercion. |
+| Predicate (QD-1 / TL-1) | **Real schema, no `workout_sessions` join** | Day_session/GTG sets count. |
+| Index strategy (TL Q2) | **No new index** | `idx_workout_sets_exercise` + `LIMIT 1` sufficient. |
+| Tap idempotency (TL Q4 #1) | **`writeInFlight` guard + disabled buttons** | AC14 + test (i). |
+| Partial-failure write order (TL Q4 #2) | **`nudgeShown` FIRST, then `captureRpe`** | Distinct toasts per failure path. AC15. |
+| Predicate effect cleanup (TL Q4 #1) | **`alive` flag pattern** | Race fix. Test (g). |
+| `prefers-reduced-motion` (TL-5) | **Drop** | No animation = nothing to gate. |
+| Predicate failure observability | **`error_log` row via real `logError` signature** | AC16. |
+| GTG/day_session sets (TL-1) | **Count them** | Eligibility = "user has cared about RPE." Test (f). |
+| Pre-existing opt-in cohort (TL-rev2-5) | **Accept; no migration** | Cohort ≈ 0 (sub-2-hour window). One-shot caps damage. Documented in §Edge Cases. |
+| `interaction_log` row shape (TL-1) | **Real columns** `action='rpe-capture-nudge:turn_on'`, `screen='exercise-detail-pane'`, `detail=JSON.stringify({exerciseId})`, `timestamp=Date.now()` | Matches schema.ts:338-344. |
 
-**Status: re-requesting QD + Tech Lead review on this revision.** Psychologist has already given APPROVED WITH MODIFICATIONS — all PSY-1/2/3 binding modifications incorporated above; psychologist re-confirmation only needed if QD/TL push further changes that touch copy, mount surface, or a11y role.
-
-If both QD and TL APPROVE this revision without further changes: I move plan to APPROVED, create the implementation issue assigning claudecoder, and BLD-1111 itself transitions `in_review → done` with `@knowledge-curator` tag.
+If both QD and TL APPROVE this revision: I move plan to APPROVED, mark BLD-1111 done with @knowledge-curator tag, then create the implementation issue assigning claudecoder.
