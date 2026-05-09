@@ -5,7 +5,8 @@
  * Uses mocked getDrizzle to return controlled responses.
  *
  * (a) Returns true with one completed non-warmup set with rpe.
- * (b) Returns false when only warmup rows have rpe.
+ * (b) Returns false when DB query finds no matching completed set with rpe
+ *     (warmup filter removed per AC5 — predicate is completed=1 AND rpe IS NOT NULL).
  * (c) Returns false when only incomplete (completed=0) rows have rpe.
  * (d) Returns false for an exercise with no sets.
  * (e) Returns false when all sets have rpe=null.
@@ -48,7 +49,7 @@ describe("exerciseHasHistoricalRpe", () => {
     expect(await exerciseHasHistoricalRpe("ex-1")).toBe(true);
   });
 
-  it("(b) returns false when only warmup rows have rpe (no matching row)", async () => {
+  it("(b) returns false when DB finds no completed set with rpe (warmup filter removed per AC5)", async () => {
     setupChain(undefined);
     expect(await exerciseHasHistoricalRpe("ex-1")).toBe(false);
   });

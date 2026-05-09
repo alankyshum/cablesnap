@@ -31,6 +31,8 @@ const mockMarkRpeCaptureNudgeSeen = jest.fn();
 const mockGetAppSetting = jest.fn();
 const mockSetAppSetting = jest.fn();
 const mockInsertInteraction = jest.fn().mockResolvedValue(undefined);
+const mockLogInteraction = jest.fn().mockResolvedValue(undefined);
+const mockToastError = jest.fn();
 
 jest.mock("../../../lib/db/exercise-history", () => ({
   exerciseHasHistoricalRpe: (...args: unknown[]) =>
@@ -47,6 +49,24 @@ jest.mock("../../../lib/db", () => ({
   setAppSetting: (...args: unknown[]) => mockSetAppSetting(...args),
   insertInteraction: (...args: unknown[]) => mockInsertInteraction(...args),
 }));
+
+jest.mock("../../../lib/interactions", () => ({
+  log: (...args: unknown[]) => mockLogInteraction(...args),
+}));
+
+jest.mock("../../../components/ui/bna-toast", () => {
+  const actual = jest.requireActual("../../../components/ui/bna-toast");
+  return {
+    ...actual,
+    useToast: () => ({
+      toast: jest.fn(),
+      error: mockToastError,
+      success: jest.fn(),
+      dismiss: jest.fn(),
+      dismissAll: jest.fn(),
+    }),
+  };
+});
 
 // Default: eligible (historical RPE, not seen, captureRpe off)
 function setEligible() {
@@ -125,6 +145,7 @@ describe("RpeCaptureNudge", () => {
     expect(callOrder).toEqual(["nudgeShown", "captureRpe"]);
     expect(mockMarkRpeCaptureNudgeSeen).toHaveBeenCalledTimes(1);
     expect(mockSetAppSetting).toHaveBeenCalledWith("session.captureRpe", "true");
+    expect(mockLogInteraction).toHaveBeenCalledWith("rpe_nudge_turn_on", "exercise_detail", "ex-1");
   });
 
   it("(f) Not now writes ONLY nudgeShown, calls onDismiss", async () => {
@@ -141,6 +162,7 @@ describe("RpeCaptureNudge", () => {
     await waitFor(() => expect(onDismiss).toHaveBeenCalled());
     expect(mockMarkRpeCaptureNudgeSeen).toHaveBeenCalledTimes(1);
     expect(mockSetAppSetting).not.toHaveBeenCalled();
+    expect(mockLogInteraction).toHaveBeenCalledWith("rpe_nudge_not_now", "exercise_detail", "ex-1");
   });
 
   it("(g) unmounts while predicate in-flight → no setState warning, no writes", async () => {
@@ -200,6 +222,7 @@ describe("RpeCaptureNudge", () => {
       expect(queryByTestId("rpe-capture-nudge")).toBeTruthy();
     });
     expect(mockSetAppSetting).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledWith("Couldn't save — try again");
   });
 
   it("(k) partial failure: captureRpe throws after nudgeShown succeeded → banner unmounts", async () => {
@@ -220,5 +243,6 @@ describe("RpeCaptureNudge", () => {
       expect(queryByTestId("rpe-capture-nudge")).toBeNull();
     });
     expect(onDismiss).toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledWith("Saved your dismissal but couldn't enable capture — open Settings to retry");
   });
 });

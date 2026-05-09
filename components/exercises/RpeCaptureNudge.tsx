@@ -18,8 +18,8 @@ import {
 import { getAppSetting, setAppSetting } from "@/lib/db";
 import { bumpQueryVersion } from "@/lib/query";
 import { useToast } from "@/components/ui/bna-toast";
+import { log as logInteraction } from "@/lib/interactions";
 
-export const RPE_NUDGE_HEADLINE = "Capture how each set feels";
 export const RPE_NUDGE_BODY =
   "You've logged RPE before. One tap after each set, and your rest adapts.";
 
@@ -30,7 +30,7 @@ interface Props {
 
 export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
   const colors = useThemeColors();
-  const { toast } = useToast();
+  const toast = useToast();
   const [eligible, setEligible] = useState<boolean | null>(null);
   const [writeInFlight, setWriteInFlight] = useState(false);
   const alive = useRef(true);
@@ -65,15 +65,16 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
       await markRpeCaptureNudgeSeen();
     } catch {
       setWriteInFlight(false);
-      toast({ description: "Couldn't save — try again." });
+      toast.error("Couldn't save — try again");
       return;
     }
+    await logInteraction("rpe_nudge_turn_on", "exercise_detail", exerciseId);
     try {
       await setAppSetting("session.captureRpe", "true");
       bumpQueryVersion("preferences");
     } catch {
       // nudgeShown already written — banner will never show again
-      toast({ description: "Saved your dismissal but couldn't enable capture — open Settings to retry." });
+      toast.error("Saved your dismissal but couldn't enable capture — open Settings to retry");
     }
     setEligible(false);
     onDismiss?.();
@@ -87,9 +88,10 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
       await markRpeCaptureNudgeSeen();
     } catch {
       setWriteInFlight(false);
-      toast({ description: "Couldn't save — try again." });
+      toast.error("Couldn't save — try again");
       return;
     }
+    await logInteraction("rpe_nudge_not_now", "exercise_detail", exerciseId);
     setEligible(false);
     onDismiss?.();
   }
@@ -97,7 +99,7 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
   return (
     <View
       testID="rpe-capture-nudge"
-      accessibilityLabel={`${RPE_NUDGE_HEADLINE}. ${RPE_NUDGE_BODY}`}
+      accessibilityLabel={RPE_NUDGE_BODY}
       style={[
         styles.banner,
         {
@@ -106,12 +108,6 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
         },
       ]}
     >
-      <Text
-        variant="body"
-        style={{ color: colors.onSurface, fontSize: fontSizes.sm, fontWeight: "600", marginBottom: 4 }}
-      >
-        {RPE_NUDGE_HEADLINE}
-      </Text>
       <Text
         variant="body"
         style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm, lineHeight: 18, marginBottom: 12 }}

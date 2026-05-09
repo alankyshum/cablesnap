@@ -644,7 +644,6 @@ export async function exerciseHasHistoricalRpe(exerciseId: string): Promise<bool
         and(
           eq(workoutSets.exercise_id, exerciseId),
           isNotNull(workoutSets.rpe),
-          ne(workoutSets.set_type, "warmup"),
           eq(workoutSets.completed, 1),
         )
       )
