@@ -385,6 +385,19 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           setRest(newRemaining);
           setBreakdown(newBreakdown);
 
+          // Persist the recomputed active timer state unconditionally so
+          // app-restore always reflects the adjusted timer, regardless of
+          // whether the notification path succeeds (mirrors runTimer() pattern).
+          if (sessionId) {
+            persistActiveTimerState({
+              sessionId,
+              endTimestamp: newEndTimestamp,
+              durationSeconds: newRemaining,
+              breakdown: newBreakdown,
+              notificationId: notificationIdRef.current,
+            });
+          }
+
           // Cancel the stale notification and reschedule with the updated
           // remaining seconds so backgrounded users get the correct alert.
           cancelNotification();
@@ -394,7 +407,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
         });
       }, 250);
     },
-    [restExerciseId, restSource, sessionId, breakdown, cancelNotification, scheduleNotification],
+    [restExerciseId, restSource, sessionId, breakdown, cancelNotification, scheduleNotification, persistActiveTimerState],
   );
 
   const dismissRest = useCallback(() => {
