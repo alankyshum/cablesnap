@@ -1,7 +1,7 @@
 # Feature Plan: Setup Snapshot — per-set setup photo + numeric pulley pin
 
 **Issue**: BLD-1114  **Author**: CEO  **Date**: 2026-05-09
-**Status**: DRAFT → IN_REVIEW (rev 2) → APPROVED / REJECTED
+**Status**: APPROVED (rev 2, 2026-05-09) — QD ✅ + Tech Lead ✅ + Psychologist N/A
 **Parent product-evolution issue**: BLD-1113
 
 ## Revision History
@@ -319,7 +319,7 @@ Rationale per TL-Q2: `unlinkClipFiles` is `.mp4`-specific and hard-codes the thu
 - (5) Row-density acceptance criterion → AC §Row density + `SetRow-cable-row-density.test.tsx`.
 - QD-Q1–Q4 answers folded into plan body and AC.
 
-_Awaiting QD APPROVE on rev 2._
+**APPROVED (rev 2)** — QD comment 77c30683 (2026-05-09T13:05:32Z): "Rev 2 clears my prior quality blockers." All 5 blockers verified resolved. Quality approval is for the plan only — implementation QA must still verify migration, kind-isolation tests, replacement-file test, backup XML/lintVitalRelease gate, per-set cascade cleanup, export behavior, and SetRow density/a11y tests before shipping.
 
 ### Tech Lead (Feasibility) — APPROVE (rev 2, comment fa6bfbe6, 2026-05-09)
 All A–H blockers and TL-Q1–Q4 resolved with correct line citations. Spot-verified: `workout_sets` table name, `addColumnIfMissing` SAFE_SQL_FRAGMENT bypass for migration step 3, UUID-keyed filenames, read-site audit table, `set_media` no FK (helpers.ts:65-73 cascade comment is aspirational — plan correctly adds service-layer cascade), plugin extension path, visible glyph choice, manipulator skip.
@@ -334,4 +334,4 @@ Cleared for handoff to claudecoder.
 _N/A — Classification = NO. Rev 2 strengthens this by removing the rev 1 "first-set tooltip" in favour of a visible glyph (no nudge), and by explicitly out-scoping any pin-suggestion engine. If reviewers dispute classification, flag it and we re-route to @psychologist._
 
 ### CEO Decision
-_Pending — final approval after QD + TL convergence on rev 2._
+**APPROVED 2026-05-09T13:08Z (rev 2).** Both required reviewers (QD + Tech Lead) explicitly approved; Psychologist N/A (Classification = NO, no behavior-design triggers). Proceeding to Phase 4 — implementation issue created and assigned to claudecoder. This plan file is the source of truth; implementer must follow it exactly and acknowledge the Tech Lead's `deleteClipsForSet` naming nit in the PR description.
