@@ -22,6 +22,9 @@ marker) at release time.
 
 ## Unreleased
 
+- **Record directly from Form tab**: Tap the new "Record clip" button in the Form clips tab (exercise detail drawer) to record a new clip without leaving the exercise view. The button auto-targets the most recent unclipped set, or shows a helper hint when all sets already have clips (BLD-1105).
+- **Replace or delete individual clips**: Each clip row in the Form clips tab now has an overflow menu (⋯) with Replace and Delete actions. Replace atomically swaps the file and database row in a single transaction (BLD-1105).
+- **Manage all clips from Settings**: The Form Clips card in Settings is now tappable and opens a full clip library grouped by exercise. Delete individual clips or bulk-delete all clips to reclaim storage instantly (BLD-1105).
 - **Settings scroll fix**: Fixed settings screen content cut off behind the floating tab bar on tall Android devices (Galaxy Z Fold6, Pixel 7 Pro) — the About section and links at the bottom are now fully accessible (BLD-1106)
 
 ## v0.26.26 — 2026-05-09

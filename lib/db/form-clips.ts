@@ -9,7 +9,7 @@
  */
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { getDrizzle } from "./helpers";
-import { setMedia, workoutSets } from "./schema";
+import { setMedia, workoutSets, exercises } from "./schema";
 import type { SetMediaRow } from "./schema";
 
 export type { SetMediaRow };
@@ -129,4 +129,33 @@ export async function deleteSetMediaForSession(sessionId: string): Promise<SetMe
     await db.delete(setMedia).where(inArray(setMedia.set_id, setIds));
   }
   return rows;
+}
+
+/**
+ * BLD-1105: Get all live (pending_delete=0) set_media rows joined with exercise name.
+ * Used by FormClipsManageSheet to list clips grouped by exercise.
+ */
+export async function getAllLiveSetMediaWithExerciseName(): Promise<
+  Array<SetMediaRow & { exercise_name: string | null }>
+> {
+  const db = await getDrizzle();
+  return db
+    .select({
+      id: setMedia.id,
+      set_id: setMedia.set_id,
+      exercise_id: setMedia.exercise_id,
+      kind: setMedia.kind,
+      rel_path: setMedia.rel_path,
+      duration_ms: setMedia.duration_ms,
+      size_bytes: setMedia.size_bytes,
+      width: setMedia.width,
+      height: setMedia.height,
+      pending_delete: setMedia.pending_delete,
+      created_at: setMedia.created_at,
+      exercise_name: exercises.name,
+    })
+    .from(setMedia)
+    .leftJoin(exercises, eq(setMedia.exercise_id, exercises.id))
+    .where(eq(setMedia.pending_delete, 0))
+    .orderBy(desc(setMedia.created_at));
 }

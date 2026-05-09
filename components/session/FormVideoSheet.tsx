@@ -27,7 +27,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useMediaSurfaceMounted } from "@/hooks/useMediaSurfaceMounted";
-import { recordClip } from "@/lib/media/form-clips";
+import { recordClip, saveReplacementClip } from "@/lib/media/form-clips";
 import { useBackupExclusionStatus } from "@/lib/form-clips-context";
 import * as Sentry from "@sentry/react-native";
 
@@ -40,6 +40,10 @@ export type FormVideoSheetProps = {
   setNumber: number;
   onClose: () => void;
   onClipSaved: (clipId: string) => void;
+  /** BLD-1105: 'add' (default) records a new clip; 'replace' swaps an existing one. */
+  mode?: "add" | "replace";
+  /** BLD-1105: Required when mode='replace'. id is the set_media.id ULID. */
+  replaceTarget?: { id: string; rel_path: string };
 };
 
 export function FormVideoSheet({
@@ -49,6 +53,8 @@ export function FormVideoSheet({
   setNumber,
   onClose,
   onClipSaved,
+  mode = "add",
+  replaceTarget,
 }: FormVideoSheetProps) {
   if (!isVisible) return null;
   return (
@@ -65,6 +71,8 @@ export function FormVideoSheet({
         setNumber={setNumber}
         onClose={onClose}
         onClipSaved={onClipSaved}
+        mode={mode}
+        replaceTarget={replaceTarget}
       />
     </Modal>
   );
@@ -72,7 +80,7 @@ export function FormVideoSheet({
 
 type BodyProps = Omit<FormVideoSheetProps, "isVisible">;
 
-function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved }: BodyProps) {
+function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved, mode = "add", replaceTarget }: BodyProps) {
   const colors = useThemeColors();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -147,13 +155,25 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
     if (!recordedUri || saving) return;
     setSaving(true);
     try {
-      const row = await recordClip({
+      const clipArgs = {
         setId,
         exerciseId,
         uri: recordedUri,
         durationMs: elapsed > 0 ? elapsed * 1000 : null,
-      });
-      onClipSaved(row.id);
+      };
+      let savedId: string;
+      if (mode === "replace" && replaceTarget) {
+        const newRow = await saveReplacementClip({
+          oldId: replaceTarget.id,
+          oldRelPath: replaceTarget.rel_path,
+          newClipArgs: clipArgs,
+        });
+        savedId = newRow.id;
+      } else {
+        const row = await recordClip(clipArgs);
+        savedId = row.id;
+      }
+      onClipSaved(savedId);
       onClose();
     } catch (err) {
       Sentry.captureException(err, { tags: { source: "form_clips_save" } });
@@ -161,7 +181,7 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
     } finally {
       setSaving(false);
     }
-  }, [recordedUri, saving, setId, exerciseId, elapsed, onClipSaved, onClose]);
+  }, [recordedUri, saving, setId, exerciseId, elapsed, mode, replaceTarget, onClipSaved, onClose]);
 
   // Permission denied state
   if (!permission?.granted) {

@@ -24,22 +24,62 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useMediaSurfaceMounted } from "@/hooks/useMediaSurfaceMounted";
 import { getClipsForExercise, softDeleteClip } from "@/lib/media/form-clips";
+import { getMostRecentCompletedSetForExercise } from "@/lib/db/session-sets";
 import { CompareView } from "./CompareView";
+import { FormVideoSheet } from "./FormVideoSheet";
 import type { SetMediaRow } from "@/lib/db/form-clips";
 import { fontSizes, radii } from "@/constants/design-tokens";
+
+type SheetProps = {
+  setId: string;
+  setNumber: number;
+  mode: "replace" | "add";
+  visible: boolean;
+  replaceTarget?: { id: string; rel_path: string };
+};
+
+function computeSheetProps(
+  replaceTarget: { id: string; rel_path: string } | null,
+  replaceSetId: string | null,
+  replaceSetNumber: number,
+  recordTarget: { id: string; set_number: number; completed_at: number } | null,
+  recordSheetVisible: boolean,
+): SheetProps {
+  return {
+    setId: replaceTarget ? (replaceSetId ?? "") : (recordTarget?.id ?? ""),
+    setNumber: replaceTarget ? replaceSetNumber : (recordTarget?.set_number ?? 1),
+    mode: replaceTarget ? "replace" : "add",
+    visible: recordSheetVisible && Boolean(replaceTarget ? replaceSetId : recordTarget),
+    replaceTarget: replaceTarget ?? undefined,
+  };
+}
 
 type Props = {
   exerciseId: string;
   unit?: "kg" | "lb";
+  onClipsChanged?: () => void;
 };
 
-export function FormLibraryTab({ exerciseId }: Props) {
+export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
   const colors = useThemeColors();
   const [clips, setClips] = useState<SetMediaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [compareClips, setCompareClips] = useState<[SetMediaRow, SetMediaRow] | null>(null);
+
+  // BLD-1105: Record CTA state.
+  // recordTargetResolved=false means the async resolution hasn't completed yet (hide CTA).
+  type RecordTarget = { id: string; set_number: number; completed_at: number };
+  const [recordTargetResolved, setRecordTargetResolved] = useState(false);
+  const [recordTarget, setRecordTarget] = useState<RecordTarget | null>(null);
+  const [recordDisabledReason, setRecordDisabledReason] = useState<"no_sets" | "all_have_clips" | null>(null);
+  const [recordSheetVisible, setRecordSheetVisible] = useState(false);
+
+  // BLD-1105: Replace overflow state
+  const [replaceTarget, setReplaceTarget] = useState<{ id: string; rel_path: string } | null>(null);
+  const [replaceSetId, setReplaceSetId] = useState<string | null>(null);
+  const [replaceSetNumber, setReplaceSetNumber] = useState<number>(1);
 
   // AC12: increment replay-gate counter while thumbnail grid is mounted.
   useMediaSurfaceMounted();
@@ -61,10 +101,50 @@ export function FormLibraryTab({ exerciseId }: Props) {
     }
   }, [exerciseId]);
 
+  // BLD-1105: Resolve record target on mount + after clips change.
+  const loadRecordTarget = useCallback(async () => {
+    if (Platform.OS === "web") return;
+    try {
+      // Check if any completed kind='workout' sets exist at all.
+      const anySet = await getMostRecentCompletedSetForExercise(exerciseId);
+      if (!anySet) {
+        setRecordTarget(null);
+        setRecordDisabledReason("no_sets");
+        setRecordTargetResolved(true);
+        return;
+      }
+      // Check if any free (no clip) set exists.
+      const freeSet = await getMostRecentCompletedSetForExercise(exerciseId, { mustHaveNoClip: true });
+      if (!freeSet) {
+        setRecordTarget(null);
+        setRecordDisabledReason("all_have_clips");
+        setRecordTargetResolved(true);
+        return;
+      }
+      setRecordTarget(freeSet);
+      setRecordDisabledReason(null);
+      setRecordTargetResolved(true);
+    } catch {
+      // Non-fatal — hide CTA.
+      setRecordTargetResolved(true);
+    }
+  }, [exerciseId]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadClips();
   }, [loadClips]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadRecordTarget();
+  }, [loadRecordTarget]);
+
+  const handleClipSaved = useCallback(() => {
+    loadClips();
+    loadRecordTarget();
+    onClipsChanged?.();
+  }, [loadClips, loadRecordTarget, onClipsChanged]);
 
   const enterSelectMode = useCallback(() => {
     setSelectMode(true);
@@ -98,10 +178,19 @@ export function FormLibraryTab({ exerciseId }: Props) {
           await softDeleteClip(id);
           exitSelectMode();
           loadClips();
+          loadRecordTarget();
+          onClipsChanged?.();
         },
       },
     ]);
-  }, [exitSelectMode, loadClips]);
+  }, [exitSelectMode, loadClips, loadRecordTarget, onClipsChanged]);
+
+  const handleOverflowReplace = useCallback((clip: SetMediaRow) => {
+    setReplaceTarget({ id: clip.id, rel_path: clip.rel_path });
+    setReplaceSetId(clip.set_id);
+    setReplaceSetNumber(1); // set_number not stored on clip; use placeholder
+    setRecordSheetVisible(true);
+  }, []);
 
   const handleCompare = useCallback(() => {
     if (selected.size !== 2) return;
@@ -113,13 +202,16 @@ export function FormLibraryTab({ exerciseId }: Props) {
     }
   }, [selected, clips]);
 
-  const selectedClip = selected.size === 1
-    ? clips.find((c) => c.id === [...selected][0])
-    : undefined;
+  // Pre-compute sheet + selection state.
+  const selectedClip = selected.size === 1 ? clips.find((c) => c.id === [...selected][0]) : undefined;
+  const sheet = computeSheetProps(replaceTarget, replaceSetId, replaceSetNumber, recordTarget, recordSheetVisible);
 
   if (Platform.OS === "web") {
     return null;
   }
+
+  const recordCTAEnabled = recordTarget !== null;
+  const isRecordTargetResolved = recordTargetResolved;
 
   return (
     <View style={styles.container}>
@@ -135,60 +227,50 @@ export function FormLibraryTab({ exerciseId }: Props) {
             </Text>
           </View>
         </View>
-        <Pressable
-          onPress={selectMode ? exitSelectMode : enterSelectMode}
-          accessibilityRole="button"
-          accessibilityLabel={selectMode ? "Exit select mode" : "Select clips"}
-          hitSlop={8}
-        >
-          <Text style={[styles.selectToggle, { color: colors.primary }]}>
-            {selectMode ? "Done" : "Select"}
-          </Text>
-        </Pressable>
+        <View style={styles.headerRight}>
+          <RecordCTAButton
+            isResolved={isRecordTargetResolved}
+            isEnabled={recordCTAEnabled}
+            reason={recordDisabledReason}
+            onRecord={() => setRecordSheetVisible(true)}
+          />
+          <Pressable
+            onPress={selectMode ? exitSelectMode : enterSelectMode}
+            accessibilityRole="button"
+            accessibilityLabel={selectMode ? "Exit select mode" : "Select clips"}
+            hitSlop={8}
+          >
+            <Text style={[styles.selectToggle, { color: colors.primary }]}>
+              {selectMode ? "Done" : "Select"}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
-      {/* Select-mode CTAs */}
-      {selectMode && (
-        <View style={styles.selectActions}>
-          {selected.size === 2 && (
-            <Pressable
-              style={[styles.cta, { backgroundColor: colors.primary }]}
-              onPress={handleCompare}
-              accessibilityRole="button"
-              accessibilityLabel="Compare selected clips"
-            >
-              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Compare</Text>
-            </Pressable>
-          )}
-          {selected.size === 1 && selectedClip && (
-            <Pressable
-              style={[styles.cta, { backgroundColor: colors.errorContainer }]}
-              onPress={() => handleDelete(selectedClip.id)}
-              accessibilityRole="button"
-              accessibilityLabel="Delete selected clip"
-            >
-              <Text style={{ color: colors.onErrorContainer, fontWeight: "600" }}>Delete</Text>
-            </Pressable>
-          )}
-          {selected.size === 0 && (
-            <Text style={[styles.selectHint, { color: colors.onSurfaceVariant }]}>
-              Tap a clip to select (max 2 for compare)
-            </Text>
-          )}
-        </View>
-      )}
+      <RecordHelperText
+        isResolved={isRecordTargetResolved}
+        isEnabled={recordCTAEnabled}
+        reason={recordDisabledReason}
+        hasClips={clips.length > 0}
+      />
+
+      <SelectActionsBar
+        isVisible={selectMode}
+        selectedCount={selected.size}
+        selectedClip={selectedClip}
+        onCompare={handleCompare}
+        onDelete={handleDelete}
+      />
 
       {/* Grid or empty state */}
       {!loading && clips.length === 0 ? (
-        <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="video-outline" size={40} color={colors.onSurfaceVariant} />
-          <Text style={[styles.emptyText, { color: colors.onSurfaceVariant }]}>
-            No clips yet
-          </Text>
-          <Text style={[styles.emptySubtext, { color: colors.onSurfaceVariant }]}>
-            Tap the video icon on a completed set to record one
-          </Text>
-        </View>
+        <LibraryEmptyState
+          isResolved={isRecordTargetResolved}
+          isEnabled={recordCTAEnabled}
+          recordTarget={recordTarget}
+          reason={recordDisabledReason}
+          onRecord={() => setRecordSheetVisible(true)}
+        />
       ) : (
         <FlatList
           data={clips}
@@ -202,6 +284,8 @@ export function FormLibraryTab({ exerciseId }: Props) {
               selected={selected.has(item.id)}
               onPress={selectMode ? () => toggleSelect(item.id) : undefined}
               onLongPress={!selectMode ? () => { enterSelectMode(); toggleSelect(item.id); } : undefined}
+              onReplace={!selectMode ? () => handleOverflowReplace(item) : undefined}
+              onDelete={!selectMode ? () => handleDelete(item.id) : undefined}
             />
           )}
           contentContainerStyle={styles.grid}
@@ -217,6 +301,162 @@ export function FormLibraryTab({ exerciseId }: Props) {
           onClose={() => setCompareClips(null)}
         />
       )}
+
+      {/* BLD-1105: Record / Replace sheet */}
+      <FormVideoSheet
+        isVisible={sheet.visible}
+        setId={sheet.setId}
+        exerciseId={exerciseId}
+        setNumber={sheet.setNumber}
+        mode={sheet.mode}
+        replaceTarget={sheet.replaceTarget}
+        onClose={() => {
+          setRecordSheetVisible(false);
+          setReplaceTarget(null);
+          setReplaceSetId(null);
+        }}
+        onClipSaved={(clipId) => {
+          setRecordSheetVisible(false);
+          setReplaceTarget(null);
+          setReplaceSetId(null);
+          handleClipSaved();
+          void clipId; // consumed upstream
+        }}
+      />
+    </View>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+type RecordCTAButtonProps = {
+  isResolved: boolean;
+  isEnabled: boolean;
+  reason: "no_sets" | "all_have_clips" | null;
+  onRecord: () => void;
+};
+
+function RecordCTAButton({ isResolved, isEnabled, reason, onRecord }: RecordCTAButtonProps) {
+  const colors = useThemeColors();
+  if (!isResolved) return null;
+  const hint = reason === "no_sets"
+    ? "Log a workout set first to attach a form clip."
+    : reason === "all_have_clips"
+    ? "Replace or delete an existing clip below to record a new one."
+    : undefined;
+  const iconColor = isEnabled ? colors.onPrimary : colors.onSurfaceVariant;
+  return (
+    <Pressable
+      onPress={isEnabled ? onRecord : undefined}
+      accessibilityRole="button"
+      accessibilityLabel="Record new form clip"
+      accessibilityState={{ disabled: !isEnabled }}
+      accessibilityHint={hint}
+      hitSlop={8}
+      style={[
+        styles.recordCTA,
+        { backgroundColor: colors.primary },
+        !isEnabled && [styles.recordCTADisabled, { borderColor: colors.outline }],
+      ]}
+      disabled={!isEnabled}
+    >
+      <MaterialCommunityIcons name="video-plus-outline" size={16} color={iconColor} />
+      <Text style={[styles.recordCTAText, { color: iconColor }]}>Record</Text>
+    </Pressable>
+  );
+}
+
+type RecordHelperTextProps = {
+  isResolved: boolean;
+  isEnabled: boolean;
+  reason: "no_sets" | "all_have_clips" | null;
+  hasClips: boolean;
+};
+
+function RecordHelperText({ isResolved, isEnabled, reason, hasClips }: RecordHelperTextProps) {
+  const colors = useThemeColors();
+  if (!isResolved || isEnabled || !reason || !hasClips) return null;
+  const copy = reason === "no_sets"
+    ? "Log a workout set first to attach a form clip."
+    : "Replace or delete an existing clip below to record a new one.";
+  return (
+    <Text style={[styles.recordHelperText, { color: colors.onSurfaceVariant }]}>{copy}</Text>
+  );
+}
+
+type SelectActionsBarProps = {
+  isVisible: boolean;
+  selectedCount: number;
+  selectedClip?: SetMediaRow;
+  onCompare: () => void;
+  onDelete: (id: string) => void;
+};
+
+function SelectActionsBar({ isVisible, selectedCount, selectedClip, onCompare, onDelete }: SelectActionsBarProps) {
+  const colors = useThemeColors();
+  if (!isVisible) return null;
+  return (
+    <View style={styles.selectActions}>
+      {selectedCount === 2 && (
+        <Pressable
+          style={[styles.cta, { backgroundColor: colors.primary }]}
+          onPress={onCompare}
+          accessibilityRole="button"
+          accessibilityLabel="Compare selected clips"
+        >
+          <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Compare</Text>
+        </Pressable>
+      )}
+      {selectedCount === 1 && selectedClip && (
+        <Pressable
+          style={[styles.cta, { backgroundColor: colors.errorContainer }]}
+          onPress={() => onDelete(selectedClip.id)}
+          accessibilityRole="button"
+          accessibilityLabel="Delete selected clip"
+        >
+          <Text style={{ color: colors.onErrorContainer, fontWeight: "600" }}>Delete</Text>
+        </Pressable>
+      )}
+      {selectedCount === 0 && (
+        <Text style={[styles.selectHint, { color: colors.onSurfaceVariant }]}>
+          Tap a clip to select (max 2 for compare)
+        </Text>
+      )}
+    </View>
+  );
+}
+
+type LibraryEmptyStateProps = {
+  isResolved: boolean;
+  isEnabled: boolean;
+  recordTarget: { id: string; set_number: number; completed_at: number } | null;
+  reason: "no_sets" | "all_have_clips" | null;
+  onRecord: () => void;
+};
+
+function LibraryEmptyState({ isResolved, isEnabled, recordTarget, reason, onRecord }: LibraryEmptyStateProps) {
+  const colors = useThemeColors();
+  const subtextCopy = reason === "no_sets"
+    ? "Log a workout set first to attach a form clip."
+    : reason === "all_have_clips"
+    ? "Replace or delete an existing clip to record a new one."
+    : "Tap the video icon on a completed set to record one";
+  return (
+    <View style={styles.emptyState}>
+      <MaterialCommunityIcons name="video-outline" size={40} color={colors.onSurfaceVariant} />
+      <Text style={[styles.emptyText, { color: colors.onSurface }]}>No clips yet</Text>
+      {isResolved && isEnabled && recordTarget ? (
+        <Pressable
+          style={[styles.emptyRecordBtn, { backgroundColor: colors.primary }]}
+          onPress={onRecord}
+          accessibilityRole="button"
+          accessibilityLabel="Record a clip"
+        >
+          <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Record a clip</Text>
+        </Pressable>
+      ) : (
+        <Text style={[styles.emptySubtext, { color: colors.onSurfaceVariant }]}>{subtextCopy}</Text>
+      )}
     </View>
   );
 }
@@ -227,44 +467,130 @@ type ThumbnailProps = {
   selected: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
+  onReplace?: () => void;
+  onDelete?: () => void;
 };
 
-function ClipThumbnail({ clip, selectMode, selected, onPress, onLongPress }: ThumbnailProps) {
+function ClipThumbnail({ clip, selectMode, selected, onPress, onLongPress, onReplace, onDelete }: ThumbnailProps) {
   const colors = useThemeColors();
+  const [menuVisible, setMenuVisible] = useState(false);
   const dateStr = new Date(clip.created_at).toLocaleDateString([], {
     month: "short",
     day: "numeric",
   });
 
+  const handleOverflowPress = useCallback(() => {
+    setMenuVisible(true);
+  }, []);
+
+  const handleReplace = useCallback(() => {
+    setMenuVisible(false);
+    onReplace?.();
+  }, [onReplace]);
+
+  const handleDelete = useCallback(() => {
+    setMenuVisible(false);
+    onDelete?.();
+  }, [onDelete]);
+
   return (
-    <Pressable
-      style={[
-        styles.thumb,
-        { backgroundColor: colors.surfaceVariant, borderColor: selected ? colors.primary : colors.outline },
-        selected && { borderWidth: 2 },
-      ]}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Clip from ${dateStr}${selectMode ? (selected ? ", selected" : ", not selected") : ""}`}
-      accessibilityState={selectMode ? { selected } : undefined}
-    >
-      {/* Placeholder — real thumbnail generation deferred to post-save */}
-      <View style={styles.thumbPlaceholder}>
-        <MaterialCommunityIcons name="video" size={24} color={colors.onSurfaceVariant} />
-      </View>
-      <View style={[styles.thumbOverlay, { backgroundColor: "rgba(0,0,0,0.35)" }]}>
-        <Text style={styles.thumbDate}>{dateStr}</Text>
-        {clip.duration_ms && (
-          <Text style={styles.thumbDuration}>{Math.round(clip.duration_ms / 1000)}s</Text>
-        )}
-      </View>
-      {selectMode && (
-        <View style={[styles.checkOverlay, selected && { backgroundColor: colors.primary }]}>
-          {selected && <MaterialCommunityIcons name="check" size={14} color="#fff" />}
+    <View style={[
+      styles.thumb,
+      { backgroundColor: colors.surfaceVariant, borderColor: selected ? colors.primary : colors.outline },
+      selected && { borderWidth: 2 },
+    ]}>
+      <Pressable
+        style={styles.thumbPressable}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Clip from ${dateStr}${selectMode ? (selected ? ", selected" : ", not selected") : ""}`}
+        accessibilityState={selectMode ? { selected } : undefined}
+      >
+        {/* Placeholder — real thumbnail generation deferred to post-save */}
+        <View style={styles.thumbPlaceholder}>
+          <MaterialCommunityIcons name="video" size={24} color={colors.onSurfaceVariant} />
         </View>
+        <View style={[styles.thumbOverlay, { backgroundColor: "rgba(0,0,0,0.35)" }]}>
+          <Text style={styles.thumbDate}>{dateStr}</Text>
+          {clip.duration_ms && (
+            <Text style={styles.thumbDuration}>{Math.round(clip.duration_ms / 1000)}s</Text>
+          )}
+        </View>
+        {selectMode && (
+          <View style={[styles.checkOverlay, selected && { backgroundColor: colors.primary }]}>
+            {selected && <MaterialCommunityIcons name="check" size={14} color="#fff" />}
+          </View>
+        )}
+      </Pressable>
+      {/* BLD-1105: Per-clip overflow button (hidden in select mode) */}
+      {!selectMode && (onReplace || onDelete) && (
+        <Pressable
+          style={[styles.overflowBtn, { backgroundColor: "rgba(0,0,0,0.45)" }]}
+          onPress={handleOverflowPress}
+          accessibilityRole="button"
+          accessibilityLabel={`More options for clip from ${dateStr}`}
+          hitSlop={4}
+        >
+          <MaterialCommunityIcons name="dots-vertical" size={16} color="#fff" />
+        </Pressable>
       )}
-    </Pressable>
+      <ClipOverflowMenu
+        visible={menuVisible}
+        dateStr={dateStr}
+        onReplace={onReplace ? handleReplace : undefined}
+        onDelete={onDelete ? handleDelete : undefined}
+        onClose={() => setMenuVisible(false)}
+      />
+    </View>
+  );
+}
+
+type OverflowMenuProps = {
+  visible: boolean;
+  dateStr: string;
+  onReplace?: () => void;
+  onDelete?: () => void;
+  onClose: () => void;
+};
+
+function ClipOverflowMenu({ visible, dateStr, onReplace, onDelete, onClose }: OverflowMenuProps) {
+  const colors = useThemeColors();
+  if (!visible) return null;
+  return (
+    <View style={[styles.overflowMenu, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+      {onReplace && (
+        <Pressable
+          style={styles.overflowMenuItem}
+          onPress={onReplace}
+          accessibilityRole="button"
+          accessibilityLabel={`Replace clip from ${dateStr}`}
+        >
+          <MaterialCommunityIcons name="refresh" size={16} color={colors.onSurface} />
+          <Text style={[styles.overflowMenuText, { color: colors.onSurface }]}>Replace</Text>
+        </Pressable>
+      )}
+      {onDelete && (
+        <Pressable
+          style={styles.overflowMenuItem}
+          onPress={onDelete}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete clip from ${dateStr}`}
+          accessibilityHint="Permanently removes this clip from your device"
+        >
+          <MaterialCommunityIcons name="delete-outline" size={16} color={colors.error} />
+          <Text style={[styles.overflowMenuText, { color: colors.error }]}>Delete</Text>
+        </Pressable>
+      )}
+      <Pressable
+        style={styles.overflowMenuItem}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Cancel"
+      >
+        <Text style={[styles.overflowMenuText, { color: colors.onSurfaceVariant }]}>Cancel</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -278,6 +604,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerTitle: { fontSize: fontSizes.base, fontWeight: "600" },
   countBadge: {
     paddingHorizontal: 8,
@@ -286,6 +613,24 @@ const styles = StyleSheet.create({
   },
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700" },
   selectToggle: { fontSize: fontSizes.sm, fontWeight: "600" },
+  recordCTA: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radii.md,
+  },
+  recordCTADisabled: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+  },
+  recordCTAText: { fontSize: fontSizes.xs, fontWeight: "600" },
+  recordHelperText: {
+    fontSize: fontSizes.xs,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
   selectActions: {
     flexDirection: "row",
     gap: 8,
@@ -307,6 +652,12 @@ const styles = StyleSheet.create({
   },
   emptyText: { fontSize: fontSizes.base, fontWeight: "600" },
   emptySubtext: { fontSize: fontSizes.sm, textAlign: "center" },
+  emptyRecordBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: radii.md,
+    marginTop: 4,
+  },
   grid: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 32 },
   row: { gap: 8, marginBottom: 8 },
   thumb: {
@@ -317,6 +668,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
+  thumbPressable: { flex: 1 },
   thumbPlaceholder: {
     flex: 1,
     alignItems: "center",
@@ -332,7 +684,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  thumbDate: { color: "#fff", fontSize: 10 },
+  thumbDate: { color: "white", fontSize: 10 },
   thumbDuration: { color: "rgba(255,255,255,0.8)", fontSize: 10 },
   checkOverlay: {
     position: "absolute",
@@ -342,8 +694,42 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: "white",
     alignItems: "center",
     justifyContent: "center",
   },
+  overflowBtn: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  overflowMenu: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    left: 0,
+    zIndex: 20,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingVertical: 4,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  overflowMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  overflowMenuText: { fontSize: fontSizes.sm },
 });
