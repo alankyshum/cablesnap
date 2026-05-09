@@ -44,6 +44,14 @@ import {
 } from '@/lib/db';
 import { useQueryClient } from '@tanstack/react-query';
 
+/**
+ * Extra bottom clearance beyond the floating tab bar zone.
+ * On wide/foldable screens the FlowContainer produces a multi-column layout
+ * that reduces total content height; this extra padding ensures the About
+ * card (with badge images) is always comfortably scrollable into view.
+ */
+export const SETTINGS_SCROLL_EXTRA_BOTTOM = 48;
+
 export default function Settings() {
   const colors = useThemeColors();
   const router = useRouter();
@@ -134,11 +142,13 @@ export default function Settings() {
 
   return (
     <ScrollView
+      testID="settings-scroll-view"
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[
-        styles.content,
-        { paddingHorizontal: layout.horizontalPadding, paddingBottom: tabBarHeight + 16 },
-      ]}
+      contentContainerStyle={{
+        paddingTop: 16,
+        paddingHorizontal: layout.horizontalPadding,
+        paddingBottom: tabBarHeight + SETTINGS_SCROLL_EXTRA_BOTTOM,
+      }}
     >
       <FlowContainer gap={16}>
         <UnitsCard
@@ -332,7 +342,6 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingTop: 16, paddingBottom: 48 },
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.md },
   settingsRow: {
     flexDirection: 'row',
