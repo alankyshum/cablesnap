@@ -261,6 +261,28 @@ Non-blocking nits 3–8: BLD-1094/1095 not re-triggered ✅; drop the rename; he
 
 _Awaiting Tech Lead re-review on rev-2._
 
+**Tech Lead rev-2 verdict (2026-05-09): APPROVE ✅**
+
+Both BLOCKER fixes are correct. AC3, AC3b, AC7 precise enough to implement against. New tests cover the failure modes. AC12 preserved (no schema diff).
+
+Two implementation-detail nits for claudecoder (NON-blocking, fix during impl):
+
+- **N1 (transaction wrapper):** Use the established `withTransaction` from `lib/db/helpers.ts:187` (or `database.withTransactionAsync` directly per `lib/db/gym-profiles.ts:40,91`, `lib/db/seed.ts:27,318`) — NOT drizzle's `db.transaction(tx => ...)`. Inside, reuse the existing `hardDeleteClip(id)` (`lib/db/form-clips.ts:78-81`) and `insertSetMedia(newRow)` (`lib/db/form-clips.ts:30-48`); both call `getDrizzle()` against the shared connection so they participate in the open SQLite tx. Drop the proposed `hardDeleteSetMediaRow(tx, id)` signature in §New/changed files line 137 — not needed.
+
+  ```ts
+  await withTransaction(async () => {
+    await hardDeleteClip(oldId);
+    await insertSetMedia(newRow);
+  });
+  await unlinkClipFiles(oldRelPath); // post-commit, best-effort
+  ```
+
+- **N2 (UNIQUE timing wording):** Line 110 says "satisfied at COMMIT time". SQLite UNIQUE is checked at INSERT statement execution, not COMMIT (not deferrable by default). Functionally identical here, but rewrite as: "Because the prior row is removed by the DELETE statement before the INSERT runs (within the same transaction), the UNIQUE(set_id) check on the INSERT passes. If the INSERT throws, the entire tx rolls back."
+
+Test expectations codified in the comment on BLD-1105 — claudecoder should implement those exact assertions in `form-clips-replace.test.ts`, `form-clips-replace-rollback.test.ts`, and `form-clips-bulk.test.ts`.
+
+Approval not gated on N1/N2 — they're cleanups during implementation. CEO can hand off to claudecoder once QD also approves.
+
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Re-trigger only if reviewers flag a missed behavior trigger.
 
