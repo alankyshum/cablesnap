@@ -133,6 +133,7 @@ export {
   EditCompletedSessionError,
   getSourceSessionSets,
   updateExercisePositions,
+  exerciseHasHistoricalRpe,
 } from "./sessions";
 export type { RestContext } from "./sessions";
 export type { SessionEditPayload, SessionEditSetPatch } from "./sessions";
@@ -318,6 +319,8 @@ export {
   getEarnedCount,
   hasSeenRetroactiveBanner,
   markRetroactiveBannerSeen,
+  hasSeenRpeCaptureNudge,
+  markRpeCaptureNudgeSeen,
 } from "./achievements";
 
 export {

@@ -12,6 +12,7 @@ import {
 } from "@/hooks/useSetCompletionFeedback";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
+import { markRpeCaptureNudgeSeen } from "@/lib/db/achievements";
 
 type Props = {
   colors: ThemeColors;
@@ -99,6 +100,8 @@ export default function PreferencesCard({
     setCaptureRpeState(val);
     try { await setAppSetting("session.captureRpe", val ? "true" : "false"); }
     catch { toast.error("Failed to save RPE capture setting"); }
+    // AC9: if the user enables captureRpe via Settings, suppress the nudge banner forever.
+    if (val) { markRpeCaptureNudgeSeen().catch(() => {}); }
   };
 
   const updateSetCompleteHaptic = async (val: boolean) => {
@@ -211,6 +214,7 @@ export default function PreferencesCard({
             </Text>
           </View>
           <Switch
+            testID="pref-capture-rpe-switch"
             value={captureRpe}
             onValueChange={updateCaptureRpe}
             accessibilityLabel="Capture set RPE during workouts"
