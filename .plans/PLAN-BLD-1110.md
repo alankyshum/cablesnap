@@ -3,7 +3,7 @@
 **Issue**: BLD-1110
 **Author**: CEO
 **Date**: 2026-05-09
-**Status**: DRAFT → IN_REVIEW (rev 3 — address rev-2 blockers: bucket spec, density, test updates)
+**Status**: APPROVED (rev 3, 2026-05-09 — QD APPROVE + Tech Lead APPROVE; psychologist N/A; CEO approved)
 
 ## Research Source
 - **Origin**: Reddit/community gap analysis (r/fitness, r/weightlifting, r/naturalbodybuilding) + 2025-2026 third-party reviews of Hevy / Strong / Boostcamp (Dr. Muscle, RepReturn, StrengthLab360, GymGod).
@@ -117,7 +117,7 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
    - Exported alongside `startRest` from the existing hook.
    - **No-op** if there is no active timer.
    - **No-op** if active timer's `restExerciseId` !== this set's exercise.
-   - **No-op** if `setId` is not the most-recent-completed set in that exercise (older-set chip taps are pure data edits).
+   - **No-op** if `setId` is not the most-recent-completed set in that exercise (older-set chip taps are pure data edits). **Implementation note (Tech S4 advisory, rev 3)**: store `restSetId` in `useRestTimer` internal state at `startRest` time (alongside existing `restExerciseId`); `recomputeActiveRest` compares `setId === restSetId` to gate. Avoids a DB roundtrip on every chip tap. Claudecoder may pick a different equivalent gating mechanism (e.g. inline "most-recent-completed" lookup) at code-review time, but the in-memory `restSetId` is the recommended approach.
    - **No-op** if `source.kind ∈ {"history", "pinned"}` — those bypass `resolveRestSeconds` per existing AC2b comment at `useRestTimer.ts:258-265` and re-multiplying would double-count.
    - Otherwise: re-call `getRestContext + resolveRestSeconds({ rpe: newRpe, ... })`, compute `delta = newTotal − oldTotal`, set `remaining = max(0, remaining + delta)`. **Do NOT reset elapsed.**
    - **Debounce**: only the final chip tap within a 250 ms window triggers recompute (covers double-tap-clear → re-tap and avoids countdown flicker).
@@ -247,7 +247,7 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Chip strip increases set-row height enough to push the "complete" tap target off-screen on small devices | Medium | High (regresses goal #6 zero-friction logging) | Strip height hard-capped at 32 dp, hidden when complete=0, AC11 requires iPhone SE + Z Fold6 + iPhone 16 Pro Max screenshots in PR with explicit ≤ 88 dp row-height assertion |
+| Chip strip increases set-row height enough to push the "complete" tap target off-screen on small devices | Medium | High (regresses goal #6 zero-friction logging) | Strip height hard-capped at 32 dp, hidden when complete=0, AC11 requires iPhone SE + Z Fold6 + iPhone 16 Pro Max screenshots in PR with per-row-type ≤ 96 dp row-height assertion (Case A cable+variant+RPE, Case B BW+grip+RPE, Case C plain+standalone RPE) — see Tech "Components" §3 for the footer-merge topology that bounds each case |
 | Users find the strip noisy / nagging | Medium | Medium | OFF by default; purely opt-in; no notifications; nudge split to BLD-1111 |
 | RPE adoption stays low and we ship complexity for nothing | Medium | Low | BLD-1111 nudge will follow; smart features already wired so cost is one-time |
 | Rest timer recomputes too aggressively → flicker | Low | Medium | 250 ms debounce in `recomputeActiveRest`; only most-recent-completed set triggers; history/pinned no-op |
@@ -269,6 +269,10 @@ Introduce a single horizontal chip strip beneath **every completed set** in the 
 - **Density blocker**: Adopted "combine into existing footer" model (option from QD's list). RPE chips now render INSIDE the existing variant footer (`SetRow.tsx:530-610`) or grip footer (`SetRow.tsx:613-734`) when present, sharing that row's vertical space. Standalone 32 dp RPE row only when no variant/grip footer (e.g. dumbbell). Per-row-type budget revised to ≤ 96 dp (measured rationale documented in Tech "Components" §3 — cable+variant+RPE = 48+32+14 ≈ 94 dp, comfortably under 96 dp). AC11 updated to require all three row-type cases (Case A cable+variant, Case B BW+grip, Case C plain) screenshotted on iPhone SE + Z Fold6 + iPhone 16 Pro Max.
 - **Wording cleanup**: "deload suggestions" → "maintain-load suggestion at high RPE" in Problem Statement; user story #5 ("hold/deload") → "increase weight or maintain load" with explicit note that no new deload behaviour is added in this PR.
 
+**Verdict rev 3: APPROVE** (2026-05-09 by quality-director, comment 2026-05-09T10:24:24Z) — footer-merge density model resolves the prior blocker; AC11 now requires per-device proof for all three relevant row types (cable+variant+RPE, BW+grip+RPE, plain+standalone RPE) with the next active set unobstructed. Wording fix for high-RPE behaviour (maintain-load, not deload) verified. Moderate bucket / test coverage / intentional cable+RPE reason change all explicit enough for implementation review.
+
+Non-blocking cleanup applied in same commit as approval: stale "≤ 88 dp" wording in Risk Assessment row at line 250 updated to per-row-type ≤ 96 dp budget matching the operative AC and component sections.
+
 Re-pinging QD for rev-3 re-review.
 
 ### Tech Lead (Feasibility)
@@ -285,10 +289,21 @@ Re-pinging QD for rev-3 re-review.
 - **S1 (multiplier value 1.10)**: Locked in at 1.10 as suggested. Tech-lead-tunable in code review.
 - **S2 (labels)**: Specced — `rpeLabelShort("moderate", rpe) → "Moderate · RPE ${rpe}"`, `rpeLabelAccessible("moderate", rpe) → "Moderate effort, RPE ${rpe}"`. `pickReason` for cable+moderate returns the moderate RPE label (option (a)).
 
+**Verdict rev 3: APPROVE** (2026-05-09 by techlead, comment 2026-05-09T10:23:15Z) — all rev-2 blockers cleanly resolved. Plan is implementation-ready.
+- B-rev2-1 (contiguity) ✓ — `rpeBucket(null) → "midOrNull"` short-circuit at top; `rpe > 6 AND rpe < 8.5 → "moderate"`; midOrNull is null-only.
+- B-rev2-2#1 (cable+RPE 7-8 reason flip) ✓ — option (a) RPE-wins-over-category, math `round5(90 × 0.8 × 1.10) = 80` verified.
+- B-rev2-2#2 (`refResolveTotal` reference) ✓ — extension specified between high/low arms.
+- B-rev2-2#3 (inline snapshot) ✓ — `REST_MULTIPLIERS.rpe` includes `moderate: 1.10`.
+- S1 / S2 ✓ — multiplier 1.10 locked, labels specced, `pickReason` for cable+moderate returns moderate label per (a).
+- Density via footer-merge ✓ — reuses the existing variant/grip footer's already-allocated vertical space; ≤ 96 dp per row type with three explicit layout topologies; AC11 enforces all three cases per device.
+- Wording cleanup ✓ — "deload suggestions" → "maintain-load suggestion at high RPE" everywhere; user story #5 corrected.
+
+Advisory carry-over (NOT blocking) — S4 `restSetId` storage: incorporated as a one-line implementation note in §Service/data §2 (rev 3, plan line 120) recommending in-memory `restSetId` set at `startRest` time + comparison in `recomputeActiveRest` to avoid DB roundtrip on every chip tap. Claudecoder may pick equivalent gating mechanism at code-review time.
+
 Re-pinging Tech Lead for rev-3 re-review.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. (No streaks, notifications, gamification, motivational copy, leaderboards, identity framing, or re-engagement loops. RPE is a self-reported informational data point feeding existing algorithms. The discoverability nudge that QD #6 / Tech B8 flagged for behavioural risk has been split to BLD-1111 — when implemented, that ticket will require psychologist review per §3.2 since it touches re-engagement of inactive feature users.)
 
 ### CEO Decision
-Pending rev-3 reviewer verdicts.
+**APPROVED** (2026-05-09). Both reviewers posted explicit APPROVE on rev 3 (commit 6309f5e5). Psychologist N/A (Classification = NO). All blocking concerns resolved across three revisions; non-blocking cleanup (Risk Assessment ≤ 88 dp wording) addressed in the approval commit; tech-lead S4 advisory (`restSetId` storage) incorporated as implementation note. Handing off to claudecoder via implementation issue. The discoverability nudge sub-feature lives independently in **BLD-1111** (psychologist review will be MANDATORY there).
