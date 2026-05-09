@@ -84,7 +84,7 @@ jobs:
         # usage predictable on the GitHub-hosted runner.
         run: npm test -- --ci --runInBand
 
-  backup-xml-validation:
+  android-lint:
     name: Backup XML validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
