@@ -30,6 +30,7 @@ function mapRow(row: ExerciseRow): Exercise {
     notes: row.notes ?? undefined,
     notes_updated_at: row.notes_updated_at ?? undefined,
     notes_backfill_dismissed_at: row.notes_backfill_dismissed_at ?? undefined,
+    max_pulley_pins: row.max_pulley_pins ?? undefined,
   };
 }
 
@@ -134,6 +135,23 @@ export async function updateCustomExercise(
   await db.update(exercises)
     .set(updates)
     .where(and(eq(exercises.id, id), eq(exercises.is_custom, 1)));
+}
+
+export async function updateMaxPulleyPins(exerciseId: string, maxPins: number | null): Promise<void> {
+  if (maxPins !== null) {
+    const n = Number(maxPins);
+    if (!Number.isInteger(n) || n < 1 || n > 30) {
+      throw new Error(`max_pulley_pins must be 1..30 or null, got: ${maxPins}`);
+    }
+  }
+  const db = await getDrizzle();
+  await db.update(exercises).set({ max_pulley_pins: maxPins }).where(eq(exercises.id, exerciseId));
+}
+
+export async function getMaxPulleyPins(exerciseId: string): Promise<number | null> {
+  const db = await getDrizzle();
+  const rows = await db.select({ max_pulley_pins: exercises.max_pulley_pins }).from(exercises).where(eq(exercises.id, exerciseId)).limit(1);
+  return rows[0]?.max_pulley_pins ?? null;
 }
 
 export async function softDeleteCustomExercise(id: string): Promise<void> {

@@ -17,6 +17,7 @@ export type WorkoutCSVRow = {
   // BLD-541: signed bodyweight modifier (kg) for the set. null for
   // non-bodyweight sets AND for pure-bodyweight sets with no modifier.
   bodyweight_modifier_kg: number | null;
+  pulley_pin: number | null;
   // BLD-1089: session subtype + GTG day-session metadata for CSV export.
   kind: string | null;
   day_session_exercise_id: string | null;
@@ -72,6 +73,7 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       link_id: workoutSets.link_id,
       tempo: workoutSets.tempo,
       bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
+      pulley_pin: workoutSets.pulley_pin,
       kind: workoutSessions.kind,
       day_session_exercise_id: workoutSessions.day_session_exercise_id,
       day_session_date: workoutSessions.day_session_date,

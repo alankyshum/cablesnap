@@ -28,6 +28,7 @@ import {
   updateExerciseNote,
   dismissExerciseBackfill,
   getExerciseBackfillCandidate,
+  updatePulleyPin,
 } from "../lib/db";
 import {
   getLastBodyweightModifier,
@@ -828,6 +829,7 @@ export function useSessionActions({
       weight: s.weight,
       reps: s.reps,
       duration_seconds: s.duration_seconds,
+      pulley_pin: s.pulley_pin,
     }));
 
     // Update local state in one batch
@@ -839,7 +841,7 @@ export function useSessionActions({
           sets: g.sets.map((s) => {
             const fill = toFill.find((f) => f.setId === s.id);
             if (!fill) return s;
-            return { ...s, weight: fill.weight, reps: fill.reps, duration_seconds: fill.duration_seconds };
+            return { ...s, weight: fill.weight, reps: fill.reps, duration_seconds: fill.duration_seconds, pulley_pin: fill.pulley_pin ?? s.pulley_pin };
           }),
         };
       })
@@ -849,6 +851,9 @@ export function useSessionActions({
     try {
       for (const fill of toFill) {
         await updateSet(fill.setId, fill.weight, fill.reps, fill.duration_seconds);
+        if (fill.pulley_pin !== undefined) {
+          await updatePulleyPin(fill.setId, fill.pulley_pin ?? null);
+        }
       }
     } catch (err) {
       // Rollback optimistic UI update so UI ↔ DB stays in sync when persistence fails.
@@ -860,7 +865,7 @@ export function useSessionActions({
             sets: g.sets.map((s) => {
               const snap = preFillSnapshot.find((p) => p.id === s.id);
               if (!snap) return s;
-              return { ...s, weight: snap.weight, reps: snap.reps, duration_seconds: snap.duration_seconds };
+              return { ...s, weight: snap.weight, reps: snap.reps, duration_seconds: snap.duration_seconds, pulley_pin: snap.pulley_pin };
             }),
           };
         })

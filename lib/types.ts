@@ -111,6 +111,7 @@ export type Exercise = {
   notes?: string | null;
   notes_updated_at?: number | null;
   notes_backfill_dismissed_at?: number | null;
+  max_pulley_pins?: number | null;
 };
 
 export const CATEGORIES: Category[] = [
@@ -330,6 +331,7 @@ export type WorkoutSet = {
   stack_marker?: number | null;
   stack_unit_at_log?: string | null;
   stack_name_at_log?: string | null;
+  pulley_pin?: number | null;
 };
 
 export type LinkedGroup = {

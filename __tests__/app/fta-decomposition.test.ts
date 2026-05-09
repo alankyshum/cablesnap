@@ -232,7 +232,8 @@ describe("FTA decomposition structural tests", () => {
     // BLD-1092: bumped 410 → 490 for form-check video modals + state wiring.
     // BLD-1110: bumped 490 → 520 for RPE capture pref state + handleRpeChange
     // + recomputeActiveRest wiring (captureRpe useEffect + callback + JSX props).
-    ["app/session/[id].tsx", 520, "session main file"],
+    // BLD-1114: bumped 520 → 640 for setup photo + pulley pin state/handlers.
+    ["app/session/[id].tsx", 640, "session main file"],
     ["components/SubstitutionSheet.tsx", 260, "substitution sheet main file"],
     ["app/progress/achievements.tsx", 200, "achievements main file"],
     ["components/ShareCard.tsx", 200, "share card main file"],

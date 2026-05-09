@@ -43,6 +43,7 @@ export async function getSessionSets(
       stack_marker: workoutSets.stack_marker,
       stack_unit_at_log: workoutSets.stack_unit_at_log,
       stack_name_at_log: workoutSets.stack_name_at_log,
+      pulley_pin: workoutSets.pulley_pin,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -84,6 +85,7 @@ export async function getSessionSets(
     stack_marker: r.stack_marker ?? null,
     stack_unit_at_log: r.stack_unit_at_log ?? null,
     stack_name_at_log: r.stack_name_at_log ?? null,
+    pulley_pin: r.pulley_pin ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -100,6 +102,15 @@ export type SourceSessionSet = {
   exercise_exists: boolean;
   set_type: SetType;
 };
+
+export function validatePulleyPin(pin: unknown): number | null {
+  if (pin === null || pin === undefined) return null;
+  const n = Number(pin);
+  if (!Number.isInteger(n) || n < 1 || n > 30) {
+    throw new Error(`pulley_pin must be 1..30 or null, got: ${pin}`);
+  }
+  return n;
+}
 
 export async function getSourceSessionSets(
   sessionId: string
@@ -157,10 +168,12 @@ export async function addSet(
   stackId?: string | null,
   stackMarker?: number | null,
   stackUnitAtLog?: string | null,
-  stackNameAtLog?: string | null
+  stackNameAtLog?: string | null,
+  pulleyPin?: number | null
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
+  const validatedPulleyPin = validatePulleyPin(pulleyPin);
   const db = await getDrizzle();
   await db.insert(workoutSets).values({
     id,
@@ -180,6 +193,7 @@ export async function addSet(
     stack_marker: stackMarker ?? null,
     stack_unit_at_log: stackUnitAtLog ?? null,
     stack_name_at_log: stackNameAtLog ?? null,
+    pulley_pin: validatedPulleyPin,
   });
   return {
     id,
@@ -207,6 +221,7 @@ export async function addSet(
     stack_marker: stackMarker ?? null,
     stack_unit_at_log: stackUnitAtLog ?? null,
     stack_name_at_log: stackNameAtLog ?? null,
+    pulley_pin: validatedPulleyPin,
   };
 }
 
@@ -231,6 +246,7 @@ export async function addSetsBatch(
     stackMarker?: number | null;
     stackUnitAtLog?: string | null;
     stackNameAtLog?: string | null;
+    pulleyPin?: number | null;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
@@ -261,12 +277,13 @@ export async function addSetsBatch(
       stack_marker: s.stackMarker ?? null,
       stack_unit_at_log: s.stackUnitAtLog ?? null,
       stack_name_at_log: s.stackNameAtLog ?? null,
+      pulley_pin: validatePulleyPin(s.pulleyPin),
     };
   });
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
@@ -278,6 +295,7 @@ export async function addSetsBatch(
           // Pinned by `__tests__/lib/db/add-sets-batch-bodyweight-variant.test.ts`.
           r.grip_type ?? null, r.grip_width ?? null,
           r.stack_id ?? null, r.stack_marker ?? null, r.stack_unit_at_log ?? null, r.stack_name_at_log ?? null,
+          r.pulley_pin ?? null,
         ]);
       }
     } finally {
@@ -317,6 +335,7 @@ export async function addWarmupSets(
     set_type: "warmup" as SetType,
     duration_seconds: null,
     exercise_position: pos,
+    pulley_pin: null,
   }));
 
   await withTransaction(async (db) => {
@@ -562,6 +581,12 @@ export async function updateSetRPE(id: string, rpe: number | null): Promise<void
     .where(eq(workoutSets.id, id));
 }
 
+export async function updatePulleyPin(setId: string, pin: number | null): Promise<void> {
+  const validated = validatePulleyPin(pin);
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({ pulley_pin: validated }).where(eq(workoutSets.id, setId));
+}
+
 export async function updateSetNotes(id: string, notes: string): Promise<void> {
   const db = await getDrizzle();
   await db.update(workoutSets)
@@ -621,9 +646,9 @@ export async function getPreviousSets(
 export async function getPreviousSetsBatch(
   exerciseIds: string[],
   currentSessionId: string
-): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null }[]>> {
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null; pulley_pin: number | null }[]>> {
   if (exerciseIds.length === 0) return {};
-  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null }[]> = {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null; pulley_pin: number | null }[]> = {};
   const db = await getDrizzle();
   // Step 1: Find all completed sessions per exercise, ordered by most recent
   const sessionRows = await db
@@ -650,7 +675,7 @@ export async function getPreviousSetsBatch(
     }
   }
   const sessionIds = [...new Set(Object.values(sessionMap))];
-  // Step 2: Fetch ALL sets from those sessions (not just completed) with completed/rpe fields
+  // Step 2: Fetch ALL sets from those sessions (not just completed) with completed/rpe/pulley_pin fields
   const rows = await db
     .select({
       exercise_id: workoutSets.exercise_id,
@@ -662,6 +687,7 @@ export async function getPreviousSetsBatch(
       set_type: workoutSets.set_type,
       completed: workoutSets.completed,
       rpe: workoutSets.rpe,
+      pulley_pin: workoutSets.pulley_pin,
     })
     .from(workoutSets)
     .where(and(
@@ -675,7 +701,7 @@ export async function getPreviousSetsBatch(
     const correctSession = sessionMap[row.exercise_id];
     if (!correctSession || row.session_id !== correctSession) continue;
     if (!result[row.exercise_id]) result[row.exercise_id] = [];
-    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: row.set_type, completed: row.completed === 1, rpe: row.rpe ?? null });
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: row.set_type, completed: row.completed === 1, rpe: row.rpe ?? null, pulley_pin: row.pulley_pin ?? null });
   }
   return result;
 }
@@ -1094,7 +1120,7 @@ export async function getMostRecentCompletedSetForExercise(
       .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
       .leftJoin(
         setMedia,
-        and(eq(setMedia.set_id, workoutSets.id), eq(setMedia.pending_delete, 0))
+        and(eq(setMedia.set_id, workoutSets.id), eq(setMedia.kind, "video"), eq(setMedia.pending_delete, 0))
       )
       .where(
         and(

@@ -146,8 +146,8 @@ describe("computePrefillSets", () => {
       "reps",
     );
     expect(result).toEqual([
-      { setId: "s1", weight: 80, reps: 8, duration_seconds: null },
-      { setId: "s2", weight: 80, reps: 7, duration_seconds: null },
+      { setId: "s1", weight: 80, reps: 8, duration_seconds: null, pulley_pin: null },
+      { setId: "s2", weight: 80, reps: 7, duration_seconds: null, pulley_pin: null },
     ]);
 
     // Completed sets are skipped
@@ -189,7 +189,7 @@ describe("computePrefillSets", () => {
       [{ weight: null, reps: 12, duration_seconds: null }],
       "reps",
     );
-    expect(bw).toEqual([{ setId: "s1", weight: null, reps: 12, duration_seconds: null }]);
+    expect(bw).toEqual([{ setId: "s1", weight: null, reps: 12, duration_seconds: null, pulley_pin: null }]);
 
     // Duration exercise
     const dur = computePrefillSets(
@@ -197,7 +197,7 @@ describe("computePrefillSets", () => {
       [{ weight: null, reps: null, duration_seconds: 90 }],
       "duration",
     );
-    expect(dur).toEqual([{ setId: "s1", weight: null, reps: null, duration_seconds: 90 }]);
+    expect(dur).toEqual([{ setId: "s1", weight: null, reps: null, duration_seconds: 90, pulley_pin: null }]);
 
     // Duration set already filled
     const durFilled = computePrefillSets(
@@ -235,7 +235,7 @@ describe("computePrefillSets", () => {
       "reps",
     );
     // s1 completed → skip, s2 has weight → skip, s3 empty → fill from prev[2]
-    expect(mixed).toEqual([{ setId: "s3", weight: 80, reps: 6, duration_seconds: null }]);
+    expect(mixed).toEqual([{ setId: "s3", weight: 80, reps: 6, duration_seconds: null, pulley_pin: null }]);
 
     // Progression: compound kg — +2.5kg
     const progCompound = computePrefillSets(
@@ -251,8 +251,8 @@ describe("computePrefillSets", () => {
       { suggested: true, weightUnit: "kg", exerciseCategory: "chest" },
     );
     expect(progCompound).toEqual([
-      { setId: "s1", weight: 82.5, reps: 8, duration_seconds: null },
-      { setId: "s2", weight: 82.5, reps: 8, duration_seconds: null },
+      { setId: "s1", weight: 82.5, reps: 8, duration_seconds: null, pulley_pin: null },
+      { setId: "s2", weight: 82.5, reps: 8, duration_seconds: null, pulley_pin: null },
     ]);
 
     // Progression: isolation kg — +1.25kg

@@ -30,6 +30,9 @@ import {
 } from "../lib/format";
 import { uuid } from "../lib/uuid";
 import { getQueryVersion } from "../lib/query";
+import { getSetupPhotosForExercise } from "../lib/db/setup-photos";
+import { toAbsPath } from "../lib/media/form-clips";
+import { isCableExercise } from "../lib/cable-variant";
 import { derivePristinePrefillCandidate } from "./resolvePrefillCandidate";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -233,6 +236,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
         weight: s.weight,
         reps: s.reps,
         duration_seconds: s.duration_seconds ?? null,
+        pulley_pin: s.pulley_pin ?? null,
       }));
     }
 
@@ -249,6 +253,29 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     }
 
     setGroups(groupList);
+
+    // BLD-1114: populate previousSetupPhotoUri for cable exercises
+    const cableGroups = groupList.filter((g) => isCableExercise({ equipment: g.equipment }));
+    if (cableGroups.length > 0) {
+      Promise.all(
+        cableGroups.map((g) =>
+          getSetupPhotosForExercise(g.exercise_id)
+            .then((photos) => {
+              const uri = photos[0] ? toAbsPath(photos[0].rel_path) : null;
+              return [g.exercise_id, uri] as const;
+            })
+            .catch(() => [g.exercise_id, null] as const)
+        )
+      ).then((pairs) => {
+        setGroups((prev) =>
+          prev.map((g) => {
+            const match = pairs.find(([eid]) => eid === g.exercise_id);
+            if (!match) return g;
+            return { ...g, previousSetupPhotoUri: match[1] };
+          })
+        );
+      }).catch(() => {});
+    }
 
     const entries: [string, Suggestion | null][] = exerciseIds.map((eid) => {
       try {

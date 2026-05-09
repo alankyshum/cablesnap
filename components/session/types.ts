@@ -29,7 +29,8 @@ export type ExerciseGroup = {
   exercise_position: number;
   previousSummary?: string | null;
   previousSummaryA11y?: string | null;
-  previousSets?: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>;
+  previousSets?: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null; pulley_pin: number | null }>;
+  previousSetupPhotoUri?: string | null;
   progressionSuggested?: boolean;
   exerciseCategory?: string | null;
   // BLD-1028: pinned per-exercise note loaded at session start.

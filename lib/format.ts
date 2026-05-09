@@ -182,6 +182,7 @@ export type PrefillResult = {
   weight: number | null;
   reps: number | null;
   duration_seconds: number | null;
+  pulley_pin?: number | null;
 };
 
 /**
@@ -233,7 +234,7 @@ export function computePrefillSets(
     duration_seconds: number | null;
     set_type?: string;
   }>,
-  previousSets: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null }>,
+  previousSets: Array<{ weight: number | null; reps: number | null; duration_seconds: number | null; pulley_pin?: number | null }>,
   trackingMode: "reps" | "duration",
   progression?: ProgressionOptions,
 ): PrefillResult[] {
@@ -270,6 +271,7 @@ export function computePrefillSets(
       weight: prev.weight,
       reps: trackingMode === "duration" ? null : prev.reps,
       duration_seconds: trackingMode === "duration" ? prev.duration_seconds : null,
+      pulley_pin: prev.pulley_pin ?? null,
     });
   }
 

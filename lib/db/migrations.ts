@@ -49,6 +49,7 @@ async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<v
  *   PHASE 4 — dropColumnIfExists (last — after all reads/writes that might
  *             still reference legacy columns).
  */
+// eslint-disable-next-line complexity
 export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // ─────────────────────────────────────────────────────────────────────────
   // PHASE 1: Core table creation (CREATE TABLE IF NOT EXISTS only).
@@ -88,6 +89,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "exercises", "notes", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "exercises", "notes_updated_at", "INTEGER DEFAULT NULL");
   await addColumnIfMissing(database, "exercises", "notes_backfill_dismissed_at", "INTEGER DEFAULT NULL");
+  // BLD-1114: per-exercise max pulley pin override.
+  await addColumnIfMissing(database, "exercises", "max_pulley_pins", "INTEGER DEFAULT NULL");
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");
   await addColumnIfMissing(database, "workout_templates", "source", "TEXT DEFAULT NULL");
@@ -160,6 +163,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "workout_sets", "stack_marker", "INTEGER DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "stack_unit_at_log", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "workout_sets", "stack_name_at_log", "TEXT DEFAULT NULL");
+  // BLD-1114: per-set pulley pin (Setup Snapshot).
+  await addColumnIfMissing(database, "workout_sets", "pulley_pin", "INTEGER DEFAULT NULL");
 
   // workout_sets.set_type migration (replaces deprecated is_warmup column).
   // Kept as a single block: the UPDATEs only reference set_type (just added)
@@ -314,6 +319,19 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     );
   } catch {
     // Partial indexes not supported on all platforms — reconciler scans full table.
+  }
+
+  // BLD-1114: Extend uq_set_media_set_id to composite (set_id, kind) so each
+  // set can have both a video AND a setup_photo row.
+  // DROP first (cannot add IF NOT EXISTS on a different column list) then recreate.
+  try {
+    await database.execAsync(`
+      DROP INDEX IF EXISTS uq_set_media_set_id;
+      CREATE UNIQUE INDEX uq_set_media_set_id ON set_media (set_id, kind);
+    `);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration: extending uq_set_media_set_id to composite failed: ${msg}`, { cause: err });
   }
   migrateBreadcrumb("phase_3_complete");
 

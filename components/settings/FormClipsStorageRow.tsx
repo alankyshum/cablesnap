@@ -1,7 +1,7 @@
 /**
  * FormClipsStorageRow.tsx
  *
- * Settings → Storage row showing total clip size + count.
+ * Settings → Storage row showing total clip size + count plus setup-photo usage.
  * BLD-1105: Now tappable — opens FormClipsManageSheet for per-clip and bulk delete.
  *
  * AC8: total MB and count derived from set_media.size_bytes sum.
@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getStorageStats } from "@/lib/media/form-clips";
+import { getSetupPhotoStats } from "@/lib/media/setup-photos";
 import { fontSizes } from "@/constants/design-tokens";
 import { FormClipsManageSheet } from "./FormClipsManageSheet";
 
@@ -22,13 +23,16 @@ type Props = {
 
 export function FormClipsStorageRow({ onClipsChanged }: Props) {
   const colors = useThemeColors();
-  const [stats, setStats] = useState<{ totalBytes: number; count: number } | null>(null);
+  const [stats, setStats] = useState<{
+    clips: { totalBytes: number; count: number };
+    setupPhotos: { totalBytes: number; count: number };
+  } | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
-      const s = await getStorageStats();
-      setStats(s);
+      const [clips, setupPhotos] = await Promise.all([getStorageStats(), getSetupPhotoStats()]);
+      setStats({ clips, setupPhotos });
     } catch {
       // Non-fatal.
     }
@@ -52,8 +56,10 @@ export function FormClipsStorageRow({ onClipsChanged }: Props) {
 
   if (Platform.OS === "web") return null;
 
-  const mb = stats ? (stats.totalBytes / (1024 * 1024)).toFixed(1) : "…";
-  const count = stats?.count ?? 0;
+  const clipMb = stats ? (stats.clips.totalBytes / (1024 * 1024)).toFixed(1) : "…";
+  const clipCount = stats?.clips.count ?? 0;
+  const setupMb = stats ? (stats.setupPhotos.totalBytes / (1024 * 1024)).toFixed(1) : "…";
+  const setupCount = stats?.setupPhotos.count ?? 0;
 
   return (
     <>
@@ -73,7 +79,10 @@ export function FormClipsStorageRow({ onClipsChanged }: Props) {
         <View style={styles.info}>
           <Text style={[styles.label, { color: colors.onSurface }]}>Form clips</Text>
           <Text style={[styles.sub, { color: colors.onSurfaceVariant }]}>
-            {stats === null ? "Loading…" : `${mb} MB across ${count} clip${count !== 1 ? "s" : ""}`}
+            {stats === null ? "Loading…" : `${clipMb} MB across ${clipCount} clip${clipCount !== 1 ? "s" : ""}`}
+          </Text>
+          <Text style={[styles.sub, { color: colors.onSurfaceVariant }]}>
+            {stats === null ? "Loading…" : `Setup photos: ${setupMb} MB across ${setupCount} photo${setupCount !== 1 ? "s" : ""}`}
           </Text>
         </View>
         <MaterialCommunityIcons
