@@ -1,7 +1,7 @@
 # Feature Plan: Inline form-clip recording + Settings manage UX
 
 **Issue**: BLD-1105  **Author**: CEO  **Date**: 2026-05-09
-**Status**: DRAFT (rev-3) → IN_REVIEW → APPROVED / REJECTED
+**Status**: DRAFT (rev-4) → IN_REVIEW → APPROVED / REJECTED
 **Source**: GitHub #534 (alankyshum, product owner)
 
 ## Research Source
@@ -98,36 +98,46 @@ Replace is a separate, **explicit per-clip** action (overflow menu on each clip 
 #### Replace flow (UNIQUE-safe transaction)
 
 > **rev-3 — `recordClip` refactor required (QD blocker on rev-2).** The current `recordClip` at `lib/media/form-clips.ts:94-139` is a single function that does (a) move temp file → final path, (b) set `NSURLIsExcludedFromBackupKey`, AND (c) `insertSetMedia` for the target `set_id`. Calling `recordClip` then a separate Replace transaction would INSERT for the same `set_id` BEFORE the old row is deleted, throwing `SQLITE_CONSTRAINT_UNIQUE` at the INSERT statement. We therefore split `recordClip` into a file-only primitive plus a save primitive, then expose two save modes through `FormVideoSheet`.
+>
+> **rev-4 — string IDs + `recordClip` return type preserved + `onClipSaved` payload preserved (QD blocker on rev-3).** All ID fields in the codebase are `text` (ULID strings), not `number`. Evidence: `workout_sets.id` (`lib/db/schema.ts:112`), `set_media.id` and `set_id` (`lib/db/schema.ts:159-162`), `InsertSetMediaParams.id/set_id` (`lib/db/form-clips.ts:17-27`), `FormVideoSheetProps.setId` (`components/session/FormVideoSheet.tsx:36-43`). Earlier revs incorrectly typed `oldId` / new helper return / `replaceTarget.id` as `number`. All such fields below are now `string`. Additionally, `recordClip`'s **return type stays `Promise<SetMediaRow>`** (today's contract per `lib/media/form-clips.ts:103`); only the new file-only primitive returns `ClipFileMetadata`. `FormVideoSheetProps.onClipSaved` stays `(clipId: string) => void` — the new replace branch passes `newRow.id` (string), not the metadata object.
 
 **Refactor:** extract `persistRecordedClipFileOnly(args) → ClipFileMetadata` from `recordClip`. The new primitive performs ONLY:
 1. Move temp file → `documentDirectory/form-clips/<exercise_id>/<newId>.mp4`
 2. Set `NSURLIsExcludedFromBackupKey` (existing iOS guard)
-3. Build and return `{ id, set_id, rel_path, size_bytes, duration_ms, recorded_at, exercise_id }` — NO DB writes.
+3. Build and return `ClipFileMetadata` — structurally a superset of `InsertSetMediaParams` (`lib/db/form-clips.ts:17-27`): `{ id: string, set_id: string, exercise_id: string, kind: 'video', rel_path: string, duration_ms: number, size_bytes: number, width?: number | null, height?: number | null, created_at: number }`. **NO DB writes.**
 
-Existing `recordClip(args)` is then reimplemented as a thin wrapper to keep the external contract byte-identical for the existing Add path:
+Existing `recordClip(params: RecordClipParams)` is then reimplemented as a thin wrapper that **PRESERVES its current `Promise<SetMediaRow>` return type** (no external contract drift):
 ```ts
-export async function recordClip(args: RecordClipArgs): Promise<ClipFileMetadata> {
-  const meta = await persistRecordedClipFileOnly(args);
-  await insertSetMedia(meta);
-  return meta;
+export async function recordClip(params: RecordClipParams): Promise<SetMediaRow> {
+  const meta = await persistRecordedClipFileOnly(params);
+  return await insertSetMedia(meta);   // returns SetMediaRow, unchanged from today
 }
 ```
-FormVideoSheet's existing call site (`components/session/FormVideoSheet.tsx:146-164`) is unchanged for the Add path.
+FormVideoSheet's existing call site (`components/session/FormVideoSheet.tsx:146-164`) is unchanged for the Add path; existing `recordClip` callers and tests need zero edits.
 
 **New Replace save primitive** in `lib/media/form-clips.ts`:
 ```ts
 export async function saveReplacementClip(args: {
-  oldId: number;
+  oldId: string;          // ULID — set_media.id
   oldRelPath: string;
-  newClipArgs: RecordClipArgs;
-}): Promise<ClipFileMetadata> {
+  newClipArgs: RecordClipParams;
+}): Promise<SetMediaRow> {
   const newMeta = await persistRecordedClipFileOnly(args.newClipArgs);   // file only
-  await withTransaction(async () => {                                    // shared connection tx
-    await hardDeleteClip(args.oldId);                                    // DELETE old row
-    await insertSetMedia(newMeta);                                       // INSERT new row, same set_id
-  });
+  let newRow: SetMediaRow;
+  try {
+    newRow = await withTransaction(async () => {                         // shared connection tx
+      await hardDeleteClip(args.oldId);                                  // DELETE old row
+      return await insertSetMedia(newMeta);                              // INSERT new row, same set_id
+    });
+  } catch (err) {
+    // Tx rollback already restored the prior row. Eagerly unlink the
+    // momentary new-file orphan so it doesn't sit on disk for the rest
+    // of the session waiting on reconcileOrphans (TL rev-3 nit).
+    try { await unlinkClipFiles(newMeta.rel_path); } catch { /* swallow */ }
+    throw err;
+  }
   try { await unlinkClipFiles(args.oldRelPath); } catch { /* swallow; reconciler will sweep */ }
-  return newMeta;
+  return newRow;
 }
 ```
 
@@ -137,14 +147,14 @@ UNIQUE-safety rationale (Tech Lead nit N2): SQLite's UNIQUE constraint is checke
 
 **End-to-end Replace order (FormVideoSheet → save primitive):**
 1. User taps `⋯` → Replace on a specific clip row in FormLibraryTab.
-2. FormLibraryTab opens `FormVideoSheet` in **`mode='replace'`** with `replaceTarget={ id: oldId, rel_path: oldRelPath }` (FormVideoSheet contract amendment — see §New/changed files).
+2. FormLibraryTab opens `FormVideoSheet` in **`mode='replace'`** with `replaceTarget={ id: oldId, rel_path: oldRelPath }` where `oldId: string` is the `set_media.id` ULID (FormVideoSheet contract amendment — see §New/changed files).
 3. User records. The recording temp file exists; nothing is persisted yet. The prior clip + DB row remain intact and visible everywhere.
 4. User taps Save. FormVideoSheet branches on its `mode` prop:
-   - `mode='add'` (default, all existing call sites): calls `recordClip(args)` — unchanged behavior.
-   - `mode='replace'`: calls `saveReplacementClip({ oldId, oldRelPath, newClipArgs: args })` — runs file persist → tx{ hardDeleteClip + insertSetMedia } → post-commit unlink.
-5. FormVideoSheet emits `onClipSaved(newMeta)` → `FormLibraryTab.loadClips()` refreshes → `onClipsChanged` propagates to Settings.
+   - `mode='add'` (default, all existing call sites): calls `recordClip(args)` — unchanged behavior, returns `SetMediaRow`, emits `onClipSaved(row.id)` (string) per existing contract.
+   - `mode='replace'`: calls `saveReplacementClip({ oldId, oldRelPath, newClipArgs: args })` — runs file persist → tx{ hardDeleteClip + insertSetMedia } → eager catch-cleanup of new-file orphan on tx failure → post-commit unlink of old file. Returns `SetMediaRow`; emits `onClipSaved(newRow.id)` (string).
+5. FormVideoSheet emits `onClipSaved(clipId)` → `FormLibraryTab.loadClips()` refreshes → `onClipsChanged` propagates to Settings.
 
-If recording fails or the user cancels before step 4, nothing runs. The prior clip is preserved verbatim. If `persistRecordedClipFileOnly` succeeds in step 4 but the transaction throws, the new file becomes a momentary orphan and `reconcileOrphans()` reaps it on next tick (acceptable; documented in Risk + Edge Cases).
+If recording fails or the user cancels before step 4, nothing runs. The prior clip is preserved verbatim. If `persistRecordedClipFileOnly` succeeds in step 4 but the transaction throws, the catch handler in `saveReplacementClip` eagerly `unlinkClipFiles(newMeta.rel_path)` (best-effort) so the new file does NOT sit on disk for the rest of the session; the prior clip is still intact (rolled back by `withTransaction`).
 
 #### Bulk Delete-All (reclaim space, AC7)
 `deleteAllClips()` uses **hard delete + file unlink** so the user-visible "Delete all" actually frees disk:
@@ -160,17 +170,18 @@ for (const row of rows) {
 
 #### New / changed files
 - `components/session/FormLibraryTab.tsx` — add Record CTA (enabled/disabled with cause-specific helper) + per-clip overflow menu (Replace, Delete). Wire into existing `FormVideoSheet`. Resolve target `setId` via new helper.
-- `lib/db/session-sets.ts` — add `getMostRecentCompletedSetForExercise(exerciseId, { mustHaveNoClip?: boolean })` returning `{ id: number, set_number: number, completed_at: number } | null`. Filter `kind='workout'`, `completed_at IS NOT NULL`. When `mustHaveNoClip=true`, LEFT JOIN `set_media` and require no live (non-tombstoned) row. Test in `__tests__/lib/db/session-sets-most-recent.test.ts`.
+- `lib/db/session-sets.ts` — add `getMostRecentCompletedSetForExercise(exerciseId: string, opts?: { mustHaveNoClip?: boolean }): Promise<{ id: string, set_number: number, completed_at: number } | null>` (workout_sets.id is `text` ULID — `lib/db/schema.ts:112`). Filter `kind='workout'`, `completed_at IS NOT NULL`. When `mustHaveNoClip=true`, LEFT JOIN `set_media` and require no live (non-tombstoned) row. Test in `__tests__/lib/db/session-sets-most-recent.test.ts`.
 - `components/settings/FormClipsStorageRow.tsx` — **no rename** (per nit-4). Make outer view a `Pressable`, add chevron, open new sheet. Accept `onClipsChanged` callback prop and call `loadStats()` in `useFocusEffect` + after each delete.
 - `components/settings/FormClipsManageSheet.tsx` — NEW. Lists clips via new helper `listAllClipsGroupedByExercise()`. Per-row delete uses `softDeleteClip`; footer uses new `deleteAllClips()` (hard). Calls `onClipsChanged` after every mutation.
 - `lib/media/form-clips.ts` — refactor + add:
-  - **REFACTOR `recordClip`** into `persistRecordedClipFileOnly(args) → ClipFileMetadata` (file move + backup-exclusion + metadata only; NO DB write) plus a thin `recordClip` wrapper that does `persistRecordedClipFileOnly` + `insertSetMedia`. Existing call sites remain byte-compatible; existing FormVideoSheet tests must continue to pass with no edits.
-  - **NEW** `saveReplacementClip({ oldId, oldRelPath, newClipArgs })` — file persist → `withTransaction(() => { hardDeleteClip(oldId); insertSetMedia(newMeta); })` → post-commit `unlinkClipFiles(oldRelPath)`.
-  - **NEW** `unlinkClipFiles(rel_path)` — extracted file-cleanup half of existing `deleteClip` (unlink video + thumbnail, ENOENT-tolerant) so Replace + Delete-All callers can reuse without re-touching the DB.
-  - **NEW** `listAllClipsGroupedByExercise(): Promise<Array<{ exerciseId: string, exerciseName: string, clips: ClipRow[] }>>`
+  - **REFACTOR `recordClip`** internals only — its **external signature stays `(params: RecordClipParams) => Promise<SetMediaRow>`** (today's contract per `lib/media/form-clips.ts:103`). Internals become `persistRecordedClipFileOnly(params)` (file move + backup-exclusion + metadata; NO DB write) followed by `insertSetMedia(meta)` (returns `SetMediaRow`). Existing call sites and tests need zero edits.
+  - **NEW** `persistRecordedClipFileOnly(params: RecordClipParams): Promise<ClipFileMetadata>` where `ClipFileMetadata` is structurally compatible with `InsertSetMediaParams` (`lib/db/form-clips.ts:17-27`): `{ id: string, set_id: string, exercise_id: string, kind: 'video', rel_path: string, duration_ms: number, size_bytes: number, width?: number | null, height?: number | null, created_at: number }`.
+  - **NEW** `saveReplacementClip({ oldId: string, oldRelPath: string, newClipArgs: RecordClipParams }): Promise<SetMediaRow>` — file persist → `withTransaction(() => { hardDeleteClip(oldId); return insertSetMedia(newMeta); })` → on tx throw, eager `unlinkClipFiles(newMeta.rel_path)` (best-effort) then re-throw → on tx success, post-commit `unlinkClipFiles(oldRelPath)`. Returns the new `SetMediaRow` for the caller to surface via `onClipSaved(newRow.id)`.
+  - **NEW** `unlinkClipFiles(rel_path: string)` — extracted file-cleanup half of existing `deleteClip` (unlink video + thumbnail, ENOENT-tolerant) so Replace + Delete-All callers can reuse without re-touching the DB.
+  - **NEW** `listAllClipsGroupedByExercise(): Promise<Array<{ exerciseId: string, exerciseName: string, clips: SetMediaRow[] }>>`
   - **NEW** `deleteAllClips(): Promise<{ deleted: number }>` — hard delete + unlink loop using existing `deleteClip(id, rel_path)`.
-  - **DROPPED** (rev-3, per TL N1): no new `hardDeleteSetMediaRow(tx, id)` signature; reuse existing `hardDeleteClip(id)`.
-- `components/session/FormVideoSheet.tsx` — **contract amendment (rev-3, per QD blocker):** add optional props `mode?: 'add' | 'replace'` (default `'add'`) and `replaceTarget?: { id: number; rel_path: string }` (required when `mode='replace'`). Save handler branches: `'add'` → `recordClip(args)` (unchanged); `'replace'` → `saveReplacementClip({ oldId: replaceTarget.id, oldRelPath: replaceTarget.rel_path, newClipArgs: args })`. All existing call sites omit `mode` and continue to use the Add path with zero diff.
+  - **DROPPED** (rev-3, per TL N1): no new `hardDeleteSetMediaRow(tx, id)` signature; reuse existing `hardDeleteClip(id: string)` (`lib/db/form-clips.ts:78-81`).
+- `components/session/FormVideoSheet.tsx` — **contract amendment (rev-3, per QD blocker; tightened in rev-4):** add optional props `mode?: 'add' | 'replace'` (default `'add'`) and `replaceTarget?: { id: string; rel_path: string }` (required when `mode='replace'`; `id` is `set_media.id` ULID). Save handler branches: `'add'` → `recordClip(args)` returns `SetMediaRow`, then `onClipSaved(row.id)`; `'replace'` → `saveReplacementClip({ oldId: replaceTarget.id, oldRelPath: replaceTarget.rel_path, newClipArgs: args })` returns `SetMediaRow`, then `onClipSaved(newRow.id)`. **The existing `onClipSaved: (clipId: string) => void` prop contract is preserved verbatim** (no payload type change). All existing call sites omit `mode` and continue to use the Add path with zero diff.
 - `app/(tabs)/settings.tsx` — pass an `onClipsChanged` no-op (card handles its own refresh internally).
 - Tests:
   - `__tests__/components/settings/FormClipsStorageRow.test.tsx` (renders, opens sheet, refreshes stats on dismiss)
@@ -182,7 +193,7 @@ for (const row of rows) {
     - Action: `saveReplacementClip({ oldId: A, oldRelPath: P_A, newClipArgs: <produces id B, rel_path P_B> })`.
     - Assert: `select * from set_media where set_id = S` returns exactly one row with `id = B`. File `P_A` does NOT exist on disk. File `P_B` exists. No exception thrown.
   - `__tests__/lib/media/form-clips-replace-rollback.test.ts` — Force `insertSetMedia` to throw (monkey-patch or pre-seed a conflicting PK).
-    - Assert: tx throws; `select * from set_media where set_id = S` STILL returns the original row `A`; file `P_A` still exists. File `P_B`, if already written by `persistRecordedClipFileOnly`, persists as an orphan (expected; reaped by `reconcileOrphans()`).
+    - Assert: tx throws; `select * from set_media where set_id = S` STILL returns the original row `A`; file `P_A` still exists. File `P_B`, if already written by `persistRecordedClipFileOnly`, is **eagerly unlinked by the catch handler in `saveReplacementClip`** (no on-disk orphan in this session). The defense-in-depth `reconcileOrphans()` reaper still covers the case where eager unlink itself fails.
   - `__tests__/lib/media/form-clips-bulk.test.ts` — Seed N=3 rows + N files. Call `deleteAllClips()`.
     - Assert: `getStorageStats()` returns `{ count: 0, totalBytes: 0 }`. All N files no longer exist on disk.
     - Sub-test: pre-delete one file from disk before `deleteAllClips()`. Assert no throw, all DB rows removed, remaining files cleaned up.
@@ -217,10 +228,10 @@ for (const row of rows) {
 - A "Replace" action inside the Manage sheet (per-clip Replace lives only in FormLibraryTab where the user already has exercise context).
 
 ## Acceptance Criteria
-- [ ] **AC1** Given an exercise with at least one completed `kind='workout'` set that has no live clip, When the user opens Exercise Details → Form clips, Then a primary "Record clip" button is visible and enabled in the header; tapping it opens FormVideoSheet bound to that most-recent-without-clip set (resolved via `getMostRecentCompletedSetForExercise(id, { mustHaveNoClip: true })`).
+- [ ] **AC1** Given an exercise with at least one completed `kind='workout'` set that has no live clip, When the user opens Exercise Details → Form clips, Then a primary "Record clip" button is visible and enabled in the header; tapping it opens FormVideoSheet bound to that most-recent-without-clip set (resolved via `getMostRecentCompletedSetForExercise(id, { mustHaveNoClip: true })`, which returns `{ id: string, set_number: number, completed_at: number } | null`).
 - [ ] **AC2a** Given an exercise with zero completed `kind='workout'` sets, When the user opens the Form clips tab, Then the Record CTA is rendered in disabled state with helper copy "Log a workout set first to attach a form clip."
 - [ ] **AC2b** Given an exercise where all completed sets already have clips, When the user opens the Form clips tab, Then the Record CTA is rendered in disabled state with helper copy "Replace or delete an existing clip below to record a new one."
-- [ ] **AC3** Given a clip row in FormLibraryTab, When the user taps the row's overflow menu and selects Replace, Then FormVideoSheet opens in `mode='replace'` with `replaceTarget`; on successful Save the FormVideoSheet calls `saveReplacementClip({ oldId, oldRelPath, newClipArgs })` which (i) persists the new file via `persistRecordedClipFileOnly`, (ii) runs `withTransaction(() => { hardDeleteClip(oldId); insertSetMedia(newMeta); })`, (iii) best-effort `unlinkClipFiles(oldRelPath)` post-commit. No `SQLITE_CONSTRAINT_UNIQUE` error occurs. If the INSERT fails, the transaction rolls back (in-tx DELETE undone) and the prior clip remains intact.
+- [ ] **AC3** Given a clip row in FormLibraryTab, When the user taps the row's overflow menu and selects Replace, Then FormVideoSheet opens in `mode='replace'` with `replaceTarget: { id: string, rel_path: string }` (where `id` is the `set_media.id` ULID); on successful Save the FormVideoSheet calls `saveReplacementClip({ oldId, oldRelPath, newClipArgs })` which (i) persists the new file via `persistRecordedClipFileOnly`, (ii) runs `withTransaction(() => { hardDeleteClip(oldId); return insertSetMedia(newMeta); })` returning a `SetMediaRow`, (iii) best-effort `unlinkClipFiles(oldRelPath)` post-commit. FormVideoSheet then calls `onClipSaved(newRow.id)` (string) — the existing `onClipSaved: (clipId: string) => void` contract is preserved. No `SQLITE_CONSTRAINT_UNIQUE` error occurs. If the INSERT fails, the transaction rolls back (in-tx DELETE undone), the catch handler eagerly `unlinkClipFiles(newMeta.rel_path)` (best-effort) so the new file does not orphan, and the prior clip remains intact.
 - [ ] **AC3b** Given a Replace flow where recording fails or is cancelled before Save, Then no DB mutation and no file unlink occurs; the prior clip is preserved verbatim.
 - [ ] **AC4** Given a saved new or replaced clip, When recording completes, Then the FormLibraryTab grid refreshes (the new clip appears at top; replaced clips swap in place) and `onClipsChanged` fires.
 - [ ] **AC5** Given any number of clips, When the user opens Settings, Then the Form clips card is tappable, has a chevron, and tapping it opens FormClipsManageSheet. After the sheet dismisses, the card's stats refresh via `onClipsChanged` (count + bytes reflect any deletions).
@@ -240,7 +251,7 @@ for (const row of rows) {
 | Exercise has completed sets but every recent set already has a clip | Record CTA disabled, helper copy AC2b. User uses per-clip Replace overflow to free a slot. |
 | User taps Replace, records, hits Save | Prior row + files removed; new row + files saved in one tx + post-commit unlink (AC3). |
 | User taps Replace, recording fails or user cancels | Prior clip preserved verbatim — no DB writes, no file unlinks (AC3b). |
-| Replace transaction insert throws (FK violation, constraint, etc.) | `withTransaction` rolls back the in-tx `hardDeleteClip` DELETE; prior row remains in `set_media`; new file written by `persistRecordedClipFileOnly` becomes a momentary orphan and is reaped by `reconcileOrphans()` next tick. User sees an error toast and the prior clip is still intact. |
+| Replace transaction insert throws (FK violation, constraint, etc.) | `withTransaction` rolls back the in-tx `hardDeleteClip` DELETE; prior row remains in `set_media`; the catch handler in `saveReplacementClip` eagerly `unlinkClipFiles(newMeta.rel_path)` (best-effort) so the new file does not orphan. If eager unlink itself fails, `reconcileOrphans()` reaps on next tick. User sees an error toast and the prior clip is still intact. |
 | 0 clips total | Settings card still tappable (AC5); sheet shows empty state with deep-link copy. |
 | Storage stats stale after delete | Card refreshes via `onClipsChanged` on every delete and on sheet dismiss (AC5/AC6/AC7). |
 | Web | All new UI hidden (AC8). |
@@ -260,7 +271,10 @@ for (const row of rows) {
 | Renamed export breaking imports elsewhere | N/A | N/A | Rename dropped per nit-4. |
 | FormVideoSheet contract amendment (rev-3): adds optional `mode` + `replaceTarget` props | Low | Medium | New props are optional with safe defaults — all existing call sites are unchanged. New `FormVideoSheet-replace.test.tsx` covers the `mode='replace'` branch; existing FormVideoSheet tests cover the `mode='add'` default. |
 | `recordClip` refactor (rev-3): split into `persistRecordedClipFileOnly` + `insertSetMedia` wrapper | Low | Medium | External contract of `recordClip` preserved (file persist + DB insert, returns same metadata shape); existing tests must still pass with no edits. New file-only primitive covered indirectly by `form-clips-replace.test.ts`. |
-| Replace partial-failure orphan: `persistRecordedClipFileOnly` succeeds but tx throws | Low | Low | New file becomes a momentary orphan; reaped by `reconcileOrphans()` next tick (existing pipeline). DB is rolled back; prior row + files preserved. Documented in Edge Cases. |
+| Replace partial-failure orphan: `persistRecordedClipFileOnly` succeeds but tx throws | Low | Low | Catch handler in `saveReplacementClip` eagerly `unlinkClipFiles(newMeta.rel_path)` (best-effort) so no in-session orphan. Defense-in-depth: `reconcileOrphans()` next tick (existing pipeline) covers the case where the eager unlink itself failed. DB rolled back; prior row + files preserved. Documented in Edge Cases. |
+| Wrong ID type used for set/clip identifiers (rev-3 typo: `number` instead of `string`) | N/A | N/A | rev-4 corrected: all `set_media.id`, `set_media.set_id`, `workout_sets.id`, helper return `id`, `replaceTarget.id`, `saveReplacementClip.oldId` are typed `string` (ULID) per `lib/db/schema.ts:112,159-162` and `lib/db/form-clips.ts:17-27`. |
+| `recordClip` return-type drift (rev-3: implied `Promise<ClipFileMetadata>`) | N/A | N/A | rev-4 corrected: `recordClip(params)` keeps its existing `Promise<SetMediaRow>` return type (`lib/media/form-clips.ts:103`); only the new file-only primitive returns `ClipFileMetadata`. |
+| `onClipSaved` payload drift (rev-3: implied metadata object) | N/A | N/A | rev-4 corrected: `onClipSaved: (clipId: string) => void` is preserved verbatim. Both Add and Replace branches resolve to a `SetMediaRow` and call `onClipSaved(row.id)`. No call sites need to change. |
 | User assumes inline record uploads to cloud | Low | Medium (privacy expectation) | Reuse existing privacy strip "Saved on this device only — never uploaded" verbatim from FormVideoSheet:235. |
 | Confusion between soft-delete (per-row) and hard-delete (Delete all) — same bytes-on-disk behavior expected? | Medium | Low | Footer Delete-all copy explicitly says "permanently removes them from this device"; per-row delete copy stays generic ("Delete this clip?") since reconcile cleans it shortly. |
 
@@ -294,6 +308,24 @@ Default Record CTA + helper return type + thumbnail clarification all good. Bloc
 - ✅ TL N1 + N2 absorbed (`withTransaction` not `db.transaction`; reuse `hardDeleteClip`; UNIQUE checked at INSERT statement execution wording).
 
 _Awaiting QD re-review on rev-3._
+
+**QD rev-3 verdict (2026-05-09): REQUEST CHANGES**
+
+Replace data-safety blocker resolved. Default Record CTA + helper return type + thumbnail clarification still good. Three remaining contract/type mismatches that would force casts or accidental API drift in implementation:
+
+1. **IDs typed `number` but the codebase uses string ULIDs** (`lib/db/schema.ts:111-115,159-162`, `lib/db/form-clips.ts:17-27`, `components/session/FormVideoSheet.tsx:36-43`). rev-3 left `oldId: number`, `replaceTarget?: { id: number }`, `getMostRecentCompletedSetForExercise(...): { id: number, ... }`. All must be `string`.
+2. **`recordClip` external contract drifted** — current returns `Promise<SetMediaRow>` (`lib/media/form-clips.ts:103-141`); rev-3 pseudocode said `Promise<ClipFileMetadata>` while claiming "byte-identical". Keep `recordClip(): Promise<SetMediaRow>`; let only `persistRecordedClipFileOnly()` return metadata.
+3. **`onClipSaved` payload drift** — current is `(clipId: string) => void` and current save calls `onClipSaved(row.id)` (`components/session/FormVideoSheet.tsx:36-43,146-157`); rev-3 said FormVideoSheet "emits `onClipSaved(newMeta)`". Keep `onClipSaved(newRow.id)` as a string.
+
+**rev-4 response:** All three contract blockers absorbed.
+- ✅ All ID fields (`oldId`, `replaceTarget.id`, helper return `id`, `set_media.id`, `set_id`, `workout_sets.id`) explicitly typed `string` (ULID) in §Technical Approach, §New/changed files, AC1, AC3, and the `saveReplacementClip` signature. New rev-4 explanatory note in §Technical Approach at the top of the recordClip refactor section enumerates the schema/code citations.
+- ✅ `recordClip` external contract preserved verbatim: `(params: RecordClipParams) => Promise<SetMediaRow>`. The thin wrapper internally calls `persistRecordedClipFileOnly` then `insertSetMedia` and returns the resulting `SetMediaRow`. Only `persistRecordedClipFileOnly` returns `ClipFileMetadata`. Existing `recordClip` callers and tests need zero edits.
+- ✅ `onClipSaved: (clipId: string) => void` preserved verbatim. Both Add and Replace branches resolve to a `SetMediaRow` and call `onClipSaved(row.id)` / `onClipSaved(newRow.id)`. `saveReplacementClip` returns `Promise<SetMediaRow>` (not `ClipFileMetadata`) so the FormVideoSheet handler has the row id directly. No call sites need to change.
+- ➕ Bonus: TL rev-3 non-blocking nit (eager unlink of new-file orphan in catch handler) folded into `saveReplacementClip` pseudocode (§Technical Approach), AC3 (catch-handler clause), Edge Cases (Replace transaction insert throws row), and the partial-failure orphan Risk row.
+
+Three new Risk rows document the rev-4 type/contract corrections so future readers know why the fields are typed the way they are.
+
+_Awaiting QD re-review on rev-4._
 
 ### Tech Lead (Feasibility) — REQUEST CHANGES (rev 1, 2026-05-09)
 
@@ -339,8 +371,14 @@ Test expectations codified in the comment on BLD-1105 — claudecoder should imp
 
 Approval not gated on N1/N2 — they're cleanups during implementation. CEO can hand off to claudecoder once QD also approves.
 
+**Tech Lead rev-3 acknowledgement (2026-05-09): APPROVE stands ✅**
+
+Read rev-3 (commit 7075bc53). Confirmed rev-2 APPROVE carries through. One residual NON-blocking nit for claudecoder: in the rare insert-failure path, the new-file orphan would sit on disk until next `reconcileOrphans()` tick (boot or first Form Library open per `hooks/useAppInit.ts:83`). Two cheap mitigations: (a) try/catch the `saveReplacementClip` call at the FormVideoSheet save handler and best-effort `unlinkClipFiles(newMeta.rel_path)` before showing the error toast, or (b) trigger an out-of-band `reconcileOrphans()` after the catch. Either is fine.
+
+**rev-4 absorbs option (a) directly inside `saveReplacementClip`** — symmetric with the post-commit unlink, costs ~3 lines, no FormVideoSheet handler change required.
+
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. Re-trigger only if reviewers flag a missed behavior trigger.
 
 ### CEO Decision
-Pending QD re-approval on rev-3. Tech Lead rev-2 APPROVE stands; rev-3 changes implement TL nits N1/N2 in the plan body and add the FormVideoSheet contract amendment + `recordClip` refactor that QD rev-2 required. No new tech-lead concerns expected, but a courtesy re-read is welcome.
+Pending QD re-approval on rev-4. Tech Lead rev-3 APPROVE stands (his rev-3 ack also flagged the eager-unlink nit which rev-4 absorbs). rev-4 changes are pure type/contract corrections — no architectural change, no new dependencies, no schema diff. Once QD signs off, hand off to claudecoder.
