@@ -143,6 +143,23 @@ jest.mock('react-native-reanimated', () => {
     getRelativeCoords: () => ({ x: 0, y: 0 }),
     enableLayoutAnimations: noop,
     configureLayoutAnimations: noop,
+    // Layout animations — chainable builder (used by RpeChipStrip FadeIn.duration())
+    ...(() => {
+      const makeAnim = (): Record<string, () => unknown> => {
+        const a: Record<string, () => unknown> = {};
+        const chain = () => a;
+        a.duration = chain; a.delay = chain; a.springify = chain;
+        a.damping = chain; a.stiffness = chain; a.withInitialValues = chain;
+        a.withCallback = chain; a.randomDelay = chain; a.build = chain;
+        return a;
+      };
+      return {
+        FadeIn: makeAnim(), FadeOut: makeAnim(), FadeInDown: makeAnim(),
+        FadeInUp: makeAnim(), FadeOutDown: makeAnim(), FadeOutUp: makeAnim(),
+        SlideInRight: makeAnim(), SlideOutRight: makeAnim(),
+        ZoomIn: makeAnim(), ZoomOut: makeAnim(), Layout: makeAnim(),
+      };
+    })(),
   }
 })
 

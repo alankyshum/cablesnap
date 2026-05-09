@@ -24,7 +24,7 @@ const refResolveTotal = (i: RestInputs): number => {
           ? REST_MULTIPLIERS.rpe.veryHigh
           : i.rpe >= 8.5
             ? REST_MULTIPLIERS.rpe.high
-            : REST_MULTIPLIERS.rpe.midOrNull;
+            : REST_MULTIPLIERS.rpe.moderate;
   const catMult = REST_MULTIPLIERS.category[i.category];
   return refClamp(refRound5(base * stMult * rpeMult * catMult), 10, 360);
 };
@@ -69,11 +69,11 @@ describe("resolveRestSeconds — formula correctness (ACs)", () => {
 
   const cases: AC[] = [
     {
-      name: "normal, RPE 8, standard, base 90 → 90s, isDefault",
+      name: "normal, RPE 8, standard, base 90 → 100s (moderate bucket: RPE 8 > 6 and < 8.5)",
       inputs: {},
-      totalSeconds: 90,
-      reasonShortExact: "",
-      isDefault: true,
+      totalSeconds: 100,
+      reasonShortContains: "Moderate",
+      isDefault: false,
     },
     {
       name: "normal, RPE 9.5, standard, base 90 → 115s",
@@ -83,9 +83,9 @@ describe("resolveRestSeconds — formula correctness (ACs)", () => {
       isDefault: false,
     },
     {
-      name: "warmup, any RPE, standard, base 90 → 25s",
+      name: "warmup, any RPE, standard, base 90 → 30s (moderate RPE 8 bucket applies: 90×0.3×1.1=29.7→30)",
       inputs: { setType: "warmup" },
-      totalSeconds: 25,
+      totalSeconds: 30,
       reasonShortExact: "Warmup",
     },
     {
@@ -95,10 +95,10 @@ describe("resolveRestSeconds — formula correctness (ACs)", () => {
       reasonShortExact: "Drop-set",
     },
     {
-      name: "normal, RPE 7, cable, base 90 → 70s (single cable bucket, no double-count)",
+      name: "normal, RPE 7, cable, base 90 → 80s (moderate bucket wins over cable)",
       inputs: { rpe: 7, category: "cable" },
-      totalSeconds: 70,
-      reasonShortExact: "Cable",
+      totalSeconds: 80,
+      reasonShortExact: "Moderate · RPE 7",
     },
     {
       name: "normal, RPE null, bodyweight, base 90 → 75s",
@@ -114,10 +114,10 @@ describe("resolveRestSeconds — formula correctness (ACs)", () => {
       isDefault: false,
     },
     {
-      name: "AC priority: cable row (cable + RPE 8, normal) → 70s, reason Cable",
+      name: "AC priority: cable row (cable + RPE 8, normal) → 80s, reason Moderate (moderate bucket wins)",
       inputs: { rpe: 8, category: "cable" },
-      totalSeconds: 70,
-      reasonShortExact: "Cable",
+      totalSeconds: 80,
+      reasonShortContains: "Moderate",
     },
     {
       name: "low RPE bucket (RPE 5) emits RPE 5 chip",
@@ -173,9 +173,9 @@ describe("resolveRestSeconds — formula correctness (ACs)", () => {
   // Clamp & breakdown invariants — kept as separate it() because they
   // exercise behaviours that differ from the AC table above.
   it("AC clamps: base→default substitution, lower 10s clamp, upper 360s clamp", () => {
-    // baseRestSeconds=0 substituted to 60 before math
+    // baseRestSeconds=0 substituted to 60 before math; RPE 8 now in moderate bucket (×1.1)
     const sub = resolveRestSeconds(base({ baseRestSeconds: 0, rpe: 8 }));
-    expect(sub.totalSeconds).toBe(60);
+    expect(sub.totalSeconds).toBe(65); // round5(60 × 1.1 × 1.0) = round5(66) = 65
     expect(sub.baseSeconds).toBe(60);
 
     // dropset tiny base clamps to 10

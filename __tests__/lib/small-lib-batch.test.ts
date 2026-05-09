@@ -133,6 +133,7 @@ describe("REST_MULTIPLIERS v1 snapshot", () => {
   "high": 1.15,
   "low": 0.8,
   "midOrNull": 1,
+  "moderate": 1.1,
   "veryHigh": 1.3,
 }
 `);
