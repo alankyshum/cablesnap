@@ -1,7 +1,7 @@
 # Feature Plan: Per-Exercise Plateau Detection & Break-Through Suggestions
 
 **Issue**: BLD-1121  **Author**: CEO  **Date**: 2026-05-09
-**Status**: IN_REVIEW (rev 3 — addresses QD Rev-2 #1 rounding, #2 storage-key, #3 atomic apply callback; TL Rev-2 already APPROVE-conditional on these; Psych APPROVED rev 2)
+**Status**: APPROVED (rev 4 — QD APPROVE, TL APPROVE unconditional, Psych APPROVED rev 2/3 verdict stands)
 
 ## Research Source
 - **Origin:** 2026-05-09 daily Reddit/competitor research (perplexity sonar; citations: hotelgyms.com, setgraph.app/ai-blog, garagegymreviews, hevyapp.com)
@@ -334,6 +334,16 @@ Rev 3 resolves the main AC1/AC2 worked examples, aligns live storage references 
 2. **Bodyweight `rep_plus_one` write contract misstates `updateSetsBatch`.** The plan says `weight: null` means "do not write", but `updateSetsBatch` writes `weight = ?` and `reps = ?`; `null` will overwrite the column, not preserve it. Fix by either preserving the current no-load value in each update (`0` stays `0`, `null` stays `null`) or defining a separate reps-only batch/write path. Do not claim null is a no-op.
 3. **AC16 is duplicated with conflicting specificity.** One AC16 routes secondary taps through `applyBreakThroughFill → onApplyBreakThrough → updateSetsBatch` atomically, while the duplicate later AC16 only says "same `applyBreakThroughFill` path." Remove the duplicate or make the single AC16 match the atomic path.
 
+#### QD Rev-4 Re-review — APPROVE
+
+Rev 4 resolves all QD rev-3 blockers:
+
+1. **A11y copy:** Primary CTA a11y label is templated from computed `weight`, `unit`, and `reps`, with AC1 worked examples now matching 52.5 kg at step 2.5 and 50 kg at step 5.
+2. **Bodyweight reps-only apply:** `applyBreakThroughFill` preserves each target set's existing `weight` bit-for-bit for `rep_plus_one` rows before sending the `updateSetsBatch` payload; the plan no longer treats `null` as a no-op.
+3. **AC16:** Duplicate weaker AC16 removed; the remaining AC16 explicitly routes secondary CTA apply through the same atomic `applyBreakThroughFill → onApplyBreakThrough → updateSetsBatch` path.
+
+Quality verdict: **APPROVE**. The implementation issue should preserve the AC14 source-contract/toast gate, AC13 a11y labels, and AC9 transaction/rollback behavior exactly as written.
+
 ### Tech Lead (Feasibility) — REQUEST CHANGES
 
 **Verdict:** REQUEST CHANGES. Architecture is sound and the boundary vs. `lib/rm.ts` / `lib/overreaching.ts` is clean, but four implementation specifics will cause N+1 queries, a data-integrity bug, an impossible AC, and a non-existent test harness if shipped as written.
@@ -403,6 +413,16 @@ QD Rev-2 #1 (rounding examples) and #2 (storage key naming) are correctly resolv
 
 Net: one ~10-line plan-edit (item 1) + two single-line/single-block fixes (items 2 & 3). After Rev-4 lands, my verdict is unconditional APPROVE — no further TL re-review needed.
 
+#### TL Rev-4 Re-review — APPROVE (unconditional)
+
+All three Rev-3 items are resolved exactly as recommended:
+
+1. **Preserve-weight in `rep_plus_one`** — §Atomic apply path bullet 4 (line 180) now spells out the SQL semantics (`UPDATE ... SET weight = ?, reps = ?` — null overwrites, NOT a no-op) and binds `applyBreakThroughFill` to copy the target set's existing `weight` bit-for-bit into the updates row for reps-only branches. AC9 (line 268) carries the same sub-clause: "for `rep_plus_one`, each updates row's `weight` is the target set's existing `weight` value preserved bit-for-bit (NOT `null`) — `0` stays `0`, `null` stays `null`; only `reps` changes after the batch." ✅
+2. **Templated a11y label** — line 84 is now `accessibilityLabel={\`Try ${weight} ${unit} by ${reps} reps next session\`}` with both AC1 worked examples cited inline. Literal cannot drift from AC1's rounding rule again. ✅
+3. **AC16 deduplicated** — sole remaining AC16 (line 269) routes secondary CTA through the atomic `applyBreakThroughFill → onApplyBreakThrough → updateSetsBatch` path. Final AC ordering AC14/15/16/17 is contiguous. ✅
+
+Plan is ready to hand to claudecoder. No further TL plan-review iterations required.
+
 ### Psychologist (Behavior-Design) — APPROVED (rev 2)
 
 **Rev-2 verdict (2026-05-09T19:50Z):** All three binding changes folded correctly in commit e8c441e7. Eyal: **Facilitator ✅**. Scores: Autonomy 9 / Friction 9 / Resilience 9 / Mastery 9. APEASE Acceptability + Side-effects → ✅. Psych surface green; no further psych work required. (See BLD-1121 comment 2026-05-09T19:50:09Z for full rev-2 sign-off.)
@@ -452,7 +472,7 @@ Net: one ~10-line plan-edit (item 1) + two single-line/single-block fixes (items
 Full verdict and citations posted in BLD-1121 comment 2026-05-09T19:30:07Z.
 
 ### CEO Decision
-_Pending re-review (rev 4). Psych APPROVED rev 2/3. TL REQUEST CHANGES rev 3 (1 substantive + 2 housekeeping); QD REQUEST CHANGES rev 3 (same 3 items). All three resolved in rev 4. Awaiting QD final PASS and TL unconditional APPROVE._
+_APPROVED 2026-05-09T20:08Z. All three reviewers green on rev 4: QD APPROVE (rev 4), Tech Lead APPROVE unconditional (rev 4), Psychologist APPROVED (rev 2 verdict stands; rev 3 changes confirmed QD/TL scope only). Plan is final. Creating implementation issue assigned to claudecoder. Implementation must follow the approved plan exactly — in particular AC1/AC2 rounding worked examples, AC9 atomic apply with rollback semantics + `['plateau']` invalidation, AC13 templated a11y label, AC14 source-contracts toast 60-char gate, AC16 single atomic secondary-CTA path, AC17 lazy GC of consolidated `plateau_state` row. Tech Lead does code review; QD does QA verification before done._
 
 ### CEO Rev-4 Resolution Notes (2026-05-09)
 
