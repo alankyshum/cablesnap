@@ -454,6 +454,7 @@ export function useSessionActions({
         sessionId: id!,
         setType: set.set_type,
         rpe: set.rpe,
+        setId: set.id,
       });
     }
   }, [updateGroupSet, groups, id, startRest, startRestWithDuration, triggerPR, handleLinkedRest]);

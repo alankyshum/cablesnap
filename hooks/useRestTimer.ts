@@ -40,6 +40,8 @@ export type SetContext = {
   sessionId: string;
   setType: SetType;
   rpe: number | null;
+  /** BLD-1110: set ID used to gate recomputeActiveRest to the most-recent-completed set. */
+  setId?: string;
 };
 
 type UseRestTimerOptions = {
@@ -95,6 +97,12 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   // BLD-1100: current resolver source + active exercise ID for attribution + Pin toggle.
   const [restSource, setRestSource] = useState<RestSource | null>(null);
   const [restExerciseId, setRestExerciseId] = useState<string | null>(null);
+  // BLD-1110: set ID that triggered the active rest timer (Tech S4 advisory).
+  // Used by recomputeActiveRest to gate: only the most-recent-completed set
+  // can trigger a recompute, avoiding a DB roundtrip on every chip tap.
+  const restSetIdRef = useRef<string | null>(null);
+  // BLD-1110: set type of the triggering set (needed for recomputeActiveRest resolver call).
+  const restSetTypeRef = useRef<SetType>("normal");
   const [persistedDurationSeconds, setPersistedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
   const [selectedDurationSeconds, setSelectedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
   const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -247,6 +255,10 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       const adaptiveSetting = await getAppSetting("rest_adaptive_enabled");
       const adaptiveOn = adaptiveSetting !== "false";
 
+      // BLD-1110: capture the triggering setId for recomputeActiveRest gating.
+      restSetIdRef.current = typeof ctx === "object" && ctx.setId ? ctx.setId : null;
+      restSetTypeRef.current = typeof ctx === "object" ? ctx.setType : "normal";
+
       if (typeof ctx === "object" && adaptiveOn) {
         try {
           const inputs = await getRestContext(sessionId, ctx.exerciseId, {
@@ -295,6 +307,84 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       runTimer(br.totalSeconds, br);
     },
     [runTimer],
+  );
+
+  /**
+   * BLD-1110: Recompute the running rest timer when the user updates RPE on
+   * the most-recent-completed set during an active rest.
+   *
+   * No-op guards (all four required per Tech B1):
+   * 1. No active timer (endAtRef.current == null)
+   * 2. Wrong exercise (restExerciseId !== exerciseId param)
+   * 3. Not the most-recent-completed set (setId !== restSetIdRef.current)
+   * 4. Source is history or pinned (would double-count the multiplier)
+   *
+   * When computing: remaining = max(0, prev_remaining + (newTotal − oldTotal)).
+   * Elapsed is preserved (no reset). If remaining ≤ 0, fires the existing
+   * natural-expiry path. Debounced: 250 ms window, only the final tap fires.
+   */
+  const recomputeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const recomputeActiveRest = useCallback(
+    (setId: string, exerciseId: string, newRpe: number | null) => {
+      // Guard 1: no active timer
+      if (endAtRef.current == null) return;
+      // Guard 2: wrong exercise
+      if (restExerciseId !== exerciseId) return;
+      // Guard 3: not the triggering set
+      if (restSetIdRef.current !== setId) return;
+      // Guard 4: history/pinned sources must not be re-multiplied
+      if (restSource?.kind === "history" || restSource?.kind === "pinned") return;
+
+      // Debounce — only the final tap within 250 ms drives the recompute.
+      if (recomputeDebounceRef.current) clearTimeout(recomputeDebounceRef.current);
+      recomputeDebounceRef.current = setTimeout(() => {
+        recomputeDebounceRef.current = null;
+        if (!sessionId || endAtRef.current == null) return;
+
+        // Re-resolve with new RPE
+        getRestContext(sessionId, exerciseId, {
+          set_type: restSetTypeRef.current,
+          rpe: newRpe,
+        }).then((inputs) => {
+          // Double-check source hasn't changed to history/pinned between the
+          // debounce delay and now.
+          if (inputs.source.kind === "history" || inputs.source.kind === "pinned") return;
+
+          const newBreakdown = resolveRestSeconds(inputs);
+          const newTotal = newBreakdown.totalSeconds;
+          const oldTotal = breakdown.totalSeconds;
+          const delta = newTotal - oldTotal;
+
+          const prevRemaining = Math.max(
+            0,
+            Math.ceil((endAtRef.current! - Date.now()) / 1000),
+          );
+          const newRemaining = Math.max(0, prevRemaining + delta);
+
+          // Emit breadcrumb only on real recomputes (not no-ops).
+          restResolverBreadcrumb({
+            source: inputs.source.kind,
+            seconds: newTotal,
+            exerciseId,
+          });
+
+          if (newRemaining <= 0) {
+            // Natural-expiry path — reuse existing timer completion logic.
+            endAtRef.current = Date.now(); // set to now so tick fires immediately
+            return;
+          }
+
+          // Adjust endAt and update state (elapsed preserved — endAt extends/contracts).
+          endAtRef.current = Date.now() + newRemaining * 1000;
+          setRest(newRemaining);
+          setBreakdown(newBreakdown);
+        }).catch(() => {
+          // Resolver error on recompute — silently skip; timer continues with old value.
+        });
+      }, 250);
+    },
+    [restExerciseId, restSource, sessionId, breakdown],
   );
 
   const dismissRest = useCallback(() => {
@@ -476,6 +566,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     startRest,
     startRestWithDuration,
     startRestWithBreakdown,
+    recomputeActiveRest,
     dismissRest,
     restRef,
   };
