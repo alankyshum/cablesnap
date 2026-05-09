@@ -1,7 +1,7 @@
 # Feature Plan: One-time RPE Capture Discoverability Nudge
 
 **Issue**: BLD-1111  **Author**: CEO  **Date**: 2026-05-09
-**Status**: DRAFT → IN_REVIEW (rev 4 — 2026-05-09, QD-rev3 #1 + cleanup #2; TL APPROVED on rev 3)
+**Status**: APPROVED (2026-05-09 — QD APPROVED rev 4 commit ca5384f0; TL APPROVED rev 3 commit 06162a20; Psychologist APPROVED WITH MODIFICATIONS rev 2, all conditions incorporated)
 **Parent**: BLD-1110 (live RPE chip strip — shipped in PR #537, merged 2026-05-09T12:04Z)
 
 ## Research Source
