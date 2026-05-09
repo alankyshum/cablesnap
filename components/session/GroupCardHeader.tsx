@@ -70,6 +70,8 @@ export type GroupCardHeaderProps = {
   plateauHint?: BreakThroughSuggestion | null;
   /** BLD-1122: atomic apply callback for plateau break-through */
   onApplyBreakThrough?: (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => Promise<void>;
+  /** BLD-1122: weight unit for break-through confirmation labels */
+  unit?: "kg" | "lb";
 };
 
 // eslint-disable-next-line complexity
@@ -109,6 +111,7 @@ function GroupCardHeaderInner({
   showMoveButtons,
   plateauHint,
   onApplyBreakThrough,
+  unit,
 }: GroupCardHeaderProps) {
   // BLD-560: dev-only render counter for memoization regression detection.
   // Metro strips the require + call-site in prod via __DEV__ DCE (matches the
@@ -266,6 +269,7 @@ function GroupCardHeaderInner({
             onOpenExplainer={() => setExplainerVisible(true)}
             exerciseName={group.name}
             plateauHint={plateauHint}
+            unit={unit}
             onApplyBreakThrough={
               onApplyBreakThrough
                 ? (updates) => onApplyBreakThrough(eid, updates)

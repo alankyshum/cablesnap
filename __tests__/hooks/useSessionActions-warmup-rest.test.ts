@@ -52,6 +52,7 @@ jest.mock("../../lib/query", () => ({
   bumpQueryVersion: jest.fn(),
   queryClient: {
     removeQueries: jest.fn(),
+    invalidateQueries: jest.fn(),
   },
 }));
 

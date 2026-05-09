@@ -206,6 +206,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onPrefill={onPrefill}
           plateauHint={plateauHints?.[group.exercise_id]}
           onApplyBreakThrough={onApplyBreakThrough}
+          unit={unit}
           isFirst={isFirstReorderable}
           isLast={isLastReorderable}
           showMoveButtons={showMoveButtons}

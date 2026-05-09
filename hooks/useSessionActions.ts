@@ -269,6 +269,8 @@ export function useSessionActions({
       updateGroupSet(setId, { reps: rounded });
       await updateSet(setId, resolvedSet.weight, rounded);
     }
+    // BLD-1122 AC17: weight/reps changes affect plateau window
+    queryClient.invalidateQueries({ queryKey: ["plateau"] });
   }, [updateGroupSet]);
 
   /** Handle superset next-hint or rest timer for linked exercises. */
@@ -328,6 +330,8 @@ export function useSessionActions({
           queryKey: ['bw-modifier-default', set.exercise_id],
         });
       }
+      // BLD-1122 AC17: set completion status affects plateau window
+      queryClient.invalidateQueries({ queryKey: ["plateau"] });
       return;
     }
 
@@ -382,6 +386,8 @@ export function useSessionActions({
     // update inside `completeSet` is authoritative for persistence/export.
     setClockStartedAt((prev) => (prev == null ? now : prev));
     await completeSet(set.id);
+    // BLD-1122 AC17: completing a set changes the plateau window
+    queryClient.invalidateQueries({ queryKey: ["plateau"] });
 
     // BLD-541 R2: invalidate the smart-default cache so the next add-set
     // for this bodyweight exercise reflects the just-completed modifier
@@ -685,6 +691,8 @@ export function useSessionActions({
       })).filter((g) => g.sets.length > 0)
     );
     await deleteSet(setId);
+    // BLD-1122 AC17: set deletion changes the plateau window
+    queryClient.invalidateQueries({ queryKey: ["plateau"] });
   }, []);
 
   const handleExerciseNotes = useCallback(async (exerciseId: string, text: string) => {
@@ -910,6 +918,8 @@ export function useSessionActions({
         await completeSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
+        // BLD-1122 AC17: completing a session finalizes the plateau window
+        queryClient.invalidateQueries({ queryKey: ["plateau"] });
 
         // Sync session edits (set count + set types) back to originating template (BLD-1038)
         try {
@@ -1019,6 +1029,8 @@ export function useSessionActions({
         await cancelSession(id!);
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
+        // BLD-1122 AC17: cancelled session removes sets from plateau window
+        queryClient.invalidateQueries({ queryKey: ["plateau"] });
         router.back();
       },
       true

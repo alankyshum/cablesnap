@@ -40,7 +40,7 @@ jest.mock("../../lib/db/session-sets", () => ({
 
 jest.mock("../../lib/query", () => ({
   bumpQueryVersion: jest.fn(),
-  queryClient: { removeQueries: jest.fn() },
+  queryClient: { removeQueries: jest.fn(), invalidateQueries: jest.fn() },
 }));
 
 jest.mock("../../lib/programs", () => ({
