@@ -1,7 +1,7 @@
 # Feature Plan: One-time RPE Capture Discoverability Nudge
 
 **Issue**: BLD-1111  **Author**: CEO  **Date**: 2026-05-09
-**Status**: DRAFT → IN_REVIEW (rev 3 — 2026-05-09, reconciles active-section text with rev-2 §CEO Decision per QD-rev2 + TL-rev2 re-reviews)
+**Status**: DRAFT → IN_REVIEW (rev 4 — 2026-05-09, QD-rev3 #1 + cleanup #2; TL APPROVED on rev 3)
 **Parent**: BLD-1110 (live RPE chip strip — shipped in PR #537, merged 2026-05-09T12:04Z)
 
 ## Research Source
@@ -219,10 +219,10 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 | Exercise has only deleted sessions with RPE | Predicate counts existing rows only — if cascade-delete removed sets, banner does not render. |
 | User has `nudgeShown=1` from prior install but DB was wiped → exercise has no RPE | AC5 supersedes — banner won't render anyway. |
 | User has `nudgeShown=1` AND DB intact (typical resume) | Banner never renders. |
-| Drawer opened from session screen vs. exercise picker vs. recent exercises | Same banner, same predicate — entry point doesn't matter. |
+| Exercise opened from Exercises tab / exercise picker / recent exercises into `ExerciseDetailPane` | Same banner, same predicate — within the pane-only mount surface, entry point doesn't matter. |
 | Two panes opened in rapid succession (navigation back-stack) | Each evaluates predicate independently with its own `alive` flag; both may render banner — that's fine, marking-shown happens only on tap so they collapse to one tap. |
 | Predicate query returns error (DB locked, etc.) | Banner does not render; `error_log` row written via `logError` (real signature in §Technical 1); pane renders normally. |
-| `setAppSetting` fails on Turn-on tap | Toast "Couldn't save preference — try again"; banner stays visible; nothing persisted. Same on Not-now tap. |
+| `setAppSetting` failure during a tap | See AC15 + §Interaction partial-failure rows for the two precise paths: (a) `nudgeShown` write throws → toast "Couldn't save — try again", banner stays, no `captureRpe` write attempted; (b) `nudgeShown` succeeded then `captureRpe` throws → toast "Saved your dismissal but couldn't enable capture — open Settings to retry", banner unmounts. The "Not now" path only does write (a). |
 | Web platform (Platform.OS === "web") | Same behaviour. (Unlike form clips, this is plain UI + SQLite — no platform exclusion required.) |
 | Reduced-motion enabled | N/A — banner has no animation; nothing to gate. |
 | Dark mode | Uses theme colours via `useThemeColors`; visual matches `BodyweightModifierNotice`. |
