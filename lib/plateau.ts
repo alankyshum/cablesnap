@@ -54,11 +54,18 @@ export type PlateauSessionRow = {
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const STALL_WINDOW = 3; // consecutive identical sessions to classify as stalled
-const REGRESSION_WINDOW = 3; // sessions for e1RM regression check
+const REGRESSION_WINDOW = 3; // sessions for e1RM regression check (same value as STALL_WINDOW)
 const REGRESSION_THRESHOLD = 0.05; // 5% e1RM drop
 const DISMISSAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
+/** Number of extra reps added for a rep_target break-through suggestion. */
+export const REP_TARGET_DELTA = 2;
+
 export { DISMISSAL_DURATION_MS };
+
+// Unit conversion constants (local to keep plateau.ts pure/no-import)
+const KG_TO_LB = 2.20462;
+const LB_TO_KG = 0.453592;
 
 // ── plateau_state storage type ────────────────────────────────────────────
 
@@ -196,6 +203,7 @@ export function classifyPlateau(
   sessions: PlateauSessionRow[],
   isBodyweight: boolean,
   unitStep: number,
+  unit: "kg" | "lb" = "kg",
 ): PlateauResult {
   const nullResult: PlateauResult = {
     classification: "progressing",
@@ -209,8 +217,8 @@ export function classifyPlateau(
 
   if (sessions.length < STALL_WINDOW) return nullResult;
 
-  // Use only the most recent window for stall/regression
-  const window = sessions.slice(0, Math.max(STALL_WINDOW, REGRESSION_WINDOW));
+  // Use only the most recent window for stall/regression (both windows are STALL_WINDOW)
+  const window = sessions.slice(0, STALL_WINDOW);
   const latest = window[0];
   const lastWeight = latest.top_set_weight;
   const lastReps = latest.top_set_reps;
@@ -280,8 +288,11 @@ export function classifyPlateau(
   // ── Loaded stall → deload primary (RPE ≥ 8) or rep_target primary ────────
   const weight = lastWeight!;
   const reps = lastReps!;
-  const deloadWeight = roundDownToStep(weight * 0.9, unitStep);
-  const repTargetReps = reps + 2;
+  // Round deload weight in display units so lb users get clean 5 lb steps (AC1/AC10)
+  const deloadWeight = unit === "lb"
+    ? roundDownToStep(weight * KG_TO_LB * 0.9, unitStep) * LB_TO_KG
+    : roundDownToStep(weight * 0.9, unitStep);
+  const repTargetReps = reps + REP_TARGET_DELTA;
 
   const deloadSuggestion: BreakThroughSuggestion = {
     kind: "deload",

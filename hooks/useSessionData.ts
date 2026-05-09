@@ -32,8 +32,8 @@ import { uuid } from "../lib/uuid";
 import { getQueryVersion } from "../lib/query";
 import { getSetupPhotosForExercise } from "../lib/db/setup-photos";
 import { getPlateauWindowBatch } from "../lib/db/exercise-history";
-import { classifyPlateau, type BreakThroughSuggestion } from "../lib/plateau";
-import { getPlateauState } from "../lib/db/settings";
+import { classifyPlateau, type BreakThroughSuggestion, DISMISSAL_DURATION_MS } from "../lib/plateau";
+import { getPlateauState, consumePlateauPending } from "../lib/db/settings";
 import { toAbsPath } from "../lib/media/form-clips";
 import { isCableExercise } from "../lib/cable-variant";
 import { derivePristinePrefillCandidate } from "./resolvePrefillCandidate";
@@ -307,7 +307,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
         const dismissal = plateauState.dismissals[eid];
         if (dismissal) {
           const dismissedAt = new Date(dismissal.dismissed_at).getTime();
-          if (dismissedAt + (7 * 24 * 60 * 60 * 1000) > now) {
+          if (dismissedAt + DISMISSAL_DURATION_MS > now) {
             hints[eid] = null;
             continue;
           }
@@ -319,7 +319,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
         }
         const ex = exerciseMeta[eid];
         const isBodyweightEx = ex ? ex.equipment === "bodyweight" : false;
-        const result = classifyPlateau(window, isBodyweightEx, derived);
+        const result = classifyPlateau(window, isBodyweightEx, derived, body.weight_unit);
         hints[eid] = result.primarySuggestion ?? null;
       }
       setPlateauHints(hints);
@@ -368,6 +368,18 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
             }
           }
           await updateSetsBatch(setsToUpdate);
+
+          // BLD-1122: consume pending plateau prefill for exercises with no prev-session data
+          const updatedIds = new Set(setsToUpdate.map((u) => u.id));
+          const pendingUpdates: { id: string; weight: number | null; reps: number | null }[] = [];
+          for (const s of created) {
+            if (updatedIds.has(s.id)) continue; // already seeded from prev session
+            const pending = await consumePlateauPending(s.exercise_id);
+            if (pending && !s.completed && (s.weight == null || s.weight === 0) && (s.reps == null || s.reps === 0)) {
+              pendingUpdates.push({ id: s.id, weight: pending.weight, reps: pending.reps });
+            }
+          }
+          if (pendingUpdates.length > 0) await updateSetsBatch(pendingUpdates);
         }
       } else if (sourceSessionId) {
         const sourceSets = await getSourceSessionSets(sourceSessionId);
@@ -422,6 +434,18 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
             }
           }
           await updateSetsBatch(setsToUpdate);
+
+          // BLD-1122: consume pending plateau prefill for empty sets with no source data
+          const updatedIds2 = new Set(setsToUpdate.map((u) => u.id));
+          const pendingUpdates2: { id: string; weight: number | null; reps: number | null }[] = [];
+          for (const s of created) {
+            if (updatedIds2.has(s.id)) continue;
+            const pending = await consumePlateauPending(s.exercise_id);
+            if (pending && !s.completed && (s.weight == null || s.weight === 0) && (s.reps == null || s.reps === 0)) {
+              pendingUpdates2.push({ id: s.id, weight: pending.weight, reps: pending.reps });
+            }
+          }
+          if (pendingUpdates2.length > 0) await updateSetsBatch(pendingUpdates2);
         }
       }
       await load();

@@ -152,6 +152,47 @@ describe("classifyPlateau — regressing (form_check only)", () => {
   });
 });
 
+describe("classifyPlateau — lb user (unit-aware deload rounding)", () => {
+  it("rounds deload to nearest 5 lb, not 5 kg, for a lb user", () => {
+    // 45kg (~99 lb) stalled for 3 sessions; step=5 (lb), unit="lb"
+    // deload: 45 * KG_TO_LB * 0.9 = 45 * 2.20462 * 0.9 ≈ 89.3 lb → round DOWN to 85 lb
+    // → 85 * LB_TO_KG ≈ 38.56 kg
+    const sessions: PlateauSessionRow[] = [
+      row("s3", 3000, 45, 5),
+      row("s2", 2000, 45, 5),
+      row("s1", 1000, 45, 5),
+    ];
+    const result = classifyPlateau(sessions, false, 5, "lb");
+    expect(result.classification).toBe("stalled");
+    const s = result.primarySuggestion!;
+    expect(s.kind).toBe("deload");
+    if (s.kind === "deload") {
+      // Should be ~38.56kg (= 85 lb ÷ 2.20462), NOT 40.5kg (= 90%  of 45, rounded to 5 kg)
+      // Verify deload is a round multiple of 5 lb when converted to lb
+      const weightLb = s.weight * 2.20462;
+      expect(Math.round(weightLb) % 5).toBe(0); // must be a clean 5-lb step
+      // And must NOT equal the naive kg-rounded result (40.5 kg → 89.4 lb, not round)
+      expect(s.weight).not.toBeCloseTo(40.5, 1);
+    }
+  });
+
+  it("deload for 100kg user in lb is a clean 5 lb step", () => {
+    // 100kg = 220.5 lb; 90% = 198.4 lb → round DOWN to 195 lb = 88.45 kg
+    const sessions: PlateauSessionRow[] = [
+      row("s3", 3000, 100, 5),
+      row("s2", 2000, 100, 5),
+      row("s1", 1000, 100, 5),
+    ];
+    const result = classifyPlateau(sessions, false, 5, "lb");
+    const s = result.primarySuggestion!;
+    if (s.kind === "deload") {
+      const weightLb = Math.round(s.weight * 2.20462);
+      expect(weightLb % 5).toBe(0); // clean 5 lb step
+    }
+  });
+});
+
+
 describe("applyBreakThroughFill", () => {
   const makeSet = (id: string, weight: number | null, reps: number | null, completed = false) => ({
     id,

@@ -215,6 +215,7 @@ export default function ExerciseDetail() {
             unit={d.unit}
             onDismiss={plateauStatus.onDismiss}
             onQueuePending={plateauStatus.onQueuePending}
+            onNavigateToFormClip={() => router.push("/(tabs)")}
           />
         )}
         <ExerciseRecordsCard colors={colors} records={d.records} recordsLoading={d.recordsLoading} recordsError={d.recordsError}

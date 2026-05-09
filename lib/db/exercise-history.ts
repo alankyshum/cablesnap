@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { eq, ne, and, sql, desc, asc, isNotNull, isNull, inArray, max, sum, count } from "drizzle-orm";
 import { query, queryOne, getDrizzle, getDatabase } from "./helpers";
 import { workoutSets, workoutSessions, exercises } from "./schema";
@@ -657,6 +658,24 @@ function buildSessionsMap(
   return { sessionsByExercise, startedAtBySession };
 }
 
+/**
+ * Compare two raw set rows to determine which is the "top set".
+ * For bodyweight sets (score=0), prefer highest reps, then latest set_number.
+ */
+function isNewTopSet(
+  candidate: PlateauRawSetRow,
+  current: PlateauRawSetRow | null,
+  candidateScore: number,
+  currentTopScore: number,
+): boolean {
+  if (candidateScore > currentTopScore) return true;
+  if (candidateScore !== currentTopScore || current == null) return false;
+  const candidateReps = candidate.reps ?? 0;
+  const currentReps = current.reps ?? 0;
+  if (candidateReps !== currentReps) return candidateReps > currentReps;
+  return candidate.set_number > current.set_number;
+}
+
 /** Aggregate a set of raw sets for one session into a PlateauSessionRow. */
 function aggregateSession(sessId: string, sets: PlateauRawSetRow[], startedAt: number): PlateauSessionRow | null {
   if (sets.length === 0) return null;
@@ -664,7 +683,7 @@ function aggregateSession(sessId: string, sets: PlateauRawSetRow[], startedAt: n
   let topScore = -Infinity;
   for (const s of sets) {
     const score = (s.weight ?? 0) * (s.reps ?? 0);
-    if (score > topScore || (score === topScore && topSet != null && s.set_number > topSet.set_number)) {
+    if (isNewTopSet(s, topSet, score, topScore)) {
       topScore = score;
       topSet = s;
     }

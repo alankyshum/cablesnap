@@ -32,6 +32,7 @@ import { fontSizes } from "../../constants/design-tokens";
 import type { SetWithMeta } from "./types";
 import type { Suggestion } from "../../lib/rm";
 import { applyBreakThroughFill, type BreakThroughSuggestion } from "../../lib/plateau";
+import { toDisplay } from "../../lib/units";
 
 export type LastNextRowProps = {
   previousPerformance: string | null | undefined;
@@ -58,6 +59,8 @@ export type LastNextRowProps = {
   plateauHint?: BreakThroughSuggestion | null;
   /** BLD-1122: Atomic break-through apply callback (from useSessionActions). */
   onApplyBreakThrough?: (updates: { id: string; weight: number | null; reps: number | null }[]) => Promise<void>;
+  /** Weight unit for display (BLD-1122). */
+  unit?: "kg" | "lb";
 };
 
 function formatNextLabel(s: Suggestion): string {
@@ -133,6 +136,7 @@ export function LastNextRow({
   previousSetupPhotoUri,
   plateauHint,
   onApplyBreakThrough,
+  unit = "kg",
 }: LastNextRowProps) {
   const colors = useThemeColors();
   const alertFn = alertImpl ?? Alert.alert;
@@ -169,7 +173,7 @@ export function LastNextRow({
       const weightDesc =
         plateauHint.kind === "rep_plus_one"
           ? `reps: ${plateauHint.reps}`
-          : `weight: ${plateauHint.weight} × ${plateauHint.reps}`;
+          : `weight: ${toDisplay(plateauHint.weight, unit)} ${unit} × ${plateauHint.reps}`;
       alertFn(
         "Apply break-through suggestion?",
         `Will fill ${updates.length} empty set${updates.length === 1 ? "" : "s"} with ${weightDesc}.`,

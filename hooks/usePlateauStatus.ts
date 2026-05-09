@@ -8,7 +8,7 @@
  *
  * staleTime: 5 min. Invalidation key prefix: ['plateau'].
  */
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   classifyPlateau,
@@ -54,7 +54,7 @@ async function loadPlateauStatus(exerciseId: string): Promise<{
   const isBodyweight = sessions.every(
     (s) => s.top_set_weight == null || s.top_set_weight === 0,
   );
-  const plateauResult = classifyPlateau(sessions, isBodyweight, step);
+  const plateauResult = classifyPlateau(sessions, isBodyweight, step, bodySettings.weight_unit);
 
   // Check dismissal
   const dismissal = plateauState.dismissals[exerciseId];
@@ -89,7 +89,7 @@ export function usePlateauStatus(exerciseId: string | undefined): PlateauStatusR
     if (!exerciseId) return;
     if (suggestion.kind === "form_check") return;
     await queuePlateauPending(exerciseId, {
-      weight: suggestion.kind === "rep_plus_one" ? suggestion.weight : suggestion.weight,
+      weight: suggestion.weight,
       reps: suggestion.reps,
       kind: suggestion.kind,
       queued_at: new Date().toISOString(),
@@ -97,12 +97,20 @@ export function usePlateauStatus(exerciseId: string | undefined): PlateauStatusR
     queryClient.invalidateQueries({ queryKey: ["plateau"] });
   }, [exerciseId, queryClient]);
 
-  // GC: if progressing → clear dismissal + pending
   const result = data?.result ?? null;
-  if (result?.classification === "progressing" && exerciseId) {
-    clearPlateauEntries(exerciseId).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: ["plateau", exerciseId] });
-  }
+
+  // GC: clear dismissal + pending once when classification becomes "progressing".
+  // Guard with a ref so we don't fire repeatedly while the query re-fetches.
+  const gcFiredRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (result?.classification === "progressing" && exerciseId && gcFiredRef.current !== exerciseId) {
+      gcFiredRef.current = exerciseId;
+      clearPlateauEntries(exerciseId).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ["plateau", exerciseId] });
+    } else if (result?.classification !== "progressing") {
+      gcFiredRef.current = null;
+    }
+  }, [result?.classification, exerciseId, queryClient]);
 
   return {
     result,

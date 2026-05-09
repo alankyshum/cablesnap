@@ -1030,9 +1030,17 @@ export function useSessionActions({
   const handleApplyBreakThrough = useCallback(
     async (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => {
       if (updates.length === 0) return;
-      // Optimistic UI update
-      setGroups((prev) =>
-        prev.map((g) => {
+      // Capture pre-update snapshot for rollback fidelity (AC9)
+      const preUpdateSnapshot = new Map<string, { weight: number | null; reps: number | null }>();
+      setGroups((prev) => {
+        for (const g of prev) {
+          if (g.exercise_id !== exerciseId) continue;
+          for (const s of g.sets) {
+            const upd = updates.find((u) => u.id === s.id);
+            if (upd) preUpdateSnapshot.set(s.id, { weight: s.weight, reps: s.reps });
+          }
+        }
+        return prev.map((g) => {
           if (g.exercise_id !== exerciseId) return g;
           return {
             ...g,
@@ -1042,22 +1050,22 @@ export function useSessionActions({
               return { ...s, weight: upd.weight, reps: upd.reps };
             }),
           };
-        })
-      );
+        });
+      });
       try {
         await updateSetsBatch(updates);
         queryClient.invalidateQueries({ queryKey: ["plateau"] });
       } catch (err) {
-        // Rollback optimistic update
+        // Rollback to snapshot values (not blanket null — preserves 0 vs null distinction)
         setGroups((prev) =>
           prev.map((g) => {
             if (g.exercise_id !== exerciseId) return g;
             return {
               ...g,
               sets: g.sets.map((s) => {
-                const upd = updates.find((u) => u.id === s.id);
-                if (!upd) return s;
-                return { ...s, weight: null, reps: null };
+                const snap = preUpdateSnapshot.get(s.id);
+                if (!snap) return s;
+                return { ...s, weight: snap.weight, reps: snap.reps };
               }),
             };
           })

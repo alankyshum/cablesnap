@@ -22,7 +22,7 @@ import { TrendingDown } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { PlateauResult, BreakThroughSuggestion } from "@/lib/plateau";
-import { applyBreakThroughFill } from "@/lib/plateau";
+import { applyBreakThroughFill, REP_TARGET_DELTA } from "@/lib/plateau";
 import { fontSizes } from "@/constants/design-tokens";
 import type { SetWithMeta } from "@/components/session/types";
 
@@ -38,6 +38,11 @@ export type PlateauStatusCardProps = {
   ) => Promise<void>;
   /** No active session — queue the suggestion for next session init. */
   onQueuePending?: (suggestion: BreakThroughSuggestion) => Promise<void>;
+  /**
+   * Navigate to the BLD-1108 form-clip recording flow (no auto-recording, per AC3).
+   * Called when the "Record a quick form clip" CTA is tapped.
+   */
+  onNavigateToFormClip?: () => void;
   onDismiss: () => Promise<void>;
 };
 
@@ -63,7 +68,8 @@ function secondaryCtaLabel(suggestion: BreakThroughSuggestion, unit: "kg" | "lb"
     case "deload":
       return `or deload to ${formatWeight(suggestion.weight, unit)} ${unit} × ${suggestion.reps}`;
     case "rep_target":
-      return `or push for +${suggestion.reps - (suggestion.reps - 2)} reps at ${formatWeight(suggestion.weight, unit)} ${unit}`;
+      // REP_TARGET_DELTA is the delta added to reps in the suggestion construction
+      return `or push for +${REP_TARGET_DELTA} reps at ${formatWeight(suggestion.weight, unit)} ${unit}`;
     default:
       return "";
   }
@@ -95,6 +101,7 @@ function getBodyCopy(result: PlateauResult): string {
   }
   return (
     "Plateaus are normal. Stalls happen to every lifter past the beginner phase — " +
+    // \u002a renders as * (asterisk) — used instead of literal * to avoid markdown rendering
     "pushing through them is what intermediate training \u002ais\u002a."
   );
 }
@@ -106,6 +113,7 @@ export function PlateauStatusCard({
   activeSets,
   onApplyBreakThrough,
   onQueuePending,
+  onNavigateToFormClip,
   onDismiss,
 }: PlateauStatusCardProps) {
   const colors = useThemeColors();
@@ -115,11 +123,9 @@ export function PlateauStatusCard({
   const handleApply = useCallback(
     async (suggestion: BreakThroughSuggestion) => {
       if (suggestion.kind === "form_check") {
-        // Link to form-clip flow — no auto-recording (per AC3 / BLD-1108)
-        // The form-clip screen is navigated from the parent; this card just
-        // surfaces the CTA. In the exercise detail screen context there's
-        // no active session, so we just dismiss and let the user navigate.
-        onDismiss();
+        // Navigate to form-clip flow — no auto-recording (per AC3 / BLD-1108).
+        // Caller provides navigation handler; we do NOT auto-dismiss (user stays until they navigate).
+        onNavigateToFormClip?.();
         return;
       }
 
@@ -156,7 +162,7 @@ export function PlateauStatusCard({
         );
       }
     },
-    [activeSets, onApplyBreakThrough, onQueuePending, onDismiss, unit],
+    [activeSets, onApplyBreakThrough, onQueuePending, onNavigateToFormClip, unit],
   );
 
   // Derived state — placed after all hooks to satisfy rules-of-hooks.
