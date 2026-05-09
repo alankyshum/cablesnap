@@ -1,7 +1,7 @@
 # Feature Plan: Inline form-clip recording + Settings manage UX
 
 **Issue**: BLD-1105  **Author**: CEO  **Date**: 2026-05-09
-**Status**: DRAFT (rev-5) → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (rev-5)
 **Source**: GitHub #534 (alankyshum, product owner)
 
 ## Research Source
@@ -339,6 +339,17 @@ Three new Risk rows document the rev-4 type/contract corrections so future reade
 
 _Awaiting QD re-review on rev-4._
 
+**rev-5 response:** QD rev-4 single blocker absorbed.
+- ✅ `withTransaction` is `Promise<void>` per `lib/db/helpers.ts:187-195` (existing usage in `lib/db/sessions.ts:206-212,255-262` is side-effect-only). `saveReplacementClip` now captures the inserted row via an outer `let newRow: SetMediaRow | null = null` closed over by the callback; after `withTransaction` resolves, asserts `newRow !== null` (else cleanup the new file and throw). Pseudocode (§Technical Approach lines 126-152), §New/changed files line 190, AC3 line 245, and a new Risk row updated. Helper contract NOT changed.
+
+**QD rev-5 verdict (2026-05-09): APPROVE ✅**
+
+Replace flow is now contract-clean: `withTransaction` treated as side-effect-only, inserted row captured via outer `let`, asserted non-null. Test plan covers replace success, replace rollback, FormVideoSheet add/replace branching, clipless target helper, bulk hard-delete reclaim. No remaining plan-level quality blockers. Implementation QA still runs AC10 + replace/bulk-delete regression suite at PR.
+
+**Tech Lead rev-5 acknowledgement (2026-05-09): APPROVE stands ✅**
+
+Spot-checked rev-5 (commit `af8ce88b`). Outer-let pattern correct; `if (newRow === null)` guard is non-defensive — it actually covers the real failure mode where `withTransaction` swallows "cannot rollback" errors at `lib/db/helpers.ts:202-205` and resolves void; without the guard, `onClipSaved(newRow.id)` would crash on a falsy row. TL flags: keep that branch in the implementation, do NOT remove during refactoring. No architectural change.
+
 ### Tech Lead (Feasibility) — REQUEST CHANGES (rev 1, 2026-05-09)
 
 Verdict: option (d) is the right architectural call but two data-layer blockers must be resolved before implementation.
@@ -393,4 +404,15 @@ Read rev-3 (commit 7075bc53). Confirmed rev-2 APPROVE carries through. One resid
 N/A — Classification = NO. Re-trigger only if reviewers flag a missed behavior trigger.
 
 ### CEO Decision
-Pending QD re-approval on rev-4. Tech Lead rev-3 APPROVE stands (his rev-3 ack also flagged the eager-unlink nit which rev-4 absorbs). rev-4 changes are pure type/contract corrections — no architectural change, no new dependencies, no schema diff. Once QD signs off, hand off to claudecoder.
+**APPROVED (2026-05-09).** All reviewers signed off on rev-5:
+- Quality Director: APPROVE (rev-5)
+- Tech Lead: APPROVE (rev-2 → rev-3 ack → rev-4 ack → rev-5 ack)
+- Psychologist: N/A (Classification = NO)
+
+Critical implementation reminders:
+1. **Do NOT remove the `if (newRow === null)` guard in `saveReplacementClip`** (TL rev-5 flag) — it covers the real failure mode where `withTransaction` swallows "cannot rollback" errors at `lib/db/helpers.ts:202-205` and resolves `void`. Without the guard, `onClipSaved(newRow.id)` would crash on a falsy row.
+2. Eager catch-handler unlink of `newMeta.rel_path` in `saveReplacementClip` is required (TL rev-3 nit absorbed in rev-4) — keep both the eager unlink and the defense-in-depth `reconcileOrphans()` reaper.
+3. `recordClip` external contract MUST stay `(params: RecordClipParams) => Promise<SetMediaRow>` — only the new `persistRecordedClipFileOnly` returns `ClipFileMetadata`.
+4. AC12 must hold — no schema migration; `lib/db/schema.ts` byte-identical to main.
+
+Handing off to claudecoder for implementation.
