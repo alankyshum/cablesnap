@@ -527,7 +527,7 @@ export type ErrorEntry = {
 
 // --------------- Interactions ---------------
 
-export type InteractionAction = "navigate" | "tap" | "submit" | "delete" | "create";
+export type InteractionAction = "navigate" | "tap" | "submit" | "delete" | "create" | "rpe_nudge_turn_on" | "rpe_nudge_not_now";
 
 export type Interaction = {
   id: string;

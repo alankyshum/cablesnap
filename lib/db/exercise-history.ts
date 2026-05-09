@@ -1,8 +1,9 @@
 import { eq, ne, and, sql, desc, asc, isNotNull, isNull, inArray, max, sum, count } from "drizzle-orm";
-import { query, queryOne, getDrizzle } from "./helpers";
+import { query, queryOne, getDrizzle, getDatabase } from "./helpers";
 import { workoutSets, workoutSessions, exercises } from "./schema";
 import { mapRow } from "./exercises";
 import type { Exercise } from "../types";
+import { uuid } from "../uuid";
 // BLD-1086 Phase 0a: VariantScope + helpers moved to variant-scope.ts.
 // Re-export for backward compatibility with all existing call-sites.
 export type { VariantScope } from "./variant-scope";
@@ -621,4 +622,52 @@ export async function getFrequentExercises(
     .limit(limit + recentLimit);
 
   return (rows as unknown[]).map((r) => mapRow(r as Parameters<typeof mapRow>[0]));
+}
+
+// ─── BLD-1111: RPE capture discoverability nudge predicate ──────────────────
+
+/**
+ * Returns true if the exercise has at least one completed, non-warmup workout
+ * set with a non-null RPE value. Used to gate the one-time RPE capture nudge.
+ *
+ * Day-session / GTG sets count intentionally — the eligibility signal is
+ * "user has cared enough to log RPE before" regardless of session kind.
+ *
+ * On DB error, returns false and writes an error_log row (non-fatal).
+ */
+export async function exerciseHasHistoricalRpe(exerciseId: string): Promise<boolean> {
+  try {
+    const db = await getDrizzle();
+    const row = await db.select({ one: sql<number>`1` })
+      .from(workoutSets)
+      .where(
+        and(
+          eq(workoutSets.exercise_id, exerciseId),
+          isNotNull(workoutSets.rpe),
+          eq(workoutSets.completed, 1),
+        )
+      )
+      .limit(1)
+      .get();
+    return row !== undefined;
+  } catch (err) {
+    try {
+      const db = await getDatabase();
+      await db.runAsync(
+        `INSERT INTO error_log (id, message, component, fatal, timestamp) VALUES (?, ?, ?, ?, ?)`,
+        [
+          uuid(),
+          err instanceof Error
+            ? `exerciseHasHistoricalRpe failed for ${exerciseId}: ${err.message}`
+            : `exerciseHasHistoricalRpe failed for ${exerciseId}: ${String(err)}`,
+          "exerciseHasHistoricalRpe",
+          0,
+          Date.now(),
+        ]
+      );
+    } catch {
+      // ignore logging errors
+    }
+    return false;
+  }
 }

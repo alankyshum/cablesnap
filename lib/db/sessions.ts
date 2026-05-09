@@ -87,6 +87,7 @@ export {
   getBestSet,
   getVariantSetCount,
   buildVariantSql,
+  exerciseHasHistoricalRpe,
 } from "./exercise-history";
 export type { ExerciseSession, ExerciseRecords, VariantScope } from "./exercise-history";
 
