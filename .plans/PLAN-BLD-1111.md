@@ -203,7 +203,19 @@ Two affordances: **[Turn on]** flips the toggle + marks shown; **[Not now]** mar
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**REQUEST CHANGES — 2026-05-09**
+
+Blockers before implementation:
+
+1. **Predicate is not implementable as written.** The plan uses `workout_sets.set_kind = 'workout'`, but the current schema has `workout_sets.set_type` and no `set_kind` column (`lib/db/schema.ts:111-149`). Existing history code also filters `completed = 1`, `set_type != 'warmup'`, and joined `workout_sessions.completed_at IS NOT NULL` (`lib/db/exercise-history.ts:42-70`). Update the plan/query/tests to use the real column names and define whether GTG/day-session rows should count.
+2. **AC9 is a real logic hole.** With the current predicates (`captureRpe=false`, `nudgeShown` unset, historical RPE exists), a user who turns `session.captureRpe` ON in Settings and later OFF without ever seeing the banner becomes eligible again. Either change AC9 to allow that behavior, or require the Settings ON path to also set `session.captureRpe.nudgeShown = "1"` and test that path.
+3. **"Turn on" must update the active session surface or avoid promising immediate capture.** `app/session/[id].tsx` reads `session.captureRpe` once on mount (`lines 165-171`) and passes local `captureRpe` state into set rows (`lines 304-354`). If the nudge is mounted in the exercise detail drawer during an active workout, writing only `app_settings` will not make the RPE chips appear until the session screen remounts. Add an `onCaptureRpeEnabled` callback/store invalidation path, or make the copy explicit that this applies to future sessions.
+4. **Copy overpromises progression.** The body says RPE can be used to "tune rest and progression"; current code shows RPE affects rest calculation (`lib/rest.ts:125-164`) but I found no RPE-driven progression logic. Remove "and progression" unless that behavior exists before this ships.
+
+Non-blocking notes:
+
+- The plan's DB-error behavior should say exactly how errors are logged to `error_log`; a silent `catch { return false; }` would hide a defect and conflict with QD expectations.
+- The a11y label should match the final visible copy and include enough context for both actions; AC10's VoiceOver/TalkBack walkthrough is appropriate.
 
 ### Tech Lead (Feasibility)
 _Pending_
