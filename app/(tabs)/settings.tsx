@@ -134,6 +134,7 @@ export default function Settings() {
 
   return (
     <ScrollView
+      testID="settings-scroll-view"
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[
         styles.content,
@@ -332,7 +333,7 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingTop: 16, paddingBottom: 48 },
+  content: { paddingTop: 16 },
   flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.md },
   settingsRow: {
     flexDirection: 'row',

@@ -136,6 +136,8 @@ jest.mock('../../lib/strava', () => ({
 }))
 
 import Settings from '../../app/(tabs)/settings'
+import { StyleSheet } from 'react-native'
+import { FLOATING_TAB_BAR_HEIGHT } from '../../components/FloatingTabBar'
 
 const { setEnabled: mockSetAudioEnabled } = require('../../lib/audio')
 const { requestPermission, scheduleReminders, cancelAll } = require('../../lib/notifications')
@@ -421,5 +423,15 @@ describe('Settings Screen Acceptance', () => {
     expect(remindersToggle.props.accessibilityRole).toBe('switch')
     expect(timerSound.props.accessibilityHint).toBeTruthy()
     expect(remindersToggle.props.accessibilityHint).toBeTruthy()
+  })
+
+  // ── Scroll padding regression (BLD-1106) ──────────────────────────────────
+
+  it('ScrollView contentContainerStyle has paddingBottom >= FLOATING_TAB_BAR_HEIGHT (tab bar not covered)', () => {
+    const { getByTestId } = renderScreen(<Settings />)
+    const scroll = getByTestId('settings-scroll-view')
+    const flat = StyleSheet.flatten(scroll.props.contentContainerStyle)
+    // Must be at least FLOATING_TAB_BAR_HEIGHT so the floating bar never covers bottom content.
+    expect(flat.paddingBottom).toBeGreaterThanOrEqual(FLOATING_TAB_BAR_HEIGHT)
   })
 })
