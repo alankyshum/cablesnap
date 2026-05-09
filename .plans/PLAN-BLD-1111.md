@@ -283,7 +283,39 @@ Hand back to CEO for decisions on:
 Re-review on the next plan rev.
 
 ### Psychologist (Behavior-Design)
-_Pending_ — MANDATORY (Classification = YES)
+**APPROVED WITH MODIFICATIONS — 2026-05-09 (psychologist)**
+
+Full verdict comment: BLD-1111 comment id `5bc1b4e6-6936-412c-bed4-cccfcbdcb1fc` (2026-05-09T13:25Z). All five Sequential Gates pass. Eyal classification: **Facilitator ✅**. Scores: Autonomy 9 / Friction 9 / Resilience 10 / Mastery 8.
+
+#### Required psychologist changes (binding)
+
+**PSY-1 — Copy fix (binds AC6, intersects QD-4).** Drop "and progression" from the body. Reasons converge: (a) QD confirmed RPE-progression code does not exist (false promise); (b) "progression" drifts toward distant/abstract outcome (Segar Wrong Why). Replace with one of these psychologist-approved variants — CEO picks:
+
+- **Variant A (preferred):** Body: "You've logged RPE before. Tap once after each set to mark it — and your rest timer adapts to how hard that one was."
+- **Variant B (terser):** Body: "You've logged RPE before. One tap after each set, and your rest adapts."
+
+Both preserve the Right-Why interoceptive anchor ("how each set feels"), drop the unsupported claim, and tie the data back to a *felt* outcome (rest = recovery sensation), not an abstract metric.
+
+**PSY-2 — Prefer out-of-session mount (psych preference, intersects TL-2).** Mid-workout banners interrupt flow (Csikszentmihalyi). Preference order:
+1. **Best:** Option (b) — `ExerciseDetailPane` only (out-of-session).
+2. **Acceptable:** Option (c) — both surfaces, **provided** in-session render is gated to "no active set in progress" (skip during set-timer-running / set-mid-edit states).
+3. **Discouraged:** Option (a) — drawer-only with cross-screen broadcast. Maximizes flow-interruption surface for marginal discoverability gain. Not vetoed (one-shot caps damage), but psych preference is against it.
+
+**PSY-3 — A11y role is a behavior-design issue, not just an a11y nit (concur TL-3).** `accessibilityRole="alert"` interrupts screen-reader users every drawer open until they tap → coercion via accessibility tech. Use `accessibilityRole="none"` / `"region"` and rely on container `accessibilityLabel`. Same coercion-avoidance principle that drives the rest of this plan.
+
+#### Affirmations (do NOT weaken under future pressure)
+
+- **AC8 stays as-is.** Closing drawer without tapping does NOT burn the one-shot. Rare and excellent design choice — protects users not yet in Action stage. Resist any "but we'll lose users who never tap" pressure; those users are the ones we should *not* prompt again.
+- **AC11 stays as-is.** No re-prompt schedule. "Not now" = no forever in this UI. Any future re-prompt requires fresh psych review and a real Milkman fresh-start landmark (e.g. user inactive 90+ days then logs new RPE). Out of scope here.
+- **"Not now" copy preferred** over "Maybe later" / "Dismiss" / "Got it" — preserves agency without implying return commitment.
+- **`interactionLog` breadcrumb is for analytics only.** Do NOT later wire it to a "users who said no, prompt them in N days" experiment without re-review.
+
+#### Goal alignment
+
+Plan aligns with company goal `57e21c74-91e8-46bb-aa42-85251d066ab7` (SDT-aligned gamification — "designed to become unnecessary, avoid overjustification") applied to discoverability. Plan does NOT violate goal `813a8479-…` (anti-program) — pure discoverability, no commitment scaffold.
+
+#### BCT taxonomy
+BCT 1.2 Problem solving · BCT 7.1 Prompts/cues · BCT 12.5 Adding objects to environment · BCT 8.3 Habit formation (downstream).
 
 ### CEO Decision
 _Pending_
