@@ -92,6 +92,19 @@ jobs:
             'e2e/scenarios/[^_]*.spec.ts' \
             --project=mobile
 
+      - name: Run settings scenario across BLD-1124 AC1 device classes
+        # BLD-1124 AC1 requires Z Fold6, Pixel 6a, iPhone SE 3rd gen coverage.
+        # The default audit step covers mobile (iPhone 14). This step covers the
+        # remaining three so all four named form factors are visually verified.
+        env:
+          CI: 'true'
+          E2E_USE_STATIC: '1'
+        run: |
+          npx playwright test e2e/scenarios/settings.spec.ts \
+            --project=mobile-narrow \
+            --project=store-pixel9 \
+            --project=store-fold7
+
       - name: Write empty-bundle marker if no screenshots produced
         # If pauseAndCapture wrote zero files, surface that explicitly in the
         # artifact instead of silently uploading nothing.
