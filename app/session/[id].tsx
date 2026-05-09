@@ -314,10 +314,7 @@ export default function ActiveSession() {
           setHasClipMap(Object.fromEntries(clipPairs));
           const boolPairs = photoPairs.map(([sid, photo]) => [sid, !!photo] as const);
           setHasSetupPhotoMap(Object.fromEntries(boolPairs));
-          const uriPairs = photoPairs
-            .filter(([, photo]) => photo != null)
-            .map(([sid, photo]) => [sid, toAbsPath(photo!.rel_path)] as const);
-          setSetupPhotoUriMap(Object.fromEntries(uriPairs));
+          setSetupPhotoUriMap(Object.fromEntries(photoPairs.filter(([, p]) => p != null).map(([sid, p]) => [sid, toAbsPath(p!.rel_path)] as const)));
         })
         .catch(() => {});
     }).catch(() => {});
