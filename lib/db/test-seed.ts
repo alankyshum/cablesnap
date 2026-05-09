@@ -31,6 +31,7 @@ import { getDatabase } from "./helpers";
 export const SUPPORTED_SCENARIOS = [
   "completed-workout",
   "workout-history",
+  "form-clips",
 ] as const;
 
 export type ScenarioKey = (typeof SUPPORTED_SCENARIOS)[number];
@@ -80,6 +81,9 @@ export async function seedScenario(): Promise<void> {
       break;
     case "workout-history":
       await seedWorkoutHistory(db);
+      break;
+    case "form-clips":
+      await seedFormClips(db);
       break;
   }
 
@@ -203,4 +207,68 @@ export async function seedWorkoutHistory(
       );
     }
   }
+}
+
+/**
+ * Seeds a single exercise with one completed workout set and no set_media row,
+ * so FormLibraryTab renders with the Record CTA enabled.
+ * Exercise id: "scenario-exercise-1".
+ */
+export async function seedFormClips(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+): Promise<void> {
+  const now = Date.now();
+  const started = now - 60 * 60 * 1000;
+  const completed = now - 60 * 1000;
+
+  // Insert a minimal custom exercise the Form clips tab can navigate to.
+  await db.runAsync(
+    `INSERT OR IGNORE INTO exercises
+       (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      "scenario-exercise-1",
+      "Scenario Exercise",
+      "strength",
+      "[]",
+      "[]",
+      "cable",
+      "",
+      "beginner",
+      1,
+    ],
+  );
+
+  // One completed workout session.
+  await db.runAsync(
+    `INSERT OR IGNORE INTO workout_sessions
+       (id, template_id, name, started_at, completed_at, duration_seconds, notes, rating)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      "scenario-fc-session-1",
+      null,
+      "Form Clips Session",
+      started,
+      completed,
+      Math.floor((completed - started) / 1000),
+      "",
+      4,
+    ],
+  );
+
+  // One completed set — no set_media row, so Record CTA is enabled.
+  await db.runAsync(
+    `INSERT OR IGNORE INTO workout_sets
+       (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, exercise_position, set_type)
+     VALUES (?, ?, ?, ?, ?, ?, 1, ?, 0, 'normal')`,
+    [
+      "scenario-fc-set-1",
+      "scenario-fc-session-1",
+      "scenario-exercise-1",
+      1,
+      40,
+      10,
+      completed,
+    ],
+  );
 }
