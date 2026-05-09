@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.26 — 2026-05-09
+<!-- versionCode: 96 -->
+
 - **Smart Rest Timer**: Rest suggestions now adapt to each exercise based on your actual median rest over the last 30 days. Pin a custom default per exercise, or let the timer learn automatically — templates and 90 s fallback remain for new users (BLD-1100).
 
 ## v0.26.25 — 2026-05-08

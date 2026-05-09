@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.26",
+    "date": "2026-05-09",
+    "versionCode": 96,
+    "body": "- **Smart Rest Timer**: Rest suggestions now adapt to each exercise based on your actual median rest over the last 30 days. Pin a custom default per exercise, or let the timer learn automatically — templates and 90 s fallback remain for new users (BLD-1100)."
+  },
+  {
     "version": "0.26.25",
     "date": "2026-05-08",
     "versionCode": 95,
