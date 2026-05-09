@@ -3,6 +3,7 @@ import { query, queryOne, getDrizzle } from "./helpers";
 import { workoutSets, workoutSessions, exercises } from "./schema";
 import { mapRow } from "./exercises";
 import type { Exercise } from "../types";
+import { logError } from "../errors";
 // BLD-1086 Phase 0a: VariantScope + helpers moved to variant-scope.ts.
 // Re-export for backward compatibility with all existing call-sites.
 export type { VariantScope } from "./variant-scope";
@@ -621,4 +622,42 @@ export async function getFrequentExercises(
     .limit(limit + recentLimit);
 
   return (rows as unknown[]).map((r) => mapRow(r as Parameters<typeof mapRow>[0]));
+}
+
+// ─── BLD-1111: RPE capture discoverability nudge predicate ──────────────────
+
+/**
+ * Returns true if the exercise has at least one completed, non-warmup workout
+ * set with a non-null RPE value. Used to gate the one-time RPE capture nudge.
+ *
+ * Day-session / GTG sets count intentionally — the eligibility signal is
+ * "user has cared enough to log RPE before" regardless of session kind.
+ *
+ * On DB error, returns false and writes an error_log row (non-fatal).
+ */
+export async function exerciseHasHistoricalRpe(exerciseId: string): Promise<boolean> {
+  try {
+    const db = await getDrizzle();
+    const row = await db.select({ one: sql<number>`1` })
+      .from(workoutSets)
+      .where(
+        and(
+          eq(workoutSets.exercise_id, exerciseId),
+          isNotNull(workoutSets.rpe),
+          ne(workoutSets.set_type, "warmup"),
+          eq(workoutSets.completed, 1),
+        )
+      )
+      .limit(1)
+      .get();
+    return row !== undefined;
+  } catch (err) {
+    await logError(
+      err instanceof Error
+        ? new Error(`exerciseHasHistoricalRpe failed for ${exerciseId}: ${err.message}`)
+        : new Error(`exerciseHasHistoricalRpe failed for ${exerciseId}: ${String(err)}`),
+      { component: "exerciseHasHistoricalRpe", fatal: false }
+    );
+    return false;
+  }
 }

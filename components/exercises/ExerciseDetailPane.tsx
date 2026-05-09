@@ -13,6 +13,7 @@ import { ExerciseIllustrationCards } from "./ExerciseIllustrationCards";
 import ProgressionPathCard from "@/components/exercise/ProgressionPathCard";
 import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
+import { RpeCaptureNudge } from "./RpeCaptureNudge";
 
 export interface ExerciseDetailPaneProps {
   detail: Exercise | null;
@@ -48,6 +49,8 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
               )}
               {/* BLD-541 AC-23: v1 user-trust microcopy on bodyweight exercise detail. */}
               {detail.equipment === 'bodyweight' && <BodyweightModifierNotice colors={colors} />}
+              {/* BLD-1111: One-time RPE capture discoverability nudge. */}
+              <RpeCaptureNudge exerciseId={detail.id} />
               <View style={styles.row}>
                 <View style={[styles.detailBadge, { backgroundColor: colors.primaryContainer }]}>
                   <Text style={[styles.detailBadgeText, { color: colors.onPrimaryContainer }]}>

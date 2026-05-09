@@ -167,3 +167,21 @@ export async function markRetroactiveBannerSeen(): Promise<void> {
     .values({ key: "achievements_retroactive_done", value: "1" })
     .onConflictDoUpdate({ target: appSettings.key, set: { value: "1" } });
 }
+
+// ─── BLD-1111: RPE capture discoverability nudge one-shot flags ──────────────
+
+export async function hasSeenRpeCaptureNudge(): Promise<boolean> {
+  const db = await getDrizzle();
+  const row = await db.select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, "session.captureRpe.nudgeShown"))
+    .get();
+  return row !== undefined;
+}
+
+export async function markRpeCaptureNudgeSeen(): Promise<void> {
+  const db = await getDrizzle();
+  await db.insert(appSettings)
+    .values({ key: "session.captureRpe.nudgeShown", value: "1" })
+    .onConflictDoUpdate({ target: appSettings.key, set: { value: "1" } });
+}
