@@ -750,3 +750,66 @@ describe("Session notes/delete button touch targets (BLD-258, GitHub #126)", () 
     expect(Number(containerMatch![1])).toBeGreaterThanOrEqual(8);
   });
 });
+
+// ── BLD-1122: plateau pejorative-token contract ──────────────────────────────
+
+describe("plateau pejorative-token contract (BLD-1122)", () => {
+  const UI_DIRS = ["components", "app", "hooks"];
+  const PEJORATIVE_TOKENS = ["regressing", "decline", "going backwards", "slipping"];
+
+  function collectUIFiles(): string[] {
+    const files: string[] = [];
+    function walk(dir: string) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          // Skip test directories inside hooks/app/components
+          if (entry.name === "__tests__" || entry.name === "node_modules") continue;
+          walk(full);
+        } else if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) {
+          files.push(full);
+        }
+      }
+    }
+    for (const d of UI_DIRS) walk(path.resolve(root, d));
+    return files;
+  }
+
+  it("no UI string literal contains pejorative plateau classification tokens", () => {
+    const files = collectUIFiles();
+    const violations: string[] = [];
+    for (const f of files) {
+      const src = fs.readFileSync(f, "utf-8");
+      // Strip single-line comments and comparison-context literals to avoid
+      // false positives on `result.classification === "regressing"` etc.
+      // Only check string literals that appear OUTSIDE of:
+      //   1. Line comments (//)
+      //   2. Comparison expressions (=== / !== / == / != followed or preceded by the literal)
+      //   3. Object property values for classification-discriminant fields
+      const strippedComments = src.replace(/\/\/[^\n]*/g, "");
+      // Find string literals not used as classification discriminants
+      const literals = strippedComments.match(/(?:'[^']*'|"[^"]*"|`[^`]*`)/g) ?? [];
+      for (const lit of literals) {
+        // Skip if this is a plain classification-discriminant comparison value
+        // (the token is the ENTIRE content of the literal)
+        const inner = lit.slice(1, -1);
+        if (["regressing", "progressing", "stalled", "maintaining"].includes(inner)) continue;
+        // Skip template literals that are purely type/kind checks
+        if (inner.startsWith("PlateauClassification") || inner.startsWith("BreakThrough")) continue;
+
+        for (const token of PEJORATIVE_TOKENS) {
+          if (inner.toLowerCase().includes(token)) {
+            violations.push(`${path.relative(root, f)}: ${lit.slice(0, 80)}`);
+          }
+        }
+      }
+    }
+    if (violations.length > 0) {
+      throw new Error(
+        `Pejorative plateau tokens found in UI sources:\n${violations.join("\n")}\n\n` +
+        "These tokens must not appear in user-visible strings. Use identity-affirming copy instead."
+      );
+    }
+    expect(violations).toHaveLength(0);
+  });
+});

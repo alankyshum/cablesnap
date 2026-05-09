@@ -35,6 +35,8 @@ import { useExerciseDetail, MAX_ITEMS } from "@/hooks/useExerciseDetail";
 import ExerciseRecordsCard from "@/components/exercise/ExerciseRecordsCard";
 import ExerciseChartCard from "@/components/exercise/ExerciseChartCard";
 import ExerciseVariantFilter from "@/components/exercise/ExerciseVariantFilter";
+import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
+import { usePlateauStatus } from "@/hooks/usePlateauStatus";
 import { isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
@@ -87,6 +89,8 @@ export default function ExerciseDetail() {
   const goalSheet = useBottomSheet();
   const goalState = useStrengthGoal(id, d.bw);
   const progression = useProgressionChain(id);
+  // BLD-1122: plateau detection for exercise detail screen
+  const plateauStatus = usePlateauStatus(id);
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
   // BLD-1028: local draft for off-session pinned note edit.
@@ -203,6 +207,16 @@ export default function ExerciseDetail() {
       <GoalSection goalState={goalState} colors={colors} bw={d.bw} unit={d.unit} onOpenSheet={goalSheet.open} />
 
       <FlowContainer gap={16}>
+        {/* BLD-1122: plateau card — shown above records when stalled or regressing and not dismissed */}
+        {plateauStatus.result != null && plateauStatus.result.classification !== "progressing" && plateauStatus.result.classification !== "maintaining" && !plateauStatus.dismissedUntil && (
+          <PlateauStatusCard
+            result={plateauStatus.result}
+            exerciseName={exercise?.name ?? ""}
+            unit={d.unit}
+            onDismiss={plateauStatus.onDismiss}
+            onQueuePending={plateauStatus.onQueuePending}
+          />
+        )}
         <ExerciseRecordsCard colors={colors} records={d.records} recordsLoading={d.recordsLoading} recordsError={d.recordsError}
           best={d.best} bw={d.bw} unit={d.unit} exerciseId={id}
           loadRecords={(eid) => d.loadRecords(eid, d.variantScope)}

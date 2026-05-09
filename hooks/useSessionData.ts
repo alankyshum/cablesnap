@@ -31,6 +31,9 @@ import {
 import { uuid } from "../lib/uuid";
 import { getQueryVersion } from "../lib/query";
 import { getSetupPhotosForExercise } from "../lib/db/setup-photos";
+import { getPlateauWindowBatch } from "../lib/db/exercise-history";
+import { classifyPlateau, type BreakThroughSuggestion } from "../lib/plateau";
+import { getPlateauState } from "../lib/db/settings";
 import { toAbsPath } from "../lib/media/form-clips";
 import { isCableExercise } from "../lib/cable-variant";
 import { derivePristinePrefillCandidate } from "./resolvePrefillCandidate";
@@ -54,6 +57,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
   const [maxes, setMaxes] = useState<Record<string, number>>({});
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+  const [plateauHints, setPlateauHints] = useState<Record<string, BreakThroughSuggestion | null>>({});
 
   const initialized = useRef(false);
   const prevExerciseIds = useRef<string>("");
@@ -109,11 +113,12 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
 
-    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes] = await Promise.all([
+    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes, plateauWindowByExercise] = await Promise.all([
       getPreviousSetsBatch(exerciseIds, id),
       getExercisesByIds(exerciseIds),
       getRecentExerciseSetsBatch(exerciseIds, 2),
       getExerciseNotesBatch(exerciseIds),
+      getPlateauWindowBatch(exerciseIds, 4),
     ]);
 
     const key = exerciseIds.sort().join(",");
@@ -292,6 +297,35 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     });
     const sugg: Record<string, Suggestion | null> = Object.fromEntries(entries);
     setSuggestions(sugg);
+
+    // BLD-1122: plateau classification per exercise (in-session)
+    try {
+      const plateauState = await getPlateauState();
+      const now = Date.now();
+      const hints: Record<string, BreakThroughSuggestion | null> = {};
+      for (const eid of exerciseIds) {
+        const dismissal = plateauState.dismissals[eid];
+        if (dismissal) {
+          const dismissedAt = new Date(dismissal.dismissed_at).getTime();
+          if (dismissedAt + (7 * 24 * 60 * 60 * 1000) > now) {
+            hints[eid] = null;
+            continue;
+          }
+        }
+        const window = plateauWindowByExercise.get(eid) ?? [];
+        if (window.length === 0) {
+          hints[eid] = null;
+          continue;
+        }
+        const ex = exerciseMeta[eid];
+        const isBodyweightEx = ex ? ex.equipment === "bodyweight" : false;
+        const result = classifyPlateau(window, isBodyweightEx, derived);
+        hints[eid] = result.primarySuggestion ?? null;
+      }
+      setPlateauHints(hints);
+    } catch {
+      // plateau classification is non-critical; ignore errors
+    }
   }, [id, router]);
 
   // Initialize session from template or source session
@@ -444,5 +478,6 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     palette,
     updateGroupSet,
     load,
+    plateauHints,
   };
 }

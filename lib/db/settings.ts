@@ -186,3 +186,70 @@ export async function clearInteractions(): Promise<void> {
   const db = await getDrizzle();
   await db.delete(interactionLog);
 }
+
+// ─── BLD-1122: plateau_state consolidated JSON blob ──────────────────────────
+
+import {
+  parsePlateauState,
+  gcPlateauState,
+  serializePlateauState,
+  type PlateauState,
+  type PlateauPending,
+} from "../plateau";
+
+export { parsePlateauState, gcPlateauState, serializePlateauState };
+export type { PlateauState, PlateauPending };
+
+const PLATEAU_STATE_KEY = "plateau_state";
+
+/**
+ * Read the consolidated plateau_state blob, run lazy GC on expired dismissals,
+ * and return the cleaned state. On corrupt/missing row returns empty state.
+ */
+export async function getPlateauState(): Promise<PlateauState> {
+  const raw = await getAppSetting(PLATEAU_STATE_KEY);
+  const parsed = parsePlateauState(raw);
+  return gcPlateauState(parsed, Date.now());
+}
+
+export async function savePlateauState(state: PlateauState): Promise<void> {
+  await setAppSetting(PLATEAU_STATE_KEY, serializePlateauState(state));
+}
+
+/** Dismiss an exercise plateau for 14 days. */
+export async function dismissPlateau(exerciseId: string): Promise<void> {
+  const state = await getPlateauState();
+  state.dismissals[exerciseId] = { dismissed_at: new Date().toISOString() };
+  await savePlateauState(state);
+}
+
+/** Queue a break-through prefill for the next session init. Single-shot. */
+export async function queuePlateauPending(
+  exerciseId: string,
+  pending: PlateauPending,
+): Promise<void> {
+  const state = await getPlateauState();
+  state.pending[exerciseId] = pending;
+  await savePlateauState(state);
+}
+
+/** Consume and clear the pending prefill entry for an exercise. */
+export async function consumePlateauPending(
+  exerciseId: string,
+): Promise<PlateauPending | null> {
+  const state = await getPlateauState();
+  const entry = state.pending[exerciseId] ?? null;
+  if (entry) {
+    delete state.pending[exerciseId];
+    await savePlateauState(state);
+  }
+  return entry;
+}
+
+/** Clear both dismissal and pending entries for an exercise (progressing). */
+export async function clearPlateauEntries(exerciseId: string): Promise<void> {
+  const state = await getPlateauState();
+  delete state.dismissals[exerciseId];
+  delete state.pending[exerciseId];
+  await savePlateauState(state);
+}

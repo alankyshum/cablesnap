@@ -38,6 +38,7 @@ import {
   updateSetVariant,
   getRecentBodyweightGripHistory,
   updateSetBodyweightVariant,
+  updateSetsBatch,
 } from "../lib/db/session-sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import {
@@ -1024,6 +1025,51 @@ export function useSessionActions({
     );
   };
 
+  /** BLD-1122: Atomically apply break-through fill updates to a set of rows.
+   * Writes via updateSetsBatch (single transaction), then invalidates plateau queries. */
+  const handleApplyBreakThrough = useCallback(
+    async (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => {
+      if (updates.length === 0) return;
+      // Optimistic UI update
+      setGroups((prev) =>
+        prev.map((g) => {
+          if (g.exercise_id !== exerciseId) return g;
+          return {
+            ...g,
+            sets: g.sets.map((s) => {
+              const upd = updates.find((u) => u.id === s.id);
+              if (!upd) return s;
+              return { ...s, weight: upd.weight, reps: upd.reps };
+            }),
+          };
+        })
+      );
+      try {
+        await updateSetsBatch(updates);
+        queryClient.invalidateQueries({ queryKey: ["plateau"] });
+      } catch (err) {
+        // Rollback optimistic update
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.exercise_id !== exerciseId) return g;
+            return {
+              ...g,
+              sets: g.sets.map((s) => {
+                const upd = updates.find((u) => u.id === s.id);
+                if (!upd) return s;
+                return { ...s, weight: null, reps: null };
+              }),
+            };
+          })
+        );
+        showError("Failed to apply break-through suggestion");
+        // eslint-disable-next-line no-console
+        console.warn("[handleApplyBreakThrough] persist failed:", err);
+      }
+    },
+    [setGroups, showError]
+  );
+
   return {
     elapsed,
     /** BLD-630: null until the user completes the first set in the session.
@@ -1049,6 +1095,7 @@ export function useSessionActions({
     handleMoveUp,
     handleMoveDown,
     handlePrefillFromPrevious,
+    handleApplyBreakThrough,
     finish,
     cancel,
   };

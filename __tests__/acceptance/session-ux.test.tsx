@@ -315,3 +315,21 @@ describe('Session UX Acceptance', () => {
     })
   })
 })
+
+// BLD-1122: mock plateau DB calls to avoid real SQLite in acceptance tests
+jest.mock('../../lib/db/exercise-history', () => ({
+  getPlateauWindowBatch: jest.fn().mockResolvedValue(new Map()),
+  getPlateauWindow: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock('../../lib/db/settings', () => ({
+  getPlateauState: jest.fn().mockResolvedValue({ dismissals: {}, pending: {} }),
+  savePlateauState: jest.fn().mockResolvedValue(undefined),
+  dismissPlateau: jest.fn().mockResolvedValue(undefined),
+  queuePlateauPending: jest.fn().mockResolvedValue(undefined),
+  consumePlateauPending: jest.fn().mockResolvedValue(null),
+  clearPlateauEntries: jest.fn().mockResolvedValue(undefined),
+  getAppSetting: jest.fn().mockResolvedValue(null),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}));
+

@@ -624,6 +624,169 @@ export async function getFrequentExercises(
   return (rows as unknown[]).map((r) => mapRow(r as Parameters<typeof mapRow>[0]));
 }
 
+// ─── BLD-1122: Per-exercise plateau window batch fetch ───────────────────────
+
+import type { PlateauSessionRow } from "../plateau";
+
+// RawSetRow type for the sets step of getPlateauWindowBatch
+type PlateauRawSetRow = {
+  exercise_id: string;
+  session_id: string;
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+  rpe: number | null;
+  completed: number | boolean | null;
+  bodyweight_modifier_kg: number | null;
+};
+
+/** Build exercise→sessionIds and session→startedAt lookup from the sessions step. */
+function buildSessionsMap(
+  sessionRows: { exercise_id: string; session_id: string; started_at: number }[],
+  n: number,
+): { sessionsByExercise: Record<string, string[]>; startedAtBySession: Record<string, number> } {
+  const sessionsByExercise: Record<string, string[]> = {};
+  const startedAtBySession: Record<string, number> = {};
+  for (const row of sessionRows) {
+    if (!sessionsByExercise[row.exercise_id]) sessionsByExercise[row.exercise_id] = [];
+    if (sessionsByExercise[row.exercise_id].length < n) {
+      sessionsByExercise[row.exercise_id].push(row.session_id);
+      startedAtBySession[row.session_id] = row.started_at;
+    }
+  }
+  return { sessionsByExercise, startedAtBySession };
+}
+
+/** Aggregate a set of raw sets for one session into a PlateauSessionRow. */
+function aggregateSession(sessId: string, sets: PlateauRawSetRow[], startedAt: number): PlateauSessionRow | null {
+  if (sets.length === 0) return null;
+  let topSet: PlateauRawSetRow | null = null;
+  let topScore = -Infinity;
+  for (const s of sets) {
+    const score = (s.weight ?? 0) * (s.reps ?? 0);
+    if (score > topScore || (score === topScore && topSet != null && s.set_number > topSet.set_number)) {
+      topScore = score;
+      topSet = s;
+    }
+  }
+  const rpeValues = sets.map((s) => s.rpe).filter((r): r is number => r != null && r > 0);
+  const avgRPE = rpeValues.length > 0 ? rpeValues.reduce((a, b) => a + b, 0) / rpeValues.length : null;
+  return {
+    session_id: sessId,
+    started_at: startedAt,
+    top_set_weight: topSet?.weight ?? null,
+    top_set_reps: topSet?.reps ?? null,
+    top_set_rpe: topSet?.rpe ?? null,
+    avg_rpe: avgRPE,
+    all_completed: sets.every((s) => s.completed === 1 || s.completed === true),
+    set_count: sets.length,
+    bodyweight_modifier_kg: topSet?.bodyweight_modifier_kg ?? null,
+  };
+}
+
+/**
+ * Fetches the last `n` completed sessions of working (set_type='normal') sets
+ * for each exerciseId in the batch.
+ *
+ * Two-step pattern mirroring getRecentExerciseSetsBatch:
+ *   1. Sessions step — find last n session_ids per exercise (set_type='normal')
+ *   2. Sets step — fetch all normal sets for those sessions
+ *
+ * Returns a Map keyed by exercise_id. Missing exercises → empty array.
+ * Rows inside each exercise are sorted DESC by started_at (newest first).
+ *
+ * Index: idx_workout_sets_exercise (exercise_id) covers the sessions step.
+ */
+export async function getPlateauWindowBatch(
+  exerciseIds: string[],
+  n: number = 4,
+): Promise<Map<string, PlateauSessionRow[]>> {
+  const result = new Map<string, PlateauSessionRow[]>();
+  for (const eid of exerciseIds) result.set(eid, []);
+  if (exerciseIds.length === 0) return result;
+
+  const db = await getDrizzle();
+
+  // Step 1: find last n completed sessions per exercise (normal sets only)
+  const sessionRows = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      session_id: workoutSessions.id,
+      started_at: workoutSessions.started_at,
+    })
+    .from(workoutSessions)
+    .innerJoin(workoutSets, eq(workoutSets.session_id, workoutSessions.id))
+    .where(
+      and(
+        inArray(workoutSets.exercise_id, exerciseIds),
+        eq(workoutSets.set_type, "normal"),
+        isNotNull(workoutSessions.completed_at),
+      )
+    )
+    .groupBy(workoutSets.exercise_id, workoutSessions.id)
+    .orderBy(asc(workoutSets.exercise_id), desc(workoutSessions.started_at));
+
+  const { sessionsByExercise, startedAtBySession } = buildSessionsMap(sessionRows, n);
+  const allSessionIds = [...new Set(Object.values(sessionsByExercise).flat())];
+  if (allSessionIds.length === 0) return result;
+
+  // Step 2: fetch all normal sets for those sessions
+  const setRows = await db
+    .select({
+      exercise_id: workoutSets.exercise_id,
+      session_id: workoutSets.session_id,
+      set_number: workoutSets.set_number,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+      rpe: workoutSets.rpe,
+      completed: workoutSets.completed,
+      bodyweight_modifier_kg: workoutSets.bodyweight_modifier_kg,
+    })
+    .from(workoutSets)
+    .where(
+      and(
+        inArray(workoutSets.session_id, allSessionIds),
+        inArray(workoutSets.exercise_id, exerciseIds),
+        eq(workoutSets.set_type, "normal"),
+      )
+    )
+    .orderBy(asc(workoutSets.session_id), asc(workoutSets.set_number));
+
+  // Build intermediate map: exercise_id → session_id → sets[]
+  const byExerciseSession: Record<string, Record<string, PlateauRawSetRow[]>> = {};
+  for (const row of setRows as PlateauRawSetRow[]) {
+    const exMap = byExerciseSession[row.exercise_id] ?? {};
+    const sessArr = exMap[row.session_id] ?? [];
+    sessArr.push(row);
+    exMap[row.session_id] = sessArr;
+    byExerciseSession[row.exercise_id] = exMap;
+  }
+
+  // Aggregate to PlateauSessionRow per exercise
+  for (const exId of exerciseIds) {
+    const sessMap = byExerciseSession[exId] ?? {};
+    const sessIds = sessionsByExercise[exId] ?? [];
+    const plateauRows: PlateauSessionRow[] = [];
+    for (const sessId of sessIds) {
+      const row = aggregateSession(sessId, sessMap[sessId] ?? [], startedAtBySession[sessId] ?? 0);
+      if (row) plateauRows.push(row);
+    }
+    plateauRows.sort((a, b) => b.started_at - a.started_at);
+    result.set(exId, plateauRows);
+  }
+
+  return result;
+}
+
+/** Single-exercise convenience wrapper. */
+export async function getPlateauWindow(
+  exerciseId: string,
+  n: number = 4,
+): Promise<PlateauSessionRow[]> {
+  const batch = await getPlateauWindowBatch([exerciseId], n);
+  return batch.get(exerciseId) ?? [];
+}
+
 // ─── BLD-1111: RPE capture discoverability nudge predicate ──────────────────
 
 /**

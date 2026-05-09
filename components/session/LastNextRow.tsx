@@ -25,11 +25,13 @@ import React, { useState } from "react";
 import { Alert, Image, Modal, Pressable, StyleSheet, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { TrendingDown } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "../../constants/design-tokens";
 import type { SetWithMeta } from "./types";
 import type { Suggestion } from "../../lib/rm";
+import { applyBreakThroughFill, type BreakThroughSuggestion } from "../../lib/plateau";
 
 export type LastNextRowProps = {
   previousPerformance: string | null | undefined;
@@ -52,6 +54,10 @@ export type LastNextRowProps = {
   alertImpl?: typeof Alert.alert;
   /** BLD-1114: Previous session setup photo URI (16x16 thumbnail in Last half). */
   previousSetupPhotoUri?: string | null;
+  /** BLD-1122: Per-exercise plateau hint. When set, renders TrendingDown icon on the Next pill. */
+  plateauHint?: BreakThroughSuggestion | null;
+  /** BLD-1122: Atomic break-through apply callback (from useSessionActions). */
+  onApplyBreakThrough?: (updates: { id: string; weight: number | null; reps: number | null }[]) => Promise<void>;
 };
 
 function formatNextLabel(s: Suggestion): string {
@@ -100,11 +106,18 @@ function applyNextFill(
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
 
-function countEmpty(s: Suggestion, sets: SetWithMeta[]): number {
-  if (s.type === "rep_increase") {
-    return sets.filter((x) => !x.completed && (x.reps == null || x.reps === 0)).length;
+function countEmpty(s: Suggestion | BreakThroughSuggestion, sets: SetWithMeta[]): number {
+  if ("type" in s) {
+    // Suggestion (existing type)
+    if (s.type === "rep_increase") {
+      return sets.filter((x) => !x.completed && (x.reps == null || x.reps === 0)).length;
+    }
+    return sets.filter((x) => !x.completed && (x.weight == null || x.weight === 0)).length;
   }
-  return sets.filter((x) => !x.completed && (x.weight == null || x.weight === 0)).length;
+  // BreakThroughSuggestion — fully-empty predicate
+  return sets.filter(
+    (x) => !x.completed && (x.weight == null || x.weight === 0) && (x.reps == null || x.reps === 0),
+  ).length;
 }
 
 export function LastNextRow({
@@ -118,6 +131,8 @@ export function LastNextRow({
   exerciseName,
   alertImpl,
   previousSetupPhotoUri,
+  plateauHint,
+  onApplyBreakThrough,
 }: LastNextRowProps) {
   const colors = useThemeColors();
   const alertFn = alertImpl ?? Alert.alert;
@@ -139,6 +154,33 @@ export function LastNextRow({
   };
 
   const confirmAndApplyNext = () => {
+    // BLD-1122: if a plateau hint exists and we have an atomic apply callback,
+    // use the break-through atomic path.
+    if (plateauHint && onApplyBreakThrough && plateauHint.kind !== "form_check") {
+      const updates = applyBreakThroughFill(plateauHint, sets);
+      if (updates.length === 0) {
+        alertFn(
+          "All sets are filled",
+          "There are no empty sets to apply the suggestion to.",
+          [{ text: "OK", style: "cancel" }],
+        );
+        return;
+      }
+      const weightDesc =
+        plateauHint.kind === "rep_plus_one"
+          ? `reps: ${plateauHint.reps}`
+          : `weight: ${plateauHint.weight} × ${plateauHint.reps}`;
+      alertFn(
+        "Apply break-through suggestion?",
+        `Will fill ${updates.length} empty set${updates.length === 1 ? "" : "s"} with ${weightDesc}.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Apply", onPress: () => { onApplyBreakThrough(updates); } },
+        ],
+      );
+      return;
+    }
+
     if (!suggestion) return;
     const emptyCount = countEmpty(suggestion, sets);
     if (emptyCount === 0) {
@@ -257,13 +299,22 @@ export function LastNextRow({
           accessibilityHint={`Tap to apply suggested values to empty sets for ${exerciseName}`}
           testID="next-half"
         >
-          <MaterialCommunityIcons
-            name={nextLeadingIconName(suggestion)}
-            size={14}
-            color={colors.primary}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-          />
+          {plateauHint && plateauHint.kind !== "form_check" ? (
+            <TrendingDown
+              size={14}
+              color={colors.primary}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+          ) : (
+            <MaterialCommunityIcons
+              name={nextLeadingIconName(suggestion)}
+              size={14}
+              color={colors.primary}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+          )}
           <Text
             numberOfLines={2}
             style={[
