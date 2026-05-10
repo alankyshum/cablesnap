@@ -1,6 +1,6 @@
 # Feature Plan: Smart Rest Coach — pre-end cue + live countdown notification + next-set preview
 
-**Issue**: BLD-1137  **Author**: CEO  **Date**: 2026-05-10
+**Issue**: BLD-1137  **Author**: CEO  **Date**: 2026-05-10  **Revision**: rev-2 (addresses TL + QD requested changes; psych conditions folded into Scope/AC)
 **Status**: DRAFT → IN_REVIEW
 
 ## Research Source
@@ -17,210 +17,396 @@ CableSnap auto-starts a rest timer on set complete and fires a single "Rest comp
 This is the most-cited differentiator competitors charge for. Closing it is small surface area, no new deps, no behavioral hooks.
 
 ## Behavior-Design Classification (MANDATORY)
-- [x] **NO** — purely informational/functional cue. The feature delivers **task-relevant information at the moment the user already plans to perform the next set**. There is **no streak**, no XP, no reward loop, no re-engagement of lapsed users, no FOMO/loss-framing, no identity language, no social/leaderboard.
-- ⚠ Notification surface is on the §3.2 trigger list, so a **psychologist scoping verdict** is requested out of caution to confirm "ongoing functional countdown for an in-flight task" is not a behavior-shaping mechanism.
+- [x] **NO** — purely informational/functional cue. Confirmed by psychologist (Eyal Facilitator). All 7 binding conditions folded into Scope/AC below.
 
 ## What CableSnap has today
 - Auto-start rest timer on set complete (`hooks/useRestTimer.ts`, `useSessionActions.ts:469`).
-- Adaptive rest duration (BLD-531 `lib/rest.ts`).
+- Adaptive rest duration (BLD-531 `lib/rest.ts`; BLD-1110 `recomputeActiveRest` path).
 - Single fire-once "Rest complete" local notification (`lib/notifications.ts:155 scheduleRestComplete`).
 - Vibrate + sound at end (settings `rest_timer_vibrate`, `rest_timer_sound`).
+- Master `Rest Timer Notifications` toggle + permission gate (`components/settings/ReminderSection.tsx:103-139`).
 
 ## User Stories
-- As a lifter resting between sets with the phone face-down, I want a subtle cue 5–10s before rest ends so I can mentally prep (grip, breathing) and start the next set on time.
-- As a lifter resting with the phone in my pocket, I want a glanceable live countdown on the lock screen so I can check remaining time **without unlocking** (unlocking = social media trap).
-- As a lifter who reaches for the phone when rest ends, I want the rest-complete notification to **show the next set's exercise, target weight, and rep range** so I can step up and start without opening the app.
+- As a lifter resting between sets with the phone face-down, I want a subtle cue 5–10s before rest ends so I can mentally prep and start the next set on time.
+- As a lifter resting with the phone in my pocket, I want a glanceable live countdown on the lock screen so I can check remaining time **without unlocking** (avoids the social-media unlock trap).
+- As a lifter who reaches for the phone when rest ends, I want the rest-complete notification to **show the next set's exercise, target weight, and rep range** so I can step up and start without opening the app — but **only if I've explicitly opted in**, since this exposes training data on the lock screen.
 
 ## Proposed Solution
 
 ### Overview
-Replace the single fire-at-end scheduling call with a **scheduled set of up to three notifications per rest interval**, plus a **live ongoing notification** (Android) / **dynamic content update** (iOS) that updates remaining time. All scheduled locally via `expo-notifications` — no cloud, no new deps.
+Replace the single fire-at-end scheduling call with **up to three notifications per rest interval** (pre-end cue, live ongoing countdown, rest-complete), all scheduled locally via `expo-notifications` — no cloud, no new deps, no SDK bump (verified against `expo-notifications@~55.0.19`).
+
+### Bootstrap (NEW — addresses TL Defect #2)
+
+On app boot (lazy-init in `lib/notifications.ts` triggered by first call from `app/_layout.tsx`), register two new Android channels alongside the existing rest channel:
+
+```ts
+// constants exported from lib/notifications.ts
+export const REST_ONGOING_CHANNEL = "rest-ongoing";
+export const REST_CUE_CHANNEL = "rest-cue";
+// existing (unchanged): "rest-complete"
+
+await setNotificationChannelAsync(REST_ONGOING_CHANNEL, {
+  name: "Rest timer (ongoing)",
+  importance: AndroidImportance.LOW,
+  sound: null,
+  vibrationPattern: [],
+  showBadge: false,
+});
+await setNotificationChannelAsync(REST_CUE_CHANNEL, {
+  name: "Rest pre-end cue",
+  importance: AndroidImportance.LOW,
+  sound: null,
+  vibrationPattern: [],
+  showBadge: false,
+});
+```
+
+Channels are no-ops on iOS (function returns null). Idempotent — safe to call on every cold start.
 
 ### UX Design
 
-**Settings (new, in existing Rest Timer settings group):**
-- `rest_timer_pre_end_cue_seconds` — integer, 0=off, default `10`. Range: 0, 5, 10, 15, 20.
-- `rest_timer_live_countdown` — boolean, default `true` on Android, `false` on iOS (iOS has no true ongoing-notification; falls back to dynamic body updates only — see Edge Cases).
-- `rest_timer_show_next_set_preview` — boolean, default `true`.
+**Settings (new, in existing Rest Timer settings group under the existing master `Rest Timer Notifications` switch in `ReminderSection.tsx`):**
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `rest_timer_pre_end_cue_seconds` | int (0/5/10/15/20) | `10` | 0 = off |
+| `rest_timer_live_countdown` | bool | Android: `true`, iOS: `false` (and runtime-ignored on iOS) | |
+| `rest_timer_show_next_set_preview` | bool | **`false`** (privacy-safe default — addresses QD #1) | Shows exercise/weight on lock screen when on. |
+
+**Master-switch / permission interaction (NEW — addresses QD #2):**
+- When master `Rest Timer Notifications` is OFF, all three child rows render **disabled** with greyed labels and helper text: `Enable rest-timer notifications to use these.`
+- When OS notification permission is **denied**, the master row already shows the existing permission-denied chip; child rows render disabled with helper text `Notifications are blocked in iOS/Android Settings.`
+- When master is OFF or permission is denied, **no scheduling calls fire** — `useRestTimer` short-circuits before calling any notification helper.
 
 **Notification surfaces:**
 
 1. **Pre-end cue notification** (when `rest_timer_pre_end_cue_seconds > 0` AND remaining ≥ pre_end + 2s safety):
    - Title: `Rest ending in {N}s`
-   - Body (with preview enabled): `Next: {exercise} — {target_weight}{unit} × {rep_range}`
-   - Body (preview off): `Next set in {N}s`
-   - Sound: silent (no vibrate/ding here — this is a glance cue, not an alarm).
-   - Tag/identifier: `rest-preend-{sessionId}`.
+   - Body (preview enabled AND next set resolved): `Next: {previewBody}` (see preview-formatting rules below)
+   - Body (preview disabled OR no next set OR null preview): `Next set in {N}s` (or `Workout ending in {N}s` if last set of session)
+   - Sound: silent (Android: `REST_CUE_CHANNEL` sound:null; iOS: `interruptionLevel: 'passive'` — addresses TL #3)
+   - Identifier: `rest-preend-{sessionId}`
+   - Channel (Android): `REST_CUE_CHANNEL`
+   - **Foreground behavior** (TL #8): if `AppState === 'active'` at scheduled fire time, suppress the system notification and fire `Haptics.selectionAsync()` instead. Implementation: schedule with the notification and add a foreground handler that swallows + replays haptic. (Acceptable simplification: schedule unconditionally; rely on `setNotificationHandler` to filter `data.type === 'rest_preend'` in foreground → return `{ shouldShowAlert: false, shouldPlaySound: false }` and trigger haptic.)
 
 2. **Rest-complete notification** (existing, enhanced):
    - Title: `Rest complete`
-   - Body (with preview enabled): `{exercise} — {target_weight}{unit} × {rep_range}`
-   - Body (preview off): `Time for your next set` (unchanged).
-   - Sound + vibrate respect existing `rest_timer_sound` / `rest_timer_vibrate` settings (UNCHANGED).
-   - Tag/identifier: `rest-complete-{sessionId}` (unchanged).
+   - Body (preview enabled AND next set resolved): `{previewBody}`
+   - Body (preview disabled OR no next set): `Time for your next set` (last-set fallback: `Last set complete`)
+   - Sound + vibrate: respect existing `rest_timer_sound`/`rest_timer_vibrate` (UNCHANGED)
+   - iOS `interruptionLevel: 'active'` (default — banner + sound respected)
+   - Identifier: `rest-complete-{sessionId}` (unchanged)
 
-3. **Live ongoing notification** (Android only, when `rest_timer_live_countdown=true`):
+3. **Live ongoing notification** (Android only, when `rest_timer_live_countdown=true` AND `rest_timer_show_next_set_preview` honored):
    - Title: `Resting · {mm:ss} remaining`
-   - Body: `{exercise} · Next: {target_weight}{unit} × {rep_range}` (or `Resting…` if preview off).
-   - `ongoing: true`, `sticky: true`, no sound, no vibrate, low priority (no heads-up).
-   - Updated every **5 seconds** via `setNotificationChannelAsync` + `presentNotificationAsync` (re-present same id replaces in-place on Android).
-   - Cancelled at rest-complete and on user "skip rest".
+   - Body: `{previewBody}` (preview on AND resolved) OR `Resting…` (preview off OR no next set)
+   - Channel: `REST_ONGOING_CHANNEL`; `sticky: true`, `priority: AndroidNotificationPriority.LOW`
+   - Re-presented every **5 seconds** via `scheduleNotificationAsync({ identifier: 'rest-live-{sessionId}', trigger: null, ... })` — reusing the identifier replaces the existing presentation in place (TL #1 fix; `presentNotificationAsync` does NOT exist in expo-notifications v55).
+   - Cancelled at: rest-complete fire, user "skip rest", user "end workout", adaptive-rest reschedule (cancel-then-reschedule).
 
-**Settings screen surface (`app/settings/notifications.tsx` or wherever rest settings live):**
-Three new rows under Rest Timer:
-```
-Pre-end cue          [Off · 5s · 10s · 15s · 20s]      ← segmented control
-Live countdown       [Toggle]   (Android only label)
-Show next set        [Toggle]
-```
-Help text under "Live countdown" on iOS: `Live countdown is Android-only. iOS shows a single rest-complete notification.`
+**Preview body formatting (NEW — addresses QD #3):**
 
-**Empty/null state:** if no next set exists (last set of session), preview falls back to `"Last set complete"` (and pre-end cue body falls back to `"Workout ending in {N}s"`).
+Source precedence (first non-null wins):
+1. The **active session's next uncompleted planned set** (next row in the active exercise group's set list, queried from `useSessionData`). Provides exerciseName, plannedReps, plannedWeight (may be null for bodyweight or time-based), exerciseKind.
+2. **Fallback**: progression suggestion from `lib/rm.ts suggest()` only when (1) returns null/no-next-set within the same exercise group.
+3. If both null → preview is `null`; bodies use the no-preview fallback copy.
+
+Body templates by exercise kind (renderer function, fully unit-tested):
+
+| Exercise kind | Has weight? | Body format | Example |
+|---|---|---|---|
+| `weighted` | yes | `{exercise} — {formatWeight(w, unit)} × {repRange}` | `Cable Row — 60 lb × 8-10` |
+| `weighted` | null/0 | `{exercise} — bodyweight × {repRange}` | `Pull-Up — bodyweight × 5-8` |
+| `bodyweight` | (always) | `{exercise} — bodyweight × {repRange}` | `Push-Up — bodyweight × 12` |
+| `time_based` | n/a | `{exercise} — {duration}` | `Plank — 0:45` |
+| `distance` | n/a | `{exercise} — {distance}{unit}` | `Sled Push — 20 m` |
+
+**Hard rule:** under no circumstances may a user-visible body contain `null`, `undefined`, `NaN`, `kg` with no number, or a bare separator. Renderer is defensive: missing fields → use no-preview fallback rather than emit malformed text. Source-contract test asserts the rendered output of every kind+null-combination set never matches `/null|undefined|NaN|^\s*kg|^\s*lb|—\s*$/i`.
+
+**Settings UI (`components/settings/ReminderSection.tsx`, three new rows under master switch):**
+```
+Pre-end cue          [Off · 5s · 10s · 15s · 20s]      ← segmented
+Live countdown       [Toggle]   (Android only)         ← hidden on iOS (conditional render)
+Show next set        [Toggle]   ⓘ "Shows your next exercise and target on the lock screen."
+```
+iOS-only help under hidden Live countdown: surfaced via existing iOS limitation footnote (no new copy).
+
+iOS row hidden via `Platform.OS !== 'ios'` conditional render — keeps the surface honest (psych condition #5: no "switch to Android" framing).
 
 ### Technical Approach
 
-**Architecture:**
-- Extend `lib/notifications.ts` with three new exports:
-  - `schedulePreEndCue(secondsUntilEnd, preview, sessionId)` → returns id or null.
-  - `presentLiveRestCountdown(secondsRemaining, preview, sessionId)` → idempotent re-present (Android only).
-  - `cancelLiveRestCountdown(sessionId)`.
-- Existing `scheduleRestComplete` gains optional `preview?: NextSetPreview` param. Backward compatible (caller may omit).
-- `NextSetPreview` shape: `{ exerciseName: string; targetWeight: number | null; weightUnit: "lb" | "kg"; repRange: string }`.
+**Architecture (lib/notifications.ts):**
 
-**Hook integration (`hooks/useRestTimer.ts`):**
-- On rest start (after computing `seconds`), in parallel:
-  1. Read settings (cue seconds, live toggle, preview toggle) once.
-  2. Resolve next-set preview via existing session/exercise data (no new DB queries — data already in memory in `useSessionData`).
-  3. If `cueSeconds > 0 && seconds > cueSeconds + 2`, call `schedulePreEndCue(seconds - cueSeconds, ...)`.
-  4. Call `scheduleRestComplete(seconds, sessionId, preview)`.
-  5. If Android + live toggle on, start a `setInterval(presentLiveRestCountdown, 5000)`; clear on rest-complete or skip.
+```ts
+export const REST_ONGOING_CHANNEL = "rest-ongoing";
+export const REST_CUE_CHANNEL = "rest-cue";
 
-**Cancellation paths:** existing `cancelRestComplete` extended to also cancel pre-end cue and live countdown for the session. Add `cancelAllRestNotifications(sessionId)` helper.
+export type NextSetPreview = {
+  exerciseName: string;
+  exerciseKind: "weighted" | "bodyweight" | "time_based" | "distance";
+  plannedWeight: number | null;
+  weightUnit: "lb" | "kg";
+  repRange: string | null;
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+} | null;
 
-**Next-set preview resolution:**
-Already-in-memory data only:
-- Current `exerciseId` and the next planned set in the active session group (from `useSessionData`).
-- Target weight: re-use existing `lib/rm.ts suggest()` output (already wired into `LastNextRow`).
-- Weight unit: from `getAppSetting("weight_unit")`.
+export function formatPreviewBody(p: NextSetPreview): string | null;
 
-If the suggest call fails or no next set exists → preview is `null` → bodies fall back to existing copy.
+export async function ensureRestChannelsRegistered(): Promise<void>;
 
-**Performance:**
-- 3 scheduled notifications per rest interval (vs 1 today). Negligible — `expo-notifications` handles thousands.
-- Live countdown updates every 5s via JS timer + native re-present; no battery impact (system handles ongoing).
-- No new SQLite reads in the hot path — preview is plumbed in via React state already in scope.
+export async function schedulePreEndCue(
+  secondsUntilCue: number,
+  preview: NextSetPreview,
+  isLastSet: boolean,
+  cueSeconds: number,
+  sessionId: string
+): Promise<string | null>;
 
-**Storage:**
-- 3 new keys in app_settings. Migration via existing `addColumnIfMissing`-style insert-or-default pattern.
+export async function scheduleRestComplete(
+  seconds: number,
+  sessionId: string,
+  preview?: NextSetPreview,
+  isLastSet?: boolean
+): Promise<string | null>; // backward-compatible
 
-**Dependencies:** none. Uses existing `expo-notifications` only.
+export async function presentLiveRestCountdown(
+  secondsRemaining: number,
+  preview: NextSetPreview,
+  sessionId: string
+): Promise<string | null>; // Android only; no-op on iOS
+
+export async function cancelAllRestNotifications(sessionId: string): Promise<void>;
+```
+
+**Hook integration (hooks/useRestTimer.ts):**
+
+- `startRest()` signature extended (TL #5 option a — caller-injects):
+  ```ts
+  startRest(seconds: number, opts?: { preview?: NextSetPreview; isLastSet?: boolean })
+  ```
+- Session screen (already holds `useSessionData` + `useRestTimer`) computes preview + `isLastSet` per BLD-1137 preview source precedence, passes into `startRest()`.
+- On `startRest`:
+  1. Read settings: `rest_timer_pre_end_cue_seconds`, `rest_timer_live_countdown`, `rest_timer_show_next_set_preview`, plus master switch and permission state (already in `useRestTimer`).
+  2. Short-circuit if master OFF or permission denied.
+  3. If preview disabled or `opts.preview === undefined` → use no-preview body templates.
+  4. If `cueSeconds > 0 && seconds > cueSeconds + 2` → call `schedulePreEndCue(seconds - cueSeconds, ...)`.
+  5. Call `scheduleRestComplete(seconds, sessionId, preview, isLastSet)`.
+  6. If `Platform.OS === 'android' && live` → call `presentLiveRestCountdown` immediately, then start a `setInterval(..., 5000)` keyed on the session.
+- All three resulting IDs stored in `notificationIdsRef.current = { preEnd?, complete?, liveOngoing? }` and persisted (see Persistence below).
+
+**Cancellation paths (TL #6):**
+Rename `cancelNotification` → `cancelAllRestNotifications(sessionId)`. Updated call sites:
+- Skip rest (`hooks/useRestTimer.ts:138` today).
+- Natural rest end (`hooks/useRestTimer.ts:193` today).
+- Adaptive-rest reschedule (`recomputeActiveRest` BLD-1110 path, `lib/rest.ts`).
+- **End workout** (`useSessionActions.ts` end-of-session path) — psych condition #6.
+- App background → eviction of stale-session timers.
+
+Implementation: walks `notificationIdsRef.current`, calls `cancelScheduledNotificationAsync` for each, dismisses live ongoing via `dismissNotificationAsync(identifier)`, clears the live-countdown interval, then clears the ref + persisted state.
+
+### Persistence (NEW — addresses TL #4)
+
+Existing schema:
+```ts
+type PersistedRestTimerState = {
+  sessionId: string;
+  endTimestamp: number;
+  notificationId: string | null; // legacy
+};
+```
+
+New schema:
+```ts
+type PersistedRestTimerState = {
+  sessionId: string;
+  endTimestamp: number;
+  notificationIds: { preEnd?: string; complete?: string; liveOngoing?: string };
+  previewSnapshot: NextSetPreview; // captured at startRest so cold-start can re-present without DB
+  isLastSet: boolean;
+  cueSeconds: number;
+  liveEnabled: boolean;
+};
+```
+
+**Migration:** reader is permissive — if `notificationIds` missing, read `notificationId` and treat as `{ complete: <id> }`. Writer always emits new shape. No schema bump required (AsyncStorage JSON blob).
+
+**Cold-start resume sequence** (when `useRestTimer` mounts and finds persisted state with `endTimestamp > now`):
+1. Compute `secondsRemaining = Math.max(0, Math.floor((endTimestamp - now)/1000))`.
+2. Cancel any persisted IDs whose corresponding feature was disabled in settings since (read settings, compare to `previewSnapshot`/`liveEnabled`).
+3. If `secondsRemaining > cueSeconds + 2` AND no persisted `preEnd` ID → re-schedule pre-end cue.
+4. If `liveEnabled` AND Android AND no live JS interval → call `presentLiveRestCountdown` immediately with `previewSnapshot` and start the 5s interval.
+5. If `secondsRemaining <= 0` → immediately fire onComplete handler, clear state.
+
+### Performance
+- 3 scheduled notifications + 1 ongoing re-present every 5s per rest interval. Well within `expo-notifications` capacity.
+- Live countdown: 5s JS timer (`setInterval`) + native re-present (O(1)). Cleared at rest-complete; no leak.
+- Preview computation: bounded — single in-memory lookup, no DB hit (preview snapshot stored at startRest).
+- No new SQLite reads in the hot path.
+
+### Storage
+- 3 new keys in `app_settings`. Migration via existing `addColumnIfMissing`-style insert-or-default pattern.
+
+### Dependencies
+None new. `expo-notifications@~55.0.19` and `expo-haptics` already present.
+
+### F-Droid build impact
+None. No new native modules; no GMS/MLKit/Firebase pull-ins. Existing F-Droid build pipeline (`fdroid/`, `releaseFdroid` flavor) unaffected.
 
 ## Scope
 
-**In:**
-- New settings + UI rows.
-- New notification helpers + hook plumbing.
-- Pre-end cue, live countdown (Android), enhanced rest-complete body.
-- Fallback behavior on iOS (no ongoing notification — only pre-end cue + enhanced rest-complete).
-- Tests: lib/notifications.ts (new helpers), hook orchestration (timer + preview wiring), settings persistence, e2e Playwright dev-harness scenario covering settings toggles.
+### In
+- New settings + UI rows in `ReminderSection.tsx` with master-switch / permission disabled states.
+- New notification helpers in `lib/notifications.ts` (channels, preview formatter, helpers, rename to `cancelAllRestNotifications`).
+- Channel registration on cold start.
+- Hook plumbing in `useRestTimer.ts` (settings read, three-id ref, persisted state migration, cold-start resume, cancel-all replacement).
+- Caller-side preview computation in session screen (consumes `useSessionData` + `lib/rm.ts`); `startRest(seconds, { preview, isLastSet })` signature extension.
+- `End workout` cancels live countdown (psych #6).
+- iOS: `interruptionLevel: 'passive'` for pre-end cue; `'active'` for rest-complete (default).
+- Foreground pre-end cue → haptic instead of banner (`setNotificationHandler` filter on `data.type === 'rest_preend'`).
+- **MAX_TESTS bump** in `scripts/audit-tests.sh`: `2845 → 2860` with justification block (`+ ~12 tests for BLD-1137: 4 helpers × ~3 tests + 3 source-contract assertions`). No `--no-verify`.
+- Tests:
+  - `lib/notifications.test.ts` — channel registration idempotence, helper signatures, formatter correctness for all 5 kind+null combos.
+  - `lib/notifications.formatPreview.test.ts` — defensive renderer (null weight, null reps, bodyweight, time-based, distance, missing fields).
+  - `hooks/useRestTimer.test.ts` — settings short-circuit, 3-id orchestration, cancel-all, cold-start resume, persistence migration from legacy single-id.
+  - `__tests__/source-contracts-batch.test.ts` — three new assertions:
+    - **AC14a** (psych condition #1): forbidden-copy regex absent from rest-notification copy templates and from rendered formatPreview output.
+    - **AC14b** (QD #3 / preview safety): rendered formatPreview never matches `/null|undefined|NaN/i` for any combination of (weighted|bodyweight|time_based|distance) × (null weight|null reps|null both).
+    - **AC14c**: title constants `Rest ending in {N}s`, `Rest complete`, `Resting · {mm:ss} remaining` are stable string templates (no env interpolation, no untranslated TODO markers).
+  - E2E Playwright dev-harness (`app/__test__/rest-coach.tsx`) for settings toggles + master-switch disabled state.
 
-**Out (explicitly):**
+### Out (and stays out — psych binding)
 - Push notifications, server delivery, account-bound features.
-- Apple Live Activities / Dynamic Island (separate future plan if requested — requires native module).
+- Apple Live Activities / Dynamic Island (separate plan; needs native module).
 - Wear OS / watchOS surfaces.
-- Auto-start the next set when timer ends (deliberate — user must initiate).
-- Streaks, XP, completion rewards, "you finished N rests on time" gamification.
-- Customizing pre-end cue sound (uses silent only — keeping it an information cue, not an alarm).
-- Notification action buttons ("Skip rest", "Add 30s") — possible follow-up issue but out of this scope.
+- **Auto-start the next set when timer ends** — psych condition #7: any future request flips classification Facilitator → Entertainer and requires fresh psych review.
+- Streaks, XP, completion rewards, "you finished N rests on time" gamification — psych condition #3.
+- "Rest performance" telemetry / `started within Ns of cue` aggregation — psych condition #2.
+- "Perfect timing" badges, "n-in-a-row" chips — psych condition #3.
+- Customizing pre-end cue sound (silent only).
+- Notification action buttons (Skip rest / +30s) — possible follow-up, not this PR.
 
 ## Acceptance Criteria
 
-- [ ] AC1 — Settings screen exposes the three new rows (Pre-end cue, Live countdown, Show next set) with stated defaults; iOS hides Live countdown toggle or disables it with help text.
-- [ ] AC2 — Given `rest_timer_pre_end_cue_seconds=10` and a 60s rest, when rest starts, then a notification fires at T+50s with title "Rest ending in 10s" and a body matching the preview-enabled/disabled rule above.
-- [ ] AC3 — Given `rest_timer_pre_end_cue_seconds=10` and a 5s rest, when rest starts, then NO pre-end cue is scheduled (5 < 10+2).
-- [ ] AC4 — Given Android + `rest_timer_live_countdown=true`, when rest starts at 60s, then an ongoing notification appears within 1s with title `Resting · 1:00 remaining` and updates at 0:55, 0:50, … (verified with 5s ticks).
-- [ ] AC5 — Given `rest_timer_show_next_set_preview=true` and a next set exists, the rest-complete notification body equals `{exercise} — {target_weight}{unit} × {rep_range}` exactly.
-- [ ] AC6 — Given `rest_timer_show_next_set_preview=true` and no next set exists, the rest-complete body falls back to `Last set complete` (no nulls in user-visible text).
-- [ ] AC7 — Given user taps "Skip rest", all three notifications (pre-end cue, live countdown, rest-complete) for the active session are cancelled within 500ms.
-- [ ] AC8 — Existing `rest_timer_sound`/`rest_timer_vibrate` continue to apply ONLY to the rest-complete notification (pre-end cue + live countdown remain silent).
-- [ ] AC9 — Settings persist across app restart (verified by reading `getAppSetting` on cold start).
-- [ ] AC10 — On iOS, `rest_timer_live_countdown` setting is ignored at runtime (no live countdown attempted) AND the UI surfaces this clearly (disabled or hidden).
-- [ ] AC11 — Bundle size delta < 5 KB (no new deps, sanity check).
-- [ ] AC12 — All `npm test`, `npm run typecheck`, `npm run lint` pass; no new lint warnings.
-- [ ] AC13 — `scripts/audit-tests.sh` budget respected (bump with comment if needed; do not `--no-verify`).
+- [ ] **AC1 — Settings layout.** `ReminderSection.tsx` renders three new rows in this order under the master switch: Pre-end cue (segmented 0/5/10/15/20), Live countdown (toggle, **rendered only on Android**), Show next set (toggle). Defaults: pre-end=10, live=true (Android), live=false (iOS), preview=**false**.
+- [ ] **AC2 — Pre-end cue scheduling.** Given `rest_timer_pre_end_cue_seconds=10`, master ON, permission granted, and a 60s rest, when `startRest(60, ...)` is called, then a notification is scheduled with identifier `rest-preend-{sessionId}` to fire at `~T+50s` with title `Rest ending in 10s` and the body matching the preview-on/off rule.
+- [ ] **AC3 — Pre-end cue safety threshold.** Given `rest_timer_pre_end_cue_seconds=10` and a 5s rest, no pre-end cue is scheduled (5 < 10+2).
+- [ ] **AC4 — Live countdown timing.** Given Android + `rest_timer_live_countdown=true` + master ON + permission granted, when `startRest(60, ...)` is called, the ongoing notification with identifier `rest-live-{sessionId}` appears within **1s** of `startRest()` and re-presents every **5s (±500ms)** until cancellation.
+- [ ] **AC5 — Rest-complete preview body.** Given `rest_timer_show_next_set_preview=true` and a next set exists, the rest-complete body equals exactly `formatPreviewBody(preview)` per the kind table (e.g. `Cable Row — 60 lb × 8-10`).
+- [ ] **AC6 — No-next-set fallback.** Given `rest_timer_show_next_set_preview=true` and no next set exists, body = `Last set complete`. With preview off and no next set, body = `Last set complete`. Pre-end body = `Workout ending in {N}s`.
+- [ ] **AC7 — Cancel-all on skip / end-workout / adaptive reschedule.** Given any of (a) user taps Skip rest, (b) user taps End workout, (c) BLD-1110 `recomputeActiveRest` fires, all of `rest-preend-{sessionId}`, `rest-complete-{sessionId}`, `rest-live-{sessionId}` are cancelled within **500ms** AND the live-countdown JS interval is cleared. (Psych condition #6 covered.)
+- [ ] **AC8 — Sound/vibrate scope.** `rest_timer_sound`/`rest_timer_vibrate` apply ONLY to rest-complete. Pre-end cue uses `REST_CUE_CHANNEL` (silent) on Android and `interruptionLevel: 'passive'` on iOS. Live countdown uses `REST_ONGOING_CHANNEL` (silent, LOW priority) — no heads-up.
+- [ ] **AC9 — Settings persistence.** All three new settings persist across cold restart (verified by reading `getAppSetting` after process kill).
+- [ ] **AC10 — iOS honesty.** `Live countdown` row is **not rendered** on iOS (`Platform.OS !== 'ios'` gate). If a stored value of `true` exists from Android backup, it is ignored at runtime — no live notification scheduled, no crash, no upgrade-framing copy anywhere.
+- [ ] **AC11 — Master switch / permission gating.** When master `Rest Timer Notifications` is OFF or OS permission is denied, the three child rows render disabled with the documented helper text AND `useRestTimer` short-circuits before any notification helper is called (verified by spy on `scheduleNotificationAsync`).
+- [ ] **AC12 — Cold-start resume.** Given app killed mid-rest with `secondsRemaining > cueSeconds + 2`, when reopened, the live countdown reappears within **2s** of foreground and any missing scheduled notifications are re-scheduled per the resume sequence.
+- [ ] **AC13 — Persistence migration.** A persisted state in legacy `notificationId: string` shape is read without error and treated as `notificationIds.complete`.
+- [ ] **AC14a — Source-contract: forbidden copy.** `__tests__/source-contracts-batch.test.ts` asserts no rest-notification template (titles, bodies, settings labels, helper text) and no `formatPreviewBody` output contains case-insensitive matches for: `Hurry`, `Don't lose`, `falling behind`, `Streak`, `Faster!`, `Push harder`, `Get ready!`, or warning emojis (⚠️🔥⏰❗). (Psych condition #1.)
+- [ ] **AC14b — Source-contract: preview safety.** Source-contract test asserts `formatPreviewBody` output for every combination of (`weighted`|`bodyweight`|`time_based`|`distance`) × (null weight | null reps | null duration | null distance | all-null) never matches `/null|undefined|NaN|^\s*kg\b|^\s*lb\b|—\s*$/i` AND falls back to `null` (no-preview) rather than emit malformed strings.
+- [ ] **AC14c — Source-contract: title stability.** Source-contract test pins title templates `Rest ending in {N}s`, `Rest complete`, `Resting · {mm:ss} remaining` (no env-interpolated branding, no TODO markers).
+- [ ] **AC15 — Foreground pre-end cue.** Given `AppState === 'active'` when pre-end cue is due, the system notification banner is suppressed via `setNotificationHandler` returning `{ shouldShowAlert: false, shouldPlaySound: false }` for `data.type === 'rest_preend'`, AND `Haptics.selectionAsync()` fires (verified via spy).
+- [ ] **AC16 — Channels registered.** `ensureRestChannelsRegistered()` is invoked once per cold start (Android), idempotent, and registers `REST_ONGOING_CHANNEL` (LOW, silent, no vibrate, no badge) and `REST_CUE_CHANNEL` (LOW, silent, no vibrate). No-op on iOS.
+- [ ] **AC17 — AC4 wording resolved.** `appears within 1s of startRest()` AND `re-presents every 5s (±500ms)` are both true (resolves earlier rev-1 contradiction).
+- [ ] **AC18 — Test budget bumped.** `scripts/audit-tests.sh` `MAX_TESTS` is updated from `2845 → 2860` in this PR with the justification block describing the BLD-1137 additions. No `--no-verify` push.
+- [ ] **AC19 — Bundle size.** Bundle delta < 5 KB (no new deps).
+- [ ] **AC20 — Lint/type/test green.** `npm test`, `npm run typecheck`, `npm run lint` all pass; no new lint warnings.
 
 ## Edge Cases
 
 | Scenario | Expected Behavior |
 |----------|------------------|
-| Rest duration shorter than `pre_end_cue + 2s` | Skip pre-end cue (AC3). |
+| Rest duration ≤ `pre_end_cue + 2s` | Skip pre-end cue (AC3). |
 | Last set of workout (no next set) | Pre-end body = `Workout ending in {N}s`; rest-complete body = `Last set complete`. |
-| User changes settings mid-rest | Existing scheduled notifications keep their already-set bodies; new bodies apply on next rest start. (Cheaper + zero risk vs hot-replacement.) |
-| App killed mid-rest | Scheduled notifications still fire (OS-level). Live countdown stops because JS timer dies — this is acceptable; on re-foreground we resume the live notification from the persisted timer state. |
-| Notification permission denied | All helpers return null (existing pattern); no errors surfaced to user. |
-| Adaptive rest changes duration after start (BLD-531) | Cancel old scheduled set, re-schedule with new duration. Existing cancel pattern is reused. |
-| Multiple rapid set completes | Each rest start cancels the previous session's notifications first (idempotent cleanup). |
-| iOS user with Live countdown stored as `true` from Android backup | Setting honored as stored but ignored at runtime; no crash. |
-| Locale / RTL | Strings sent to i18n layer (existing `t()` pattern); preview format unchanged. |
-| Weight unit kg vs lb | Pulled from `weight_unit` setting; unit suffix matches; no rounding (use existing `formatWeight`). |
+| User changes settings mid-rest | Existing scheduled notifications keep their bodies; new bodies apply on next rest start (no hot-replacement). |
+| App killed mid-rest | Cold-start resume sequence (AC12). |
+| Master switch OFF or permission denied | Child rows disabled; no scheduling (AC11). |
+| Notification permission becomes denied mid-rest | Existing scheduled notifications no-op at OS level; cancel-all on next start is still safe. |
+| Adaptive rest changes duration after start (BLD-531/1110) | Cancel-all then re-schedule with new duration (AC7). |
+| Multiple rapid set completes | Each `startRest` cancels the prior session's IDs first (idempotent cleanup). |
+| iOS user with `live_countdown=true` from Android backup | Honored as stored, ignored at runtime, row not rendered (AC10). |
+| Bodyweight exercise (weight=null, kind=weighted) | Body: `{exercise} — bodyweight × {repRange}`. |
+| Bodyweight exercise (kind=bodyweight) | Body: `{exercise} — bodyweight × {repRange}`. |
+| Time-based set (Plank etc.) | Body: `{exercise} — {mm:ss}`. |
+| Distance set (Sled push etc.) | Body: `{exercise} — {distance}{unit}`. |
+| Next planned set has null reps AND null weight | `formatPreviewBody → null` → no-preview fallback body used. AC14b. |
+| Locale / RTL | Strings routed through existing `t()` helper; preview format respects locale-aware number formatting via `formatWeight`. |
+| Weight unit kg/lb | From `weight_unit` setting; rendered via existing `formatWeight`. |
 | No internet | Fully functional — all local. |
-| Foreground vs background | Pre-end cue + rest-complete fire identically (scheduled). Live countdown only visible from notification shade — if app is foreground, optional dismiss to avoid duplicate cue (UX nicety; default keep showing for consistency). |
+| Foreground pre-end cue | Haptic + suppress banner (AC15). |
+| Foreground rest-complete | Banner shown normally (existing behavior); no haptic added. |
+| App backgrounded with live countdown active | Live notification stays in shade; JS interval throttled by OS but still re-presents on resume. |
+| Live countdown on Android < API 26 | Channels API no-ops cleanly (expo-notifications handles). LOW priority + sticky still applied via legacy path. |
 
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| iOS lacks true ongoing-notification → users expect feature parity | Medium | Medium | Hide/disable toggle on iOS, document with help text, document in CHANGELOG. Future native-module plan if demand emerges. |
-| Notification spam perception (3 vs 1) | Low | Medium | Pre-end cue silent + low-priority; live countdown silent ongoing; rest-complete unchanged. Settings allow disabling each independently. |
-| Battery from 5s timer ticks | Low | Low | JS timer is cheap; native re-present is O(1). Stops at rest-complete. |
-| Notification ID collisions | Low | Medium | Tags include `sessionId`. Cleanup on session end. |
-| Behavior-shaping accusation (notifications are §3.2 triggers) | Low | High | Plan-classified NO; psychologist scoping verdict requested; no streaks/rewards/identity/loss-framing in copy. Pure functional cue for in-flight task. |
-| Adaptive rest re-schedule races | Medium | Low | Cancel-then-schedule pattern; existing test coverage extended. |
-| Test budget exceeded | Medium | Low | Add justification block in `scripts/audit-tests.sh` per repo convention. |
+| Lock-screen privacy backlash | Low (default OFF) | High | Preview defaults OFF; explicit opt-in row says "Shows your next exercise and target on the lock screen." |
+| iOS feature-parity expectation | Medium | Medium | iOS row hidden, no upgrade-framing (psych #5); Live Activities punted to separate plan. |
+| Notification spam perception | Low | Medium | Pre-end cue silent; live countdown silent ongoing LOW; rest-complete unchanged. Master switch + 3 independent toggles. |
+| Battery from 5s ticks | Low | Low | JS timer cheap; cleared at rest end. |
+| Notification ID collisions | Low | Medium | All IDs scoped by `sessionId`. Cancel-all walk on session end. |
+| Cold-start resume race | Medium | Low | Re-derive from `endTimestamp`; cancel stale; re-present; explicit AC12. |
+| Behavior-shaping accusation | Low (psych APPROVED) | High | All 7 psych conditions folded into Scope/AC; source-contract tests AC14a/b/c lock the contract. |
+| Adaptive rest reschedule races | Medium | Low | Cancel-all then schedule; AC7 covers. |
+| Test budget exceeded | Low (bumped to 2860) | Low | Bump in this PR per repo convention; no `--no-verify`. |
+| `setNotificationHandler` global state collision | Low | Medium | Filter by `data.type === 'rest_preend'`; chain through any pre-existing handler (defensive composition). |
 
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+
+**rev-1 Verdict: REQUEST CHANGES** (4 blockers, 2026-05-10 comment e4fd1321). All addressed in rev-2:
+
+| QD blocker | rev-2 fix |
+|---|---|
+| 1. Lock-screen privacy default | `rest_timer_show_next_set_preview` default flipped from `true` → `false`. Row helper text added. AC1 + AC5/6 reflect. |
+| 2. Master-toggle / permission UX | New section "Master-switch / permission interaction" + AC11. Disabled states + helper text + scheduling short-circuit specified. |
+| 3. Preview correctness for null/bodyweight/time-based | New "Preview body formatting" section with kind table, defensive renderer rule, source precedence (active session next set first, suggest() as fallback), AC14b source-contract test. |
+| 4. Fold TL/Psych conditions into Scope/AC | All 10 TL defects + 7 psych conditions now appear as explicit Scope/In bullets + AC1–20. Plan no longer relies on review prose. |
+
+_Status: re-review requested._
 
 ### Tech Lead (Feasibility)
 
-**Verdict: REQUEST CHANGES** — 10 plan-edit defects, no architectural rework. (2026-05-10, comment 46f16956)
+**rev-1 Verdict: REQUEST CHANGES** (10 plan-edit defects, 2026-05-10 comment 46f16956). All addressed in rev-2:
 
-Direction sound, classification right, no SDK bump, F-Droid build unaffected. Defects:
+| TL defect | rev-2 fix |
+|---|---|
+| 1. `presentNotificationAsync` doesn't exist | §UX surface 3 + §Architecture rewritten to use `scheduleNotificationAsync({ identifier, trigger: null, content: { channelId, sticky } })`. |
+| 2. Missing Android channel registration | NEW §Bootstrap section; `REST_ONGOING_CHANNEL` + `REST_CUE_CHANNEL` constants; `ensureRestChannelsRegistered()` helper; AC16. |
+| 3. iOS `interruptionLevel` unspecified | Pre-end cue: `'passive'`. Rest-complete: `'active'`. Documented in surfaces and AC8. |
+| 4. Persisted state schema | NEW §Persistence section with new shape, migration rule, 5-step cold-start resume; AC12 + AC13. |
+| 5. Preview source coupling | Picked option (a): caller-injects via `startRest(seconds, { preview, isLastSet })`. Session screen owns preview computation. Documented in §Hook integration. |
+| 6. `cancelAllRestNotifications` rename + call sites | §Cancellation paths enumerates 5 sites including new End-workout (psych #6); AC7 covers. |
+| 7. AC4 1s vs 5s contradiction | New AC17 explicitly resolves. AC4 reworded. |
+| 8. Foreground pre-end cue undefined | §UX surface 1 specifies `setNotificationHandler` filter + `Haptics.selectionAsync()`; AC15. |
+| 9. Test budget bump in PR | Explicit Scope/In bullet + AC18: `MAX_TESTS 2845 → 2860` with justification block, no `--no-verify`. |
+| 10. Psych condition #1 has no AC | AC14a created with full forbidden-copy regex set. AC14b adds preview-safety contract. AC14c locks title templates. |
 
-1. **`presentNotificationAsync` does not exist** in `expo-notifications@~55.0.19` (BLOCKER). Use `scheduleNotificationAsync({ identifier, content: { channelId, sticky, priority: AndroidNotificationPriority.LOW }, trigger: null })` for re-present-replaces-by-id pattern.
-2. **Missing Android channel registration** — register `rest-ongoing` (IMPORTANCE_LOW, sound:null, vibrationPattern:[]) and `rest-cue` channels at boot. Without channels, the live notification will heads-up every 5s.
-3. **iOS `interruptionLevel` unspecified** — pre-end cue must set `interruptionLevel: 'passive'` or it banners+dings (defeats "subtle glance"). Rest-complete keeps `active`.
-4. **Persisted timer state schema** carries one ID; needs `{preEnd?, complete?, liveOngoing?}` map + cold-start resume sequence (re-derive remaining → cancel stale → re-present live). Add an AC for kill-and-resume.
-5. **Next-set preview source** — `useRestTimer` does NOT currently import `useSessionData`. Pick (a) caller-injects via `startRest(seconds, preview?)` (preferred) OR (b) new `lib/next-set-preview.ts` helper. Document call site.
-6. **`cancelNotification()` only cancels rest-complete** — rename to `cancelAllRestNotifications(sessionId)` and update all 3 cancel call sites (skip, natural end, BLD-1110 `recomputeActiveRest` adaptive reschedule). AC7 fails for new surfaces otherwise.
-7. **AC4 contradicts §UX** — "appears within 1s" vs "every 5s". Reword: "appears within 1s of `startRest()`, then re-presents every 5s (±500ms)."
-8. **Foreground pre-end cue undefined** — would banner over the in-app countdown. Recommend: suppress notification when `AppState === 'active'` and fire `Haptics.selectionAsync()` instead (already have `expo-haptics`).
-9. **Test budget bump must be in this PR** — add `MAX_TESTS=2845 → 2860` in `scripts/audit-tests.sh` with justification block as an explicit Scope/In task. No `--no-verify`.
-10. **Psych condition #1 has no AC** — add AC14 for source-contract test in `__tests__/source-contracts-batch.test.ts` asserting forbidden-copy strings are absent from rest-notification templates.
+Architecture preserved: throttling stays inside `useRestTimer` (no `lib/rest-coach.ts`); no SDK bump; F-Droid build unaffected.
 
-**What's right:** no SDK bump (`sticky`/`channelId`/`interruptionLevel` all in v55 type defs); F-Droid unaffected (no native deps); architecture fit with BLD-531/1110; iOS honest-fallback for live countdown; throttling stays inside `useRestTimer` (do not introduce `lib/rest-coach.ts` — premature abstraction with one caller).
-
-Re-route to techlead for re-review once §Architecture, §Persistence (new), §Bootstrap (new), §AC, §Edge Cases, §Scope updated. APPROVE on next pass if all 10 addressed.
+_Status: re-review requested._
 
 ### Psychologist (Behavior-Design scoping verdict)
 
-**Verdict: APPROVED WITH CONDITIONS — scoping classification of NO behavior-design CONFIRMED.** (2026-05-10, comment 6a5fc2f2)
+**Verdict: APPROVED WITH CONDITIONS — scoping classification of NO behavior-design CONFIRMED.** (2026-05-10, comment 6a5fc2f2; re-confirmed comment d477d0e0)
 
-This is a pure functional in-flight cue for a task the user has already initiated. Notifications surface is on §3.2's trigger list, but that list flags re-engagement / habit-shaping notifications, not in-session task affordances. All Five Gates pass (Gates 3 & 4 N/A). Eyal Classification: **Facilitator ✅**. Scores: Autonomy 9/10, Friction 9/10 (positive externality — defends against unlock→social-media leak), Resilience 10/10. BCT codes invoked: 7.1 Prompts/Cues (functional), 4.1 Instruction. No habit/reward/self-monitoring BCTs invoked.
+Eyal Classification: **Facilitator ✅**. Scores: Autonomy 9/10, Friction 9/10, Resilience 10/10. BCT codes: 7.1 Prompts/Cues (functional), 4.1 Instruction.
 
-**Binding conditions for implementation (merge-time invariants):**
+All 7 binding conditions folded into rev-2 Scope/AC:
+1. ✅ Copy lock → AC14a source-contract test.
+2. ✅ No "rest performance" telemetry → §Out (and stays out).
+3. ✅ No completion-counter / badge / n-in-a-row bolt-ons → §Out.
+4. ✅ Pre-end cue body when preview off stays descriptive (`Next set in {N}s`) → §UX surface 1 + AC14a forbids `Get ready!`.
+5. ✅ iOS honesty disclosure no upgrade-framing → AC10 + iOS row hidden via Platform check.
+6. ✅ End-workout cancels live countdown → §Cancellation + AC7.
+7. ✅ Auto-start-next-set permanently fenced → §Out (and stays out, with explicit re-review trigger).
 
-1. **Copy lock.** No urgency, loss-aversion, or evaluative language on any of the three notification surfaces. Forbidden patterns: `Hurry!`, `Don't lose…`, `You're falling behind`, `Streak at risk`, `Faster!`, `Push harder`, warning-implying emojis (⚠️🔥⏰❗). Add a source-contract test (BLD-569 AC4-style) asserting these strings are absent from rest-notification copy templates.
-2. **No "rest performance" telemetry surface.** Do not log, display, or aggregate "started next set within N seconds of cue" metrics anywhere user-visible. Internal debug logs OK; user-visible aggregation requires fresh psych review.
-3. **No future bolt-on** of completion counters, "perfect timing" badges, or "n-in-a-row" chips on this surface. Any such PR re-opens psych review.
-4. **Pre-end cue body when preview disabled** stays descriptive (`Next set in {N}s`); do not switch to imperatives like `Get ready!`.
-5. **iOS honesty disclosure** must not frame the OS gap as user-fixable. No `Upgrade to…` / `Switch to Android for…` framing.
-6. **Ongoing notification dismissibility** — confirm "End workout" (in addition to "Skip rest" per AC7) also cancels the live countdown within the 500ms budget. Add as AC or sub-note to AC7.
-7. **Auto-start-next-set is permanently fenced.** Any future request to auto-initiate the next set when timer ends flips this from Facilitator → Entertainer and requires fresh psych review. Note explicitly in the Out-of-scope section.
+Per psych comment d477d0e0: live-countdown default-on (Android) is fine; foreground VoiceOver "10 seconds remaining" is fine; carry on without re-ping unless copy/scope drifts.
 
-**Out of scope (and stays out, per psych verdict):** completion XP / "rests on time" gamification, perfect-timing badges, n-in-a-row chips, auto-start-next-set, "rest performance" stats. Re-opening any of these requires psych re-review.
+_Status: APPROVED WITH CONDITIONS — no further psych review required._
 
 ### CEO Decision
-_Pending_
+_Pending — awaiting QD + techlead re-approval on rev-2._
