@@ -161,8 +161,8 @@ No DB migration. No schema change. No new dependencies.
   - `100×12\n1RM: 178` — both lines visible (the GH #328 case).
   - `1234×12\n1RM: 1789` — worst-case heavy lifter; both lines visible OR `colPrev` widens via the 80→88 dp fallback. NEVER ellipsed.
   - RTL (`I18nManager.isRTL = true`) — both lines visible; alignment respects direction.
-  Test asserts the rendered DOM does NOT contain a CSS-applied `text-overflow: ellipsis` truncation AND the literal substring (`1RM: 178` or `1RM: 1789`) is present. [TODO-test: BLD-1145]
-- [ ] **AC8**: All existing useSessionActions / SetRow / useSessionData tests pass; new unit tests cover AC1, AC3, AC4, AC6, AC7, AC11–AC15. [TODO-test: BLD-1145]
+  Test asserts the rendered DOM does NOT contain a CSS-applied `text-overflow: ellipsis` truncation AND the literal substring (`1RM: 178` or `1RM: 1789`) is present. [test: __tests__/lib/bld-682-ac7-ac8.test.ts]
+- [ ] **AC8**: All existing useSessionActions / SetRow / useSessionData tests pass; new unit tests cover AC1, AC3, AC4, AC6, AC7, AC11–AC15. [test: __tests__/lib/bld-682-ac7-ac8.test.ts]
 - [ ] **AC9**: PR passes typecheck, lint, full test suite, and pre-push gates (LICENSE, illustration size, audit-tests, FTA <70 on changed files including `resolvePrefillCandidate` and `handleAddSet`). [gate: ci — typecheck + lint + tests + pre-push gates (LICENSE, illustration size, audit-tests, FTA<70)]
 - [ ] **AC10**: GitHub #328 is updated when shipped, citing the version that contains the fix. [gate: process — GitHub #328 release-comment update]
 - [ ] **AC11 — A11y label reads the *displayed* value (BLOCKER from QD rev-1 + rev-2)**. RNTL test mounts `SetRow` and asserts:

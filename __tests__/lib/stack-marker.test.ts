@@ -104,3 +104,46 @@ describe("pickMarker", () => {
   });
 });
 
+// ── BLD-1145: BLD-1126 AC9 — multi-stack disambiguation ──────────────────────
+
+describe("pickMarker — AC9 multi-stack disambiguation (BLD-1126)", () => {
+  it("Stack A marker 6 → weight 40 and Stack B marker 6 → weight 30: both code paths yield distinct (stack_id, weight)", () => {
+    const stackA = makeStack({ id: "stack-A", name: "Left Stack", unit: "kg" });
+    const stackB = makeStack({ id: "stack-B", name: "Right Stack", unit: "kg" });
+    const calsA: StackCalibrationRow[] = [{ id: "c1", stack_id: "stack-A", marker: 6, true_weight: 40 }];
+    const calsB: StackCalibrationRow[] = [{ id: "c2", stack_id: "stack-B", marker: 6, true_weight: 30 }];
+
+    const resultA = pickMarker(stackA, calsA, 6)!;
+    const resultB = pickMarker(stackB, calsB, 6)!;
+
+    // Stack A code path
+    expect(resultA.stackId).toBe("stack-A");
+    expect(resultA.stackName).toBe("Left Stack");
+    expect(resultA.weight).toBe(40);
+    expect(resultA.marker).toBe(6);
+
+    // Stack B code path
+    expect(resultB.stackId).toBe("stack-B");
+    expect(resultB.stackName).toBe("Right Stack");
+    expect(resultB.weight).toBe(30);
+    expect(resultB.marker).toBe(6);
+
+    // Same marker, different stacks → different weights (disambiguation)
+    expect(resultA.weight).not.toBe(resultB.weight);
+    expect(resultA.stackId).not.toBe(resultB.stackId);
+  });
+
+  it("marker present in Stack A only → Stack B returns null for same marker", () => {
+    const stackA = makeStack({ id: "stack-A", name: "Left Stack", unit: "kg" });
+    const stackB = makeStack({ id: "stack-B", name: "Right Stack", unit: "kg" });
+    const calsA: StackCalibrationRow[] = [{ id: "c3", stack_id: "stack-A", marker: 8, true_weight: 60 }];
+    const calsB: StackCalibrationRow[] = []; // Stack B has no marker 8
+
+    const resultA = pickMarker(stackA, calsA, 8)!;
+    const resultB = pickMarker(stackB, calsB, 8);
+
+    expect(resultA.weight).toBe(60);
+    expect(resultB).toBeNull(); // Stack B can't resolve marker 8
+  });
+});
+
