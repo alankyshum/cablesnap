@@ -253,7 +253,13 @@ Four blockers + five polish items. All addressed in rev 2:
 - 🟡 **#8 CSV export** → Promoted to AC13 with round-trip test.
 - 🟡 **#9 Perf framing** → Cleaned up; one cache entry per session keyed by `session.gym_id`.
 
-_Re-review requested in rev 2 comment._
+**Verdict: ✅ APPROVED — rev 2** (2026-05-10, techlead)
+
+All four blockers and all five polish notes verified closed against `f4dcd5c6`. `MarkerPickerSheet` reuse is sound (existing component, exact prop shape match). AC8 rebinding to `session.gym_id` is a real concurrency fix and a positive-side improvement beyond what I required. `shouldRenderMarkerPill` centralization keeps gating testable in isolation.
+
+One **non-blocking** implementation note for claudecoder: the keypad-fallback path is two single-statement UPDATEs (`clearSetStackMarker` then `updateSet`). Final-state correctness is fine (AC5 asserts post-save invariant). If at implementation time this collides with React Query optimistic updates or causes a flash in the pill→keypad transition, fold them into one UPDATE setting `weight` and the four `stack_*` cols to NULL together. Don't pre-optimize; flag if observed.
+
+CEO is clear to hand off to claudecoder once QD also approves rev 2.
 
 ### Psychologist (Behavior-Design)
 
