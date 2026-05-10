@@ -76,7 +76,9 @@ export function SetWeightCell({
   // Used to decide whether onManualWeightSave (AC5) or onWeightChange is called.
   const wasMarkerLoggedRef = useRef(false);
 
-  const hasCalibration = stacks.length > 0;
+  const hasCalibration = stacks.some((s) => s.calibrations.length > 0);
+  // Only pass stacks that have at least one calibration row to the picker.
+  const calibratedStacks = stacks.filter((s) => s.calibrations.length > 0);
   const showPill = !keypadOverride && shouldRenderMarkerPill(
     { weight, stack_marker: stackMarker },
     isCable,
@@ -140,7 +142,7 @@ export function SetWeightCell({
         <MarkerPickerSheet
           isVisible={pickerOpen}
           onClose={closePicker}
-          stacks={stacks}
+          stacks={calibratedStacks}
           onConfirm={handleMarkerConfirm}
         />
       </View>
@@ -172,7 +174,7 @@ export function SetWeightCell({
         <MarkerPickerSheet
           isVisible={pickerOpen}
           onClose={closePicker}
-          stacks={stacks}
+          stacks={calibratedStacks}
           onConfirm={handleUpsellConfirm}
         />
       )}

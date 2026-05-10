@@ -54,6 +54,15 @@ describe("shouldRenderMarkerPill", () => {
   it("returns false when both not cable and no calibration", () => {
     expect(shouldRenderMarkerPill({ weight: 30, stack_marker: null }, false, false)).toBe(false);
   });
+
+  // Regression: stack configured (gym has stacks) but all stacks have zero
+  // calibration rows. SetWeightCell computes hasCalibration via
+  // stacks.some(s => s.calibrations.length > 0), which is false here.
+  // shouldRenderMarkerPill must therefore return false, keeping the normal
+  // WeightInput (not "Pick marker" with an empty sheet).
+  it("returns false when hasCalibration=false (stack present, zero calibration rows — reviewer blocker)", () => {
+    expect(shouldRenderMarkerPill({ weight: null, stack_marker: null }, true, false)).toBe(false);
+  });
 });
 
 // ── pickMarker ─────────────────────────────────────────────────────────────

@@ -644,7 +644,11 @@ export function useSessionActions({
     let prefillReps: number | null = null;
     let prefillDuration: number | null = null;
     let prefillApplied = false;
-    if (group) {
+    // Skip numeric prefill entirely when stack marker autofill succeeded (AC6).
+    // Numeric updateSet would overwrite the marker-resolved weight while leaving
+    // stack_* snapshot columns intact, causing a weight mismatch between SQLite
+    // and the in-memory display.
+    if (group && autofilledStackWeight === null) {
       const hasInSessionWorking = group.sets.some((s) => s.set_type !== "warmup");
 
       let previousSetForSlot: PrefillCandidate & { set_type: string | null } | null = null;
