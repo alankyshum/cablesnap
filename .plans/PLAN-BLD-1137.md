@@ -184,7 +184,25 @@ If the suggest call fails or no next set exists → preview is `null` → bodies
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: REQUEST CHANGES** — 10 plan-edit defects, no architectural rework. (2026-05-10, comment 46f16956)
+
+Direction sound, classification right, no SDK bump, F-Droid build unaffected. Defects:
+
+1. **`presentNotificationAsync` does not exist** in `expo-notifications@~55.0.19` (BLOCKER). Use `scheduleNotificationAsync({ identifier, content: { channelId, sticky, priority: AndroidNotificationPriority.LOW }, trigger: null })` for re-present-replaces-by-id pattern.
+2. **Missing Android channel registration** — register `rest-ongoing` (IMPORTANCE_LOW, sound:null, vibrationPattern:[]) and `rest-cue` channels at boot. Without channels, the live notification will heads-up every 5s.
+3. **iOS `interruptionLevel` unspecified** — pre-end cue must set `interruptionLevel: 'passive'` or it banners+dings (defeats "subtle glance"). Rest-complete keeps `active`.
+4. **Persisted timer state schema** carries one ID; needs `{preEnd?, complete?, liveOngoing?}` map + cold-start resume sequence (re-derive remaining → cancel stale → re-present live). Add an AC for kill-and-resume.
+5. **Next-set preview source** — `useRestTimer` does NOT currently import `useSessionData`. Pick (a) caller-injects via `startRest(seconds, preview?)` (preferred) OR (b) new `lib/next-set-preview.ts` helper. Document call site.
+6. **`cancelNotification()` only cancels rest-complete** — rename to `cancelAllRestNotifications(sessionId)` and update all 3 cancel call sites (skip, natural end, BLD-1110 `recomputeActiveRest` adaptive reschedule). AC7 fails for new surfaces otherwise.
+7. **AC4 contradicts §UX** — "appears within 1s" vs "every 5s". Reword: "appears within 1s of `startRest()`, then re-presents every 5s (±500ms)."
+8. **Foreground pre-end cue undefined** — would banner over the in-app countdown. Recommend: suppress notification when `AppState === 'active'` and fire `Haptics.selectionAsync()` instead (already have `expo-haptics`).
+9. **Test budget bump must be in this PR** — add `MAX_TESTS=2845 → 2860` in `scripts/audit-tests.sh` with justification block as an explicit Scope/In task. No `--no-verify`.
+10. **Psych condition #1 has no AC** — add AC14 for source-contract test in `__tests__/source-contracts-batch.test.ts` asserting forbidden-copy strings are absent from rest-notification templates.
+
+**What's right:** no SDK bump (`sticky`/`channelId`/`interruptionLevel` all in v55 type defs); F-Droid unaffected (no native deps); architecture fit with BLD-531/1110; iOS honest-fallback for live countdown; throttling stays inside `useRestTimer` (do not introduce `lib/rest-coach.ts` — premature abstraction with one caller).
+
+Re-route to techlead for re-review once §Architecture, §Persistence (new), §Bootstrap (new), §AC, §Edge Cases, §Scope updated. APPROVE on next pass if all 10 addressed.
 
 ### Psychologist (Behavior-Design scoping verdict)
 
