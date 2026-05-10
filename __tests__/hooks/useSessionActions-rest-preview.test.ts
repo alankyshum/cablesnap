@@ -223,16 +223,18 @@ describe("useSessionActions — handleCheck preview wiring (BLD-1137 AC5/AC6/AC1
     expect(ctx.preview).toBeNull(); // no next set in same exercise group
   });
 
-  it("falls back to progression suggestion when no next set in group (plan §Preview fallback #2)", async () => {
+  it("falls back to progression suggestion when no next set in group — uses real weighted shape (reps: null) and derives repRange from last completed set", async () => {
     const startRest = jest.fn();
     // Only one set in group (will be completed) — no next planned set
+    // Set is completed=false initially; handleCheck will mark it done
     const onlySet = makeSet({ id: "s1", exercise_id: "ex-1", weight: 60, reps: 8 });
     const group = makeGroup({ exercise_id: "ex-1", name: "Cable Row", sets: [onlySet] });
     // Also a second group so isLastSet = false
     const set2 = makeSet({ id: "s2", exercise_id: "ex-2", weight: 50, reps: 10 });
     const group2 = makeGroup({ exercise_id: "ex-2", name: "Lat Pulldown", sets: [set2] });
 
-    const suggestion = { type: "increase" as const, weight: 65, reps: 8, reason: "All sets completed" };
+    // Real weighted suggestion shape from lib/rm.ts suggest() — reps is null for increase/maintain
+    const suggestion = { type: "increase" as const, weight: 65, reps: null, reason: "All sets completed — increase by 5" };
 
     const { result } = renderHook(() =>
       useSessionActions(createParams({
@@ -253,6 +255,7 @@ describe("useSessionActions — handleCheck preview wiring (BLD-1137 AC5/AC6/AC1
     expect(ctx.preview).not.toBeNull();
     expect(ctx.preview?.exerciseName).toBe("Cable Row");
     expect(ctx.preview?.plannedWeight).toBe(65);
+    // repRange derived from the last completed set (onlySet.reps = 8)
     expect(ctx.preview?.repRange).toBe("8");
     expect(ctx.preview?.exerciseKind).toBe("weighted");
   });

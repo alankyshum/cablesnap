@@ -135,14 +135,23 @@ function computeRestPreview(
     };
   }
   // Fallback: progression suggestion from lib/rm.ts suggest()
+  // suggest() returns reps: null for weighted increase/maintain — derive repRange from the
+  // last completed set or the just-completed set (completedSetId, not yet flushed in state).
   if (suggestion) {
+    const lastCompletedSet =
+      [...previewGroup.sets].filter((s) => s.completed).at(-1) ??
+      previewGroup.sets.find((s) => s.id === completedSetId);
+    const repRange =
+      suggestion.reps != null ? String(suggestion.reps)
+      : lastCompletedSet?.reps != null ? String(lastCompletedSet.reps)
+      : null;
     return {
       preview: {
         exerciseName: previewGroup.name,
         exerciseKind,
         plannedWeight: suggestion.weight > 0 ? suggestion.weight : null,
         weightUnit: unit,
-        repRange: suggestion.reps != null ? String(suggestion.reps) : null,
+        repRange,
         durationSeconds: null,
         distanceMeters: null,
       },
