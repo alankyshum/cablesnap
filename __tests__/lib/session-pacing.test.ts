@@ -47,6 +47,7 @@ describe("computePacing — pure logic (BLD-1144)", () => {
       started_at: T0,
       completed_at: T0 + 30 * 60 * 1000,
       edited_at: null,
+      duration_seconds: 1800, // 30 min — persisted
     };
     const result = computePacing([], session);
 
@@ -54,7 +55,7 @@ describe("computePacing — pure logic (BLD-1144)", () => {
     expect(result.working).toBe(0);
     expect(result.rest).toBe(0);
     expect(result.other).toBe(0);
-    expect(result.gross).toBe(30 * 60);
+    expect(result.gross).toBe(1800); // uses duration_seconds, not wall-clock diff
     expect(result.perExercise).toHaveLength(0);
   });
 
@@ -110,11 +111,12 @@ describe("computePacing — pure logic (BLD-1144)", () => {
     // Set1 working = 2 * 5 = 10s (at T0+2min)
     // Set2 working = 2 * 5 = 10s (at T0+4min)
     // gap between set1 and set2 = 120s; raw rest = 120 - 10 = 110s
-    // gross = 6 min = 360s
+    // gross = 6 min = 360s (from duration_seconds)
     // other = 360 - (10 + 10) - 110 = 230s
     const session = makeSession({
       started_at: T0,
       completed_at: T0 + 6 * 60 * 1000,
+      duration_seconds: 6 * 60,
     });
     const sets: PacingSet[] = [
       makeSet("ex1", 5, null, 2 * 60 * 1000),
@@ -129,6 +131,54 @@ describe("computePacing — pure logic (BLD-1144)", () => {
     expect(result.rest).toBe(expectedRest);
     expect(result.other).toBe(expectedOther);
     expect(result.other).toBeGreaterThanOrEqual(0);
+  });
+
+  it("uses duration_seconds as gross (not wall-clock) when available", () => {
+    // started_at precedes the actual clock-start by 5 min (user opened app early).
+    // duration_seconds = 55 * 60 (anchored to clock_started_at, not started_at).
+    // gross must equal duration_seconds, not (completed_at - started_at) = 60 * 60.
+    const session: PacingSession = {
+      started_at: T0,
+      completed_at: T0 + 60 * 60 * 1000, // wall-clock 60 min
+      edited_at: null,
+      duration_seconds: 55 * 60,          // persisted anchor: 55 min
+    };
+    const sets: PacingSet[] = [
+      makeSet("ex1", 10, null, 30 * 60 * 1000),
+    ];
+    const result = computePacing(sets, session);
+
+    expect(result.gross).toBe(55 * 60); // must use duration_seconds
+    expect(result.gross).not.toBe(60 * 60); // must NOT use wall-clock diff
+  });
+
+  it("falls back to wall-clock gross when duration_seconds is absent (legacy rows)", () => {
+    const session: PacingSession = {
+      started_at: T0,
+      completed_at: T0 + 45 * 60 * 1000,
+      edited_at: null,
+      // duration_seconds omitted (legacy row)
+    };
+    const sets: PacingSet[] = [
+      makeSet("ex1", 10, null, 20 * 60 * 1000),
+    ];
+    const result = computePacing(sets, session);
+
+    expect(result.gross).toBe(45 * 60);
+  });
+
+  it("sets missing both duration_seconds and reps contribute 0 silently (no console.warn)", () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const session = makeSession({ duration_seconds: 10 * 60 });
+    const sets: PacingSet[] = [
+      // Both estimators absent — must contribute 0 with no console output
+      { exercise_id: "ex1", completed_at: T0 + 2 * 60 * 1000, duration_seconds: null, reps: null },
+    ];
+    const result = computePacing(sets, session);
+
+    expect(result.working).toBe(0);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });
 

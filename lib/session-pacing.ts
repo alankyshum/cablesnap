@@ -32,6 +32,12 @@ export type PacingSession = {
   started_at: number | null; // Unix ms
   completed_at: number | null; // Unix ms
   edited_at?: number | null; // Unix ms — used by cache key, not computation
+  /**
+   * Persisted completed-session duration (seconds), anchored to clock_started_at ??
+   * started_at at session completion — same source as the summary-screen duration.
+   * When present, used as gross instead of (completed_at − started_at).
+   */
+  duration_seconds?: number | null;
 };
 
 export type ExercisePacing = {
@@ -45,7 +51,7 @@ export type PacingBreakdown = {
   working: number; // seconds
   rest: number; // seconds
   other: number; // seconds
-  gross: number; // session.completed_at − session.started_at (seconds)
+  gross: number; // completed session duration (seconds) — matches summary-screen duration
   perExercise: ExercisePacing[];
   isEmpty: boolean; // true when 0 completed sets
 };
@@ -125,27 +131,20 @@ export function computePacing(
 ): PacingBreakdown {
   const completedSets = sets.filter((s) => s.completed_at != null);
 
+  // Use persisted duration_seconds as gross (same source as summary-screen duration).
+  // Fall back to wall-clock difference only for legacy rows missing the column.
   const gross =
-    session.started_at != null && session.completed_at != null
-      ? Math.round((session.completed_at - session.started_at) / 1000)
-      : 0;
+    session.duration_seconds != null
+      ? session.duration_seconds
+      : session.started_at != null && session.completed_at != null
+        ? Math.round((session.completed_at - session.started_at) / 1000)
+        : 0;
 
   if (
     completedSets.length === 0 ||
-    session.started_at == null ||
     session.completed_at == null
   ) {
     return { working: 0, rest: 0, other: 0, gross, perExercise: [], isEmpty: true };
-  }
-
-  // Warn once per session for sets missing both estimators
-  const missingCount = completedSets.filter(
-    (s) => s.duration_seconds == null && s.reps == null
-  ).length;
-  if (missingCount > 0) {
-    console.warn(
-      `[session-pacing] ${missingCount} set(s) missing both duration_seconds and reps — contributing 0 working time`
-    );
   }
 
   const byExercise = groupByExercise(completedSets);
@@ -163,12 +162,6 @@ export function computePacing(
 
   const rawOther = gross - totalWorking - totalRest;
   const totalOther = Math.max(rawOther, 0);
-
-  if (rawOther < 0) {
-    console.warn(
-      `[session-pacing] Other clamped to 0 (clock-skew or rounding); gross=${gross}s working=${totalWorking}s rest=${totalRest}s`
-    );
-  }
 
   distributeOther(perExercise, totalWorking, totalOther);
 
