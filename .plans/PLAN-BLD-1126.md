@@ -178,7 +178,21 @@ The numeric weight input remains fully available — a small "123" toggle on the
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: REQUEST CHANGES** — 2026-05-10 (techlead)
+
+Plan is feasible and well-architected, but four claims do not survive verification against the current codebase. Full review in issue comment; blockers summarized:
+
+- 🔴 **#1 Multi-stack-per-gym ambiguity.** `cable_stacks` is gym-scoped with no uniqueness constraint and no "active stack" column (`lib/db/schema.ts:445-456`). Picker design assumes one stack per gym; `OUT` clause "single active stack per gym, as today" is unenforced. Pick: (a) two-step Stack→Marker picker [recommended], (b) per-exercise preferred stack, or (c) gate this work on a separate BLD ticket adding the constraint.
+- 🔴 **#2 AC12 references a non-existent CI gate.** No JS-bundle-size measurement exists in `.github/workflows/` or `package.json`. Drop AC12 or add a real gate.
+- 🔴 **#3 Atomicity wording is hand-wavy.** No existing `stack_*` setters in `lib/db/session-sets.ts`; `updateSet()` only writes weight/reps/duration. Spec ONE new helper `updateSetStackMarker(id, {…5 cols})` doing one Drizzle `.update().set()` (atomic at SQLite statement level — no `db.transaction()` needed).
+- 🔴 **#4 AC5 stale-stack-columns bug.** Numeric-fallback long-press → `updateSet()` does NOT clear `stack_*` columns. Spec a `clearSetStackMarker(id)` helper invoked on the keypad-mode toggle, plus a unit test asserting `stack_marker IS NULL` post-fallback.
+
+Non-blocking polish (#5–#9): cache invalidation not wired in `app/settings/gym-profiles.tsx`; `resolveMarker()` returns `unit:""` so `useActiveCalibration` must JOIN `cable_stacks`; autofill extension lacks named helpers; CSV export change is hidden in edge-cases (promote to AC13); perf framing is misleading.
+
+**What's right:** behavior-design NO classification correct; F-Droid safe (no new native deps); web build precedent (`VariantPickerSheet`) sound; AC7 non-cable regression guard well-placed; "no schema change" verified.
+
+Re-ping me after Blockers #1–#4 are addressed.
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO_
