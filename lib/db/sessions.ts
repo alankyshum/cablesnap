@@ -1,7 +1,7 @@
 import { eq, sql, desc, isNotNull, and, asc, inArray } from "drizzle-orm";
 import type { WorkoutSession } from "../types";
 import { uuid } from "../uuid";
-import { getDrizzle, query, withTransaction, execute } from "./helpers";
+import { getDrizzle, query, withTransaction } from "./helpers";
 import { getDefaultGym } from "./gym-profiles";
 import {
   workoutSessions,
@@ -205,11 +205,10 @@ export async function cancelSession(id: string): Promise<void> {
   // Cascade-delete form clips for the target session BEFORE workout_sets delete.
   await cascadeDeleteClipsForSession(id);
   await withTransaction(async () => {
-    // BLD-1094: PRAGMA foreign_keys = ON now enforces strava_sync_log /
-    // health_connect_sync_log → workout_sessions FK; delete sync-log child
-    // rows before the parent session row to avoid FK violations.
+    // BLD-1094: PRAGMA foreign_keys = ON now enforces strava_sync_log →
+    // workout_sessions FK; delete sync-log child rows before the parent
+    // session row to avoid FK violations.
     await db.delete(stravaSyncLog).where(eq(stravaSyncLog.session_id, id));
-    await execute("DELETE FROM health_connect_sync_log WHERE session_id = ?", [id]);
     await db.delete(workoutSets).where(eq(workoutSets.session_id, id));
     await db.delete(workoutSessions).where(eq(workoutSessions.id, id));
     // Clean up any other orphan sessions (completed_at IS NULL).
@@ -224,7 +223,6 @@ export async function cancelSession(id: string): Promise<void> {
     for (const o of orphans) {
       await cascadeDeleteClipsForSession(o.id);
       await db.delete(stravaSyncLog).where(eq(stravaSyncLog.session_id, o.id));
-      await execute("DELETE FROM health_connect_sync_log WHERE session_id = ?", [o.id]);
       await db.delete(workoutSets).where(eq(workoutSets.session_id, o.id));
       await db.delete(workoutSessions).where(eq(workoutSessions.id, o.id));
     }
@@ -254,11 +252,10 @@ export async function deleteCompletedSession(id: string): Promise<void> {
   // Cascade-delete form clips for the session BEFORE workout_sets delete.
   await cascadeDeleteClipsForSession(id);
   await withTransaction(async () => {
-    // BLD-1094: delete strava_sync_log + health_connect_sync_log children
-    // first — both declare FK → workout_sessions(id) (no cascade) in tables.ts,
-    // and PRAGMA foreign_keys = ON now enforces them.
+    // BLD-1094: delete strava_sync_log child first — it declares
+    // FK → workout_sessions(id) (no cascade) in tables.ts, and
+    // PRAGMA foreign_keys = ON now enforces it.
     await db.delete(stravaSyncLog).where(eq(stravaSyncLog.session_id, id));
-    await execute("DELETE FROM health_connect_sync_log WHERE session_id = ?", [id]);
     // Sets first — only ones owned by this session (always safe regardless
     // of whether the session row qualifies for deletion below).
     await db.delete(workoutSets).where(eq(workoutSets.session_id, id));

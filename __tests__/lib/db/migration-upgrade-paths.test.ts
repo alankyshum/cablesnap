@@ -295,18 +295,6 @@ function buildPreBld1059Schema(db: InstanceType<typeof DatabaseSync>): void {
       UNIQUE(session_id)
     );
 
-    CREATE TABLE health_connect_sync_log (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL REFERENCES workout_sessions(id),
-      health_connect_record_id TEXT,
-      status TEXT NOT NULL,
-      error TEXT,
-      retry_count INTEGER DEFAULT 0,
-      created_at INTEGER NOT NULL,
-      synced_at INTEGER,
-      UNIQUE(session_id)
-    );
-
     CREATE TABLE meal_templates (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
