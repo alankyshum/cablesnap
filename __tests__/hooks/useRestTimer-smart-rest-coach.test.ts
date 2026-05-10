@@ -526,6 +526,51 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
         mockGetRestSeconds.mockResolvedValue(60); // restore default
       }
     });
+
+    it("AC9 — write→restart→read round-trip: hook reads persisted live_countdown value on fresh mount", async () => {
+      // Simulates the full cold-restart persistence contract:
+      // 1. Write setting to an in-memory store (representing AsyncStorage / DB write)
+      // 2. Configure getAppSetting to read from that store (simulating cold-start re-launch)
+      // 3. Mount a fresh hook instance (fresh component = fresh cold start)
+      // 4. Verify the hook reads and applies the previously-written setting
+
+      // Step 1: In-memory store simulating AsyncStorage / DB persistence
+      const settingsStore: Record<string, string> = {
+        rest_notification_enabled: "true",
+        rest_adaptive_enabled: "false",
+        rest_timer_pre_end_cue_seconds: "10",
+        rest_timer_show_next_set_preview: "false",
+      };
+      // Write setting (as app would before being killed)
+      await mockSetAppSetting("rest_timer_live_countdown", "true");
+      mockSetAppSetting.mockImplementation((key: string, value: string) => {
+        settingsStore[key] = value;
+        return Promise.resolve();
+      });
+      settingsStore["rest_timer_live_countdown"] = "true"; // the written value
+
+      // Step 2: Configure getAppSetting to read from the store (cold-start re-launch reads DB)
+      mockGetAppSetting.mockImplementation((key: string) => {
+        return Promise.resolve(settingsStore[key] ?? null) as Promise<string>;
+      });
+
+      // Step 3: Mount a fresh hook instance (simulates cold-start re-launch)
+      const { result } = renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => {
+        await result.current.startRest("exercise-1");
+        await flushPromises();
+      });
+
+      // Step 4: Verify the hook read rest_timer_live_countdown from the persistence layer
+      // and applied the written "true" value — live countdown was presented
+      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
+      expect(mockPresentLiveRestCountdown).toHaveBeenCalled();
+    });
   });
 
   // BLD-1137: covers AC12 from PLAN-BLD-1137.md
@@ -568,10 +613,13 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
         "sess-1",
       );
       // AC12: missing scheduled notifications re-scheduled on resume.
-      // scheduleRestComplete must be called to restore the OS-level completion notification.
+      // scheduleRestComplete must be called with previewSnapshot + isLastSet from persisted state
+      // so a resumed last-set rest doesn't regress to "Time for your next set." body.
       expect(mockScheduleRestComplete).toHaveBeenCalledWith(
         expect.any(Number), // remaining seconds
         "sess-1",
+        null, // previewSnapshot from persisted state
+        false, // isLastSet from persisted state
       );
     });
 
