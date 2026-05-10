@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Bug, Lightbulb, List } from 'lucide-react-native';
-import { flowCardStyle } from '@/components/ui/FlowContainer';
 import { fontSizes } from '@/constants/design-tokens';
 import type { ThemeColors } from '@/hooks/useThemeColors';
 
@@ -52,6 +51,6 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
+  flowCard: { padding: 14 },
   buttonFlow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { StyleSheet, View, type ViewStyle } from "react-native";
 
 type Props = {
@@ -12,7 +12,14 @@ type Props = {
 
 /**
  * Pinterest-style flowing container. Children wrap into as many columns
- * as fit based on available width. Each child should use FlowCard styles.
+ * as fit based on available width.
+ *
+ * Each child is automatically wrapped in a flow-cell `<View>` that applies
+ * `flowCardStyle` (minWidth/flexBasis/flexGrow). This guarantees correct
+ * row-wrap layout on Android even if a child forgets to apply `flowCardStyle`
+ * itself — without the wrapper, a width-less child collapses to its content's
+ * intrinsic width inside a `flexDirection: row` parent, breaking the column
+ * layout, ScrollView height calculation, and visible interaction area.
  */
 export default function FlowContainer({
   children,
@@ -23,7 +30,13 @@ export default function FlowContainer({
 }: Props) {
   return (
     <View style={[styles.container, { gap }, style]}>
-      {children}
+      {Children.map(children, (child, index) =>
+        child == null || child === false ? null : (
+          <View key={index} style={flowCardStyle}>
+            {child}
+          </View>
+        )
+      )}
     </View>
   );
 }

@@ -10,7 +10,7 @@ import { Text } from '@/components/ui/text';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLayout } from '../../lib/layout';
 import { useFloatingTabBarHeight } from '../../components/FloatingTabBar';
-import FlowContainer, { flowCardStyle } from '../../components/ui/FlowContainer';
+import FlowContainer from '../../components/ui/FlowContainer';
 import BodyProfileCard from '../../components/BodyProfileCard';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
@@ -50,11 +50,16 @@ import { useQueryClient } from '@tanstack/react-query';
  * that reduces total content height; this extra padding ensures the About
  * card (with badge images) is always comfortably scrollable into view.
  *
- * Set conservatively at 96px to account for Z Fold6 and other foldable /
- * large-screen form factors where safe-area-inset reporting may understate
- * the actual visual clearance needed below the floating bar.
+ * On Android with gesture navigation, `insets.bottom` is often 0, so the
+ * floating tab bar (which is `position: absolute`) can overlay the bottom
+ * cards and block interaction unless we add generous extra clearance here.
+ *
+ * Set to 160px (was 96px) to guarantee the last interactive card sits
+ * comfortably above the floating tab bar on Android phones with gesture
+ * navigation, foldables, and other form factors where safe-area-inset
+ * reporting may understate the actual visual clearance needed.
  */
-export const SETTINGS_SCROLL_EXTRA_BOTTOM = 96;
+export const SETTINGS_SCROLL_EXTRA_BOTTOM = 160;
 
 export default function Settings() {
   const colors = useThemeColors();
@@ -355,7 +360,7 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: spacing.md },
+  flowCard: { padding: spacing.md },
   settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',

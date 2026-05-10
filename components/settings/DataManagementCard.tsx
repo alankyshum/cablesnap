@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Download, Upload } from 'lucide-react-native';
-import { flowCardStyle } from '@/components/ui/FlowContainer';
 import { fontSizes } from '@/constants/design-tokens';
 import type { ThemeColors } from '@/hooks/useThemeColors';
 
@@ -86,7 +85,7 @@ export default function DataManagementCard({
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
+  flowCard: { padding: 14 },
   wideCard: { minWidth: 340, flexBasis: 340 },
   buttonFlow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

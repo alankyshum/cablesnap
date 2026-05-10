@@ -2,7 +2,6 @@ import { Pressable, StyleSheet, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
@@ -83,7 +82,7 @@ export default function FrequencyGoalPicker({ colors, value, onChange }: Props) 
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
+  flowCard: { padding: 14 },
   stepperRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   stepper: { flexDirection: "row", alignItems: "center", gap: 12 },
   stepButton: {

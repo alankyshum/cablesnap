@@ -5,7 +5,6 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Apple, FileOutput, Scale, User } from "lucide-react-native";
-import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import { getCSVCounts } from "@/lib/db";
 import { sinceForRange, useCSVExport } from "@/hooks/useCSVExport";
@@ -32,7 +31,7 @@ export default function CSVExportCard({ colors }: Props) {
   }, [range]);
 
   return (
-    <Card style={StyleSheet.flatten([styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }])}>
+    <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
         <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>CSV Export</Text>
         <SegmentedControl value={range} onValueChange={setRange} buttons={RANGE_BUTTONS} style={styles.segment} />
@@ -55,8 +54,7 @@ export default function CSVExportCard({ colors }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
-  wideCard: { minWidth: 340, flexBasis: 340 },
+  flowCard: { padding: 14 },
   segment: { marginBottom: 4 },
   buttonFlow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

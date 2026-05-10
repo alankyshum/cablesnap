@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, View } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import { getAppSetting, setAppSetting } from "@/lib/db";
 import { setEnabled as setAudioCategoryEnabled } from "@/lib/audio";
@@ -287,7 +286,7 @@ export default function PreferencesCard({
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
+  flowCard: { padding: 14 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   labelWithIcon: { flexDirection: "row", alignItems: "center" },
   tooltipText: { fontSize: fontSizes.xs, padding: 10, borderRadius: 6, marginBottom: 8, lineHeight: 18 },

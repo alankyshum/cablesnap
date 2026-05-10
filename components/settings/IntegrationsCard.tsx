@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Activity, AlertCircle, ExternalLink, HeartPulse } from "lucide-react-native";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import { setAppSetting } from "@/lib/db";
 import {
@@ -231,7 +230,7 @@ export default function IntegrationsCard({
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
+  flowCard: { padding: 14 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   deniedBlock: {
     marginTop: 8,

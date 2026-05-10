@@ -5,7 +5,6 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
-import { flowCardStyle } from "@/components/ui/FlowContainer";
 import { fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
@@ -117,7 +116,7 @@ export default function AutoBackupSection({ colors, toast }: Props) {
   if (!ready) return null;
 
   return (
-    <Card style={StyleSheet.flatten([styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }])}>
+    <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
         <Text
           variant="body"
@@ -225,8 +224,7 @@ export default function AutoBackupSection({ colors, toast }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flowCard: { ...flowCardStyle, maxWidth: undefined, padding: 14 },
-  wideCard: { minWidth: 340, flexBasis: 340 },
+  flowCard: { padding: 14 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   labelWithIcon: { flexDirection: "row", alignItems: "center" },
   tooltipText: { fontSize: fontSizes.xs, padding: 10, borderRadius: 6, marginBottom: 8, lineHeight: 18 },
