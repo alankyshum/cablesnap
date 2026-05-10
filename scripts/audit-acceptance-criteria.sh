@@ -269,6 +269,25 @@ if [ "$SKIPPED_LEGACY" -gt 0 ]; then
   echo "    -> ${LEGACY_PLANS[*]}"
 fi
 
+# ─── Followup-ticket progress tracking ────────────────────────────────
+# Count [TODO-test: BLD-NNNN] markers grouped by followup ticket id so
+# tracking BLD-1145 / BLD-1147 / future followups is just a script run.
+echo ""
+echo "  Followup-ticket TODO progress:"
+followup_tmp=$(mktemp)
+for plan in "${PLANS[@]}"; do
+  grep -oE '\[TODO-test:[[:space:]]+BLD-[0-9]+\]' "$plan" 2>/dev/null \
+    | grep -oE 'BLD-[0-9]+' >> "$followup_tmp" || true
+done
+if [ -s "$followup_tmp" ]; then
+  sort "$followup_tmp" | uniq -c | sort -rn | while read -r count ticket; do
+    echo "    [$ticket](/BLD/issues/$ticket): $count AC(s) remaining"
+  done
+else
+  echo "    (no tracked TODO followups in selected plans)"
+fi
+rm -f "$followup_tmp"
+
 if [ "$TOTAL_MISSING" -gt 0 ]; then
   echo ""
   echo "Findings:"
