@@ -83,8 +83,8 @@ test.describe("@scenario stack-marker", () => {
       },
     });
 
-    // AC3 — tap the pill to commit the marker
-    await pill.tap();
+    // AC3 — click the pill to commit the marker (tap() requires hasTouch; click() maps to onPress in RN-Web)
+    await pill.click();
 
     // AC1 — marker-logged state: label is "<marker> · <weight> <unit>"
     await expect(pill).toHaveText("6 · 60 kg");

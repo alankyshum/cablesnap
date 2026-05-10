@@ -84,11 +84,16 @@ test.describe("@scenario settings", () => {
     await scrollEl.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await page.waitForTimeout(300);
 
+    // scrollHeight may be stale if new settings rows were added (BLD-1126/1110/etc.).
+    // Use scrollIntoViewIfNeeded() as a surgical follow-up to guarantee the target
+    // is actually visible regardless of content height changes.
+    const aboutLocator = page.getByText(/about|buy me a coffee|thanks\.dev/i).first();
+    await aboutLocator.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+
     // Assert a known bottom-of-settings element is visible before capturing,
     // so the spec detects the exact cutoff regression this ticket was filed for.
-    await expect(
-      page.getByText(/about|buy me a coffee|thanks\.dev/i).first(),
-    ).toBeInViewport({ timeout: 5_000 });
+    await expect(aboutLocator).toBeInViewport({ timeout: 5_000 });
 
     const viewport = testInfo.project.name;
     await captureWithCvd({
