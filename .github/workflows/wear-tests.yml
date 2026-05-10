@@ -34,6 +34,10 @@ on:
       - 'plugins/with-wearos-module.js'
       - '__tests__/plugins/with-wearos-module.test.js'
       - '.github/workflows/wear-tests.yml'
+  # Manual dispatch lets CEO/QD verify AC9 (`:app:assembleReleaseFdroid`
+  # GMS-free DEX grep) on a feature branch whose diff doesn't touch any of
+  # the path-filtered files above. Used by BLD-1152 for PR #558.
+  workflow_dispatch:
 
 permissions:
   contents: read
