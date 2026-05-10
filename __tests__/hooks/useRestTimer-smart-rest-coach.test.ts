@@ -527,49 +527,73 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       }
     });
 
-    it("AC9 — write→restart→read round-trip: hook reads persisted live_countdown value on fresh mount", async () => {
-      // Simulates the full cold-restart persistence contract:
-      // 1. Write setting to an in-memory store (representing AsyncStorage / DB write)
+    it("AC9 — write→restart→read round-trip: hook reads persisted live_countdown, sound, and vibrate on fresh mount", async () => {
+      // Simulates the full cold-restart persistence contract for all three sound/vibrate settings:
+      // 1. Write settings to an in-memory store (representing AsyncStorage / DB write before kill)
       // 2. Configure getAppSetting to read from that store (simulating cold-start re-launch)
-      // 3. Mount a fresh hook instance (fresh component = fresh cold start)
-      // 4. Verify the hook reads and applies the previously-written setting
+      // 3. Mount a fresh hook instance (fresh component = fresh cold start) with 1s timer
+      // 4. Advance timer to completion — sound/vibrate keys are read on timer completion
+      // 5. Verify all three keys were read from the persistence layer
 
-      // Step 1: In-memory store simulating AsyncStorage / DB persistence
-      const settingsStore: Record<string, string> = {
-        rest_notification_enabled: "true",
-        rest_adaptive_enabled: "false",
-        rest_timer_pre_end_cue_seconds: "10",
-        rest_timer_show_next_set_preview: "false",
-      };
-      // Write setting (as app would before being killed)
-      await mockSetAppSetting("rest_timer_live_countdown", "true");
-      mockSetAppSetting.mockImplementation((key: string, value: string) => {
-        settingsStore[key] = value;
-        return Promise.resolve();
-      });
-      settingsStore["rest_timer_live_countdown"] = "true"; // the written value
+      jest.useFakeTimers();
+      try {
+        // Step 1: Persist all three settings before process kill
+        const settingsStore: Record<string, string> = {};
+        mockSetAppSetting.mockImplementation((key: string, value: string) => {
+          settingsStore[key] = value;
+          return Promise.resolve();
+        });
+        await mockSetAppSetting("rest_timer_live_countdown", "true");
+        await mockSetAppSetting("rest_timer_sound", "true");
+        await mockSetAppSetting("rest_timer_vibrate", "true");
 
-      // Step 2: Configure getAppSetting to read from the store (cold-start re-launch reads DB)
-      mockGetAppSetting.mockImplementation((key: string) => {
-        return Promise.resolve(settingsStore[key] ?? null) as Promise<string>;
-      });
+        // Step 2: Cold-start re-launch reads from DB (the written store)
+        mockGetAppSetting.mockImplementation((key: string) => {
+          const defaults: Record<string, string> = {
+            rest_notification_enabled: "true",
+            rest_adaptive_enabled: "false",
+            rest_timer_pre_end_cue_seconds: "0", // skip pre-end cue for 1s timer
+            rest_timer_show_next_set_preview: "false",
+          };
+          return Promise.resolve(settingsStore[key] ?? defaults[key] ?? null) as Promise<string>;
+        });
+        mockGetRestSeconds.mockResolvedValue(1); // 1-second timer for fast completion
 
-      // Step 3: Mount a fresh hook instance (simulates cold-start re-launch)
-      const { result } = renderHook(() => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { useRestTimer } = require("../../hooks/useRestTimer");
-        return useRestTimer(defaultOptions);
-      });
+        // Step 3: Mount fresh hook instance (simulates cold-start re-launch)
+        const { result } = renderHook(() => {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { useRestTimer } = require("../../hooks/useRestTimer");
+          return useRestTimer(defaultOptions);
+        });
 
-      await act(async () => {
-        await result.current.startRest("exercise-1");
-        await flushPromises();
-      });
+        // Kick off startRest — flush async layers before advancing timers
+        await act(async () => {
+          result.current.startRest("exercise-1");
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+        });
 
-      // Step 4: Verify the hook read rest_timer_live_countdown from the persistence layer
-      // and applied the written "true" value — live countdown was presented
-      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
-      expect(mockPresentLiveRestCountdown).toHaveBeenCalled();
+        // Step 4: Advance 1s to timer completion — sound/vibrate keys read on completion
+        await act(async () => {
+          jest.advanceTimersByTime(1100);
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        // Step 5: All three persisted settings were read from the persistence layer (getAppSetting)
+        // These must survive cold restart — if they were hardcoded, this assertion would pass
+        // regardless of what was written to the store.
+        expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
+        expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_sound");
+        expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_vibrate");
+        // live countdown was applied from the persisted "true" value
+        expect(mockPresentLiveRestCountdown).toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+        mockGetRestSeconds.mockResolvedValue(60);
+      }
     });
   });
 
