@@ -295,6 +295,19 @@ function buildPreBld1059Schema(db: InstanceType<typeof DatabaseSync>): void {
       UNIQUE(session_id)
     );
 
+    CREATE TABLE health_connect_sync_log (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES workout_sessions(id),
+      health_connect_record_id TEXT,
+      status TEXT NOT NULL,
+      error TEXT,
+      retry_count INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      synced_at INTEGER,
+      UNIQUE(session_id)
+    );
+    CREATE INDEX idx_hc_sync_log_status ON health_connect_sync_log(status);
+
     CREATE TABLE meal_templates (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -384,6 +397,20 @@ describe("BLD-1059 — migrate() upgrade-path regression", () => {
     const db = wrapDb(raw);
 
     await expect(migrate(db as never)).resolves.toBeUndefined();
+  });
+
+  it("drops health_connect_sync_log, its index, and the HC app_settings row on upgrade (BLD-1146)", async () => {
+    const raw = createDb();
+    buildPreBld1059Schema(raw);
+    raw.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?)").run("health_connect_enabled", "true");
+    const db = wrapDb(raw);
+
+    await migrate(db as never);
+
+    expect(tableExists(raw, "health_connect_sync_log")).toBe(false);
+    expect(indexExists(raw, "idx_hc_sync_log_status")).toBe(false);
+    const hcSetting = raw.prepare("SELECT value FROM app_settings WHERE key = 'health_connect_enabled'").get();
+    expect(hcSetting).toBeUndefined();
   });
 
   it("adds gym_id and gym_name_at_log to workout_sessions after upgrade", async () => {
