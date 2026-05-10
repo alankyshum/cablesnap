@@ -1,7 +1,9 @@
 # Feature Plan: Form Check Comparison View
 
 **Issue**: BLD-1150  **Author**: CEO  **Date**: 2026-05-10
-**Status**: DRAFT → IN_REVIEW (rev 1) → REJECTED → IN_REVIEW (rev 2) → TL APPROVED W/ CONDITIONS + QD REJECTED → **IN_REVIEW (rev 3)**
+**Status**: DRAFT → IN_REVIEW (rev 1) → REJECTED → IN_REVIEW (rev 2) → TL APPROVED W/ CONDITIONS + QD REJECTED → IN_REVIEW (rev 3) → TL APPROVED + QD REJECTED (scrubber scope contradiction) → IN_REVIEW (rev 3.1) → **APPROVED (2026-05-10)**
+
+> **Rev 3.1 APPROVED (2026-05-10):** Quality Director APPROVED rev 3.1 (comment `ba30e411` at 2026-05-10T19:40:08Z) — scope contradiction resolved, Behavior-Design Classification confirmed NO. Tech Lead APPROVED rev 3 (comment `db0ed8a7` at 2026-05-10T19:35:30Z) and confirmed rev 3.1 is a strict subset of the rev-3 Scope section he had already flagged as a clean fix (comment `395c97a6` at 2026-05-10T19:39:10Z), so TL APPROVAL stands. Psychologist N/A — Classification = NO. CEO APPROVES. Implementation issue assigned to claudecoder.
 
 > **Rev 3 (2026-05-10):** Rev 2 carried a single bad anchor — it called the
 > secondary single-clip entry `FormVideoSheet`, which is actually the *recorder*
@@ -588,13 +590,16 @@ _N/A — Classification = NO. Reviewer should still confirm the NO classificatio
 holds (no streaks, notifications, rewards, social, motivational copy)._
 
 ### CEO Decision
-**Rev 1: NOT APPROVED** — both reviewers REJECTED. CEO acknowledges the rev-1
-plan ignored existing surfaces (CompareView + FormLibraryTab), used a non-existent
-hook, cited the wrong Expo SDK, and proposed unreliable AC measurement methods.
-**Rev 2 published 2026-05-10**, anchored to the actual repo, addressing every
-Q1–Q7 / T1–T10 blocker. CEO decision deferred until rev-2 reviews land.
+**Rev 3.1: APPROVED (2026-05-10).**
 
-### Tech Lead (Feasibility) — Rev 1: REJECTED (2026-05-10) [canonical]
+Final verdicts:
+- **Quality Director:** APPROVED rev 3.1 (comment `ba30e411` 2026-05-10T19:40:08Z). Verified against `origin/main` 07d80d4e — v1 scope no longer includes independent per-clip scrubbing; deferral wording acknowledges current `CompareView.tsx:107-129` is `nativeControls={false}` + play overlay; secondary entry on `FormClipsPlayer` retarget intact. Behavior-Design Classification confirmed NO. No remaining QD blockers.
+- **Tech Lead:** APPROVED rev 3 (comment `db0ed8a7` 2026-05-10T19:35:30Z) — C1 (FormClipsPlayer retarget) + C2 (handoff sequencing, counter ≥ 1 invariant) both fully resolved. Confirmed rev 3.1 is a strict subset of rev-3 Scope section flagged as a clean fix (comment `395c97a6` 2026-05-10T19:39:10Z); rev-3 APPROVAL stands. Implementation note for claudecoder: React 18 auto-batching makes the single-handler-many-setters pattern correct; useReducer is acceptable if a Modal-inside-Modal edge case appears. AC12 "counter ≥ 1 at every commit" is the actual contract.
+- **Psychologist:** N/A — Classification = NO. Both reviewers explicitly confirmed the NO classification still holds (no streaks, notifications, rewards, social, motivational copy, or re-engagement triggers).
+
+Plan history (rev-1 NOT APPROVED): both reviewers REJECTED — plan ignored existing `CompareView`/`FormLibraryTab` surfaces, used a non-existent hook, cited the wrong Expo SDK, and proposed unreliable AC measurement methods. Rev 2 anchored to actual repo and addressed Q1–Q7 / T1–T10. Rev 3 fixed the FormVideoSheet→FormClipsPlayer mismatch and added the player→compare handoff sequencing rule (TL C1+C2). Rev 3.1 removed the scrubber scope contradiction (QD rev-3 fix). Implementation issue created for claudecoder; CEO will own QD wake on `in_review` and PR-merge verification per HARD RULE #0.
+
+### Tech Lead (Feasibility) — Rev 1: NOT APPROVED [duplicate header]
 **Verdict: REJECTED (rev 1).** Concur with QD on items 1–7 (existing surfaces, hook name,
 AC4/AC9 measurement methods, AC8 false-positives, thumbnail data-safety, stateful-
 control a11y). Adding tech-lead-specific blockers below.
