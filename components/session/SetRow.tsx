@@ -43,6 +43,8 @@ import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
 import { isCableExercise, formatAttachmentLabel, formatMountPositionLabel } from "../../lib/cable-variant";
 import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } from "../../lib/bodyweight-grip-variant";
 import { RpeChipStrip } from "./RpeChipStrip";
+import { SetWeightCell } from "./SetWeightCell";
+import { useActiveCalibration } from "@/hooks/useActiveCalibration";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
@@ -172,6 +174,18 @@ export type SetRowProps = {
   // completed sets. onRpeChange writes to DB + emits breadcrumb in parent.
   captureRpe?: boolean;
   onRpeChange?: (setId: string, rpe: number | null) => void;
+  // BLD-1126: Stack Marker Quick-Pick. gymId powers useActiveCalibration.
+  // onMarkerConfirm writes the five stack columns atomically (AC3).
+  // onManualWeightSave writes weight + reps AND clears stack columns (AC5).
+  gymId?: string | null;
+  onMarkerConfirm?: (setId: string, result: {
+    stackId: string;
+    stackName: string;
+    marker: number;
+    trueWeight: number;
+    unit: string;
+  }) => void;
+  onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
 };
 
 export const SetRow = memo(function SetRow({
@@ -186,6 +200,7 @@ export const SetRow = memo(function SetRow({
   hasClip, onVideoGlyph,
   pulleyPin, onOpenPulleyPinPicker, showPulleyPin, hasSetupPhoto, setupPhotoUri, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
+  gymId, onMarkerConfirm, onManualWeightSave,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-771: ref to the variant footer Pressable so the picker hook can
@@ -283,6 +298,24 @@ export const SetRow = memo(function SetRow({
   const handleRpeChange = useCallback(
     (rpe: number | null) => onRpeChange?.(set.id, rpe),
     [set.id, onRpeChange],
+  );
+
+  // BLD-1126: Stack marker calibration for this set's gym.
+  const stacks = useActiveCalibration(gymId ?? null);
+  const isCable = isCableExercise({ equipment });
+
+  const handleMarkerConfirm = useCallback(
+    (result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => {
+      onMarkerConfirm?.(set.id, result);
+    },
+    [set.id, onMarkerConfirm],
+  );
+
+  const handleManualWeightSave = useCallback(
+    (weight: number | null) => {
+      onManualWeightSave?.(set.id, weight, set.reps ?? null);
+    },
+    [set.id, set.reps, onManualWeightSave],
   );
 
   // BLD-1110: RPE chip strip element, shared across Case A/B/C footer topologies.
@@ -410,12 +443,21 @@ export const SetRow = memo(function SetRow({
                 setNumber={set.set_number}
               />
             ) : (
-              <WeightPicker
-                value={displayedWeight}
+              <SetWeightCell
+                setId={set.id}
+                setNumber={set.set_number}
+                weight={set.weight ?? null}
+                stackMarker={set.stack_marker ?? null}
+                stackUnit={set.stack_unit_at_log ?? null}
+                displayedWeight={displayedWeight}
                 step={step}
                 unit={unit}
-                onValueChange={onWeightChange}
+                isCable={isCable}
+                stacks={stacks}
                 accessibilityLabel={a11yWeightLabel}
+                onWeightChange={onWeightChange}
+                onManualWeightSave={handleManualWeightSave}
+                onMarkerConfirm={handleMarkerConfirm}
               />
             )}
           </View>

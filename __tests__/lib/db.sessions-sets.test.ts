@@ -170,3 +170,27 @@ describe("data validation edge cases", () => {
     expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 });
+
+// BLD-1126 AC5: updateSetManualWeight must clear all four stack_* columns
+// in the same UPDATE as weight + reps (single-write atomicity).
+describe("updateSetManualWeight — AC5 stack column clearance", () => {
+  it("clears stack_marker, stack_id, stack_name_at_log, stack_unit_at_log in one UPDATE", async () => {
+    await ctx.initDb();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { updateSetManualWeight } = require("../../lib/db/session-sets");
+    await updateSetManualWeight("set1", { weight: 40, reps: 8 });
+
+    // Verify drizzle's update().set() was called with null stack columns
+    const setMock = mockDrizzleDb.update.mock.results.at(-1)?.value.set;
+    expect(setMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        weight: 40,
+        reps: 8,
+        stack_id: null,
+        stack_marker: null,
+        stack_name_at_log: null,
+        stack_unit_at_log: null,
+      })
+    );
+  });
+});

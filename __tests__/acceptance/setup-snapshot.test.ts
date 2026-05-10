@@ -31,6 +31,8 @@ describe("Setup Snapshot — CSV export includes pulley_pin (BLD-1114 AC-CSV)", 
     day_session_date: null,
     bodyweight_modifier_kg: null,
     pulley_pin: null,
+    stack_marker: null,
+    stack_name_at_log: null,
   };
 
   it("header includes pulley_pin column", () => {
