@@ -747,6 +747,20 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
       });
     });
 
+    it("throws StravaError(unknown) when callback state does not match (CSRF protection)", async () => {
+      // uuid mock returns "mock-state-uuid" (see top of describe block, line ~249).
+      // Passing a different state value simulates a CSRF attack / state confusion.
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+        type: "success",
+        url: "cablesnap://strava-callback?code=valid-code&state=wrong-state-value",
+      });
+      await expect(strava.connectStrava()).rejects.toMatchObject({
+        name: "StravaError",
+        code: "unknown",
+        message: expect.stringContaining("state mismatch"),
+      });
+    });
+
     it("still returns null (no throw) when user dismisses or cancels the prompt", async () => {
       WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
       await expect(strava.connectStrava()).resolves.toBeNull();

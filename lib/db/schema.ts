@@ -390,19 +390,6 @@ export const stravaSyncLog = sqliteTable("strava_sync_log", {
   index("idx_strava_sync_log_status").on(table.status),
 ]);
 
-export const healthConnectSyncLog = sqliteTable("health_connect_sync_log", {
-  id: text("id").primaryKey(),
-  session_id: text("session_id").notNull().unique(),
-  health_connect_record_id: text("health_connect_record_id"),
-  status: text("status").notNull(),
-  error: text("error"),
-  retry_count: integer("retry_count").default(0),
-  created_at: integer("created_at").notNull(),
-  synced_at: integer("synced_at"),
-}, (table) => [
-  index("idx_hc_sync_log_status").on(table.status),
-]);
-
 // ─── Strength Goals ─────────────────────────────────────────────────────────
 
 export const strengthGoals = sqliteTable("strength_goals", {
@@ -491,7 +478,6 @@ export type ProgressPhotoRow = typeof progressPhotos.$inferSelect;
 export type AchievementEarnedRow = typeof achievementsEarned.$inferSelect;
 export type StravaConnectionRow = typeof stravaConnection.$inferSelect;
 export type StravaSyncLogRow = typeof stravaSyncLog.$inferSelect;
-export type HealthConnectSyncLogRow = typeof healthConnectSyncLog.$inferSelect;
 export type StrengthGoalRow = typeof strengthGoals.$inferSelect;
 export type WaterLogRow = typeof waterLogs.$inferSelect;
 export type GymProfileRow = typeof gymProfiles.$inferSelect;

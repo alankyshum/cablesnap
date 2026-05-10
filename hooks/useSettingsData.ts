@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { AccessibilityInfo, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useToast } from '@/components/ui/bna-toast';
 import {
@@ -33,12 +33,6 @@ export function useSettingsData() {
   const [exportProgress, setExportProgress] = useState<string | null>(null);
   const [stravaAthlete, setStravaAthlete] = useState<string | null>(null);
   const [stravaLoading, setStravaLoading] = useState(false);
-  const [hcEnabled, setHcEnabled] = useState(false);
-  const [hcLoading, setHcLoading] = useState(false);
-  const [hcPermissionDenied, setHcPermissionDenied] = useState(false);
-  const [hcSdkStatus, setHcSdkStatus] = useState<
-    'available' | 'needs_install' | 'needs_update' | 'unavailable'
-  >('unavailable');
   const [weeklyGoal, setWeeklyGoal] = useState<number | null>(null);
 
   useFocusEffect(
@@ -111,41 +105,6 @@ export function useSettingsData() {
           .then((conn) => setStravaAthlete(conn?.athlete_name ?? null))
           .catch(() => {});
       }
-      if (Platform.OS === 'android') {
-        (async () => {
-          try {
-            const { getHealthConnectSdkStatus, checkHealthConnectPermissionStatus } =
-              await import('@/lib/health-connect');
-            const status = await getHealthConnectSdkStatus();
-            setHcSdkStatus(status);
-            if (status === 'available') {
-              const setting = await getAppSetting('health_connect_enabled');
-              if (setting === 'true') {
-                const hasPermission = await checkHealthConnectPermissionStatus();
-                if (!hasPermission) {
-                  await import('@/lib/db').then(({ setAppSetting: set }) =>
-                    set('health_connect_enabled', 'false'),
-                  );
-                  setHcEnabled(false);
-                  setHcPermissionDenied(true);
-                  toast.error('Health Connect permission was revoked');
-                  AccessibilityInfo.announceForAccessibility(
-                    'Health Connect permission was revoked',
-                  );
-                } else {
-                  setHcEnabled(true);
-                  setHcPermissionDenied(false);
-                }
-              } else {
-                setHcEnabled(false);
-                setHcPermissionDenied(false);
-              }
-            }
-          } catch {
-            setHcSdkStatus('unavailable');
-          }
-        })();
-      }
     }, [toast]),
   );
 
@@ -168,10 +127,6 @@ export function useSettingsData() {
     exportProgress, setExportProgress,
     stravaAthlete, setStravaAthlete,
     stravaLoading, setStravaLoading,
-    hcEnabled, setHcEnabled,
-    hcLoading, setHcLoading,
-    hcPermissionDenied, setHcPermissionDenied,
-    hcSdkStatus,
     weeklyGoal, setWeeklyGoal,
   };
 }

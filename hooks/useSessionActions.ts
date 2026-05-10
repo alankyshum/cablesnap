@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function, max-lines, react-hooks/exhaustive-deps, complexity */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, AppState, Keyboard, Platform } from "react-native";
+import { AccessibilityInfo, AppState, Keyboard } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import {
@@ -1138,16 +1138,6 @@ export function useSessionActions({
           }
         } catch {
           showError("Strava sync failed");
-        }
-
-        // Health Connect sync (non-blocking, silent)
-        if (Platform.OS === "android") {
-          try {
-            const { syncToHealthConnect } = await import("../lib/health-connect");
-            await syncToHealthConnect(id!);
-          } catch {
-            // HC sync is silent
-          }
         }
 
         try {
