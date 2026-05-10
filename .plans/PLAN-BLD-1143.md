@@ -86,14 +86,14 @@ A single non-interactive line under each historical session in `DayDetailPanel`:
 - **Working time (per session):** `Σ` of per-set Working over all completed sets.
 - **Rest time (per consecutive set pair within the same exercise group):**
   `gap_i = workout_sets[i].completed_at − workout_sets[i−1].completed_at − working_estimate[i]`
-  Capped per pair at `min(gap_i, max(2 × rest_target_seconds, 600))` to prevent a phone-locked 30-min real gap from dominating the chart. Negative values clamped to 0.
+  Capped per pair at `min(gap_i, REST_CAP_SECONDS)` where `REST_CAP_SECONDS = 600` (10 minutes). The fixed cap prevents a phone-locked 30-min real gap from dominating the chart while staying simple and free of per-set DB lookups. Negative values clamped to 0. **Note:** an exercise-aware cap (e.g., `2 × resolveRest(...)` from `lib/rest-resolver.ts`) was considered but rejected for v1 — `resolveRest` is async per (session, exercise, setType), so calling it per consecutive-set pair would add ~N async queries per session render. The fixed cap is honest about being a cap (not a per-exercise target) and matches QD's recommendation #2 from the rev-2.1 review.
   **Rest time (per session):** `Σ` of all per-pair gaps.
 - **Other time:** `session.completed_at − session.started_at − Working − Rest`. Always clamped to ≥ 0 (clock-skew defense). Includes set-up time, idle scrolling, exercise transitions, anything not modeled above. **Never labeled as "Idle", "Wasted", or any valenced word** — locked via source-contracts test.
 
 ### Technical Approach
 - New pure module: `lib/session-pacing.ts` exporting `computePacing(sets, session): PacingBreakdown`. Pure function, no React, no DB.
 - **Reuses** `WORK_ESTIMATE_SECONDS_PER_REP` and the working-time COALESCE estimator from `lib/rest-resolver.ts` — imported, not re-implemented. If that constant changes, pacing changes consistently. Add a comment-link in both files.
-- Query layer: `lib/db/session-pacing.ts` reads existing `workout_sets` columns (`completed_at`, `duration_seconds`, `reps`, `rest_target_seconds`, `exercise_id`) and the session's `started_at`/`completed_at`. **No schema migration in v1.**
+- Query layer: `lib/db/session-pacing.ts` reads existing `workout_sets` columns (`completed_at`, `duration_seconds`, `reps`, `exercise_id`) and the session's `started_at`/`completed_at`. **No schema migration in v1, no read of any non-existent column.** The Rest cap uses a single hard-coded `REST_CAP_SECONDS = 600` constant in `lib/session-pacing.ts` — no rest-target lookup. (Verified against `lib/db/schema.ts:113-153`: `workout_sets` has no `rest_target_seconds` column; rest target lives on `template_exercises.rest_seconds` and `exercises.user_rest_seconds`, behind the async `resolveRest`/`getRestSecondsForExercise` helpers — out of scope for v1 pacing.)
 - React: `hooks/useSessionPacing.ts` (TanStack Query). **Cache key:** `['session-pacing', sessionId, session.edited_at ?? session.completed_at]` — keyed on `edited_at` (the actual edit signal stamped by `lib/db/sessions.ts:482-548`), NOT a non-existent `updated_at`. `staleTime: Infinity` is safe because the key bumps on every edit.
 - Components:
   - `components/session/summary/PacingCard.tsx` (stacked bar + 3 numbers + ⓘ disclosure + tap target).
@@ -152,8 +152,8 @@ A single non-interactive line under each historical session in `DayDetailPanel`:
 | Session in progress (not finished) | Pacing surface NOT rendered until session is marked complete. |
 | Set with neither `duration_seconds` nor `reps` | Contributes 0 Working time; quiet `console.warn` once per session; no user-facing warning. |
 | Clock skew / negative Other | Clamp Other to 0; emit `console.warn` once per session; user sees clean numbers that may sum to slightly less than the gross duration in this rare case (≤ 1 s typically). |
-| Very long real gap (30 min — phone died, user came back) | Per-pair Rest cap at `min(actual − working_estimate, max(2 × rest_target_seconds, 600))`. Remainder bleeds into Other so totals stay honest about elapsed time. |
-| `rest_target_seconds` unset for a pair | Use 90 s as fallback for the cap calculation only; never displayed. |
+| Very long real gap (30 min — phone died, user came back) | Per-pair Rest cap at `min(actual − working_estimate, REST_CAP_SECONDS)` where `REST_CAP_SECONDS = 600`. Remainder bleeds into Other so totals stay honest about elapsed time. |
+| Rest cap heuristic is too aggressive for legit long-rest training (powerlifting 5+ min sets) | Accepted as v1 trade-off. Cap is 10 min, generous enough for almost all rest patterns; outliers bleed into Other. Future iteration can adopt exercise-aware cap via `resolveRest` if user feedback justifies the per-set query cost. |
 | Session crosses midnight | Use absolute timestamps; renders correctly. |
 | Edited session (set added/removed/duration corrected via edit-completed-session flow) | Cache key keyed on `edited_at` → automatic invalidation; numbers refresh on next render. |
 | Accessibility | Stacked bar has a11y label `"Estimated pacing: Working 18 minutes 42 seconds, Rest 41 minutes 10 seconds, Other 7 minutes 8 seconds"`; sheet rows are individually focusable; ⓘ has `accessibilityRole="button"` and label `"Show how pacing is calculated"`. |
