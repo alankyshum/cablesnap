@@ -133,6 +133,7 @@ describe("useSessionActions – warmup rest timer guard", () => {
         startRest,
         startRestWithDuration,
         startRestWithBreakdown: jest.fn(),
+    dismissRest: jest.fn(),
         session: { started_at: Date.now(), name: "Test" },
         showToast,
         showError,

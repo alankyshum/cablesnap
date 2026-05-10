@@ -167,6 +167,7 @@ function makeParams(groups: any[] = []) {
     startRest: jest.fn(),
     startRestWithDuration: jest.fn(),
     startRestWithBreakdown: jest.fn(),
+    dismissRest: jest.fn(),
     session: { started_at: Date.now() - 1000, name: "Test" },
     showToast: jest.fn(),
     showError: jest.fn(),

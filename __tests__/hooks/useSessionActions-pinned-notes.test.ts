@@ -154,6 +154,7 @@ function makeParams(groups: any[] = [], overrides: any = {}) {
     startRest: jest.fn(),
     startRestWithDuration: jest.fn(),
     startRestWithBreakdown: jest.fn(),
+    dismissRest: jest.fn(),
     // clock_started_at must be non-null so the AppState listener gets registered.
     session: { started_at: Date.now(), clock_started_at: Date.now(), name: "Test" },
     showToast: jest.fn(),

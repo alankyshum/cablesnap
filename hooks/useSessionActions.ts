@@ -99,6 +99,7 @@ type Params = {
   startRest: (ctx: string | SetContext) => void;
   startRestWithDuration: (secs: number) => void;
   startRestWithBreakdown: (breakdown: RestBreakdown) => void;
+  dismissRest: () => void;
   session: { started_at: number; clock_started_at?: number | null; name: string; gym_id?: string | null } | null;
   showToast: (msg: string, opts?: { action?: { label: string; onPress: () => void | Promise<void> }; duration?: number }) => void;
   showError: (msg: string) => void;
@@ -114,6 +115,7 @@ export function useSessionActions({
   startRest,
   startRestWithDuration,
   startRestWithBreakdown,
+  dismissRest,
   session,
   showToast,
   showError,
@@ -1002,6 +1004,8 @@ export function useSessionActions({
       "Complete Workout?",
       `Duration: ${formatTime(elapsed)}`,
       async () => {
+        // BLD-1137: cancel any active rest timer notifications before completing.
+        dismissRest();
         // BLD-1028: flush any pending pinned-note drafts before completing.
         await flushAllPinnedNotes();
         await completeSession(id!);

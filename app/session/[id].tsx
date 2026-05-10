@@ -136,7 +136,7 @@ export default function ActiveSession() {
     handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill,
     handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough,
     handleMarkerConfirm, handleManualWeightSave, finish, cancel,
-  } = useSessionActions({ id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, session, showToast, showError, triggerPR, unit });
+  } = useSessionActions({ id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, dismissRest, session, showToast, showError, triggerPR, unit });
 
   const {
     activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex,
