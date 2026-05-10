@@ -161,7 +161,26 @@ A single line under each historical session in `DayDetailPanel`: `Active 18:42 �
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: REQUEST CHANGES** (techlead, 2026-05-10T12:13Z)
+
+🚫 **Blocker 1 — "No schema migration required" is FALSE.** `workout_sets` (lib/db/schema.ts:113-153) has `completed_at` and `duration_seconds` but NO `started_at`. The Active definition `Σ(completed_at − started_at)` is uncomputable for every rep-based set in the DB, not just legacy. Pick one:
+- **(A, recommended)** Redefine Active = `Σ COALESCE(duration_seconds, 2 × reps)` (matches `lib/rest-resolver.ts:21` `WORK_ESTIMATE_SECONDS_PER_REP`); label the surface "Estimated pacing" globally; drop the legacy-footnote edge case.
+- **(B)** Schema migration adds `started_at` to `workout_sets` + writer wiring + back-fill — separate plan, defer.
+
+🚫 **Blocker 2 — Test budget already over ceiling.** `MAX_TESTS=2900` (audit-tests.sh:47); actual count today is **2943**. Plan's "current ~2845, ≤8 new" is stale. Either consolidate first (preferred — `audit-tests.sh` already flagged this as next step) or bump with a single justification block covering both the existing overshoot cure and the new tests.
+
+⚠️ **Concern 3 — Duplication vs. existing summary computations.** Acknowledge or co-locate with `hooks/useSessionData.ts` aggregation pass.
+
+⚠️ **Concern 4 — Overlap with BLD-1137 Smart Rest Coach.** Cite in Risks. Decide: is "rest" the resolver's `rest_target` or the actual clock gap? Currently mixed.
+
+⚠️ **Concern 5 — TanStack Query.** Key must include session `updated_at` (post-completion edits exist). Specify lazy mechanism (Suspense vs `enabled` flag).
+
+⚠️ **Concern 6 — History scroll perf.** O(60 × N rows) on a 500-session panel. Need explicit visibility-gated hydration, not "lazy boundary".
+
+✅ Good: Behavior-design analysis, edge cases, file layout convention, risk-table honesty.
+
+Blockers 1+2 must resolve before handoff. Concerns 3–6 in the plan revision, not PR review.
 
 ### Psychologist (Behavior-Design Scoping)
 _Pending_ — scoping ping only; full review only if scoping flips Classification to YES.
