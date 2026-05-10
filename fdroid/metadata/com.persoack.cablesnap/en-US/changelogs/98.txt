@@ -1,0 +1,3 @@
+- **Plateau detection & break-through suggestions**: When an exercise stalls for 4+ sessions without weight or rep improvement, a suggestion card surfaces on the exercise detail screen with a context-aware action — deload to break a loaded stall, push for +2 reps at current weight, or check form if effort has been creeping up (BLD-1122).
+- **Settings scroll fix (follow-up)**: Increased the bottom clearance buffer on the Settings screen to prevent the About section
+…see in-app release notes
