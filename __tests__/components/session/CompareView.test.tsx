@@ -26,16 +26,15 @@ const mockDecrement = jest.fn(() => { unmountCount++; });
 
 jest.mock("@/hooks/useMediaSurfaceMounted", () => ({
   useMediaSurfaceMounted: () => {
-    const { useEffect } = require("react") as typeof import("react");
+    const { useEffect, useLayoutEffect } = require("react") as typeof import("react");
     const { increment, decrement } = require("@/lib/media/replay-gate") as {
       increment: () => void;
       decrement: () => void;
     };
+    // Mirror real implementation: increment in layout effect, decrement in passive effect.
     /* eslint-disable react-hooks/exhaustive-deps */
-    useEffect(() => {
-      increment();
-      return () => { decrement(); };
-    }, []);
+    useLayoutEffect(() => { increment(); }, []);
+    useEffect(() => { return () => { decrement(); }; }, []);
     /* eslint-enable react-hooks/exhaustive-deps */
   },
 }));

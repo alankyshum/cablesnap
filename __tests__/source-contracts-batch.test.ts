@@ -1131,11 +1131,13 @@ describe("CompareView / FormClipsPlayer — AC8 banned token scan", () => {
     // JSX text nodes between tags with braces: {"..."}
     const jsxText = src.matchAll(/\{["']([^"']+)["']\}/g);
     for (const m of jsxText) parts.push(m[1]);
-    // Plain JSX text nodes between tags (no braces)
+    // Plain JSX text nodes between tags (no braces).
+    // Filter: skip multiline matches and strings containing TypeScript code characters
+    // (;, (, ), {, }, [, ]) — these indicate TS generic expressions, not UI text.
     const plainText = src.matchAll(/>([^<{]+)</g);
     for (const m of plainText) {
       const t = m[1].trim();
-      if (t.length > 1) parts.push(t);
+      if (t.length > 1 && !/\n/.test(t) && !/[;(){}[\]]/.test(t)) parts.push(t);
     }
     // accessibilityLabel/Hint — brace syntax: accessibilityLabel={"..."}
     const a11yBrace = src.matchAll(/accessibility(?:Label|Hint)=\{"([^"]+)"\}/g);
@@ -1152,10 +1154,13 @@ describe("CompareView / FormClipsPlayer — AC8 banned token scan", () => {
   const compareViewSrc = readSrc("components/session/CompareView.tsx");
   const formClipsPlayerSrc = readSrc("components/session/FormClipsPlayer.tsx");
   const formClipThumbsSrc = readSrc("lib/media/form-clip-thumbs.ts");
-  // FormLibraryTab added per techlead review (AC8 scope): must scan entry-point too.
-  // Note: [id].tsx and form-clips.ts are excluded — TypeScript generics produce xp/other
-  // false positives via the />([^<{]+)</ regex matching generic syntax.
   const formLibraryTabSrc = readSrc("components/session/FormLibraryTab.tsx");
+  // BLD-1151: include all PR-modified files. The extractor above strips TS
+  // generic false-positives via the multiline + code-char filter, so these
+  // files can now be scanned without excluding them.
+  const sessionScreenSrc = readSrc("app/session/[id].tsx");
+  const compareFromPlayerSrc = readSrc("hooks/useCompareFromPlayer.tsx");
+  const formClipsSrc = readSrc("lib/media/form-clips.ts");
 
   const allUserFacing =
     extractUserFacingStrings(compareViewSrc) +
@@ -1164,7 +1169,13 @@ describe("CompareView / FormClipsPlayer — AC8 banned token scan", () => {
     " " +
     extractUserFacingStrings(formClipThumbsSrc) +
     " " +
-    extractUserFacingStrings(formLibraryTabSrc);
+    extractUserFacingStrings(formLibraryTabSrc) +
+    " " +
+    extractUserFacingStrings(sessionScreenSrc) +
+    " " +
+    extractUserFacingStrings(compareFromPlayerSrc) +
+    " " +
+    extractUserFacingStrings(formClipsSrc);
 
   const BANNED = [
     "streak",
@@ -1200,6 +1211,18 @@ describe("CompareView / FormClipsPlayer — AC8 banned token scan", () => {
 
   it("form-clip-thumbs does not import expo-notifications", () => {
     expect(formClipThumbsSrc).not.toContain("expo-notifications");
+  });
+
+  it("session screen does not import expo-notifications", () => {
+    expect(sessionScreenSrc).not.toContain("expo-notifications");
+  });
+
+  it("useCompareFromPlayer does not import expo-notifications", () => {
+    expect(compareFromPlayerSrc).not.toContain("expo-notifications");
+  });
+
+  it("form-clips does not import expo-notifications", () => {
+    expect(formClipsSrc).not.toContain("expo-notifications");
   });
 
   it("CompareView Sentry calls never reference rel_path, cacheDirectory, documentDirectory, or absolute paths", () => {

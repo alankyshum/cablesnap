@@ -35,15 +35,18 @@ jest.mock("@/lib/media/replay-gate", () => ({
 
 jest.mock("@/hooks/useMediaSurfaceMounted", () => ({
   useMediaSurfaceMounted: () => {
-    const { useEffect } = require("react") as typeof import("react");
+    const { useEffect, useLayoutEffect } = require("react") as typeof import("react");
     const { increment, decrement } = require("@/lib/media/replay-gate") as {
       increment: () => void;
       decrement: () => void;
     };
-    useEffect(() => {
-      increment();
-      return () => { decrement(); };
-    }, []);
+    // Mirror the real implementation: increment in layout effect so a new
+    // surface's counter rise precedes the passive-phase cleanup of the
+    // surface being replaced in the same batch (AC12 invariant).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useLayoutEffect(() => { increment(); }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { return () => { decrement(); }; }, []);
   },
 }));
 
@@ -207,6 +210,8 @@ describe("Player → Compare handoff (AC12 extended)", () => {
 
     // After transition: CompareView is open → counter should be 1 again.
     expect(counter).toBe(1);
+    // AC12 invariant: counter must never drop to 0 during the handoff.
+    expect(counterHistory.every((v) => v >= 1)).toBe(true);
 
     // One increment from player, one decrement from player, one increment from compare.
     expect(mockIncrement).toHaveBeenCalledTimes(2);
