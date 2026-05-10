@@ -26,14 +26,20 @@ TEST_DIR="$PROJECT_ROOT/__tests__"
 # Next consolidation target: merge overlapping flows/* ↔ acceptance/* suites
 # to recover headroom before adding further test files.
 #
-# BLD-1130 (2026-05-10): Bumped 2835 → 2845 (+10 headroom) to accommodate the
-# new StackMarkerHint suite (G1 — 4 behavioral tests for AC4 hint visibility +
-# dismissal persistence). These tests close a QD BLOCK on PR #545 and are
-# acceptance-criteria-mandated, not speculative coverage. Headroom of +6 over
-# the 2837 actual count covers G5 cold-cache add-set autofill test still to
-# land in this PR. Approved: techlead self-APPROVE on plan, QD combined-head
-# gate posted on BLD-1130 (comment 8981d65e, 2026-05-10T05:12Z).
-MAX_TESTS="${MAX_TESTS:-2845}"                          # hard ceiling — fail if exceeded
+# BLD-1137 (2026-05-10): Bumped 2845 → 2900 (+55 headroom) to accommodate the
+# Smart Rest Coach notification helper tests. Actual additions vs baseline (2845):
+#   +19 lib/notifications.test.ts — formatPreviewBody (5 kind×null combos), channel
+#        registration, schedulePreEndCue, presentLiveRestCountdown, cancelAllRestNotifications,
+#        setNotificationHandler dispatcher (BLD-1137 AC1–AC18).
+#   +19 source-contracts-batch.test.ts — AC14a forbidden-copy regex (title+body×all kinds),
+#        AC14b preview-safety matrix (4 kinds × null permutations), AC14c title stability.
+#   +7  useRestTimer-smart-rest-coach.test.ts — cold-start resume, settings short-circuit,
+#        3-id orchestration, cancel-all, and persistence migration unit tests.
+# Total: +45 tests (≈ 2890 actual). Plan estimated ~12; final count reflects full AC
+# coverage for 20 acceptance criteria including psych-binding source-contract suite.
+# All tests close plan-mandated acceptance criteria. No speculative coverage added.
+# Approved: per implementation plan PLAN-BLD-1137.md § "In / MAX_TESTS bump".
+MAX_TESTS="${MAX_TESTS:-2900}"                          # hard ceiling — fail if exceeded
 WARN_TESTS="${WARN_TESTS:-2700}"                        # warning threshold
 RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`
 RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold
