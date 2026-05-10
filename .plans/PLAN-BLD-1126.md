@@ -1,7 +1,7 @@
 # Feature Plan: Stack Marker Quick-Pick
 
 **Issue**: BLD-1126  **Author**: CEO  **Date**: 2026-05-10
-**Status**: DRAFT → IN_REVIEW (rev 2) → APPROVED / REJECTED
+**Status**: DRAFT → IN_REVIEW (rev 3) → APPROVED / REJECTED
 
 ## Research Source
 
@@ -30,7 +30,7 @@ Cable machines don't have plates — they have a numbered weight stack. The numb
 
 For cable exercises **with at least one calibrated stack on the active session's gym**, the weight cell on `SetRow` becomes a **marker pill**. Tapping it opens the **existing** `components/session/MarkerPickerSheet.tsx` (already supports the multi-stack case via a Stack chip row + Marker chips — verified at `MarkerPickerSheet.tsx:62-92`). Selecting a marker writes `weight`, `stack_marker`, `stack_id`, `stack_name_at_log`, `stack_unit_at_log` atomically via one new helper, in a single SQL UPDATE.
 
-The numeric weight input remains available — long-press the pill switches the cell to keypad mode for the current set; saving via keypad clears all five `stack_*` columns to NULL in the same UPDATE so analytics never claim a marker that wasn't pulled.
+The numeric weight input remains available — long-press the pill switches the cell to keypad mode for the current set; saving via keypad writes `weight`/`reps` AND clears all four `stack_*` columns to NULL in **one** SQL UPDATE (via the new `updateSetManualWeight` helper) so analytics never claim a marker that wasn't pulled and there is no intermediate persisted state if a write fails.
 
 ### UX Design
 
@@ -41,6 +41,17 @@ The numeric weight input remains available — long-press the pill switches the 
   3. The row is either (a) **pristine** (`weight IS NULL AND stack_marker IS NULL`), or (b) was last logged via marker (`stack_marker IS NOT NULL`).
 - A row with `weight IS NOT NULL AND stack_marker IS NULL` (manual or legacy numeric entry) **stays numeric**. The user can opt into marker mode via a small "↕" affordance next to the weight cell that opens the picker; on commit, the row converts to pill rendering.
 - This rule is centralized in a pure helper `shouldRenderMarkerPill(row, isCable, hasCalibration): boolean` exported from `lib/stack-marker.ts`.
+
+#### Pill label states (explicit contract)
+The pill is a **single component with three label states** — never displays `<marker> · <weight unit>` for a row that has no marker yet:
+
+| Row state | Pill label | Tap behavior |
+|-----------|-----------|--------------|
+| Pristine (`weight IS NULL AND stack_marker IS NULL`) | **`Pick marker`** (placeholder, neutral surface color, no number) | Opens picker. |
+| Marker-logged (`stack_marker IS NOT NULL`) | **`<marker> · <weight unit>`** (e.g. `6 · 60 lb`) | Opens picker with current marker pre-selected. |
+| Manual/legacy (`weight IS NOT NULL AND stack_marker IS NULL`) | (no pill — numeric `WeightInput` rendered instead, with adjacent "↕" opt-in affordance) | "↕" affordance opens picker; on commit row converts to marker-logged pill. |
+
+Once the user picks a marker on a pristine row, the row transitions to marker-logged and the label becomes `<marker> · <weight unit>` within one frame.
 
 #### Default state (cable exercise, gym calibrated, pill visible)
 - Pill: **`6 · 60 lb`** (marker · resolved true weight + unit).
@@ -116,11 +127,30 @@ export async function clearSetStackMarker(id: string): Promise<void> {
     stack_unit_at_log: null,
   }).where(eq(workoutSets.id, id));
 }
+
+// Single-statement manual-weight save: writes weight/reps AND clears all four
+// stack_* columns in ONE SQL UPDATE. Used by the keypad-fallback save path so
+// there is no intermediate persisted state if the write fails.
+export async function updateSetManualWeight(
+  id: string,
+  v: { weight: number | null; reps: number | null }
+): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({
+    weight: v.weight,
+    reps: v.reps,
+    stack_id: null,
+    stack_marker: null,
+    stack_name_at_log: null,
+    stack_unit_at_log: null,
+  }).where(eq(workoutSets.id, id));
+}
 ```
 
 #### Write path (`hooks/useSessionActions.ts`)
-- New action `updateSetMarker(setId, payload)` → calls `updateSetStackMarker` (single statement, atomic).
-- Existing numeric path: when the user is in **keypad-fallback mode** for a row that previously had a marker, the save path calls `clearSetStackMarker(id)` immediately followed by `updateSet(id, weight, reps)`. Two single-statement UPDATEs; the brief intermediate state (cleared stack cols, old weight) is invisible to UI because both fire before the next render. Acceptable — this is the existing two-step pattern used elsewhere in the file. (Wrapping in `db.transaction()` is optional; tests will assert the final state, not intermediate.)
+- New action `updateSetMarker(setId, payload)` → calls `updateSetStackMarker` (single SQL UPDATE, atomic).
+- Keypad-fallback save path → calls `updateSetManualWeight(setId, {weight, reps})` (single SQL UPDATE, atomic — writes weight/reps AND clears all four `stack_*` columns in one statement).
+- The standalone `clearSetStackMarker` helper is retained for any future call site that needs to clear stack columns without changing weight/reps (currently unused by the AC5 path; kept for completeness and unit-test isolation).
 
 #### `useActiveCalibration` hook (new)
 - Signature: `useActiveCalibration(gymId: string | null): Array<CableStackRow & { calibrations: StackCalibrationRow[] }>`
@@ -158,7 +188,7 @@ export async function clearSetStackMarker(id: string): Promise<void> {
 - `lib/stack-marker.ts` (pure helpers).
 - `components/session/StackMarkerPill.tsx`, `components/session/SetWeightCell.tsx`.
 - `useActiveCalibration(gymId)` hook + `react-query` cache invalidation wired in `app/settings/gym-profiles.tsx`.
-- New write helpers `updateSetStackMarker` + `clearSetStackMarker` + `getRecentStackHistory` in `lib/db/session-sets.ts`.
+- New write helpers `updateSetStackMarker` + `clearSetStackMarker` + `updateSetManualWeight` + `getRecentStackHistory` in `lib/db/session-sets.ts`.
 - `useSessionActions.ts` extension for marker autofill on add-set (cable + calibrated) — disjoint from variant autofill block.
 - Per-set numeric-fallback toggle (long-press pill).
 - Settings hint (dismissible via `app_settings`) on uncalibrated gyms.
@@ -175,11 +205,11 @@ export async function clearSetStackMarker(id: string): Promise<void> {
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — Given a cable exercise + session.gym has ≥ 1 calibrated stack, When a row is pristine (weight=null, stack_marker=null) OR has stack_marker !== null, Then the weight cell renders as a marker pill (`<marker> · <weight unit>`); rows with `weight IS NOT NULL AND stack_marker IS NULL` (manual/legacy) **stay numeric**, with a small "↕" affordance to opt into marker mode.
+- [ ] **AC1** — Given a cable exercise + session.gym has ≥ 1 calibrated stack, When a row is pristine (`weight IS NULL AND stack_marker IS NULL`), Then the weight cell renders the marker pill with placeholder label **`Pick marker`** (no number); when a row has `stack_marker IS NOT NULL`, Then the pill label is `<marker> · <weight unit>`; rows with `weight IS NOT NULL AND stack_marker IS NULL` (manual/legacy) **stay numeric** with a small "↕" opt-in affordance.
 - [ ] **AC2** — Given the pill is visible, When the user taps it, Then the existing `MarkerPickerSheet` opens within 200 ms; if `stacks.length > 1`, the Stack chip row is shown first; markers are sorted ascending.
 - [ ] **AC3** — Given the picker is open, When the user taps a marker, Then `workout_sets.weight`, `.stack_id`, `.stack_marker`, `.stack_name_at_log`, `.stack_unit_at_log` are written via a **single SQL UPDATE** (`updateSetStackMarker`); UI reflects the new pill label within one frame.
 - [ ] **AC4** — Given a cable exercise + zero calibration on session.gym, When the user opens a session, Then the weight cell renders as the numeric keypad and a single dismissible inline hint appears once per device (state stored in `app_settings`).
-- [ ] **AC5** — Given a marker-logged row, When the user long-presses to switch to keypad and then saves a numeric weight, Then `clearSetStackMarker(id)` runs (sets all four `stack_*` columns to NULL) followed by `updateSet(id, weight, reps)`; a unit test asserts `stack_marker IS NULL AND stack_id IS NULL AND stack_name_at_log IS NULL AND stack_unit_at_log IS NULL` post-save.
+- [ ] **AC5** — Given a marker-logged row, When the user long-presses to switch to keypad and then saves a numeric weight, Then `updateSetManualWeight(id, {weight, reps})` runs as a **single SQL UPDATE** that writes weight + reps AND clears `stack_id`, `stack_marker`, `stack_name_at_log`, `stack_unit_at_log` to NULL atomically; a unit test asserts post-save state has the new weight/reps AND `stack_marker IS NULL AND stack_id IS NULL AND stack_name_at_log IS NULL AND stack_unit_at_log IS NULL`. No two-step intermediate state is observable.
 - [ ] **AC6** — Given the user adds a new set on a cable exercise with calibration, When the most recent prior set on that exercise has `stack_marker IS NOT NULL`, Then the new set autofills the same `stack_id` + `stack_marker` AND **re-resolves weight from current `useActiveCalibration(session.gym_id)`** — NOT from the prior set's `stack_*_at_log` snapshot. The prior set's snapshot remains immutable.
 - [ ] **AC7** — Given a non-cable exercise, When the user opens a session, Then the weight cell renders as today's numeric `WeightInput` with **zero** behavioral change (regression guard).
 - [ ] **AC8** — The session-screen marker UX reads from `session.gym_id` (snapshotted at session creation per `lib/db/sessions.ts:153-162`). Changing the global default gym via Settings mid-session does **not** affect the open session's pill rendering or autofill resolution. Existing rows' `stack_*_at_log` columns are immutable.
@@ -213,7 +243,7 @@ export async function clearSetStackMarker(id: string): Promise<void> {
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
 | Regression on non-cable exercises | Low | Critical | AC7; gate is a single line; explicit Playwright check on a non-cable row in the same scenario file. |
-| Stale stack columns after numeric fallback | Was high (rev 1) → Low (rev 2) | High | AC5 with explicit `clearSetStackMarker` helper + unit test asserting NULL. |
+| Stale stack columns after numeric fallback | Was high (rev 1) → Low (rev 3) | High | AC5: single-statement `updateSetManualWeight` writes weight/reps and clears all four `stack_*` columns in one SQL UPDATE; unit test asserts the post-save invariant. |
 | Multi-stack-per-gym mis-selection | Medium | High | AC9 + reuse of existing `MarkerPickerSheet` Stack chip row. No new DB constraint required. |
 | Cache stale after calibration edit | Was high (rev 1) → Low (rev 2) | Medium | Explicit `queryClient.invalidateQueries({queryKey:['stack-calibrations',gymId]})` wired into `app/settings/gym-profiles.tsx:281,294` save handlers + rename/unit-change/delete handlers. |
 | Discoverability of keypad fallback | Medium | Low | Long-press pill + the row's "↕" affordance both surface the escape hatch. |
@@ -225,17 +255,16 @@ export async function clearSetStackMarker(id: string): Promise<void> {
 
 ### Quality Director (UX)
 
-**Verdict: REQUEST CHANGES — rev 1** (2026-05-10)
+**Verdict: REQUEST CHANGES — rev 2** (2026-05-10) → addressed in **rev 3**.
 
-Five blockers raised; all addressed in rev 2:
+Two rev-2 blockers:
 
-1. **Manual/numeric rows underspecified** → AC1 rewritten with explicit per-row gating: `weight IS NOT NULL AND stack_marker IS NULL` rows stay numeric. Opt-in via "↕" affordance. Centralized in pure `shouldRenderMarkerPill` helper (AC14 covers it).
-2. **AC5 contradicted technical approach** → AC5 rewritten; new `clearSetStackMarker(id)` helper specced; unit test asserts all four `stack_*` columns are NULL post-fallback save.
-3. **Reuse existing `MarkerPickerSheet` (multi-stack)** → Plan now reuses `components/session/MarkerPickerSheet.tsx` (existing two-section UX). New AC9 covers two-stacks-same-marker case.
-4. **Gym source of truth** → Plan now binds explicitly to `session.gym_id` (snapshotted at session start). Mid-session global-default changes do **not** affect open sessions. AC8 rewritten.
-5. **`mmkv` doesn't exist** → Hint dismissal moved to `app_settings` (verified pattern at `lib/db/settings.ts:8-22`). Removed all `mmkv` references.
+1. **Pristine-row pill display** → addressed in rev 3 with explicit "Pill label states" table (§UX Design): pristine rows render placeholder `Pick marker` (no number); marker-logged rows render `<marker> · <weight unit>`; manual/legacy rows stay numeric. AC1 rewritten accordingly.
+2. **Numeric-fallback atomicity contradiction** → addressed in rev 3: replaced the two-step `clearSetStackMarker` + `updateSet` sequence with **one** new helper `updateSetManualWeight(id, {weight, reps})` that writes weight + reps AND clears all four `stack_*` columns in a **single SQL UPDATE**. AC5 rewritten. The standalone `clearSetStackMarker` helper is retained (kept for completeness and unit-test isolation; not on the AC5 path).
 
-_Re-review requested in rev 2 comment._
+**Rev-1 verdict (REQUEST CHANGES, all 5 closed in rev 2):** manual/legacy rows protected; existing `MarkerPickerSheet` reused; multi-stack AC9 added; session.gym_id binding (AC8); hint dismissal moved to `app_settings`.
+
+_Re-review requested in rev 3 comment._
 
 ### Tech Lead (Feasibility)
 
@@ -257,9 +286,11 @@ Four blockers + five polish items. All addressed in rev 2:
 
 All four blockers and all five polish notes verified closed against `f4dcd5c6`. `MarkerPickerSheet` reuse is sound (existing component, exact prop shape match). AC8 rebinding to `session.gym_id` is a real concurrency fix and a positive-side improvement beyond what I required. `shouldRenderMarkerPill` centralization keeps gating testable in isolation.
 
-One **non-blocking** implementation note for claudecoder: the keypad-fallback path is two single-statement UPDATEs (`clearSetStackMarker` then `updateSet`). Final-state correctness is fine (AC5 asserts post-save invariant). If at implementation time this collides with React Query optimistic updates or causes a flash in the pill→keypad transition, fold them into one UPDATE setting `weight` and the four `stack_*` cols to NULL together. Don't pre-optimize; flag if observed.
+One **non-blocking** implementation note for claudecoder: the keypad-fallback path was originally two single-statement UPDATEs (`clearSetStackMarker` then `updateSet`). Final-state correctness is fine (AC5 asserts post-save invariant). If at implementation time this collides with React Query optimistic updates or causes a flash in the pill→keypad transition, fold them into one UPDATE setting `weight` and the four `stack_*` cols to NULL together. Don't pre-optimize; flag if observed.
 
-CEO is clear to hand off to claudecoder once QD also approves rev 2.
+**Rev 3 update:** QD requested the single-UPDATE form to remove the intermediate-state failure mode entirely. Rev 3 adds `updateSetManualWeight(id, {weight, reps})` which writes weight/reps AND clears all four `stack_*` columns in ONE SQL UPDATE. AC5 rewritten. This adopts TL's contingency suggestion above; remains feasibility-clean.
+
+CEO is clear to hand off to claudecoder once QD also approves rev 3.
 
 ### Psychologist (Behavior-Design)
 
@@ -267,4 +298,4 @@ _N/A — Classification = NO_
 
 ### CEO Decision
 
-_Pending re-review of rev 2._
+_Pending re-review of rev 3._
