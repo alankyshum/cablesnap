@@ -124,8 +124,10 @@ describe("Strava Integration — API Client", () => {
     expect(stravaClientSrc).toContain("400");
     expect(stravaClientSrc).toContain("await disconnect()");
     expect(stravaClientSrc).toContain("No completed sets to sync");
-    expect(stravaClientSrc).toContain('scheme: "cablesnap"');
-    expect(stravaClientSrc).toContain('"strava-callback"');
+    // Worker bounce redirect URI (https) + app deep link (cablesnap://)
+    expect(stravaClientSrc).toContain("cablesnap://strava-callback");
+    expect(stravaClientSrc).toContain("/callback");
+    expect(stravaClientSrc).toContain("stravaProxyUrl");
   });
 
   it("sync log entry created before upload, retry queue respects limits", () => {
@@ -244,6 +246,7 @@ describe("Strava Integration — Worker Proxy", () => {
 // ---- Behavioral integration tests (mocked dependencies, no real API calls) ----
 
 // Mock all external deps before importing the module
+jest.mock("../../lib/uuid", () => ({ uuid: jest.fn(() => "mock-state-uuid") }));
 jest.mock("expo-constants", () => ({
   __esModule: true,
   default: {
@@ -274,7 +277,7 @@ jest.mock("@sentry/react-native", () => ({
   captureException: jest.fn(),
 }));
 
-const AuthSession = require("expo-auth-session");
+const WebBrowser = require("expo-web-browser");
 const SecureStore = require("expo-secure-store");
 const db = require("../../lib/db");
 
@@ -296,13 +299,10 @@ describe("Strava Integration — Behavioral", () => {
   });
 
   it("connectStrava exchanges auth code for tokens via proxy and saves connection", async () => {
-    AuthSession.AuthRequest.mockImplementation(() => ({
-      promptAsync: jest.fn().mockResolvedValue({
-        type: "success",
-        params: { code: "auth-code-123" },
-      }),
-      codeVerifier: "test-verifier",
-    }));
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+      type: "success",
+      url: "cablesnap://strava-callback?code=auth-code-123&scope=activity%3Awrite&state=mock-state-uuid",
+    });
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -331,9 +331,7 @@ describe("Strava Integration — Behavioral", () => {
   });
 
   it("connectStrava returns null when user cancels OAuth", async () => {
-    AuthSession.AuthRequest.mockImplementation(() => ({
-      promptAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
-    }));
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
     const result = await strava.connectStrava();
     expect(result).toBeNull();
     expect(mockFetch).not.toHaveBeenCalled();
@@ -463,12 +461,10 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
   }
 
   it("connectStrava emits lifecycle logs and never leaks tokens or auth codes", async () => {
-    AuthSession.AuthRequest.mockImplementation(() => ({
-      promptAsync: jest.fn().mockResolvedValue({
-        type: "success",
-        params: { code: SECRET_AUTH_CODE },
-      }),
-    }));
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+      type: "success",
+      url: `cablesnap://strava-callback?code=${SECRET_AUTH_CODE}&scope=activity%3Awrite&state=mock-state-uuid`,
+    });
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -502,9 +498,7 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
   });
 
   it("connectStrava logs user_cancelled when OAuth is cancelled (no tokens in logs)", async () => {
-    AuthSession.AuthRequest.mockImplementation(() => ({
-      promptAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
-    }));
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
 
     const result = await strava.connectStrava();
 
@@ -568,9 +562,7 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Sentry as any).logger = undefined;
     try {
-      AuthSession.AuthRequest.mockImplementation(() => ({
-        promptAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
-      }));
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
       await expect(strava.connectStrava()).resolves.toBeNull();
     } finally {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -689,19 +681,17 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
   });
 
   describe("connectStrava throws typed StravaError", () => {
-    const AuthSession = require("expo-auth-session");
     const mockFetch = jest.fn();
     const originalFetch = global.fetch;
 
     beforeEach(() => {
       jest.clearAllMocks();
       global.fetch = mockFetch;
-      AuthSession.AuthRequest.mockImplementation(() => ({
-        promptAsync: jest.fn().mockResolvedValue({
-          type: "success",
-          params: { code: "auth-code-xyz" },
-        }),
-      }));
+      // Default: browser returns success with a code
+      WebBrowser.openAuthSessionAsync.mockResolvedValue({
+        type: "success",
+        url: "cablesnap://strava-callback?code=auth-code-xyz&scope=activity%3Awrite&state=mock-state-uuid",
+      });
     });
 
     afterAll(() => {
@@ -746,14 +736,11 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
       }
     });
 
-    it("throws StravaError(unknown) when AuthSession prompt returns type='error' (BLD-547)", async () => {
-      AuthSession.AuthRequest.mockImplementation(() => ({
-        promptAsync: jest.fn().mockResolvedValue({
-          type: "error",
-          params: {},
-          error: new Error("deep link routing failed"),
-        }),
-      }));
+    it("throws StravaError(unknown) when browser returns success URL without a code (BLD-547)", async () => {
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+        type: "success",
+        url: "cablesnap://strava-callback?error=access_denied",
+      });
       await expect(strava.connectStrava()).rejects.toMatchObject({
         name: "StravaError",
         code: "unknown",
@@ -761,14 +748,10 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
     });
 
     it("still returns null (no throw) when user dismisses or cancels the prompt", async () => {
-      AuthSession.AuthRequest.mockImplementation(() => ({
-        promptAsync: jest.fn().mockResolvedValue({ type: "cancel", params: {} }),
-      }));
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
       await expect(strava.connectStrava()).resolves.toBeNull();
 
-      AuthSession.AuthRequest.mockImplementation(() => ({
-        promptAsync: jest.fn().mockResolvedValue({ type: "dismiss", params: {} }),
-      }));
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "dismiss" });
       await expect(strava.connectStrava()).resolves.toBeNull();
     });
   });
