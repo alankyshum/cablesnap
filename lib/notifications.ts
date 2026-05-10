@@ -369,6 +369,11 @@ export async function handleResponse(
  * Slot ownership: notifications.ts owns this slot. If future code needs to
  * add handlers, extend the dispatcher here rather than calling setNotificationHandler
  * elsewhere — overwriting this registration will break the foreground cue suppression.
+ *
+ * Note on chaining: expo-notifications does NOT expose a getter for any
+ * previously-registered handler, so true chaining is not possible. This
+ * implementation intentionally overwrites. All notification-type routing
+ * is handled inside this dispatcher to keep the single slot self-contained.
  */
 export function setupHandler(): void {
   const mod = getModule();

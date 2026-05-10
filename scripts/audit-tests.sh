@@ -39,6 +39,11 @@ TEST_DIR="$PROJECT_ROOT/__tests__"
 # coverage for 20 acceptance criteria including psych-binding source-contract suite.
 # All tests close plan-mandated acceptance criteria. No speculative coverage added.
 # Approved: per implementation plan PLAN-BLD-1137.md § "In / MAX_TESTS bump".
+#
+# BLD-1137 round-2 fixes (2026-05-10): No net change to ceiling (2900 still accurate).
+# Removed duplicate AC14 source-contract suite (−17 tests). Added 3 orchestration tests
+# in useSessionActions-rest-preview.test.ts (AC5/AC6/AC12/AC13 handleCheck wiring).
+# Net delta: −14. Actual ≈ 2876. 2900 ceiling unchanged — adequate headroom.
 MAX_TESTS="${MAX_TESTS:-2900}"                          # hard ceiling — fail if exceeded
 WARN_TESTS="${WARN_TESTS:-2700}"                        # warning threshold
 RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`

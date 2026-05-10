@@ -185,9 +185,11 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     if (sessionId) {
       void cancelAllRestNotifications(sessionId).catch(() => {});
     } else {
-      // Fallback: cancel by stored IDs (no sessionId available)
+      // Fallback: cancel all stored IDs (no sessionId available at call time)
       const ids = notificationIdsRef.current;
-      if (ids.complete) { void cancelRestComplete(ids.complete).catch(() => {}); }
+      for (const notifId of [ids.preEnd, ids.complete, ids.liveOngoing]) {
+        if (notifId) void cancelRestComplete(notifId).catch(() => {});
+      }
     }
     notificationIdsRef.current = {};
   }, [sessionId, stopLiveCountdownInterval]);
@@ -415,8 +417,8 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     [sessionId, runTimer],
   );
 
-  const startRestWithDuration = useCallback((secs: number) => {
-    runTimer(secs, defaultBreakdown(secs));
+  const startRestWithDuration = useCallback((secs: number, preview: NextSetPreview = null, isLastSet = false) => {
+    runTimer(secs, defaultBreakdown(secs), preview, isLastSet);
   }, [runTimer]);
 
   /**
@@ -425,8 +427,8 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
    * re-resolving.
    */
   const startRestWithBreakdown = useCallback(
-    (br: RestBreakdown) => {
-      runTimer(br.totalSeconds, br);
+    (br: RestBreakdown, preview: NextSetPreview = null, isLastSet = false) => {
+      runTimer(br.totalSeconds, br, preview, isLastSet);
     },
     [runTimer],
   );
