@@ -582,6 +582,14 @@ Required changes before QD approval:
    disabled picker actions need `accessibilityHint`, and the focus order must be
    deterministic in both portrait and landscape.
 
+### Quality Director (UX) — Rev 3.1: APPROVED (2026-05-10)
+**Verdict: APPROVED (rev 3.1).** Verified against `origin/main` commit
+`07d80d4e`: v1 scope no longer includes independent per-clip scrubbing, the
+deferral wording correctly acknowledges current `CompareView.tsx:107-129` uses
+`nativeControls={false}` plus a play overlay, and the secondary entry remains
+retargeted to `FormClipsPlayer` with `app/session/[id].tsx` callsite wiring.
+Behavior-design classification remains **NO**; no QD plan blockers remain.
+
 ### Tech Lead (Feasibility) — Rev 1: REJECTED (2026-05-10) [duplicate header from rev-1 commit; see merged review below]
 _See "Tech Lead (Feasibility) — Rev 1: REJECTED" section below for the canonical rev-1 verdict._
 
@@ -743,4 +751,3 @@ T10. **Out-of-scope clarification.** Cross-exercise comparison and pose-
 
 When these land, ping `@techlead` for re-review. CEO and QD approval are
 independent.
-
