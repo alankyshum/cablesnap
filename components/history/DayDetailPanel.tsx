@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/format";
+import { formatPacingTime } from "@/lib/session-pacing";
 import { spacing, radii } from "@/constants/design-tokens";
 import RatingWidget from "@/components/RatingWidget";
 import { Icon } from "@/components/ui/icon";
@@ -8,6 +9,7 @@ import { ChevronRight } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { SessionRow } from "@/hooks/useHistoryData";
+import { useSessionPacing } from "@/hooks/useSessionPacing";
 
 type Props = {
   colors: ThemeColors;
@@ -44,6 +46,7 @@ export default function DayDetailPanel({
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text variant="body" numberOfLines={1} style={{ color: colors.onSurface }}>{s.name || "Untitled workout"}</Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{formatDuration(s.duration_seconds)} · {s.set_count} sets</Text>
+              <SessionPacingLabel session={s} colors={colors} />
             </View>
             {s.rating != null && s.rating > 0 && <RatingWidget value={s.rating} readOnly size="small" />}
             <Icon name={ChevronRight} size={20} color={colors.onSurfaceVariant} />
@@ -62,3 +65,29 @@ const styles = StyleSheet.create({
   panel: { marginTop: spacing.sm, marginBottom: spacing.sm, padding: spacing.md, borderRadius: radii.lg, gap: spacing.xs },
   item: { flexDirection: "row", alignItems: "center", padding: spacing.sm, borderRadius: radii.md, gap: spacing.sm, marginTop: spacing.xxs },
 });
+
+/**
+ * Passive one-line pacing label for DayDetailPanel session rows (BLD-1144).
+ * Plain <Text> — NOT a separate tap target. No nested Pressable.
+ * Valenced words ("Idle", "Wasted", "Inactive", "Off-task", "Distraction") forbidden.
+ */
+function SessionPacingLabel({
+  session,
+  colors,
+}: {
+  session: SessionRow;
+  colors: ThemeColors;
+}) {
+  const { pacing } = useSessionPacing({
+    sessionId: session.id,
+    editStamp: session.edited_at ?? session.completed_at ?? null,
+  });
+
+  if (!pacing || pacing.isEmpty) return null;
+
+  return (
+    <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>
+      {"Working"} {formatPacingTime(pacing.working)} · {"Rest"} {formatPacingTime(pacing.rest)} · {"Other"} {formatPacingTime(pacing.other)}
+    </Text>
+  );
+}

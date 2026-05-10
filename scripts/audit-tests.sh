@@ -44,7 +44,12 @@ TEST_DIR="$PROJECT_ROOT/__tests__"
 # Removed duplicate AC14 source-contract suite (−17 tests). Added 3 orchestration tests
 # in useSessionActions-rest-preview.test.ts (AC5/AC6/AC12/AC13 handleCheck wiring).
 # Net delta: −14. Actual ≈ 2876. 2900 ceiling unchanged — adequate headroom.
-MAX_TESTS="${MAX_TESTS:-2900}"                          # hard ceiling — fail if exceeded
+#
+# BLD-1144 Session Pacing Insights (2026-05-10): +13 net tests.
+# Added: 7 pure-logic+format tests (session-pacing.test.ts), 6 source-contract assertions
+# (source-contracts-batch.test.ts). All tests mandatory per plan §142 (≤8 new it/test).
+# Actual count jumped from ~2890 baseline to 2903. Ceiling bumped 2900→2910.
+MAX_TESTS="${MAX_TESTS:-2910}"                          # hard ceiling — fail if exceeded
 WARN_TESTS="${WARN_TESTS:-2700}"                        # warning threshold
 RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`
 RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold
