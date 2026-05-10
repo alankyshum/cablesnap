@@ -53,6 +53,7 @@ jest.mock('../../lib/db', () => ({
   getExercisesByIds: jest.fn().mockResolvedValue({}),
   getAppSetting: jest.fn().mockResolvedValue('true'),
   setAppSetting: jest.fn().mockResolvedValue(undefined),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
   getSessionPRs: jest.fn().mockResolvedValue([]),
   getSessionRepPRs: jest.fn().mockResolvedValue([]),
   getSessionDurationPRs: jest.fn().mockResolvedValue([]),
@@ -756,5 +757,6 @@ jest.mock('../../lib/db/settings', () => ({
   clearPlateauEntries: jest.fn().mockResolvedValue(undefined),
   getAppSetting: jest.fn().mockResolvedValue(null),
   setAppSetting: jest.fn().mockResolvedValue(undefined),
+  deleteAppSetting: jest.fn().mockResolvedValue(undefined),
 }));
 
