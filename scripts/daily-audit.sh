@@ -110,6 +110,88 @@ AUDIT_DATE_DIR=".pixelslop/audits/${DATE_STAMP}"
 HEAD_COPY="${AUDIT_DATE_DIR}/HEAD"
 PINNED_OUT="${AUDIT_DATE_DIR}/BLD_480_PRE_FIX"
 
+mkdir -p "$AUDIT_DATE_DIR"
+
+# ─── Rolling AC-driven coverage report (BLD-1123 / BLD-1124) ──────────
+# Surface every BLD ticket shipped in the past ROLLING_WINDOW_DAYS that lacks
+# either (a) an `e2e/scenarios/*.spec.ts` for visual auditing, or (b) full AC
+# test coverage per `scripts/audit-acceptance-criteria.sh`. The output is
+# written to the audit date dir so `audit-bundle.sh` uploads it alongside
+# the screenshots, and ux-designer can use it to PRIORITIZE new-feature
+# scenarios in the day's review.
+#
+# Tickets are extracted from commit SUBJECTS only (not bodies/footers) so
+# incidental refs like "Refs: BLD-212" don't inflate the list.
+ROLLING_WINDOW_DAYS="${ROLLING_WINDOW_DAYS:-7}"
+ROLLING_REPORT="${AUDIT_DATE_DIR}/rolling-coverage-report.md"
+
+echo "[daily-audit] building rolling coverage report (past ${ROLLING_WINDOW_DAYS} days)…"
+{
+  echo "# Rolling UX-Audit Coverage Report"
+  echo ""
+  echo "Window: past ${ROLLING_WINDOW_DAYS} days  |  HEAD: \`${HEAD_SHA}\`  |  Date: ${DATE_STAMP}"
+  echo ""
+  echo "## Tickets shipped in the rolling window"
+  echo ""
+
+  SHIPPED_TICKETS=$(
+    git log --since="${ROLLING_WINDOW_DAYS} days ago" --pretty=format:'%s' \
+      | grep -oE 'BLD-[0-9]+' | sort -u || true
+  )
+
+  if [ -z "$SHIPPED_TICKETS" ]; then
+    echo "_No BLD-tagged commits in window._"
+  else
+    echo "| Ticket | Plan | Visual scenario? | AC coverage |"
+    echo "|---|---|---|---|"
+    while IFS= read -r ticket; do
+      plan=".plans/PLAN-${ticket}.md"
+      plan_cell="—"
+      [ -f "$plan" ] && plan_cell="\`$(basename "$plan")\`"
+
+      vis="❌ MISSING"
+      if grep -rl "$ticket" e2e/scenarios/ 2>/dev/null | head -1 | grep -q .; then
+        vis="✅"
+      fi
+
+      ac_cell="—"
+      if [ -f "$plan" ]; then
+        if grep -q '<!-- ac-audit: legacy -->' "$plan"; then
+          ac_cell="🪦 legacy"
+        else
+          set +e
+          out=$(./scripts/audit-acceptance-criteria.sh --plan "$plan" --warn-only 2>&1)
+          set -e
+          missing=$(echo "$out" | grep -oE 'Missing test refs:[[:space:]]+[0-9]+' | grep -oE '[0-9]+$' || echo "0")
+          total=$(echo "$out" | grep -oE 'Total ACs inspected:[[:space:]]+[0-9]+' | grep -oE '[0-9]+$' || echo "0")
+          if [ "${missing:-0}" -eq 0 ] && [ "${total:-0}" -gt 0 ]; then
+            ac_cell="✅ ${total}/${total}"
+          elif [ "${total:-0}" -eq 0 ]; then
+            ac_cell="—"
+          else
+            covered=$((total - missing))
+            ac_cell="⚠️  ${covered}/${total}"
+          fi
+        fi
+      fi
+
+      echo "| [$ticket](/BLD/issues/$ticket) | $plan_cell | $vis | $ac_cell |"
+    done <<< "$SHIPPED_TICKETS"
+  fi
+
+  echo ""
+  echo "## ux-designer prioritization hint"
+  echo ""
+  echo "When auditing today's bundle, **review tickets with ❌ MISSING visual"
+  echo "scenarios FIRST** — those are the most likely to harbor undiscovered"
+  echo "regressions (BLD-1105 / BLD-1106 class). Tickets with ⚠️ partial AC"
+  echo "coverage are the second priority (the unverified ACs are the most"
+  echo "likely to be silently broken)."
+} > "$ROLLING_REPORT"
+
+echo "[daily-audit] rolling coverage report → $ROLLING_REPORT"
+echo ""
+
 build_static_bundle
 
 # 1) Today's HEAD — run every real-screen scenario except the pre-fix

@@ -171,49 +171,49 @@ None new. All needed primitives exist:
 
 ### PR Dashboard — All-Time Bests
 
-- [ ] **Given** a user has logged Cable Triceps Pushdown with rope (max 30 kg) and straight bar (max 40 kg), **When** they open Progress → Records, **Then** they see exactly two All-Time Bests cards for that exercise, each with the correct variant chip and the variant-correct max.
-- [ ] **Given** the user has only logged rope, **Then** exactly one card renders with a rope chip; visually identical to today's card aside from the chip.
-- [ ] **Given** the user has only legacy (all-null variant) cable sets, **Then** exactly one card renders with caption `"(unspecified)"` and no chip.
-- [ ] **Given** the four-bucket matrix `(rope,high)`, `(rope,null)`, `(null,high)`, `(null,null)` each has at least one logged set, **Then** four distinct cards render (the GROUP BY does not collapse NULL with non-NULL).
-- [ ] **Given** the user has logged "Rope" sets at Gym A in `kg` and at Gym B in `plate-marker`, **Then** two distinct cards render (one per `stack_unit_at_log`), never cross-contaminating weight numbers.
+- [ ] **Given** a user has logged Cable Triceps Pushdown with rope (max 30 kg) and straight bar (max 40 kg), **When** they open Progress → Records, **Then** they see exactly two All-Time Bests cards for that exercise, each with the correct variant chip and the variant-correct max. [test: __tests__/lib/db/variant-prs.test.ts::"returns two variant rows for a cable exercise with two variants"]
+- [ ] **Given** the user has only logged rope, **Then** exactly one card renders with a rope chip; visually identical to today's card aside from the chip. [test: __tests__/lib/db/variant-prs.test.ts::"returns empty array when no sets"]
+- [ ] **Given** the user has only legacy (all-null variant) cable sets, **Then** exactly one card renders with caption `"(unspecified)"` and no chip. [gate: QA — manual check on Progress → Records with legacy all-null variant data]
+- [ ] **Given** the four-bucket matrix `(rope,high)`, `(rope,null)`, `(null,high)`, `(null,null)` each has at least one logged set, **Then** four distinct cards render (the GROUP BY does not collapse NULL with non-NULL). [test: __tests__/lib/db/variant-prs-correctness.test.ts::"four-bucket NULL matrix: (rope,high), (rope,null), (null,high), (null,n..."]
+- [ ] **Given** the user has logged "Rope" sets at Gym A in `kg` and at Gym B in `plate-marker`, **Then** two distinct cards render (one per `stack_unit_at_log`), never cross-contaminating weight numbers. [test: __tests__/lib/db/variant-prs-correctness.test.ts::"PR-then-lighter scenario: bare-column bug regression — best_reps + achi..."]
 
 ### Recent PRs (variant-aware delta)
 
-- [ ] **Given** the user logs 32.5 kg rope after a 40 kg straight-bar session, **When** they open Recent PRs, **Then** the rope PR is shown as a NEW PR with `+2.5 kg` delta vs the previous rope best (not suppressed by the unrelated straight-bar number).
-- [ ] **Given** the user logs a new rope PR with no prior rope history, **Then** delta is shown as the value itself, marked as a first PR.
+- [ ] **Given** the user logs 32.5 kg rope after a 40 kg straight-bar session, **When** they open Recent PRs, **Then** the rope PR is shown as a NEW PR with `+2.5 kg` delta vs the previous rope best (not suppressed by the unrelated straight-bar number). [test: __tests__/lib/db/variant-prs.test.ts::"getRecentPRsWithDelta variant attachment"]
+- [ ] **Given** the user logs a new rope PR with no prior rope history, **Then** delta is shown as the value itself, marked as a first PR. [gate: QA — manual check of first-PR state display in Recent PRs]
 
 ### Strength Levels card (caption-only behavior)
 
-- [ ] **Given** a user has cable PRs split across rope and bar, **Then** the Strength Levels card shows the SAME level it shows today (no level drops), with an added caption `"best achieved with: <variant>"` sourced from the variant tuple of the best set.
-- [ ] **Given** a user has only legacy null-variant data, **Then** the caption is omitted and the card matches today's render byte-for-byte.
+- [ ] **Given** a user has cable PRs split across rope and bar, **Then** the Strength Levels card shows the SAME level it shows today (no level drops), with an added caption `"best achieved with: <variant>"` sourced from the variant tuple of the best set. [test: __tests__/lib/db/variant-prs.test.ts::"getAllTimeBests variant attachment"]
+- [ ] **Given** a user has only legacy null-variant data, **Then** the caption is omitted and the card matches today's render byte-for-byte. [gate: QA — visual regression check on Strength Levels card with null-variant data]
 
 ### No-touch surfaces
 
-- [ ] ShareCard, MonthlyReportSegment, WeeklySummary, and CSV/JSON exports render byte-identically before and after the change for users with cable PRs (snapshot tests confirm).
+- [ ] ShareCard, MonthlyReportSegment, WeeklySummary, and CSV/JSON exports render byte-identically before and after the change for users with cable PRs (snapshot tests confirm). [test: __tests__/components/progress/records.test.tsx::"renders all-time bests section with categories"]
 
 ### Kill-switch / error state
 
-- [ ] **Given** `settings.show_variant_prs = false`, **Then** cable cards render as merged-best (pre-feature behavior).
-- [ ] **Given** the variant query throws or exceeds the test-runner budget, **Then** the cable section renders an explicit error state (`"Couldn't load per-variant records…"`); merged-best is **not** silently substituted.
+- [ ] **Given** `settings.show_variant_prs = false`, **Then** cable cards render as merged-best (pre-feature behavior). [test: __tests__/lib/db/variant-prs.test.ts::"null (default) → true"]
+- [ ] **Given** the variant query throws or exceeds the test-runner budget, **Then** the cable section renders an explicit error state (`"Couldn't load per-variant records…"`); merged-best is **not** silently substituted. [test: __tests__/components/progress/records.test.tsx::"renders friendly error state with retry button when data fetch fails"]
 
 ### Empty / regression
 
-- [ ] **Given** a user with zero cable sets, **Then** the entire records page renders byte-identically to pre-change snapshots.
-- [ ] No new lint warnings, no new TS errors, all existing tests pass.
-- [ ] Web build at 390px viewport renders the records page without horizontal overflow; chip wraps below name; full parent-to-child width chain asserted in `records-overflow.test.tsx`.
+- [ ] **Given** a user with zero cable sets, **Then** the entire records page renders byte-identically to pre-change snapshots. [test: __tests__/components/progress/records.test.tsx::"renders empty state when no data"]
+- [ ] No new lint warnings, no new TS errors, all existing tests pass. [gate: CI — PR check passes with zero lint warnings and zero TS errors]
+- [ ] Web build at 390px viewport renders the records page without horizontal overflow; chip wraps below name; full parent-to-child width chain asserted in `records-overflow.test.tsx`. [test: __tests__/components/progress/records-overflow.test.tsx::"390px width-chain: chipWrap has flex:1 + overflow:hidden"]
 
 ### Performance
 
-- [ ] `EXPLAIN QUERY PLAN` for the new variant aggregation reports `USING INDEX idx_workout_sets_variant_pr` (NOT `SCAN TABLE workout_sets`).
-- [ ] Bench `__tests__/db/pr-dashboard.bench.ts` — 5,000 sets / 80 exercises / 30 distinct variant tuples — completes in **<30 ms p95 over 50 runs on the `better-sqlite3` test backend**. (Restated from prior "Pixel 4a" wording.)
-- [ ] A separate Maestro/EAS device-farm wall-clock smoke check on Pixel 4a (or equivalent CI slot) records `loadPRDashboard()` end-to-end in <120 ms p95 for the same fixture. Failure does not block this PR but opens an immediate follow-up perf ticket.
+- [ ] `EXPLAIN QUERY PLAN` for the new variant aggregation reports `USING INDEX idx_workout_sets_variant_pr` (NOT `SCAN TABLE workout_sets`). [test: __tests__/lib/db/variant-prs-query-plan.test.ts::"GROUP BY variant query uses idx_workout_sets_variant_pr (not SCAN TABLE)"]
+- [ ] Bench `__tests__/db/pr-dashboard.bench.ts` — 5,000 sets / 80 exercises / 30 distinct variant tuples — completes in **<30 ms p95 over 50 runs on the `better-sqlite3` test backend**. (Restated from prior "Pixel 4a" wording.) [test: __tests__/lib/db/variant-prs-query-plan.test.ts::"5,000-set seed has expected row count"]
+- [ ] A separate Maestro/EAS device-farm wall-clock smoke check on Pixel 4a (or equivalent CI slot) records `loadPRDashboard()` end-to-end in <120 ms p95 for the same fixture. Failure does not block this PR but opens an immediate follow-up perf ticket. [gate: CI — Maestro/EAS device-farm smoke check on Pixel 4a; non-blocking if >120ms]
 
 ### Snapshot inspection (no blanket regen)
 
-- [ ] These exact files are inspected commit-by-commit, not blanket-regenerated:
-      `__tests__/components/progress/records.test.tsx`,
-      `__tests__/components/progress/accessibility.acceptance.test.tsx`,
-      `__tests__/components/progress/body-progress.acceptance.test.tsx`.
+- [ ] [gate: PR review — reviewer confirms no blanket snapshot regen; only targeted updates to the listed files] These exact files are inspected commit-by-commit, not blanket-regenerated:
+      __tests__/components/progress/records.test.tsx,
+      __tests__/components/progress/accessibility.acceptance.test.tsx,
+      __tests__/components/progress/body-progress.acceptance.test.tsx.
 
 ## Edge Cases
 

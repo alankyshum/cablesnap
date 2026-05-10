@@ -489,25 +489,25 @@ expected 3 min" without adding a UI.
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: Given a user has logged ≥ 4 sets on exercise X in the last
+- [ ] **AC1** [test: __tests__/lib/rest-resolver.test.ts::"AC1 — median is within ±10 s of synthetic fixture expected value"]: Given a user has logged ≥ 4 sets on exercise X in the last
       30 days with `actual_rest` (per "Rest measurement" definition) in
       [15 s, 600 s], when the user completes a new set on X (in any
       session, with or without a template), then the rest timer starts
       at the historical median **within ±10 s of the synthetic-fixture
-      expected value**, NOT 90 s.
-- [ ] **AC1b**: On a synthetic fixture where true rest is known, the
+      expected value**, NOT 90 s. [test: __tests__/lib/rest-resolver.test.ts::"AC1 — median is within ±10 s of synthetic fixture expected value"]
+- [ ] **AC1b** [test: __tests__/lib/rest-resolver.test.ts::"AC1b — median bias is within ±5 s of true rest on synthetic fixture"]: On a synthetic fixture where true rest is known, the
       median produced by the resolver is within **±5 s** of the true
       median (asserts the `2s × reps` work-estimate is bias-neutral at
-      P50).
-- [ ] **AC2**: Given a user has pinned a default rest of N seconds on
+      P50). [test: __tests__/lib/rest-resolver.test.ts::"AC1b — median bias is within ±5 s of true rest on synthetic fixture"]
+- [ ] **AC2** [test: __tests__/lib/rest-resolver.test.ts::"returns pinned source when user_rest_seconds is set"]: Given a user has pinned a default rest of N seconds on
       exercise X, when the user completes a set on X, then the timer
       starts at exactly N seconds **with no multiplier applied**
       (composition rule, Blocker 1 fix), regardless of history or
-      template.
-- [ ] **AC2b**: When source ∈ {`history`, `pinned`}, `useRestTimer.startRest`
+      template. [test: __tests__/lib/rest-resolver.test.ts::"returns pinned source when user_rest_seconds is set"]
+- [ ] **AC2b** [test: __tests__/lib/rest-resolver.test.ts::"pinned source is returned even when history samples exist"]: When source ∈ {`history`, `pinned`}, `useRestTimer.startRest`
       bypasses `resolveRestSeconds` (verified by spy / mock in unit test).
-      Output is clamped to `[15, 600]`, NOT the legacy `[10, 360]`.
-- [ ] **AC2c** (rev 4 — supersedes rev-3 framing per TL+QD rev-3):
+      Output is clamped to `[15, 600]`, NOT the legacy `[10, 360]`. [test: __tests__/lib/rest-resolver.test.ts::"pinned source is returned even when history samples exist (AC2 priority o..."]
+- [ ] **AC2c** [test: __tests__/lib/rest-resolver.test.ts::"linkScope=true returns pinned when user_rest_seconds is set (AC2c bypass)"] (rev 4 — supersedes rev-3 framing per TL+QD rev-3):
       `useSessionActions.handleLinkedRest` adaptive-ON branch
       (`hooks/useSessionActions.ts:287-294`) calls `getRestContext` with
       **`linkScope: true`** (same as the adaptive-OFF branch and
@@ -516,25 +516,25 @@ expected 3 min" without adding a UI.
       `startRestWithDuration(source.seconds)`. `source.kind === "history"`
       cannot occur (excluded by `linkScope: true`); a unit test asserts
       this invariant. AC2b's spy assertion is extended to cover the
-      `handleLinkedRest` adaptive-ON pinned path.
-- [ ] **AC3**: Given a user has < 4 qualifying history samples on exercise
+      `handleLinkedRest` adaptive-ON pinned path. [test: __tests__/lib/rest-resolver.test.ts::"linkScope=true returns pinned when user_rest_seconds is set (AC2c bypass)"]
+- [ ] **AC3** [test: __tests__/lib/rest-resolver.test.ts::"AC3 — falls through when < 4 qualifying samples exist"]: Given a user has < 4 qualifying history samples on exercise
       X, when they complete a set on X, then the timer falls back to the
       template default (legacy path WITH multiplier); if no template
-      default, 90 s × multiplier (legacy path).
-- [ ] **AC4**: The breakdown sheet shows the source attribution line for
+      default, 90 s × multiplier (legacy path). [test: __tests__/lib/rest-resolver.test.ts::"AC3 — falls through when < 4 qualifying samples exist"]
+- [ ] **AC4** [gate: QA — manual UI review of attribution line for each source kind on device]: The breakdown sheet shows the source attribution line for
       every source: `"From your history (N sets, last 30 days), no
       further adjustment applied"` / `"Pinned by you, no further
       adjustment applied"` / `"Template default"` (existing multiplier
-      breakdown still rendered) / `"Default"`.
-- [ ] **AC5**: Tapping "Pin as default" persists `user_rest_seconds`
+      breakdown still rendered) / `"Default"`. [gate: QA — manual UI review of attribution line for each source kind on device]
+- [ ] **AC5** [test: __tests__/lib/rest-resolver.test.ts::"persists valid seconds in [15, 600]"]: Tapping "Pin as default" persists `user_rest_seconds`
       (clamped to `[15, 600]` at write time) and is reversible by tapping
-      again ("Unpin").
-- [ ] **AC5b**: `setUserRestSeconds` throws `RestBoundsError` for values
+      again ("Unpin"). [test: __tests__/lib/rest-resolver.test.ts::"persists valid seconds in [15, 600]"]
+- [ ] **AC5b** [test: __tests__/lib/rest-resolver.test.ts::"throws RestBoundsError for $label"]: `setUserRestSeconds` throws `RestBoundsError` for values
       outside `[15, 600]` (excluding `null`); regression tests cover
-      `-1`, `0`, `14`, `601`, `100000`, `NaN`.
-- [ ] **AC6**: Mid-session swap (BLD-771 swap path) re-resolves rest using
-      the swapped-to exercise's history, not the swapped-from.
-- [ ] **AC6b** (rev 3 / Blocker 4 + QD rev-2 blocker 1): For a
+      `-1`, `0`, `14`, `601`, `100000`, `NaN`. [test: __tests__/lib/rest-resolver.test.ts::"throws RestBoundsError for $label"]
+- [ ] **AC6** [gate: QA — manual mid-session swap test on device verifying attribution updates]: Mid-session swap (BLD-771 swap path) re-resolves rest using
+      the swapped-to exercise's history, not the swapped-from. [gate: QA — manual mid-session swap test on device verifying attribution updates]
+- [ ] **AC6b** [test: __tests__/lib/rest-resolver.test.ts::"history is excluded even for exercises with rich straight-set history"] (rev 3 / Blocker 4 + QD rev-2 blocker 1): For a
       templateless or template-based linked group `[A, B]`,
       `getRestSecondsForLink` returns
       `max(resolveRest(A, { linkScope: true }).seconds,
@@ -545,8 +545,8 @@ expected 3 min" without adding a UI.
       (`template`); both untrained / no template → 90 s
       (`default`). Attribution names winning exercise + source. Even
       if A has rich straight-set history, that history is **not**
-      consulted in the link path.
-- [ ] **AC6c** (rev 4 — fixed math per TL+QD rev-3): The history query
+      consulted in the link path. [test: __tests__/lib/rest-resolver.test.ts::"history is excluded even for exercises with rich straight-set history"]
+- [ ] **AC6c** [test: __tests__/lib/rest-resolver.test.ts::"AC6c(a) — 5 consecutive NULL-link rows yield 4 pairs → history hit"] (rev 4 — fixed math per TL+QD rev-3): The history query
       SQL filters `WHERE prev.link_id IS NULL AND curr.link_id IS NULL`
       on both members of every consecutive pair. Verified by **two**
       unit tests on the same exercise:
@@ -559,29 +559,29 @@ expected 3 min" without adding a UI.
       (yields only 3 qualifying pairs, < `HISTORY_MIN_SAMPLES = 4`)
       interleaved with 4 linked sets. The resolver does NOT return a
       `history` source; falls through to template/default. This
-      asserts the threshold and the `link_id IS NULL` filter together.
-- [ ] **AC7**: Importing a backup that includes `user_rest_seconds` is
+      asserts the threshold and the `link_id IS NULL` filter together. [test: __tests__/lib/rest-resolver.test.ts::"AC6c(a) — 5 consecutive NULL-link rows yield 4 pairs → history hit"]
+- [ ] **AC7** [test: __tests__/lib/rest-resolver.test.ts::"emits import_clamp kind with input/output values"]: Importing a backup that includes `user_rest_seconds` is
       lossless within `[15, 600]`. Out-of-bounds values are clamped
       (positive) or dropped to NULL (negative/NaN/non-integer); a Sentry
       breadcrumb is emitted on every clamp/drop. Regression tests cover
-      `user_rest_seconds = -1`, `0`, `100000`, `"abc"`, valid `120`.
-- [ ] **AC8**: Resolver latency ≤ 30 ms (P95 over 100 runs) on a 10 k-set
+      `user_rest_seconds = -1`, `0`, `100000`, `"abc"`, valid `120`. [test: __tests__/lib/rest-resolver.test.ts::"emits import_clamp kind with input/output values"]
+- [ ] **AC8** [gate: CI — scripts/perf-bench-rest-resolver.ts passes latency + EXPLAIN QUERY PLAN assertions]: Resolver latency ≤ 30 ms (P95 over 100 runs) on a 10 k-set
       fixture (`scripts/perf-bench-rest-resolver.ts`). The bench
       additionally runs `EXPLAIN QUERY PLAN` for the history query and
       **fails** if the planner picks any index other than
-      `idx_workout_sets_exercise_completed_at` (Blocker 3 enforcement).
-- [ ] **AC9**: All existing tests for `getRestSecondsForExercise`,
+      `idx_workout_sets_exercise_completed_at` (Blocker 3 enforcement). [gate: CI — scripts/perf-bench-rest-resolver.ts passes latency + EXPLAIN QUERY PLAN assertions]
+- [ ] **AC9** [gate: CI — PR test suite shows all pre-existing rest-timer tests pass + at least 10 new tests present]: All existing tests for `getRestSecondsForExercise`,
       `getRestSecondsForLink`, `getRestContext`, and `useRestTimer` pass
       unchanged. PR adds ≥ **10** new unit tests (resolver tiers,
       bounds, work-estimate fallback, link-group max, breadcrumb
-      emission) and 1 integration test.
-- [ ] **AC10**: Drizzle migration is non-destructive
+      emission) and 1 integration test. [gate: CI — PR test suite shows all pre-existing rest-timer tests pass + ≥10 new tests present]
+- [ ] **AC10** [gate: CI — migration idempotency verified by running migration twice without error in test suite]: Drizzle migration is non-destructive
       (`addColumnIfMissing` for the column; `CREATE INDEX IF NOT EXISTS`
       for the partial index); rollback by ignoring the column and the
-      index is safe.
-- [ ] **AC11**: No new lint warnings; typecheck clean; no new
-      dependencies.
-- [ ] **AC12** (rev 3 / QD rev-2 blocker 2): A new dedicated helper
+      index is safe. [gate: CI — migration idempotency verified by running migration twice without error in test suite]
+- [ ] **AC11** [gate: CI — PR lint + typecheck steps pass with zero new warnings]: No new lint warnings; typecheck clean; no new
+      dependencies. [gate: CI — PR lint + typecheck steps pass with zero new warnings]
+- [ ] **AC12** [test: __tests__/lib/rest-resolver.test.ts::"calls Sentry.addBreadcrumb with category='rest-resolver'"] (rev 3 / QD rev-2 blocker 2): A new dedicated helper
       `restResolverBreadcrumb({ source, seconds, exerciseId,
       sampleCount? })` exported from `lib/rest-resolver.ts` calls
       `Sentry.addBreadcrumb({ category: "rest-resolver", level: "info",
@@ -593,7 +593,7 @@ expected 3 min" without adding a UI.
       is unit-tested for: (a) breadcrumb is added to Sentry; (b)
       payload contains only UUID + numeric fields, no exercise name,
       no user content; (c) `category === "rest-resolver"`. Privacy
-      contract preserved per memory "privacy enforcement".
+      contract preserved per memory "privacy enforcement". [test: __tests__/lib/rest-resolver.test.ts::"calls Sentry.addBreadcrumb with category='rest-resolver'"]
 
 ## Edge Cases
 

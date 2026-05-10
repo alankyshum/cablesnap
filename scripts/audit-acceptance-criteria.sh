@@ -191,7 +191,7 @@ for plan in "${PLANS[@]}"; do
     # 1) Inline annotation `[test: path]` → check file exists
     test_ref=$(echo "$line" | grep -oE '\[test:[^]]+\]' | head -1 || true)
     if [ -n "$test_ref" ]; then
-      path=$(echo "$test_ref" | sed -E 's/\[test:\s*//; s/\s*\]$//; s/::.*$//; s/^`//; s/`$//; s/\s.*$//')
+      path=$(echo "$test_ref" | sed -E 's/\[test:[[:space:]]*//' | sed -E 's/[[:space:]]*\]$//' | sed -E 's/::.*$//' | sed -E 's/^`//' | sed -E 's/`$//' | sed -E 's/[[:space:]].*$//')
       if [ -f "$path" ]; then
         continue   # ✅ explicit ref + file exists
       else
