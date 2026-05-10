@@ -130,10 +130,10 @@ A single non-interactive line under each historical session in `DayDetailPanel`:
 ## Acceptance Criteria
 - [ ] Given a finished session with N completed sets, when the user opens the session summary, then a card titled **"Estimated pacing"** is rendered with **Working + Rest + Other** that sum to the session's gross duration (±1 s tolerance for rounding).
 - [ ] The card title is exactly the literal string `"Estimated pacing"`. The three segment labels are exactly `"Working"`, `"Rest"`, `"Other"`. Locked via a new entry in `__tests__/source-contracts-batch.test.ts` (BLD-569 AC4 60-char gate respected).
-- [ ] The labels `"Idle"`, `"Wasted"`, `"Down"`, `"Inactive"`, `"Off-task"`, `"Distraction"` MUST NOT appear anywhere in the feature's source. Asserted by a forbidden-substring test in the same source-contracts batch.
+- [ ] The valenced words `"Idle"`, `"Wasted"`, `"Inactive"`, `"Off-task"`, `"Distraction"` MUST NOT appear in any **user-facing copy** for the feature. Asserted by a source-contracts test that scans only JSX text children and `accessibilityLabel`/`accessibilityHint` props in `components/session/summary/Pacing*.tsx` and the new pacing line in `components/history/DayDetailPanel.tsx` — NOT a whole-source substring grep (would false-positive on `countdown`, `dropdown`, etc., per techlead rev-2 note). The word "Down" is excluded from the list for the same reason; "Idle" and the other clearly valenced words remain forbidden.
 - [ ] Given the same session, when the user taps the PacingCard body, then a bottom sheet opens listing every exercise in the session with its **Working / Rest / Other** subtotals; tapping a column header sorts the list.
 - [ ] Given the historical day-detail panel for a past session, when the panel renders, then a single one-line passive summary appears under the session title (`Working … · Rest … · Other …`); the line is **NOT a separate tap target** — it is plain text inside the existing row `Pressable`.
-- [ ] Given a session with **zero** completed sets (e.g., started and abandoned), the PacingCard renders the message `"No completed sets"` and no chart — never crashes, never shows NaN, never blocks the rest of the summary screen.
+- [ ] Given a session with **zero** completed sets (e.g., started and abandoned), the PacingCard renders the literal message `"No completed sets to analyze"` and no chart — never crashes, never shows NaN, never blocks the rest of the summary screen. The empty-state copy must NOT include nudging language ("start logging", "try again", "get started", etc.) — locked via source-contracts.
 - [ ] Given any session, the Working number equals what `lib/rest-resolver.ts`'s `WORK_ESTIMATE_SECONDS_PER_REP × reps` (or `duration_seconds`) accounting would produce for the same set list — verified by a unit test that imports both modules and asserts equality on a fixture.
 - [ ] The TanStack Query cache key for pacing includes `session.edited_at` (with fallback to `completed_at` if null). Editing a completed session via the existing edit flow invalidates the pacing cache automatically — verified by a unit test.
 - [ ] PR passes all tests with no regressions; net new test count documented in PR description and stays under the audit budget per `scripts/audit-tests.sh`. Current `it/test` count = **2890**, budget warn=2700, max=2900 — only **10 tests of headroom**. Pacing implementation will add **≤ 8 new tests** (5 pure-logic + 1 cache-key + 1 source-contract + 1 Playwright) and stay under 2900. If headroom is exceeded, bump max with a justification comment in `audit-tests.sh` per the stored convention; **bare `--no-verify` is forbidden**.
@@ -147,7 +147,7 @@ A single non-interactive line under each historical session in `DayDetailPanel`:
 
 | Scenario | Expected Behavior |
 |---|---|
-| Empty session (0 completed sets) | Render `"No completed sets — start logging to see pacing"` placeholder. Never NaN. |
+| Empty session (0 completed sets) | Render `"No completed sets to analyze"` placeholder (neutral, descriptive — no nudge). Never NaN. |
 | Single completed set | Working = estimator output, Rest = 0, Other = remaining gross duration. |
 | Session in progress (not finished) | Pacing surface NOT rendered until session is marked complete. |
 | Set with neither `duration_seconds` nor `reps` | Contributes 0 Working time; quiet `console.warn` once per session; no user-facing warning. |
@@ -202,7 +202,7 @@ _techlead 2026-05-10T12:32Z — all rev-1 blockers cleared, all concerns address
 | Reviewer concern | rev-2 fix |
 |---|---|
 | TL Blocker 1 / QD #1 (no `started_at`) | Adopted Path A. New "Definitions" section uses `COALESCE(duration_seconds, WORK_ESTIMATE_SECONDS_PER_REP × reps)`; imports the constant from `lib/rest-resolver.ts` (single source of truth). Surface re-titled "Estimated pacing" with ⓘ disclosure copy explaining the heuristic. Legacy footnote dropped. |
-| TL Blocker 2 / QD #4 (test budget) | AC rewritten: ≤8 new tests, document delta in PR; if ceiling exceeded, bump `audit-tests.sh` MAX_TESTS to 2950 with a single justification block covering both the existing overshoot and the new tests. **Bare `--no-verify` forbidden.** Claudecoder to consolidate first if cheap. |
+| TL Blocker 2 / QD #4 (test budget) | AC rewritten: ≤8 new tests, document delta in PR. **Narrow-path policy (per QD rev-2):** stay ≤2900 if at all possible — consolidate first. If exceeded, bump `audit-tests.sh` MAX_TESTS to the smallest justified ceiling (2910 maximum) with a single justification block. **Bare `--no-verify` forbidden.** |
 | TL Concern 3 | Tech Approach calls out co-location with `useSessionData.ts` as an implementation-time decision for claudecoder; document choice in PR. |
 | TL Concern 4 | Definitions explicitly state Rest = clock gap (capped). Risk row added for Smart Rest Coach overlap. |
 | TL Concern 5 / QD #3 | Cache key documented: `['session-pacing', sessionId, session.edited_at ?? session.completed_at]`. AC includes a unit test asserting cache invalidates on edit. |
