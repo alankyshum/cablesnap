@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.30",
+    "date": "2026-05-10",
+    "versionCode": 100,
+    "body": "- **Connect Strava (fix)**: The \"Connect Strava\" button in Settings → Integrations now actually works. Previously it always failed silently with an \"invalid redirect URI\" error from Strava's side. The OAuth flow now correctly hands off through a small HTTPS bouncer back to the app."
+  },
+  {
     "version": "0.26.29",
     "date": "2026-05-10",
     "versionCode": 99,

@@ -1,0 +1,1 @@
+- **Connect Strava (fix)**: The "Connect Strava" button in Settings → Integrations now actually works. Previously it always failed silently with an "invalid redirect URI" error from Strava's side. The OAuth flow now correctly hands off through a small HTTPS bouncer back to the app.
