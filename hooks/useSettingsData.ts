@@ -18,6 +18,10 @@ export function useSettingsData() {
   const [count, setCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [restNotifications, setRestNotifications] = useState(true);
+  // BLD-1137: Smart Rest Coach settings
+  const [restPreEndCueSeconds, setRestPreEndCueSeconds] = useState<number>(10);
+  const [restLiveCountdown, setRestLiveCountdown] = useState<boolean>(Platform.OS === 'android');
+  const [restShowNextSet, setRestShowNextSet] = useState<boolean>(false);
   const [reminders, setReminders] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
   const [permDenied, setPermDenied] = useState(false);
@@ -66,6 +70,17 @@ export function useSettingsData() {
         .catch(() => {
           setRestNotifications(true);
         });
+      // BLD-1137: Load Smart Rest Coach settings
+      Promise.all([
+        getAppSetting('rest_timer_pre_end_cue_seconds'),
+        getAppSetting('rest_timer_live_countdown'),
+        getAppSetting('rest_timer_show_next_set_preview'),
+      ]).then(([cue, live, preview]) => {
+        const cueVal = cue != null ? parseInt(cue, 10) : 10;
+        setRestPreEndCueSeconds(Number.isFinite(cueVal) ? cueVal : 10);
+        setRestLiveCountdown(live !== 'false');
+        setRestShowNextSet(preview === 'true');
+      }).catch(() => {});
       getAppSetting('weekly_training_goal')
         .then((val) => {
           if (val != null) {
@@ -140,6 +155,9 @@ export function useSettingsData() {
     count,
     soundEnabled, setSoundEnabled,
     restNotifications, setRestNotifications,
+    restPreEndCueSeconds, setRestPreEndCueSeconds,
+    restLiveCountdown, setRestLiveCountdown,
+    restShowNextSet, setRestShowNextSet,
     reminders, setReminders,
     reminderTime, setReminderTime,
     permDenied, setPermDenied,
