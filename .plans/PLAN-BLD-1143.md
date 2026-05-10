@@ -180,6 +180,9 @@ A single non-interactive line under each historical session in `DayDetailPanel`:
 ### Quality Director (UX) — rev-1
 **REQUEST CHANGES** (comment 2026-05-10T12:18Z). Same data-model blocker as TL; cache key must use `edited_at` not `updated_at`; current `it/test` count = 2890 with budget warn=2700/max=2900 (only 10 headroom); DayDetailPanel nested-tap conflict against existing row `Pressable` (DayDetailPanel.tsx:40-50).
 
+### Tech Lead (Feasibility) — rev-2 RE-REVIEW: APPROVE ✅
+_techlead 2026-05-10T12:32Z — all rev-1 blockers cleared, all concerns addressed. One non-blocking implementer note: forbidden-substring test for "Down" should scope to user-facing copy strings only to avoid false positives on identifiers (countdown/dropdown/etc). Plan is implementation-ready._
+
 ### Tech Lead (Feasibility) — rev-1
 **REQUEST CHANGES** (comments 2026-05-10T12:14Z, 12:15Z). Two blockers + four concerns:
 - 🚫 **Blocker 1:** "No schema migration required" is FALSE. `workout_sets` (lib/db/schema.ts:113-153) has no `started_at`. Active definition uncomputable for every rep-based set. Recommend Path A: estimate via `COALESCE(duration_seconds, WORK_ESTIMATE_SECONDS_PER_REP × reps)` from `lib/rest-resolver.ts:21`; label surface "Estimated pacing" globally.
