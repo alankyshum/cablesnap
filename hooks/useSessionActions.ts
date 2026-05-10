@@ -39,6 +39,10 @@ import {
   getRecentBodyweightGripHistory,
   updateSetBodyweightVariant,
   updateSetsBatch,
+  updateSetStackMarker,
+  updateSetManualWeight,
+  getRecentStackHistory,
+  updateSetRepsAndDuration,
 } from "../lib/db/session-sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import {
@@ -90,7 +94,7 @@ type Params = {
   startRest: (ctx: string | SetContext) => void;
   startRestWithDuration: (secs: number) => void;
   startRestWithBreakdown: (breakdown: RestBreakdown) => void;
-  session: { started_at: number; clock_started_at?: number | null; name: string } | null;
+  session: { started_at: number; clock_started_at?: number | null; name: string; gym_id?: string | null } | null;
   showToast: (msg: string, opts?: { action?: { label: string; onPress: () => void | Promise<void> }; duration?: number }) => void;
   showError: (msg: string) => void;
   triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
@@ -588,7 +592,48 @@ export function useSessionActions({
       }
     }
 
-    // BLD-655 + BLD-682: prefill weight/reps (or weight/duration_seconds)
+    // BLD-1126 AC6: autofill stack marker from the user's last logged cable set
+    // on this exercise. Only fires when: the exercise is cable, the session has
+    // a gym_id, and the user's last set had a stack_marker recorded. Uses
+    // CURRENT calibration data (not historical snapshot) to resolve the true
+    // weight — the snapshot columns on the prior set remain immutable (AC3).
+    let autofilledStackId: string | null = null;
+    let autofilledStackMarker: number | null = null;
+    let autofilledStackName: string | null = null;
+    let autofilledStackUnit: string | null = null;
+    let autofilledStackWeight: number | null = null;
+    if (group && isCableExercise({ equipment: group.equipment }) && session?.gym_id) {
+      try {
+        const lastMarker = await getRecentStackHistory(exerciseId);
+        if (lastMarker?.stack_marker != null && lastMarker.stack_id) {
+          // Fetch current calibration from cache (does not block on network).
+          const currentStacks: import("@/hooks/useActiveCalibration").StackWithCalibrations[] = queryClient.getQueryData(
+            ["stack-calibrations", session.gym_id]
+          ) ?? [];
+          const matchedStack = currentStacks.find((s) => s.id === lastMarker.stack_id);
+          if (matchedStack) {
+            const { resolveMarker } = await import("../lib/cable-stack");
+            const resolved = resolveMarker(matchedStack.calibrations, lastMarker.stack_marker);
+            if (resolved !== null) {
+              await updateSetStackMarker(newSet.id, {
+                weight: resolved.weight,
+                marker: lastMarker.stack_marker,
+                stackId: matchedStack.id,
+                stackName: matchedStack.name,
+                stackUnit: matchedStack.unit ?? "",
+              });
+              autofilledStackId = matchedStack.id;
+              autofilledStackMarker = lastMarker.stack_marker;
+              autofilledStackName = matchedStack.name;
+              autofilledStackUnit = matchedStack.unit ?? null;
+              autofilledStackWeight = resolved.weight;
+            }
+          }
+        }
+      } catch {
+        // Stack marker autofill is best-effort; silently ignored on any error.
+      }
+    }
     // using the resolvePrefillCandidate helper.
     //   1. In-session prior working set (BLD-655 path).
     //   2. Otherwise, the matching set from the previous workout (BLD-682).
@@ -600,6 +645,11 @@ export function useSessionActions({
     let prefillReps: number | null = null;
     let prefillDuration: number | null = null;
     let prefillApplied = false;
+    // Always resolve the reps/duration prefill candidate (BLD-655/BLD-682), but
+    // when marker autofill has already set the weight:
+    //  - use updateSetRepsAndDuration (reps + duration only, no weight/stack cols)
+    //  - leave prefillWeight as null so setWithModifier keeps the marker weight.
+    // When no marker autofill, use the normal updateSet path (weight + reps).
     if (group) {
       const hasInSessionWorking = group.sets.some((s) => s.set_type !== "warmup");
 
@@ -635,16 +685,30 @@ export function useSessionActions({
       if (candidate) {
         const isDuration = group.trackingMode === "duration";
         try {
-          await updateSet(
-            newSet.id,
-            candidate.weight,
-            candidate.reps,
-            isDuration ? candidate.duration_seconds : undefined,
-          );
-          prefillWeight = candidate.weight;
-          prefillReps = candidate.reps;
-          prefillDuration = candidate.duration_seconds;
-          prefillApplied = true;
+          if (autofilledStackWeight !== null) {
+            // Marker autofill owns the weight. Only carry reps/duration so the
+            // set is pre-populated without overwriting the resolved marker weight
+            // or leaving stack_* snapshot columns in an inconsistent state.
+            await updateSetRepsAndDuration(
+              newSet.id,
+              candidate.reps,
+              isDuration ? candidate.duration_seconds : undefined,
+            );
+            prefillReps = candidate.reps;
+            prefillDuration = candidate.duration_seconds;
+            prefillApplied = true;
+          } else {
+            await updateSet(
+              newSet.id,
+              candidate.weight,
+              candidate.reps,
+              isDuration ? candidate.duration_seconds : undefined,
+            );
+            prefillWeight = candidate.weight;
+            prefillReps = candidate.reps;
+            prefillDuration = candidate.duration_seconds;
+            prefillApplied = true;
+          }
         } catch (err) {
           // AC6: do not throw, do not show unsaved values; row insert
           // already succeeded. Single console.warn breadcrumb. Tag both
@@ -671,6 +735,13 @@ export function useSessionActions({
       // chips render the autofilled grip immediately without a refresh.
       grip_type: autofilledGripType ?? newSet?.grip_type ?? null,
       grip_width: autofilledGripWidth ?? newSet?.grip_width ?? null,
+      // BLD-1126 AC6: propagate stack marker autofill into in-memory row so
+      // the pill renders the autofilled marker immediately without a refresh.
+      stack_id: autofilledStackId ?? newSet?.stack_id ?? null,
+      stack_marker: autofilledStackMarker ?? newSet?.stack_marker ?? null,
+      stack_name_at_log: autofilledStackName ?? newSet?.stack_name_at_log ?? null,
+      stack_unit_at_log: autofilledStackUnit ?? newSet?.stack_unit_at_log ?? null,
+      ...(autofilledStackWeight !== null ? { weight: autofilledStackWeight } : {}),
       previous: "-",
     };
     setGroups((prev) =>
@@ -1090,6 +1161,76 @@ export function useSessionActions({
     [setGroups, showError]
   );
 
+  /**
+   * BLD-1126 AC3: Atomic write of all five stack columns in a single UPDATE.
+   * Called by SetWeightCell → SetRow → ExerciseGroupSetTable → ExerciseGroupCard → session screen.
+   * Also invalidates the stack-calibrations cache so any concurrent hook refetch
+   * sees the freshest snapshot name (AC6 autofill uses current calibration).
+   */
+  const handleMarkerConfirm = useCallback(
+    async (setId: string, result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => {
+      // Optimistic in-memory update so the pill re-renders immediately (AC1).
+      updateGroupSet(setId, {
+        stack_id: result.stackId,
+        stack_name_at_log: result.stackName,
+        stack_marker: result.marker,
+        stack_unit_at_log: result.unit,
+        weight: result.trueWeight,
+      });
+      try {
+        await updateSetStackMarker(setId, {
+          weight: result.trueWeight,
+          marker: result.marker,
+          stackId: result.stackId,
+          stackName: result.stackName,
+          stackUnit: result.unit,
+        });
+        queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
+      } catch (err) {
+        // Roll back: clear the in-memory stack fields that we just wrote.
+        updateGroupSet(setId, {
+          stack_id: null,
+          stack_name_at_log: null,
+          stack_marker: null,
+          stack_unit_at_log: null,
+        });
+        showError("Failed to save stack marker");
+        // eslint-disable-next-line no-console
+        console.warn("[handleMarkerConfirm] persist failed:", err);
+      }
+    },
+    [updateGroupSet, showError]
+  );
+
+  /**
+   * BLD-1126 AC5: When the user long-presses a marker-logged pill and then saves
+   * a numeric weight, this handler issues a single UPDATE that writes weight + reps
+   * AND clears all four stack_* columns (stack_id, stack_marker, stack_name_at_log,
+   * stack_unit_at_log). Called only from the keypad-override code path in
+   * SetWeightCell — normal weight changes use handleUpdate as usual.
+   */
+  const handleManualWeightSave = useCallback(
+    async (setId: string, weight: number | null, reps: number | null) => {
+      // Optimistic update: clear stack fields, apply weight.
+      updateGroupSet(setId, {
+        weight,
+        reps,
+        stack_id: null,
+        stack_marker: null,
+        stack_name_at_log: null,
+        stack_unit_at_log: null,
+      });
+      try {
+        await updateSetManualWeight(setId, { weight, reps });
+      } catch (err) {
+        showError("Failed to save weight");
+        // eslint-disable-next-line no-console
+        console.warn("[handleManualWeightSave] persist failed:", err);
+      }
+    },
+    [updateGroupSet, showError]
+  );
+
   return {
     elapsed,
     /** BLD-630: null until the user completes the first set in the session.
@@ -1116,6 +1257,8 @@ export function useSessionActions({
     handleMoveDown,
     handlePrefillFromPrevious,
     handleApplyBreakThrough,
+    handleMarkerConfirm,
+    handleManualWeightSave,
     finish,
     cancel,
   };

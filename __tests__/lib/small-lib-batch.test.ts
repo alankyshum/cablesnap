@@ -256,6 +256,8 @@ describe("workoutCSV — bodyweight_modifier_kg column (BLD-541)", () => {
     day_session_exercise_id: null,
     day_session_date: null,
     pulley_pin: null,
+    stack_marker: null,
+    stack_name_at_log: null,
   };
 
   it.each([
@@ -268,11 +270,71 @@ describe("workoutCSV — bodyweight_modifier_kg column (BLD-541)", () => {
     const out = workoutCSV([row]);
     const [header, data] = out.split("\n");
     expect(header).toBe(
-      "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date"
+      "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log"
     );
     const cells = data.split(",");
     // bodyweight_modifier_kg is 4 columns before the end (pulley_pin, kind, dseid, dsdate follow)
-    expect(cells[cells.length - 5]).toBe(expected);
+    expect(cells[cells.length - 7]).toBe(expected);
+  });
+});
+
+// ── workoutCSV — stack_marker columns (BLD-1126 AC13) ────────────────────
+
+describe("workoutCSV — stack_marker CSV round-trip (BLD-1126 AC13)", () => {
+  const baseWithStack: WorkoutCSVRow = {
+    date: "2026-06-01",
+    exercise: "Cable Pulldown",
+    set_number: 1,
+    weight: 45,
+    reps: 10,
+    duration_seconds: null,
+    notes: "",
+    set_rpe: null,
+    set_notes: "",
+    link_id: null,
+    tempo: null,
+    kind: null,
+    day_session_exercise_id: null,
+    day_session_date: null,
+    bodyweight_modifier_kg: null,
+    pulley_pin: null,
+    stack_marker: 10,
+    stack_name_at_log: "Main Stack",
+  };
+
+  it("header includes stack_marker and stack_name_at_log", () => {
+    const csv = workoutCSV([baseWithStack]);
+    const header = csv.split("\n")[0];
+    expect(header).toContain("stack_marker");
+    expect(header).toContain("stack_name_at_log");
+  });
+
+  it("exports numeric stack_marker in correct position", () => {
+    const csv = workoutCSV([baseWithStack]);
+    const [header, data] = csv.split("\n");
+    const headers = header.split(",");
+    const markerIdx = headers.indexOf("stack_marker");
+    const cells = data.split(",");
+    expect(cells[markerIdx]).toBe("10");
+  });
+
+  it("exports stack_name_at_log string value", () => {
+    const csv = workoutCSV([baseWithStack]);
+    const [header, data] = csv.split("\n");
+    const headers = header.split(",");
+    const nameIdx = headers.indexOf("stack_name_at_log");
+    const cells = data.split(",");
+    expect(cells[nameIdx]).toBe("Main Stack");
+  });
+
+  it("exports empty string for null stack_marker", () => {
+    const row: WorkoutCSVRow = { ...baseWithStack, stack_marker: null, stack_name_at_log: null };
+    const csv = workoutCSV([row]);
+    const [header, data] = csv.split("\n");
+    const headers = header.split(",");
+    const markerIdx = headers.indexOf("stack_marker");
+    const cells = data.split(",");
+    expect(cells[markerIdx]).toBe("");
   });
 });
 

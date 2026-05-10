@@ -49,6 +49,10 @@ export type ExerciseGroupSetTableProps = {
   // BLD-1110: live RPE capture
   captureRpe?: boolean;
   onRpeChange?: (setId: string, rpe: number | null) => void;
+  // BLD-1126: Stack Marker Quick-Pick
+  gymId?: string | null;
+  onMarkerConfirm?: (setId: string, result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => void;
+  onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
 };
 
 export function ExerciseGroupSetTable({
@@ -63,6 +67,7 @@ export function ExerciseGroupSetTable({
   hasClipMap, onVideoGlyph,
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
+  gymId, onMarkerConfirm, onManualWeightSave,
 }: ExerciseGroupSetTableProps) {
   return (
     <>
@@ -113,6 +118,9 @@ export function ExerciseGroupSetTable({
             onSetupPhotoGlyph={onSetupPhotoGlyph}
             captureRpe={captureRpe}
             onRpeChange={onRpeChange}
+            gymId={gymId}
+            onMarkerConfirm={onMarkerConfirm}
+            onManualWeightSave={onManualWeightSave}
           />
         );
       })}

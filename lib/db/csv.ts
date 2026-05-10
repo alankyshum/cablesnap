@@ -22,6 +22,9 @@ export type WorkoutCSVRow = {
   kind: string | null;
   day_session_exercise_id: string | null;
   day_session_date: string | null;
+  // BLD-1126 AC13: stack marker and snapshot stack name for cable sets.
+  stack_marker: number | null;
+  stack_name_at_log: string | null;
 };
 
 export type NutritionCSVRow = {
@@ -77,6 +80,8 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       kind: workoutSessions.kind,
       day_session_exercise_id: workoutSessions.day_session_exercise_id,
       day_session_date: workoutSessions.day_session_date,
+      stack_marker: workoutSets.stack_marker,
+      stack_name_at_log: workoutSets.stack_name_at_log,
     })
     .from(workoutSessions)
     .innerJoin(workoutSets, sql`${workoutSets.session_id} = ${workoutSessions.id}`)

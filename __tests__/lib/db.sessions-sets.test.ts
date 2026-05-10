@@ -170,3 +170,63 @@ describe("data validation edge cases", () => {
     expect(mockDrizzleDb.update).toHaveBeenCalled();
   });
 });
+
+// BLD-1126 AC5: updateSetManualWeight must clear all four stack_* columns
+// in the same UPDATE as weight + reps (single-write atomicity).
+describe("updateSetManualWeight — AC5 stack column clearance", () => {
+  it("clears stack_marker, stack_id, stack_name_at_log, stack_unit_at_log in one UPDATE", async () => {
+    await ctx.initDb();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { updateSetManualWeight } = require("../../lib/db/session-sets");
+    await updateSetManualWeight("set1", { weight: 40, reps: 8 });
+
+    // Verify drizzle's update().set() was called with null stack columns
+    const setMock = mockDrizzleDb.update.mock.results.at(-1)?.value.set;
+    expect(setMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        weight: 40,
+        reps: 8,
+        stack_id: null,
+        stack_marker: null,
+        stack_name_at_log: null,
+        stack_unit_at_log: null,
+      })
+    );
+  });
+});
+
+// BLD-1126 reviewer blocker (round 2): marker-autofill + reps-carry coexistence.
+// updateSetRepsAndDuration writes reps + optional duration WITHOUT touching
+// weight or stack columns, enabling the add-set prefill chain (BLD-655/BLD-682)
+// to carry reps even when marker autofill has already resolved the weight.
+describe("updateSetRepsAndDuration — reps-only write (no weight / stack column touch)", () => {
+  it("calls update().set() with reps but NOT weight or stack columns", async () => {
+    await ctx.initDb();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { updateSetRepsAndDuration } = require("../../lib/db/session-sets");
+    await updateSetRepsAndDuration("set1", 8, undefined);
+
+    const setMock = mockDrizzleDb.update.mock.results.at(-1)?.value.set;
+    expect(setMock).toHaveBeenCalledWith(
+      expect.objectContaining({ reps: 8 })
+    );
+    // weight and stack columns must NOT be present — they belong to the
+    // marker-autofill write that already ran.
+    const setCallArg = setMock.mock.calls.at(-1)?.[0];
+    expect(setCallArg).not.toHaveProperty("weight");
+    expect(setCallArg).not.toHaveProperty("stack_marker");
+    expect(setCallArg).not.toHaveProperty("stack_id");
+  });
+
+  it("includes duration_seconds when isDuration=true", async () => {
+    await ctx.initDb();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { updateSetRepsAndDuration } = require("../../lib/db/session-sets");
+    await updateSetRepsAndDuration("set1", null, 30);
+
+    const setMock = mockDrizzleDb.update.mock.results.at(-1)?.value.set;
+    expect(setMock).toHaveBeenCalledWith(
+      expect.objectContaining({ reps: null, duration_seconds: 30 })
+    );
+  });
+});

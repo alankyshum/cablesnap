@@ -1,5 +1,6 @@
 /* eslint-disable max-lines-per-function */
 import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Alert, FlatList, Pressable, StyleSheet, Switch, View } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react-native";
@@ -40,6 +41,7 @@ export default function GymProfilesScreen() {
   const colors = useThemeColors();
   const layout = useLayout();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [gyms, setGyms] = useState<GymProfile[]>([]);
   const [stacksByGym, setStacksByGym] = useState<Record<string, CableStack[]>>({});
@@ -278,11 +280,12 @@ export default function GymProfilesScreen() {
       await upsertCalibration(stackId, marker, weight);
       updateCalibrationDraft(stackId, { marker: "", weight: "" });
       toast.success("Marker saved");
+      queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
       await load();
     } catch {
       toast.error("Failed to save marker");
     }
-  }, [calibrationDrafts, load, toast, updateCalibrationDraft]);
+  }, [calibrationDrafts, load, queryClient, toast, updateCalibrationDraft]);
 
   const handleBulkPaste = useCallback(async (stackId: string) => {
     const draft = calibrationDrafts[stackId] ?? { marker: "", weight: "", bulk: "" };
@@ -291,6 +294,7 @@ export default function GymProfilesScreen() {
       try {
         await Promise.all(result.accepted.map((row) => upsertCalibration(stackId, row.marker, row.trueWeight)));
         updateCalibrationDraft(stackId, { bulk: "" });
+        queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
         await load();
       } catch {
         toast.error("Failed to save pasted markers");
@@ -303,17 +307,18 @@ export default function GymProfilesScreen() {
       if (result.accepted.length > 0) toast.success(message);
       else toast.info(message);
     }
-  }, [calibrationDrafts, load, toast, updateCalibrationDraft]);
+  }, [calibrationDrafts, load, queryClient, toast, updateCalibrationDraft]);
 
   const handleDeleteCalibration = useCallback(async (stackId: string, marker: number) => {
     try {
       await deleteCalibration(stackId, marker);
       toast.success("Marker deleted");
+      queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
       await load();
     } catch {
       toast.error("Failed to delete marker");
     }
-  }, [load, toast]);
+  }, [load, queryClient, toast]);
 
   const listHeader = useMemo(() => (
     <View style={styles.headerBlock}>

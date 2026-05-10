@@ -396,6 +396,25 @@ export async function updateSet(
   await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
 }
 
+/**
+ * BLD-1126: Write reps + optional duration WITHOUT touching weight or stack
+ * columns. Used when marker autofill has already resolved the weight; we still
+ * want to carry the previous reps/duration from BLD-655/BLD-682 prefill without
+ * overwriting the marker-resolved weight (which would cause a weight mismatch).
+ */
+export async function updateSetRepsAndDuration(
+  id: string,
+  reps: number | null,
+  durationSeconds?: number | null
+): Promise<void> {
+  const db = await getDrizzle();
+  const values: Record<string, unknown> = { reps };
+  if (durationSeconds !== undefined) {
+    values.duration_seconds = durationSeconds;
+  }
+  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
+}
+
 export async function updateSetDuration(
   id: string,
   durationSeconds: number | null
@@ -1142,4 +1161,90 @@ export async function getMostRecentCompletedSetForExercise(
   const row = rows[0];
   if (!row || row.completed_at === null || row.completed_at === undefined) return null;
   return { id: row.id, set_number: row.set_number, completed_at: row.completed_at };
+}
+
+// ─── BLD-1126: Stack Marker Quick-Pick write helpers ─────────────────────────
+
+/**
+ * Write all five stack marker fields in a single SQL UPDATE (atomic at
+ * SQLite statement level — no transaction() needed).
+ *
+ * AC3: single statement so there is no intermediate persisted state if
+ * the write fails mid-execution.
+ */
+export async function updateSetStackMarker(
+  id: string,
+  v: { weight: number; marker: number; stackId: string; stackName: string; stackUnit: string }
+): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({
+    weight: v.weight,
+    stack_id: v.stackId,
+    stack_marker: v.marker,
+    stack_name_at_log: v.stackName,
+    stack_unit_at_log: v.stackUnit,
+  }).where(eq(workoutSets.id, id));
+}
+
+/**
+ * Clear stack columns without changing weight/reps. Retained for future
+ * call sites and unit-test isolation (AC5 path uses updateSetManualWeight
+ * which does both in one UPDATE).
+ */
+export async function clearSetStackMarker(id: string): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({
+    stack_id: null,
+    stack_marker: null,
+    stack_name_at_log: null,
+    stack_unit_at_log: null,
+  }).where(eq(workoutSets.id, id));
+}
+
+/**
+ * AC5: Keypad-fallback save path. Writes weight + reps AND clears all four
+ * stack_* columns in ONE SQL UPDATE — no two-step intermediate state.
+ *
+ * Unit test asserts post-save state: new weight/reps AND
+ * stack_marker IS NULL AND stack_id IS NULL AND stack_name_at_log IS NULL
+ * AND stack_unit_at_log IS NULL.
+ */
+export async function updateSetManualWeight(
+  id: string,
+  v: { weight: number | null; reps: number | null }
+): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({
+    weight: v.weight,
+    reps: v.reps,
+    stack_id: null,
+    stack_marker: null,
+    stack_name_at_log: null,
+    stack_unit_at_log: null,
+  }).where(eq(workoutSets.id, id));
+}
+
+/**
+ * AC6: Autofill — fetch the most recent set on an exercise that has a
+ * stack_marker logged. Returns {stack_id, stack_marker} or null when no
+ * prior marker-logged set exists. Re-resolving weight from current
+ * calibration is the caller's responsibility (plan §Autofill interaction).
+ */
+export async function getRecentStackHistory(
+  exerciseId: string
+): Promise<{ stack_id: string; stack_marker: number } | null> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ stack_id: string; stack_marker: number }>(
+    `SELECT ws.stack_id, ws.stack_marker
+       FROM workout_sets ws
+       JOIN workout_sessions s ON s.id = ws.session_id
+      WHERE ws.exercise_id = ?
+        AND ws.stack_marker IS NOT NULL
+        AND ws.stack_id IS NOT NULL
+      ORDER BY s.started_at DESC, ws.set_number DESC
+      LIMIT 1`,
+    [exerciseId]
+  );
+  if (!row) return null;
+  return { stack_id: row.stack_id, stack_marker: row.stack_marker };
 }

@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Stack marker quick-pick**: Cable exercises at calibrated gyms now show a marker pill instead of a numeric weight field. Tap to pick your stack position; the true weight is resolved automatically. Long-press to fall back to numeric entry on any set.
 
 ## v0.26.28 — 2026-05-10
 <!-- versionCode: 98 -->
