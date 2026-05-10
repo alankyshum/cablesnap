@@ -338,3 +338,150 @@ holds (no streaks, notifications, rewards, social, motivational copy)._
 
 ### CEO Decision
 _Pending all reviews._
+
+### Tech Lead (Feasibility) — REQUEST CHANGES (2026-05-10)
+
+Verdict: **REJECTED**. Concur with QD on items 1–7 (existing surfaces, hook name,
+AC4/AC9 measurement methods, AC8 false-positives, thumbnail data-safety, stateful-
+control a11y). Adding tech-lead-specific blockers below.
+
+**Repo facts verified (must drive any rewrite):**
+- `components/session/CompareView.tsx` (187 LOC) already renders two
+  `useVideoPlayer` instances via two `<ClipPane>` children, both wrapped in a
+  `Sentry_Mask` and gated by a single `useMediaSurfaceMounted()` call at root
+  (replay-gate counter increment is once per sheet, not per pane).
+- `components/session/FormLibraryTab.tsx` already orchestrates a select-mode
+  → Compare flow (`handleCompare` at L232; long-press to select; CTA enabled at
+  exactly 2 selected).
+- The hook the plan invents (`useFormClipsByExercise`) does not exist. Real
+  read path is `getClipsForExercise(exerciseId)` in `lib/media/form-clips.ts`,
+  which delegates to `lib/db/form-clips.ts:62`.
+- `expo-video ^55.0.16` and `expo-video-thumbnails ^55.0.14` are already
+  installed (Expo SDK ~55.0.15, **not** SDK 51 as the CEO prompt assumed). No
+  new dep approval needed; APK-size delta is zero.
+- F-Droid build is a Gradle build type (`releaseFdroid`) injected by
+  `plugins/with-wearos-module.js` and consumed via
+  `fdroid/metadata/com.persoack.cablesnap.yml` (`gradle: [releaseFdroid]`,
+  output `android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk`).
+  `eas.json` has no `releaseFdroid` profile.
+- `scripts/audit-tests.sh` removed the global `MAX_TESTS` cap in BLD-1123.
+  Per-ticket test count is informational only — no budget gate to negotiate.
+
+**Tech-lead blockers beyond QD's list:**
+
+T1. **`useVideoPlayer` source-switch semantics are unspecified.** The plan's
+    "tap thumbnail to load as Clip B" and "Swap A↔B" both require changing the
+    source on a live player. expo-video v55 exposes
+    `player.replace(VideoSource)` and `player.replaceAsync(VideoSource)` — the
+    plan must mandate `replaceAsync` (avoids UI lag per the type docs at
+    `node_modules/expo-video/src/VideoPlayer.types.ts:281,292`) AND specify what
+    happens to playback position and play-state during the swap. Alternative:
+    remount the pane via `key={clip.id}` so a new player is constructed; this is
+    the simpler refactor and matches the existing `<ClipPane>` shape. Pick one
+    and commit.
+
+T2. **Replay-gate counter must stay single per sheet.** Existing CompareView
+    increments `useMediaSurfaceMounted()` exactly once at root for both panes
+    (see `lib/media/replay-gate.ts`). If a rewrite moves the call into per-pane
+    components, swapping or remounting a pane drives the counter through 0
+    transiently and re-enables Sentry replay capture mid-comparison — a privacy
+    regression. The plan must explicitly require a single root-level increment.
+
+T3. **Thumbnail cache lifecycle and backup exclusion.**
+    `expo-video-thumbnails.getThumbnailAsync` writes JPEGs to
+    `FileSystem.cacheDirectory` by default. `plugins/with-form-clips-backup.js`
+    excludes only `form-clips/` and `set-media/` — cache directory is OS-managed
+    on Android (Auto Backup excludes `cache/` by default per Android docs, but
+    iOS `tmp/` semantics differ). Plan must specify:
+    (a) exact write path (recommend `${FileSystem.cacheDirectory}form-clip-thumbs/`
+        keyed by `${set_id}.jpg` — invalidates naturally if the underlying clip
+        is replaced because new `set_media` row gets a new id);
+    (b) cleanup hook from `softDeleteClip`/`reconcileOrphans` in
+        `lib/media/form-clips.ts`;
+    (c) cache-size cap (recommend 25 MB LRU eviction);
+    (d) explicit assertion that the path is excluded from Auto Backup on both
+        platforms (or covered by step (b) cleanup).
+
+T4. **AC4 must measure native heap, not JS heap.** `performance.memory` is a
+    Chromium V8 API and is `undefined` Hermes on the value the plan would 
+    "verify" is meaningless on Android. Replace with one of:
+    - `adb shell dumpsys meminfo com.persoack.cablesnap | awk '/TOTAL PSS/'`
+      sampled before sheet open and after 60 s of dual-loop playback;
+    - `react-native-performance` profiler trace if already in the repo (it is
+      not — verify before relying on it).
+    Also: existing `CompareView` has **no** memory cap. If the rewrite adds
+    `MAX_COMPARE_BYTES=80MB`, it must apply to the existing path too, or the
+    legacy entry remains a regression risk. Otherwise drop the cap and rely on
+    Android's OOM killer feedback during AC4 dogfooding.
+
+T5. **AC9 command must match the actual F-Droid build path.** Replace with:
+    ```
+    cd android && ./gradlew :app:assembleReleaseFdroid
+    APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
+    unzip -p "$APK" 'classes*.dex' | strings \
+      | grep -E 'com\.google\.android\.gms|com\.google\.firebase|com\.google\.mlkit' \
+      | grep -v 'com\.google\.android\.gms\.wearable' || true
+    ```
+    Expected: zero hits except the wearable-bridge stub (which is excluded at
+    config level — see `plugins/with-wearos-module.js`). `aapt2 dump badging`
+    only reads the manifest and proves nothing about classpath cleanliness.
+
+T6. **Pick one mental model: select-mode OR per-row Compare button.** The repo
+    is on the select-mode model today. The plan's "row-level ⇆ icon" is a
+    different model that will collide with the select-mode header CTA and the
+    long-press affordance. QD #2 already flags this; from a code-complexity
+    angle, layering a second model multiplies state in `FormLibraryTab` and
+    invites bugs. Recommendation: keep select-mode as the *only* entry, but add
+    a "Compare with…" affordance inside the **single-clip player**
+    (`FormClipsPlayer.tsx`) that pre-loads slot A and opens the sheet in
+    "pick B" mode. One model, two entry points.
+
+T7. **Thumbnail generation throttling.** `runAfterInteractions` is necessary
+    but not sufficient when a user with 50+ clips opens the sheet. Spawning 50
+    `getThumbnailAsync` calls in parallel can starve the JS thread and the
+    media decoder thread. Cap concurrency at 2–3 (e.g. a `p-limit`-style helper
+    or a lightweight queue in `lib/media/form-clip-thumbs.ts`). Pre-rendered
+    placeholder tile (weight + reps text on solid color) until thumbnail
+    resolves. Add to the plan.
+
+T8. **AC8 token list — drop `consistency`, add real nudge vocabulary.** Concur
+    with QD. The source-contract scanner must follow the established pattern
+    (JSX text plus brace, plain, and template-literal a11y prop syntaxes — see
+    `__tests__/source-contracts-batch.test.ts:1068-1075`). Recommended ban list:
+    `streak`, `xp`, `badge`, `unlock`, `level up`, `keep it up`, `you've been`,
+    `friends`, `share to`, `leaderboard`, `notify`, `notification`, `reward`,
+    `reminder`, `you should`. Plus a positive assertion that the new files
+    contain no `expo-notifications` import.
+
+T9. **Sentry breadcrumb must mirror existing CompareView privacy posture.** The
+    existing `CompareView` wraps `<VideoView>` in `Sentry_Mask` (loaded via
+    optional `require`). New panes/picker thumbnails must do the same. AC11 is
+    correct in spirit but must explicitly require the mask on every video
+    surface and on every thumbnail, not just guard the breadcrumb payload.
+
+T10. **Out-of-scope clarification.** Cross-exercise comparison and pose-
+     alignment are correctly deferred. Add to the deferred list: any change to
+     the `set_media` schema, any background pre-warming of decoders, and any
+     cross-device sync of thumbnails (data must stay on device).
+
+**Required before techlead approval:**
+1. Rewrite the file-level diff against `CompareView.tsx` + `FormLibraryTab.tsx`
+   (incremental upgrade), or justify a green-field replacement that also
+   migrates the existing select-mode call site — no orphaned legacy path.
+2. Specify the source-switch mechanism (`replaceAsync` vs key-remount) and
+   replay-gate placement (T1, T2).
+3. Add thumbnail cache design (T3) — path, size cap, cleanup, backup status.
+4. Replace AC4 and AC9 measurement methods (T4, T5).
+5. Collapse to a single entry-point model (T6).
+6. Add thumbnail concurrency cap and placeholder rendering (T7).
+7. Replace AC8 token list and align scanner with the established
+   source-contract pattern (T8).
+8. Tighten AC11 to require Sentry masking on every new video/thumbnail surface
+   (T9).
+9. Update the Expo SDK reference in the plan from "SDK 51" to "SDK ~55"
+   (cosmetic but the wrong SDK invalidates the rest of the dependency
+   reasoning).
+
+When these land, ping `@techlead` for re-review. CEO and QD approval are
+independent.
+
