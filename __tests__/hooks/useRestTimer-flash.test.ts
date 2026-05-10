@@ -42,6 +42,9 @@ jest.mock("../../lib/notifications", () => ({
   isAvailable: () => false,
   scheduleRestComplete: jest.fn().mockResolvedValue("notif-1"),
   cancelRestComplete: jest.fn().mockResolvedValue(undefined),
+  cancelAllRestNotifications: jest.fn().mockResolvedValue(undefined),
+  schedulePreEndCue: jest.fn().mockResolvedValue(undefined),
+  presentLiveRestCountdown: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("../../lib/db", () => ({
