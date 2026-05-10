@@ -502,5 +502,156 @@ describe("notifications", () => {
       });
       expect(result.shouldShowAlert).toBe(true);
     });
+
+    // BLD-1137: covers AC15 from PLAN-BLD-1137.md
+    it("AC15 — fires Haptics.selectionAsync() when rest_preend notification fires in foreground", async () => {
+      notifications.setupHandler();
+      type HandlerFn = (notification: { request: { content: { data: { type: string } } } }) => Promise<{ shouldShowAlert: boolean }>;
+      const handler = (Notifications as typeof Notifications & { _getHandler: () => { handleNotification: HandlerFn } })._getHandler();
+      const Haptics = require("expo-haptics");
+      await handler.handleNotification({
+        request: { content: { data: { type: "rest_preend" } } },
+      });
+      // Allow microtasks to flush (Haptics.selectionAsync is void-called inside handler)
+      await Promise.resolve();
+      expect(Haptics.selectionAsync).toHaveBeenCalled();
+    });
+  });
+
+  // BLD-1137: covers AC8 from PLAN-BLD-1137.md
+  describe("AC8 — Sound/vibrate scope channel assertions", () => {
+    it("schedulePreEndCue uses REST_CUE_CHANNEL (silent) on Android", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.schedulePreEndCue(50, null, false, 10, "sess-ac8");
+        const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+        expect(call.content.channelId).toBe(notifications.REST_CUE_CHANNEL);
+        expect(call.content.sound).toBeNull();
+        expect(call.content.interruptionLevel).toBeUndefined();
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("schedulePreEndCue uses interruptionLevel=passive (no channelId) on iOS", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "ios";
+      try {
+        await notifications.schedulePreEndCue(50, null, false, 10, "sess-ac8-ios");
+        const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+        expect(call.content.interruptionLevel).toBe("passive");
+        expect(call.content.channelId).toBeUndefined();
+        expect(call.content.sound).toBeNull();
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("presentLiveRestCountdown uses REST_ONGOING_CHANNEL (silent, no heads-up) on Android", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.presentLiveRestCountdown(45, null, "sess-live");
+        const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+        expect(call.content.channelId).toBe(notifications.REST_ONGOING_CHANNEL);
+        // No sound field — channel config already silences it
+        expect(call.content.sound).toBeUndefined();
+        expect(call.identifier).toBe("rest-live-sess-live");
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("presentLiveRestCountdown is a no-op on iOS", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "ios";
+      try {
+        const result = await notifications.presentLiveRestCountdown(45, null, "sess-live-ios");
+        expect(result).toBeNull();
+        expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("scheduleRestComplete has sound='default' (rest_timer_sound applies only here)", async () => {
+      await notifications.scheduleRestComplete(60, "sess-sound");
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      // Rest-complete alone carries sound — pre-end cue and live countdown are both silent
+      expect(call.content.sound).toBe("default");
+    });
+  });
+
+  // BLD-1137: covers AC16 from PLAN-BLD-1137.md
+  describe("ensureRestChannelsRegistered (AC16)", () => {
+    it("AC16 — registers REST_ONGOING_CHANNEL (LOW, silent, no vibrate, no badge) on Android", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.ensureRestChannelsRegistered();
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+          notifications.REST_ONGOING_CHANNEL,
+          expect.objectContaining({
+            importance: 2, // AndroidImportance.LOW
+            sound: null,
+            vibrationPattern: [],
+            showBadge: false,
+          }),
+        );
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("AC16 — registers REST_CUE_CHANNEL (LOW, silent, no vibrate) on Android", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.ensureRestChannelsRegistered();
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+          notifications.REST_CUE_CHANNEL,
+          expect.objectContaining({
+            importance: 2, // AndroidImportance.LOW
+            sound: null,
+            vibrationPattern: [],
+          }),
+        );
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("AC16 — is idempotent: calling twice registers each channel exactly twice (no error)", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.ensureRestChannelsRegistered();
+        await notifications.ensureRestChannelsRegistered();
+        // 2 channels × 2 calls = 4 total setNotificationChannelAsync calls
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(4);
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("AC16 — is a no-op on iOS", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "ios";
+      try {
+        await notifications.ensureRestChannelsRegistered();
+        expect(Notifications.setNotificationChannelAsync).not.toHaveBeenCalled();
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
   });
 });

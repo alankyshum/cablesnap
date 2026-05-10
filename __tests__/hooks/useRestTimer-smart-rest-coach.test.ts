@@ -301,4 +301,234 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       expect(result.current.rest).toBeGreaterThan(0);
     });
   });
+
+  // BLD-1137: covers AC4 from PLAN-BLD-1137.md
+  describe("AC4 — Live countdown timing", () => {
+    it("AC4 — presentLiveRestCountdown called immediately (within 1s) when liveEnabled=true", async () => {
+      mockGetAppSetting.mockImplementation((key: string) => {
+        const map: Record<string, string> = {
+          rest_notification_enabled: "true",
+          rest_adaptive_enabled: "false",
+          rest_timer_pre_end_cue_seconds: "10",
+          rest_timer_live_countdown: "true",
+          rest_timer_show_next_set_preview: "false",
+        };
+        return Promise.resolve(map[key] ?? null);
+      });
+
+      const { result } = renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => {
+        await result.current.startRest("exercise-1");
+        await flushPromises();
+      });
+
+      // First live-countdown presentation must happen immediately inside scheduleNotifications
+      // (no timer delay on the initial call — satisfies "within 1s of startRest()")
+      expect(mockPresentLiveRestCountdown).toHaveBeenCalledWith(
+        60, // full rest duration on first call
+        null, // no preview (showNextSet=false)
+        "sess-1",
+      );
+    });
+
+    it("AC4 — 5-second re-presentation chain is scheduled via setTimeout after initial call", async () => {
+      mockGetAppSetting.mockImplementation((key: string) => {
+        const map: Record<string, string> = {
+          rest_notification_enabled: "true",
+          rest_adaptive_enabled: "false",
+          rest_timer_pre_end_cue_seconds: "10",
+          rest_timer_live_countdown: "true",
+          rest_timer_show_next_set_preview: "false",
+        };
+        return Promise.resolve(map[key] ?? null);
+      });
+
+      // Spy on setTimeout to verify the 5s chain is set up (AC4: re-presents every 5s ±500ms)
+      const setTimeoutSpy = jest.spyOn(global, "setTimeout");
+
+      const { result } = renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => {
+        await result.current.startRest("exercise-1");
+        await flushPromises();
+      });
+
+      // Verify the self-correcting 5s chain was scheduled
+      const fiveSecondCalls = setTimeoutSpy.mock.calls.filter((call) => call[1] === 5000);
+      expect(fiveSecondCalls.length).toBeGreaterThanOrEqual(1);
+
+      setTimeoutSpy.mockRestore();
+    });
+  });
+
+  // BLD-1137: covers AC9 from PLAN-BLD-1137.md
+  describe("AC9 — Settings persistence across cold restart", () => {
+    it("AC9 — rest_timer_live_countdown=true read from getAppSetting starts live countdown", async () => {
+      mockGetAppSetting.mockImplementation((key: string) => {
+        const map: Record<string, string> = {
+          rest_notification_enabled: "true",
+          rest_adaptive_enabled: "false",
+          rest_timer_pre_end_cue_seconds: "10",
+          rest_timer_live_countdown: "true", // persisted "true"
+          rest_timer_show_next_set_preview: "false",
+        };
+        return Promise.resolve(map[key] ?? null);
+      });
+
+      const { result } = renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => {
+        await result.current.startRest("exercise-1");
+        await flushPromises();
+      });
+
+      // Hook must have read rest_timer_live_countdown from getAppSetting
+      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
+      // And applied it — live countdown was presented
+      expect(mockPresentLiveRestCountdown).toHaveBeenCalled();
+    });
+
+    it("AC9 — rest_timer_live_countdown=false read from getAppSetting suppresses live countdown", async () => {
+      mockGetAppSetting.mockImplementation((key: string) => {
+        const map: Record<string, string> = {
+          rest_notification_enabled: "true",
+          rest_adaptive_enabled: "false",
+          rest_timer_pre_end_cue_seconds: "10",
+          rest_timer_live_countdown: "false", // persisted "false"
+          rest_timer_show_next_set_preview: "false",
+        };
+        return Promise.resolve(map[key] ?? null);
+      });
+
+      const { result } = renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => {
+        await result.current.startRest("exercise-1");
+        await flushPromises();
+      });
+
+      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
+      expect(mockPresentLiveRestCountdown).not.toHaveBeenCalled();
+    });
+
+    it("AC9 — rest_timer_pre_end_cue_seconds and rest_timer_show_next_set_preview are read from getAppSetting", async () => {
+      mockGetAppSetting.mockImplementation((key: string) => {
+        const map: Record<string, string> = {
+          rest_notification_enabled: "true",
+          rest_adaptive_enabled: "false",
+          rest_timer_pre_end_cue_seconds: "15",
+          rest_timer_live_countdown: "false",
+          rest_timer_show_next_set_preview: "true",
+        };
+        return Promise.resolve(map[key] ?? null);
+      });
+
+      const { result } = renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => {
+        await result.current.startRest("exercise-1");
+        await flushPromises();
+      });
+
+      // All new BLD-1137 settings must be read from the persistence layer (getAppSetting)
+      // so they survive cold restarts (process kill → re-launch reads fresh from DB).
+      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_pre_end_cue_seconds");
+      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_show_next_set_preview");
+      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
+    });
+  });
+
+  // BLD-1137: covers AC12 from PLAN-BLD-1137.md
+  describe("AC12 — Cold-start resume of live countdown", () => {
+    it("AC12 — presentLiveRestCountdown called on mount when persisted state has liveEnabled=true and time remaining", async () => {
+      const futureTimestamp = Date.now() + 55_000; // 55s remaining > cueSeconds(10) + 2
+      const activeState = JSON.stringify({
+        sessionId: "sess-1",
+        endTimestamp: futureTimestamp,
+        durationSeconds: 60,
+        breakdown: { totalSeconds: 60 },
+        notificationIds: { preEnd: "preend-id", complete: "complete-id", liveOngoing: "live-id" },
+        previewSnapshot: null,
+        isLastSet: false,
+        cueSeconds: 10,
+        liveEnabled: true, // cold-start resume should re-start live countdown
+      });
+
+      mockGetAppSetting.mockImplementation((key: string) => {
+        if (key === "rest_timer_active_state") return Promise.resolve(activeState);
+        if (key === "rest_timer_default_seconds") return Promise.resolve(null as unknown as string);
+        return Promise.resolve(null as unknown as string);
+      });
+
+      renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      // Allow the mount useEffect to run and call presentLiveRestCountdown
+      await act(async () => { await flushPromises(); });
+
+      // Live countdown must reappear within 2s of foreground (here: immediately on mount)
+      expect(mockPresentLiveRestCountdown).toHaveBeenCalled();
+      // Called with the session id from persisted state
+      expect(mockPresentLiveRestCountdown).toHaveBeenCalledWith(
+        expect.any(Number), // remaining seconds (≤55)
+        null, // previewSnapshot
+        "sess-1",
+      );
+    });
+
+    it("AC12 — does NOT restart live countdown when liveEnabled=false in persisted state", async () => {
+      const futureTimestamp = Date.now() + 55_000;
+      const activeState = JSON.stringify({
+        sessionId: "sess-1",
+        endTimestamp: futureTimestamp,
+        durationSeconds: 60,
+        breakdown: { totalSeconds: 60 },
+        notificationIds: {},
+        previewSnapshot: null,
+        isLastSet: false,
+        cueSeconds: 10,
+        liveEnabled: false,
+      });
+
+      mockGetAppSetting.mockImplementation((key: string) => {
+        if (key === "rest_timer_active_state") return Promise.resolve(activeState);
+        if (key === "rest_timer_default_seconds") return Promise.resolve(null as unknown as string);
+        return Promise.resolve(null as unknown as string);
+      });
+
+      renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => { await flushPromises(); });
+
+      expect(mockPresentLiveRestCountdown).not.toHaveBeenCalled();
+    });
+  });
 });
