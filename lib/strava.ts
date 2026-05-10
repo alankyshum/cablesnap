@@ -1,9 +1,23 @@
-import { Linking, Platform } from "react-native";
-import * as AuthSession from "expo-auth-session";
+/*
+ * WHY WE USE A WORKER BOUNCE FOR STRAVA OAUTH
+ * --------------------------------------------
+ * Strava's /oauth/authorize endpoint rejects custom URI scheme redirect_uris
+ * (e.g. cablesnap://strava-callback) with an HTTP 302 → "invalid redirect_uri".
+ * It only accepts http(s):// URLs whose host matches the registered
+ * "Authorization Callback Domain".
+ *
+ * Fix: We send redirect_uri=https://strava-proxy.alan200994.workers.dev/callback
+ * (accepted by Strava). The worker's GET /callback handler reads the code/scope/
+ * state query params and 302-redirects to cablesnap://strava-callback?<params>.
+ * WebBrowser.openAuthSessionAsync intercepts that cablesnap:// redirect (matches
+ * its second argument), closes the in-app browser, and returns the deep-link URL
+ * to the app. We then parse the code from the URL and POST to the proxy /token.
+ */
+import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
-import * as Sentry from "@sentry/react-native";
+import { uuid } from "./uuid";
 import {
   getStravaConnection,
   saveStravaConnection,
@@ -17,124 +31,26 @@ import {
   getSessionSets,
   getBodySettings,
 } from "./db";
-
-// ---- Error classification ----
-
-export type StravaErrorCode =
-  | "auth_expired"
-  | "auth_revoked"
-  | "network"
-  | "rate_limit"
-  | "server"
-  | "config"
-  | "unknown";
-
-export class StravaError extends Error {
-  public readonly code: StravaErrorCode;
-  public readonly status?: number;
-  constructor(code: StravaErrorCode, message: string, status?: number) {
-    super(message);
-    this.name = "StravaError";
-    this.code = code;
-    this.status = status;
-  }
-}
-
-function classifyHttpStatus(status: number): StravaErrorCode {
-  if (status === 401 || status === 403) return "auth_expired";
-  if (status === 429) return "rate_limit";
-  if (status >= 500) return "server";
-  return "unknown";
-}
-
-function isNetworkError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  // React Native fetch surfaces TypeError with "Network request failed"
-  // Node/browsers use TypeError with "Failed to fetch".
-  const msg = err.message || "";
-  return (
-    err.name === "TypeError" ||
-    /network request failed|failed to fetch|networkerror|timeout|timed out/i.test(msg)
-  );
-}
-
-/**
- * Maps any thrown value from Strava flows into a user-friendly message.
- * Leaves technical details (status, raw message) for logs only.
- */
-export function getStravaUserMessage(err: unknown): string {
-  if (err instanceof StravaError) {
-    switch (err.code) {
-      case "auth_expired":
-      case "auth_revoked":
-        return "Connection expired. Please try again.";
-      case "network":
-        return "Check your internet and try again.";
-      case "rate_limit":
-        return "Too many requests. Please wait a moment and try again.";
-      case "server":
-        return "Strava is having trouble right now. Please try again soon.";
-      case "config":
-        return "Strava isn't set up correctly. Please contact support.";
-      case "unknown":
-      default:
-        return "Something went wrong connecting to Strava. Please try again.";
-    }
-  }
-  if (isNetworkError(err)) {
-    return "Check your internet and try again.";
-  }
-  return "Something went wrong connecting to Strava. Please try again.";
-}
-
-// Public URL users can open when Strava errors are unactionable in-app
-// (e.g. misconfigured build). Points to the project issue tracker so users
-// can file a bug or read known issues.
-export const STRAVA_SUPPORT_URL =
-  "https://github.com/alankyshum/cablesnap/issues";
-
-export interface StravaSupportAction {
-  label: string;
-  onPress: () => void;
-}
-
-/**
- * Returns an optional support CTA to pair with a Strava error toast.
- * Errors the user cannot self-resolve surface a "Get help" link that opens
- * {@link STRAVA_SUPPORT_URL}:
- * - `config`: misconfigured build (client_id / proxy URL missing)
- * - `unknown`: we have no actionable hint — give the user a way to report it
- *
- * For self-recoverable errors (network, rate_limit, server, auth_*) we omit
- * the CTA — retrying resolves them.
- *
- * TODO(BLD-513): generalize if a second integration needs this — extract
- * a `makeSupportAction(url, label)` factory into `lib/support.ts` and
- * keep this function as the Strava-specific caller.
- */
-export function getStravaSupportAction(
-  err: unknown,
-): StravaSupportAction | undefined {
-  const isConfig = err instanceof StravaError && err.code === "config";
-  const isUnknown = err instanceof StravaError && err.code === "unknown";
-  if (isConfig || isUnknown) {
-    return {
-      label: "Get help",
-      onPress: () => {
-        void Linking.openURL(STRAVA_SUPPORT_URL).catch((linkErr) => {
-          // Do not cascade a second error toast, but log so repeated
-          // URL-launch failures are diagnosable in production (e.g. when
-          // no browser is registered to handle https:// on the device).
-          console.warn("Strava support URL launch failed:", linkErr);
-        });
-      },
-    };
-  }
-  return undefined;
-}
+export {
+  StravaError,
+  getStravaUserMessage,
+  getStravaSupportAction,
+  STRAVA_SUPPORT_URL,
+} from "./strava-error";
+export type { StravaErrorCode, StravaSupportAction } from "./strava-error";
+import {
+  StravaError,
+  classifyHttpStatus,
+  isNetworkError,
+} from "./strava-error";
+import {
+  captureStravaError,
+  stravaBreakcrumb,
+  stravaLog,
+} from "./strava-telemetry";
 
 // Strava API constants
-const STRAVA_AUTH_URL = "https://www.strava.com/oauth/mobile/authorize";
+const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 
 // SecureStore keys
@@ -154,10 +70,12 @@ function getProxyUrl(): string {
   return url as string;
 }
 
-const redirectUri = AuthSession.makeRedirectUri({
-  scheme: "cablesnap",
-  path: "strava-callback",
-});
+// OAuth redirect constants
+// redirect_uri sent to Strava — must be an https:// URL matching the registered domain.
+// The worker's GET /callback bounces this to the cablesnap:// deep link below.
+const REDIRECT_URI_FOR_STRAVA = `${Constants.expoConfig?.extra?.stravaProxyUrl ?? "https://strava-proxy.alan200994.workers.dev"}/callback`;
+// Deep link that WebBrowser.openAuthSessionAsync watches for to close the browser.
+const APP_DEEP_LINK = "cablesnap://strava-callback";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -262,54 +180,6 @@ async function getValidAccessToken(): Promise<string | null> {
   return await refreshAccessToken();
 }
 
-// ---- Sentry helpers ----
-
-function captureStravaError(
-  err: unknown,
-  flow: string,
-  step: string,
-  extra?: Record<string, unknown>,
-): void {
-  Sentry.captureException(err, { tags: { flow, step }, extra });
-}
-
-function stravaBreakcrumb(message: string, data?: Record<string, unknown>): void {
-  Sentry.addBreadcrumb({ category: "strava", message, data });
-}
-
-/**
- * Emit a structured Sentry log for a Strava lifecycle checkpoint.
- *
- * Unlike `stravaBreakcrumb` (which only attaches to exception events),
- * these calls go to the Sentry logs (`ourlogs`) dataset so we have
- * verifiable happy-path signal. Init config sets `enableLogs: true`
- * (see `app/_layout.tsx`).
- *
- * Never pass secrets (tokens, client_secret, raw auth codes, Authorization
- * headers). Scalars only (IDs, status codes, resultType).
- *
- * Uses optional chaining so older @sentry/react-native SDKs that do not
- * export `logger` do not throw at runtime.
- */
-function stravaLog(
-  level: "info" | "warn" | "error",
-  message: string,
-  attrs?: Record<string, unknown>,
-): void {
-  try {
-    const logger = (Sentry as unknown as {
-      logger?: {
-        info?: (msg: string, attrs?: Record<string, unknown>) => void;
-        warn?: (msg: string, attrs?: Record<string, unknown>) => void;
-        error?: (msg: string, attrs?: Record<string, unknown>) => void;
-      };
-    }).logger;
-    logger?.[level]?.(message, attrs);
-  } catch {
-    // Logging must never break the app flow.
-  }
-}
-
 // ---- Token Exchange ----
 
 async function exchangeCodeForTokens(
@@ -326,7 +196,7 @@ async function exchangeCodeForTokens(
       body: JSON.stringify({ code }),
     });
   } catch (err) {
-    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri, proxyUrl, clientId });
+    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl, clientId });
     if (isNetworkError(err)) {
       throw new StravaError("network", err instanceof Error ? err.message : "Network request failed");
     }
@@ -340,7 +210,7 @@ async function exchangeCodeForTokens(
       `Token exchange failed: ${tokenResponse.status}`,
       tokenResponse.status,
     );
-    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri, proxyUrl, clientId, status: tokenResponse.status, responseBody: body });
+    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl, clientId, status: tokenResponse.status, responseBody: body });
     throw err;
   }
 
@@ -352,6 +222,55 @@ async function exchangeCodeForTokens(
 // ---- OAuth2 Authorization Code Flow ----
 // Note: Strava does not support PKCE. Tokens are exchanged via the
 // Cloudflare Worker proxy which holds the client_secret server-side.
+
+/**
+ * Open the Strava authorization browser session and parse the callback URL.
+ * Wraps {@link WebBrowser.openAuthSessionAsync} + URL parsing in unified
+ * error handling so {@link connectStrava} stays under the complexity budget.
+ *
+ * Verifies the returned `state` matches `expectedState` (CSRF protection)
+ * and returns the parsed `code` on success.
+ */
+async function runAuthPrompt(
+  authorizeUrl: string,
+  expectedState: string,
+): Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }> {
+  let result: WebBrowser.WebBrowserAuthSessionResult;
+  try {
+    result = await WebBrowser.openAuthSessionAsync(authorizeUrl, APP_DEEP_LINK);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const wrapped = new StravaError("unknown", errorMessage);
+    stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
+    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "error" });
+    throw wrapped;
+  }
+
+  if (result.type !== "success") {
+    return { result, code: undefined };
+  }
+
+  let callbackParams: URLSearchParams;
+  try {
+    callbackParams = new URL(result.url).searchParams;
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const wrapped = new StravaError("unknown", errorMessage);
+    stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
+    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
+    throw wrapped;
+  }
+
+  // Verify CSRF state to prevent token injection attacks.
+  if (callbackParams.get("state") !== expectedState) {
+    const wrapped = new StravaError("unknown", "OAuth state mismatch");
+    stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
+    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
+    throw wrapped;
+  }
+
+  return { result, code: callbackParams.get("code") ?? undefined };
+}
 
 export async function connectStrava(): Promise<{
   athleteId: number;
@@ -378,21 +297,23 @@ export async function connectStrava(): Promise<{
     throw wrapped;
   }
 
-  stravaBreakcrumb("connectStrava started", { clientId, redirectUri, proxyUrl });
+  stravaBreakcrumb("connectStrava started", { clientId, redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl });
   stravaLog("info", "strava connect started", { flow: "strava_connect", step: "start" });
 
-  const authRequest = new AuthSession.AuthRequest({
-    clientId,
-    scopes: ["activity:write"],
-    redirectUri,
-    responseType: AuthSession.ResponseType.Code,
-  });
+  // Generate a random state value for CSRF protection
+  const oauthState = uuid();
 
-  const result = await authRequest.promptAsync({
-    authorizationEndpoint: STRAVA_AUTH_URL,
-  });
+  const authorizeUrl = new URL(STRAVA_AUTH_URL);
+  authorizeUrl.searchParams.set("client_id", clientId);
+  authorizeUrl.searchParams.set("redirect_uri", REDIRECT_URI_FOR_STRAVA);
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("approval_prompt", "auto");
+  authorizeUrl.searchParams.set("scope", "activity:write");
+  authorizeUrl.searchParams.set("state", oauthState);
 
-  const hasCode = !!(result.type === "success" && result.params?.code);
+  const { result, code } = await runAuthPrompt(authorizeUrl.toString(), oauthState);
+
+  const hasCode = !!(result.type === "success" && code);
   stravaBreakcrumb("auth prompt completed", { resultType: result.type, hasCode });
   stravaLog("info", "strava auth prompt completed", {
     flow: "strava_connect",
@@ -401,20 +322,15 @@ export async function connectStrava(): Promise<{
     hasCode,
   });
 
-  if (result.type !== "success" || !result.params.code) {
-    // "error" surfaces issues like Android deep-link routing failures or
-    // a malformed authorization response. Without this branch, the caller
-    // silently received null and no toast was shown — the user saw nothing
-    // or only the spinner stop. (BLD-547 / GH #333)
-    if (result.type === "error") {
-      const promptErr = (result as { error?: Error | null }).error;
-      const message = promptErr?.message || "Strava authorization failed";
-      const wrapped = new StravaError("unknown", message);
+  if (result.type !== "success" || !code) {
+    if (result.type === "success" && !code) {
+      // Browser returned a cablesnap:// URL but no code — treat as error
+      const wrapped = new StravaError("unknown", "Strava authorization failed: no code in callback URL");
       stravaLog("warn", "strava auth prompt errored", {
         flow: "strava_connect",
         step: "auth_prompt_error",
         resultType: result.type,
-        errorMessage: message,
+        errorMessage: wrapped.message,
       });
       captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
       throw wrapped;
@@ -428,7 +344,7 @@ export async function connectStrava(): Promise<{
   }
 
   // Exchange authorization code for tokens via proxy
-  const data = await exchangeCodeForTokens(result.params.code, proxyUrl, clientId);
+  const data = await exchangeCodeForTokens(code, proxyUrl, clientId);
 
   await saveTokens(
     data.access_token as string,

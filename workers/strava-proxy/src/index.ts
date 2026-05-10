@@ -7,7 +7,7 @@ const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
@@ -53,6 +53,21 @@ async function handleToken(request: Request, env: Env): Promise<Response> {
   });
 }
 
+function handleCallback(request: Request): Response {
+  // CONTRACT (manual verification only — no test framework configured for this worker):
+  //   GET /callback?code=abc&scope=activity:write&state=xyz
+  //     → 302, Location: cablesnap://strava-callback?code=abc&scope=activity%3Awrite&state=xyz
+  //   GET /callback?error=access_denied&state=xyz
+  //     → 302, Location: cablesnap://strava-callback?error=access_denied&state=xyz
+  //   POST /callback → 405 (caught by the method-not-allowed guard above)
+  const incomingUrl = new URL(request.url);
+  const target = new URL("cablesnap://strava-callback");
+  incomingUrl.searchParams.forEach((value, key) => {
+    target.searchParams.set(key, value);
+  });
+  return Response.redirect(target.toString(), 302);
+}
+
 async function handleRefresh(request: Request, env: Env): Promise<Response> {
   const body = (await request.json()) as Record<string, unknown>;
   const refreshToken = body.refresh_token as string | undefined;
@@ -91,6 +106,11 @@ export default {
     // CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
+    // GET /callback: bounce Strava's redirect back to the app deep link
+    if (request.method === "GET" && url.pathname === "/callback") {
+      return handleCallback(request);
     }
 
     if (request.method !== "POST") {
