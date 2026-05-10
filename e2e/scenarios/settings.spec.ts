@@ -84,11 +84,20 @@ test.describe("@scenario settings", () => {
     await scrollEl.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await page.waitForTimeout(300);
 
+    // Ensure the About element is actually in the visible region. scrollHeight
+    // can be stale after new settings rows are added (e.g. rest-coach rows from
+    // BLD-1137) or when the floating tab bar shifts the visual clipping boundary.
+    // scrollIntoViewIfNeeded() is more robust: it scrolls the container just
+    // enough to bring the element into the visible rect, independent of the
+    // total content height. This preserves the BLD-1106 → BLD-1124 regression
+    // invariant: About/BMC must be visible above the floating tab bar.
+    const aboutEl = page.getByText(/about|buy me a coffee|thanks\.dev/i).first();
+    await aboutEl.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+
     // Assert a known bottom-of-settings element is visible before capturing,
     // so the spec detects the exact cutoff regression this ticket was filed for.
-    await expect(
-      page.getByText(/about|buy me a coffee|thanks\.dev/i).first(),
-    ).toBeInViewport({ timeout: 5_000 });
+    await expect(aboutEl).toBeInViewport({ timeout: 5_000 });
 
     const viewport = testInfo.project.name;
     await captureWithCvd({
