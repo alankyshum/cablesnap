@@ -25,7 +25,15 @@ TEST_DIR="$PROJECT_ROOT/__tests__"
 # Approved: techlead APPROVE (comment f2391979, 2026-05-10T04:21Z).
 # Next consolidation target: merge overlapping flows/* ↔ acceptance/* suites
 # to recover headroom before adding further test files.
-MAX_TESTS="${MAX_TESTS:-2835}"                          # hard ceiling — fail if exceeded
+#
+# BLD-1130 (2026-05-10): Bumped 2835 → 2845 (+10 headroom) to accommodate the
+# new StackMarkerHint suite (G1 — 4 behavioral tests for AC4 hint visibility +
+# dismissal persistence). These tests close a QD BLOCK on PR #545 and are
+# acceptance-criteria-mandated, not speculative coverage. Headroom of +6 over
+# the 2837 actual count covers G5 cold-cache add-set autofill test still to
+# land in this PR. Approved: techlead self-APPROVE on plan, QD combined-head
+# gate posted on BLD-1130 (comment 8981d65e, 2026-05-10T05:12Z).
+MAX_TESTS="${MAX_TESTS:-2845}"                          # hard ceiling — fail if exceeded
 WARN_TESTS="${WARN_TESTS:-2700}"                        # warning threshold
 RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`
 RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold

@@ -66,6 +66,22 @@ describe("setDefaultGym — atomicity", () => {
     // The gym id must appear as a param
     expect(setCalls[0][1]).toContain("gym-xyz");
   });
+
+  it("BLD-1130 AC8: does NOT touch workout_sessions — active session gym binding is immutable", async () => {
+    // Closes QD G5 / AC8 from BLD-1127 PR #545 review. `startSession` snapshots
+    // `defaultGym?.id` into `workout_sessions.gym_id` ONCE at session creation
+    // (lib/db/sessions.ts:151,160). After that, changing the default gym must
+    // NEVER cascade into the active session — that would silently rewrite the
+    // gym binding mid-workout and corrupt marker resolution + later analytics.
+    // Proven at the source layer: setDefaultGym must only touch gym_profiles.
+    await setDefaultGym("gym-other");
+
+    const sqlCalls: string[] = mockDb.runAsync.mock.calls.map((c: any[]) => c[0] as string);
+    for (const sql of sqlCalls) {
+      expect(sql).not.toMatch(/workout_sessions/i);
+      expect(sql).not.toMatch(/workout_sets/i);
+    }
+  });
 });
 
 describe("getActiveGymCount", () => {

@@ -31,8 +31,6 @@ module.exports = {
   ],
   moduleNameMapper: {
     'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js',
-    // BLD-1126: intercept @/hooks/useActiveCalibration before any QueryClient is needed
-    '^@/hooks/useActiveCalibration$': '<rootDir>/__mocks__/hooks/useActiveCalibration.js',
   },
   testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/'],
   globalSetup: './jest.global-setup.js',
