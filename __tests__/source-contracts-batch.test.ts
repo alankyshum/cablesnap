@@ -1044,3 +1044,75 @@ describe("BLD-1137 Smart Rest Coach source contracts", () => {
   });
 });
 
+// ── Session Pacing source contracts (BLD-1144) ────────────────────
+
+describe("PacingCard source contracts (BLD-1144)", () => {
+  /**
+   * Scans only JSX text children and accessibilityLabel/accessibilityHint props
+   * inside components/session/summary/Pacing*.tsx and the pacing line in
+   * components/history/DayDetailPanel.tsx — NOT a whole-source grep.
+   * See plan §136 for rationale (avoid false-positives on countdown/dropdown etc).
+   */
+  function extractUserFacingStrings(src: string): string {
+    const parts: string[] = [];
+    // JSX text literals: {" ... "} or plain text between tags
+    const jsxText = src.matchAll(/>\s*\{"([^"]+)"\}\s*</g);
+    for (const m of jsxText) parts.push(m[1]);
+    // Plain JSX text nodes between tags (no braces)
+    const plainText = src.matchAll(/>([^<{]+)</g);
+    for (const m of plainText) {
+      const t = m[1].trim();
+      if (t.length > 1) parts.push(t);
+    }
+    // accessibilityLabel= and accessibilityHint= string literals
+    const a11y = src.matchAll(/accessibility(?:Label|Hint)=\{"([^"]+)"\}/g);
+    for (const m of a11y) parts.push(m[1]);
+    return parts.join(" ");
+  }
+
+  const pacingCardSrc = readSrc("components/session/summary/PacingCard.tsx");
+  const pacingSheetSrc = readSrc("components/session/summary/PacingBreakdownSheet.tsx");
+  const dayDetailSrc = readSrc("components/history/DayDetailPanel.tsx");
+
+  const allUserFacing =
+    extractUserFacingStrings(pacingCardSrc) +
+    " " +
+    extractUserFacingStrings(pacingSheetSrc) +
+    " " +
+    extractUserFacingStrings(dayDetailSrc);
+
+  const FORBIDDEN = ["Idle", "Wasted", "Inactive", "Off-task", "Distraction"];
+
+  it.each(FORBIDDEN)('forbidden word "%s" absent from user-facing copy', (word) => {
+    expect(allUserFacing).not.toMatch(new RegExp(`\\b${word}\\b`, "i"));
+  });
+
+  it('title literal is exactly "Estimated pacing"', () => {
+    expect(pacingCardSrc).toMatch(/["']Estimated pacing["']/);
+  });
+
+  it('segment labels are "Working", "Rest", "Other" (verbatim)', () => {
+    expect(pacingCardSrc).toMatch(/["']Working["']/);
+    expect(pacingCardSrc).toMatch(/["']Rest["']/);
+    expect(pacingCardSrc).toMatch(/["']Other["']/);
+  });
+
+  it('empty-state copy is "No completed sets to analyze" — no nudging language', () => {
+    expect(pacingCardSrc).toMatch(/["']No completed sets to analyze["']/);
+    expect(pacingCardSrc).not.toMatch(/start logging|try again|get started/i);
+  });
+
+  it("disclosure copy is verbatim AC§147", () => {
+    expect(pacingCardSrc).toContain(
+      "Working time is estimated as roughly 2 seconds per rep (or recorded duration for time-based sets). Rest is the remaining gap between consecutive sets."
+    );
+  });
+
+  it("imports PACING_DISCLOSURE_COPY constant (disclosure locked via export)", () => {
+    // The constant is exported so it can be verified independently.
+    const { PACING_DISCLOSURE_COPY } = require("../components/session/summary/PacingCard");
+    expect(typeof PACING_DISCLOSURE_COPY).toBe("string");
+    expect(PACING_DISCLOSURE_COPY).toContain("2 seconds per rep");
+  });
+});
+
