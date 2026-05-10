@@ -142,16 +142,16 @@ Existing tests on main:
 
 ## Acceptance Criteria
 
-- [ ] PR opened from a fresh `bld-989-adopt-gemini-illustrations` branch off `main`, NOT from `bld-561-gemini-illustrations-review`. [TODO-test: BLD-1123-followup]
+- [ ] PR opened from a fresh `bld-989-adopt-gemini-illustrations` branch off `main`, NOT from `bld-561-gemini-illustrations-review`. [gate: process — branch off main convention]
 - [ ] `assets/exercise-illustrations/` contains exactly 128 exercise dirs: 2 mw-bb + 45 mw-bw + 25 mw-cable + 56 voltra. [test: `__tests__/exercise-illustrations-manifest.test.ts::"manifest entry counts (128-exercise Gemini set) > total manifest count is 128"`] [test: `__tests__/exercise-illustrations-manifest.test.ts::"manifest entry counts (128-exercise Gemini set) > mw-bb prefix count is 2"`] [test: `__tests__/exercise-illustrations-manifest.test.ts::"manifest entry counts (128-exercise Gemini set) > mw-bw prefix count is 45"`] [test: `__tests__/exercise-illustrations-manifest.test.ts::"manifest entry counts (128-exercise Gemini set) > mw-cable prefix count is 25"`] [test: `__tests__/exercise-illustrations-manifest.test.ts::"manifest entry counts (128-exercise Gemini set) > voltra prefix count is 56"`]
-- [ ] No mixed-provider exercises: every voltra-* dir's `fingerprint.json` shows `model: gemini-3-pro-image-preview`. [TODO-test: BLD-1123-followup]
+- [ ] No mixed-provider exercises: every voltra-* dir's `fingerprint.json` shows `model: gemini-3-pro-image-preview`. [TODO-test: BLD-1145]
 - [ ] `manifest.generated.ts` references all 128 exercises with start+end paths and alt text. [test: `__tests__/exercise-illustrations-manifest.test.ts::"manifest entry completeness > every entry has start, end, startAlt, endAlt"`]
-- [ ] `npm test` passes (manifest count threshold updated). [TODO-test: BLD-1123-followup]
+- [ ] `npm test` passes (manifest count threshold updated). [gate: ci — npm test green with updated manifest threshold]
 - [ ] CI `bundle-gate.yml` passes (≤ 8 MB warn, definitely ≤ 12 MB fail). [test: `.github/workflows/bundle-gate.yml`]
-- [ ] CI typecheck + lint clean. [TODO-test: BLD-1123-followup]
-- [ ] App boots and renders illustrations in `ExerciseDetailDrawer` for at least one exercise from each of the 4 prefix families (mw-bb, mw-bw, mw-cable, voltra). [TODO-test: BLD-1123-followup]
-- [ ] Owner contact-sheet review acknowledged in implementation-issue comment (red-flag IDs deferred to follow-up issue, not blocking). [TODO-test: BLD-1123-followup]
-- [ ] Source branch `bld-561-gemini-illustrations-review` archived (delete remote ref) after merge. [TODO-test: BLD-1123-followup]
+- [ ] CI typecheck + lint clean. [gate: ci — typecheck + lint clean]
+- [ ] App boots and renders illustrations in `ExerciseDetailDrawer` for at least one exercise from each of the 4 prefix families (mw-bb, mw-bw, mw-cable, voltra). [gate: manual-smoke — boot app + render 1 exercise per family (mw-bb, mw-bw, mw-cable, voltra)]
+- [ ] Owner contact-sheet review acknowledged in implementation-issue comment (red-flag IDs deferred to follow-up issue, not blocking). [gate: process — owner contact-sheet review acknowledged in PR comment]
+- [ ] Source branch `bld-561-gemini-illustrations-review` archived (delete remote ref) after merge. [gate: process — delete remote bld-561-gemini-illustrations-review branch post-merge]
 
 ## Edge Cases
 

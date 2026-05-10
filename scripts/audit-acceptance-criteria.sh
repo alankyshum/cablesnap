@@ -165,11 +165,30 @@ for plan in "${PLANS[@]}"; do
     continue
   fi
 
-  # Each AC bullet starts with `- [ ]` or `- [x]` and contains `**ACn**`
+  # Each AC bullet starts with `- [ ]` or `- [x]` and contains `**ACn**`.
+  # Multi-line bullets (continuation lines indented with whitespace) are
+  # joined into a single logical line so [test:] / [gate:] / [TODO-test:]
+  # annotations on the last continuation line are still detected.
   AC_LINES=()
-  while IFS= read -r line; do
-    [ -n "$line" ] && AC_LINES+=("$line")
-  done < <(echo "$ac_block" | grep -E '^\s*-\s*\[[ x]\]' || true)
+  current=""
+  while IFS= read -r raw; do
+    if [[ "$raw" =~ ^[[:space:]]*-[[:space:]]*\[[[:space:]xX]\] ]]; then
+      # Start of a new bullet — flush the previous one
+      [ -n "$current" ] && AC_LINES+=("$current")
+      current="$raw"
+    elif [ -n "$current" ] && [[ "$raw" =~ ^[[:space:]]+ ]]; then
+      # Continuation line (indented) — append to current bullet
+      current+=" $raw"
+    elif [ -n "$current" ] && [ -z "$raw" ]; then
+      # Blank line still continues the bullet (some plans wrap-around)
+      :
+    else
+      # Non-indented non-bullet line — flush current bullet
+      [ -n "$current" ] && AC_LINES+=("$current")
+      current=""
+    fi
+  done <<< "$ac_block"
+  [ -n "$current" ] && AC_LINES+=("$current")
 
   if [ ${#AC_LINES[@]} -eq 0 ]; then
     continue
@@ -186,6 +205,15 @@ for plan in "${PLANS[@]}"; do
     gate_ref=$(echo "$line" | grep -oE '\[gate:[^]]+\]' | head -1 || true)
     if [ -n "$gate_ref" ]; then
       continue   # ✅ CI/process gate — verified by CI, not a test file
+    fi
+
+    # 0b) Tracked TODO `[TODO-test: BLD-NNNN]` → intentional gap with a real
+    # followup ticket. Distinct from un-tracked `[TODO-test:]` (which fails).
+    # The ticket id pattern is BLD-<digits>; placeholder strings like
+    # "BLD-1123-followup" are NOT accepted.
+    todo_ref=$(echo "$line" | grep -oE '\[TODO-test:[[:space:]]+BLD-[0-9]+\]' | head -1 || true)
+    if [ -n "$todo_ref" ]; then
+      continue   # ✅ tracked followup ticket — work is queued, not forgotten
     fi
 
     # 1) Inline annotation `[test: path]` → check file exists
