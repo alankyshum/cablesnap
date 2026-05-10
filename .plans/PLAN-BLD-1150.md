@@ -1,7 +1,18 @@
 # Feature Plan: Form Check Comparison View
 
 **Issue**: BLD-1150  **Author**: CEO  **Date**: 2026-05-10
-**Status**: DRAFT → IN_REVIEW (rev 1) → REJECTED → **IN_REVIEW (rev 2)**
+**Status**: DRAFT → IN_REVIEW (rev 1) → REJECTED → IN_REVIEW (rev 2) → TL APPROVED W/ CONDITIONS + QD REJECTED → **IN_REVIEW (rev 3)**
+
+> **Rev 3 (2026-05-10):** Rev 2 carried a single bad anchor — it called the
+> secondary single-clip entry `FormVideoSheet`, which is actually the *recorder*
+> (`CameraView` + `recordClip`), not the viewer. The real single-clip viewer is
+> `FormClipsPlayer.tsx`, mounted from `app/session/[id].tsx`. Rev 3 retargets the
+> file-level diff, AC2/AC7/AC8/AC12 wording, callsite wiring, and prop shape
+> accordingly; closes Tech Lead C1 + C2 (state-batching ordering rule for the
+> player→compare handoff so the `useMediaSurfaceMounted()` counter never
+> transients to 0); closes QD-rev2-1..4 (file mismatch, missing wiring,
+> incorrect "scrubbers remain" claim, stale "no way to view two clips together"
+> copy). See the "Rev-3 Changes" section at the end for a per-blocker map.
 
 > **Rev 2 (2026-05-10):** Both QD and Tech Lead REJECTED rev 1 because comparison
 > already exists in the repo (`components/session/CompareView.tsx` opened from
@@ -37,7 +48,11 @@ drift over time, today they must:
 4. Tap clip B → watch.
 5. Mentally overlay.
 
-There is no way to view two clips together. This defeats the primary value of the
+Today's `CompareView` does open two clips side-by-side, but it ships only a play
+overlay — no transport row, no Swap A↔B, no in-sheet picker, no landscape layout,
+no thumbnail cache. The single-clip player (`FormClipsPlayer`) has no path into
+comparison at all. The combined effect is that the side-by-side view defeats the
+primary value of the
 on-device form library: comparison. Cloud-first competitors (CoachNow, OnForm) do
 support comparison but require uploading personal video to a third-party server,
 which conflicts with CableSnap's offline-first, privacy-first stance.
@@ -94,8 +109,10 @@ to it:
    useWindowDimensions().height`, panes lay out left/right with a vertical divider;
    portrait keeps today's top/bottom layout.
 5. **Second entry point** — the single-clip player surface
-   (`components/session/FormVideoSheet.tsx`, the only existing single-clip viewer
-   on this code path) gets a **"Compare with another set…"** action row that
+   (`components/session/FormClipsPlayer.tsx`, the actual single-clip viewer at
+   `BottomSheet` + `useVideoPlayer`; `FormVideoSheet.tsx` is the *recorder*, not
+   a viewer — it owns `CameraView` / `recordClip` and never receives a
+   `SetMediaRow`) gets a **"Compare with another set…"** action row that
    pre-loads the current clip as Clip A and opens `CompareView` in "pick B" mode
    (B starts unselected; picker strip is the only path forward). Per Tech Lead T6,
    we keep one mental model: **select-mode + this single new entry** — no per-row
@@ -111,12 +128,36 @@ thumbnail-cache helper module.
    thumbnails → "Compare" CTA in `SelectActionsBar` opens `CompareView` with both
    slots filled. Picker strip is hidden by default in this flow (both slots
    already chosen) but available behind a small "Change" affordance per pane.
-2. **Single-clip player (new).** `FormVideoSheet` gets a footer row button
-   **"Compare with another set…"**. It dismisses the single-clip sheet, then
-   opens `CompareView` with `clipA = currentClip`, `clipB = null`, and the picker
-   strip auto-opened so the user picks B in one tap. The dismiss-then-open
-   sequencing avoids two `useMediaSurfaceMounted()` regions overlapping (Tech
-   Lead T2 — single root increment must be preserved).
+2. **Single-clip player (new).** `FormClipsPlayer` gains a footer row button
+   **"Compare with another set…"**. The player itself is presentational and
+   does not own clip-list state, so two new props are added:
+   `exerciseId: string` and `onRequestCompare: (clipA: SetMediaRow) => void`.
+   The owning caller is `app/session/[id].tsx` (lines ~600–612), which already
+   holds `playerClip` (the active `SetMediaRow`) and the resolved
+   `playerSetInfo.exerciseId`. The caller passes both props in and implements
+   `onRequestCompare` as a single batched state update (see "Player → Compare
+   handoff sequencing" below) that closes the player and opens `CompareView`
+   with `clipA = currentClip`, `clipB = null`, `pickerEnabled = true`,
+   `pickerOpen = true`. Tech Lead T2 single-root-`useMediaSurfaceMounted()`
+   invariant must hold across the transition (counter never < 1).
+
+##### Player → Compare handoff sequencing (Tech Lead C2)
+
+A naive `onClose() → setCompareOpen(true)` runs through a React commit where
+**neither** surface is mounted, dropping the replay-gate counter to 0 and
+re-enabling Sentry replay for one frame — the exact failure T2 warns against.
+Required pattern in `app/session/[id].tsx`:
+
+- `onRequestCompare(clipA)` performs **one** state update (single `setState`
+  call, or `useReducer` action) that simultaneously sets
+  `compareInitialA = clipA`, `compareOpen = true`, `playerSetId = null`,
+  `playerClip = null`. React batches the resulting commits; `CompareView`'s
+  mount commit is sequenced **before** `FormClipsPlayer`'s unmount commit, OR
+  both surfaces are mounted for one frame with `CompareView` first, so the
+  `useMediaSurfaceMounted()` counter never falls below 1.
+- AC12 is extended to assert this invariant for the player→compare handoff
+  (open player → tap Compare-with → assert counter ≥ 1 across every commit →
+  close compare → assert counter back to 0).
 
 #### Picker strip
 - Data source: `getClipsForExercise(exerciseId)` from `lib/media/form-clips.ts`
@@ -141,8 +182,11 @@ thumbnail-cache helper module.
 - **Play Both / Pause Both / Reset Both** call the matching method on both
   player refs in the same JS task. No promise of frame-perfect sync; AC3 below
   gives a 50 ms tolerance at 250 ms post-tap.
-- Per-pane scrubber controls remain (existing `<VideoView>` exposes them via
-  `nativeControls={false}` + custom overlay; rev-2 keeps this).
+- **No independent per-clip scrubbing in v1.** Existing `CompareView`
+  (`nativeControls={false}` + custom play overlay only, lines 107–129) has no
+  scrubber today, and adding two custom scrubbers competes for vertical space
+  with the new picker + transport row. Out of scope for v1; tracked as a
+  follow-up. Users still get Play/Pause/Reset Both for synchronized motion.
 - Loop is already on per pane (`p.loop = true` in CompareView); rev 2 leaves
   this default.
 
@@ -168,9 +212,12 @@ thumbnail-cache helper module.
 #### Empty / disabled states
 - `FormLibraryTab` already gates select-mode CTAs at exactly 2 selected — no
   change.
-- The new `FormVideoSheet` "Compare with another set…" button is rendered
+- The new `FormClipsPlayer` "Compare with another set…" button is rendered
   `disabled` with `accessibilityHint="Record at least one more clip for this
   exercise to compare."` when `getClipsForExercise(exerciseId).length < 2`.
+  The clip-count check runs in `app/session/[id].tsx` and is passed in via a
+  new prop (`siblingClipCount: number`) so `FormClipsPlayer` stays
+  presentational.
 
 #### Accessibility (per QD #7 + Tech Lead T8)
 - Each `<ClipPane>` keeps the existing `accessibilityLabel` ("Clip A, recorded
@@ -202,7 +249,8 @@ thumbnail-cache helper module.
 |------|--------|
 | `components/session/CompareView.tsx` | **MODIFY** — add transport row, Swap, picker strip, landscape layout, file-missing pane. Single root `useMediaSurfaceMounted()` retained (T2). `<ClipPane key={clip.id}>` for source-switch via remount (T1). |
 | `components/session/FormLibraryTab.tsx` | **MODIFY** — keep `handleCompare` (existing); pass new `pickerEnabled={false}` prop so select-mode entry hides the picker by default but exposes a "Change" affordance per pane. |
-| `components/session/FormVideoSheet.tsx` | **MODIFY** — add footer "Compare with another set…" button. On press: dismiss self, then open `CompareView` (`clipA = currentClip, clipB = null, pickerEnabled = true, pickerOpen = true`). Sequenced so only one media-surface region is mounted at a time. |
+| `components/session/FormClipsPlayer.tsx` | **MODIFY** — add footer "Compare with another set…" button. Two new props: `exerciseId: string`, `siblingClipCount: number`, `onRequestCompare: (clipA: SetMediaRow) => void`. Button is disabled when `siblingClipCount < 2` with `accessibilityHint`. No clip-list state owned here (presentational). |
+| `app/session/[id].tsx` | **MODIFY** — pass `exerciseId={playerSetInfo.exerciseId}`, `siblingClipCount={getClipsForExercise(playerSetInfo.exerciseId).length}` (memoized), and `onRequestCompare` to `FormClipsPlayer`. Implement `onRequestCompare` as a single batched state update that closes player and opens `CompareView` per the "Player → Compare handoff sequencing" rule above. Existing `<FormVideoSheet>` callsite is unchanged (FormVideoSheet is the recorder and is not part of this feature). |
 | `lib/media/form-clip-thumbs.ts` | **NEW** — `getOrCreateThumb(setId, srcRelPath)` writes to `${FileSystem.cacheDirectory}form-clip-thumbs/${setId}.jpg`, 25 MB LRU eviction, p-limit concurrency = 3. `purgeThumb(setId)` invoked from `softDeleteClip` and `reconcileOrphans` in `lib/media/form-clips.ts`. |
 | `lib/media/form-clips.ts` | **MODIFY** — call `purgeThumb(id)` from `softDeleteClip` and `reconcileOrphans`. No schema change. |
 | `__tests__/components/session/CompareView.test.tsx` | **NEW or EXTEND** — transport row drives both players, swap remounts both panes, picker excludes loaded slots, file-missing pane renders, landscape layout via mocked `useWindowDimensions`, Sentry_Mask wraps every video + thumbnail, replay-gate counter increments exactly once per sheet open. |
@@ -325,11 +373,16 @@ None. Feature is read-only over `set_media` and `workout_sets`.
   in `SelectActionsBar`, then `CompareView` opens with both slots filled, picker
   hidden by default, and "Change" affordance available per pane.
 - [ ] **AC2 (entry from single-clip player):** Given the single-clip player
-  (`FormVideoSheet`) is open with a clip whose exercise has ≥ 2 clips, when the
-  user taps **Compare with another set…**, then the single-clip sheet dismisses,
-  `CompareView` opens with `clipA = currentClip`, `clipB = null`, and the picker
-  strip auto-opens. Exactly one `useMediaSurfaceMounted()` region is mounted
-  during the transition (verified by mocking the hook in test).
+  (`FormClipsPlayer`, mounted from `app/session/[id].tsx`) is open with a clip
+  whose exercise has ≥ 2 clips, when the user taps **Compare with another
+  set…**, then the caller invokes `onRequestCompare(currentClip)` which
+  performs **one batched state update** that simultaneously closes the player
+  and opens `CompareView` with `clipA = currentClip`, `clipB = null`, and the
+  picker strip auto-opened. Across every React commit during the transition,
+  the `useMediaSurfaceMounted()` counter is **≥ 1** (verified by mocking the
+  hook in test — never observes 0 between player unmount and CompareView
+  mount). After the transition exactly one `useMediaSurfaceMounted()` region
+  (CompareView's root) is mounted.
 - [ ] **AC3 (synchronized transport):** Given both slots are loaded, when the
   user taps **Play Both**, then 250 ms later
   `Math.abs(playerA.currentTime - playerB.currentTime) <= 0.05` (50 ms drift
@@ -352,14 +405,14 @@ None. Feature is read-only over `set_media` and `workout_sets`.
   `reconcileOrphans`), and slot A remains playable. Sentry breadcrumb logs
   `{ tag: "form-clip-compare.missing", setId }` only — never `rel_path`.
 - [ ] **AC7 (single clip = compare disabled in single-player entry):** Given an
-  exercise has exactly one clip and the user is viewing it in `FormVideoSheet`,
+  exercise has exactly one clip and the user is viewing it in `FormClipsPlayer`,
   then **Compare with another set…** renders with `accessibilityState={{
   disabled: true }}` and `accessibilityHint="Record at least one more clip for
   this exercise to compare."`. (Select-mode entry is naturally gated by the
   existing 2-of-N selection requirement — no new code needed there.)
-- [ ] **AC8 (no behaviour-shaping copy):** Repo-wide grep over the new files
-  (`CompareView.tsx`, `FormVideoSheet.tsx`, `lib/media/form-clip-thumbs.ts`,
-  the new test files) for the prohibited tokens
+- [ ] **AC8 (no behaviour-shaping copy):** Repo-wide grep over the new and
+  modified files (`CompareView.tsx`, `FormClipsPlayer.tsx`,
+  `lib/media/form-clip-thumbs.ts`, the new test files) for the prohibited tokens
   `streak`, `xp`, `badge`, `unlock`, `level up`, `keep it up`, `you've been`,
   `friends`, `share to`, `leaderboard`, `notify`, `notification`, `reward`,
   `reminder`, `you should` returns zero hits, **and** new files contain no
@@ -396,8 +449,14 @@ None. Feature is read-only over `set_media` and `workout_sets`.
 - [ ] **AC12 (replay-gate counter is single):** With `useMediaSurfaceMounted`
   mocked, opening `CompareView`, swapping panes 5 times, changing B via picker
   3 times, and closing the sheet results in **exactly one** increment and
-  **exactly one** decrement of the counter. Asserted in
-  `__tests__/components/session/CompareView.test.tsx`.
+  **exactly one** decrement of the counter. **Plus** the player→compare
+  handoff: open `FormClipsPlayer`, tap **Compare with another set…**, and
+  observe the mocked counter value at every React commit during the
+  transition — it must remain **≥ 1** at all times (never 0 between player
+  unmount and CompareView mount). After CompareView closes, the counter is
+  back to 0. Asserted in
+  `__tests__/components/session/CompareView.test.tsx` and a new
+  `__tests__/app/session/player-to-compare-handoff.test.tsx`.
 - [ ] **AC13 (thumbnail cache):** `lib/media/form-clip-thumbs.ts` writes only
   under `${FileSystem.cacheDirectory}form-clip-thumbs/`, evicts oldest by mtime
   when directory size > 25 MB, caps `getThumbnailAsync` concurrency at 3, and
@@ -441,7 +500,7 @@ None. Feature is read-only over `set_media` and `workout_sets`.
 
 | Blocker | Resolution in rev 2 |
 |---------|---------------------|
-| **QD-1 / TL final 1** Net-new feature vs existing surfaces | File-level diff now anchored on `CompareView.tsx` + `FormLibraryTab.tsx` + `FormVideoSheet.tsx`. No `app/exercise/[id].tsx` change. No `useFormClipsByExercise` hook (used `getClipsForExercise` from `lib/media/form-clips.ts`). |
+| **QD-1 / TL final 1** Net-new feature vs existing surfaces | File-level diff now anchored on `CompareView.tsx` + `FormLibraryTab.tsx` + `FormClipsPlayer.tsx` + `app/session/[id].tsx` (rev-3 corrected the secondary-entry file from `FormVideoSheet` — the recorder — to `FormClipsPlayer` — the actual viewer). No `app/exercise/[id].tsx` change. No `useFormClipsByExercise` hook (used `getClipsForExercise` from `lib/media/form-clips.ts`). |
 | **QD-2 / TL T6** One mental model | Single model: select-mode primary entry (existing) + single-clip player secondary entry (new). No per-row ⇆ icon. |
 | **QD-3 / TL T3** Thumbnail cache data safety | Full design in Technical Approach §"Thumbnail cache (T3)". AC13 enforces. |
 | **QD-4 / TL T5** AC9 wrong tool | AC9 rewritten to Gradle `:app:assembleReleaseFdroid` + DEX `strings` grep with wearable filter. |
@@ -454,6 +513,16 @@ None. Feature is read-only over `set_media` and `workout_sets`.
 | **TL T9** Sentry_Mask on every surface | AC11 covers — every video and thumbnail. |
 | **TL T10** Out-of-scope additions | Added to Out-of-scope list below: schema changes, decoder pre-warm, cross-device thumb sync. |
 | **TL final-9** Wrong SDK reference | Updated SDK 51 → SDK ~55 throughout. |
+
+## Rev-3 Changes — Resolution of Rev-2 Blockers
+
+| Blocker | Resolution in rev 3 |
+|---------|---------------------|
+| **QD-rev2-1 / TL C1** Wrong file: `FormVideoSheet` (recorder) vs `FormClipsPlayer` (viewer) | Every secondary-entry reference retargeted to `FormClipsPlayer.tsx`. File-level diff, Overview item 5, UX entry #2, AC2, AC7, AC8 file list, AC12 test paths all updated. `FormVideoSheet.tsx` removed from the diff entirely; the line in §Overview now explicitly disambiguates the two files. |
+| **QD-rev2-2** Missing callsite wiring | `app/session/[id].tsx` added to file-level diff. New `FormClipsPlayer` props enumerated: `exerciseId: string`, `siblingClipCount: number`, `onRequestCompare: (clipA: SetMediaRow) => void`. Caller passes `playerSetInfo.exerciseId` and the memoized `getClipsForExercise(...).length` (existing context at L600–612). |
+| **QD-rev2-3** "Per-pane scrubbers remain" was false | Scrubber language removed from §UX Synchronized transport row; explicit "No independent per-clip scrubbing in v1" note added with rationale (`nativeControls={false}` + custom play overlay only at `CompareView.tsx:107-129` today). Frame-by-frame stepping was already in Out-of-scope; scrubbers join it. |
+| **QD-rev2-4** Stale "no way to view two clips together" copy | Problem Statement rewritten to acknowledge that today's `CompareView` opens two clips but lacks transport / Swap / picker / landscape / cache, and that `FormClipsPlayer` has no path into comparison. |
+| **TL C2** Player→Compare handoff replay-gate transient | New §"Player → Compare handoff sequencing" added under UX entry #2 specifying single batched state update (`onRequestCompare` performs one `setState`/`useReducer` action that simultaneously closes the player and opens `CompareView`, with mount-before-unmount ordering). AC12 extended to assert counter ≥ 1 at every commit during the transition, with a new test file `__tests__/app/session/player-to-compare-handoff.test.tsx`. |
 
 ## Review Feedback
 
