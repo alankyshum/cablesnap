@@ -61,23 +61,53 @@ describe("StackMarkerHint (BLD-1130 G1 / BLD-1127 AC4)", () => {
     });
   });
 
-  it("persists dismissal via setAppSetting and hides the hint", async () => {
-    (getAppSetting as jest.Mock).mockResolvedValue(null);
-    const { findByTestId, queryByTestId } = render(withClient(<StackMarkerHint />));
-    const dismissBtn = await findByTestId("stack-marker-hint-dismiss");
-
-    // Once dismiss fires, the next refetch returns the timestamp.
-    (getAppSetting as jest.Mock).mockResolvedValue("2026-05-10T01:00:00.000Z");
-    fireEvent.press(dismissBtn);
-
-    await waitFor(() => {
-      expect(setAppSetting).toHaveBeenCalledWith(
-        STACK_MARKER_HINT_DISMISSED_AT_KEY,
-        expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
-      );
+  it("does not render during pending settings query, even if eventually dismissed (QD 1bf6519c regression guard)", async () => {
+    // Defer resolution so the query stays pending across the initial render.
+    let resolveSetting: (value: string | null) => void = () => {};
+    const pending = new Promise<string | null>((resolve) => {
+      resolveSetting = resolve;
     });
+    (getAppSetting as jest.Mock).mockReturnValue(pending);
+
+    const { queryByTestId } = render(withClient(<StackMarkerHint />));
+
+    // Hint MUST be absent before the settings query resolves — otherwise a
+    // previously-dismissed hint flashes on mount.
+    expect(queryByTestId("stack-marker-hint")).toBeNull();
+
+    // Resolve to "already dismissed" — hint must stay hidden.
+    resolveSetting("2026-05-10T00:00:00.000Z");
     await waitFor(() => {
       expect(queryByTestId("stack-marker-hint")).toBeNull();
     });
+  });
+
+  it("optimistically hides on dismiss without waiting for invalidate→refetch", async () => {
+    (getAppSetting as jest.Mock).mockResolvedValue(null);
+    // setAppSetting hangs forever — we still expect the hint gone immediately
+    // because the optimistic cache write is synchronous.
+    let resolveSet: () => void = () => {};
+    (setAppSetting as jest.Mock).mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveSet = resolve;
+      }),
+    );
+
+    const { findByTestId, queryByTestId } = render(withClient(<StackMarkerHint />));
+    const dismissBtn = await findByTestId("stack-marker-hint-dismiss");
+    fireEvent.press(dismissBtn);
+
+    await waitFor(() => {
+      expect(queryByTestId("stack-marker-hint")).toBeNull();
+    });
+    // Optimistic cache write must have happened on the press itself,
+    // independent of whether setAppSetting has resolved.
+    expect(setAppSetting).toHaveBeenCalledWith(
+      STACK_MARKER_HINT_DISMISSED_AT_KEY,
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    );
+
+    // Cleanly resolve so the test doesn't leak the pending mutation.
+    resolveSet();
   });
 });

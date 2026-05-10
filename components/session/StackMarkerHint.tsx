@@ -35,9 +35,12 @@ export function StackMarkerHint() {
 
 function StackMarkerHintInner() {
   const colors = useThemeColors();
-  const { dismissed, dismiss } = useStackMarkerHint();
+  const { dismissed, dismiss, ready } = useStackMarkerHint();
 
-  if (dismissed) return null;
+  // BLD-1130 QD block (1bf6519c, 2026-05-10T07:40Z): suppress render until the
+  // persisted dismissal timestamp has resolved, otherwise a previously-dismissed
+  // hint flashes on mount while the settings query is still pending.
+  if (!ready || dismissed) return null;
 
   return (
     <View

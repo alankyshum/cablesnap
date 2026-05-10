@@ -24,11 +24,18 @@ export type StackMarkerHintState = {
   dismiss: () => void;
   /** Underlying ISO timestamp (null when never dismissed). */
   dismissedAt: string | null;
+  /**
+   * False until the persisted dismissal timestamp has resolved at least once.
+   * Callers MUST gate rendering on this — otherwise a previously-dismissed
+   * hint can flash on mount before the settings query resolves (BLD-1130 QD
+   * block, comment 1bf6519c, 2026-05-10T07:40Z).
+   */
+  ready: boolean;
 };
 
 export function useStackMarkerHint(): StackMarkerHintState {
   const queryClient = useQueryClient();
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: getStackMarkerHintDismissedAt,
     staleTime: Infinity,
@@ -43,7 +50,12 @@ export function useStackMarkerHint(): StackMarkerHintState {
   return {
     dismissed: dismissedAt !== null,
     dismissedAt,
+    ready: !isPending,
     dismiss: () => {
+      // Optimistic hide: write the resolved cache before the mutation lands so
+      // the hint disappears on the same frame as the press, instead of waiting
+      // for the invalidate→refetch round-trip.
+      queryClient.setQueryData(QUERY_KEY, new Date().toISOString());
       mutation.mutate();
     },
   };
