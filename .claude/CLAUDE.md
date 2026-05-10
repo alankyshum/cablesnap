@@ -182,14 +182,68 @@ Alternatively, move non-route code out of `app/` entirely (into `components/`, `
 
 > **Runtime measurement methodology** lives in [`docs/QA-BUDGET.md`](../docs/QA-BUDGET.md) — read it before measuring per-suite wall-clock times (TL;DR: use `./scripts/measure-suite.sh` or `npm test`; never bare `npx jest`).
 
-The test suite has a **budget of 2500 test cases** (env-overridable via `MAX_TESTS`). Before adding tests, agents MUST:
+**Updated 2026-05-09 (BLD-1123):** the previous global hard cap on test count
+(`MAX_TESTS=2500`) is **REMOVED**. Acceptance-criteria coverage is now enforced
+per ticket, and a global ceiling created perverse incentives to skip AC tests.
+Two policies remain:
 
-1. Run `./scripts/audit-tests.sh` to check the current count
-2. If over budget, consolidate overlapping tests before adding new ones
-3. When writing new tests, check for existing coverage of the same behavior in `flows/`, `acceptance/`, `app/`, and `components/` — do NOT duplicate
-4. Use shared helpers from `__tests__/helpers/` for router mocks and domain mock factories
-5. Prefer extending an existing test file over creating a new one for the same feature
-6. Avoid source-string tests (`fs.readFileSync` + regex) when a behavioral test already covers the same assertion
+1. **Runtime budget** — `npm test` wall-clock under 150s, enforced by
+   `scripts/audit-tests.sh`. Slow CI is bad regardless of count.
+2. **Per-ticket reporting** — `scripts/audit-tests.sh` groups tests by the
+   `BLD-XXXX` reference in each test file's header comment and prints a
+   per-ticket count. Soft warn at 50 tests/ticket. Informational only.
+
+Conventions when writing new tests:
+
+1. **Declare the ticket** in a header comment near the top:
+   ```ts
+   // BLD-1108: covers AC1, AC5, AC6 from PLAN-BLD-1105.md
+   ```
+2. **Cover every AC.** Either annotate the AC bullet in the plan with
+   `[test: <path>::"<test name>"]`, or name the `describe`/`it` to include
+   both the AC label (`AC1`, `AC2a`) and reference the plan's ticket so the
+   inferred match in `scripts/audit-acceptance-criteria.sh` succeeds.
+3. **Check for existing coverage** of the same behavior in `flows/`,
+   `acceptance/`, `app/`, and `components/` — do NOT duplicate.
+4. Use shared helpers from `__tests__/helpers/` for router mocks and domain
+   mock factories.
+5. Prefer extending an existing test file over creating a new one for the
+   same feature (subject to the 50/ticket soft warn).
+6. Avoid source-string tests (`fs.readFileSync` + regex) when a behavioral
+   test already covers the same assertion.
+
+## Acceptance Criteria — Coverage Convention (BLD-1123)
+
+Every `## Acceptance Criteria` bullet in a `.plans/PLAN-BLD-*.md` plan must
+have a matching test. Three equivalent ways to declare it:
+
+**A) Inline annotation (preferred):**
+
+```md
+- [ ] **AC1** Given X, When Y, Then Z. [test: __tests__/acceptance/foo.test.tsx::"opens sheet on tap"]
+```
+
+**B) Inferred match:** a test under `__tests__/acceptance/` or
+`e2e/scenarios/` whose contents reference both the BLD ticket (in a header
+comment) AND the AC label (`AC1`, `AC2a`, …) in a `describe`/`it` name.
+
+**C) TODO marker (for ACs that genuinely cannot be unit/e2e tested):**
+
+```md
+- [ ] [TODO-test: BLD-1123-followup] **AC10** Manual a11y walk-through with VoiceOver…
+```
+
+The audit treats TODO markers as intentional gaps (`~`) rather than failures
+(`X`). Use only when no automated test is feasible (CI workflow asserts,
+manual a11y checks, process steps).
+
+Pre-push enforces this on **changed plans only**, so legacy plans don't block
+dev. Daily UX audit reports the rolling 7-day coverage gap as an
+informational artifact (`.pixelslop/audits/<date>/rolling-coverage-report.md`)
+that ux-designer uses to prioritize visual review.
+
+To grandfather an old plan: add `<!-- ac-audit: legacy -->` anywhere in the
+file. Use sparingly — backfill is the goal.
 
 ## Database Layer — Drizzle ORM
 

@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
-# Test Audit Script — detects duplicate/overlapping tests and guards runtime
+# Test Audit Script — detects duplicate/overlapping tests and guards runtime.
 # Run: ./scripts/audit-tests.sh
-# Exit code 1 if test count or wall-time exceeds budget (configurable below).
+#
+# Policy update (BLD-1123, 2026-05-09):
+#   - The previous global hard cap on total test count (MAX_TESTS=2500/2800) is
+#     REMOVED. Acceptance-criteria test enforcement (scripts/audit-acceptance-
+#     criteria.sh) will only grow the suite legitimately, and a global cap
+#     creates perverse incentives to skip AC tests. The runtime budget remains
+#     because slow CI is bad regardless of test count.
+#   - Per-ticket test count is REPORTED (informational only) — grouped by the
+#     BLD-XXXX reference parsed from changed test file headers, so reviewers
+#     can spot pathological per-feature growth at a glance.
 #
 # Flags / env:
 #   --detail                 show extended mock-overlap matrix
 #   --skip-runtime           skip the npm test runtime check (fast audit)
 #   RUNTIME_BUDGET_SECONDS   override runtime ceiling (default: 150)
-#   MAX_TESTS                override count ceiling (default: 2500)
+#   PER_TICKET_WARN_TESTS    soft warn threshold per BLD ticket (default: 50)
 #   SKIP_RUNTIME=1           same as --skip-runtime
 
 set -euo pipefail
@@ -16,43 +25,10 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR="$PROJECT_ROOT/__tests__"
 
 # ─── Configuration ───────────────────────────────────────────────
-# BLD-1128 (2026-05-10): Bumped 2800 → 2835 to accommodate 4 new AC4-mandated
-# unit tests for the stack-marker/manual-weight optimistic-save rollback hotfix.
-# The 4 tests (useSessionActions-stackmarker-rollback.test.ts) cover two
-# data-consistency defects: (1) handleMarkerConfirm omitted `weight` from its
-# rollback, (2) handleManualWeightSave had NO rollback at all. These are not
-# speculative coverage — they are acceptance criteria from the BLD-1128 spec.
-# Approved: techlead APPROVE (comment f2391979, 2026-05-10T04:21Z).
-# Next consolidation target: merge overlapping flows/* ↔ acceptance/* suites
-# to recover headroom before adding further test files.
-#
-# BLD-1137 (2026-05-10): Bumped 2845 → 2900 (+55 headroom) to accommodate the
-# Smart Rest Coach notification helper tests. Actual additions vs baseline (2845):
-#   +19 lib/notifications.test.ts — formatPreviewBody (5 kind×null combos), channel
-#        registration, schedulePreEndCue, presentLiveRestCountdown, cancelAllRestNotifications,
-#        setNotificationHandler dispatcher (BLD-1137 AC1–AC18).
-#   +19 source-contracts-batch.test.ts — AC14a forbidden-copy regex (title+body×all kinds),
-#        AC14b preview-safety matrix (4 kinds × null permutations), AC14c title stability.
-#   +7  useRestTimer-smart-rest-coach.test.ts — cold-start resume, settings short-circuit,
-#        3-id orchestration, cancel-all, and persistence migration unit tests.
-# Total: +45 tests (≈ 2890 actual). Plan estimated ~12; final count reflects full AC
-# coverage for 20 acceptance criteria including psych-binding source-contract suite.
-# All tests close plan-mandated acceptance criteria. No speculative coverage added.
-# Approved: per implementation plan PLAN-BLD-1137.md § "In / MAX_TESTS bump".
-#
-# BLD-1137 round-2 fixes (2026-05-10): No net change to ceiling (2900 still accurate).
-# Removed duplicate AC14 source-contract suite (−17 tests). Added 3 orchestration tests
-# in useSessionActions-rest-preview.test.ts (AC5/AC6/AC12/AC13 handleCheck wiring).
-# Net delta: −14. Actual ≈ 2876. 2900 ceiling unchanged — adequate headroom.
-#
-# BLD-1144 Session Pacing Insights (2026-05-10): +13 net tests.
-# Added: 7 pure-logic+format tests (session-pacing.test.ts), 6 source-contract assertions
-# (source-contracts-batch.test.ts). All tests mandatory per plan §142 (≤8 new it/test).
-# Actual count jumped from ~2890 baseline to 2903. Ceiling bumped 2900→2910.
-MAX_TESTS="${MAX_TESTS:-2910}"                          # hard ceiling — fail if exceeded
-WARN_TESTS="${WARN_TESTS:-2700}"                        # warning threshold
 RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`
 RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold
+PER_TICKET_WARN_TESTS="${PER_TICKET_WARN_TESTS:-50}"    # soft per-ticket warn (informational)
+# ─────────────────────────────────────────────────────────────────
 # ─────────────────────────────────────────────────────────────────
 
 # Parse flags and file arguments
@@ -71,25 +47,11 @@ SCOPED=$( [ ${#CHANGED_FILES[@]} -gt 0 ] && echo 1 || echo 0 )
 echo "=== CableSnap Test Audit ==="
 echo ""
 
-# 1. Count total test cases
+# 1. Count total test cases (informational — no global cap as of BLD-1123)
 TOTAL=$(grep -r "^\s*\(it\|test\)(" "$TEST_DIR" --include='*.ts' --include='*.tsx' | wc -l | tr -d ' ')
 echo "Total test cases (it/test): $TOTAL"
-echo "  Budget: warn=$WARN_TESTS, max=$MAX_TESTS"
-
-if [ "$TOTAL" -gt "$MAX_TESTS" ]; then
-  echo "  ❌ OVER BUDGET by $((TOTAL - MAX_TESTS)) tests"
-  echo ""
-  echo "  Before adding new tests, consolidate overlapping suites."
-  echo "  Run: ./scripts/audit-tests.sh --detail"
-  echo ""
-  OVER_BUDGET=1
-elif [ "$TOTAL" -gt "$WARN_TESTS" ]; then
-  echo "  ⚠️  Approaching budget ($((MAX_TESTS - TOTAL)) remaining)"
-  OVER_BUDGET=0
-else
-  echo "  ✅ Within budget ($((MAX_TESTS - TOTAL)) remaining)"
-  OVER_BUDGET=0
-fi
+echo "  (No global cap. Per-ticket counts shown below.)"
+OVER_BUDGET=0
 
 echo ""
 
@@ -202,7 +164,46 @@ if [[ "$DETAIL" -eq 1 ]]; then
   echo ""
 fi
 
-# 8. Summary recommendations
+# 8. Per-ticket test count (BLD-1123 — replaces global cap)
+echo "=== Per-ticket test counts (BLD-XXXX header references)${SCOPE_LABEL} ==="
+echo "  (Test files declare ownership via a header comment like:"
+echo "    // BLD-1108: covers AC1, AC5, AC6 from PLAN-BLD-1105.md"
+echo "  ; informational — soft warn at ${PER_TICKET_WARN_TESTS} tests/ticket)"
+echo ""
+PER_TICKET_TMP=$(mktemp)
+TARGET_FILES=()
+if [ "$SCOPED" -eq 1 ]; then
+  TARGET_FILES=("${CHANGED_FILES[@]}")
+else
+  while IFS= read -r f; do
+    [ -n "$f" ] && TARGET_FILES+=("$f")
+  done < <(find "$TEST_DIR" \( -name '*.test.ts' -o -name '*.test.tsx' \) 2>/dev/null)
+fi
+for f in "${TARGET_FILES[@]}"; do
+  [ -f "$f" ] || continue
+  ticket=$(head -20 "$f" 2>/dev/null | grep -oE "BLD-[0-9]+" | head -1 || true)
+  [ -z "$ticket" ] && ticket="UNTAGGED"
+  test_count=$(grep -c "^\s*\(it\|test\)(" "$f" || true)
+  echo "$ticket $test_count" >> "$PER_TICKET_TMP"
+done
+if [ -s "$PER_TICKET_TMP" ]; then
+  awk '{tickets[$1] += $2; files[$1]++} END {for (t in tickets) printf "%s\t%d tests across %d file(s)\n", t, tickets[t], files[t]}' "$PER_TICKET_TMP" \
+    | sort -t$'\t' -k2 -rn \
+    | while IFS=$'\t' read -r ticket info; do
+        count=$(echo "$info" | grep -oE "^[0-9]+" || echo "0")
+        if [ "${count:-0}" -gt "$PER_TICKET_WARN_TESTS" ]; then
+          echo "  ⚠️  $ticket: $info  (over per-ticket warn: $PER_TICKET_WARN_TESTS)"
+        else
+          echo "  $ticket: $info"
+        fi
+      done
+else
+  echo "  (no test files inspected)"
+fi
+rm -f "$PER_TICKET_TMP"
+echo ""
+
+# 9. Summary recommendations
 echo "=== Consolidation opportunities ==="
 echo "  1. Extract shared router/infra mocks → __tests__/helpers/screen-harness.ts"
 echo "  2. Create domain mock factories → __tests__/helpers/mock-nutrition.ts, etc."
@@ -254,11 +255,10 @@ else
 fi
 
 if [ "$OVER_BUDGET" -eq 1 ] || [ "$OVER_RUNTIME" -eq 1 ]; then
-  echo "❌ Test audit FAILED — consolidate before pushing"
-  [ "$OVER_BUDGET" -eq 1 ]  && echo "   • count ceiling breached ($TOTAL > $MAX_TESTS)"
+  echo "❌ Test audit FAILED — runtime budget breached"
   [ "$OVER_RUNTIME" -eq 1 ] && echo "   • runtime ceiling breached (${RUNTIME_SECONDS}s > ${RUNTIME_BUDGET_SECONDS}s)"
   exit 1
 else
-  echo "✅ Test audit passed"
+  echo "✅ Test audit passed (runtime within budget; per-ticket counts informational)"
   exit 0
 fi

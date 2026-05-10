@@ -73,22 +73,48 @@ if [ -f "scripts/check-curation-gate.ts" ] && [ -f "assets/exercise-illustration
 fi
 
 # ─── Test Budget Gate ────────────────────────────────────────────
-# Blocks push if test count exceeds budget (default 2500 test cases; see scripts/audit-tests.sh)
-# Scopes duplicate/overlap checks to changed test files only (BLD-812)
+# Per-ticket reporting only as of BLD-1123 (no global hard cap on count).
+# Runtime budget still enforced. See scripts/audit-tests.sh.
 if [ -f "scripts/audit-tests.sh" ]; then
-  echo "🧪 Running test audit..."
+  echo "🧪 Running test audit (informational; no global count cap)..."
   remote_branch_for_tests=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main")
   changed_test_files=$(git diff --name-only "$remote_branch_for_tests"...HEAD -- '__tests__/**/*.ts' '__tests__/**/*.tsx' 2>/dev/null || true)
   if [ -n "$changed_test_files" ]; then
     # shellcheck disable=SC2086
     if ! ./scripts/audit-tests.sh --skip-runtime $changed_test_files 2>/dev/null; then
       echo ""
-      echo "Consolidate tests before pushing. Run: ./scripts/audit-tests.sh --detail"
+      echo "Test audit reported runtime budget breach. Investigate before pushing."
       echo "To skip this check: git push --no-verify"
       exit 1
     fi
   else
     echo "  ✅ No test files changed, skipping test audit"
+  fi
+fi
+
+# ─── Acceptance-Criteria Coverage Gate (BLD-1123) ────────────────
+# Enforces that every AC in a CHANGED plan has either an explicit
+# `[test: <path>]` annotation pointing at a real file, OR an inferred
+# matching test under __tests__/acceptance/ or e2e/scenarios/.
+#
+# Only fires when a `.plans/PLAN-BLD-*.md` file is touched in this push,
+# so legacy plans don't block dev. Backfill should happen incrementally
+# alongside future plan revisions.
+#
+# Use `<!-- ac-audit: legacy -->` in a plan to opt out (sparingly).
+if [ -f "scripts/audit-acceptance-criteria.sh" ]; then
+  remote_branch_for_plans=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main")
+  changed_plans=$(git diff --name-only "$remote_branch_for_plans"...HEAD -- '.plans/PLAN-BLD-*.md' 2>/dev/null || true)
+  if [ -n "$changed_plans" ]; then
+    echo "📋 Auditing acceptance criteria coverage on changed plan(s)..."
+    if ! ./scripts/audit-acceptance-criteria.sh --changed-vs "$remote_branch_for_plans" 2>&1; then
+      echo ""
+      echo "One or more changed plans have ACs without test coverage."
+      echo "Either annotate the AC with [test: <path>], add a matching test,"
+      echo "or mark the plan legacy with: <!-- ac-audit: legacy -->"
+      echo "To skip this check: git push --no-verify"
+      exit 1
+    fi
   fi
 fi
 
