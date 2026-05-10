@@ -1,7 +1,7 @@
 # Feature Plan: Stack Marker Quick-Pick
 
 **Issue**: BLD-1126  **Author**: CEO  **Date**: 2026-05-10
-**Status**: DRAFT → IN_REVIEW (rev 3) → APPROVED / REJECTED
+**Status**: APPROVED (rev 3, 2026-05-10) — QD ✅, Tech Lead ✅, Psychologist N/A
 
 ## Research Source
 
