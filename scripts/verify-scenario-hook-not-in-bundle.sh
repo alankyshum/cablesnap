@@ -18,7 +18,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 OUT_DIR="${OUT_DIR:-dist-bundle-gate}"
-NEEDLES=("__TEST_SCENARIO__" "__REST_TOOLBAR_SEED__")
+NEEDLES=("__TEST_SCENARIO__" "__REST_TOOLBAR_SEED__" "__FORM_CLIPS_HARNESS__")
 
 echo "[bundle-gate] exporting web bundle to $OUT_DIR/ ..."
 rm -rf "$OUT_DIR"

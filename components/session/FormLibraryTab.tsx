@@ -9,6 +9,11 @@
  * AC4: Select mode with checkboxes; selecting two enables Compare CTA;
  *      selecting one shows Delete. Long-press also enters Select mode.
  * useMediaSurfaceMounted() called at root (AC12 Sentry gate).
+ *
+ * Dev-only harness bypass: when `window.__FORM_CLIPS_HARNESS__` is set in a
+ * `__DEV__` + web context (see `app/__test__/form-clips.tsx`), the three
+ * `Platform.OS === "web"` early-returns are skipped and state is hydrated
+ * directly from the seed object. Metro DCE removes this branch in production.
  */
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -81,12 +86,31 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
   const [replaceSetId, setReplaceSetId] = useState<string | null>(null);
   const [replaceSetNumber, setReplaceSetNumber] = useState<number>(1);
 
+  // Dev-only harness bypass (BLD-1123). Metro DCE folds this to false in prod
+  // because it is inside an `if (__DEV__)` branch in the caller harness and
+  // the string `__FORM_CLIPS_HARNESS__` never leaks to the production bundle
+  // (enforced by scripts/verify-scenario-hook-not-in-bundle.sh).
+  const harnessActive =
+    __DEV__ &&
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    (window as unknown as Record<string, unknown>)["__FORM_CLIPS_HARNESS__"] != null;
+
   // AC12: increment replay-gate counter while thumbnail grid is mounted.
   useMediaSurfaceMounted();
 
   const loadClips = useCallback(async () => {
-    if (Platform.OS === "web") {
+    if (Platform.OS === "web" && !harnessActive) {
       setClips([]);
+      setLoading(false);
+      return;
+    }
+    if (harnessActive) {
+      // Hydrate from harness seed — no native data-layer call.
+      const seed = (window as unknown as Record<string, unknown>)[
+        "__FORM_CLIPS_HARNESS__"
+      ] as { clips: SetMediaRow[] };
+      setClips(seed.clips ?? []);
       setLoading(false);
       return;
     }
@@ -99,11 +123,24 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [exerciseId]);
+  }, [exerciseId, harnessActive]);
 
   // BLD-1105: Resolve record target on mount + after clips change.
   const loadRecordTarget = useCallback(async () => {
-    if (Platform.OS === "web") return;
+    if (Platform.OS === "web" && !harnessActive) return;
+    if (harnessActive) {
+      // Hydrate from harness seed — no native data-layer call.
+      const seed = (window as unknown as Record<string, unknown>)[
+        "__FORM_CLIPS_HARNESS__"
+      ] as {
+        recordTarget: { id: string; set_number: number; completed_at: number } | null;
+        recordDisabledReason: "no_sets" | "all_have_clips" | null;
+      };
+      setRecordTarget(seed.recordTarget ?? null);
+      setRecordDisabledReason(seed.recordDisabledReason ?? null);
+      setRecordTargetResolved(true);
+      return;
+    }
     try {
       // Check if any completed kind='workout' sets exist at all.
       const anySet = await getMostRecentCompletedSetForExercise(exerciseId);
@@ -128,7 +165,7 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
       // Non-fatal — hide CTA.
       setRecordTargetResolved(true);
     }
-  }, [exerciseId]);
+  }, [exerciseId, harnessActive]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -206,7 +243,7 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
   const selectedClip = selected.size === 1 ? clips.find((c) => c.id === [...selected][0]) : undefined;
   const sheet = computeSheetProps(replaceTarget, replaceSetId, replaceSetNumber, recordTarget, recordSheetVisible);
 
-  if (Platform.OS === "web") {
+  if (Platform.OS === "web" && !harnessActive) {
     return null;
   }
 
