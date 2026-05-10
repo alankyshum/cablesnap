@@ -387,7 +387,7 @@ _Status: re-review requested._
 
 Architecture preserved: throttling stays inside `useRestTimer` (no `lib/rest-coach.ts`); no SDK bump; F-Droid build unaffected.
 
-_Status: re-review requested._
+**rev-2 Verdict: APPROVED** (2026-05-10, comment 79a1516e). All 10 defects mapped 1:1 and verified. Two non-blocking implementation notes for claudecoder: (a) `setNotificationHandler` is single-slot global — chain through any pre-existing handler rather than overwrite; factor a dispatcher keyed on `data.type`. (b) If `setInterval` drift exceeds AC4's ±500ms tolerance under JS-thread load, switch to self-correcting `setTimeout` chained off `Date.now()` deltas. Recommend handoff to claudecoder; TL will QC the resulting PR per E2E ownership flow.
 
 ### Psychologist (Behavior-Design scoping verdict)
 
