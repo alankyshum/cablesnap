@@ -128,18 +128,25 @@ jobs:
           cd android
           ./gradlew :wear:assembleRelease
 
-      - name: Assemble :app releaseFdroid + verify GMS-free (AC10b)
-        # AC10b is duplicated here so PRs touching the bridge / plugin / wear
+      - name: Assemble :app releaseFdroid + verify GMS-free (AC9/AC10b)
+        # AC9 (BLD-1151): verify no GMS/Firebase/MLKit in the F-Droid APK DEX.
+        # AC10b: duplicated here so PRs touching the bridge / plugin / wear
         # template can fail FAST without waiting for a full release build.
         # Same check runs in scheduled-release.yml as the canonical gate.
+        #
+        # The grep checks ALL com.google.android.gms, com.google.firebase, and
+        # com.google.mlkit class references, EXCLUDING the one allowed GMS
+        # namespace: com.google.android.gms.wearable (Wear OS data-layer API
+        # used by the watch companion — not a GMS Play Services runtime dep).
+        # Per QD AC9 spec (BLD-1152): PASS only if final grep returns 0 lines.
         #
         # SENTRY_DISABLE_AUTO_UPLOAD=true: the :app:createBundle…SentryUpload
         # gradle task fails without SENTRY_AUTH_TOKEN, which we deliberately
         # do not propagate to this step. The official F-Droid build path
         # (fdroid/metadata/com.persoack.cablesnap.yml) ships without Sentry
         # secrets too — Sentry upload is environmentally optional. This CI
-        # gate verifies build correctness + AC10b GMS-free grep, not source
-        # map upload. Escape hatch documented at
+        # gate verifies build correctness + AC9/AC10b GMS-free grep, not
+        # source map upload. Escape hatch documented at
         # node_modules/@sentry/react-native/sentry.gradle:11.
         env:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
@@ -155,14 +162,19 @@ jobs:
           fi
           GMS_TMPDIR=$(mktemp -d)
           unzip -q -o "$APK" 'classes*.dex' -d "$GMS_TMPDIR"
-          GMS_COUNT=$(strings "$GMS_TMPDIR"/classes*.dex | grep -c 'com/google/android/gms/wearable' || true)
+          # Full AC9/AC10b check: any GMS/Firebase/MLKit reference except the
+          # allowed com.google.android.gms.wearable Wear OS data-layer namespace.
+          FORBIDDEN=$(strings "$GMS_TMPDIR"/classes*.dex \
+            | grep -E 'com\.google\.android\.gms|com\.google\.firebase|com\.google\.mlkit' \
+            | grep -v 'com\.google\.android\.gms\.wearable' \
+            || true)
           rm -rf "$GMS_TMPDIR"
-          echo "GMS Wearable class hits in $APK (via dex strings): $GMS_COUNT"
-          if [ "$GMS_COUNT" -ne 0 ]; then
-            echo "::error::AC10b violated — F-Droid APK contains $GMS_COUNT GMS Wearable class entries."
+          if [ -n "$FORBIDDEN" ]; then
+            echo "::error::AC9/AC10b violated — F-Droid APK contains forbidden GMS/Firebase/MLKit references:"
+            echo "$FORBIDDEN" | head -20
             exit 1
           fi
-          echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
+          echo "AC9/AC10b OK — F-Droid APK contains no forbidden GMS/Firebase/MLKit class references."
 
       - name: KVM availability spike
         id: kvm
