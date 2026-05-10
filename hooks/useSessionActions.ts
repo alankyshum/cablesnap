@@ -42,6 +42,7 @@ import {
   updateSetStackMarker,
   updateSetManualWeight,
   getRecentStackHistory,
+  updateSetRepsAndDuration,
 } from "../lib/db/session-sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import {
@@ -644,11 +645,12 @@ export function useSessionActions({
     let prefillReps: number | null = null;
     let prefillDuration: number | null = null;
     let prefillApplied = false;
-    // Skip numeric prefill entirely when stack marker autofill succeeded (AC6).
-    // Numeric updateSet would overwrite the marker-resolved weight while leaving
-    // stack_* snapshot columns intact, causing a weight mismatch between SQLite
-    // and the in-memory display.
-    if (group && autofilledStackWeight === null) {
+    // Always resolve the reps/duration prefill candidate (BLD-655/BLD-682), but
+    // when marker autofill has already set the weight:
+    //  - use updateSetRepsAndDuration (reps + duration only, no weight/stack cols)
+    //  - leave prefillWeight as null so setWithModifier keeps the marker weight.
+    // When no marker autofill, use the normal updateSet path (weight + reps).
+    if (group) {
       const hasInSessionWorking = group.sets.some((s) => s.set_type !== "warmup");
 
       let previousSetForSlot: PrefillCandidate & { set_type: string | null } | null = null;
@@ -683,16 +685,30 @@ export function useSessionActions({
       if (candidate) {
         const isDuration = group.trackingMode === "duration";
         try {
-          await updateSet(
-            newSet.id,
-            candidate.weight,
-            candidate.reps,
-            isDuration ? candidate.duration_seconds : undefined,
-          );
-          prefillWeight = candidate.weight;
-          prefillReps = candidate.reps;
-          prefillDuration = candidate.duration_seconds;
-          prefillApplied = true;
+          if (autofilledStackWeight !== null) {
+            // Marker autofill owns the weight. Only carry reps/duration so the
+            // set is pre-populated without overwriting the resolved marker weight
+            // or leaving stack_* snapshot columns in an inconsistent state.
+            await updateSetRepsAndDuration(
+              newSet.id,
+              candidate.reps,
+              isDuration ? candidate.duration_seconds : undefined,
+            );
+            prefillReps = candidate.reps;
+            prefillDuration = candidate.duration_seconds;
+            prefillApplied = true;
+          } else {
+            await updateSet(
+              newSet.id,
+              candidate.weight,
+              candidate.reps,
+              isDuration ? candidate.duration_seconds : undefined,
+            );
+            prefillWeight = candidate.weight;
+            prefillReps = candidate.reps;
+            prefillDuration = candidate.duration_seconds;
+            prefillApplied = true;
+          }
         } catch (err) {
           // AC6: do not throw, do not show unsaved values; row insert
           // already succeeded. Single console.warn breadcrumb. Tag both

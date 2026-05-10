@@ -396,6 +396,25 @@ export async function updateSet(
   await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
 }
 
+/**
+ * BLD-1126: Write reps + optional duration WITHOUT touching weight or stack
+ * columns. Used when marker autofill has already resolved the weight; we still
+ * want to carry the previous reps/duration from BLD-655/BLD-682 prefill without
+ * overwriting the marker-resolved weight (which would cause a weight mismatch).
+ */
+export async function updateSetRepsAndDuration(
+  id: string,
+  reps: number | null,
+  durationSeconds?: number | null
+): Promise<void> {
+  const db = await getDrizzle();
+  const values: Record<string, unknown> = { reps };
+  if (durationSeconds !== undefined) {
+    values.duration_seconds = durationSeconds;
+  }
+  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
+}
+
 export async function updateSetDuration(
   id: string,
   durationSeconds: number | null
