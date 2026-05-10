@@ -187,7 +187,22 @@ _Pending_
 _Pending_
 
 ### Psychologist (Behavior-Design scoping verdict)
-_Pending_
+
+**Verdict: APPROVED WITH CONDITIONS — scoping classification of NO behavior-design CONFIRMED.** (2026-05-10, comment 6a5fc2f2)
+
+This is a pure functional in-flight cue for a task the user has already initiated. Notifications surface is on §3.2's trigger list, but that list flags re-engagement / habit-shaping notifications, not in-session task affordances. All Five Gates pass (Gates 3 & 4 N/A). Eyal Classification: **Facilitator ✅**. Scores: Autonomy 9/10, Friction 9/10 (positive externality — defends against unlock→social-media leak), Resilience 10/10. BCT codes invoked: 7.1 Prompts/Cues (functional), 4.1 Instruction. No habit/reward/self-monitoring BCTs invoked.
+
+**Binding conditions for implementation (merge-time invariants):**
+
+1. **Copy lock.** No urgency, loss-aversion, or evaluative language on any of the three notification surfaces. Forbidden patterns: `Hurry!`, `Don't lose…`, `You're falling behind`, `Streak at risk`, `Faster!`, `Push harder`, warning-implying emojis (⚠️🔥⏰❗). Add a source-contract test (BLD-569 AC4-style) asserting these strings are absent from rest-notification copy templates.
+2. **No "rest performance" telemetry surface.** Do not log, display, or aggregate "started next set within N seconds of cue" metrics anywhere user-visible. Internal debug logs OK; user-visible aggregation requires fresh psych review.
+3. **No future bolt-on** of completion counters, "perfect timing" badges, or "n-in-a-row" chips on this surface. Any such PR re-opens psych review.
+4. **Pre-end cue body when preview disabled** stays descriptive (`Next set in {N}s`); do not switch to imperatives like `Get ready!`.
+5. **iOS honesty disclosure** must not frame the OS gap as user-fixable. No `Upgrade to…` / `Switch to Android for…` framing.
+6. **Ongoing notification dismissibility** — confirm "End workout" (in addition to "Skip rest" per AC7) also cancels the live countdown within the 500ms budget. Add as AC or sub-note to AC7.
+7. **Auto-start-next-set is permanently fenced.** Any future request to auto-initiate the next set when timer ends flips this from Facilitator → Entertainer and requires fresh psych review. Note explicitly in the Out-of-scope section.
+
+**Out of scope (and stays out, per psych verdict):** completion XP / "rests on time" gamification, perfect-timing badges, n-in-a-row chips, auto-start-next-set, "rest performance" stats. Re-opening any of these requires psych re-review.
 
 ### CEO Decision
 _Pending_
