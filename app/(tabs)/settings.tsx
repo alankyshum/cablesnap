@@ -93,10 +93,6 @@ export default function Settings() {
     exportProgress, setExportProgress,
     stravaAthlete, setStravaAthlete,
     stravaLoading, setStravaLoading,
-    hcEnabled, setHcEnabled,
-    hcLoading, setHcLoading,
-    hcPermissionDenied, setHcPermissionDenied,
-    hcSdkStatus,
     weeklyGoal, setWeeklyGoal,
   } = useSettingsData();
 
@@ -232,13 +228,6 @@ export default function Settings() {
           setStravaAthlete={setStravaAthlete}
           stravaLoading={stravaLoading}
           setStravaLoading={setStravaLoading}
-          hcEnabled={hcEnabled}
-          setHcEnabled={setHcEnabled}
-          hcLoading={hcLoading}
-          setHcLoading={setHcLoading}
-          hcPermissionDenied={hcPermissionDenied}
-          setHcPermissionDenied={setHcPermissionDenied}
-          hcSdkStatus={hcSdkStatus}
         />
         <AutoBackupSection colors={colors} toast={toast} />
         <FormClipsStorageRow onClipsChanged={() => {}} />

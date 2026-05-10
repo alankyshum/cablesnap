@@ -491,7 +491,6 @@ export type ProgressPhotoRow = typeof progressPhotos.$inferSelect;
 export type AchievementEarnedRow = typeof achievementsEarned.$inferSelect;
 export type StravaConnectionRow = typeof stravaConnection.$inferSelect;
 export type StravaSyncLogRow = typeof stravaSyncLog.$inferSelect;
-export type HealthConnectSyncLogRow = typeof healthConnectSyncLog.$inferSelect;
 export type StrengthGoalRow = typeof strengthGoals.$inferSelect;
 export type WaterLogRow = typeof waterLogs.$inferSelect;
 export type GymProfileRow = typeof gymProfiles.$inferSelect;

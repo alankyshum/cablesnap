@@ -66,8 +66,8 @@ export async function seedScenario(): Promise<void> {
   // Clear scenario-mutable tables only (preserve exercises + starter templates
   // so the app still renders normally).
   // BLD-1094: include sync-log children before parent workout_sessions —
-  // PRAGMA foreign_keys = ON now enforces strava_sync_log /
-  // health_connect_sync_log → workout_sessions FK.
+  // PRAGMA foreign_keys = ON now enforces strava_sync_log →
+  // workout_sessions FK.
   await db.execAsync(`
     DELETE FROM strava_sync_log;
     DELETE FROM health_connect_sync_log;

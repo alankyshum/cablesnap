@@ -53,10 +53,6 @@ jest.mock("../../lib/strava", () => ({
   syncSessionToStrava: jest.fn().mockResolvedValue(false),
 }));
 
-jest.mock("../../lib/health-connect", () => ({
-  syncToHealthConnect: jest.fn().mockResolvedValue(undefined),
-}));
-
 jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: "light" },

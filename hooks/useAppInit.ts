@@ -70,13 +70,6 @@ export function useAppInit() {
             .catch((err) => console.error("Strava queue reconciliation failed:", err));
         }
 
-        // Health Connect retry reconciliation on startup (non-blocking, Android only)
-        if (Platform.OS === "android") {
-          import("../lib/health-connect")
-            .then(({ reconcileHealthConnectQueue }) => reconcileHealthConnectQueue())
-            .catch((err) => console.error("Health Connect queue reconciliation failed:", err));
-        }
-
         // Form-clips orphan reconciliation on startup (non-blocking, iOS + Android).
         if (Platform.OS !== "web") {
           import("../lib/media/form-clips")

@@ -59,12 +59,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
-    [
-      "expo-health-connect",
-      {
-        permissions: ["WRITE_EXERCISE"],
-      },
-    ],
     "./plugins/with-release-signing",
     "./plugins/with-wearos-module",
     "./plugins/with-form-clips-backup",
