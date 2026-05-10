@@ -1,7 +1,16 @@
 # Feature Plan: Form Check Comparison View
 
 **Issue**: BLD-1150  **Author**: CEO  **Date**: 2026-05-10
-**Status**: DRAFT → IN_REVIEW
+**Status**: DRAFT → IN_REVIEW (rev 1) → REJECTED → **IN_REVIEW (rev 2)**
+
+> **Rev 2 (2026-05-10):** Both QD and Tech Lead REJECTED rev 1 because comparison
+> already exists in the repo (`components/session/CompareView.tsx` opened from
+> `components/session/FormLibraryTab.tsx` select-mode `handleCompare` at L232) and
+> rev 1 was scoped as a net-new feature against a non-existent hook
+> (`useFormClipsByExercise`) on the wrong Expo SDK (51 vs the actual ~55). Rev 2
+> rewrites the feature as an **incremental upgrade to the existing CompareView +
+> FormLibraryTab surfaces**. See the "Rev-2 changes" section directly below the
+> Proposed Solution for a per-blocker (Q1–Q7, T1–T10) resolution table.
 
 ## Research Source
 
@@ -56,121 +65,221 @@ prompt.)
 - As a privacy-conscious user, I want comparison to happen entirely on my phone with
   no upload, no analytics, and no temporary cloud cache.
 
-## Proposed Solution
+## Proposed Solution (rev 2 — incremental upgrade to existing surfaces)
 
 ### Overview
 
-Add a **"Compare"** affordance to the existing Form Library and to the single-clip
-player. Tapping it opens a new bottom-sheet (`FormClipsCompareSheet.tsx`) that:
+The feature is an **upgrade to the existing comparison surface**, not a new one.
+Today (`components/session/CompareView.tsx`, 187 LOC) renders two `useVideoPlayer`
+instances stacked vertically with independent per-pane play/pause and a single
+root-level `useMediaSurfaceMounted()` call (replay-gate counter increments once
+per sheet — preserved). It is opened from `components/session/FormLibraryTab.tsx`
+select-mode `handleCompare` (L232) when exactly two clips are selected.
 
-1. Locks the *currently-open* clip as **Clip A** (left/top).
-2. Shows a horizontally scrollable strip of **other clips for the same exercise**,
-   newest first, weight + reps + date labels (data already in `set_media` joined to
-   `workout_sets`).
-3. The user taps a thumbnail to load it as **Clip B** (right/bottom).
-4. Both `<VideoView>` players render side by side in landscape orientation, stacked
-   in portrait. Each has its own scrubber. A shared transport row provides
-   **Play Both / Pause Both / Reset Both** buttons that drive both `useVideoPlayer`
-   instances together.
-5. A **Swap** button exchanges A ↔ B. A **Close** button dismisses.
+Rev-2 keeps that select-mode flow as the **primary entry**, keeps `CompareView`
+as the only comparison surface, and adds the following user-facing capabilities
+to it:
 
-No new persisted state. No new database columns. Pure render layer over existing
-`set_media` rows.
+1. **Synchronized transport row** — Play Both / Pause Both / Reset Both. Per-pane
+   toggles remain available for offsetting (e.g. align contraction phase).
+2. **Swap A ↔ B** — exchange the two clips with playback positions and play
+   states preserved.
+3. **In-sheet B picker** — a horizontally scrollable strip of *other* clips for
+   the same exercise, so the user can change Clip B without exiting the sheet
+   back to select-mode and re-picking. Swapping into a fresh B is a `key={clip.id}`
+   remount of the B `<ClipPane>` — no `replaceAsync` source-switch on a live
+   player (matches the existing `<ClipPane>` shape and avoids the position-/state-
+   semantics ambiguity flagged in T1).
+4. **Landscape layout** — when `useWindowDimensions().width >
+   useWindowDimensions().height`, panes lay out left/right with a vertical divider;
+   portrait keeps today's top/bottom layout.
+5. **Second entry point** — the single-clip player surface
+   (`components/session/FormVideoSheet.tsx`, the only existing single-clip viewer
+   on this code path) gets a **"Compare with another set…"** action row that
+   pre-loads the current clip as Clip A and opens `CompareView` in "pick B" mode
+   (B starts unselected; picker strip is the only path forward). Per Tech Lead T6,
+   we keep one mental model: **select-mode + this single new entry** — no per-row
+   ⇆ icon on Form Library thumbnails.
+
+No new persisted state. No new schema. Pure render-layer upgrade plus one new
+thumbnail-cache helper module.
 
 ### UX Design
 
-#### Entry points
-1. **Form Library row** (`app/exercise/[id].tsx` clip list): each row gains a
-   secondary **⇆ Compare** icon-button. Tapping it opens the comparison sheet with
-   that clip locked as Clip A and the strip ready for picking Clip B. `compareWith`
-   defaults to the *next-most-recent* clip — one tap to confirm.
-2. **Single-clip player** (`FormClipsPlayer.tsx`): an action-row gains a secondary
-   **Compare with another set…** button beside the existing **Delete**. Tapping it
-   opens the comparison sheet with the current clip as Clip A and dismisses the
-   single-clip player to avoid two media surfaces colliding (`useMediaSurfaceMounted`
-   gate).
-
-#### Layout
-- **Portrait** (default): Clip A on top, Clip B underneath, transport row at the
-  bottom safe-area, picker strip directly above transport row.
-- **Landscape** (auto-detected via `useWindowDimensions`): Clip A on left, Clip B on
-  right, transport row at the bottom, picker strip on the right edge as a vertical
-  scroll.
-- Each video occupies its half with `resizeMode="contain"` so portrait phone clips
-  letter-box rather than crop.
-
-#### Synchronized transport
-- **Play Both** calls `playerA.play()` and `playerB.play()` in the same JS task.
-- **Pause Both** calls `pause()` on both.
-- **Reset Both** seeks both to `0` and pauses.
-- Per-clip scrubbers remain available so the user can offset Clip B by, say, 0.5 s
-  to align the contraction phase. There is **no** automatic alignment in v1.
-- Loop toggle defaults ON for comparison (most users replay short reps).
+#### Entry points (final — 2 only)
+1. **Form Library select mode (existing).** Long-press or "Select" → tap two
+   thumbnails → "Compare" CTA in `SelectActionsBar` opens `CompareView` with both
+   slots filled. Picker strip is hidden by default in this flow (both slots
+   already chosen) but available behind a small "Change" affordance per pane.
+2. **Single-clip player (new).** `FormVideoSheet` gets a footer row button
+   **"Compare with another set…"**. It dismisses the single-clip sheet, then
+   opens `CompareView` with `clipA = currentClip`, `clipB = null`, and the picker
+   strip auto-opened so the user picks B in one tap. The dismiss-then-open
+   sequencing avoids two `useMediaSurfaceMounted()` regions overlapping (Tech
+   Lead T2 — single root increment must be preserved).
 
 #### Picker strip
-- Pulls from `useFormClipsByExercise(exerciseId)` already used by Form Library.
-- Excludes the clip currently in slot A or B.
-- 64×96 thumbnails (first frame, generated on demand via `expo-video-thumbnails`
-  if not already cached; cache key = `set_id:thumb:v1`).
-- Label: weight (formatted via existing `useUnitFormatter`) + reps. Secondary line:
-  relative date (`2 weeks ago`). PR clips marked with a `⭐` chip if the underlying
-  `workout_sets` row was the e1RM PR for the exercise at the time of capture
-  (data already computed by `lib/db/pr-dashboard.ts`).
+- Data source: `getClipsForExercise(exerciseId)` from `lib/media/form-clips.ts`
+  (the actual hook in the repo — rev 1's `useFormClipsByExercise` does not
+  exist). Filtered at the call site to exclude clips currently in slot A or B.
+  No new `lib/db/form-clips.ts` helper required.
+- 64×96 thumbnails generated by `expo-video-thumbnails` (already installed at
+  `^55.0.14`, no APK delta) and cached via the new
+  `lib/media/form-clip-thumbs.ts` helper (see Tech Lead T3 below).
+- Label line 1: weight + reps via existing `useUnitFormatter`.
+- Label line 2: short relative date (`2w ago`).
+- PR badge: `⭐` if the clip's underlying `workout_sets` row was the e1RM PR at
+  capture time, sourced from existing `lib/db/pr-dashboard.ts`. Best-effort —
+  if the lookup throws or returns null, render without the badge (no toast, no
+  Sentry — informational only).
+- Concurrency cap: 3 simultaneous `getThumbnailAsync` calls via a small
+  `p-limit`-style queue inside `lib/media/form-clip-thumbs.ts` (Tech Lead T7).
+  Until a thumbnail resolves, render a placeholder tile with weight/reps text on
+  the exercise's themed background color.
 
-#### Empty state
-- If the exercise has only **one** clip, the Compare button is **disabled** with
-  tooltip-style helper text: *"Record at least one more clip for this exercise to
-  compare."* No empty-state sheet that wastes a tap.
+#### Synchronized transport row
+- **Play Both / Pause Both / Reset Both** call the matching method on both
+  player refs in the same JS task. No promise of frame-perfect sync; AC3 below
+  gives a 50 ms tolerance at 250 ms post-tap.
+- Per-pane scrubber controls remain (existing `<VideoView>` exposes them via
+  `nativeControls={false}` + custom overlay; rev-2 keeps this).
+- Loop is already on per pane (`p.loop = true` in CompareView); rev 2 leaves
+  this default.
 
-#### Accessibility
-- Each video gets `accessibilityLabel="Form clip A: 80 kilograms, 8 reps, 2 weeks ago"`.
-- Transport buttons have explicit `accessibilityLabel` ("Play both clips", etc.) and
-  `accessibilityRole="button"`.
-- Picker thumbnails are buttons with full label text in `accessibilityLabel` so
-  VoiceOver/TalkBack users can navigate by clip metadata alone.
-- Swap and Close get standard role/label.
+#### Swap A ↔ B
+- A single `<Pressable>` with `accessibilityLabel="Swap clip A and B"` and
+  `accessibilityRole="button"`. Internally swaps the two `clip` props; the
+  `key={clip.id}` on each `<ClipPane>` remounts, constructing fresh
+  `useVideoPlayer` instances at position 0, paused. Swap is therefore
+  **destructive of position and play-state** by design — predictable, simple,
+  and within budget. Documented in AC5.
+
+#### Layout
+- **Portrait** (today's behavior): vertical 1×1 split, A top, B bottom.
+- **Landscape** (new): horizontal 1×1 split via
+  `useWindowDimensions().width > height`. Divider is vertical, 2 px,
+  `colors.outline`. Transport row sits across the bottom safe-area (both
+  orientations). Picker strip sits directly above transport row in portrait;
+  in landscape it sits at the right edge as a vertical scroll. RTL invariant
+  (existing CompareView comment line 8 — preserved): vertical split is
+  unmirrored.
+- Each video uses `contentFit="contain"` (existing).
+
+#### Empty / disabled states
+- `FormLibraryTab` already gates select-mode CTAs at exactly 2 selected — no
+  change.
+- The new `FormVideoSheet` "Compare with another set…" button is rendered
+  `disabled` with `accessibilityHint="Record at least one more clip for this
+  exercise to compare."` when `getClipsForExercise(exerciseId).length < 2`.
+
+#### Accessibility (per QD #7 + Tech Lead T8)
+- Each `<ClipPane>` keeps the existing `accessibilityLabel` ("Clip A, recorded
+  …, clip 1 of 2.") and gains weight/reps in the label when available.
+- Transport row: `Play Both` / `Pause Both` / `Reset Both` / `Swap` each have
+  explicit `accessibilityLabel`, `accessibilityRole="button"`, and
+  `accessibilityState={{ disabled: bothLoaded ? false : true }}` for the three
+  transport buttons (disabled until both A and B are loaded). `accessibilityHint`
+  on disabled state explains why.
+- Picker thumbnail: `accessibilityRole="button"`, `accessibilityLabel` includes
+  weight, reps, relative date, and PR badge if present.
+- Focus order is deterministic in both orientations: Close → Swap → A pane → B
+  pane → Picker → Transport row.
 
 #### Error / edge states
 | Scenario | Behavior |
 |----------|----------|
-| Clip B's file missing on disk (e.g. user manually purged via FormClipsManageSheet) | Show "Clip unavailable" placeholder in slot B, keep A playing, log a Sentry breadcrumb. Picker hides the orphaned row on next render. |
-| Both clips in different orientations (one portrait, one landscape) | Each renders with `contain`; no rotation hack. |
-| Low memory / second `<VideoView>` fails to mount | Fall back to single-player and toast: "Couldn't play both clips at once on this device. Showing the most recent." Don't crash. |
-| User backgrounds the app mid-comparison | Both players pause on `AppState !== 'active'`, resume on return only if they were both playing pre-pause. |
-| Rotation mid-session | Layout recomputes via `useWindowDimensions`; current playback positions preserved. |
+| Clip B's file missing on disk (purged via `softDeleteClip` while sheet open) | `<ClipPane>` renders a "Clip unavailable" placeholder; picker hides the orphaned row on next render via `reconcileOrphans` already invoked by `getClipsForExercise`. Sentry breadcrumb logs only `set_id` + a constant tag — never `rel_path` (privacy, AC11). |
+| Both clips different orientations (one portrait, one landscape) | Each pane uses `contentFit="contain"` (existing) — letterbox, no rotation. |
+| Native decoder fails on second `<VideoView>` (low-memory) | `<ClipPane>` `onError` falls back to single-clip rendering and surfaces a non-modal toast `"Could not play both clips at once on this device. Showing one."`. No crash, no Sentry PII. |
+| App backgrounds mid-comparison | Existing pattern — both pause on `AppState !== "active"`. Resume on return is *not* automatic (matches existing single-clip behavior; no surprise audio/motion). |
+| Rotation mid-session | `useWindowDimensions` re-renders; player instances persist (no key change), positions preserved. |
+| Theme change mid-sheet | Re-render only; no flicker (`useThemeColors` already memoized). |
 
 ### Technical Approach
 
-#### File-level diff
+#### File-level diff (rev 2 — anchored to actual files)
 | File | Change |
 |------|--------|
-| `components/session/FormClipsCompareSheet.tsx` | **NEW** — bottom sheet, owns two `useVideoPlayer` instances, picker strip, transport row. |
-| `components/session/FormClipsPlayer.tsx` | Add **Compare with another set…** action-row button, wire to parent's `onRequestCompare(clip)`. |
-| `app/exercise/[id].tsx` | Add per-row **⇆ Compare** icon-button on Form Library rows; manage shared state for which sheet is open. |
-| `lib/db/form-clips.ts` | Add `getFormClipsForExerciseExcept(exerciseId, excludeIds: string[])` helper if the existing `useFormClipsByExercise` cannot be filtered cheaply at the call site — verify before adding. |
-| `__tests__/components/session/FormClipsCompareSheet.test.tsx` | **NEW** — render, picker filter excludes both slots, swap flips A/B, transport drives both players, missing-file fallback. |
-| `e2e/scenarios/form-clip-compare.spec.ts` | **NEW** — Playwright (web build): seed two clips, open comparison, swap, play-both, close. Mobile project skipped (video element semantics differ on RNW + jsdom-mobile). |
+| `components/session/CompareView.tsx` | **MODIFY** — add transport row, Swap, picker strip, landscape layout, file-missing pane. Single root `useMediaSurfaceMounted()` retained (T2). `<ClipPane key={clip.id}>` for source-switch via remount (T1). |
+| `components/session/FormLibraryTab.tsx` | **MODIFY** — keep `handleCompare` (existing); pass new `pickerEnabled={false}` prop so select-mode entry hides the picker by default but exposes a "Change" affordance per pane. |
+| `components/session/FormVideoSheet.tsx` | **MODIFY** — add footer "Compare with another set…" button. On press: dismiss self, then open `CompareView` (`clipA = currentClip, clipB = null, pickerEnabled = true, pickerOpen = true`). Sequenced so only one media-surface region is mounted at a time. |
+| `lib/media/form-clip-thumbs.ts` | **NEW** — `getOrCreateThumb(setId, srcRelPath)` writes to `${FileSystem.cacheDirectory}form-clip-thumbs/${setId}.jpg`, 25 MB LRU eviction, p-limit concurrency = 3. `purgeThumb(setId)` invoked from `softDeleteClip` and `reconcileOrphans` in `lib/media/form-clips.ts`. |
+| `lib/media/form-clips.ts` | **MODIFY** — call `purgeThumb(id)` from `softDeleteClip` and `reconcileOrphans`. No schema change. |
+| `__tests__/components/session/CompareView.test.tsx` | **NEW or EXTEND** — transport row drives both players, swap remounts both panes, picker excludes loaded slots, file-missing pane renders, landscape layout via mocked `useWindowDimensions`, Sentry_Mask wraps every video + thumbnail, replay-gate counter increments exactly once per sheet open. |
+| `__tests__/source-contracts-batch.test.ts` | **EXTEND** — add the new ban list (T8) following the established pattern at L1068–L1075 (JSX text + brace + plain + template-literal a11y prop syntaxes). |
+| `e2e/scenarios/form-clip-compare.spec.ts` | **NEW** — Playwright web project: seed two clips, open from select-mode, play-both, swap, change-B-via-picker, close. Use `.first()` on RN-Web Switch role queries (memory: e2e harness pattern). Use `.click()` not `.tap()` (memory: e2e harness pattern). |
 
 #### Dependencies
-- **`expo-video`** — already in `package.json` (used by `FormClipsPlayer`). Two
-  `useVideoPlayer` instances are supported per Expo SDK 51 docs; we will benchmark
-  on the lowest-spec device in the QA matrix (Z Fold6 inner display, Pixel 6a)
-  before claiming AC4.
-- **`expo-video-thumbnails`** — verify whether already present. If not, add and
-  document in PLAN review (techlead must approve a new dep).
-- No new permissions, no new manifest entries, no FOSS-build implications (verified
-  against `fdroid-foss-build` skill — `expo-video` is already in the F-Droid build).
+- **`expo-video ^55.0.16`** and **`expo-video-thumbnails ^55.0.14`** — both
+  already in `package.json`. Repo is on **Expo SDK ~55** (rev 1's "SDK 51"
+  reference was wrong — corrected per Tech Lead T-final-9). No new dependency,
+  no new permission, no manifest change, no APK-size delta.
+- F-Droid build path verified via `fdroid-foss-build` skill (memory: cablesnap
+  fdroid): `expo-video` and `expo-video-thumbnails` Android modules contain no
+  `com.google.android.gms`, `com.google.firebase`, or `com.google.mlkit`
+  references — confirmed by Tech Lead repo audit.
+
+#### Source-switch mechanism (decision per T1)
+- **Decision:** key-remount, not `player.replaceAsync`. Each `<ClipPane>` is
+  rendered with `key={clip.id}`. Changing the clip in slot A or B (via swap or
+  picker) unmounts the old pane and mounts a new one with a fresh
+  `useVideoPlayer`. New player starts at position 0, paused. Loop=true is set in
+  the existing `useVideoPlayer` factory callback.
+- **Why:** matches the existing `<ClipPane>` shape (no refactor of the player
+  hook into a ref-managed source-switch). Eliminates ambiguous "what happens to
+  position/play-state on swap" — answer: both reset, documented in AC5. Avoids
+  having to decide `replace` vs `replaceAsync` and the dev-build/Hermes
+  semantics differences.
+- **Trade-off:** pane unmount/remount briefly tears down the native decoder.
+  AC4 measures heap PSS across multiple swap cycles to confirm no leak.
+
+#### Replay-gate placement (decision per T2)
+- `useMediaSurfaceMounted()` stays at the **root of `CompareBody`** — exactly
+  one increment per sheet open, exactly one decrement per sheet close, regardless
+  of swaps or picker changes. The hook is **never** moved into per-pane
+  components. Enforced by a unit test in
+  `__tests__/components/session/CompareView.test.tsx` that mocks
+  `useMediaSurfaceMounted` and asserts call count = 1 across N swaps.
+
+#### Thumbnail cache (T3 — full design)
+- **Path:** `${FileSystem.cacheDirectory}form-clip-thumbs/${setId}.jpg`
+  (cache directory, not document directory; auto-evictable by OS).
+- **Generation:** `expo-video-thumbnails.getThumbnailAsync(absSrcUri, { time:
+  500, quality: 0.6 })`. JPG, ~64×96, ~5–15 KB each.
+- **Cache key invalidation:** the file name uses `set_media.id` (UUID) which
+  changes whenever a clip is replaced (replace flow softs-deletes the old row
+  and inserts a new row), so a stale thumb is impossible by construction.
+- **Concurrency cap:** 3 simultaneous `getThumbnailAsync` calls via a
+  `p-limit`-style queue inside `lib/media/form-clip-thumbs.ts`.
+- **Cache size:** soft cap 25 MB (≈ 1700 thumbs). On generation, if directory
+  size > 25 MB, evict oldest by mtime until under cap. Eviction runs at most
+  once per minute (debounced).
+- **Cleanup hooks:** `softDeleteClip(id)` and `reconcileOrphans()` in
+  `lib/media/form-clips.ts` both call `purgeThumb(id)`.
+- **Backup exclusion:** Android Auto Backup excludes `cache/` by default
+  (verified via `plugins/with-form-clips-backup.js` semantics — only
+  `form-clips/` and `set-media/` are explicitly excluded; cache lives outside
+  those by virtue of being in the OS cache root). iOS `tmp/`-equivalent for
+  `cacheDirectory` is also excluded from iCloud backup by default. Documented
+  inline in `lib/media/form-clip-thumbs.ts` with a header comment.
+- **Privacy:** thumbnail file path never reaches Sentry breadcrumbs. Only
+  `setId` (UUID, opaque) is logged on error.
 
 #### Data model
-None. The feature is read-only over `set_media` and `workout_sets`.
+None. Feature is read-only over `set_media` and `workout_sets`.
 
-#### Performance budget
-- Two simultaneous `<VideoView>` players. Per Expo benchmarks, each ~30 MB heap
-  for a 10 s 1080p clip. **Hard cap: do not allow comparison if either clip's
-  `size_bytes` exceeds 80 MB** — show toast and refuse, to avoid OOM on entry-level
-  Android. Encoded into a `MAX_COMPARE_BYTES` constant in `lib/media/form-clips.ts`.
-- Thumbnail generation runs in `InteractionManager.runAfterInteractions` so picker
-  scroll stays at 60 fps.
+#### Performance methodology (T4 — replaces rev 1's broken approach)
+- **No `MAX_COMPARE_BYTES` cap.** Existing `CompareView` has no cap; adding one
+  asymmetrically would gate the new entry but not the legacy one (Tech Lead
+  T4). Instead, AC4 below uses the standard Android measurement.
+- **Measurement (AC4):** `adb shell dumpsys meminfo com.persoack.cablesnap |
+  grep "TOTAL PSS"` sampled before sheet open and after 60 s of dual-loop
+  playback on a Pixel 6a release build. Recorded in the AC4 dogfood log.
+  Threshold: **PSS delta ≤ 180 MB** for two 10–20 s 1080p clips. If two clips
+  exceed this in dogfooding, we ship a "single-pane fallback on
+  low-memory device" toast in a follow-up issue, not in v1.
+- **Thumbnail generation throttling:** concurrency cap = 3 (T7), runs inside
+  `InteractionManager.runAfterInteractions` so picker scroll stays 60 fps.
 
 ## Scope
 
@@ -195,94 +304,165 @@ None. The feature is read-only over `set_media` and `workout_sets`.
   off-screen rendering pipeline; defer).
 - "Compare to a coach's reference clip" (would require import-from-URL or
   bundled reference library — separate feature).
-
-## Acceptance Criteria
-
-- [ ] **AC1 (entry from library):** Given an exercise with ≥ 2 form clips, when the
-  user taps the **⇆ Compare** icon on a Form Library row, then the comparison sheet
-  opens with that clip in slot A and the most-recent other clip auto-selected as B.
-- [ ] **AC2 (entry from player):** Given the single-clip player is open, when the
-  user taps **Compare with another set…**, then the player closes and the comparison
-  sheet opens with the same clip in slot A and the picker awaiting B selection.
-- [ ] **AC3 (synchronized transport):** Given both slots have a clip loaded, when the
-  user taps **Play Both**, then both clips begin playback within 50 ms of each other
-  measured by `playerA.currentTime` and `playerB.currentTime` after 250 ms.
-- [ ] **AC4 (no OOM):** Given two 80 MB clips on a Pixel 6a, when the comparison
-  sheet opens and both clips loop for 60 s, then the app does not crash and JS heap
-  stays below 220 MB (measured via `performance.memory` in the dev build).
-- [ ] **AC5 (swap):** Given clips X in A and Y in B, when the user taps **Swap**,
-  then A holds Y and B holds X with their playback positions and play states
-  preserved.
-- [ ] **AC6 (file missing):** Given clip B's underlying `rel_path` no longer exists
-  on disk, when the comparison sheet renders, then slot B shows the
-  *"Clip unavailable"* placeholder and the picker row for that clip is hidden on
-  next mount, while slot A remains playable.
-- [ ] **AC7 (single clip = disabled):** Given an exercise has exactly one clip, when
-  the user views its Form Library row, then the **⇆ Compare** icon is rendered with
-  `disabled` state and an `accessibilityHint` explaining why.
-- [ ] **AC8 (no behaviour shaping):** A repo-wide grep over the new files for the
-  forbidden tokens `streak`, `xp`, `reward`, `notify`, `notification`, `you should`,
-  `don't break`, `keep going`, `consistency` returns zero hits. Codified in a new
-  `__tests__/source-contracts/form-clip-compare-no-behaviour.test.ts`.
-- [ ] **AC9 (FOSS build):** `eas build --profile releaseFdroid --platform android`
-  on the new code path produces no GMS / Firebase / MLKit references in the final
-  APK (verified via `aapt2 dump badging` + `grep`).
-- [ ] **AC10 (a11y):** Every control has `accessibilityLabel` and
-  `accessibilityRole`; verified by jest-axe (already in dev-deps) on the rendered
-  sheet.
-- [ ] **AC11 (no privacy regression):** Sentry breadcrumb on file-missing case logs
-  only the `set_id`, never the `rel_path` (which can leak a username via document
-  directory). Source contract test enforces.
-- [ ] PR passes all existing tests with no regressions.
-- [ ] No new lint warnings.
-
-## Edge Cases
-
-| Scenario | Expected Behavior |
-|----------|-------------------|
-| Empty exercise (no clips) | No Compare button visible. |
-| One clip only | Compare button rendered but disabled with explanatory `accessibilityHint`. |
-| Many clips (50+) | Picker strip uses `FlatList` with `windowSize=5` for smooth scroll. |
-| One clip is portrait, one landscape | Each renders with `contain`; layout unaffected. |
-| Both clips reference same `set_id` (impossible via UI but defensive) | Show toast "Pick a different clip" and keep B empty. |
-| Device rotates mid-playback | Layout flips portrait↔landscape; positions preserved. |
-| App backgrounds | Both pause; on foreground, resume only if both were playing. |
-| Low-memory device fails to mount second player | Fall back to single-player and toast user-friendly explanation; no crash. |
-| Storage cleanup races (FormClipsManageSheet purge mid-comparison) | File-missing path triggers per AC6. |
-| Theme change mid-sheet | Re-render with new colors; no flicker. |
-
-## Out of Scope
-
-(Repeated for emphasis — see "Scope" section above for rationale.)
-- Cross-exercise comparison.
-- ML-based pose alignment.
-- Annotation overlay.
-- Sharing or exporting composed videos.
-- Coach-reference library.
+- **Schema changes** to `set_media` or `workout_sets` (Tech Lead T10). The
+  feature is read-only over existing rows.
+- Background pre-warming of video decoders before sheet open (Tech Lead T10).
+- Cross-device sync of thumbnail cache (Tech Lead T10) — thumbs stay on device
+  by design.
 
 ## Dependencies
 
 - BLD-1092 (form-check video capture) — **shipped**.
 - BLD-1094 (PRAGMA foreign_keys=ON for set_media cascade) — **shipped**.
 - BLD-1095 (backup exclusion for clips) — **shipped**.
+- `expo-video ^55.0.16` and `expo-video-thumbnails ^55.0.14` — **already in
+  package.json**.
 
-## Risk Assessment
+## Acceptance Criteria (rev 2)
+
+- [ ] **AC1 (entry from select-mode):** Given an exercise with ≥ 2 form clips and
+  the user has selected exactly two via select-mode, when the user taps **Compare**
+  in `SelectActionsBar`, then `CompareView` opens with both slots filled, picker
+  hidden by default, and "Change" affordance available per pane.
+- [ ] **AC2 (entry from single-clip player):** Given the single-clip player
+  (`FormVideoSheet`) is open with a clip whose exercise has ≥ 2 clips, when the
+  user taps **Compare with another set…**, then the single-clip sheet dismisses,
+  `CompareView` opens with `clipA = currentClip`, `clipB = null`, and the picker
+  strip auto-opens. Exactly one `useMediaSurfaceMounted()` region is mounted
+  during the transition (verified by mocking the hook in test).
+- [ ] **AC3 (synchronized transport):** Given both slots are loaded, when the
+  user taps **Play Both**, then 250 ms later
+  `Math.abs(playerA.currentTime - playerB.currentTime) <= 0.05` (50 ms drift
+  tolerance). Same assertion for **Pause Both** (both `playing === false`) and
+  **Reset Both** (both `currentTime === 0` and `playing === false`).
+- [ ] **AC4 (native heap stays bounded):** On a Pixel 6a release build, with two
+  10–20 s 1080p clips loaded and dual-loop playback for 60 s,
+  `adb shell dumpsys meminfo com.persoack.cablesnap | awk '/TOTAL PSS/ {print $3}'`
+  delta ≤ 180 MB versus baseline (sheet closed). Method and raw measurements
+  recorded in the implementation PR description. No `MAX_COMPARE_BYTES` constant
+  added — measurement-driven, not gate-driven.
+- [ ] **AC5 (swap):** Given clips X in A and Y in B, when the user taps **Swap**,
+  then A holds Y and B holds X, both panes are remounted via `key={clip.id}`,
+  both new players are at `currentTime === 0` and `playing === false`. This
+  reset behavior is documented in the Swap button's `accessibilityHint`.
+- [ ] **AC6 (file missing):** Given clip B's `rel_path` no longer exists on disk
+  when `<ClipPane>` mounts, then the pane renders the *"Clip unavailable"*
+  placeholder with `accessibilityLabel="Clip B unavailable. The recording was
+  removed."`, the picker hides the orphaned row on next refresh (via
+  `reconcileOrphans`), and slot A remains playable. Sentry breadcrumb logs
+  `{ tag: "form-clip-compare.missing", setId }` only — never `rel_path`.
+- [ ] **AC7 (single clip = compare disabled in single-player entry):** Given an
+  exercise has exactly one clip and the user is viewing it in `FormVideoSheet`,
+  then **Compare with another set…** renders with `accessibilityState={{
+  disabled: true }}` and `accessibilityHint="Record at least one more clip for
+  this exercise to compare."`. (Select-mode entry is naturally gated by the
+  existing 2-of-N selection requirement — no new code needed there.)
+- [ ] **AC8 (no behaviour-shaping copy):** Repo-wide grep over the new files
+  (`CompareView.tsx`, `FormVideoSheet.tsx`, `lib/media/form-clip-thumbs.ts`,
+  the new test files) for the prohibited tokens
+  `streak`, `xp`, `badge`, `unlock`, `level up`, `keep it up`, `you've been`,
+  `friends`, `share to`, `leaderboard`, `notify`, `notification`, `reward`,
+  `reminder`, `you should` returns zero hits, **and** new files contain no
+  `expo-notifications` import. (`consistency` is removed from the ban list per
+  QD #6 — legitimate form-analysis vocabulary.) The scanner extends
+  `__tests__/source-contracts-batch.test.ts` and follows the established
+  three-syntax pattern at L1068–L1075 (JSX text, brace `prop={"…"}`, plain
+  `prop="…"`, template `prop={`…`}`).
+- [ ] **AC9 (FOSS / F-Droid build clean):** Build the Gradle releaseFdroid
+  variant and confirm zero GMS/Firebase/MLKit class references in the DEX:
+  ```
+  cd android && ./gradlew :app:assembleReleaseFdroid
+  APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
+  unzip -p "$APK" 'classes*.dex' | strings \
+    | grep -E 'com\.google\.android\.gms|com\.google\.firebase|com\.google\.mlkit' \
+    | grep -v 'com\.google\.android\.gms\.wearable' || true
+  ```
+  Expected: zero matches (the wearable bridge stub is excluded at config level
+  per `plugins/with-wearos-module.js`). `aapt2 dump badging` is **not** an
+  acceptable substitute — manifest only.
+- [ ] **AC10 (a11y — stateful controls):** Every new control declares
+  `accessibilityRole`, `accessibilityLabel`, and (for transport buttons)
+  `accessibilityState={{ disabled }}` reflecting whether both slots are loaded.
+  Disabled states declare `accessibilityHint` explaining how to enable. Focus
+  order is deterministic: Close → Swap → A pane → B pane → Picker → Transport.
+  Verified by `jest-axe` on the rendered sheet plus a manual VoiceOver pass
+  recorded in the implementation PR description.
+- [ ] **AC11 (Sentry mask + privacy):** Every `<VideoView>` and every
+  `<Image>`/picker-thumbnail is wrapped in `Sentry_Mask` (the same
+  optional-require pattern used by existing `CompareView` at L137). The
+  file-missing breadcrumb shape (AC6) is enforced by a source-contract test:
+  no `rel_path`, no `cacheDirectory`, no `documentDirectory`, no absolute
+  filesystem path appears in any Sentry call inside the new files.
+- [ ] **AC12 (replay-gate counter is single):** With `useMediaSurfaceMounted`
+  mocked, opening `CompareView`, swapping panes 5 times, changing B via picker
+  3 times, and closing the sheet results in **exactly one** increment and
+  **exactly one** decrement of the counter. Asserted in
+  `__tests__/components/session/CompareView.test.tsx`.
+- [ ] **AC13 (thumbnail cache):** `lib/media/form-clip-thumbs.ts` writes only
+  under `${FileSystem.cacheDirectory}form-clip-thumbs/`, evicts oldest by mtime
+  when directory size > 25 MB, caps `getThumbnailAsync` concurrency at 3, and
+  is invoked from `softDeleteClip` and `reconcileOrphans` to purge by `setId`.
+  Unit test seeds 30 MB of fake thumbs and asserts post-eviction size ≤ 25 MB
+  and oldest files removed.
+- [ ] PR passes all existing tests with no regressions.
+- [ ] No new lint warnings.
+
+## Edge Cases (rev 2)
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Exercise has 0 clips | Select-mode CTA never enables; "Compare with another set…" hidden in single-clip player (no clip is open). |
+| Exercise has 1 clip | Select-mode CTA never enables (needs 2 selected); single-player "Compare with another set…" rendered disabled with `accessibilityHint`. |
+| Many clips (50+) | Picker uses `FlatList` with `windowSize=5`, thumbnail concurrency cap = 3, placeholder tile until thumb resolves. |
+| Mixed orientations (one portrait, one landscape) | Each pane uses `contentFit="contain"` (existing) — letterbox; no rotation. |
+| Same `set_id` somehow loaded into both slots (defensive) | Picker filter at call site already excludes loaded slots; if it slips through, B pane shows toast `"Pick a different clip"` and returns to picker. |
+| Device rotates mid-playback | `useWindowDimensions` re-renders; player instances persist (no key change), positions preserved. |
+| App backgrounds | Both pause on `AppState !== "active"`. No automatic resume on foreground (matches existing single-clip player). |
+| Native decoder OOM on second `<VideoView>` | `<ClipPane>` `onError` falls back to single-clip rendering and shows non-modal toast. No crash, no PII in Sentry. |
+| `softDeleteClip` runs while sheet open and matches loaded clip | Pane shows "Clip unavailable" placeholder per AC6; thumbnail cache purged via `purgeThumb(setId)`. |
+| Theme change mid-sheet | Re-render only via `useThemeColors` (already memoized); no flicker. |
+| Swap during playback | Both panes remount per AC5; both end at position 0 paused. Documented in `accessibilityHint`. |
+
+## Risk Assessment (rev 2)
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| OOM on two simultaneous video decoders on entry-level Android | Medium | High | `MAX_COMPARE_BYTES=80 MB` per-clip cap; landscape-only on Z Fold6 inner where wide layout helps; AC4 explicit memory test on Pixel 6a. |
-| Synchronized playback drift | Medium | Low | Document drift in AC3 (50 ms tolerance). Per-clip scrubber lets user re-align manually. No promise of frame-perfect sync. |
-| `expo-video-thumbnails` not currently bundled — adds APK size | Medium | Medium | Verify before plan approval; if added, document size delta in techlead review. Fallback: render solid color tile with weight/reps text only. |
-| Feature creep into "annotations" or "ML alignment" | Low | Medium | Out-of-scope section is explicit. Reviewers gate-keep follow-up issues. |
-| Privacy regression via breadcrumb logging full file path | Low | High | Source contract test (AC11) enforces breadcrumb shape. |
-| User confusion: "compare" looks like "compete with friend" | Low | Low | Copy uses *"Compare with another of your sets"* in the empty/disabled tooltip. Icon is `⇆` (swap arrows), not a person/trophy glyph. |
+| Native OOM on dual decoder on entry-level Android | Medium | High | AC4 dogfood measurement on Pixel 6a (release build, dumpsys meminfo). If exceeded, ship single-pane fallback toast in a follow-up — not in v1. No `MAX_COMPARE_BYTES` cap (asymmetric with legacy entry, Tech Lead T4). |
+| Replay-gate counter drift causing Sentry replay re-enable mid-comparison | Low | High | Single-root `useMediaSurfaceMounted()` enforced by AC12 unit test. |
+| Privacy regression via Sentry breadcrumb / replay | Low | High | AC6 + AC11 source-contract tests; Sentry_Mask wraps every video and thumbnail. |
+| Thumbnail cache unbounded growth | Medium | Medium | 25 MB LRU eviction + cleanup hooks in `softDeleteClip` and `reconcileOrphans`; AC13 unit test. |
+| `getThumbnailAsync` starves JS / decoder threads with 50+ clips | Medium | Medium | Concurrency cap = 3; `runAfterInteractions`; placeholder tile until resolved (Tech Lead T7). |
+| Source-contract scanner misses non-brace JSX text or false-positives `consistency` | Medium | Medium | Follow established three-syntax pattern at `__tests__/source-contracts-batch.test.ts:1068-1075` (memory: testing practices). Drop `consistency` (QD #6). |
+| Layout regressions in landscape on tablets / Z Fold inner display | Low | Medium | E2E spec resizes viewport; manual dogfood on Z Fold6 inner before merge. |
+| F-Droid AC9 false-positive from wearable stub | Low | Low | Grep filter excludes `com.google.android.gms.wearable` (memory: cablesnap fdroid). |
+| Two reviewers re-reject because rev 2 still misses something | Low | Medium | Dedicated rev-2 changes table (next section) maps every Q1–Q7 / T1–T10 blocker to a section + AC. |
+
+## Rev-2 Changes — Resolution of Rev-1 Blockers
+
+| Blocker | Resolution in rev 2 |
+|---------|---------------------|
+| **QD-1 / TL final 1** Net-new feature vs existing surfaces | File-level diff now anchored on `CompareView.tsx` + `FormLibraryTab.tsx` + `FormVideoSheet.tsx`. No `app/exercise/[id].tsx` change. No `useFormClipsByExercise` hook (used `getClipsForExercise` from `lib/media/form-clips.ts`). |
+| **QD-2 / TL T6** One mental model | Single model: select-mode primary entry (existing) + single-clip player secondary entry (new). No per-row ⇆ icon. |
+| **QD-3 / TL T3** Thumbnail cache data safety | Full design in Technical Approach §"Thumbnail cache (T3)". AC13 enforces. |
+| **QD-4 / TL T5** AC9 wrong tool | AC9 rewritten to Gradle `:app:assembleReleaseFdroid` + DEX `strings` grep with wearable filter. |
+| **QD-5 / TL T4** AC4 wrong measurement | AC4 rewritten to `adb shell dumpsys meminfo` PSS delta ≤ 180 MB on Pixel 6a release. No `MAX_COMPARE_BYTES`. |
+| **QD-6 / TL T8** AC8 false-positive on `consistency` + scanner pattern | Token list rewritten; `consistency` dropped; scanner extends established three-syntax pattern. |
+| **QD-7** Stateful a11y for transport | AC10 covers; transport buttons declare `accessibilityState={{ disabled }}` + `accessibilityHint`. |
+| **TL T1** Source-switch unspecified | Decision documented: key-remount via `key={clip.id}`, not `replaceAsync`. AC5 documents reset semantics. |
+| **TL T2** Replay-gate single increment | Documented; AC12 unit test enforces. |
+| **TL T7** Thumbnail concurrency | Cap = 3 with `p-limit`-style queue + placeholder tile. AC13 covers. |
+| **TL T9** Sentry_Mask on every surface | AC11 covers — every video and thumbnail. |
+| **TL T10** Out-of-scope additions | Added to Out-of-scope list below: schema changes, decoder pre-warm, cross-device thumb sync. |
+| **TL final-9** Wrong SDK reference | Updated SDK 51 → SDK ~55 throughout. |
 
 ## Review Feedback
 
-### Quality Director (UX)
-**Verdict: REJECTED / REQUEST CHANGES (2026-05-10).**
+### Quality Director (UX) — Rev 1: REJECTED (2026-05-10)
+**Verdict: REJECTED / REQUEST CHANGES (rev 1).** Full QD blockers Q1–Q7 below.
+**Rev 2 awaiting re-review** — see "Rev-2 Changes" table above for per-blocker
+resolutions. Re-review request posted on BLD-1150.
 
-Evidence checked:
+Evidence checked (rev 1):
 - Current repo already has a comparison surface:
   `components/session/FormLibraryTab.tsx` imports `CompareView` and opens it after
   selecting exactly two clips; `components/session/CompareView.tsx` already owns
@@ -329,19 +509,22 @@ Required changes before QD approval:
    disabled picker actions need `accessibilityHint`, and the focus order must be
    deterministic in both portrait and landscape.
 
-### Tech Lead (Feasibility)
-_Pending — request via @techlead after CEO releases checkout._
+### Tech Lead (Feasibility) — Rev 1: REJECTED (2026-05-10) [duplicate header from rev-1 commit; see merged review below]
+_See "Tech Lead (Feasibility) — Rev 1: REJECTED" section below for the canonical rev-1 verdict._
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. Reviewer should still confirm the NO classification
 holds (no streaks, notifications, rewards, social, motivational copy)._
 
 ### CEO Decision
-_Pending all reviews._
+**Rev 1: NOT APPROVED** — both reviewers REJECTED. CEO acknowledges the rev-1
+plan ignored existing surfaces (CompareView + FormLibraryTab), used a non-existent
+hook, cited the wrong Expo SDK, and proposed unreliable AC measurement methods.
+**Rev 2 published 2026-05-10**, anchored to the actual repo, addressing every
+Q1–Q7 / T1–T10 blocker. CEO decision deferred until rev-2 reviews land.
 
-### Tech Lead (Feasibility) — REQUEST CHANGES (2026-05-10)
-
-Verdict: **REJECTED**. Concur with QD on items 1–7 (existing surfaces, hook name,
+### Tech Lead (Feasibility) — Rev 1: REJECTED (2026-05-10) [canonical]
+**Verdict: REJECTED (rev 1).** Concur with QD on items 1–7 (existing surfaces, hook name,
 AC4/AC9 measurement methods, AC8 false-positives, thumbnail data-safety, stateful-
 control a11y). Adding tech-lead-specific blockers below.
 
