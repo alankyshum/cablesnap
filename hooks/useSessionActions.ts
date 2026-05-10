@@ -71,6 +71,7 @@ import { formatTime, computePrefillSets } from "../lib/format";
 import { confirmAction } from "../lib/confirm";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
+import type { Suggestion } from "../lib/rm";
 
 /** Check if completing a set achieves a strength goal. Non-throwing. */
 async function checkGoalAchievement(exerciseId: string): Promise<boolean> {
@@ -90,6 +91,75 @@ async function checkGoalAchievement(exerciseId: string): Promise<boolean> {
 }
 
 import type { SetContext } from "./useRestTimer";
+import { type NextSetPreview } from "../lib/notifications";
+
+/**
+ * BLD-1137: Compute the next-set preview and isLastSet flag for the Smart Rest Coach
+ * lock-screen notification. Looks at the next uncompleted set in `previewGroup`.
+ * isLastSet = true iff no uncompleted sets remain anywhere across all groups
+ * (excluding the just-completed set which is now marked done optimistically).
+ *
+ * Fallback precedence (plan §Preview body formatting):
+ * 1. Next uncompleted planned set in same exercise group (primary).
+ * 2. Progression suggestion from lib/rm.ts suggest() (secondary, when primary is null).
+ * 3. null → no preview.
+ */
+function computeRestPreview(
+  completedSetId: string,
+  previewGroup: { name: string; is_bodyweight: boolean; trackingMode: "reps" | "duration"; sets: Array<{ id: string; completed: boolean; weight: number | null; reps: number | null; duration_seconds: number | null }> } | undefined,
+  allGroups: Array<{ sets: Array<{ id: string; completed: boolean }> }>,
+  unit: "kg" | "lb",
+  suggestion?: Suggestion | null,
+): { preview: NextSetPreview; isLastSet: boolean } {
+  const isLastSet = !allGroups.some((g) =>
+    g.sets.some((s) => !s.completed && s.id !== completedSetId),
+  );
+  if (!previewGroup) return { preview: null, isLastSet };
+  const exerciseKind: NonNullable<NextSetPreview>["exerciseKind"] =
+    previewGroup.is_bodyweight ? "bodyweight"
+    : previewGroup.trackingMode === "duration" ? "time_based"
+    : "weighted";
+  const nextSet = previewGroup.sets.find((s) => !s.completed && s.id !== completedSetId);
+  if (nextSet) {
+    return {
+      preview: {
+        exerciseName: previewGroup.name,
+        exerciseKind,
+        plannedWeight: nextSet.weight ?? null,
+        weightUnit: unit,
+        repRange: nextSet.reps != null ? String(nextSet.reps) : null,
+        durationSeconds: nextSet.duration_seconds ?? null,
+        distanceMeters: null,
+      },
+      isLastSet,
+    };
+  }
+  // Fallback: progression suggestion from lib/rm.ts suggest()
+  // suggest() returns reps: null for weighted increase/maintain — derive repRange from the
+  // last completed set or the just-completed set (completedSetId, not yet flushed in state).
+  if (suggestion) {
+    const lastCompletedSet =
+      [...previewGroup.sets].filter((s) => s.completed).at(-1) ??
+      previewGroup.sets.find((s) => s.id === completedSetId);
+    const repRange =
+      suggestion.reps != null ? String(suggestion.reps)
+      : lastCompletedSet?.reps != null ? String(lastCompletedSet.reps)
+      : null;
+    return {
+      preview: {
+        exerciseName: previewGroup.name,
+        exerciseKind,
+        plannedWeight: suggestion.weight > 0 ? suggestion.weight : null,
+        weightUnit: unit,
+        repRange,
+        durationSeconds: null,
+        distanceMeters: null,
+      },
+      isLastSet,
+    };
+  }
+  return { preview: null, isLastSet };
+}
 
 type Params = {
   id: string | undefined;
@@ -97,13 +167,15 @@ type Params = {
   setGroups: React.Dispatch<React.SetStateAction<ExerciseGroup[]>>;
   updateGroupSet: (setId: string, updates: Partial<SetWithMeta>) => void;
   startRest: (ctx: string | SetContext) => void;
-  startRestWithDuration: (secs: number) => void;
-  startRestWithBreakdown: (breakdown: RestBreakdown) => void;
+  startRestWithDuration: (secs: number, preview?: NextSetPreview, isLastSet?: boolean) => void;
+  startRestWithBreakdown: (breakdown: RestBreakdown, preview?: NextSetPreview, isLastSet?: boolean) => void;
+  dismissRest: () => void;
   session: { started_at: number; clock_started_at?: number | null; name: string; gym_id?: string | null } | null;
   showToast: (msg: string, opts?: { action?: { label: string; onPress: () => void | Promise<void> }; duration?: number }) => void;
   showError: (msg: string) => void;
   triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
   unit?: "kg" | "lb";
+  suggestions?: Record<string, Suggestion | null>;
 };
 
 export function useSessionActions({
@@ -114,11 +186,13 @@ export function useSessionActions({
   startRest,
   startRestWithDuration,
   startRestWithBreakdown,
+  dismissRest,
   session,
   showToast,
   showError,
   triggerPR,
   unit,
+  suggestions,
 }: Params) {
   const router = useRouter();
 
@@ -295,6 +369,11 @@ export function useSessionActions({
       hintTimer.current = setTimeout(() => setNextHint(null), 1500);
     } else {
       setNextHint(null);
+      // BLD-1137: for superset rest, preview is the next uncompleted set of the
+      // first linked exercise (superset cycles back to the top).
+      const firstLinked = linked.length > 0 ? linked[0] : undefined;
+      const previewGroup = firstLinked?.exercise_id !== set.exercise_id ? firstLinked : undefined;
+      const { preview, isLastSet } = computeRestPreview(set.id, previewGroup, groups, unit ?? "lb", previewGroup ? suggestions?.[previewGroup.exercise_id] : undefined);
       // Adaptive superset rest: resolve using the last-completed set's context
       // on the final exercise of the superset (per plan §5).
       const adaptiveSetting = await getAppSetting("rest_adaptive_enabled");
@@ -308,11 +387,11 @@ export function useSessionActions({
           }, { linkScope: true });
           if (ctx.source.kind === "pinned") {
             const secs = Math.min(600, Math.max(15, ctx.source.seconds));
-            startRestWithDuration(secs);
+            startRestWithDuration(secs, preview, isLastSet);
             return;
           }
           const breakdown = resolveRestSeconds(ctx);
-          startRestWithBreakdown(breakdown);
+          startRestWithBreakdown(breakdown, preview, isLastSet);
           return;
         } catch (e) {
           // Resolver error — log to Sentry for observability, then fall through to legacy path.
@@ -321,9 +400,9 @@ export function useSessionActions({
         }
       }
       const secs = await getRestSecondsForLink(id!, set.link_id!);
-      startRestWithDuration(secs);
+      startRestWithDuration(secs, preview, isLastSet);
     }
-  }, [groups, id, startRestWithDuration, startRestWithBreakdown]);
+  }, [groups, id, unit, suggestions, startRestWithDuration, startRestWithBreakdown]);
 
   const handleCheck = useCallback(async (set: SetWithMeta) => {
     const group = groups.find((g) => g.exercise_id === set.exercise_id);
@@ -466,15 +545,20 @@ export function useSessionActions({
     if (set.link_id) {
       await handleLinkedRest(set);
     } else {
+      // BLD-1137: compute next-set preview for Smart Rest Coach lock-screen notification.
+      const group = groups.find((g) => g.exercise_id === set.exercise_id);
+      const { preview, isLastSet } = computeRestPreview(set.id, group, groups, unit ?? "lb", suggestions?.[set.exercise_id]);
       startRest({
         exerciseId: set.exercise_id,
         sessionId: id!,
         setType: set.set_type,
         rpe: set.rpe,
         setId: set.id,
+        preview,
+        isLastSet,
       });
     }
-  }, [updateGroupSet, groups, id, startRest, startRestWithDuration, triggerPR, handleLinkedRest]);
+  }, [updateGroupSet, groups, id, unit, suggestions, startRest, startRestWithDuration, triggerPR, handleLinkedRest]);
 
   const handleAddSet = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
@@ -1002,6 +1086,8 @@ export function useSessionActions({
       "Complete Workout?",
       `Duration: ${formatTime(elapsed)}`,
       async () => {
+        // BLD-1137: cancel any active rest timer notifications before completing.
+        dismissRest();
         // BLD-1028: flush any pending pinned-note drafts before completing.
         await flushAllPinnedNotes();
         await completeSession(id!);

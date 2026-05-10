@@ -1,13 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
- * Integration tests for auto-backup in useSessionActions.
+ * BLD-1137 call-chain test: finish() must call dismissRest() to cancel all
+ * active rest-timer notifications (pre-end cue, live countdown, rest-complete)
+ * before navigating away on workout completion.
  *
- * Note: The dynamic import() in the fire-and-forget IIFE cannot be intercepted
- * in Jest without --experimental-vm-modules. These tests verify:
- * 1. Navigation to summary happens on summary path (done.length > 0)
- * 2. Navigation to tabs happens on discard path (done.length === 0)
- * 3. Navigation is never blocked by the backup IIFE (even if import throws)
+ * AC7 (End Workout cancellation path).
  */
 
 const mockCompleteSession = jest.fn().mockResolvedValue(undefined);
@@ -84,7 +82,6 @@ jest.mock("@/components/ui/bna-toast", () => ({
   }),
 }));
 
-
 import { renderHook, act } from "@testing-library/react-native";
 import { useSessionActions } from "../../hooks/useSessionActions";
 
@@ -97,8 +94,6 @@ function createParams(overrides: Partial<Parameters<typeof useSessionActions>[0]
     id: "session-1",
     groups: [],
     setGroups: jest.fn(),
-    modes: {},
-    setModes: jest.fn(),
     updateGroupSet: jest.fn(),
     startRest: jest.fn(),
     startRestWithDuration: jest.fn(),
@@ -111,56 +106,59 @@ function createParams(overrides: Partial<Parameters<typeof useSessionActions>[0]
   };
 }
 
-describe("useSessionActions — auto-backup integration", () => {
+describe("useSessionActions — finish() dismisses rest timer (BLD-1137 AC7)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("navigates to summary on summary path (done.length > 0) — backup IIFE is non-blocking", async () => {
+  it("calls dismissRest() when user confirms End Workout (sets completed → summary path)", async () => {
+    const dismissRest = jest.fn();
     mockGetSessionSets.mockResolvedValue([
       { id: "s1", completed: true },
-      { id: "s2", completed: true },
     ]);
 
-    const { result } = renderHook(() => useSessionActions(createParams()));
+    const { result } = renderHook(() => useSessionActions(createParams({ dismissRest })));
 
     await act(async () => {
       result.current.finish();
       await flush();
     });
 
+    expect(dismissRest).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith("/session/summary/session-1");
   });
 
-  it("navigates to tabs on discard path (done.length === 0) — no backup triggered", async () => {
+  it("calls dismissRest() when user confirms End Workout (no completed sets → tabs path)", async () => {
+    const dismissRest = jest.fn();
     mockGetSessionSets.mockResolvedValue([
       { id: "s1", completed: false },
     ]);
 
-    const { result } = renderHook(() => useSessionActions(createParams()));
+    const { result } = renderHook(() => useSessionActions(createParams({ dismissRest })));
 
     await act(async () => {
       result.current.finish();
       await flush();
     });
 
+    expect(dismissRest).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith("/(tabs)");
   });
 
-  it("navigation still happens when backup IIFE throws (QD TEST-02)", async () => {
-    // Even if the dynamic import fails (Jest limitation) or backup throws,
-    // the fire-and-forget IIFE has a catch block, so navigation is never blocked
-    mockGetSessionSets.mockResolvedValue([
-      { id: "s1", completed: true },
-    ]);
+  it("calls dismissRest() before completeSession (ordering guarantee)", async () => {
+    const callOrder: string[] = [];
+    const dismissRest = jest.fn(() => { callOrder.push("dismissRest"); });
+    mockCompleteSession.mockImplementation(async () => { callOrder.push("completeSession"); });
+    mockGetSessionSets.mockResolvedValue([{ id: "s1", completed: true }]);
 
-    const { result } = renderHook(() => useSessionActions(createParams()));
+    const { result } = renderHook(() => useSessionActions(createParams({ dismissRest })));
 
     await act(async () => {
       result.current.finish();
       await flush();
     });
 
-    expect(mockReplace).toHaveBeenCalledWith("/session/summary/session-1");
+    expect(callOrder[0]).toBe("dismissRest");
+    expect(callOrder[1]).toBe("completeSession");
   });
 });

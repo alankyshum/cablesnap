@@ -194,7 +194,7 @@ classify_comment() {
   # ── Sentinel layer (preferred) ──
   # Pattern: MERGE-GATE: <role> <verdict>
   local sentinel
-  sentinel=$(printf '%s\n' "$body" | grep -iE '^[[:space:]]*MERGE-GATE:[[:space:]]+(techlead|quality-director|qd)[[:space:]]+(APPROVE|BLOCK)' | tail -n1 || true)
+  sentinel=$(printf '%s\n' "$body" | grep -iE '^(#{1,3}[[:space:]]*)?[[:space:]]*MERGE-GATE:[[:space:]]+(techlead|quality-director|qd)[[:space:]]+(APPROVE|BLOCK)' | tail -n1 || true)
   if [[ -n "$sentinel" ]]; then
     local role verdict
     # Normalize whitespace and case

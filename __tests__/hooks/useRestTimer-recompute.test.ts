@@ -36,6 +36,9 @@ jest.mock("../../lib/notifications", () => ({
   requestPermission: (...args: unknown[]) => mockRequestPermission(...args),
   scheduleRestComplete: (...args: unknown[]) => mockScheduleRestComplete(...args),
   cancelRestComplete: (...args: unknown[]) => mockCancelRestComplete(...args),
+  cancelAllRestNotifications: jest.fn().mockResolvedValue(undefined),
+  schedulePreEndCue: jest.fn().mockResolvedValue(undefined),
+  presentLiveRestCountdown: jest.fn().mockResolvedValue(undefined),
 }));
 
 // We need to intercept getRestContext calls to control source and resolver output.

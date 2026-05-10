@@ -161,6 +161,7 @@ function makeParams(groups: any[], overrides: any = {}): any {
     startRest: jest.fn(),
     startRestWithDuration: jest.fn(),
     startRestWithBreakdown: jest.fn(),
+    dismissRest: jest.fn(),
     session: { started_at: Date.now(), name: "Cable Session", gym_id: "gym-1" },
     showToast: jest.fn(),
     showError: jest.fn(),

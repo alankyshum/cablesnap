@@ -75,6 +75,9 @@ export default function Settings() {
     count,
     soundEnabled, setSoundEnabled,
     restNotifications, setRestNotifications,
+    restPreEndCueSeconds, setRestPreEndCueSeconds,
+    restLiveCountdown, setRestLiveCountdown,
+    restShowNextSet, setRestShowNextSet,
     reminders, setReminders,
     reminderTime, setReminderTime,
     permDenied, setPermDenied,
@@ -208,6 +211,12 @@ export default function Settings() {
             scheduleCount={scheduleCount}
             restNotifications={restNotifications}
             setRestNotifications={setRestNotifications}
+            restPreEndCueSeconds={restPreEndCueSeconds}
+            setRestPreEndCueSeconds={setRestPreEndCueSeconds}
+            restLiveCountdown={restLiveCountdown}
+            setRestLiveCountdown={setRestLiveCountdown}
+            restShowNextSet={restShowNextSet}
+            setRestShowNextSet={setRestShowNextSet}
           />
         </PreferencesCard>
         <HydrationCard colors={colors} toast={toast} />

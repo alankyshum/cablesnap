@@ -131,6 +131,7 @@ function makeParams(overrides: any = {}) {
     startRest: jest.fn(),
     startRestWithDuration: jest.fn(),
     startRestWithBreakdown: jest.fn(),
+    dismissRest: jest.fn(),
     // BLD-630: tests assume an already-anchored session unless they
     // explicitly override `clock_started_at` to null.
     session: { started_at: Date.now(), clock_started_at: Date.now(), name: "Test" },

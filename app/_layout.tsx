@@ -22,7 +22,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
-import { setupHandler } from "../lib/notifications";
+import { setupHandler, ensureRestChannelsRegistered } from "../lib/notifications";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
@@ -68,6 +68,7 @@ Sentry.init({
 
 SplashScreen.preventAutoHideAsync();
 setupHandler();
+ensureRestChannelsRegistered(); // BLD-1137: register REST_ONGOING_CHANNEL + REST_CUE_CHANNEL on Android
 setupConsoleLogBuffer();
 // BLD-1092: excludeFormClipsFromBackup() is now called inside useAppInit()
 // so the result can be tracked in React state and passed to FormVideoSheet

@@ -2,6 +2,12 @@ jest.mock("expo-constants", () => ({
   executionEnvironment: "standalone",
 }));
 
+jest.mock("expo-haptics", () => ({
+  selectionAsync: jest.fn().mockResolvedValue(undefined),
+  notificationAsync: jest.fn().mockResolvedValue(undefined),
+  NotificationFeedbackType: { Warning: "warning" },
+}));
+
 jest.mock("expo-notifications", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let handler: any = null;
@@ -10,7 +16,10 @@ jest.mock("expo-notifications", () => {
     requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
     cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
     cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
+    dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
     scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
+    setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+    AndroidImportance: { LOW: 2 },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setNotificationHandler: jest.fn((h: any) => { handler = h; }),
     addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -37,6 +46,11 @@ describe("notifications", () => {
     jest.doMock("expo-constants", () => ({
       executionEnvironment: "standalone",
     }));
+    jest.doMock("expo-haptics", () => ({
+      selectionAsync: jest.fn().mockResolvedValue(undefined),
+      notificationAsync: jest.fn().mockResolvedValue(undefined),
+      NotificationFeedbackType: { Warning: "warning" },
+    }));
     jest.doMock("expo-notifications", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let handler: any = null;
@@ -45,7 +59,10 @@ describe("notifications", () => {
         requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
         cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
         cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
+        dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
         scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
+        setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+        AndroidImportance: { LOW: 2 },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setNotificationHandler: jest.fn((h: any) => { handler = h; }),
         addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -229,22 +246,31 @@ describe("notifications", () => {
   });
 
   describe("scheduleRestComplete", () => {
-    it("schedules a time-interval notification", async () => {
+    it("schedules a time-interval notification with identifier", async () => {
       const id = await notifications.scheduleRestComplete(60, "session-1");
       expect(id).toBe("notif-id");
-      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
-        content: {
-          title: "Rest complete",
-          body: "Time for your next set.",
-          sound: "default",
-          data: { sessionId: "session-1", type: "rest_complete" },
-        },
-        trigger: {
-          type: "timeInterval",
-          seconds: 60,
-          repeats: false,
-        },
-      });
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      expect(call.identifier).toBe("rest-complete-session-1");
+      expect(call.content.title).toBe("Rest complete");
+      expect(call.content.body).toBe("Time for your next set.");
+      expect(call.trigger.seconds).toBe(60);
+    });
+
+    it("uses preview body when preview provided (no isLastSet)", async () => {
+      const preview: import("../../lib/notifications").NextSetPreview = {
+        exerciseName: "Cable Row", exerciseKind: "weighted",
+        plannedWeight: 60, weightUnit: "lb", repRange: "8-10",
+        durationSeconds: null, distanceMeters: null,
+      };
+      await notifications.scheduleRestComplete(60, "s1", preview, false);
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      expect(call.content.body).toBe("Cable Row — 60 lb × 8-10");
+    });
+
+    it("uses 'Last set complete' when isLastSet=true", async () => {
+      await notifications.scheduleRestComplete(60, "s1", null, true);
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      expect(call.content.body).toBe("Last set complete");
     });
 
     it("returns null when schedule throws", async () => {
@@ -282,6 +308,199 @@ describe("notifications", () => {
       await notifications.handleResponse(response, navigate, showSnackbar);
       expect(navigate).toHaveBeenCalledWith("/session/sess-42");
       expect(showSnackbar).not.toHaveBeenCalled();
+    });
+  });
+
+  // BLD-1137: Smart Rest Coach notification helpers
+  describe("formatPreviewBody", () => {
+    it("returns null for null input", () => {
+      expect(notifications.formatPreviewBody(null)).toBeNull();
+    });
+
+    it("formats weighted exercise with weight and reps", () => {
+      const result = notifications.formatPreviewBody({
+        exerciseName: "Cable Row",
+        exerciseKind: "weighted",
+        plannedWeight: 60,
+        weightUnit: "lb",
+        repRange: "8-10",
+        durationSeconds: null,
+        distanceMeters: null,
+      });
+      expect(result).toBe("Cable Row — 60 lb × 8-10");
+    });
+
+    it("formats weighted exercise with null weight as bodyweight", () => {
+      const result = notifications.formatPreviewBody({
+        exerciseName: "Pull-Up",
+        exerciseKind: "weighted",
+        plannedWeight: null,
+        weightUnit: "lb",
+        repRange: "5-8",
+        durationSeconds: null,
+        distanceMeters: null,
+      });
+      expect(result).toBe("Pull-Up — bodyweight × 5-8");
+    });
+
+    it("formats bodyweight exercise", () => {
+      const result = notifications.formatPreviewBody({
+        exerciseName: "Push-Up",
+        exerciseKind: "bodyweight",
+        plannedWeight: null,
+        weightUnit: "kg",
+        repRange: "12",
+        durationSeconds: null,
+        distanceMeters: null,
+      });
+      expect(result).toBe("Push-Up — bodyweight × 12");
+    });
+
+    it("formats time_based exercise", () => {
+      const result = notifications.formatPreviewBody({
+        exerciseName: "Plank",
+        exerciseKind: "time_based",
+        plannedWeight: null,
+        weightUnit: "kg",
+        repRange: null,
+        durationSeconds: 75,
+        distanceMeters: null,
+      });
+      expect(result).toBe("Plank — 1:15");
+    });
+
+    it("formats distance exercise in meters", () => {
+      const result = notifications.formatPreviewBody({
+        exerciseName: "Sled Push",
+        exerciseKind: "distance",
+        plannedWeight: null,
+        weightUnit: "kg",
+        repRange: null,
+        durationSeconds: null,
+        distanceMeters: 20,
+      });
+      expect(result).toBe("Sled Push — 20 m");
+    });
+
+    it("formats distance exercise in km when >= 1000m", () => {
+      const result = notifications.formatPreviewBody({
+        exerciseName: "Run",
+        exerciseKind: "distance",
+        plannedWeight: null,
+        weightUnit: "kg",
+        repRange: null,
+        durationSeconds: null,
+        distanceMeters: 5000,
+      });
+      expect(result).toBe("Run — 5.0 km");
+    });
+
+    it("returns null for weighted with null reps (insufficient data)", () => {
+      expect(notifications.formatPreviewBody({
+        exerciseName: "Cable Row",
+        exerciseKind: "weighted",
+        plannedWeight: 60,
+        weightUnit: "lb",
+        repRange: null,
+        durationSeconds: null,
+        distanceMeters: null,
+      })).toBeNull();
+    });
+
+    it("returns null for time_based with null duration", () => {
+      expect(notifications.formatPreviewBody({
+        exerciseName: "Plank",
+        exerciseKind: "time_based",
+        plannedWeight: null,
+        weightUnit: "kg",
+        repRange: null,
+        durationSeconds: null,
+        distanceMeters: null,
+      })).toBeNull();
+    });
+
+    it("uses kg unit correctly", () => {
+      const result = notifications.formatPreviewBody({
+        exerciseName: "Cable Row",
+        exerciseKind: "weighted",
+        plannedWeight: 40,
+        weightUnit: "kg",
+        repRange: "8",
+        durationSeconds: null,
+        distanceMeters: null,
+      });
+      expect(result).toBe("Cable Row — 40 kg × 8");
+    });
+  });
+
+  describe("schedulePreEndCue (BLD-1137)", () => {
+    it("schedules with correct identifier and body when no preview", async () => {
+      const id = await notifications.schedulePreEndCue(50, null, false, 10, "sess-1");
+      expect(id).toBeTruthy();
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      expect(call.identifier).toBe("rest-preend-sess-1");
+      expect(call.content.title).toBe("Rest ending in 10s");
+      expect(call.content.body).toBe("Next set in 10s");
+      expect(call.trigger.seconds).toBe(50);
+    });
+
+    it("uses 'Workout ending' body when isLastSet", async () => {
+      await notifications.schedulePreEndCue(50, null, true, 10, "sess-1");
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      expect(call.content.body).toBe("Workout ending in 10s");
+    });
+
+    it("includes preview in body when preview provided", async () => {
+      const preview = {
+        exerciseName: "Cable Row",
+        exerciseKind: "weighted" as const,
+        plannedWeight: 60,
+        weightUnit: "lb" as const,
+        repRange: "8-10",
+        durationSeconds: null,
+        distanceMeters: null,
+      };
+      await notifications.schedulePreEndCue(50, preview, false, 10, "sess-1");
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      expect(call.content.body).toBe("Next: Cable Row — 60 lb × 8-10");
+    });
+
+    it("returns null when secondsUntilCue <= 0", async () => {
+      const result = await notifications.schedulePreEndCue(0, null, false, 10, "sess-1");
+      expect(result).toBeNull();
+      expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("cancelAllRestNotifications (BLD-1137)", () => {
+    it("cancels all three notification IDs", async () => {
+      await notifications.cancelAllRestNotifications("sess-1");
+      expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("rest-preend-sess-1");
+      expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("rest-complete-sess-1");
+      expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("rest-live-sess-1");
+    });
+  });
+
+  describe("setupHandler — BLD-1137 dispatcher", () => {
+    it("suppresses banner for rest_preend notifications in foreground", async () => {
+      notifications.setupHandler();
+      type HandlerFn = (notification: { request: { content: { data: { type: string } } } }) => Promise<{ shouldShowAlert: boolean; shouldPlaySound: boolean; shouldSetBadge: boolean }>;
+      const handler = (Notifications as typeof Notifications & { _getHandler: () => { handleNotification: HandlerFn } })._getHandler();
+      const result = await handler.handleNotification({
+        request: { content: { data: { type: "rest_preend" } } },
+      });
+      expect(result.shouldShowAlert).toBe(false);
+      expect(result.shouldPlaySound).toBe(false);
+    });
+
+    it("shows alert for non-rest_preend notifications", async () => {
+      notifications.setupHandler();
+      type HandlerFn = (notification: { request: { content: { data: { type: string } } } }) => Promise<{ shouldShowAlert: boolean; shouldPlaySound: boolean; shouldSetBadge: boolean }>;
+      const handler = (Notifications as typeof Notifications & { _getHandler: () => { handleNotification: HandlerFn } })._getHandler();
+      const result = await handler.handleNotification({
+        request: { content: { data: { type: "rest_complete" } } },
+      });
+      expect(result.shouldShowAlert).toBe(true);
     });
   });
 });

@@ -15,6 +15,9 @@ jest.mock("../../lib/audio", () => ({
 
 const mockScheduleRestComplete = jest.fn().mockResolvedValue("notif-id-1");
 const mockCancelRestComplete = jest.fn().mockResolvedValue(undefined);
+const mockCancelAllRestNotifications = jest.fn().mockResolvedValue(undefined);
+const mockSchedulePreEndCue = jest.fn().mockResolvedValue("preend-id-1");
+const mockPresentLiveRestCountdown = jest.fn().mockResolvedValue("live-id-1");
 const mockIsAvailable = jest.fn().mockReturnValue(true);
 const mockRequestPermission = jest.fn().mockResolvedValue(true);
 jest.mock("../../lib/notifications", () => ({
@@ -22,6 +25,9 @@ jest.mock("../../lib/notifications", () => ({
   requestPermission: (...args: unknown[]) => mockRequestPermission(...args),
   scheduleRestComplete: (...args: unknown[]) => mockScheduleRestComplete(...args),
   cancelRestComplete: (...args: unknown[]) => mockCancelRestComplete(...args),
+  cancelAllRestNotifications: (...args: unknown[]) => mockCancelAllRestNotifications(...args),
+  schedulePreEndCue: (...args: unknown[]) => mockSchedulePreEndCue(...args),
+  presentLiveRestCountdown: (...args: unknown[]) => mockPresentLiveRestCountdown(...args),
 }));
 
 const mockGetRestSeconds = jest.fn().mockResolvedValue(60);
@@ -154,7 +160,8 @@ describe("useRestTimer", () => {
     });
 
     expect(result.current.rest).toBe(0);
-    expect(mockCancelRestComplete).toHaveBeenCalledWith("notif-id-1");
+    // BLD-1137: cancelAllRestNotifications replaces cancelRestComplete
+    expect(mockCancelAllRestNotifications).toHaveBeenCalledWith("session-1");
     expect(mockDeleteAppSetting).toHaveBeenCalledWith("rest_timer_active_state");
   });
 
@@ -185,7 +192,8 @@ describe("useRestTimer", () => {
     });
 
     expect(mockRequestPermission).toHaveBeenCalled();
-    expect(mockScheduleRestComplete).toHaveBeenCalledWith(60, "session-1");
+    // BLD-1137: scheduleRestComplete now also accepts preview and isLastSet
+    expect(mockScheduleRestComplete).toHaveBeenCalledWith(60, "session-1", null, false);
   });
 
   it("does NOT schedule notification when permission is denied", async () => {
@@ -245,7 +253,8 @@ describe("useRestTimer", () => {
 
     act(() => { jest.advanceTimersByTime(2000); });
     expect(result.current.rest).toBe(0);
-    expect(mockCancelRestComplete).toHaveBeenCalled();
+    // BLD-1137: natural expiry uses cancelAllRestNotifications
+    expect(mockCancelAllRestNotifications).toHaveBeenCalledWith("session-1");
   });
 
   it("new startRestWithDuration cancels previous notification", async () => {
@@ -272,7 +281,8 @@ describe("useRestTimer", () => {
       await Promise.resolve();
     });
 
-    expect(mockCancelRestComplete).toHaveBeenCalledWith("notif-1");
+    // BLD-1137: starting a new timer calls cancelAllRestNotifications to clear previous
+    expect(mockCancelAllRestNotifications).toHaveBeenCalledWith("session-1");
   });
 
   it("recalculates remaining time when app resumes from background", async () => {
