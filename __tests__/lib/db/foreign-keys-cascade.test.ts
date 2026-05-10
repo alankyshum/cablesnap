@@ -18,9 +18,9 @@
  * Delete paths covered (BLD-1094 issue body enumeration):
  *   - deleteSet                   (lib/db/session-sets.ts)
  *   - deleteSetsBatch             (lib/db/session-sets.ts)
- *   - deleteCompletedSession      (lib/db/sessions.ts)         — strava + health_connect cascade
- *   - cancelSession               (lib/db/sessions.ts)         — strava + health_connect cascade
- *   - undoCsvImport               (lib/db/csv-import.ts)       — strava + health_connect cascade
+ *   - deleteCompletedSession      (lib/db/sessions.ts)         — strava cascade
+ *   - cancelSession               (lib/db/sessions.ts)         — strava cascade
+ *   - undoCsvImport               (lib/db/csv-import.ts)       — strava cascade
  *   - removeQuickAddSet           (lib/db/day-session.ts)
  *   - softDeleteCustomExercise    (lib/db/exercises.ts)        — soft delete, no FK violation
  *   - deleteTemplate              (lib/db/templates.ts)        — program_schedule child first
@@ -36,7 +36,7 @@
  *   - deleteMealTemplate          (lib/db/meal-templates.ts)   — meal_template_items child first
  *   - deleteStravaConnection      (lib/db/strava.ts)
  *   - deleteCalibration (single)  (lib/db/gym-profiles.ts)
- *   - test-seed clearAll          (lib/db/test-seed.ts)        — strava + health_connect cascade
+ *   - test-seed clearAll          (lib/db/test-seed.ts)        — strava cascade
  *
  * Also includes a negative test that demonstrates the FK constraint actually
  * fires when a child row exists and the parent is deleted without cascade —
@@ -100,15 +100,6 @@ function createFkDb(): InstanceType<typeof DatabaseSync> {
       id TEXT PRIMARY KEY,
       session_id TEXT NOT NULL REFERENCES workout_sessions(id),
       strava_activity_id TEXT,
-      status TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      UNIQUE(session_id)
-    );
-
-    CREATE TABLE health_connect_sync_log (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL REFERENCES workout_sessions(id),
-      health_connect_record_id TEXT,
       status TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       UNIQUE(session_id)
@@ -255,20 +246,17 @@ describe("BLD-1094 — PRAGMA foreign_keys = ON enforcement", () => {
 describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK errors)", () => {
   // ── workout_sessions delete paths (sync-log child cascade) ──
 
-  it("deleteCompletedSession: cascades to strava_sync_log + health_connect_sync_log + workout_sets", () => {
+  it("deleteCompletedSession: cascades to strava_sync_log + workout_sets", () => {
     const db = createFkDb();
     db.prepare("INSERT INTO exercises (id, name) VALUES ('ex1', 'Bench')").run();
     insertSession(db, "s1");
     insertSet(db, "set1", "s1", "ex1");
     db.prepare("INSERT INTO strava_sync_log (id, session_id, status, created_at) VALUES (?, ?, ?, ?)")
       .run("strava1", "s1", "synced", 100);
-    db.prepare("INSERT INTO health_connect_sync_log (id, session_id, status, created_at) VALUES (?, ?, ?, ?)")
-      .run("hc1", "s1", "synced", 100);
 
     // Mirror lib/db/sessions.ts:deleteCompletedSession — children before parent.
     expect(() => {
       db.prepare("DELETE FROM strava_sync_log WHERE session_id = ?").run("s1");
-      db.prepare("DELETE FROM health_connect_sync_log WHERE session_id = ?").run("s1");
       db.prepare("DELETE FROM workout_sets WHERE session_id = ?").run("s1");
       db.prepare("DELETE FROM workout_sessions WHERE id = ? AND completed_at IS NOT NULL").run("s1");
     }).not.toThrow();
@@ -276,7 +264,6 @@ describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK er
     expect(count(db, "workout_sessions", "id='s1'")).toBe(0);
     expect(count(db, "workout_sets", "session_id='s1'")).toBe(0);
     expect(count(db, "strava_sync_log", "session_id='s1'")).toBe(0);
-    expect(count(db, "health_connect_sync_log", "session_id='s1'")).toBe(0);
   });
 
   it("cancelSession orphan sweep: cascades sync logs for every orphaned in-progress session", () => {
@@ -295,7 +282,6 @@ describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK er
       // Targeted delete + orphan loop — same shape as cancelSession.
       for (const id of ["target", "orphan1"]) {
         db.prepare("DELETE FROM strava_sync_log WHERE session_id = ?").run(id);
-        db.prepare("DELETE FROM health_connect_sync_log WHERE session_id = ?").run(id);
         db.prepare("DELETE FROM workout_sets WHERE session_id = ?").run(id);
         db.prepare("DELETE FROM workout_sessions WHERE id = ?").run(id);
       }
@@ -314,14 +300,11 @@ describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK er
     insertSet(db, "set2", "s2", "ex1");
     db.prepare("INSERT INTO strava_sync_log (id, session_id, status, created_at) VALUES (?, ?, ?, ?)")
       .run("sync_s1", "s1", "synced", 100);
-    db.prepare("INSERT INTO health_connect_sync_log (id, session_id, status, created_at) VALUES (?, ?, ?, ?)")
-      .run("hc_s2", "s2", "synced", 100);
 
     expect(() => {
       const sessions = db.prepare("SELECT id FROM workout_sessions WHERE import_batch_id = ?").all("batch-A") as Array<{ id: string }>;
       for (const { id } of sessions) {
         db.prepare("DELETE FROM strava_sync_log WHERE session_id = ?").run(id);
-        db.prepare("DELETE FROM health_connect_sync_log WHERE session_id = ?").run(id);
         db.prepare("DELETE FROM workout_sets WHERE session_id = ?").run(id);
       }
       db.prepare("DELETE FROM workout_sessions WHERE import_batch_id = ?").run("batch-A");
@@ -330,7 +313,6 @@ describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK er
     expect(count(db, "workout_sessions", "import_batch_id='batch-A'")).toBe(0);
     expect(count(db, "workout_sets")).toBe(0);
     expect(count(db, "strava_sync_log")).toBe(0);
-    expect(count(db, "health_connect_sync_log")).toBe(0);
   });
 
   it("removeQuickAddSet: deletes a day_session backing row after last set; sync logs absent so no FK concern", () => {
@@ -354,11 +336,9 @@ describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK er
     insertSession(db, "s1");
     insertSet(db, "set1", "s1", "ex1");
     db.prepare("INSERT INTO strava_sync_log (id, session_id, status, created_at) VALUES ('sync', 's1', 'synced', 100)").run();
-    db.prepare("INSERT INTO health_connect_sync_log (id, session_id, status, created_at) VALUES ('hc', 's1', 'synced', 100)").run();
 
     expect(() => db.exec(`
       DELETE FROM strava_sync_log;
-      DELETE FROM health_connect_sync_log;
       DELETE FROM workout_sets;
       DELETE FROM workout_sessions;
     `)).not.toThrow();
@@ -559,7 +539,6 @@ describe("BLD-1094 — delete-path regression sweep (no dangling rows + no FK er
     expect(() => {
       db.prepare("DELETE FROM set_media WHERE set_id = ?").run("set1");
       db.prepare("DELETE FROM strava_sync_log WHERE session_id = ?").run("s1");
-      db.prepare("DELETE FROM health_connect_sync_log WHERE session_id = ?").run("s1");
       db.prepare("DELETE FROM workout_sets WHERE session_id = ?").run("s1");
       db.prepare("DELETE FROM workout_sessions WHERE id = ? AND completed_at IS NOT NULL").run("s1");
     }).not.toThrow();

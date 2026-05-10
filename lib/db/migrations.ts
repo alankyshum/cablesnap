@@ -367,5 +367,17 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await dropColumnIfExists(database, "template_exercises", "training_mode");
   await dropColumnIfExists(database, "exercises", "mount_position");
   await dropColumnIfExists(database, "exercises", "training_modes");
+
+  // ── BLD-1146: Destructive cleanup of Health Connect schema objects ──
+  // Health Connect was removed as a feature (never shipped to users).
+  // On existing installs the table, index, and app_settings key may persist
+  // from an intermediate build. Drop them idempotently so all installs
+  // converge to the clean schema. IF EXISTS guards make this a no-op on
+  // fresh installs or installs that never had the HC artifacts.
+  await database.execAsync(`
+    DROP INDEX IF EXISTS idx_hc_sync_log_status;
+    DROP TABLE IF EXISTS health_connect_sync_log;
+    DELETE FROM app_settings WHERE key = 'health_connect_enabled';
+  `);
   migrateBreadcrumb("phase_4_complete");
 }

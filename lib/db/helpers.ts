@@ -65,7 +65,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         await instance.execAsync("PRAGMA journal_mode = WAL");
         // BLD-1094: enable foreign-key enforcement on every connection so
         // the FK declarations in lib/db/tables.ts (strava_sync_log,
-        // health_connect_sync_log, strength_goals, cable_stacks,
+        // strength_goals, cable_stacks,
         // stack_calibrations, program_schedule) actually run, and the
         // service-layer cascades in deleteCompletedSession / cancelSession /
         // undoCsvImport prevent dangling rows. Prerequisite for BLD-1092
