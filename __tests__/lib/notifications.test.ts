@@ -628,15 +628,24 @@ describe("notifications", () => {
       }
     });
 
-    it("AC16 — is idempotent: calling twice registers each channel exactly twice (no error)", async () => {
+    it("AC16 — is idempotent: second call registers same channels again without error", async () => {
       const { Platform } = require("react-native");
       const origOS = Platform.OS;
       (Platform as { OS: string }).OS = "android";
       try {
+        // First cold-start call: 2 channels registered
         await notifications.ensureRestChannelsRegistered();
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(2);
+        const firstCallArgs = (Notifications.setNotificationChannelAsync as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
+
+        // Second call (e.g., process re-init) succeeds without error and registers the same 2 channels
+        jest.clearAllMocks();
         await notifications.ensureRestChannelsRegistered();
-        // 2 channels × 2 calls = 4 total setNotificationChannelAsync calls
-        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(4);
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(2);
+        const secondCallArgs = (Notifications.setNotificationChannelAsync as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
+
+        // Same channel IDs registered both times — idempotent behavior
+        expect(secondCallArgs).toEqual(firstCallArgs);
       } finally {
         (Platform as { OS: string }).OS = origOS;
       }

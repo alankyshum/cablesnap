@@ -598,6 +598,24 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           liveCountdownIntervalRef.current = setTimeout(scheduleNext, 5000) as unknown as ReturnType<typeof setInterval>;
         }
 
+        // BLD-1137: AC12 — Re-schedule OS notifications lost on Android force-kill or device restart.
+        // scheduleNotificationAsync uses stable identifiers so duplicate calls replace-in-place safely.
+        if (AppState.currentState === "active") {
+          void scheduleRestComplete(remaining, sessionId).catch(() => {});
+          if (
+            restoredState.cueSeconds > 0
+            && remaining > restoredState.cueSeconds + 2
+          ) {
+            void schedulePreEndCue(
+              remaining - restoredState.cueSeconds,
+              restoredState.previewSnapshot,
+              restoredState.isLastSet,
+              restoredState.cueSeconds,
+              sessionId,
+            ).catch(() => {});
+          }
+        }
+
         if (AppState.currentState === "active") {
           startRestInterval();
         }

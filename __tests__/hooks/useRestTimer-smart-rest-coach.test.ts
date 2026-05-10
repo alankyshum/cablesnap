@@ -336,37 +336,53 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       );
     });
 
-    it("AC4 — 5-second re-presentation chain is scheduled via setTimeout after initial call", async () => {
-      mockGetAppSetting.mockImplementation((key: string) => {
-        const map: Record<string, string> = {
-          rest_notification_enabled: "true",
-          rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "10",
-          rest_timer_live_countdown: "true",
-          rest_timer_show_next_set_preview: "false",
-        };
-        return Promise.resolve(map[key] ?? null);
-      });
+    it("AC4 — re-presents live countdown on the 5s chain (fake timer advancement)", async () => {
+      // AC4 requires re-presentation every 5s ±500ms until cancellation.
+      // Use fake timers to advance past the first 5s interval and assert a second call.
+      jest.useFakeTimers();
+      try {
+        mockGetAppSetting.mockImplementation((key: string) => {
+          const map: Record<string, string> = {
+            rest_notification_enabled: "true",
+            rest_adaptive_enabled: "false",
+            rest_timer_pre_end_cue_seconds: "10",
+            rest_timer_live_countdown: "true",
+            rest_timer_show_next_set_preview: "false",
+          };
+          return Promise.resolve(map[key] ?? null);
+        });
 
-      // Spy on setTimeout to verify the 5s chain is set up (AC4: re-presents every 5s ±500ms)
-      const setTimeoutSpy = jest.spyOn(global, "setTimeout");
+        const { result } = renderHook(() => {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { useRestTimer } = require("../../hooks/useRestTimer");
+          return useRestTimer(defaultOptions);
+        });
 
-      const { result } = renderHook(() => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { useRestTimer } = require("../../hooks/useRestTimer");
-        return useRestTimer(defaultOptions);
-      });
+        // Start rest — async operations (getRestSecondsForExercise, getAppSetting)
+        await act(async () => {
+          result.current.startRest("exercise-1");
+          // Flush microtasks/promises without advancing fake timers
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+        });
 
-      await act(async () => {
-        await result.current.startRest("exercise-1");
-        await flushPromises();
-      });
+        // Initial call (within 1s — AC4 "appears within 1s") already happened in scheduleNotifications
+        const initialCallCount = mockPresentLiveRestCountdown.mock.calls.length;
+        expect(initialCallCount).toBeGreaterThanOrEqual(1);
 
-      // Verify the self-correcting 5s chain was scheduled
-      const fiveSecondCalls = setTimeoutSpy.mock.calls.filter((call) => call[1] === 5000);
-      expect(fiveSecondCalls.length).toBeGreaterThanOrEqual(1);
+        // Advance fake timers by 5001ms to fire the 5s self-correcting chain (AC4: ±500ms)
+        await act(async () => {
+          jest.advanceTimersByTime(5001);
+          await Promise.resolve();
+        });
 
-      setTimeoutSpy.mockRestore();
+        // A second presentLiveRestCountdown must have been called (the 5s chain re-presented)
+        expect(mockPresentLiveRestCountdown.mock.calls.length).toBeGreaterThanOrEqual(initialCallCount + 1);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -457,6 +473,59 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_show_next_set_preview");
       expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
     });
+
+    it("AC9 — rest_timer_sound and rest_timer_vibrate are read from getAppSetting when rest completes", async () => {
+      // These two settings control haptic/audio feedback on timer completion.
+      // They are read inside a useEffect triggered when rest goes from >0 to 0,
+      // so we need to advance the timer interval to completion.
+      jest.useFakeTimers();
+      try {
+        mockGetRestSeconds.mockResolvedValue(1); // 1-second timer for fast completion
+        mockGetAppSetting.mockImplementation((key: string) => {
+          const map: Record<string, string> = {
+            rest_notification_enabled: "true",
+            rest_adaptive_enabled: "false",
+            rest_timer_pre_end_cue_seconds: "0", // skip pre-end cue (1s < cue+2)
+            rest_timer_live_countdown: "false",
+            rest_timer_show_next_set_preview: "false",
+            rest_timer_sound: "true",
+            rest_timer_vibrate: "true",
+          };
+          return Promise.resolve(map[key] ?? null);
+        });
+
+        const { result } = renderHook(() => {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { useRestTimer } = require("../../hooks/useRestTimer");
+          return useRestTimer(defaultOptions);
+        });
+
+        // Kick off startRest — flushes all async (getAppSetting reads, getRestSeconds)
+        await act(async () => {
+          result.current.startRest("exercise-1");
+          // Flush microtasks so async resolution completes before advancing timers
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        // Advance 1s (the rest duration) to trigger the setInterval tick that sets rest=0
+        await act(async () => {
+          jest.advanceTimersByTime(1100);
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        // rest_timer_sound and rest_timer_vibrate must be read from DB (persistence layer)
+        // so the user's preference survives cold restarts and is not hardcoded.
+        expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_sound");
+        expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_vibrate");
+      } finally {
+        jest.useRealTimers();
+        mockGetRestSeconds.mockResolvedValue(60); // restore default
+      }
+    });
   });
 
   // BLD-1137: covers AC12 from PLAN-BLD-1137.md
@@ -496,6 +565,50 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       expect(mockPresentLiveRestCountdown).toHaveBeenCalledWith(
         expect.any(Number), // remaining seconds (≤55)
         null, // previewSnapshot
+        "sess-1",
+      );
+      // AC12: missing scheduled notifications re-scheduled on resume.
+      // scheduleRestComplete must be called to restore the OS-level completion notification.
+      expect(mockScheduleRestComplete).toHaveBeenCalledWith(
+        expect.any(Number), // remaining seconds
+        "sess-1",
+      );
+    });
+
+    it("AC12 — re-schedules pre-end cue when remaining time allows (remaining > cueSeconds + 2)", async () => {
+      const futureTimestamp = Date.now() + 55_000; // 55s > cueSeconds(10) + 2
+      const activeState = JSON.stringify({
+        sessionId: "sess-1",
+        endTimestamp: futureTimestamp,
+        durationSeconds: 60,
+        breakdown: { totalSeconds: 60 },
+        notificationIds: { preEnd: "preend-id", complete: "complete-id" },
+        previewSnapshot: null,
+        isLastSet: false,
+        cueSeconds: 10,
+        liveEnabled: false,
+      });
+
+      mockGetAppSetting.mockImplementation((key: string) => {
+        if (key === "rest_timer_active_state") return Promise.resolve(activeState);
+        if (key === "rest_timer_default_seconds") return Promise.resolve(null as unknown as string);
+        return Promise.resolve(null as unknown as string);
+      });
+
+      renderHook(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { useRestTimer } = require("../../hooks/useRestTimer");
+        return useRestTimer(defaultOptions);
+      });
+
+      await act(async () => { await flushPromises(); });
+
+      // Pre-end cue must be re-scheduled (55 > 10 + 2)
+      expect(mockSchedulePreEndCue).toHaveBeenCalledWith(
+        expect.any(Number), // remaining - cueSeconds (≈45)
+        null, // previewSnapshot
+        false, // isLastSet
+        10, // cueSeconds
         "sess-1",
       );
     });
