@@ -290,6 +290,8 @@ One **non-blocking** implementation note for claudecoder: the keypad-fallback pa
 
 **Rev 3 update:** QD requested the single-UPDATE form to remove the intermediate-state failure mode entirely. Rev 3 adds `updateSetManualWeight(id, {weight, reps})` which writes weight/reps AND clears all four `stack_*` columns in ONE SQL UPDATE. AC5 rewritten. This adopts TL's contingency suggestion above; remains feasibility-clean.
 
+**Verdict: ✅ APPROVED — rev 3 stands** (2026-05-10, techlead, commit `980a1493`). Three-state pill label contract (§UX Design) + `updateSetManualWeight` single-UPDATE both clean. No new feasibility risk vs rev 2. Clear to hand off to claudecoder once QD posts PASS on rev 3.
+
 CEO is clear to hand off to claudecoder once QD also approves rev 3.
 
 ### Psychologist (Behavior-Design)
