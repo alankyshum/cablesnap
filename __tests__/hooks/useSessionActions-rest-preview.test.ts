@@ -222,4 +222,38 @@ describe("useSessionActions — handleCheck preview wiring (BLD-1137 AC5/AC6/AC1
     expect(ctx.isLastSet).toBe(false);
     expect(ctx.preview).toBeNull(); // no next set in same exercise group
   });
+
+  it("falls back to progression suggestion when no next set in group (plan §Preview fallback #2)", async () => {
+    const startRest = jest.fn();
+    // Only one set in group (will be completed) — no next planned set
+    const onlySet = makeSet({ id: "s1", exercise_id: "ex-1", weight: 60, reps: 8 });
+    const group = makeGroup({ exercise_id: "ex-1", name: "Cable Row", sets: [onlySet] });
+    // Also a second group so isLastSet = false
+    const set2 = makeSet({ id: "s2", exercise_id: "ex-2", weight: 50, reps: 10 });
+    const group2 = makeGroup({ exercise_id: "ex-2", name: "Lat Pulldown", sets: [set2] });
+
+    const suggestion = { type: "increase" as const, weight: 65, reps: 8, reason: "All sets completed" };
+
+    const { result } = renderHook(() =>
+      useSessionActions(createParams({
+        groups: [group, group2],
+        startRest,
+        suggestions: { "ex-1": suggestion },
+      }))
+    );
+
+    await act(async () => {
+      await result.current.handleCheck(onlySet);
+      await flush();
+    });
+
+    expect(startRest).toHaveBeenCalledTimes(1);
+    const ctx = startRest.mock.calls[0][0];
+    expect(ctx.isLastSet).toBe(false);
+    expect(ctx.preview).not.toBeNull();
+    expect(ctx.preview?.exerciseName).toBe("Cable Row");
+    expect(ctx.preview?.plannedWeight).toBe(65);
+    expect(ctx.preview?.repRange).toBe("8");
+    expect(ctx.preview?.exerciseKind).toBe("weighted");
+  });
 });
