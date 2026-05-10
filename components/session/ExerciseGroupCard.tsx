@@ -9,6 +9,7 @@ import { ExerciseGroupSetTable } from "./ExerciseGroupSetTable";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { Suggestion } from "../../lib/rm";
 import type { BreakThroughSuggestion } from "../../lib/plateau";
+import { useActiveCalibration } from "@/hooks/useActiveCalibration";
 
 export type GroupCardProps = {
   group: ExerciseGroup;
@@ -105,6 +106,13 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   gymId, onMarkerConfirm, onManualWeightSave,
 }: GroupCardProps) {
   const colors = useThemeColors();
+  // BLD-1130 G3: lift `useActiveCalibration` out of `SetRow` (it was previously
+  // called per-row, forcing a global jest mock to keep tests rendering and
+  // multiplying query overhead by row count). Now fetched once per
+  // `ExerciseGroupCard` and prop-drilled to every SetRow as `stacks`.
+  // The hook is unconditional but `useQuery({ enabled: !!gymId })` no-ops when
+  // `gymId` is null/undefined, returning [].
+  const stacks = useActiveCalibration(gymId ?? null);
   const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
   const linkIdx = group.link_id ? linked.findIndex((g) => g.exercise_id === group.exercise_id) : -1;
   const isFirstInLink = linkIdx === 0;
@@ -163,6 +171,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       captureRpe={captureRpe}
       onRpeChange={onRpeChange}
       gymId={gymId}
+      stacks={stacks}
       onMarkerConfirm={onMarkerConfirm}
       onManualWeightSave={onManualWeightSave}
     />

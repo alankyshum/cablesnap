@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { SetRow } from "./SetRow";
 import type { SetWithMeta, ExerciseGroup } from "./types";
+import type { StackWithCalibrations } from "@/hooks/useActiveCalibration";
 import { fontSizes } from "@/constants/design-tokens";
 
 export type ExerciseGroupSetTableProps = {
@@ -50,7 +51,9 @@ export type ExerciseGroupSetTableProps = {
   captureRpe?: boolean;
   onRpeChange?: (setId: string, rpe: number | null) => void;
   // BLD-1126: Stack Marker Quick-Pick
+  // BLD-1130 G3: stacks fetched once in ExerciseGroupCard; passed through.
   gymId?: string | null;
+  stacks?: StackWithCalibrations[];
   onMarkerConfirm?: (setId: string, result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => void;
   onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
 };
@@ -67,7 +70,7 @@ export function ExerciseGroupSetTable({
   hasClipMap, onVideoGlyph,
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
-  gymId, onMarkerConfirm, onManualWeightSave,
+  gymId, stacks, onMarkerConfirm, onManualWeightSave,
 }: ExerciseGroupSetTableProps) {
   return (
     <>
@@ -119,6 +122,7 @@ export function ExerciseGroupSetTable({
             captureRpe={captureRpe}
             onRpeChange={onRpeChange}
             gymId={gymId}
+            stacks={stacks}
             onMarkerConfirm={onMarkerConfirm}
             onManualWeightSave={onManualWeightSave}
           />
