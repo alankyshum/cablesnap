@@ -16,7 +16,16 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR="$PROJECT_ROOT/__tests__"
 
 # ─── Configuration ───────────────────────────────────────────────
-MAX_TESTS="${MAX_TESTS:-2800}"                          # hard ceiling — fail if exceeded
+# BLD-1128 (2026-05-10): Bumped 2800 → 2835 to accommodate 4 new AC4-mandated
+# unit tests for the stack-marker/manual-weight optimistic-save rollback hotfix.
+# The 4 tests (useSessionActions-stackmarker-rollback.test.ts) cover two
+# data-consistency defects: (1) handleMarkerConfirm omitted `weight` from its
+# rollback, (2) handleManualWeightSave had NO rollback at all. These are not
+# speculative coverage — they are acceptance criteria from the BLD-1128 spec.
+# Approved: techlead APPROVE (comment f2391979, 2026-05-10T04:21Z).
+# Next consolidation target: merge overlapping flows/* ↔ acceptance/* suites
+# to recover headroom before adding further test files.
+MAX_TESTS="${MAX_TESTS:-2835}"                          # hard ceiling — fail if exceeded
 WARN_TESTS="${WARN_TESTS:-2700}"                        # warning threshold
 RUNTIME_BUDGET_SECONDS="${RUNTIME_BUDGET_SECONDS:-150}" # wall-time ceiling for `npm test`
 RUNTIME_WARN_SECONDS="${RUNTIME_WARN_SECONDS:-120}"     # warning threshold
