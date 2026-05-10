@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-- **Session Pacing**: Post-session summary now includes an **Estimated pacing** card showing a stacked bar with time spent Working, Resting, and in Other (transition/setup) time. Tap the card to see a per-exercise breakdown table. Working time for rep-based sets is estimated at ~2 s/rep; rest is the gap between consecutive sets on the same exercise (capped at 10 min). Available on completed sessions only.
+- **Session Pacing**: Post-session summary now includes an **Estimated pacing** card showing a stacked bar with time spent Working, Resting, and in Other (transition/setup) time. Tap the card to see a per-exercise breakdown table. Working time for rep-based sets is estimated at ~2 s/rep; rest is the gap between consecutive sets on the same exercise (capped at 10 min). Available on completed sessions only. Pacing duration now matches the session duration shown in the summary header.
+- **Session Pacing (fix)**: Pacing totals now correctly align with the session duration shown in the summary header; the breakdown sheet tap interaction is restored on all devices.
 
 ## v0.26.29 — 2026-05-10
 <!-- versionCode: 99 -->

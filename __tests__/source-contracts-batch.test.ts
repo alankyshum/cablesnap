@@ -1064,9 +1064,15 @@ describe("PacingCard source contracts (BLD-1144)", () => {
       const t = m[1].trim();
       if (t.length > 1) parts.push(t);
     }
-    // accessibilityLabel= and accessibilityHint= string literals
-    const a11y = src.matchAll(/accessibility(?:Label|Hint)=\{"([^"]+)"\}/g);
-    for (const m of a11y) parts.push(m[1]);
+    // accessibilityLabel= and accessibilityHint= — brace syntax: accessibilityLabel={"..."}
+    const a11yBrace = src.matchAll(/accessibility(?:Label|Hint)=\{"([^"]+)"\}/g);
+    for (const m of a11yBrace) parts.push(m[1]);
+    // accessibilityLabel= and accessibilityHint= — plain string syntax: accessibilityLabel="..."
+    const a11yPlain = src.matchAll(/accessibility(?:Label|Hint)="([^"]+)"/g);
+    for (const m of a11yPlain) parts.push(m[1]);
+    // accessibilityLabel= — template literal prefix (catches "Sort by ${...}" style)
+    const a11yTemplate = src.matchAll(/accessibility(?:Label|Hint)=\{`([^`$]+)/g);
+    for (const m of a11yTemplate) parts.push(m[1]);
     return parts.join(" ");
   }
 
