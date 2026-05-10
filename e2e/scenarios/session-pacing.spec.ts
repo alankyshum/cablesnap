@@ -105,9 +105,11 @@ test.describe("@scenario session-pacing", () => {
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("pacing-card")).toBeVisible({ timeout: 5000 });
 
-    // Tap the card body (the Pressable with accessibilityRole=button targeting breakdown)
+    // Click the card body (the Pressable with accessibilityRole=button targeting breakdown).
+    // Use click() — the mobile Playwright project sets only viewport, not hasTouch,
+    // so tap() is not supported. click() triggers the onPress handler identically.
     const cardBody = page.getByRole("button", { name: /Estimated pacing/i });
-    await cardBody.tap();
+    await cardBody.click();
 
     // Sheet should open with exercise names
     await expect(page.getByText("Cable Row")).toBeVisible({ timeout: 5000 });

@@ -188,6 +188,15 @@ for plan in "${PLANS[@]}"; do
       continue   # ✅ CI/process gate — verified by CI, not a test file
     fi
 
+    # 0b) Tracked TODO `[TODO-test: BLD-NNNN]` → intentional gap with a real
+    # followup ticket. Distinct from un-tracked `[TODO-test:]` (which fails).
+    # The ticket id pattern is BLD-<digits>; placeholder strings like
+    # "BLD-1123-followup" are NOT accepted.
+    todo_ref=$(echo "$line" | grep -oE '\[TODO-test:[[:space:]]+BLD-[0-9]+\]' | head -1 || true)
+    if [ -n "$todo_ref" ]; then
+      continue   # ✅ tracked followup ticket — work is queued, not forgotten
+    fi
+
     # 1) Inline annotation `[test: path]` → check file exists
     test_ref=$(echo "$line" | grep -oE '\[test:[^]]+\]' | head -1 || true)
     if [ -n "$test_ref" ]; then
