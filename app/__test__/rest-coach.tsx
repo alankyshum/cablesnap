@@ -9,13 +9,15 @@
  *   2. `Platform.OS === "web"`
  *   3. `typeof window !== "undefined" && window.__REST_COACH_HARNESS__ != null`
  *
- * Bundle hygiene: `__REST_COACH_HARNESS__` only referenced inside `if (__DEV__)` branch.
- * Verified by `scripts/verify-scenario-hook-not-in-bundle.sh`.
+ * Bundle hygiene: ALL references to `__REST_COACH_HARNESS__` are inside the
+ * `if (__DEV__)` branch in `useEffect`. Metro folds `__DEV__` to `false` in
+ * production builds and tree-shakes the entire branch. Verified by
+ * `scripts/verify-scenario-hook-not-in-bundle.sh`.
  *
  * Refs: BLD-1137. Precedent: BLD-535/537, BLD-1123.
  */
+import { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
-import { useState } from "react";
 import ReminderSection from "@/components/settings/ReminderSection";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useToast } from "@/components/ui/bna-toast";
@@ -29,36 +31,48 @@ type HarnessSeed = {
   harnessActive?: boolean;
 };
 
-declare global {
-  interface Window {
-    __REST_COACH_HARNESS__?: HarnessSeed;
-  }
-}
+type HarnessState = {
+  harnessActive: boolean;
+  restNotifications: boolean;
+  restPreEndCueSeconds: number;
+  restLiveCountdown: boolean;
+  restShowNextSet: boolean;
+  permDenied: boolean;
+};
 
 export default function RestCoachHarness() {
   const colors = useThemeColors();
   const toast = useToast();
-  const [harnessActive] = useState(() => {
-    if (!__DEV__ || Platform.OS !== "web" || typeof window === "undefined") return false;
-    return window.__REST_COACH_HARNESS__?.harnessActive ?? false;
-  });
-  const [restNotifications, setRestNotifications] = useState(() =>
-    window.__REST_COACH_HARNESS__?.restNotifications ?? true
-  );
-  const [restPreEndCueSeconds, setRestPreEndCueSeconds] = useState(() =>
-    window.__REST_COACH_HARNESS__?.restPreEndCueSeconds ?? 10
-  );
-  const [restLiveCountdown, setRestLiveCountdown] = useState(() =>
-    window.__REST_COACH_HARNESS__?.restLiveCountdown ?? true
-  );
-  const [restShowNextSet, setRestShowNextSet] = useState(() =>
-    window.__REST_COACH_HARNESS__?.restShowNextSet ?? false
-  );
-  const [permDenied, setPermDenied] = useState(() =>
-    window.__REST_COACH_HARNESS__?.permDenied ?? false
-  );
+  const [state, setState] = useState<HarnessState | null>(null);
 
-  if (!__DEV__ || Platform.OS !== "web" || !harnessActive) return null;
+  useEffect(() => {
+    if (__DEV__) {
+      if (Platform.OS !== "web") return;
+      if (typeof window === "undefined") return;
+
+      const w = window as unknown as Record<string, unknown>;
+      const seed = w["__REST_COACH_HARNESS__"] as HarnessSeed | undefined;
+      if (!seed?.harnessActive) return;
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState({
+        harnessActive: true,
+        restNotifications: seed.restNotifications ?? true,
+        restPreEndCueSeconds: seed.restPreEndCueSeconds ?? 10,
+        restLiveCountdown: seed.restLiveCountdown ?? true,
+        restShowNextSet: seed.restShowNextSet ?? false,
+        permDenied: seed.permDenied ?? false,
+      });
+
+      if (typeof document !== "undefined" && document.body) {
+        document.body.dataset.testReady = "true";
+      }
+    }
+  }, []);
+
+  if (!__DEV__) return null;
+  if (Platform.OS !== "web") return null;
+  if (!state?.harnessActive) return null;
 
   return (
     <View style={{ padding: 16, backgroundColor: colors.background, flex: 1 }} testID="rest-coach-harness">
@@ -69,17 +83,17 @@ export default function RestCoachHarness() {
         setReminders={() => {}}
         reminderTime="08:00"
         setReminderTime={() => {}}
-        permDenied={permDenied}
-        setPermDenied={setPermDenied}
+        permDenied={state.permDenied}
+        setPermDenied={(v) => setState((s) => s ? { ...s, permDenied: v } : s)}
         scheduleCount={0}
-        restNotifications={restNotifications}
-        setRestNotifications={setRestNotifications}
-        restPreEndCueSeconds={restPreEndCueSeconds}
-        setRestPreEndCueSeconds={setRestPreEndCueSeconds}
-        restLiveCountdown={restLiveCountdown}
-        setRestLiveCountdown={setRestLiveCountdown}
-        restShowNextSet={restShowNextSet}
-        setRestShowNextSet={setRestShowNextSet}
+        restNotifications={state.restNotifications}
+        setRestNotifications={(v) => setState((s) => s ? { ...s, restNotifications: v } : s)}
+        restPreEndCueSeconds={state.restPreEndCueSeconds}
+        setRestPreEndCueSeconds={(v) => setState((s) => s ? { ...s, restPreEndCueSeconds: v } : s)}
+        restLiveCountdown={state.restLiveCountdown}
+        setRestLiveCountdown={(v) => setState((s) => s ? { ...s, restLiveCountdown: v } : s)}
+        restShowNextSet={state.restShowNextSet}
+        setRestShowNextSet={(v) => setState((s) => s ? { ...s, restShowNextSet: v } : s)}
       />
     </View>
   );

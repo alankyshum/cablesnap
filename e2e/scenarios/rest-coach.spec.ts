@@ -46,6 +46,7 @@ test.describe("@scenario rest-coach", () => {
     });
 
     await page.goto("/__test__/rest-coach");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
     const harness = page.getByTestId("rest-coach-harness");
     await expect(harness).toBeVisible({ timeout: 5000 });
 
@@ -79,6 +80,7 @@ test.describe("@scenario rest-coach", () => {
     });
 
     await page.goto("/__test__/rest-coach");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
     const harness = page.getByTestId("rest-coach-harness");
     await expect(harness).toBeVisible({ timeout: 5000 });
 
@@ -108,6 +110,7 @@ test.describe("@scenario rest-coach", () => {
     });
 
     await page.goto("/__test__/rest-coach");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
     const harness = page.getByTestId("rest-coach-harness");
     await expect(harness).toBeVisible({ timeout: 5000 });
 
