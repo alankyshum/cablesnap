@@ -334,7 +334,6 @@ None. Feature is read-only over `set_media` and `workout_sets`.
 **In v1:**
 - Side-by-side / stacked dual playback of two clips for the same exercise.
 - Synchronized Play / Pause / Reset transport.
-- Independent per-clip scrubbing.
 - Swap A ↔ B.
 - Picker strip with PR badges.
 - Entry from Form Library and from single-clip player.
@@ -344,7 +343,10 @@ None. Feature is read-only over `set_media` and `workout_sets`.
 - Cross-exercise comparison (e.g. cable row vs barbell row).
 - Auto-alignment of contraction phase (would need on-device pose detection — too
   heavy for v1, and would push us into ML model evaluation territory).
-- Frame-by-frame stepping (use existing per-clip scrubber for now).
+- Independent per-clip scrubbers and frame-by-frame stepping. Existing
+  `CompareView.tsx:107-129` is `nativeControls={false}` plus a play-only overlay,
+  so there is no scrubber today; v1 keeps per-pane play/pause plus shared
+  Play/Pause/Reset and defers scrubbing/frame-stepping to a follow-up.
 - Annotation / drawing overlay (separate feature).
 - Picture-in-picture overlay (one video on top of the other with opacity) —
   considered, deferred for performance reasons. Side-by-side first.
