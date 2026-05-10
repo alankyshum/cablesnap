@@ -53,8 +53,12 @@ test.describe("@scenario rest-coach", () => {
     // Pre-end cue segmented control should have 10s selected
     await expect(page.getByRole("radio", { name: "10 seconds" })).toBeVisible();
 
-    // Show next set toggle should be present
-    await expect(page.getByRole("switch", { name: "Show next set on lock screen" })).toBeVisible();
+    // Show next set toggle should be present.
+    // RN Web emits BOTH a `<div role="switch">` (visible toggle) and a hidden
+    // `<input role="switch">` (a11y companion control), so the bare role-name
+    // selector hits a strict-mode violation. `.first()` targets the visible
+    // toggle deterministically.
+    await expect(page.getByRole("switch", { name: "Show next set on lock screen" }).first()).toBeVisible();
 
     // No disabled-state helper text when master is ON
     await expect(page.getByText("Enable rest-timer notifications to use these.")).not.toBeVisible();
