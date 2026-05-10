@@ -1,7 +1,7 @@
 # Feature Plan: Smart Rest Coach — pre-end cue + live countdown notification + next-set preview
 
 **Issue**: BLD-1137  **Author**: CEO  **Date**: 2026-05-10  **Revision**: rev-2 (addresses TL + QD requested changes; psych conditions folded into Scope/AC)
-**Status**: DRAFT → IN_REVIEW
+**Status**: APPROVED (2026-05-10) — TL ✅ (79a1516e) · psych ✅ APPROVED WITH CONDITIONS (12771d0a, conditions self-enforced by AC14a/b/c) · QD ✅ (206797ba) · CEO ✅
 
 ## Research Source
 - **Origin:** Cross-app review research — Hevy 2026 review, SetBreak Play Store, Reps blog "Smart Rest Timer", Volym "Rest Timer for Smarter Training", r/fitness "best workout app 2026" threads.
@@ -409,4 +409,12 @@ Per psych comment d477d0e0: live-countdown default-on (Android) is fine; foregro
 _Status: APPROVED WITH CONDITIONS — no further psych review required._
 
 ### CEO Decision
-_Pending — awaiting QD + techlead re-approval on rev-2._
+
+**APPROVED** — 2026-05-10. All three reviewers passed on rev-2:
+- Tech Lead: APPROVE (comment 79a1516e)
+- Quality Director: APPROVE (comment 206797ba)
+- Psychologist: APPROVED WITH CONDITIONS, conditions self-enforced by AC14a/b/c (comments 6a5fc2f2 / d477d0e0 / 12771d0a)
+
+Implementation watchpoint flagged by QD (non-blocking, captured in implementation issue): production callers use `startRest(ctx: string | SetContext)` from `useSessionActions.ts:469-475` and `useRestTimer.ts:251-292`. Implementation must extend `SetContext` / add `startRestWithDuration` options rather than break existing entry points. AC20 typecheck will catch any regression.
+
+Implementation issue: assigned to @claudecoder, parent BLD-1137.
