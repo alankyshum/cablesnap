@@ -6,16 +6,46 @@
  *
  * - Writes only under `${FileSystem.Paths.cache}/form-clip-thumbs/`
  * - LRU eviction when cumulative size > 25 MB
- * - Caps concurrent getThumbnailAsync calls at 3 (p-limit)
+ * - Caps concurrent getThumbnailAsync calls at 3 (inline semaphore — no p-limit dep)
  * - `purgeThumb(setId)` invoked from softDeleteClip and reconcileOrphans
+ * - `getThumbnailAsync` is lazy-loaded inside getOrCreateThumb to avoid
+ *   native-module errors in Jest environments that don't run FormClipsPlayer.
  */
 
 import { File, Directory, Paths } from "expo-file-system";
-import { getThumbnailAsync } from "expo-video-thumbnails";
 import { toAbsPath } from "@/lib/media/set-media-common";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pLimit = require("p-limit");
+// ---------------------------------------------------------------------------
+// Inline concurrency semaphore (replaces p-limit)
+// ---------------------------------------------------------------------------
+
+function createSemaphore(maxConcurrent: number) {
+  let running = 0;
+  const queue: Array<() => void> = [];
+
+  function next() {
+    if (running >= maxConcurrent || queue.length === 0) return;
+    running++;
+    const fn = queue.shift()!;
+    fn();
+  }
+
+  return function limit<T>(task: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      queue.push(async () => {
+        try {
+          resolve(await task());
+        } catch (err) {
+          reject(err);
+        } finally {
+          running--;
+          next();
+        }
+      });
+      next();
+    });
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -31,7 +61,7 @@ const EVICT_DEBOUNCE_MS = 60_000; // at most one eviction pass per minute
 // Module-level state
 // ---------------------------------------------------------------------------
 
-const limit = pLimit(3);
+const limit = createSemaphore(3);
 let lastEvictAt = 0;
 
 // ---------------------------------------------------------------------------
@@ -90,7 +120,7 @@ async function maybeEvict(): Promise<void> {
  * Returns the cached thumbnail URI for `setId`, generating it via
  * `getThumbnailAsync` if not already cached.
  *
- * Throttled to 3 concurrent invocations (p-limit).
+ * Throttled to 3 concurrent invocations (inline semaphore).
  */
 export async function getOrCreateThumb(
   setId: string,
@@ -108,6 +138,8 @@ export async function getOrCreateThumb(
 
     // Generate
     const absPath = toAbsPath(relPath);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getThumbnailAsync } = require("expo-video-thumbnails") as typeof import("expo-video-thumbnails");
     const result = await getThumbnailAsync(absPath, {
       time: THUMB_TIME_MS,
       quality: THUMB_QUALITY,

@@ -7,7 +7,8 @@
  * - AC6: File-missing pane renders placeholder with accessibilityLabel
  * - AC10: Transport buttons have accessibilityState disabled when not loaded
  * - AC11: Sentry_Mask wraps videos
- * - AC12: useMediaSurfaceMounted called exactly once per CompareBody, regardless of swaps
+ * - AC12: useMediaSurfaceMounted fires exactly once per CompareBody,
+ *         regardless of swaps — verified via increment counter (behavioral, not structural)
  */
 import React from "react";
 import { render, fireEvent, act, waitFor } from "@testing-library/react-native";
@@ -16,23 +17,42 @@ import { getClipsForExercise } from "../../../lib/media/form-clips";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockUseMediaSurfaceMounted = jest.fn();
-let playCallCount = 0;
-let pauseCallCount = 0;
-let seekByCallCount = 0;
-const mockPlay = jest.fn(() => { playCallCount++; });
-const mockPause = jest.fn(() => { pauseCallCount++; });
-const mockSeekBy = jest.fn(() => { seekByCallCount++; });
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let mountCount = 0;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let unmountCount = 0;
+const mockIncrement = jest.fn(() => { mountCount++; });
+const mockDecrement = jest.fn(() => { unmountCount++; });
+
+jest.mock("@/hooks/useMediaSurfaceMounted", () => ({
+  useMediaSurfaceMounted: () => {
+    const { useEffect } = require("react") as typeof import("react");
+    const { increment, decrement } = require("@/lib/media/replay-gate") as {
+      increment: () => void;
+      decrement: () => void;
+    };
+    /* eslint-disable react-hooks/exhaustive-deps */
+    useEffect(() => {
+      increment();
+      return () => { decrement(); };
+    }, []);
+    /* eslint-enable react-hooks/exhaustive-deps */
+  },
+}));
+
+jest.mock("@/lib/media/replay-gate", () => ({
+  increment: () => mockIncrement(),
+  decrement: () => mockDecrement(),
+}));
+
+const mockPlay = jest.fn();
+const mockPause = jest.fn();
 const mockPlayerFactory = jest.fn(() => ({
   play: mockPlay,
   pause: mockPause,
-  seekBy: mockSeekBy,
+  currentTime: 0,
   playing: false,
   loop: false,
-}));
-
-jest.mock("@/hooks/useMediaSurfaceMounted", () => ({
-  useMediaSurfaceMounted: () => mockUseMediaSurfaceMounted(),
 }));
 
 jest.mock("@/hooks/useThemeColors", () => ({
@@ -116,12 +136,13 @@ beforeEach(() => {
   mockFileExists = true;
   playCallCount = 0;
   pauseCallCount = 0;
-  seekByCallCount = 0;
+  mountCount = 0;
+  unmountCount = 0;
 });
 
 describe("CompareView — replay-gate counter (AC12)", () => {
-  it("calls useMediaSurfaceMounted on mount (hook is present at root)", async () => {
-    render(
+  it("increments replay-gate counter exactly once on mount", async () => {
+    const { unmount } = render(
       <CompareView
         isVisible
         clipA={clipA}
@@ -130,11 +151,13 @@ describe("CompareView — replay-gate counter (AC12)", () => {
         onClose={jest.fn()}
       />,
     );
-    // Hook is called at least once (structural: it IS present at CompareBody root).
-    expect(mockUseMediaSurfaceMounted).toHaveBeenCalled();
+    await act(async () => {});
+    expect(mockIncrement).toHaveBeenCalledTimes(1);
+    expect(mockDecrement).toHaveBeenCalledTimes(0);
+    unmount();
   });
 
-  it("swap does not cause extra hook instances (structural: hook at CompareBody root only)", () => {
+  it("counter stays at 1 after 5 swaps (not incremented per swap)", async () => {
     const { getByLabelText } = render(
       <CompareView
         isVisible
@@ -144,19 +167,30 @@ describe("CompareView — replay-gate counter (AC12)", () => {
         onClose={jest.fn()}
       />,
     );
-    // Hook called at least once per render — confirm it IS present.
-    const callsAtMount = mockUseMediaSurfaceMounted.mock.calls.length;
-    expect(callsAtMount).toBeGreaterThan(0);
-
-    jest.clearAllMocks();
+    await act(async () => {});
     const swapBtn = getByLabelText("Swap clip A and B");
-    fireEvent.press(swapBtn);
-    const callsAfterSwap = mockUseMediaSurfaceMounted.mock.calls.length;
+    for (let i = 0; i < 5; i++) {
+      fireEvent.press(swapBtn);
+      await act(async () => {});
+    }
+    expect(mockIncrement).toHaveBeenCalledTimes(1);
+    expect(mockDecrement).toHaveBeenCalledTimes(0);
+  });
 
-    // Swap triggers a re-render; hook call count should be roughly the same
-    // as callsAtMount (not double, which would indicate hook in 2 places).
-    // Allow up to 2x to account for React Strict Mode double-invocation.
-    expect(callsAfterSwap).toBeLessThanOrEqual(callsAtMount * 2 + 2);
+  it("decrements replay-gate counter on unmount", async () => {
+    const { unmount } = render(
+      <CompareView
+        isVisible
+        clipA={clipA}
+        clipB={clipB}
+        exerciseId="ex-1"
+        onClose={jest.fn()}
+      />,
+    );
+    await act(async () => {});
+    expect(mockDecrement).toHaveBeenCalledTimes(0);
+    unmount();
+    expect(mockDecrement).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -291,7 +325,7 @@ describe("CompareView — not rendered when isVisible=false (AC12)", () => {
       />,
     );
     expect(toJSON()).toBeNull();
-    expect(mockUseMediaSurfaceMounted).not.toHaveBeenCalled();
+    expect(mockIncrement).not.toHaveBeenCalled();
   });
 });
 

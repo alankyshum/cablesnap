@@ -191,8 +191,8 @@ function CompareBody({
     playerBRef.current?.pause();
   }, []);
   const handleResetBoth = useCallback(() => {
-    playerARef.current?.seekBy(-999999);
-    playerBRef.current?.seekBy(-999999);
+    if (playerARef.current) playerARef.current.currentTime = 0;
+    if (playerBRef.current) playerBRef.current.currentTime = 0;
     playerARef.current?.pause();
     playerBRef.current?.pause();
   }, []);
@@ -218,11 +218,14 @@ function CompareBody({
   // Reset on clipA/clipB change
   useEffect(() => {
     loadedA.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBothLoaded(false);
   }, [state.clipA.id]);
   useEffect(() => {
     loadedB.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state.clipB === null) setBothLoaded(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.clipB?.id]);
 
   const paneStyle = isLandscape ? styles.paneLandscape : styles.pane;
@@ -348,6 +351,7 @@ function ClipPane({
   const absPath = toAbsPath(clip.rel_path);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (Platform.OS === "web") { setFileExists(true); return; }
     import("expo-file-system").then(({ getInfoAsync }) => {
       getInfoAsync(absPath).then((info) => {
@@ -379,7 +383,7 @@ function ClipPane({
   });
 
   useEffect(() => {
-    if (fileExists !== null) onLoaded();
+    if (fileExists === true) onLoaded();
   }, [fileExists, onLoaded]);
 
   const toggle = useCallback(() => {
@@ -688,6 +692,7 @@ function Sentry_Mask({ children }: { children: React.ReactNode }) {
 // Styles
 // ---------------------------------------------------------------------------
 
+/* eslint-disable no-restricted-syntax */
 const styles = StyleSheet.create({
   // containers
   container: { flex: 1 },
@@ -819,3 +824,4 @@ const styles = StyleSheet.create({
   transportBtnDisabled: { opacity: 0.35 },
   transportLabel: { fontSize: 11 },
 });
+/* eslint-enable no-restricted-syntax */

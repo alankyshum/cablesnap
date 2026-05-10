@@ -1152,13 +1152,19 @@ describe("CompareView / FormClipsPlayer — AC8 banned token scan", () => {
   const compareViewSrc = readSrc("components/session/CompareView.tsx");
   const formClipsPlayerSrc = readSrc("components/session/FormClipsPlayer.tsx");
   const formClipThumbsSrc = readSrc("lib/media/form-clip-thumbs.ts");
+  // FormLibraryTab added per techlead review (AC8 scope): must scan entry-point too.
+  // Note: [id].tsx and form-clips.ts are excluded — TypeScript generics produce xp/other
+  // false positives via the />([^<{]+)</ regex matching generic syntax.
+  const formLibraryTabSrc = readSrc("components/session/FormLibraryTab.tsx");
 
   const allUserFacing =
     extractUserFacingStrings(compareViewSrc) +
     " " +
     extractUserFacingStrings(formClipsPlayerSrc) +
     " " +
-    extractUserFacingStrings(formClipThumbsSrc);
+    extractUserFacingStrings(formClipThumbsSrc) +
+    " " +
+    extractUserFacingStrings(formLibraryTabSrc);
 
   const BANNED = [
     "streak",
