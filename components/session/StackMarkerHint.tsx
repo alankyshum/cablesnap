@@ -15,6 +15,7 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { X } from "lucide-react-native";
+import { QueryClientContext } from "@tanstack/react-query";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
@@ -23,6 +24,16 @@ import { useStackMarkerHint } from "@/hooks/useStackMarkerHint";
 const HINT_LABEL = "Calibrate this gym's stacks in Settings to log cable sets by marker.";
 
 export function StackMarkerHint() {
+  // Defensive context check: SetRow is rendered standalone in many unit tests
+  // without a QueryClientProvider. Without this guard the hook below would
+  // throw and crash unrelated SetRow assertions. In production the session
+  // screen always provides a client, so this branch never executes.
+  const hasQueryClient = React.useContext(QueryClientContext) !== undefined;
+  if (!hasQueryClient) return null;
+  return <StackMarkerHintInner />;
+}
+
+function StackMarkerHintInner() {
   const colors = useThemeColors();
   const { dismissed, dismiss } = useStackMarkerHint();
 

@@ -18,6 +18,7 @@ import React, { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import WeightPicker from "@/components/WeightPicker";
 import { StackMarkerPill } from "./StackMarkerPill";
+import { StackMarkerHint } from "./StackMarkerHint";
 import { MarkerPickerSheet } from "./MarkerPickerSheet";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -150,34 +151,37 @@ export function SetWeightCell({
   }
 
   return (
-    <View style={styles.row}>
-      <WeightPicker
-        value={displayedWeight}
-        step={step}
-        unit={unit}
-        onValueChange={keypadOverride ? handleKeypadWeightChange : onWeightChange}
-        accessibilityLabel={accessibilityLabel}
-      />
-      {showUpsellAffordance && (
-        <Pressable
-          onPress={openPicker}
-          hitSlop={8}
-          style={[styles.upsellBtn, { borderColor: colors.outlineVariant }]}
-          accessibilityRole="button"
-          accessibilityLabel="Switch to stack marker mode for this set"
-          testID={`set-${setId}-marker-upsell`}
-        >
-          <Text style={[styles.upsellText, { color: colors.onSurfaceVariant }]}>↕</Text>
-        </Pressable>
-      )}
-      {showUpsellAffordance && (
-        <MarkerPickerSheet
-          isVisible={pickerOpen}
-          onClose={closePicker}
-          stacks={calibratedStacks}
-          onConfirm={handleUpsellConfirm}
+    <View>
+      <View style={styles.row}>
+        <WeightPicker
+          value={displayedWeight}
+          step={step}
+          unit={unit}
+          onValueChange={keypadOverride ? handleKeypadWeightChange : onWeightChange}
+          accessibilityLabel={accessibilityLabel}
         />
-      )}
+        {showUpsellAffordance && (
+          <Pressable
+            onPress={openPicker}
+            hitSlop={8}
+            style={[styles.upsellBtn, { borderColor: colors.outlineVariant }]}
+            accessibilityRole="button"
+            accessibilityLabel="Switch to stack marker mode for this set"
+            testID={`set-${setId}-marker-upsell`}
+          >
+            <Text style={[styles.upsellText, { color: colors.onSurfaceVariant }]}>↕</Text>
+          </Pressable>
+        )}
+        {showUpsellAffordance && (
+          <MarkerPickerSheet
+            isVisible={pickerOpen}
+            onClose={closePicker}
+            stacks={calibratedStacks}
+            onConfirm={handleUpsellConfirm}
+          />
+        )}
+      </View>
+      {isCable && !hasCalibration && <StackMarkerHint />}
     </View>
   );
 }
