@@ -45,6 +45,11 @@ import {
   updateSetRepsAndDuration,
 } from "../lib/db/session-sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
+import { resolveMarker } from "../lib/cable-stack";
+import {
+  fetchStacksWithCalibrations,
+  type StackWithCalibrations,
+} from "./useActiveCalibration";
 import {
   getLastBodyweightGripVariant,
   isBodyweightGripExercise,
@@ -606,13 +611,26 @@ export function useSessionActions({
       try {
         const lastMarker = await getRecentStackHistory(exerciseId);
         if (lastMarker?.stack_marker != null && lastMarker.stack_id) {
-          // Fetch current calibration from cache (does not block on network).
-          const currentStacks: import("@/hooks/useActiveCalibration").StackWithCalibrations[] = queryClient.getQueryData(
-            ["stack-calibrations", session.gym_id]
-          ) ?? [];
+          // BLD-1130 G2 (closes BLD-1127 AC6 cold-cache race): use fetchQuery
+          // (not getQueryData) so a cold cache awaits a real fetch instead of
+          // silently skipping autofill on the first add-set after gym change.
+          // Same key as `useActiveCalibration` so react-query dedupes any
+          // concurrent in-flight fetch from the rendered ExerciseGroupCard.
+          // Use relative path (matches static imports elsewhere in this file)
+          // so jest's resolver doesn't depend on the `@/*` alias mapper.
+          // BLD-1130: fetchStacksWithCalibrations + resolveMarker statically
+          // imported at top of file. The previous `await import()` pattern
+          // failed under jest CJS dynamic-import without
+          // --experimental-vm-modules; static binding makes the cold-cache
+          // path testable and removes a per-call resolver round-trip.
+          const currentStacks: StackWithCalibrations[] =
+            await queryClient.fetchQuery({
+              queryKey: ["stack-calibrations", session.gym_id],
+              queryFn: () => fetchStacksWithCalibrations(session.gym_id as string),
+              staleTime: 60_000,
+            });
           const matchedStack = currentStacks.find((s) => s.id === lastMarker.stack_id);
           if (matchedStack) {
-            const { resolveMarker } = await import("../lib/cable-stack");
             const resolved = resolveMarker(matchedStack.calibrations, lastMarker.stack_marker);
             if (resolved !== null) {
               await updateSetStackMarker(newSet.id, {
