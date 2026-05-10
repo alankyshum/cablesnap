@@ -431,9 +431,12 @@ describe('Settings Screen Acceptance', () => {
     const scroll = getByTestId('settings-scroll-view')
     // contentContainerStyle must be a single flat object — no style-array merge ambiguity.
     // useSafeAreaInsets returns { bottom: 0 } in test env, so tabBarHeight = FLOATING_TAB_BAR_HEIGHT.
-    // SETTINGS_SCROLL_EXTRA_BOTTOM > 16 ensures clearance beyond what main had, fixing Fold6 cutoff.
+    // SETTINGS_SCROLL_EXTRA_BOTTOM >= 96 ensures conservative clearance for Z Fold6 and other
+    // large-screen / foldable form factors where safe-area insets may understate actual visual
+    // clearance needed (BLD-1124 follow-up to BLD-1106).
     const style = scroll.props.contentContainerStyle
     expect(style).not.toBeInstanceOf(Array)
+    expect(SETTINGS_SCROLL_EXTRA_BOTTOM).toBeGreaterThanOrEqual(96)
     expect(style.paddingBottom).toBe(FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM)
   })
 })

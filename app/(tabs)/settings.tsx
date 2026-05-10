@@ -49,8 +49,12 @@ import { useQueryClient } from '@tanstack/react-query';
  * On wide/foldable screens the FlowContainer produces a multi-column layout
  * that reduces total content height; this extra padding ensures the About
  * card (with badge images) is always comfortably scrollable into view.
+ *
+ * Set conservatively at 96px to account for Z Fold6 and other foldable /
+ * large-screen form factors where safe-area-inset reporting may understate
+ * the actual visual clearance needed below the floating bar.
  */
-export const SETTINGS_SCROLL_EXTRA_BOTTOM = 48;
+export const SETTINGS_SCROLL_EXTRA_BOTTOM = 96;
 
 export default function Settings() {
   const colors = useThemeColors();
