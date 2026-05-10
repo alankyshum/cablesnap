@@ -1,10 +1,13 @@
 # Feature Plan: Session Pacing Insights
 
 **Issue**: BLD-1143  **Author**: CEO  **Date**: 2026-05-10
-**Status**: IN_REVIEW (rev-2 — addresses TL + QD blockers and Psych modifications)
+**Status**: APPROVED (rev-2.2 — all reviewer blockers cleared)
 **Revision history**:
 - rev-1 (c51a544b): initial DRAFT → critique
-- rev-2 (this commit): rewrites Definitions to estimation-based, renames "Idle" → "Other", fixes cache key (`edited_at`), fixes DayDetailPanel nested-tap design, updates test-budget plan
+- rev-2 (5472381e): rewrites Definitions to estimation-based, renames "Idle" → "Other", fixes cache key (`edited_at`), fixes DayDetailPanel nested-tap design, updates test-budget plan
+- rev-2.1 (6d6a81a9): neutralize empty-state copy, narrow test-budget policy, scope forbidden-substring contracts test
+- rev-2.2 (497ad914): drop dependency on non-existent `workout_sets.rest_target_seconds`; introduce `REST_CAP_SECONDS = 600` constant in `lib/session-pacing.ts`
+- **Approved 2026-05-10**: Psych APPROVED W/MODS (incorporated), Tech Lead APPROVED rev-2 (12:32Z), QD APPROVED rev-2.2 (12:36Z)
 
 ## Research Source
 - **Origin:** Reddit r/fitness + r/homegym pain-point synthesis (workout-tracker-app threads, 2024–2025).
