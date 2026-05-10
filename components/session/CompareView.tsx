@@ -201,7 +201,7 @@ function CompareBody({
   const loadedA = useRef(false);
   const loadedB = useRef(false);
   const checkBothLoaded = useCallback(() => {
-    if (loadedA.current && (state.clipB === null || loadedB.current)) {
+    if (loadedA.current && state.clipB !== null && loadedB.current) {
       setBothLoaded(true);
     }
   }, [state.clipB]);
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 30,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: radii.pill,
   },
   divider: { height: 2 },
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,

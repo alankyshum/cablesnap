@@ -134,8 +134,6 @@ const clipB = makeClip("clip-b");
 beforeEach(() => {
   jest.clearAllMocks();
   mockFileExists = true;
-  playCallCount = 0;
-  pauseCallCount = 0;
   mountCount = 0;
   unmountCount = 0;
 });

@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Form Check Comparison**: Compare form clips side-by-side from the Form Library or from the clip player with synchronized play/pause/reset, A↔B swap, in-sheet clip picker, and landscape layout support.
 - **Settings cleanup**: Removed the Health Connect integration entry from Settings. The feature was never fully functional; removing it reduces permission surface and eliminates a confusing toggle for Android users.
 - **Smart Rest Coach (fix)**: Live countdown and scheduled rest notifications now correctly resume after the app is force-quit and reopened mid-rest on Android. Previously, OS-scheduled notifications could be lost on process kill; they are now re-scheduled on cold-start resume.
 - **Session Pacing**: Post-session summary now includes an **Estimated pacing** card showing a stacked bar with time spent Working, Resting, and in Other (transition/setup) time. Tap the card to see a per-exercise breakdown table. Working time for rep-based sets is estimated at ~2 s/rep; rest is the gap between consecutive sets on the same exercise (capped at 10 min). Available on completed sessions only. Pacing duration now matches the session duration shown in the summary header.

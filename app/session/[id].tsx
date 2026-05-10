@@ -40,12 +40,11 @@ import { VariantPickerSheet } from "../../components/session/VariantPickerSheet"
 import { BodyweightGripPickerSheet } from "../../components/session/BodyweightGripPickerSheet";
 import { FormVideoSheet } from "../../components/session/FormVideoSheet";
 import { FormClipsPlayer } from "../../components/session/FormClipsPlayer";
-import { CompareView } from "../../components/session/CompareView";
 import { PulleyPinPickerSheet } from "../../components/session/PulleyPinPickerSheet";
 import { SetupPhotoSheet } from "../../components/session/SetupPhotoSheet";
 import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
-import { toAbsPath, getClipsForExercise } from "../../lib/media/form-clips";
-import type { SetMediaRow } from "../../lib/media/form-clips";
+import { toAbsPath } from "../../lib/media/form-clips";
+import { useCompareFromPlayer } from "../../hooks/useCompareFromPlayer";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -164,10 +163,6 @@ export default function ActiveSession() {
   const [playerSetId, setPlayerSetId] = useState<string | null>(null);
   // Actual SetMediaRow for the set being played (null when no player open).
   const [playerClip, setPlayerClip] = useState<import("../../lib/media/form-clips").SetMediaRow | null>(null);
-  // BLD-1151: Compare view state.
-  const [compareClipA, setCompareClipA] = useState<SetMediaRow | null>(null);
-  const [compareExerciseId, setCompareExerciseId] = useState<string | null>(null);
-  const [compareSiblingCounts, setCompareSiblingCounts] = useState<Record<string, number>>({});
   // Map of setId → hasClip, populated after set completion check.
   const [hasClipMap, setHasClipMap] = useState<Record<string, boolean>>({});
   const [pulleyPinSetId, setPulleyPinSetId] = useState<string | null>(null);
@@ -212,28 +207,13 @@ export default function ActiveSession() {
         import("../../lib/db/form-clips").then(({ getClipForSet }) => {
           getClipForSet(setId).then((clip) => setPlayerClip(clip)).catch(() => {});
         }).catch(() => {});
-        // Load sibling clip count for the Compare button.
-        const found = findSetById(setId);
-        if (found) {
-          getClipsForExercise(found.exerciseId)
-            .then((clips) => setCompareSiblingCounts((prev) => ({ ...prev, [found.exerciseId]: clips.length })))
-            .catch(() => {});
-        }
       }
     } else {
       setFormVideoSetId(setId);
     }
-  }, [hasClipMap, findSetById]);
+  }, [hasClipMap]);
 
-  // BLD-1151: Single-batched handoff from player to compare (AC2/AC12 contract).
-  const handleRequestCompare = useCallback((clipA: SetMediaRow) => {
-    const found = playerSetId ? findSetById(playerSetId) : null;
-    // One batched update: close player, open compare.
-    setPlayerSetId(null);
-    setPlayerClip(null);
-    setCompareClipA(clipA);
-    setCompareExerciseId(found?.exerciseId ?? null);
-  }, [playerSetId, findSetById]);
+  const { handleRequestCompare, getSibCount, renderCompareView } = useCompareFromPlayer({ playerSetId, setPlayerSetId, setPlayerClip, findSetById });
 
   const handleClipSaved = useCallback((setId: string, clipId: string) => {
     setFormVideoSetId(null);
@@ -623,7 +603,6 @@ export default function ActiveSession() {
       {Platform.OS !== "web" && (() => {
         const playerSetInfo = playerSetId ? findSetById(playerSetId) : null;
         const playerSet = playerSetInfo?.set ?? null;
-        const sibCount = playerSetInfo ? (compareSiblingCounts[playerSetInfo.exerciseId] ?? 0) : 0;
         return (
           <FormClipsPlayer
             isVisible={!!playerSetId && !!playerClip}
@@ -631,23 +610,13 @@ export default function ActiveSession() {
             weightLabel={playerSet ? `${playerSet.weight ?? ""} ${unit}`.trim() : undefined}
             reps={playerSet?.reps ?? null}
             exerciseId={playerSetInfo?.exerciseId}
-            siblingClipCount={sibCount}
+            siblingClipCount={playerSetInfo ? getSibCount(playerSetInfo.exerciseId) : 0}
             onRequestCompare={handleRequestCompare}
             onClose={() => { setPlayerSetId(null); setPlayerClip(null); }}
           />
         );
       })()}
-      {Platform.OS !== "web" && compareClipA && compareExerciseId && (
-        <CompareView
-          isVisible
-          clipA={compareClipA}
-          clipB={null}
-          exerciseId={compareExerciseId}
-          pickerEnabled
-          pickerOpen
-          onClose={() => { setCompareClipA(null); setCompareExerciseId(null); }}
-        />
-      )}
+      {renderCompareView()}
       {Platform.OS !== "web" && (() => {
         const setupSetInfo = setupPhotoSetId ? findSetById(setupPhotoSetId) : null;
         return setupSetInfo ? (
