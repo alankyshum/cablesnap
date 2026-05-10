@@ -133,6 +133,7 @@ describe("useSessionActions – warmup rest timer guard", () => {
         startRest,
         startRestWithDuration,
         startRestWithBreakdown: jest.fn(),
+    dismissRest: jest.fn(),
         session: { started_at: Date.now(), name: "Test" },
         showToast,
         showError,
@@ -179,8 +180,8 @@ describe("useSessionActions – warmup rest timer guard", () => {
       await result.current.handleCheck(linkedSet);
     });
 
-    // Last exercise in the linked group → startRestWithDuration
-    expect(startRestWithDuration).toHaveBeenCalledWith(90);
+    // Last exercise in the linked group → startRestWithDuration (single set = isLastSet, no next preview)
+    expect(startRestWithDuration).toHaveBeenCalledWith(90, null, true);
   });
 
   it("does NOT auto-start rest timer for warmup set in a superset", async () => {

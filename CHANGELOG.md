@@ -22,7 +22,17 @@ marker) at release time.
 
 ## Unreleased
 
+- **Session Pacing**: Post-session summary now includes an **Estimated pacing** card showing a stacked bar with time spent Working, Resting, and in Other (transition/setup) time. Tap the card to see a per-exercise breakdown table. Working time for rep-based sets is estimated at ~2 s/rep; rest is the gap between consecutive sets on the same exercise (capped at 10 min). Available on completed sessions only. Pacing duration now matches the session duration shown in the summary header.
+- **Session Pacing (fix)**: Pacing totals now correctly align with the session duration shown in the summary header; the breakdown sheet tap interaction is restored on all devices.
+
+## v0.26.29 — 2026-05-10
+<!-- versionCode: 99 -->
+
+- **Smart Rest Coach**: Rest-timer notifications now include a pre-end cue (5–20s before rest ends), a live lock-screen countdown that updates every 5 seconds (Android), and an optional next-set preview showing exercise, target weight, and rep range right on the notification — so you never need to unlock the phone just to remember what's next. All three features are individually togglable under Settings → Rest Timer.
 - **Stack marker quick-pick**: Cable exercises at calibrated gyms now show a marker pill instead of a numeric weight field. Tap to pick your stack position; the true weight is resolved automatically. Long-press to fall back to numeric entry on any set.
+- **Stack marker hint**: Cable exercises at gyms without saved calibration now show a one-time, dismissible hint pointing to where to add stack calibration so future sessions can use marker quick-pick.
+- **Marker autofill reliability**: First add-set after switching gyms now consistently fills in the right stack marker instead of occasionally dropping back to numeric entry.
+- **Bug fix — marker/weight save reliability**: On rare DB write failures when logging a stack marker or manual weight, the set row now correctly reverts to its previous state instead of showing stale or blank values.
 
 ## v0.26.28 — 2026-05-10
 <!-- versionCode: 98 -->

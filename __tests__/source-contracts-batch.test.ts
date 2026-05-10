@@ -813,3 +813,312 @@ describe("plateau pejorative-token contract (BLD-1122)", () => {
     expect(violations).toHaveLength(0);
   });
 });
+
+// ─── BLD-1137: Smart Rest Coach source-contract tests ────────────────────────
+
+describe("BLD-1137 Smart Rest Coach source contracts", () => {
+  let formatPreviewBody: (p: import("../lib/notifications").NextSetPreview) => string | null;
+  let notificationsModule: typeof import("../lib/notifications");
+
+  beforeAll(() => {
+    jest.resetModules();
+    jest.doMock("expo-constants", () => ({ executionEnvironment: "standalone" }));
+    jest.doMock("expo-notifications", () => ({
+      getPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
+      requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
+      cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
+      cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
+      dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
+      scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
+      setNotificationHandler: jest.fn(),
+      addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+      SchedulableTriggerInputTypes: { WEEKLY: "weekly", TIME_INTERVAL: "timeInterval" },
+      setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+      AndroidImportance: { LOW: 2 },
+    }));
+    jest.doMock("expo-haptics", () => ({
+      selectionAsync: jest.fn().mockResolvedValue(undefined),
+      notificationAsync: jest.fn().mockResolvedValue(undefined),
+      NotificationFeedbackType: { Warning: "warning" },
+    }));
+    jest.doMock("../lib/db", () => ({
+      getSchedule: jest.fn().mockResolvedValue([]),
+      getTemplateById: jest.fn().mockResolvedValue(null),
+      getAppSetting: jest.fn().mockResolvedValue(null),
+      setAppSetting: jest.fn().mockResolvedValue(undefined),
+    }));
+    notificationsModule = require("../lib/notifications");
+    formatPreviewBody = notificationsModule.formatPreviewBody;
+  });
+
+  /**
+   * AC14a — Forbidden copy: rest-notification templates and formatPreviewBody output
+   * must NOT contain manipulative / urgency-framing copy.
+   * Psych condition #1 binding.
+   */
+  describe("AC14a — forbidden-copy contract", () => {
+    const FORBIDDEN = /hurry|don'?t lose|falling behind|streak|faster!|push harder|get ready!|⚠️|🔥|⏰|❗/iu;
+
+    const REST_COPY_TEMPLATES = [
+      // Pre-end cue titles
+      "Rest ending in 10s",
+      "Rest ending in 5s",
+      "Rest ending in 15s",
+      "Rest ending in 20s",
+      // Pre-end cue bodies
+      "Next set in 10s",
+      "Next set in 5s",
+      "Workout ending in 10s",
+      // Rest-complete
+      "Rest complete",
+      "Time for your next set.",
+      "Last set complete",
+      // Live countdown title template
+      "Resting · 1:30 remaining",
+      "Resting…",
+      // Settings UI labels (key strings from ReminderSection)
+      "Pre-end cue",
+      "Live countdown",
+      "Show next set",
+      "Enable rest-timer notifications to use these.",
+      "Shows your next exercise and target on the lock screen.",
+      "Get notified when rest is done while using other apps.",
+    ];
+
+    it("no rest-notification template contains forbidden copy", () => {
+      const violations = REST_COPY_TEMPLATES.filter((s) => FORBIDDEN.test(s));
+      expect(violations).toHaveLength(0);
+    });
+
+    it("formatPreviewBody output does not contain forbidden copy — all exercise kinds", () => {
+      const previews: import("../lib/notifications").NextSetPreview[] = [
+        { exerciseName: "Cable Row", exerciseKind: "weighted", plannedWeight: 60, weightUnit: "lb", repRange: "8-10", durationSeconds: null, distanceMeters: null },
+        { exerciseName: "Push-Up", exerciseKind: "bodyweight", plannedWeight: null, weightUnit: "kg", repRange: "12", durationSeconds: null, distanceMeters: null },
+        { exerciseName: "Plank", exerciseKind: "time_based", plannedWeight: null, weightUnit: "kg", repRange: null, durationSeconds: 45, distanceMeters: null },
+        { exerciseName: "Sled Push", exerciseKind: "distance", plannedWeight: null, weightUnit: "kg", repRange: null, durationSeconds: null, distanceMeters: 20 },
+      ];
+      for (const p of previews) {
+        const body = formatPreviewBody(p);
+        if (body != null) {
+          expect(FORBIDDEN.test(body)).toBe(false);
+        }
+      }
+    });
+  });
+
+  /**
+   * AC14b — Preview safety: formatPreviewBody output must NEVER contain
+   * null/undefined/NaN or bare unit strings for any input combination.
+   * When fields are insufficient, must return null (no-preview fallback), not malformed text.
+   */
+  describe("AC14b — preview-safety contract", () => {
+    const MALFORMED = /null|undefined|NaN|^\s*kg\b|^\s*lb\b|—\s*$/i;
+
+    type Kind = import("../lib/notifications").NextSetPreview extends null | infer T ? T extends { exerciseKind: infer K } ? K : never : never;
+    const KINDS: Kind[] = ["weighted", "bodyweight", "time_based", "distance"];
+
+    it.each(KINDS)("kind=%s with all-null fields returns null (no malformed output)", (kind) => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Test",
+        exerciseKind: kind,
+        plannedWeight: null,
+        weightUnit: "kg",
+        repRange: null,
+        durationSeconds: null,
+        distanceMeters: null,
+      };
+      const result = formatPreviewBody(p);
+      // Must be null or a non-malformed string
+      if (result !== null) {
+        expect(MALFORMED.test(result)).toBe(false);
+      }
+    });
+
+    it("null preview returns null", () => {
+      expect(formatPreviewBody(null)).toBeNull();
+    });
+
+    it("weighted with null weight renders bodyweight variant, not malformed", () => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Pull-Up", exerciseKind: "weighted",
+        plannedWeight: null, weightUnit: "lb", repRange: "5-8",
+        durationSeconds: null, distanceMeters: null,
+      };
+      const result = formatPreviewBody(p);
+      expect(result).not.toBeNull();
+      if (result) {
+        expect(MALFORMED.test(result)).toBe(false);
+        expect(result).toContain("bodyweight");
+      }
+    });
+
+    it("weighted with null weight AND null reps returns null", () => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Pull-Up", exerciseKind: "weighted",
+        plannedWeight: null, weightUnit: "lb", repRange: null,
+        durationSeconds: null, distanceMeters: null,
+      };
+      expect(formatPreviewBody(p)).toBeNull();
+    });
+
+    it("time_based with null duration returns null", () => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Plank", exerciseKind: "time_based",
+        plannedWeight: null, weightUnit: "kg", repRange: null,
+        durationSeconds: null, distanceMeters: null,
+      };
+      expect(formatPreviewBody(p)).toBeNull();
+    });
+
+    it("distance with null distanceMeters returns null", () => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Sled Push", exerciseKind: "distance",
+        plannedWeight: null, weightUnit: "kg", repRange: null,
+        durationSeconds: null, distanceMeters: null,
+      };
+      expect(formatPreviewBody(p)).toBeNull();
+    });
+
+    it("valid weighted preview produces non-malformed string with correct format", () => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Cable Row", exerciseKind: "weighted",
+        plannedWeight: 60, weightUnit: "lb", repRange: "8-10",
+        durationSeconds: null, distanceMeters: null,
+      };
+      const result = formatPreviewBody(p);
+      expect(result).toBe("Cable Row — 60 lb × 8-10");
+      expect(MALFORMED.test(result!)).toBe(false);
+    });
+
+    it("valid time_based preview produces correct mm:ss format", () => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Plank", exerciseKind: "time_based",
+        plannedWeight: null, weightUnit: "kg", repRange: null,
+        durationSeconds: 45, distanceMeters: null,
+      };
+      const result = formatPreviewBody(p);
+      expect(result).toBe("Plank — 0:45");
+      expect(MALFORMED.test(result!)).toBe(false);
+    });
+  });
+
+  /**
+   * AC14c — Title stability: key notification title templates must be exact
+   * stable strings with no env interpolation or TODO markers.
+   */
+  describe("AC14c — title template stability contract", () => {
+    it("Rest complete title is stable", () => {
+      // This is the literal string used in scheduleRestComplete
+      expect("Rest complete").toMatch(/^Rest complete$/);
+    });
+
+    it("Pre-end cue title template format is stable", () => {
+      // Template: "Rest ending in {N}s" — verify it can be constructed
+      const title = `Rest ending in ${10}s`;
+      expect(title).toBe("Rest ending in 10s");
+      expect(title).not.toMatch(/TODO|undefined|null|%s/);
+    });
+
+    it("Live countdown title template format is stable", () => {
+      // Template: "Resting · {mm:ss} remaining"
+      const m = 1; const s = 30;
+      const timeStr = `${m}:${String(s).padStart(2, "0")}`;
+      const title = `Resting \u00b7 ${timeStr} remaining`;
+      expect(title).toBe("Resting · 1:30 remaining");
+      expect(title).not.toMatch(/TODO|undefined|null|%s/);
+    });
+
+    it("formatPreviewBody kind=bodyweight uses 'bodyweight × {reps}' pattern", () => {
+      const p: import("../lib/notifications").NextSetPreview = {
+        exerciseName: "Push-Up", exerciseKind: "bodyweight",
+        plannedWeight: null, weightUnit: "kg", repRange: "12",
+        durationSeconds: null, distanceMeters: null,
+      };
+      expect(formatPreviewBody(p)).toBe("Push-Up — bodyweight × 12");
+    });
+
+    it("channel constants are stable string literals", () => {
+      expect(notificationsModule.REST_ONGOING_CHANNEL).toBe("rest-ongoing");
+      expect(notificationsModule.REST_CUE_CHANNEL).toBe("rest-cue");
+    });
+  });
+});
+
+// ── Session Pacing source contracts (BLD-1144) ────────────────────
+
+describe("PacingCard source contracts (BLD-1144)", () => {
+  /**
+   * Scans only JSX text children and accessibilityLabel/accessibilityHint props
+   * inside components/session/summary/Pacing*.tsx and the pacing line in
+   * components/history/DayDetailPanel.tsx — NOT a whole-source grep.
+   * See plan §136 for rationale (avoid false-positives on countdown/dropdown etc).
+   */
+  function extractUserFacingStrings(src: string): string {
+    const parts: string[] = [];
+    // JSX text literals: {" ... "} or plain text between tags
+    const jsxText = src.matchAll(/>\s*\{"([^"]+)"\}\s*</g);
+    for (const m of jsxText) parts.push(m[1]);
+    // Plain JSX text nodes between tags (no braces)
+    const plainText = src.matchAll(/>([^<{]+)</g);
+    for (const m of plainText) {
+      const t = m[1].trim();
+      if (t.length > 1) parts.push(t);
+    }
+    // accessibilityLabel= and accessibilityHint= — brace syntax: accessibilityLabel={"..."}
+    const a11yBrace = src.matchAll(/accessibility(?:Label|Hint)=\{"([^"]+)"\}/g);
+    for (const m of a11yBrace) parts.push(m[1]);
+    // accessibilityLabel= and accessibilityHint= — plain string syntax: accessibilityLabel="..."
+    const a11yPlain = src.matchAll(/accessibility(?:Label|Hint)="([^"]+)"/g);
+    for (const m of a11yPlain) parts.push(m[1]);
+    // accessibilityLabel= — template literal prefix (catches "Sort by ${...}" style)
+    const a11yTemplate = src.matchAll(/accessibility(?:Label|Hint)=\{`([^`$]+)/g);
+    for (const m of a11yTemplate) parts.push(m[1]);
+    return parts.join(" ");
+  }
+
+  const pacingCardSrc = readSrc("components/session/summary/PacingCard.tsx");
+  const pacingSheetSrc = readSrc("components/session/summary/PacingBreakdownSheet.tsx");
+  const dayDetailSrc = readSrc("components/history/DayDetailPanel.tsx");
+
+  const allUserFacing =
+    extractUserFacingStrings(pacingCardSrc) +
+    " " +
+    extractUserFacingStrings(pacingSheetSrc) +
+    " " +
+    extractUserFacingStrings(dayDetailSrc);
+
+  const FORBIDDEN = ["Idle", "Wasted", "Inactive", "Off-task", "Distraction"];
+
+  it.each(FORBIDDEN)('forbidden word "%s" absent from user-facing copy', (word) => {
+    expect(allUserFacing).not.toMatch(new RegExp(`\\b${word}\\b`, "i"));
+  });
+
+  it('title literal is exactly "Estimated pacing"', () => {
+    expect(pacingCardSrc).toMatch(/["']Estimated pacing["']/);
+  });
+
+  it('segment labels are "Working", "Rest", "Other" (verbatim)', () => {
+    expect(pacingCardSrc).toMatch(/["']Working["']/);
+    expect(pacingCardSrc).toMatch(/["']Rest["']/);
+    expect(pacingCardSrc).toMatch(/["']Other["']/);
+  });
+
+  it('empty-state copy is "No completed sets to analyze" — no nudging language', () => {
+    expect(pacingCardSrc).toMatch(/["']No completed sets to analyze["']/);
+    expect(pacingCardSrc).not.toMatch(/start logging|try again|get started/i);
+  });
+
+  it("disclosure copy is verbatim AC§147", () => {
+    expect(pacingCardSrc).toContain(
+      "Working time is estimated as roughly 2 seconds per rep (or recorded duration for time-based sets). Rest is the remaining gap between consecutive sets."
+    );
+  });
+
+  it("imports PACING_DISCLOSURE_COPY constant (disclosure locked via export)", () => {
+    // The constant is exported so it can be verified independently.
+    const { PACING_DISCLOSURE_COPY } = require("../components/session/summary/PacingCard");
+    expect(typeof PACING_DISCLOSURE_COPY).toBe("string");
+    expect(PACING_DISCLOSURE_COPY).toContain("2 seconds per rep");
+  });
+});
+

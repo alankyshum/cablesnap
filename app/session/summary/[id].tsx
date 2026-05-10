@@ -20,7 +20,9 @@ import SetsCard from "../../../components/session/summary/SetsCard";
 import MusclesWorkedCard from "../../../components/session/summary/MusclesWorkedCard";
 import { EditedPill } from "@/components/session/EditedPill";
 import SummaryFooter from "../../../components/session/summary/SummaryFooter";
+import PacingCard from "../../../components/session/summary/PacingCard";
 import ErrorBoundary from "../../../components/ErrorBoundary";
+import { useSessionPacing } from "../../../hooks/useSessionPacing";
 import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
@@ -59,6 +61,22 @@ function Summary() {
   const data = useSummaryData(id);
   const { session, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount, primaryMuscles, secondaryMuscles } = data;
   const actions = useSummaryActions(id);
+
+  const { pacing } = useSessionPacing({
+    sessionId: id ?? "",
+    editStamp: session?.edited_at ?? session?.completed_at ?? null,
+  });
+
+  // Build exerciseNames map from grouped sets
+  const exerciseNames = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const g of grouped) {
+      for (const s of g.sets) {
+        if (s.exercise_id) map[s.exercise_id] = g.name;
+      }
+    }
+    return map;
+  }, [grouped]);
 
   // Sync rating/notes when session loads
   const sessionRef = useRef(session);
@@ -119,6 +137,7 @@ function Summary() {
     ...(increases.length > 0 ? [{ key: "increases" }] : []),
     ...(comparison?.previous ? [{ key: "comparison" }] : []),
     ...((primaryMuscles.length > 0 || secondaryMuscles.length > 0) ? [{ key: "muscles" }] : []),
+    ...(pacing && session?.completed_at ? [{ key: "pacing" }] : []),
     ...(grouped.length > 0 ? [{ key: "sets" }] : []),
   ] as { key: string }[];
 
@@ -155,6 +174,7 @@ function Summary() {
           if (item.key === "increases") return <WeightIncreasesCard increases={increases} unit={unit} colors={colors} />;
           if (item.key === "comparison" && comparison?.previous) return <ComparisonCard comparison={comparison} colors={colors} />;
           if (item.key === "muscles") return <MusclesWorkedCard primaryMuscles={primaryMuscles} secondaryMuscles={secondaryMuscles} colors={colors} />;
+          if (item.key === "pacing" && pacing) return <PacingCard pacing={pacing} exerciseNames={exerciseNames} />;
           if (item.key === "sets") return <SetsCard grouped={grouped} colors={colors} />;
           return null;
         }}
