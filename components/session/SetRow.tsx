@@ -44,13 +44,9 @@ import { isCableExercise, formatAttachmentLabel, formatMountPositionLabel } from
 import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } from "../../lib/bodyweight-grip-variant";
 import { RpeChipStrip } from "./RpeChipStrip";
 import { SetWeightCell } from "./SetWeightCell";
-import type { StackWithCalibrations } from "@/hooks/useActiveCalibration";
+import { useActiveCalibration } from "@/hooks/useActiveCalibration";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
-
-// BLD-1130 G3: stable empty-array reference so SetRows without calibration
-// don't get a new prop identity each render (preserves React.memo bailouts).
-const EMPTY_STACKS: StackWithCalibrations[] = [];
 
 // Module-level claim: ensures exactly one SetRow caller per JS runtime ever
 // receives `won=true` for the swipe-right discoverability hint.
@@ -178,15 +174,10 @@ export type SetRowProps = {
   // completed sets. onRpeChange writes to DB + emits breadcrumb in parent.
   captureRpe?: boolean;
   onRpeChange?: (setId: string, rpe: number | null) => void;
-  // BLD-1126: Stack Marker Quick-Pick.
-  // BLD-1130 G3: stacks fetched once in ExerciseGroupCard and prop-drilled.
-  // Empty array = no calibration / not cable. onMarkerConfirm writes the five
-  // stack columns atomically (AC3). onManualWeightSave writes weight + reps
-  // AND clears stack columns (AC5).
-  // gymId is accepted for API compatibility but calibration is now fetched in
-  // ExerciseGroupCard and prop-drilled as `stacks` (BLD-1130 G3 refactor).
+  // BLD-1126: Stack Marker Quick-Pick. gymId powers useActiveCalibration.
+  // onMarkerConfirm writes the five stack columns atomically (AC3).
+  // onManualWeightSave writes weight + reps AND clears stack columns (AC5).
   gymId?: string | null;
-  stacks?: StackWithCalibrations[];
   onMarkerConfirm?: (setId: string, result: {
     stackId: string;
     stackName: string;
@@ -209,7 +200,7 @@ export const SetRow = memo(function SetRow({
   hasClip, onVideoGlyph,
   pulleyPin, onOpenPulleyPinPicker, showPulleyPin, hasSetupPhoto, setupPhotoUri, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
-  stacks, onMarkerConfirm, onManualWeightSave,
+  gymId, onMarkerConfirm, onManualWeightSave,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-771: ref to the variant footer Pressable so the picker hook can
@@ -309,10 +300,8 @@ export const SetRow = memo(function SetRow({
     [set.id, onRpeChange],
   );
 
-  // BLD-1126: Stack marker calibration is fetched once in ExerciseGroupCard
-  // and prop-drilled to every SetRow (BLD-1130 G3 — avoids per-row hook calls
-  // and the global jest mock previously needed to keep tests rendering).
-  const stacksProp = stacks ?? EMPTY_STACKS;
+  // BLD-1126: Stack marker calibration for this set's gym.
+  const stacks = useActiveCalibration(gymId ?? null);
   const isCable = isCableExercise({ equipment });
 
   const handleMarkerConfirm = useCallback(
@@ -464,7 +453,7 @@ export const SetRow = memo(function SetRow({
                 step={step}
                 unit={unit}
                 isCable={isCable}
-                stacks={stacksProp}
+                stacks={stacks}
                 accessibilityLabel={a11yWeightLabel}
                 onWeightChange={onWeightChange}
                 onManualWeightSave={handleManualWeightSave}

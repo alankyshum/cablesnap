@@ -606,17 +606,10 @@ export function useSessionActions({
       try {
         const lastMarker = await getRecentStackHistory(exerciseId);
         if (lastMarker?.stack_marker != null && lastMarker.stack_id) {
-          // BLD-1130 G2: cold-cache deterministic resolution. Use fetchQuery
-          // (not getQueryData) so a cold cache awaits a real fetch instead of
-          // silently skipping autofill. Same key as useActiveCalibration so
-          // react-query dedupes any concurrent in-flight fetch.
-          const { fetchStacksWithCalibrations } = await import("@/hooks/useActiveCalibration");
-          const currentStacks: import("@/hooks/useActiveCalibration").StackWithCalibrations[] =
-            await queryClient.fetchQuery({
-              queryKey: ["stack-calibrations", session.gym_id],
-              queryFn: () => fetchStacksWithCalibrations(session.gym_id as string),
-              staleTime: 60_000,
-            });
+          // Fetch current calibration from cache (does not block on network).
+          const currentStacks: import("@/hooks/useActiveCalibration").StackWithCalibrations[] = queryClient.getQueryData(
+            ["stack-calibrations", session.gym_id]
+          ) ?? [];
           const matchedStack = currentStacks.find((s) => s.id === lastMarker.stack_id);
           if (matchedStack) {
             const { resolveMarker } = await import("../lib/cable-stack");
