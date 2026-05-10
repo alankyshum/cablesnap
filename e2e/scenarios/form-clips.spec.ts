@@ -1,19 +1,14 @@
 /**
  * Scenario spec: form-clips.
  *
- * Seeds one custom exercise ("Scenario Exercise") with one completed workout
- * set via window.__TEST_SCENARIO__, navigates to the exercise detail screen,
- * and captures the exercise detail page at the `mobile` viewport.
+ * Uses the `app/__test__/form-clips.tsx` dev-only harness to render
+ * FormLibraryTab in isolation on web, bypassing the Platform.OS !== "web"
+ * guards via `window.__FORM_CLIPS_HARNESS__`. Asserts that the Record CTA
+ * button is visible and enabled, then captures a screenshot.
  *
- * NOTE: The Form clips tab (FormLibraryTab / Record CTA) is rendered ONLY on
- * native — ExerciseDetailDrawer.tsx gates `showClipsTab` on
- * `Platform.OS !== "web"` (AC16 of BLD-1105). Playwright runs against the web
- * export, so the tab is not present here by design. This scenario instead
- * captures the exercise detail page — the host surface for Form clips on
- * native — so the daily audit detects layout regressions on that screen.
- *
- * The seeded exercise has `is_custom = 1`, so the "Custom" chip is
- * deterministically visible and used as the gate assertion.
+ * The harness receives a seed with one completed set and no existing clips
+ * (recordTarget non-null, recordDisabledReason null), so the Record CTA is
+ * enabled — this is the primary happy-path assertion for AC2a/AC5 of BLD-1105.
  *
  * Refs: BLD-1105, BLD-1123
  */
@@ -22,12 +17,23 @@ import * as path from "path";
 import { captureWithCvd } from "./capture-with-cvd";
 
 const SCENARIO = "form-clips";
-const EXERCISE_ID = "scenario-exercise-1";
 const OUT_DIR = path.resolve(
   __dirname,
   "../../.pixelslop/screenshots/scenarios",
   SCENARIO,
 );
+
+/** Seed that produces an enabled Record CTA (one set, no clips). */
+const HARNESS_SEED = {
+  exerciseId: "scenario-exercise-1",
+  clips: [],
+  recordTarget: {
+    id: "scenario-fc-set-1",
+    set_number: 1,
+    completed_at: 1_700_000_000_000,
+  },
+  recordDisabledReason: null,
+};
 
 test.describe("@scenario form-clips", () => {
   // v1 mobile only.
@@ -39,27 +45,29 @@ test.describe("@scenario form-clips", () => {
     );
   });
 
-  test("captures Exercise Details page — host surface for Form clips on native", async ({
+  test("Record CTA is visible and enabled in form-clips harness", async ({
     page,
   }) => {
-    await page.addInitScript((scenario) => {
+    // Inject the harness seed before navigation so FormLibraryTab reads it.
+    await page.addInitScript((seed) => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
-      w.__TEST_SCENARIO__ = scenario;
-    }, SCENARIO);
+      w.__FORM_CLIPS_HARNESS__ = seed;
+    }, HARNESS_SEED);
 
-    await page.goto(`/exercise/${EXERCISE_ID}`);
+    await page.goto("/__test__/form-clips");
 
-    // Gate on seed completion before capturing.
+    // Wait for the harness to set testReady before asserting the CTA.
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({
       timeout: 15_000,
     });
 
-    // Assert the seeded exercise page has loaded — "Custom" chip is
-    // deterministically present because is_custom=1 in the seed.
-    // This is a hard assertion (no optional guard) so the spec fails
-    // explicitly if the exercise page doesn't render.
-    await expect(page.getByText("Custom").first()).toBeVisible({ timeout: 5_000 });
+    // AC2a / AC5: Record CTA button is visible and enabled.
+    const recordBtn = page.getByRole("button", {
+      name: /record new form clip/i,
+    });
+    await expect(recordBtn).toBeVisible({ timeout: 5_000 });
+    await expect(recordBtn).toBeEnabled();
 
     await page.waitForTimeout(500);
 
@@ -70,8 +78,8 @@ test.describe("@scenario form-clips", () => {
       viewport,
       meta: {
         scenario: SCENARIO,
-        label: "exercise-detail-form-clips-host",
-        route: `/exercise/${EXERCISE_ID}`,
+        label: "form-clips-record-cta",
+        route: "/__test__/form-clips",
         viewport,
         viewportSize: page.viewportSize(),
         commitSha: process.env.GITHUB_SHA ?? process.env.COMMIT_SHA ?? null,
@@ -80,3 +88,4 @@ test.describe("@scenario form-clips", () => {
     });
   });
 });
+
