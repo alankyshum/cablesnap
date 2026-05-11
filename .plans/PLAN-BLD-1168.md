@@ -1,7 +1,7 @@
 # Feature Plan: Advanced Set Schemes (Rest-Pause, Cluster, Myo-Reps)
 
 **Issue**: BLD-1168  **Author**: CEO  **Date**: 2026-05-11
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: DRAFT → IN_REVIEW (rev2) → APPROVED / REJECTED
 **Parent tracking issue**: BLD-1167 (Product evolution)
 
 ## Research Source
@@ -59,7 +59,7 @@ The intelligent rest-timer (lib/rest.ts) gains two new multipliers (`rest_pause 
 **Active-session mini-set entry** (new component `MiniSetEditor`)
 - When a user marks a set as one of the three new types, the row expands to reveal a "+ mini-set" affordance.
 - Tapping logs the prior segment's reps, starts the intra-mini-set rest timer (auto-resolved by rest.ts), and reveals the next reps input.
-- Maximum 6 mini-sets per parent (technical guard; UX warns at 5). DC training and myo-reps both fit comfortably under this cap; ≥7 is essentially a separate set.
+- Maximum 8 mini-sets per parent (technical guard; UX warns at 7). Fagerli's published myo-rep prescriptions allow activation + 5–7 mini-clusters, so activation + 7 = 8 segments at the outer limit; ≥9 is essentially a separate set.
 - Long-press a mini-set row → edit reps/weight, or delete (with confirmation if completed).
 
 **Display formatting** (lib/format.ts)
@@ -80,11 +80,14 @@ The intelligent rest-timer (lib/rest.ts) gains two new multipliers (`rest_pause 
 ### Technical Approach
 
 **Data model**
+
+> **Retraction:** Rev1 stated "no ALTER TABLE on existing rows." This claim is retracted. Rev2 adds two cached columns to `workout_sets` via additive `ADD COLUMN` migrations.
+
 - New table `workout_set_segments` (mini-sets):
   ```sql
   CREATE TABLE workout_set_segments (
     id TEXT PRIMARY KEY,
-    set_id TEXT NOT NULL,                    -- FK → workout_sets.id (cascade in service layer)
+    set_id TEXT NOT NULL REFERENCES workout_sets(id) ON DELETE CASCADE,
     segment_number INTEGER NOT NULL,         -- 1-based, ordered
     reps INTEGER NOT NULL,
     weight REAL,                             -- NULL = inherit from parent set
@@ -95,8 +98,104 @@ The intelligent rest-timer (lib/rest.ts) gains two new multipliers (`rest_pause 
   CREATE UNIQUE INDEX uq_set_segments_set_seg ON workout_set_segments(set_id, segment_number);
   CREATE INDEX idx_set_segments_set ON workout_set_segments(set_id);
   ```
-- `workout_sets.reps` becomes the **sum** of mini-set reps when `set_type IN ('rest_pause','cluster','myo_reps')`. Maintained via a service-layer trigger in lib/db/sets.ts (NOT a SQLite trigger — keeps logic auditable in TS, consistent with BLD-1094 PRAGMA pattern).
-- Migration: additive only — existing sets keep the empty segments list and behave identically.
+  FK uses `ON DELETE CASCADE` (SQLite FOREIGN KEYS pragma is enforced per BLD-1094). "Cascade in service layer" from rev1 is replaced by FK-level cascade.
+
+- Two new cached columns on `workout_sets` (each a separate additive migration — single `ADD COLUMN`, no data loss):
+  ```sql
+  ALTER TABLE workout_sets ADD COLUMN cached_volume_kg REAL NOT NULL DEFAULT 0;
+  ALTER TABLE workout_sets ADD COLUMN cached_e1rm_kg   REAL NOT NULL DEFAULT 0;
+  ```
+  After the column additions, a **one-time backfill pass** runs (guarded by migration version):
+  ```sql
+  UPDATE workout_sets
+  SET cached_volume_kg = weight * reps,
+      cached_e1rm_kg   = weight * (1.0 + reps / 30.0)
+  WHERE weight IS NOT NULL AND reps IS NOT NULL;
+  ```
+  Legacy rows have no segments, so `parent.weight × parent.reps` is correct for them. New advanced sets are populated via `recomputeSetCaches(setId)` on every mutation.
+
+- `workout_sets.reps` becomes the **sum** of mini-set reps when `set_type IN ('rest_pause','cluster','myo_reps')`. Maintained via `lib/db/sets.ts:recomputeSetCaches(setId)` (NOT a SQLite trigger — keeps logic auditable in TS, consistent with BLD-1094 PRAGMA pattern).
+
+**Forward-compat normalization**
+
+Every **read boundary** must call `normalizeSetType(raw: unknown): SetType` before the value is used. The helper:
+- Returns `raw` if it is one of `"normal" | "warmup" | "dropset" | "failure" | "rest_pause" | "cluster" | "myo_reps"`.
+- Coerces any other value (unknown string, `null`, `undefined`, `""`) to `"normal"`.
+- Emits a single `console.warn` per session (dev-mode only) on first coercion: `[normalizeSetType] Unknown set_type "${raw}" coerced to "normal"`.
+
+Mandatory call sites:
+
+| Boundary | File | Location |
+|----------|------|----------|
+| DB row hydration | `lib/db/session-sets.ts` | lines 73, 143, 615 |
+| Template parser | `lib/db/sessions.ts` | line 394 |
+| CSV import | `lib/csv-import.ts` | set_type column reader |
+| Share-payload deserializer | `lib/share-payload.ts` | set_type field |
+| UI label lookup | `components/session/detail/ExerciseGroupRow.tsx` | lines 65–67 |
+
+Unit test: `__tests__/normalize-set-type.test.ts` — feeds garbage strings (`"drop_set_v2"`, `""`, `null`, `undefined`, `"REST_PAUSE"`) to each boundary and asserts each returns `"normal"` without throwing. Also asserts the raw DB row is not mutated (no destructive write).
+
+**Cached aggregates strategy**
+
+> **Replaces** the rev1 "single helper `computeSetVolume`" claim. That claim was insufficient for SQL query sites that cannot call a TS function.
+
+`cached_volume_kg` and `cached_e1rm_kg` on `workout_sets` are the **single source of truth** for all aggregate analytics. They are populated exclusively by `lib/db/sets.ts:recomputeSetCaches(setId)`, which runs after every mutation to a parent set or its segments:
+
+```
+cached_volume_kg = Σ (segment.reps × (segment.weight ?? parent.weight))
+cached_e1rm_kg   = MAX over segments of (seg_weight × (1 + seg_reps / 30))
+                   where seg_weight = segment.weight ?? parent.weight
+```
+
+All **8 analytics surfaces** read these cached columns instead of computing `weight × reps` ad hoc:
+
+| Surface | File | Affected query sites |
+|---------|------|----------------------|
+| e1rm-trends | `lib/db/e1rm-trends.ts` | lines 36, 183, 200, 229, 245, 284, 301 |
+| monthly-report | `lib/db/monthly-report.ts` | lines 121, 152, 321, 337 |
+| weekly-summary | `lib/db/weekly-summary.ts` | lines 121, 152 |
+| achievements | `lib/db/achievements.ts` | lines 60, 72 |
+| exercise-history | `lib/db/exercise-history.ts` | line 59 |
+| useSessionDetail | `hooks/useSessionDetail.ts` | line 113 |
+| useSummaryData | `hooks/useSummaryData.ts` | line 130 |
+| useSessionShareData | `hooks/useSessionShareData.ts` | line 36 |
+
+Architecture grep-test (`__tests__/architecture-set-write-path.test.ts`) fails CI if any file outside `lib/db/sets.ts` contains `weight\s*\*\s*reps` or `weight\s*\*\s*\(1.*reps.*30` (the raw e1RM formula), ensuring no site regresses to ad-hoc computation.
+
+**Named reps accessors** (`lib/db/sets.ts` or new `lib/sets-accessors.ts`)
+
+Direct `.reps` reads on `workout_sets` rows where `set_type` is advanced are **banned**. All callers must use one of:
+
+```ts
+/** Returns the heaviest single-segment reps for advanced types, or set.reps for normal/warmup/dropset/failure. */
+getWorkingRepsForOverloadDecision(set: WorkoutSet, segments: SetSegment[]): number
+
+/** For myo_reps: activation segment reps. For cluster/rest_pause: heaviest segment reps. For normal: set.reps. */
+getEffortRepsForPlateau(set: WorkoutSet, segments: SetSegment[]): number
+
+/** Returns the reps of the segment with the most reps. */
+getHeaviestSegmentReps(set: WorkoutSet, segments: SetSegment[]): number
+
+/** Returns Σ segments.reps (or set.reps if no segments). */
+getTotalRepsForVolume(set: WorkoutSet, segments: SetSegment[]): number
+```
+
+Architecture grep-test (`__tests__/architecture-set-write-path.test.ts`) also fails CI if any file reads `.reps` on a `WorkoutSet` type outside `lib/db/sets.ts` / `lib/sets-accessors.ts`.
+
+**Write-path inventory**
+
+Only `lib/db/sets.ts` may issue `UPDATE workout_sets` or call `db.update(workoutSets)`. The following existing write sites must each be refactored to call a `lib/db/sets.ts` function:
+
+| File | Lines | Current operation |
+|------|-------|-------------------|
+| `lib/db/session-sets.ts` | 191, 218, 279, 296, 365, 642, 649 | insert/update/upsert/finishWarmup |
+| `hooks/useSessionActions.ts` | 385, 554 | direct update |
+| `hooks/useRestTimer.ts` | 389, 471 | direct update |
+| undo paths | (various) | undo set mutations |
+| CSV import | `lib/csv-import.ts` | bulk upsert |
+| curated-template seeder | `lib/db/sessions.ts:394` | set_types JSON write |
+
+Architecture grep-test fails CI if any file outside `lib/db/sets.ts` contains `UPDATE workout_sets`, `db.update(workoutSets)`, `INSERT INTO workout_set_segments`, `UPDATE workout_set_segments`, or `DELETE FROM workout_set_segments`.
 
 **Type extensions** (lib/types.ts)
 ```ts
@@ -106,18 +205,19 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 
 **Rest timer extension** (lib/rest.ts)
 - Add `rest_pause: 0.15`, `cluster: 0.5`, `myo_reps: 0.10` to `REST_MULTIPLIERS.setType`.
-- New `IntraMiniSetRest` mode: when a mini-set completes mid-parent, the timer resolves intra-rest (5s/15s/30s defaults) and shows a "Mini-set 3 of ?" badge. When the parent set completes, normal inter-set rest resumes.
-- Preserve `MIN_REST_SECONDS = 10` as a floor for safety even on aggressive myo-reps (i.e., 5s default ceil-clamps up to 10s minimum).
+- New `IntraMiniSetRest` mode: when a mini-set completes mid-parent, `lib/rest-resolver.ts` returns intra-mini-set mode with defaults 5s (myo_reps) / 15s (rest_pause) / 30s (cluster), and shows a "Mini-set N of ?" badge. When the parent set is marked complete, the resolver switches to inter-set mode and normal inter-set rest resumes.
+- **Intra-vs-inter mode selection** (`lib/rest-resolver.ts:218,230`): the resolver checks whether the current set is an advanced type AND has at least one completed segment AND the parent is not yet marked complete → intra-mini-set mode. Once `workout_sets.completed_at` is set → inter-set mode.
+- **`MIN_REST_SECONDS = 10` is advisory in intra-mini-set mode only.** The myo-reps protocol intentionally uses 5s intra-set rest; the timer shows 5s and counts down to zero but does NOT block the user from starting the next mini-set. The floor is never raised for intra-mini-set rest. The 10s floor still applies to inter-set rest (between parent sets).
 
 **Analytics surfaces (modify, do not break)**
 - `lib/db/strength-overview.ts` — `set_type != 'warmup'` filter unchanged; rest_pause/cluster/myo_reps count as working sets (correct).
-- `lib/db/session-stats.ts` — total volume = `Σ (segment.reps × (segment.weight ?? parent.weight))` for advanced types; Σ (parent.reps × parent.weight) otherwise. Single helper `computeSetVolume(set, segments)` consumed everywhere — single point of change.
-- `lib/plateau.ts` — PR detection: for cluster/rest-pause, evaluate the heaviest segment by `weight × reps`. For myo-reps, evaluate the activation segment only. Comment the rationale in code.
-- `lib/db/exercises.ts:314,329` queries (`set_type = 'normal'`) become `set_type IN ('normal','rest_pause','cluster','myo_reps')` for "best work-set" computations. Documented inline.
+- All 8 analytics surfaces listed in §"Cached aggregates strategy" read `cached_volume_kg` and `cached_e1rm_kg` directly — no ad-hoc `weight * reps` computation at these sites.
+- `lib/plateau.ts` — PR detection: uses `getEffortRepsForPlateau` / `getWorkingRepsForOverloadDecision` accessors; never reads `workout_sets.reps` directly for advanced types. Comment the rationale in code.
+- `lib/db/exercises.ts:309-318` progression check uses `getWorkingRepsForOverloadDecision` instead of `set.reps` for advanced types. Filter extended to `set_type IN ('normal','rest_pause','cluster','myo_reps')` for "best work-set" computations. Documented inline.
 
 **CSV import/export**
 - Export: append columns `mini_set_reps` (semicolon-separated, e.g., `8;3;2`), `mini_set_weights`, `mini_set_rests`. Empty for non-advanced sets — fully back-compat with current schema.
-- Import: parse the new columns; clamp segment count to 6; coerce unknown `set_type` to `normal`.
+- Import: parse the new columns; clamp segment count to 8; coerce unknown `set_type` to `normal` via `normalizeSetType()`.
 - Round-trip test: `__tests__/csv-roundtrip-advanced-sets.test.ts` exports + reimports a session with one of each advanced type and asserts byte-equality on the resulting state.
 
 **Performance**
@@ -125,8 +225,9 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 - `idx_set_segments_set` covers the only hot read path (load segments by set during session render).
 
 **Storage / migrations**
-- New table only; no ALTER TABLE on existing rows. Migration in lib/db/migrations.ts gated behind a new monotonic version.
-- Forward-only: previous app versions opening a DB written by this version will see the unknown `set_type` and coerce to `normal` (data is preserved in the DB; just not displayed). Documented in CHANGELOG.
+- New `workout_set_segments` table (additive). Two new cached columns on `workout_sets` added via `ADD COLUMN` (additive; see §Data model). Migration gated behind a new monotonic version.
+- One-time backfill: see §Data model for SQL.
+- Forward-only: previous app versions opening a DB written by this version will see the unknown `set_type` and coerce to `normal` via `normalizeSetType()` (data is preserved in the DB; just not displayed). Documented in CHANGELOG.
 
 **Dependencies**
 - No new npm packages required.
@@ -153,8 +254,8 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 
 ## Acceptance Criteria
 - [ ] GIVEN a user creates a working set and changes its type to `rest_pause` WHEN they tap "+ mini-set" twice and enter (8, 3, 2) reps THEN the parent row displays "8+3+2 (13)" and `workout_set_segments` contains 3 rows ordered 1,2,3. [test: `__tests__/mini-set-editor.test.tsx`]
-- [ ] GIVEN a `cluster` set with three segments at 100kg×3, 100kg×3, 100kg×2 WHEN session-stats computes total volume THEN it returns 800 kg (3+3+2 × 100), not 2400 (8 × 100 × 3). [test: `__tests__/session-stats-advanced-sets.test.ts`]
-- [ ] GIVEN a `myo_reps` set with activation 15 reps @ 25kg + clusters 5,5,4,3 @ 25kg WHEN plateau.ts evaluates PR THEN it considers only the 15-rep activation segment, NOT the 28-rep sum. [test: `__tests__/plateau-myoreps.test.ts`]
+- [ ] GIVEN a `cluster` set with three segments at 100kg×3, 100kg×3, 100kg×2 WHEN `cached_volume_kg` is read from the parent row THEN it equals 800 kg (not 2400). [test: `__tests__/session-stats-advanced-sets.test.ts`]
+- [ ] GIVEN a `myo_reps` set with activation 15 reps @ 25kg + clusters 5,5,4,3 @ 25kg WHEN plateau.ts evaluates PR via `getEffortRepsForPlateau` THEN it returns 15 (activation segment), NOT 32 (sum). [test: `__tests__/plateau-myoreps.test.ts`]
 - [ ] GIVEN a `rest_pause` set in progress WHEN the user completes a mini-set mid-parent THEN the rest timer resolves to ≤30 seconds (intra) and shows "Mini-set N of ?" badge; WHEN the parent set is marked complete THEN normal inter-set rest resumes. [test: `__tests__/rest-timer-mini-set.test.ts`]
 - [ ] GIVEN any session containing one of each new set type WHEN exported to CSV and re-imported into a fresh DB THEN the resulting state is byte-equal to the original (excluding timestamps). [test: `__tests__/csv-roundtrip-advanced-sets.test.ts`]
 - [ ] GIVEN an existing user opens a pre-migration session with no advanced sets WHEN they view Strength Overview, Session Detail, and Plateau dashboards THEN every number matches what they saw on v0.26.x exactly (no analytic regression on legacy data). [test: snapshot fixture in `__tests__/legacy-analytics-parity.test.ts`]
@@ -162,11 +263,21 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 - [ ] GIVEN VoiceOver/TalkBack is enabled WHEN focus reaches an advanced set parent row THEN the announcement includes the set type and mini-set count (e.g., "Rest-pause set with 3 mini-sets"). [test: `__tests__/a11y-advanced-sets.test.tsx`]
 - [ ] PR passes all tests with no regressions; no new lint warnings; typecheck clean.
 - [ ] Feature renders, persists, and survives kill+relaunch when triggered through the production session-detail mount path (not just unit-mounted in isolation). [test: `e2e/scenarios/advanced-sets.spec.ts`]
+- [ ] GIVEN any sequence of segment insert/update/delete mutations on a parent advanced set WHEN the operation completes THEN `parent.reps == Σ segments.reps` AND `parent.cached_volume_kg == Σ (segment.reps × (segment.weight ?? parent.weight))` AND `parent.cached_e1rm_kg` reflects the heaviest-segment Epley estimate. Property-test with 1000 random sequences. [test: `__tests__/parent-segment-invariant.property.test.ts`]
+- [ ] GIVEN the codebase WHEN the architecture grep-test runs THEN there are zero `UPDATE workout_sets` / `db.update(workoutSets)` matches outside `lib/db/sets.ts`, AND zero `weight\s*\*\s*reps` or `weight\s*\*\s*\(1.*reps.*30` matches outside the cached-column population path in `lib/db/sets.ts`. [test: `__tests__/architecture-set-write-path.test.ts`]
+- [ ] GIVEN a fixture session containing one rest_pause (8+3+2 @ 100kg), one cluster (3+3+2 @ 100kg with segment-level weight overrides at 100/100/95), and one myo_reps (15 + 5+5+4+3 @ 25kg) WHEN every analytics surface (e1rm-trends, monthly-report, weekly-summary, achievements, exercise-history, useSessionDetail, useSummaryData, useSessionShareData) is queried THEN every numeric output matches a hand-computed segment-aware reference within ±0.01. [test: `__tests__/analytics-parity-advanced-sets.test.ts`]
+- [ ] GIVEN any read boundary (UI lookup, DB hydration, template parser, CSV import, share-payload) sees an unknown `set_type` value (e.g., `"drop_set_v2"`, `""`, `null`) WHEN it is normalized THEN the result is `"normal"` and the original raw value is preserved in the underlying row (no destructive write). [test: `__tests__/normalize-set-type.test.ts`]
+- [ ] GIVEN a rest_pause set with parent.reps=13 (segments 8,3,2 @ 100kg) WHEN `getWorkingRepsForOverloadDecision` is called THEN it returns 8 (the heaviest single-segment reps), NOT 13. [test: `__tests__/set-accessors.test.ts`]
+- [ ] GIVEN a myo_reps set with activation 15 reps + clusters 5,5,4,3 WHEN `getEffortRepsForPlateau` is called THEN it returns 15 (activation), NOT 32 (sum) or 5 (heaviest cluster). [test: `__tests__/set-accessors.test.ts`]
+- [ ] GIVEN a parent advanced set is in progress with one or more completed segments WHEN the user completes another mini-set THEN `lib/rest-resolver` returns intra-mini-set mode (5/15/30s defaults per set_type) AND a "Mini-set N of ?" badge is rendered; WHEN the user marks the parent set complete THEN the resolver switches to inter-set mode AND `MIN_REST_SECONDS=10` floor is enforced. [test: `__tests__/rest-resolver-intra-vs-inter.test.ts`]
+- [ ] GIVEN the help screen renders advanced set type explanations WHEN the architecture grep-test scans the help strings THEN none of the forbidden aspirational phrases ("advanced lifters", "next level", "unlock", "serious lifters", "take your training to") appear; AND each set type has at least one descriptive sentence ≤120 chars. [test: `__tests__/help-copy-tone.test.ts`]
+- [ ] GIVEN a parent advanced set with `cached_volume_kg` and `cached_e1rm_kg` populated WHEN the FK CASCADE deletes the parent (e.g., session deletion) THEN all `workout_set_segments` rows are deleted at the SQLite layer with no orphans. [test: `__tests__/fk-cascade-segments.test.ts`]
+- [ ] GIVEN a pre-migration database (no segments table, no cached columns on workout_sets) WHEN the new app version opens it THEN migration adds the table + columns AND a one-time backfill computes `cached_volume_kg = weight*reps` and `cached_e1rm_kg = weight*(1+reps/30)` for every existing row (rest_pause/cluster/myo_reps don't exist yet so legacy formula is correct). [test: `__tests__/migration-cached-columns-backfill.test.ts`]
 
 ## Edge Cases
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| User adds 7th mini-set | UI blocks at 6; toast: "Use a separate set for more than 6 mini-sets." |
+| User adds 9th mini-set | UI blocks at 8; toast: "Use a separate set for more than 8 mini-sets." |
 | User adds zero mini-sets to an advanced set then completes | Parent renders "0 reps — tap to add mini-set"; analytics treats as zero-volume working set; warning toast at session save: "1 advanced set has no mini-sets." |
 | App killed mid-mini-set entry | Last completed mini-set persisted; uncompleted draft discarded; on resume, set is partially populated and tappable to continue. |
 | User changes set_type from rest_pause → cluster | Mini-sets preserved; only the rest-timer multiplier and label change. |
@@ -181,71 +292,56 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
 | Analytics regression on legacy sessions | Medium | High | `legacy-analytics-parity.test.ts` snapshot fixture; ship behind a feature flag for first canary; manual cross-check of 5 historical sessions before flag-on. |
-| Forward-compat break for users on older app versions | Low | Medium | Coerce unknown set_type to `normal`; documented in CHANGELOG; data preserved in DB regardless. |
-| UI complexity overwhelms casual users | Medium | Medium | Default `set_type` cycle order keeps `normal` first; advanced types only appear after the user explicitly cycles past `failure`. Help screen explains each. |
-| Bug in service-layer "trigger" desyncs parent.reps from segment sum | Medium | High | Single helper `recomputeParentReps(setId)` invoked from every segment mutation; property-test asserts `parent.reps === Σ segments.reps` after random sequences of insert/delete/update. |
+| Forward-compat break for users on older app versions | Low | Medium | `normalizeSetType()` at every read boundary (8 sites); documented in CHANGELOG; data preserved in DB regardless. |
+| UI complexity overwhelms casual users | Medium | Medium | Default `set_type` cycle order keeps `normal` first; advanced types only appear after the user explicitly cycles past `failure`. Help screen explains each with descriptive-only copy. |
+| Bug in service-layer trigger desyncs parent.reps from segment sum | Medium | High | `recomputeSetCaches(setId)` invoked from every segment mutation; property-test (`__tests__/parent-segment-invariant.property.test.ts`) asserts `parent.reps === Σ segments.reps` after 1000 random sequences. |
 | Performance on large historical exports | Low | Low | Segments table benchmarked at 10k rows; <50ms for full export. No new joins on hot read paths. |
 | Misuse as gamification (e.g., "myo-rep streak") | Low | High (psych veto) | Out of Scope explicitly excludes any such layer; future PRs that touch this feature must re-trigger psychologist review. |
 | Cable-variant interaction edge cases | Low | Medium | Inheritance rule (parent → mini-sets) documented in lib/cable-variant.ts; integration test covers cluster set with attachment swap mid-parent (forbidden — attachment locked once first mini-set completes). |
+| Cached column desync from segment mutations | Medium | High | Every mutation routes through `recomputeSetCaches`; property test asserts invariant; CI fails on drift. |
+| Write-path bypasses recomputeSetCaches | Medium | High | Architecture grep-test (`__tests__/architecture-set-write-path.test.ts`) fails build if direct UPDATE happens outside `lib/db/sets.ts`. |
+| Normalization helper missed at a read boundary | Low | Medium | Grep-test for raw `SET_TYPE_LABELS[set_type]` patterns outside the helper; 8 mandatory call sites enumerated in §Forward-compat normalization. |
+| Cached columns increase row size on legacy users | Low | Negligible | 16 bytes per row × ~10k rows for power users ≈ 160KB. Negligible; absorbed on first migration pass. |
 
 ## Review Feedback
-### Quality Director (UX)
-**REQUEST CHANGES (2026-05-11):**
+### Quality Director (UX) — Revision 1
+**REQUEST CHANGES** at 2026-05-11T19:39 (comment id 8e…). Two blockers:
+1. Forward-compat: `ExerciseGroupRow.tsx:65-67` reads `SET_TYPE_LABELS[st].short` and can throw on unknown DB values. Need real normalization across all read paths.
+2. Analytics blast radius: `set_type != "warmup"` and direct `weight*reps` exist in many more surfaces than enumerated; segment-level weight overrides break `parent.weight * parent.reps`. Need exhaustive audit + segment-aware helper or disallow segment weights.
 
-1. **Blocker — forward-compat / unknown `set_type` claim is unsafe.** The plan says older app versions will coerce unknown `set_type` values to `normal` (§129, §174), but current display paths are not defensive enough to make that true. Example: `components/session/detail/ExerciseGroupRow.tsx` indexes `SET_TYPE_LABELS[st]` and immediately reads `label.short`; an unknown DB value such as `rest_pause` in an older build can throw instead of rendering as normal. Revise the plan to either (a) state downgrade is unsupported and protect current-version import/display code with explicit `normalizeSetType` guards, or (b) specify a real compatibility layer that every DB/template/import read path uses before UI access. Do not rely on a future enum extension to protect already-shipped app versions.
-2. **Blocker — analytics blast radius is under-enumerated.** The plan lists `strength-overview`, `session-stats`, `plateau`, and two `exercises.ts` queries, but a grep of the current codebase shows many more working-set and PR/volume surfaces using `set_type != 'warmup'` or direct `weight * reps` math: `e1rm-trends`, `monthly-report`, `achievements`, `exercise-history`, `pr-dashboard`, `hooks/useSummaryData.ts`, `hooks/useSessionDetail.ts`, and `hooks/useSessionActions.ts`. Because the new segment model allows per-segment `weight`, parent `weight * parent.reps` is wrong whenever segment weights differ. Add an AC requiring an exhaustive source audit plus tests proving every analytics/export/summary/PR surface either uses the shared segment-aware helper or intentionally rejects segment-level weight overrides.
-3. **Non-blocking UX note — mini-set completion affordance needs sharper wording.** "`+ mini-set` logs the prior segment's reps" combines add, complete, and rest-start semantics into one control. For zero-friction logging, implementation should make the committed state explicit in accessible copy, e.g. "Complete mini-set and rest" versus "Add draft mini-set", so users do not accidentally start an intra-set rest timer.
+Non-blocking UX note: mini-set completion affordance wording — "Complete mini-set and rest" vs "Add draft mini-set" should be distinct in accessible copy.
 
-The feature direction is strong and the production-path, a11y, CSV round-trip, and legacy-parity ACs are the right shape. I will approve after the two data-integrity blockers above are reflected in the plan.
+### Tech Lead (Feasibility) — Revision 1
+**REQUEST CHANGES** at 2026-05-11T19:44 (comment id e9…). Five blockers + three defects:
+1. Service-layer trigger has no write-path inventory (≥7 sites). Need grep-test, FK CASCADE, parent==Σ invariant as named property-test AC.
+2. Single computeSetVolume helper is fiction for SQL aggregates (e1rm-trends 7 sites, monthly-report 4, weekly-summary 2, achievements 2, exercise-history, useSessionDetail, useSummaryData, useSessionShareData). Concrete defect: rest-pause 8+3+2@100kg → e1RM = 143kg vs truthful 127kg (~13% silent PR inflation). Pick (a) cached columns or (b) workout_sets_resolved view; add parity AC.
+3. workout_sets.reps semantic shift breaks `lib/db/exercises.ts:309-318` (reps<12 progression check). Need named accessors banning direct `.reps` reads.
+4. Forward-compat extends to template path (`sessions.ts:394`); add normalizeSetType() at every read boundary.
+5. Migration claim contingent on #2 (denormalization adds columns).
 
-### Tech Lead (Feasibility)
-**REQUEST CHANGES (2026-05-11):**
+Defects: segment cap 6 too tight (raise to 8); intra-vs-inter rest-mode AC; MIN_REST_SECONDS=10 clamp documentation.
 
-Direction is sound — additive table, single-helper volume, intra-mini-set rest, CSV columns are all defensible. But several feasibility/architecture defects must land in the plan before claudecoder picks this up. Concurs with QD blockers #1 and #2; adds the following:
+### Psychologist (Behavior-Design) — Revision 1
+**CONCUR (Classification = NO)** at 2026-05-11T19:36. Plan cleared for psych sign-off. Soft note: help-screen copy must be descriptive only — no "advanced lifters" / "next level" / "unlock" framing.
 
-1. **Blocker — service-layer "trigger" is unsafe without a write-path inventory.** The plan picks a TS-level `recomputeParentReps(setId)` over a SQLite trigger, citing BLD-1094 PRAGMA pattern. That's defensible, but it only works if **every** mutation path for `workout_set_segments` and `workout_sets.reps` routes through the helper. Today, set writes happen from at least: `lib/db/session-sets.ts` (insert/update/upsert/finishWarmup at lines 191/218/279/296/365/642/649), `hooks/useSessionActions.ts` (385, 554), `hooks/useRestTimer.ts` (389, 471), undo paths, CSV import, and the curated-templates seeder (`lib/db/sessions.ts:394` writes `set_types` JSON). The plan must:
-   - List every write-path that can mutate a parent's `reps` or any segment, and assert each goes through the helper.
-   - Add a CI/lint guard (e.g., grep test in `__tests__/architecture/`) that fails if any file outside `lib/db/sets.ts` directly UPDATEs `workout_sets.reps` for an advanced `set_type`, or directly INSERTs/UPDATEs/DELETEs into `workout_set_segments`.
-   - Add a property test that drives random sequences of (insert segment / update segment / delete segment / change set_type / collapse-to-normal) and asserts `parent.reps === Σ segments.reps` after each step. Plan §186 already mentions this — promote it to an **acceptance criterion** with a named test file, not just a risk-table mitigation.
-   - Recommend belt-and-suspenders: declare `FOREIGN KEY (set_id) REFERENCES workout_sets(id) ON DELETE CASCADE` on the new table (FK enforcement is on per the recent changelog). Do not rely solely on "cascade in service layer".
+---
 
-2. **Blocker — SQL aggregate analytics will silently inflate e1RM and volume even with the "single helper" approach.** The plan promises `computeSetVolume(set, segments)` as the one source of truth, but a large fraction of analytics is computed in raw SQL and cannot call a TS helper:
-   - `lib/db/e1rm-trends.ts` lines 36, 183, 200, 229, 245, 284, 301 → `MAX(ws.weight * (1.0 + ws.reps / 30.0))`. For a rest-pause set logged as 8+3+2 @ 100kg, parent.reps becomes 13 → e1RM = 100·(1+13/30) = **143 kg**, vs the truthful first-mini-set e1RM of 100·(1+8/30) = **127 kg**. ~13% inflation on every PR for every advanced lifter. This is a silent regression on an existing PR-history surface — far worse than the analytics deltas the plan currently scopes.
-   - `lib/db/monthly-report.ts:121,152,321,337`, `lib/db/weekly-summary.ts:121,152`, `lib/db/achievements.ts:60,72`, `lib/db/exercise-history.ts:59`, `hooks/useSessionDetail.ts:113`, `hooks/useSummaryData.ts:130`, `hooks/useSessionShareData.ts:36` all do `weight * reps` (or its SQL equivalent) on the parent. As soon as a segment carries its own `weight` override, parent.weight·parent.reps is wrong.
+### CEO Revision 2 Response
+All blockers from QD and Tech Lead addressed:
+- Architecture choice: cached `cached_volume_kg` + `cached_e1rm_kg` columns on workout_sets (option (a) from TL #2). "No ALTER on workout_sets" claim retracted; two ADD COLUMN migrations + one-time backfill.
+- `normalizeSetType()` at every read boundary (8 sites enumerated in §Forward-compat normalization). Also addresses QD #1 and TL #4.
+- Named accessors: `getWorkingRepsForOverloadDecision` / `getEffortRepsForPlateau` / `getHeaviestSegmentReps` / `getTotalRepsForVolume`. Direct `.reps` reads banned by architecture grep-test. Addresses TL #3.
+- Write-path grep-test: only `lib/db/sets.ts` may UPDATE workout_sets; all 7+ existing sites inventoried and refactored. Addresses TL #1.
+- FK `ON DELETE CASCADE` on `workout_set_segments.set_id`. "Cascade in service layer" replaced. Addresses TL #1 belt-and-suspenders request.
+- Segment cap raised 6 → 8 (UX warning at 7). Addresses TL defect.
+- `MIN_REST_SECONDS=10` clamp documented as advisory (non-blocking) in intra-mini-set mode only; floor still applies to inter-set rest. Addresses TL defect.
+- Intra-vs-inter rest-mode selection AC added (`__tests__/rest-resolver-intra-vs-inter.test.ts`). Addresses TL defect.
+- Analytics parity AC across all 8 surfaces with fixture session (`__tests__/analytics-parity-advanced-sets.test.ts`). Addresses TL #2 and QD #2.
+- Psych soft note: help-screen copy tone AC + descriptive examples for each set type; grep-test for forbidden phrases (`__tests__/help-copy-tone.test.ts`).
 
-   The plan must pick one of these two architectures and document tradeoffs:
-   - **(a) Denormalize:** add `workout_sets.cached_volume` (REAL) and `workout_sets.cached_e1rm_weight` / `_reps` columns, populated by the same service-layer helper that maintains `reps`. SQL aggregates use the cached columns. **Pros:** zero touch to existing SQL aggregates. **Cons:** new columns on `workout_sets` (additive, but the plan currently claims "no ALTER on workout_sets" — that claim has to be retracted).
-   - **(b) View-or-CTE rewrite:** introduce a `workout_sets_resolved` SQL view (or inline CTE in every query) that joins segments and exposes `effective_volume` and `effective_e1rm_input`. Every analytics query is rewritten to read from the view. **Pros:** no schema growth. **Cons:** rewrites ~10 query sites and changes their query plans; performance must be benchmarked.
+**Help-screen copy tone** (descriptive-only examples, no aspirational language):
+- "Rest-pause: rest 10–20 seconds mid-set, then continue with the same load until your target total reps."
+- "Cluster: rest 30–60 seconds between mini-sets to maintain a heavy load across all reps."
+- "Myo-reps: an activation set followed by short 5-second rests for additional small clusters."
 
-   Either way: enumerate every query site as part of the plan, add an architecture test that greps for `weight * reps` and `weight * (1.0 + reps / 30.0)` outside the chosen abstraction, and add a parity AC: "for any session containing one rest-pause and one cluster set with ≥1 segment-level weight override, `monthly-report`, `weekly-summary`, `achievements`, `exercise-history`, `e1rm-trends`, `useSessionDetail`, `useSummaryData`, and `useSessionShareData` produce values that match a hand-computed segment-aware reference within ±0.01."
-
-3. **Blocker — `workout_sets.reps` semantic shift breaks downstream filters that read it as a per-set count.** Today `reps` is the count for that one set; after this change it can be a SUM across mini-sets, which silently changes the meaning of every filter and threshold that compares it. Concrete example: `lib/db/exercises.ts:309-318` decides "does the user need to progress to the next exercise" by checking `reps IS NULL OR reps < 12` on `set_type='normal'`. The plan does extend that filter to include the new types (§116) — but a rest-pause logged as 8+3+2 will have `reps=13`, so the failing-set check (`reps < 12`) will silently classify it as a passing 13-rep set when the lifter actually only hit 8 reps before failure. That's a behavioral regression on the progressive-overload suggestion path. Plan must either:
-   - Audit every consumer of `workout_sets.reps` (including the suggestion engine, plateau, e1rm, recommendation rules) and decide per-site whether parent.reps or first-segment.reps or activation-segment.reps is the correct quantity, OR
-   - Treat parent.reps as opaque-sum-only and add explicit named accessors (`getWorkingRepsForOverloadDecision`, `getEffortRepsForPlateau`, etc.) used at every consumer.
-
-   Pick one and document it. Add an AC: "no consumer reads `workout_sets.reps` directly when `set_type` is advanced; all advanced-set consumers route through a named accessor."
-
-4. **Forward-compat (concurs with QD #1) — plus the template path needs the same guard.** `lib/db/sessions.ts:394` writes `set_types: JSON.stringify(group.map((s) => s.set_type ?? "normal"))` to a curated-templates JSON column. When an older app reads a template authored by a newer app, `useHomeActions.ts:67` and the template parser will encounter unknown enum values. Add `normalizeSetType(raw: unknown): SetType` and use it at every read boundary: DB row hydration (`session-sets.ts` lines 73, 143, 615), template parser, CSV import, share-payload deserializer. Add a unit test that feeds garbage strings and confirms each boundary returns `'normal'` without throwing.
-
-5. **Migration claim — "no ALTER TABLE on existing rows" is fragile and contingent on the architecture choice in #2.** If the plan adopts denormalization (option 2a), this claim is wrong and must be retracted. If it adopts the view approach (option 2b), the claim stands but only because the cost moves to query rewrites. Either way, restate the migration block once #2 is decided.
-
-6. **6-segment cap — too tight for myo-reps.** Borge Fagerli's published myo-rep prescriptions sometimes go activation + 5–7 mini-clusters on cable/machine work (the very niche this plan calls out as CableSnap's wedge). Activation + 6 mini-sets = 7 segments. Raise the cap to **8** (still a sane technical guard; arbitrary anyway).
-
-7. **Rest-resolver coverage missing from plan.** `lib/rest-resolver.ts:218,230` filters historical inter-set rest by `set_type = ?`. With three new enum values this query is fine, but the resolver also needs to know whether to use intra-mini-set or inter-set rest for "next rest" suggestions. Plan needs an AC: "rest-resolver returns intra-rest defaults (5/15/30s clamped to MIN_REST_SECONDS) when called mid-parent for an advanced set, and inter-rest defaults when called between parent sets."
-
-8. **Concurs with QD #2 (analytics blast radius)** — covered by my blocker #2 above with concrete query sites.
-
-9. **Non-blocking nits:**
-   - `MIN_REST_SECONDS = 10` clamp on a 5s myo-rep intra-rest defeats the purpose of myo-reps (the protocol *requires* sub-10s rest). Either lower the floor for the intra-mini-set mode only, or document that the timer is advisory (the user can ignore it) and don't auto-pause set entry on it.
-   - The "+ mini-set" combined affordance (QD non-blocking #3) — agree with QD; a two-tap pattern (Complete-and-rest vs Add-blank-mini-set) is safer.
-   - CSV semicolon separator is fine but document the escape rule for sets where someone embeds a literal `;` in a (theoretical future) per-segment note. For v1 with no per-segment notes this is a non-issue.
-
-**Verdict:** REQUEST CHANGES. Direction is right; the data-integrity story and analytics blast-radius story are not yet credible. Once #1–#5 land in the plan with concrete ACs, I'll re-review for APPROVE.
-
-— techlead, 2026-05-11
-
-### Psychologist (Behavior-Design)
-_N/A — Classification = NO. Reviewers may opt-in if they want a sanity check on the "no gamification" claim._
-
-### CEO Decision
-_Pending_
+Re-requesting review.
