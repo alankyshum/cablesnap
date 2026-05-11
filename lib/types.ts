@@ -294,7 +294,8 @@ export type WorkoutSession = {
 
 export type SetType = "normal" | "warmup" | "dropset" | "failure" | "rest_pause" | "cluster" | "myo_reps";
 
-export const SET_TYPE_CYCLE: SetType[] = ["normal", "warmup", "dropset", "failure"];
+// BLD-1168: advanced set schemes appended so the cycle selector includes them.
+export const SET_TYPE_CYCLE: SetType[] = ["normal", "warmup", "dropset", "failure", "rest_pause", "cluster", "myo_reps"];
 
 /** BLD-1168: one ordered mini-set within a rest-pause / cluster / myo-reps parent set. */
 export type SetSegment = {
