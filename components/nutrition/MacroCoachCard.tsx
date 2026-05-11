@@ -126,6 +126,8 @@ export function MacroCoachCard({
     await updateMacroTargets(clamped, macros.protein_g, macros.carbs_g, macros.fat_g);
     const nowIso = new Date().toISOString().slice(0, 10);
     if (rightWhy) await setRightWhyEntry(nowIso, rightWhy);
+    // Persist acceptance so post-decision check-in renders next week (same as handleUseThisNumber).
+    await setLastAcceptedSuggestion(nowIso, clamped);
     await resetDismissalCount();
     clearMacroCoachMemo();
     setShowSetOwn(false);
