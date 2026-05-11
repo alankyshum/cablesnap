@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Tempo Coach (haptic engine)**: Enable "Tempo Coach" in Settings → Preferences to get a haptic rep guide during your sets. When active, a vibration cues each phase of your tempo (eccentric → bottom pause → concentric → top pause) in real time. A compact overlay shows the current phase and lets you stop the coach at any time. The coach auto-stops when the set is logged and cancels if you background the app.
 
 ## v0.26.32 — 2026-05-11
 <!-- versionCode: 102 -->

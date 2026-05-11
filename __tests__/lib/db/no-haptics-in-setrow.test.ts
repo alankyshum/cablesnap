@@ -1,15 +1,12 @@
 /**
  * BLD-1158 AC9: Static boundary guard — SetRow.tsx hard-exclusion boundary
- * and PR1 scope boundary (SetRow + tempo-coach.ts must not import expo-haptics
- * or contain PR2-restricted symbols).
+ * and tempo-coach.ts psychologist guardrails.
  *
  * Two describe blocks:
  *  1. SetRow.tsx hard exclusions — haptics, streak, badge, notification imports
- *  2. PR1 boundary guard — SetRow.tsx + tempo-coach.ts vs expo-haptics / PR2 symbols
- *
- * PR1 boundary rule: The Tempo Coach is split into three PRs. PR1 (this PR)
- * contains only the data layer and input UI. The coach engine (expo-haptics,
- * expo-keep-awake, streak/adherence/badge tracking) lives exclusively in PR2.
+ *  2. tempo-coach.ts psychologist guardrails — no streak/adherence/badge/notifications
+ *     (PR2: tempo-coach.ts now correctly imports expo-haptics as the engine; the
+ *     PR1 "no haptics in tempo-coach" rule no longer applies after PR2 merges)
  *
  * Strategy: Node's `fs.readFileSync` reads source at test time; assertions
  * verify that no forbidden symbols appear in non-comment code. Guardrail
@@ -83,42 +80,22 @@ describe("AC9 — SetRow.tsx hard exclusions", () => {
   });
 });
 
-describe("AC9: PR1 boundary — no PR2 symbols in SetRow or tempo-coach (PR1)", () => {
-  const setRowSrc = readSrc("components/session/SetRow.tsx");
+describe("AC9: tempo-coach.ts psychologist guardrails", () => {
   const tempoCoachSrc = readSrc("lib/workout/tempo-coach.ts");
-  const setRowCode = codeOnly(setRowSrc);
   const tempoCoachCode = codeOnly(tempoCoachSrc);
 
-  it("SetRow.tsx does not import expo-haptics", () => {
-    expect(setRowSrc).not.toMatch(/import.*expo-haptics/);
-    expect(setRowSrc).not.toMatch(/from ['"]expo-haptics['"]/);
-  });
-
-  it("SetRow.tsx does not reference streak, adherence, or gamification badge in new tempo code", () => {
-    // SetRow has a pre-existing `prBadge` style (🏆 emoji for PR sets).
-    // The boundary rule only applies to NEW gamification tracking (streak counts,
-    // adherence badges, motivation badges). Check tempo-coach.ts instead (below).
-    // This assertion is retained for SetRow specifically for expo-haptics only.
-    expect(setRowCode).not.toMatch(/import.*expo-haptics/);
-  });
-
-  it("SetRow.tsx does not call scheduleNotificationAsync in code", () => {
-    expect(setRowCode).not.toMatch(/scheduleNotificationAsync/);
-  });
-
-  it("tempo-coach.ts (PR1) does not import expo-haptics", () => {
-    expect(tempoCoachSrc).not.toMatch(/import.*expo-haptics/);
-    expect(tempoCoachSrc).not.toMatch(/from ['"]expo-haptics['"]/);
-  });
-
-  it("tempo-coach.ts (PR1) does not contain streak/adherence/badge tracking in code", () => {
+  it("tempo-coach.ts does not contain streak/adherence/badge tracking in code", () => {
     expect(tempoCoachCode).not.toMatch(/\bstreak\b/i);
     expect(tempoCoachCode).not.toMatch(/\badherence\b/i);
     expect(tempoCoachCode).not.toMatch(/\bbadge\b/i);
   });
 
-  it("tempo-coach.ts (PR1) does not call scheduleNotificationAsync in code", () => {
+  it("tempo-coach.ts does not call scheduleNotificationAsync in code", () => {
     // Guardrail comments may mention the symbol; only actual calls are forbidden.
     expect(tempoCoachCode).not.toMatch(/scheduleNotificationAsync/);
+  });
+
+  it("tempo-coach.ts exports startCoach (coach engine present in PR2)", () => {
+    expect(tempoCoachSrc).toMatch(/export function startCoach/);
   });
 });

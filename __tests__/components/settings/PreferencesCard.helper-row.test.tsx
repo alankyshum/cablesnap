@@ -28,6 +28,11 @@ jest.mock("@/lib/db", () => ({
   setAppSetting: (...args: unknown[]) => mockSet(...args),
 }));
 
+jest.mock("@/lib/workout/tempo-coach", () => ({
+  getTempoCoachEnabled: jest.fn().mockResolvedValue(false),
+  setTempoCoachEnabled: jest.fn().mockResolvedValue(undefined),
+}));
+
 import PreferencesCard from "@/components/settings/PreferencesCard";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
@@ -110,7 +115,7 @@ describe("PreferencesCard discoverability helper (BLD-582)", () => {
     expect(row.props.onLongPress).toBeUndefined();
     // Pressable / TouchableOpacity wrappers set accessibilityRole='button';
     // the helper's ancestor chain must not do that.
-    let node: any = row;
+    let node: typeof row | null = row;
     while (node) {
       if (node.props?.accessibilityRole === "button") {
         throw new Error("helper row has a pressable ancestor");
@@ -160,7 +165,7 @@ describe("PreferencesCard discoverability helper (BLD-582)", () => {
     const { findByTestId } = renderCard();
     const row = await findByTestId(HELPER_TID);
     const styles = Array.isArray(row.props.style) ? row.props.style.flat() : [row.props.style];
-    const color = styles.map((s: any) => s?.color).find(Boolean);
+    const color = styles.map((s: { color?: string } | null | undefined) => s?.color).find(Boolean);
     expect(color).toBe(mockColors.onSurfaceVariant);
   });
 });

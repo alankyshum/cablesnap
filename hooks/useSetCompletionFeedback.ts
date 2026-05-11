@@ -15,6 +15,7 @@
  */
 import { useCallback, useEffect } from "react";
 import * as Haptics from "expo-haptics";
+import { emitSetCompleted } from "@/lib/workout/tempo-coach";
 import {
   getAppSetting,
   setAppSetting,
@@ -109,6 +110,7 @@ export function useSetCompletionFeedback(): { fire: () => void } {
   }, []);
 
   const fire = useCallback(() => {
+    emitSetCompleted();
     if (hapticEnabled) {
       // Fire-and-forget — do not await. expo-haptics no-ops on devices
       // without haptic hardware per its contract.

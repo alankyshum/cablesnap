@@ -9,6 +9,10 @@ import {
   setSetCompletionHaptic,
   setSetCompletionAudio,
 } from "@/hooks/useSetCompletionFeedback";
+import {
+  getTempoCoachEnabled,
+  setTempoCoachEnabled,
+} from "@/lib/workout/tempo-coach";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
 import { markRpeCaptureNudgeSeen } from "@/lib/db/achievements";
@@ -46,6 +50,9 @@ export default function PreferencesCard({
   const [setCompleteHaptic, setSetCompleteHapticState] = useState(true);
   const [setCompleteAudio, setSetCompleteAudioState] = useState(false);
 
+  // BLD-1158b: Tempo Coach — haptic rep guide. Default OFF.
+  const [tempoCoachEnabled, setTempoCoachEnabledState] = useState(false);
+
   // BLD-580 helper-row tri-state (PLAN-BLD-580 §Technical Approach):
   //   true  = hide helper (safe default; also post-interaction state)
   //   false = show helper (only after hydration resolves a null stored value)
@@ -63,7 +70,8 @@ export default function PreferencesCard({
       getAppSetting("feedback.setComplete.haptic"),
       getAppSetting("feedback.setComplete.audio"),
       getAppSetting("session.pulleyPinTracking"),
-    ]).then(([adaptive, show, warmup, captureRpeSetting, scHaptic, scAudio, pulleyPin]) => {
+      getTempoCoachEnabled(),
+    ]).then(([adaptive, show, warmup, captureRpeSetting, scHaptic, scAudio, pulleyPin, tempoCoach]) => {
       if (cancelled) return;
       setAdaptiveRest(adaptive !== "false");
       setShowBreakdown(show === "true");
@@ -73,6 +81,7 @@ export default function PreferencesCard({
       setSetCompleteAudioState(scAudio === "true");
       setAudioEverInteracted(scAudio != null);
       setPulleyPinTrackingState(pulleyPin !== "false");
+      setTempoCoachEnabledState(tempoCoach);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -123,6 +132,12 @@ export default function PreferencesCard({
     setPulleyPinTrackingState(val);
     try { await setAppSetting("session.pulleyPinTracking", val ? "true" : "false"); }
     catch { toast.error("Failed to save pulley pin tracking setting"); }
+  };
+
+  const updateTempoCoachEnabled = async (val: boolean) => {
+    setTempoCoachEnabledState(val);
+    try { await setTempoCoachEnabled(val); }
+    catch { toast.error("Failed to save Tempo Coach setting"); }
   };
 
   return (
@@ -238,6 +253,21 @@ export default function PreferencesCard({
             accessibilityLabel="Track pulley pin position"
             accessibilityRole="switch"
             accessibilityHint="Show or hide the pulley pin chip on cable exercise sets"
+          />
+        </View>
+
+        {/* BLD-1158b: Tempo Coach */}
+        <View style={styles.row}>
+          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+            Tempo Coach (haptic)
+          </Text>
+          <Switch
+            value={tempoCoachEnabled}
+            onValueChange={updateTempoCoachEnabled}
+            accessibilityLabel="Tempo Coach"
+            accessibilityRole="switch"
+            accessibilityHint="Enable haptic rep guide to coach your tempo on each set"
+            testID="pref-tempo-coach-switch"
           />
         </View>
 
