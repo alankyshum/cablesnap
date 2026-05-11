@@ -81,9 +81,10 @@ test.describe("@scenario form-clip-compare", () => {
     // Enter select mode.
     await page.getByRole("button", { name: "Select clips" }).click();
 
-    // Select both clips — clips render as pressable thumbnails with labels like
-    // "Clip from {date}, not selected" (production accessibilityLabel).
-    const thumbnails = page.getByRole("button", { name: /Clip from/i });
+    // ClipThumbnail in components/session/FormLibraryTab.tsx renders:
+    //   accessibilityLabel=`Clip from ${dateStr}, not selected` (in select mode)
+    // Anchor with ^ so this doesn't also match overflow labels like "More options for clip from …".
+    const thumbnails = page.getByRole("button", { name: /^Clip from / });
     await thumbnails.first().click();
     await thumbnails.last().click();
 
@@ -118,8 +119,10 @@ test.describe("@scenario form-clip-compare", () => {
     // Enter select mode.
     await page.getByRole("button", { name: "Select clips" }).click();
 
-    // Select only one clip — label matches "Clip from {date}, not selected".
-    const thumbnails = page.getByRole("button", { name: /Clip from/i });
+    // ClipThumbnail in components/session/FormLibraryTab.tsx renders:
+    //   accessibilityLabel=`Clip from ${dateStr}, not selected` (in select mode)
+    // Anchor with ^ so this doesn't also match overflow labels like "More options for clip from …".
+    const thumbnails = page.getByRole("button", { name: /^Clip from / });
     await thumbnails.first().click();
 
     // With only one selected, Compare should not be present or should be disabled.
