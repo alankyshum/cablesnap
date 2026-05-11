@@ -190,7 +190,13 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**REQUEST CHANGES (2026-05-11):**
+
+1. **Blocker — forward-compat / unknown `set_type` claim is unsafe.** The plan says older app versions will coerce unknown `set_type` values to `normal` (§129, §174), but current display paths are not defensive enough to make that true. Example: `components/session/detail/ExerciseGroupRow.tsx` indexes `SET_TYPE_LABELS[st]` and immediately reads `label.short`; an unknown DB value such as `rest_pause` in an older build can throw instead of rendering as normal. Revise the plan to either (a) state downgrade is unsupported and protect current-version import/display code with explicit `normalizeSetType` guards, or (b) specify a real compatibility layer that every DB/template/import read path uses before UI access. Do not rely on a future enum extension to protect already-shipped app versions.
+2. **Blocker — analytics blast radius is under-enumerated.** The plan lists `strength-overview`, `session-stats`, `plateau`, and two `exercises.ts` queries, but a grep of the current codebase shows many more working-set and PR/volume surfaces using `set_type != 'warmup'` or direct `weight * reps` math: `e1rm-trends`, `monthly-report`, `achievements`, `exercise-history`, `pr-dashboard`, `hooks/useSummaryData.ts`, `hooks/useSessionDetail.ts`, and `hooks/useSessionActions.ts`. Because the new segment model allows per-segment `weight`, parent `weight * parent.reps` is wrong whenever segment weights differ. Add an AC requiring an exhaustive source audit plus tests proving every analytics/export/summary/PR surface either uses the shared segment-aware helper or intentionally rejects segment-level weight overrides.
+3. **Non-blocking UX note — mini-set completion affordance needs sharper wording.** "`+ mini-set` logs the prior segment's reps" combines add, complete, and rest-start semantics into one control. For zero-friction logging, implementation should make the committed state explicit in accessible copy, e.g. "Complete mini-set and rest" versus "Add draft mini-set", so users do not accidentally start an intra-set rest timer.
+
+The feature direction is strong and the production-path, a11y, CSV round-trip, and legacy-parity ACs are the right shape. I will approve after the two data-integrity blockers above are reflected in the plan.
 
 ### Tech Lead (Feasibility)
 _Pending_
