@@ -45,6 +45,12 @@ import { SetupPhotoSheet } from "../../components/session/SetupPhotoSheet";
 import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
 import { toAbsPath } from "../../lib/media/form-clips";
 import { useCompareFromPlayer } from "../../hooks/useCompareFromPlayer";
+import { CoachOverlay } from "../../components/session/CoachOverlay";
+import {
+  startCoach,
+  getTempoCoachEnabled,
+} from "../../lib/workout/tempo-coach";
+import type { CoachSession, CoachPhase } from "../../lib/workout/tempo-coach";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -128,6 +134,50 @@ export default function ActiveSession() {
   } = useSetOptionsSheetActions({ groups, setGroups });
 
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
+
+  // BLD-1158b: Tempo Coach state
+  const [tempoCoachEnabled, setTempoCoachEnabledState] = useState(false);
+  const [activeCoachSession, setActiveCoachSession] = useState<CoachSession | null>(null);
+  const [coachPhase, setCoachPhase] = useState<CoachPhase | null>(null);
+  const [coachTempo, setCoachTempo] = useState<string | null>(null);
+  const activeCoachRef = useRef<CoachSession | null>(null);
+
+  useEffect(() => {
+    getTempoCoachEnabled().then(setTempoCoachEnabledState).catch(() => {});
+  }, []);
+
+  // Cancel coach on unmount.
+  useEffect(() => {
+    return () => {
+      activeCoachRef.current?.cancel("unmount");
+    };
+  }, []);
+
+  const handleStartCoach = useCallback((tempo: string) => {
+    activeCoachRef.current?.cancel("manual");
+    setCoachPhase(null);
+    const session = startCoach(tempo, {
+      onAbort: () => {
+        setActiveCoachSession(null);
+        setCoachPhase(null);
+        setCoachTempo(null);
+        activeCoachRef.current = null;
+      },
+    });
+    if (session) {
+      activeCoachRef.current = session;
+      setActiveCoachSession(session);
+      setCoachTempo(tempo);
+    }
+  }, []);
+
+  const handleStopCoach = useCallback(() => {
+    activeCoachRef.current?.cancel("manual");
+    setActiveCoachSession(null);
+    setCoachPhase(null);
+    setCoachTempo(null);
+    activeCoachRef.current = null;
+  }, []);
 
   const {
     elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, nextHint, hintTimer,
@@ -524,8 +574,17 @@ export default function ActiveSession() {
           onSelectType={handleSelectSetType}
           onSaveTempo={handleSaveTempo}
           onDismiss={() => setSetOptionsSheetSetId(null)}
+          tempoCoachEnabled={tempoCoachEnabled}
+          onStartCoach={handleStartCoach}
         />
       )}
+      {activeCoachSession && coachTempo ? (
+        <CoachOverlay
+          currentPhase={coachPhase}
+          tempo={coachTempo}
+          onStop={handleStopCoach}
+        />
+      ) : null}
 
       <ExercisePickerSheet
         visible={pickerOpen}

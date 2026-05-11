@@ -1,15 +1,17 @@
 /**
- * BLD-1158: Tempo Coach — parser/validator (PR1).
+ * BLD-1158: Tempo Coach — parser/validator (PR1) + coach engine (PR2).
  *
- * HAPTIC GUARDRAIL: This module (PR1) contains ONLY the parser surface.
- * The coach engine (startCoach, expo-haptics, expo-keep-awake, AppState) lives
- * in PR2 (BLD-1158b). Any PR adding the following to this file requires a fresh
- * psychologist review (classification flip to YES):
+ * PSYCHOLOGIST GUARDRAIL: This module MUST NOT contain:
  *   - streak / adherence / badge tracking
- *   - out-of-set notifications
- *   - Notifications.scheduleNotificationAsync
+ *   - out-of-set notifications (scheduleNotificationAsync)
  *   - Persuasive copy on discouragement moments (tempo trends, plateau hints)
+ * Any such addition requires a fresh psychologist review.
  */
+
+import * as Haptics from "expo-haptics";
+import * as KeepAwake from "expo-keep-awake";
+import { AccessibilityInfo, AppState } from "react-native";
+import { getAppSetting, setAppSetting } from "@/lib/db/settings";
 
 export type ParsedTempo = {
   e: number; // eccentric (lowering) phase, seconds
@@ -97,4 +99,193 @@ export function tempoAccessibilityLabel(parsed: ParsedTempo): string {
     phase(parsed.c, "concentric"),
     phase(parsed.t, "pause"),
   ].join(", ");
+}
+
+// ---- Coach Engine (PR2) ----
+
+export type CoachAbortReason = "manual" | "backgrounded" | "set_completed" | "unmount";
+export type CoachPhase = "eccentric" | "bottom_pause" | "concentric" | "top_pause";
+
+export interface CoachOptions {
+  onAbort?: (reason: CoachAbortReason) => void;
+}
+
+export interface CoachSession {
+  cancel: (reason?: CoachAbortReason) => void;
+  isRunning: () => boolean;
+}
+
+// Module-level pub/sub for set-completion signals (AC13).
+type SetCompletedListener = () => void;
+const setCompletedListeners = new Set<SetCompletedListener>();
+
+/** Subscribe to set-completed signals. Returns an unsubscribe function. */
+export function subscribeSetCompleted(listener: SetCompletedListener): () => void {
+  setCompletedListeners.add(listener);
+  return () => setCompletedListeners.delete(listener);
+}
+
+/** Emit set-completed to cancel any active coach session before haptic fires. */
+export function emitSetCompleted(): void {
+  setCompletedListeners.forEach((l) => l());
+}
+
+// Haptic error log-once flag — reset on each new coach session start.
+let hapticErrorLogged = false;
+
+/** Test helper — resets the haptic error log flag between tests. */
+export function __resetHapticErrorLogForTests(): void {
+  hapticErrorLogged = false;
+}
+
+// ---- Settings helpers ----
+
+export const TEMPO_COACH_SETTING_KEY = "tempo_coach_enabled";
+
+export async function getTempoCoachEnabled(): Promise<boolean> {
+  const val = await getAppSetting(TEMPO_COACH_SETTING_KEY);
+  return val === "true";
+}
+
+export async function setTempoCoachEnabled(enabled: boolean): Promise<void> {
+  await setAppSetting(TEMPO_COACH_SETTING_KEY, enabled ? "true" : "false");
+}
+
+// ---- Internal helpers ----
+
+function phaseAtOffset(offsetMs: number, parsed: ParsedTempo): CoachPhase {
+  const { e, b, c } = parsed;
+  if (offsetMs >= (e + b + c) * 1000) return "top_pause";
+  if (offsetMs >= (e + b) * 1000) return "concentric";
+  if (offsetMs >= e * 1000) return "bottom_pause";
+  return "eccentric";
+}
+
+function phaseAnnouncement(phase: CoachPhase): string {
+  switch (phase) {
+    case "eccentric":
+      return "Lower the weight";
+    case "bottom_pause":
+      return "Hold at the bottom";
+    case "concentric":
+      return "Lift the weight";
+    case "top_pause":
+      return "Hold at the top";
+  }
+}
+
+/**
+ * Start a Tempo Coach session for the given tempo string.
+ *
+ * Returns a CoachSession handle (cancel + isRunning), or null if the tempo
+ * string is invalid. The coach:
+ *   - Fires selectionAsync haptics at each phase boundary (AC4)
+ *   - Fires a double-tick (two haptics ≤80ms apart) at the rep boundary (AC4)
+ *   - Falls back to AccessibilityInfo announcements when reduce-motion is on (AC5)
+ *   - Activates expo-keep-awake for the session duration (AC12)
+ *   - Cancels automatically when the app backgrounds (AC7)
+ *   - Cancels on emitSetCompleted() and fires a Success haptic (AC13)
+ */
+export function startCoach(tempo: string, options: CoachOptions): CoachSession | null {
+  const parsedOrNull = parseTempo(tempo);
+  if (!parsedOrNull) return null;
+  const parsed: ParsedTempo = parsedOrNull;
+
+  hapticErrorLogged = false;
+  let cancelled = false;
+
+  const repDurationMs = (parsed.e + parsed.b + parsed.c + parsed.t) * 1000;
+
+  // Unique phase start offsets (ms) in ascending order.
+  const rawOffsets = [
+    0,
+    parsed.e * 1000,
+    (parsed.e + parsed.b) * 1000,
+    (parsed.e + parsed.b + parsed.c) * 1000,
+    repDurationMs,
+  ];
+  const uniqueOffsets = [...new Set(rawOffsets)];
+  // All offsets except the last are single-tick boundaries; the last is the rep boundary.
+  const singleTickOffsets = uniqueOffsets.slice(0, -1);
+  const boundaryOffset = uniqueOffsets[uniqueOffsets.length - 1]; // = repDurationMs
+
+  void KeepAwake.activateKeepAwakeAsync("tempo-coach");
+
+  const appStateSubscription = AppState.addEventListener(
+    "change",
+    (state: string) => {
+      if (state === "background" || state === "inactive") {
+        cancel("backgrounded");
+      }
+    }
+  );
+
+  const unsubscribeSetCompleted = subscribeSetCompleted(() => {
+    cancel("set_completed");
+  });
+
+  function fireHaptic(reduceMotion: boolean, phase: CoachPhase): void {
+    if (cancelled) return;
+    if (reduceMotion) {
+      AccessibilityInfo.announceForAccessibility(phaseAnnouncement(phase));
+    } else {
+      void Haptics.selectionAsync().catch((err: unknown) => {
+        if (!hapticErrorLogged) {
+          hapticErrorLogged = true;
+          console.warn("TempoCoach: haptic unavailable —", err);
+        }
+      });
+    }
+  }
+
+  function scheduleRep(reduceMotion: boolean): void {
+    if (cancelled) return;
+
+    for (const offset of singleTickOffsets) {
+      setTimeout(() => {
+        if (cancelled) return;
+        fireHaptic(reduceMotion, phaseAtOffset(offset, parsed));
+      }, offset);
+    }
+
+    // Rep boundary: double-tick + next rep (all scheduled after the boundary fires).
+    setTimeout(() => {
+      if (cancelled) return;
+      setTimeout(() => {
+        if (cancelled) return;
+        fireHaptic(reduceMotion, "top_pause");
+      }, 1);
+      setTimeout(() => {
+        if (cancelled) return;
+        fireHaptic(reduceMotion, "top_pause");
+      }, 80);
+      setTimeout(() => {
+        if (cancelled) return;
+        scheduleRep(reduceMotion);
+      }, 81);
+    }, boundaryOffset);
+  }
+
+  function cancel(reason: CoachAbortReason = "manual"): void {
+    if (cancelled) return;
+    cancelled = true;
+    KeepAwake.deactivateKeepAwake("tempo-coach");
+    appStateSubscription.remove();
+    unsubscribeSetCompleted();
+    options.onAbort?.(reason);
+    if (reason === "set_completed") {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }
+
+  void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion: boolean) => {
+    if (!cancelled) {
+      scheduleRep(reduceMotion);
+    }
+  });
+
+  return {
+    cancel,
+    isRunning: () => !cancelled,
+  };
 }

@@ -16,6 +16,10 @@ type SetOptionsSheetProps = {
   onSelectType: (type: SetType) => void;
   onSaveTempo: (setId: string, tempo: string | null) => void;
   onDismiss: () => void;
+  /** Whether Tempo Coach is enabled in Settings (AC3). */
+  tempoCoachEnabled?: boolean;
+  /** Called when user taps "Coach this set". Receives the current tempo string. */
+  onStartCoach?: (tempo: string) => void;
 };
 
 /**
@@ -35,6 +39,8 @@ export function SetOptionsSheet({
   onSelectType,
   onSaveTempo,
   onDismiss,
+  tempoCoachEnabled = false,
+  onStartCoach,
 }: SetOptionsSheetProps) {
   const colors = useThemeColors();
   const [showTempoEditor, setShowTempoEditor] = useState(false);
@@ -196,6 +202,33 @@ export function SetOptionsSheet({
               </View>
               <Text style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>›</Text>
             </Pressable>
+
+            {/* ── Coach Launcher (AC3/AC8): visible when Tempo Coach enabled + tempo set) ── */}
+            {tempoCoachEnabled && currentTempo && onStartCoach ? (
+              <Pressable
+                style={[styles.option, { backgroundColor: colors.primaryContainer }]}
+                onPress={() => {
+                  onStartCoach(currentTempo);
+                  onDismiss();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Start Tempo Coach for ${currentTempo}. Double tap to begin.`}
+              >
+                <View style={[styles.chipPreview, { backgroundColor: colors.primary }]}>
+                  <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: colors.onPrimary }}>
+                    ▶
+                  </Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text variant="body" style={{ color: colors.onPrimaryContainer }}>
+                    Coach this set
+                  </Text>
+                  <Text variant="caption" style={{ color: colors.onPrimaryContainer, marginTop: 2, opacity: 0.8 }}>
+                    Haptic rep guide · {currentTempo}
+                  </Text>
+                </View>
+              </Pressable>
+            ) : null}
           </>
         ) : null}
       </View>
