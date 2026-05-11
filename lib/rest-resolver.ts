@@ -243,6 +243,75 @@ async function queryHistoryMedian(
   return { median, sampleCount: sorted.length };
 }
 
+// ─── BLD-1168: IntraMiniSetRest mode ─────────────────────────────────────────
+
+/** Advanced set types that use intra-mini-set rest. */
+export type AdvancedSetType = "rest_pause" | "cluster" | "myo_reps";
+
+/**
+ * Default intra-mini-set rest in seconds per set type.
+ *
+ * myo_reps = 5s  (per Borge Fagerli protocol — 5s non-blocking countdown)
+ * rest_pause = 15s  (typical mid-set pause duration)
+ * cluster   = 30s  (strength protocol: longer intra-cluster rest)
+ *
+ * The MIN_REST_SECONDS=10 floor is advisory in intra-mini-set mode only and
+ * is NEVER enforced here — myo_reps intentionally uses 5s. The floor only
+ * applies to inter-set rest (between parent sets).
+ */
+export const INTRA_MINI_SET_DEFAULTS: Record<AdvancedSetType, number> = {
+  myo_reps: 5,
+  rest_pause: 15,
+  cluster: 30,
+};
+
+export type IntraMiniSetRestResult = {
+  mode: "intra";
+  seconds: number;
+  /** Display badge shown during intra-mini-set rest. N is 1-based completed mini-set count. */
+  badge: string;
+  setType: AdvancedSetType;
+};
+
+export type IntraOrInterRestResult = IntraMiniSetRestResult | { mode: "inter" };
+
+/**
+ * Determine whether to use intra-mini-set or inter-set rest mode.
+ *
+ * Returns `{ mode: "intra", ... }` when a mini-set has just completed mid-parent
+ * (i.e. the parent set is NOT yet complete). Returns `{ mode: "inter" }` when the
+ * parent set is complete, signalling callers to use the regular `resolveRest` path
+ * and enforce the MIN_REST_SECONDS=10 floor.
+ *
+ * @param setType       The parent set's type (must be an AdvancedSetType).
+ * @param parentDone    True when the parent set has been marked complete.
+ * @param completedMiniSets  Count of mini-sets completed so far (≥1 to be mid-parent).
+ * @param totalMiniSets      Total planned mini-sets for the parent (may be unknown; 0 = "?").
+ */
+export function resolveIntraMiniSetRest(
+  setType: AdvancedSetType,
+  parentDone: boolean,
+  completedMiniSets: number,
+  totalMiniSets: number,
+): IntraOrInterRestResult {
+  if (parentDone) {
+    return { mode: "inter" };
+  }
+
+  const seconds = INTRA_MINI_SET_DEFAULTS[setType];
+  const totalLabel = totalMiniSets > 0 ? String(totalMiniSets) : "?";
+  const badge = `Mini-set ${completedMiniSets} of ${totalLabel}`;
+
+  return { mode: "intra", seconds, badge, setType };
+}
+
+/**
+ * Returns true if `setType` uses the intra-mini-set rest mode.
+ */
+export function isAdvancedSetType(setType: string): setType is AdvancedSetType {
+  return setType === "rest_pause" || setType === "cluster" || setType === "myo_reps";
+}
+
 // ─── Mutation: setUserRestSeconds ────────────────────────────────────────────
 
 /**
