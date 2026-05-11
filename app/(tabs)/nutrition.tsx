@@ -12,8 +12,21 @@ import { MealSectionHeader } from '../../components/nutrition/MealSectionHeader'
 import { MacroTargetsSheet } from '../../components/nutrition/MacroTargetsSheet';
 import { MealTemplatesSheet } from '../../components/nutrition/MealTemplatesSheet';
 import { WaterAmountSheet } from '../../components/nutrition/WaterAmountSheet';
+import { MacroCoachCard } from '../../components/nutrition/MacroCoachCard';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { useNutritionData } from '@/hooks/useNutritionData';
+import { useMacroCoach } from '@/hooks/useMacroCoach';
+
+/** Returns a human-readable week label like "May 4–10" based on the most recent Sunday. */
+function getWeekLabel(now: Date): string {
+  const day = now.getDay(); // 0=Sun
+  const sunday = new Date(now.getTime() - day * 86_400_000);
+  const saturday = new Date(sunday.getTime() + 6 * 86_400_000);
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const start = sunday.toLocaleDateString('en-US', opts);
+  const end = saturday.toLocaleDateString('en-US', { day: 'numeric' });
+  return `${start}–${end}`;
+}
 
 export default function Nutrition() {
   const colors = useThemeColors();
@@ -40,6 +53,15 @@ export default function Nutrition() {
     waterPresetsMl,
     addWater,
   } = useNutritionData();
+
+  const coach = useMacroCoach();
+  const weekLabel = getWeekLabel(new Date());
+
+  const showCoachCard =
+    (coach.status === 'ready' || coach.status === 'info_only') &&
+    coach.suggestion !== undefined &&
+    coach.safetyFloorKcal !== undefined &&
+    coach.userWeightKg !== undefined;
 
   const [targetsVisible, setTargetsVisible] = useState(false);
   const [templatesVisible, setTemplatesVisible] = useState(false);
@@ -72,22 +94,36 @@ export default function Nutrition() {
         renderItem={({ item }) => <FoodLogCard item={item} colors={colors} onRemove={remove} />}
         SectionSeparatorComponent={() => <View style={{ height: 16 }} />}
         ListHeaderComponent={
-          <NutritionListHeader
-            date={date}
-            summary={summary}
-            targets={targets}
-            waterTotalMl={waterTotalMl}
-            waterGoalMl={waterGoalMl}
-            waterUnit={waterUnit}
-            waterPresetsMl={waterPresetsMl}
-            colors={colors}
-            onPrev={prev}
-            onNext={next}
-            onEditTargets={() => setTargetsVisible(true)}
-            onMealTemplates={() => setTemplatesVisible(true)}
-            onWaterPreset={(amt) => addWater(amt)}
-            onWaterCustom={() => setWaterSheetVisible(true)}
-          />
+          <>
+            <NutritionListHeader
+              date={date}
+              summary={summary}
+              targets={targets}
+              waterTotalMl={waterTotalMl}
+              waterGoalMl={waterGoalMl}
+              waterUnit={waterUnit}
+              waterPresetsMl={waterPresetsMl}
+              colors={colors}
+              onPrev={prev}
+              onNext={next}
+              onEditTargets={() => setTargetsVisible(true)}
+              onMealTemplates={() => setTemplatesVisible(true)}
+              onWaterPreset={(amt) => addWater(amt)}
+              onWaterCustom={() => setWaterSheetVisible(true)}
+            />
+            {showCoachCard && (
+              <MacroCoachCard
+                suggestion={coach.suggestion!}
+                infoOnly={coach.status === 'info_only'}
+                weekLabel={weekLabel}
+                safetyFloorKcal={coach.safetyFloorKcal!}
+                userWeightKg={coach.userWeightKg!}
+                lastAcceptedDate={coach.lastAccepted?.dateIso}
+                lastAcceptedTarget={coach.lastAccepted?.targetKcal}
+                onDismiss={coach.refetch}
+              />
+            )}
+          </>
         }
         ListEmptyComponent={
           <View style={styles.empty}>

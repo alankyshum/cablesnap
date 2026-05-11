@@ -96,6 +96,28 @@ export function calculateMacros(
 }
 
 /**
+ * Recompute protein/carbs/fat from a coach-supplied calorie target WITHOUT re-applying
+ * GOAL_ADJUSTMENTS. This prevents the goal-double-apply trap when the Adaptive Macro Coach
+ * calls calculateMacros with its suggested target.
+ *
+ * The coach MUST call this helper — never calculateMacros — when applying a suggestion.
+ */
+export function recomputeMacrosFromCalories(
+  calories: number,
+  weight_kg: number
+): { protein_g: number; carbs_g: number; fat_g: number } {
+  const protein_g = Math.round(weight_kg * PROTEIN_PER_KG);
+  const fat_g = Math.round((calories * FAT_PERCENT) / 9);
+
+  const proteinCals = protein_g * 4;
+  const fatCals = fat_g * 9;
+  const carbCals = calories - proteinCals - fatCals;
+  const carbs_g = Math.max(0, Math.round(carbCals / 4));
+
+  return { protein_g, carbs_g, fat_g };
+}
+
+/**
  * Calculate absolute percentage deviation between a user-provided RMR and the formula estimate.
  */
 export function calculateDeviationPercent(inputRMR: number, estimatedBMR: number): number {
