@@ -181,6 +181,7 @@ jobs:
         # Gradle exclusion alone):
         #
         #   gms.wearable           — wearable bridge classes, intentionally kept
+        #                            (prefix match: all subclasses OK)
         #   gms.org.conscrypt      — OkHttp conscrypt-provider availability probe
         #                            (Class.forName string constant in OkHttp, not
         #                            a GMS dep — see BLD-1154 edge case)
@@ -194,6 +195,14 @@ jobs:
         #                                          probe string constant; MLKit dep
         #                                          (com.google.mlkit group) is
         #                                          fully excluded
+        #
+        # Exclusion strategy:
+        #   • gms.wearable: regex prefix match (grep -v) — covers all wearable
+        #     subclasses intentionally shipped in the F-Droid APK.
+        #   • The 4 false positives: exact whole-line fixed-string match
+        #     (grep -vxF) — excludes ONLY the exact known string, never
+        #     a string that merely starts with the same prefix. This prevents
+        #     future genuine violations with a similar prefix from being masked.
         run: |
           set -euo pipefail
           APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
@@ -202,10 +211,10 @@ jobs:
           strings "$DEX_TMP"/classes*.dex \
             | grep -E 'com\.google\.android\.gms|com\.google\.firebase|com\.google\.mlkit' \
             | grep -v 'com\.google\.android\.gms\.wearable' \
-            | grep -v 'com\.google\.android\.gms\.org\.conscrypt' \
-            | grep -v 'com\.google\.android\.gms\.provider\.action\.PICK_IMAGES' \
-            | grep -v 'com\.google\.android\.gms\.provider\.extra\.PICK_IMAGES_MAX' \
-            | grep -v 'com\.google\.mlkit\.vision\.barcode\.BarcodeScanning' \
+            | grep -vxF 'com.google.android.gms.org.conscrypt' \
+            | grep -vxF 'com.google.android.gms.provider.action.PICK_IMAGES' \
+            | grep -vxF 'com.google.android.gms.provider.extra.PICK_IMAGES_MAX' \
+            | grep -vxF 'com.google.mlkit.vision.barcode.BarcodeScanning' \
             | sort -u > /tmp/ac9-hits.txt || true
           rm -rf "$DEX_TMP"
           COUNT=$(wc -l < /tmp/ac9-hits.txt)
