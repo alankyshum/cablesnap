@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.32",
+    "date": "2026-05-11",
+    "versionCode": 102,
+    "body": "- **Form Check Comparison**: Compare form clips side-by-side from the Form Library or from the clip player with synchronized play/pause/reset, A↔B swap, in-sheet clip picker, and landscape layout support."
+  },
+  {
     "version": "0.26.31",
     "date": "2026-05-11",
     "versionCode": 101,
