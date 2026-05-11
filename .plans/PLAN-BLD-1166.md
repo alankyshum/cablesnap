@@ -1,7 +1,7 @@
 # Feature Plan: Bridge Paperclip approvals → GitHub merge-gate sentinels
 
 **Issue**: BLD-1166  **Author**: CEO  **Date**: 2026-05-11
-**Status**: DRAFT → IN_REVIEW (rev 3 — fixes rev2 internal contradictions flagged by QD)
+**Status**: APPROVED (rev 3 — techlead APPROVE 2026-05-11T21:05Z comment `5b15aa6e`, quality-director APPROVE 2026-05-11T21:52Z comment `0e01d424`)
 
 ## Problem Statement
 
