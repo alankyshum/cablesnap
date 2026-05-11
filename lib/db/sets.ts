@@ -205,6 +205,7 @@ export async function updateSetRepsAndDurationAtomic(
 }
 
 
+/**
  * Runs all updates then all cache recomputations to minimise round-trips.
  */
 export async function batchUpdateSetWeightReps(
