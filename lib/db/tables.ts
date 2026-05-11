@@ -80,7 +80,15 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       attachment TEXT DEFAULT 'handle',
       is_voltra INTEGER DEFAULT 0,
       start_image_uri TEXT DEFAULT NULL,
-      end_image_uri TEXT DEFAULT NULL
+      end_image_uri TEXT DEFAULT NULL,
+      progression_group TEXT DEFAULT NULL,
+      progression_order INTEGER DEFAULT NULL,
+      notes TEXT DEFAULT NULL,
+      notes_updated_at INTEGER DEFAULT NULL,
+      notes_backfill_dismissed_at INTEGER DEFAULT NULL,
+      user_rest_seconds INTEGER DEFAULT NULL,
+      max_pulley_pins INTEGER DEFAULT NULL,
+      default_tempo TEXT DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_templates (

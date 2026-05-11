@@ -91,6 +91,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "exercises", "notes_backfill_dismissed_at", "INTEGER DEFAULT NULL");
   // BLD-1114: per-exercise max pulley pin override.
   await addColumnIfMissing(database, "exercises", "max_pulley_pins", "INTEGER DEFAULT NULL");
+  // BLD-1158: per-exercise default tempo (E-B-C-T canonical form). NULL = no default.
+  await addColumnIfMissing(database, "exercises", "default_tempo", "TEXT DEFAULT NULL");
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");
   await addColumnIfMissing(database, "workout_templates", "source", "TEXT DEFAULT NULL");

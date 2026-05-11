@@ -111,7 +111,10 @@ export type Exercise = {
   notes?: string | null;
   notes_updated_at?: number | null;
   notes_backfill_dismissed_at?: number | null;
+  // BLD-1114: per-exercise pulley pin override.
   max_pulley_pins?: number | null;
+  // BLD-1158: per-exercise default tempo (E-B-C-T canonical form). NULL = no default.
+  default_tempo?: string | null;
 };
 
 export const CATEGORIES: Category[] = [

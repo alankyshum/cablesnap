@@ -18,6 +18,8 @@ export {
   updateExerciseNote,
   updateMaxPulleyPins,
   getMaxPulleyPins,
+  getDefaultTempo,
+  setDefaultTempo,
   dismissExerciseBackfill,
   getExerciseBackfillCandidate,
   getExerciseNotesBatch,

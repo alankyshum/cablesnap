@@ -31,6 +31,8 @@ function mapRow(row: ExerciseRow): Exercise {
     notes_updated_at: row.notes_updated_at ?? undefined,
     notes_backfill_dismissed_at: row.notes_backfill_dismissed_at ?? undefined,
     max_pulley_pins: row.max_pulley_pins ?? undefined,
+    // BLD-1158: per-exercise default tempo.
+    default_tempo: row.default_tempo ?? undefined,
   };
 }
 
@@ -152,6 +154,18 @@ export async function getMaxPulleyPins(exerciseId: string): Promise<number | nul
   const db = await getDrizzle();
   const rows = await db.select({ max_pulley_pins: exercises.max_pulley_pins }).from(exercises).where(eq(exercises.id, exerciseId)).limit(1);
   return rows[0]?.max_pulley_pins ?? null;
+}
+
+// BLD-1158: per-exercise default tempo (E-B-C-T canonical form).
+export async function getDefaultTempo(exerciseId: string): Promise<string | null> {
+  const db = await getDrizzle();
+  const rows = await db.select({ default_tempo: exercises.default_tempo }).from(exercises).where(eq(exercises.id, exerciseId)).limit(1);
+  return rows[0]?.default_tempo ?? null;
+}
+
+export async function setDefaultTempo(exerciseId: string, tempo: string | null): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(exercises).set({ default_tempo: tempo }).where(eq(exercises.id, exerciseId));
 }
 
 export async function softDeleteCustomExercise(id: string): Promise<void> {
