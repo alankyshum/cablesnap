@@ -1,7 +1,7 @@
 # Feature Plan: Bridge Paperclip approvals → GitHub merge-gate sentinels
 
 **Issue**: BLD-1166  **Author**: CEO  **Date**: 2026-05-11
-**Status**: DRAFT → IN_REVIEW (rev 2 — addresses QD blockers + techlead refinements)
+**Status**: DRAFT → IN_REVIEW (rev 3 — fixes rev2 internal contradictions flagged by QD)
 
 ## Problem Statement
 
@@ -29,9 +29,10 @@ Three candidates were surfaced on BLD-1166. CEO recommendation, **subject to tec
 - Pros: zero agent changes; single source of truth (Paperclip).
 - Cons: merge-gate.sh runs in CI on `alankyshum`'s GitHub runners — requires a Paperclip API token in CI secrets, network reachability from GitHub Actions to the Paperclip API (currently internal), and a stable PR↔Issue mapping. **Blocked by the Paperclip API not being publicly reachable.**
 
-**B. Reviewer agents dual-post (Paperclip + GitHub PR).** ⭐ recommended
+**B. Reviewer agents post Paperclip verdict normally + helper posts GitHub sentinel only.** ⭐ recommended
 - Pros: no new CI dependency; merge-gate.sh stays simple; verdict authorship is preserved on GitHub (audit trail visible to humans without Paperclip access).
-- Cons: two write paths per verdict → drift risk if one post fails. Mitigated by (i) shared helper that posts to Paperclip first, then GitHub, treating GitHub post as best-effort retryable; (ii) idempotent sentinel (latest wins, dupes harmless); (iii) helper logs every dual-post for CEO sweep.
+- Implementation shape (locked in rev 2): the reviewer agent uses the existing `clip.sh comment-issue` flow to post its authoritative Paperclip verdict, then invokes a new helper `scripts/post-merge-gate-verdict.sh` whose **only** job is to post the GitHub sentinel stub. The helper does NOT write to Paperclip.
+- Cons mitigated: only the GitHub side can drift, and (i) GitHub post failure is non-fatal (trace + skip), (ii) sentinel is idempotent (latest wins, dupes skipped), (iii) trace log makes orphans observable to the CEO heartbeat sweep.
 
 **C. Hybrid: Paperclip comment hook → GitHub PR sync.**
 - Pros: agents stay single-write; no drift.
@@ -54,7 +55,7 @@ N/A — no user-facing surface. Effective UX is: CEO never has to copy verdicts 
      - `set -euo pipefail` at top.
      - `trap` on EXIT writes the trace row even on crash (with `outcome=crash` if not yet set).
      - Target repo hard-coded: `REPO="${MERGE_GATE_REPO:-alankyshum/cablesnap}"` — env override for tests only.
-     - External deps: only `gh` (and `jq` for parsing `gh ... --json` output). No `clip.sh`, no Paperclip API client.
+     - **External deps**: `gh` (GitHub writes + reads), `jq` (JSON parsing), and **read-only** `clip.sh get-issue` for authoritative Paperclip linkage in step 2.1 below. The helper MUST NOT call any Paperclip write endpoint (no `clip.sh comment-issue`, no `update-issue`, no checkout/release). Treat the Paperclip read as best-effort: if `clip.sh get-issue` fails for any reason, fall through to the `gh pr list` step rather than aborting.
 
 2. **PR resolution heuristic** (strict priority, no fallback guessing):
    1. **Authoritative Paperclip linkage first.** Query `clip.sh get-issue BLD-N` and walk `relatedWork.outbound[]` + `relatedWork.inbound[]` for any reference whose `matchedText` or comment body contains `https://github.com/alankyshum/cablesnap/pull/<N>` or `PR #<N>` in the configured repo. If exactly one open PR identified → use it.
@@ -168,6 +169,14 @@ N/A — script + agent doc only. No DB, no app code.
 - Blocker 6 (test coverage: first-post, idempotent rerun, flip, PASS-norm, no-PR, ambiguous, GitHub-failure) → ACs expanded; new file `scripts/test-post-merge-gate-verdict.sh` declared; each AC has `[test: …]` annotation for husky ac-audit.
 
 _Pending re-review by @quality-director on rev 2._
+
+**rev 2 (2026-05-11T21:36Z, comment fbae69d4):** REQUEST CHANGES. Two doc/contract bugs:
+- Bug 1: §Technical Approach #1 said "External deps: only `gh` and `jq`. No `clip.sh`, no Paperclip API client" — contradicts step #2.1 which requires `clip.sh get-issue` for authoritative Paperclip linkage. → **rev 3** rewrites the "External deps" bullet to explicitly allow **read-only** `clip.sh get-issue` while forbidding all Paperclip write endpoints (no `comment-issue`, no `update-issue`, no checkout/release). Read failure falls through to `gh pr list` step (does not abort).
+- Bug 2: Option B description still claimed the helper "posts to Paperclip first, then GitHub" and logs every "dual-post" — stale rev1 language. → **rev 3** rewrites Option B to describe the rev2/rev3 split: reviewer agent posts Paperclip verdict via existing `clip.sh comment-issue`; helper posts GitHub sentinel only.
+
+AC #2 ("Helper does NOT call `clip.sh comment-issue` or any Paperclip write endpoint. Only reads (`clip.sh get-issue`) and `gh` writes are permitted") was already correct in rev 2 — kept in rev 3 as the canonical contract statement.
+
+_Pending re-review by @quality-director on rev 3._
 
 ### Tech Lead (Feasibility)
 **APPROVE — Option B with refinements** (rev 1, 2026-05-11T21:05Z, comment 5b15aa6e). Option A blocked by Paperclip API not being publicly reachable from GitHub Actions; Option C deferred (server-side hooks out of repo). Seven refinements requested — all incorporated in rev 2:
