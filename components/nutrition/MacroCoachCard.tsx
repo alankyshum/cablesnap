@@ -151,6 +151,11 @@ export function MacroCoachCard({
   async function handlePostDecisionDrained() {
     const until = Date.now() + 14 * 24 * 60 * 60 * 1000;
     await setDeficitSuppressedUntil(until);
+    // Persist into right_why history so hasTwoConsecutiveDrained() picks it up.
+    // Two consecutive post-decision "Drained" check-ins trigger 2-week deficit suppression.
+    // QD blocker resolution: post-decision Drained must feed the same history path.
+    const nowIso = new Date().toISOString().slice(0, 10);
+    await setRightWhyEntry(nowIso, "drained");
     clearMacroCoachMemo();
     onDismiss?.();
   }
