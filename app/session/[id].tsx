@@ -24,7 +24,7 @@ import { useRestTimer } from "../../hooks/useRestTimer";
 import { useSessionData } from "../../hooks/useSessionData";
 import { useSessionActions } from "../../hooks/useSessionActions";
 import { useExerciseManagement } from "../../hooks/useExerciseManagement";
-import { useSetTypeActions } from "../../hooks/useSetTypeActions";
+import { useSetOptionsSheetActions } from "../../hooks/useSetOptionsSheetActions";
 import { useSessionTimer } from "../../hooks/useSessionTimer";
 import { usePRCelebration } from "../../hooks/usePRCelebration";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
@@ -123,9 +123,9 @@ export default function ActiveSession() {
   });
 
   const {
-    setTypeSheetSetId, setSetTypeSheetSetId,
+    setOptionsSheetSetId, setSetOptionsSheetSetId,
     handleCycleSetType, handleLongPressSetType, handleSelectSetType, handleSaveTempo,
-  } = useSetTypeActions({ groups, setGroups });
+  } = useSetOptionsSheetActions({ groups, setGroups });
 
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
 
@@ -516,14 +516,14 @@ export default function ActiveSession() {
         ListFooterComponent={listFooter}
       />
       </KeyboardAvoidingView>
-      {!!setTypeSheetSetId && (
+      {!!setOptionsSheetSetId && (
         <SetOptionsSheet
-          setId={setTypeSheetSetId}
-          currentTempo={groups.flatMap(g => g.sets).find(s => s.id === setTypeSheetSetId)?.tempo ?? null}
+          setId={setOptionsSheetSetId}
+          currentTempo={groups.flatMap(g => g.sets).find(s => s.id === setOptionsSheetSetId)?.tempo ?? null}
           groups={groups}
           onSelectType={handleSelectSetType}
           onSaveTempo={handleSaveTempo}
-          onDismiss={() => setSetTypeSheetSetId(null)}
+          onDismiss={() => setSetOptionsSheetSetId(null)}
         />
       )}
 

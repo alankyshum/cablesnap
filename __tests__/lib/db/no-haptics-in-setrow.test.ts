@@ -1,13 +1,18 @@
 /**
- * BLD-1158 AC9: Static boundary guard — SetRow.tsx and tempo-coach.ts must
- * not import expo-haptics or contain PR2-restricted symbols in code.
+ * BLD-1158 AC9: Static boundary guard — SetRow.tsx hard-exclusion boundary
+ * and PR1 scope boundary (SetRow + tempo-coach.ts must not import expo-haptics
+ * or contain PR2-restricted symbols).
+ *
+ * Two describe blocks:
+ *  1. SetRow.tsx hard exclusions — haptics, streak, badge, notification imports
+ *  2. PR1 boundary guard — SetRow.tsx + tempo-coach.ts vs expo-haptics / PR2 symbols
  *
  * PR1 boundary rule: The Tempo Coach is split into three PRs. PR1 (this PR)
  * contains only the data layer and input UI. The coach engine (expo-haptics,
  * expo-keep-awake, streak/adherence/badge tracking) lives exclusively in PR2.
  *
- * This test uses Node's `fs.readFileSync` to read the source at test time and
- * asserts that no forbidden symbols appear in non-comment code. Guardrail
+ * Strategy: Node's `fs.readFileSync` reads source at test time; assertions
+ * verify that no forbidden symbols appear in non-comment code. Guardrail
  * comments are permitted to name the forbidden symbols; actual calls are not.
  */
 
@@ -15,6 +20,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../..");
+const SET_ROW_PATH = path.join(PROJECT_ROOT, "components/session/SetRow.tsx");
 
 function readSrc(relPath: string): string {
   return fs.readFileSync(path.join(PROJECT_ROOT, relPath), "utf8");
@@ -30,6 +36,52 @@ function codeOnly(src: string): string {
     })
     .join("\n");
 }
+
+describe("AC9 — SetRow.tsx hard exclusions", () => {
+  let source: string;
+
+  beforeAll(() => {
+    source = fs.readFileSync(SET_ROW_PATH, "utf8");
+  });
+
+  it("does not import expo-haptics", () => {
+    // Haptic ownership is exclusively useSetCompletionFeedback (BLD-559/614).
+    expect(source).not.toMatch(/import.*expo-haptics/);
+  });
+
+  it("does not reference Haptics in source", () => {
+    // No direct Haptics.* calls permitted in SetRow.
+    expect(source).not.toMatch(/Haptics\./);
+  });
+
+  it("does not import expo-notifications", () => {
+    expect(source).not.toMatch(/import.*expo-notifications/);
+  });
+
+  it("does not reference streak logic", () => {
+    // Only check for streak API imports or calls, not the prohibition comments.
+    expect(source).not.toMatch(/import.*streak/i);
+    expect(source).not.toMatch(/streakCount|streakDays|incrementStreak/i);
+  });
+
+  it("does not reference badge logic", () => {
+    // Only check that no badge API is actually called (import or function call).
+    // The word "badge" is allowed in comments that document the prohibition.
+    expect(source).not.toMatch(/import.*badge/i);
+    expect(source).not.toMatch(/setBadgeCount|appBadge/i);
+  });
+
+  it("carries the AC9 Tempo Coach boundary comment", () => {
+    // The guardrail comment was added per plan §AC9 to document tempo
+    // chip as display-only with no coach/haptic logic.
+    expect(source).toMatch(/AC9|Tempo Coach/);
+  });
+
+  it("imports and renders SetTempoChip (AC1 display requirement)", () => {
+    expect(source).toMatch(/import.*SetTempoChip/);
+    expect(source).toMatch(/SetTempoChip/);
+  });
+});
 
 describe("AC9: PR1 boundary — no PR2 symbols in SetRow or tempo-coach (PR1)", () => {
   const setRowSrc = readSrc("components/session/SetRow.tsx");
@@ -70,4 +122,3 @@ describe("AC9: PR1 boundary — no PR2 symbols in SetRow or tempo-coach (PR1)", 
     expect(tempoCoachCode).not.toMatch(/scheduleNotificationAsync/);
   });
 });
-
