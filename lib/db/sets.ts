@@ -16,7 +16,7 @@
  * Raw e1RM formula migration (weight*reps, weight*(1+reps/30)) is out of scope
  * for this slice — that is covered by BLD-1174 (analytics surfaces migration).
  */
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getDrizzle, withTransaction } from "./helpers";
 import { workoutSets, workoutSetSegments } from "./schema";
 import { uuid } from "../uuid";
@@ -490,6 +490,39 @@ export async function updateSetForSessionEdit(
   if (updates.weight !== undefined || updates.reps !== undefined || updates.set_type !== undefined) {
     await recomputeSetCaches(setId);
   }
+}
+
+/**
+ * Batch-load segments for multiple sets. Returns a Map<setId, SetSegment[]>.
+ * Sets with no segments are absent from the map.
+ */
+export async function getSegmentsForSets(setIds: string[]): Promise<Map<string, SetSegment[]>> {
+  if (setIds.length === 0) return new Map();
+  const db = await getDrizzle();
+  const rows = await db
+    .select()
+    .from(workoutSetSegments)
+    .where(inArray(workoutSetSegments.set_id, setIds))
+    .orderBy(workoutSetSegments.segment_number)
+    .all();
+
+  const result = new Map<string, SetSegment[]>();
+  for (const r of rows) {
+    const seg: SetSegment = {
+      id: r.id,
+      set_id: r.set_id,
+      segment_number: r.segment_number,
+      reps: r.reps,
+      weight: r.weight ?? null,
+      rest_after_seconds: r.rest_after_seconds ?? null,
+      completed_at: r.completed_at ?? null,
+      created_at: r.created_at,
+    };
+    const list = result.get(r.set_id) ?? [];
+    list.push(seg);
+    result.set(r.set_id, list);
+  }
+  return result;
 }
 
 /** Load all segments for a set ordered by segment_number. */
