@@ -157,6 +157,7 @@ export default function ActiveSession() {
     activeCoachRef.current?.cancel("manual");
     setCoachPhase(null);
     const session = startCoach(tempo, {
+      onPhaseChange: (phase) => setCoachPhase(phase),
       onAbort: () => {
         setActiveCoachSession(null);
         setCoachPhase(null);

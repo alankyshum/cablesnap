@@ -22,7 +22,7 @@ jest.mock("react-native", () => ({
 }));
 
 import * as Haptics from "expo-haptics";
-import { startCoach } from "../../../lib/workout/tempo-coach";
+import { startCoach, emitSetCompleted } from "../../../lib/workout/tempo-coach";
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -63,6 +63,33 @@ describe("AC12 — no orphan timers after cancel", () => {
     expect(session!.isRunning()).toBe(true);
     session!.cancel();
     expect(session!.isRunning()).toBe(false);
+  });
+
+  it("fires no haptics after set_completed cancel (timer handles cleared)", async () => {
+    startCoach("3-1-2-0", {});
+    await Promise.resolve();
+
+    jest.advanceTimersByTime(1000); // past t=0 tick
+    const countBeforeCancel = jest.mocked(Haptics.selectionAsync).mock.calls.length;
+
+    emitSetCompleted();
+    jest.advanceTimersByTime(20000); // advance well past any pending rep timers
+
+    // No additional selectionAsync haptics — all timer handles were cleared on cancel
+    expect(jest.mocked(Haptics.selectionAsync)).toHaveBeenCalledTimes(countBeforeCancel);
+  });
+
+  it("fires no haptics after unmount cancel (timer handles cleared)", async () => {
+    const session = startCoach("3-1-2-0", {});
+    await Promise.resolve();
+
+    jest.advanceTimersByTime(1000);
+    const countBeforeCancel = jest.mocked(Haptics.selectionAsync).mock.calls.length;
+
+    session!.cancel("unmount");
+    jest.advanceTimersByTime(20000);
+
+    expect(jest.mocked(Haptics.selectionAsync)).toHaveBeenCalledTimes(countBeforeCancel);
   });
 
   it("returns null for invalid tempo", () => {

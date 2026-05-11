@@ -108,6 +108,8 @@ export type CoachPhase = "eccentric" | "bottom_pause" | "concentric" | "top_paus
 
 export interface CoachOptions {
   onAbort?: (reason: CoachAbortReason) => void;
+  /** Called at each phase transition and on cancel (null). Used to drive CoachOverlay phase ring. */
+  onPhaseChange?: (phase: CoachPhase | null) => void;
 }
 
 export interface CoachSession {
@@ -194,6 +196,9 @@ export function startCoach(tempo: string, options: CoachOptions): CoachSession |
   hapticErrorLogged = false;
   let cancelled = false;
 
+  // All active timer handles — cleared in cancel() to prevent orphan timers (AC12).
+  const timers: ReturnType<typeof setTimeout>[] = [];
+
   const repDurationMs = (parsed.e + parsed.b + parsed.c + parsed.t) * 1000;
 
   // Unique phase start offsets (ms) in ascending order.
@@ -208,6 +213,9 @@ export function startCoach(tempo: string, options: CoachOptions): CoachSession |
   // All offsets except the last are single-tick boundaries; the last is the rep boundary.
   const singleTickOffsets = uniqueOffsets.slice(0, -1);
   const boundaryOffset = uniqueOffsets[uniqueOffsets.length - 1]; // = repDurationMs
+
+  // Anchor all rep timers to an absolute start time so drift does not accumulate across reps (AC4).
+  const sessionStartTime = Date.now();
 
   void KeepAwake.activateKeepAwakeAsync("tempo-coach");
 
@@ -226,6 +234,7 @@ export function startCoach(tempo: string, options: CoachOptions): CoachSession |
 
   function fireHaptic(reduceMotion: boolean, phase: CoachPhase): void {
     if (cancelled) return;
+    options.onPhaseChange?.(phase);
     if (reduceMotion) {
       AccessibilityInfo.announceForAccessibility(phaseAnnouncement(phase));
     } else {
@@ -238,49 +247,80 @@ export function startCoach(tempo: string, options: CoachOptions): CoachSession |
     }
   }
 
-  function scheduleRep(reduceMotion: boolean): void {
+  /**
+   * Schedule all haptics for repIndex using absolute offsets from sessionStartTime.
+   * This prevents per-rep drift accumulation: each boundary fires at exactly
+   * sessionStartTime + repIndex * repDurationMs ± JS event-loop jitter (AC4).
+   */
+  function scheduleRep(repIndex: number, reduceMotion: boolean): void {
     if (cancelled) return;
+    const elapsed = Date.now() - sessionStartTime;
+    const repStartOffset = repIndex * repDurationMs;
 
     for (const offset of singleTickOffsets) {
-      setTimeout(() => {
-        if (cancelled) return;
-        fireHaptic(reduceMotion, phaseAtOffset(offset, parsed));
-      }, offset);
+      const delay = Math.max(0, repStartOffset + offset - elapsed);
+      timers.push(
+        setTimeout(() => {
+          if (cancelled) return;
+          fireHaptic(reduceMotion, phaseAtOffset(offset, parsed));
+        }, delay)
+      );
     }
 
-    // Rep boundary: double-tick + next rep (all scheduled after the boundary fires).
-    setTimeout(() => {
-      if (cancelled) return;
+    // Rep boundary: double-tick (two haptics 80ms apart) then schedule next rep.
+    const boundaryDelay = Math.max(0, repStartOffset + boundaryOffset - elapsed);
+    timers.push(
       setTimeout(() => {
         if (cancelled) return;
-        fireHaptic(reduceMotion, "top_pause");
-      }, 1);
-      setTimeout(() => {
-        if (cancelled) return;
-        fireHaptic(reduceMotion, "top_pause");
-      }, 80);
-      setTimeout(() => {
-        if (cancelled) return;
-        scheduleRep(reduceMotion);
-      }, 81);
-    }, boundaryOffset);
+        timers.push(
+          setTimeout(() => {
+            if (cancelled) return;
+            fireHaptic(reduceMotion, "top_pause");
+          }, 1)
+        );
+        timers.push(
+          setTimeout(() => {
+            if (cancelled) return;
+            fireHaptic(reduceMotion, "top_pause");
+          }, 80)
+        );
+        timers.push(
+          setTimeout(() => {
+            if (cancelled) return;
+            scheduleRep(repIndex + 1, reduceMotion);
+          }, 81)
+        );
+      }, boundaryDelay)
+    );
   }
 
   function cancel(reason: CoachAbortReason = "manual"): void {
     if (cancelled) return;
     cancelled = true;
+    // Clear all pending timers before they fire (AC12 orphan-timer prevention).
+    timers.forEach((id) => clearTimeout(id));
+    timers.length = 0;
+    options.onPhaseChange?.(null);
     KeepAwake.deactivateKeepAwake("tempo-coach");
     appStateSubscription.remove();
     unsubscribeSetCompleted();
     options.onAbort?.(reason);
     if (reason === "set_completed") {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Success haptic guarded the same way as selectionAsync — log-once on native rejection (AC5).
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        (err: unknown) => {
+          if (!hapticErrorLogged) {
+            hapticErrorLogged = true;
+            console.warn("TempoCoach: Success haptic unavailable —", err);
+          }
+        }
+      );
     }
   }
 
   void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion: boolean) => {
     if (!cancelled) {
-      scheduleRep(reduceMotion);
+      scheduleRep(0, reduceMotion);
     }
   });
 

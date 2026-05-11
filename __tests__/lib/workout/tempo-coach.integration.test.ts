@@ -95,6 +95,42 @@ describe("AC4 — haptics at expected timestamps for 3-1-2-0", () => {
     expect(jest.mocked(Haptics.selectionAsync)).toHaveBeenCalledTimes(5);
   });
 
+  it("AC4 drift: rep boundaries do not accumulate drift — rep3 boundary fires within ±250ms of 18000ms", async () => {
+    const session = startCoach("3-1-2-0", {});
+    await Promise.resolve();
+
+    // Advance to just before the 250ms window for rep3 boundary (17750ms)
+    jest.advanceTimersByTime(17750);
+    const before = jest.mocked(Haptics.selectionAsync).mock.calls.length;
+
+    // Advance 500ms window — rep3 boundary fires at exactly 18000ms (abs-anchored, no drift)
+    jest.advanceTimersByTime(500);
+    const after = jest.mocked(Haptics.selectionAsync).mock.calls.length;
+
+    // At minimum the first double-tick of rep3 boundary should have fired in this window
+    expect(after - before).toBeGreaterThanOrEqual(1);
+
+    session!.cancel();
+  });
+
+  it("AC4 drift: rep2 boundary fires at 12000ms not 12162ms (absolute anchor check)", async () => {
+    const session = startCoach("3-1-2-0", {});
+    await Promise.resolve();
+
+    // Advance to 11999ms — rep2 boundary has NOT yet fired (fires at 12000ms)
+    jest.advanceTimersByTime(11999);
+    const beforeBoundary2 = jest.mocked(Haptics.selectionAsync).mock.calls.length;
+
+    // Advance 2ms → 12001ms: rep2 boundary callback fires at 12000ms, double-tick 1 fires at 12001ms
+    jest.advanceTimersByTime(2);
+    const afterBoundary2FirstTick = jest.mocked(Haptics.selectionAsync).mock.calls.length;
+
+    // If drift had accumulated (+162ms), the boundary would not yet have fired at 12001ms.
+    expect(afterBoundary2FirstTick).toBeGreaterThan(beforeBoundary2);
+
+    session!.cancel();
+  });
+
   it("repeats: second rep start tick fires after rep boundary", async () => {
     const session = startCoach("3-1-2-0", {});
     await Promise.resolve();
