@@ -17,6 +17,8 @@ export type ImportedSet = {
   rpe: number | null;
   durationSeconds: number | null;
   notes: string;
+  /** Set type from source CSV (CableSnap format). Coerced to valid SetType at DB insertion. */
+  set_type?: string | null;
 };
 
 export type ImportedSession = {
@@ -140,6 +142,7 @@ function buildSession({
     rpe: row.rpe,
     durationSeconds: row.durationSeconds,
     notes: row.notes,
+    set_type: row.set_type ?? null,
   }));
   const firstRow = sessionRows[0];
   return {

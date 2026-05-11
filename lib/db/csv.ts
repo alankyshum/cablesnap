@@ -25,6 +25,8 @@ export type WorkoutCSVRow = {
   // BLD-1126 AC13: stack marker and snapshot stack name for cable sets.
   stack_marker: number | null;
   stack_name_at_log: string | null;
+  // BLD-1168: advanced set type (rest_pause, cluster, myo_reps, or legacy normal/warmup/dropset/failure).
+  set_type: string | null;
 };
 
 export type NutritionCSVRow = {
@@ -82,6 +84,7 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       day_session_date: workoutSessions.day_session_date,
       stack_marker: workoutSets.stack_marker,
       stack_name_at_log: workoutSets.stack_name_at_log,
+      set_type: workoutSets.set_type,
     })
     .from(workoutSessions)
     .innerJoin(workoutSets, sql`${workoutSets.session_id} = ${workoutSessions.id}`)

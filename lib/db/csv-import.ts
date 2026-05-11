@@ -9,6 +9,7 @@ import type { ImportedSession } from "../csv-import";
 import type { MatchResult } from "../exercise-matcher";
 import type { NlpResult } from "../exercise-nlp";
 import type { Category, Equipment, Difficulty, MuscleGroup } from "../types";
+import { normalizeSetType } from "./sets";
 
 // ---- Types ----
 
@@ -137,7 +138,7 @@ export async function importCsvSessions(
         const setId = uuid();
         await database.runAsync(
           `INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, set_type)
-           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'normal')`,
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`,
           [
             setId,
             sessionId,
@@ -148,6 +149,7 @@ export async function importCsvSessions(
             completedAt,
             set.rpe,
             set.notes,
+            normalizeSetType(set.set_type ?? "normal"),
           ]
         );
         setsInserted++;
