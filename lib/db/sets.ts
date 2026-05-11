@@ -18,27 +18,43 @@ import { eq, and } from "drizzle-orm";
 import { getDrizzle } from "./helpers";
 import { workoutSets, workoutSetSegments } from "./schema";
 import { uuid } from "../uuid";
-import type { SetSegment } from "../types";
+import type { SetSegment, SetType } from "../types";
 
 export type { SetSegment };
+
+/** Set types that support mini-set segments. When all segments are deleted, these sets
+ *  must store reps=0 / cached_volume_kg=0 / cached_e1rm_kg=0 (not legacy parent fallback). */
+export const ADVANCED_SET_TYPES: ReadonlySet<SetType> = new Set(["rest_pause", "cluster", "myo_reps"]);
 
 // ─── Pure computation (exported for tests) ─────────────────────────────────
 
 export type SegmentInput = { reps: number; weight: number | null };
-export type ParentInput = { weight: number | null; reps: number | null };
+export type ParentInput = {
+  weight: number | null;
+  reps: number | null;
+  /** When true and segments is empty, returns zeros instead of legacy parent fallback. */
+  isAdvancedSet?: boolean;
+};
 
 /**
  * Pure function: computes cached_volume_kg, cached_e1rm_kg, and total_reps
  * from a parent set and its segments. No DB access.
  *
- * This is the canonical formula — all write paths call computeSetCacheValues,
- * then persist the result via recomputeSetCaches().
+ * For advanced set types (rest_pause, cluster, myo_reps) with zero segments,
+ * returns zeros — the parent row reflects "0 reps, tap to add mini-set".
+ *
+ * For legacy set types with zero segments, falls back to parent.weight × parent.reps
+ * (backwards-compatible with pre-BLD-1168 rows that have no segments).
  */
 export function computeSetCacheValues(
   parent: ParentInput,
   segments: SegmentInput[],
 ): { cachedVolumeKg: number; cachedE1rmKg: number; totalReps: number } {
   if (segments.length === 0) {
+    if (parent.isAdvancedSet) {
+      // Advanced set with no mini-sets: parent is effectively "0 reps"
+      return { cachedVolumeKg: 0, cachedE1rmKg: 0, totalReps: 0 };
+    }
     const w = parent.weight ?? 0;
     const r = parent.reps ?? 0;
     return {
@@ -84,18 +100,21 @@ export function computeSetCacheValues(
 export async function recomputeSetCaches(setId: string): Promise<void> {
   const db = await getDrizzle();
 
-  // Load parent set
+  // Load parent set (including set_type to distinguish advanced vs legacy)
   const parent = await db
     .select({
       id: workoutSets.id,
       weight: workoutSets.weight,
       reps: workoutSets.reps,
+      set_type: workoutSets.set_type,
     })
     .from(workoutSets)
     .where(eq(workoutSets.id, setId))
     .get();
 
   if (!parent) return; // set was deleted; nothing to recompute
+
+  const isAdvancedSet = ADVANCED_SET_TYPES.has((parent.set_type ?? "normal") as SetType);
 
   // Load all segments ordered by segment_number
   const segments = await db
@@ -107,13 +126,13 @@ export async function recomputeSetCaches(setId: string): Promise<void> {
     .where(eq(workoutSetSegments.set_id, setId))
     .all();
 
-  if (segments.length === 0) {
+  if (segments.length === 0 && !isAdvancedSet) {
     // Legacy/non-segmented set — caches stay as backfilled, reps untouched.
     return;
   }
 
   const { cachedVolumeKg, cachedE1rmKg, totalReps } = computeSetCacheValues(
-    { weight: parent.weight ?? null, reps: parent.reps ?? null },
+    { weight: parent.weight ?? null, reps: parent.reps ?? null, isAdvancedSet },
     segments.map((s) => ({ reps: s.reps, weight: s.weight ?? null })),
   );
 

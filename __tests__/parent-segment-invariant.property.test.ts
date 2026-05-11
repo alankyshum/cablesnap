@@ -3,13 +3,17 @@
  * parent.cached_volume_kg == Σ (seg.reps × (seg.weight ?? parent.weight))
  * after any sequence of insert/update/delete mutations.
  *
+ * Also covers the advanced-set-zero-segment invariant (AC #266 plan:76,117,266):
+ * when an advanced set type (rest_pause/cluster/myo_reps) has all segments deleted,
+ * reps=0, cached_volume_kg=0, cached_e1rm_kg=0 (not the legacy parent fallback).
+ *
  * Uses the pure computeSetCacheValues() helper so no DB mocking is required.
  * 1000 random sequences are executed.
  *
  * Reproducible failures: set SEED=<number> env var to replay a failed trial.
  * The seed is logged before each run so failures can be replayed deterministically.
  */
-import { computeSetCacheValues } from "../lib/db/sets";
+import { computeSetCacheValues, ADVANCED_SET_TYPES } from "../lib/db/sets";
 
 // ─── Seeded PRNG (mulberry32) ─────────────────────────────────────────────────
 
@@ -69,40 +73,43 @@ function applyMutation(
 
 // ─── Property assertion ──────────────────────────────────────────────────────
 
+function expectedReps(parent: { reps: number | null; isAdvancedSet?: boolean }, segments: Seg[]): number {
+  if (segments.length === 0) return parent.isAdvancedSet ? 0 : (parent.reps ?? 0);
+  return segments.reduce((sum, s) => sum + s.reps, 0);
+}
+
+function expectedVolume(parent: { weight: number | null; reps: number | null; isAdvancedSet?: boolean }, segments: Seg[]): number {
+  if (segments.length === 0) {
+    if (parent.isAdvancedSet) return 0;
+    return (parent.weight ?? 0) * (parent.reps ?? 0);
+  }
+  return segments.reduce((sum, s) => sum + s.reps * (s.weight ?? parent.weight ?? 0), 0);
+}
+
+function expectedE1rm(parent: { weight: number | null; reps: number | null; isAdvancedSet?: boolean }, segments: Seg[]): number {
+  if (segments.length === 0) {
+    if (parent.isAdvancedSet) return 0;
+    const r = parent.reps ?? 0;
+    const w = parent.weight ?? 0;
+    return r > 0 ? w * (1 + r / 30) : 0;
+  }
+  let maxE1rm = 0;
+  for (const seg of segments) {
+    const sw = seg.weight ?? parent.weight ?? 0;
+    const e = seg.reps > 0 ? sw * (1 + seg.reps / 30) : 0;
+    if (e > maxE1rm) maxE1rm = e;
+  }
+  return maxE1rm;
+}
+
 function assertInvariant(
-  parent: { weight: number | null; reps: number | null },
+  parent: { weight: number | null; reps: number | null; isAdvancedSet?: boolean },
   segments: Seg[],
 ): void {
   const { cachedVolumeKg, cachedE1rmKg, totalReps } = computeSetCacheValues(parent, segments);
-
-  // Invariant 1: totalReps == Σ segments.reps
-  const expectedTotalReps =
-    segments.length === 0 ? (parent.reps ?? 0) : segments.reduce((sum, s) => sum + s.reps, 0);
-  expect(totalReps).toBe(expectedTotalReps);
-
-  // Invariant 2: cachedVolumeKg == Σ (seg.reps × effective_weight)
-  const expectedVolume =
-    segments.length === 0
-      ? (parent.weight ?? 0) * (parent.reps ?? 0)
-      : segments.reduce((sum, s) => sum + s.reps * (s.weight ?? parent.weight ?? 0), 0);
-  expect(cachedVolumeKg).toBeCloseTo(expectedVolume, 6);
-
-  // Invariant 3: cachedE1rmKg >= 0 and uses correct formula
-  if (segments.length === 0) {
-    const r = parent.reps ?? 0;
-    const w = parent.weight ?? 0;
-    const expected = r > 0 ? w * (1 + r / 30) : 0;
-    expect(cachedE1rmKg).toBeCloseTo(expected, 6);
-  } else {
-    // e1RM = MAX over segments
-    let maxE1rm = 0;
-    for (const seg of segments) {
-      const sw = seg.weight ?? parent.weight ?? 0;
-      const e = seg.reps > 0 ? sw * (1 + seg.reps / 30) : 0;
-      if (e > maxE1rm) maxE1rm = e;
-    }
-    expect(cachedE1rmKg).toBeCloseTo(maxE1rm, 6);
-  }
+  expect(totalReps).toBe(expectedReps(parent, segments));
+  expect(cachedVolumeKg).toBeCloseTo(expectedVolume(parent, segments), 6);
+  expect(cachedE1rmKg).toBeCloseTo(expectedE1rm(parent, segments), 6);
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -175,6 +182,60 @@ describe("BLD-1168 AC#266 — parent-segment cache invariants", () => {
     expect(cachedVolumeKg).toBeCloseTo(5 * 80 + 5 * 60, 6);  // 700
   });
 
+  it("advanced set (rest_pause) with zero segments yields zeros", () => {
+    const parent = { weight: 100, reps: 13, isAdvancedSet: true };
+    const { cachedVolumeKg, cachedE1rmKg, totalReps } = computeSetCacheValues(parent, []);
+    expect(totalReps).toBe(0);
+    expect(cachedVolumeKg).toBe(0);
+    expect(cachedE1rmKg).toBe(0);
+  });
+
+  it("advanced set: 8+3+2 segments → delete all → zeros (deterministic delete-down sequence)", () => {
+    const parent = { weight: 100, reps: null, isAdvancedSet: true };
+    let segments: Seg[] = [
+      { reps: 8, weight: null },
+      { reps: 3, weight: null },
+      { reps: 2, weight: null },
+    ];
+
+    // Verify non-zero state with all segments present
+    const withSegments = computeSetCacheValues(parent, segments);
+    expect(withSegments.totalReps).toBe(13);
+    expect(withSegments.cachedVolumeKg).toBeCloseTo(1300, 4);
+
+    // Delete segments one by one — final delete must yield zeros
+    segments = segments.slice(1);
+    assertInvariant(parent, segments); // 2 segments: 3+2
+
+    segments = segments.slice(1);
+    assertInvariant(parent, segments); // 1 segment: 2
+
+    segments = [];
+    assertInvariant(parent, segments); // 0 segments → zeros
+  });
+
+  it.each(["rest_pause", "cluster", "myo_reps"] as const)(
+    "ADVANCED_SET_TYPES includes %s",
+    (type) => {
+      expect(ADVANCED_SET_TYPES.has(type)).toBe(true);
+    }
+  );
+
+  it.each(["normal", "warmup", "dropset", "failure"] as const)(
+    "ADVANCED_SET_TYPES excludes legacy type %s",
+    (type) => {
+      expect(ADVANCED_SET_TYPES.has(type)).toBe(false);
+    }
+  );
+
+  it("legacy set (normal) with zero segments uses parent reps (not zeroed)", () => {
+    const parent = { weight: 100, reps: 8, isAdvancedSet: false };
+    const { cachedVolumeKg, cachedE1rmKg, totalReps } = computeSetCacheValues(parent, []);
+    expect(totalReps).toBe(8);
+    expect(cachedVolumeKg).toBeCloseTo(800, 4);
+    expect(cachedE1rmKg).toBeCloseTo(100 * (1 + 8 / 30), 4);
+  });
+
   it("parent with null weight and null reps yields zeros", () => {
     const parent = { weight: null, reps: null };
     const { cachedVolumeKg, cachedE1rmKg, totalReps } = computeSetCacheValues(parent, []);
@@ -183,13 +244,16 @@ describe("BLD-1168 AC#266 — parent-segment cache invariants", () => {
     expect(totalReps).toBe(0);
   });
 
-  it("property: invariants hold across 1000 random mutation sequences", () => {
+  it("property: invariants hold across 1000 random mutation sequences (legacy and advanced sets)", () => {
     // Log seed so a failed trial can be replayed: SEED=<value> npx jest parent-segment
     console.log(`[property test] SEED=${SEED}`);
+    const allSetTypes = ["normal", "warmup", "dropset", "failure", "rest_pause", "cluster", "myo_reps"] as const;
     for (let trial = 0; trial < 1000; trial++) {
       const parentWeight = rand() < 0.1 ? null : randFloat(10, 300);
       const parentReps = rand() < 0.1 ? null : randInt(1, 20);
-      const parent = { weight: parentWeight, reps: parentReps };
+      const setType = allSetTypes[randInt(0, allSetTypes.length - 1)];
+      const isAdvancedSet = ADVANCED_SET_TYPES.has(setType);
+      const parent = { weight: parentWeight, reps: parentReps, isAdvancedSet };
 
       // Start with 0-4 initial segments
       let segments: Seg[] = [];
