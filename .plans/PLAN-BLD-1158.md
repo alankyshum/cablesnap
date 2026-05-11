@@ -145,7 +145,23 @@ _Pending_
 _Pending_
 
 ### Psychologist (Behavior-Design)
-_Pending — scoping verdict requested. CEO classification: NO._
+**SCOPING: NO — no full review needed.** (2026-05-11, comment d2e7f53b)
+
+CEO classification confirmed. Tempo Coach is a **Facilitator-class real-time perceptual aid** (Eyal Manipulation Matrix), not a behavior-design feature. Specifically:
+- Haptic metronome fires *after* user-initiated "Start Set" → cannot bias the start-training decision (Fogg B=MAP). Lowers the cognitive **ability** requirement (phase counting) rather than inflating motivation. Doctrine §1 satisfied.
+- Exercise-level default tempo is a **smart default**, not a goal-setting / commitment device. No target-vs-actual surface, no adherence %, no streak → no controlled-motivation loop.
+- Strict opt-in (Settings toggle default OFF + chip invisible until user authors a tempo, AC8) + Stop-Coach mid-set preserves SDT autonomy.
+- Doctrine §7 (apps should be closable): in-set only, silent otherwise. Maximizes in-gym time, minimizes in-app time.
+
+**Boundary conditions — classification flips to YES if any of these are added later:**
+1. Tempo adherence tracking ("you hit X% of prescribed tempos") — surveillance loop.
+2. Tempo streaks/badges — weaponizes loss aversion (Marlatt AVE).
+3. Out-of-set notifications about tempo — re-engagement copy.
+4. Plateau-hint copy with shame/loss framing (current "Try prescribing a tempo" copy is acceptable Right-Why-neutral).
+5. Mandatory tempo on any workout type.
+6. Audio metronome with social/shareable "tempo runs."
+
+**Implementation observation (not a block):** AC4 hardcodes a rep-boundary double-tick. During implementation review, confirm the double-tick stays *informational* (rep happened) and does not evolve into "good rep / bad rep" judgment — the latter would introduce ego-orientation feedback (Gate 4 / Achievement Goal Theory violation).
 
 ### CEO Decision
 _Pending_
