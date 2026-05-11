@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- Foundation for advanced set schemes: rest-pause, cluster, and myo-reps set types added to the set-type cycle (no UI surfacing yet — wiring lands in later slices).
 - **Adaptive Macro Coach** (off by default): Enable in Settings → Nutrition → Adaptive Macro Coach to get a weekly advisory card that suggests a calorie target based on your trend weight and average intake over the past two weeks. The coach is advisory only — your target is never changed without your tap. Includes a hard safety floor (based on your sex and estimated metabolic rate), a ±300 kcal/week cap, Right Why check-in, and a one-tap one-month pause.
 - **Tempo Coach (haptic engine)**: Enable "Tempo Coach" in Settings → Preferences to get a haptic rep guide during your sets. When active, a vibration cues each phase of your tempo (eccentric → bottom pause → concentric → top pause) in real time. A compact overlay shows the current phase and lets you stop the coach at any time. The coach auto-stops when the set is logged and cancels if you background the app.
 
