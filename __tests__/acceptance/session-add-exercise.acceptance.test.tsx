@@ -214,7 +214,7 @@ describe('Session → Add Exercise Flow', () => {
     await act(async () => { capturedOnPick!(deadlift) })
 
     await waitFor(() => {
-      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-3', 1)
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-3', 1, null, null, null, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, null)
     })
 
     expect(await screen.findByText('Deadlift', {}, { timeout: 500 })).toBeTruthy()

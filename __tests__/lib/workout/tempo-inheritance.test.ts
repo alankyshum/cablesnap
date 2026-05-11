@@ -6,73 +6,55 @@
  *  - addSetsBatch() with per-seed exerciseDefaultTempo (AC1.3) — verified via prepareAsync call values
  *  - explicit tempo wins over exerciseDefaultTempo (AC1.1 tie-break)
  *  - null is used for duration-mode paths (AC1.6)
+ *
+ * Strategy: mock lib/db/helpers directly (getDrizzle + withTransaction) to bypass
+ * DB initialization (migrate/seed) entirely — same pattern as all other db unit tests.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// --- addSetsBatch mocks (prepareAsync path) ---
-const mockExecuteAsync = jest.fn().mockResolvedValue({ changes: 1 });
+// --- addSet mocks (getDrizzle() → drizzle object with insert().values()) ---
+const mockInsertValues = jest.fn().mockResolvedValue(undefined);
+const mockInsert = jest.fn().mockReturnValue({ values: mockInsertValues });
+const mockDrizzle = { insert: mockInsert };
+
+// --- addSetsBatch mocks (withTransaction → raw SQLite db.prepareAsync()) ---
+const mockExecuteAsync = jest.fn();
 const mockFinalizeAsync = jest.fn().mockResolvedValue(undefined);
 const mockPrepareAsync = jest.fn().mockResolvedValue({
   executeAsync: mockExecuteAsync,
   finalizeAsync: mockFinalizeAsync,
 });
+const mockRawDb = { prepareAsync: mockPrepareAsync };
 
-// --- addSet mocks (drizzle path) ---
-const mockInsertValues = jest.fn().mockResolvedValue(undefined);
-const mockInsert = jest.fn().mockReturnValue({ values: mockInsertValues });
-
-const mockDb = {
-  execAsync: jest.fn().mockResolvedValue(undefined),
-  getAllAsync: jest.fn().mockResolvedValue([]),
-  getFirstAsync: jest.fn().mockResolvedValue(null),
-  runAsync: jest.fn().mockResolvedValue({ changes: 1, lastInsertRowId: 1 }),
-  withTransactionAsync: jest.fn(async (cb: () => Promise<void>) => cb()),
-  prepareAsync: mockPrepareAsync,
-};
-
-jest.mock("expo-sqlite", () => ({
-  openDatabaseAsync: jest.fn().mockResolvedValue(mockDb),
-}));
-
-jest.mock("drizzle-orm/expo-sqlite", () => ({
-  drizzle: jest.fn(() => ({ insert: mockInsert })),
-}));
-
-jest.mock("../../../lib/db/exercises", () => ({
-  getExerciseById: jest.fn().mockResolvedValue(null),
+// Mock lib/db/helpers to bypass all DB initialization (migrate, seed, etc.)
+jest.mock("../../../lib/db/helpers", () => ({
+  getDrizzle: jest.fn(),
+  withTransaction: jest.fn(),
+  getDatabase: jest.fn(),
+  query: jest.fn(),
+  queryOne: jest.fn(),
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // clearAllMocks wipes all mockReturnValue/mockResolvedValue — restore.
-  mockExecuteAsync.mockResolvedValue({ changes: 1 });
+
+  // Restore mock implementations after clearAllMocks
+  mockInsertValues.mockResolvedValue(undefined);
+  mockInsert.mockReturnValue({ values: mockInsertValues });
+
   mockFinalizeAsync.mockResolvedValue(undefined);
+  mockExecuteAsync.mockImplementation(async (values: any[]) => ({ changes: 1, values }));
   mockPrepareAsync.mockResolvedValue({
     executeAsync: mockExecuteAsync,
     finalizeAsync: mockFinalizeAsync,
   });
-  mockExecuteAsync.mockImplementation(async (values: any[]) => {
-    return { changes: 1, values };
-  });
 
-  mockInsertValues.mockResolvedValue(undefined);
-  mockInsert.mockReturnValue({ values: mockInsertValues });
-
-  mockDb.execAsync.mockResolvedValue(undefined);
-  mockDb.runAsync.mockResolvedValue({ changes: 1, lastInsertRowId: 1 });
-  mockDb.getAllAsync.mockResolvedValue([]);
-  mockDb.getFirstAsync.mockResolvedValue(null);
-  mockDb.withTransactionAsync.mockImplementation(async (cb: () => Promise<void>) => cb());
-  mockDb.prepareAsync.mockImplementation(() => mockPrepareAsync());
-
-  // Restore openDatabaseAsync — clearAllMocks resets it to return undefined
-  const SQLite = jest.requireMock("expo-sqlite");
-  SQLite.openDatabaseAsync.mockResolvedValue(mockDb);
-
-  // Restore drizzle — clearAllMocks resets it too
-  const drizzleMod = jest.requireMock("drizzle-orm/expo-sqlite");
-  drizzleMod.drizzle.mockReturnValue({ insert: mockInsert });
+  const helpers = jest.requireMock("../../../lib/db/helpers");
+  helpers.getDrizzle.mockResolvedValue(mockDrizzle);
+  helpers.withTransaction.mockImplementation(
+    async (fn: (db: any) => Promise<void>) => fn(mockRawDb)
+  );
 });
 
 import { addSet, addSetsBatch } from "../../../lib/db/session-sets";
