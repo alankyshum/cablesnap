@@ -81,13 +81,16 @@ test.describe("@scenario form-clip-compare", () => {
     // Enter select mode.
     await page.getByRole("button", { name: "Select clips" }).click();
 
-    // Select both clips — clips render as pressable thumbnails.
-    const thumbnails = page.getByRole("button", { name: /Select clip/i });
+    // ClipThumbnail in components/session/FormLibraryTab.tsx renders:
+    //   accessibilityLabel=`Clip from ${dateStr}, not selected` (in select mode)
+    // Anchor with ^ so this doesn't also match overflow labels like "More options for clip from …".
+    const thumbnails = page.getByRole("button", { name: /^Clip from / });
     await thumbnails.first().click();
     await thumbnails.last().click();
 
     // Compare button should become active.
-    const compareBtn = page.getByRole("button", { name: "Compare" });
+    // accessibilityLabel="Compare selected clips" — use partial match.
+    const compareBtn = page.getByRole("button", { name: /Compare/i });
     await expect(compareBtn).toBeVisible({ timeout: 5000 });
     // Must not be aria-disabled when 2 are selected.
     await expect(compareBtn).not.toHaveAttribute("aria-disabled", "true");
@@ -116,12 +119,14 @@ test.describe("@scenario form-clip-compare", () => {
     // Enter select mode.
     await page.getByRole("button", { name: "Select clips" }).click();
 
-    // Select only one clip.
-    const thumbnails = page.getByRole("button", { name: /Select clip/i });
+    // ClipThumbnail in components/session/FormLibraryTab.tsx renders:
+    //   accessibilityLabel=`Clip from ${dateStr}, not selected` (in select mode)
+    // Anchor with ^ so this doesn't also match overflow labels like "More options for clip from …".
+    const thumbnails = page.getByRole("button", { name: /^Clip from / });
     await thumbnails.first().click();
 
     // With only one selected, Compare should not be present or should be disabled.
-    const compareBtn = page.getByRole("button", { name: "Compare" });
+    const compareBtn = page.getByRole("button", { name: /Compare/i });
     const visible = await compareBtn.isVisible().catch(() => false);
     if (visible) {
       // If it's visible, it must be disabled.
