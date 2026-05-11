@@ -5,6 +5,8 @@ import { uuid } from "../uuid";
 import { getDrizzle, query, withTransaction } from "./helpers";
 import { exercises, templateExercises } from "./schema";
 import type { ExerciseRow } from "./schema";
+import { getWorkingRepsForOverloadDecision } from "../sets-accessors";
+import { getSegmentsForSet } from "./sets";
 
 function mapRow(row: ExerciseRow): Exercise {
   return {
@@ -306,32 +308,37 @@ export async function getProgressionSuggestion(
     return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
   }
 
-  const failingSet = await query<{ count: number }>(
-    `SELECT COUNT(*) as count
+  // Load all completed work sets (normal + advanced) from the latest session.
+  // BLD-1172: use getWorkingRepsForOverloadDecision() instead of set.reps directly,
+  // because for advanced set types (rest_pause, cluster, myo_reps) set.reps is the
+  // SUM of all mini-set reps, which would incorrectly inflate the progression check.
+  // The accessor returns the first-segment reps (the heaviest working effort) for
+  // advanced types, and set.reps unchanged for normal/warmup/dropset/failure.
+  const workSets = await query<{ id: string; set_type: string; reps: number | null }>(
+    `SELECT id, set_type, reps
      FROM workout_sets
      WHERE session_id = ?
        AND exercise_id = ?
-       AND set_type = 'normal'
-       AND completed = 1
-       AND (reps IS NULL OR reps < 12)`,
-    [latestSession[0].session_id, exerciseId]
-  );
-  if ((failingSet[0]?.count ?? 1) > 0) {
-    return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
-  }
-
-  // Also check there was at least one normal completed set (don't suggest on empty sessions)
-  const normalSetCount = await query<{ count: number }>(
-    `SELECT COUNT(*) as count
-     FROM workout_sets
-     WHERE session_id = ?
-       AND exercise_id = ?
-       AND set_type = 'normal'
+       AND set_type IN ('normal', 'rest_pause', 'cluster', 'myo_reps')
        AND completed = 1`,
     [latestSession[0].session_id, exerciseId]
   );
-  if ((normalSetCount[0]?.count ?? 0) === 0) {
+
+  if (workSets.length === 0) {
+    // No work sets logged in this session — skip suggestion.
     return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+  }
+
+  // Check every work set reached >= 12 reps using the named accessor.
+  for (const ws of workSets) {
+    const segments = await getSegmentsForSet(ws.id);
+    const workingReps = getWorkingRepsForOverloadDecision(
+      { ...ws, set_type: ws.set_type as import("../types").SetType } as import("../types").WorkoutSet,
+      segments,
+    );
+    if (workingReps < 12) {
+      return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
+    }
   }
 
   // Check 4: user has NOT logged next exercise in last 30 days
