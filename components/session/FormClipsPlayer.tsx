@@ -25,9 +25,15 @@ type Props = {
   reps?: number | null;
   onClose: () => void;
   onDelete?: (clip: SetMediaRow) => void;
+  /** Exercise this clip belongs to — needed to count sibling clips. */
+  exerciseId?: string;
+  /** Total number of clips for this exercise (including current). */
+  siblingClipCount?: number;
+  /** Called when user taps "Compare with another set…" — receiver opens CompareView. */
+  onRequestCompare?: (clipA: SetMediaRow) => void;
 };
 
-export function FormClipsPlayer({ isVisible, clip, weightLabel, reps, onClose, onDelete }: Props) {
+export function FormClipsPlayer({ isVisible, clip, weightLabel, reps, onClose, onDelete, exerciseId, siblingClipCount, onRequestCompare }: Props) {
   if (!isVisible || !clip) return null;
   return (
     <BottomSheet isVisible={isVisible} onClose={onClose}>
@@ -36,14 +42,16 @@ export function FormClipsPlayer({ isVisible, clip, weightLabel, reps, onClose, o
         weightLabel={weightLabel}
         reps={reps}
         onDelete={onDelete}
+        siblingClipCount={siblingClipCount}
+        onRequestCompare={onRequestCompare}
       />
     </BottomSheet>
   );
 }
 
-type BodyProps = Pick<Props, "clip" | "weightLabel" | "reps" | "onDelete">;
+type BodyProps = Pick<Props, "clip" | "weightLabel" | "reps" | "onDelete" | "siblingClipCount" | "onRequestCompare">;
 
-function PlayerBody({ clip, weightLabel, reps, onDelete }: BodyProps) {
+function PlayerBody({ clip, weightLabel, reps, onDelete, siblingClipCount, onRequestCompare }: BodyProps) {
   const colors = useThemeColors();
 
   // AC12: increment replay-gate counter while this player surface is mounted.
@@ -95,6 +103,27 @@ function PlayerBody({ clip, weightLabel, reps, onDelete }: BodyProps) {
           <Text style={{ color: colors.error, fontWeight: "600" }}>Delete clip</Text>
         </Pressable>
       )}
+      {/* AC2/AC7: "Compare with another set…" entry point */}
+      {(() => {
+        const canCompare = (siblingClipCount ?? 0) >= 2;
+        return (
+          <Pressable
+            style={[styles.compareBtn, { borderColor: colors.primary, opacity: canCompare ? 1 : 0.4 }]}
+            onPress={canCompare && onRequestCompare ? () => onRequestCompare(clip!) : undefined}
+            disabled={!canCompare}
+            accessibilityRole="button"
+            accessibilityLabel="Compare with another set…"
+            accessibilityState={{ disabled: !canCompare }}
+            accessibilityHint={
+              !canCompare
+                ? "You need at least two clips for this exercise to compare"
+                : "Opens a side-by-side comparison with a clip you pick"
+            }
+          >
+            <Text style={{ color: colors.primary, fontWeight: "600" }}>Compare with another set…</Text>
+          </Pressable>
+        );
+      })()}
     </View>
   );
 }
@@ -127,6 +156,14 @@ const styles = StyleSheet.create({
   metaVal: { fontSize: 13, fontWeight: "600" },
   deleteBtn: {
     marginTop: 16,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginHorizontal: 4,
+  },
+  compareBtn: {
+    marginTop: 12,
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 12,

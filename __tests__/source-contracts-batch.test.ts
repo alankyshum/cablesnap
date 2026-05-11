@@ -1122,3 +1122,119 @@ describe("PacingCard source contracts (BLD-1144)", () => {
   });
 });
 
+// ── BLD-1151: Form Check Comparison View — banned tokens (AC8) ───────────────
+
+describe("CompareView / FormClipsPlayer — AC8 banned token scan", () => {
+  /** Extract user-facing strings from source (three-syntax pattern, BLD-1144 pattern L1068-1075). */
+  function extractUserFacingStrings(src: string): string {
+    const parts: string[] = [];
+    // JSX text nodes between tags with braces: {"..."}
+    const jsxText = src.matchAll(/\{["']([^"']+)["']\}/g);
+    for (const m of jsxText) parts.push(m[1]);
+    // Plain JSX text nodes between tags (no braces).
+    // Filter: skip multiline matches and strings containing TypeScript code characters
+    // (;, (, ), {, }, [, ]) — these indicate TS generic expressions, not UI text.
+    const plainText = src.matchAll(/>([^<{]+)</g);
+    for (const m of plainText) {
+      const t = m[1].trim();
+      if (t.length > 1 && !/\n/.test(t) && !/[;(){}[\]]/.test(t)) parts.push(t);
+    }
+    // accessibilityLabel/Hint — brace syntax: accessibilityLabel={"..."}
+    const a11yBrace = src.matchAll(/accessibility(?:Label|Hint)=\{"([^"]+)"\}/g);
+    for (const m of a11yBrace) parts.push(m[1]);
+    // accessibilityLabel/Hint — plain string syntax: accessibilityLabel="..."
+    const a11yPlain = src.matchAll(/accessibility(?:Label|Hint)="([^"]+)"/g);
+    for (const m of a11yPlain) parts.push(m[1]);
+    // accessibilityLabel/Hint — template literal prefix
+    const a11yTemplate = src.matchAll(/accessibility(?:Label|Hint)=\{`([^`$]+)/g);
+    for (const m of a11yTemplate) parts.push(m[1]);
+    return parts.join(" ");
+  }
+
+  const compareViewSrc = readSrc("components/session/CompareView.tsx");
+  const formClipsPlayerSrc = readSrc("components/session/FormClipsPlayer.tsx");
+  const formClipThumbsSrc = readSrc("lib/media/form-clip-thumbs.ts");
+  const formLibraryTabSrc = readSrc("components/session/FormLibraryTab.tsx");
+  // BLD-1151: include all PR-modified files. The extractor above strips TS
+  // generic false-positives via the multiline + code-char filter, so these
+  // files can now be scanned without excluding them.
+  const sessionScreenSrc = readSrc("app/session/[id].tsx");
+  const compareFromPlayerSrc = readSrc("hooks/useCompareFromPlayer.tsx");
+  const formClipsSrc = readSrc("lib/media/form-clips.ts");
+
+  const allUserFacing =
+    extractUserFacingStrings(compareViewSrc) +
+    " " +
+    extractUserFacingStrings(formClipsPlayerSrc) +
+    " " +
+    extractUserFacingStrings(formClipThumbsSrc) +
+    " " +
+    extractUserFacingStrings(formLibraryTabSrc) +
+    " " +
+    extractUserFacingStrings(sessionScreenSrc) +
+    " " +
+    extractUserFacingStrings(compareFromPlayerSrc) +
+    " " +
+    extractUserFacingStrings(formClipsSrc);
+
+  const BANNED = [
+    "streak",
+    "xp",
+    "badge",
+    "unlock",
+    "level up",
+    "keep it up",
+    "you've been",
+    "friends",
+    "share to",
+    "leaderboard",
+    "notify",
+    "notification",
+    "reward",
+    "reminder",
+    "you should",
+  ];
+
+  for (const token of BANNED) {
+    it(`does not contain banned token: "${token}"`, () => {
+      expect(allUserFacing.toLowerCase()).not.toContain(token);
+    });
+  }
+
+  it("CompareView does not import expo-notifications", () => {
+    expect(compareViewSrc).not.toContain("expo-notifications");
+  });
+
+  it("FormClipsPlayer does not import expo-notifications", () => {
+    expect(formClipsPlayerSrc).not.toContain("expo-notifications");
+  });
+
+  it("form-clip-thumbs does not import expo-notifications", () => {
+    expect(formClipThumbsSrc).not.toContain("expo-notifications");
+  });
+
+  it("session screen does not import expo-notifications", () => {
+    expect(sessionScreenSrc).not.toContain("expo-notifications");
+  });
+
+  it("useCompareFromPlayer does not import expo-notifications", () => {
+    expect(compareFromPlayerSrc).not.toContain("expo-notifications");
+  });
+
+  it("form-clips does not import expo-notifications", () => {
+    expect(formClipsSrc).not.toContain("expo-notifications");
+  });
+
+  it("CompareView Sentry calls never reference rel_path, cacheDirectory, documentDirectory, or absolute paths", () => {
+    // Find all addBreadcrumb / captureMessage / withScope blocks
+    const sentryBlocks = compareViewSrc.match(/Sentry\.(addBreadcrumb|captureMessage|withScope|captureException)[^;]+;/g) ?? [];
+    for (const block of sentryBlocks) {
+      expect(block).not.toContain("rel_path");
+      expect(block).not.toContain("cacheDirectory");
+      expect(block).not.toContain("documentDirectory");
+      // No absolute path-like string literals in Sentry calls
+      expect(block).not.toMatch(/["'`]\/[a-zA-Z]/);
+    }
+  });
+});
+

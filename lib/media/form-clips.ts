@@ -28,6 +28,7 @@ import {
   deleteClipsForSet as dbDeleteClipsForSet,
   deleteSetMediaForSession as dbDeleteSetMediaForSession,
 } from "../db/form-clips";
+import { purgeThumb } from "@/lib/media/form-clip-thumbs";
 import { withTransaction } from "../db/helpers";
 import type { SetMediaRow } from "../db/form-clips";
 import {
@@ -232,6 +233,8 @@ export async function getClipsForExercise(exerciseId: string): Promise<SetMediaR
  */
 export async function softDeleteClip(id: string): Promise<void> {
   await dbSoftDeleteClip(id);
+  // Purge compare-view thumbnail cache entry (AC13)
+  await purgeThumb(id);
 }
 
 /**
@@ -325,6 +328,8 @@ async function sweepPendingDeletes(rows: Awaited<ReturnType<typeof getAllSetMedi
     } catch {
       // Swallow ENOENT — AC18e.
     }
+    // Purge compare-view thumbnail cache entry (AC13)
+    await purgeThumb(row.id);
     await dbHardDeleteClip(row.id);
   }
 }

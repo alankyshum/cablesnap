@@ -9,12 +9,17 @@
  * Unmount decrements it. See lib/media/replay-gate.ts for the full
  * AC12 rationale.
  */
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { increment, decrement } from "@/lib/media/replay-gate";
 
 export function useMediaSurfaceMounted(): void {
-  useEffect(() => {
+  // Increment in layout effect so the counter rises before passive-effect
+  // cleanup of a simultaneously unmounting media surface, ensuring the
+  // counter never drops to 0 during a batched player→compare handoff (AC12).
+  useLayoutEffect(() => {
     increment();
+  }, []);
+  useEffect(() => {
     return () => {
       decrement();
     };

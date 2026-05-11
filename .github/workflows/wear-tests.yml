@@ -164,6 +164,72 @@ jobs:
           fi
           echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
 
+      - name: AC9 — F-Droid APK GMS/Firebase/MLKit-free except wearable
+        # AC9 (BLD-1151/BLD-1153/BLD-1154): Verify that no actual GMS/Firebase/
+        # MLKit class bytecode is compiled into the releaseFdroid APK.
+        #
+        # Method: dexdump "Class descriptor" lines list only classes DEFINED in
+        # a DEX shard — not external types referenced in method signatures,
+        # annotations, or string constants. This avoids the false positives that
+        # plagued the earlier `strings | grep` approach (BLD-1154 runs
+        # 25642685732, 25643568873, 25644407579, 25644707735):
+        #
+        #   strings | grep (dot-notation): matched Java string constants that
+        #     reference GMS class names (e.g. OkHttp's conscrypt probe, expo-
+        #     image-picker's GMS Photo Picker action/extra constants, expo-
+        #     camera's MLKit availability check). DEX encoding adds ULEB128
+        #     length-byte prefixes ($, /, 2, 5…) that defeated grep -vxF and
+        #     even grep -v was unreliable across runner locales.
+        #
+        #   strings | grep (slash-notation): matched DEX type DESCRIPTOR STRINGS
+        #     that appear in method signatures, parameter types, and return types
+        #     of classes compiled from expo-notifications and expo-camera code
+        #     that references Firebase / MLKit types. Those class JARs ARE
+        #     excluded by Gradle (with-wearos-module.js FDROID_EXCLUDES_BLOCK),
+        #     so no Firebase/MLKit class bytecode is present, but their
+        #     descriptor strings remain in the DEX constant pool wherever the
+        #     calling code uses them as parameter or return types.
+        #
+        # dexdump only reports classes that HAVE bytecode in the DEX. If Gradle
+        # exclusions work correctly, zero GMS/Firebase/MLKit class definitions
+        # will appear.
+        #
+        # Reuses the APK built by the AC10b step — no second Gradle invocation.
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
+          DEX_TMP=$(mktemp -d)
+          unzip -q -o "$APK" 'classes*.dex' -d "$DEX_TMP"
+          # Locate dexdump in the highest-versioned available build-tools.
+          ANDROID_BT=$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)
+          DEXDUMP="$ANDROID_HOME/build-tools/$ANDROID_BT/dexdump"
+          if [ ! -x "$DEXDUMP" ]; then
+            echo "::error::dexdump not found at $DEXDUMP"
+            exit 1
+          fi
+          echo "Using dexdump: $DEXDUMP (build-tools $ANDROID_BT)"
+          # Extract class definitions from each DEX shard.
+          # dexdump prints one "Class descriptor : 'L...;'" line per defined class.
+          # sed -n pulls out the slash-form path (com/google/...) without 'L' or ';'.
+          for dex in "$DEX_TMP"/classes*.dex; do
+            "$DEXDUMP" "$dex" 2>/dev/null
+          done \
+            | grep "Class descriptor" \
+            | sed -n "s/.*'L\([^;]*\);'.*/\1/p" \
+            | grep -E 'com/google/android/gms|com/google/firebase|com/google/mlkit' \
+            | grep -v 'com/google/android/gms/wearable' \
+            | sort -u > /tmp/ac9-hits.txt || true
+          rm -rf "$DEX_TMP"
+          COUNT=$(wc -l < /tmp/ac9-hits.txt)
+          echo "AC9 non-wearable GMS/Firebase/MLKit class definitions: $COUNT"
+          if [ "$COUNT" -ne 0 ]; then
+            echo '--- Violating class definitions ---'
+            cat /tmp/ac9-hits.txt
+            echo '::error::AC9 violated — F-Droid APK contains compiled GMS/Firebase/MLKit class definitions.'
+            exit 1
+          fi
+          echo 'AC9 OK — F-Droid APK contains zero compiled GMS/Firebase/MLKit class definitions.'
+
       - name: KVM availability spike
         id: kvm
         # Probe for /dev/kvm. Standard ubuntu-latest runners enabled nested
@@ -208,3 +274,4 @@ jobs:
             echo "a runner image that exposes /dev/kvm (default standard"
             echo "ubuntu-latest runners do as of 2023-04)."
           } >> "$GITHUB_STEP_SUMMARY"
+

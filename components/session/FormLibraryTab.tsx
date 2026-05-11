@@ -335,6 +335,7 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
           isVisible
           clipA={compareClips[0]}
           clipB={compareClips[1]}
+          exerciseId={exerciseId}
           onClose={() => setCompareClips(null)}
         />
       )}

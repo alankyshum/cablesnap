@@ -44,6 +44,7 @@ import { PulleyPinPickerSheet } from "../../components/session/PulleyPinPickerSh
 import { SetupPhotoSheet } from "../../components/session/SetupPhotoSheet";
 import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
 import { toAbsPath } from "../../lib/media/form-clips";
+import { useCompareFromPlayer } from "../../hooks/useCompareFromPlayer";
 
 export default function ActiveSession() {
   // BLD-577: the session screen is the only surface allowed to hold a
@@ -211,6 +212,8 @@ export default function ActiveSession() {
       setFormVideoSetId(setId);
     }
   }, [hasClipMap]);
+
+  const { handleRequestCompare, getSibCount, renderCompareView } = useCompareFromPlayer({ playerSetId, setPlayerSetId, setPlayerClip, findSetById });
 
   const handleClipSaved = useCallback((setId: string, clipId: string) => {
     setFormVideoSetId(null);
@@ -606,10 +609,14 @@ export default function ActiveSession() {
             clip={playerClip}
             weightLabel={playerSet ? `${playerSet.weight ?? ""} ${unit}`.trim() : undefined}
             reps={playerSet?.reps ?? null}
+            exerciseId={playerSetInfo?.exerciseId}
+            siblingClipCount={playerSetInfo ? getSibCount(playerSetInfo.exerciseId) : 0}
+            onRequestCompare={handleRequestCompare}
             onClose={() => { setPlayerSetId(null); setPlayerClip(null); }}
           />
         );
       })()}
+      {renderCompareView()}
       {Platform.OS !== "web" && (() => {
         const setupSetInfo = setupPhotoSetId ? findSetById(setupPhotoSetId) : null;
         return setupSetInfo ? (
