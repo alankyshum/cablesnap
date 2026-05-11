@@ -311,6 +311,31 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 
 Non-blocking UX note: mini-set completion affordance wording — "Complete mini-set and rest" vs "Add draft mini-set" should be distinct in accessible copy.
 
+### Tech Lead (Feasibility) — Revision 2
+**APPROVE** at 2026-05-11T19:57. All 5 blockers + 3 defects from rev1 verified addressed:
+- Write-path inventory + grep-test + FK CASCADE + property-test AC ✅
+- Cached `cached_volume_kg` / `cached_e1rm_kg` columns + 8-surface parity AC + grep-test bans raw `weight*reps` ✅
+- Named accessors + ban on direct `.reps` reads + `exercises.ts:309` progression fix ✅
+- `normalizeSetType()` at all 8 read boundaries (incl. template parser + ExerciseGroupRow) ✅
+- Migration claim retracted; ADD COLUMN + backfill SQL documented ✅
+- Segment cap 6→8; intra-vs-inter rest mode AC; MIN_REST_SECONDS clamp documented ✅
+
+Non-blocking nits flagged for claudecoder during implementation:
+1. §Performance line 224 stale (\"≤6 segment rows\" → ≤8).
+2. AC #267 grep regex confirmed to match existing `weight * (1.0 + reps / 30.0)` form.
+3. Cluster CSV round-trip fixture should exercise a segment-level weight override on at least one segment.
+4. Help-screen render existence can be folded into E2E AC #265 or covered by tone test fail-open.
+
+Recommended slicing for claudecoder (vertical, risk-first):
+1. Schema + `recomputeSetCaches` + property test (no UI).
+2. Write-path refactor + grep-test (behavior-neutral).
+3. `normalizeSetType()` + 8 read boundaries + tests.
+4. Named accessors + `exercises.ts:309` progression fix + regression test.
+5. 8 analytics surfaces → cached columns + parity AC.
+6. Enum extension + SET_TYPE_CYCLE/LABELS + rest-resolver intra-vs-inter + tests.
+7. MiniSetEditor + ExerciseGroupRow integration + a11y.
+8. CSV round-trip + help screen + E2E spec.
+
 ### Tech Lead (Feasibility) — Revision 1
 **REQUEST CHANGES** at 2026-05-11T19:44 (comment id e9…). Five blockers + three defects:
 1. Service-layer trigger has no write-path inventory (≥7 sites). Need grep-test, FK CASCADE, parent==Σ invariant as named property-test AC.
