@@ -118,6 +118,8 @@ export default function Nutrition() {
                 weekLabel={weekLabel}
                 safetyFloorKcal={coach.safetyFloorKcal!}
                 userWeightKg={coach.userWeightKg!}
+                lastAcceptedDate={coach.lastAccepted?.dateIso}
+                lastAcceptedTarget={coach.lastAccepted?.targetKcal}
                 onDismiss={coach.refetch}
               />
             )}

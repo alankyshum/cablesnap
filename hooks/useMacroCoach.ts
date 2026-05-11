@@ -3,6 +3,7 @@ import { useFocusEffect } from "expo-router";
 import { computeMacroCoach, clearMacroCoachMemo } from "../lib/db/macro-coach";
 import type { CoachStatus, MacroCoachResult } from "../lib/db/macro-coach";
 import type { CoachSuggestion, SkipReason } from "../lib/macro-coach";
+import type { LastAcceptedSuggestion } from "../lib/db/macro-coach-settings";
 
 export type { CoachStatus };
 
@@ -12,6 +13,8 @@ export interface UseMacroCoachResult {
   skipReason?: SkipReason;
   safetyFloorKcal?: number;
   userWeightKg?: number;
+  /** Last suggestion accepted by the user (for post-decision check-in). */
+  lastAccepted?: LastAcceptedSuggestion;
   loading: boolean;
   refetch: () => void;
   clearCache: () => void;
@@ -52,6 +55,7 @@ export function useMacroCoach(): UseMacroCoachResult {
     skipReason: result.skipReason,
     safetyFloorKcal: result.safetyFloorKcal,
     userWeightKg: result.userWeightKg,
+    lastAccepted: result.lastAccepted,
     loading,
     refetch: fetch,
     clearCache,

@@ -33,6 +33,7 @@ import {
   setPausedUntil,
   setRightWhyEntry,
   setDeficitSuppressedUntil,
+  setLastAcceptedSuggestion,
   type RightWhyAnswer,
 } from "@/lib/db/macro-coach-settings";
 import { clearMacroCoachMemo } from "@/lib/db/macro-coach";
@@ -99,6 +100,8 @@ export function MacroCoachCard({
     );
     const nowIso = new Date().toISOString().slice(0, 10);
     if (rightWhy) await setRightWhyEntry(nowIso, rightWhy);
+    // Persist acceptance so the post-decision check-in renders next week.
+    await setLastAcceptedSuggestion(nowIso, suggTarget);
     await resetDismissalCount();
     clearMacroCoachMemo();
     setSubmitted(true);

@@ -26,11 +26,13 @@ import {
   getEnabled,
   getMode,
   getFloorKcal,
+  getLastAcceptedSuggestion,
   isCooldownActive,
   isPaused,
   isDeficitSuppressed,
   hasTwoConsecutiveDrained,
   type UserFloorProfile,
+  type LastAcceptedSuggestion,
 } from "./macro-coach-settings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,6 +47,8 @@ export interface MacroCoachResult {
   safetyFloorKcal?: number;
   /** User's current body weight in kg (for macro recompute on custom-kcal input). */
   userWeightKg?: number;
+  /** Most recently accepted suggestion, if any. Used to wire post-decision check-in. */
+  lastAccepted?: LastAcceptedSuggestion;
 }
 
 // ─── Memo cache ───────────────────────────────────────────────────────────────
@@ -191,6 +195,7 @@ async function _computeUncached(now: Date): Promise<MacroCoachResult> {
 
   const safetyFloor = await getFloorKcal(userFloorProfile);
   const currentTarget = await fetchCurrentTargetKcal();
+  const lastAccepted = await getLastAcceptedSuggestion() ?? undefined;
 
   // Fetch data
   const weights = await fetchWeightRows(35, now);
@@ -216,7 +221,7 @@ async function _computeUncached(now: Date): Promise<MacroCoachResult> {
       loggingConsistencyDays,
     });
     if ("reason" in suggestion) return { status: "hidden", skipReason: suggestion.reason };
-    return { status: "info_only", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg };
+    return { status: "info_only", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg, lastAccepted };
   }
 
   // Full mode — check deficit suppression
@@ -240,10 +245,10 @@ async function _computeUncached(now: Date): Promise<MacroCoachResult> {
   if ("reason" in suggestion) return { status: "hidden", skipReason: suggestion.reason };
 
   if ((deficitSuppressed || twoDrained) && goal === "cut") {
-    return { status: "info_only", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg };
+    return { status: "info_only", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg, lastAccepted };
   }
 
-  return { status: "ready", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg };
+  return { status: "ready", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg, lastAccepted };
 }
 
 async function _fetchGoal(): Promise<"cut" | "maintain" | "bulk"> {

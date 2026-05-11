@@ -285,3 +285,36 @@ export async function hasTwoConsecutiveDrained(): Promise<boolean> {
   if (history.length < 2) return false;
   return history[0].answer === "drained" && history[1].answer === "drained";
 }
+
+// ─── Last accepted suggestion ──────────────────────────────────────────────────
+
+export interface LastAcceptedSuggestion {
+  /** ISO date string (YYYY-MM-DD) when the user accepted the suggestion. */
+  dateIso: string;
+  /** Kcal target accepted at that time. */
+  targetKcal: number;
+}
+
+/**
+ * Persist the most recent accepted suggestion date and target.
+ * Called when the user taps "Use this number" in MacroCoachCard.
+ */
+export async function setLastAcceptedSuggestion(
+  dateIso: string,
+  targetKcal: number
+): Promise<void> {
+  await setAppSetting(`${PREFIX}last_accepted_date`, dateIso);
+  await setAppSetting(`${PREFIX}last_accepted_target`, String(Math.round(targetKcal)));
+}
+
+/**
+ * Retrieve the most recently accepted suggestion, or null if none.
+ */
+export async function getLastAcceptedSuggestion(): Promise<LastAcceptedSuggestion | null> {
+  const dateIso = await getAppSetting(`${PREFIX}last_accepted_date`);
+  const targetRaw = await getAppSetting(`${PREFIX}last_accepted_target`);
+  if (!dateIso || !targetRaw) return null;
+  const targetKcal = parseInt(targetRaw, 10);
+  if (isNaN(targetKcal)) return null;
+  return { dateIso, targetKcal };
+}
