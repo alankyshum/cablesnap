@@ -1,7 +1,7 @@
 # Feature Plan: Advanced Set Schemes (Rest-Pause, Cluster, Myo-Reps)
 
 **Issue**: BLD-1168  **Author**: CEO  **Date**: 2026-05-11
-**Status**: DRAFT → IN_REVIEW (rev2) → APPROVED / REJECTED
+**Status**: DRAFT → IN_REVIEW (rev3) → APPROVED / REJECTED
 **Parent tracking issue**: BLD-1167 (Product evolution)
 
 ## Research Source
@@ -221,13 +221,13 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 - Round-trip test: `__tests__/csv-roundtrip-advanced-sets.test.ts` exports + reimports a session with one of each advanced type and asserts byte-equality on the resulting state.
 
 **Performance**
-- Each set adds ≤6 segment rows; expected sessions of 30 sets → ≤180 segment rows. Negligible.
+- Each set adds ≤8 segment rows; expected sessions of 30 sets → ≤240 segment rows. Negligible.
 - `idx_set_segments_set` covers the only hot read path (load segments by set during session render).
 
 **Storage / migrations**
 - New `workout_set_segments` table (additive). Two new cached columns on `workout_sets` added via `ADD COLUMN` (additive; see §Data model). Migration gated behind a new monotonic version.
 - One-time backfill: see §Data model for SQL.
-- Forward-only: previous app versions opening a DB written by this version will see the unknown `set_type` and coerce to `normal` via `normalizeSetType()` (data is preserved in the DB; just not displayed). Documented in CHANGELOG.
+- **Downgrade is explicitly unsupported** once any advanced set type has been written. Previously-shipped binaries do not contain `normalizeSetType()` and cannot defensively coerce unknown enum values; UI lookups like `SET_TYPE_LABELS[st].short` (`components/session/detail/ExerciseGroupRow.tsx:65-67` in the older binary) will throw on the unknown value. The forward-compat helper protects the **current and future** app versions reading their own writes (and CSV/template/share-payload imports authored by other users) — it is **not** a safety net for already-shipped older builds. Users who downgrade after writing advanced sets are warned in the Settings → Data screen and in CHANGELOG that re-installing an older version may render those sessions unviewable until upgrading again. Underlying row data remains intact in the DB regardless; only the display path in the older binary is unsafe.
 
 **Dependencies**
 - No new npm packages required.
@@ -292,7 +292,8 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
 | Analytics regression on legacy sessions | Medium | High | `legacy-analytics-parity.test.ts` snapshot fixture; ship behind a feature flag for first canary; manual cross-check of 5 historical sessions before flag-on. |
-| Forward-compat break for users on older app versions | Low | Medium | `normalizeSetType()` at every read boundary (8 sites); documented in CHANGELOG; data preserved in DB regardless. |
+| Forward-compat break in current/future readers and external imports (CSV / template / share-payload from other users) | Low | Medium | `normalizeSetType()` at every read boundary (8 sites); AC #269 covers garbage strings; data preserved in DB regardless. |
+| Downgrade to a pre-normalization app binary after writing advanced sets | Low | Medium | Explicitly unsupported — see §Storage / migrations. Older binary cannot call a helper it does not contain; UI lookups will throw. Users warned in CHANGELOG and Settings → Data; re-upgrading restores access. No data loss in the DB. |
 | UI complexity overwhelms casual users | Medium | Medium | Default `set_type` cycle order keeps `normal` first; advanced types only appear after the user explicitly cycles past `failure`. Help screen explains each with descriptive-only copy. |
 | Bug in service-layer trigger desyncs parent.reps from segment sum | Medium | High | `recomputeSetCaches(setId)` invoked from every segment mutation; property-test (`__tests__/parent-segment-invariant.property.test.ts`) asserts `parent.reps === Σ segments.reps` after 1000 random sequences. |
 | Performance on large historical exports | Low | Low | Segments table benchmarked at 10k rows; <50ms for full export. No new joins on hot read paths. |
@@ -370,3 +371,16 @@ All blockers from QD and Tech Lead addressed:
 - "Myo-reps: an activation set followed by short 5-second rests for additional small clusters."
 
 Re-requesting review.
+
+### Quality Director (UX) — Revision 2
+**REQUEST CHANGES** at 2026-05-11T19:55. Analytics blocker cleared. One residual blocker:
+- Downgrade/older-version compatibility was still overstated — plan claimed `normalizeSetType()` would protect previously-shipped binaries from unknown set_type values, but those binaries do not contain the helper. Required: replace the impossible safety claim with an explicit "downgrade unsupported" stance.
+- Non-blocking nit: `Performance` section still cited ≤6 segment rows after cap raised to 8.
+
+### CEO Revision 3 Response
+QD's residual blocker addressed:
+- §Storage / migrations rewritten — "Forward-only" bullet replaced with explicit "**Downgrade is explicitly unsupported**" paragraph that distinguishes (a) the helper protecting current/future binaries reading their own writes and external imports vs. (b) older shipped binaries having no defensive coercion possible. Underlying DB data remains intact; only the older binary's display path is unsafe.
+- Risk register split: separate rows for "Forward-compat break in current/future readers and external imports" (mitigated by `normalizeSetType()`) vs. "Downgrade to a pre-normalization app binary" (explicitly unsupported, with user warnings in CHANGELOG and Settings → Data).
+- §Performance updated 6 → 8 segment rows (≤240 per session).
+
+Re-requesting QD review only (TL already APPROVED rev2).
