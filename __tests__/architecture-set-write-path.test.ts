@@ -134,7 +134,57 @@ describe("Architecture: hooks do not bypass DB layer for workout_sets (BLD-1170)
   });
 });
 
-// ─── Test 3: key session-sets.ts functions route through sets.ts ──────────────
+// ─── Test 4: repo-wide db.update(workoutSets) exclusivity to lib/db/sets.ts ──
+//
+// AC #267 (partial — write-path half): Only lib/db/sets.ts may call
+// db.update(workoutSets) for volume-affecting fields. session-sets.ts retains
+// db.update(workoutSets) for NON-volume fields (notes, tempo, rpe, duration,
+// variant, etc.) — those are intentional and excluded via per-file allowlist.
+//
+// NOTE: The e1RM formula ban (`weight * reps`, `weight * (1 + reps/30)`) is NOT
+// enforced here because the analytics surfaces (lib/db/e1rm-trends.ts,
+// lib/db/monthly-report.ts, etc.) still use raw formulas pending BLD-1174
+// (Slice 5: analytics surfaces → cached columns). Adding that check here would
+// break CI before BLD-1174 merges. The formula ban will be enforced by BLD-1174's
+// architecture test once those files are migrated to read cached_volume_kg /
+// cached_e1rm_kg directly.
+
+describe("Architecture: db.update(workoutSets) only from approved files (BLD-1170 AC#267)", () => {
+  it("no file outside lib/db/sets.ts and lib/db/session-sets.ts calls db.update(workoutSets)", () => {
+    // lib/db/session-sets.ts is explicitly allowed because it retains legitimate
+    // non-volume writes (notes, tempo, duration, rpe, variant, etc.). The individual
+    // volume-write functions in session-sets.ts are verified by Test 3 above.
+    // lib/db/sessions.ts is explicitly allowed because it contains:
+    //   - swapExerciseInSession / undoSwapInSession (exercise_id swaps — non-volume)
+    //   - applyEditUpdate (inside editCompletedSession transaction — recomputed post-TX)
+    //   - set renumbering (set_number — non-volume)
+    const APPROVED_FILES = new Set([
+      "lib/db/sets.ts",
+      "lib/db/session-sets.ts",
+      "lib/db/sessions.ts",
+    ]);
+    const allTsFiles = findFiles("**/*.{ts,tsx}");
+    const violations: string[] = [];
+
+    for (const relPath of allTsFiles) {
+      if (APPROVED_FILES.has(relPath)) continue;
+      const content = readFile(relPath);
+      if (/\bdb\.update\(workoutSets\)/.test(content)) {
+        violations.push(relPath);
+      }
+    }
+
+    if (violations.length > 0) {
+      throw new Error(
+        "db.update(workoutSets) found outside approved files.\n" +
+        "Only lib/db/sets.ts (volume writes) and lib/db/session-sets.ts (non-volume writes)\n" +
+        "may call db.update(workoutSets). All other callers must use a lib/db/sets.ts helper.\n\n" +
+        "Violations:\n" + violations.map((v) => `  - ${v}`).join("\n")
+      );
+    }
+  });
+});
+
 //
 // Verify that the specific functions in session-sets.ts that update volume-affecting
 // fields no longer contain direct db.update(workoutSets) calls. They must delegate

@@ -185,7 +185,26 @@ export async function updateSetRepsOnly(
 }
 
 /**
- * Batch update weight+reps for multiple sets, recomputing caches for each.
+ * Update reps plus optional duration_seconds atomically in one SQL statement,
+ * then recompute caches. This preserves the atomic write contract required by
+ * existing tests (e.g. db.sessions-sets.test.ts:229).
+ * Used by `updateSetRepsAndDuration` in session-sets.ts.
+ */
+export async function updateSetRepsAndDurationAtomic(
+  id: string,
+  reps: number | null,
+  durationSeconds: number | null | undefined,
+): Promise<void> {
+  const db = await getDrizzle();
+  const fields: Partial<{ reps: number | null; duration_seconds: number | null }> = { reps };
+  if (durationSeconds !== undefined) {
+    fields.duration_seconds = durationSeconds;
+  }
+  await db.update(workoutSets).set(fields).where(eq(workoutSets.id, id));
+  await recomputeSetCaches(id);
+}
+
+
  * Runs all updates then all cache recomputations to minimise round-trips.
  */
 export async function batchUpdateSetWeightReps(

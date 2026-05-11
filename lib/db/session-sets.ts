@@ -10,7 +10,7 @@ import { getDrizzle, withTransaction, getDatabase } from "./helpers";
 import { workoutSets, exercises, workoutSessions, setMedia } from "./schema";
 import {
   updateSetWeightReps,
-  updateSetRepsOnly,
+  updateSetRepsAndDurationAtomic,
   batchUpdateSetWeightReps,
   updateSetTypeAndRecompute,
   updateSetWeightAndFields,
@@ -417,11 +417,10 @@ export async function updateSetRepsAndDuration(
   reps: number | null,
   durationSeconds?: number | null
 ): Promise<void> {
-  // BLD-1170: route reps through sets.ts to trigger cache recomputation.
-  await updateSetRepsOnly(id, reps);
-  if (durationSeconds !== undefined) {
-    await updateSetDuration(id, durationSeconds);
-  }
+  // BLD-1170: atomic reps+duration write via sets.ts to trigger cache recomputation.
+  // Uses updateSetRepsAndDurationAtomic to preserve the single-statement contract
+  // required by tests (db.sessions-sets.test.ts:229).
+  await updateSetRepsAndDurationAtomic(id, reps, durationSeconds);
 }
 
 export async function updateSetDuration(
