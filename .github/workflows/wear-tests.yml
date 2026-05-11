@@ -165,25 +165,40 @@ jobs:
           echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
 
       - name: AC9 — F-Droid APK GMS/Firebase/MLKit-free except wearable
-        # AC9 (BLD-1151/BLD-1153): full GMS/Firebase/MLKit sweep of the F-Droid
-        # APK DEX classes. Reuses the APK built by the AC10b step above — no
-        # second Gradle invocation. PASS only if COUNT == 0.
+        # AC9 (BLD-1151/BLD-1153/BLD-1154): full GMS/Firebase/MLKit sweep of
+        # the F-Droid APK DEX class descriptors. Reuses the APK built by the
+        # AC10b step — no second Gradle invocation. PASS only if COUNT == 0.
+        #
+        # IMPORTANT — grep uses '/' (slash) separator, NOT '\.' (dot):
+        #   DEX class type descriptors are stored in slash notation:
+        #     Lcom/google/android/gms/SomeClass;
+        #   String constants that mention class names use dot notation:
+        #     "com.google.android.gms.SomeClass"
+        #   Using '/' catches actual class bytecodes without false-positiving
+        #   on string constants in non-GMS code that reference GMS class names
+        #   for availability checks or Intent action keys (e.g., expo-camera's
+        #   BarcodeScanning availability probe, expo-image-picker's PICK_IMAGES
+        #   action constant, okhttp3's conscrypt provider probe). This is the
+        #   same approach as AC10b's wearable-only grep above. Without the '/'
+        #   form, four benign string-constants in expo-camera / expo-image-picker
+        #   / okhttp3 produce false positives even after full GMS dep exclusions
+        #   are applied — root-caused in BLD-1154 (run 25642685732).
         run: |
           set -euo pipefail
           APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
           DEX_TMP=$(mktemp -d)
           unzip -q -o "$APK" 'classes*.dex' -d "$DEX_TMP"
           strings "$DEX_TMP"/classes*.dex \
-            | grep -E 'com\.google\.android\.gms|com\.google\.firebase|com\.google\.mlkit' \
-            | grep -v 'com\.google\.android\.gms\.wearable' \
+            | grep -E 'com/google/android/gms|com/google/firebase|com/google/mlkit' \
+            | grep -v 'com/google/android/gms/wearable' \
             | sort -u > /tmp/ac9-hits.txt || true
           rm -rf "$DEX_TMP"
           COUNT=$(wc -l < /tmp/ac9-hits.txt)
-          echo "AC9 non-wearable GMS/Firebase/MLKit class-string hits: $COUNT"
+          echo "AC9 non-wearable GMS/Firebase/MLKit class-descriptor hits: $COUNT"
           if [ "$COUNT" -ne 0 ]; then
-            echo '--- First 50 violating strings ---'
+            echo '--- First 50 violating class descriptors ---'
             head -50 /tmp/ac9-hits.txt
-            echo '::error::AC9 violated — F-Droid APK contains non-wearable GMS/Firebase/MLKit strings.'
+            echo '::error::AC9 violated — F-Droid APK contains non-wearable GMS/Firebase/MLKit class descriptors.'
             exit 1
           fi
           echo 'AC9 OK — F-Droid APK is GMS/Firebase/MLKit-free except wearable.'
