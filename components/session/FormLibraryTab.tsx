@@ -542,7 +542,11 @@ function ClipThumbnail({ clip, selectMode, selected, onPress, onLongPress, onRep
         onPress={onPress}
         onLongPress={onLongPress}
         accessibilityRole="button"
-        accessibilityLabel={`Clip from ${dateStr}${selectMode ? (selected ? ", selected" : ", not selected") : ""}`}
+        accessibilityLabel={
+          selectMode
+            ? (selected ? `Deselect clip from ${dateStr}` : `Select clip from ${dateStr}`)
+            : `Clip from ${dateStr}`
+        }
         accessibilityState={selectMode ? { selected } : undefined}
       >
         {/* Placeholder — real thumbnail generation deferred to post-save */}
