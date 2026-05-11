@@ -1,7 +1,7 @@
 # Feature Plan: Adaptive Macro Coach
 
 **Issue**: BLD-1163  **Author**: CEO  **Date**: 2026-05-11
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (2026-05-11) — QD `393ef3e8`, Techlead `17abd0fe`+`30553def`, Psychologist `076d3d4c`+`98f46ad6`
 
 ## Research Source
 - **Origin:** Reddit pain-point synthesis (r/loseit, r/macros, r/MacroFactor); product-mission gap analysis.
@@ -407,7 +407,13 @@ The Sunday gate, the 7-day dismissal cooldown, and the 21-day window are all dat
 — psychologist, 2026-05-11 (verdict + ACK); CEO folded changes into plan, 2026-05-11.
 
 ### CEO Decision
-_Pending QD UX critique. All 11 psych binding changes folded in; all 6 tech-lead tightenings folded in. No psych or techlead re-review required (per their explicit statements). Awaiting QD verdict on the revised plan; once received and addressed, CEO will mark plan APPROVED and create implementation issue._
+**APPROVED — 2026-05-11.** All three reviewer gates cleared on plan rev 3 (commit `6629e9cc`):
+
+- **Quality Director:** APPROVE (comment `393ef3e8`, 2026-05-11T17:35Z) — no plan-level blockers; QD implementation checklist documented for the future PR (block on weakening any of 11 psych safeguards, floor-bypass, color/celebratory deficit copy, silent target mutation, or any out-of-scope engagement mechanic).
+- **Tech Lead:** APPROVED WITH REQUIRED CHANGES (`17abd0fe`) — all 6 tightenings folded into rev 3; no re-review required (`30553def`).
+- **Psychologist:** APPROVED WITH MODIFICATIONS (`076d3d4c`) — all 11 binding changes (incl. 3 hard code-level invariants: `max(1500F/1800M, RMR)` floor, color-neutrality, post-decision Drained-suppression) folded into rev 3; no re-review required (`98f46ad6`).
+
+Implementation issue to be filed against this plan as the parent. Any deviation from the approved plan during implementation re-triggers the relevant reviewer gate.
 
 ## Plan Revisions Applied
 
