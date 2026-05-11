@@ -56,32 +56,67 @@ A **weekly advisory** that:
 **Surface 1 — Weekly card on `/nutrition` tab (only when ready):**
 
 ```
-┌─────────────────────────────────────────────┐
-│ 📈  Macro Coach — week of May 4–10          │
-│                                             │
-│ Your trend weight: 78.4 kg (was 79.1)       │
-│ You averaged 2,180 kcal/day                 │
-│ Estimated TDEE: ~2,520 kcal                 │
-│                                             │
-│ Suggested new target: 2,020 kcal            │
-│ (current: 1,950 — +70)                      │
-│                                             │
-│ [ Update target ] [ Keep current ] [ ⓘ ]    │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│ 📈  Macro Coach — week of May 4–10                  │
+│                                                     │
+│ Here's what your data suggests. You set your target.│
+│                                                     │
+│ You logged 4 workouts this week and weighed in 6 of │
+│ 7 days. Your body has good data to work with.       │
+│                                                     │
+│ Your trend weight: 78.4 kg (was 79.1)               │
+│ You averaged ~2,200 kcal/day                        │
+│ Estimated TDEE: ~2,500 kcal (range 2,400–2,650)     │
+│                                                     │
+│ Suggested target: 2,000 kcal/day                    │
+│ (you're currently at 1,950)                         │
+│                                                     │
+│ How did your training feel this week?               │
+│   ( Strong )  ( OK )  ( Drained )                   │
+│                                                     │
+│ [ Use this number ] [ Set my own ] [ Not this week ]│
+│                                                     │
+│ Logging consistency this month: 22/30 days.         │
+│ That consistency is doing more for you than any     │
+│ number on this card.                                │
+│                                                     │
+│ ⓘ How this is computed                              │
+└─────────────────────────────────────────────────────┘
 ```
 
 - Card appears **only on Sundays** (or first app-open after Sunday) and **only if** preconditions met (see "Required data quality" below).
-- "Update target" applies the new target and recomputes protein/carbs/fat using existing `nutrition-calc.calculateMacros` (so split rules stay consistent).
-- "Keep current" dismisses; coach won't re-prompt for 7 days.
+- **All numbers user-facing are rounded to the nearest 50 kcal or shown as ranges.** No 4-significant-figure precision (per psych verdict §Required Change 2).
+- **Direction is conveyed by the literal number, not by color.** No green-down / red-up arrows. Both directions render in identical neutral chrome (per psych §Required Change 10).
+- **Authority inversion (per psych §4):** Header reads *"Here's what your data suggests. You set your target."* Buttons:
+  - **`Use this number`** — applies the suggestion via the **new** `recomputeMacrosFromCalories(calories, weight_kg)` helper in `nutrition-calc.ts` (avoids the goal-double-apply trap; see Tech Lead item #6 / footnote).
+  - **`Set my own`** — opens manual entry; user types the kcal target they want.
+  - **`Not this week`** — escalating cooldown: first decline = 14-day cooldown, second consecutive decline = 28-day cooldown + adds in-card line *"You've passed twice. Want to pause this for a while?"* with one-tap "Pause 1 month." Cooldown resets to 14 days only after one acceptance OR explicit user re-enable from Settings (per psych §6).
+- **Right Why prompt** (Strong / OK / Drained) is captured per week, stored locally. **If the user reports `Drained` two weeks in a row AND the algorithm would suggest a deficit, the card suppresses the deficit suggestion that week** (per psych §1, §11). After a `Use this number` tap, the next week's card opens with: *"Last Sunday you set 2,000 kcal/day. How did the week feel?"* — same Strong/OK/Drained tap; `Drained` suppresses any further reduction for 14 days regardless of trend (per psych §11).
+- **Mastery overlay** (logging-consistency line) is computed from existing `daily_log` data and rendered **below** (not above) the kcal numbers — outcome stays primary because the user opted in, but mastery is acknowledged (per psych §9). No badge, no streak counter elsewhere.
+- **No celebration-of-direction copy. Ever.** This is enforced in code via the `MacroCoachCard.tsx` header comment (see Risk Assessment) and is a quality-director PR-review checklist item (per psych §5).
 - "ⓘ" opens a one-screen explainer of the math + a link to disable.
 
 **Surface 2 — Settings → Nutrition → Adaptive Macro Coach:**
 
 - **Master toggle** (off by default — opt-in only).
-- "Show me weekly TDEE check-ins even if I don't want target changes" sub-toggle (info-only mode).
+- **First-opt-in disclosure flow (per psych §7 Required Change — binding consent architecture, NOT gatekeeping):**
+  - On the **very first tap** of the master toggle (not buried in a separate explainer), present a single full-screen panel containing:
+    1. Plain-language summary of what the coach does and does not do (advisory, weekly, never silently mutates targets, has a hard safety floor).
+    2. **One SCOFF-lite passive screening item** (single question, no diagnostic claim): *"Have you ever felt out of control around food, or worried about food/weight in a way that interfered with daily life?"* — Yes / No / Prefer not to say.
+    3. **Two outcomes** — both valid, neither dead-end:
+       - **Continue** → full coach with target suggestions.
+       - **Use info-only mode** → shows weekly TDEE estimate but **never** suggests target changes. (Default routing if user answered "Yes" or "Prefer not to say" to the screen, but user can override either way.)
+    4. Final paragraph: *"If food and weight have been a hard area for you, the safest path is to talk to a clinician. This app cannot replace that."*
+- **Identity + implementation-intention capture (per psych §8, on the same opt-in flow):**
+  - One optional free-text prompt: *"In one sentence: who are you fueling?"* (stored locally; surfaced occasionally above the card as: *"You said: '<their words>'."*).
+  - One if-then plan: *"When the card appears on Sunday, I will:* ☐ check it before lunch ☐ check it after my Sunday workout ☐ check it whenever." (Two taps; BCT 1.4 Action Planning + Clear identity loop.)
+- "Show me weekly TDEE check-ins even if I don't want target changes" sub-toggle (info-only mode — also reachable here without re-doing the screening).
 - "Pause for N weeks" (1 / 2 / 4 / indefinite).
-- Hard floor display: "Suggestions will never go below 1,200 kcal or your custom floor." Editable floor input.
-- Educational disclosure: "If you have a history of disordered eating, we recommend keeping this off. Talk to a clinician before adjusting calories."
+- **Safety floor display (per psych §3 — supersedes the original 1,200 kcal floor; binding):**
+  > *"Suggestions will never go below your safety floor of **X kcal** — your body's resting energy needs."*
+  - `X = max(1500 if female, 1800 if male, mifflin_st_jeor_RMR(user))`. (Existing `lib/nutrition-calc.ts` already exposes the Mifflin-St Jeor RMR computation.)
+  - **Floor is read-only-down. User can RAISE it; user cannot lower it below the computed value.** This is a code-level invariant, not a soft validation. `lib/db/macro-coach-settings.ts::getFloorKcal()` clamps to the computed safety floor on read, even if the underlying `app_settings` row was corrupted to a smaller value (per Tech Lead §4 + Psych §3 ack from techlead at comment `30553def`).
+- Educational disclosure remains visible in Settings (separate from the first-opt-in screen): "If you have a history of disordered eating, we recommend keeping this off or using info-only mode. Talk to a clinician before adjusting calories."
 
 **Empty / error / a11y states:**
 
@@ -90,71 +125,138 @@ A **weekly advisory** that:
 | <14 daily weigh-ins in last 21 days | Card hidden; explainer in Settings: "Need 14 days of weights." |
 | <10 days of food logs in window | Card hidden; explainer: "Log meals more consistently." |
 | Trend weight delta within ±0.2% bodyweight | Card shows "Weight stable — no change suggested." |
-| Suggested target below user's floor | Card capped at floor; warning copy: "Capped at your floor (X kcal)." |
-| Suggested change > ±300 kcal in one week | Card capped at ±300 kcal/week; copy: "Limited to ±300 kcal/week for safety." |
-| Screen-reader users | All numbers announced with units; chart has alt-text summary; buttons fully labeled. |
+| Suggested target below user's safety floor | Suggestion **clamped at the safety floor** (`max(1500F/1800M, RMR)`); card displays neutral copy: *"Held at your safety floor (X kcal)."* No alarming language; no red affordance. |
+| Suggested change > ±300 kcal from current target in one week | Capped at ±300 kcal/week; copy: *"Limited to ±300 kcal/week."* (Drop the trailing "for safety" — psych: makes the algorithm sound paternalistic; the cap is operational.) |
+| User reports `Drained` on Right Why prompt | Stored. If two consecutive `Drained` weeks AND algorithm would suggest a deficit, deficit suggestion is suppressed; card shows info-only mode that week. |
+| Post-decision suppression active (Drained week after `Use this number` for a deficit) | Card suppresses any further reduction for 14 days regardless of trend (per psych §11). |
+| Cooldown active (after `Not this week`) | Card hidden until cooldown elapses (14 days first decline; 28 days second consecutive decline). |
+| Color coding | **Prohibited.** Direction is conveyed by the literal number only. Both deficit and surplus suggestions render in identical neutral chrome (per psych §10). |
+| Screen-reader users | All numbers announced with units; chart has alt-text summary; buttons fully labeled; Right Why prompt buttons announce "Strong / OK / Drained — log how training felt this week." |
 | RTL / large font / Dynamic Type | Card uses `Text` with `allowFontScaling`; layout reflows; tested up to 200% font size. |
 
 ### Technical Approach
 
-**Architecture — pure functions + thin UI:**
+**Architecture — pure functions + thin UI** (incorporates Tech Lead §1–§6 tightenings):
 
-- **New pure module** `lib/macro-coach.ts` (≈150 LOC) with no DB / RN imports — fully unit-testable. Exposes:
+- **New pure module** `lib/macro-coach.ts` with no DB / RN imports — fully unit-testable. Exposes:
   ```ts
-  computeTrendWeight(weights: BodyWeightRow[], windowDays: number): number | null;
+  // EWMA with α=0.1 (Hacker's-Diet trend formula; ~10-day half-life). α exported as a named constant; not user-configurable.
+  computeTrendWeight(weights: BodyWeightRow[], windowDays: number, now: Date): number | null;
   computeAvgIntake(logs: DailyLogRow[], window: DateRange): number | null;
-  estimateTDEE(avgIntake: number, weightDeltaKg: number, days: number): number;
+  // Hardened per Tech Lead §2: rejects days<7, rejects |Δw|/window<0.002, caps |TDEE−avg_intake| at 750 kcal/day.
+  estimateTDEE(avgIntake: number, weightDeltaKg: number, days: number): number | { reason: SkipReason };
+  // Composable helpers (Tech Lead §5):
+  clampToFloor(target: number, floor: number): { value: number; capped: boolean };
+  clampToWeeklyDelta(current: number, target: number, maxDelta: number): { value: number; capped: boolean };
+  classifyStability(deltaKg: number, windowKg: number): "stable" | "loss" | "gain";
+  // Orchestrator:
   suggestTarget(opts: SuggestOpts): CoachSuggestion | { reason: SkipReason };
   ```
-- **DB integration** in `lib/db/macro-coach.ts` (thin orchestrator, queries the three tables).
-- **Settings** in existing `app_settings` table (no schema change for v1):
-  - `macro_coach.enabled` (string "0"/"1")
-  - `macro_coach.floor_kcal` (string number, default "1200")
-  - `macro_coach.last_dismissed_at` (string epoch ms)
-  - `macro_coach.paused_until` (string epoch ms)
-- **UI** new `components/nutrition/MacroCoachCard.tsx` (renders only when `coach.shouldShow()` returns true) + new screen `app/settings/macro-coach.tsx`.
-- **No new dependencies.** All math is arithmetic. No background jobs — recompute on `/nutrition` tab focus.
+  **Determinism (Tech Lead §6):** No `new Date()` / `Date.now()` calls in this module. `now: Date` and `tz: string` are injected. The DB orchestrator captures wallclock.
 
-**Data model:** No new tables. All inputs already exist in `body_weight`, `food_entries`, `daily_log`, `macro_targets`, `app_settings`.
+- **DB integration** in `lib/db/macro-coach.ts` (thin orchestrator + memoization, per Tech Lead §3). Memo key: `${todayIso}|${latestWeightRowId}|${latestLogId}|${settingsHash}`. Compute lives in a `useMacroCoach()` hook returning `{ status: 'loading' | 'hidden' | 'ready', suggestion? }`. Module-level `Map`, cleared on settings change. No background timers, no `useEffect` polling.
 
-**Performance:** Window is bounded to 21 days. Each weekly compute reads ≤21 weight rows + ≤21×N food rows; trivially under one frame on the slowest target devices.
+- **Settings accessor** `lib/db/macro-coach-settings.ts` (typed, single owner of `app_settings.macro_coach.*` parsing — per Tech Lead §4, **with floor logic updated per psych §3**):
+  - `getEnabled(): boolean` (default `false`).
+  - `getMode(): 'full' | 'info_only'` (set during first-opt-in screening; default `'info_only'` if user answered "Yes" or "Prefer not to say" to the SCOFF-lite item; user can override).
+  - `getFloorKcal(user: UserProfile): number` — **always returns `max(1500 if female, 1800 if male, mifflin_st_jeor_RMR(user))`** regardless of any value persisted in the row. The persisted value can only RAISE the floor above this minimum, never lower it. This is a code-level invariant (per psych §3 + techlead ack `30553def`).
+  - `getRightWhyHistory(): RightWhyEntry[]` — last 4 weeks of Strong/OK/Drained taps.
+  - `getDismissalCount(): number` — consecutive `Not this week` count; resets to 0 on accept or explicit re-enable.
+  - `getLastDismissedAt(): number | null`.
+  - `getPausedUntil(): number | null`.
+  - `getDeficitSuppressedUntil(): number | null` — set when post-decision Drained suppresses further reductions (per psych §11).
+  - `getIdentitySentence(): string | null` and `getIfThenChoice(): 'before_lunch' | 'after_workout' | 'whenever' | null` (from opt-in capture, per psych §8).
+  - All `setX(...)` mirrors apply the same clamps. **No `parseFloat` outside this module.**
+
+- **UI** new `components/nutrition/MacroCoachCard.tsx` (renders only when `useMacroCoach().status === 'ready'`) + new screen `app/settings/macro-coach.tsx` (master toggle + first-opt-in flow + safety floor display + identity prompt + pause + history viewer).
+
+- **NEW helper required** in `lib/nutrition-calc.ts` per Tech Lead §"Foot-gun flagged (preferred fix)":
+  ```ts
+  // Recompute protein/carbs/fat from a coach-supplied calorie target WITHOUT re-applying GOAL_ADJUSTMENTS.
+  // Prevents the goal-double-apply trap when the coach calls `calculateMacros(suggestedTarget, weight, goal)`.
+  recomputeMacrosFromCalories(calories: number, weight_kg: number): { protein_g: number; carbs_g: number; fat_g: number };
+  ```
+  This is the preferred fix (vs. per-call subtraction in coach code). The coach never calls `calculateMacros` directly with its suggested target.
+
+- **No new dependencies.** All math is arithmetic. No background jobs — recompute on `/nutrition` tab focus, memoized. Sunday detection uses `Intl.DateTimeFormat` with the injected tz (do NOT add Luxon/date-fns-tz).
+
+**Data model:** No new tables. All inputs already exist in `body_weight`, `food_entries`, `daily_log`, `macro_targets`, `app_settings`. New `app_settings.macro_coach.*` keys (append-only): `enabled`, `mode`, `floor_kcal_user_override`, `right_why_w-N` (4 keys, last 4 weeks), `dismissal_count`, `last_dismissed_at`, `paused_until`, `deficit_suppressed_until`, `identity_sentence`, `if_then_choice`, `screening_answer`, `screening_completed_at`. All string-typed; the typed accessor module is the only reader/writer.
+
+**Performance:** Window is bounded to 21 days. Each weekly compute reads ≤21 weight rows + ≤21×N food rows; trivially under one frame on the slowest target devices. Memoized so navigation back to `/nutrition` is O(1) after first compute per Sunday.
 
 **Storage:** No new persistent storage beyond settings keys above.
 
 **Offline-first:** Pure local computation, no network. Aligned with project privacy-first stance.
 
+**Scope-creep gate (per Tech Lead "LOC honesty check"):** Realistic PR target is **~1,100–1,500 LOC across ~6 files**. Anything materially larger triggers a split. Files in scope:
+- `lib/macro-coach.ts` (pure): 180–230 LOC.
+- `lib/db/macro-coach.ts` (orchestrator + memo): 100–140 LOC.
+- `lib/db/macro-coach-settings.ts`: 80–110 LOC (slightly larger than original estimate due to Right Why + identity + suppression keys).
+- `lib/nutrition-calc.ts` (add `recomputeMacrosFromCalories`): +30 LOC.
+- `__tests__/macro-coach.test.ts` (95% branch + property tests + safety-floor invariant tests + color-neutrality snapshot + Drained-suppression tests): 400–550 LOC.
+- `components/nutrition/MacroCoachCard.tsx`: 220–300 LOC.
+- `app/settings/macro-coach.tsx` (incl. first-opt-in flow): 230–320 LOC.
+
 ## Scope
 
 **In:**
-- Weekly trend-weight + observed-TDEE computation.
-- One advisory card on `/nutrition` tab.
-- Settings screen with master toggle + floor + pause.
-- Hard floor (default 1,200 kcal, user-editable upward only).
+- Weekly trend-weight (EWMA α=0.1) + observed-TDEE computation with hardened guards (days<7 reject, ±0.2% stability skip, |TDEE−intake|>750 kcal/d reject).
+- One advisory card on `/nutrition` tab with three-button authority-inverted UX (`Use this number` / `Set my own` / `Not this week`).
+- Right Why prompt (Strong / OK / Drained) on every card; two-week-Drained suppression of deficit suggestions.
+- Post-decision check-in loop (the week after `Use this number` for a deficit asks Drained-status; Drained → 14-day suppression of further reductions).
+- Mastery-overlay line (logging consistency this month) rendered below the kcal numbers.
+- All user-facing kcal numbers rounded to nearest 50 or shown as ranges. No 4-sig-fig precision.
+- Color-neutral chrome: no green-down / red-up direction signaling.
+- Settings screen with master toggle, info-only mode, pause, identity prompt + if-then plan, Right Why history viewer.
+- **First-opt-in disclosure flow** with SCOFF-lite single-question screening, info-only fallback route, clinician-talk reminder.
+- **Safety floor = `max(1500F / 1800M, mifflin_st_jeor_RMR)`** — code-level invariant, read-only-down, surfaced in Settings as the user's resting energy needs.
 - Hard cap on weekly target change (±300 kcal/week).
-- Pure-function module + unit tests covering all branches.
+- Escalating `Not this week` cooldowns (14 → 28 days) with one-tap "Pause 1 month" surfaced after second consecutive decline.
+- `recomputeMacrosFromCalories(calories, weight_kg)` helper added to `lib/nutrition-calc.ts` to remove the goal-double-apply foot-gun.
+- Pure-function module + unit tests covering all branches (≥95% branch coverage), property tests for goal × delta-sign combos, safety-floor invariant tests, color-neutrality snapshot, Drained-suppression tests.
 - Opt-in default: feature is **OFF** until user enables it from Settings.
-- Educational disclosure copy reviewed by psychologist.
+- **Written prohibition on celebration-of-direction copy**, enforced by:
+  - Code comment at top of `MacroCoachCard.tsx` (and any future coach-copy file) stating the rule verbatim.
+  - QD PR-review checklist item on every PR touching `MacroCoach*` files.
+- All copy reviewed by psychologist before merge.
 
-**Out (deferred):**
-- Push notifications for weekly check-ins (would re-trigger psychologist review).
-- Macro-split adaptation (we keep existing 0.25 fat / 2.2 g·kg⁻¹ protein rules; only kcal floats).
+**Out (deferred — adding any of these re-triggers the psychologist gate):**
+- Push notifications of any kind for the coach.
+- Streaks of any kind tied to coach acceptance, logging, or weigh-ins.
+- Badges / achievements for hitting suggested targets.
+- Social / leaderboard surfacing of TDEE, weight, or coach acceptance.
+- Any "smart" upward auto-suggest on bulks that compares user to other users.
+- Any in-app celebration animation tied to body-weight movement.
+- Macro-split adaptation (we keep existing 0.25 fat / 2.2 g·kg⁻¹ protein rules; only kcal floats; protein recomputed via `recomputeMacrosFromCalories` from new kcal but the formula itself is unchanged).
 - Body-composition-aware adjustments (DEXA / smart-scale impedance).
 - Multi-week trend visualizations (we already have a body-weight chart in `/progress`).
-- Streaks, gamification, reminder badges (intentionally avoided).
 - Group / social features.
 
 ## Acceptance Criteria
 
-- [ ] Given the user has logged ≥14 daily weights in the last 21 days **AND** ≥10 days of food in the last 14 days **AND** the coach is enabled in Settings **AND** ≥7 days have passed since last dismissal, When they open `/nutrition` on or after the next Sunday, Then the Macro Coach card appears with computed trend weight, avg intake, estimated TDEE, and a suggested new daily kcal target.
-- [ ] Given the suggested target would be lower than the user's configured floor (default 1,200 kcal), When the card is shown, Then the suggestion is capped at the floor and the card displays the cap warning copy: "Capped at your floor (X kcal)."
-- [ ] Given the change between current and suggested target exceeds ±300 kcal, When the card is shown, Then the suggestion is capped at ±300 kcal and the card displays: "Limited to ±300 kcal/week for safety."
-- [ ] Given the user taps "Update target", When confirmed, Then `macro_targets.calories` is updated and protein/carbs/fat are recomputed via existing `calculateMacros`, and a confirmation toast appears.
-- [ ] Given the user taps "Keep current", When confirmed, Then `app_settings.macro_coach.last_dismissed_at` is set and the card hides for ≥7 days.
+- [ ] Given the user has logged ≥14 daily weights in the last 21 days **AND** ≥10 days of food in the last 14 days **AND** the coach is enabled in Settings (mode = `full`) **AND** no active cooldown / pause / Drained-suppression, When they open `/nutrition` on or after the next Sunday, Then the Macro Coach card appears with: trend weight, avg intake (rounded to nearest 50), estimated TDEE shown as a range (`X – Y kcal`), suggested target (rounded to nearest 50), Right Why prompt (Strong/OK/Drained), three buttons (`Use this number` / `Set my own` / `Not this week`), and the mastery-overlay logging-consistency line.
+- [ ] **Safety floor invariant.** Given any input combination (including malformed `app_settings` rows, missing user profile fields, or extreme weight outliers), When `suggestTarget` returns a value, Then the value is **always** ≥ `max(1500 if female, 1800 if male, mifflin_st_jeor_RMR(user))`. Enforced by `lib/db/macro-coach-settings.ts::getFloorKcal()` and asserted by a property test that exhaustively probes corruption modes.
+- [ ] Given the suggested target would be lower than the safety floor, When the card is shown, Then the suggestion is held at the floor and the card displays the neutral copy: *"Held at your safety floor (X kcal)."* No alarming language, no red color.
+- [ ] Given the change between current and suggested target exceeds ±300 kcal, When the card is shown, Then the suggestion is capped at ±300 kcal and the card displays: *"Limited to ±300 kcal/week."*
+- [ ] Given the user taps **`Use this number`**, When confirmed, Then `macro_targets.calories` is updated and protein/carbs/fat are recomputed via the new `recomputeMacrosFromCalories(calories, weight_kg)` helper (NOT via `calculateMacros`, which would double-apply the goal delta), and a confirmation toast appears.
+- [ ] Given the user taps **`Set my own`**, When they enter a kcal value and confirm, Then `macro_targets.calories` is updated to the user-entered value (subject to the same safety-floor clamp), and macros are recomputed via the new helper.
+- [ ] Given the user taps **`Not this week`** for the first time, When confirmed, Then `app_settings.macro_coach.last_dismissed_at` is set, `dismissal_count` increments to 1, and the card hides for **14 days** (not 7).
+- [ ] Given the user taps **`Not this week`** twice consecutively, When the second decline is confirmed, Then `dismissal_count` = 2, the card hides for **28 days**, and the card showed an in-card line on that second decline: *"You've passed twice. Want to pause this for a while?"* with a one-tap "Pause 1 month" affordance.
+- [ ] Given the user taps **`Use this number`** OR explicitly re-enables the coach in Settings, When confirmed, Then `dismissal_count` resets to 0.
+- [ ] Given the user reports `Drained` two consecutive weeks AND the algorithm would suggest a deficit, When the card would render, Then the deficit suggestion is suppressed and the card shows info-only mode (TDEE range only, no target suggestion) for that week.
+- [ ] **Post-decision check-in.** Given the user tapped `Use this number` for a deficit suggestion last Sunday, When the next week's card renders, Then it opens with the line *"Last Sunday you set X kcal/day. How did the week feel?"* with the same Strong/OK/Drained buttons. If the user taps `Drained`, Then `deficit_suppressed_until` is set 14 days out and any further reduction is suppressed for that period regardless of trend.
 - [ ] Given the master toggle is OFF, When the user opens `/nutrition` under any data condition, Then no card is rendered. (Default state for all existing and new users.)
-- [ ] Given trend-weight delta is within ±0.2% bodyweight over the window, When the card is shown, Then it shows "Weight stable — no change suggested" with disabled "Update" button.
+- [ ] **First-opt-in screening.** Given the user taps the master toggle for the first time, When the screen appears, Then it presents (in this order) plain-language summary, the SCOFF-lite single-question screen, two routing buttons (`Continue` → full, `Use info-only mode`), and the clinician-talk paragraph. Both routes are valid; neither is a dead-end.
+- [ ] Given the user answered "Yes" or "Prefer not to say" to the SCOFF-lite item, When the routing screen appears, Then **`Use info-only mode` is the default-highlighted option** (user can still choose `Continue`).
+- [ ] **Identity prompt.** Given the user is in the first-opt-in flow, When the identity-capture screen renders, Then it shows the optional free-text prompt *"In one sentence: who are you fueling?"* and the if-then radio (`before_lunch` / `after_workout` / `whenever`); both are skippable.
+- [ ] Given trend-weight delta is within ±0.2% bodyweight over the window, When the card is shown, Then it shows "Weight stable — no change suggested" with the suggestion buttons hidden (mastery overlay still visible).
 - [ ] Given insufficient data (any precondition unmet), When the user opens `/nutrition`, Then no card appears, but Settings → Macro Coach displays the specific missing prerequisite.
 - [ ] All `lib/macro-coach.ts` pure functions have ≥95% branch coverage in `__tests__/macro-coach.test.ts`.
+- [ ] Property test covers all 6 (goal × delta-sign) combinations and asserts correct suggestion direction.
+- [ ] **Color-neutrality snapshot test.** `MacroCoachCard.tsx` renders deficit and surplus suggestions; snapshot diff between the two outputs is empty for any color/affordance attribute (only the literal numeric content differs).
+- [ ] No `new Date()` / `Date.now()` calls inside `lib/macro-coach.ts` (lint rule or grep assertion in test).
 - [ ] Settings screen passes a11y audit (TalkBack / VoiceOver labels for every control, contrast AA, font scaling 200%).
+- [ ] First-opt-in screen passes a11y audit (full-screen panel scrolls under large fonts; SCOFF-lite buttons have explicit labels including "Prefer not to say").
 - [ ] PR passes all tests, typecheck, lint with no regressions.
 - [ ] No new lint warnings.
 - [ ] No new third-party dependencies.
@@ -177,19 +279,32 @@ A **weekly advisory** that:
 | Empty / null `serving` or 0-cal foods | Already handled in existing `nutrition-calc`; coach inherits. |
 | RTL languages | Card uses `flex-direction: row-reverse` aware components (existing patterns). |
 | User disables coach mid-render | UI subscribes to settings; card unmounts on next render. |
+| User answers "Prefer not to say" on SCOFF-lite | Defaults to info-only mode; can override to full from Settings; both routes valid. |
+| User skips identity sentence + if-then on opt-in | Both fields stored as `null`; surfaces are simply omitted; no nag to revisit. |
+| Drained → Drained two consecutive weeks | Deficit suggestion suppressed for week 2; card shows info-only mode (TDEE range only). |
+| Post-decision: user tapped `Use this number` for a deficit, then reports `Drained` next week | `deficit_suppressed_until` set 14 days out; further reductions suppressed regardless of trend. |
+| Goal switched to `bulk` while deficit-suppressed | Suppression applies only to deficit suggestions; surplus suggestions on a bulk are unaffected. |
+| User raises floor above algorithm output | Algorithm output clamps to user floor; copy: *"Held at your custom floor (X kcal)."* |
+| User attempts to lower floor below safety floor in Settings | UI rejects with non-blocking explainer; Settings cannot persist a floor below `max(1500F/1800M, RMR)`. |
 
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| **ED-adjacent harm** — auto-suggesting deficits triggers restrictive cycles in vulnerable users | Medium | **Severe** | Off by default; install-time disclosure; hard kcal floor (default 1,200, user-editable upward only); ±300 kcal/week cap; psychologist review of every copy string; explicit "if you have ED history, keep this off" messaging; no streaks/gamification. |
-| Bad math from outliers (one bad weigh-in skews EWMA) | High | Medium | EWMA smoothing + filter out implausible weights ([30, 300] kg) + require ≥14 weights in 21 days. |
-| Users misinterpret advisory as authoritative | Medium | Medium | Copy: "Estimated TDEE — your true value may differ." ⓘ link to explainer. Buttons read "Update" / "Keep" — never "Accept" / "Reject". |
-| Feature creep into push notifications / streaks | Medium | High (behavior risk) | Explicitly out-of-scope; any addition re-triggers psychologist gate. |
-| Computation perceived as slow on low-end devices | Low | Low | All inputs ≤21 days; pure JS arithmetic; <1ms in benchmarks. |
-| Migration risk | Very low | Low | No schema change; only new `app_settings` keys (which are append-only). |
+| **ED-adjacent harm** — auto-suggesting deficits triggers restrictive cycles in vulnerable users | Medium | **Severe** | Off by default; **first-opt-in SCOFF-lite screening with info-only routing**; install-time disclosure; **safety floor = `max(1500F/1800M, RMR)`** as code-level invariant (not user-lowerable); ±300 kcal/week cap; **two-week-Drained suppression of deficit suggestions**; **post-decision Drained → 14-day suppression**; **escalating dismissal cooldowns (14 → 28 d)**; psychologist review of every copy string; explicit "if you have ED history, use info-only" messaging; no streaks/gamification; **written prohibition on celebration-of-direction copy enforced via code comment + QD PR-checklist item**; color-neutral chrome (no red-up/green-down). |
+| **False precision / authority** ("the app said 2,520 kcal, why am I not losing?") | High | Medium | All user-facing kcal numbers rounded to nearest 50 or shown as ranges. TDEE shown as range (e.g., 2,400–2,650). "Estimated" prefix on every TDEE display. ⓘ link to one-screen explainer of formula limits. |
+| **Algorithm-as-authority framing** undermines user autonomy | Medium | Medium | Three-button card: `Use this number` / `Set my own` / `Not this week`. Header reads *"Here's what your data suggests. You set your target."* User is decider; algorithm is informant. (SDT autonomy support.) |
+| **Wrong Why dominance** — outcome-only motivation collapses on bad scale days | Medium | Medium | Right Why prompt (Strong/OK/Drained) on every card. Identity sentence + if-then plan captured at opt-in and surfaced occasionally. Mastery overlay (logging consistency) below the kcal numbers. |
+| Bad math from outliers (one bad weigh-in skews EWMA) | High | Medium | EWMA α=0.1 + filter implausible weights ([30, 300] kg) + require ≥14 weights in 21 days + reject `days<7` in pure fn (defense in depth). |
+| Energy-balance noise from water shifts injects ±275 kcal/d/week | High | Medium | `estimateTDEE` caps `|TDEE − avg_intake|` at 750 kcal/d; values above this return `reason: "implausible_balance"` and skip the suggestion that week. |
+| Goal-double-apply trap (`calculateMacros` adds `GOAL_ADJUSTMENTS` internally) | Medium | High | New `recomputeMacrosFromCalories(calories, weight_kg)` helper in `nutrition-calc.ts`. Coach **never** calls `calculateMacros` with its suggested target. Lint/test asserts this. |
+| Feature creep into push notifications / streaks / badges / social | Medium | High (behavior risk) | Explicitly out-of-scope; any addition re-triggers psychologist gate. List enumerated in §Out (deferred). |
+| **Watering down any of the 11 psych binding changes during implementation** | Medium | High | Each binding change has an AC; QD must verify each on PR review; if any is dropped or weakened, claudecoder must surface it as a scope question on the implementation issue, NOT silently ship. Implementation issue description will list all 11 explicitly. |
+| Computation perceived as slow on low-end devices | Low | Low | All inputs ≤21 days; pure JS arithmetic; memoized so navigation is O(1) after first compute per Sunday. |
+| Migration risk | Very low | Low | No schema change; only new `app_settings.macro_coach.*` keys (append-only). |
 | Wrong sign for bulk (negative weight change → suggest more kcal) — easy to flip | Low | High | Property-based tests in `macro-coach.test.ts` covering all 6 (goal × delta sign) combinations. |
 | Conflict with manual user edits to `macro_targets` between Sundays | Medium | Low | Always read fresh `macro_targets` at compute time; suggest delta from current actual target. |
+| First-opt-in screen feels like gatekeeping rather than consent | Low | Medium | Explicit copy: both routes (Continue / info-only) lead to using the feature; neither is dead-end. SCOFF-lite is one question, no diagnostic claim. Psych-reviewed copy. |
 
 ## Review Feedback
 
@@ -264,7 +379,40 @@ The Sunday gate, the 7-day dismissal cooldown, and the 21-day window are all dat
 — techlead, 2026-05-11
 
 ### Psychologist (Behavior-Design) — MANDATORY GATE
-_Pending_
+
+**Verdict: APPROVED WITH MODIFICATIONS** (comment `076d3d4c`, 2026-05-11T16:18:37Z). Verdict re-confirmed in comment `98f46ad6` after CEO ACK; no further psych re-review required if all 11 binding changes are folded in (which this revision does).
+
+**Gates:** Motivation ⚠️→✅ (Right Why prompt added) · Trigger ✅ · Habit ⚠️→✅ (identity + if-then captured at opt-in) · Progression ⚠️→✅ (mastery overlay added) · Failure ✅. **Eyal Classification: Facilitator** (conditional on changes 1, 4, 5, 10 — all incorporated).
+
+**Scores after revision:** Autonomy 8→**10/10** (3-button + "you set your target" framing) · Friction 9/10 · Resilience 9→**10/10** (escalating cooldowns) · Mastery 4→**8/10** (mastery overlay + Right Why + post-decision check-in).
+
+**11 binding changes — folded in this revision (commit log entry below):**
+
+| # | Required Change | Plan Section Where Folded In |
+|---|---|---|
+| 1 | Right Why prompt (Strong/OK/Drained) + non-numeric framing line | UX Surface 1 mockup; Edge Cases; AC #11; AC for Drained-suppression |
+| 2 | TDEE + suggested target shown as ranges or rounded to nearest 50 | UX Surface 1 mockup ("range 2,400–2,650"); AC #1; Risk "False precision" row |
+| 3 | Floor = `max(1500F/1800M, mifflin_st_jeor_RMR)` — code-level invariant, read-only-down | Settings Surface 2 copy; Technical Approach `getFloorKcal()`; AC "Safety floor invariant"; Risk "ED-adjacent" row |
+| 4 | Three-button card + authority inversion ("Here's what your data suggests. You set your target.") | UX Surface 1 mockup; AC #5/#6; Risk "Algorithm-as-authority" row |
+| 5 | Written prohibition on celebration-of-direction copy | Risk "ED-adjacent" row; Scope "In" — code comment + QD checklist enforcement |
+| 6 | Escalating dismissal cooldown (14 → 28 d + "Pause 1 month" affordance) | UX Surface 1 mockup; AC #7/#8/#9; Edge Cases |
+| 7 | First-opt-in disclosure + SCOFF-lite passive screen + info-only fallback | Settings Surface 2; AC "First-opt-in screening"; Scope "In" |
+| 8 | Identity sentence + if-then implementation intention on opt-in | Settings Surface 2; AC "Identity prompt"; Technical Approach settings keys |
+| 9 | Mastery overlay (logging-consistency line) below kcal numbers | UX Surface 1 mockup; Scope "In" |
+| 10 | Ban color-coded direction signaling | UX Surface 1 mockup; Edge Cases "Color coding"; AC "Color-neutrality snapshot test" |
+| 11 | Post-decision check-in ("How did the week feel?") + Drained → 14-day reduction-suppression | UX Surface 1 mockup; AC "Post-decision check-in"; Edge Cases; Technical Approach `getDeficitSuppressedUntil()` |
+
+**Out-of-scope reaffirmed (re-triggers psych gate if added):** push notifications, streaks, badges, social/leaderboard, smart upward auto-suggest comparing users, weight-movement celebration animations. All listed in §Out (deferred).
+
+— psychologist, 2026-05-11 (verdict + ACK); CEO folded changes into plan, 2026-05-11.
 
 ### CEO Decision
-_Pending_
+_Pending QD UX critique. All 11 psych binding changes folded in; all 6 tech-lead tightenings folded in. No psych or techlead re-review required (per their explicit statements). Awaiting QD verdict on the revised plan; once received and addressed, CEO will mark plan APPROVED and create implementation issue._
+
+## Plan Revisions Applied
+
+| Rev | Date | Author | Summary |
+|---|---|---|---|
+| 1 | 2026-05-11 | CEO | Initial draft (commit `881d6675`). Floor 1,200; 2-button card; numeric precision unrounded. |
+| 2 | 2026-05-11 | techlead | Folded Tech Lead review verdict text into the file (commit `95e46202`). No design changes; review-feedback section only. |
+| 3 | 2026-05-11 | CEO | Folded all 11 psychologist binding changes + Tech Lead floor-supersede coordination note into design sections (UX, Technical Approach, Scope, AC, Edge Cases, Risk). Floor now `max(1500F/1800M, RMR)` code-level invariant. Three-button card with authority inversion. Right Why prompt + post-decision check-in + Drained-suppression. Mastery overlay. Numbers rounded to 50 / shown as ranges. Color-neutral chrome. Escalating cooldowns 14→28d. First-opt-in SCOFF-lite + identity + if-then capture. Color-neutrality snapshot test added to AC. New `recomputeMacrosFromCalories` helper added to scope to remove goal-double-apply trap. |
