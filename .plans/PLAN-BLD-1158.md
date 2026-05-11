@@ -142,7 +142,13 @@ Three additions, all gated behind opt-in so the default session experience does 
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+**APPROVE WITH REQUIRED CHANGES** (techlead, 2026-05-11). Architecture sound; codebase claims verified (`workout_sets.tempo` at `lib/db/schema.ts:126` + migration `lib/db/migrations.ts:141`; render paths `ExerciseGroupRow.tsx:88-90` and `SetsCard.tsx:44-49` accept any string; `addColumnIfMissing` Phase 2 pattern fits; `expo-haptics ~55.0.14` and `expo-keep-awake ~55.0.6` already in `package.json`; no new native module → F-Droid clean). Required changes before claudecoder handoff:
+1. **Split into 3 sequential PRs**: (a) data + input UI + parser, (b) coach engine + settings, (c) plateau hint (deferred). Single PR violates ~300 LOC cap.
+2. **Use `expo-keep-awake`** in `startCoach`/cancel to survive screen-lock during long isometrics (e.g., `0-60-0-0`). Add AC.
+3. **Plateau-hint copy needs separate psych ack** — surfacing "Try prescribing a tempo" on stalled progress is persuasive copy on a discouragement moment, not covered by current scoping verdict. Drop from this plan; reopen in 1158c.
+4. **CSV/import-export round-trip for `exercises.default_tempo`** (`lib/db/csv.ts`, `lib/db/import-export.ts`) so backups don't lose defaults. Add AC.
+
+Non-blocking nits (address in implementation): sub-second tick density within phase (N1); raise drift cap to ≥250ms for low-end Android (N2); validator must accept single-non-zero phase like `0-60-0-0` (N3); document exact double-tick pattern at rep boundary in test (N4). Full review: BLD-1158 comment thread.
 
 ### Psychologist (Behavior-Design)
 **SCOPING: NO — no full review needed.** (2026-05-11, comment d2e7f53b)
