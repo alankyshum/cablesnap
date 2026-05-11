@@ -261,6 +261,10 @@ describe("workoutCSV — bodyweight_modifier_kg column (BLD-541)", () => {
     pulley_pin: null,
     stack_marker: null,
     stack_name_at_log: null,
+    set_type: null,
+    mini_set_reps: null,
+    mini_set_weights: null,
+    mini_set_rests: null,
   };
 
   it.each([
@@ -273,11 +277,11 @@ describe("workoutCSV — bodyweight_modifier_kg column (BLD-541)", () => {
     const out = workoutCSV([row]);
     const [header, data] = out.split("\n");
     expect(header).toBe(
-      "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log"
+      "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log,set_type,mini_set_reps,mini_set_weights,mini_set_rests"
     );
     const cells = data.split(",");
-    // bodyweight_modifier_kg is 4 columns before the end (pulley_pin, kind, dseid, dsdate follow)
-    expect(cells[cells.length - 7]).toBe(expected);
+    // bodyweight_modifier_kg is at fixed index 10 (0-based)
+    expect(cells[10]).toBe(expected);
   });
 });
 
@@ -303,6 +307,10 @@ describe("workoutCSV — stack_marker CSV round-trip (BLD-1126 AC13)", () => {
     pulley_pin: null,
     stack_marker: 10,
     stack_name_at_log: "Main Stack",
+    set_type: null,
+    mini_set_reps: null,
+    mini_set_weights: null,
+    mini_set_rests: null,
   };
 
   it("header includes stack_marker and stack_name_at_log", () => {

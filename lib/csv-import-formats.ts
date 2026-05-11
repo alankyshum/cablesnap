@@ -25,6 +25,12 @@ export type ParsedCsvRow = {
   kind?: string | null;
   daySessionExerciseId?: string | null;
   daySessionDate?: string | null;
+  /** BLD-1169: raw set_type string from CableSnap CSV; normalised at DB insertion. */
+  set_type?: string | null;
+  /** BLD-1176: mini-set segment data from CableSnap advanced-set CSV round-trip. */
+  mini_set_reps?: string | null;
+  mini_set_weights?: string | null;
+  mini_set_rests?: string | null;
 };
 
 export type FormatDefinition = {
@@ -203,6 +209,12 @@ const cablesnap: FormatDefinition = {
       kind,
       daySessionExerciseId,
       daySessionDate,
+      // BLD-1169: pass raw set_type through; normalizeSetType is applied at DB insertion.
+      set_type: row["set_type"]?.trim() || null,
+      // BLD-1176: mini-set segment data for advanced set types.
+      mini_set_reps: row["mini_set_reps"]?.trim() || null,
+      mini_set_weights: row["mini_set_weights"]?.trim() || null,
+      mini_set_rests: row["mini_set_rests"]?.trim() || null,
     };
   },
   detectWeightUnit() {

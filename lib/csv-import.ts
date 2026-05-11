@@ -17,6 +17,12 @@ export type ImportedSet = {
   rpe: number | null;
   durationSeconds: number | null;
   notes: string;
+  /** Set type from source CSV (CableSnap format). Coerced to valid SetType at DB insertion. */
+  set_type?: string | null;
+  /** BLD-1176: mini-set segment data (CableSnap advanced-set round-trip). Clamped to 8 segments at import. */
+  mini_set_reps?: string | null;
+  mini_set_weights?: string | null;
+  mini_set_rests?: string | null;
 };
 
 export type ImportedSession = {
@@ -44,6 +50,17 @@ export type CsvParseError = {
   type: "empty_file" | "no_data" | "unrecognized_format" | "parse_error";
   message: string;
 };
+
+/** Maximum mini-set segments per set (BLD-1168 §Performance). */
+const MAX_SEGMENTS = 8;
+
+/** Clamp mini-set column strings to at most MAX_SEGMENTS segments. */
+function clampMiniSetColumn(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const parts = raw.split(";");
+  if (parts.length <= MAX_SEGMENTS) return raw;
+  return parts.slice(0, MAX_SEGMENTS).join(";");
+}
 
 // ---- Constants ----
 
@@ -140,6 +157,10 @@ function buildSession({
     rpe: row.rpe,
     durationSeconds: row.durationSeconds,
     notes: row.notes,
+    set_type: row.set_type ?? null,
+      mini_set_reps: clampMiniSetColumn(row.mini_set_reps),
+      mini_set_weights: clampMiniSetColumn(row.mini_set_weights),
+      mini_set_rests: clampMiniSetColumn(row.mini_set_rests),
   }));
   const firstRow = sessionRows[0];
   return {

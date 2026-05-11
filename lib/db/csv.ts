@@ -1,6 +1,7 @@
-import { asc, gte, sql, isNotNull, and } from "drizzle-orm";
+import { asc, gte, sql, isNotNull, and, inArray } from "drizzle-orm";
 import { getDrizzle } from "./helpers";
-import { bodyWeight, bodyMeasurements, workoutSessions, workoutSets, exercises, dailyLog, foodEntries } from "./schema";
+import { bodyWeight, bodyMeasurements, workoutSessions, workoutSets, workoutSetSegments, exercises, dailyLog, foodEntries } from "./schema";
+import { ADVANCED_SET_TYPES } from "./sets";
 
 export type WorkoutCSVRow = {
   date: string;
@@ -25,6 +26,14 @@ export type WorkoutCSVRow = {
   // BLD-1126 AC13: stack marker and snapshot stack name for cable sets.
   stack_marker: number | null;
   stack_name_at_log: string | null;
+  // BLD-1168: advanced set type (rest_pause, cluster, myo_reps, or legacy normal/warmup/dropset/failure).
+  set_type: string | null;
+  /** Semicolon-separated reps per mini-set, e.g. "8;3;2". Null/empty for non-advanced sets (back-compat). */
+  mini_set_reps: string | null;
+  /** Semicolon-separated weights (kg) per mini-set. Empty element means inherit parent weight. */
+  mini_set_weights: string | null;
+  /** Semicolon-separated rest durations (seconds) after each mini-set. */
+  mini_set_rests: string | null;
 };
 
 export type NutritionCSVRow = {
@@ -64,6 +73,7 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
   const db = await getDrizzle();
   const rows = await db
     .select({
+      set_id: workoutSets.id,
       date: sql<string>`date(${workoutSessions.started_at} / 1000, 'unixepoch')`,
       exercise: sql<string>`COALESCE(${exercises.name}, 'Deleted Exercise')`,
       set_number: workoutSets.set_number,
@@ -82,6 +92,25 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       day_session_date: workoutSessions.day_session_date,
       stack_marker: workoutSets.stack_marker,
       stack_name_at_log: workoutSets.stack_name_at_log,
+      set_type: workoutSets.set_type,
+      mini_set_reps: sql<string | null>`(
+        SELECT GROUP_CONCAT(${workoutSetSegments.reps}, ';')
+        FROM ${workoutSetSegments}
+        WHERE ${workoutSetSegments.set_id} = ${workoutSets.id}
+        ORDER BY ${workoutSetSegments.segment_number}
+      )`,
+      mini_set_weights: sql<string | null>`(
+        SELECT GROUP_CONCAT(COALESCE(${workoutSetSegments.weight}, ''), ';')
+        FROM ${workoutSetSegments}
+        WHERE ${workoutSetSegments.set_id} = ${workoutSets.id}
+        ORDER BY ${workoutSetSegments.segment_number}
+      )`,
+      mini_set_rests: sql<string | null>`(
+        SELECT GROUP_CONCAT(COALESCE(${workoutSetSegments.rest_after_seconds}, ''), ';')
+        FROM ${workoutSetSegments}
+        WHERE ${workoutSetSegments.set_id} = ${workoutSets.id}
+        ORDER BY ${workoutSetSegments.segment_number}
+      )`,
     })
     .from(workoutSessions)
     .innerJoin(workoutSets, sql`${workoutSets.session_id} = ${workoutSessions.id}`)
@@ -98,7 +127,59 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       asc(workoutSets.set_number)
     );
 
-  return rows as unknown as WorkoutCSVRow[];
+  // BLD-1168: Fetch segments only for advanced set types (back-compat: non-advanced rows get empty columns).
+  const advancedSetIds = rows
+    .filter((r) => ADVANCED_SET_TYPES.has((r.set_type ?? "normal") as Parameters<typeof ADVANCED_SET_TYPES.has>[0]))
+    .map((r) => r.set_id);
+
+  type SegRow = { set_id: string; reps: number; weight: number | null; rest_after_seconds: number | null };
+  const segmentsBySetId = new Map<string, SegRow[]>();
+
+  if (advancedSetIds.length > 0) {
+    const segs = await db
+      .select({
+        set_id: workoutSetSegments.set_id,
+        reps: workoutSetSegments.reps,
+        weight: workoutSetSegments.weight,
+        rest_after_seconds: workoutSetSegments.rest_after_seconds,
+      })
+      .from(workoutSetSegments)
+      .where(inArray(workoutSetSegments.set_id, advancedSetIds))
+      .orderBy(asc(workoutSetSegments.set_id), asc(workoutSetSegments.segment_number));
+
+    for (const seg of segs) {
+      if (!segmentsBySetId.has(seg.set_id)) segmentsBySetId.set(seg.set_id, []);
+      segmentsBySetId.get(seg.set_id)!.push({ ...seg, weight: seg.weight ?? null, rest_after_seconds: seg.rest_after_seconds ?? null });
+    }
+  }
+
+  return rows.map((r) => {
+    const segs = segmentsBySetId.get(r.set_id);
+    return {
+      date: r.date,
+      exercise: r.exercise,
+      set_number: r.set_number,
+      weight: r.weight,
+      reps: r.reps,
+      duration_seconds: r.duration_seconds,
+      notes: r.notes,
+      set_rpe: r.set_rpe,
+      set_notes: r.set_notes,
+      link_id: r.link_id,
+      tempo: r.tempo,
+      bodyweight_modifier_kg: r.bodyweight_modifier_kg,
+      pulley_pin: r.pulley_pin,
+      kind: r.kind,
+      day_session_exercise_id: r.day_session_exercise_id,
+      day_session_date: r.day_session_date,
+      stack_marker: r.stack_marker,
+      stack_name_at_log: r.stack_name_at_log,
+      set_type: r.set_type ?? "normal",
+      mini_set_reps: segs ? segs.map((s) => String(s.reps)).join(";") : null,
+      mini_set_weights: segs ? segs.map((s) => (s.weight !== null ? String(s.weight) : "")).join(";") : null,
+      mini_set_rests: segs ? segs.map((s) => (s.rest_after_seconds !== null ? String(s.rest_after_seconds) : "")).join(";") : null,
+    };
+  }) as WorkoutCSVRow[];
 }
 
 export async function getNutritionCSVData(since: number): Promise<NutritionCSVRow[]> {
