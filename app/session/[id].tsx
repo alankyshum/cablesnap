@@ -386,8 +386,6 @@ export default function ActiveSession() {
         group?.link_id,
         group?.sets[0]?.tempo,
         group?.exercise_position ?? 0,
-        // AC1.4: inherit exercise default tempo for rep-mode warmup sets.
-        // Duration exercises are not warmup-eligible in this path.
         group?.trackingMode === "duration" ? null : group?.defaultTempo ?? null,
       );
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

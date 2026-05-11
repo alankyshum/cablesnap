@@ -2,16 +2,15 @@
  * BLD-1158 AC1.1 / AC1.3 / AC1.4 / AC1.6: Tempo inheritance per-path tests.
  *
  * Tests that the correct tempo is resolved when sets are created via:
- *  - addSet() with exerciseDefaultTempo (AC1.1)
- *  - addSetsBatch() with per-seed exerciseDefaultTempo (AC1.3)
+ *  - addSet() with exerciseDefaultTempo (AC1.1) — verified via return value
+ *  - addSetsBatch() with per-seed exerciseDefaultTempo (AC1.3) — verified via prepareAsync call values
  *  - explicit tempo wins over exerciseDefaultTempo (AC1.1 tie-break)
  *  - null is used for duration-mode paths (AC1.6)
- *
- * Uses the same expo-sqlite mock pattern as add-sets-batch-variant.test.ts.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// --- addSetsBatch mocks (prepareAsync path) ---
 const mockExecuteAsync = jest.fn().mockResolvedValue({ changes: 1 });
 const mockFinalizeAsync = jest.fn().mockResolvedValue(undefined);
 const mockPrepareAsync = jest.fn().mockResolvedValue({
@@ -19,11 +18,15 @@ const mockPrepareAsync = jest.fn().mockResolvedValue({
   finalizeAsync: mockFinalizeAsync,
 });
 
+// --- addSet mocks (drizzle path) ---
+const mockInsertValues = jest.fn().mockResolvedValue(undefined);
+const mockInsert = jest.fn().mockReturnValue({ values: mockInsertValues });
+
 const mockDb = {
   execAsync: jest.fn().mockResolvedValue(undefined),
   getAllAsync: jest.fn().mockResolvedValue([]),
   getFirstAsync: jest.fn().mockResolvedValue(null),
-  runAsync: jest.fn().mockResolvedValue({ changes: 1 }),
+  runAsync: jest.fn().mockResolvedValue({ changes: 1, lastInsertRowId: 1 }),
   withTransactionAsync: jest.fn(async (cb: () => Promise<void>) => cb()),
   prepareAsync: mockPrepareAsync,
 };
@@ -32,121 +35,109 @@ jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn().mockResolvedValue(mockDb),
 }));
 
+jest.mock("drizzle-orm/expo-sqlite", () => ({
+  drizzle: jest.fn(() => ({ insert: mockInsert })),
+}));
+
 jest.mock("../../../lib/db/exercises", () => ({
   getExerciseById: jest.fn().mockResolvedValue(null),
 }));
 
-// Capture all INSERT values for inspection
-let lastInsertValues: any[] = [];
 beforeEach(() => {
   jest.clearAllMocks();
-  lastInsertValues = [];
+  // clearAllMocks wipes all mockReturnValue/mockResolvedValue — restore.
+  mockExecuteAsync.mockResolvedValue({ changes: 1 });
+  mockFinalizeAsync.mockResolvedValue(undefined);
+  mockPrepareAsync.mockResolvedValue({
+    executeAsync: mockExecuteAsync,
+    finalizeAsync: mockFinalizeAsync,
+  });
   mockExecuteAsync.mockImplementation(async (values: any[]) => {
-    lastInsertValues = values;
-    return { changes: 1 };
+    return { changes: 1, values };
   });
-  // getFirstAsync (used by addSet for the SELECT after INSERT)
-  mockDb.getFirstAsync.mockResolvedValue({
-    id: "test-set-id",
-    session_id: "s1",
-    exercise_id: "e1",
-    set_number: 1,
-    reps: null,
-    weight: null,
-    duration_seconds: null,
-    is_completed: 0,
-    is_warmup: 0,
-    set_type: "normal",
-    exercise_position: 0,
-    attachment: null,
-    mount_position: null,
-    grip_type: null,
-    grip_width: null,
-    link_id: null,
-    round: null,
-    stack_id: null,
-    stack_marker: null,
-    stack_unit_at_log: null,
-    stack_name_at_log: null,
-    pulley_pin: null,
-    tempo: null,
-    rpe: null,
-  });
+
+  mockInsertValues.mockResolvedValue(undefined);
+  mockInsert.mockReturnValue({ values: mockInsertValues });
+
+  mockDb.execAsync.mockResolvedValue(undefined);
+  mockDb.runAsync.mockResolvedValue({ changes: 1, lastInsertRowId: 1 });
+  mockDb.getAllAsync.mockResolvedValue([]);
+  mockDb.getFirstAsync.mockResolvedValue(null);
+  mockDb.withTransactionAsync.mockImplementation(async (cb: () => Promise<void>) => cb());
+  mockDb.prepareAsync.mockImplementation(() => mockPrepareAsync());
+
+  // Restore openDatabaseAsync — clearAllMocks resets it to return undefined
+  const SQLite = jest.requireMock("expo-sqlite");
+  SQLite.openDatabaseAsync.mockResolvedValue(mockDb);
+
+  // Restore drizzle — clearAllMocks resets it too
+  const drizzleMod = jest.requireMock("drizzle-orm/expo-sqlite");
+  drizzleMod.drizzle.mockReturnValue({ insert: mockInsert });
 });
 
 import { addSet, addSetsBatch } from "../../../lib/db/session-sets";
 
+// AC1.1 tests check the return value of addSet — tempo is resolved locally and
+// included in the returned WorkoutSet object before any DB read.
 describe("AC1.1: addSet() — exerciseDefaultTempo inheritance", () => {
   it("uses exerciseDefaultTempo when no explicit tempo is set", async () => {
-    // Call addSet with no explicit tempo but with exerciseDefaultTempo
-    await addSet(
-      "session-1",
-      "exercise-1",
-      1,
-      null, // linkId
-      null, // round
-      null, // tempo (explicit — null means inherit)
-      false, // isWarmup
-      undefined, // setType
-      undefined, // exercisePosition
-      undefined, // attachment
-      undefined, // mountPosition
-      undefined, // gripType
-      undefined, // gripWidth
-      undefined, // stackId
-      undefined, // stackMarker
-      undefined, // stackUnitAtLog
-      undefined, // stackNameAtLog
-      undefined, // pulleyPin
-      "3-1-2-0"  // exerciseDefaultTempo
-    );
-
-    // The INSERT should have been called; tempo in the INSERT should be "3-1-2-0"
-    // We verify by checking the bound values array — tempo is at a fixed index.
-    expect(lastInsertValues).toBeDefined();
-    // Find "3-1-2-0" in the bound params — it's the resolved tempo
-    expect(lastInsertValues).toContain("3-1-2-0");
-  });
-
-  it("uses explicit tempo over exerciseDefaultTempo when both are set", async () => {
-    await addSet(
-      "session-1",
-      "exercise-1",
-      1,
+    const result = await addSet(
+      "session-1", "exercise-1", 1,
       null, null,
-      "4-0-2-1", // explicit tempo
+      null, // explicit tempo = null → fallback to exerciseDefaultTempo
       false, undefined, undefined,
       undefined, undefined, undefined, undefined,
       undefined, undefined, undefined, undefined,
       undefined,
-      "3-1-2-0"  // exerciseDefaultTempo (should be ignored)
+      "3-1-2-0", // exerciseDefaultTempo
     );
-    expect(lastInsertValues).toContain("4-0-2-1");
-    expect(lastInsertValues).not.toContain("3-1-2-0");
+    expect(result.tempo).toBe("3-1-2-0");
+    // Also verify drizzle insert was called with the resolved tempo
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ tempo: "3-1-2-0" })
+    );
+  });
+
+  it("uses explicit tempo over exerciseDefaultTempo when both are set", async () => {
+    const result = await addSet(
+      "session-1", "exercise-1", 1,
+      null, null,
+      "4-0-2-1", // explicit tempo wins
+      false, undefined, undefined,
+      undefined, undefined, undefined, undefined,
+      undefined, undefined, undefined, undefined,
+      undefined,
+      "3-1-2-0", // exerciseDefaultTempo (should be ignored)
+    );
+    expect(result.tempo).toBe("4-0-2-1");
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ tempo: "4-0-2-1" })
+    );
   });
 
   it("inserts null tempo when no tempo and no exerciseDefaultTempo", async () => {
-    await addSet("session-1", "exercise-1", 1);
-    // null tempo → no tempo value in INSERT params (beyond what's expected)
-    // The important thing: "3-1-2-0" is NOT inserted
-    expect(lastInsertValues).not.toContain("3-1-2-0");
+    const result = await addSet("session-1", "exercise-1", 1);
+    expect(result.tempo).toBeNull();
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ tempo: null })
+    );
   });
 
-  it("AC1.6: inserts null for duration-mode path (pass null as exerciseDefaultTempo)", async () => {
-    await addSet(
-      "session-1",
-      "exercise-1",
-      1,
+  it("AC1.6: inserts null tempo for duration-mode path (exerciseDefaultTempo = null)", async () => {
+    const result = await addSet(
+      "session-1", "exercise-1", 1,
       null, null,
       null, // no explicit tempo
       false, undefined, undefined,
       undefined, undefined, undefined, undefined,
       undefined, undefined, undefined, undefined,
       undefined,
-      null // duration-mode: exerciseDefaultTempo is null
+      null, // duration-mode: exerciseDefaultTempo is null
     );
-    // Result: tempo is null (no default applied)
-    expect(lastInsertValues).not.toContain("3-1-2-0");
+    expect(result.tempo).toBeNull();
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ tempo: null })
+    );
   });
 });
 
@@ -177,14 +168,12 @@ describe("AC1.3: addSetsBatch() — per-seed exerciseDefaultTempo inheritance", 
       },
     ]);
 
-    // All three sets should have been inserted
+    // All three sets should have been inserted via prepareAsync
     expect(mockPrepareAsync).toHaveBeenCalledTimes(1);
-    // executeAsync called once per seed
     expect(mockExecuteAsync).toHaveBeenCalledTimes(3);
 
     // Verify per-call values:
     const calls = mockExecuteAsync.mock.calls;
-
     // Seed 1: no explicit tempo, default "3-1-2-0" → inserted as "3-1-2-0"
     expect(calls[0][0]).toContain("3-1-2-0");
     // Seed 2: explicit "4-0-2-0" wins

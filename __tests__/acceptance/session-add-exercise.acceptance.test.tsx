@@ -172,9 +172,9 @@ describe('Session → Add Exercise Flow', () => {
 
     await waitFor(() => {
       expect(mockDb.addSet).toHaveBeenCalledTimes(3)
-      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-2', 1)
-      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-2', 2)
-      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-2', 3)
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-2', 1, null, null, null, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, null)
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-2', 2, null, null, null, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, null)
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-1', 'ex-2', 3, null, null, null, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, null)
     })
 
     // Both exercises visible within 500ms, Squat last

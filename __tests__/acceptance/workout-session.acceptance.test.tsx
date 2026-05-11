@@ -406,7 +406,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(addBtn)
 
     await waitFor(() => {
-      expect(mockDb.addSet).toHaveBeenCalledWith('sess-add', 'ex-1', 4, null, null, null, undefined, undefined, 0)
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-add', 'ex-1', 4, null, null, null, undefined, undefined, 0, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, null)
     })
   })
 
