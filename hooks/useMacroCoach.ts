@@ -10,6 +10,8 @@ export interface UseMacroCoachResult {
   status: CoachStatus;
   suggestion?: CoachSuggestion;
   skipReason?: SkipReason;
+  safetyFloorKcal?: number;
+  userWeightKg?: number;
   loading: boolean;
   refetch: () => void;
   clearCache: () => void;
@@ -48,6 +50,8 @@ export function useMacroCoach(): UseMacroCoachResult {
     status: result.status,
     suggestion: result.suggestion,
     skipReason: result.skipReason,
+    safetyFloorKcal: result.safetyFloorKcal,
+    userWeightKg: result.userWeightKg,
     loading,
     refetch: fetch,
     clearCache,

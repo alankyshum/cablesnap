@@ -14,7 +14,7 @@ import FlowContainer from '../../components/ui/FlowContainer';
 import BodyProfileCard from '../../components/BodyProfileCard';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronRight } from 'lucide-react-native';
 import PreferencesCard from '../../components/settings/PreferencesCard';
 import HydrationCard from '../../components/settings/HydrationCard';
@@ -42,6 +42,7 @@ import {
   setAppSetting,
   type BackupCategoryName,
 } from '@/lib/db';
+import { getEnabled as getMacroCoachEnabled } from '@/lib/db/macro-coach-settings';
 import { useQueryClient } from '@tanstack/react-query';
 
 /**
@@ -73,7 +74,12 @@ export default function Settings() {
   const [pendingImportJson, setPendingImportJson] = useState<string | null>(null);
   const [importCategories, setImportCategories] = useState<BackupCategoryName[]>([]);
   const [importCategoryCounts, setImportCategoryCounts] = useState<Partial<Record<BackupCategoryName, number>>>({});
+  const [macroCoachEnabled, setMacroCoachEnabled] = useState<boolean | null>(null);
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
+
+  useEffect(() => {
+    getMacroCoachEnabled().then(setMacroCoachEnabled).catch(() => setMacroCoachEnabled(false));
+  }, []);
   const {
     toast,
     loading, setLoading,
@@ -182,6 +188,24 @@ export default function Settings() {
                 <Text variant="body" style={[styles.settingsLinkTitle, { color: colors.onSurface }]}>Gym Profiles</Text>
                 <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                   Manage gyms, cable stacks, and marker calibrations.
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.onSurfaceVariant} />
+            </Pressable>
+          </CardContent>
+        </Card>
+        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+          <CardContent>
+            <Pressable
+              onPress={() => router.push('/settings/macro-coach')}
+              accessibilityRole="button"
+              accessibilityLabel="Open Adaptive Macro Coach settings"
+              style={styles.settingsLinkRow}
+            >
+              <View style={styles.settingsLinkMeta}>
+                <Text variant="body" style={[styles.settingsLinkTitle, { color: colors.onSurface }]}>Adaptive Macro Coach</Text>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                  {macroCoachEnabled === null ? '' : macroCoachEnabled ? 'On — weekly advisory card on Nutrition tab' : 'Off — tap to set up'}
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.onSurfaceVariant} />

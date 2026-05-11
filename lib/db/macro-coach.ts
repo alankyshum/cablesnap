@@ -41,6 +41,10 @@ export interface MacroCoachResult {
   status: CoachStatus;
   suggestion?: CoachSuggestion;
   skipReason?: SkipReason;
+  /** Safety floor kcal for the current user (max(sexFloor, RMR)). Present when status=ready|info_only. */
+  safetyFloorKcal?: number;
+  /** User's current body weight in kg (for macro recompute on custom-kcal input). */
+  userWeightKg?: number;
 }
 
 // ─── Memo cache ───────────────────────────────────────────────────────────────
@@ -212,7 +216,7 @@ async function _computeUncached(now: Date): Promise<MacroCoachResult> {
       loggingConsistencyDays,
     });
     if ("reason" in suggestion) return { status: "hidden", skipReason: suggestion.reason };
-    return { status: "info_only", suggestion };
+    return { status: "info_only", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg };
   }
 
   // Full mode — check deficit suppression
@@ -236,10 +240,10 @@ async function _computeUncached(now: Date): Promise<MacroCoachResult> {
   if ("reason" in suggestion) return { status: "hidden", skipReason: suggestion.reason };
 
   if ((deficitSuppressed || twoDrained) && goal === "cut") {
-    return { status: "info_only", suggestion };
+    return { status: "info_only", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg };
   }
 
-  return { status: "ready", suggestion };
+  return { status: "ready", suggestion, safetyFloorKcal: safetyFloor, userWeightKg: userFloorProfile.weight_kg };
 }
 
 async function _fetchGoal(): Promise<"cut" | "maintain" | "bulk"> {
