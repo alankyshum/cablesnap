@@ -172,9 +172,10 @@ describe("getProgressionSuggestion", () => {
   it("returns shouldSuggest=true when all criteria met", async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 3 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
+    // BLD-1172: workSets query now returns actual rows {id, set_type, reps}
+    mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-1", set_type: "normal", reps: 15 }]);
+    // getSegmentsForSet uses Drizzle .all() → always [] in tests (mocked via drizzle-orm mock)
+    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]); // nextLogged = 0
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(true);
     expect(result.nextExercise).toEqual({ id: "e3", name: "Diamond Push-Up" });
@@ -184,9 +185,9 @@ describe("getProgressionSuggestion", () => {
   it("returns shouldSuggest=false when next exercise already logged recently", async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 3 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 2 }]);
+    // BLD-1172: workSets with reps >= 12 so we reach the nextLogged check
+    mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-1", set_type: "normal", reps: 15 }]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 2 }]); // nextLogged = 2 → recently logged
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(false);
   });
@@ -194,8 +195,8 @@ describe("getProgressionSuggestion", () => {
   it("returns shouldSuggest=false when no normal completed sets exist", async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
+    // BLD-1172: empty workSets array → hits workSets.length === 0 early-exit
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(false);
   });
