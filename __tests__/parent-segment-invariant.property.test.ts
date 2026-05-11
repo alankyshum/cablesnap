@@ -5,21 +5,37 @@
  *
  * Uses the pure computeSetCacheValues() helper so no DB mocking is required.
  * 1000 random sequences are executed.
+ *
+ * Reproducible failures: set SEED=<number> env var to replay a failed trial.
+ * The seed is logged before each run so failures can be replayed deterministically.
  */
 import { computeSetCacheValues } from "../lib/db/sets";
 
-// ─── Random helpers ──────────────────────────────────────────────────────────
+// ─── Seeded PRNG (mulberry32) ─────────────────────────────────────────────────
+
+function mulberry32(seed: number): () => number {
+  let s = seed >>> 0;
+  return (): number => {
+    s += 0x6D2B79F5;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) >>> 0;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SEED = process.env.SEED ? parseInt(process.env.SEED, 10) : Date.now();
+const rand = mulberry32(SEED);
 
 function randInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(rand() * (max - min + 1)) + min;
 }
 
 function randFloat(min: number, max: number): number {
-  return Math.random() * (max - min) + min;
+  return rand() * (max - min) + min;
 }
 
 function maybe<T>(value: T, prob = 0.2): T | null {
-  return Math.random() < prob ? null : value;
+  return rand() < prob ? null : value;
 }
 
 type Seg = { reps: number; weight: number | null };
@@ -168,9 +184,11 @@ describe("BLD-1168 AC#266 — parent-segment cache invariants", () => {
   });
 
   it("property: invariants hold across 1000 random mutation sequences", () => {
+    // Log seed so a failed trial can be replayed: SEED=<value> npx jest parent-segment
+    console.log(`[property test] SEED=${SEED}`);
     for (let trial = 0; trial < 1000; trial++) {
-      const parentWeight = Math.random() < 0.1 ? null : randFloat(10, 300);
-      const parentReps = Math.random() < 0.1 ? null : randInt(1, 20);
+      const parentWeight = rand() < 0.1 ? null : randFloat(10, 300);
+      const parentReps = rand() < 0.1 ? null : randInt(1, 20);
       const parent = { weight: parentWeight, reps: parentReps };
 
       // Start with 0-4 initial segments

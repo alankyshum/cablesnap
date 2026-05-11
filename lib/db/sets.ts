@@ -7,7 +7,8 @@
  * every mutation and the cached_volume_kg / cached_e1rm_kg columns remain in sync.
  *
  * The architecture grep-test (__tests__/architecture-set-write-path.test.ts)
- * fails CI if any file outside this module contains:
+ * enforcing this invariant is added in Slice 2 (BLD-1170). It will fail CI
+ * if any file outside this module contains:
  *   - UPDATE workout_sets / db.update(workoutSets)
  *   - INSERT INTO workout_set_segments / UPDATE workout_set_segments / DELETE FROM workout_set_segments
  *   - weight * reps  (raw ad-hoc volume computation)
@@ -105,6 +106,11 @@ export async function recomputeSetCaches(setId: string): Promise<void> {
     .from(workoutSetSegments)
     .where(eq(workoutSetSegments.set_id, setId))
     .all();
+
+  if (segments.length === 0) {
+    // Legacy/non-segmented set — caches stay as backfilled, reps untouched.
+    return;
+  }
 
   const { cachedVolumeKg, cachedE1rmKg, totalReps } = computeSetCacheValues(
     { weight: parent.weight ?? null, reps: parent.reps ?? null },
