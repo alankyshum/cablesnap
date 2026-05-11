@@ -3,7 +3,8 @@
 #
 # Posts a MERGE-GATE: <role> <verdict> sentinel comment on the GitHub PR
 # linked to a Paperclip issue. Does NOT write to Paperclip; reviewer agents
-# continue to post their authoritative verdict via clip.sh comment-issue.
+# continue to post their authoritative verdict via the Paperclip issue-comment
+# endpoint (clip.sh's read-write path). This helper is GitHub-only.
 #
 # Usage:
 #   post-merge-gate-verdict.sh <role> <verdict> <issue-identifier>
@@ -105,8 +106,10 @@ _run_clip_get_issue() {
   local issue_id="$1"
   if [[ -n "$CLIP_CMD" ]]; then
     $CLIP_CMD "$issue_id" 2>/dev/null
-  elif [[ -x "$SCRIPT_DIR/clip.sh" ]]; then
-    "$SCRIPT_DIR/clip.sh" get-issue "$issue_id" 2>/dev/null
+  elif command -v clip.sh >/dev/null 2>&1; then
+    clip.sh get-issue "$issue_id" 2>/dev/null
+  elif [[ -x "/skills/scripts/clip.sh" ]]; then
+    /skills/scripts/clip.sh get-issue "$issue_id" 2>/dev/null
   else
     return 1
   fi
@@ -187,10 +190,11 @@ fi
 _pr="$_pr_number"
 
 # ─── Idempotency check ───────────────────────────────────────────────
-# Fetch existing comment bodies newest-first; find latest sentinel for this role
+# Fetch the first line of each comment body, newest-first.
+# Using jq to extract first line per comment ensures multiline bodies
+# cannot smuggle a MERGE-GATE token via a later line.
 _existing_verdict=""
-while IFS= read -r _comment_body; do
-  _first_line=$(printf '%s' "$_comment_body" | head -1)
+while IFS= read -r _first_line; do
   if [[ "$_first_line" =~ ^MERGE-GATE:\ (techlead|quality-director)\ (APPROVE|BLOCK)$ ]]; then
     if [[ "${BASH_REMATCH[1]}" == "$_role" ]]; then
       _existing_verdict="${BASH_REMATCH[2]}"
@@ -198,7 +202,7 @@ while IFS= read -r _comment_body; do
     fi
   fi
 done < <(gh pr view "$_pr_number" --repo "$REPO" --json comments \
-  --jq '.comments | sort_by(.createdAt) | reverse | .[].body' 2>/dev/null || true)
+  --jq '.comments | sort_by(.createdAt) | reverse | .[].body | split("\n")[0]' 2>/dev/null || true)
 
 if [[ -n "$_existing_verdict" ]] && [[ "$_existing_verdict" == "$_verdict_norm" ]]; then
   _outcome="skip-idempotent"

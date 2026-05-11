@@ -173,6 +173,8 @@ AMBIGUOUS_ISSUE='{"relatedWork":{"outbound":[{"issue":{"title":""},"sources":[{"
 
 EXISTING_TL_APPROVE='[{"createdAt":"2026-05-01T10:00:00Z","body":"MERGE-GATE: techlead APPROVE\n\nPosted by helper."}]'
 EXISTING_QD_APPROVE='[{"createdAt":"2026-05-01T10:00:00Z","body":"MERGE-GATE: quality-director APPROVE\n\nPosted by helper."}]'
+# Multiline comment where the MERGE-GATE token appears ONLY on line 2 (not line 1)
+MULTILINE_SPOOFED_TL_APPROVE='[{"createdAt":"2026-05-01T10:00:00Z","body":"Just a regular review comment.\nMERGE-GATE: techlead APPROVE\nSome trailing text."}]'
 
 echo
 echo "── Layer 1: argument validation ──"
@@ -335,6 +337,28 @@ else
   FAIL=$((FAIL + 1)); FAILED_NAMES+=("QD PASS sentinel body")
   echo "  ✗ QD PASS sentinel body not captured" >&2
 fi
+
+echo
+echo "── Layer 8: regression — multiline comment + PATH clip resolution ──"
+
+# Regression: multiline comment whose second line is MERGE-GATE:
+# must NOT be treated as an authoritative sentinel (first line only counts)
+make_fake_clip "$NO_PR_ISSUE"
+make_fake_gh "OPEN" "$MULTILINE_SPOOFED_TL_APPROVE" "0" '[{"number":999}]'
+run_verdict "techlead" "APPROVE" "BLD-60" > /dev/null 2>&1
+assert_trace_outcome "multiline comment: MERGE-GATE on line 2 ignored → posted-first" "posted-first"
+
+# Regression: clip.sh resolved from PATH (not SCRIPT_DIR) in normal use
+# Create a clip.sh shim in WORKDIR so it's on PATH; verify linkage works
+make_fake_clip "$PR_LINKED_ISSUE"
+make_fake_gh "OPEN" "[]" "0" "[]"
+# Override CLIP_CMD to empty to exercise PATH-based lookup; add fake-clip.sh as 'clip.sh' on PATH
+cp "$WORKDIR/fake-clip.sh" "$WORKDIR/clip.sh"
+chmod +x "$WORKDIR/clip.sh"
+out=$(PATH="$WORKDIR:$PATH" MERGE_GATE_CLIP_CMD="" MERGE_GATE_REPO="alankyshum/cablesnap" \
+  bash "$VERDICT_SCRIPT" "techlead" "APPROVE" "BLD-61" 2>/dev/null || true)
+assert_trace_outcome "clip.sh from PATH resolves PR → posted-first" "posted-first"
+rm -f "$WORKDIR/clip.sh"
 
 # ─── Summary ─────────────────────────────────────────────────────────
 echo
