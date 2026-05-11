@@ -12,7 +12,8 @@ import {
   startSession,
   updateSession,
 } from "@/lib/db";
-import type { WorkoutSession, WorkoutSet } from "@/lib/types";
+import type { WorkoutSession, WorkoutSet, SetType } from "@/lib/types";
+import { ADVANCED_SET_TYPES, getSegmentsForSets } from "@/lib/db/sets";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 export type SetWithName = WorkoutSet & {
@@ -80,6 +81,14 @@ export function useSessionDetail(id: string | undefined) {
     ]);
     setPrs(prData);
     setCompletedSetCount(setCount);
+
+    // BLD-1168 Slice 7: batch-load segments for advanced set types so
+    // the history view can render compact "8+3+2 (13)" and correct a11y labels.
+    const advancedSetIds = sets
+      .filter((s) => ADVANCED_SET_TYPES.has(s.set_type as SetType))
+      .map((s) => s.id);
+    const segmentsMap = await getSegmentsForSets(advancedSetIds);
+
     const map = new Map<string, ExerciseGroup>();
     for (const s of sets) {
       if (!map.has(s.exercise_id)) {
@@ -91,7 +100,11 @@ export function useSessionDetail(id: string | undefined) {
           swapped_from_name: (s as SetWithName).swapped_from_name ?? null,
         });
       }
-      map.get(s.exercise_id)!.sets.push(s);
+      const setWithSegments: SetWithName = {
+        ...s,
+        segments: segmentsMap.get(s.id) ?? undefined,
+      };
+      map.get(s.exercise_id)!.sets.push(setWithSegments);
     }
     setGroups([...map.values()]);
   }, [id]);

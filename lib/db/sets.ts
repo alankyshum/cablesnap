@@ -14,7 +14,7 @@
  *   - weight * reps  (raw ad-hoc volume computation)
  *   - weight * (1 + reps / 30)  (raw ad-hoc e1RM computation)
  */
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getDrizzle } from "./helpers";
 import { workoutSets, workoutSetSegments } from "./schema";
 import { uuid } from "../uuid";
@@ -25,6 +25,36 @@ export type { SetSegment };
 /** Set types that support mini-set segments. When all segments are deleted, these sets
  *  must store reps=0 / cached_volume_kg=0 / cached_e1rm_kg=0 (not legacy parent fallback). */
 export const ADVANCED_SET_TYPES: ReadonlySet<SetType> = new Set(["rest_pause", "cluster", "myo_reps"]);
+
+const VALID_SET_TYPES: ReadonlySet<string> = new Set([
+  "normal", "warmup", "dropset", "failure", "rest_pause", "cluster", "myo_reps",
+]);
+
+/** Tracks whether we've already warned about a given unknown value this process lifetime. */
+const _warnedSetTypes = new Set<unknown>();
+
+/**
+ * Normalises an untrusted `set_type` value (from DB row, CSV, backup, share-link payload)
+ * to a valid `SetType`.
+ *
+ * - Returns `raw` unchanged if it is one of the seven valid set-type strings.
+ * - Coerces any other value (unknown string, null, undefined, "") to "normal".
+ * - Emits a single `console.warn` per unknown value (dev-mode only) on first coercion.
+ *
+ * **Call this at every read boundary** — DB hydration, CSV import, backup restore,
+ * share-payload deserialiser, and UI label lookup — so that unknown values from older
+ * app versions or external sources never reach typed code as an invalid string.
+ */
+export function normalizeSetType(raw: unknown): SetType {
+  if (typeof raw === "string" && VALID_SET_TYPES.has(raw)) {
+    return raw as SetType;
+  }
+  if (__DEV__ && !_warnedSetTypes.has(raw)) {
+    _warnedSetTypes.add(raw);
+    console.warn(`[normalizeSetType] Unknown set_type "${String(raw)}" coerced to "normal"`);
+  }
+  return "normal";
+}
 
 // ─── Pure computation (exported for tests) ─────────────────────────────────
 
@@ -241,6 +271,39 @@ export async function deleteAllSegmentsForSet(setId: string): Promise<void> {
   const db = await getDrizzle();
   await db.delete(workoutSetSegments).where(eq(workoutSetSegments.set_id, setId));
   await recomputeSetCaches(setId);
+}
+
+/**
+ * Batch-load segments for multiple sets. Returns a Map<setId, SetSegment[]>.
+ * Sets with no segments are absent from the map.
+ */
+export async function getSegmentsForSets(setIds: string[]): Promise<Map<string, SetSegment[]>> {
+  if (setIds.length === 0) return new Map();
+  const db = await getDrizzle();
+  const rows = await db
+    .select()
+    .from(workoutSetSegments)
+    .where(inArray(workoutSetSegments.set_id, setIds))
+    .orderBy(workoutSetSegments.segment_number)
+    .all();
+
+  const result = new Map<string, SetSegment[]>();
+  for (const r of rows) {
+    const seg: SetSegment = {
+      id: r.id,
+      set_id: r.set_id,
+      segment_number: r.segment_number,
+      reps: r.reps,
+      weight: r.weight ?? null,
+      rest_after_seconds: r.rest_after_seconds ?? null,
+      completed_at: r.completed_at ?? null,
+      created_at: r.created_at,
+    };
+    const list = result.get(r.set_id) ?? [];
+    list.push(seg);
+    result.set(r.set_id, list);
+  }
+  return result;
 }
 
 /** Load all segments for a set ordered by segment_number. */

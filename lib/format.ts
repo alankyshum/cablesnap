@@ -280,6 +280,35 @@ export function computePrefillSets(
   return results;
 }
 
+/**
+ * BLD-1168 Slice 7: Format mini-set reps as compact display string.
+ * Examples: [8,3,2] → "8+3+2 (13)"  (≥3 segments: show total in parens)
+ *           [10,5]  → "10+5"          (2 segments: no parens)
+ *           []      → "0"             (empty: show 0)
+ */
+export function formatMiniSetReps(segments: { reps: number }[]): string {
+  if (segments.length === 0) return "0";
+  const joined = segments.map((s) => s.reps).join("+");
+  if (segments.length >= 3) {
+    const total = segments.reduce((sum, s) => sum + s.reps, 0);
+    return `${joined} (${total})`;
+  }
+  return joined;
+}
+
+/**
+ * BLD-1168 Slice 7: Format a VoiceOver-friendly label for an advanced set parent row.
+ * Example: "Rest-pause set with 3 mini-sets"
+ */
+export function formatAdvancedSetAccessibilityLabel(
+  setTypeLabel: string,
+  segmentCount: number,
+): string {
+  if (segmentCount === 0) return `${setTypeLabel} set, no mini-sets yet`;
+  const plural = segmentCount === 1 ? "mini-set" : "mini-sets";
+  return `${setTypeLabel} set with ${segmentCount} ${plural}`;
+}
+
 export function hexToRgb(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
