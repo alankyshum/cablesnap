@@ -108,16 +108,9 @@ describe('deleteCompletedSession (BLD-690 reviewer fix)', () => {
     await deleteCompletedSession('completed-A');
 
     // BLD-1094: 3 Drizzle delete() calls — strava_sync_log + workout_sets + workout_sessions.
-    // health_connect_sync_log is deleted via execute() (raw SQL) since the table
-    // definition was removed from schema.ts in BLD-1146; runAsync handles it.
     // Media cascade (BLD-1092) is handled by the mocked cascadeDeleteClipsForSession
     // before these DB deletes; it does not add to deleteCalls here.
     expect(g.__deleteCalls).toHaveLength(3);
-    // The HC delete goes through raw runAsync (not tracked in __deleteCalls).
-    expect(mockDbStub.runAsync).toHaveBeenCalledWith(
-      "DELETE FROM health_connect_sync_log WHERE session_id = ?",
-      ['completed-A'],
-    );
     // Ran inside a transaction (at least once for our call — count may include
     // any preceding migration/init transactions on the shared mock).
     expect(mockDbStub.withTransactionAsync).toHaveBeenCalled();

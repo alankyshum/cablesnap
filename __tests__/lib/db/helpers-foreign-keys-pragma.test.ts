@@ -3,7 +3,7 @@
  * connection (regular expo-sqlite path AND web in-memory fallback).
  *
  * The migration tables in lib/db/tables.ts declare FK constraints
- * (strava_sync_log, health_connect_sync_log, strength_goals, cable_stacks,
+ * (strava_sync_log, strength_goals, cable_stacks,
  * stack_calibrations, program_schedule). Until BLD-1094 those constraints
  * were silent runtime no-ops because foreign_keys was only enabled inside
  * lib/db/import-export.ts:530 (CSV import). This test pins the pragma to
