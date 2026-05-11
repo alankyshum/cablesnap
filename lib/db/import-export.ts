@@ -96,6 +96,7 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
 
 import type { AppSettingRow, AchievementEarnedRow, ProgramScheduleRow } from "./schema";
 export type { AppSettingRow, AchievementEarnedRow, ProgramScheduleRow };
+import { normalizeSetType } from "./sets";
 
 export type BackupV3Data = {
   exercises: unknown[];
@@ -733,7 +734,7 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       return r.changes > 0;
     }
     case "workout_sets": {
-      const setType = row.set_type ?? (row.is_warmup ? "warmup" : "normal");
+      const setType = normalizeSetType(row.set_type ?? (row.is_warmup ? "warmup" : "normal"));
       const r = await database.runAsync(
         "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, tempo, set_type, duration_seconds, bodyweight_modifier_kg, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null, row.bodyweight_modifier_kg ?? null, row.attachment ?? null, row.mount_position ?? null, row.grip_type ?? null, row.grip_width ?? null, row.stack_id ?? null, row.stack_marker ?? null, row.stack_unit_at_log ?? null, row.stack_name_at_log ?? null, row.pulley_pin ?? null]
