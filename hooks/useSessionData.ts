@@ -148,6 +148,8 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           // If this exercise was already dismissed, initialize as null (never show backfill).
           // Otherwise use undefined so the header lazy-loads the candidate on mount.
           pinnedNoteBackfill: exerciseNotes[s.exercise_id]?.dismissed ? null : undefined,
+          // BLD-1158: exercise default tempo for new-set inheritance (AC1.1).
+          defaultTempo: ex?.default_tempo ?? null,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(

@@ -28,6 +28,7 @@ _No user-facing changes yet._
 <!-- versionCode: 102 -->
 
 - **Form Check Comparison**: Compare form clips side-by-side from the Form Library or from the clip player with synchronized play/pause/reset, A↔B swap, in-sheet clip picker, and landscape layout support.
+- **Tempo Coach (data layer)**: Set a per-exercise default tempo (e.g. `3-1-2-0`), which auto-fills on every new set for that exercise. Edit tempo per-set via the new Set Options sheet. Tempo is preserved across CSV import/export and template initialization.
 
 ## v0.26.31 — 2026-05-11
 <!-- versionCode: 101 -->

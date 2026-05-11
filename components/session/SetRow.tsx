@@ -28,6 +28,7 @@ import WeightPicker from "../../components/WeightPicker";
 import { BodyweightModifierChip } from "./BodyweightModifierChip";
 import { SetAttachmentChip } from "./SetAttachmentChip";
 import { SetMountPositionChip } from "./SetMountPositionChip";
+import { SetTempoChip } from "./SetTempoChip";
 import { SetPulleyPinChip } from "./SetPulleyPinChip";
 import { SetGripTypeChip } from "./SetGripTypeChip";
 import { SetGripWidthChip } from "./SetGripWidthChip";
@@ -853,6 +854,18 @@ export const SetRow = memo(function SetRow({
         <View style={styles.standaloneRpe}>{rpeStrip}</View>
       ) : null}
 
+      {/*
+        BLD-1158: Tempo chip — display-only. Self-suppresses when tempo is null
+        (or for duration sets via the SetOptionsSheet gate). Long-press the set
+        type indicator to open SetOptionsSheet → TempoEditorSheet.
+        ⛔ NO haptics, NO streak/adherence/badge logic here (AC9 boundary).
+      */}
+      {set.tempo && trackingMode !== "duration" ? (
+        <View style={styles.tempoRow}>
+          <SetTempoChip tempo={set.tempo} />
+        </View>
+      ) : null}
+
       <PlateHint weight={displayedWeight} unit={unit} equipment={equipment} />
     </View>
   );
@@ -902,6 +915,13 @@ const styles = StyleSheet.create({
     paddingLeft: 36,
     height: 32,
     justifyContent: "center",
+  },
+  // BLD-1158: tempo chip row — display-only, self-suppresses when tempo is null.
+  tempoRow: {
+    flexDirection: "row",
+    paddingLeft: 36,
+    paddingTop: 2,
+    paddingBottom: 2,
   },
   // BLD-771: empty-state placeholder pill rendered when both attachment
   // and mount_position are null. Dashed outline reads as "tap to fill"

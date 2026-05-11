@@ -169,11 +169,16 @@ export async function addSet(
   stackMarker?: number | null,
   stackUnitAtLog?: string | null,
   stackNameAtLog?: string | null,
-  pulleyPin?: number | null
+  pulleyPin?: number | null,
+  // BLD-1158: exercise-level default tempo — used as fallback when tempo is
+  // null and the set is rep-mode (AC1.1). Pass null for duration-mode sets (AC1.6).
+  exerciseDefaultTempo?: string | null,
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
   const validatedPulleyPin = validatePulleyPin(pulleyPin);
+  // AC1.1: inherit exercise default_tempo when no explicit tempo is set.
+  const resolvedTempo = tempo ?? exerciseDefaultTempo ?? null;
   const db = await getDrizzle();
   await db.insert(workoutSets).values({
     id,
@@ -182,7 +187,7 @@ export async function addSet(
     set_number: setNumber,
     link_id: linkId ?? null,
     round: round ?? null,
-    tempo: tempo ?? null,
+    tempo: resolvedTempo,
     set_type: resolvedType,
     exercise_position: exercisePosition ?? 0,
     attachment: attachment ?? null,
@@ -208,7 +213,7 @@ export async function addSet(
     notes: "",
     link_id: linkId ?? null,
     round: round ?? null,
-    tempo: tempo ?? null,
+    tempo: resolvedTempo,
     swapped_from_exercise_id: null,
     set_type: resolvedType,
     duration_seconds: null,
@@ -247,10 +252,15 @@ export async function addSetsBatch(
     stackUnitAtLog?: string | null;
     stackNameAtLog?: string | null;
     pulleyPin?: number | null;
+    // BLD-1158: exercise default tempo — fallback when tempo is null and set is
+    // rep-mode (AC1.1, AC1.3). Caller must pass null for duration-mode sets (AC1.6).
+    exerciseDefaultTempo?: string | null;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
     const resolvedType: SetType = s.setType ?? (s.isWarmup ? "warmup" : "normal");
+    // AC1.1 / AC1.3: inherit exercise default_tempo when no explicit tempo is provided.
+    const resolvedTempo = s.tempo ?? s.exerciseDefaultTempo ?? null;
     return {
       id: uuid(),
       session_id: s.sessionId,
@@ -264,7 +274,7 @@ export async function addSetsBatch(
       notes: "",
       link_id: s.linkId ?? null,
       round: s.round ?? null,
-      tempo: s.tempo ?? null,
+      tempo: resolvedTempo,
       swapped_from_exercise_id: null,
       set_type: resolvedType,
       duration_seconds: null,
@@ -311,11 +321,16 @@ export async function addWarmupSets(
   warmupSets: { weight: number; reps: number }[],
   linkId?: string | null,
   tempo?: string | null,
-  exercisePosition?: number
+  exercisePosition?: number,
+  // BLD-1158: exercise default tempo — fallback when tempo is null and warmup
+  // sets are rep-mode (AC1.4). Pass null for duration-mode exercises (AC1.6).
+  exerciseDefaultTempo?: string | null,
 ): Promise<WorkoutSet[]> {
   if (warmupSets.length === 0) return [];
   const warmupCount = warmupSets.length;
   const pos = exercisePosition ?? 0;
+  // AC1.4: inherit exercise default_tempo for rep-mode warmup sets.
+  const resolvedTempo = tempo ?? exerciseDefaultTempo ?? null;
 
   const results: WorkoutSet[] = warmupSets.map((ws, i) => ({
     id: uuid(),
@@ -330,7 +345,7 @@ export async function addWarmupSets(
     notes: "",
     link_id: linkId ?? null,
     round: null,
-    tempo: tempo ?? null,
+    tempo: resolvedTempo,
     swapped_from_exercise_id: null,
     set_type: "warmup" as SetType,
     duration_seconds: null,

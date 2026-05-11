@@ -20,6 +20,7 @@ import {
   softDeleteCustomExercise,
   getTemplatesUsingExercise,
   updateExerciseNote,
+  setDefaultTempo,
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
@@ -50,6 +51,7 @@ import GoalSetForm from "@/components/exercise/GoalSetForm";
 import { BodyweightModifierNotice } from "@/components/exercises/BodyweightModifierNotice";
 import ProgressionPathCard from "@/components/exercise/ProgressionPathCard";
 import { PinnedExerciseNoteEditor } from "@/components/session/PinnedExerciseNoteEditor";
+import { ExerciseDefaultTempoField } from "@/components/exercise/ExerciseDefaultTempoField";
 import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -222,6 +224,20 @@ export default function ExerciseDetail() {
               style={{ alignSelf: "flex-start", marginTop: 4 }}
             />
           )}
+        </View>
+      )}
+
+      {/* BLD-1158: Per-exercise default tempo — primary discoverability path */}
+      {id && (
+        <View style={styles.section}>
+          <ExerciseDefaultTempoField
+            exerciseId={id}
+            currentTempo={exercise.default_tempo}
+            onSave={async (canonical) => {
+              await setDefaultTempo(id, canonical);
+              bumpQueryVersion("exercises");
+            }}
+          />
         </View>
       )}
 

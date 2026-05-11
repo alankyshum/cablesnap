@@ -170,3 +170,37 @@ export async function getBodyMeasurementsCSVData(since: number): Promise<BodyMea
     .where(gte(bodyMeasurements.date, cutoff))
     .orderBy(asc(bodyMeasurements.date)) as unknown as Promise<BodyMeasurementsCSVRow[]>;
 }
+
+// BLD-1158 AC1.7/AC1.8: Custom exercise CSV export including default_tempo.
+// Only exports custom exercises (is_custom = 1). Built-in exercises are
+// immutable and excluded — users cannot modify them so there is nothing to
+// round-trip.
+export type ExerciseCSVRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  equipment: string | null;
+  difficulty: string | null;
+  primary_muscles: string | null;
+  secondary_muscles: string | null;
+  instructions: string | null;
+  default_tempo: string | null;
+};
+
+export async function getExercisesCSVData(): Promise<ExerciseCSVRow[]> {
+  const db = await getDrizzle();
+  return db.select({
+    id: exercises.id,
+    name: exercises.name,
+    category: exercises.category,
+    equipment: exercises.equipment,
+    difficulty: exercises.difficulty,
+    primary_muscles: exercises.primary_muscles,
+    secondary_muscles: exercises.secondary_muscles,
+    instructions: exercises.instructions,
+    default_tempo: exercises.default_tempo,
+  })
+    .from(exercises)
+    .where(isNotNull(exercises.is_custom))
+    .orderBy(asc(exercises.name)) as unknown as Promise<ExerciseCSVRow[]>;
+}

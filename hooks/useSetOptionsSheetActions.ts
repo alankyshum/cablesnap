@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { useToast } from "@/components/ui/bna-toast";
 import {
   updateSetType,
+  updateSetTempo,
   getAppSetting,
   setAppSetting,
 } from "../lib/db";
@@ -16,9 +17,9 @@ type UseSetTypeActionsArgs = {
   setGroups: React.Dispatch<React.SetStateAction<ExerciseGroup[]>>;
 };
 
-export function useSetTypeActions({ setGroups }: UseSetTypeActionsArgs) {
+export function useSetOptionsSheetActions({ setGroups }: UseSetTypeActionsArgs) {
   const { info: showToast } = useToast();
-  const [setTypeSheetSetId, setSetTypeSheetSetId] = useState<string | null>(null);
+  const [setOptionsSheetSetId, setSetOptionsSheetSetId] = useState<string | null>(null);
 
   const handleCycleSetType = useCallback(async (setId: string) => {
     let newType = "normal" as SetType;
@@ -56,13 +57,13 @@ export function useSetTypeActions({ setGroups }: UseSetTypeActionsArgs) {
 
   const handleLongPressSetType = useCallback((setId: string) => {
     Haptics.selectionAsync();
-    setSetTypeSheetSetId(setId);
+    setSetOptionsSheetSetId(setId);
   }, []);
 
   const handleSelectSetType = useCallback(async (type: SetType) => {
-    const setId = setTypeSheetSetId;
+    const setId = setOptionsSheetSetId;
     if (!setId) return;
-    setSetTypeSheetSetId(null);
+    setSetOptionsSheetSetId(null);
     setGroups((prev) =>
       prev.map((g) => ({
         ...g,
@@ -76,13 +77,25 @@ export function useSetTypeActions({ setGroups }: UseSetTypeActionsArgs) {
     );
     await updateSetType(setId, type);
     Haptics.selectionAsync();
-  }, [setTypeSheetSetId]);
+  }, [setOptionsSheetSetId]);
+
+  // BLD-1158: save tempo for a specific set (called from SetOptionsSheet).
+  const handleSaveTempo = useCallback(async (setId: string, tempo: string | null) => {
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        sets: g.sets.map((s) => s.id === setId ? { ...s, tempo } : s),
+      }))
+    );
+    await updateSetTempo(setId, tempo);
+  }, []);
 
   return {
-    setTypeSheetSetId,
-    setSetTypeSheetSetId,
+    setOptionsSheetSetId,
+    setSetOptionsSheetSetId,
     handleCycleSetType,
     handleLongPressSetType,
     handleSelectSetType,
+    handleSaveTempo,
   };
 }

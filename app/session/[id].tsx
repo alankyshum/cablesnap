@@ -24,12 +24,12 @@ import { useRestTimer } from "../../hooks/useRestTimer";
 import { useSessionData } from "../../hooks/useSessionData";
 import { useSessionActions } from "../../hooks/useSessionActions";
 import { useExerciseManagement } from "../../hooks/useExerciseManagement";
-import { useSetTypeActions } from "../../hooks/useSetTypeActions";
+import { useSetOptionsSheetActions } from "../../hooks/useSetOptionsSheetActions";
 import { useSessionTimer } from "../../hooks/useSessionTimer";
 import { usePRCelebration } from "../../hooks/usePRCelebration";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
 import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDetailDrawer";
-import { SetTypeSheet } from "../../components/session/SetTypeSheet";
+import { SetOptionsSheet } from "../../components/session/SetOptionsSheet";
 import { SessionListHeader } from "../../components/session/SessionListHeader";
 import { SessionListFooter } from "../../components/session/SessionListFooter";
 import { SessionToolboxSheet } from "../../components/session/SessionToolboxSheet";
@@ -123,9 +123,9 @@ export default function ActiveSession() {
   });
 
   const {
-    setTypeSheetSetId, setSetTypeSheetSetId,
-    handleCycleSetType, handleLongPressSetType, handleSelectSetType,
-  } = useSetTypeActions({ groups, setGroups });
+    setOptionsSheetSetId, setSetOptionsSheetSetId,
+    handleCycleSetType, handleLongPressSetType, handleSelectSetType, handleSaveTempo,
+  } = useSetOptionsSheetActions({ groups, setGroups });
 
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
 
@@ -385,7 +385,8 @@ export default function ActiveSession() {
         warmupSets,
         group?.link_id,
         group?.sets[0]?.tempo,
-        group?.exercise_position ?? 0
+        group?.exercise_position ?? 0,
+        group?.trackingMode === "duration" ? null : group?.defaultTempo ?? null,
       );
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await load();
@@ -515,12 +516,14 @@ export default function ActiveSession() {
         ListFooterComponent={listFooter}
       />
       </KeyboardAvoidingView>
-      {!!setTypeSheetSetId && (
-        <SetTypeSheet
-          setId={setTypeSheetSetId}
+      {!!setOptionsSheetSetId && (
+        <SetOptionsSheet
+          setId={setOptionsSheetSetId}
+          currentTempo={groups.flatMap(g => g.sets).find(s => s.id === setOptionsSheetSetId)?.tempo ?? null}
           groups={groups}
-          onSelect={handleSelectSetType}
-          onDismiss={() => setSetTypeSheetSetId(null)}
+          onSelectType={handleSelectSetType}
+          onSaveTempo={handleSaveTempo}
+          onDismiss={() => setSetOptionsSheetSetId(null)}
         />
       )}
 

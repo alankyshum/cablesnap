@@ -4,6 +4,7 @@ import type {
   NutritionCSVRow,
   BodyWeightCSVRow,
   BodyMeasurementsCSVRow,
+  ExerciseCSVRow,
 } from "./db";
 
 export function workoutCSV(rows: WorkoutCSVRow[]): string {
@@ -87,6 +88,36 @@ export function bodyMeasurementsCSV(rows: BodyMeasurementsCSVRow[]): string {
         csvEscape(r.neck),
         csvEscape(r.body_fat),
         csvEscape(r.notes),
+      ].join(",")
+    );
+  }
+  return [header, ...lines].join("\n");
+}
+
+/**
+ * BLD-1158 AC1.7/AC1.8: Custom exercise CSV serializer.
+ *
+ * The `default_tempo` column is placed LAST (backward-compat: older importers
+ * ignore unknown trailing columns). Null/undefined → empty string.
+ */
+export function exercisesCSV(rows: ExerciseCSVRow[]): string {
+  // AC1.7: default_tempo is the FINAL column for backward compatibility.
+  const header =
+    "id,name,category,equipment,difficulty,primary_muscles,secondary_muscles,instructions,default_tempo";
+  const lines: string[] = [];
+  for (const r of rows) {
+    lines.push(
+      [
+        csvEscape(r.id),
+        csvEscape(r.name),
+        csvEscape(r.category),
+        csvEscape(r.equipment),
+        csvEscape(r.difficulty),
+        csvEscape(r.primary_muscles),
+        csvEscape(r.secondary_muscles),
+        csvEscape(r.instructions),
+        // Null/undefined → empty string (preserves column count for round-trip).
+        csvEscape(r.default_tempo ?? null),
       ].join(",")
     );
   }

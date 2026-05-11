@@ -18,6 +18,8 @@ export {
   updateExerciseNote,
   updateMaxPulleyPins,
   getMaxPulleyPins,
+  getDefaultTempo,
+  setDefaultTempo,
   dismissExerciseBackfill,
   getExerciseBackfillCandidate,
   getExerciseNotesBatch,
@@ -213,12 +215,14 @@ export {
   getCSVCounts,
   getBodyWeightCSVData,
   getBodyMeasurementsCSVData,
+  getExercisesCSVData,
 } from "./csv";
 export type {
   WorkoutCSVRow,
   NutritionCSVRow,
   BodyWeightCSVRow,
   BodyMeasurementsCSVRow,
+  ExerciseCSVRow,
 } from "./csv";
 
 export {

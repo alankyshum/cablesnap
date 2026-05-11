@@ -45,6 +45,8 @@ export const exercises = sqliteTable("exercises", {
   user_rest_seconds: integer("user_rest_seconds"),
   // BLD-1114: per-exercise pulley pin override. NULL = use global default (12).
   max_pulley_pins: integer("max_pulley_pins"),
+  // BLD-1158: per-exercise default tempo (E-B-C-T notation). NULL = no default.
+  default_tempo: text("default_tempo"),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {
