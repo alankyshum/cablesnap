@@ -33,15 +33,13 @@ export async function getWeeklyE1RMTrends(now: number = Date.now()): Promise<Wee
        ws.exercise_id,
        COALESCE(e.name, 'Deleted Exercise') AS name,
        CAST((wss.started_at / ?) * ? AS INTEGER) AS week_start,
-       MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS max_e1rm
+       MAX(ws.cached_e1rm_kg) AS max_e1rm -- BLD-1174: segment-aware cached value
      FROM workout_sets ws
      JOIN workout_sessions wss ON ws.session_id = wss.id
      LEFT JOIN exercises e ON ws.exercise_id = e.id
      WHERE ws.completed = 1
        AND ws.set_type != 'warmup'
-       AND ws.weight > 0
-       AND ws.reps > 0
-       AND ws.reps <= 12
+       AND ws.cached_e1rm_kg > 0 -- BLD-1174: cached handles segment-level reps
        AND wss.completed_at IS NOT NULL
        AND wss.started_at >= ?
      GROUP BY ws.exercise_id, week_start
@@ -180,15 +178,13 @@ export async function getE1RMTrends(gymId?: string | null): Promise<E1RMTrendRow
          prev.e1rm AS previous_e1rm
        FROM (
          SELECT ws.exercise_id,
-                MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm,
+                MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174: segment-aware cached value,
                 COUNT(DISTINCT wss.id) AS session_count
          FROM workout_sets ws
          JOIN workout_sessions wss ON ws.session_id = wss.id
          WHERE ws.completed = 1
            AND ws.set_type != 'warmup'
-           AND ws.weight > 0
-           AND ws.reps > 0
-           AND ws.reps <= 12
+           AND ws.cached_e1rm_kg > 0 -- BLD-1174: cached handles segment-level reps
            AND wss.completed_at IS NOT NULL
            AND wss.gym_id = ?
            AND wss.started_at >= ?
@@ -197,14 +193,12 @@ export async function getE1RMTrends(gymId?: string | null): Promise<E1RMTrendRow
        ) cur
        JOIN (
          SELECT ws.exercise_id,
-                MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm
+                MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174: segment-aware cached value
          FROM workout_sets ws
          JOIN workout_sessions wss ON ws.session_id = wss.id
          WHERE ws.completed = 1
            AND ws.set_type != 'warmup'
-           AND ws.weight > 0
-           AND ws.reps > 0
-           AND ws.reps <= 12
+           AND ws.cached_e1rm_kg > 0 -- BLD-1174: cached handles segment-level reps
            AND wss.completed_at IS NOT NULL
            AND wss.gym_id = ?
            AND wss.started_at >= ? AND wss.started_at < ?
@@ -226,15 +220,13 @@ export async function getE1RMTrends(gymId?: string | null): Promise<E1RMTrendRow
        prev.e1rm AS previous_e1rm
      FROM (
        SELECT ws.exercise_id,
-              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm,
+              MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174: segment-aware cached value,
               COUNT(DISTINCT wss.id) AS session_count
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.weight > 0
-         AND ws.reps > 0
-         AND ws.reps <= 12
+         AND ws.cached_e1rm_kg > 0 -- BLD-1174: cached handles segment-level reps
          AND wss.completed_at IS NOT NULL
          AND wss.started_at >= ?
        GROUP BY ws.exercise_id
@@ -242,14 +234,12 @@ export async function getE1RMTrends(gymId?: string | null): Promise<E1RMTrendRow
      ) cur
      JOIN (
        SELECT ws.exercise_id,
-              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm
+              MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174: segment-aware cached value
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.weight > 0
-         AND ws.reps > 0
-         AND ws.reps <= 12
+         AND ws.cached_e1rm_kg > 0 -- BLD-1174: cached handles segment-level reps
          AND wss.completed_at IS NOT NULL
          AND wss.started_at >= ? AND wss.started_at < ?
        GROUP BY ws.exercise_id
@@ -281,15 +271,13 @@ export async function getE1RMTrendsByGym(gymId: string): Promise<E1RMTrendRow[]>
        prev.e1rm AS previous_e1rm
      FROM (
        SELECT ws.exercise_id,
-              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm,
+              MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174: segment-aware cached value,
               COUNT(DISTINCT wss.id) AS session_count
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.weight > 0
-         AND ws.reps > 0
-         AND ws.reps <= 12
+         AND ws.cached_e1rm_kg > 0 -- BLD-1174: cached handles segment-level reps
          AND wss.completed_at IS NOT NULL
          AND wss.gym_id = ?
          AND wss.started_at >= ?
@@ -298,14 +286,12 @@ export async function getE1RMTrendsByGym(gymId: string): Promise<E1RMTrendRow[]>
      ) cur
      JOIN (
        SELECT ws.exercise_id,
-              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm
+              MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174: segment-aware cached value
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.weight > 0
-         AND ws.reps > 0
-         AND ws.reps <= 12
+         AND ws.cached_e1rm_kg > 0 -- BLD-1174: cached handles segment-level reps
          AND wss.completed_at IS NOT NULL
          AND wss.gym_id = ?
          AND wss.started_at >= ? AND wss.started_at < ?

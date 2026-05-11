@@ -56,7 +56,7 @@ export async function getExerciseHistory(
       max_reps: max(workoutSets.reps),
       total_reps: sum(workoutSets.reps),
       set_count: count(workoutSets.id),
-      volume: sql<number>`SUM(${workoutSets.weight} * ${workoutSets.reps})`,
+      volume: sql<number>`SUM(${workoutSets.cached_volume_kg})`, /* BLD-1174 */
       avg_rpe: sql<number | null>`AVG(CASE WHEN ${workoutSets.rpe} IS NOT NULL THEN ${workoutSets.rpe} END)`,
       max_modifier: sql<number | null>`MAX(${workoutSets.bodyweight_modifier_kg})`,
     })
@@ -179,7 +179,7 @@ export async function getExerciseRecords(
   const [vol, rm, weighted, bwBests] = await Promise.all([
     queryOne<{ val: number | null }>(
       `SELECT MAX(sv) AS val FROM (
-         SELECT SUM(ws.weight * ws.reps) AS sv
+         SELECT SUM(ws.cached_volume_kg) AS sv /* BLD-1174 */
          FROM workout_sets ws
          JOIN workout_sessions wss ON ws.session_id = wss.id
          WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND wss.completed_at IS NOT NULL${variantSql.sql}
