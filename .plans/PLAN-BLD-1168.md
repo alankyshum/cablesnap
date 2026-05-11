@@ -199,7 +199,50 @@ export type SetSegment = { id: string; segment_number: number; reps: number; wei
 The feature direction is strong and the production-path, a11y, CSV round-trip, and legacy-parity ACs are the right shape. I will approve after the two data-integrity blockers above are reflected in the plan.
 
 ### Tech Lead (Feasibility)
-_Pending_
+**REQUEST CHANGES (2026-05-11):**
+
+Direction is sound — additive table, single-helper volume, intra-mini-set rest, CSV columns are all defensible. But several feasibility/architecture defects must land in the plan before claudecoder picks this up. Concurs with QD blockers #1 and #2; adds the following:
+
+1. **Blocker — service-layer "trigger" is unsafe without a write-path inventory.** The plan picks a TS-level `recomputeParentReps(setId)` over a SQLite trigger, citing BLD-1094 PRAGMA pattern. That's defensible, but it only works if **every** mutation path for `workout_set_segments` and `workout_sets.reps` routes through the helper. Today, set writes happen from at least: `lib/db/session-sets.ts` (insert/update/upsert/finishWarmup at lines 191/218/279/296/365/642/649), `hooks/useSessionActions.ts` (385, 554), `hooks/useRestTimer.ts` (389, 471), undo paths, CSV import, and the curated-templates seeder (`lib/db/sessions.ts:394` writes `set_types` JSON). The plan must:
+   - List every write-path that can mutate a parent's `reps` or any segment, and assert each goes through the helper.
+   - Add a CI/lint guard (e.g., grep test in `__tests__/architecture/`) that fails if any file outside `lib/db/sets.ts` directly UPDATEs `workout_sets.reps` for an advanced `set_type`, or directly INSERTs/UPDATEs/DELETEs into `workout_set_segments`.
+   - Add a property test that drives random sequences of (insert segment / update segment / delete segment / change set_type / collapse-to-normal) and asserts `parent.reps === Σ segments.reps` after each step. Plan §186 already mentions this — promote it to an **acceptance criterion** with a named test file, not just a risk-table mitigation.
+   - Recommend belt-and-suspenders: declare `FOREIGN KEY (set_id) REFERENCES workout_sets(id) ON DELETE CASCADE` on the new table (FK enforcement is on per the recent changelog). Do not rely solely on "cascade in service layer".
+
+2. **Blocker — SQL aggregate analytics will silently inflate e1RM and volume even with the "single helper" approach.** The plan promises `computeSetVolume(set, segments)` as the one source of truth, but a large fraction of analytics is computed in raw SQL and cannot call a TS helper:
+   - `lib/db/e1rm-trends.ts` lines 36, 183, 200, 229, 245, 284, 301 → `MAX(ws.weight * (1.0 + ws.reps / 30.0))`. For a rest-pause set logged as 8+3+2 @ 100kg, parent.reps becomes 13 → e1RM = 100·(1+13/30) = **143 kg**, vs the truthful first-mini-set e1RM of 100·(1+8/30) = **127 kg**. ~13% inflation on every PR for every advanced lifter. This is a silent regression on an existing PR-history surface — far worse than the analytics deltas the plan currently scopes.
+   - `lib/db/monthly-report.ts:121,152,321,337`, `lib/db/weekly-summary.ts:121,152`, `lib/db/achievements.ts:60,72`, `lib/db/exercise-history.ts:59`, `hooks/useSessionDetail.ts:113`, `hooks/useSummaryData.ts:130`, `hooks/useSessionShareData.ts:36` all do `weight * reps` (or its SQL equivalent) on the parent. As soon as a segment carries its own `weight` override, parent.weight·parent.reps is wrong.
+
+   The plan must pick one of these two architectures and document tradeoffs:
+   - **(a) Denormalize:** add `workout_sets.cached_volume` (REAL) and `workout_sets.cached_e1rm_weight` / `_reps` columns, populated by the same service-layer helper that maintains `reps`. SQL aggregates use the cached columns. **Pros:** zero touch to existing SQL aggregates. **Cons:** new columns on `workout_sets` (additive, but the plan currently claims "no ALTER on workout_sets" — that claim has to be retracted).
+   - **(b) View-or-CTE rewrite:** introduce a `workout_sets_resolved` SQL view (or inline CTE in every query) that joins segments and exposes `effective_volume` and `effective_e1rm_input`. Every analytics query is rewritten to read from the view. **Pros:** no schema growth. **Cons:** rewrites ~10 query sites and changes their query plans; performance must be benchmarked.
+
+   Either way: enumerate every query site as part of the plan, add an architecture test that greps for `weight * reps` and `weight * (1.0 + reps / 30.0)` outside the chosen abstraction, and add a parity AC: "for any session containing one rest-pause and one cluster set with ≥1 segment-level weight override, `monthly-report`, `weekly-summary`, `achievements`, `exercise-history`, `e1rm-trends`, `useSessionDetail`, `useSummaryData`, and `useSessionShareData` produce values that match a hand-computed segment-aware reference within ±0.01."
+
+3. **Blocker — `workout_sets.reps` semantic shift breaks downstream filters that read it as a per-set count.** Today `reps` is the count for that one set; after this change it can be a SUM across mini-sets, which silently changes the meaning of every filter and threshold that compares it. Concrete example: `lib/db/exercises.ts:309-318` decides "does the user need to progress to the next exercise" by checking `reps IS NULL OR reps < 12` on `set_type='normal'`. The plan does extend that filter to include the new types (§116) — but a rest-pause logged as 8+3+2 will have `reps=13`, so the failing-set check (`reps < 12`) will silently classify it as a passing 13-rep set when the lifter actually only hit 8 reps before failure. That's a behavioral regression on the progressive-overload suggestion path. Plan must either:
+   - Audit every consumer of `workout_sets.reps` (including the suggestion engine, plateau, e1rm, recommendation rules) and decide per-site whether parent.reps or first-segment.reps or activation-segment.reps is the correct quantity, OR
+   - Treat parent.reps as opaque-sum-only and add explicit named accessors (`getWorkingRepsForOverloadDecision`, `getEffortRepsForPlateau`, etc.) used at every consumer.
+
+   Pick one and document it. Add an AC: "no consumer reads `workout_sets.reps` directly when `set_type` is advanced; all advanced-set consumers route through a named accessor."
+
+4. **Forward-compat (concurs with QD #1) — plus the template path needs the same guard.** `lib/db/sessions.ts:394` writes `set_types: JSON.stringify(group.map((s) => s.set_type ?? "normal"))` to a curated-templates JSON column. When an older app reads a template authored by a newer app, `useHomeActions.ts:67` and the template parser will encounter unknown enum values. Add `normalizeSetType(raw: unknown): SetType` and use it at every read boundary: DB row hydration (`session-sets.ts` lines 73, 143, 615), template parser, CSV import, share-payload deserializer. Add a unit test that feeds garbage strings and confirms each boundary returns `'normal'` without throwing.
+
+5. **Migration claim — "no ALTER TABLE on existing rows" is fragile and contingent on the architecture choice in #2.** If the plan adopts denormalization (option 2a), this claim is wrong and must be retracted. If it adopts the view approach (option 2b), the claim stands but only because the cost moves to query rewrites. Either way, restate the migration block once #2 is decided.
+
+6. **6-segment cap — too tight for myo-reps.** Borge Fagerli's published myo-rep prescriptions sometimes go activation + 5–7 mini-clusters on cable/machine work (the very niche this plan calls out as CableSnap's wedge). Activation + 6 mini-sets = 7 segments. Raise the cap to **8** (still a sane technical guard; arbitrary anyway).
+
+7. **Rest-resolver coverage missing from plan.** `lib/rest-resolver.ts:218,230` filters historical inter-set rest by `set_type = ?`. With three new enum values this query is fine, but the resolver also needs to know whether to use intra-mini-set or inter-set rest for "next rest" suggestions. Plan needs an AC: "rest-resolver returns intra-rest defaults (5/15/30s clamped to MIN_REST_SECONDS) when called mid-parent for an advanced set, and inter-rest defaults when called between parent sets."
+
+8. **Concurs with QD #2 (analytics blast radius)** — covered by my blocker #2 above with concrete query sites.
+
+9. **Non-blocking nits:**
+   - `MIN_REST_SECONDS = 10` clamp on a 5s myo-rep intra-rest defeats the purpose of myo-reps (the protocol *requires* sub-10s rest). Either lower the floor for the intra-mini-set mode only, or document that the timer is advisory (the user can ignore it) and don't auto-pause set entry on it.
+   - The "+ mini-set" combined affordance (QD non-blocking #3) — agree with QD; a two-tap pattern (Complete-and-rest vs Add-blank-mini-set) is safer.
+   - CSV semicolon separator is fine but document the escape rule for sets where someone embeds a literal `;` in a (theoretical future) per-segment note. For v1 with no per-segment notes this is a non-issue.
+
+**Verdict:** REQUEST CHANGES. Direction is right; the data-integrity story and analytics blast-radius story are not yet credible. Once #1–#5 land in the plan with concrete ACs, I'll re-review for APPROVE.
+
+— techlead, 2026-05-11
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. Reviewers may opt-in if they want a sanity check on the "no gamification" claim._
