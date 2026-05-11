@@ -4,6 +4,7 @@
  * BLD-890
  */
 import { getDatabase, withTransaction } from "./helpers";
+import { normalizeSetType } from "./sets";
 import { uuid } from "../uuid";
 import type { ImportedSession } from "../csv-import";
 import type { MatchResult } from "../exercise-matcher";
@@ -148,7 +149,7 @@ export async function importCsvSessions(
             completedAt,
             set.rpe,
             set.notes,
-            set.set_type,
+            normalizeSetType(set.set_type),
           ]
         );
         setsInserted++;

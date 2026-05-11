@@ -27,6 +27,12 @@ export type WorkoutCSVRow = {
   stack_name_at_log: string | null;
   // BLD-1168: advanced set type (rest_pause, cluster, myo_reps, or legacy normal/warmup/dropset/failure).
   set_type: string | null;
+  /** Semicolon-separated reps per mini-set, e.g. "8;3;2". Null/empty for non-advanced sets (back-compat). */
+  mini_set_reps: string | null;
+  /** Semicolon-separated weights (kg) per mini-set. Empty element means inherit parent weight. */
+  mini_set_weights: string | null;
+  /** Semicolon-separated rest durations (seconds) after each mini-set. */
+  mini_set_rests: string | null;
 };
 
 export type NutritionCSVRow = {

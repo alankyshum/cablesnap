@@ -197,6 +197,24 @@ export default function Settings() {
         <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Pressable
+              onPress={() => router.push('/settings/advanced-sets')}
+              accessibilityRole="button"
+              accessibilityLabel="Open advanced set types help"
+              style={styles.settingsLinkRow}
+            >
+              <View style={styles.settingsLinkMeta}>
+                <Text variant="body" style={[styles.settingsLinkTitle, { color: colors.onSurface }]}>Advanced Set Types</Text>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                  How to use rest-pause, cluster, and myo-rep sets.
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.onSurfaceVariant} />
+            </Pressable>
+          </CardContent>
+        </Card>
+        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+          <CardContent>
+            <Pressable
               onPress={() => router.push('/settings/macro-coach')}
               accessibilityRole="button"
               accessibilityLabel="Open Adaptive Macro Coach settings"

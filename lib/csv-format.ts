@@ -9,7 +9,7 @@ import type {
 
 export function workoutCSV(rows: WorkoutCSVRow[]): string {
   const header =
-    "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log,set_type";
+    "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log,set_type,mini_set_reps,mini_set_weights,mini_set_rests";
   const lines: string[] = [];
   for (const r of rows) {
     lines.push(
@@ -31,8 +31,11 @@ export function workoutCSV(rows: WorkoutCSVRow[]): string {
         csvEscape(r.day_session_date),
         csvEscape(r.stack_marker),
         csvEscape(r.stack_name_at_log),
-        // BLD-1168: set_type is the last column for backward-compatibility (older importers ignore unknown trailing columns).
+        // BLD-1168: advanced set columns. Trailing for backward-compat; older importers ignore unknown trailing columns.
         csvEscape(r.set_type ?? "normal"),
+        csvEscape(r.mini_set_reps ?? ""),
+        csvEscape(r.mini_set_weights ?? ""),
+        csvEscape(r.mini_set_rests ?? ""),
       ].join(",")
     );
   }
