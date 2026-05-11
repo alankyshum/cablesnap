@@ -46,6 +46,8 @@ interface MacroCoachCardProps {
   weekLabel: string;             // e.g. "week of May 4–10"
   onDismiss?: () => void;        // called after any card action
   userWeightKg: number;
+  /** Safety floor (kcal) for the current user: max(sexFloor, RMR). Always enforced. */
+  safetyFloorKcal: number;
   /** ISO date of the previous accepted suggestion, if any */
   lastAcceptedDate?: string;
   /** kcal target accepted last Sunday (for post-decision check-in) */
@@ -67,6 +69,7 @@ export function MacroCoachCard({
   weekLabel,
   onDismiss,
   userWeightKg,
+  safetyFloorKcal,
   lastAcceptedDate,
   lastAcceptedTarget,
 }: MacroCoachCardProps) {
@@ -75,6 +78,7 @@ export function MacroCoachCard({
   const [rightWhy, setRightWhy] = useState<RightWhyAnswer | null>(null);
   const [showSetOwn, setShowSetOwn] = useState(false);
   const [customKcal, setCustomKcal] = useState("");
+  const [customKcalError, setCustomKcalError] = useState<string | null>(null);
   const [showPausePrompt, setShowPausePrompt] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -104,8 +108,17 @@ export function MacroCoachCard({
 
   async function handleSetOwn() {
     const parsed = parseInt(customKcal, 10);
-    if (isNaN(parsed) || parsed < 500) return;
-    const clamped = Math.max(parsed, suggestion.floorActive ? suggestion.suggestedTarget : parsed);
+    if (isNaN(parsed)) return;
+    // Safety floor is unconditional per psych verdict (076d3d4c §3).
+    // Reject below-floor input with inline error — do not silently clamp (preserves user agency).
+    if (parsed < safetyFloorKcal) {
+      setCustomKcalError(
+        `Minimum safe target is ${safetyFloorKcal.toLocaleString()} kcal/day`
+      );
+      return;
+    }
+    setCustomKcalError(null);
+    const clamped = Math.max(parsed, safetyFloorKcal);
     const macros = recomputeMacrosFromCalories(clamped, userWeightKg);
     await updateMacroTargets(clamped, macros.protein_g, macros.carbs_g, macros.fat_g);
     const nowIso = new Date().toISOString().slice(0, 10);
@@ -297,13 +310,22 @@ export function MacroCoachCard({
                 style={[styles.textInput, { color: colors.onSurface, borderColor: colors.onSurfaceVariant }]}
                 keyboardType="number-pad"
                 value={customKcal}
-                onChangeText={setCustomKcal}
+                onChangeText={(v) => { setCustomKcal(v); setCustomKcalError(null); }}
                 placeholder="e.g. 2100"
                 placeholderTextColor={colors.onSurfaceVariant}
                 accessibilityLabel="Enter calorie target"
                 allowFontScaling
                 maxLength={5}
               />
+              {customKcalError !== null && (
+                <Text
+                  variant="caption"
+                  style={{ color: colors.onSurfaceVariant }}
+                  accessibilityLiveRegion="polite"
+                >
+                  {customKcalError}
+                </Text>
+              )}
               <View style={styles.actionRow}>
                 <ActionButton label="Confirm" onPress={handleSetOwn} primary colors={colors} />
                 <ActionButton label="Cancel" onPress={() => setShowSetOwn(false)} colors={colors} />

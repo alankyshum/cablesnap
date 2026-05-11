@@ -117,6 +117,16 @@ const GOAL_ADJUSTMENTS: Record<Goal, number> = {
 // ─── Pure Helpers ─────────────────────────────────────────────────────────────
 
 /**
+ * Add N calendar days to a Date using epoch arithmetic.
+ * This is the ONLY place in this module allowed to call `new Date(…)`.
+ * All other helpers must use addDays() so that the module remains grep-enforceable
+ * as clock-injection-compliant (tightened regex: /\bnew Date\(/).
+ */
+function addDays(d: Date, n: number): Date {
+  return new Date(d.getTime() + n * 86_400_000);
+}
+
+/**
  * Round to nearest N (e.g. nearest 50 for user-facing kcal display).
  */
 export function roundToNearest(value: number, step: number): number {
@@ -135,8 +145,7 @@ export function computeTrendWeight(
   windowDays: number,
   now: Date
 ): number | null {
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - windowDays);
+  const cutoff = addDays(now, -windowDays);
   const cutoffIso = cutoff.toISOString().slice(0, 10);
 
   const valid = weights
@@ -243,8 +252,7 @@ export function classifyStability(
  * Count unique dates with food logs in last N days.
  */
 export function countLoggingDays(logs: DailyLogRow[], windowDays: number, now: Date): number {
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - windowDays);
+  const cutoff = addDays(now, -windowDays);
   const cutoffIso = cutoff.toISOString().slice(0, 10);
   const todayIso = now.toISOString().slice(0, 10);
   const dates = new Set(
@@ -266,10 +274,8 @@ export function suggestTarget(
   const { weights, logs, currentTargetKcal, safetyFloorKcal, goal, now } = opts;
 
   const todayIso = now.toISOString().slice(0, 10);
-  const window21 = new Date(now);
-  window21.setDate(window21.getDate() - 21);
-  const window14 = new Date(now);
-  window14.setDate(window14.getDate() - 14);
+  const window21 = addDays(now, -21);
+  const window14 = addDays(now, -14);
 
   // Filter valid weights in window
   const validWeights = weights.filter(
@@ -287,7 +293,7 @@ export function suggestTarget(
   if (trendNow === null) return { reason: "insufficient_weights" };
 
   // Trend 14 days ago (for delta)
-  const trendStart = computeTrendWeight(weights, 35, new Date(window14));
+  const trendStart = computeTrendWeight(weights, 35, window14);
   if (trendStart === null) return { reason: "insufficient_weights" };
 
   const deltaKg = trendNow - trendStart;

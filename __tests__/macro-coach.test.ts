@@ -511,13 +511,16 @@ describe("recomputeMacrosFromCalories — coach must use this, not calculateMacr
 // ─── No Date.now() / new Date() in lib/macro-coach.ts ───────────────────────
 
 describe("lib/macro-coach.ts — clock injection compliance", () => {
-  it("does not contain executable Date.now() or bare new Date() outside comments", () => {
+  it("does not contain executable Date.now() or new Date(…) outside the addDays helper", () => {
     const fs = require("fs");
     const srcTs = fs.readFileSync("lib/macro-coach.ts", "utf8") as string;
-    // Remove single-line comments before checking
+    // Remove single-line and block comments before checking
     const noComments = srcTs.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(noComments).not.toMatch(/Date\.now\(\)/);
-    expect(noComments).not.toMatch(/new Date\(\s*\)/);
+    // Strip the addDays helper body (the only allowed new Date call in this module)
+    const noHelperBody = noComments.replace(/function addDays[\s\S]*?\{[\s\S]*?\}/, "");
+    expect(noHelperBody).not.toMatch(/Date\.now\(\)/);
+    // Tightened: catch any new Date(...) invocation, not just bare new Date()
+    expect(noHelperBody).not.toMatch(/\bnew Date\(/);
   });
 });
 
