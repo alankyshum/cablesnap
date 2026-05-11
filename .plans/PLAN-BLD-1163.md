@@ -197,7 +197,71 @@ A **weekly advisory** that:
 _Pending_
 
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: APPROVED WITH REQUIRED CHANGES** — the architecture is sound and fits the existing pure-functions + thin-UI pattern (mirrors `lib/nutrition-calc.ts`). All referenced tables (`body_weight`, `daily_log`, `app_settings`, `macro_targets`) exist and `calculateMacros(tdee, weight_kg, goal)` is already shaped to be reused with a coach-supplied TDEE. No schema change, no new dep — low risk. The following 6 items must be folded in before claudecoder picks this up.
+
+**1. EWMA — specify the smoothing parameter, not just "7-day".**
+"7-day EWMA" is ambiguous. Pin the canonical Hacker's-trend formula:
+`trend_t = trend_{t-1} + α · (weight_t − trend_{t-1})` with **α = 0.1** (≈ 10-day half-life), seeded with the first valid weight.
+Rationale vs. alternatives interrogated by CEO:
+- **SMA**: too jumpy at window edges; one missed weigh-in flips the gradient.
+- **Kalman**: requires a process model we don't have; overkill, adds tunables we can't justify.
+- **EWMA(α=0.1)**: is the MacroFactor / Hacker's Diet baseline, well-documented, single tunable, robust to gaps.
+Document α as a named constant in `macro-coach.ts`. Do **not** expose it in Settings — psychologist gate covers user-facing controls.
+
+**2. Energy-balance formula — guard the divisor and clamp the input.**
+`avg_intake + (Δweight_kg × 7700) / days` is numerically fine in fp64, but is *behaviorally* unstable at small `days` and small `Δweight`. Required hardening in `estimateTDEE`:
+- Reject `days < 7` → return `null` with `reason: "insufficient_window"`. (Plan already requires 14 weighs; enforce in the pure fn too — defense in depth.)
+- Reject when `|Δtrend_weight| / window_kg < 0.002` (the ±0.2% rule already in the AC) → return `reason: "weight_stable"`, do **not** propagate a TDEE estimate.
+- Cap `|estimated_TDEE − avg_intake|` at **750 kcal/day** before suggesting (a single 0.5 kg water shift in 14 d injects ±275 kcal/d of noise; >750 is almost certainly artifact). Surface as `reason: "implausible_balance"` and skip the suggestion that week.
+- Add a UI footnote (one line) acknowledging the formula assumes 7,700 kcal/kg of fat mass; lean-tissue gain on a bulk will under-estimate intake. Psychologist owns the exact wording.
+
+**3. Recompute strategy — memoize, don't churn on every focus.**
+"Recompute on `/nutrition` tab focus" will recompute on every navigation; on a busy logger that's dozens of times per day for an answer that only changes once per Sunday. Required:
+- Memoization key: `${todayIso}|${latestWeightRowId}|${latestLogId}|${settingsHash}`.
+- Compute lives in a `useMacroCoach()` hook that returns `{ status: 'loading' | 'hidden' | 'ready', suggestion? }` and caches in module-level `Map` (cleared on settings change).
+- No background timers, no `useEffect` polling. Pure pull-on-render with memo.
+
+**4. `app_settings` keys — wrap them in a typed accessor.**
+String-typed `app_settings` is the established pattern (acceptable for v1; adding a typed table is out of scope), but parsing scattered `parseFloat(...)` across UI is how silent NaN bugs ship. Required: a single `lib/db/macro-coach-settings.ts` module that owns:
+- `getEnabled(): boolean` (default `false`)
+- `getFloorKcal(): number` (default 1200, **clamped to ≥1200**, never below — the floor is a *floor*, even if a user typo'd a smaller value into the row)
+- `getLastDismissedAt(): number | null`
+- `getPausedUntil(): number | null`
+- `setX(...)` mirrors with same clamps.
+Every UI/coach call site goes through this module. No `parseFloat` outside it.
+
+**5. `suggestTarget` — split into composable pure helpers.**
+The signature in §Architecture conflates compute, floor clamp, weekly-delta clamp, stability check, and reason selection. For 95% branch coverage to be meaningful, factor into:
+```ts
+clampToFloor(target: number, floor: number): { value: number; capped: boolean }
+clampToWeeklyDelta(current: number, target: number, maxDelta: number): { value: number; capped: boolean }
+classifyStability(deltaKg: number, windowKg: number): "stable" | "loss" | "gain"
+suggestTarget(...): CoachSuggestion | { reason: SkipReason }   // composes the above
+```
+Each helper individually unit-testable; the composition becomes a thin orchestrator with obvious branches.
+
+**6. Determinism — inject `now` and `tz`; no `new Date()` inside pure module.**
+The Sunday gate, the 7-day dismissal cooldown, and the 21-day window are all date-sensitive. `lib/macro-coach.ts` **must not** call `new Date()` or `Date.now()` directly. All time inputs come in as parameters (`now: Date`, `tz: string`). The DB orchestrator (`lib/db/macro-coach.ts`) is the only place that captures wallclock. This makes the property-based tests CEO already requires (6 goal × delta-sign combos) trivially seedable.
+
+**LOC honesty check.** CEO's "≈150 LOC for the pure module" estimate is **optimistic by ~30–50%**. Realistic numbers:
+- `lib/macro-coach.ts` (pure): **180–230 LOC** with the helper split in (5).
+- `lib/db/macro-coach.ts` (orchestrator + memo): 100–140 LOC.
+- `lib/db/macro-coach-settings.ts`: 60–90 LOC.
+- `__tests__/macro-coach.test.ts` (95% branch + property tests): 350–500 LOC.
+- `components/nutrition/MacroCoachCard.tsx`: 200–280 LOC.
+- `app/settings/macro-coach.tsx`: 180–260 LOC.
+- **Total PR target: ~1,100–1,500 LOC** across ~6 files. Update plan's scope-creep gate to expect this size; anything materially larger triggers a split.
+
+**Other items flagged but not blocking:**
+- Verify `body_weight.date` is `YYYY-MM-DD` ISO strings (it is, per schema). Sunday computation: derive from device-local TZ via `Intl.DateTimeFormat`; do **not** add Luxon/date-fns-tz just for this.
+- `calculateMacros(tdee, weight_kg, goal)` adds `GOAL_ADJUSTMENTS[goal]` *internally*. Coach must call it with `tdee = suggested_target − GOAL_ADJUSTMENTS[goal]` to avoid double-applying the goal delta. Add an explicit unit test for this trap. (Or: introduce a `recomputeMacrosFromCalories(calories, weight_kg)` helper in `nutrition-calc.ts` to remove the foot-gun entirely. **Preferred.**)
+- "Goal switched mid-window" — required test: switching goal on day 10 of a 14-day window should still produce a sensible suggestion using the *current* goal's `GOAL_ADJUSTMENTS`, never blending. Plan asserts this; lock it in tests.
+- Migration / rollback: **no risk**. Append-only `app_settings` keys; rollback = remove UI, orphan keys are harmless.
+
+**Plan re-review not required after these changes** — they're surgical clarifications, not architectural changes. Author edits the plan, claudecoder picks up.
+
+— techlead, 2026-05-11
 
 ### Psychologist (Behavior-Design) — MANDATORY GATE
 _Pending_
