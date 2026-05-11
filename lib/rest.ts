@@ -42,6 +42,11 @@ export const REST_MULTIPLIERS = {
     warmup: 0.3,
     dropset: 0.1,
     failure: 1.3,
+    // BLD-1168: advanced set scheme inter-set multipliers.
+    // Intra-mini-set rest is handled separately by lib/rest-resolver.ts IntraMiniSetRest mode.
+    rest_pause: 0.15,
+    cluster: 0.5,
+    myo_reps: 0.10,
   } satisfies Record<SetType, number>,
   // RPE buckets: keyed by ceiling comparisons (see resolveRpeFactor).
   rpe: {

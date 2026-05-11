@@ -148,11 +148,37 @@ export const workoutSets = sqliteTable("workout_sets", {
   stack_name_at_log: text("stack_name_at_log"),
   // BLD-1114: per-set cable pulley pin. NULL = unset.
   pulley_pin: integer("pulley_pin"),
+  // BLD-1168: cached aggregate columns — single source of truth for all analytics surfaces.
+  // Populated exclusively by recomputeSetCaches(setId) in lib/db/sets.ts.
+  // DEFAULT 0 so pre-migration rows have a defined value (backfill in migrate() sets correct values).
+  cached_volume_kg: real("cached_volume_kg").default(0),
+  cached_e1rm_kg: real("cached_e1rm_kg").default(0),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),
   index("idx_workout_sets_session_exercise").on(table.session_id, table.exercise_id),
 ]);
+
+// ─── Advanced Set Segments (BLD-1168) ─────────────────────────────────────
+// One row per mini-set within a rest-pause / cluster / myo-reps parent set.
+// FK ON DELETE CASCADE ensures orphan-free cleanup when the parent set is deleted.
+// PRAGMA foreign_keys=ON is enforced per BLD-1094.
+
+export const workoutSetSegments = sqliteTable("workout_set_segments", {
+  id: text("id").primaryKey(),
+  set_id: text("set_id").notNull(),               // FK → workout_sets.id ON DELETE CASCADE
+  segment_number: integer("segment_number").notNull(),   // 1-based, ordered within parent
+  reps: integer("reps").notNull(),
+  weight: real("weight"),                          // NULL = inherit from parent workout_sets.weight
+  rest_after_seconds: integer("rest_after_seconds"), // actual intra-mini-set rest taken
+  completed_at: integer("completed_at"),
+  created_at: integer("created_at").notNull(),
+}, (t) => [
+  uniqueIndex("uq_set_segments_set_seg").on(t.set_id, t.segment_number),
+  index("idx_set_segments_set").on(t.set_id),
+]);
+
+export type WorkoutSetSegmentRow = typeof workoutSetSegments.$inferSelect;
 
 // ─── Form Check Videos (BLD-1092) ─────────────────────────────────────────
 // One video clip per completed working set (uniqueness enforced by uq_set_media_set_id).

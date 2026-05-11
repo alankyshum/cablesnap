@@ -4,7 +4,7 @@ import * as SQLite from "expo-sqlite";
 // Defense-in-depth: validate before interpolation to prevent accidental SQL injection.
 const VALID_TABLES = new Set([
   "exercises", "workout_templates", "template_exercises",
-  "workout_sessions", "workout_sets", "food_entries", "daily_log",
+  "workout_sessions", "workout_sets", "workout_set_segments", "food_entries", "daily_log",
   "macro_targets", "error_log", "body_weight", "body_measurements",
   "body_settings", "programs", "program_days", "program_log",
   "interaction_log", "progress_photos", "achievements_earned",
@@ -400,6 +400,22 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
     -- version without gym_id) raises "no such column: gym_id" and aborts the
     -- entire migration. The index is created in migrations.ts Phase 3 (after
     -- addColumnIfMissing in Phase 2 guarantees the column exists).
+
+    -- BLD-1168: advanced set segments table.
+    -- Each row is one mini-set within a rest-pause / cluster / myo-reps parent set.
+    -- FK ON DELETE CASCADE ensures orphan-free cleanup; enforced by PRAGMA foreign_keys=ON (BLD-1094).
+    CREATE TABLE IF NOT EXISTS workout_set_segments (
+      id TEXT PRIMARY KEY,
+      set_id TEXT NOT NULL REFERENCES workout_sets(id) ON DELETE CASCADE,
+      segment_number INTEGER NOT NULL,
+      reps INTEGER NOT NULL,
+      weight REAL,
+      rest_after_seconds INTEGER,
+      completed_at INTEGER,
+      created_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_set_segments_set_seg ON workout_set_segments(set_id, segment_number);
+    CREATE INDEX IF NOT EXISTS idx_set_segments_set ON workout_set_segments(set_id);
   `);
 }
 

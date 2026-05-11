@@ -292,15 +292,33 @@ export type WorkoutSession = {
   day_session_date?: string | null;
 };
 
-export type SetType = "normal" | "warmup" | "dropset" | "failure";
+export type SetType = "normal" | "warmup" | "dropset" | "failure" | "rest_pause" | "cluster" | "myo_reps";
 
 export const SET_TYPE_CYCLE: SetType[] = ["normal", "warmup", "dropset", "failure"];
+
+/** BLD-1168: one ordered mini-set within a rest-pause / cluster / myo-reps parent set. */
+export type SetSegment = {
+  id: string;
+  set_id: string;
+  segment_number: number;
+  reps: number;
+  /** NULL = inherit weight from parent workout_sets row. */
+  weight?: number | null;
+  /** Actual intra-mini-set rest taken, in seconds. */
+  rest_after_seconds?: number | null;
+  completed_at?: number | null;
+  created_at: number;
+};
 
 export const SET_TYPE_LABELS: Record<SetType, { label: string; short: string }> = {
   normal: { label: "Normal", short: "" },
   warmup: { label: "Warm-up", short: "W" },
   dropset: { label: "Dropset", short: "D" },
   failure: { label: "Failure", short: "F" },
+  // BLD-1168: advanced set schemes — display-only; UI added in Slice 6.
+  rest_pause: { label: "Rest-pause", short: "RP" },
+  cluster: { label: "Cluster", short: "CL" },
+  myo_reps: { label: "Myo-reps", short: "MR" },
 };
 
 export type WorkoutSet = {
@@ -335,6 +353,9 @@ export type WorkoutSet = {
   stack_unit_at_log?: string | null;
   stack_name_at_log?: string | null;
   pulley_pin?: number | null;
+  // BLD-1168: cached aggregate columns populated by recomputeSetCaches(). DEFAULT 0.
+  cached_volume_kg?: number;
+  cached_e1rm_kg?: number;
 };
 
 export type LinkedGroup = {

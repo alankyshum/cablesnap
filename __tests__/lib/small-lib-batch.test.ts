@@ -119,9 +119,12 @@ describe("REST_MULTIPLIERS v1 snapshot", () => {
   it("set-type multipliers are frozen", () => {
     expect(REST_MULTIPLIERS.setType).toMatchInlineSnapshot(`
 {
+  "cluster": 0.5,
   "dropset": 0.1,
   "failure": 1.3,
+  "myo_reps": 0.1,
   "normal": 1,
+  "rest_pause": 0.15,
   "warmup": 0.3,
 }
 `);
