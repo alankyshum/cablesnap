@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-const templateSetTypeSchema = z.enum(["normal", "warmup", "dropset", "failure"]);
+// BLD-1168: extended with rest_pause, cluster, myo_reps.
+const templateSetTypeSchema = z.enum(["normal", "warmup", "dropset", "failure", "rest_pause", "cluster", "myo_reps"]);
 const templateSourceSchema = z.enum(["coach"]);
 
 const exerciseImportSchema = z.object({

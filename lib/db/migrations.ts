@@ -167,6 +167,12 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "workout_sets", "stack_name_at_log", "TEXT DEFAULT NULL");
   // BLD-1114: per-set pulley pin (Setup Snapshot).
   await addColumnIfMissing(database, "workout_sets", "pulley_pin", "INTEGER DEFAULT NULL");
+  // BLD-1168: cached aggregate columns for advanced set scheme analytics.
+  // DEFAULT 0 so reads on pre-backfill rows see 0 not NULL. The one-time
+  // backfill in Phase 3 populates correct values for all existing rows.
+  // addColumnIfMissing is idempotent — safe to call on every boot.
+  await addColumnIfMissing(database, "workout_sets", "cached_volume_kg", "REAL NOT NULL DEFAULT 0");
+  await addColumnIfMissing(database, "workout_sets", "cached_e1rm_kg", "REAL NOT NULL DEFAULT 0");
 
   // workout_sets.set_type migration (replaces deprecated is_warmup column).
   // Kept as a single block: the UPDATEs only reference set_type (just added)
@@ -236,6 +242,28 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     SET set_number = (SELECT rn FROM renumbered WHERE renumbered.id = workout_sets.id)
     WHERE id IN (SELECT id FROM renumbered WHERE rn != workout_sets.set_number)
   `);
+
+  // BLD-1168: one-time backfill of cached_volume_kg and cached_e1rm_kg for legacy rows.
+  // Pre-migration rows have no segments so parent.weight × parent.reps is the correct formula.
+  // Uses 30.0 (float literal) to prevent SQLite integer division truncation.
+  // Idempotent: rows that already have correct cached values are re-written to the same value.
+  // Guard: only runs if the column was just added OR values are still at the default 0.
+  // Non-advanced sets that genuinely have reps=0 or weight=NULL are unaffected (WHERE guard).
+  try {
+    await database.execAsync(`
+      UPDATE workout_sets
+      SET cached_volume_kg = weight * reps,
+          cached_e1rm_kg   = weight * (1.0 + reps / 30.0)
+      WHERE weight IS NOT NULL
+        AND reps IS NOT NULL
+        AND reps > 0
+        AND cached_volume_kg = 0
+        AND cached_e1rm_kg = 0
+    `);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration: cached_volume_kg/cached_e1rm_kg backfill failed: ${msg}`, { cause: err });
+  }
 
   // BLD-1086 Phase 0b: Composite index for per-variant PR aggregation.
   // Covers (exercise_id, attachment, mount_position, grip_type, completed_at)
