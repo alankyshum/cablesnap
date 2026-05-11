@@ -251,6 +251,10 @@ export function startCoach(tempo: string, options: CoachOptions): CoachSession |
    * Schedule all haptics for repIndex using absolute offsets from sessionStartTime.
    * This prevents per-rep drift accumulation: each boundary fires at exactly
    * sessionStartTime + repIndex * repDurationMs ± JS event-loop jitter (AC4).
+   *
+   * Each scheduled callback checks its own lateness against the 250ms cap: if the
+   * event loop was delayed more than 250ms past the expected fire time the tick is
+   * skipped (not fired as a catch-up burst) to honour AC4's latency contract.
    */
   function scheduleRep(repIndex: number, reduceMotion: boolean): void {
     if (cancelled) return;
@@ -258,20 +262,31 @@ export function startCoach(tempo: string, options: CoachOptions): CoachSession |
     const repStartOffset = repIndex * repDurationMs;
 
     for (const offset of singleTickOffsets) {
-      const delay = Math.max(0, repStartOffset + offset - elapsed);
+      const expectedMs = repStartOffset + offset;
+      const delay = Math.max(0, expectedMs - elapsed);
       timers.push(
         setTimeout(() => {
           if (cancelled) return;
+          // Skip if JS event loop delivered this tick more than 250ms late (AC4 drift cap).
+          if (Date.now() - sessionStartTime - expectedMs > 250) return;
           fireHaptic(reduceMotion, phaseAtOffset(offset, parsed));
         }, delay)
       );
     }
 
     // Rep boundary: double-tick (two haptics 80ms apart) then schedule next rep.
-    const boundaryDelay = Math.max(0, repStartOffset + boundaryOffset - elapsed);
+    const boundaryExpectedMs = repStartOffset + boundaryOffset;
+    const boundaryDelay = Math.max(0, boundaryExpectedMs - elapsed);
     timers.push(
       setTimeout(() => {
         if (cancelled) return;
+        // Skip boundary burst if the outer callback fired >250ms late.
+        const boundaryLate = Date.now() - sessionStartTime - boundaryExpectedMs;
+        if (boundaryLate > 250) {
+          // Even if we skip the double-tick, still schedule the next rep.
+          timers.push(setTimeout(() => { if (!cancelled) scheduleRep(repIndex + 1, reduceMotion); }, 81));
+          return;
+        }
         timers.push(
           setTimeout(() => {
             if (cancelled) return;

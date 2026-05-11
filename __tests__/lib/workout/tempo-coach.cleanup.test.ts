@@ -39,6 +39,7 @@ describe("AC12 — no orphan timers after cancel", () => {
     const session = startCoach("3-1-2-0", {});
     await Promise.resolve();
     session!.cancel();
+    expect(jest.getTimerCount()).toBe(0);
     jest.advanceTimersByTime(10000);
     expect(jest.mocked(Haptics.selectionAsync)).not.toHaveBeenCalled();
   });
@@ -51,6 +52,7 @@ describe("AC12 — no orphan timers after cancel", () => {
     jest.advanceTimersByTime(1000);
     const countBeforeCancel = jest.mocked(Haptics.selectionAsync).mock.calls.length;
     session!.cancel();
+    expect(jest.getTimerCount()).toBe(0);
     jest.advanceTimersByTime(10000);
 
     // No additional haptics after cancel
@@ -73,6 +75,7 @@ describe("AC12 — no orphan timers after cancel", () => {
     const countBeforeCancel = jest.mocked(Haptics.selectionAsync).mock.calls.length;
 
     emitSetCompleted();
+    expect(jest.getTimerCount()).toBe(0);
     jest.advanceTimersByTime(20000); // advance well past any pending rep timers
 
     // No additional selectionAsync haptics — all timer handles were cleared on cancel
@@ -87,6 +90,7 @@ describe("AC12 — no orphan timers after cancel", () => {
     const countBeforeCancel = jest.mocked(Haptics.selectionAsync).mock.calls.length;
 
     session!.cancel("unmount");
+    expect(jest.getTimerCount()).toBe(0);
     jest.advanceTimersByTime(20000);
 
     expect(jest.mocked(Haptics.selectionAsync)).toHaveBeenCalledTimes(countBeforeCancel);
