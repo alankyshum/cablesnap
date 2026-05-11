@@ -573,3 +573,66 @@ describe("BLD-1059 — migrate() idempotency", () => {
     expect(count(raw, "workout_sets")).toBe(3);
   });
 });
+
+// ── BLD-1158: default_tempo migration tests (AC10) ─────────────────────────
+
+describe("BLD-1158 AC10 — default_tempo column migration", () => {
+  it("adds default_tempo to exercises on upgrade from pre-BLD-1158 schema", async () => {
+    const raw = createDb();
+    buildPreBld1059Schema(raw);
+    insertLegacyData(raw);
+    const db = wrapDb(raw);
+
+    await migrate(db as never);
+
+    expect(columnExists(raw, "exercises", "default_tempo")).toBe(true);
+  });
+
+  it("default_tempo column is NULL on legacy exercises after upgrade", async () => {
+    const raw = createDb();
+    buildPreBld1059Schema(raw);
+    insertLegacyData(raw);
+    const db = wrapDb(raw);
+
+    await migrate(db as never);
+
+    const rows = raw.prepare("SELECT default_tempo FROM exercises").all() as { default_tempo: string | null }[];
+    // All pre-existing exercises should have NULL default_tempo (no data corruption).
+    for (const row of rows) {
+      expect(row.default_tempo).toBeNull();
+    }
+  });
+
+  it("creates default_tempo column on fresh install", async () => {
+    const raw = createDb();
+    const db = wrapDb(raw);
+
+    await migrate(db as never);
+
+    expect(columnExists(raw, "exercises", "default_tempo")).toBe(true);
+  });
+
+  it("default_tempo is writable after migration", async () => {
+    const raw = createDb();
+    buildPreBld1059Schema(raw);
+    insertLegacyData(raw);
+    const db = wrapDb(raw);
+
+    await migrate(db as never);
+
+    // Insert a row and set default_tempo — should not throw.
+    const id = "test-ex-dt-" + Math.random().toString(36).slice(2);
+    raw.prepare(
+      "INSERT INTO exercises (id, name, is_custom) VALUES (?, ?, 1)"
+    ).run(id, "Test Tempo Exercise");
+    raw.prepare(
+      "UPDATE exercises SET default_tempo = ? WHERE id = ?"
+    ).run("3-1-2-0", id);
+
+    const row = raw.prepare(
+      "SELECT default_tempo FROM exercises WHERE id = ?"
+    ).get(id) as { default_tempo: string } | undefined;
+
+    expect(row?.default_tempo).toBe("3-1-2-0");
+  });
+});

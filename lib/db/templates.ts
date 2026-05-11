@@ -25,6 +25,8 @@ export type InitialSetSeed = {
   round: number | null;
   exercisePosition: number;
   setType?: SetType;
+  // BLD-1158: exercise default tempo for AC1.3 inheritance.
+  exerciseDefaultTempo?: string | null;
 };
 
 export function normalizeTemplateSetTypes(setTypes: SetType[] | undefined, targetSets: number): SetType[] {
@@ -63,6 +65,7 @@ export function buildInitialSetsFromTemplate(
 ): InitialSetSeed[] {
   const out: InitialSetSeed[] = [];
   for (const te of template.exercises ?? []) {
+    const isDurationMode = (te.target_duration_seconds ?? null) != null;
     for (let i = 1; i <= te.target_sets; i++) {
       out.push({
         sessionId,
@@ -72,6 +75,9 @@ export function buildInitialSetsFromTemplate(
         round: te.link_id ? i : null,
         exercisePosition: te.position,
         setType: normalizeTemplateSetTypes(te.set_types, te.target_sets)[i - 1] ?? "normal",
+        // AC1.3: pass exercise default tempo for batch insert to use as fallback.
+        // Duration-mode exercises must not get tempo (AC1.6).
+        exerciseDefaultTempo: isDurationMode ? null : (te.exercise?.default_tempo ?? null),
       });
     }
   }
@@ -135,6 +141,7 @@ export async function getTemplateById(
       exercise_end_image_uri: exercises.end_image_uri,
       exercise_progression_group: exercises.progression_group,
       exercise_progression_order: exercises.progression_order,
+      exercise_default_tempo: exercises.default_tempo,
     })
     .from(templateExercises)
     .leftJoin(exercises, eq(templateExercises.exercise_id, exercises.id))
@@ -176,6 +183,7 @@ export async function getTemplateById(
           notes_backfill_dismissed_at: null,
           user_rest_seconds: null,
           max_pulley_pins: null,
+          default_tempo: r.exercise_default_tempo ?? null,
         })
       : undefined,
   }));

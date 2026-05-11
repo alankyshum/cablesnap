@@ -37,4 +37,7 @@ export type ExerciseGroup = {
   pinnedNote?: string | null;
   /** Backfill candidate from workout_sets.notes; null when dismissed or absent. */
   pinnedNoteBackfill?: { text: string; date: number } | null;
+  // BLD-1158: exercise-level default tempo (E-B-C-T canonical). Used by
+  // addSet/addSetsBatch to inherit tempo on new sets (AC1.1).
+  defaultTempo?: string | null;
 };

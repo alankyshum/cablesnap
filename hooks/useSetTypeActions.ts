@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { useToast } from "@/components/ui/bna-toast";
 import {
   updateSetType,
+  updateSetTempo,
   getAppSetting,
   setAppSetting,
 } from "../lib/db";
@@ -78,11 +79,23 @@ export function useSetTypeActions({ setGroups }: UseSetTypeActionsArgs) {
     Haptics.selectionAsync();
   }, [setTypeSheetSetId]);
 
+  // BLD-1158: save tempo for a specific set (called from SetOptionsSheet).
+  const handleSaveTempo = useCallback(async (setId: string, tempo: string | null) => {
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        sets: g.sets.map((s) => s.id === setId ? { ...s, tempo } : s),
+      }))
+    );
+    await updateSetTempo(setId, tempo);
+  }, []);
+
   return {
     setTypeSheetSetId,
     setSetTypeSheetSetId,
     handleCycleSetType,
     handleLongPressSetType,
     handleSelectSetType,
+    handleSaveTempo,
   };
 }

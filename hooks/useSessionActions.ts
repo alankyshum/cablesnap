@@ -563,7 +563,9 @@ export function useSessionActions({
   const handleAddSet = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
     const num = (group?.sets.length ?? 0) + 1;
-    const newSet = await addSet(id!, exerciseId, num, null, null, null, undefined, undefined, group?.exercise_position ?? 0);
+    // AC1.1 / AC1.6: pass exerciseDefaultTempo for rep-mode groups; null for duration groups.
+    const exerciseDefaultTempo = group?.trackingMode === "duration" ? null : (group?.defaultTempo ?? null);
+    const newSet = await addSet(id!, exerciseId, num, null, null, null, undefined, undefined, group?.exercise_position ?? 0, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, exerciseDefaultTempo);
 
     // BLD-541: smart-default the bodyweight modifier from the last session's
     // most-recent completed set. Only runs for bodyweight groups. Persisted

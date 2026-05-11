@@ -45,6 +45,8 @@ export function useExerciseForm({ initial, onSave, title }: UseExerciseFormParam
     new Set(initial?.secondary_muscles ?? [])
   );
   const [instructions, setInstructions] = useState(initial?.instructions ?? "");
+  // BLD-1158: exercise-level default tempo (AC1.1 / AC8).
+  const [defaultTempo, setDefaultTempo] = useState<string | null>(initial?.default_tempo ?? null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; category?: string; muscles?: string }>({});
@@ -140,13 +142,14 @@ export function useExerciseForm({ initial, onSave, title }: UseExerciseFormParam
         primary_muscles: Array.from(primary),
         secondary_muscles: Array.from(secondary),
         instructions: instructions.trim(),
+        default_tempo: defaultTempo,
       });
     } catch {
       toast.error("Failed to save exercise");
     } finally {
       setSaving(false);
     }
-  }, [validate, onSave, name, category, equipment, difficulty, primary, secondary, instructions, toast]);
+  }, [validate, onSave, name, category, equipment, difficulty, primary, secondary, instructions, defaultTempo, toast]);
 
   const back = useCallback(() => {
     if (dirty) {
@@ -175,6 +178,9 @@ export function useExerciseForm({ initial, onSave, title }: UseExerciseFormParam
     setSecondary,
     instructions,
     setInstructions,
+    // BLD-1158: exercise-level default tempo
+    defaultTempo,
+    setDefaultTempo,
     saving,
     dirty,
     setDirty,

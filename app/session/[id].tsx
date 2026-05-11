@@ -29,7 +29,7 @@ import { useSessionTimer } from "../../hooks/useSessionTimer";
 import { usePRCelebration } from "../../hooks/usePRCelebration";
 import { ExerciseGroupCard } from "../../components/session/ExerciseGroupCard";
 import { ExerciseDetailDrawerContent } from "../../components/session/ExerciseDetailDrawer";
-import { SetTypeSheet } from "../../components/session/SetTypeSheet";
+import { SetOptionsSheet } from "../../components/session/SetOptionsSheet";
 import { SessionListHeader } from "../../components/session/SessionListHeader";
 import { SessionListFooter } from "../../components/session/SessionListFooter";
 import { SessionToolboxSheet } from "../../components/session/SessionToolboxSheet";
@@ -124,7 +124,7 @@ export default function ActiveSession() {
 
   const {
     setTypeSheetSetId, setSetTypeSheetSetId,
-    handleCycleSetType, handleLongPressSetType, handleSelectSetType,
+    handleCycleSetType, handleLongPressSetType, handleSelectSetType, handleSaveTempo,
   } = useSetTypeActions({ groups, setGroups });
 
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
@@ -385,7 +385,10 @@ export default function ActiveSession() {
         warmupSets,
         group?.link_id,
         group?.sets[0]?.tempo,
-        group?.exercise_position ?? 0
+        group?.exercise_position ?? 0,
+        // AC1.4: inherit exercise default tempo for rep-mode warmup sets.
+        // Duration exercises are not warmup-eligible in this path.
+        group?.trackingMode === "duration" ? null : group?.defaultTempo ?? null,
       );
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await load();
@@ -516,10 +519,12 @@ export default function ActiveSession() {
       />
       </KeyboardAvoidingView>
       {!!setTypeSheetSetId && (
-        <SetTypeSheet
+        <SetOptionsSheet
           setId={setTypeSheetSetId}
+          currentTempo={groups.flatMap(g => g.sets).find(s => s.id === setTypeSheetSetId)?.tempo ?? null}
           groups={groups}
-          onSelect={handleSelectSetType}
+          onSelectType={handleSelectSetType}
+          onSaveTempo={handleSaveTempo}
           onDismiss={() => setSetTypeSheetSetId(null)}
         />
       )}

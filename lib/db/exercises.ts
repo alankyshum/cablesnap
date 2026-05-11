@@ -131,6 +131,8 @@ export async function updateCustomExercise(
   if (exercise.equipment !== undefined) updates.equipment = exercise.equipment;
   if (exercise.instructions !== undefined) updates.instructions = exercise.instructions;
   if (exercise.difficulty !== undefined) updates.difficulty = exercise.difficulty;
+  // BLD-1158: include default_tempo when provided (null = clear; undefined = no-op).
+  if ("default_tempo" in exercise) updates.default_tempo = exercise.default_tempo ?? null;
   if (Object.keys(updates).length === 0) return;
 
   const db = await getDrizzle();

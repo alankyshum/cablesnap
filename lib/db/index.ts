@@ -215,12 +215,14 @@ export {
   getCSVCounts,
   getBodyWeightCSVData,
   getBodyMeasurementsCSVData,
+  getExercisesCSVData,
 } from "./csv";
 export type {
   WorkoutCSVRow,
   NutritionCSVRow,
   BodyWeightCSVRow,
   BodyMeasurementsCSVRow,
+  ExerciseCSVRow,
 } from "./csv";
 
 export {

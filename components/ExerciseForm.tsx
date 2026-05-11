@@ -25,6 +25,7 @@ import {
 } from "../lib/types";
 import { useExerciseForm } from "@/hooks/useExerciseForm";
 import { MuscleGroupPicker } from "@/components/exercise-form/MuscleGroupPicker";
+import { ExerciseDefaultTempoField } from "@/components/exercise/ExerciseDefaultTempoField";
 
 type Props = {
   initial?: Exercise;
@@ -49,6 +50,9 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
     setSecondary,
     instructions,
     setInstructions,
+    // BLD-1158: exercise-level default tempo
+    defaultTempo,
+    setDefaultTempo,
     saving,
     setDirty,
     errors,
@@ -262,6 +266,13 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
               rows={3}
               accessibilityLabel="Exercise instructions"
               containerStyle={styles.input}
+            />
+
+            {/* BLD-1158: Default Tempo — AC8 primary discoverability path */}
+            <ExerciseDefaultTempoField
+              exerciseId={initial?.id ?? ""}
+              currentTempo={defaultTempo}
+              onSave={(canonical) => { setDefaultTempo(canonical); setDirty(true); }}
             />
 
             {/* Save / Cancel */}

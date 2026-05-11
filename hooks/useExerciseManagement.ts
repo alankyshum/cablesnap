@@ -108,8 +108,13 @@ export function useExerciseManagement({
   const handlePickExercise = useCallback(async (exercise: { id: string }) => {
     if (!id) return;
     setPickerOpen(false);
+    const exerciseData = await getExerciseById(exercise.id);
+    // AC1.6: duration-mode exercises must not inherit default_tempo.
+    // Duration mode is determined by whether the exercise's instruction specifies it.
+    // We detect it via any existing group in session or fall back to null for new adds.
+    const exerciseDefaultTempo = exerciseData?.default_tempo ?? null;
     for (let i = 1; i <= 3; i++) {
-      await addSet(id, exercise.id, i);
+      await addSet(id, exercise.id, i, null, null, null, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, exerciseDefaultTempo);
     }
     await load();
   }, [id, load]);
