@@ -57,7 +57,7 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
     ),
     queryOne<{ volume: number }>(
       `SELECT COALESCE(MAX(sv.volume), 0) AS volume FROM (
-        SELECT ws.session_id, SUM(ws.weight * ws.reps) AS volume
+        SELECT ws.session_id, SUM(ws.cached_volume_kg) AS volume
         FROM workout_sets ws
         JOIN workout_sessions wss ON ws.session_id = wss.id
         WHERE ws.completed = 1
@@ -69,7 +69,7 @@ export async function buildAchievementContext(): Promise<AchievementContext> {
       ) sv`
     ),
     queryOne<{ volume: number }>(
-      `SELECT COALESCE(SUM(ws.weight * ws.reps), 0) AS volume
+      `SELECT COALESCE(SUM(ws.cached_volume_kg), 0) AS volume
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1

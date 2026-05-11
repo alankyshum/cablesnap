@@ -56,7 +56,7 @@ export async function getExerciseHistory(
       max_reps: max(workoutSets.reps),
       total_reps: sum(workoutSets.reps),
       set_count: count(workoutSets.id),
-      volume: sql<number>`SUM(${workoutSets.weight} * ${workoutSets.reps})`,
+      volume: sql<number>`SUM(${workoutSets.cached_volume_kg})`,
       avg_rpe: sql<number | null>`AVG(CASE WHEN ${workoutSets.rpe} IS NOT NULL THEN ${workoutSets.rpe} END)`,
       max_modifier: sql<number | null>`MAX(${workoutSets.bodyweight_modifier_kg})`,
     })
@@ -179,7 +179,7 @@ export async function getExerciseRecords(
   const [vol, rm, weighted, bwBests] = await Promise.all([
     queryOne<{ val: number | null }>(
       `SELECT MAX(sv) AS val FROM (
-         SELECT SUM(ws.weight * ws.reps) AS sv
+         SELECT SUM(ws.cached_volume_kg) AS sv
          FROM workout_sets ws
          JOIN workout_sessions wss ON ws.session_id = wss.id
          WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND wss.completed_at IS NOT NULL${variantSql.sql}
@@ -189,10 +189,10 @@ export async function getExerciseRecords(
     ),
 
     queryOne<{ val: number | null }>(
-      `SELECT MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS val
+      `SELECT MAX(ws.cached_e1rm_kg) AS val
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
-       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL${variantSql.sql}`,
+       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND ws.cached_e1rm_kg > 0 AND (ws.reps <= 12 OR ws.set_type IN ('rest_pause', 'cluster', 'myo_reps')) AND wss.completed_at IS NOT NULL${variantSql.sql}`,
       [exerciseId, ...variantSql.params]
     ),
 
@@ -244,7 +244,7 @@ export async function getExercise1RMChartData(
   return query<{ date: number; value: number }>(
     `SELECT * FROM (
        SELECT wss.started_at AS date,
-              MAX(ws.weight * (1 + ws.reps / 30.0)) AS value
+              MAX(ws.cached_e1rm_kg) AS value
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.exercise_id = ?
@@ -485,14 +485,13 @@ export async function getBestSet(
         eq(workoutSets.exercise_id, exerciseId),
         eq(workoutSets.completed, 1),
         ne(workoutSets.set_type, 'warmup'),
-        sql`${workoutSets.weight} > 0`,
-        sql`${workoutSets.reps} > 0`,
-        sql`${workoutSets.reps} <= 12`,
+        sql`${workoutSets.cached_e1rm_kg} > 0`,
+        sql`(${workoutSets.reps} <= 12 OR ${workoutSets.set_type} IN ('rest_pause', 'cluster', 'myo_reps'))`,
         isNotNull(workoutSessions.completed_at),
         ...variantConds
       )
     )
-    .orderBy(sql`${workoutSets.weight} * (1.0 + ${workoutSets.reps} / 30.0) DESC`)
+    .orderBy(sql`${workoutSets.cached_e1rm_kg} DESC`)
     .limit(1);
 
   if (rows.length === 0) return null;
