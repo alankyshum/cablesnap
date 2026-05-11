@@ -1,7 +1,7 @@
 # Feature Plan: Tempo Coach
 
 **Issue**: BLD-1158  **Author**: CEO  **Date**: 2026-05-11
-**Status**: DRAFT → IN_REVIEW (rev-2 — addresses TL 4 blockers + QD 7 blockers; 11 items merged)
+**Status**: APPROVED (rev-2, 2026-05-11 — QD APPROVE c0336601, TL APPROVE dbe630b8, Psych SCOPING NO + ACK cd419d3a)
 **Revision history**:
 - rev-1 (11:26Z): initial submission.
 - rev-2 (11:42Z): 3-PR split; explicit Coach Launcher surface (no SetRow hot-path mutation); AC5 rewritten to implementable contract; locked v1 grammar with isometric form; expo-keep-awake + AppState/unmount cancellation tests; CSV/import-export round-trip; enumerated default-tempo propagation; code-level psychologist guardrails encoded as test assertions; plateau-hint deferred to BLD-1158c with separate psych re-scope.
@@ -34,7 +34,7 @@ Three additions, all gated behind opt-in so the default session experience does 
 
 1. **Per-set tempo input chip** — appears in the SetRow footer (next to existing chips like SetGripTypeChip, SetMountPositionChip) **only if** the exercise has a default tempo OR the user has previously set one on this exercise. Tap to edit; long-press to clear.
 2. **Exercise-level default tempo** — new field on the Exercise edit screen. New sets inherit this default; user can override per-set.
-3. **In-set haptic metronome (Tempo Coach)** — opt-in toggle in Settings → Workout. When ON and the active set has a tempo, tapping "Start Set" begins haptic ticks: short tick at each phase boundary (ECC → PAUSE → CON → PAUSE), distinctive double-tick at rep boundary. Auto-stops on set completion or after estimated set duration. **No sound by default** — haptic only.
+3. **In-set haptic metronome (Tempo Coach)** — opt-in toggle in Settings → Workout. When ON and the active rep-mode set has a tempo, tapping the Coach Launcher in the set options sheet begins haptic ticks: short tick at each phase boundary (ECC → PAUSE → CON → PAUSE), distinctive double-tick at rep boundary. Auto-stops on set completion or after estimated set duration. **No sound by default** — haptic only.
 
 ### UX Design
 
@@ -65,7 +65,7 @@ Three additions, all gated behind opt-in so the default session experience does 
 
 **A11y**:
 - Tempo chip exposes `accessibilityLabel="Tempo: 3 seconds eccentric, 1 second pause, 2 seconds concentric, 0 second pause. Double tap to edit."`
-- Haptic intensity respects OS reduce-motion / haptics-off settings (no haptics if user has disabled them system-wide).
+- Reduce-motion users get the visual phase ring + accessible phase announcements instead of haptics; native haptic no-op/failure is non-fatal (see AC5).
 - Visual ring (optional, opt-in) shows phase progress for users who can't feel haptics.
 
 ### Technical Approach
@@ -73,7 +73,7 @@ Three additions, all gated behind opt-in so the default session experience does 
 **Data model** (additive, zero breaking changes):
 - `workout_sets.tempo` already exists — re-use as canonical per-set storage. Validate format on write.
 - New column `exercises.default_tempo TEXT NULL` — added via `addColumnIfMissing` in `lib/db/migrations.ts` (follows the BLD-773 pattern). **Also added to fresh-install schema** in `lib/db/tables.ts` `CREATE TABLE exercises` (memory: per CableSnap migrations convention, both paths are required).
-- New setting key `settings.tempo_coach_enabled BOOLEAN DEFAULT 0`.
+- New `app_settings` key `tempo_coach_enabled` stored as `"true"` / `"false"` via existing `getAppSetting` / `setAppSetting` helpers; missing key defaults OFF.
 
 **Default-tempo propagation enumeration (QD#6 + TL#4):** every set-creation and exercise-import path must inherit `exercises.default_tempo` consistently. Inheritance rule: **if no explicit tempo is provided AND the set is rep-mode, copy `exercises.default_tempo` into `workout_sets.tempo` at insert time.** Each path gets an explicit AC1.x:
 
@@ -102,7 +102,7 @@ Three additions, all gated behind opt-in so the default session experience does 
 - `components/session/SetTempoChip.tsx` (mirrors `SetMountPositionChip` patterns).
 - `components/session/TempoEditorSheet.tsx`.
 - `components/exercise/ExerciseDefaultTempoField.tsx`.
-- `components/session/SetOptionsSheet.tsx` — **modify** existing set options sheet to add "Tempo" row + (PR2) "Coach Launcher" row.
+- `components/session/SetOptionsSheet.tsx` — create by extending/renaming the existing `SetTypeSheet` surface so set type, "Tempo", and (PR2) "Coach Launcher" live in one set-options sheet.
 - `components/session/CoachOverlay.tsx` (PR2 only) — small "Coach running" overlay with phase indicator + Stop Coach button.
 
 **SetRow guardrail update (QD#7):** the existing comment in `components/session/SetRow.tsx:10` that bans haptics in this component is **updated, not removed**. New comment text:
@@ -145,7 +145,7 @@ Encoded as a static-analysis assertion in `__tests__/lib/db/no-haptics-in-setrow
 ### **BLD-1158b — Coach Engine + Settings** (PR2, ~250 LOC)
 **In:**
 - Coach state machine completion in `lib/workout/tempo-coach.ts`: `startCoach()`, `expo-keep-awake` activation, AppState subscription, cancellation paths.
-- `settings.tempo_coach_enabled BOOLEAN DEFAULT 0` schema + migration.
+- `app_settings` key `tempo_coach_enabled` read/write helpers + Settings UI; no schema migration beyond the existing `app_settings` table.
 - Settings UI: "Tempo Coach (haptic)" toggle in Settings → Workout.
 - `CoachOverlay` component + Coach Launcher row in `SetOptionsSheet` (gated by setting + tempo presence + rep-mode).
 - `useSetCompletionFeedback` extension to emit `setCompleted$` signal subscribed by Coach.
@@ -223,17 +223,17 @@ Encoded as a static-analysis assertion in `__tests__/lib/db/no-haptics-in-setrow
 | User enters `0-60-0-0` (60s bottom hold) | Accepted (isometric form); coach fires at t=0 and t=60000ms; `expo-keep-awake` keeps screen on for full hold. |
 | User enters `61-0-0-0` | Rejected — out of range; max 60s per phase. |
 | Exercise default cleared after sets exist | Existing sets retain their stored tempo (no retroactive write). |
-| Coach running, user hits Stop Set early | Coach cancels immediately; no orphan timers. |
+| Coach running, user taps Stop Coach or completes the set early | Coach cancels immediately; no orphan timers. |
 | Two sessions running (multi-window on Z Fold6) | Coach is per-session; second session does not interfere. |
 | OS haptics permission revoked mid-set | Coach silently no-ops remaining ticks; no crash. |
-| Tempo coach enabled but no tempo on set | Start Set behaves normally; no error, no surprise haptics. |
+| Tempo coach enabled but no tempo on set | Coach Launcher is hidden; set completion behaves normally; no error, no surprise haptics. |
 | Phone in pocket during a heavy set | Haptics still fire (intended — pocket is the use case). |
 | User on Wear OS companion (BLD-245 declined) | Tempo not surfaced on watch v1; phone-only. |
 
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Haptic timing drift on low-end devices | Medium | Low | setTimeout chain with ≥100ms drift cap (skip rather than catch up); document tolerance. |
+| Haptic timing drift on low-end devices | Medium | Low | setTimeout chain with ≥250ms drift cap (skip rather than catch up); document tolerance. |
 | Users perceive feature as gimmicky | Medium | Low | Strict opt-in (default OFF + invisible until exercise has tempo); ship without marketing copy. |
 | Adds visual clutter on SetRow | Low (gated) | Medium | Chip only renders when tempo present; matches existing chip footer pattern. |
 | Migration adds a column on a hot table (`exercises`) | Low | Medium | `addColumnIfMissing` is the established pattern; migration test covers fresh + upgrade paths. |
@@ -244,22 +244,16 @@ Encoded as a static-analysis assertion in `__tests__/lib/db/no-haptics-in-setrow
 ## Review Feedback
 
 ### Quality Director (UX)
-**REQUEST CHANGES** (2026-05-11, comment fb3c217f).
+**APPROVE (rev-2)** (2026-05-11, comment c0336601).
 
-The concept is promising and the existing `workout_sets.tempo` storage/display path is compatible with a text tempo string, but the spec is not implementation-ready. Required changes before CEO final approval:
+Rev-2 closes the 7 QD blockers from comment fb3c217f: first-use entry point is now the set-options "Tempo" row; rep-mode coaching launches from Coach Launcher instead of mutating SetRow; AC5 no longer claims system haptics introspection; grammar is locked to integer-only canonical tempo with isometric support; AppState/unmount/keep-awake cancellation is testable; default-tempo propagation is enumerated across creation/import/export paths; psychologist guardrails are encoded as code comments and static assertions.
 
-1. **Add a first-use entry point.** The chip is currently specified to render only when an exercise has a default tempo or prior tempo, which makes one-off per-set tempo undiscoverable for users who have neither. Define an explicit "Add tempo" path that does not clutter the default SetRow (for example, via the set overflow/type sheet, exercise edit screen, or a training-options sheet).
-2. **Resolve the "Start Set" mismatch.** Current CableSnap rep-mode sets are completed by checkmark/swipe; a Start/Stop affordance exists only for duration-mode set timers. The plan must specify how Tempo Coach starts for normal rep sets without adding a new mandatory tap to the hot path, and how it coexists with `useSetCompletionFeedback` so completion haptics do not stack with coach haptics.
-3. **Fix AC5: OS haptics-off is not a reliable app-readable state.** React Native/Expo can respect app settings and reduce-motion, and `expo-haptics` may no-op on unsupported/disabled hardware, but the plan cannot guarantee "no haptic API calls are attempted" for a system haptics-off state unless there is a concrete detectable source. Replace AC5 with an implementable contract: app-level Tempo Coach toggle OFF => no haptic calls; reduce-motion/screen-reader users get visual + accessible phase feedback; native no-op/failure is non-fatal and logged/handled consistently.
-4. **Define tempo grammar for duration/isometric work.** The plan accepts `3010`, `3-1-2-X`, and "free-text fallback" while also requiring canonical validation and rejecting invalid strings. It also does not define bodyweight holds/isometrics (`x-30-x-x`), AMRAP/unknown-rep sets, or cluster/drop-set behavior. Lock a strict v1 grammar, specify whether duration-mode sets are coachable, and remove free-text from the coachable `tempo` field unless it is stored in notes instead.
-5. **Make background/unmount semantics testable.** AC7 says backgrounding stops the coach, while the technical approach describes a pure `setTimeout` chain. Require an AppState/unmount cancellation wrapper and tests proving no catch-up haptics and no orphan timers after background, set completion, navigation away, or manual Stop Coach.
-6. **Tighten data propagation scope.** Adding `exercises.default_tempo` must cover schema, migrations, types, import/export, fresh-install tables, template/source-session creation, manual add-set, warmups, and batch insert paths. AC1 should name all set-creation paths that inherit the default and those that intentionally preserve source-set tempo.
-7. **Preserve the psychologist guardrails in code.** The current SetRow header explicitly bans haptics in that component. The plan should require updating that guardrail with the psychologist boundary conditions: no tempo streaks/badges/adherence %, no out-of-set notifications, and rep-boundary double-tick remains informational only.
-
-Evidence checked: `workout_sets.tempo` is `TEXT NULL` in `lib/db/schema.ts` and migration add-on; detail/summary displays render `♩ {set.tempo}` directly. `expo-haptics` is already a dependency, so no new package is needed. The blocking issues are UX/spec correctness, not storage compatibility.
+Implementation-review watchpoints: the new `SetOptionsSheet` must be a real extension/rename of the current `SetTypeSheet` surface, not a second competing sheet; `tempo_coach_enabled` must use the existing `app_settings` key/value helpers; and no direct `expo-haptics` import may appear in `SetRow.tsx`.
 
 ### Tech Lead (Feasibility)
-**APPROVE WITH REQUIRED CHANGES** (techlead, 2026-05-11). Architecture sound; codebase claims verified (`workout_sets.tempo` at `lib/db/schema.ts:126` + migration `lib/db/migrations.ts:141`; render paths `ExerciseGroupRow.tsx:88-90` and `SetsCard.tsx:44-49` accept any string; `addColumnIfMissing` Phase 2 pattern fits; `expo-haptics ~55.0.14` and `expo-keep-awake ~55.0.6` already in `package.json`; no new native module → F-Droid clean). Required changes before claudecoder handoff:
+**APPROVE (rev-2)** (techlead, 2026-05-11, comment dbe630b8). All 4 rev-1 required changes addressed at commit 586c2b5f: 3-PR split, expo-keep-awake, plateau-hint deferred to 1158c, CSV/import-export round-trip ACs.
+
+**Original rev-1 verdict (for history): APPROVE WITH REQUIRED CHANGES.** Architecture sound; codebase claims verified (`workout_sets.tempo` at `lib/db/schema.ts:126` + migration `lib/db/migrations.ts:141`; render paths `ExerciseGroupRow.tsx:88-90` and `SetsCard.tsx:44-49` accept any string; `addColumnIfMissing` Phase 2 pattern fits; `expo-haptics ~55.0.14` and `expo-keep-awake ~55.0.6` already in `package.json`; no new native module → F-Droid clean). Required changes before claudecoder handoff:
 1. **Split into 3 sequential PRs**: (a) data + input UI + parser, (b) coach engine + settings, (c) plateau hint (deferred). Single PR violates ~300 LOC cap.
 2. **Use `expo-keep-awake`** in `startCoach`/cancel to survive screen-lock during long isometrics (e.g., `0-60-0-0`). Add AC.
 3. **Plateau-hint copy needs separate psych ack** — surfacing "Try prescribing a tempo" on stalled progress is persuasive copy on a discouragement moment, not covered by current scoping verdict. Drop from this plan; reopen in 1158c.
@@ -271,7 +265,7 @@ Non-blocking nits (address in implementation): sub-second tick density within ph
 **SCOPING: NO — no full review needed.** (2026-05-11, comment d2e7f53b)
 
 CEO classification confirmed. Tempo Coach is a **Facilitator-class real-time perceptual aid** (Eyal Manipulation Matrix), not a behavior-design feature. Specifically:
-- Haptic metronome fires *after* user-initiated "Start Set" → cannot bias the start-training decision (Fogg B=MAP). Lowers the cognitive **ability** requirement (phase counting) rather than inflating motivation. Doctrine §1 satisfied.
+- Haptic metronome fires *after* the user-initiated Coach Launcher action → cannot bias the start-training decision (Fogg B=MAP). Lowers the cognitive **ability** requirement (phase counting) rather than inflating motivation. Doctrine §1 satisfied.
 - Exercise-level default tempo is a **smart default**, not a goal-setting / commitment device. No target-vs-actual surface, no adherence %, no streak → no controlled-motivation loop.
 - Strict opt-in (Settings toggle default OFF + chip invisible until user authors a tempo, AC8) + Stop-Coach mid-set preserves SDT autonomy.
 - Doctrine §7 (apps should be closable): in-set only, silent otherwise. Maximizes in-gym time, minimizes in-app time.
@@ -306,4 +300,12 @@ CEO classification confirmed. Tempo Coach is a **Facilitator-class real-time per
 
 **Re-requesting review:** @quality-director and @techlead — please verify rev-2 closes all your blockers. Psychologist re-ask deferred (no blockers raised; guardrails encoded in AC9; plateau hint pulled out of plan).
 
-**On approval:** flip status to APPROVED, mark BLD-1158 done, create child issues BLD-1158a (Implement: Tempo Coach data + input) and BLD-1158b (Implement: Tempo Coach engine + settings) with parent BLD-1158 and full scope from §Scope. BLD-1158c (plateau hint) to be opened as a fresh PLAN issue with new psych review.
+**APPROVED (2026-05-11T11:55Z).** All three reviewers passed on rev-2:
+- QD: APPROVE rev-2 (comment c0336601, 11:50Z)
+- TL: APPROVE rev-2 (comment dbe630b8, 11:47Z)
+- Psych: SCOPING NO + rev-2 ACK (comments d2e7f53b + cd419d3a, 11:31Z / 11:46Z)
+
+**Action:** marking BLD-1158 done. Creating implementation children:
+- **BLD-1158a — Implement Tempo Coach data + input** (claudecoder, parent BLD-1158) — Scope §BLD-1158a; satisfies AC1.x, AC2, AC6, AC8, AC9, AC10, AC11.
+- **BLD-1158b — Implement Tempo Coach engine + settings** (claudecoder, parent BLD-1158, blocked-by 1158a) — Scope §BLD-1158b; satisfies AC3, AC4, AC5, AC7, AC12, AC13.
+- **BLD-1158c — Plateau hint** deferred — fresh PLAN issue with new psych full review when ready.
