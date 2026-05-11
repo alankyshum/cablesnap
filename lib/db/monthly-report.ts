@@ -318,13 +318,13 @@ async function getMonthlyMostImproved(
        prev.e1rm AS previous_e1rm
      FROM (
        SELECT ws.exercise_id,
-              MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174,
+              MAX(ws.cached_e1rm_kg) AS e1rm, /* BLD-1174 */
               COUNT(DISTINCT wss.id) AS session_count
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.cached_e1rm_kg > 0 -- BLD-1174
+         AND ws.cached_e1rm_kg > 0 /* BLD-1174 */
          AND wss.completed_at IS NOT NULL
          AND wss.started_at >= ? AND wss.started_at < ?
        GROUP BY ws.exercise_id
@@ -332,12 +332,12 @@ async function getMonthlyMostImproved(
      ) cur
      JOIN (
        SELECT ws.exercise_id,
-              MAX(ws.cached_e1rm_kg) AS e1rm -- BLD-1174
+              MAX(ws.cached_e1rm_kg) AS e1rm /* BLD-1174 */
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.cached_e1rm_kg > 0 -- BLD-1174
+         AND ws.cached_e1rm_kg > 0 /* BLD-1174 */
          AND wss.completed_at IS NOT NULL
          AND wss.started_at >= ? AND wss.started_at < ?
        GROUP BY ws.exercise_id

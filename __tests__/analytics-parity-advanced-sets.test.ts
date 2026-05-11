@@ -148,8 +148,8 @@ describe("BLD-1174 AC#268 — SQL analytics parity: cached columns produce corre
 
     // Insert a session
     db.exec(`
-      INSERT INTO workout_sessions (id, started_at, completed_at, duration_seconds, kind)
-      VALUES ('${SESSION_ID}', ${NOW - 3600_000}, ${NOW}, 3600, 'workout')
+      INSERT INTO workout_sessions (id, name, started_at, completed_at, duration_seconds, kind)
+      VALUES ('${SESSION_ID}', 'Test Session', ${NOW - 3600_000}, ${NOW}, 3600, 'workout')
     `);
 
     // Insert a sample exercise
@@ -169,18 +169,18 @@ describe("BLD-1174 AC#268 — SQL analytics parity: cached columns produce corre
       db.prepare(
         `INSERT INTO workout_sets
            (id, session_id, exercise_id, set_number, set_type, reps, weight,
-            cached_volume_kg, cached_e1rm_kg, completed, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,1,?)`
-      ).run(s.id, SESSION_ID, "ex1", i + 1, s.set_type, s.reps, s.weight, s.cv, s.ce, NOW);
+            cached_volume_kg, cached_e1rm_kg, completed)
+         VALUES (?,?,?,?,?,?,?,?,?,1)`
+      ).run(s.id, SESSION_ID, "ex1", i + 1, s.set_type, s.reps, s.weight, s.cv, s.ce);
     }
 
     // Also insert one warmup set (should be excluded from analytics)
     db.prepare(
       `INSERT INTO workout_sets
          (id, session_id, exercise_id, set_number, set_type, reps, weight,
-          cached_volume_kg, cached_e1rm_kg, completed, created_at)
-       VALUES ('set_wu', ?, 'ex1', 0, 'warmup', 5, 60, 300, 62, 1, ?)`
-    ).run(SESSION_ID, NOW);
+          cached_volume_kg, cached_e1rm_kg, completed)
+       VALUES ('set_wu', ?, 'ex1', 0, 'warmup', 5, 60, 300, 62, 1)`
+    ).run(SESSION_ID);
   });
 
   it("SUM(cached_volume_kg) excludes warmup and equals 1300+790+800=2890", async () => {

@@ -65,8 +65,8 @@ describe("BLD-1174 — legacy analytics parity: no regression on pre-BLD-1168 no
     await migrate(wdb as Parameters<typeof migrate>[0]);
 
     db.exec(`
-      INSERT INTO workout_sessions (id, started_at, completed_at, duration_seconds, kind)
-      VALUES ('${SESSION_ID}', ${NOW - 3600_000}, ${NOW}, 3600, 'workout')
+      INSERT INTO workout_sessions (id, name, started_at, completed_at, duration_seconds, kind)
+      VALUES ('${SESSION_ID}', 'Legacy Test Session', ${NOW - 3600_000}, ${NOW}, 3600, 'workout')
     `);
 
     db.prepare(
@@ -83,18 +83,18 @@ describe("BLD-1174 — legacy analytics parity: no regression on pre-BLD-1168 no
       db.prepare(
         `INSERT INTO workout_sets
            (id, session_id, exercise_id, set_number, set_type, reps, weight,
-            cached_volume_kg, cached_e1rm_kg, completed, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,1,?)`
-      ).run(s.id, SESSION_ID, "ex_legacy", i + 1, s.set_type, s.reps, s.weight, cv, ce, NOW);
+            cached_volume_kg, cached_e1rm_kg, completed)
+         VALUES (?,?,?,?,?,?,?,?,?,1)`
+      ).run(s.id, SESSION_ID, "ex_legacy", i + 1, s.set_type, s.reps, s.weight, cv, ce);
     }
 
     // Add a warmup set (must be excluded from all analytics)
     db.prepare(
       `INSERT INTO workout_sets
          (id, session_id, exercise_id, set_number, set_type, reps, weight,
-          cached_volume_kg, cached_e1rm_kg, completed, created_at)
-       VALUES ('l_wu', ?, 'ex_legacy', 0, 'warmup', 10, 40, 400, 41.33, 1, ?)`
-    ).run(SESSION_ID, NOW);
+          cached_volume_kg, cached_e1rm_kg, completed)
+       VALUES ('l_wu', ?, 'ex_legacy', 0, 'warmup', 10, 40, 400, 41.33, 1)`
+    ).run(SESSION_ID);
   });
 
   it("total volume (cached) matches legacy weight*reps sum", async () => {

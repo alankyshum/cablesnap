@@ -189,10 +189,10 @@ export async function getExerciseRecords(
     ),
 
     queryOne<{ val: number | null }>(
-      `SELECT MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS val
+      `SELECT MAX(ws.cached_e1rm_kg) AS val
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
-       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL${variantSql.sql}`,
+       WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.set_type != 'warmup' AND ws.cached_e1rm_kg > 0 AND wss.completed_at IS NOT NULL${variantSql.sql}`,
       [exerciseId, ...variantSql.params]
     ),
 
@@ -244,15 +244,12 @@ export async function getExercise1RMChartData(
   return query<{ date: number; value: number }>(
     `SELECT * FROM (
        SELECT wss.started_at AS date,
-              MAX(ws.weight * (1 + ws.reps / 30.0)) AS value
+              MAX(ws.cached_e1rm_kg) AS value
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.exercise_id = ?
          AND ws.completed = 1
-         AND ws.weight IS NOT NULL
-         AND ws.weight > 0
-         AND ws.reps IS NOT NULL
-         AND ws.reps > 0
+         AND ws.cached_e1rm_kg > 0
          AND ws.set_type != 'warmup'
          AND wss.completed_at IS NOT NULL${v.sql}
        GROUP BY wss.id
