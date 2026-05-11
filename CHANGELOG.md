@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.31 — 2026-05-11
+<!-- versionCode: 101 -->
+
 - **Settings cleanup**: Removed the Health Connect integration entry from Settings. The feature was never fully functional; removing it reduces permission surface and eliminates a confusing toggle for Android users.
 - **Database cleanup**: Removed the legacy `health_connect_sync_log` database table and its associated app_settings key on device upgrade. New installs are not affected.
 - **Smart Rest Coach (fix)**: Live countdown and scheduled rest notifications now correctly resume after the app is force-quit and reopened mid-rest on Android. Previously, OS-scheduled notifications could be lost on process kill; they are now re-scheduled on cold-start resume.
