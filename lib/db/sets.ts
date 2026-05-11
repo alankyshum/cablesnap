@@ -148,6 +148,97 @@ export async function recomputeSetCaches(setId: string): Promise<void> {
     .where(eq(workoutSets.id, setId));
 }
 
+// ─── Write-path: workout_sets mutations (BLD-1170) ──────────────────────────
+//
+// These are the ONLY functions outside of recomputeSetCaches() that may call
+// db.update(workoutSets) for columns that affect volume/e1rm computation
+// (weight, reps, set_type, cached_volume_kg, cached_e1rm_kg).
+//
+// Non-volume fields (notes, tempo, attachment, completed, rpe, etc.) may still
+// be updated directly in lib/db/session-sets.ts since they do not affect caches.
+
+/**
+ * Update weight and reps for a set, then recompute cached_volume_kg / cached_e1rm_kg.
+ * Use this instead of direct db.update(workoutSets) whenever weight or reps change.
+ */
+export async function updateSetWeightReps(
+  id: string,
+  weight: number | null,
+  reps: number | null,
+): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({ weight, reps }).where(eq(workoutSets.id, id));
+  await recomputeSetCaches(id);
+}
+
+/**
+ * Update reps only (weight unchanged), then recompute caches.
+ * Used by paths that need to change reps without touching weight (e.g. reps+duration combo).
+ */
+export async function updateSetRepsOnly(
+  id: string,
+  reps: number | null,
+): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({ reps }).where(eq(workoutSets.id, id));
+  await recomputeSetCaches(id);
+}
+
+/**
+ * Batch update weight+reps for multiple sets, recomputing caches for each.
+ * Runs all updates then all cache recomputations to minimise round-trips.
+ */
+export async function batchUpdateSetWeightReps(
+  updates: { id: string; weight: number | null; reps: number | null }[],
+): Promise<void> {
+  if (updates.length === 0) return;
+  const db = await getDrizzle();
+  for (const u of updates) {
+    await db.update(workoutSets).set({ weight: u.weight, reps: u.reps }).where(eq(workoutSets.id, u.id));
+  }
+  for (const u of updates) {
+    await recomputeSetCaches(u.id);
+  }
+}
+
+/**
+ * Update set_type, removing all segments if changing from an advanced type to a
+ * non-advanced type (segment data would no longer be valid). Recomputes caches.
+ */
+export async function updateSetTypeAndRecompute(
+  id: string,
+  newType: SetType,
+): Promise<void> {
+  const db = await getDrizzle();
+  // Advanced → non-advanced: delete segments so the set falls back to legacy formula.
+  if (!ADVANCED_SET_TYPES.has(newType)) {
+    await db.delete(workoutSetSegments).where(eq(workoutSetSegments.set_id, id));
+  }
+  await db.update(workoutSets).set({ set_type: newType }).where(eq(workoutSets.id, id));
+  await recomputeSetCaches(id);
+}
+
+/**
+ * Update weight plus additional non-volume fields in one SQL statement, then
+ * recompute caches. Used by stack-marker and manual-weight write paths that must
+ * atomically write weight + ancillary columns.
+ */
+export async function updateSetWeightAndFields(
+  id: string,
+  weight: number | null,
+  extraFields: Partial<{
+    reps: number | null;
+    stack_id: string | null;
+    stack_marker: number | null;
+    stack_name_at_log: string | null;
+    stack_unit_at_log: string | null;
+  }>,
+): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(workoutSets).set({ weight, ...extraFields }).where(eq(workoutSets.id, id));
+  await recomputeSetCaches(id);
+}
+
 // ─── Segment mutations ───────────────────────────────────────────────────────
 
 export type InsertSegmentParams = {
