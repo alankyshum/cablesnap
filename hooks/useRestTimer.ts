@@ -39,6 +39,13 @@ import {
 } from "../lib/notifications";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
 
+/**
+ * Interval between live countdown shade updates (ms).
+ * 15s is frequent enough for human perception during a rest and minimises
+ * shade churn vs the previous 5s cadence (BLD-1208).
+ */
+const LIVE_COUNTDOWN_TICK_MS = 15_000;
+
 export type SetContext = {
   exerciseId: string;
   sessionId: string;
@@ -262,9 +269,9 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
               return;
             }
             void presentLiveRestCountdown(remaining, effectivePreview, sessionId).catch(() => {});
-            liveCountdownIntervalRef.current = setTimeout(scheduleNext, 5000) as unknown as ReturnType<typeof setInterval>;
+            liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
           };
-          liveCountdownIntervalRef.current = setTimeout(scheduleNext, 5000) as unknown as ReturnType<typeof setInterval>;
+          liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
         }
       }
 

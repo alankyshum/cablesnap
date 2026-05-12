@@ -40,6 +40,12 @@ export const REST_ONGOING_CHANNEL = "rest-ongoing";
 export const REST_CUE_CHANNEL = "rest-cue";
 
 /**
+ * Android channel for the rest-complete notification.
+ * HIGH importance so Wear OS Companion bridges it to the watch (BLD-1208).
+ */
+export const REST_COMPLETE_CHANNEL = "rest-complete";
+
+/**
  * Preview of the next set to display on the lock screen.
  * null means no preview available (no next set, or preview disabled by user).
  */
@@ -118,7 +124,8 @@ function formatBodyWeighted(
 }
 
 /**
- * Register the two new Android notification channels for BLD-1137.
+ * Register Android notification channels for the Smart Rest Coach (BLD-1137/BLD-1208).
+ * Three channels: ongoing (LOW), cue (LOW), complete (HIGH — bridges to Wear OS).
  * Idempotent — safe to call on every cold start. No-op on iOS.
  */
 export async function ensureRestChannelsRegistered(): Promise<void> {
@@ -127,7 +134,7 @@ export async function ensureRestChannelsRegistered(): Promise<void> {
   if (!mod) return;
   try {
     if (typeof mod.setNotificationChannelAsync !== "function") return;
-    const AndroidImportance = mod.AndroidImportance ?? { LOW: 2 };
+    const AndroidImportance = mod.AndroidImportance ?? { LOW: 2, HIGH: 4 };
     await mod.setNotificationChannelAsync(REST_ONGOING_CHANNEL, {
       name: "Rest timer (ongoing)",
       importance: AndroidImportance.LOW ?? 2,
@@ -141,6 +148,16 @@ export async function ensureRestChannelsRegistered(): Promise<void> {
       sound: null,
       vibrationPattern: [],
       showBadge: false,
+    });
+    // HIGH importance required so Wear OS Companion bridges this to the watch (BLD-1208).
+    // rest-ongoing stays LOW (unobtrusive ticker — bridging to Wear would be obnoxious).
+    await mod.setNotificationChannelAsync(REST_COMPLETE_CHANNEL, {
+      name: "Rest complete",
+      importance: AndroidImportance.HIGH ?? 4,
+      sound: "default",
+      vibrationPattern: [0, 250, 250, 250],
+      showBadge: false,
+      enableVibrate: true,
     });
   } catch {
     // Non-critical — channel registration is best-effort
@@ -207,7 +224,10 @@ export async function schedulePreEndCue(
 
 /**
  * Present (or re-present) the live ongoing countdown notification on Android.
- * Uses identifier reuse to replace-in-place. No-op on iOS.
+ * Dismisses the previous shade entry before posting a new one (BLD-1208) —
+ * Android does not replace trigger:null notifications in-place even with a
+ * stable identifier, so without the dismiss step every tick stacks a new entry.
+ * No-op on iOS.
  * @param secondsRemaining - Current remaining rest seconds (for display).
  * @param preview - Next set preview (may be null).
  * @param sessionId - Session identifier.
@@ -221,6 +241,12 @@ export async function presentLiveRestCountdown(
   const mod = getModule();
   if (!mod) return null;
   try {
+    const liveId = `rest-live-${sessionId}`;
+    // Dismiss the previous shade entry before posting a new one to prevent stacking.
+    if (typeof mod.dismissNotificationAsync === "function") {
+      try { await mod.dismissNotificationAsync(liveId); } catch { /* not in shade on first call */ }
+    }
+
     const m = Math.floor(secondsRemaining / 60);
     const s = secondsRemaining % 60;
     const timeStr = `${m}:${String(s).padStart(2, "0")}`;
@@ -228,7 +254,7 @@ export async function presentLiveRestCountdown(
     const body = previewBody ?? "Resting\u2026";
 
     const id = await mod.scheduleNotificationAsync({
-      identifier: `rest-live-${sessionId}`,
+      identifier: liveId,
       content: {
         title: `Resting \u00b7 ${timeStr} remaining`,
         body,
@@ -237,7 +263,7 @@ export async function presentLiveRestCountdown(
       },
       trigger: null,
     } as Parameters<typeof mod.scheduleNotificationAsync>[0]);
-    return id ?? `rest-live-${sessionId}`;
+    return id ?? liveId;
   } catch {
     return null;
   }
@@ -393,6 +419,16 @@ export function setupHandler(): void {
             shouldShowList: false,
           };
         }
+        // Suppress live countdown banner in foreground — shade managed by dismiss-before-present.
+        if (data?.type === "rest_live") {
+          return {
+            shouldShowAlert: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowBanner: false,
+            shouldShowList: false,
+          };
+        }
         return {
           shouldShowAlert: true,
           shouldPlaySound: false,
@@ -452,6 +488,7 @@ export async function scheduleRestComplete(
         body,
         sound: "default",
         data: { sessionId, type: "rest_complete" },
+        ...(Platform.OS === "android" ? { channelId: REST_COMPLETE_CHANNEL } : {}),
       },
       trigger: {
         type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL,

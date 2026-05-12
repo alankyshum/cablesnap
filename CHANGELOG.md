@@ -22,6 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
+- **Rest timer (Android)**: Fixed notification spam where finishing a set would stack 12–24+ shade entries instead of showing one. The live countdown now dismisses the previous entry before re-presenting, and updates every 15 s instead of every 5 s.
+- **WearOS rest-complete bridging**: The "rest complete" chime now appears on paired Wear OS watches. Previously the notification used a low-importance channel that the Wear OS Companion skips; it now uses a HIGH-importance channel.
 - **Strava connect** (Android): Fixed a silent connection failure on some OEM Android builds (Samsung Z Fold6 and similar) where the OAuth redirect was not intercepted, leaving the connection incomplete.
 - Progression suggestions now correctly evaluate advanced set types (rest-pause, cluster, myo-reps) using the working-set reps of the activation segment, rather than the inflated total-reps sum.
 - **CSV export/import round-trip for advanced sets**: rest-pause, cluster, and myo-rep set segment data (reps, weights, rests per mini-set) is now preserved when you export and re-import your workout CSV. Unknown set types in imported CSVs are automatically normalised to "normal" instead of being silently dropped.

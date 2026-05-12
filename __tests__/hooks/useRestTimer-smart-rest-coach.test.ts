@@ -372,9 +372,9 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
         const initialCallCount = mockPresentLiveRestCountdown.mock.calls.length;
         expect(initialCallCount).toBeGreaterThanOrEqual(1);
 
-        // Advance fake timers by 5001ms to fire the 5s self-correcting chain (AC4: ±500ms)
+        // Advance fake timers by 15001ms to fire the 15s self-correcting chain (BLD-1208: bumped from 5s)
         await act(async () => {
-          jest.advanceTimersByTime(5001);
+          jest.advanceTimersByTime(15001);
           await Promise.resolve();
         });
 

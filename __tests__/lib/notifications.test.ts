@@ -19,7 +19,7 @@ jest.mock("expo-notifications", () => {
     dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
     scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
     setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
-    AndroidImportance: { LOW: 2 },
+    AndroidImportance: { LOW: 2, HIGH: 4 },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setNotificationHandler: jest.fn((h: any) => { handler = h; }),
     addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -62,7 +62,7 @@ describe("notifications", () => {
         dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
         scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
         setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
-        AndroidImportance: { LOW: 2 },
+        AndroidImportance: { LOW: 2, HIGH: 4 },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setNotificationHandler: jest.fn((h: any) => { handler = h; }),
         addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -585,6 +585,70 @@ describe("notifications", () => {
       // Rest-complete alone carries sound — pre-end cue and live countdown are both silent
       expect(call.content.sound).toBe("default");
     });
+
+    // BLD-1208: new tests
+    it("BLD-1208 — presentLiveRestCountdown calls dismissNotificationAsync before scheduleNotificationAsync", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        const callOrder: string[] = [];
+        (Notifications.dismissNotificationAsync as jest.Mock).mockImplementation(async () => {
+          callOrder.push("dismiss");
+        });
+        (Notifications.scheduleNotificationAsync as jest.Mock).mockImplementation(async () => {
+          callOrder.push("schedule");
+          return "notif-id";
+        });
+
+        await notifications.presentLiveRestCountdown(45, null, "sess-nostack");
+
+        expect(callOrder).toEqual(["dismiss", "schedule"]);
+        expect(Notifications.dismissNotificationAsync).toHaveBeenCalledWith("rest-live-sess-nostack");
+        expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+          expect.objectContaining({ identifier: "rest-live-sess-nostack" }),
+        );
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("BLD-1208 — scheduleRestComplete sets channelId=REST_COMPLETE_CHANNEL on Android", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.scheduleRestComplete(60, "sess-ch");
+        const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+        expect(call.content.channelId).toBe(notifications.REST_COMPLETE_CHANNEL);
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("BLD-1208 — scheduleRestComplete does not set channelId on iOS", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "ios";
+      try {
+        await notifications.scheduleRestComplete(60, "sess-ios");
+        const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+        expect(call.content.channelId).toBeUndefined();
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("BLD-1208 — setupHandler suppresses rest_live banners in foreground", async () => {
+      notifications.setupHandler();
+      const handler = (Notifications._getHandler as jest.Mock)();
+      const behavior = await handler.handleNotification({
+        request: { content: { data: { type: "rest_live" } } },
+      });
+      expect(behavior.shouldShowBanner).toBe(false);
+      expect(behavior.shouldShowList).toBe(false);
+      expect(behavior.shouldShowAlert).toBe(false);
+    });
   });
 
   // BLD-1137: covers AC16 from PLAN-BLD-1137.md
@@ -628,20 +692,37 @@ describe("notifications", () => {
       }
     });
 
+    it("BLD-1208 — registers REST_COMPLETE_CHANNEL (HIGH importance) on Android", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.ensureRestChannelsRegistered();
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+          notifications.REST_COMPLETE_CHANNEL,
+          expect.objectContaining({
+            importance: 4, // AndroidImportance.HIGH — required for Wear OS bridging
+          }),
+        );
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
     it("AC16 — is idempotent: second call registers same channels again without error", async () => {
       const { Platform } = require("react-native");
       const origOS = Platform.OS;
       (Platform as { OS: string }).OS = "android";
       try {
-        // First cold-start call: 2 channels registered
+        // First cold-start call: 3 channels registered (rest-ongoing, rest-cue, rest-complete)
         await notifications.ensureRestChannelsRegistered();
-        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(2);
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(3);
         const firstCallArgs = (Notifications.setNotificationChannelAsync as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
 
-        // Second call (e.g., process re-init) succeeds without error and registers the same 2 channels
+        // Second call (e.g., process re-init) succeeds without error and registers the same 3 channels
         jest.clearAllMocks();
         await notifications.ensureRestChannelsRegistered();
-        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(2);
+        expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledTimes(3);
         const secondCallArgs = (Notifications.setNotificationChannelAsync as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
 
         // Same channel IDs registered both times — idempotent behavior
