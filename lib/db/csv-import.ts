@@ -153,6 +153,33 @@ export async function importCsvSessions(
           ]
         );
         setsInserted++;
+
+        // BLD-1176 AC #257: insert set_segments for advanced sets.
+        // Parse the semicolon-separated strings from the CSV into ordered segment rows.
+        // AC #260: cap at 8 segments at the DB layer (defence-in-depth; also clamped at parse).
+        if (set.mini_set_reps) {
+          const repParts = set.mini_set_reps.split(";").slice(0, 8);
+          const weightParts = (set.mini_set_weights ?? "").split(";");
+          const restParts = (set.mini_set_rests ?? "").split(";");
+          const now = Date.now();
+
+          for (let si = 0; si < repParts.length; si++) {
+            const repStr = repParts[si];
+            if (!repStr) continue; // skip empty trailing segments
+            const reps = parseInt(repStr, 10);
+            if (isNaN(reps)) continue;
+            const weightStr = weightParts[si] ?? "";
+            const segWeight = weightStr !== "" ? parseFloat(weightStr) : null;
+            const restStr = restParts[si] ?? "";
+            const restSecs = restStr !== "" ? parseInt(restStr, 10) : null;
+
+            await database.runAsync(
+              `INSERT INTO workout_set_segments (id, set_id, segment_number, reps, weight, rest_after_seconds, completed_at, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [uuid(), setId, si + 1, reps, isNaN(segWeight as number) ? null : segWeight, isNaN(restSecs as number) ? null : restSecs, completedAt, now]
+            );
+          }
+        }
       }
 
       onProgress?.({ current: i + 1, total: sessions.length, phase: "inserting" });

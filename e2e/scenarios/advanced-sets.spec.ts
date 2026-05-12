@@ -1,5 +1,5 @@
 /**
- * Scenario spec: advanced-sets (BLD-1176 AC #265 / AC #273).
+ * Scenario spec: advanced-sets (BLD-1176 AC #264 / AC #273).
  *
  * Navigates to Settings → Advanced Set Types help screen via the production
  * mount path (/settings → press "Advanced Set Types") and verifies:
@@ -8,9 +8,11 @@
  *  2. None of the forbidden aspirational phrases appear in the rendered text.
  *  3. Screenshots captured at mobile + mobile-narrow viewports.
  *
- * Note on kill+relaunch persistence (AC #265): The help screen is static
- * (no DB state), so persistence is verified by navigating to the route
- * directly after a page reload — confirming the route is stable across reloads.
+ * Scope note on AC #265 (kill+relaunch data persistence): AC #265 is about
+ * advanced set DATA (rest-pause segments) surviving app kill+relaunch through
+ * the production session-detail path. That coverage belongs to BLD-1175
+ * (Slice 7 — mini-set editor + live logging). This spec verifies only that
+ * the help-screen route survives a page reload (static content, no DB state).
  *
  * Refs: BLD-1168, BLD-1176.
  */
@@ -83,7 +85,7 @@ test.describe("@scenario advanced-sets", () => {
     }
   });
 
-  test("help screen survives kill+relaunch (direct navigation to route)", async ({ page }, testInfo) => {
+  test("help screen route survives page reload (static route stability)", async ({ page }, testInfo) => {
     await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;

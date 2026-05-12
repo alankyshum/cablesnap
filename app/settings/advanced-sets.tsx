@@ -12,6 +12,14 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing, fontSizes } from "@/constants/design-tokens";
 
+/** Intro paragraph rendered above the help cards. Exported for copy-tone test coverage. */
+export const ADVANCED_SET_INTRO =
+  "Advanced set types let you log structured multi-burst sets as a single parent with ordered mini-sets. Each mini-set records its own reps, optional weight, and rest duration.";
+
+/** Footer note rendered below the help cards. Exported for copy-tone test coverage. */
+export const ADVANCED_SET_FOOTER =
+  "Each parent set supports up to 8 mini-sets. To log more than 8 bursts, use a separate set.";
+
 export const ADVANCED_SET_HELP_ENTRIES = [
   {
     setType: "rest_pause" as const,
@@ -48,8 +56,7 @@ export default function AdvancedSetsHelpScreen() {
       <Stack.Screen options={{ title: "Advanced Set Types" }} />
 
       <Text variant="body" style={[styles.intro, { color: colors.onSurface }]}>
-        Advanced set types let you log structured multi-burst sets as a single parent with ordered mini-sets.
-        Each mini-set records its own reps, optional weight, and rest duration.
+        {ADVANCED_SET_INTRO}
       </Text>
 
       {ADVANCED_SET_HELP_ENTRIES.map((entry, index) => (
@@ -72,7 +79,7 @@ export default function AdvancedSetsHelpScreen() {
       ))}
 
       <Text variant="caption" style={[styles.note, { color: colors.onSurfaceVariant }]}>
-        Each parent set supports up to 8 mini-sets. To log more than 8 bursts, use a separate set.
+        {ADVANCED_SET_FOOTER}
       </Text>
     </ScrollView>
   );

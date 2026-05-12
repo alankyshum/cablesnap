@@ -6,13 +6,17 @@
  * Each entry specifies the regex pattern, sample fails[], and sample passes[].
  */
 
-import { ADVANCED_SET_HELP_ENTRIES } from "../app/settings/advanced-sets";
+import { ADVANCED_SET_HELP_ENTRIES, ADVANCED_SET_INTRO, ADVANCED_SET_FOOTER } from "../app/settings/advanced-sets";
 
-// Flatten all text we need to scan: titles + descriptions + examples (if present)
-const allCopy = ADVANCED_SET_HELP_ENTRIES.map((e) => {
-  const ex = "example" in e ? String((e as Record<string, unknown>).example) : "";
-  return `${e.title} ${e.description} ${ex}`;
-}).join("\n");
+// Flatten all text we need to scan: intro + titles + descriptions + examples + footer
+const allCopy = [
+  ADVANCED_SET_INTRO,
+  ...ADVANCED_SET_HELP_ENTRIES.map((e) => {
+    const ex = "example" in e ? String((e as Record<string, unknown>).example) : "";
+    return `${e.title} ${e.description} ${ex}`;
+  }),
+  ADVANCED_SET_FOOTER,
+].join("\n");
 
 interface BanEntry {
   token: string;
