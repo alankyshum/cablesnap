@@ -37,6 +37,7 @@ function createChainableSelect() {
     limit: jest.fn().mockReturnThis(),
     offset: jest.fn().mockReturnThis(),
     get: jest.fn(() => drizzleGetResult),
+    all: jest.fn(() => Promise.resolve(drizzleQueryResult)),
     then: undefined as any,
   };
   chain.then = (resolve: any, reject: any) =>

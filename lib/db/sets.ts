@@ -128,18 +128,24 @@ export async function recomputeSetCaches(setId: string): Promise<void> {
     .where(eq(workoutSetSegments.set_id, setId))
     .all();
 
-  if (segments.length === 0 && !isAdvancedSet) {
-    // Legacy/non-segmented set — caches stay as backfilled, reps untouched.
-    return;
-  }
-
   const { cachedVolumeKg, cachedE1rmKg, totalReps } = computeSetCacheValues(
     { weight: parent.weight ?? null, reps: parent.reps ?? null, isAdvancedSet },
     segments.map((s) => ({ reps: s.reps, weight: s.weight ?? null })),
   );
 
-  // Write back — update both cached columns and parent.reps (for advanced types with segments).
-  // For non-advanced sets parent.reps is unchanged (totalReps === parent.reps ?? 0).
+  if (!isAdvancedSet && segments.length === 0) {
+    // Legacy/normal set: write cache columns computed from parent weight×reps,
+    // but do NOT overwrite the reps column (totalReps = parent.reps ?? 0 could
+    // coerce a null reps to 0 for sets that were created without reps).
+    await db
+      .update(workoutSets)
+      .set({ cached_volume_kg: cachedVolumeKg, cached_e1rm_kg: cachedE1rmKg })
+      .where(eq(workoutSets.id, setId));
+    return;
+  }
+
+  // Advanced set or a set with segments: write all three columns.
+  // For advanced types, totalReps = Σ segment.reps keeps parent.reps in sync.
   await db
     .update(workoutSets)
     .set({
