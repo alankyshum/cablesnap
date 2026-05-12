@@ -58,6 +58,9 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const KEY_ACCESS_TOKEN = "strava_access_token";
 const KEY_REFRESH_TOKEN = "strava_refresh_token";
 const KEY_TOKEN_EXPIRES_AT = "strava_token_expires_at";
+// Persisted before opening the OAuth browser so cold-start recovery can match
+// the deep-link state against the state from the prior process.
+const KEY_PENDING_OAUTH_STATE = "strava_pending_oauth_state";
 
 const MAX_RETRIES = 3;
 
@@ -369,40 +372,41 @@ export async function connectStrava(): Promise<{
   stravaBreakcrumb("connectStrava started", { clientId, redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl });
   stravaLog("info", "strava connect started", { flow: "strava_connect", step: "start" });
 
-  // Cold-start check: if the app was killed while the OAuth browser was open
-  // and the OS re-launched via a cablesnap://strava-callback deep link, the
-  // URL will be available via getInitialURL(). We can only consume it if state
-  // matches, which requires generating oauthState first.
-  // Generate a random state value for CSRF protection
+  // Generate a random state value for CSRF protection (used by the normal auth path).
   const oauthState = uuid();
 
-  // Check for a pending deep link from a previous session (cold-start recovery).
-  // parseCallbackUrl throws StravaError on state mismatch (propagates to caller).
-  // It returns null for malformed URLs (falls through to normal auth flow).
-  // Known gap: the freshly-generated oauthState won't match a URL from a *prior*
-  // cold-start unless the process restart happened within the same auth attempt.
+  // Cold-start check: if the app was killed while the OAuth browser was open
+  // and the OS re-launched via a cablesnap://strava-callback deep link, the
+  // URL will be available via getInitialURL(). We match using the state that
+  // was persisted to SecureStore before the browser was opened in the prior
+  // process — a freshly-generated uuid() won't match the callback's state.
   const initialUrl = await Linking.getInitialURL();
   if (initialUrl?.startsWith(APP_DEEP_LINK)) {
     stravaLog("info", "strava cold-start deep link detected", { flow: "strava_connect", step: "cold_start_check" });
-    // parseCallbackUrl: returns null for malformed URL, throws StravaError on state mismatch
-    const coldCode = parseCallbackUrl(initialUrl, oauthState);
-    if (coldCode) {
-      stravaLog("info", "strava cold-start deep link consumed", { flow: "strava_connect", step: "cold_start_consumed" });
-      // exchangeCodeForTokens / saveTokens / saveStravaConnection errors propagate to caller
-      const data = await exchangeCodeForTokens(coldCode, proxyUrl, clientId);
-      await saveTokens(
-        data.access_token as string,
-        data.refresh_token as string,
-        data.expires_at as number,
-      );
-      const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
-      const athleteName =
-        [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
-      await saveStravaConnection(athleteId, athleteName);
-      stravaBreakcrumb("connectStrava succeeded (cold-start)", { athleteId });
-      stravaLog("info", "strava connect succeeded", { flow: "strava_connect", step: "success", athleteId });
-      return { athleteId, athleteName };
+    const persistedState = await SecureStore.getItemAsync(KEY_PENDING_OAUTH_STATE);
+    if (persistedState) {
+      // parseCallbackUrl: returns null for malformed URL, throws StravaError on state mismatch
+      const coldCode = parseCallbackUrl(initialUrl, persistedState);
+      if (coldCode) {
+        await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+        stravaLog("info", "strava cold-start deep link consumed", { flow: "strava_connect", step: "cold_start_consumed" });
+        // exchangeCodeForTokens / saveTokens / saveStravaConnection errors propagate to caller
+        const data = await exchangeCodeForTokens(coldCode, proxyUrl, clientId);
+        await saveTokens(
+          data.access_token as string,
+          data.refresh_token as string,
+          data.expires_at as number,
+        );
+        const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
+        const athleteName =
+          [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
+        await saveStravaConnection(athleteId, athleteName);
+        stravaBreakcrumb("connectStrava succeeded (cold-start)", { athleteId });
+        stravaLog("info", "strava connect succeeded", { flow: "strava_connect", step: "success", athleteId });
+        return { athleteId, athleteName };
+      }
     }
+    // No persisted state (or URL didn't validate) — fall through to normal auth flow.
   }
 
   const authorizeUrl = new URL(STRAVA_AUTH_URL);
@@ -413,7 +417,17 @@ export async function connectStrava(): Promise<{
   authorizeUrl.searchParams.set("scope", "activity:write");
   authorizeUrl.searchParams.set("state", oauthState);
 
-  const { result, code } = await runAuthPrompt(authorizeUrl.toString(), oauthState);
+  // Persist state before opening the browser so cross-process cold-start
+  // recovery can match the deep-link URL from the relaunched session.
+  await SecureStore.setItemAsync(KEY_PENDING_OAUTH_STATE, oauthState);
+
+  let result: Awaited<ReturnType<typeof runAuthPrompt>>["result"];
+  let code: string | undefined;
+  try {
+    ({ result, code } = await runAuthPrompt(authorizeUrl.toString(), oauthState));
+  } finally {
+    await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+  }
 
   const hasCode = !!(result.type === "success" && code);
   stravaBreakcrumb("auth prompt completed", { resultType: result.type, hasCode });

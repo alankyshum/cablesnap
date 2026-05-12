@@ -895,8 +895,11 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     });
   });
 
-  it("(d) cold-start getInitialURL captures pending callback (state matches uuid mock)", async () => {
-    // uuid mock always returns "mock-state-uuid" so we embed that as state
+  it("(d) cold-start getInitialURL captures pending callback using persisted state", async () => {
+    // Simulate the state that was persisted to SecureStore before the browser was
+    // opened in the prior process (the "pending OAuth state" key).
+    const SecureStore = require("expo-secure-store");
+    SecureStore.getItemAsync.mockResolvedValueOnce("mock-state-uuid");
     Linking.getInitialURL.mockResolvedValueOnce(
       "cablesnap://strava-callback?code=cold-start-code&state=mock-state-uuid",
     );
@@ -907,14 +910,18 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     // Browser should NOT have been opened — cold-start bypasses it
     expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
     expect(Linking.getInitialURL).toHaveBeenCalled();
+    // Persisted state was deleted after consumption
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("strava_pending_oauth_state");
     const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(fetchBody.code).toBe("cold-start-code");
   });
 
   it("(d2) cold-start getInitialURL with wrong state throws StravaError(unknown, 'OAuth state mismatch')", async () => {
-    // uuid mock returns "mock-state-uuid"; state in URL is different → mismatch
+    // Persisted state from prior session doesn't match URL's state → mismatch
+    const SecureStore = require("expo-secure-store");
+    SecureStore.getItemAsync.mockResolvedValueOnce("persisted-state-abc");
     Linking.getInitialURL.mockResolvedValueOnce(
-      "cablesnap://strava-callback?code=cold-code&state=stale-prior-state",
+      "cablesnap://strava-callback?code=cold-code&state=different-state-xyz",
     );
 
     await expect(strava.connectStrava()).rejects.toMatchObject({
@@ -929,6 +936,8 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
   });
 
   it("(d3) cold-start token exchange failure propagates (not swallowed)", async () => {
+    const SecureStore = require("expo-secure-store");
+    SecureStore.getItemAsync.mockResolvedValueOnce("mock-state-uuid");
     Linking.getInitialURL.mockResolvedValueOnce(
       "cablesnap://strava-callback?code=cold-code&state=mock-state-uuid",
     );
@@ -940,6 +949,28 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
       code: "network",
     });
     expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+  });
+
+  it("(d4) cross-process cold-start: persisted state differs from new uuid, callback URL carries persisted state → success", async () => {
+    // Regression: prior implementation used freshly-generated uuid() to validate
+    // the cold-start URL, which always mismatches a URL from a prior process.
+    // This test proves that the persisted state (not the new uuid) drives validation.
+    const SecureStore = require("expo-secure-store");
+    // The prior process persisted "prior-session-state-999" before killing.
+    SecureStore.getItemAsync.mockResolvedValueOnce("prior-session-state-999");
+    // OS re-launched with the callback from the prior browser session.
+    Linking.getInitialURL.mockResolvedValueOnce(
+      "cablesnap://strava-callback?code=cross-process-code&state=prior-session-state-999",
+    );
+    // uuid() will generate "mock-state-uuid" (a different value) for the new session.
+    mockTokenFetch({ athlete: { id: 99, firstname: "Cross", lastname: "Process" } });
+
+    const result = await strava.connectStrava();
+    // Despite uuid() returning a different value, cold-start succeeds using persisted state.
+    expect(result).toEqual({ athleteId: 99, athleteName: "Cross Process" });
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+    const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(fetchBody.code).toBe("cross-process-code");
   });
 
   it("(e) listener removed on success (browser path) and on error (state mismatch browser path)", async () => {
