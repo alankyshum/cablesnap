@@ -133,40 +133,40 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("100 × 13")).toBeVisible();
   });
 
-  // AC #265 — kill+relaunch simulation: navigate away via SPA (no page reload,
-  // addInitScript doesn't re-run, seedScenario doesn't clear+re-seed), then
-  // navigate back to session detail and assert data persists in the in-session DB.
-  test("advanced set data survives kill+relaunch via session-detail (AC #265)", async ({ page }) => {
-    await page.addInitScript((scenario) => {
+  // AC #265 — kill+relaunch simulation using real page.reload().
+  //
+  // The web DB primary path is `openDatabaseAsync("cablesnap.db")` (lib/db/helpers.ts:64)
+  // which uses IndexedDB-backed SQLite on Chromium — data SURVIVES page.reload() within
+  // the same browser context. The seed gate below exploits sessionStorage (also survives
+  // reload) to ensure __TEST_SCENARIO__ is injected ONLY on the first load; on the reload
+  // seedScenario() sees guardsAllow()=false (no __TEST_SCENARIO__), skips the clear+re-seed,
+  // and useSessionDetail reads previously persisted rows from the IndexedDB DB.
+  test("advanced set data survives reload (AC #265 — kill+relaunch via persistent DB)", async ({ page }) => {
+    // addInitScript re-runs on every navigation including page.reload().
+    // The sessionStorage gate ensures __TEST_SCENARIO__ is injected only once (first load).
+    await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
-      w.__TEST_SCENARIO__ = scenario;
-    }, "advanced-sets");
+      if (!sessionStorage.getItem("__adv_seeded")) {
+        w.__TEST_SCENARIO__ = "advanced-sets";
+        sessionStorage.setItem("__adv_seeded", "1");
+      }
+    });
 
-    // First "launch": seed + navigate to session detail
+    // First load: seedScenario() fires, writes rest_pause set to the IndexedDB DB.
     await page.goto("/session/detail/scenario-advanced-session-1");
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("100 × 13")).toBeVisible();
 
-    // Simulate "kill": navigate to home via SPA history API (no full page reload).
-    // addInitScript does NOT re-run on SPA navigations, so __TEST_SCENARIO__ is
-    // not re-set and seedScenario() does not clear+re-seed the DB.
-    await page.evaluate(() => {
-      window.history.pushState({}, "", "/");
-      window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
-    });
-    await page.waitForTimeout(500);
-
-    // Simulate "relaunch": navigate back to session detail via SPA
-    await page.evaluate(() => {
-      window.history.pushState({}, "", "/session/detail/scenario-advanced-session-1");
-      window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
-    });
-    await page.waitForTimeout(800);
-
-    // Data must still render — seedScenario did NOT re-run (seed hook was not re-enabled),
-    // proving the in-session DB state persists through kill+relaunch navigation.
-    await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
+    // Reload (simulates kill+relaunch):
+    //   - addInitScript re-runs, but sessionStorage["__adv_seeded"] = "1" blocks re-injection
+    //   - __TEST_SCENARIO__ is not set → guardsAllow()=false → seedScenario() is a no-op
+    //   - DB tables are NOT cleared → data persists in IndexedDB
+    //   - useSessionDetail queries the same DB → must render the previously seeded session
+    await page.reload();
+    // No data-test-ready signal (seedScenario didn't run); wait on actual content instead.
+    await expect(page.getByText("RP")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("100 × 13")).toBeVisible();
   });
 });
