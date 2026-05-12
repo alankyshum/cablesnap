@@ -640,8 +640,9 @@ describe("notifications", () => {
     });
 
     it("BLD-1208 — setupHandler suppresses rest_live banners in foreground", async () => {
+      type HandlerFn = (notification: { request: { content: { data: { type: string } } } }) => Promise<{ shouldShowBanner: boolean; shouldShowList: boolean; shouldShowAlert: boolean }>;
       notifications.setupHandler();
-      const handler = (Notifications._getHandler as jest.Mock)();
+      const handler = (Notifications as typeof Notifications & { _getHandler: () => { handleNotification: HandlerFn } })._getHandler();
       const behavior = await handler.handleNotification({
         request: { content: { data: { type: "rest_live" } } },
       });
