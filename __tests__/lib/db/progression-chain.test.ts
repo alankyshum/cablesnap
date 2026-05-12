@@ -174,7 +174,8 @@ describe("getProgressionSuggestion", () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
     // BLD-1172: workSets query now returns actual rows {id, set_type, reps}
     mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-1", set_type: "normal", reps: 15 }]);
-    // getSegmentsForSet uses Drizzle .all() → always [] in tests (mocked via drizzle-orm mock)
+    // BLD-1172: batch segments query (normal sets have no segments → empty array)
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]); // nextLogged = 0
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(true);
@@ -187,6 +188,8 @@ describe("getProgressionSuggestion", () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
     // BLD-1172: workSets with reps >= 12 so we reach the nextLogged check
     mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-1", set_type: "normal", reps: 15 }]);
+    // BLD-1172: batch segments query (normal sets have no segments → empty array)
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 2 }]); // nextLogged = 2 → recently logged
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(false);
