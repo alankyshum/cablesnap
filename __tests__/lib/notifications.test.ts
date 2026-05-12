@@ -639,7 +639,7 @@ describe("notifications", () => {
       }
     });
 
-    it("BLD-1208 — setupHandler suppresses rest_live banners in foreground", async () => {
+    it("BLD-1208 — setupHandler suppresses rest_live banners but keeps shade entry visible in foreground", async () => {
       type HandlerFn = (notification: { request: { content: { data: { type: string } } } }) => Promise<{ shouldShowBanner: boolean; shouldShowList: boolean; shouldShowAlert: boolean }>;
       notifications.setupHandler();
       const handler = (Notifications as typeof Notifications & { _getHandler: () => { handleNotification: HandlerFn } })._getHandler();
@@ -647,7 +647,7 @@ describe("notifications", () => {
         request: { content: { data: { type: "rest_live" } } },
       });
       expect(behavior.shouldShowBanner).toBe(false);
-      expect(behavior.shouldShowList).toBe(false);
+      expect(behavior.shouldShowList).toBe(true);
       expect(behavior.shouldShowAlert).toBe(false);
     });
   });
@@ -702,7 +702,7 @@ describe("notifications", () => {
         expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
           notifications.REST_COMPLETE_CHANNEL,
           expect.objectContaining({
-            importance: 4, // AndroidImportance.HIGH — required for Wear OS bridging
+            importance: Notifications.AndroidImportance.HIGH,
           }),
         );
       } finally {

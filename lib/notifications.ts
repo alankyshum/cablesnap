@@ -419,14 +419,14 @@ export function setupHandler(): void {
             shouldShowList: false,
           };
         }
-        // Suppress live countdown banner in foreground — shade managed by dismiss-before-present.
+        // Suppress live countdown banner in foreground — keep shade/list entry visible.
         if (data?.type === "rest_live") {
           return {
             shouldShowAlert: false,
             shouldPlaySound: false,
             shouldSetBadge: false,
             shouldShowBanner: false,
-            shouldShowList: false,
+            shouldShowList: true,
           };
         }
         return {
