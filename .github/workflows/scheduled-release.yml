@@ -342,37 +342,117 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main' && inputs.republish_current != true
         run: |
           VERSION="${{ steps.next_version.outputs.version }}"
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
           git config user.name "CableSnap Release Bot"
           git config user.email "release-bot@cablesnap.app"
-          git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
-            CHANGELOG.md \
-            lib/changelog.generated.ts \
-            fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
-          if git diff --cached --quiet; then
-            echo "Version files already at v$VERSION — skipping commit."
-          else
+
+          # Helper: stage all release-bump artifacts and commit.
+          # Called once initially and again after a conflict-reset.
+          stage_and_commit() {
+            git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
+              CHANGELOG.md \
+              lib/changelog.generated.ts \
+              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+            if git diff --cached --quiet; then
+              echo "Version files already at v$VERSION — skipping commit."
+              return 0
+            fi
             git commit -m "release: v$VERSION"
-            # Retry up to 5 times with rebase, in case main moved during the workflow
-            # (e.g. a Dependabot merge landed between checkout and push).
-            pushed=0
-            for i in 1 2 3 4 5; do
-              if git push origin main; then
-                pushed=1
-                break
-              fi
-              echo "::warning::Push rejected (attempt $i). Rebasing onto remote main and retrying..."
-              git fetch origin main
-              git pull --rebase origin main || {
-                echo "::error::Rebase failed on attempt $i — aborting."
-                exit 1
+          }
+
+          # Helper: re-apply the version bump + changelog promotion on top of
+          # the newly-reset working tree (origin/main HEAD after conflict-reset).
+          # This is the "regenerate-on-conflict" path for CHANGELOG.md conflicts.
+          reapply_bump() {
+            echo "Re-applying version bump on top of new main..."
+
+            # package.json
+            node -e "
+              const fs = require('fs');
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              pkg.version = '$VERSION';
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            "
+
+            # app.config.ts
+            sed -i "s/version: \"[^\"]*\"/version: \"$VERSION\"/" app.config.ts
+            sed -i "s/versionCode: [0-9]*/versionCode: $VCODE/" app.config.ts
+
+            # F-Droid metadata
+            sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
+            sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
+
+            # Promote ## Unreleased → ## vVERSION in CHANGELOG.md.
+            # The concurrent merge may have added new Unreleased bullets — they
+            # will be captured here from the new origin/main working tree and
+            # promoted into the v$VERSION block.
+            DATE=$(date -u +%Y-%m-%d)
+            NEW_HEADER="## v$VERSION — $DATE"
+            MARKER="<!-- versionCode: $VCODE -->"
+            PLACEHOLDER=$'## Unreleased\n\n_No user-facing changes yet._\n'
+            awk -v new_header="$NEW_HEADER" \
+                -v marker="$MARKER" \
+                -v placeholder="$PLACEHOLDER" '
+              BEGIN { promoted = 0 }
+              /^##[[:space:]]+Unreleased[[:space:]]*$/ && promoted == 0 {
+                printf "%s\n", placeholder
+                print new_header
+                print marker
+                promoted = 1
+                next
               }
-              # Brief jitter to avoid lockstep with other concurrent pushers.
-              sleep $((RANDOM % 5 + 2))
-            done
-            if [ "$pushed" -ne 1 ]; then
-              echo "::error::Failed to push release commit after 5 rebase attempts."
+              { print }
+            ' CHANGELOG.md > CHANGELOG.md.tmp
+            mv CHANGELOG.md.tmp CHANGELOG.md
+
+            # Regenerate lib/changelog.generated.ts + F-Droid sidecars.
+            npm run changelog:gen
+
+            SIDECAR="fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/${VCODE}.txt"
+            if [ ! -s "$SIDECAR" ]; then
+              echo "::error::Expected F-Droid sidecar $SIDECAR missing after re-apply — aborting."
               exit 1
             fi
+            echo "Re-applied bump for v$VERSION (versionCode $VCODE)."
+          }
+
+          stage_and_commit
+
+          # Retry up to 5 times. On push failure:
+          #   - Try a clean rebase first (handles non-CHANGELOG concurrent commits).
+          #   - If rebase conflicts (CHANGELOG.md touched by concurrent merge),
+          #     abort the rebase, reset to origin/main, re-apply the bump from
+          #     scratch, and retry.
+          pushed=0
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              pushed=1
+              break
+            fi
+            echo "::warning::Push rejected (attempt $i). Fetching and rebasing onto remote main..."
+            git fetch origin main
+
+            if git pull --rebase origin main; then
+              # Clean rebase — no conflicts. Retry push immediately.
+              echo "Clean rebase succeeded on attempt $i. Retrying push..."
+            else
+              # Conflict — almost certainly CHANGELOG.md or other derived
+              # artifacts. Abort the stalled rebase, reset to the new main,
+              # and regenerate all bump artifacts from scratch.
+              echo "::warning::Rebase conflict on attempt $i — regenerating bump on top of new main."
+              git rebase --abort 2>/dev/null || true
+              git reset --hard origin/main
+              reapply_bump
+              stage_and_commit
+            fi
+
+            # Brief jitter to avoid lockstep with other concurrent pushers.
+            sleep $((RANDOM % 5 + 2))
+          done
+
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::Failed to push release commit after 5 attempts (rebase + regenerate)."
+            exit 1
           fi
 
       - name: Dry-run notice (non-main ref)
