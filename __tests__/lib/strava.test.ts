@@ -331,10 +331,18 @@ describe("Strava Integration — Behavioral", () => {
   });
 
   it("connectStrava returns null when user cancels OAuth", async () => {
-    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-    const result = await strava.connectStrava();
-    expect(result).toBeNull();
-    expect(mockFetch).not.toHaveBeenCalled();
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r)); // flush until grace timer registered
+      jest.runAllTimers();
+      const result = await connectPromise;
+      expect(result).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("disconnect clears tokens from SecureStore and DB", async () => {
@@ -498,16 +506,22 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
   });
 
   it("connectStrava logs user_cancelled when OAuth is cancelled (no tokens in logs)", async () => {
-    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-
-    const result = await strava.connectStrava();
-
-    expect(result).toBeNull();
-    expect(Sentry.logger.info).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ flow: "strava_connect", step: "user_cancelled", resultType: "cancel" }),
-    );
-    scanLoggerCallsForSecrets();
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r));
+      jest.runAllTimers();
+      const result = await connectPromise;
+      expect(result).toBeNull();
+      expect(Sentry.logger.info).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ flow: "strava_connect", step: "user_cancelled", resultType: "cancel" }),
+      );
+      scanLoggerCallsForSecrets();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("disconnect emits start + success lifecycle logs", async () => {
@@ -561,10 +575,15 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
     // Simulate older SDK without logger export
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Sentry as any).logger = undefined;
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
     try {
       WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-      await expect(strava.connectStrava()).resolves.toBeNull();
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r));
+      jest.runAllTimers();
+      await expect(connectPromise).resolves.toBeNull();
     } finally {
+      jest.useRealTimers();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (Sentry as any).logger = original;
     }
@@ -762,11 +781,23 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
     });
 
     it("still returns null (no throw) when user dismisses or cancels the prompt", async () => {
-      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-      await expect(strava.connectStrava()).resolves.toBeNull();
+      // Use fake timers so the 500ms DEEP_LINK_GRACE_MS window resolves instantly.
+      jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+      try {
+        WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+        const p1 = strava.connectStrava();
+        await new Promise((r) => setImmediate(r)); // flush until grace setTimeout registered
+        jest.runAllTimers(); // fire the grace window → settled=true, cancel
+        await expect(p1).resolves.toBeNull();
 
-      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "dismiss" });
-      await expect(strava.connectStrava()).resolves.toBeNull();
+        WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "dismiss" });
+        const p2 = strava.connectStrava();
+        await new Promise((r) => setImmediate(r));
+        jest.runAllTimers();
+        await expect(p2).resolves.toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });
@@ -808,6 +839,7 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     expect(stravaClientSrc).toContain("Promise.race");
     expect(stravaClientSrc).toMatch(/subscription.*remove\(\)/);
     expect(stravaClientSrc).toContain("finally");
+    expect(stravaClientSrc).toContain("DEEP_LINK_GRACE_MS");
   });
 
   it("(a) deep-link wins race: listener resolves when browser has not intercepted", async () => {
@@ -972,6 +1004,56 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     await connectPromise;
     // Token exchange called exactly once
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("(f) browser cancel/dismiss resolves before deep-link: link arrives within grace window → success", async () => {
+    // Simulates the primary bare-Android failure mode: Custom Tabs reports cancel
+    // one macrotask before the OS delivers the cablesnap://strava-callback event.
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      Linking.getInitialURL.mockResolvedValueOnce(null);
+      // Browser cancels immediately (Custom Tabs dismissed by OS deep-link redirect)
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      mockTokenFetch({ athlete: { id: 99, firstname: "Late", lastname: "Link" } });
+
+      const connectPromise = strava.connectStrava();
+      // Allow microtasks to run until browserPromise is suspended on DEEP_LINK_GRACE_MS timer
+      await new Promise((r) => setImmediate(r));
+      // OS deep-link event arrives while the grace window is open
+      Linking.__simulateUrl("cablesnap://strava-callback?code=late-code&state=mock-state-uuid");
+      // Advance past the grace window (timer fires → browserPromise.then checks settled → already true)
+      jest.runAllTimers();
+
+      const result = await connectPromise;
+      expect(result).toEqual({ athleteId: 99, athleteName: "Late Link" });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(fetchBody.code).toBe("late-code");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("(g) browser cancel with no deep-link: returns null after grace window and cleans up listener", async () => {
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      Linking.getInitialURL.mockResolvedValueOnce(null);
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      // No deep link arrives — real user cancellation
+
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r)); // flush until grace timer registered
+      jest.runAllTimers(); // fire the grace window → settled=true, return cancel
+
+      const result = await connectPromise;
+      expect(result).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+      // Listener was registered and removed
+      const sub = Linking.addEventListener.mock.results[0].value;
+      expect(sub.remove).toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 

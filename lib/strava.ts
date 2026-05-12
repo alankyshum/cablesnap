@@ -77,6 +77,11 @@ function getProxyUrl(): string {
 const REDIRECT_URI_FOR_STRAVA = `${Constants.expoConfig?.extra?.stravaProxyUrl ?? "https://strava-proxy.alan200994.workers.dev"}/callback`;
 // Deep link that WebBrowser.openAuthSessionAsync watches for to close the browser.
 const APP_DEEP_LINK = "cablesnap://strava-callback";
+// On bare Android, Custom Tabs may dismiss and report `cancel`/`dismiss` one
+// macrotask before the OS delivers the `cablesnap://strava-callback` deep-link
+// event. This grace window keeps the Linking listener alive after a browser
+// cancel so a valid callback that arrives within this window still wins.
+const DEEP_LINK_GRACE_MS = 500;
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -293,16 +298,28 @@ async function runAuthPrompt(
 
   // browser promise: resolves when openAuthSessionAsync returns
   const browserPromise = WebBrowser.openAuthSessionAsync(authorizeUrl, APP_DEEP_LINK)
-    .then((result): { result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined } => {
+    .then(async (result): Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }> => {
       if (settled) {
         // Deep link already won — return a neutral cancelled result so the
         // caller's winner check sees the deep-link result, not this one.
         return { result: { type: "cancel" } as WebBrowser.WebBrowserAuthSessionResult, code: undefined };
       }
-      settled = true;
       if (result.type !== "success") {
+        // Do NOT settle yet. On bare Android OEM Custom Tabs, the browser may
+        // report cancel/dismiss one macrotask before the OS delivers the
+        // cablesnap://strava-callback deep-link event to the Linking listener.
+        // Keep the listener alive for a bounded grace window so a valid callback
+        // that arrives during this window still wins the race.
+        await new Promise<void>((r) => setTimeout(r, DEEP_LINK_GRACE_MS));
+        if (settled) {
+          // Deep link arrived during the grace window — treat browser cancel as superseded.
+          return { result: { type: "cancel" } as WebBrowser.WebBrowserAuthSessionResult, code: undefined };
+        }
+        settled = true;
         return { result, code: undefined };
       }
+      // Success path — settle immediately
+      settled = true;
       // parseCallbackUrl returns null for malformed URLs, throws on state mismatch
       const code = parseCallbackUrl(result.url, expectedState) ?? undefined;
       return { result, code };
