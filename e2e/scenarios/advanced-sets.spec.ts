@@ -54,15 +54,19 @@ test.describe("@scenario advanced-sets", () => {
 
     const helpLink = page.getByText("Advanced Set Types").first();
     await expect(helpLink).toBeVisible({ timeout: 5_000 });
-    await helpLink.tap();
+    // Use click() — Playwright mobile projects set viewport only, not hasTouch, so tap() throws.
+    await helpLink.click();
 
     await expect(page.locator("body")).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(500);
 
-    // Verify all three set types render
-    await expect(page.getByText("Rest-pause")).toBeVisible();
-    await expect(page.getByText("Cluster")).toBeVisible();
-    await expect(page.getByText("Myo-reps")).toBeVisible();
+    // Verify all three set types render.
+    // Use { exact: true } + .first() to avoid React Native Web's nested-span strict-mode
+    // violation: getByText("Cluster") matches the title span AND every ancestor that
+    // contains only "Cluster" as its innerText.
+    await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
   });
 
   test("help copy contains no forbidden aspirational phrases", async ({ page }) => {
@@ -100,9 +104,9 @@ test.describe("@scenario advanced-sets", () => {
       w.__SKIP_ONBOARDING__ = true;
     });
     await page.goto("/settings/advanced-sets");
-    await expect(page.getByText("Rest-pause")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Cluster")).toBeVisible();
-    await expect(page.getByText("Myo-reps")).toBeVisible();
+    await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
 
     // Capture screenshot
     const viewport = testInfo.project.name;
@@ -111,8 +115,13 @@ test.describe("@scenario advanced-sets", () => {
     expect(screenshotPath).toBeTruthy();
   });
 
-  // AC #265 — advanced set data through production session-detail mount path
+  // AC #265 — advanced set data through production session-detail mount path.
+  // Requires E2E_USE_STATIC=1 (pre-built bundle with COOP/COEP headers) so
+  // SharedArrayBuffer is available for the expo-sqlite web worker. Without it,
+  // useAppInit short-circuits (webNeedsUnsupportedFallback=true) and seedScenario()
+  // never runs — body[data-test-ready='true'] is never set. See e2e/README.md.
   test("rest_pause set renders via production session-detail path (AC #265)", async ({ page }) => {
+    test.skip(!process.env.E2E_USE_STATIC, "requires E2E_USE_STATIC=1 — see e2e/README.md");
     await page.addInitScript((scenario) => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -141,7 +150,9 @@ test.describe("@scenario advanced-sets", () => {
   // reload) to ensure __TEST_SCENARIO__ is injected ONLY on the first load; on the reload
   // seedScenario() sees guardsAllow()=false (no __TEST_SCENARIO__), skips the clear+re-seed,
   // and useSessionDetail reads previously persisted rows from the IndexedDB DB.
+  // Requires E2E_USE_STATIC=1 — see comment on the AC #265 test above.
   test("advanced set data survives reload (AC #265 — kill+relaunch via persistent DB)", async ({ page }) => {
+    test.skip(!process.env.E2E_USE_STATIC, "requires E2E_USE_STATIC=1 — see e2e/README.md");
     // addInitScript re-runs on every navigation including page.reload().
     // The sessionStorage gate ensures __TEST_SCENARIO__ is injected only once (first load).
     await page.addInitScript(() => {
