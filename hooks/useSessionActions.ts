@@ -1089,11 +1089,26 @@ export function useSessionActions({
       "Complete Workout?",
       `Duration: ${formatTime(elapsed)}`,
       async () => {
-        // BLD-1137: cancel any active rest timer notifications before completing.
-        dismissRest();
-        // BLD-1028: flush any pending pinned-note drafts before completing.
-        await flushAllPinnedNotes();
-        await completeSession(id!);
+        // BLD-1207 / GH#589: the critical "save the workout" steps must
+        // never silently no-op. Previously a thrown rejection inside
+        // dismissRest() / flushAllPinnedNotes() / completeSession() was
+        // swallowed by Alert's onPress callback, so the user saw "no
+        // event" after tapping Complete and lost their session. Wrap the
+        // must-succeed chain in try/catch and surface a toast on failure
+        // so the user can retry. Their data remains intact because the
+        // session is not marked completed_at on throw and the resume CTA
+        // on Home still picks it up.
+        try {
+          // BLD-1137: cancel any active rest timer notifications before completing.
+          dismissRest();
+          // BLD-1028: flush any pending pinned-note drafts before completing.
+          await flushAllPinnedNotes();
+          await completeSession(id!);
+        } catch (err) {
+          console.warn("[finish] failed to complete workout:", err);
+          showError("Couldn't finish workout — your data is safe, please try again");
+          return;
+        }
         bumpQueryVersion("home");
         queryClient.removeQueries({ queryKey: ["home"] });
         // BLD-1122 AC17: completing a session finalizes the plateau window
@@ -1185,7 +1200,8 @@ export function useSessionActions({
           router.replace(`/session/summary/${id}`);
         }
       },
-      false
+      false,
+      "Complete"
     );
   };
 
