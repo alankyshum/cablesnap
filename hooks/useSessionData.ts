@@ -265,7 +265,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     // BLD-1175: batch-load mini-set segments for advanced sets
     const allSets = groupList.flatMap((g) => g.sets);
     const advancedSetIds = allSets
-      .filter((s) => ADVANCED_SET_TYPES.includes(s.set_type))
+      .filter((s) => ADVANCED_SET_TYPES.has(s.set_type))
       .map((s) => s.id);
     if (advancedSetIds.length > 0) {
       getSegmentsForSets(advancedSetIds).then((segMap) => {

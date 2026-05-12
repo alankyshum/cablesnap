@@ -37,7 +37,8 @@ import { getAppSetting, setAppSetting } from "@/lib/db";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { type SetWithMeta } from "./types";
-import { SET_TYPE_LABELS, ADVANCED_SET_TYPES, type Equipment } from "../../lib/types";
+import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
+import { ADVANCED_SET_TYPES } from "../../lib/db/sets";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
@@ -875,7 +876,7 @@ export const SetRow = memo(function SetRow({
         </View>
       ) : null}
 
-      {ADVANCED_SET_TYPES.includes(set.set_type) && onAddSegment && onDeleteSegment && onCollapseToNormal ? (
+      {ADVANCED_SET_TYPES.has(set.set_type) && onAddSegment && onDeleteSegment && onCollapseToNormal ? (
         <MiniSetEditor
           setId={set.id}
           segments={set.segments ?? []}
