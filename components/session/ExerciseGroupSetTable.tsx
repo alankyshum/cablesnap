@@ -56,6 +56,10 @@ export type ExerciseGroupSetTableProps = {
   stacks?: StackWithCalibrations[];
   onMarkerConfirm?: (setId: string, result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => void;
   onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
+  /** BLD-1175: Mini-set segment handlers. */
+  onAddSegment?: (setId: string) => Promise<void> | void;
+  onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
+  onCollapseToNormal?: (setId: string) => Promise<void> | void;
 };
 
 export function ExerciseGroupSetTable({
@@ -71,6 +75,7 @@ export function ExerciseGroupSetTable({
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
   gymId, stacks, onMarkerConfirm, onManualWeightSave,
+  onAddSegment, onDeleteSegment, onCollapseToNormal,
 }: ExerciseGroupSetTableProps) {
   return (
     <>
@@ -125,6 +130,9 @@ export function ExerciseGroupSetTable({
             stacks={stacks}
             onMarkerConfirm={onMarkerConfirm}
             onManualWeightSave={onManualWeightSave}
+            onAddSegment={onAddSegment}
+            onDeleteSegment={onDeleteSegment}
+            onCollapseToNormal={onCollapseToNormal}
           />
         );
       })}

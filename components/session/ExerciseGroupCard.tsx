@@ -83,6 +83,10 @@ export type GroupCardProps = {
   gymId?: string | null;
   onMarkerConfirm?: (setId: string, result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => void;
   onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
+  /** BLD-1175: Mini-set segment handlers. */
+  onAddSegment?: (setId: string) => Promise<void> | void;
+  onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
+  onCollapseToNormal?: (setId: string) => Promise<void> | void;
 };
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
@@ -104,6 +108,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
   gymId, onMarkerConfirm, onManualWeightSave,
+  onAddSegment, onDeleteSegment, onCollapseToNormal,
 }: GroupCardProps) {
   const colors = useThemeColors();
   // BLD-1130 G3: lift `useActiveCalibration` out of `SetRow` (it was previously
@@ -174,6 +179,9 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       stacks={stacks}
       onMarkerConfirm={onMarkerConfirm}
       onManualWeightSave={onManualWeightSave}
+      onAddSegment={onAddSegment}
+      onDeleteSegment={onDeleteSegment}
+      onCollapseToNormal={onCollapseToNormal}
     />
   );
 
