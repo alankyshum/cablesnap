@@ -8,6 +8,13 @@ import { categorize, type ExerciseCategory } from "../rest";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
 import { workoutSets, exercises, workoutSessions, setMedia } from "./schema";
+import {
+  updateSetWeightReps,
+  updateSetRepsAndDurationAtomic,
+  batchUpdateSetWeightReps,
+  updateSetTypeAndRecompute,
+  updateSetWeightAndFields,
+} from "./sets";
 import { cascadeDeleteClipsForSets } from "../media/form-clips";
 import { normalizeSetType } from "./sets";
 
@@ -383,19 +390,8 @@ export async function addWarmupSets(
 export async function updateSetsBatch(
   updates: { id: string; weight: number | null; reps: number | null }[]
 ): Promise<void> {
-  if (updates.length === 0) return;
-  await withTransaction(async (db) => {
-    const stmt = await db.prepareAsync(
-      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?"
-    );
-    try {
-      for (const u of updates) {
-        await stmt.executeAsync([u.weight, u.reps, u.id]);
-      }
-    } finally {
-      await stmt.finalizeAsync();
-    }
-  });
+  // BLD-1170: route through sets.ts so recomputeSetCaches runs for each updated set.
+  await batchUpdateSetWeightReps(updates);
 }
 
 export async function updateSet(
@@ -404,12 +400,11 @@ export async function updateSet(
   reps: number | null,
   durationSeconds?: number | null
 ): Promise<void> {
-  const db = await getDrizzle();
-  const values: Record<string, unknown> = { weight, reps };
+  // BLD-1170: route weight+reps through sets.ts to trigger cache recomputation.
+  await updateSetWeightReps(id, weight, reps);
   if (durationSeconds !== undefined) {
-    values.duration_seconds = durationSeconds;
+    await updateSetDuration(id, durationSeconds);
   }
-  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
 }
 
 /**
@@ -423,12 +418,10 @@ export async function updateSetRepsAndDuration(
   reps: number | null,
   durationSeconds?: number | null
 ): Promise<void> {
-  const db = await getDrizzle();
-  const values: Record<string, unknown> = { reps };
-  if (durationSeconds !== undefined) {
-    values.duration_seconds = durationSeconds;
-  }
-  await db.update(workoutSets).set(values).where(eq(workoutSets.id, id));
+  // BLD-1170: atomic reps+duration write via sets.ts to trigger cache recomputation.
+  // Uses updateSetRepsAndDurationAtomic to preserve the single-statement contract
+  // required by tests (db.sessions-sets.test.ts:229).
+  await updateSetRepsAndDurationAtomic(id, reps, durationSeconds);
 }
 
 export async function updateSetDuration(
@@ -637,18 +630,13 @@ export async function updateSetTempo(id: string, tempo: string | null): Promise<
 }
 
 export async function updateSetWarmup(id: string, isWarmup: boolean): Promise<void> {
-  const setType = isWarmup ? "warmup" : "normal";
-  const db = await getDrizzle();
-  await db.update(workoutSets)
-    .set({ set_type: setType })
-    .where(eq(workoutSets.id, id));
+  // BLD-1170: route through sets.ts — clears segments if changing advanced→non-advanced.
+  await updateSetTypeAndRecompute(id, isWarmup ? "warmup" : "normal");
 }
 
 export async function updateSetType(id: string, type: SetType): Promise<void> {
-  const db = await getDrizzle();
-  await db.update(workoutSets)
-    .set({ set_type: type })
-    .where(eq(workoutSets.id, id));
+  // BLD-1170: route through sets.ts — clears segments if changing advanced→non-advanced.
+  await updateSetTypeAndRecompute(id, type);
 }
 
 export async function getPreviousSets(
@@ -1192,14 +1180,13 @@ export async function updateSetStackMarker(
   id: string,
   v: { weight: number; marker: number; stackId: string; stackName: string; stackUnit: string }
 ): Promise<void> {
-  const db = await getDrizzle();
-  await db.update(workoutSets).set({
-    weight: v.weight,
+  // BLD-1170: route weight write through sets.ts to trigger cache recomputation.
+  await updateSetWeightAndFields(id, v.weight, {
     stack_id: v.stackId,
     stack_marker: v.marker,
     stack_name_at_log: v.stackName,
     stack_unit_at_log: v.stackUnit,
-  }).where(eq(workoutSets.id, id));
+  });
 }
 
 /**
@@ -1229,15 +1216,14 @@ export async function updateSetManualWeight(
   id: string,
   v: { weight: number | null; reps: number | null }
 ): Promise<void> {
-  const db = await getDrizzle();
-  await db.update(workoutSets).set({
-    weight: v.weight,
+  // BLD-1170: route weight+reps write through sets.ts (clears stack columns atomically).
+  await updateSetWeightAndFields(id, v.weight, {
     reps: v.reps,
     stack_id: null,
     stack_marker: null,
     stack_name_at_log: null,
     stack_unit_at_log: null,
-  }).where(eq(workoutSets.id, id));
+  });
 }
 
 /**
