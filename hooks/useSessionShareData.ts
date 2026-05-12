@@ -33,7 +33,10 @@ export function useSessionShareData(
   const duration = session?.duration_seconds ? formatTime(session.duration_seconds) : "0:00";
   const volumeRaw = groups.reduce((sum, g) => {
     for (const s of g.sets) {
-      if (s.completed) sum += (s.weight ?? 0) * (s.reps ?? 0);
+      // BLD-1174: use cached_volume_kg (segment-aware); fall back to weight*reps for legacy rows
+      if (s.completed && s.set_type !== 'warmup') {
+        sum += s.cached_volume_kg ?? (s.weight ?? 0) * (s.reps ?? 0);
+      }
     }
     return sum;
   }, 0);

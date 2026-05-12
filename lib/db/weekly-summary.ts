@@ -118,7 +118,7 @@ export async function getWeeklyWorkouts(
         .get(),
       db
         .select({
-          volume: sql<number>`COALESCE(SUM(${workoutSets.weight} * ${workoutSets.reps}), 0)`.as("volume"),
+          volume: sql<number>`COALESCE(SUM(${workoutSets.cached_volume_kg}), 0)`.as("volume") /* BLD-1174 */,
         })
         .from(workoutSets)
         .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
@@ -149,7 +149,7 @@ export async function getWeeklyWorkouts(
         .get(),
       db
         .select({
-          volume: sql<number>`COALESCE(SUM(${workoutSets.weight} * ${workoutSets.reps}), 0)`.as("volume"),
+          volume: sql<number>`COALESCE(SUM(${workoutSets.cached_volume_kg}), 0)`.as("volume") /* BLD-1174 */,
         })
         .from(workoutSets)
         .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))

@@ -118,7 +118,7 @@ async function getMonthlyWorkouts(
       .get(),
     db
       .select({
-        volume: sql<number>`COALESCE(SUM(${workoutSets.weight} * ${workoutSets.reps}), 0)`.as("volume"),
+        volume: sql<number>`COALESCE(SUM(${workoutSets.cached_volume_kg}), 0)`.as("volume") /* BLD-1174 */,
       })
       .from(workoutSets)
       .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
@@ -149,7 +149,7 @@ async function getMonthlyWorkouts(
       .get(),
     db
       .select({
-        volume: sql<number>`COALESCE(SUM(${workoutSets.weight} * ${workoutSets.reps}), 0)`.as("volume"),
+        volume: sql<number>`COALESCE(SUM(${workoutSets.cached_volume_kg}), 0)`.as("volume") /* BLD-1174 */,
       })
       .from(workoutSets)
       .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
@@ -318,15 +318,13 @@ async function getMonthlyMostImproved(
        prev.e1rm AS previous_e1rm
      FROM (
        SELECT ws.exercise_id,
-              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm,
+              MAX(ws.cached_e1rm_kg) AS e1rm, /* BLD-1174 */
               COUNT(DISTINCT wss.id) AS session_count
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.weight > 0
-         AND ws.reps > 0
-         AND ws.reps <= 12
+         AND ws.cached_e1rm_kg > 0 /* BLD-1174 */
          AND wss.completed_at IS NOT NULL
          AND wss.started_at >= ? AND wss.started_at < ?
        GROUP BY ws.exercise_id
@@ -334,14 +332,12 @@ async function getMonthlyMostImproved(
      ) cur
      JOIN (
        SELECT ws.exercise_id,
-              MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS e1rm
+              MAX(ws.cached_e1rm_kg) AS e1rm /* BLD-1174 */
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
        WHERE ws.completed = 1
          AND ws.set_type != 'warmup'
-         AND ws.weight > 0
-         AND ws.reps > 0
-         AND ws.reps <= 12
+         AND ws.cached_e1rm_kg > 0 /* BLD-1174 */
          AND wss.completed_at IS NOT NULL
          AND wss.started_at >= ? AND wss.started_at < ?
        GROUP BY ws.exercise_id
