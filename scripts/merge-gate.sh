@@ -45,6 +45,16 @@
 # Sentinel takes precedence over prose. Latest verdict per role wins.
 # A BLOCK verdict newer than any APPROVE counts as missing approval.
 #
+# ─── Dual-post convention (since BLD-1180) ───────────────────────────
+# Internal agents (techlead, quality-director) now automatically dual-post
+# their verdicts: once to Paperclip via `clip.sh comment-issue`, and once
+# as a MERGE-GATE sentinel on the linked GitHub PR via:
+#
+#   scripts/post-merge-gate-verdict.sh <role> <verdict> <BLD-N>
+#
+# Humans should NOT mirror verdicts by hand any more — the helper handles it.
+# The only exception is an emergency fallback if the helper is unavailable.
+#
 # ─── Usage ───────────────────────────────────────────────────────────
 #   merge-gate.sh <PR_NUMBER> [REPO]
 #
