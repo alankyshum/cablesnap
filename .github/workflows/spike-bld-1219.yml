@@ -42,7 +42,7 @@ jobs:
   build-and-gate:
     name: Spike build + DEX-strings gate
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - name: Checkout spike branch
         uses: actions/checkout@v4
@@ -62,9 +62,80 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install base dependencies
+      - name: Install base dependencies (BASELINE — no HC)
         run: npm ci
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ---------------------------------------------------------------
+      # PASS 1 — BASELINE build (no react-native-health-connect dep)
+      #
+      # Per reviewer (BLD-1221): the `release` flavor's GMS/Firebase/MlKit
+      # count must be COMPARED against a pre-HC baseline, not just logged.
+      # Otherwise HC could silently drag GMS classes into the Play APK and
+      # the gate would still emit GO.
+      #
+      # We capture the baseline counts from the same runner image, same
+      # SDK, same prebuild plugin chain — so any delta in PASS 2 is
+      # attributable to the HC dep alone.
+      # ---------------------------------------------------------------
+      - name: Generate native project (BASELINE prebuild)
+        env:
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: npx expo prebuild --clean --platform android
+
+      - name: Boost Gradle JVM heap (BASELINE)
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+
+      - name: Build BASELINE :app:assembleRelease (no HC)
+        run: |
+          # Single flavor — we only need release GMS count baseline. The
+          # FOSS flavor's hard-zero gate doesn't need a baseline.
+          set -euo pipefail
+          cd android
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          cd ..
+          mkdir -p /tmp/baseline-apks
+          cp android/app/build/outputs/apk/release/app-release.apk /tmp/baseline-apks/baseline-release.apk
+
+      - name: Capture BASELINE DEX counts
+        id: baseline_counts
+        run: |
+          set -euo pipefail
+          TMP=$(mktemp -d)
+          unzip -q -o /tmp/baseline-apks/baseline-release.apk 'classes*.dex' -d "$TMP"
+          HC=$(strings "$TMP"/classes*.dex | grep -c 'androidx/health/connect/' || true)
+          GMS=$(strings "$TMP"/classes*.dex | grep -cE 'com/google/android/gms/wearable|FirebaseInitProvider|MlKitInitProvider' || true)
+          echo ""
+          echo "=== BASELINE (release, no HC) ==="
+          echo "androidx/health/connect/  count: $HC (expected 0)"
+          echo "GMS/Firebase/MlKit         count: $GMS (this is the regression baseline)"
+          echo "baseline_release_hc=$HC"  >> "$GITHUB_OUTPUT"
+          echo "baseline_release_gms=$GMS" >> "$GITHUB_OUTPUT"
+          if [ "$HC" -ne 0 ]; then
+            echo "::error::BASELINE has HC classes already? That violates the test premise. NO-GO."
+            exit 1
+          fi
+
+      # ---------------------------------------------------------------
+      # PASS 2 — POST build (with react-native-health-connect installed)
+      # ---------------------------------------------------------------
       - name: Install Health Connect dependency
         run: |
           # `.npmrc` already sets `legacy-peer-deps=true`, so HC 3.5.0's
@@ -77,25 +148,14 @@ jobs:
           echo "--- package.json change ---"
           grep -n 'react-native-health-connect' package.json || true
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Generate native project (expo prebuild)
+      - name: Generate native project (POST prebuild)
         env:
-          # Sentry plugin tolerates missing secrets at prebuild — see
-          # scheduled-release.yml comment.
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
 
-      - name: Boost Gradle JVM heap
+      - name: Boost Gradle JVM heap (POST)
         run: |
           set -euo pipefail
           PROPS=android/gradle.properties
@@ -104,9 +164,8 @@ jobs:
           else
             echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
           fi
-          grep '^org.gradle.jvmargs=' "$PROPS"
 
-      - name: Build APKs (release + releaseFdroid)
+      - name: Build POST APKs (release + releaseFdroid, with HC)
         run: |
           # No keystore.properties → with-release-signing falls back to
           # debug-keystore signing for the `release` build type. That is
@@ -123,35 +182,60 @@ jobs:
           ls -la android/app/build/outputs/apk/release/
           ls -la android/app/build/outputs/apk/releaseFdroid/
 
-      - name: DEX-strings gate
+      - name: DEX-strings gate (baseline-diff for release, hard-zero for releaseFdroid)
         id: dex_gate
+        env:
+          BASELINE_RELEASE_GMS: ${{ steps.baseline_counts.outputs.baseline_release_gms }}
         run: |
           set -euo pipefail
           PASS=true
+          declare -A POST_HC POST_GMS
           for VAR in release releaseFdroid; do
             APK=$(ls android/app/build/outputs/apk/$VAR/app-*.apk | head -1)
             TMP=$(mktemp -d)
             unzip -q -o "$APK" 'classes*.dex' -d "$TMP"
-            HC_COUNT=$(strings "$TMP"/classes*.dex | grep -c 'androidx/health/connect/' || true)
-            GMS_COUNT=$(strings "$TMP"/classes*.dex | grep -cE 'com/google/android/gms/wearable|FirebaseInitProvider|MlKitInitProvider' || true)
+            HC=$(strings "$TMP"/classes*.dex | grep -c 'androidx/health/connect/' || true)
+            GMS=$(strings "$TMP"/classes*.dex | grep -cE 'com/google/android/gms/wearable|FirebaseInitProvider|MlKitInitProvider' || true)
+            POST_HC[$VAR]=$HC
+            POST_GMS[$VAR]=$GMS
             echo ""
-            echo "=== $VAR (apk=$(basename "$APK")) ==="
-            echo "androidx/health/connect/  count: $HC_COUNT"
-            echo "GMS/Firebase/MlKit         count: $GMS_COUNT"
-            if [ "$HC_COUNT" -le 0 ]; then
-              echo "::error::$VAR — Health Connect classes missing (HC_COUNT=$HC_COUNT). Spike NO-GO."
+            echo "=== POST $VAR (apk=$(basename "$APK")) ==="
+            echo "androidx/health/connect/  count: $HC"
+            echo "GMS/Firebase/MlKit         count: $GMS"
+            if [ "$HC" -le 0 ]; then
+              echo "::error::$VAR — Health Connect classes missing (HC=$HC). NO-GO."
               PASS=false
             fi
-            if [ "$VAR" = "releaseFdroid" ] && [ "$GMS_COUNT" -ne 0 ]; then
-              echo "::error::releaseFdroid — GMS/Firebase/MlKit leak detected ($GMS_COUNT classes). Spike NO-GO; HC dep pulls forbidden Google libs into FOSS flavor."
+            if [ "$VAR" = "releaseFdroid" ] && [ "$GMS" -ne 0 ]; then
+              echo "::error::releaseFdroid — GMS/Firebase/MlKit leak detected (GMS=$GMS). NO-GO; HC dep pulls forbidden Google libs into FOSS flavor."
               PASS=false
             fi
           done
+
+          # Reviewer-mandated baseline-diff gate (BLD-1221):
+          # Play release flavor's GMS count must be UNCHANGED after HC install.
+          POST_RELEASE_GMS=${POST_GMS[release]}
+          echo ""
+          echo "=== BASELINE-DIFF GATE (release flavor) ==="
+          echo "BASELINE GMS/Firebase/MlKit count: $BASELINE_RELEASE_GMS"
+          echo "POST     GMS/Firebase/MlKit count: $POST_RELEASE_GMS"
+          if [ "$POST_RELEASE_GMS" -ne "$BASELINE_RELEASE_GMS" ]; then
+            DELTA=$((POST_RELEASE_GMS - BASELINE_RELEASE_GMS))
+            echo "::error::release — GMS/Firebase/MlKit count regression (delta=$DELTA). HC dep transitively pulled additional Google classes into Play flavor. NO-GO."
+            PASS=false
+          else
+            echo "::notice::release — GMS count unchanged from baseline ($BASELINE_RELEASE_GMS). No regression."
+          fi
+
           if [ "$PASS" = false ]; then
             echo "verdict=NO-GO" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "verdict=GO" >> "$GITHUB_OUTPUT"
+          echo "post_release_hc=${POST_HC[release]}"           >> "$GITHUB_OUTPUT"
+          echo "post_release_gms=${POST_GMS[release]}"          >> "$GITHUB_OUTPUT"
+          echo "post_fdroid_hc=${POST_HC[releaseFdroid]}"       >> "$GITHUB_OUTPUT"
+          echo "post_fdroid_gms=${POST_GMS[releaseFdroid]}"     >> "$GITHUB_OUTPUT"
           echo "::notice::DEX gate passed — Slice 0 build feasibility = GO. Awaiting BLD-1220 device smoke test."
 
       - name: Upload release APK (Play flavor)
@@ -175,10 +259,15 @@ jobs:
       - name: Spike summary
         if: always()
         run: |
-          echo "## Spike BLD-1219 — Slice 0 Health Connect feasibility" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Spike BLD-1219 — Slice 0 Health Connect feasibility (v2 baseline-diff)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**HC version:** \`${{ inputs.hc_version }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "**DEX gate verdict:** \`${{ steps.dex_gate.outputs.verdict || 'unreachable (build failed)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Variant | HC count | GMS count | Baseline GMS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| release      | ${{ steps.dex_gate.outputs.post_release_hc || '-' }} | ${{ steps.dex_gate.outputs.post_release_gms || '-' }} | ${{ steps.baseline_counts.outputs.baseline_release_gms || '-' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| releaseFdroid | ${{ steps.dex_gate.outputs.post_fdroid_hc || '-' }} | ${{ steps.dex_gate.outputs.post_fdroid_gms || '-' }} | n/a (hard-zero gate) |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Artifacts: \`spike-bld-1219-app-release\`, \`spike-bld-1219-app-releaseFdroid\` (30-day retention)." >> "$GITHUB_STEP_SUMMARY"
           echo "Next step: BLD-1220 — owner sideloads the FOSS APK on Z Fold6 and runs READ_WEIGHT permission round-trip." >> "$GITHUB_STEP_SUMMARY"
