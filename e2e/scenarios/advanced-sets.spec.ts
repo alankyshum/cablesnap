@@ -159,12 +159,30 @@ test.describe("@scenario advanced-sets", () => {
   //
   // The web DB primary path is `openDatabaseAsync("cablesnap.db")` (lib/db/helpers.ts:64)
   // which uses IndexedDB-backed SQLite on Chromium — data SURVIVES page.reload() within
-  // the same browser context. addInitScript re-runs on every navigation, so __TEST_SCENARIO__
-  // is set on both first load and reload. seedScenario() deletes + re-inserts on both loads,
-  // which verifies that the session detail route correctly renders seeded advanced-set data
-  // through a kill+relaunch cycle.
+  // the same browser context.
+  //
+  // Seed strategy: use page.evaluate() to inject __TEST_SCENARIO__ into the LIVE page
+  // BEFORE useAppInit fires (via addInitScript for first load only), then on reload
+  // __TEST_SCENARIO__ is NOT set → guardsAllow()=false → seedScenario() is a no-op
+  // → DB tables are NOT cleared → data persists in IndexedDB → useSessionDetail
+  // reads the previously seeded rows, proving true kill+relaunch persistence.
+  //
+  // addInitScript re-runs on every navigation including page.reload(). To inject on
+  // first load only without sessionStorage (which may not be available at addInitScript
+  // execution time), we use a window-level guard variable set by addInitScript itself.
   // Requires E2E_USE_STATIC=1 — see comment on the AC #265 test above.
   test("advanced set data survives reload (AC #265 — kill+relaunch via persistent DB)", async ({ page }) => {
+    // addInitScript re-runs on every navigation. Use a window-level boolean guard
+    // (__adv_seeded) set on first run to prevent __TEST_SCENARIO__ injection on reload.
+    // This is reliable because window globals are cleared on page.reload() — so on
+    // the reload the guard doesn't exist, but we also don't set __TEST_SCENARIO__ there.
+    // Wait — window IS cleared on reload, so __adv_seeded won't persist. Use a different
+    // approach: inject via a dedicated addInitScript that gates on a flag it sets itself,
+    // using a closure variable that persists only within the addInitScript registration.
+    //
+    // The cleanest approach: addInitScript runs BEFORE page JS. We inject __TEST_SCENARIO__
+    // on page 1 (first goto), then call page.evaluate() to clear it before reload so the
+    // reload load sees no __TEST_SCENARIO__.
     await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -177,11 +195,32 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("100 × 8+3+2 (13)")).toBeVisible();
 
-    // Reload (simulates kill+relaunch): seedScenario() re-runs (delete + re-insert),
-    // and useSessionDetail must still render the advanced-set data correctly.
+    // Clear __TEST_SCENARIO__ in the live page BEFORE reload.
+    // addInitScript re-runs on reload and would re-inject it — override by having the
+    // reload addInitScript check a sentinel we set here via evaluate().
+    // Simplest correct approach: add a SECOND addInitScript that clears __TEST_SCENARIO__
+    // if the reload sentinel is present in sessionStorage (set below via evaluate).
+    await page.evaluate(() => {
+      sessionStorage.setItem("__e2e_adv_seeded", "1");
+    });
+
+    // Register a second addInitScript: on reload, sessionStorage["__e2e_adv_seeded"]
+    // will be present (survives reload), clearing __TEST_SCENARIO__ before app JS runs.
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem("__e2e_adv_seeded")) {
+        const w = window as unknown as Record<string, unknown>;
+        delete w.__TEST_SCENARIO__;
+      }
+    });
+
+    // Reload (simulates kill+relaunch):
+    // - addInitScript #1 sets __TEST_SCENARIO__ = "advanced-sets"
+    // - addInitScript #2 immediately deletes it (sessionStorage gate triggers)
+    // - net result: no __TEST_SCENARIO__ → guardsAllow()=false → seedScenario() no-op
+    // - IndexedDB rows from first load persist → useSessionDetail renders them
     await page.reload();
-    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
+    // No data-test-ready signal (seedScenario didn't run); wait on actual content.
+    await expect(page.getByText("RP")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("100 × 8+3+2 (13)")).toBeVisible();
   });
 });
