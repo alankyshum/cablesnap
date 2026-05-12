@@ -43,6 +43,14 @@ jobs:
     name: Spike build + DEX-strings gate
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      # v3 fix (BLD-1219): the Sentry Android Gradle plugin's SentryUpload task
+      # reads these at gradle execution time. Setting them at the job level
+      # ensures BOTH assembleRelease passes (BASELINE no-HC and POST with-HC)
+      # inherit them, not just the prebuild steps. See scheduled-release.yml:447-453.
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
       - name: Checkout spike branch
         uses: actions/checkout@v4
@@ -87,10 +95,6 @@ jobs:
       # attributable to the HC dep alone.
       # ---------------------------------------------------------------
       - name: Generate native project (BASELINE prebuild)
-        env:
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
 
       - name: Boost Gradle JVM heap (BASELINE)
@@ -149,10 +153,6 @@ jobs:
           grep -n 'react-native-health-connect' package.json || true
 
       - name: Generate native project (POST prebuild)
-        env:
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
 
       - name: Boost Gradle JVM heap (POST)
