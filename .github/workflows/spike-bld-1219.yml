@@ -62,22 +62,20 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Install base dependencies
+        run: npm ci
+
       - name: Install Health Connect dependency
         run: |
+          # `.npmrc` already sets `legacy-peer-deps=true`, so HC 3.5.0's
+          # peer-dep declaration of RN >=0.71 is tolerated against our 0.83.4.
+          # If the install itself rejects, that's the spike's first NO-GO.
           set -euo pipefail
           HC_VERSION="${{ inputs.hc_version }}"
           echo "Pinning react-native-health-connect@${HC_VERSION}"
-          # --no-audit/--no-fund for cleaner logs; --save records to package.json
-          # --legacy-peer-deps mirrors what `expo install` tolerates for RN-only
-          # libs that haven't published a peer-dep range matching RN 0.83.x yet
-          # (HC 3.5.0 declares >=0.71). If the lock-step rejects we'll see it
-          # here and the spike has its first NO-GO signal.
-          npm install --save --legacy-peer-deps "react-native-health-connect@${HC_VERSION}"
+          npm install --save "react-native-health-connect@${HC_VERSION}"
           echo "--- package.json change ---"
           grep -n 'react-native-health-connect' package.json || true
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
