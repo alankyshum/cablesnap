@@ -344,7 +344,6 @@ async function runAuthPrompt(
   }
 }
 
-// eslint-disable-next-line complexity
 export async function connectStrava(): Promise<{
   athleteId: number;
   athleteName: string;

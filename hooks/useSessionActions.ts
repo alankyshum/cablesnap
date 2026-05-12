@@ -1089,6 +1089,7 @@ export function useSessionActions({
       "Complete Workout?",
       `Duration: ${formatTime(elapsed)}`,
       async () => {
+
         // BLD-1207 / GH#589: the critical "save the workout" steps must
         // never silently no-op. Previously a thrown rejection inside
         // dismissRest() / flushAllPinnedNotes() / completeSession() was
