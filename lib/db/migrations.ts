@@ -249,11 +249,19 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // Idempotent: rows that already have correct cached values are re-written to the same value.
   // Guard: only runs if the column was just added OR values are still at the default 0.
   // Non-advanced sets that genuinely have reps=0 or weight=NULL are unaffected (WHERE guard).
+  // AC #261: cap e1RM at reps <= 12 to preserve pre-BLD-1168 analytics for legacy normal sets.
+  // Sets with reps > 12 get cached_e1rm_kg = 0 so the `> 0` filter in analytics excludes them,
+  // matching the old `AND ws.reps <= 12` WHERE clause.  Advanced-set rows are never touched here
+  // because recomputeSetCaches writes their cached values via segment arithmetic before they reach
+  // this backfill guard (cached_e1rm_kg is non-zero by the time migrate() runs in production).
   try {
     await database.execAsync(`
       UPDATE workout_sets
       SET cached_volume_kg = weight * reps,
-          cached_e1rm_kg   = weight * (1.0 + reps / 30.0)
+          cached_e1rm_kg   = CASE WHEN reps <= 12
+                                  THEN weight * (1.0 + reps / 30.0)
+                                  ELSE 0
+                             END
       WHERE weight IS NOT NULL
         AND reps IS NOT NULL
         AND reps > 0

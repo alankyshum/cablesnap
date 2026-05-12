@@ -159,7 +159,7 @@ describe("BLD-1174 — legacy analytics parity: no regression on pre-BLD-1168 no
     }
   });
 
-  it("per-set cached_e1rm_kg = weight*(1+reps/30) for every legacy set", async () => {
+  it("per-set cached_e1rm_kg = weight*(1+reps/30) for every legacy set (reps ≤ 12)", async () => {
     const rows = await wdb.getAllAsync<{ id: string; cached_e1rm_kg: number }>(
       `SELECT id, cached_e1rm_kg FROM workout_sets WHERE session_id = ? AND set_type != 'warmup'`,
       [SESSION_ID]
@@ -169,5 +169,90 @@ describe("BLD-1174 — legacy analytics parity: no regression on pre-BLD-1168 no
       const expected = fixture.weight * (1 + fixture.reps / 30);
       expect(row.cached_e1rm_kg).toBeCloseTo(expected, 2);
     }
+  });
+});
+
+// ── AC #261: backfill caps cached_e1rm_kg at reps ≤ 12 for legacy normal sets ──
+//
+// Verifies that the migration backfill sets cached_e1rm_kg = 0 for sets with reps > 12
+// so that the `WHERE cached_e1rm_kg > 0` gate in analytics queries is equivalent to
+// the pre-BLD-1168 `AND ws.reps <= 12` filter.  Without this cap a user's "best e1RM"
+// could jump ~25 % after migration with no new training stimulus.
+
+describe("BLD-1174 AC #261 — backfill caps high-rep sets: cached_e1rm_kg = 0 for reps > 12", () => {
+  let db2: InstanceType<typeof DatabaseSync>;
+  let wdb2: ReturnType<typeof wrapDb>;
+
+  const NOW2 = 1_700_200_000_000;
+  const SID = "sess_hr";
+
+  beforeAll(async () => {
+    db2 = new DatabaseSync(":memory:");
+    db2.exec("PRAGMA foreign_keys = ON;");
+    wdb2 = wrapDb(db2);
+
+    // First migrate call creates the schema (empty DB — backfill has nothing to process)
+    await migrate(wdb2 as Parameters<typeof migrate>[0]);
+
+    db2.exec(`
+      INSERT INTO workout_sessions (id, name, started_at, completed_at, duration_seconds, kind)
+      VALUES ('${SID}', 'High Rep Session', ${NOW2 - 3600_000}, ${NOW2}, 3600, 'workout')
+    `);
+    db2.prepare(
+      `INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty)
+       VALUES ('ex_hr', 'Squat', 'quads', '[]', '[]', 'barbell', '', 'intermediate')`
+    ).run();
+
+    // Insert rows with cached columns = 0 (pre-backfill state)
+    // l_high: reps=20 — must be excluded from e1RM analytics (AC #261)
+    // l_low:  reps=10 — must be included in e1RM analytics
+    db2.prepare(
+      `INSERT INTO workout_sets
+         (id, session_id, exercise_id, set_number, set_type, reps, weight,
+          cached_volume_kg, cached_e1rm_kg, completed)
+       VALUES (?,?,?,?,?,?,?,0,0,1)`
+    ).run("l_high", SID, "ex_hr", 1, "normal", 20, 100);
+    db2.prepare(
+      `INSERT INTO workout_sets
+         (id, session_id, exercise_id, set_number, set_type, reps, weight,
+          cached_volume_kg, cached_e1rm_kg, completed)
+       VALUES (?,?,?,?,?,?,?,0,0,1)`
+    ).run("l_low", SID, "ex_hr", 2, "normal", 10, 80);
+
+    // Second migrate call — idempotent schema DDL, backfill runs on rows with cached = 0
+    await migrate(wdb2 as Parameters<typeof migrate>[0]);
+  });
+
+  it("high-rep set (reps=20) has cached_e1rm_kg = 0 after backfill", async () => {
+    const row = await wdb2.getFirstAsync<{ cached_e1rm_kg: number }>(
+      `SELECT cached_e1rm_kg FROM workout_sets WHERE id = 'l_high'`
+    );
+    expect(row!.cached_e1rm_kg).toBe(0);
+  });
+
+  it("high-rep set (reps=20) still gets cached_volume_kg = weight*reps after backfill", async () => {
+    const row = await wdb2.getFirstAsync<{ cached_volume_kg: number }>(
+      `SELECT cached_volume_kg FROM workout_sets WHERE id = 'l_high'`
+    );
+    expect(row!.cached_volume_kg).toBeCloseTo(100 * 20, 2);
+  });
+
+  it("low-rep set (reps=10) has cached_e1rm_kg = weight*(1+reps/30) after backfill", async () => {
+    const row = await wdb2.getFirstAsync<{ cached_e1rm_kg: number }>(
+      `SELECT cached_e1rm_kg FROM workout_sets WHERE id = 'l_low'`
+    );
+    expect(row!.cached_e1rm_kg).toBeCloseTo(80 * (1 + 10 / 30), 2);
+  });
+
+  it("MAX(cached_e1rm_kg) WHERE cached_e1rm_kg > 0 excludes l_high", async () => {
+    const row = await wdb2.getFirstAsync<{ max_e1rm: number }>(
+      `SELECT MAX(cached_e1rm_kg) AS max_e1rm
+         FROM workout_sets
+        WHERE session_id = ?
+          AND cached_e1rm_kg > 0`,
+      [SID]
+    );
+    // Should be l_low's value, not l_high's inflated value
+    expect(row!.max_e1rm).toBeCloseTo(80 * (1 + 10 / 30), 2);
   });
 });
