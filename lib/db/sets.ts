@@ -402,6 +402,60 @@ export async function deleteAllSegmentsForSet(setId: string): Promise<void> {
   await recomputeSetCaches(setId);
 }
 
+// ─── Session-edit write path ─────────────────────────────────────────────────
+
+/**
+ * The set of fields that editCompletedSession may update on an existing row.
+ * Mirrors PATCHABLE_COLUMNS in sessions.ts plus exercise_id.
+ */
+export type SessionEditUpdateFields = {
+  set_number?: number;
+  weight?: number | null;
+  reps?: number | null;
+  completed?: 0 | 1;
+  completed_at?: number | null;
+  rpe?: number | null;
+  notes?: string;
+  link_id?: string | null;
+  round?: number | null;
+  tempo?: string | null;
+  swapped_from_exercise_id?: string | null;
+  set_type?: string;
+  duration_seconds?: number | null;
+  exercise_position?: number;
+  bodyweight_modifier_kg?: number | null;
+  exercise_id?: string;
+};
+
+/**
+ * Write all session-edit fields for an existing workout_sets row and recompute
+ * cached_volume_kg / cached_e1rm_kg if any volume-affecting column was provided.
+ *
+ * This is the canonical write path for applyEditUpdate (called from
+ * editCompletedSession). Centralising the write here guarantees
+ * recomputeSetCaches() always runs after a weight / reps / set_type change,
+ * eliminating the post-TX recompute loop that previously lived in sessions.ts.
+ *
+ * Must be called from inside `withTransaction` so that recomputeSetCaches()
+ * reads-after-writes see the just-written values within the same SQLite tx.
+ */
+export async function updateSetForSessionEdit(
+  setId: string,
+  sessionId: string,
+  updates: SessionEditUpdateFields,
+): Promise<void> {
+  if (Object.keys(updates).length === 0) return;
+
+  const db = await getDrizzle();
+  await db.update(workoutSets)
+    .set(updates as never)
+    .where(and(eq(workoutSets.id, setId), eq(workoutSets.session_id, sessionId)));
+
+  if (updates.weight !== undefined || updates.reps !== undefined || updates.set_type !== undefined) {
+    await recomputeSetCaches(setId);
+  }
+}
+
 /** Load all segments for a set ordered by segment_number. */
 export async function getSegmentsForSet(setId: string): Promise<SetSegment[]> {
   const db = await getDrizzle();

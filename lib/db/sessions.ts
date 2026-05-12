@@ -11,7 +11,7 @@ import {
   stravaSyncLog,
 } from "./schema";
 import { cascadeDeleteClipsForSession } from "../media/form-clips";
-import { recomputeSetCaches, normalizeSetType } from "./sets";
+import { recomputeSetCaches, normalizeSetType, updateSetForSessionEdit, type SessionEditUpdateFields } from "./sets";
 
 // Re-export from split modules for backward compatibility
 export {
@@ -484,9 +484,11 @@ export class EditCompletedSessionError extends Error {
  * preserved. `workout_sessions.edited_at` is stamped to `now` inside the same
  * transaction so the edit pill appears as soon as the next read happens.
  *
- * BLD-1170: after the transaction, recomputeSetCaches is called for every set
- * whose weight, reps, or set_type was changed, so cached_volume_kg and
- * cached_e1rm_kg remain in sync.
+ * BLD-1186: cache recomputation (cached_volume_kg / cached_e1rm_kg) now happens
+ * inline — updates route through updateSetForSessionEdit (which calls
+ * recomputeSetCaches), and inserts call recomputeSetCaches directly in
+ * applyEditInsert. There is no post-TX recompute loop; lib/db/sets.ts owns the
+ * full write path.
  */
 export async function editCompletedSession(
   sessionId: string,
@@ -527,8 +529,6 @@ export async function editCompletedSession(
   }
 
   const db = await getDrizzle();
-  // BLD-1170: track set IDs that need cache recomputation after the transaction.
-  const recomputeIds: string[] = [];
 
   await withTransaction(async () => {
     if (deletes.length > 0) {
@@ -539,17 +539,9 @@ export async function editCompletedSession(
     }
     for (const u of upserts) {
       if (u.id) {
-        await applyEditUpdate(db, sessionId, u, now);
-        // If weight, reps, or set_type changed, recompute caches after transaction.
-        if (u.weight !== undefined || u.reps !== undefined || u.set_type !== undefined) {
-          recomputeIds.push(u.id);
-        }
+        await applyEditUpdate(sessionId, u, now);
       } else {
-        const newId = await applyEditInsert(db, sessionId, u, now);
-        // New sets with weight/reps need cache priming.
-        if (u.weight != null || u.reps != null) {
-          recomputeIds.push(newId);
-        }
+        await applyEditInsert(db, sessionId, u, now);
       }
     }
     await renumberSessionSets(db, sessionId);
@@ -557,11 +549,6 @@ export async function editCompletedSession(
       .set({ edited_at: now })
       .where(eq(workoutSessions.id, sessionId));
   });
-
-  // BLD-1170: recompute caches outside the transaction (recomputeSetCaches reads back from DB).
-  for (const id of recomputeIds) {
-    await recomputeSetCaches(id);
-  }
 }
 
 const PATCHABLE_COLUMNS: ReadonlyArray<keyof SessionEditSetPatch> = [
@@ -570,15 +557,19 @@ const PATCHABLE_COLUMNS: ReadonlyArray<keyof SessionEditSetPatch> = [
   "duration_seconds", "exercise_position", "bodyweight_modifier_kg",
 ];
 
+/**
+ * Apply an update patch for an existing set, delegating all DB writes through
+ * updateSetForSessionEdit in lib/db/sets.ts. This guarantees recomputeSetCaches()
+ * is called for any volume-affecting change (weight / reps / set_type).
+ */
 async function applyEditUpdate(
-  db: Awaited<ReturnType<typeof getDrizzle>>,
   sessionId: string,
   u: SessionEditSetPatch,
   now: number,
 ): Promise<void> {
-  const updates: Record<string, unknown> = {};
+  const updates: SessionEditUpdateFields = {};
   for (const k of PATCHABLE_COLUMNS) {
-    if (u[k] !== undefined) updates[k as string] = u[k];
+    if (u[k] !== undefined) (updates as Record<string, unknown>)[k] = u[k];
   }
   if (u.exercise_id !== undefined) updates.exercise_id = u.exercise_id;
 
@@ -591,10 +582,7 @@ async function applyEditUpdate(
     updates.completed_at = null;
   }
 
-  if (Object.keys(updates).length === 0) return;
-  await db.update(workoutSets)
-    .set(updates)
-    .where(and(eq(workoutSets.id, u.id!), eq(workoutSets.session_id, sessionId)));
+  await updateSetForSessionEdit(u.id!, sessionId, updates);
 }
 
 async function applyEditInsert(
@@ -602,14 +590,17 @@ async function applyEditInsert(
   sessionId: string,
   u: SessionEditSetPatch,
   now: number,
-): Promise<string> {
+): Promise<void> {
   const completed: 0 | 1 = u.completed ?? 0;
   const completedAt = u.completed_at !== undefined
     ? u.completed_at
     : completed === 1 ? now : null;
   const newRow = buildEditInsertRow(sessionId, u, completed, completedAt);
   await db.insert(workoutSets).values(newRow as never);
-  return newRow.id as string;
+  // Prime caches for new sets that have weight/reps.
+  if (u.weight != null || u.reps != null) {
+    await recomputeSetCaches(newRow.id as string);
+  }
 }
 
 function buildEditInsertRow(

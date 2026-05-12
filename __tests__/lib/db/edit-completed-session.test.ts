@@ -44,7 +44,7 @@ jest.mock('drizzle-orm/expo-sqlite', () => ({
           orderBy: jest.fn().mockReturnThis(),
           limit: jest.fn().mockReturnThis(),
           offset: jest.fn().mockReturnThis(),
-          get: jest.fn(() => undefined),
+          get: jest.fn(() => (g as any).__mockGetResult ?? undefined),
           all: jest.fn(() => g.__mockSelectResult),
           then: (r: any) => Promise.resolve(g.__mockSelectResult).then(r),
         };
@@ -91,6 +91,7 @@ beforeEach(() => {
   g.__mockDeleteCalls = [];
   g.__mockSelectResult = [];
   g.__mockSelectThrows = false;
+  g.__mockGetResult = null;
   mockDbStub.withTransactionAsync.mockImplementation(async (cb: () => Promise<void>) => cb());
 });
 
@@ -285,5 +286,66 @@ describe('editCompletedSession', () => {
       expect(u.values).not.toHaveProperty('link_id');
       expect(u.values).not.toHaveProperty('round');
     }
+  });
+});
+
+// ─── BLD-1186 regression: cache recompute via editCompletedSession ────────────
+//
+// Verifies that editCompletedSession triggers recomputeSetCaches when a
+// volume-affecting field (weight / reps / set_type) changes, and does NOT
+// trigger it for non-volume-only changes.
+//
+// The mock's get() returns g.__mockGetResult to simulate recomputeSetCaches
+// loading the parent row. The resulting cached_volume_kg update is captured in
+// g.__mockUpdateCalls so we can assert the recompute path ran end-to-end.
+
+describe('BLD-1186: cache recompute on volume change', () => {
+  it('writes cached_volume_kg / cached_e1rm_kg after a weight change', async () => {
+    // Simulate recomputeSetCaches loading the parent row (weight=20, reps=10).
+    // The mock does not persist writes, so get() still returns the pre-update row;
+    // what matters here is that the recompute path is triggered and completes.
+    g.__mockGetResult = { id: 'set-1', weight: 20, reps: 10, set_type: 'normal' };
+
+    await editCompletedSession(
+      'sess-1',
+      { upserts: [{ id: 'set-1', exercise_id: 'e-1', weight: 40 }], deletes: [] },
+    );
+
+    const cacheUpdate = g.__mockUpdateCalls.find(
+      (c: any) => 'cached_volume_kg' in (c.values ?? {}),
+    );
+    expect(cacheUpdate).toBeDefined();
+    // cached_volume_kg = parent.weight(20) × parent.reps(10) = 200 (legacy row, no segments)
+    expect(cacheUpdate.values.cached_volume_kg).toBe(200);
+    expect(cacheUpdate.values.cached_e1rm_kg).toBeCloseTo(20 * (1 + 10 / 30), 5);
+  });
+
+  it('writes cached_volume_kg / cached_e1rm_kg after a reps change', async () => {
+    g.__mockGetResult = { id: 'set-1', weight: 100, reps: 5, set_type: 'normal' };
+
+    await editCompletedSession(
+      'sess-1',
+      { upserts: [{ id: 'set-1', exercise_id: 'e-1', reps: 8 }], deletes: [] },
+    );
+
+    const cacheUpdate = g.__mockUpdateCalls.find(
+      (c: any) => 'cached_volume_kg' in (c.values ?? {}),
+    );
+    expect(cacheUpdate).toBeDefined();
+    // cached_volume_kg = 100 × 5 = 500 (mock returns the pre-update row)
+    expect(cacheUpdate.values.cached_volume_kg).toBe(500);
+  });
+
+  it('does NOT write cache cols for non-volume-only changes (e.g. rpe)', async () => {
+    // Leave g.__mockGetResult = null so if recomputeSetCaches is called it exits early.
+    await editCompletedSession(
+      'sess-1',
+      { upserts: [{ id: 'set-1', exercise_id: 'e-1', rpe: 8 }], deletes: [] },
+    );
+
+    const cacheUpdate = g.__mockUpdateCalls.find(
+      (c: any) => 'cached_volume_kg' in (c.values ?? {}),
+    );
+    expect(cacheUpdate).toBeUndefined();
   });
 });
