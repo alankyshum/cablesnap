@@ -6,11 +6,14 @@
  * columns when the drizzle query returns segment-aggregated data.
  *
  * BLOCKER 2 (import): verifies importCsvSessions() binds the parsed
- * set_type (not hardcoded 'normal') and inserts workout_set_segments rows.
+ * set_type (not hardcoded 'normal') and routes segment inserts through
+ * bulkInsertSegments() in lib/db/sets.ts (so recomputeSetCaches() runs
+ * and cached_volume_kg / cached_e1rm_kg are kept in sync).
  *
- * Both test layers use mocked expo-sqlite / drizzle-orm so no real SQLite
- * engine is required — the goal is to pin the DB-level contracts that the
- * format-layer unit tests cannot reach.
+ * BLOCKER 3 (cache invariant): verifies importCsvSessions() calls
+ * bulkInsertSegments() (not raw SQL) so the architecture invariant holds,
+ * and verifies computeSetCacheValues() produces the correct cached column
+ * values for the cluster 5+5+4 at 100/100/95 fixture.
  */
 
 // ─── Mock Setup ───────────────────────────────────────────────────────────────
@@ -61,6 +64,7 @@ jest.mock("drizzle-orm/expo-sqlite", () => ({
 
 import { getWorkoutCSVData } from "../lib/db/csv";
 import { importCsvSessions } from "../lib/db/csv-import";
+import * as setsModule from "../lib/db/sets";
 import type { ImportedSession } from "../lib/csv-import";
 import type { MatchResult } from "../lib/exercise-matcher";
 
@@ -234,6 +238,7 @@ describe("BLOCKER 2 — importCsvSessions persists set_type and set_segments (AC
     mockGetFirstAsync.mockResolvedValue(null); // hasActiveWorkout → no active workout
     mockGetAllAsync.mockResolvedValue([]);
     mockWithTransactionAsync.mockImplementation(async (cb: () => Promise<void>) => cb());
+    jest.spyOn(setsModule, "bulkInsertSegments").mockResolvedValue(undefined);
   });
 
   it("binds parsed set_type (not hardcoded normal) in workout_sets INSERT", async () => {
@@ -254,37 +259,26 @@ describe("BLOCKER 2 — importCsvSessions persists set_type and set_segments (AC
     expect(setTypeParam).toBe("rest_pause");
   });
 
-  it("inserts set_segments rows for each parsed mini-set", async () => {
+  it("inserts set_segments rows for each parsed mini-set via bulkInsertSegments (BLOCKER 3)", async () => {
     const sessions = [makeRestPauseSession()];
     const matchResults = makeMatchResults("Cable Row", EXERCISE_ID);
 
     await importCsvSessions(sessions, matchResults);
 
-    // Find all INSERT INTO set_segments calls
-    const segInserts = mockRunAsync.mock.calls.filter(
-      (call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO workout_set_segments")
-    );
-    // rest_pause "8;3;2" → 3 segments
-    expect(segInserts).toHaveLength(3);
+    // bulkInsertSegments must be called exactly once (one advanced set in the session)
+    expect(jest.mocked(setsModule.bulkInsertSegments)).toHaveBeenCalledTimes(1);
 
-    // Verify segment_number, reps, weight, rest values
-    const seg1 = segInserts[0][1] as unknown[];
-    expect(seg1[2]).toBe(1);     // segment_number
-    expect(seg1[3]).toBe(8);     // reps
-    expect(seg1[4]).toBeNull();  // weight = null (inherit parent)
-    expect(seg1[5]).toBe(15);    // rest_after_seconds
+    // The second argument is the segments array; rest_pause "8;3;2" → 3 segments
+    const [calledSetId, calledSegments] = jest.mocked(setsModule.bulkInsertSegments).mock.calls[0] as [string, any[]];
+    expect(typeof calledSetId).toBe("string"); // setId is a UUID string
+    expect(calledSegments).toHaveLength(3);
 
-    const seg2 = segInserts[1][1] as unknown[];
-    expect(seg2[2]).toBe(2);
-    expect(seg2[3]).toBe(3);
-    expect(seg2[4]).toBeNull();
-    expect(seg2[5]).toBe(15);
-
-    const seg3 = segInserts[2][1] as unknown[];
-    expect(seg3[2]).toBe(3);
-    expect(seg3[3]).toBe(2);
-    expect(seg3[4]).toBeNull();
-    expect(seg3[5]).toBeNull();  // trailing empty rest → null
+    // Verify segment 1: reps=8, weight=null (inherit parent), rest=15
+    expect(calledSegments[0]).toMatchObject({ segmentNumber: 1, reps: 8, weight: null, restAfterSeconds: 15 });
+    // Verify segment 2: reps=3, weight=null, rest=15
+    expect(calledSegments[1]).toMatchObject({ segmentNumber: 2, reps: 3, weight: null, restAfterSeconds: 15 });
+    // Verify segment 3: reps=2, weight=null, rest=null (trailing empty)
+    expect(calledSegments[2]).toMatchObject({ segmentNumber: 3, reps: 2, weight: null, restAfterSeconds: null });
   });
 
   it("inserts no set_segments rows for normal sets", async () => {
@@ -316,12 +310,10 @@ describe("BLOCKER 2 — importCsvSessions persists set_type and set_segments (AC
 
     await importCsvSessions(sessions, matchResults);
 
-    const segInserts = mockRunAsync.mock.calls.filter(
-      (call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO workout_set_segments")
-    );
-    expect(segInserts).toHaveLength(0);
+    // bulkInsertSegments must NOT be called for normal sets (no mini_set_reps)
+    expect(jest.mocked(setsModule.bulkInsertSegments)).not.toHaveBeenCalled();
 
-    // set_type should still be 'normal'
+    // set_type should still be 'normal' in the workout_sets INSERT
     const setInsertCall = mockRunAsync.mock.calls.find(
       (call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO workout_sets")
     );
@@ -358,10 +350,9 @@ describe("BLOCKER 2 — importCsvSessions persists set_type and set_segments (AC
 
     await importCsvSessions(sessions, matchResults);
 
-    const segInserts = mockRunAsync.mock.calls.filter(
-      (call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO workout_set_segments")
-    );
-    expect(segInserts.length).toBeLessThanOrEqual(8);
+    expect(jest.mocked(setsModule.bulkInsertSegments)).toHaveBeenCalledTimes(1);
+    const [, calledSegments] = jest.mocked(setsModule.bulkInsertSegments).mock.calls[0] as [string, any[]];
+    expect(calledSegments.length).toBeLessThanOrEqual(8);
   });
 
   it("preserves segment-level weight override (non-null weight on specific segment)", async () => {
@@ -393,13 +384,65 @@ describe("BLOCKER 2 — importCsvSessions persists set_type and set_segments (AC
 
     await importCsvSessions(sessions, matchResults);
 
-    const segInserts = mockRunAsync.mock.calls.filter(
-      (call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO workout_set_segments")
-    );
-    expect(segInserts).toHaveLength(3);
+    expect(jest.mocked(setsModule.bulkInsertSegments)).toHaveBeenCalledTimes(1);
+    const [, calledSegments] = jest.mocked(setsModule.bulkInsertSegments).mock.calls[0] as [string, any[]];
+    expect(calledSegments).toHaveLength(3);
 
     // Third segment should have weight=95
-    const seg3 = segInserts[2][1] as unknown[];
-    expect(seg3[4]).toBe(95); // weight
+    expect(calledSegments[2]).toMatchObject({ segmentNumber: 3, reps: 4, weight: 95 });
+    // First and second segments have no weight override (null = inherit parent)
+    expect(calledSegments[0].weight).toBeNull();
+    expect(calledSegments[1].weight).toBeNull();
+  });
+});
+
+// ─── BLOCKER 3: computeSetCacheValues math verification ──────────────────────
+//
+// Proves that the values recomputeSetCaches() would write to the DB are correct.
+// The routing test above (bulkInsertSegments spy) verifies the function IS called;
+// this test verifies the MATH is correct so the cached columns will be non-zero
+// and accurate after import.
+
+describe("BLOCKER 3 — computeSetCacheValues: cached columns are correct after import (AC #257)", () => {
+  it("cluster 5+5+4 at 100/100/95 kg → cachedVolumeKg=1380, cachedE1rmKg≈116.67", () => {
+    // Fixture mirrors techlead example: cluster set 5+5+4 at 100/100/95 kg
+    // Parent weight=100, segment 3 overrides to 95.
+    const result = setsModule.computeSetCacheValues(
+      { weight: 100, reps: 14 },
+      [
+        { reps: 5, weight: null },   // inherits 100 → 5×100 = 500
+        { reps: 5, weight: null },   // inherits 100 → 5×100 = 500
+        { reps: 4, weight: 95 },     // override 95 → 4×95  = 380
+      ]
+    );
+
+    // Total volume: 500 + 500 + 380 = 1380
+    expect(result.cachedVolumeKg).toBe(1380);
+    // e1RM = max(100*(1+5/30), 100*(1+5/30), 95*(1+4/30)) = max(116.67, 116.67, 107.67) ≈ 116.67
+    expect(result.cachedE1rmKg).toBeCloseTo(100 * (1 + 5 / 30), 5);
+    expect(result.cachedE1rmKg).toBeGreaterThan(0);
+    expect(result.totalReps).toBe(14);
+  });
+
+  it("rest_pause 8+3+2 at 100 kg (null weights inherit) → cachedVolumeKg=1300", () => {
+    const result = setsModule.computeSetCacheValues(
+      { weight: 100, reps: 13 },
+      [
+        { reps: 8, weight: null },  // 8×100 = 800
+        { reps: 3, weight: null },  // 3×100 = 300
+        { reps: 2, weight: null },  // 2×100 = 200
+      ]
+    );
+    expect(result.cachedVolumeKg).toBe(1300);
+    // e1RM = max from reps=8 segment: 100*(1+8/30) ≈ 126.67
+    expect(result.cachedE1rmKg).toBeCloseTo(100 * (1 + 8 / 30), 5);
+    expect(result.totalReps).toBe(13);
+  });
+
+  it("normal set with no segments falls back to parent weight×reps", () => {
+    const result = setsModule.computeSetCacheValues({ weight: 80, reps: 8 }, []);
+    expect(result.cachedVolumeKg).toBe(640); // 80×8
+    expect(result.cachedE1rmKg).toBeCloseTo(80 * (1 + 8 / 30), 5);
+    expect(result.totalReps).toBe(8);
   });
 });
