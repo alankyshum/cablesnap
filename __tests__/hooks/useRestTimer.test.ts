@@ -420,7 +420,7 @@ describe("useRestTimer", () => {
       if (key === "rest_timer_default_seconds") return "90";
       if (key === "rest_timer_active_state") {
         return JSON.stringify({
-          sessionId: "session-restore",
+          sessionId: "session-1",
           endTimestamp,
           durationSeconds: 90,
           breakdown: {
@@ -441,27 +441,35 @@ describe("useRestTimer", () => {
       return "true";
     });
 
-    const { result } = renderHook(() => useRestTimer(defaultOptions));
+    // Simulate app is in foreground during restore
+    const origCurrentState = AppState.currentState;
+    Object.defineProperty(AppState, "currentState", { value: "active", writable: true, configurable: true });
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    try {
+      const { result } = renderHook(() => useRestTimer(defaultOptions));
 
-    // Initial restore call
-    const callsAfterRestore = mockPresentLiveRestCountdown.mock.calls.length;
-    expect(callsAfterRestore).toBeGreaterThanOrEqual(1);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
 
-    // Advance by 5s — should NOT trigger another live countdown call (old 5s cadence)
-    await act(async () => { jest.advanceTimersByTime(5000); });
-    expect(mockPresentLiveRestCountdown.mock.calls.length).toBe(callsAfterRestore);
+      // Initial restore call
+      const callsAfterRestore = mockPresentLiveRestCountdown.mock.calls.length;
+      expect(callsAfterRestore).toBeGreaterThanOrEqual(1);
 
-    // Advance by another 10s (total 15s) — NOW it should fire (15s cadence)
-    await act(async () => { jest.advanceTimersByTime(10000); });
-    expect(mockPresentLiveRestCountdown.mock.calls.length).toBe(callsAfterRestore + 1);
+      // Advance by 5s — should NOT trigger another live countdown call (old 5s cadence)
+      await act(async () => { jest.advanceTimersByTime(5000); });
+      expect(mockPresentLiveRestCountdown.mock.calls.length).toBe(callsAfterRestore);
 
-    // Confirm result is still counting
-    expect(result.current.rest).toBeGreaterThan(0);
+      // Advance by another 10s (total 15s) — NOW it should fire (15s cadence)
+      await act(async () => { jest.advanceTimersByTime(10000); });
+      expect(mockPresentLiveRestCountdown.mock.calls.length).toBe(callsAfterRestore + 1);
+
+      // Confirm result is still counting
+      expect(result.current.rest).toBeGreaterThan(0);
+    } finally {
+      Object.defineProperty(AppState, "currentState", { value: origCurrentState, writable: true, configurable: true });
+    }
   });
 
   it("does not schedule notification when notifications unavailable", async () => {
