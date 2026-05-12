@@ -204,71 +204,10 @@ jobs:
           echo "version_code=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Next version code: $NEXT"
 
-      - name: Bump version in package.json
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
-        run: |
-          VERSION="${{ steps.next_version.outputs.version }}"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '$VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-
-      - name: Bump version in app.config.ts
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
-        run: |
-          VERSION="${{ steps.next_version.outputs.version }}"
-          VCODE="${{ steps.next_vcode.outputs.version_code }}"
-          sed -i "s/version: \"[^\"]*\"/version: \"$VERSION\"/" app.config.ts
-          sed -i "s/versionCode: [0-9]*/versionCode: $VCODE/" app.config.ts
-
-      - name: Bump version in F-Droid metadata
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
-        run: |
-          VERSION="${{ steps.next_version.outputs.version }}"
-          VCODE="${{ steps.next_vcode.outputs.version_code }}"
-          sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
-          sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
-
-      # BLD-1027: Promote `## Unreleased` → `## vX.Y.Z — DATE` with the
-      # `<!-- versionCode: N -->` marker. This keeps CHANGELOG.md in sync
-      # with the version bumped above and recreates a fresh placeholder
-      # `## Unreleased` for the next cycle. macOS/BSD-safe awk.
-      - name: Promote `## Unreleased` to versioned section in CHANGELOG.md
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.next_version.outputs.version }}"
-          VCODE="${{ steps.next_vcode.outputs.version_code }}"
-          DATE=$(date -u +%Y-%m-%d)
-          NEW_HEADER="## v$VERSION — $DATE"
-          MARKER="<!-- versionCode: $VCODE -->"
-          PLACEHOLDER=$'## Unreleased\n\n_No user-facing changes yet._\n'
-
-          awk -v new_header="$NEW_HEADER" \
-              -v marker="$MARKER" \
-              -v placeholder="$PLACEHOLDER" '
-            BEGIN { promoted = 0 }
-            /^##[[:space:]]+Unreleased[[:space:]]*$/ && promoted == 0 {
-              printf "%s\n", placeholder
-              print new_header
-              print marker
-              promoted = 1
-              next
-            }
-            { print }
-          ' CHANGELOG.md > CHANGELOG.md.tmp
-          mv CHANGELOG.md.tmp CHANGELOG.md
-          echo "Promoted '## Unreleased' to '$NEW_HEADER' (versionCode $VCODE)"
-          # Sanity: top `## v<semver>` header must now match.
-          TOP=$(awk '/^## v[0-9]+\.[0-9]+\.[0-9]+/ { print; exit }' CHANGELOG.md)
-          echo "Top entry: $TOP"
-
-      # Setup Node + deps before changelog regen *and* the Android build —
-      # `npm run changelog:gen` (BLD-571) needs tsx, the Android build needs
-      # node_modules for `expo prebuild`. Keeping these here means we can
-      # commit the regenerated artifacts atomically with the version bump.
+      # Setup Node + deps BEFORE the bump applier — `scripts/release-apply-bump.sh`
+      # invokes `npm run changelog:gen` which needs `tsx`. The Android build
+      # below also needs `node_modules` for `expo prebuild`, so we install once
+      # here and the cached node_modules are reused.
       - name: Set up Node.js
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         uses: actions/setup-node@v4
@@ -280,12 +219,26 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: npm ci
 
-      - name: Regenerate changelog artifacts (lib/changelog.generated.ts + F-Droid sidecars)
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+      # BLD-1185: bump package.json + app.config.ts + fdroid metadata, promote
+      # `## Unreleased` → `## vX.Y.Z — DATE`, and refresh
+      # `lib/changelog.generated.ts` + F-Droid sidecar — all via a single
+      # idempotent script. The script is also re-invoked from "Commit and push"
+      # below if a concurrent merge forces us to rebase onto a fresh main.
+      - name: Apply release bump (version + CHANGELOG + generated artefacts)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current != true
+        run: |
+          VERSION="${{ steps.next_version.outputs.version }}"
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
+          bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
+
+      # Republish mode (BLD-1101): no version bump or `## Unreleased` promotion,
+      # but lib/changelog.generated.ts + F-Droid sidecar must still match the
+      # already-committed version.
+      - name: Regenerate changelog artifacts (republish mode)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && inputs.republish_current == true
         run: |
           set -euo pipefail
           npm run changelog:gen
-          # Sanity: the new versionCode sidecar must exist.
           VCODE="${{ steps.next_vcode.outputs.version_code }}"
           SIDECAR="fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/${VCODE}.txt"
           if [ ! -s "$SIDECAR" ]; then
@@ -341,38 +294,66 @@ jobs:
       - name: Commit and push
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main' && inputs.republish_current != true
         run: |
+          set -euo pipefail
           VERSION="${{ steps.next_version.outputs.version }}"
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
           git config user.name "CableSnap Release Bot"
           git config user.email "release-bot@cablesnap.app"
-          git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
-            CHANGELOG.md \
-            lib/changelog.generated.ts \
-            fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+
+          stage_paths() {
+            git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
+              CHANGELOG.md \
+              lib/changelog.generated.ts \
+              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+          }
+
+          stage_paths
           if git diff --cached --quiet; then
             echo "Version files already at v$VERSION — skipping commit."
-          else
-            git commit -m "release: v$VERSION"
-            # Retry up to 5 times with rebase, in case main moved during the workflow
-            # (e.g. a Dependabot merge landed between checkout and push).
-            pushed=0
-            for i in 1 2 3 4 5; do
-              if git push origin main; then
+            exit 0
+          fi
+          git commit -m "release: v$VERSION"
+
+          # BLD-1185: retry up to 5 times on push rejection. Try a plain
+          # `git pull --rebase` first (preserves history when no derived
+          # artefacts conflict). If the rebase produces a conflict — almost
+          # always CHANGELOG.md / lib/changelog.generated.ts / F-Droid sidecar
+          # because those are derived from `## Unreleased` — abort the rebase,
+          # hard-reset onto fresh main, and re-apply the bump from scratch via
+          # `scripts/release-apply-bump.sh`. Any concurrent `## Unreleased`
+          # bullets are preserved automatically because the script promotes the
+          # post-reset CHANGELOG.md.
+          pushed=0
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              pushed=1
+              break
+            fi
+            echo "::warning::Push rejected (attempt $i). Recovering against fresh origin/main..."
+            git fetch origin main
+
+            if git pull --rebase origin main; then
+              echo "::notice::Plain rebase succeeded on attempt $i — retrying push."
+            else
+              echo "::warning::Rebase produced conflicts on attempt $i — switching to regenerate-on-conflict path."
+              git rebase --abort || true
+              git reset --hard origin/main
+              bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
+              stage_paths
+              if git diff --cached --quiet; then
+                echo "::notice::No staged delta after regenerate — concurrent merge already shipped v$VERSION? exiting."
                 pushed=1
                 break
               fi
-              echo "::warning::Push rejected (attempt $i). Rebasing onto remote main and retrying..."
-              git fetch origin main
-              git pull --rebase origin main || {
-                echo "::error::Rebase failed on attempt $i — aborting."
-                exit 1
-              }
-              # Brief jitter to avoid lockstep with other concurrent pushers.
-              sleep $((RANDOM % 5 + 2))
-            done
-            if [ "$pushed" -ne 1 ]; then
-              echo "::error::Failed to push release commit after 5 rebase attempts."
-              exit 1
+              git commit -m "release: v$VERSION"
             fi
+
+            # Brief jitter to avoid lockstep with other concurrent pushers.
+            sleep $((RANDOM % 5 + 2))
+          done
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::Failed to push release commit after 5 rebase attempts."
+            exit 1
           fi
 
       - name: Dry-run notice (non-main ref)
