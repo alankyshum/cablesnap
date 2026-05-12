@@ -879,6 +879,37 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     expect(fetchBody.code).toBe("cold-start-code");
   });
 
+  it("(d2) cold-start getInitialURL with wrong state throws StravaError(unknown, 'OAuth state mismatch')", async () => {
+    // uuid mock returns "mock-state-uuid"; state in URL is different → mismatch
+    Linking.getInitialURL.mockResolvedValueOnce(
+      "cablesnap://strava-callback?code=cold-code&state=stale-prior-state",
+    );
+
+    await expect(strava.connectStrava()).rejects.toMatchObject({
+      name: "StravaError",
+      code: "unknown",
+      message: expect.stringContaining("state mismatch"),
+    });
+    // Browser was not opened because we rejected before reaching that point
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+    // Token exchange was not attempted
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("(d3) cold-start token exchange failure propagates (not swallowed)", async () => {
+    Linking.getInitialURL.mockResolvedValueOnce(
+      "cablesnap://strava-callback?code=cold-code&state=mock-state-uuid",
+    );
+    // Token exchange fails with network error
+    mockFetch.mockRejectedValueOnce(new TypeError("Network request failed"));
+
+    await expect(strava.connectStrava()).rejects.toMatchObject({
+      name: "StravaError",
+      code: "network",
+    });
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+  });
+
   it("(e) listener removed on success (browser path) and on error (state mismatch browser path)", async () => {
     // Success case
     Linking.getInitialURL.mockResolvedValueOnce(null);

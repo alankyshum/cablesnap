@@ -225,6 +225,33 @@ async function exchangeCodeForTokens(
 // Cloudflare Worker proxy which holds the client_secret server-side.
 
 /**
+ * Parse a `cablesnap://strava-callback` URL, verify CSRF state, and extract the code.
+ *
+ * - Returns `null` if `rawUrl` is not a Strava callback URL (wrong prefix or malformed).
+ * - Throws `StravaError("unknown", "OAuth state mismatch")` if state doesn't match.
+ *
+ * Shared by the active Linking listener, the WebBrowser path, and the cold-start
+ * `getInitialURL()` path so all three apply identical validation logic.
+ */
+function parseCallbackUrl(rawUrl: string, expectedState: string): string | null {
+  if (!rawUrl.startsWith(APP_DEEP_LINK)) return null;
+  let params: URLSearchParams;
+  try {
+    params = new URL(rawUrl).searchParams;
+  } catch {
+    // Malformed URL — not our callback
+    return null;
+  }
+  if (params.get("state") !== expectedState) {
+    const wrapped = new StravaError("unknown", "OAuth state mismatch");
+    stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
+    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "deep_link" });
+    throw wrapped;
+  }
+  return params.get("code");
+}
+
+/**
  * Open the Strava authorization browser session and parse the callback URL.
  * Wraps {@link WebBrowser.openAuthSessionAsync} + URL parsing in unified
  * error handling so {@link connectStrava} stays under the complexity budget.
@@ -245,28 +272,6 @@ async function runAuthPrompt(
   // Settled once — prevents double token exchange if both paths fire.
   let settled = false;
 
-  /**
-   * Parse a cablesnap://strava-callback URL, verify CSRF state, and extract code.
-   * Returns null if the URL doesn't match the expected scheme/path.
-   * Throws StravaError if state mismatches.
-   */
-  function parseCallbackUrl(rawUrl: string): string | null {
-    if (!rawUrl.startsWith(APP_DEEP_LINK)) return null;
-    let params: URLSearchParams;
-    try {
-      params = new URL(rawUrl).searchParams;
-    } catch {
-      return null;
-    }
-    if (params.get("state") !== expectedState) {
-      const wrapped = new StravaError("unknown", "OAuth state mismatch");
-      stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
-      captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "deep_link" });
-      throw wrapped;
-    }
-    return params.get("code");
-  }
-
   let subscription: { remove(): void } | null = null;
   const deepLinkPromise = new Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }>(
     (resolve, reject) => {
@@ -275,7 +280,7 @@ async function runAuthPrompt(
         if (!url.startsWith(APP_DEEP_LINK)) return;
         settled = true;
         try {
-          const code = parseCallbackUrl(url) ?? undefined;
+          const code = parseCallbackUrl(url, expectedState) ?? undefined;
           // Dismiss the in-app browser so it doesn't linger
           WebBrowser.dismissAuthSession?.();
           resolve({ result: { type: "success", url } as WebBrowser.WebBrowserAuthSessionResult, code });
@@ -298,23 +303,9 @@ async function runAuthPrompt(
       if (result.type !== "success") {
         return { result, code: undefined };
       }
-      let callbackParams: URLSearchParams;
-      try {
-        callbackParams = new URL(result.url).searchParams;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        const wrapped = new StravaError("unknown", errorMessage);
-        stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
-        captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
-        throw wrapped;
-      }
-      if (callbackParams.get("state") !== expectedState) {
-        const wrapped = new StravaError("unknown", "OAuth state mismatch");
-        stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
-        captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
-        throw wrapped;
-      }
-      return { result, code: callbackParams.get("code") ?? undefined };
+      // parseCallbackUrl returns null for malformed URLs, throws on state mismatch
+      const code = parseCallbackUrl(result.url, expectedState) ?? undefined;
+      return { result, code };
     })
     .catch((err: unknown) => {
       if (!settled) settled = true;
@@ -369,39 +360,31 @@ export async function connectStrava(): Promise<{
   const oauthState = uuid();
 
   // Check for a pending deep link from a previous session (cold-start recovery).
-  // If the URL matches our scheme and the state is correct we can skip opening
-  // the browser entirely. Known gap: state from a *prior* connectStrava call
-  // won't match the freshly-generated oauthState, so cold-start recovery only
-  // works if the app re-invokes connectStrava with the same oauthState (unusual).
-  // For all practical cases, this captures the URL when connectStrava is called
-  // immediately after a cold-start deep link arrives.
+  // parseCallbackUrl throws StravaError on state mismatch (propagates to caller).
+  // It returns null for malformed URLs (falls through to normal auth flow).
+  // Known gap: the freshly-generated oauthState won't match a URL from a *prior*
+  // cold-start unless the process restart happened within the same auth attempt.
   const initialUrl = await Linking.getInitialURL();
   if (initialUrl?.startsWith(APP_DEEP_LINK)) {
     stravaLog("info", "strava cold-start deep link detected", { flow: "strava_connect", step: "cold_start_check" });
-    try {
-      const coldParams = new URL(initialUrl).searchParams;
-      if (coldParams.get("state") === oauthState) {
-        const coldCode = coldParams.get("code");
-        if (coldCode) {
-          stravaLog("info", "strava cold-start deep link consumed", { flow: "strava_connect", step: "cold_start_consumed" });
-          const data = await exchangeCodeForTokens(coldCode, proxyUrl, clientId);
-          await saveTokens(
-            data.access_token as string,
-            data.refresh_token as string,
-            data.expires_at as number,
-          );
-          const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
-          const athleteName =
-            [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
-          await saveStravaConnection(athleteId, athleteName);
-          stravaBreakcrumb("connectStrava succeeded (cold-start)", { athleteId });
-          stravaLog("info", "strava connect succeeded", { flow: "strava_connect", step: "success", athleteId });
-          return { athleteId, athleteName };
-        }
-      }
-    } catch {
-      // Cold-start URL malformed or state mismatch — fall through to normal flow
-      stravaLog("warn", "strava cold-start deep link ignored", { flow: "strava_connect", step: "cold_start_check" });
+    // parseCallbackUrl: returns null for malformed URL, throws StravaError on state mismatch
+    const coldCode = parseCallbackUrl(initialUrl, oauthState);
+    if (coldCode) {
+      stravaLog("info", "strava cold-start deep link consumed", { flow: "strava_connect", step: "cold_start_consumed" });
+      // exchangeCodeForTokens / saveTokens / saveStravaConnection errors propagate to caller
+      const data = await exchangeCodeForTokens(coldCode, proxyUrl, clientId);
+      await saveTokens(
+        data.access_token as string,
+        data.refresh_token as string,
+        data.expires_at as number,
+      );
+      const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
+      const athleteName =
+        [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
+      await saveStravaConnection(athleteId, athleteName);
+      stravaBreakcrumb("connectStrava succeeded (cold-start)", { athleteId });
+      stravaLog("info", "strava connect succeeded", { flow: "strava_connect", step: "success", athleteId });
+      return { athleteId, athleteName };
     }
   }
 
