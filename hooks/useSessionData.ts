@@ -38,6 +38,7 @@ import { toAbsPath } from "../lib/media/form-clips";
 import { isCableExercise } from "../lib/cable-variant";
 import { derivePristinePrefillCandidate } from "./resolvePrefillCandidate";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { ADVANCED_SET_TYPES, getSegmentsForSets } from "../lib/db/sets";
 
 type UseSessionDataArgs = {
   id: string | undefined;
@@ -260,6 +261,25 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     }
 
     setGroups(groupList);
+
+    // BLD-1175: batch-load mini-set segments for advanced sets
+    const allSets = groupList.flatMap((g) => g.sets);
+    const advancedSetIds = allSets
+      .filter((s) => ADVANCED_SET_TYPES.has(s.set_type))
+      .map((s) => s.id);
+    if (advancedSetIds.length > 0) {
+      getSegmentsForSets(advancedSetIds).then((segMap) => {
+        setGroups((prev) =>
+          prev.map((g) => ({
+            ...g,
+            sets: g.sets.map((s) => ({
+              ...s,
+              segments: segMap.get(s.id) ?? [],
+            })),
+          }))
+        );
+      }).catch(() => {});
+    }
 
     // BLD-1114: populate previousSetupPhotoUri for cable exercises
     const cableGroups = groupList.filter((g) => isCableExercise({ equipment: g.equipment }));

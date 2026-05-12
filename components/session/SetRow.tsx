@@ -38,6 +38,7 @@ import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { type SetWithMeta } from "./types";
 import { SET_TYPE_LABELS, type Equipment } from "../../lib/types";
+import { ADVANCED_SET_TYPES } from "../../lib/db/sets";
 import { fontSizes } from "@/constants/design-tokens";
 import { PlateHint } from "./PlateHint";
 import { useSetCompletionFeedback } from "@/hooks/useSetCompletionFeedback";
@@ -46,6 +47,7 @@ import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } f
 import { RpeChipStrip } from "./RpeChipStrip";
 import { SetWeightCell } from "./SetWeightCell";
 import type { StackWithCalibrations } from "@/hooks/useActiveCalibration";
+import { MiniSetEditor } from "./MiniSetEditor";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
@@ -195,6 +197,10 @@ export type SetRowProps = {
     unit: string;
   }) => void;
   onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
+  /** BLD-1175: Mini-set segment handlers — only present for advanced set types in active session. */
+  onAddSegment?: (setId: string, reps: number) => Promise<void> | void;
+  onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
+  onCollapseToNormal?: (setId: string) => Promise<void> | void;
 };
 
 export const SetRow = memo(function SetRow({
@@ -210,8 +216,12 @@ export const SetRow = memo(function SetRow({
   pulleyPin, onOpenPulleyPinPicker, showPulleyPin, hasSetupPhoto, setupPhotoUri, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
   stacks, onMarkerConfirm, onManualWeightSave,
+  onAddSegment, onDeleteSegment, onCollapseToNormal,
 }: SetRowProps) {
   const colors = useThemeColors();
+  // BLD-1175: controlled next-reps input for MiniSetEditor — scoped to this row
+  // so each advanced set row tracks its own reps draft independently.
+  const [nextReps, setNextReps] = useState<number | null>(null);
   // BLD-771: ref to the variant footer Pressable so the picker hook can
   // resolve its accessibility node handle on open and restore VO/TalkBack
   // focus to it on dismiss (reviewer blocker #4, PR #426).
@@ -278,12 +288,15 @@ export const SetRow = memo(function SetRow({
       case "warmup": return { bg: colors.surfaceVariant, fg: colors.onSurfaceVariant };
       case "dropset": return { bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer };
       case "failure": return { bg: colors.errorContainer, fg: colors.onErrorContainer };
+      case "rest_pause": return { bg: colors.secondaryContainer, fg: colors.onSecondaryContainer };
+      case "cluster": return { bg: colors.secondaryContainer, fg: colors.onSecondaryContainer };
+      case "myo_reps": return { bg: colors.secondaryContainer, fg: colors.onSecondaryContainer };
       default: return null;
     }
   }, [set.set_type, colors]);
 
   const chipLabel = SET_TYPE_LABELS[set.set_type]?.short;
-  const typeLabel = set.set_type === "normal" ? "working set" : `${set.set_type} set`;
+  const typeLabel = set.set_type === "normal" ? "working set" : `${SET_TYPE_LABELS[set.set_type]?.label ?? set.set_type} set`;
 
   const handleDelete = useCallback(() => onDelete(set.id), [onDelete, set.id]);
   // Screen-reader fallback: TalkBack / VoiceOver dispatch the built-in
@@ -864,6 +877,21 @@ export const SetRow = memo(function SetRow({
         <View style={styles.tempoRow}>
           <SetTempoChip tempo={set.tempo} />
         </View>
+      ) : null}
+
+      {ADVANCED_SET_TYPES.has(set.set_type) && onAddSegment && onDeleteSegment && onCollapseToNormal ? (
+        <MiniSetEditor
+          setId={set.id}
+          segments={set.segments ?? []}
+          onAddSegment={async () => {
+            await onAddSegment(set.id, nextReps ?? 1);
+            setNextReps(null);
+          }}
+          onDeleteSegment={(segId) => onDeleteSegment(segId, set.id)}
+          onCollapseToNormal={() => onCollapseToNormal(set.id)}
+          nextReps={nextReps}
+          onChangeNextReps={setNextReps}
+        />
       ) : null}
 
       <PlateHint weight={displayedWeight} unit={unit} equipment={equipment} />

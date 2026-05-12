@@ -44,6 +44,7 @@ import {
   getRecentStackHistory,
   updateSetRepsAndDuration,
 } from "../lib/db/session-sets";
+import { ADVANCED_SET_TYPES, insertSegment, deleteSegment, collapseAdvancedSetToNormal, getSegmentsForSets } from "../lib/db/sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import { resolveMarker } from "../lib/cable-stack";
 import {
@@ -1383,6 +1384,53 @@ export function useSessionActions({
     [groups, updateGroupSet, showError]
   );
 
+  const handleAddSegment = useCallback(
+    async (setId: string, reps: number) => {
+      const allSets = groups.flatMap((g) => g.sets);
+      const set = allSets.find((s) => s.id === setId);
+      if (!set) return;
+      const segments = set.segments ?? [];
+      // deleteSegment renumbers remaining segments to contiguous 1..N, so the
+      // next slot is always (length + 1). This keeps mini-set labels meaningful
+      // under the 8-cap.
+      const nextSegmentNumber = segments.length + 1;
+      await insertSegment({
+        setId,
+        segmentNumber: nextSegmentNumber,
+        reps,
+        weight: null,
+      });
+      const segMap = await getSegmentsForSets([setId]);
+      updateGroupSet(setId, { segments: segMap.get(setId) ?? [] });
+    },
+    [groups, updateGroupSet]
+  );
+
+  const handleDeleteSegment = useCallback(
+    async (segmentId: string, setId: string) => {
+      await deleteSegment(segmentId, setId);
+      const segMap = await getSegmentsForSets([setId]);
+      updateGroupSet(setId, { segments: segMap.get(setId) ?? [] });
+    },
+    [updateGroupSet]
+  );
+
+  const handleCollapseToNormal = useCallback(
+    async (setId: string) => {
+      // Atomic collapse: deletes segments, sets type='normal' + reps=Σ, AND
+      // rewrites cached_volume_kg / cached_e1rm_kg from parent.weight × Σreps.
+      // Doing these as separate calls leaves caches stuck at 0 because
+      // recomputeSetCaches early-returns for non-advanced sets with no segments.
+      const totalReps = await collapseAdvancedSetToNormal(setId);
+      updateGroupSet(setId, {
+        set_type: "normal",
+        segments: [],
+        reps: totalReps > 0 ? totalReps : null,
+      });
+    },
+    [updateGroupSet]
+  );
+
   return {
     elapsed,
     /** BLD-630: null until the user completes the first set in the session.
@@ -1411,6 +1459,9 @@ export function useSessionActions({
     handleApplyBreakThrough,
     handleMarkerConfirm,
     handleManualWeightSave,
+    handleAddSegment,
+    handleDeleteSegment,
+    handleCollapseToNormal,
     finish,
     cancel,
   };

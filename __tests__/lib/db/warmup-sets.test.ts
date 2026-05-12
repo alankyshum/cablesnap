@@ -200,14 +200,20 @@ tempo: null,
 // ---- SET_TYPE_CYCLE order ----
 
 describe('SET_TYPE_CYCLE', () => {
-  it('has correct cycle order: normal → warmup → dropset → failure', () => {
-    expect(SET_TYPE_CYCLE).toEqual(['normal', 'warmup', 'dropset', 'failure']);
+  it('has correct cycle order: normal → warmup → dropset → failure → rest_pause → cluster → myo_reps', () => {
+    expect(SET_TYPE_CYCLE).toEqual(['normal', 'warmup', 'dropset', 'failure', 'rest_pause', 'cluster', 'myo_reps']);
   });
 
-  it('cycles back to normal after failure', () => {
+  it('cycles back to normal after myo_reps (last type)', () => {
+    const lastIdx = SET_TYPE_CYCLE.length - 1;
+    const next = SET_TYPE_CYCLE[(lastIdx + 1) % SET_TYPE_CYCLE.length];
+    expect(next).toBe('normal');
+  });
+
+  it('cycles from failure to rest_pause (BLD-1173 advanced types follow failure)', () => {
     const failureIdx = SET_TYPE_CYCLE.indexOf('failure');
     const next = SET_TYPE_CYCLE[(failureIdx + 1) % SET_TYPE_CYCLE.length];
-    expect(next).toBe('normal');
+    expect(next).toBe('rest_pause');
   });
 });
 

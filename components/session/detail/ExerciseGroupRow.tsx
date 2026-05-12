@@ -2,11 +2,13 @@ import { StyleSheet, View } from "react-native";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 import { SET_TYPE_LABELS } from "@/lib/types";
+import type { SetType } from "@/lib/types";
 import { rpeColor, rpeText } from "@/lib/rpe";
 import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
-import { normalizeSetType } from "@/lib/db/sets";
+import { normalizeSetType, ADVANCED_SET_TYPES } from "@/lib/db/sets";
+import { formatMiniSetReps, formatAdvancedSetAccessibilityLabel } from "@/lib/format";
 
 type Props = {
   group: ExerciseGroup;
@@ -15,6 +17,30 @@ type Props = {
   palette: string[];
   colors: ThemeColors;
 };
+
+function getSetChipColors(st: SetType, colors: ThemeColors): { bg: string; fg: string } | null {
+  switch (st) {
+    case "warmup": return { bg: colors.surfaceVariant, fg: colors.onSurfaceVariant };
+    case "dropset": return { bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer };
+    case "failure": return { bg: colors.errorContainer, fg: colors.onErrorContainer };
+    case "rest_pause": return { bg: colors.primaryContainer, fg: colors.onPrimaryContainer };
+    case "cluster": return { bg: colors.secondaryContainer, fg: colors.onSecondaryContainer };
+    case "myo_reps": return { bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer };
+    default: return null;
+  }
+}
+
+function getSetBorderColor(st: SetType, colors: ThemeColors): string | undefined {
+  switch (st) {
+    case "warmup": return colors.surfaceVariant;
+    case "dropset": return colors.tertiaryContainer;
+    case "failure": return colors.errorContainer;
+    case "rest_pause": return colors.primaryContainer;
+    case "cluster": return colors.secondaryContainer;
+    case "myo_reps": return colors.tertiaryContainer;
+    default: return undefined;
+  }
+}
 
 export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Props) {
   const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
@@ -53,59 +79,64 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
         )}
         {group.sets
           .filter((s) => s.completed)
-          .map((set) => (
-            <View key={set.id}>
-              <View style={[styles.setRow, (() => {
-                const st = normalizeSetType(set.set_type);
-                if (st === "warmup") return { borderLeftWidth: 3, borderLeftColor: colors.surfaceVariant, paddingLeft: 5 };
-                if (st === "dropset") return { borderLeftWidth: 3, borderLeftColor: colors.tertiaryContainer, paddingLeft: 5 };
-                if (st === "failure") return { borderLeftWidth: 3, borderLeftColor: colors.errorContainer, paddingLeft: 5 };
-                return {};
-              })()]}>
-                {(() => {
-                  const st = normalizeSetType(set.set_type);
-                  const label = SET_TYPE_LABELS[st];
-                  if (label.short) {
-                    const chipColors = st === "warmup"
-                      ? { bg: colors.surfaceVariant, fg: colors.onSurfaceVariant }
-                      : st === "dropset"
-                      ? { bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer }
-                      : { bg: colors.errorContainer, fg: colors.onErrorContainer };
-                    return (
-                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: chipColors.bg, justifyContent: "center", alignItems: "center", marginRight: 8 }}>
-                        <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: chipColors.fg }}>{label.short}</Text>
-                      </View>
-                    );
-                  }
-                  return (
+          .map((set) => {
+            const st = normalizeSetType(set.set_type) as SetType;
+            const label = SET_TYPE_LABELS[st];
+            const isAdvanced = ADVANCED_SET_TYPES.has(st);
+            const segments = set.segments ?? [];
+            const repsDisplay = isAdvanced
+              ? formatMiniSetReps(segments)
+              : String(set.reps ?? 0);
+            const a11yLabel = isAdvanced
+              ? `${formatAdvancedSetAccessibilityLabel(label.label, segments.length)}, ${set.weight ?? 0} × ${repsDisplay}`
+              : undefined;
+
+            const chipColors = getSetChipColors(st, colors);
+            const borderColor = getSetBorderColor(st, colors);
+
+            return (
+              <View
+                key={set.id}
+                accessibilityLabel={a11yLabel}
+                accessibilityRole={isAdvanced ? "text" : undefined}
+              >
+                <View style={[
+                  styles.setRow,
+                  borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor, paddingLeft: 5 } : undefined,
+                ]}>
+                  {label.short ? (
+                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: chipColors!.bg, justifyContent: "center", alignItems: "center", marginRight: 8 }}>
+                      <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: chipColors!.fg }}>{label.short}</Text>
+                    </View>
+                  ) : (
                     <Text variant="body" style={[styles.setNum, { color: colors.onSurface }]}>
                       {set.round ? `R${set.round}` : `Set ${set.set_number}`}
                     </Text>
-                  );
-                })()}
-                <Text variant="body" style={{ color: colors.onSurface }}>
-                  {set.weight ?? 0} × {set.reps ?? 0}
-                </Text>
-                {set.tempo && (
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
-                    ♩ {set.tempo}
+                  )}
+                  <Text variant="body" style={{ color: colors.onSurface }}>
+                    {set.weight ?? 0} × {repsDisplay}
                   </Text>
-                )}
-                {set.rpe != null && (
-                  <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
-                    <Text style={{ color: rpeText(set.rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>
-                      RPE {set.rpe}
+                  {set.tempo && (
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
+                      ♩ {set.tempo}
                     </Text>
-                  </View>
-                )}
+                  )}
+                  {set.rpe != null && (
+                    <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
+                      <Text style={{ color: rpeText(set.rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>
+                        RPE {set.rpe}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {set.notes ? (
+                  <Text variant="caption" style={[styles.setNote, { color: colors.onSurfaceVariant }]}>
+                    {set.notes}
+                  </Text>
+                ) : null}
               </View>
-              {set.notes ? (
-                <Text variant="caption" style={[styles.setNote, { color: colors.onSurfaceVariant }]}>
-                  {set.notes}
-                </Text>
-              ) : null}
-            </View>
-          ))}
+            );
+          })}
       </View>
       {isLast && group.link_id && (
         <View style={{ height: 4, backgroundColor: groupColor, borderRadius: 2 }} />

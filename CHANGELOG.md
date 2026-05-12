@@ -24,6 +24,7 @@ marker) at release time.
 
 - Progression suggestions now correctly evaluate advanced set types (rest-pause, cluster, myo-reps) using the working-set reps of the activation segment, rather than the inflated total-reps sum.
 - **CSV export/import round-trip for advanced sets**: rest-pause, cluster, and myo-rep set segment data (reps, weights, rests per mini-set) is now preserved when you export and re-import your workout CSV. Unknown set types in imported CSVs are automatically normalised to "normal" instead of being silently dropped.
+- **Advanced set types — Mini-set editor**: Rest-pause, cluster, and myo-rep sets now show an inline mini-set editor during active sessions. Tap to log each sub-rep burst, long-press a mini-set row to delete it, or collapse all mini-sets back into a single normal set. Up to 8 mini-sets per parent set are supported.
 
 ## v0.26.33 — 2026-05-12
 <!-- versionCode: 103 -->

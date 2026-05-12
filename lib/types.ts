@@ -294,7 +294,8 @@ export type WorkoutSession = {
 
 export type SetType = "normal" | "warmup" | "dropset" | "failure" | "rest_pause" | "cluster" | "myo_reps";
 
-export const SET_TYPE_CYCLE: SetType[] = ["normal", "warmup", "dropset", "failure"];
+// BLD-1168: advanced set schemes appended so the cycle selector includes them.
+export const SET_TYPE_CYCLE: SetType[] = ["normal", "warmup", "dropset", "failure", "rest_pause", "cluster", "myo_reps"];
 
 /** BLD-1168: one ordered mini-set within a rest-pause / cluster / myo-reps parent set. */
 export type SetSegment = {
@@ -356,6 +357,9 @@ export type WorkoutSet = {
   // BLD-1168: cached aggregate columns populated by recomputeSetCaches(). DEFAULT 0.
   cached_volume_kg?: number;
   cached_e1rm_kg?: number;
+  // BLD-1168 Slice 7: optional mini-set segments — populated in history/detail view
+  // for advanced set types (rest_pause, cluster, myo_reps). Absent for normal/warmup/dropset/failure.
+  segments?: SetSegment[];
 };
 
 export type LinkedGroup = {
