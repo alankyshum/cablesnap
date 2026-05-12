@@ -198,7 +198,7 @@ export type SetRowProps = {
   }) => void;
   onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
   /** BLD-1175: Mini-set segment handlers — only present for advanced set types in active session. */
-  onAddSegment?: (setId: string) => Promise<void> | void;
+  onAddSegment?: (setId: string, reps: number) => Promise<void> | void;
   onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
   onCollapseToNormal?: (setId: string) => Promise<void> | void;
 };
@@ -219,6 +219,9 @@ export const SetRow = memo(function SetRow({
   onAddSegment, onDeleteSegment, onCollapseToNormal,
 }: SetRowProps) {
   const colors = useThemeColors();
+  // BLD-1175: controlled next-reps input for MiniSetEditor — scoped to this row
+  // so each advanced set row tracks its own reps draft independently.
+  const [nextReps, setNextReps] = useState<number | null>(null);
   // BLD-771: ref to the variant footer Pressable so the picker hook can
   // resolve its accessibility node handle on open and restore VO/TalkBack
   // focus to it on dismiss (reviewer blocker #4, PR #426).
@@ -880,9 +883,14 @@ export const SetRow = memo(function SetRow({
         <MiniSetEditor
           setId={set.id}
           segments={set.segments ?? []}
-          onAddSegment={() => onAddSegment(set.id)}
+          onAddSegment={async () => {
+            await onAddSegment(set.id, nextReps ?? 1);
+            setNextReps(null);
+          }}
           onDeleteSegment={(segId) => onDeleteSegment(segId, set.id)}
           onCollapseToNormal={() => onCollapseToNormal(set.id)}
+          nextReps={nextReps}
+          onChangeNextReps={setNextReps}
         />
       ) : null}
 

@@ -1386,15 +1386,19 @@ export function useSessionActions({
   );
 
   const handleAddSegment = useCallback(
-    async (setId: string) => {
+    async (setId: string, reps: number) => {
       const allSets = groups.flatMap((g) => g.sets);
       const set = allSets.find((s) => s.id === setId);
       if (!set) return;
-      const existingCount = (set.segments ?? []).length;
+      const segments = set.segments ?? [];
+      // Use MAX(segment_number) + 1 to avoid collisions after mid-list deletes.
+      const nextSegmentNumber = segments.length > 0
+        ? Math.max(...segments.map((s) => s.segment_number)) + 1
+        : 1;
       await insertSegment({
         setId,
-        segmentNumber: existingCount + 1,
-        reps: 1,
+        segmentNumber: nextSegmentNumber,
+        reps,
         weight: null,
       });
       const segMap = await getSegmentsForSets([setId]);
@@ -1414,11 +1418,19 @@ export function useSessionActions({
 
   const handleCollapseToNormal = useCallback(
     async (setId: string) => {
+      // Capture Σreps before deleting — deleteAllSegmentsForSet recomputes
+      // caches with 0 segments, leaving parent.reps = 0 for advanced types.
+      const allSets = groups.flatMap((g) => g.sets);
+      const set = allSets.find((s) => s.id === setId);
+      const totalReps = (set?.segments ?? []).reduce((sum, seg) => sum + seg.reps, 0);
+
       await deleteAllSegmentsForSet(setId);
       await updateSetType(setId, "normal");
-      updateGroupSet(setId, { set_type: "normal", segments: [] });
+      // Restore the summed reps that deleteAllSegmentsForSet zeroed out.
+      await updateSetRepsAndDuration(setId, totalReps > 0 ? totalReps : null, undefined);
+      updateGroupSet(setId, { set_type: "normal", segments: [], reps: totalReps > 0 ? totalReps : null });
     },
-    [updateGroupSet]
+    [groups, updateGroupSet]
   );
 
   return {

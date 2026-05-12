@@ -57,7 +57,7 @@ export type ExerciseGroupSetTableProps = {
   onMarkerConfirm?: (setId: string, result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => void;
   onManualWeightSave?: (setId: string, weight: number | null, reps: number | null) => void;
   /** BLD-1175: Mini-set segment handlers. */
-  onAddSegment?: (setId: string) => Promise<void> | void;
+  onAddSegment?: (setId: string, reps: number) => Promise<void> | void;
   onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
   onCollapseToNormal?: (setId: string) => Promise<void> | void;
 };
