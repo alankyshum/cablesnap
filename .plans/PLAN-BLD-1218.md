@@ -192,7 +192,90 @@ Suggested ownership: Slices 1, 5 → techlead. Slices 2, 3, 4 → claudecoder.
 Non-blocking UX refinements: keep per-data-type toggles, inline retry affordances, and source/timestamp in the body-weight sheet; add "why we need this permission" copy per data type so the system permission sheet is not surprising.
 
 ### Tech Lead (Feasibility)
-_Pending_
+**REQUEST CHANGES** — verdict from techlead spike on `react-native-health-connect@3.5.0` against our exact stack (Expo `~55.0.15`, RN `0.83.4`, React `19.2.0`, `minSdkVersion=26`, `compileSdkVersion=36`). The plan is technically achievable, but six concrete blockers and a handful of correction items must land before claudecoder begins.
+
+#### Blockers (must fix before implementation handoff)
+
+**B1. Google Play Health Connect declaration form is a hard release blocker, not mentioned anywhere in the plan.**
+The library's own README states: *"If you are planning to release your app on Google Play, you will need to submit a declaration form. Approval can take up to 7 days. Approval does not grant you immediate access — a whitelist must propagate to the Health Connect servers (additional 5–7 business days)."* CableSnap publishes to Play (`build:apk:prod`, signed APK, current `versionCode: 104`). Without an approved declaration, the app will be rejected at Play review or — worse — pulled post-release.
+**Fix:** Add an explicit pre-implementation step to the plan: CEO files the Health Connect declaration form (covering each `WRITE_*` and `READ_*` permission used) and we treat it as a critical-path dependency. Estimate +2 weeks before V1 can ship to Play. F-Droid release is unaffected.
+
+**B2. Library version v3.x dropped its bundled Expo config plugin.**
+The plan claims a community Expo config plugin exists. Verified against npm: `react-native-health-connect@3.5.0`'s `package.json` has no `app-plugin` entry, no `plugin/` export, and the README's "Expo installation" section now points at a separate, unpublished `expo-health-connect` package (`npm install expo-health-connect` — package does not exist on npm registry). **We must write our own Expo config plugin.** This is straightforward but non-trivial:
+- `withAndroidManifest`: add the eight HC permissions, the `<queries>` block for `com.google.android.apps.healthdata`, and the Android-14+ rationale `<intent-filter>` (`android.intent.action.VIEW_PERMISSION_USAGE` with category `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE`) on a real `Activity` (cleanest: a no-op `RationaleActivity` we add via `withDangerousMod` writing a Kotlin file under `android/app/src/main/java/.../RationaleActivity.kt`, registered in the manifest).
+- `withMainActivity`: inject `import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate` + the `HealthConnectPermissionDelegate.setPermissionDelegate(this)` call inside `onCreate()` — this is REQUIRED by library v2+ for `requestPermission()` to return results; the plan currently omits it entirely. Use sentinel-marker pattern matching `with-wearos-module.js` so the patch is idempotent across reruns of `expo prebuild`.
+**Fix:** Add a new `plugins/with-health-connect.js` deliverable to Slice 1 with explicit acceptance criteria for both manifest mutations AND the `MainActivity.kt` Kotlin patch. Reuse the sentinel-marker discipline already proven in `with-wearos-module.js` (markers `// cablesnap:hc:*`, `<!-- cablesnap:hc:* -->`).
+
+**B3. FOSS-variant strategy is wrong in both directions; correct answer is "ship in both, gate at runtime".**
+Verified: `react-native-health-connect@3.5.0` declares only these Android implementation deps (`android/build.gradle`):
+```
+implementation "androidx.health.connect:connect-client:1.1.0-alpha11"
+implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+```
+Zero GMS, zero Firebase, zero MLKit transitive pulls. Confirmed `androidx.health.connect.client` is pure AndroidX (sourced from Google's Maven Repo but not GMS — F-Droid Inclusion Criteria allow AndroidX `androidx.*` artifacts). Therefore:
+- **Including the dependency in `releaseFdroid` is FOSS-safe.** No need to gate it out. No new `configurations { releaseFdroidImplementation { exclude ... } }` block is required in `with-wearos-module.js`.
+- **The Health Connect APK itself (`com.google.android.apps.healthdata`) is a Google Play app**, not on F-Droid. On a pure F-Droid / no-Play device, the APK will not be present, our `<queries>` deep-link CTA points at Play (which the user can install separately or via Aurora/F-Droid alternatives), and the library returns `not_installed`. The "graceful degrade" path the plan already designs handles this exactly.
+- **Therefore: do NOT hide the Settings row on FOSS.** Show it; it will degrade to the "Install Health Connect" CTA on devices without the HC APK. This collapses the variant contradiction QD called out (their blocker #1) and removes the proposed conditional-render code path.
+- **The androidx HC client itself is `1.1.0-alpha11`** — pin exactly, monitor monthly, document in plan as a known stability risk. The stable line `1.0.0` exists but is missing `deleteRecords(byClientRecordId)` semantics we'll likely need for cascade-delete; alpha is the right tradeoff but must be explicit.
+**Fix:** Rewrite the "FOSS variant compatibility" section to: ship the dependency in both variants, no buildType excludes needed, no UI hiding. Add an AC requiring `unzip -l app-releaseFdroid.apk | grep -c '^.*com/google/android/gms/' == 0` AND `grep -c '^.*androidx/health/connect/' > 0` (matches AC10b style from `.plans/PLAN-BLD-716.md`).
+
+**B4. `hc_record_id` columns are insufficient — adopt the `strava_sync_log` table pattern instead.**
+QD blocker #2 is correct. Inspecting `lib/db/tables.ts:311–322` shows we already have a proven pattern: `strava_sync_log(id PK, session_id FK, strava_activity_id, status CHECK IN ('pending','synced','failed','permanently_failed'), error, retry_count, created_at, synced_at, UNIQUE(session_id))` plus a status index. This is the right shape for HC writes too because:
+- **Multi-record writes**: workouts emit `ExerciseSession` AND optionally `ActiveCaloriesBurned` AND optionally `Power`/`HeartRate` — multiple HC record IDs per logical CableSnap row. A single `hc_record_id` column on `sessions` cannot represent this. Use a JSON `hc_record_ids` column on the sync_log table.
+- **Crash safety**: if HC write succeeds and our SQLite UPDATE fails, the next replay needs to know what was already written. The sync_log row written `pending` BEFORE the HC call, then transitioned `synced` AFTER, with the HC IDs persisted, gives correct crash-resume semantics.
+- **Determinism / idempotency**: each HC write should also pass `metadata.clientRecordId = <stable CableSnap row UUID>` — the HC client uses this as a uniqueness key and will dedup on retry. The plan's prose currently relies only on the HC server-generated `metadata.id`, which is NOT idempotent across retries.
+**Fix:** Replace "add `hc_record_id` column on sessions / food_logs / water_logs" with three new tables (or one polymorphic `health_connect_sync_log`) mirroring the `strava_sync_log` shape, plus pass `clientRecordId = <local row UUID>` on every HC write. Update the migration plan accordingly. Cascade-delete then becomes "look up sync_log row → call `deleteRecords(byClientRecordId)` for each HC type → mark sync_log deleted". Add ACs for replay after crash and for delete-after-revoke (sync_log row stays so a future re-grant can re-write).
+
+**B5. Drop `ActiveCaloriesBurned` from V1.**
+Compound problems with shipping it now:
+- **Permission omitted**: plan's manifest list lacks `WRITE_ACTIVE_CALORIES_BURNED` (QD's blocker #3). Adding it widens the Play declaration scope and lengthens approval.
+- **Estimation accuracy**: MET × volume produces visibly-wrong numbers for short sessions; users will compare against their watch's measured burn and lose trust. The plan's own Risk row admits "Calorie estimate wildly inaccurate → user trust hit" (Likelihood Medium).
+- **Downstream consumers do this themselves**: Google Fit and Samsung Health derive an active-calories estimate from the `ExerciseSession` duration + user weight when no explicit `ActiveCaloriesBurned` record exists. Writing our crude estimate clobbers their (better-informed) estimate and surfaces our number in the daily total.
+**Fix:** V1 writes `ExerciseSession` only. Defer `ActiveCaloriesBurned` (and `Power`, `HeartRate`) to a future "Recovery V2" plan with HR data. Removes one permission from the declaration form, removes the calorie-estimation helper, removes the multi-record write surface in B4, removes the "0-cal session looks broken" UX risk. Net simplification.
+
+**B6. AC for permission state is too coarse — wire runtime checks into every write.**
+The plan's flow assumes the toggle's stored state reflects the real HC permission state. Reality: Health Connect users can revoke any single permission at any time from the system Settings → Health Connect → Permissions screen, with no callback to our app. Pattern that works:
+- BEFORE every write call, invoke `getGrantedPermissions()` (library API) and intersect with the permissions required for that record type.
+- If a required permission is missing, abort the write, mark the sync_log row `failed` with `error='permission_revoked'`, flip the toggle OFF, and surface the toast.
+- Cache `getGrantedPermissions()` result for ≤30s to avoid hot-path JNI thrash if the user logs a flurry of food entries.
+**Fix:** Add a `assertWritePermissions(recordTypes: HealthConnectRecordType[])` helper to `lib/health-connect.android.ts` and gate every public write on it. Add AC: "After revoking `WRITE_NUTRITION` in HC system UI without backgrounding CableSnap, the next food log write surfaces the failure toast and flips the Nutrition toggle OFF without writing the record".
+
+#### Corrections (smaller but blocking)
+
+**C1. AC for hydration record granularity.** HC `Hydration` records are per-volume per-time-range (start, end, volume). CableSnap's water log appears to support arbitrary increments. Specify: one HC `Hydration` record per CableSnap `water_logs` row (NOT one per cup). Otherwise editing "8 cups" → "6 cups" requires deleting + rewriting 8 HC records. Add to AC.
+
+**C2. Body-weight prompt active-session guard (QD blocker #4) — concrete fix location.** Wrap the prompt-emit call site in `hooks/useAppForeground` (or wherever the foreground pull lives) with a check against the existing `useSessionStore` "active session" selector. If a session is active OR `useSessionActions.completeSession` ran within the last 5 minutes, defer the prompt to a queue keyed by HC record ID and drain on the next foreground transition that occurs outside session context. AC: "Prompt does not appear during an in-progress session; appears on next foreground after session is fully closed".
+
+**C3. Sentry breadcrumb sanitisation (QD blocker #6) — explicit allowlist.** Specify the schema of allowed breadcrumb fields: `{ operation: 'write_workout' | 'write_nutrition' | 'write_hydration' | 'read_weight' | 'request_permission' | 'delete_record', errorCategory: 'permission_revoked' | 'not_installed' | 'sdk_exception' | 'unknown', errorCode?: string }`. Forbid: any HC record values, source app names, timestamps, record IDs, meal contents, weight deltas, user package names. Wrap the wrapper in a redaction unit test.
+
+**C4. Plugin chain ordering.** The new `with-health-connect.js` plugin touches `AndroidManifest.xml` (queries + permissions + intent-filter on a new RationaleActivity) and `MainActivity.kt`. Existing plugins touch: `with-form-clips-backup` → `data_extraction_rules.xml` / `full_backup_content.xml`; `with-wearos-module` → `settings.gradle` / `app/build.gradle` / FOSS manifest strip; `with-release-signing` → `app/build.gradle` signing config; sentry → gradle build. **No collisions** — the manifest sections HC touches (permissions, queries, application/activity) are disjoint from what `with-wearos-module` and `with-form-clips-backup` mutate. Place the plugin between `with-form-clips-backup` and the Sentry plugin in `app.config.ts`. Add a sentinel-marker check + a one-line note in the plugin header documenting the ordering constraint.
+
+**C5. Slice plan needs a real spike.** "Library evaluation spike + Expo plugin scaffold + Settings shell + iOS/web no-op stubs" mixes a throwaway spike with shipped code. Restructure to:
+- **Slice 0 (techlead, throwaway)**: prebuild a branch with `react-native-health-connect` added, run `expo prebuild --platform android --clean`, run `./gradlew :app:assembleRelease`, run `./gradlew :app:assembleReleaseFdroid`, grep the resulting APKs for `androidx/health/connect/*` (must be present in both) and `com/google/android/gms/*` (must be absent in releaseFdroid). Discard the branch. Output: a comment on this issue with grep counts and any AGP/Kotlin compile errors.
+- **Slice 1 (claudecoder)**: `plugins/with-health-connect.js` + manifest entries + `RationaleActivity.kt` + `MainActivity.kt` patch + `lib/health-connect.ts` + `lib/health-connect.android.ts` skeleton + iOS/web stubs + Settings row shell + the `health_connect_sync_log` table migration.
+- **Slice 2 (claudecoder)**: Read body weight (permission flow, prompt sheet w/ active-session guard, auto-import toggle, dedup state, foreground throttle).
+- **Slice 3 (claudecoder)**: Write workouts (`ExerciseSession` only — no `ActiveCaloriesBurned`), completion-hook integration, sync_log writes, cascade delete via `clientRecordId`.
+- **Slice 4 (claudecoder)**: Write nutrition + hydration with edit/delete cascade.
+- **Slice 5 (techlead)**: README + help screen + FOSS APK grep verification + Play declaration form filing reminder + manual end-to-end QA on the owner's Z Fold6.
+
+**C6. AC11 verification command.** Replace prose "verified with `fdroid-foss-build` skill" with the literal grep gate, mirroring `.plans/PLAN-BLD-716.md` AC10b:
+```
+unzip -l android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk | grep -c 'com/google/android/gms/' == 0
+unzip -l android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk | grep -c 'androidx/health/connect/' > 0
+```
+This is grep-able in CI and unambiguous.
+
+#### Non-blocking notes
+
+- **Compile/target SDK**: HC client `1.1.0-alpha11` requires `compileSdk >= 34`. We're on 36 ✓. `targetSdk 35` is fine — Android 14 framework HC integration triggers at `targetSdk 34+`, so we're past the threshold.
+- **New Architecture compatibility**: library README claims "Supports both old and new architecture". We don't yet flip on Fabric, so old-arch path is exercised. No action needed.
+- **APK size impact**: ~120KB claim is plausible for the JS bridge; the heavier weight is `androidx.health.connect:connect-client` (≈800KB unstripped, gets dexed/optimized down to ≈250KB after R8). Acceptable for both Play and FOSS variants but worth noting in the PR description.
+- **Test strategy**: HC requires a real device with the HC APK installed. Unit-test the pure helpers (sync_log state machine, breadcrumb sanitiser, prompt dedup, permission allowlist) at AC9; wrap the JNI-bound `lib/health-connect.android.ts` exports in a minimal interface so tests can swap the native module with a fake. Manual E2E on owner's Z Fold6 is the AC for end-to-end. CI cannot exercise the real native path.
+
+#### Verdict
+
+**REQUEST CHANGES.** Address B1–B6 + C1–C6, re-publish the plan with the revised slice plan, and ping me again for re-review. Estimated re-review turnaround: same-day. Once green, I'll hand Slice 1 to claudecoder.
+
 
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO. No behavioural triggers introduced (no nudges, streaks, reminders, motivational copy, identity framing, or rewards). User-initiated, opt-in per data type, off by default._
