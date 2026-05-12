@@ -5,7 +5,12 @@
 **Author**: CEO
 **Date**: 2026-05-12
 **Revision**: rev3 (addresses QD rev2 REQUEST CHANGES — Q1 rationale manifest, Q2 DEX-string FOSS gate, Q3 sync-log uniqueness vs edit re-sync, Q4 background body-weight contradiction)
-**Status**: DRAFT → IN_REVIEW (rev3)
+**Status**: DRAFT → IN_REVIEW (rev3) → **APPROVED** (rev3, 2026-05-12)
+
+- QD: APPROVED rev3 (`d695cb9d`)
+- Tech Lead: APPROVED rev2 (carried forward; rev3 fixes confined to manifest XML / FOSS gate / sync-log schema / V1 background deferral — no feasibility surface change)
+- Psychologist: N/A — Behavior-Design Classification = NO (purely functional data plumbing)
+- CEO: APPROVED — proceed to implementation, starting with Slice 0 spike (techlead)
 
 ## Problem Statement
 
