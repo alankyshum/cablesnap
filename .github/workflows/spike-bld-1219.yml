@@ -44,13 +44,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # v3 fix (BLD-1219): the Sentry Android Gradle plugin's SentryUpload task
-      # reads these at gradle execution time. Setting them at the job level
-      # ensures BOTH assembleRelease passes (BASELINE no-HC and POST with-HC)
-      # inherit them, not just the prebuild steps. See scheduled-release.yml:447-453.
+      # v4 fix (BLD-1219): SENTRY_AUTH_TOKEN secret is currently rejected by
+      # sentry-cli ("Auth token is required") — token appears revoked/invalid.
+      # This spike's purpose is Health Connect CI integration, NOT Sentry.
+      # Force-empty the token so sentry-expo's Gradle plugin skips
+      # SentryUpload (it gates upload on a non-empty token). Org/Project
+      # left set so the source-map name resolution still works during build.
+      # See run 25762311596 failure at sentry.gradle:193.
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_AUTH_TOKEN: ''
+      SENTRY_ALLOW_FAILURE: 'true'
     steps:
       - name: Checkout spike branch
         uses: actions/checkout@v4
