@@ -360,6 +360,23 @@ out=$(PATH="$WORKDIR:$PATH" MERGE_GATE_CLIP_CMD="" MERGE_GATE_REPO="alankyshum/c
 assert_trace_outcome "clip.sh from PATH resolves PR → posted-first" "posted-first"
 rm -f "$WORKDIR/clip.sh"
 
+# Regression: /skills/scripts/clip.sh exists but is NOT executable (chmod 644).
+# The helper must still invoke it via `bash` (uses MERGE_GATE_SKILLS_DIR override).
+make_fake_clip "$PR_LINKED_ISSUE"
+make_fake_gh "OPEN" "[]" "0" "[]"
+FAKE_SKILLS_DIR="$WORKDIR/fake-skills"
+mkdir -p "$FAKE_SKILLS_DIR/scripts"
+cp "$WORKDIR/fake-clip.sh" "$FAKE_SKILLS_DIR/scripts/clip.sh"
+# Copy support files that fake-clip.sh reads relative to its own dir
+cp "$WORKDIR/fake-issue.json" "$FAKE_SKILLS_DIR/scripts/fake-issue.json"
+cp "$WORKDIR/fake-clip-exit.txt" "$FAKE_SKILLS_DIR/scripts/fake-clip-exit.txt"
+chmod 644 "$FAKE_SKILLS_DIR/scripts/clip.sh"  # NOT executable — must be run via bash
+out=$(PATH="$WORKDIR:$PATH" MERGE_GATE_CLIP_CMD="" MERGE_GATE_SKILLS_DIR="$FAKE_SKILLS_DIR" \
+  MERGE_GATE_REPO="alankyshum/cablesnap" \
+  bash "$VERDICT_SCRIPT" "techlead" "APPROVE" "BLD-62" 2>/dev/null || true)
+assert_trace_outcome "non-exec skills/clip.sh invoked via bash → posted-first" "posted-first"
+rm -rf "$FAKE_SKILLS_DIR"
+
 # ─── Summary ─────────────────────────────────────────────────────────
 echo
 echo "── Summary ──"

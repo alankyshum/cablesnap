@@ -40,6 +40,8 @@ TRACE_LOG="/tmp/merge-gate-verdict-trace.log"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Allow full-command override for tests; otherwise use clip.sh in same dir
 CLIP_CMD="${MERGE_GATE_CLIP_CMD:-}"
+# Allow skills dir override for tests (default: /skills)
+_SKILLS_DIR="${MERGE_GATE_SKILLS_DIR:-/skills}"
 
 # ─── Trace state (defaults ensure crash row is always written) ────────
 _role=""
@@ -108,8 +110,11 @@ _run_clip_get_issue() {
     $CLIP_CMD "$issue_id" 2>/dev/null
   elif command -v clip.sh >/dev/null 2>&1; then
     clip.sh get-issue "$issue_id" 2>/dev/null
-  elif [[ -x "/skills/scripts/clip.sh" ]]; then
-    /skills/scripts/clip.sh get-issue "$issue_id" 2>/dev/null
+  elif [[ -f "${_SKILLS_DIR}/scripts/clip.sh" ]]; then
+    # Use `bash` explicitly — the file may not be executable in this environment
+    bash "${_SKILLS_DIR}/scripts/clip.sh" get-issue "$issue_id" 2>/dev/null
+  elif [[ -f "$(dirname "$0")/clip.sh" ]]; then
+    bash "$(dirname "$0")/clip.sh" get-issue "$issue_id" 2>/dev/null
   else
     return 1
   fi
