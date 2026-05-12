@@ -25,6 +25,17 @@ import { DatabaseSync } from "node:sqlite";
 import { migrate } from "../lib/db/migrations";
 import { computeSetCacheValues } from "../lib/db/sets";
 
+/**
+ * Mirror of the migration backfill SQL for e1RM.
+ * AC #261: legacy normal-set backfill caps at reps <= 12 so the
+ * `WHERE cached_e1rm_kg > 0` analytics gate is equivalent to the
+ * pre-BLD-1168 `AND ws.reps <= 12` filter.
+ */
+function backfillE1rm(weight: number | null, reps: number | null): number {
+  if (weight == null || reps == null || reps <= 0) return 0;
+  return reps <= 12 ? weight * (1 + reps / 30) : 0;
+}
+
 // ── Thin async shim (same as migration-upgrade-paths.test.ts) ────────────────
 
 type Row = Record<string, unknown>;
@@ -128,12 +139,10 @@ describe("BLD-1168 AC#275 — migration cached-columns backfill (integration)", 
       "SELECT cached_volume_kg, cached_e1rm_kg FROM workout_sets WHERE id = ?"
     ).get(id) as { cached_volume_kg: number; cached_e1rm_kg: number };
 
-    const { cachedVolumeKg, cachedE1rmKg } = computeSetCacheValues(
-      { weight, reps },
-      [],
-    );
+    const { cachedVolumeKg } = computeSetCacheValues({ weight, reps }, []);
     expect(row.cached_volume_kg).toBeCloseTo(cachedVolumeKg, 4);
-    expect(row.cached_e1rm_kg).toBeCloseTo(cachedE1rmKg, 4);
+    // AC #261: backfill caps e1RM at reps <= 12 to preserve legacy analytics parity
+    expect(row.cached_e1rm_kg).toBeCloseTo(backfillE1rm(weight, reps), 4);
   });
 
   it("backfill skips rows with NULL weight (leaves cached at 0)", () => {
@@ -160,12 +169,13 @@ describe("BLD-1168 AC#275 — migration cached-columns backfill (integration)", 
         "SELECT cached_volume_kg, cached_e1rm_kg FROM workout_sets WHERE id = ?"
       ).get(f.id) as { cached_volume_kg: number; cached_e1rm_kg: number };
 
-      const { cachedVolumeKg, cachedE1rmKg } = computeSetCacheValues(
+      const { cachedVolumeKg } = computeSetCacheValues(
         { weight: f.weight, reps: f.reps },
         [],
       );
       expect(row.cached_volume_kg).toBeCloseTo(cachedVolumeKg, 4);
-      expect(row.cached_e1rm_kg).toBeCloseTo(cachedE1rmKg, 4);
+      // AC #261: backfill caps e1RM at reps <= 12
+      expect(row.cached_e1rm_kg).toBeCloseTo(backfillE1rm(f.weight, f.reps), 4);
     }
   });
 });
